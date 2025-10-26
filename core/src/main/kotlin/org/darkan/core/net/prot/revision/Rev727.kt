@@ -1285,7 +1285,7 @@ fun register727() =
             out.writeByte(0) // Gender.
             out.writeByte(0) // VERIFIED_EMAIL_ADDRESS
             out.writeByte(1)
-            out.writeLong(Long.Companion.MAX_VALUE) // members subscription end
+            out.writeLong(Long.MAX_VALUE) // members subscription end
             out.write5(12)
             out.writeByte(0x1) // 0x1 - if members, 0x2 - subscription
             out.writeInt(1) // jcoins?
@@ -1295,8 +1295,9 @@ fun register727() =
             out.writeShort(0) // Messages add support for forum integration
             out.writeShort(0) // last logged in date
             if (account.lastIp != null) {
-                val ipSplit = account.lastIp!!.split("\\.")
-                ipHash = ipSplit[0].toInt() shl 24 or (ipSplit[1].toInt() shl 16) or (ipSplit[2].toInt() shl 8) or ipSplit[3].toInt()
+                val ipSplit = account.lastIp?.replace("[", "")?.replace("]", "")?.split(".")
+                if (ipSplit != null)
+                    ipHash = ipSplit[0].toInt() shl 24 or (ipSplit[1].toInt() shl 16) or (ipSplit[2].toInt() shl 8) or ipSplit[3].toInt()
             }
             out.writeInt(ipHash) // ip part
             out.writeRSString(worldLoginToken)
