@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 import org.darkan.core.crypt.Crypto
 import org.darkan.core.formatPlayerNameForProtocol
+import org.darkan.core.model.Account
 import org.darkan.core.mongo.MongoDB.database
 import org.darkan.core.net.web.AccountCreateRequest
 import org.darkan.core.net.web.ConflictException
-import org.darkan.core.model.Account
 
 object Accounts {
     private val collection by lazy {

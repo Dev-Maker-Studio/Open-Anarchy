@@ -4,8 +4,8 @@ import io.ktor.utils.io.*
 import world.gregs.voidps.buffer.writeByte
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.file.FileProvider
-import world.gregs.voidps.cache.file.FileProvider.Companion.JS5_HEADER_LEN
 import world.gregs.voidps.cache.file.FileProvider.Companion.ARCHIVE_METADATA_HEADER_LEN
+import world.gregs.voidps.cache.file.FileProvider.Companion.JS5_HEADER_LEN
 import world.gregs.voidps.cache.file.FileProvider.Companion.SEPARATOR
 import world.gregs.voidps.cache.file.FileProvider.Companion.SPLIT
 import world.gregs.voidps.cache.file.FileProvider.Companion.getInt

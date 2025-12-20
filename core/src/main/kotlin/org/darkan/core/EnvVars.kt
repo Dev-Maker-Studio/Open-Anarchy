@@ -29,6 +29,7 @@ object EnvVars {
     val minorVersion: Int = dotenv.get("MINOR_VERSION", "1").toInt()
     val packetSizeLimit: Int = dotenv.get("PACKET_SIZE_LIMIT", "7500").toInt()
     val packetQueueCapacity: Int = dotenv.get("PACKET_QUEUE_CAPACITY", "50").toInt()
+    val packetValidateSizes: Boolean = dotenv.get("PACKET_VALIDATE_SIZES", debug.toString()).toBooleanStrict()
     val worldCycleNanos: Long = dotenv.get("WORLD_CYCLE_NANOS", "600000000").toLong()
     val worldCycleMillis: Long = worldCycleNanos / 1000000L
     val worldCycleWarnMillis: Long = dotenv.get("WORLD_CYCLE_WARN_MILLIS", "300").toLong()

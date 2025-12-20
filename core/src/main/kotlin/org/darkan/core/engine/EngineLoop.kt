@@ -1,15 +1,9 @@
 package org.darkan.core.engine
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Runnable
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logErrorToDatabase
-import org.darkan.core.Logger.logInfo
 import java.util.concurrent.TimeUnit
-import kotlin.Long
 import kotlin.properties.Delegates
 
 class EngineLoop(val steps: Array<Runnable>, val reportTickConcern: (Long, Map<String, Long>) -> Unit) {
