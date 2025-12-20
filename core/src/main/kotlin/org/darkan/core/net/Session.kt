@@ -1,8 +1,7 @@
 package org.darkan.core.net
 
 import io.ktor.utils.io.*
-import io.ktor.utils.io.core.ByteReadPacket
-import io.ktor.utils.io.core.remaining
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import kotlinx.io.Source
@@ -102,8 +101,22 @@ open class Session(
 
             when (encoder.size) {
                 is ProtSize.Fixed -> {
-                    writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
-                    encoder.encoder?.invoke(serverProt, write)
+                    if (EnvVars.packetValidateSizes && encoder.encoder != null) {
+                        val dataChannel = ByteChannel()
+                        encoder.encoder.invoke(serverProt, dataChannel)
+                        val packetData = dataChannel.toByteReadPacket()
+                        val packetLength = packetData.remaining.toInt()
+                        val expectedLength = encoder.size.length
+                        if (packetLength != expectedLength) {
+                            logWarn("Fixed packet size mismatch for ${serverProt::class}: expected=$expectedLength actual=$packetLength opcode=${encoder.opcode}")
+                        }
+
+                        writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
+                        write.writePacket(packetData)
+                    } else {
+                        writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
+                        encoder.encoder?.invoke(serverProt, write)
+                    }
                 }
                 ProtSize.VarByte, ProtSize.VarShort -> {
                     val dataChannel = ByteChannel()

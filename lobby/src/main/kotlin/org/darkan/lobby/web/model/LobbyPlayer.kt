@@ -5,13 +5,13 @@ import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logDebug
 import org.darkan.core.Logger.logError
 import org.darkan.core.generateRandomString
+import org.darkan.core.model.Account
+import org.darkan.core.model.Vars
 import org.darkan.core.net.Session
 import org.darkan.core.net.prot.LobbyLoginDetails
 import org.darkan.core.net.prot.Ping
 import org.darkan.core.net.prot.WorldListPacket
 import org.darkan.core.net.prot.handler.PacketHandlers
-import org.darkan.core.model.Account
-import org.darkan.core.model.Vars
 import org.darkan.lobby.Lobby
 
 class LobbyPlayer(val session: Session, val account: Account) {

@@ -1,11 +1,11 @@
 package org.darkan.core.net.prot
 
 import org.darkan.core.clientwatch.ReflectionCheck
-import org.darkan.core.social.ChatMessage
-import org.darkan.core.social.QuickChatMessage
 import org.darkan.core.model.Account
 import org.darkan.core.model.ChatMessageType
 import org.darkan.core.model.RegionSize
+import org.darkan.core.social.ChatMessage
+import org.darkan.core.social.QuickChatMessage
 import org.darkan.core.worldlist.WorldList
 import world.gregs.voidps.type.Tile
 
@@ -15,190 +15,347 @@ data class IfSetPlayerHead(val interfaceId: Int, val componentId: Int) : ServerP
 
 data class IfSetPlayerHeadIgnoreWorn(val interfaceId: Int, val componentId: Int, val identiKit1: Int, val identiKit2: Int, val identiKit3: Int) : ServerProt
 
-data class IfSetPlayerModel(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 72, size 4
-) : ServerProt
+data class IfSetPlayerModel(val interfaceId: Int, val componentId: Int) : ServerProt
 
 data class IfSetTextFont(val interfaceId: Int, val componentId: Int, val fontId: Int) : ServerProt
 
 data class IfMoveSub(val fromInterfaceId: Int, val fromComponentId: Int, val toInterfaceId: Int, val toComponentId: Int) : ServerProt
 
-data class IfOpenSubActiveObject(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 23, size 32
+data class IfOpenSubActiveObject(
+    val interfaceId: Int,
+    val componentId: Int,
+    val subInterfaceId: Int,
+    val overlay: Boolean,
+    val xteas: IntArray,
+    val objectId: Int,
+    val tile: Tile,
+    val type: Int,
+    val rotation: Int,
+) : ServerProt {
+    init {
+        require(xteas.size == 4) { "xteas must be length 4" }
+    }
+}
+
+data class IfSetHide(val interfaceId: Int, val componentId: Int, val hidden: Boolean) : ServerProt
+
+data class IfOpenSubActivePlayer(
+    val interfaceId: Int,
+    val componentId: Int,
+    val subInterfaceId: Int,
+    val overlay: Boolean,
+    val playerIndex: Int,
+    val xteas: IntArray,
+) : ServerProt {
+    init {
+        require(xteas.size == 4) { "xteas must be length 4" }
+    }
+}
+
+data class IfSetGraphic(val interfaceId: Int, val componentId: Int, val spriteId: Int) : ServerProt
+
+data class IfSetTextAntiMacro(val interfaceId: Int, val componentId: Int, val enabled: Boolean) : ServerProt
+
+data class IfOpenTop(
+    val interfaceId: Int,
+    val type: Int,
+    val xteas: IntArray,
+) : ServerProt {
+    init {
+        require(xteas.size == 4) { "xteas must be length 4" }
+    }
+}
+
+data class IfOpenSub(
+    val interfaceId: Int,
+    val componentId: Int,
+    val subInterfaceId: Int,
+    val overlay: Boolean,
+    val xteas: IntArray,
+) : ServerProt {
+    init {
+        require(xteas.size == 4) { "xteas must be length 4" }
+    }
+}
+
+data class IfSetAngle(val interfaceId: Int, val componentId: Int, val pitch: Int, val roll: Int, val scale: Int) : ServerProt
+
+data class IfSetPosition(val interfaceId: Int, val componentId: Int, val x: Int, val y: Int) : ServerProt
+
+data class IfSetPlayerModelOther(val interfaceId: Int, val componentId: Int, val primaryModelId: Int, val secondaryModelId: Int) : ServerProt
+
+data class IfSetScrollPos(val interfaceId: Int, val componentId: Int, val scrollPos: Int) : ServerProt
+
+data class IfOpenSubActiveNpc(
+    val interfaceId: Int,
+    val componentId: Int,
+    val subInterfaceId: Int,
+    val overlay: Boolean,
+    val npcIndex: Int,
+    val xteas: IntArray,
+) : ServerProt {
+    init {
+        require(xteas.size == 4) { "xteas must be length 4" }
+    }
+}
+
+data class IfCloseSub(val interfaceId: Int, val componentId: Int) : ServerProt
+
+data class IfSetAnim(val interfaceId: Int, val componentId: Int, val animationId: Int) : ServerProt
+
+data class IfSetColor(val interfaceId: Int, val componentId: Int, val color: Int) : ServerProt
+
+data class IfSetNpcHead(val interfaceId: Int, val componentId: Int, val npcId: Int) : ServerProt
+
+data class IfSetItem(val interfaceId: Int, val componentId: Int, val itemId: Int, val amount: Int) : ServerProt
+
+data class IfSetEvents(
+    val interfaceId: Int,
+    val componentId: Int,
+    val fromSlot: Int,
+    val toSlot: Int,
+    val settings: Int,
 ) : ServerProt
 
-data class IfSetHide(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 33, size 5
+data class IfSetText(val interfaceId: Int, val componentId: Int, val text: String) : ServerProt
+
+data class IfSetReTex(val interfaceId: Int, val componentId: Int, val index: Int, val fromTextureId: Int, val toTextureId: Int) : ServerProt
+
+data class IfSetModel(val interfaceId: Int, val componentId: Int, val modelId: Int) : ServerProt
+
+data class IfSetReCol(val interfaceId: Int, val componentId: Int, val index: Int, val fromColor: Int, val toColor: Int) : ServerProt
+
+data class IfSetTargetParam(
+    val interfaceId: Int,
+    val componentId: Int,
+    val targetInterfaceId: Int,
+    val fromSlot: Int,
+    val toSlot: Int,
 ) : ServerProt
 
-data class IfOpenSubActivePlayer(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 59, size 25
-) : ServerProt
+data class IfSetClickMask(val interfaceId: Int, val componentId: Int, val enabled: Boolean) : ServerProt
 
-data class IfSetGraphic(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 35, size 8
-) : ServerProt
+data class IfOpenSubActiveGroundItem(
+    val interfaceId: Int,
+    val componentId: Int,
+    val subInterfaceId: Int,
+    val overlay: Boolean,
+    val tile: Tile,
+    val itemId: Int,
+    val xteas: IntArray,
+) : ServerProt {
+    init {
+        require(xteas.size == 4) { "xteas must be length 4" }
+    }
+}
 
-data class IfSetTextAntiMacro(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 36, size 5
-) : ServerProt
-
-data class IfOpenTop(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 37, size 19
-) : ServerProt
-
-data class IfOpenSub(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 38, size 23
-) : ServerProt
-
-data class IfSetAngle(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 44, size 10
-) : ServerProt
-
-data class IfSetPosition(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 48, size 8
-) : ServerProt
-
-data class IfSetPlayerModelOther(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 53, size 10
-) : ServerProt
-
-data class IfSetScrollPos(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 55, size 6
-) : ServerProt
-
-data class IfOpenSubActiveNpc(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 34, size 25
-) : ServerProt
-
-data class IfCloseSub(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 78, size 4
-) : ServerProt
-
-data class IfSetAnim(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 82, size 8
-) : ServerProt
-
-data class IfSetColor(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 105, size 6
-) : ServerProt
-
-data class IfSetNpcHead(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 109, size 8
-) : ServerProt
-
-data class IfSetItem(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 112, size 10
-) : ServerProt
-
-data class IfSetEvents(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 121, size 12
-) : ServerProt
-
-data class IfSetText(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 124, size -2
-) : ServerProt
-
-data class IfSetReTex(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 132, size 9
-) : ServerProt
-
-data class IfSetModel(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 135, size 8
-) : ServerProt
-
-data class IfSetReCol(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 144, size 9
-) : ServerProt
-
-data class IfSetTargetParam(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 148, size 10
-) : ServerProt
-
-data class IfSetClickMask(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 150, size 5
-) : ServerProt
-
-data class IfOpenSubActiveGroundItem(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 155, size 29
-) : ServerProt
-
-data class IfSetPlayerHeadOther(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 158, size 10
+data class IfSetPlayerHeadOther(
+    val interfaceId: Int,
+    val componentId: Int,
+    val key: Int,
+    val value: Int,
 ) : ServerProt
 
 /**
  * Update and inventory protocols
  */
-data class UpdateInvPartial(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 4, size -2
+data class UpdateInvPartial(
+    val containerId: Int,
+    val negativeKey: Boolean,
+    val updates: Array<InvSlotUpdate>,
+) : ServerProt {
+    data class InvSlotUpdate(val slot: Int, val itemId: Int, val amount: Int)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as UpdateInvPartial
+        if (containerId != other.containerId) return false
+        if (negativeKey != other.negativeKey) return false
+        if (!updates.contentEquals(other.updates)) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = containerId
+        result = 31 * result + negativeKey.hashCode()
+        result = 31 * result + updates.contentHashCode()
+        return result
+    }
+}
+
+data class UpdateInvFull(
+    val containerId: Int,
+    val negativeKey: Boolean,
+    val itemIds: IntArray,
+    val amounts: IntArray,
+) : ServerProt {
+    init {
+        require(itemIds.size == amounts.size) { "itemIds and amounts must have same length" }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as UpdateInvFull
+        if (containerId != other.containerId) return false
+        if (negativeKey != other.negativeKey) return false
+        if (!itemIds.contentEquals(other.itemIds)) return false
+        if (!amounts.contentEquals(other.amounts)) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = containerId
+        result = 31 * result + negativeKey.hashCode()
+        result = 31 * result + itemIds.contentHashCode()
+        result = 31 * result + amounts.contentHashCode()
+        return result
+    }
+}
+
+data class NpcUpdate(val data: ByteArray) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as NpcUpdate
+        return data.contentEquals(other.data)
+    }
+
+    override fun hashCode(): Int = data.contentHashCode()
+}
+
+data class UpdateZoneFullFollows(val chunkX: Int, val chunkY: Int, val plane: Int) : ServerProt
+
+data class UpdateFriendchatChannelSingleUser(
+    val displayName: String,
+    val username: String = displayName,
+    val worldId: Int,
+    val rank: Int,
+    val worldName: String? = null,
 ) : ServerProt
 
-data class UpdateInvFull(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 5, size -2
-) : ServerProt
+data class UpdateZonePartialFollows(val chunkX: Int, val chunkY: Int, val plane: Int) : ServerProt
 
-data class NpcUpdate(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 6, size -2
-) : ServerProt
+data class UpdateInvStopTransmit(val containerId: Int, val negativeKey: Boolean) : ServerProt
 
-data class UpdateZoneFullFollows(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 15, size 3
-) : ServerProt
+data class PlayerUpdate(val data: ByteArray) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as PlayerUpdate
+        return data.contentEquals(other.data)
+    }
 
-data class UpdateFriendchatChannelSingleUser(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 19, size -1
-) : ServerProt
+    override fun hashCode(): Int = data.contentHashCode()
+}
 
-data class UpdateZonePartialFollows(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 41, size 3
-) : ServerProt
+data class NpcUpdateLarge(val data: ByteArray) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as NpcUpdateLarge
+        return data.contentEquals(other.data)
+    }
 
-data class UpdateInvStopTransmit(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 42, size 3
-) : ServerProt
+    override fun hashCode(): Int = data.contentHashCode()
+}
 
-data class PlayerUpdate(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 43, size -2
-) : ServerProt
+data class ClanChannelDelta(val main: Boolean, val data: ByteArray) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as ClanChannelDelta
+        if (main != other.main) return false
+        return data.contentEquals(other.data)
+    }
 
-data class NpcUpdateLarge(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 47, size -2
-) : ServerProt
+    override fun hashCode(): Int = 31 * main.hashCode() + data.contentHashCode()
+}
 
-data class ClanChannelDelta(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 28, size -2
-) : ServerProt
+data class ClanChannelFull(val main: Boolean, val data: ByteArray?) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as ClanChannelFull
+        if (main != other.main) return false
+        return data.contentEquals(other.data)
+    }
 
-data class ClanChannelFull(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 49, size -2
-) : ServerProt
+    override fun hashCode(): Int = 31 * main.hashCode() + (data?.contentHashCode() ?: 0)
+}
 
-data class ClanSettingsDelta(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 46, size -2
-) : ServerProt
+data class ClanSettingsDelta(val main: Boolean, val data: ByteArray) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as ClanSettingsDelta
+        if (main != other.main) return false
+        return data.contentEquals(other.data)
+    }
 
-data class ClanSettingsFull(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 137, size -2
-) : ServerProt
+    override fun hashCode(): Int = 31 * main.hashCode() + data.contentHashCode()
+}
 
-data class UpdateZonePartialEnclosed(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 65, size -2
-) : ServerProt
+data class ClanSettingsFull(val main: Boolean, val data: ByteArray?) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as ClanSettingsFull
+        if (main != other.main) return false
+        return data.contentEquals(other.data)
+    }
 
-data class UpdateGESlot(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 57, size 20
-) : ServerProt
+    override fun hashCode(): Int = 31 * main.hashCode() + (data?.contentHashCode() ?: 0)
+}
+
+data class UpdateZonePartialEnclosed(val chunkX: Int, val chunkY: Int, val plane: Int, val data: ByteArray) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as UpdateZonePartialEnclosed
+        if (chunkX != other.chunkX) return false
+        if (chunkY != other.chunkY) return false
+        if (plane != other.plane) return false
+        return data.contentEquals(other.data)
+    }
+
+    override fun hashCode(): Int {
+        var result = chunkX
+        result = 31 * result + chunkY
+        result = 31 * result + plane
+        result = 31 * result + data.contentHashCode()
+        return result
+    }
+}
+
+data class UpdateGESlot(val slot: Int, val offer: Offer?) : ServerProt {
+    data class Offer(
+        val progress: Int,
+        val itemId: Int,
+        val price: Int,
+        val amount: Int,
+        val currentAmount: Int,
+        val totalPrice: Int,
+    )
+}
 
 @JvmInline value class UpdateUid192(val data: ByteArray) : ServerProt
 
-data class UpdateIgnoreList(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 97, size -2
-) : ServerProt
+data class UpdateIgnoreList(val ignores: Array<IgnoreEntry>) : ServerProt {
+    data class IgnoreEntry(val username: String, val displayName: String)
 
-data class UpdateStat(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 140, size 6
-) : ServerProt
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as UpdateIgnoreList
+        return ignores.contentEquals(other.ignores)
+    }
+
+    override fun hashCode(): Int = ignores.contentHashCode()
+}
+
+data class UpdateStat(val xp: Int, val skillId: Int, val level: Int) : ServerProt
 
 /**
  * Region and map related protocols
@@ -301,150 +458,192 @@ data class BuildInstancedRegion(
     }
 }
 
-data class ShowFaceHere(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 21, size 1
+@JvmInline value class ShowFaceHere(val enabled: Boolean) : ServerProt
+
+data class MinimapFlag(val x: Int, val y: Int) : ServerProt
+
+/**
+ * Represents a single hint arrow slot update.
+ *
+ * - If [targetType] == 0, the hint arrow is cleared and other fields are ignored.
+ * - If [targetType] is 1 or 10, [targetIndex] and [denominator] are used.
+ * - Otherwise, [plane], [x], [y], [height], [distance] are used (tile based).
+ */
+data class HintArrow(
+    val iconIndex: Int,
+    val targetType: Int,
+    val arrowSprite: Int = 0,
+    val plane: Int = 0,
+    val x: Int = 0,
+    val y: Int = 0,
+    val height: Int = 0,
+    val distance: Int = 0,
+    val targetIndex: Int = 0,
+    val denominator: Int = 0,
+    val modelId: Int = 0,
 ) : ServerProt
 
-data class MinimapFlag(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 70, size 2
+data class HintTrail(val index: Int, val modelId: Int, val data: ByteArray) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as HintTrail
+        if (index != other.index) return false
+        if (modelId != other.modelId) return false
+        return data.contentEquals(other.data)
+    }
+
+    override fun hashCode(): Int {
+        var result = index
+        result = 31 * result + modelId
+        result = 31 * result + data.contentHashCode()
+        return result
+    }
+}
+
+data class MapProjAnim(
+    val localX: Int,
+    val localY: Int,
+    val xOffset: Int,
+    val yOffset: Int,
+    val lockOn: Int,
+    val spotAnimId: Int,
+    val startHeight: Int,
+    val endHeight: Int,
+    val startTime: Int,
+    val endTime: Int,
+    val angle: Int,
+    val slope: Int,
+    val useFloorHeight: Boolean,
 ) : ServerProt
 
-data class HintArrow(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 79, size 14
+data class MapProjAnimHalfSq(
+    val localX: Int,
+    val localY: Int,
+    val xOffset: Int,
+    val yOffset: Int,
+    val source: Int,
+    val lockOn: Int,
+    val spotAnimId: Int,
+    val startHeight: Int,
+    val endHeight: Int,
+    val startTime: Int,
+    val endTime: Int,
+    val angle: Int,
+    val slope: Int,
+    val basOffIdx: Int = -1,
+    val useFloorHeight: Boolean = false,
 ) : ServerProt
 
-data class HintTrail(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 149, size -2
-) : ServerProt
+@JvmInline value class SetDrawOrder(val playerFirst: Boolean) : ServerProt
 
-data class MapProjAnim(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 143, size 16
-) : ServerProt
-
-data class MapProjAnimHalfSq(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 95, size 17
-) : ServerProt
-
-data class SetDrawOrder(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 151, size 1
-) : ServerProt
-
-data class BlockMinimapState(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 154, size 1
-) : ServerProt
+@JvmInline value class BlockMinimapState(val state: Int) : ServerProt
 
 /**
  * Object and ground item protocols
  */
-data class GroundItemCount(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 3, size 7
+data class GroundItemCount(val localX: Int, val localY: Int, val itemId: Int, val oldAmount: Int, val newAmount: Int) : ServerProt
+
+data class CreateGroundItem(val localX: Int, val localY: Int, val itemId: Int, val amount: Int) : ServerProt
+
+data class GroundItemReveal(val playerId: Int, val localX: Int, val localY: Int, val itemId: Int, val amount: Int) : ServerProt
+
+data class RemoveGroundItem(val localX: Int, val localY: Int, val itemId: Int) : ServerProt
+
+data class DestroyObject(val localX: Int, val localY: Int, val shape: Int, val rotation: Int) : ServerProt
+
+data class ObjAnim(val localX: Int, val localY: Int, val shape: Int, val rotation: Int, val animationId: Int) : ServerProt
+
+data class ObjAnimSpecific(val tile: Tile, val shape: Int, val rotation: Int, val animationId: Int) : ServerProt
+
+data class CreateObject(val localX: Int, val localY: Int, val objectId: Int, val shape: Int, val rotation: Int) : ServerProt
+
+data class TileMessage(val localX: Int, val localY: Int, val priority: Int, val duration: Int, val color: Int, val message: String) : ServerProt
+
+data class CustomizeObject(
+    val localX: Int,
+    val localY: Int,
+    val objectId: Int,
+    val shape: Int,
+    val rotation: Int,
+    val clear: Boolean = false,
+    val modelIds: IntArray? = null,
+    val recolors: ShortArray? = null,
+    val retextures: ShortArray? = null,
 ) : ServerProt
 
-data class CreateGroundItem(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 27, size 5
-) : ServerProt
-
-data class GroundItemReveal(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 107, size 7
-) : ServerProt
-
-data class RemoveGroundItem(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 125, size 3
-) : ServerProt
-
-data class DestroyObject(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 69, size 2
-) : ServerProt
-
-data class ObjAnim(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 113, size 6
-) : ServerProt
-
-data class ObjAnimSpecific(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 80, size 9
-) : ServerProt
-
-data class CreateObject(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 117, size 6
-) : ServerProt
-
-data class TileMessage(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 114, size -1
-) : ServerProt
-
-data class CustomizeObject(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 84, size -1
-) : ServerProt
-
-data class ObjectPrefetch(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 88, size 5
-) : ServerProt
+data class ObjectPrefetch(val objectId: Int, val typeIndex: Int) : ServerProt
 
 /**
  * Animation related protocols
  */
-data class SpotAnim(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 139, size 8
+data class SpotAnim(val localX: Int, val localY: Int, val spotAnimId: Int, val height: Int, val speed: Int, val rotation: Int) : ServerProt
+
+data class SpotAnimSpecific(
+    val slot: Int,
+    val spotAnimId: Int,
+    val settings: Int,
+    val speed: Int,
+    val targetHash: Int,
+    val height: Int,
 ) : ServerProt
 
-data class SpotAnimSpecific(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 126, size 12
+data class AnimateNpc(val npcIndex: Int, val animationIds: IntArray, val speed: Int) : ServerProt {
+    init {
+        require(animationIds.size == 4) { "animationIds must be length 4" }
+    }
+}
+
+data class ProjAnimSpecific(
+    val endHeight: Int,
+    val source: Int,
+    val endTime: Int,
+    val lockOn: Int,
+    val flags: Int,
+    val y: Int,
+    val slope: Int,
+    val startTime: Int,
+    val spotAnimId: Int,
+    val angle: Int,
+    val xDist: Int,
+    val yDist: Int,
+    val x: Int,
+    val startHeight: Int,
 ) : ServerProt
 
-data class AnimateNpc(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 145, size 19
-) : ServerProt
-
-data class ProjAnimSpecific(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 56, size 22
-) : ServerProt
-
-data class ResetAllAnimations(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 122, size 0
-) : ServerProt
+@JvmInline value class ResetAllAnimations(val dummy: Int = 0) : ServerProt
 
 /**
  * Audio related protocols
  */
-data class VorbisSound(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 18, size 8
+data class VorbisSound(val soundId: Int, val repeat: Int, val delay: Int, val volume: Int, val sampleRate: Int) : ServerProt
+
+data class SoundEffectTile(
+    val localX: Int,
+    val localY: Int,
+    val soundId: Int,
+    val range: Int,
+    val mode: Int,
+    val delay: Int,
+    val volume: Int,
+    val sampleRate: Int,
 ) : ServerProt
 
-data class SoundEffectTile(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 128, size 6
-) : ServerProt
+data class VorbisSpeechSound(val soundId: Int, val soundType: Int, val delay: Int, val volume: Int) : ServerProt
 
-data class VorbisSpeechSound(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 104, size 6
-) : ServerProt
+data class SoundSynth(val soundId: Int, val flags: Int, val unknown: Int, val delay: Int, val unknown2: Int) : ServerProt
 
-data class SoundSynth(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 136, size 8
-) : ServerProt
+data class MusicEffect(val key: Int, val volume: Int, val musicId: Int) : ServerProt
 
-data class MusicEffect(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 60, size 6
-) : ServerProt
+data class MusicTrack(val key: Int, val flags: Int, val musicId: Int) : ServerProt
 
-data class MusicTrack(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 63, size 4
-) : ServerProt
+data class MusicTrackTile(val plane: Int, val x: Int, val y: Int, val near: Int, val far: Int, val volume: Int, val musicArchive: Int) : ServerProt
 
-data class MusicTrackTile(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 93, size 11
-) : ServerProt
+@JvmInline value class PreloadSong(val songId: Int) : ServerProt
 
-data class PreloadSong(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 77, size 2
-) : ServerProt
+data class SoundMixbussSetLevel(val level: Int, val index: Int) : ServerProt
 
-data class SoundMixbussSetLevel(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 134, size 2
-) : ServerProt
-
-data class ResetSounds(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 120, size 0
-) : ServerProt
+@JvmInline value class ResetSounds(val dummy: Int = 0) : ServerProt
 
 /**
  * Camera related protocols
@@ -516,73 +715,108 @@ data class PlayerOption(val option: String, val slot: Int, val top: Boolean, val
 
 @JvmInline value class RunEnergy(val energy: Int) : ServerProt
 
-data class FriendStatus(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 74, size -2
-) : ServerProt
+data class FriendStatus(val updates: Array<FriendStatusUpdate>) : ServerProt {
+    data class FriendStatusUpdate(
+        val warnMessage: Boolean,
+        val displayName: String,
+        val previousDisplayName: String,
+        val world: Int,
+        val friendsChatRank: Int,
+        val referrer: Boolean,
+        val worldName: String? = null,
+        val platform: Int = -1,
+        val worldFlags: Int = 0,
+    )
 
-data class FriendlistLoaded(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 101, size 0
-) : ServerProt
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as FriendStatus
+        return updates.contentEquals(other.updates)
+    }
 
-data class AddIgnore(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 138, size -1
-) : ServerProt
+    override fun hashCode(): Int = updates.contentHashCode()
+}
 
-data class ReduceAttackPriority(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 61, size 1
-) : ServerProt
+@JvmInline value class FriendlistLoaded(val dummy: Int = 0) : ServerProt
 
-data class SetTarget(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 129, size 2
-) : ServerProt
+data class AddIgnore(val username: String, val displayName: String, val temporary: Boolean = false, val editDisplayName: Boolean = false) : ServerProt
+
+@JvmInline value class ReduceAttackPriority(val enabled: Boolean) : ServerProt
+
+@JvmInline value class SetTarget(val target: Int) : ServerProt
 
 /**
  * Friend and clan chat protocols
  */
-data class FriendsChatChannel(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 127, size -2
-) : ServerProt
+data class FriendsChatChannel(
+    val clear: Boolean = false,
+    val ownerDisplayName: String? = null,
+    val ownerUsername: String? = ownerDisplayName,
+    val chatName: String? = null,
+    val minRankCanKick: Int = 0,
+    val players: Array<FriendsChatPlayer>? = null,
+) : ServerProt {
+    data class FriendsChatPlayer(
+        val displayName: String,
+        val username: String = displayName,
+        val worldId: Int,
+        val rank: Int,
+        val worldName: String,
+    )
+
+    init {
+        if (!clear) {
+            require(ownerDisplayName != null) { "ownerDisplayName is required unless clear=true" }
+            require(chatName != null) { "chatName is required unless clear=true" }
+        }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as FriendsChatChannel
+        if (clear != other.clear) return false
+        if (ownerDisplayName != other.ownerDisplayName) return false
+        if (ownerUsername != other.ownerUsername) return false
+        if (chatName != other.chatName) return false
+        if (minRankCanKick != other.minRankCanKick) return false
+        return players.contentEquals(other.players)
+    }
+
+    override fun hashCode(): Int {
+        var result = clear.hashCode()
+        result = 31 * result + (ownerDisplayName?.hashCode() ?: 0)
+        result = 31 * result + (ownerUsername?.hashCode() ?: 0)
+        result = 31 * result + (chatName?.hashCode() ?: 0)
+        result = 31 * result + minRankCanKick
+        result = 31 * result + (players?.contentHashCode() ?: 0)
+        return result
+    }
+}
 
 /**
  * Login and system related protocols
  */
-data class LogoutLobby(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 9, size 0
-) : ServerProt
+@JvmInline value class LogoutLobby(val dummy: Int = 0) : ServerProt
 
-data class LogoutFull(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 62, size 0
-) : ServerProt
+@JvmInline value class LogoutFull(val dummy: Int = 0) : ServerProt
 
-data class OpenUrl(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 16, size -2
-) : ServerProt
+data class OpenUrl(val url: String, val displayUrl: String? = null) : ServerProt
 
 data class WorldListPacket(val worldList: WorldList, val refreshOnClient: Boolean, val refreshOnlyPlayerCounts: Boolean) : ServerProt
 
-data class IdentifyHostName(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 147, size 4
-) : ServerProt
+@JvmInline value class IdentifyHostName(val ip: Int) : ServerProt
 
-data class UpdateRebootTimer(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 102, size 2
-) : ServerProt
+@JvmInline value class UpdateRebootTimer(val seconds: Int) : ServerProt
 
-data class RequestFps(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 159, size 8
-) : ServerProt
+data class RequestFps(val key: Int, val flags: Int) : ServerProt
 
-data class UpdateSitesettingsCookie(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 91, size -1
-) : ServerProt
+@JvmInline value class UpdateSitesettingsCookie(val dummy: Int = 0) : ServerProt
 
-data class ChatFilterSettings(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 30, size 2
-) : ServerProt
+data class ChatFilterSettings(val tradeFilter: Int, val publicFilter: Int) : ServerProt
 
-data class ChatFilterSettingsPrivateChat(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 67, size 1
-) : ServerProt
+@JvmInline value class ChatFilterSettingsPrivateChat(val privateFilter: Int) : ServerProt
 
 /**
  * Account related protocols
@@ -603,18 +837,14 @@ enum class CreateAccountReplyOpcode(val value: Int) {
 
 @JvmInline value class CreateAccountReply(val code: CreateAccountReplyOpcode) : ServerProt
 
-data class UpdateDob(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 157, size 4
-) : ServerProt
+data class UpdateDob(val dob: Int, val quickChatOnly: Boolean) : ServerProt
 
 /**
  * Miscellaneous protocols
  */
 class Pong : ServerProt
 
-data class ProcessDevConsoleCommand(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 2, size -1
-) : ServerProt
+@JvmInline value class ProcessDevConsoleCommand(val command: String) : ServerProt
 
 data class ReflectionRequest(val id: Int, val checks: Array<ReflectionCheck>) : ServerProt {
     override fun equals(other: Any?): Boolean {
@@ -633,49 +863,93 @@ data class ReflectionRequest(val id: Int, val checks: Array<ReflectionCheck>) : 
     }
 }
 
-data class RunCs2Script(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 99, size -2
-) : ServerProt
+data class RunCs2Script(val signature: String, val trigger: Int, val args: Array<Any?>) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as RunCs2Script
+        if (signature != other.signature) return false
+        if (trigger != other.trigger) return false
+        return args.contentEquals(other.args)
+    }
 
-data class SetCursor(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 153, size -1
-) : ServerProt
+    override fun hashCode(): Int {
+        var result = signature.hashCode()
+        result = 31 * result + trigger
+        result = 31 * result + args.contentHashCode()
+        return result
+    }
+}
 
-data class Cutscene(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 110, size -2
-) : ServerProt
+data class SetCursor(val cursorId: Int = -1, val uptext: String? = null) : ServerProt
 
-data class TriggerOnDialogAbort(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 146, size 0
-) : ServerProt
+data class Cutscene(val cutsceneId: Int, val mapXteas: Array<IntArray>, val data: ByteArray) : ServerProt {
+    init {
+        require(mapXteas.all { it.size == 4 }) { "Each xtea set must be length 4" }
+    }
 
-data class KeepAlive(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 29, size 0
-) : ServerProt
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as Cutscene
+        if (cutsceneId != other.cutsceneId) return false
+        if (!mapXteas.contentDeepEquals(other.mapXteas)) return false
+        return data.contentEquals(other.data)
+    }
 
-data class LoyaltyUpdate(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 32, size 5
-) : ServerProt
+    override fun hashCode(): Int {
+        var result = cutsceneId
+        result = 31 * result + mapXteas.contentDeepHashCode()
+        result = 31 * result + data.contentHashCode()
+        return result
+    }
+}
 
-data class JCoinsUpdate(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 75, size 4
-) : ServerProt
+@JvmInline value class TriggerOnDialogAbort(val dummy: Int = 0) : ServerProt
 
-data class ApplyDebug(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 76, size 2
-) : ServerProt
+@JvmInline value class KeepAlive(val dummy: Int = 0) : ServerProt
 
-data class QuickHopWorlds(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 58, size -1
-) : ServerProt
+data class LoyaltyUpdate(val balance: Int, val enabled: Boolean) : ServerProt
 
-data class DebugServerTriggers(val dummy: Int
-    // TODO: Add fields based on analysis of opcode 73, size -1
-) : ServerProt
+@JvmInline value class JCoinsUpdate(val amount: Int) : ServerProt
+
+@JvmInline value class ApplyDebug(val opcode: Int) : ServerProt
+
+data class QuickHopWorlds(val host: String, val port: Int, val reconnecting: Boolean) : ServerProt
+
+data class DebugServerTriggers(val interfaceId: Int, val fromComponent: Int, val toComponent: Int, val triggers: IntArray) : ServerProt {
+    init {
+        require(toComponent >= fromComponent) { "toComponent must be >= fromComponent" }
+        require(triggers.size == (toComponent - fromComponent)) { "triggers length must match component range" }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as DebugServerTriggers
+        if (interfaceId != other.interfaceId) return false
+        if (fromComponent != other.fromComponent) return false
+        if (toComponent != other.toComponent) return false
+        return triggers.contentEquals(other.triggers)
+    }
+
+    override fun hashCode(): Int {
+        var result = interfaceId
+        result = 31 * result + fromComponent
+        result = 31 * result + toComponent
+        result = 31 * result + triggers.contentHashCode()
+        return result
+    }
+}
 
 // Note: These pre-world packets would need special handling
-data class WorldLoginDetails(val dummy: Int
-    // TODO: Add fields based on analysis of pre-world opcode 2, size -1
+data class WorldLoginDetails(
+    val rights: Int,
+    val playerIndex: Int,
+    val displayName: String,
+    val unknownInt: Int,
+    val unknownBoolean: Boolean,
+    val members: Boolean,
 ) : ServerProt
 
 data class LobbyLoginDetails(val account: Account, val worldLoginToken: String) : ServerProt

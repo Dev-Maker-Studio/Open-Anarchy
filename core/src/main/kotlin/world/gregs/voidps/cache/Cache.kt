@@ -6,8 +6,6 @@ import world.gregs.voidps.cache.definition.data.VarBitDefinition
 import world.gregs.voidps.cache.definition.decoder.ObjectDecoder
 import world.gregs.voidps.cache.definition.decoder.VarBitDecoder
 import world.gregs.voidps.cache.secure.Huffman
-import java.util.*
-import kotlin.math.sin
 
 interface Cache {
 

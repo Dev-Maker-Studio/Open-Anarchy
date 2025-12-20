@@ -94,6 +94,21 @@ suspend fun ByteWriteChannel.writeSmart(value: Int) {
     }
 }
 
+/**
+ * Inverse of [world.gregs.voidps.buffer.read.Reader.readBigSmart] / [world.gregs.voidps.buffer.read.BufferReader.readBigSmart].
+ *
+ * - Encodes -1 as 32767 (ushort)
+ * - Encodes 0..32766 as ushort
+ * - Encodes 32767+ as int with the sign bit set (0x80000000)
+ */
+suspend fun ByteWriteChannel.writeBigSmart(value: Int) {
+    when {
+        value == -1 -> writeShort(32767)
+        value in 0..32766 -> writeShort(value)
+        else -> writeInt(value or 0x80000000.toInt())
+    }
+}
+
 suspend fun ByteWriteChannel.writeFlags(flags: Int) {
     var flags = flags
     while ((flags and 0x7F.inv()) != 0) {

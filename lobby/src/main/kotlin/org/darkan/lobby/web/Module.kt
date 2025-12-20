@@ -3,7 +3,7 @@ package org.darkan.lobby.web
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.server.plugins.requestvalidation.RequestValidation
+import io.ktor.server.plugins.requestvalidation.*
 import kotlinx.serialization.json.Json
 import org.darkan.core.net.web.installCoreValidators
 import org.darkan.core.net.web.installExceptions

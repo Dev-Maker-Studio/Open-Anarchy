@@ -9,7 +9,6 @@ import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
 import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.file.FileProvider
-import world.gregs.voidps.cache.file.prefetchKeys
 
 class JS5Server(val provider: FileProvider, val prefetchKeys: IntArray) {
     val limiter = MultilogLimiter()

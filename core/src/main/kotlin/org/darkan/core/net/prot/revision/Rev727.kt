@@ -9,10 +9,10 @@ import org.darkan.core.clientwatch.MouseTrailStep
 import org.darkan.core.clientwatch.MouseTrailStep.Type
 import org.darkan.core.clientwatch.ReflectionCheckType
 import org.darkan.core.clientwatch.ReflectionResponseCode
+import org.darkan.core.model.Preference
 import org.darkan.core.net.prot.*
 import org.darkan.core.social.QuickChatMessage
 import org.darkan.core.toInterfaceHash
-import org.darkan.core.model.Preference
 import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.secure.CRC
@@ -30,6 +30,14 @@ fun register727() =
          */
         //Utility/clientwatch
         clientProt<Ping>(opcode = 0)
+
+        clientProt(opcode = 39, size = ProtSize.VarByte) {
+            readUByte() // client-supplied payload length for the remaining fields; ignore
+            UnusedClanOp(
+                pid = readUShort().toInt(),
+                username = readRSString()
+            )
+        }
 
         clientProt(opcode = 36, size = ProtSize.VarByte) {
             val responseCode = ReflectionResponseCode.fromId(readByte().toInt()) ?: throw IllegalArgumentException("Invalid response code")
@@ -788,26 +796,69 @@ fun register727() =
         }
 
         serverProt<FriendStatus>(opcode = 74, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            for (update in updates) {
+                out.writeBoolean(update.warnMessage)
+                out.writeRSString(update.displayName)
+                out.writeRSString(update.previousDisplayName)
+                out.writeShort(update.world)
+                out.writeByte(update.friendsChatRank)
+                out.writeBoolean(update.referrer)
+                if (update.world > 0) {
+                    out.writeRSString(update.worldName ?: "")
+                    out.writeByte(update.platform)
+                    out.writeInt(update.worldFlags)
+                }
+            }
         }
 
         serverProt<FriendlistLoaded>(opcode = 101)
 
         serverProt<AddIgnore>(opcode = 138, size = ProtSize.VarByte) { out ->
-            // TODO: Implement serialization
+            var flags = 0
+            if (editDisplayName) flags = flags or 0x1
+            if (temporary) flags = flags or 0x2
+            out.writeByte(flags)
+            out.writeRSString(username)
+            out.writeRSString(displayName)
         }
 
         serverProt<ReduceAttackPriority>(opcode = 61, size = 1) { out ->
-            // TODO: Implement serialization
+            out.writeBooleanAdd(enabled)
         }
 
         serverProt<SetTarget>(opcode = 129, size = 2) { out ->
-            // TODO: Implement serialization
+            out.writeShortLittle(target)
         }
 
         // Friend and clan chat protocols
         serverProt<FriendsChatChannel>(opcode = 127, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            if (clear) {
+                return@serverProt
+            }
+            out.writeRSString(ownerDisplayName ?: "")
+            val nameChanged = ownerUsername != null && ownerUsername != ownerDisplayName
+            out.writeBoolean(nameChanged)
+            if (nameChanged) {
+                out.writeRSString(ownerUsername ?: ownerDisplayName ?: "")
+            }
+            out.writeLong(chatName ?: "")
+            out.writeByte(minRankCanKick)
+            if (players == null) {
+                out.writeByte(255)
+            } else {
+                out.writeByte(players.size)
+                for (player in players) {
+                    out.writeRSString(player.displayName)
+                    val changed = player.username != player.displayName
+                    out.writeBoolean(changed)
+                    if (changed) {
+                        out.writeRSString(player.username)
+                    }
+                    out.writeShort(player.worldId)
+                    out.writeByte(player.rank)
+                    out.writeRSString(player.worldName)
+                }
+            }
         }
 
         // Login and system related protocols
@@ -816,7 +867,12 @@ fun register727() =
         serverProt<LogoutFull>(opcode = 62)
 
         serverProt<OpenUrl>(opcode = 16, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            val hasDisplayUrl = displayUrl != null
+            out.writeBoolean(hasDisplayUrl)
+            out.writeRSString(url)
+            if (hasDisplayUrl) {
+                out.writeRSString(displayUrl?.ifEmpty { url } ?: url)
+            }
         }
 
         serverProt<WorldListPacket>(opcode = 103, size = ProtSize.VarShort) { out ->
@@ -860,27 +916,29 @@ fun register727() =
         }
 
         serverProt<IdentifyHostName>(opcode = 147, size = 4) { out ->
-            // TODO: Implement serialization
+            out.writeInt(ip)
         }
 
         serverProt<UpdateRebootTimer>(opcode = 102, size = 2) { out ->
-            // TODO: Implement serialization
+            out.writeShort(seconds)
         }
 
         serverProt<RequestFps>(opcode = 159, size = 8) { out ->
-            // TODO: Implement serialization
+            out.writeInt(key)
+            out.writeInt(flags)
         }
 
         serverProt<UpdateSitesettingsCookie>(opcode = 91, size = ProtSize.VarByte) { out ->
-            // TODO: Implement serialization
+            // Client no-ops this packet on non-applet builds. Send empty payload by default.
         }
 
         serverProt<ChatFilterSettings>(opcode = 30, size = 2) { out ->
-            // TODO: Implement serialization
+            out.writeByteInverse(tradeFilter)
+            out.writeByteAdd(publicFilter)
         }
 
         serverProt<ChatFilterSettingsPrivateChat>(opcode = 67, size = 1) { out ->
-            // TODO: Implement serialization
+            out.writeByte(privateFilter)
         }
 
         // Account related protocols
@@ -893,24 +951,49 @@ fun register727() =
         }
 
         serverProt<UpdateDob>(opcode = 157, size = 4) { out ->
-            // TODO: Implement serialization
+            out.writeMedium(dob)
+            out.writeBoolean(quickChatOnly)
         }
 
         // Miscellaneous protocols
         serverProt<ProcessDevConsoleCommand>(opcode = 2, size = ProtSize.VarByte) { out ->
-            // TODO: Implement serialization
+            out.writeRSString(command)
         }
 
         serverProt<RunCs2Script>(opcode = 99, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            require(args.size == signature.length) { "RunCs2Script args must match signature length" }
+            out.writeRSString(signature)
+            for (i in signature.length - 1 downTo 0) {
+                val type = signature[i]
+                val arg = args[i]
+                if (type == 's') {
+                    out.writeRSString(arg as? String ?: "")
+                } else {
+                    out.writeInt(arg as? Int ?: 0)
+                }
+            }
+            out.writeInt(trigger)
         }
 
         serverProt<SetCursor>(opcode = 153, size = ProtSize.VarByte) { out ->
-            // TODO: Implement serialization
+            if (uptext != null) {
+                out.writeRSString(uptext)
+                out.writeShort(if (cursorId == -1) 65535 else cursorId)
+            } else if (cursorId != -1) {
+                out.writeShort(cursorId)
+            }
         }
 
         serverProt<Cutscene>(opcode = 110, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeShort(cutsceneId)
+            out.writeShort(mapXteas.size)
+            for (keys in mapXteas) {
+                for (key in keys) {
+                    out.writeInt(key)
+                }
+            }
+            out.writeByte(data.size)
+            out.writeBytes(data)
         }
 
         serverProt<TriggerOnDialogAbort>(opcode = 146)
@@ -918,23 +1001,31 @@ fun register727() =
         serverProt<KeepAlive>(opcode = 29)
 
         serverProt<LoyaltyUpdate>(opcode = 32, size = 5) { out ->
-            // TODO: Implement serialization
+            out.writeInt(balance)
+            out.writeBooleanInverse(enabled)
         }
 
         serverProt<JCoinsUpdate>(opcode = 75, size = 4) { out ->
-            // TODO: Implement serialization
+            out.writeIntLittle(amount)
         }
 
         serverProt<ApplyDebug>(opcode = 76, size = 2) { out ->
-            // TODO: Implement serialization
+            out.writeShort(opcode)
         }
 
         serverProt<QuickHopWorlds>(opcode = 58, size = ProtSize.VarByte) { out ->
-            // TODO: Implement serialization
+            out.writeShort(port)
+            out.writeRSString(host)
+            out.writeBoolean(reconnecting)
         }
 
         serverProt<DebugServerTriggers>(opcode = 73, size = ProtSize.VarByte) { out ->
-            // TODO: Implement serialization
+            out.writeShort(interfaceId)
+            out.writeShort(fromComponent)
+            out.writeShort(toComponent)
+            for (trigger in triggers) {
+                out.writeMedium(trigger)
+            }
         }
 
         // Interface/UI related
@@ -960,176 +1051,317 @@ fun register727() =
         }
 
         serverProt<IfOpenSubActiveObject>(opcode = 23, size = 32) { out ->
-            // TODO: Implement serialization
+            out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
+            out.writeIntInverseMiddle(xteas[2])
+            out.writeByteAdd(if (overlay) 1 else 0)
+            out.writeInt(xteas[1])
+            out.writeIntMiddle(xteas[0])
+            out.writeShortAdd(subInterfaceId)
+            out.writeByteSubtract((type shl 2) or (rotation and 0x3))
+            out.writeInt(xteas[3])
+            out.writeIntInverseMiddle(tile.id)
+            out.writeInt(objectId)
         }
 
         serverProt<IfSetHide>(opcode = 33, size = 5) { out ->
-            // TODO: Implement serialization
+            out.writeByteAdd(if (hidden) 1 else 0)
+            out.writeInt(toInterfaceHash(interfaceId, componentId))
         }
 
         serverProt<IfOpenSubActivePlayer>(opcode = 59, size = 25) { out ->
-            // TODO: Implement serialization
+            out.writeIntLittle(xteas[3])
+            out.writeByte(if (overlay) 1 else 0)
+            out.writeIntMiddle(xteas[0])
+            out.writeShort(subInterfaceId)
+            out.writeInt(xteas[1])
+            out.writeIntMiddle(toInterfaceHash(interfaceId, componentId))
+            out.writeIntMiddle(xteas[2])
+            out.writeShortLittle(playerIndex)
         }
 
         serverProt<IfSetGraphic>(opcode = 35, size = 8) { out ->
-            // TODO: Implement serialization
+            out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
+            out.writeIntInverseMiddle(spriteId)
         }
 
         serverProt<IfSetTextAntiMacro>(opcode = 36, size = 5) { out ->
-            // TODO: Implement serialization
+            out.writeByteSubtract(if (enabled) 1 else 0)
+            out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
         }
 
         serverProt<IfOpenTop>(opcode = 37, size = 19) { out ->
-            // TODO: Implement serialization
+            out.writeIntMiddle(xteas[2])
+            out.writeIntMiddle(xteas[3])
+            out.writeShortAdd(interfaceId)
+            out.writeByteSubtract(type)
+            out.writeInt(xteas[1])
+            out.writeInt(xteas[0])
         }
 
         serverProt<IfOpenSub>(opcode = 38, size = 23) { out ->
-            // TODO: Implement serialization
+            out.writeInt(xteas[0])
+            out.writeIntInverseMiddle(xteas[2])
+            out.writeIntInverseMiddle(xteas[1])
+            out.writeShortAddLittle(subInterfaceId)
+            out.writeIntLittle(xteas[3])
+            out.writeInt(toInterfaceHash(interfaceId, componentId))
+            out.writeByteInverse(if (overlay) 1 else 0)
         }
 
         serverProt<IfSetAngle>(opcode = 44, size = 10) { out ->
-            // TODO: Implement serialization
+            out.writeInt(toInterfaceHash(interfaceId, componentId))
+            out.writeShortLittle(pitch)
+            out.writeShortLittle(roll)
+            out.writeShortAddLittle(scale)
         }
 
         serverProt<IfSetPosition>(opcode = 48, size = 8) { out ->
-            // TODO: Implement serialization
+            out.writeShortAdd(y)
+            out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
+            out.writeShortAddLittle(x)
         }
 
         serverProt<IfSetPlayerModelOther>(opcode = 53, size = 10) { out ->
-            // TODO: Implement serialization
+            out.writeShortAdd(primaryModelId)
+            out.writeIntMiddle(toInterfaceHash(interfaceId, componentId))
+            out.writeIntMiddle(secondaryModelId)
         }
 
         serverProt<IfSetScrollPos>(opcode = 55, size = 6) { out ->
-            // TODO: Implement serialization
+            out.writeShort(scrollPos)
+            out.writeInt(toInterfaceHash(interfaceId, componentId))
         }
 
         serverProt<IfOpenSubActiveNpc>(opcode = 34, size = 25) { out ->
-            // TODO: Implement serialization
+            out.writeShortAdd(npcIndex)
+            out.writeIntLittle(xteas[1])
+            out.writeByteInverse(if (overlay) 1 else 0)
+            out.writeInt(toInterfaceHash(interfaceId, componentId))
+            out.writeIntLittle(xteas[3])
+            out.writeShortAddLittle(subInterfaceId)
+            out.writeInt(xteas[2])
+            out.writeInt(xteas[0])
         }
 
         serverProt<IfSetPlayerModel>(opcode = 72, size = 4) { out ->
-            // TODO: Implement serialization
+            out.writeIntMiddle(toInterfaceHash(interfaceId, componentId))
         }
 
         serverProt<IfCloseSub>(opcode = 78, size = 4) { out ->
-            // TODO: Implement serialization
+            out.writeInt(toInterfaceHash(interfaceId, componentId))
         }
 
         serverProt<IfSetAnim>(opcode = 82, size = 8) { out ->
-            // TODO: Implement serialization
+            out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
+            out.writeInt(animationId)
         }
 
         serverProt<IfSetColor>(opcode = 105, size = 6) { out ->
-            // TODO: Implement serialization
+            out.writeIntLittle(toInterfaceHash(interfaceId, componentId))
+            out.writeShortAdd(color)
         }
 
         serverProt<IfSetNpcHead>(opcode = 109, size = 8) { out ->
-            // TODO: Implement serialization
+            out.writeIntLittle(toInterfaceHash(interfaceId, componentId))
+            out.writeIntMiddle(npcId)
         }
 
         serverProt<IfSetItem>(opcode = 112, size = 10) { out ->
-            // TODO: Implement serialization
+            out.writeShort(if (itemId == -1) 65535 else itemId)
+            out.writeInt(toInterfaceHash(interfaceId, componentId))
+            out.writeIntInverseMiddle(amount)
         }
 
         serverProt<IfSetEvents>(opcode = 121, size = 12) { out ->
-            // TODO: Implement serialization
+            out.writeShortAddLittle(if (toSlot == -1) 65535 else toSlot)
+            out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
+            out.writeShort(if (fromSlot == -1) 65535 else fromSlot)
+            out.writeIntLittle(settings)
         }
 
         serverProt<IfSetText>(opcode = 124, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeRSString(text)
+            out.writeIntMiddle(toInterfaceHash(interfaceId, componentId))
         }
 
         serverProt<IfSetReTex>(opcode = 132, size = 9) { out ->
-            // TODO: Implement serialization
+            out.writeShortLittle(fromTextureId)
+            out.writeShort(toTextureId)
+            out.writeByteSubtract(index)
+            out.writeIntLittle(toInterfaceHash(interfaceId, componentId))
         }
 
         serverProt<IfSetModel>(opcode = 135, size = 8) { out ->
-            // TODO: Implement serialization
+            out.writeInt(toInterfaceHash(interfaceId, componentId))
+            out.writeIntInverseMiddle(modelId)
         }
 
         serverProt<IfSetReCol>(opcode = 144, size = 9) { out ->
-            // TODO: Implement serialization
+            out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
+            out.writeShortLittle(fromColor)
+            out.writeShortLittle(toColor)
+            out.writeByte(index)
         }
 
         serverProt<IfSetTargetParam>(opcode = 148, size = 10) { out ->
-            // TODO: Implement serialization
+            out.writeIntMiddle(toInterfaceHash(interfaceId, componentId))
+            out.writeShortAddLittle(targetInterfaceId)
+            out.writeShort(if (toSlot == -1) 65535 else toSlot)
+            out.writeShortAdd(if (fromSlot == -1) 65535 else fromSlot)
         }
 
         serverProt<IfSetClickMask>(opcode = 150, size = 5) { out ->
-            // TODO: Implement serialization
+            out.writeByteSubtract(if (enabled) 1 else 0)
+            out.writeIntLittle(toInterfaceHash(interfaceId, componentId))
         }
 
         serverProt<IfOpenSubActiveGroundItem>(opcode = 155, size = 29) { out ->
-            // TODO: Implement serialization
+            out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
+            out.writeIntLittle(xteas[2])
+            out.writeShortLittle(subInterfaceId)
+            out.writeInt(xteas[3])
+            out.writeIntMiddle(xteas[0])
+            out.writeByteSubtract(if (overlay) 1 else 0)
+            out.writeIntMiddle(tile.id)
+            out.writeIntMiddle(xteas[1])
+            out.writeShortAddLittle(itemId)
         }
 
         serverProt<IfSetPlayerHeadOther>(opcode = 158, size = 10) { out ->
-            // TODO: Implement serialization
+            out.writeInt(key)
+            out.writeShortAddLittle(value)
+            out.writeIntMiddle(toInterfaceHash(interfaceId, componentId))
         }
 
         // Update and inventory protocols
         serverProt<UpdateInvPartial>(opcode = 4, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeShort(containerId)
+            out.writeByte(if (negativeKey) 1 else 0)
+            for (update in updates) {
+                out.writeSmart(update.slot)
+                if (update.itemId == -1) {
+                    out.writeShort(0)
+                } else {
+                    out.writeShort(update.itemId + 1)
+                    if (update.amount >= 255) {
+                        out.writeByte(255)
+                        out.writeInt(update.amount)
+                    } else {
+                        out.writeByte(update.amount)
+                    }
+                }
+            }
         }
 
         serverProt<UpdateInvFull>(opcode = 5, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeShort(containerId)
+            out.writeByte(if (negativeKey) 1 else 0)
+            out.writeShort(itemIds.size)
+            for (i in itemIds.indices) {
+                val amount = amounts[i]
+                if (amount >= 255) {
+                    out.writeByteSubtract(255)
+                    out.writeIntInverseMiddle(amount)
+                } else {
+                    out.writeByteSubtract(amount)
+                }
+                out.writeShortAddLittle(itemIds[i] + 1)
+            }
         }
 
         serverProt<UpdateZoneFullFollows>(opcode = 15, size = 3) { out ->
-            // TODO: Implement serialization
+            out.writeByteSubtract(chunkX)
+            out.writeByte(chunkY)
+            out.writeByte(plane)
         }
 
         serverProt<TileMessage>(opcode = 114, size = ProtSize.VarByte) { out ->
-            // TODO: Implement serialization
+            out.writeByte(0) // Unused
+            out.writeByte((localX shl 4) or (localY and 0x7))
+            out.writeShort(priority)
+            out.writeByte(duration)
+            out.writeMedium(color)
+            out.writeRSString(message)
         }
 
         serverProt<UpdateFriendchatChannelSingleUser>(opcode = 19, size = ProtSize.VarByte) { out ->
-            // TODO: Implement serialization
+            out.writeRSString(displayName)
+            val changedName = username != displayName
+            out.writeBoolean(changedName)
+            if (changedName) {
+                out.writeRSString(username)
+            }
+            out.writeShort(worldId)
+            out.writeByte(rank)
+            if (rank != -128) {
+                out.writeRSString(worldName ?: "")
+            }
         }
 
         serverProt<UpdateZonePartialFollows>(opcode = 41, size = 3) { out ->
-            // TODO: Implement serialization
+            out.writeByteAdd(chunkY)
+            out.writeByteAdd(plane)
+            out.writeByteAdd(chunkX)
         }
 
         serverProt<UpdateInvStopTransmit>(opcode = 42, size = 3) { out ->
-            // TODO: Implement serialization
+            out.writeByteInverse(if (negativeKey) 1 else 0)
+            out.writeShortLittle(containerId)
         }
 
         serverProt<PlayerUpdate>(opcode = 43, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeBytes(data)
         }
 
         serverProt<NpcUpdateLarge>(opcode = 47, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeBytes(data)
         }
 
         serverProt<NpcUpdate>(opcode = 6, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeBytes(data)
         }
 
         serverProt<ClanChannelDelta>(opcode = 28, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeBoolean(main)
+            out.writeBytes(data)
         }
 
         serverProt<ClanChannelFull>(opcode = 49, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeBoolean(main)
+            data?.let { out.writeBytes(it) }
         }
 
         serverProt<ClanSettingsDelta>(opcode = 46, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeBoolean(main)
+            out.writeBytes(data)
         }
 
         serverProt<ClanSettingsFull>(opcode = 137, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeBoolean(main)
+            data?.let { out.writeBytes(it) }
         }
 
         serverProt<UpdateZonePartialEnclosed>(opcode = 65, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeByteSubtract(chunkY)
+            out.writeByteAdd(plane)
+            out.writeByte(chunkX)
+            out.writeBytes(data)
         }
 
         serverProt<UpdateGESlot>(opcode = 57, size = 20) { out ->
-            // TODO: Implement serialization
+            out.writeByte(slot)
+            val offer = offer
+            if (offer == null) {
+                out.writeByte(0)
+                out.writeBytes(ByteArray(18))
+            } else {
+                out.writeByte(offer.progress)
+                out.writeShort(offer.itemId)
+                out.writeInt(offer.price)
+                out.writeInt(offer.amount)
+                out.writeInt(offer.currentAmount)
+                out.writeInt(offer.totalPrice)
+            }
         }
 
         serverProt<UpdateUid192>(opcode = 90, size = 28) { out ->
@@ -1138,140 +1370,286 @@ fun register727() =
         }
 
         serverProt<UpdateIgnoreList>(opcode = 97, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeByte(ignores.size)
+            for (ignore in ignores) {
+                out.writeRSString(ignore.username)
+                out.writeRSString(ignore.displayName)
+            }
         }
 
         serverProt<UpdateStat>(opcode = 140, size = 6) { out ->
-            // TODO: Implement serialization
+            out.writeInt(xp)
+            out.writeByte(skillId)
+            out.writeByte(level)
         }
 
         serverProt<ShowFaceHere>(opcode = 21, size = 1) { out ->
-            // TODO: Implement serialization
+            out.writeBoolean(enabled)
         }
 
         serverProt<MinimapFlag>(opcode = 70, size = 2) { out ->
-            // TODO: Implement serialization
+            if (x < 0 || y < 0) {
+                out.writeByteSubtract(255)
+                out.writeByteSubtract(255)
+            } else {
+                out.writeByteSubtract(x)
+                out.writeByteSubtract(y)
+            }
         }
 
         serverProt<HintArrow>(opcode = 79, size = 14) { out ->
-            // TODO: Implement serialization
+            val flags = ((iconIndex and 0x7) shl 5) or (targetType and 0x1F)
+            out.writeByte(flags)
+            if (targetType == 0) {
+                out.writeBytes(ByteArray(13))
+                return@serverProt
+            }
+            out.writeByte(arrowSprite)
+            if (targetType == 1 || targetType == 10) {
+                out.writeShort(targetIndex)
+                out.writeShort(denominator)
+                out.writeInt(0) // unused 4 bytes
+            } else {
+                out.writeByte(plane)
+                out.writeShort(x)
+                out.writeShort(y)
+                out.writeByte(height shr 2)
+                out.writeShort(distance)
+            }
+            out.writeInt(modelId)
         }
 
         serverProt<HintTrail>(opcode = 149, size = ProtSize.VarShort) { out ->
-            // TODO: Implement serialization
+            out.writeByte(index)
+            out.writeBigSmart(modelId)
+            out.writeBytes(data)
         }
 
         serverProt<MapProjAnim>(opcode = 143, size = 16) { out ->
-            // TODO: Implement serialization
+            val flags = (if (useFloorHeight) 0x80 else 0) or ((localX and 0x7) shl 3) or (localY and 0x7)
+            out.writeByte(flags)
+            out.writeByte(xOffset)
+            out.writeByte(yOffset)
+            out.writeShort(lockOn)
+            out.writeShort(spotAnimId)
+            out.writeByte(startHeight / 4)
+            out.writeByte(endHeight / 4)
+            out.writeShort(startTime)
+            out.writeShort(endTime)
+            out.writeByte(if (angle == -1) 255 else angle)
+            out.writeShort(slope)
         }
 
-        serverProt<MapProjAnimHalfSq>(opcode = 95, size = 17) { out ->
-            // TODO: Implement serialization
+        serverProt<MapProjAnimHalfSq>(opcode = 95, size = 19) { out ->
+            val coords = ((localX and 0xF) shl 4) or (localY and 0xF)
+            out.writeByte(coords)
+            val hasBas = basOffIdx != -1
+            val flags = (if (useFloorHeight) 0x1 else 0) or (if (hasBas) 0x2 else 0) or (if (hasBas) (basOffIdx shl 2) else 0)
+            out.writeByte(flags)
+            out.writeByte(xOffset)
+            out.writeByte(yOffset)
+            out.writeShort(source)
+            out.writeShort(lockOn)
+            out.writeShort(spotAnimId)
+            if (hasBas) {
+                out.writeByte(startHeight)
+            } else {
+                out.writeByte(startHeight / 4)
+            }
+            out.writeByte(endHeight / 4)
+            out.writeShort(startTime)
+            out.writeShort(endTime)
+            out.writeByte(if (angle == -1) 255 else angle)
+            out.writeShort(slope)
         }
 
         serverProt<SetDrawOrder>(opcode = 151, size = 1) { out ->
-            // TODO: Implement serialization
+            out.writeBooleanInverse(playerFirst)
         }
 
         serverProt<BlockMinimapState>(opcode = 154, size = 1) { out ->
-            // TODO: Implement serialization
+            out.writeByte(state)
         }
 
         // Object and ground item protocols
         serverProt<GroundItemCount>(opcode = 3, size = 7) { out ->
-            // TODO: Implement serialization
+            out.writeByte((localX shl 4) or (localY and 0x7))
+            out.writeShort(itemId)
+            out.writeShort(oldAmount)
+            out.writeShort(newAmount)
         }
 
         serverProt<CreateGroundItem>(opcode = 27, size = 5) { out ->
-            // TODO: Implement serialization
+            out.writeShortAddLittle(amount)
+            out.writeShortAdd(itemId)
+            out.writeByteInverse((localX shl 4) or (localY and 0x7))
         }
 
         serverProt<GroundItemReveal>(opcode = 107, size = 7) { out ->
-            // TODO: Implement serialization
+            out.writeShort(playerId)
+            out.writeByte((localX shl 4) or (localY and 0x7))
+            out.writeShortAddLittle(amount)
+            out.writeShortAddLittle(itemId)
         }
 
         serverProt<RemoveGroundItem>(opcode = 125, size = 3) { out ->
-            // TODO: Implement serialization
+            out.writeByteInverse((localX shl 4) or (localY and 0x7))
+            out.writeShortAddLittle(itemId)
         }
 
         serverProt<DestroyObject>(opcode = 69, size = 2) { out ->
-            // TODO: Implement serialization
+            out.writeByteAdd((shape shl 2) or (rotation and 0x3))
+            out.writeByte((localX shl 4) or (localY and 0x7))
         }
 
         serverProt<ObjAnim>(opcode = 113, size = 6) { out ->
-            // TODO: Implement serialization
+            out.writeByteSubtract((shape shl 2) or (rotation and 0x3))
+            out.writeByteSubtract((localX shl 4) or (localY and 0x7))
+            out.writeIntLittle(animationId)
         }
 
         serverProt<ObjAnimSpecific>(opcode = 80, size = 9) { out ->
-            // TODO: Implement serialization
+            out.writeIntInverseMiddle(tile.id)
+            out.writeIntLittle(animationId)
+            out.writeByteSubtract((shape shl 2) or (rotation and 0x3))
         }
 
         serverProt<CreateObject>(opcode = 117, size = 6) { out ->
-            // TODO: Implement serialization
+            out.writeInt(objectId)
+            out.writeByteSubtract((localX shl 4) or (localY and 0x7))
+            out.writeByteSubtract((shape shl 2) or (rotation and 0x3))
         }
 
         serverProt<CustomizeObject>(opcode = 84, size = ProtSize.VarByte) { out ->
-            // TODO: Implement serialization
+            out.writeInt(objectId)
+            out.writeByteAdd((shape shl 2) or (rotation and 0x3))
+            var flags = 0
+            if (clear) {
+                flags = flags or 0x1
+            } else {
+                if (modelIds != null) flags = flags or 0x2
+                if (recolors != null) flags = flags or 0x4
+                if (retextures != null) flags = flags or 0x8
+            }
+            out.writeByte(flags)
+            out.writeByteAdd((localX shl 4) or (localY and 0x7))
+            if (!clear) {
+                modelIds?.forEach { out.writeInt(it) }
+                recolors?.forEach { out.writeShort(it.toInt() and 0xFFFF) }
+                retextures?.forEach { out.writeShort(it.toInt() and 0xFFFF) }
+            }
         }
 
         serverProt<ObjectPrefetch>(opcode = 88, size = 5) { out ->
-            // TODO: Implement serialization
+            out.writeInt(objectId)
+            out.writeByte(typeIndex)
         }
 
         // Animation related protocols
         serverProt<SpotAnim>(opcode = 139, size = 8) { out ->
-            // TODO: Implement serialization
+            out.writeByte((localX shl 4) or (localY and 0x7))
+            out.writeShort(if (spotAnimId == -1) 65535 else spotAnimId)
+            out.writeShort(height)
+            out.writeShort(speed)
+            out.writeByte(rotation)
         }
 
         serverProt<SpotAnimSpecific>(opcode = 126, size = 12) { out ->
-            // TODO: Implement serialization
+            out.writeByteInverse(slot)
+            out.writeShortAdd(if (spotAnimId == -1) 65535 else spotAnimId)
+            out.writeByteInverse(settings)
+            out.writeShortAdd(speed)
+            out.writeIntLittle(targetHash)
+            out.writeShortLittle(height)
         }
 
         serverProt<AnimateNpc>(opcode = 145, size = 19) { out ->
-            // TODO: Implement serialization
+            out.writeShortAddLittle(npcIndex)
+            for (id in animationIds) {
+                out.writeIntLittle(id)
+            }
+            out.writeByte(speed)
         }
 
         serverProt<ProjAnimSpecific>(opcode = 56, size = 22) { out ->
-            // TODO: Implement serialization
+            out.writeByteAdd(endHeight / 4)
+            out.writeShortAddLittle(source)
+            out.writeShortLittle(endTime)
+            out.writeShort(lockOn)
+            out.writeByteAdd(flags)
+            out.writeShortAdd(y)
+            out.writeShort(slope)
+            out.writeShortAddLittle(startTime)
+            out.writeShortAddLittle(spotAnimId)
+            out.writeByteAdd(if (angle == -1) 255 else angle)
+            out.writeByteInverse(xDist)
+            out.writeByteInverse(yDist)
+            out.writeShortAdd(x)
+            out.writeByteInverse(startHeight)
         }
 
         serverProt<ResetAllAnimations>(opcode = 122)
 
         // Audio related protocols
         serverProt<VorbisSound>(opcode = 18, size = 8) { out ->
-            // TODO: Implement serialization
+            out.writeShort(if (soundId == -1) 65535 else soundId)
+            out.writeByte(repeat)
+            out.writeShort(delay)
+            out.writeByte(volume)
+            out.writeShort(sampleRate)
         }
 
-        serverProt<SoundEffectTile>(opcode = 128, size = 6) { out ->
-            // TODO: Implement serialization
+        serverProt<SoundEffectTile>(opcode = 128, size = 8) { out ->
+            out.writeByte((localX shl 4) or (localY and 0x7))
+            out.writeShort(if (soundId == -1) 65535 else soundId)
+            out.writeByte(((range and 0xF) shl 4) or (mode and 0x7))
+            out.writeByte(delay)
+            out.writeByte(volume)
+            out.writeShort(sampleRate)
         }
 
         serverProt<VorbisSpeechSound>(opcode = 104, size = 6) { out ->
-            // TODO: Implement serialization
+            out.writeShort(if (soundId == -1) 65535 else soundId)
+            out.writeByte(soundType)
+            out.writeShort(delay)
+            out.writeByte(volume)
         }
 
         serverProt<SoundSynth>(opcode = 136, size = 8) { out ->
-            // TODO: Implement serialization
+            out.writeShort(if (soundId == -1) 65535 else soundId)
+            out.writeByte(flags)
+            out.writeShort(unknown)
+            out.writeByte(delay)
+            out.writeShort(unknown2)
         }
 
         serverProt<MusicEffect>(opcode = 60, size = 6) { out ->
-            // TODO: Implement serialization
+            out.writeMediumReverseEnd(key)
+            out.writeByteSubtract(volume)
+            out.writeShortLittle(if (musicId == -1) 65535 else musicId)
         }
 
         serverProt<MusicTrack>(opcode = 63, size = 4) { out ->
-            // TODO: Implement serialization
+            out.writeByteAdd(key)
+            out.writeByteAdd(flags)
+            out.writeShortAdd(if (musicId == -1) 65535 else musicId)
         }
 
         serverProt<MusicTrackTile>(opcode = 93, size = 11) { out ->
-            // TODO: Implement serialization
+            out.writeByteSubtract(near)
+            out.writeByte(volume)
+            out.writeByteInverse(far)
+            out.writeInt(musicArchive)
+            out.writeIntMiddle((plane shl 28) or (x shl 14) or (y and 0x3FFF))
         }
 
         serverProt<PreloadSong>(opcode = 77, size = 2) { out ->
-            // TODO: Implement serialization
+            out.writeShortAddLittle(if (songId == -1) 65535 else songId)
         }
 
         serverProt<SoundMixbussSetLevel>(opcode = 134, size = 2) { out ->
-            // TODO: Implement serialization
+            out.writeByte(level)
+            out.writeByteInverse(index)
         }
 
         serverProt<ResetSounds>(opcode = 120)

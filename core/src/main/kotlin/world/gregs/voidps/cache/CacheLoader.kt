@@ -1,13 +1,11 @@
 package world.gregs.voidps.cache
 
 import org.darkan.core.EnvVars
-import org.darkan.core.Logger.logInfo
 import world.gregs.voidps.cache.secure.VersionTableBuilder
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.RandomAccessFile
 import java.math.BigInteger
-import java.util.*
 
 interface CacheLoader {
 

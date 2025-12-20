@@ -1,7 +1,6 @@
 package org.darkan.core.net.web
 
-import io.ktor.server.plugins.requestvalidation.RequestValidationConfig
-import io.ktor.server.plugins.requestvalidation.ValidationResult
+import io.ktor.server.plugins.requestvalidation.*
 import org.darkan.core.isValidAccountName
 import org.darkan.core.isValidEmail
 import org.darkan.core.isValidPassword

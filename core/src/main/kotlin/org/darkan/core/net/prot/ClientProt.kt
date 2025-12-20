@@ -142,6 +142,14 @@ data class FcSetRank(val username: String, val rank: Int) : ClientProt
 // Clan Chat
 data class ClanChannelKickUser(val guest: Boolean, val pid: Int, val username: String) : ClientProt
 
+/**
+ * ClientProt opcode 39 in the 727 client (`UNUSED_CLAN_OP` in `darkan-bot`).
+ *
+ * The client currently writes an extra leading byte (payload size of the following fields).
+ * We decode and ignore it.
+ */
+data class UnusedClanOp(val pid: Int, val username: String) : ClientProt
+
 // Game State
 @JvmInline value class RegionLoadedConfirm(val dummy: Int = 0) : ClientProt
 @JvmInline value class SoundEffectMusicEnded(val musicId: Int) : ClientProt
