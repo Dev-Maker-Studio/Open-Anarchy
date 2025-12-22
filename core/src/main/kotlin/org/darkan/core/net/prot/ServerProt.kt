@@ -214,16 +214,14 @@ data class UpdateInvFull(
     }
 }
 
-data class NpcUpdate(val data: ByteArray) : ServerProt {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as NpcUpdate
-        return data.contentEquals(other.data)
-    }
-
-    override fun hashCode(): Int = data.contentHashCode()
-}
+/**
+ * NPC update (small scene view).
+ *
+ * The actual on-wire byte stream is revision-specific and is encoded via the revision [Codec]'s npcUpdate encoder.
+ */
+data class NpcUpdate(
+    val packet: org.darkan.core.net.prot.update.NpcUpdatePacket,
+) : ServerProt
 
 data class UpdateZoneFullFollows(val chunkX: Int, val chunkY: Int, val plane: Int) : ServerProt
 
@@ -239,27 +237,23 @@ data class UpdateZonePartialFollows(val chunkX: Int, val chunkY: Int, val plane:
 
 data class UpdateInvStopTransmit(val containerId: Int, val negativeKey: Boolean) : ServerProt
 
-data class PlayerUpdate(val data: ByteArray) : ServerProt {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as PlayerUpdate
-        return data.contentEquals(other.data)
-    }
+/**
+ * Player update.
+ *
+ * The actual on-wire byte stream is revision-specific and is encoded via the revision [Codec]'s playerUpdate encoder.
+ */
+data class PlayerUpdate(
+    val packet: org.darkan.core.net.prot.update.PlayerUpdatePacket,
+) : ServerProt
 
-    override fun hashCode(): Int = data.contentHashCode()
-}
-
-data class NpcUpdateLarge(val data: ByteArray) : ServerProt {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as NpcUpdateLarge
-        return data.contentEquals(other.data)
-    }
-
-    override fun hashCode(): Int = data.contentHashCode()
-}
+/**
+ * NPC update (large scene view).
+ *
+ * Same structured payload as [NpcUpdate], but different opcode for some revisions (e.g. 727).
+ */
+data class NpcUpdateLarge(
+    val packet: org.darkan.core.net.prot.update.NpcUpdatePacket,
+) : ServerProt
 
 data class ClanChannelDelta(val main: Boolean, val data: ByteArray) : ServerProt {
     override fun equals(other: Any?): Boolean {

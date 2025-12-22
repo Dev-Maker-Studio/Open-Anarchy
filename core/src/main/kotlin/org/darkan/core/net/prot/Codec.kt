@@ -23,7 +23,11 @@ class Codec {
         val protClass: KClass<T>
     )
 
-    internal inline fun <reified T : ServerProt> serverProt(opcode: Int, size: ProtSize = ProtSize.Fixed(0), noinline encoder: (suspend T.(ByteWriteChannel) -> Unit)? = null) {
+    internal inline fun <reified T : ServerProt> serverProt(
+        opcode: Int,
+        size: ProtSize = ProtSize.Fixed(0),
+        noinline encoder: (suspend T.(ByteWriteChannel) -> Unit)? = null
+    ) {
         serverProts[T::class] = ServerProtCodec(
             opcode = opcode,
             size = size,
@@ -31,7 +35,11 @@ class Codec {
         )
     }
 
-    internal inline fun <reified T : ServerProt> serverProt(opcode: Int, size: Int, noinline encoder: (suspend T.(ByteWriteChannel) -> Unit)? = null) {
+    internal inline fun <reified T : ServerProt> serverProt(
+        opcode: Int,
+        size: Int,
+        noinline encoder: (suspend T.(ByteWriteChannel) -> Unit)? = null
+    ) {
         serverProts[T::class] = ServerProtCodec(
             opcode = opcode,
             size = ProtSize.Fixed(size),
