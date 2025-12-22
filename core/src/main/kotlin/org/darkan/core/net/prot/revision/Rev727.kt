@@ -1310,15 +1310,15 @@ fun register727() =
         }
 
         serverProt<PlayerUpdate>(opcode = 43, size = ProtSize.VarShort) { out ->
-            out.writeBytes(data)
+            out.writeBytes(Rev727UpdateProtocol.encodePlayerUpdate(packet))
         }
 
         serverProt<NpcUpdateLarge>(opcode = 47, size = ProtSize.VarShort) { out ->
-            out.writeBytes(data)
+            out.writeBytes(Rev727UpdateProtocol.encodeNpcUpdate(packet))
         }
 
         serverProt<NpcUpdate>(opcode = 6, size = ProtSize.VarShort) { out ->
-            out.writeBytes(data)
+            out.writeBytes(Rev727UpdateProtocol.encodeNpcUpdate(packet))
         }
 
         serverProt<ClanChannelDelta>(opcode = 28, size = ProtSize.VarShort) { out ->

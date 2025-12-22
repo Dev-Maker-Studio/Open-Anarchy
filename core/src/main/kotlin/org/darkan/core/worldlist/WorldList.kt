@@ -8,7 +8,7 @@ class WorldList(val maxWorlds: Int) {
 
     init {
         if (EnvVars.debug)
-            put(World(WorldMetadata(300, "localhost", 43595, "localhost:43595", Country.USA, false, true, true, false, false)))
+            put(World(WorldMetadata(300, "localhost", 43595, "localhost:43595", Country.USA, false, true, true, true, false)))
     }
 
     val revision
