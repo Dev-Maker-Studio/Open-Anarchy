@@ -60,7 +60,7 @@ object Rev727UpdateProtocol {
     private val playerMasks: MaskRegistry<PlayerMaskCtx, PlayerMaskKey> =
         MaskRegistryBuilder<PlayerMaskCtx, PlayerMaskKey>(header = playerHeader).apply {
             // 0x20000 Tint
-            mask(PlayerMaskKey.BODY_GLOW, 0x20000) { ctx, out ->
+            mask(PlayerMaskKey.TINT, 0x20000) { ctx, out ->
                     val t = ctx.player.blocks.common.tint!!
                     out.writeByte(t.hue)
                     out.writeByteInverse(t.saturation)
@@ -81,7 +81,7 @@ object Rev727UpdateProtocol {
             }
 
             // 0x200 SpotAnim slot=1
-            mask(PlayerMaskKey.GRAPHICS_2, 0x200) { ctx, out ->
+            mask(PlayerMaskKey.SPOT_ANIM_2, 0x200) { ctx, out ->
                     val s1 = ctx.player.blocks.common.spotAnims[1]!!
                     out.writeShort(if (s1.id == -1) 65535 else s1.id)
                     out.writeIntInverseMiddle(s1.settingsHash)
@@ -137,7 +137,7 @@ object Rev727UpdateProtocol {
             }
 
             // 0x40000 SpotAnim slot=2
-            mask(PlayerMaskKey.GRAPHICS_3, 0x40000) { ctx, out ->
+            mask(PlayerMaskKey.SPOT_ANIM_3, 0x40000) { ctx, out ->
                     val s2 = ctx.player.blocks.common.spotAnims[2]!!
                     out.writeShortAddLittle(if (s2.id == -1) 65535 else s2.id)
                     out.writeIntInverseMiddle(s2.settingsHash)
@@ -199,7 +199,7 @@ object Rev727UpdateProtocol {
             }
 
             // 0x200000 SpotAnim slot=3
-            mask(PlayerMaskKey.GRAPHICS_4, 0x200000) { ctx, out ->
+            mask(PlayerMaskKey.SPOT_ANIM_4, 0x200000) { ctx, out ->
                     val s3 = ctx.player.blocks.common.spotAnims[3]!!
                     out.writeShortLittle(if (s3.id == -1) 65535 else s3.id)
                     out.writeIntLittle(s3.settingsHash)
@@ -219,7 +219,7 @@ object Rev727UpdateProtocol {
             }
 
             // 0x80 SpotAnim slot=0
-            mask(PlayerMaskKey.GRAPHICS_1, 0x80) { ctx, out ->
+            mask(PlayerMaskKey.SPOT_ANIM_1, 0x80) { ctx, out ->
                     val s0 = ctx.player.blocks.common.spotAnims[0]!!
                     out.writeShortLittle(if (s0.id == -1) 65535 else s0.id)
                     out.writeInt(s0.settingsHash)
@@ -271,7 +271,7 @@ object Rev727UpdateProtocol {
             }
 
             // 0x1000000 PLAY_GFX slot=3
-            mask(NpcMaskKey.GRAPHICS_4, 0x1000000) { ctx, out ->
+            mask(NpcMaskKey.SPOT_ANIM_4, 0x1000000) { ctx, out ->
                     val s3 = ctx.npc.blocks.common.spotAnims[3]!!
                     out.writeShortAdd(if (s3.id == -1) 65535 else s3.id)
                     out.writeIntInverseMiddle(s3.settingsHash)
@@ -296,7 +296,7 @@ object Rev727UpdateProtocol {
             }
 
             // 0x800 GFX_ slot=1
-            mask(NpcMaskKey.GRAPHICS_2, 0x800) { ctx, out ->
+            mask(NpcMaskKey.SPOT_ANIM_2, 0x800) { ctx, out ->
                     val s1 = ctx.npc.blocks.common.spotAnims[1]!!
                     out.writeShortLittle(if (s1.id == -1) 65535 else s1.id)
                     out.writeInt(s1.settingsHash)
@@ -310,7 +310,7 @@ object Rev727UpdateProtocol {
             mask(NpcMaskKey.TRANSFORMATION, 0x8) { ctx, out -> writeBigSmart(out, ctx.npc.blocks.transformNpcId!!) }
 
             // 0x2000000 spotanim slot=2
-            mask(NpcMaskKey.GRAPHICS_3, 0x2000000) { ctx, out ->
+            mask(NpcMaskKey.SPOT_ANIM_3, 0x2000000) { ctx, out ->
                     val s2 = ctx.npc.blocks.common.spotAnims[2]!!
                     out.writeShortLittle(if (s2.id == -1) 65535 else s2.id)
                     out.writeIntLittle(s2.settingsHash)
@@ -355,7 +355,7 @@ object Rev727UpdateProtocol {
             }
 
             // 0x20000 tint
-            mask(NpcMaskKey.BODY_GLOW, 0x20000) { ctx, out ->
+            mask(NpcMaskKey.TINT, 0x20000) { ctx, out ->
                     val t = ctx.npc.blocks.common.tint!!
                     out.writeByteSubtract(t.hue)
                     out.writeByte(t.saturation)
@@ -385,7 +385,7 @@ object Rev727UpdateProtocol {
             }
 
             // 0x20 spotanim slot=0
-            mask(NpcMaskKey.GRAPHICS_1, 0x20) { ctx, out ->
+            mask(NpcMaskKey.SPOT_ANIM_1, 0x20) { ctx, out ->
                     val s0 = ctx.npc.blocks.common.spotAnims[0]!!
                     out.writeShort(if (s0.id == -1) 65535 else s0.id)
                     out.writeIntInverseMiddle(s0.settingsHash)
