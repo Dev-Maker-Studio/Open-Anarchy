@@ -2,7 +2,8 @@ package world.gregs.voidps.buffer
 
 import io.ktor.utils.io.*
 import io.ktor.utils.io.bits.*
-import io.ktor.utils.io.core.remaining
+import io.ktor.utils.io.core.BytePacketBuilder
+import io.ktor.utils.io.core.*
 import kotlinx.io.Source
 import kotlinx.io.readUByte
 import org.darkan.core.currentTimeTicks
@@ -124,6 +125,16 @@ suspend fun ByteWriteChannel.writeRSString(value: String) {
 }
 
 suspend fun ByteWriteChannel.writeJagString(value: String) {
+    writeByte(0)
+    writeRSString(value)
+}
+
+fun BytePacketBuilder.writeRSString(value: String) {
+    writeFully(value.toByteArray())
+    writeByte(0)
+}
+
+fun BytePacketBuilder.writeJagString(value: String) {
     writeByte(0)
     writeRSString(value)
 }
