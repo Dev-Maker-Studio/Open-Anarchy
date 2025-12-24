@@ -163,7 +163,7 @@ class LobbyServer(val js5: JS5Server) {
 
         for (index in 0..<Cache.get().indexCount()) {
             if (index > 35) break
-            val crc = Cache.get().indexCrcs()[index].toInt()
+            val crc = Cache.get().indexCrcs()[index]
             val receivedCRC = xtea.readInt()
             if (crc != receivedCRC && index < 32) {
                 logError("CRC mismatch: $crc, $receivedCRC from $username")
