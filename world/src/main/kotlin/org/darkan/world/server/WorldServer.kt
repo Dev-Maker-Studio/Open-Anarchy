@@ -15,8 +15,9 @@ import org.darkan.core.Logger.logTrace
 import org.darkan.core.model.MachineInformation
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.*
-import org.darkan.core.net.login.WorldLoginToken
+import org.darkan.core.net.login.LoginToken
 import org.darkan.core.net.prot.Codec
+import org.darkan.core.net.prot.WorldLoginDetails
 import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.secure.RSA
@@ -141,7 +142,7 @@ class WorldServer {
         val unk1 = sensitiveData.readLong()
         val unk2 = sensitiveData.readLong()
 
-        val verifiedToken = WorldLoginToken.verify(lobbyAuthToken, System.currentTimeMillis(), EnvVars.worldLoginTokenSecret)
+        val verifiedToken = LoginToken.verify(lobbyAuthToken, System.currentTimeMillis(), EnvVars.worldLoginTokenSecret)
             ?: return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
         val xtea = packet.decryptXtea(isaacKeys)
         val usernameIsString = xtea.readUByte().toInt()
@@ -186,36 +187,25 @@ class WorldServer {
 
         val account = Accounts.find(verifiedToken.username) ?: return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
 
-        // World-login response for LobbyStage.LOBBY_TO_WORLD (client LoginManager UNK_140):
-        // - 1 byte: response (2)
-        // - 1 byte: length N
-        // - N bytes payload:
-        //   rights, modLevel, quickChat, verifiedEmail, aBool7322, quickChatOnly,
-        //   playerIndex (u16), isMember, dob (u24), memberWorld, worldName (RSString)
-        output.writeByte(ResponseOpcode.SUCCESS.toByte())
-
-        val details = BytePacketBuilder()
-        details.writeByte(account.rights.crown.toByte()) // rights
-        details.writeByte(0) // mod level
-        details.writeByte(0) // quickchat
-        details.writeByte(1) // verified email (TODO: wire real)
-        details.writeByte(0) // aBool7322
-        details.writeByte(0) // quickchat-only
-        details.writeShort(1) // PlayerUpdate.myPlayerIndex (TODO)
-        details.writeByte((if (EnvVars.members) 1 else 0).toByte()) // is member
-        details.writeByte(0); details.writeByte(0); details.writeByte(0) // dob (medium)
-        details.writeByte((if (EnvVars.members) 1 else 0).toByte()) // member world
-        details.writeRSString(EnvVars.serverName) // world name string
-
-        val detailsPacket = details.build()
-        val detailBytes = detailsPacket.readByteArray()
-        require(detailBytes.size <= 255) { "World login details too large: ${detailBytes.size}" }
-        output.writeByte(detailBytes.size.toByte())
-        output.writeBytes(detailBytes)
-        output.flush()
-
-        // Establish session and start normal packet stream.
         val session = initSession(output, isaacKeys, ip, codec)
+        session.send(
+            WorldLoginDetails(
+                rights = account.rights.crown,
+                modLevel = 0,
+                quickChat = false,
+                verifiedEmail = true,
+                aBool7322 = false,
+                quickChatOnly = false,
+                playerIndex = 1, // TODO
+                members = EnvVars.members,
+                dob = 0,
+                memberWorld = EnvVars.members,
+                worldName = EnvVars.serverName,
+            ),
+            noIsaac = true,
+        )
+        session.flush()
+
         logInfo("World login ok user=${verifiedToken.username} reconnecting=$reconnecting clientUser=$usernameFromClient")
         session.readPackets(input)
     }
