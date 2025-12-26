@@ -1693,4 +1693,20 @@ fun register727() =
             out.writeShort(0)
             out.writeJagString("127.0.0.1")
         }
+
+        // World-login details blob (LobbyStage.LOBBY_TO_WORLD).
+        // This intentionally uses opcode=2 (success) + VarByte length, matching the client's world-login handshake.
+        serverProt<WorldLoginDetails>(opcode = 2, size = ProtSize.VarByte) { out ->
+            out.writeByte(rights)
+            out.writeByte(modLevel)
+            out.writeByte(if (quickChat) 1 else 0)
+            out.writeByte(if (verifiedEmail) 1 else 0)
+            out.writeByte(if (aBool7322) 1 else 0)
+            out.writeByte(if (quickChatOnly) 1 else 0)
+            out.writeShort(playerIndex)
+            out.writeByte(if (members) 1 else 0)
+            out.writeMedium(dob)
+            out.writeByte(if (memberWorld) 1 else 0)
+            out.writeRSString(worldName)
+        }
     }

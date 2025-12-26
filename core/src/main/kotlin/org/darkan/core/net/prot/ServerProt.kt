@@ -939,11 +939,16 @@ data class DebugServerTriggers(val interfaceId: Int, val fromComponent: Int, val
 // Note: These pre-world packets would need special handling
 data class WorldLoginDetails(
     val rights: Int,
+    val modLevel: Int,
+    val quickChat: Boolean,
+    val verifiedEmail: Boolean,
+    val aBool7322: Boolean,
+    val quickChatOnly: Boolean,
     val playerIndex: Int,
-    val displayName: String,
-    val unknownInt: Int,
-    val unknownBoolean: Boolean,
     val members: Boolean,
+    val dob: Int,
+    val memberWorld: Boolean,
+    val worldName: String,
 ) : ServerProt
 
 data class LobbyLoginDetails(val account: Account, val worldLoginToken: String) : ServerProt

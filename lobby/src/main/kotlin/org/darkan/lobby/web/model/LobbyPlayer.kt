@@ -7,7 +7,7 @@ import org.darkan.core.Logger.logError
 import org.darkan.core.model.Account
 import org.darkan.core.model.Vars
 import org.darkan.core.net.Session
-import org.darkan.core.net.login.WorldLoginToken
+import org.darkan.core.net.login.LoginToken
 import org.darkan.core.net.prot.LobbyLoginDetails
 import org.darkan.core.net.prot.Ping
 import org.darkan.core.net.prot.WorldListPacket
@@ -16,7 +16,7 @@ import org.darkan.lobby.Lobby
 
 class LobbyPlayer(val session: Session, val account: Account) {
     val vars = Vars().setSession(session)
-    val worldLoginToken: String = WorldLoginToken.issue(
+    val worldLoginToken: String = LoginToken.issue(
         username = account.username,
         displayName = account.displayName,
         rights = account.rights.crown,
