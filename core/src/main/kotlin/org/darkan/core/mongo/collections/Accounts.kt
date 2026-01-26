@@ -1,12 +1,15 @@
 package org.darkan.core.mongo.collections
 
 import com.mongodb.client.model.Filters.eq
+import com.mongodb.client.model.Filters.`in`
 import com.mongodb.client.model.Filters.or
 import com.mongodb.client.model.IndexOptions
 import com.mongodb.client.model.Sorts.ascending
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 import org.darkan.core.crypt.Crypto
+import org.darkan.core.formatPlayerNameForDisplay
 import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.model.Account
 import org.darkan.core.mongo.MongoDB.database
@@ -32,6 +35,24 @@ object Accounts {
                 eq(Account::email.name, formatted)
             )
         ).firstOrNull()
+    }
+
+    suspend fun findByDisplayName(displayName: String): Account? {
+        val byUsername = displayName.formatPlayerNameForProtocol()
+        val byDisplay = byUsername.formatPlayerNameForDisplay()
+        return collection.find(
+            or(
+                eq(Account::username.name, byUsername),
+                eq(Account::displayName.name, displayName),
+                eq(Account::displayName.name, byDisplay),
+            )
+        ).firstOrNull()
+    }
+
+    suspend fun findByUsernames(usernames: Collection<String>): List<Account> {
+        if (usernames.isEmpty()) return emptyList()
+        val formatted = usernames.map { it.formatPlayerNameForProtocol() }
+        return collection.find(`in`(Account::username.name, formatted)).toList()
     }
 
     suspend fun exists(usernameOrEmail: String): Boolean {

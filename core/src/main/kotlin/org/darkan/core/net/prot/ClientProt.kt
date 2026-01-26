@@ -1,5 +1,6 @@
 package org.darkan.core.net.prot
 
+import kotlinx.serialization.Serializable
 import org.darkan.core.clientwatch.MouseTrailStep
 import org.darkan.core.clientwatch.ReflectionResponseCode
 import org.darkan.core.model.Preference
@@ -86,10 +87,10 @@ data class CloseInterface(val dummy: Int = 0) : ClientProt
 @JvmInline value class ResumeClanForumQFCDialog(val forumQfc: String) : ClientProt
 
 // Communication
-data class Chat(val type: Int = -1, val color: Int, val effect: Int, val message: String) : ClientProt
-data class PrivateMessage(val toDisplayName: String, val message: String) : ClientProt
-@JvmInline value class ChatType(val type: Int) : ClientProt
-data class ChatSetFilter(val publicFilter: Int, val privateFilter: Int, val tradeFilter: Int) : ClientProt
+@Serializable data class Chat(val type: Int = -1, val color: Int, val effect: Int, val message: String) : ClientProt
+@Serializable data class PrivateMessage(val toDisplayName: String, val message: String) : ClientProt
+@Serializable @JvmInline value class ChatType(val type: Int) : ClientProt
+@Serializable data class ChatSetFilter(val publicFilter: Int, val privateFilter: Int, val tradeFilter: Int) : ClientProt
 data class QuickChatPublic(val chatType: Int, val qcId: Int, val messageData: ByteArray?) : ClientProt {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -129,15 +130,15 @@ data class QuickChatPrivate(val toUsername: String, val qcId: Int, val messageDa
 }
 
 // Friends/Ignore List
-@JvmInline value class AddFriend(val name: String) : ClientProt
-@JvmInline value class RemoveFriend(val name: String) : ClientProt
-data class AddIgnoreReq(val username: String, val temporary: Boolean) : ClientProt
-@JvmInline value class RemoveIgnore(val name: String) : ClientProt
+@Serializable @JvmInline value class AddFriend(val name: String) : ClientProt
+@Serializable @JvmInline value class RemoveFriend(val name: String) : ClientProt
+@Serializable data class AddIgnoreReq(val username: String, val temporary: Boolean) : ClientProt
+@Serializable @JvmInline value class RemoveIgnore(val name: String) : ClientProt
 
 // Friend Chat
-@JvmInline value class FcJoin(val fcName: String?) : ClientProt
-@JvmInline value class FcKick(val username: String) : ClientProt
-data class FcSetRank(val username: String, val rank: Int) : ClientProt
+@Serializable @JvmInline value class FcJoin(val fcName: String?) : ClientProt
+@Serializable @JvmInline value class FcKick(val username: String) : ClientProt
+@Serializable data class FcSetRank(val username: String, val rank: Int) : ClientProt
 
 // Clan Chat
 data class ClanChannelKickUser(val guest: Boolean, val pid: Int, val username: String) : ClientProt
