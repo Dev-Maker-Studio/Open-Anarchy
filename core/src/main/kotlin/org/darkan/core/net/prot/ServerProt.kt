@@ -1,5 +1,6 @@
 package org.darkan.core.net.prot
 
+import kotlinx.serialization.Serializable
 import org.darkan.core.clientwatch.ReflectionCheck
 import org.darkan.core.model.Account
 import org.darkan.core.model.ChatMessageType
@@ -336,8 +337,8 @@ data class UpdateGESlot(val slot: Int, val offer: Offer?) : ServerProt {
 
 @JvmInline value class UpdateUid192(val data: ByteArray) : ServerProt
 
-data class UpdateIgnoreList(val ignores: Array<IgnoreEntry>) : ServerProt {
-    data class IgnoreEntry(val username: String, val displayName: String)
+@Serializable data class UpdateIgnoreList(val ignores: Array<IgnoreEntry>) : ServerProt {
+    @Serializable data class IgnoreEntry(val username: String, val displayName: String)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -653,13 +654,13 @@ data class CamForceAngle(val angleX: Int, val angleY: Int) : ServerProt
 /**
  * Messaging protocols
  */
-data class MessagePrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: String) : ServerProt
-data class MessagePrivateEcho(val senderDisplayName: String, val message: String) : ServerProt
+@Serializable data class MessagePrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: String) : ServerProt
+@Serializable data class MessagePrivateEcho(val senderDisplayName: String, val message: String) : ServerProt
 
 data class MessageQuickChatPrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
 data class MessageQuickChatPrivateEcho(val senderDisplayName: String, val message: QuickChatMessage) : ServerProt
 
-data class MessageFriendsChat(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val chatName: String, val message: String) : ServerProt
+@Serializable data class MessageFriendsChat(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val chatName: String, val message: String) : ServerProt
 data class MessageQuickChatFriendsChat(val chatName: String, val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
 
 data class MessageClanChannel(val guest: Boolean, val crown: Int, val displayName: String, val message: String) : ServerProt
@@ -670,7 +671,7 @@ data class MessageQuickChatPlayerGroup(val crown: Int, val displayName: String, 
 
 data class MessagePublic(val pid: Int, val messageIcon: Int, val message: ChatMessage) : ServerProt
 
-data class GameMessage(val type: ChatMessageType, val message: String, val targetDisplayName: String? = null, val effectFlags: Int = 0) : ServerProt
+@Serializable data class GameMessage(val type: ChatMessageType, val message: String, val targetDisplayName: String? = null, val effectFlags: Int = 0) : ServerProt
 
 /**
  * Variable related protocols
@@ -709,8 +710,8 @@ data class PlayerOption(val option: String, val slot: Int, val top: Boolean, val
 
 @JvmInline value class RunEnergy(val energy: Int) : ServerProt
 
-data class FriendStatus(val updates: Array<FriendStatusUpdate>) : ServerProt {
-    data class FriendStatusUpdate(
+@Serializable data class FriendStatus(val updates: Array<FriendStatusUpdate>) : ServerProt {
+    @Serializable data class FriendStatusUpdate(
         val warnMessage: Boolean,
         val displayName: String,
         val previousDisplayName: String,
@@ -732,7 +733,7 @@ data class FriendStatus(val updates: Array<FriendStatusUpdate>) : ServerProt {
     override fun hashCode(): Int = updates.contentHashCode()
 }
 
-@JvmInline value class FriendlistLoaded(val dummy: Int = 0) : ServerProt
+@Serializable @JvmInline value class FriendlistLoaded(val dummy: Int = 0) : ServerProt
 
 data class AddIgnore(val username: String, val displayName: String, val temporary: Boolean = false, val editDisplayName: Boolean = false) : ServerProt
 
@@ -743,7 +744,7 @@ data class AddIgnore(val username: String, val displayName: String, val temporar
 /**
  * Friend and clan chat protocols
  */
-data class FriendsChatChannel(
+@Serializable data class FriendsChatChannel(
     val clear: Boolean = false,
     val ownerDisplayName: String? = null,
     val ownerUsername: String? = ownerDisplayName,
@@ -751,7 +752,7 @@ data class FriendsChatChannel(
     val minRankCanKick: Int = 0,
     val players: Array<FriendsChatPlayer>? = null,
 ) : ServerProt {
-    data class FriendsChatPlayer(
+    @Serializable data class FriendsChatPlayer(
         val displayName: String,
         val username: String = displayName,
         val worldId: Int,
@@ -810,7 +811,7 @@ data class RequestFps(val key: Int, val flags: Int) : ServerProt
 
 data class ChatFilterSettings(val tradeFilter: Int, val publicFilter: Int) : ServerProt
 
-@JvmInline value class ChatFilterSettingsPrivateChat(val privateFilter: Int) : ServerProt
+@Serializable @JvmInline value class ChatFilterSettingsPrivateChat(val privateFilter: Int) : ServerProt
 
 /**
  * Account related protocols

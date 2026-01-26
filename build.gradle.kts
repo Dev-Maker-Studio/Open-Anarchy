@@ -19,7 +19,7 @@ subprojects {
 
     configure<JavaPluginExtension> {
         toolchain {
-            languageVersion.set(JavaLanguageVersion.of(23))
+            languageVersion.set(JavaLanguageVersion.of(25))
         }
     }
 
@@ -59,6 +59,7 @@ subprojects {
         implementation("io.ktor:ktor-serialization-kotlinx-json:${findProperty("ktorVersion")}")
         implementation("io.ktor:ktor-client-core:${findProperty("ktorVersion")}")
         implementation("io.ktor:ktor-client-cio:${findProperty("ktorVersion")}")
+        implementation("io.ktor:ktor-client-websockets:${findProperty("ktorVersion")}")
         implementation("io.ktor:ktor-client-content-negotiation:${findProperty("ktorVersion")}")
 
         implementation("de.mkammerer:argon2-jvm:2.12")

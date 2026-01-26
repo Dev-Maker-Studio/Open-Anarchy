@@ -60,7 +60,7 @@ class LobbyServer(val js5: JS5Server) {
                     logInfo("Lobby server started on port ${EnvVars.lobbyPort}")
                     while (isActive) {
                         val socket = serverSocket.accept()
-                        logInfo("Client connected: ${socket.remoteAddress.toJavaAddress().hostname}")
+                        logInfo("Client connected: ${socket.remoteAddress.ipString()}")
                         connectClient(socket)
                     }
                 }
@@ -91,7 +91,7 @@ class LobbyServer(val js5: JS5Server) {
         try {
             val input = socket.openReadChannel()
             val output = socket.openWriteChannel(autoFlush = false)
-            val ip = socket.remoteAddress.toJavaAddress().hostname
+            val ip = socket.remoteAddress.ipString()
 
             try {
                 when (val reqOpcode = input.readByte().toInt()) {

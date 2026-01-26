@@ -12,7 +12,7 @@ object EnvVars {
     val debug: Boolean = dotenv.get("DEBUG", "false").toBooleanStrict()
     val members: Boolean = dotenv.get("MEMBERS", "true").toBooleanStrict()
     val serverName: String = dotenv.get("SERVER_NAME", "Darkan")
-    val multiLogWhitelist: String = dotenv.get("MULTILOG_WHITELIST", "localhost,127.0.0.1")
+    val multiLogWhitelist: String = dotenv.get("MULTILOG_WHITELIST", "localhost,127.0.0.1,::1,0:0:0:0:0:0:0:1")
     val multiLogLimit: Int = dotenv.get("MULTILOG_LIMIT", "3").toInt()
     val js5ServerToken: String = dotenv.get("JS5_SERVER_TOKEN", "ev9+VAp5/tMKeNR/7MOuH6lKWS+rGkHK")
     val loginServerToken: String = dotenv.get("LOGIN_SERVER_TOKEN", "wwGlrZHF5gKN6D3mDdihco3oPeYN2KFybL9hUUFqOvk")
@@ -51,4 +51,17 @@ object EnvVars {
 
     //mongo settings
     val mongoUri: String = dotenv.get("MONGO_URI", "mongodb://localhost:27017/darkan-server?retryWrites=true&w=majority")
+
+    // SocialGateway (world <-> lobby) settings
+    val socialGatewayUrl: String = dotenv.get("SOCIAL_GATEWAY_URL", "ws://localhost:${lobbyApiPort}/social/ws")
+    val socialGatewayToken: String = dotenv.get("SOCIAL_GATEWAY_TOKEN", "CHANGE_ME")
+    val worldId: Int = dotenv.get("WORLD_ID", "300").toInt()
+    val worldName: String = dotenv.get("WORLD_NAME", serverName)
+    val worldHost: String = dotenv.get("WORLD_HOST", "localhost")
+    val worldPublicHost: String = dotenv.get("WORLD_PUBLIC_HOST", worldHost)
+    val worldActivity: String = dotenv.get("WORLD_ACTIVITY", "")
+    val worldMembers: Boolean = dotenv.get("WORLD_MEMBERS", members.toString()).toBooleanStrict()
+    val worldQuickChat: Boolean = dotenv.get("WORLD_QUICKCHAT", "false").toBooleanStrict()
+    val worldPvp: Boolean = dotenv.get("WORLD_PVP", "false").toBooleanStrict()
+    val worldLootShare: Boolean = dotenv.get("WORLD_LOOTSHARE", "true").toBooleanStrict()
 }
