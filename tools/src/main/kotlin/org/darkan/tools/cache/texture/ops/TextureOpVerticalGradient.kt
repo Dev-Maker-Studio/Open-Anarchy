@@ -1,0 +1,21 @@
+package org.darkan.tools.cache.texture.ops
+
+import org.darkan.tools.cache.texture.TextureOperation
+import org.darkan.tools.cache.texture.TextureRaster
+
+/**
+ * Type 3: Vertical gradient.
+ * Fills output row with the vertical coordinate value.
+ */
+class TextureOpVerticalGradient : TextureOperation(0, true) {
+    override fun getMonochromeOutput(y: Int): IntArray {
+        val output = monochromeImageCache.getPalette(y)
+        if (monochromeImageCache.dirty) {
+            val value = TextureRaster.verticalTable!![y]
+            for (x in 0 until TextureRaster.currentWidth) {
+                output[x] = value
+            }
+        }
+        return output
+    }
+}

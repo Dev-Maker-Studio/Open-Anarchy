@@ -47,6 +47,10 @@ class ShaderProgram {
         uniforms[name]?.let { glUniform1i(it, value) }
     }
 
+    fun setUniform(name: String, value: Boolean) {
+        uniforms[name]?.let { glUniform1i(it, if (value) 1 else 0) }
+    }
+
     fun setUniform(name: String, value: Float) {
         uniforms[name]?.let { glUniform1f(it, value) }
     }

@@ -1,6 +1,8 @@
 package org.darkan.tools.viewer
 
 import org.darkan.tools.cache.model.ModelLoader
+import org.darkan.tools.cache.model.TexturedModel
+import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.Engine
 import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.engine.scene.SceneNode
@@ -24,6 +26,8 @@ class ModelViewer(
     private lateinit var assetBrowser: AssetBrowser
 
     private var modelNode: SceneNode? = null
+    private var texturedModelNodes: MutableList<SceneNode> = mutableListOf()
+    private var currentTexturedModel: TexturedModel? = null
     private var gridNode: SceneNode? = null
     private var currentModelId = -1
 
@@ -31,6 +35,9 @@ class ModelViewer(
     private var rotationSpeed = 30f
 
     override fun onInit() {
+        // Initialize texture loader
+        TextureLoader.init(cache)
+
         imGui = ImGuiLayer(window)
         imGui.init()
 
@@ -67,7 +74,7 @@ class ModelViewer(
 
         // Load default model - try several until we find a valid one
         var loaded = false
-        for (id in listOf(0, 1, 10, 100, 1000, 2000, 5000)) {
+        for (id in listOf(27, 0, 1, 10, 100, 1000, 2000, 5000)) {
             if (loadModel(id)) {
                 println("Successfully loaded model $id")
                 loaded = true
@@ -80,25 +87,53 @@ class ModelViewer(
     }
 
     fun loadModel(modelId: Int): Boolean {
-        // Remove existing model
+        // Remove existing model nodes
         modelNode?.let {
             scene.removeNode("model")
             it.cleanup()
         }
-
-        val mesh = ModelLoader.loadMesh(cache, modelId)
-        if (mesh != null && mesh.vertexCount > 0) {
-            println("Loaded model $modelId: ${mesh.vertexCount} vertices")
-            modelNode = SceneNode(mesh = mesh)
-            scene.addNode("model", modelNode!!)
-            currentModelId = modelId
-            return true
-        } else {
-            println("Failed to load model $modelId (mesh is ${if (mesh == null) "null" else "empty"})")
-            modelNode = null
-            currentModelId = -1
-            return false
+        texturedModelNodes.forEachIndexed { index, node ->
+            scene.removeNode("model_tex_$index")
+            node.cleanup()
         }
+        texturedModelNodes.clear()
+        currentTexturedModel = null
+
+        val texturedModel = ModelLoader.loadTexturedModel(cache, modelId)
+        if (texturedModel != null) {
+            var totalVertices = 0
+
+            // Add color batch (untextured faces)
+            texturedModel.colorBatch?.let { mesh ->
+                if (mesh.vertexCount > 0) {
+                    totalVertices += mesh.vertexCount
+                    modelNode = SceneNode(mesh = mesh)
+                    scene.addNode("model", modelNode!!)
+                }
+            }
+
+            // Add textured batches
+            texturedModel.textureBatches.forEachIndexed { index, batch ->
+                if (batch.mesh.vertexCount > 0) {
+                    totalVertices += batch.mesh.vertexCount
+                    val node = SceneNode(mesh = batch.mesh)
+                    scene.addNode("model_tex_$index", node)
+                    texturedModelNodes.add(node)
+                }
+            }
+
+            if (totalVertices > 0) {
+                println("Loaded model $modelId: $totalVertices vertices, ${texturedModel.textureBatches.size} texture batches")
+                currentTexturedModel = texturedModel
+                currentModelId = modelId
+                return true
+            }
+        }
+
+        println("Failed to load model $modelId")
+        modelNode = null
+        currentModelId = -1
+        return false
     }
 
     override fun onInput() {
@@ -155,16 +190,66 @@ class ModelViewer(
 
     override fun onUpdate(deltaTime: Float) {
         // Auto-rotate model
-        if (autoRotate && modelNode != null) {
-            val current = modelNode!!.rotation
+        if (autoRotate) {
             val angle = rotationSpeed * deltaTime
-            current.rotateY(Math.toRadians(angle.toDouble()).toFloat())
+            val radians = Math.toRadians(angle.toDouble()).toFloat()
+
+            modelNode?.rotation?.rotateY(radians)
+            texturedModelNodes.forEach { it.rotation.rotateY(radians) }
         }
     }
 
     override fun onRender() {
-        // Render scene
-        scene.render(colorShader, getAspectRatio())
+        val aspectRatio = getAspectRatio()
+        val viewMatrix = scene.camera.getViewMatrix()
+        val projectionMatrix = scene.camera.getProjectionMatrix(aspectRatio)
+
+        // Render untextured elements (grid and color batch) with color shader
+        colorShader.bind()
+        colorShader.setUniform("view", viewMatrix)
+        colorShader.setUniform("projection", projectionMatrix)
+        colorShader.setUniform("ambientLight", scene.ambientLight)
+        colorShader.setUniform("lightDirection", scene.lightDirection)
+        colorShader.setUniform("lightColor", scene.lightColor)
+
+        // Render grid
+        gridNode?.let { node ->
+            colorShader.setUniform("model", node.getModelMatrix())
+            node.mesh?.render()
+        }
+
+        // Render untextured faces
+        modelNode?.let { node ->
+            colorShader.setUniform("model", node.getModelMatrix())
+            node.mesh?.render()
+        }
+
+        colorShader.unbind()
+
+        // Render textured batches with textured shader
+        if (texturedModelNodes.isNotEmpty() && currentTexturedModel != null) {
+            texturedShader.bind()
+            texturedShader.setUniform("view", viewMatrix)
+            texturedShader.setUniform("projection", projectionMatrix)
+            texturedShader.setUniform("ambientLight", scene.ambientLight)
+            texturedShader.setUniform("lightDirection", scene.lightDirection)
+            texturedShader.setUniform("lightColor", scene.lightColor)
+            texturedShader.setUniform("textureSampler", 0)
+
+            currentTexturedModel!!.textureBatches.forEachIndexed { index, batch ->
+                val node = texturedModelNodes.getOrNull(index) ?: return@forEachIndexed
+
+                // Bind texture for this batch
+                val textureId = TextureLoader.getTextureForMaterial(cache, batch.textureId)
+                TextureLoader.bindTexture(textureId, 0)
+                texturedShader.setUniform("useTexture", true)
+                texturedShader.setUniform("model", node.getModelMatrix())
+                node.mesh?.render()
+            }
+
+            TextureLoader.unbindTexture()
+            texturedShader.unbind()
+        }
 
         // Render ImGui
         imGui.beginFrame()
@@ -188,8 +273,8 @@ class ModelViewer(
     private fun renderModelInfo() {
         if (currentModelId < 0) return
 
-        imgui.ImGui.setNextWindowPos(10f, imgui.ImGui.getIO().displaySizeY - 150f)
-        imgui.ImGui.setNextWindowSize(250f, 0f)
+        imgui.ImGui.setNextWindowPos(10f, imgui.ImGui.getIO().displaySizeY - 200f)
+        imgui.ImGui.setNextWindowSize(280f, 0f)
 
         if (imgui.ImGui.begin("Model Info", imgui.flag.ImGuiWindowFlags.NoMove or imgui.flag.ImGuiWindowFlags.NoResize)) {
             imgui.ImGui.text("Model ID: $currentModelId")
@@ -198,6 +283,21 @@ class ModelViewer(
             if (def != null) {
                 imgui.ImGui.text("Vertices: ${def.vertexCount}")
                 imgui.ImGui.text("Faces: ${def.faceCount}")
+            }
+
+            // Texture info
+            currentTexturedModel?.let { model ->
+                imgui.ImGui.separator()
+                imgui.ImGui.text("Textures: ${if (model.hasTextures) "Yes" else "No"}")
+                if (model.textureBatches.isNotEmpty()) {
+                    imgui.ImGui.text("Texture batches: ${model.textureBatches.size}")
+                    model.textureBatches.take(5).forEach { batch ->
+                        imgui.ImGui.bulletText("Material ${batch.textureId}: ${batch.mesh.vertexCount} verts")
+                    }
+                    if (model.textureBatches.size > 5) {
+                        imgui.ImGui.text("  ... and ${model.textureBatches.size - 5} more")
+                    }
+                }
             }
 
             imgui.ImGui.separator()
@@ -213,6 +313,7 @@ class ModelViewer(
 
     override fun onCleanup() {
         ModelLoader.clearCache()
+        TextureLoader.clearCache()
         imGui.cleanup()
     }
 }
