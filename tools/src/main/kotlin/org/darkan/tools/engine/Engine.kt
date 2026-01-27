@@ -15,6 +15,7 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
 
     protected lateinit var colorShader: ShaderProgram
     protected lateinit var simpleShader: ShaderProgram
+    protected lateinit var texturedShader: ShaderProgram
 
     var scene = Scene()
         protected set
@@ -54,6 +55,15 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
         simpleShader = ShaderProgram.createWithUniforms(
             simpleVertSrc, simpleFragSrc,
             "model", "view", "projection"
+        )
+
+        val texturedVertSrc = loadShaderSource("/shaders/textured.vert")
+        val texturedFragSrc = loadShaderSource("/shaders/textured.frag")
+        texturedShader = ShaderProgram.createWithUniforms(
+            texturedVertSrc, texturedFragSrc,
+            "model", "view", "projection",
+            "ambientLight", "lightDirection", "lightColor",
+            "textureSampler", "useTexture"
         )
 
         lastFrameTime = System.nanoTime()
@@ -116,6 +126,7 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
         scene.cleanup()
         colorShader.cleanup()
         simpleShader.cleanup()
+        texturedShader.cleanup()
         renderSystem.cleanup()
         window.cleanup()
     }
