@@ -11,27 +11,28 @@ object CoordinateUtil {
 
     /**
      * Convert RuneScape coordinates to OpenGL coordinates.
-     * RS: X = east/west, Y = height, Z = north/south
-     * OpenGL: X = right, Y = up, Z = out of screen (towards camera)
+     * RS: X = east/west, Y = height (positive = DOWN), Z = north/south
+     * OpenGL: X = right, Y = up (positive = UP), Z = out of screen (towards camera)
      *
-     * RS Z axis is inverted relative to OpenGL (RS north is +Z, OpenGL forward is -Z)
+     * RS Y axis is inverted (positive = down), so we negate it.
+     * Only negate Y to preserve face winding order.
      */
     fun rsToOpenGL(x: Int, y: Int, z: Int, scale: Float = DEFAULT_SCALE): Vector3f {
-        return Vector3f(x * scale, y * scale, -z * scale)
+        return Vector3f(x * scale, -y * scale, -z * scale)
     }
 
     /**
      * Convert RuneScape coordinates to OpenGL coordinates (float version).
      */
     fun rsToOpenGL(x: Float, y: Float, z: Float, scale: Float = DEFAULT_SCALE): Vector3f {
-        return Vector3f(x * scale, y * scale, -z * scale)
+        return Vector3f(x * scale, -y * scale, -z * scale)
     }
 
     /**
      * Convert OpenGL coordinates back to RuneScape coordinates.
      */
     fun openGLToRS(x: Float, y: Float, z: Float, scale: Float = DEFAULT_SCALE): Vector3f {
-        return Vector3f(x / scale, y / scale, -z / scale)
+        return Vector3f(x / scale, -y / scale, -z / scale)
     }
 
     /**

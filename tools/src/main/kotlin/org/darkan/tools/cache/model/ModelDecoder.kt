@@ -6,68 +6,82 @@ import world.gregs.voidps.cache.Index
 
 /**
  * Decoder for RS model binary format (revision 727).
+ * Based on reference implementation from darkan-bot.
  */
 object ModelDecoder {
     fun decode(cache: Cache, modelId: Int): ModelDefinition? {
         val data = cache.data(Index.MODELS, modelId) ?: return null
-        return decode(modelId, data)
+        return try {
+            decode(modelId, data)
+        } catch (e: Exception) {
+            System.err.println("Failed to decode model $modelId: ${e.message}")
+            null
+        }
     }
 
-    fun decode(modelId: Int, data: ByteArray): ModelDefinition {
-        val buffer = BufferReader(data)
+    fun decode(modelId: Int, data: ByteArray): ModelDefinition? {
+        if (data.size < 20) {
+            return null
+        }
 
-        // Read footer to determine format
-        buffer.position(data.size - 2)
-        val formatFlag = buffer.readShort()
+        // Check format - both last two bytes must be -1 (0xFF) for new format
+        val isNewFormat = data[data.size - 1] == (-1).toByte() && data[data.size - 2] == (-1).toByte()
 
-        return if (formatFlag == -1) {
+        return if (isNewFormat) {
             decodeNewFormat(modelId, data)
         } else {
             decodeOldFormat(modelId, data)
         }
     }
 
-    private fun decodeNewFormat(modelId: Int, data: ByteArray): ModelDefinition {
+    private fun decodeNewFormat(modelId: Int, data: ByteArray): ModelDefinition? {
         val buffer = BufferReader(data)
 
-        // Read header from end of file
+        // Read header from end of file (23 bytes before end)
         buffer.position(data.size - 23)
         val vertexCount = buffer.readUnsignedShort()
         val faceCount = buffer.readUnsignedShort()
         val texturedFaceCount = buffer.readUnsignedByte()
+        val footerFlags = buffer.readUnsignedByte()
 
-        val hasRenderTypes = buffer.readUnsignedByte()
-        val hasPriorities = buffer.readUnsignedByte()
-        val hasAlphas = buffer.readUnsignedByte()
+        val hasFaceTypes = (footerFlags and 0x1) == 1
+        val modelPriority = buffer.readUnsignedByte()
+        val hasFaceAlpha = buffer.readUnsignedByte()
         val hasFaceSkins = buffer.readUnsignedByte()
+        val hasFaceTextures = buffer.readUnsignedByte()
         val hasVertexSkins = buffer.readUnsignedByte()
 
         val vertexXLength = buffer.readUnsignedShort()
         val vertexYLength = buffer.readUnsignedShort()
         val vertexZLength = buffer.readUnsignedShort()
         val faceIndicesLength = buffer.readUnsignedShort()
-        val textureLength = buffer.readUnsignedShort()
+        val textureIndicesLength = buffer.readUnsignedShort()
 
-        // Calculate offsets
-        var offset = 0
+        if (vertexCount == 0 || faceCount == 0) {
+            return null
+        }
+
+        // Calculate offsets (order matters!)
+        // Data starts after textured face count (reference uses texturedFaceCount directly as starting index)
+        var offset = texturedFaceCount
         val vertexFlagsOffset = offset
         offset += vertexCount
 
-        val faceTypesOffset = offset
+        val faceTypeOffset = offset
+        if (hasFaceTypes) {
+            offset += faceCount
+        }
+
+        val faceIndexTypesOffset = offset
         offset += faceCount
 
         val facePrioritiesOffset = offset
-        if (hasPriorities == 255) {
+        if (modelPriority == 255) {
             offset += faceCount
         }
 
         val faceSkinOffset = offset
         if (hasFaceSkins == 1) {
-            offset += faceCount
-        }
-
-        val faceRenderTypesOffset = offset
-        if (hasRenderTypes == 1) {
             offset += faceCount
         }
 
@@ -77,7 +91,7 @@ object ModelDecoder {
         }
 
         val faceAlphasOffset = offset
-        if (hasAlphas == 1) {
+        if (hasFaceAlpha == 1) {
             offset += faceCount
         }
 
@@ -85,9 +99,13 @@ object ModelDecoder {
         offset += faceIndicesLength
 
         val faceTexturesOffset = offset
-        if (hasRenderTypes == 1) {
+        if (hasFaceTextures == 1) {
             offset += faceCount * 2
         }
+
+        // TEXTURE INDICES - always present, size is textureIndicesLength from footer
+        val textureIndicesOffset = offset
+        offset += textureIndicesLength
 
         val faceColorsOffset = offset
         offset += faceCount * 2
@@ -102,25 +120,32 @@ object ModelDecoder {
         offset += vertexZLength
 
         val textureTrianglesOffset = offset
-        offset += texturedFaceCount * 6
 
-        val textureCoordOffset = offset
 
-        // Decode vertices
+        // Validate data fits
+        val minRequired = vertexZOffset + vertexZLength
+        if (minRequired > data.size) {
+            return null
+        }
+
+        // Decode vertex flags
+        buffer.position(vertexFlagsOffset)
+        val vertexFlags = ByteArray(vertexCount)
+        for (i in 0 until vertexCount) {
+            vertexFlags[i] = buffer.readByte().toByte()
+        }
+
+        // Decode vertices (delta encoded)
         val vertexX = IntArray(vertexCount)
         val vertexY = IntArray(vertexCount)
         val vertexZ = IntArray(vertexCount)
-
-        buffer.position(vertexFlagsOffset)
-        val vertexFlags = ByteArray(vertexCount)
-        buffer.readBytes(vertexFlags)
 
         buffer.position(vertexXOffset)
         var vX = 0
         for (i in 0 until vertexCount) {
             val flag = vertexFlags[i].toInt() and 0xff
-            if (flag and 1 != 0) {
-                vX += readSignedSmart(buffer)
+            if ((flag and 0x1) != 0) {
+                vX += readSmart(buffer)
             }
             vertexX[i] = vX
         }
@@ -129,8 +154,8 @@ object ModelDecoder {
         var vY = 0
         for (i in 0 until vertexCount) {
             val flag = vertexFlags[i].toInt() and 0xff
-            if (flag and 2 != 0) {
-                vY += readSignedSmart(buffer)
+            if ((flag and 0x2) != 0) {
+                vY += readSmart(buffer)
             }
             vertexY[i] = vY
         }
@@ -139,52 +164,56 @@ object ModelDecoder {
         var vZ = 0
         for (i in 0 until vertexCount) {
             val flag = vertexFlags[i].toInt() and 0xff
-            if (flag and 4 != 0) {
-                vZ += readSignedSmart(buffer)
+            if ((flag and 0x4) != 0) {
+                vZ += readSmart(buffer)
             }
             vertexZ[i] = vZ
         }
 
-        // Decode faces
+        // Decode face index types
+        buffer.position(faceIndexTypesOffset)
+        val faceIndexTypes = ByteArray(faceCount)
+        for (i in 0 until faceCount) {
+            faceIndexTypes[i] = buffer.readByte().toByte()
+        }
+
+        // Decode face indices
         val faceA = IntArray(faceCount)
         val faceB = IntArray(faceCount)
         val faceC = IntArray(faceCount)
-
-        buffer.position(faceTypesOffset)
-        val faceTypes = ByteArray(faceCount)
-        buffer.readBytes(faceTypes)
 
         buffer.position(faceIndicesOffset)
         var a = 0
         var b = 0
         var c = 0
         var lastIndex = 0
+
         for (i in 0 until faceCount) {
-            val type = faceTypes[i].toInt() and 0xff
+            val type = faceIndexTypes[i].toInt() and 0xff
             when (type) {
                 1 -> {
-                    a = readSignedSmart(buffer) + lastIndex
+                    a = readSmart(buffer) + lastIndex
                     lastIndex = a
-                    b = readSignedSmart(buffer) + lastIndex
+                    b = readSmart(buffer) + lastIndex
                     lastIndex = b
-                    c = readSignedSmart(buffer) + lastIndex
+                    c = readSmart(buffer) + lastIndex
                     lastIndex = c
                 }
                 2 -> {
                     b = c
-                    c = readSignedSmart(buffer) + lastIndex
+                    c = readSmart(buffer) + lastIndex
                     lastIndex = c
                 }
                 3 -> {
                     a = c
-                    c = readSignedSmart(buffer) + lastIndex
+                    c = readSmart(buffer) + lastIndex
                     lastIndex = c
                 }
                 4 -> {
                     val temp = a
                     a = b
                     b = temp
-                    c = readSignedSmart(buffer) + lastIndex
+                    c = readSmart(buffer) + lastIndex
                     lastIndex = c
                 }
             }
@@ -195,37 +224,39 @@ object ModelDecoder {
 
         // Decode colors
         val faceColors = ShortArray(faceCount)
-        buffer.position(faceColorsOffset)
-        for (i in 0 until faceCount) {
-            faceColors[i] = buffer.readUnsignedShort().toShort()
+        if (faceColorsOffset + faceCount * 2 <= data.size) {
+            buffer.position(faceColorsOffset)
+            for (i in 0 until faceCount) {
+                faceColors[i] = buffer.readUnsignedShort().toShort()
+            }
         }
 
         // Decode priorities
-        val facePriorities: ByteArray? = if (hasPriorities == 255) {
+        val facePriorities: ByteArray? = if (modelPriority == 255 && facePrioritiesOffset + faceCount <= data.size) {
             buffer.position(facePrioritiesOffset)
-            ByteArray(faceCount).also { buffer.readBytes(it) }
+            ByteArray(faceCount) { buffer.readByte().toByte() }
         } else {
             null
         }
 
         // Decode alphas
-        val faceAlphas: ByteArray? = if (hasAlphas == 1) {
+        val faceAlphas: ByteArray? = if (hasFaceAlpha == 1 && faceAlphasOffset + faceCount <= data.size) {
             buffer.position(faceAlphasOffset)
-            ByteArray(faceCount).also { buffer.readBytes(it) }
+            ByteArray(faceCount) { buffer.readByte().toByte() }
         } else {
             null
         }
 
-        // Decode render types
-        val faceRenderTypes: ByteArray? = if (hasRenderTypes == 1) {
-            buffer.position(faceRenderTypesOffset)
-            ByteArray(faceCount).also { buffer.readBytes(it) }
+        // Decode face types (render types)
+        val faceRenderTypes: ByteArray? = if (hasFaceTypes && faceTypeOffset + faceCount <= data.size) {
+            buffer.position(faceTypeOffset)
+            ByteArray(faceCount) { buffer.readByte().toByte() }
         } else {
             null
         }
 
         // Decode face textures
-        val faceTextures: ShortArray? = if (hasRenderTypes == 1) {
+        val faceTextures: ShortArray? = if (hasFaceTextures == 1 && faceTexturesOffset + faceCount * 2 <= data.size) {
             buffer.position(faceTexturesOffset)
             ShortArray(faceCount) { buffer.readUnsignedShort().toShort() }
         } else {
@@ -255,10 +286,10 @@ object ModelDecoder {
         )
     }
 
-    private fun decodeOldFormat(modelId: Int, data: ByteArray): ModelDefinition {
+    private fun decodeOldFormat(modelId: Int, data: ByteArray): ModelDefinition? {
         val buffer = BufferReader(data)
 
-        // Read header from end of file
+        // Read header from end of file (18 bytes before end)
         buffer.position(data.size - 18)
         val vertexCount = buffer.readUnsignedShort()
         val faceCount = buffer.readUnsignedShort()
@@ -275,12 +306,16 @@ object ModelDecoder {
         val vertexZLength = buffer.readUnsignedShort()
         val faceIndicesLength = buffer.readUnsignedShort()
 
-        // Calculate offsets
-        var offset = 0
+        if (vertexCount == 0 || faceCount == 0) {
+            return null
+        }
+
+        // Calculate offsets (starting after textured face count)
+        var offset = texturedFaceCount
         val vertexFlagsOffset = offset
         offset += vertexCount
 
-        val faceTypesOffset = offset
+        val faceIndexTypesOffset = offset
         offset += faceCount
 
         val facePrioritiesOffset = offset
@@ -325,21 +360,30 @@ object ModelDecoder {
 
         val textureTrianglesOffset = offset
 
-        // Decode vertices
+        // Validate
+        val minRequired = vertexZOffset + vertexZLength
+        if (minRequired > data.size) {
+            return null
+        }
+
+        // Decode vertex flags
+        buffer.position(vertexFlagsOffset)
+        val vertexFlags = ByteArray(vertexCount)
+        for (i in 0 until vertexCount) {
+            vertexFlags[i] = buffer.readByte().toByte()
+        }
+
+        // Decode vertices (delta encoded)
         val vertexX = IntArray(vertexCount)
         val vertexY = IntArray(vertexCount)
         val vertexZ = IntArray(vertexCount)
-
-        buffer.position(vertexFlagsOffset)
-        val vertexFlags = ByteArray(vertexCount)
-        buffer.readBytes(vertexFlags)
 
         buffer.position(vertexXOffset)
         var vX = 0
         for (i in 0 until vertexCount) {
             val flag = vertexFlags[i].toInt() and 0xff
-            if (flag and 1 != 0) {
-                vX += readSignedSmart(buffer)
+            if ((flag and 0x1) != 0) {
+                vX += readSmart(buffer)
             }
             vertexX[i] = vX
         }
@@ -348,8 +392,8 @@ object ModelDecoder {
         var vY = 0
         for (i in 0 until vertexCount) {
             val flag = vertexFlags[i].toInt() and 0xff
-            if (flag and 2 != 0) {
-                vY += readSignedSmart(buffer)
+            if ((flag and 0x2) != 0) {
+                vY += readSmart(buffer)
             }
             vertexY[i] = vY
         }
@@ -358,52 +402,56 @@ object ModelDecoder {
         var vZ = 0
         for (i in 0 until vertexCount) {
             val flag = vertexFlags[i].toInt() and 0xff
-            if (flag and 4 != 0) {
-                vZ += readSignedSmart(buffer)
+            if ((flag and 0x4) != 0) {
+                vZ += readSmart(buffer)
             }
             vertexZ[i] = vZ
         }
 
-        // Decode faces
+        // Decode face index types
+        buffer.position(faceIndexTypesOffset)
+        val faceIndexTypes = ByteArray(faceCount)
+        for (i in 0 until faceCount) {
+            faceIndexTypes[i] = buffer.readByte().toByte()
+        }
+
+        // Decode face indices
         val faceA = IntArray(faceCount)
         val faceB = IntArray(faceCount)
         val faceC = IntArray(faceCount)
-
-        buffer.position(faceTypesOffset)
-        val faceTypes = ByteArray(faceCount)
-        buffer.readBytes(faceTypes)
 
         buffer.position(faceIndicesOffset)
         var a = 0
         var b = 0
         var c = 0
         var lastIndex = 0
+
         for (i in 0 until faceCount) {
-            val type = faceTypes[i].toInt() and 0xff
+            val type = faceIndexTypes[i].toInt() and 0xff
             when (type) {
                 1 -> {
-                    a = readSignedSmart(buffer) + lastIndex
+                    a = readSmart(buffer) + lastIndex
                     lastIndex = a
-                    b = readSignedSmart(buffer) + lastIndex
+                    b = readSmart(buffer) + lastIndex
                     lastIndex = b
-                    c = readSignedSmart(buffer) + lastIndex
+                    c = readSmart(buffer) + lastIndex
                     lastIndex = c
                 }
                 2 -> {
                     b = c
-                    c = readSignedSmart(buffer) + lastIndex
+                    c = readSmart(buffer) + lastIndex
                     lastIndex = c
                 }
                 3 -> {
                     a = c
-                    c = readSignedSmart(buffer) + lastIndex
+                    c = readSmart(buffer) + lastIndex
                     lastIndex = c
                 }
                 4 -> {
                     val temp = a
                     a = b
                     b = temp
-                    c = readSignedSmart(buffer) + lastIndex
+                    c = readSmart(buffer) + lastIndex
                     lastIndex = c
                 }
             }
@@ -414,31 +462,33 @@ object ModelDecoder {
 
         // Decode colors
         val faceColors = ShortArray(faceCount)
-        buffer.position(faceColorsOffset)
-        for (i in 0 until faceCount) {
-            faceColors[i] = buffer.readUnsignedShort().toShort()
+        if (faceColorsOffset + faceCount * 2 <= data.size) {
+            buffer.position(faceColorsOffset)
+            for (i in 0 until faceCount) {
+                faceColors[i] = buffer.readUnsignedShort().toShort()
+            }
         }
 
         // Decode priorities
-        val facePriorities: ByteArray? = if (hasPriorities == 255) {
+        val facePriorities: ByteArray? = if (hasPriorities == 255 && facePrioritiesOffset + faceCount <= data.size) {
             buffer.position(facePrioritiesOffset)
-            ByteArray(faceCount).also { buffer.readBytes(it) }
+            ByteArray(faceCount) { buffer.readByte().toByte() }
         } else {
             null
         }
 
         // Decode alphas
-        val faceAlphas: ByteArray? = if (hasAlphas == 1) {
+        val faceAlphas: ByteArray? = if (hasAlphas == 1 && faceAlphasOffset + faceCount <= data.size) {
             buffer.position(faceAlphasOffset)
-            ByteArray(faceCount).also { buffer.readBytes(it) }
+            ByteArray(faceCount) { buffer.readByte().toByte() }
         } else {
             null
         }
 
         // Decode render types
-        val faceRenderTypes: ByteArray? = if (hasRenderTypes == 1) {
+        val faceRenderTypes: ByteArray? = if (hasRenderTypes == 1 && faceRenderTypesOffset + faceCount <= data.size) {
             buffer.position(faceRenderTypesOffset)
-            ByteArray(faceCount).also { buffer.readBytes(it) }
+            ByteArray(faceCount) { buffer.readByte().toByte() }
         } else {
             null
         }
@@ -466,7 +516,12 @@ object ModelDecoder {
         )
     }
 
-    private fun readSignedSmart(buffer: BufferReader): Int {
+    /**
+     * Read a smart-encoded value.
+     * If first byte < 128: single byte, value range -64 to +63
+     * If first byte >= 128: two bytes, value range -49152 to +16383
+     */
+    private fun readSmart(buffer: BufferReader): Int {
         val peek = buffer.readUnsignedByte()
         return if (peek < 128) {
             peek - 64

@@ -5,6 +5,7 @@ import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.glfw.GLFWErrorCallback
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL11.*
+import org.lwjgl.opengl.GL13.GL_MULTISAMPLE
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil.NULL
 
@@ -89,8 +90,9 @@ class Window(private val config: WindowConfig = WindowConfig()) {
         GL.createCapabilities()
 
         glEnable(GL_DEPTH_TEST)
-        glEnable(GL_CULL_FACE)
-        glCullFace(GL_BACK)
+        // Culling disabled - RS models have inconsistent winding
+        // glEnable(GL_CULL_FACE)
+        // glCullFace(GL_BACK)
         if (config.samples > 0) {
             glEnable(GL_MULTISAMPLE)
         }

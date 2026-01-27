@@ -65,11 +65,21 @@ class ModelViewer(
         gridNode = SceneNode(mesh = Mesh.createGrid(20f, 20))
         scene.addNode("grid", gridNode!!)
 
-        // Load default model
-        loadModel(0)
+        // Load default model - try several until we find a valid one
+        var loaded = false
+        for (id in listOf(0, 1, 10, 100, 1000, 2000, 5000)) {
+            if (loadModel(id)) {
+                println("Successfully loaded model $id")
+                loaded = true
+                break
+            }
+        }
+        if (!loaded) {
+            println("Warning: Could not load any default model")
+        }
     }
 
-    fun loadModel(modelId: Int) {
+    fun loadModel(modelId: Int): Boolean {
         // Remove existing model
         modelNode?.let {
             scene.removeNode("model")
@@ -77,13 +87,17 @@ class ModelViewer(
         }
 
         val mesh = ModelLoader.loadMesh(cache, modelId)
-        if (mesh != null) {
+        if (mesh != null && mesh.vertexCount > 0) {
+            println("Loaded model $modelId: ${mesh.vertexCount} vertices")
             modelNode = SceneNode(mesh = mesh)
             scene.addNode("model", modelNode!!)
             currentModelId = modelId
+            return true
         } else {
+            println("Failed to load model $modelId (mesh is ${if (mesh == null) "null" else "empty"})")
             modelNode = null
             currentModelId = -1
+            return false
         }
     }
 
@@ -129,10 +143,13 @@ class ModelViewer(
 
         // Model navigation
         if (input.keyboard.isKeyPressed(GLFW_KEY_LEFT) || input.keyboard.isKeyPressed(GLFW_KEY_COMMA)) {
-            if (currentModelId > 0) loadModel(currentModelId - 1)
+            if (currentModelId > 0) {
+                loadModel(currentModelId - 1)
+            }
         }
         if (input.keyboard.isKeyPressed(GLFW_KEY_RIGHT) || input.keyboard.isKeyPressed(GLFW_KEY_PERIOD)) {
-            loadModel(currentModelId + 1)
+            val nextId = if (currentModelId < 0) 0 else currentModelId + 1
+            loadModel(nextId)
         }
     }
 

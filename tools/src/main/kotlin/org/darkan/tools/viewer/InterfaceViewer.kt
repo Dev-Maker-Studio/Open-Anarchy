@@ -4,6 +4,7 @@ import org.darkan.tools.engine.Engine
 import org.darkan.tools.engine.window.WindowConfig
 import org.darkan.tools.ui.DebugPanel
 import org.darkan.tools.ui.ImGuiLayer
+import imgui.type.ImInt
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL11.*
 import world.gregs.voidps.cache.Cache
@@ -23,6 +24,7 @@ class InterfaceViewer(
     private var interfaceDefs: Array<InterfaceDefinitionFull>? = null
     private var currentInterfaceId = 0
     private var selectedComponent = 0
+    private val interfaceIdInput = ImInt(0)
 
     override fun onInit() {
         imGui = ImGuiLayer(window)
@@ -107,11 +109,11 @@ class InterfaceViewer(
         if (imgui.ImGui.begin("Interface Browser", imgui.flag.ImGuiWindowFlags.NoMove or imgui.flag.ImGuiWindowFlags.NoResize)) {
             imgui.ImGui.text("Interface ID:")
 
-            val interfaceId = intArrayOf(currentInterfaceId)
+            interfaceIdInput.set(currentInterfaceId)
             imgui.ImGui.setNextItemWidth(150f)
-            if (imgui.ImGui.inputInt("##interfaceId", interfaceId)) {
-                interfaceId[0] = interfaceId[0].coerceAtLeast(0)
-                currentInterfaceId = interfaceId[0]
+            if (imgui.ImGui.inputInt("##interfaceId", interfaceIdInput)) {
+                interfaceIdInput.set(interfaceIdInput.get().coerceAtLeast(0))
+                currentInterfaceId = interfaceIdInput.get()
                 selectedComponent = 0
             }
 
@@ -153,20 +155,20 @@ class InterfaceViewer(
             imgui.ImGui.text("Type: ${getComponentTypeString(component.type)}")
             imgui.ImGui.separator()
 
-            imgui.ImGui.text("Position: (${component.x}, ${component.y})")
-            imgui.ImGui.text("Size: ${component.width} x ${component.height}")
+            imgui.ImGui.text("Position: (${component.basePositionX}, ${component.basePositionY})")
+            imgui.ImGui.text("Size: ${component.baseWidth} x ${component.baseHeight}")
             imgui.ImGui.separator()
 
-            if (component.text?.isNotEmpty() == true) {
+            if (component.text.isNotEmpty()) {
                 imgui.ImGui.text("Text: ${component.text}")
             }
 
-            if (component.spriteId != -1) {
-                imgui.ImGui.text("Sprite ID: ${component.spriteId}")
+            if (component.defaultImage != -1) {
+                imgui.ImGui.text("Sprite ID: ${component.defaultImage}")
             }
 
-            if (component.modelId != -1) {
-                imgui.ImGui.text("Model ID: ${component.modelId}")
+            if (component.defaultMediaId != 0) {
+                imgui.ImGui.text("Model ID: ${component.defaultMediaId}")
             }
 
             imgui.ImGui.separator()

@@ -34,13 +34,16 @@ object ModelLoader {
         val normals = mutableListOf<Float>()
         val indices = mutableListOf<Int>()
 
+        // Helper to check if index is valid
+        fun isValidIndex(idx: Int) = idx >= 0 && idx < def.vertexCount
+
         // Calculate face normals
         val faceNormals = Array(def.faceCount) { i ->
             val aIdx = def.faceA[i]
             val bIdx = def.faceB[i]
             val cIdx = def.faceC[i]
 
-            if (aIdx >= def.vertexCount || bIdx >= def.vertexCount || cIdx >= def.vertexCount) {
+            if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) {
                 Vector3f(0f, 1f, 0f)
             } else {
                 val v0 = CoordinateUtil.rsToOpenGL(def.vertexX[aIdx], def.vertexY[aIdx], def.vertexZ[aIdx])
@@ -57,7 +60,13 @@ object ModelLoader {
             val bIdx = def.faceB[i]
             val cIdx = def.faceC[i]
 
-            if (aIdx >= def.vertexCount || bIdx >= def.vertexCount || cIdx >= def.vertexCount) {
+            if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) {
+                continue
+            }
+
+            // Check alpha before processing - skip fully transparent faces
+            val alpha = def.faceAlphas?.get(i)?.toInt()?.and(0xff) ?: 255
+            if (alpha == 0) {
                 continue
             }
 
@@ -76,12 +85,6 @@ object ModelLoader {
                 Vector3f(0.5f, 0.5f, 0.5f) // Default gray for invalid colors
             } else {
                 ColorUtil.hslToRgb(hsl)
-            }
-
-            // Apply alpha if present
-            val alpha = def.faceAlphas?.get(i)?.toInt()?.and(0xff) ?: 255
-            if (alpha == 0) {
-                continue // Skip fully transparent faces
             }
 
             colors.addAll(listOf(color.x, color.y, color.z))
@@ -118,6 +121,9 @@ object ModelLoader {
     fun createMeshSmooth(def: ModelDefinition): Mesh? {
         if (def.faceCount == 0) return null
 
+        // Helper to check if index is valid
+        fun isValidIndex(idx: Int) = idx >= 0 && idx < def.vertexCount
+
         val positions = FloatArray(def.vertexCount * 3)
         val colors = FloatArray(def.vertexCount * 3)
         val normals = FloatArray(def.vertexCount * 3)
@@ -137,7 +143,7 @@ object ModelLoader {
             val bIdx = def.faceB[i]
             val cIdx = def.faceC[i]
 
-            if (aIdx >= def.vertexCount || bIdx >= def.vertexCount || cIdx >= def.vertexCount) {
+            if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) {
                 continue
             }
 
@@ -196,7 +202,7 @@ object ModelLoader {
             val bIdx = def.faceB[i]
             val cIdx = def.faceC[i]
 
-            if (aIdx >= def.vertexCount || bIdx >= def.vertexCount || cIdx >= def.vertexCount) {
+            if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) {
                 continue
             }
 

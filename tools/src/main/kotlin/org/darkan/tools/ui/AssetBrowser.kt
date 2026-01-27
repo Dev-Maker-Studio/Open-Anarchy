@@ -133,7 +133,7 @@ class AssetBrowser(private val cache: Cache) {
     private fun renderItemTab() {
         if (itemDefs == null) {
             if (ImGui.button("Load Item Definitions")) {
-                itemDefs = ItemDecoderFull(true).load(cache)
+                itemDefs = ItemDecoderFull().load(cache)
                 updateFilteredItems()
             }
             return
