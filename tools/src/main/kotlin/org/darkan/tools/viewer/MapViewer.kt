@@ -7,6 +7,7 @@ import org.darkan.tools.engine.window.WindowConfig
 import org.darkan.tools.ui.DebugPanel
 import org.darkan.tools.ui.ImGuiLayer
 import org.darkan.tools.util.CoordinateUtil
+import imgui.type.ImInt
 import org.lwjgl.glfw.GLFW.*
 import world.gregs.voidps.cache.Cache
 
@@ -24,6 +25,8 @@ class MapViewer(
     private var currentRegionX = 50
     private var currentRegionY = 50
     private var currentPlane = 0
+    private val regionXInput = ImInt(50)
+    private val regionYInput = ImInt(50)
 
     override fun onInit() {
         imGui = ImGuiLayer(window)
@@ -154,21 +157,21 @@ class MapViewer(
             imgui.ImGui.separator()
             imgui.ImGui.text("Go to Region:")
 
-            val regionX = intArrayOf(currentRegionX)
-            val regionY = intArrayOf(currentRegionY)
+            regionXInput.set(currentRegionX)
+            regionYInput.set(currentRegionY)
 
             imgui.ImGui.setNextItemWidth(80f)
-            if (imgui.ImGui.inputInt("X##regionX", regionX)) {
-                regionX[0] = regionX[0].coerceIn(0, 255)
+            if (imgui.ImGui.inputInt("X##regionX", regionXInput)) {
+                regionXInput.set(regionXInput.get().coerceIn(0, 255))
             }
             imgui.ImGui.sameLine()
             imgui.ImGui.setNextItemWidth(80f)
-            if (imgui.ImGui.inputInt("Y##regionY", regionY)) {
-                regionY[0] = regionY[0].coerceIn(0, 255)
+            if (imgui.ImGui.inputInt("Y##regionY", regionYInput)) {
+                regionYInput.set(regionYInput.get().coerceIn(0, 255))
             }
 
             if (imgui.ImGui.button("Load")) {
-                loadRegion(regionX[0], regionY[0], currentPlane)
+                loadRegion(regionXInput.get(), regionYInput.get(), currentPlane)
             }
         }
         imgui.ImGui.end()

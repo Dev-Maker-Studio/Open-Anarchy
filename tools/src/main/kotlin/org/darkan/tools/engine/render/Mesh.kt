@@ -95,15 +95,19 @@ class Mesh(
         }
     }
 
+    var primitiveType: Int = GL_TRIANGLES
+
     fun render() {
         glBindVertexArray(vaoId)
-        glDrawElements(GL_TRIANGLES, vertexCount, GL_UNSIGNED_INT, 0)
+        glDrawElements(primitiveType, vertexCount, GL_UNSIGNED_INT, 0)
         glBindVertexArray(0)
     }
 
     fun renderWireframe() {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-        render()
+        glBindVertexArray(vaoId)
+        glDrawElements(GL_TRIANGLES, vertexCount, GL_UNSIGNED_INT, 0)
+        glBindVertexArray(0)
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
     }
 
@@ -162,6 +166,7 @@ class Mesh(
         fun createGrid(size: Float, divisions: Int): Mesh {
             val positions = mutableListOf<Float>()
             val colors = mutableListOf<Float>()
+            val normals = mutableListOf<Float>()
             val indices = mutableListOf<Int>()
 
             val step = size / divisions
@@ -175,6 +180,8 @@ class Mesh(
                 positions.addAll(listOf(pos, 0f, halfSize))
                 colors.addAll(listOf(0.5f, 0.5f, 0.5f))
                 colors.addAll(listOf(0.5f, 0.5f, 0.5f))
+                normals.addAll(listOf(0f, 1f, 0f))
+                normals.addAll(listOf(0f, 1f, 0f))
                 indices.add(index++)
                 indices.add(index++)
 
@@ -183,6 +190,8 @@ class Mesh(
                 positions.addAll(listOf(halfSize, 0f, pos))
                 colors.addAll(listOf(0.5f, 0.5f, 0.5f))
                 colors.addAll(listOf(0.5f, 0.5f, 0.5f))
+                normals.addAll(listOf(0f, 1f, 0f))
+                normals.addAll(listOf(0f, 1f, 0f))
                 indices.add(index++)
                 indices.add(index++)
             }
@@ -191,9 +200,9 @@ class Mesh(
                 positions.toFloatArray(),
                 colors.toFloatArray(),
                 null,
-                null,
+                normals.toFloatArray(),
                 indices.toIntArray()
-            )
+            ).apply { primitiveType = GL_LINES }
         }
     }
 }
