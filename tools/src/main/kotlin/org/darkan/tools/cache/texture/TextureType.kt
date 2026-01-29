@@ -184,9 +184,9 @@ class TextureType(data: ByteArray) {
                 blueBuffer = palette[2]
             }
 
-            // Process pixels - use full opacity for solid textures
-            // RS textures often have low opacity values for effects that don't apply to simple rendering
-            for (x in 0 until width) {
+            // Process pixels from right to left (matching RS client behavior)
+            // This horizontally flips the texture as the client expects
+            for (x in width - 1 downTo 0) {
                 var red = (redBuffer[x] shr 4).coerceIn(0, 255)
                 var green = (greenBuffer[x] shr 4).coerceIn(0, 255)
                 var blue = (blueBuffer[x] shr 4).coerceIn(0, 255)

@@ -36,6 +36,7 @@ object ModelDecoder {
 
     private fun decodeNewFormat(modelId: Int, data: ByteArray): ModelDefinition? {
         val buffer = BufferReader(data)
+        val buffer2 = BufferReader(data)
 
         // Read header from end of file (23 bytes before end)
         buffer.position(data.size - 23)
@@ -59,6 +60,25 @@ object ModelDecoder {
 
         if (vertexCount == 0 || faceCount == 0) {
             return null
+        }
+
+        // Decode texture mapping types first (they're at the start of the file)
+        var simpleTextureFaceCount = 0
+        var complexTextureFaceCount = 0
+        var texturesMapping: ByteArray? = null
+        if (texturedFaceCount > 0) {
+            texturesMapping = ByteArray(texturedFaceCount)
+            buffer.position(0)
+            for (i in 0 until texturedFaceCount) {
+                val mapping = buffer.readByte().toByte()
+                texturesMapping[i] = mapping
+                if (mapping.toInt() == 0) {
+                    simpleTextureFaceCount++
+                }
+                if (mapping.toInt() in 1..3) {
+                    complexTextureFaceCount++
+                }
+            }
         }
 
         // Calculate offsets (order matters!)
@@ -103,7 +123,7 @@ object ModelDecoder {
             offset += faceCount * 2
         }
 
-        // TEXTURE INDICES - always present, size is textureIndicesLength from footer
+        // TEXTURE INDICES (faceTexturePointers) - size is textureIndicesLength from footer
         val textureIndicesOffset = offset
         offset += textureIndicesLength
 
@@ -119,8 +139,12 @@ object ModelDecoder {
         val vertexZOffset = offset
         offset += vertexZLength
 
-        val textureTrianglesOffset = offset
+        // Texture triangle data offsets
+        val simpleTexTriOffset = offset
+        offset += simpleTextureFaceCount * 6
 
+        val complexTexTriOffset = offset
+        offset += complexTextureFaceCount * 6
 
         // Validate data fits
         val minRequired = vertexZOffset + vertexZLength
@@ -255,12 +279,56 @@ object ModelDecoder {
             null
         }
 
-        // Decode face textures
+        // Decode face textures (material IDs)
         val faceTextures: ShortArray? = if (hasFaceTextures == 1 && faceTexturesOffset + faceCount * 2 <= data.size) {
             buffer.position(faceTexturesOffset)
-            ShortArray(faceCount) { buffer.readUnsignedShort().toShort() }
+            ShortArray(faceCount) { (buffer.readUnsignedShort() - 1).toShort() }
         } else {
             null
+        }
+
+        // Decode face texture pointers (index into texture triangles for UV projection)
+        val faceTexturePointers: ByteArray? = if (hasFaceTextures == 1 && texturedFaceCount > 0 && textureIndicesOffset + faceCount <= data.size) {
+            buffer.position(textureIndicesOffset)
+            ByteArray(faceCount) { faceIdx ->
+                // Only decode texture pointer if face has a material
+                if (faceTextures != null && faceTextures[faceIdx].toInt() != -1) {
+                    (buffer.readUnsignedByte() - 1).toByte()
+                } else {
+                    -1
+                }
+            }
+        } else {
+            null
+        }
+
+        // Decode texture triangles (for UV projection)
+        var textureFaceX: ShortArray? = null
+        var textureFaceY: ShortArray? = null
+        var textureFaceZ: ShortArray? = null
+
+        if (texturedFaceCount > 0 && simpleTexTriOffset + simpleTextureFaceCount * 6 <= data.size) {
+            textureFaceX = ShortArray(texturedFaceCount)
+            textureFaceY = ShortArray(texturedFaceCount)
+            textureFaceZ = ShortArray(texturedFaceCount)
+
+            buffer.position(simpleTexTriOffset)
+            buffer2.position(complexTexTriOffset)
+
+            for (i in 0 until texturedFaceCount) {
+                val mappingType = texturesMapping?.get(i)?.toInt()?.and(0xff) ?: 0
+                if (mappingType == 0) {
+                    // Simple/planar mapping - read from simpleTexTriOffset
+                    textureFaceX[i] = buffer.readUnsignedShort().toShort()
+                    textureFaceY[i] = buffer.readUnsignedShort().toShort()
+                    textureFaceZ[i] = buffer.readUnsignedShort().toShort()
+                } else if (mappingType in 1..3) {
+                    // Complex/cylindrical mapping - read from complexTexTriOffset
+                    textureFaceX[i] = buffer2.readUnsignedShort().toShort()
+                    textureFaceY[i] = buffer2.readUnsignedShort().toShort()
+                    textureFaceZ[i] = buffer2.readUnsignedShort().toShort()
+                }
+            }
         }
 
         return ModelDefinition(
@@ -278,6 +346,12 @@ object ModelDecoder {
             faceRenderTypes = faceRenderTypes,
             facePriorities = facePriorities,
             faceTextures = faceTextures,
+            faceTexturePointers = faceTexturePointers,
+            textureTriangleCount = texturedFaceCount,
+            texturesMapping = texturesMapping,
+            textureFaceX = textureFaceX,
+            textureFaceY = textureFaceY,
+            textureFaceZ = textureFaceZ,
             textureCoordU = null,
             textureCoordV = null,
             vertexNormalsX = null,
@@ -508,6 +582,12 @@ object ModelDecoder {
             faceRenderTypes = faceRenderTypes,
             facePriorities = facePriorities,
             faceTextures = null,
+            faceTexturePointers = null,
+            textureTriangleCount = 0,
+            texturesMapping = null,
+            textureFaceX = null,
+            textureFaceY = null,
+            textureFaceZ = null,
             textureCoordU = null,
             textureCoordV = null,
             vertexNormalsX = null,
