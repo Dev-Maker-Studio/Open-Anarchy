@@ -44,13 +44,26 @@ object TextureLoader {
         if (textureId < 0) return defaultTextureId
 
         return textureCache.getOrPut(textureId) {
+            println("DEBUG: Loading texture for material $textureId")
+
             // Try to load and generate the texture using the full operation pipeline
             val textureType = loadTextureType(cache, textureId)
             if (textureType != null) {
+                println("DEBUG: TextureType loaded, sprite IDs: ${textureType.textureFileIds.toList()}")
+                println("DEBUG: Operation count: ${textureType.textureOperations.size}")
+                textureType.textureOperations.forEachIndexed { i, op ->
+                    val spriteId = op.getTextureId()
+                    val materialId = op.getMaterialId()
+                    println("DEBUG:   Op[$i] ${op::class.simpleName} spriteId=$spriteId materialId=$materialId")
+                }
+
                 val pixels = textureType.getPixelsArgb(
                     TEXTURE_SIZE,
                     TEXTURE_SIZE,
-                    spriteLoader = { spriteId -> loadSpriteData(cache, spriteId) },
+                    spriteLoader = { spriteId ->
+                        println("DEBUG: Loading sprite $spriteId")
+                        loadSpriteData(cache, spriteId)
+                    },
                     textureLoader = { materialId, width, height ->
                         generateTexturePixels(cache, materialId, width, height)
                     }
@@ -59,6 +72,7 @@ object TextureLoader {
             }
 
             // Fallback: try loading texture ID directly as sprite ID (some models use this)
+            println("DEBUG: No TextureType found, trying direct sprite load")
             val directSprite = loadSpriteAsTexture(cache, textureId)
             if (directSprite != null) {
                 return@getOrPut directSprite
@@ -77,11 +91,20 @@ object TextureLoader {
     private fun generateTexturePixels(cache: Cache, textureId: Int, width: Int, height: Int): IntArray? {
         // Use a simple cache to avoid redundant generation
         return pixelCache.getOrPut(textureId) {
-            val textureType = loadTextureType(cache, textureId) ?: return@getOrPut null
+            println("DEBUG: generateTexturePixels for nested texture $textureId")
+            val textureType = loadTextureType(cache, textureId)
+            if (textureType == null) {
+                println("DEBUG: Nested texture $textureId - NO TextureType found")
+                return@getOrPut null
+            }
+            println("DEBUG: Nested texture $textureId - operations: ${textureType.textureOperations.map { it::class.simpleName }}")
             textureType.getPixelsArgb(
                 width,
                 height,
-                spriteLoader = { spriteId -> loadSpriteData(cache, spriteId) },
+                spriteLoader = { spriteId ->
+                    println("DEBUG: Nested texture $textureId loading sprite $spriteId")
+                    loadSpriteData(cache, spriteId)
+                },
                 textureLoader = { materialId, w, h ->
                     // Recursive call for deeply nested textures
                     if (materialId != textureId) { // Avoid infinite recursion
@@ -113,8 +136,19 @@ object TextureLoader {
      */
     private fun loadSpriteData(cache: Cache, spriteId: Int): SpriteData? {
         return spriteDataCache.getOrPut(spriteId) {
-            val data = cache.data(Index.SPRITES, spriteId) ?: return@getOrPut null
-            decodeSpriteToData(data, 0)
+            val data = cache.data(Index.SPRITES, spriteId)
+            if (data == null) {
+                println("DEBUG: Sprite $spriteId - NO DATA FOUND")
+                return@getOrPut null
+            }
+            println("DEBUG: Sprite $spriteId - data size: ${data.size}")
+            val result = decodeSpriteToData(data, 0)
+            if (result != null) {
+                println("DEBUG: Sprite $spriteId - decoded: ${result.width}x${result.height}")
+            } else {
+                println("DEBUG: Sprite $spriteId - decode FAILED")
+            }
+            result
         }
     }
 
@@ -156,9 +190,17 @@ object TextureLoader {
         for (i in 0 until spriteCount) widths[i] = buffer.readShort()
         for (i in 0 until spriteCount) heights[i] = buffer.readShort()
 
-        val width = widths[subIndex]
-        val height = heights[subIndex]
-        if (width <= 0 || height <= 0) return null
+        val innerWidth = widths[subIndex]
+        val innerHeight = heights[subIndex]
+        val offsetX = minX[subIndex]
+        val offsetY = minY[subIndex]
+        if (innerWidth <= 0 || innerHeight <= 0) return null
+
+        // Calculate full canvas size (like method1523 does)
+        // biggestWidth and biggestHeight define the full canvas
+        // Fall back to inner dimensions if biggest is invalid
+        val fullWidth = if (biggestWidth > 0) biggestWidth else innerWidth
+        val fullHeight = if (biggestHeight > 0) biggestHeight else innerHeight
 
         // Read palette
         buffer.position(data.size - 7 - spriteCount * 8 - (paletteSize - 1) * 3)
@@ -214,21 +256,30 @@ object TextureLoader {
 
         if (raster == null) return null
 
-        // Convert indexed to ARGB
-        val pixels = IntArray(width * height)
-        for (i in pixels.indices) {
-            val paletteIdx = raster[i].toInt() and 0xFF
-            val rgb = palette[paletteIdx]
-            val a = if (alpha != null) {
-                alpha[i].toInt() and 0xFF
-            } else {
-                if (paletteIdx == 0) 0 else 255
+        // Convert indexed to ARGB on the full canvas (like method1523 does)
+        // This expands the sprite to its full bounding box
+        val pixels = IntArray(fullWidth * fullHeight)
+        for (y in 0 until innerHeight) {
+            val srcRowStart = y * innerWidth
+            val destRowStart = (y + offsetY) * fullWidth + offsetX
+            for (x in 0 until innerWidth) {
+                val srcIdx = srcRowStart + x
+                val destIdx = destRowStart + x
+                if (destIdx < pixels.size) {
+                    val paletteIdx = raster[srcIdx].toInt() and 0xFF
+                    val rgb = palette[paletteIdx]
+                    val a = if (alpha != null) {
+                        alpha[srcIdx].toInt() and 0xFF
+                    } else {
+                        if (paletteIdx == 0) 0 else 255
+                    }
+                    // ARGB format
+                    pixels[destIdx] = (a shl 24) or rgb
+                }
             }
-            // ARGB format
-            pixels[i] = (a shl 24) or rgb
         }
 
-        return SpriteData(pixels, width, height)
+        return SpriteData(pixels, fullWidth, fullHeight)
     }
 
     /**
