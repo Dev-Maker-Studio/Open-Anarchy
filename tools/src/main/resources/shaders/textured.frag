@@ -21,16 +21,21 @@ void main() {
         vec4 texColor = texture(textureSampler, vTexCoord);
         baseColor = texColor.rgb * vColor; // Blend texture with vertex color
         alpha = texColor.a;
-        if (alpha < 0.1) discard; // Discard nearly transparent pixels
+        // Alpha-to-coverage handles smooth edges - no discard needed
     } else {
         baseColor = vColor;
+    }
+
+    // Flip normal for back faces (two-sided lighting)
+    vec3 norm = normalize(vNormal);
+    if (!gl_FrontFacing) {
+        norm = -norm;
     }
 
     // Ambient lighting
     vec3 ambient = ambientLight * baseColor;
 
     // Diffuse lighting
-    vec3 norm = normalize(vNormal);
     vec3 lightDir = normalize(-lightDirection);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor * baseColor;

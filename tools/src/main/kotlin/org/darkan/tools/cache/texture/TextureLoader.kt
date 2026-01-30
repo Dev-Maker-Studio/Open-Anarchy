@@ -1,5 +1,7 @@
 package org.darkan.tools.cache.texture
 
+import org.lwjgl.opengl.EXTTextureFilterAnisotropic
+import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL11.*
 import org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE
 import org.lwjgl.opengl.GL13.GL_TEXTURE0
@@ -44,35 +46,24 @@ object TextureLoader {
         if (textureId < 0) return defaultTextureId
 
         return textureCache.getOrPut(textureId) {
-            println("DEBUG: Loading texture for material $textureId")
-
             // Try to load and generate the texture using the full operation pipeline
             val textureType = loadTextureType(cache, textureId)
             if (textureType != null) {
-                println("DEBUG: TextureType loaded, sprite IDs: ${textureType.textureFileIds.toList()}")
-                println("DEBUG: Operation count: ${textureType.textureOperations.size}")
-                textureType.textureOperations.forEachIndexed { i, op ->
-                    val spriteId = op.getTextureId()
-                    val materialId = op.getMaterialId()
-                    println("DEBUG:   Op[$i] ${op::class.simpleName} spriteId=$spriteId materialId=$materialId")
-                }
-
                 val pixels = textureType.getPixelsArgb(
                     TEXTURE_SIZE,
                     TEXTURE_SIZE,
                     spriteLoader = { spriteId ->
-                        println("DEBUG: Loading sprite $spriteId")
                         loadSpriteData(cache, spriteId)
                     },
                     textureLoader = { materialId, width, height ->
                         generateTexturePixels(cache, materialId, width, height)
                     }
                 )
+
                 return@getOrPut createTextureFromArgb(pixels, TEXTURE_SIZE, TEXTURE_SIZE)
             }
 
             // Fallback: try loading texture ID directly as sprite ID (some models use this)
-            println("DEBUG: No TextureType found, trying direct sprite load")
             val directSprite = loadSpriteAsTexture(cache, textureId)
             if (directSprite != null) {
                 return@getOrPut directSprite
@@ -91,18 +82,11 @@ object TextureLoader {
     private fun generateTexturePixels(cache: Cache, textureId: Int, width: Int, height: Int): IntArray? {
         // Use a simple cache to avoid redundant generation
         return pixelCache.getOrPut(textureId) {
-            println("DEBUG: generateTexturePixels for nested texture $textureId")
-            val textureType = loadTextureType(cache, textureId)
-            if (textureType == null) {
-                println("DEBUG: Nested texture $textureId - NO TextureType found")
-                return@getOrPut null
-            }
-            println("DEBUG: Nested texture $textureId - operations: ${textureType.textureOperations.map { it::class.simpleName }}")
+            val textureType = loadTextureType(cache, textureId) ?: return@getOrPut null
             textureType.getPixelsArgb(
                 width,
                 height,
                 spriteLoader = { spriteId ->
-                    println("DEBUG: Nested texture $textureId loading sprite $spriteId")
                     loadSpriteData(cache, spriteId)
                 },
                 textureLoader = { materialId, w, h ->
@@ -136,19 +120,8 @@ object TextureLoader {
      */
     private fun loadSpriteData(cache: Cache, spriteId: Int): SpriteData? {
         return spriteDataCache.getOrPut(spriteId) {
-            val data = cache.data(Index.SPRITES, spriteId)
-            if (data == null) {
-                println("DEBUG: Sprite $spriteId - NO DATA FOUND")
-                return@getOrPut null
-            }
-            println("DEBUG: Sprite $spriteId - data size: ${data.size}")
-            val result = decodeSpriteToData(data, 0)
-            if (result != null) {
-                println("DEBUG: Sprite $spriteId - decoded: ${result.width}x${result.height}")
-            } else {
-                println("DEBUG: Sprite $spriteId - decode FAILED")
-            }
-            result
+            val data = cache.data(Index.SPRITES, spriteId) ?: return@getOrPut null
+            decodeSpriteToData(data, 0)
         }
     }
 
@@ -293,6 +266,12 @@ object TextureLoader {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+
+        // Enable anisotropic filtering for better texture quality at angles
+        if (GL.getCapabilities().GL_EXT_texture_filter_anisotropic) {
+            val maxAnisotropy = glGetFloat(EXTTextureFilterAnisotropic.GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT)
+            glTexParameterf(GL_TEXTURE_2D, EXTTextureFilterAnisotropic.GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropy)
+        }
 
         val buffer = MemoryUtil.memAlloc(width * height * 4)
         try {

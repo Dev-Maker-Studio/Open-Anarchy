@@ -3,6 +3,7 @@ package org.darkan.tools.engine.render
 import org.darkan.tools.engine.window.Window
 import org.joml.Vector4f
 import org.lwjgl.opengl.GL11.*
+import org.lwjgl.opengl.GL13.GL_SAMPLE_ALPHA_TO_COVERAGE
 
 class RenderSystem(private val window: Window) {
     var clearColor: Vector4f = Vector4f(0.1f, 0.1f, 0.1f, 1.0f)
@@ -36,6 +37,18 @@ class RenderSystem(private val window: Window) {
 
     fun disableBlending() {
         glDisable(GL_BLEND)
+    }
+
+    /**
+     * Enable alpha-to-coverage for smoother alpha edges with MSAA.
+     * Converts alpha values to MSAA coverage masks for anti-aliased transparency.
+     */
+    fun enableAlphaToCoverage() {
+        glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE)
+    }
+
+    fun disableAlphaToCoverage() {
+        glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE)
     }
 
     fun enableCullFace() {

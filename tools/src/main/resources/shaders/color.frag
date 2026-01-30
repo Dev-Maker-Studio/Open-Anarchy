@@ -11,11 +11,16 @@ uniform vec3 lightDirection;
 uniform vec3 lightColor;
 
 void main() {
+    // Flip normal for back faces (two-sided lighting)
+    vec3 norm = normalize(vNormal);
+    if (!gl_FrontFacing) {
+        norm = -norm;
+    }
+
     // Ambient
     vec3 ambient = ambientLight * vColor;
 
     // Diffuse
-    vec3 norm = normalize(vNormal);
     vec3 lightDir = normalize(-lightDirection);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor * vColor;
