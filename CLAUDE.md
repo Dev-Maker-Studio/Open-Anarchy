@@ -50,6 +50,127 @@ Darkan is a multiplayer game server emulator implementing **revision 727** of th
 
 ---
 
+## ⚠️ MANDATORY: Specialized Agent Invocation
+
+> **THIS IS A BLOCKING REQUIREMENT. READ THIS SECTION CAREFULLY.**
+
+This project uses **specialized agents** with deep domain expertise for critical subsystems. These agents are the **exclusive code owners** of their respective domains. You **MUST** invoke the appropriate agent for ANY work in their ownership scope.
+
+**FAILURE TO INVOKE THE CORRECT AGENT IS A VIOLATION OF PROJECT GUIDELINES.**
+
+### Why This Matters
+
+1. **Domain Expertise**: Each agent has comprehensive knowledge of RS-specific formats, protocols, and patterns that are non-obvious and require specialized understanding
+2. **Code Consistency**: Agents maintain consistent patterns, naming conventions, and architectural decisions within their domains
+3. **Correctness**: These systems have complex interdependencies (byte ordering, encryption, compression) where small mistakes cause hard-to-debug failures
+4. **Reference Knowledge**: Agents have indexed knowledge of the `../darkan-bot` client codebase for protocol inversion and format reference
+
+### Code Ownership Boundaries
+
+| Agent | Exclusive Ownership | Description |
+|-------|---------------------|-------------|
+| **cache-library-engineer** | `core/src/main/kotlin/world/gregs/voidps/**` | RS cache format specialists: buffer operations, definition decoders/encoders, compression, cryptography, JS5 protocol |
+| **networking-protocol-engineer** | `core/src/main/kotlin/org/darkan/core/net/**` | RS protocol specialists: packet codec, ISAAC cipher, session management, update masks, protocol inversion |
+| **rendering-tools-engineer** | `tools/**` | OpenGL/rendering specialists: shaders, LWJGL, ImGui, spatial structures, performance optimization |
+
+### ✅ REQUIRED: When to Invoke Each Agent
+
+#### cache-library-engineer
+
+**INVOKE THIS AGENT FOR:**
+- Creating or modifying definition decoders (`ItemDecoder`, `ObjectDecoder`, `NPCDecoder`, `AnimationDecoder`, config decoders, etc.)
+- Creating or modifying definition encoders
+- ANY changes to `Reader` or `Writer` interfaces or implementations
+- ANY changes to `BufferReader`, `BufferWriter`, or `JagExtensions.kt`
+- Cache infrastructure (`Cache`, `FileCache`, `MemoryCache`, `ReadOnlyCache`, `Index`)
+- Compression code (`DecompressionContext`, GZIP, BZIP2, LZMA)
+- Cryptographic utilities (`Xtea`, `CRC`, `Whirlpool`, `Huffman`)
+- JS5 file serving (`FileProvider`, `CacheFileProvider`, `MemoryFileProvider`)
+- Sector format handling
+- Archive/file addressing
+- Coordinate and spatial types (`Tile`, `Region`, `Zone`, `Coordinate3D`)
+- Definition mixins (`Transforms`, `Recolourable`, `Parameterized`, `Extra`)
+
+**OWNERSHIP PATH**: `core/src/main/kotlin/world/gregs/voidps/buffer/`, `core/src/main/kotlin/world/gregs/voidps/cache/`, `core/src/main/kotlin/world/gregs/voidps/type/`
+
+#### networking-protocol-engineer
+
+**INVOKE THIS AGENT FOR:**
+- Adding new `ClientProt` or `ServerProt` packet definitions
+- Modifying existing packet definitions
+- ANY changes to `Rev727.kt` codec registration
+- ANY changes to `Rev727UpdateProtocol.kt` update masks
+- Codec DSL modifications (`Codec.kt`)
+- Session management (`Session.kt`)
+- ISAAC cipher (`Isaac.kt`)
+- Packet handler registry (`PacketHandlers.kt`)
+- Update mask systems (`MaskRegistry`, `UpdateMaskPresence`, `UpdateMaskKeys`)
+- Request/Response opcodes
+- Login token handling
+- Packet inversion from `../darkan-bot` client code
+- Debugging protocol issues or encoding mismatches
+- ANY code that reads from or writes to network buffers
+
+**OWNERSHIP PATH**: `core/src/main/kotlin/org/darkan/core/net/`
+
+#### rendering-tools-engineer
+
+**INVOKE THIS AGENT FOR:**
+- Creating or modifying GLSL shaders (`.vert`, `.frag` files)
+- Mesh rendering code (`Mesh.kt`, `InstancedMesh.kt`)
+- Shader program management (`ShaderProgram.kt`, `Shader.kt`)
+- Camera system (`Camera.kt`)
+- Render system and GL state (`RenderSystem.kt`)
+- GPU instancing and batching (`InstanceManager.kt`, `StaticBatcher.kt`)
+- Texture atlasing (`TextureAtlas.kt`)
+- Uniform buffer objects (`UniformBuffers.kt`)
+- Spatial structures (`Octree.kt`, `Quadtree.kt`, `Frustum.kt`, `CullingSystem.kt`, `LODSystem.kt`)
+- Model loading from cache (`ModelLoader.kt`, `ModelDefinition.kt`)
+- Texture loading and procedural generation (`TextureLoader.kt`, `TextureOperation.kt`, ops/)
+- Terrain loading and rendering (`TerrainLoader.kt`, `ChunkedTerrain.kt`)
+- ImGui integration (`ImGuiLayer.kt`, `DebugPanel.kt`, `AssetBrowser.kt`)
+- Viewer applications (`ModelViewer.kt`, `MapViewer.kt`, `OptimizedMapViewer.kt`, `InterfaceViewer.kt`)
+- Window and input handling (`Window.kt`, `InputSystem.kt`, `Keyboard.kt`, `Mouse.kt`)
+- Scene graph (`Scene.kt`, `SceneNode.kt`, `SpatialScene.kt`)
+- Performance optimization for frame rate, draw calls, memory
+- ANY code in the `tools/` submodule
+
+**OWNERSHIP PATH**: `tools/src/main/kotlin/org/darkan/tools/`, `tools/src/main/resources/shaders/`
+
+### ❌ DO NOT
+
+- **DO NOT** attempt to modify owned code directly without invoking the appropriate agent
+- **DO NOT** guess at RS-specific formats, byte orderings, or protocol details
+- **DO NOT** assume generic solutions work for game-specific subsystems
+- **DO NOT** skip agent invocation because a change "seems simple"
+
+### ✅ DO
+
+- **DO** invoke the agent even for small changes in their domain
+- **DO** invoke multiple agents if a task crosses ownership boundaries
+- **DO** provide the agent with full context about what you're trying to accomplish
+- **DO** trust the agent's domain expertise for implementation decisions
+
+### Exception: Explicit User Override
+
+The user may explicitly bypass agent invocation with clear statements such as:
+- "Don't use agents for this"
+- "Handle this directly without agents"
+- "Skip the specialist agent"
+- "I want you to do this yourself"
+
+**Without such explicit instruction from the user, agent invocation is MANDATORY.**
+
+### Quick Reference
+
+```
+Is the file in world/gregs/voidps/**?     → cache-library-engineer
+Is the file in org/darkan/core/net/**?    → networking-protocol-engineer
+Is the file in tools/**?                  → rendering-tools-engineer
+```
+
+---
+
 ## Module Structure
 
 ```

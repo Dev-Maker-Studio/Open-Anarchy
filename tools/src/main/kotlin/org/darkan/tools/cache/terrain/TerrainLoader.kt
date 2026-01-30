@@ -7,13 +7,23 @@ import org.joml.Vector3f
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
+import world.gregs.voidps.cache.config.data.OverlayDefinition
+import world.gregs.voidps.cache.config.data.UnderlayDefinition
+import world.gregs.voidps.cache.config.decoder.OverlayDecoder
+import world.gregs.voidps.cache.config.decoder.UnderlayDecoder
 
 /**
  * Loads terrain data from the cache and creates renderable meshes.
+ * Uses actual underlay and overlay definitions for accurate colors.
  */
 object TerrainLoader {
     private val regionCache = mutableMapOf<Int, RegionData?>()
     private val meshCache = mutableMapOf<Int, Mesh?>()
+
+    // Lazy-loaded definitions from cache
+    private var underlays: Array<UnderlayDefinition>? = null
+    private var overlays: Array<OverlayDefinition>? = null
+    private var definitionsLoaded = false
 
     data class RegionData(
         val regionId: Int,
@@ -38,6 +48,18 @@ object TerrainLoader {
         val flags: Int
     )
 
+    /**
+     * Load floor definitions (underlays and overlays) from the cache.
+     * Call this once before using getUnderlayColor/getOverlayColor.
+     */
+    fun loadDefinitions(cache: Cache) {
+        if (definitionsLoaded) return
+
+        underlays = UnderlayDecoder().load(cache)
+        overlays = OverlayDecoder().load(cache)
+        definitionsLoaded = true
+    }
+
     fun loadRegion(cache: Cache, regionX: Int, regionY: Int): RegionData? {
         val regionId = (regionX shl 8) or regionY
         return regionCache.getOrPut(regionId) {
@@ -46,6 +68,9 @@ object TerrainLoader {
     }
 
     fun loadRegionMesh(cache: Cache, regionX: Int, regionY: Int, plane: Int = 0): Mesh? {
+        // Ensure definitions are loaded
+        loadDefinitions(cache)
+
         val regionId = (regionX shl 8) or regionY
         val cacheKey = regionId * 4 + plane
         return meshCache.getOrPut(cacheKey) {
@@ -128,17 +153,35 @@ object TerrainLoader {
                 val z0 = -y * tileSize
                 val z1 = -(y + 1) * tileSize
 
-                // Get color based on underlay
-                val color = getUnderlayColor(tile.underlayId)
+                // Get colors for both overlay and underlay
+                val underlayColor = getUnderlayColor(tile.underlayId)
+                val overlayColor = if (tile.overlayId > 0) getOverlayColor(tile.overlayId) else underlayColor
 
-                // First triangle
-                positions.addAll(listOf(x0, h00, z0))
-                positions.addAll(listOf(x1, h10, z0))
-                positions.addAll(listOf(x0, h01, z1))
+                // Determine corner colors based on overlay shape
+                // Corner order: [SW, SE, NE, NW] = [(x, y), (x+1, y), (x+1, y+1), (x, y+1)]
+                val cornerColors: Array<Vector3f>
+                if (tile.overlayId > 0 && tile.overlayShape < OVERLAY_SHAPES.size) {
+                    val shape = OVERLAY_SHAPES[tile.overlayShape]
+                    val rotatedShape = rotateShape(shape, tile.overlayRotation)
+                    cornerColors = arrayOf(
+                        if (rotatedShape[0]) overlayColor else underlayColor, // SW corner (x, y)
+                        if (rotatedShape[1]) overlayColor else underlayColor, // SE corner (x+1, y)
+                        if (rotatedShape[2]) overlayColor else underlayColor, // NE corner (x+1, y+1)
+                        if (rotatedShape[3]) overlayColor else underlayColor  // NW corner (x, y+1)
+                    )
+                } else {
+                    // No overlay or unknown shape - use underlay for all corners
+                    cornerColors = arrayOf(underlayColor, underlayColor, underlayColor, underlayColor)
+                }
 
-                colors.addAll(listOf(color.x, color.y, color.z))
-                colors.addAll(listOf(color.x, color.y, color.z))
-                colors.addAll(listOf(color.x, color.y, color.z))
+                // First triangle: SW, SE, NW (corners 0, 1, 3)
+                positions.addAll(listOf(x0, h00, z0))  // SW
+                positions.addAll(listOf(x1, h10, z0))  // SE
+                positions.addAll(listOf(x0, h01, z1))  // NW
+
+                colors.addAll(listOf(cornerColors[0].x, cornerColors[0].y, cornerColors[0].z))  // SW
+                colors.addAll(listOf(cornerColors[1].x, cornerColors[1].y, cornerColors[1].z))  // SE
+                colors.addAll(listOf(cornerColors[3].x, cornerColors[3].y, cornerColors[3].z))  // NW
 
                 // Calculate normal for first triangle
                 val v0 = Vector3f(x0, h00, z0)
@@ -155,14 +198,14 @@ object TerrainLoader {
                 indices.add(vertexIndex + 2)
                 vertexIndex += 3
 
-                // Second triangle
-                positions.addAll(listOf(x1, h10, z0))
-                positions.addAll(listOf(x1, h11, z1))
-                positions.addAll(listOf(x0, h01, z1))
+                // Second triangle: SE, NE, NW (corners 1, 2, 3)
+                positions.addAll(listOf(x1, h10, z0))  // SE
+                positions.addAll(listOf(x1, h11, z1))  // NE
+                positions.addAll(listOf(x0, h01, z1))  // NW
 
-                colors.addAll(listOf(color.x, color.y, color.z))
-                colors.addAll(listOf(color.x, color.y, color.z))
-                colors.addAll(listOf(color.x, color.y, color.z))
+                colors.addAll(listOf(cornerColors[1].x, cornerColors[1].y, cornerColors[1].z))  // SE
+                colors.addAll(listOf(cornerColors[2].x, cornerColors[2].y, cornerColors[2].z))  // NE
+                colors.addAll(listOf(cornerColors[3].x, cornerColors[3].y, cornerColors[3].z))  // NW
 
                 // Calculate normal for second triangle
                 val v3 = Vector3f(x1, h10, z0)
@@ -190,22 +233,95 @@ object TerrainLoader {
         )
     }
 
-    private fun getUnderlayColor(underlayId: Int): Vector3f {
-        // Basic underlay colors - in full implementation, load from cache
-        return when (underlayId) {
-            0 -> Vector3f(0.2f, 0.5f, 0.2f) // Grass
-            1 -> Vector3f(0.6f, 0.5f, 0.3f) // Dirt
-            2 -> Vector3f(0.3f, 0.3f, 0.35f) // Stone
-            3 -> Vector3f(0.2f, 0.3f, 0.6f) // Water
-            4 -> Vector3f(0.9f, 0.85f, 0.7f) // Sand
-            else -> Vector3f(0.3f, 0.6f, 0.3f) // Default grass
+    /**
+     * Get the color for an underlay ID using actual definition data.
+     */
+    fun getUnderlayColor(underlayId: Int): Vector3f {
+        if (underlayId <= 0) return DEFAULT_GRASS_COLOR
+
+        val defs = underlays
+        if (defs != null && underlayId < defs.size) {
+            val def = defs[underlayId]
+            if (def.colour != 0) {
+                return ColorUtil.rgbToVector(def.colour)
+            }
         }
+
+        // Fallback colors for when definitions aren't loaded
+        return when (underlayId) {
+            1 -> Vector3f(0.6f, 0.5f, 0.3f)   // Dirt
+            2 -> Vector3f(0.3f, 0.3f, 0.35f)  // Stone
+            3 -> Vector3f(0.2f, 0.3f, 0.6f)   // Water
+            4 -> Vector3f(0.9f, 0.85f, 0.7f)  // Sand
+            else -> DEFAULT_GRASS_COLOR
+        }
+    }
+
+    /**
+     * Get the color for an overlay ID using actual definition data.
+     */
+    fun getOverlayColor(overlayId: Int): Vector3f {
+        if (overlayId <= 0) return DEFAULT_GRASS_COLOR
+
+        val defs = overlays
+        if (defs != null && overlayId < defs.size) {
+            val def = defs[overlayId]
+            // Use blendColour if available, otherwise colour
+            val color = if (def.blendColour != -1) def.blendColour else def.colour
+            if (color != 0 && color != -1) {
+                // Overlay colors are stored as packed HSL, need to convert
+                return decodeOverlayHsl(color)
+            }
+        }
+
+        // Fallback - use underlay color lookup
+        return getUnderlayColor(overlayId)
+    }
+
+    /**
+     * Decode overlay HSL color format to RGB.
+     * Overlay colours are pre-processed in a specific format.
+     */
+    private fun decodeOverlayHsl(packedHsl: Int): Vector3f {
+        // Extract HSL components from the packed format
+        // Format: (h << 10) | (s << 7) | l
+        val h = ((packedHsl shr 10) and 0x3f) / 63f
+        val s = ((packedHsl shr 5) and 0x1f) / 31f
+        val l = (packedHsl and 0x7f) / 127f
+
+        return ColorUtil.hslToRgb(h, s, l)
+    }
+
+    /**
+     * Get underlay definition by ID.
+     */
+    fun getUnderlayDefinition(underlayId: Int): UnderlayDefinition? {
+        val defs = underlays ?: return null
+        return if (underlayId in defs.indices) defs[underlayId] else null
+    }
+
+    /**
+     * Get overlay definition by ID.
+     */
+    fun getOverlayDefinition(overlayId: Int): OverlayDefinition? {
+        val defs = overlays ?: return null
+        return if (overlayId in defs.indices) defs[overlayId] else null
     }
 
     fun clearCache() {
         meshCache.values.forEach { it?.cleanup() }
         meshCache.clear()
         regionCache.clear()
+    }
+
+    /**
+     * Clear all caches including definitions.
+     */
+    fun clearAll() {
+        clearCache()
+        underlays = null
+        overlays = null
+        definitionsLoaded = false
     }
 
     /**
@@ -222,5 +338,73 @@ object TerrainLoader {
             }
         }
         return regions
+    }
+
+    private val DEFAULT_GRASS_COLOR = Vector3f(0.3f, 0.55f, 0.25f)
+
+    /**
+     * Overlay shapes define which corners of a tile use overlay vs underlay color.
+     * Each shape is an array of 4 booleans [SW, SE, NE, NW] indicating overlay corners.
+     * RS uses 23 predefined shapes (0-22).
+     *
+     * Shapes are:
+     * 0: Full tile (all overlay)
+     * 1-8: Half tiles with various orientations
+     * 9-16: Diagonal and corner shapes
+     * 17-22: Detailed corner shapes
+     */
+    private val OVERLAY_SHAPES: Array<BooleanArray> = arrayOf(
+        // Shape 0: Full tile - all overlay
+        booleanArrayOf(true, true, true, true),
+
+        // Shape 1-4: Half tiles (two adjacent corners)
+        booleanArrayOf(true, true, false, false),  // 1: South half (SW, SE)
+        booleanArrayOf(false, true, true, false),  // 2: East half (SE, NE)
+        booleanArrayOf(false, false, true, true),  // 3: North half (NE, NW)
+        booleanArrayOf(true, false, false, true),  // 4: West half (SW, NW)
+
+        // Shape 5-8: Diagonal half tiles
+        booleanArrayOf(true, false, true, false),  // 5: Diagonal SW-NE
+        booleanArrayOf(false, true, false, true),  // 6: Diagonal SE-NW
+        booleanArrayOf(true, true, false, true),   // 7: All except NE
+        booleanArrayOf(true, true, true, false),   // 8: All except NW
+
+        // Shape 9-12: Single corner
+        booleanArrayOf(true, false, false, false), // 9: Only SW
+        booleanArrayOf(false, true, false, false), // 10: Only SE
+        booleanArrayOf(false, false, true, false), // 11: Only NE
+        booleanArrayOf(false, false, false, true), // 12: Only NW
+
+        // Shape 13-16: Three corners (L-shapes)
+        booleanArrayOf(true, true, false, true),   // 13: All except NE (alternative)
+        booleanArrayOf(true, true, true, false),   // 14: All except NW (alternative)
+        booleanArrayOf(false, true, true, true),   // 15: All except SW
+        booleanArrayOf(true, false, true, true),   // 16: All except SE
+
+        // Shape 17-22: Detailed corner and edge shapes
+        booleanArrayOf(true, false, false, true),  // 17: SW and NW (west edge)
+        booleanArrayOf(true, true, false, false),  // 18: SW and SE (south edge)
+        booleanArrayOf(false, true, true, false),  // 19: SE and NE (east edge)
+        booleanArrayOf(false, false, true, true),  // 20: NE and NW (north edge)
+        booleanArrayOf(true, false, true, false),  // 21: Diagonal (SW, NE)
+        booleanArrayOf(false, true, false, true)   // 22: Diagonal (SE, NW)
+    )
+
+    /**
+     * Rotate a shape by the given number of 90-degree clockwise rotations.
+     * The corners are ordered [SW, SE, NE, NW], so rotating CW shifts the indices.
+     */
+    private fun rotateShape(shape: BooleanArray, rotation: Int): BooleanArray {
+        if (rotation == 0) return shape
+
+        val result = BooleanArray(4)
+        val rot = rotation and 3  // Ensure rotation is 0-3
+
+        // Clockwise rotation: SW -> SE -> NE -> NW -> SW
+        // Each rotation shifts indices by 1
+        for (i in 0 until 4) {
+            result[(i + rot) and 3] = shape[i]
+        }
+        return result
     }
 }

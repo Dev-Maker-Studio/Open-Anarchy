@@ -1,5 +1,6 @@
 package org.darkan.tools.engine.render
 
+import org.darkan.tools.engine.spatial.Frustum
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import kotlin.math.cos
@@ -25,58 +26,128 @@ class Camera(
     var orthographic: Boolean = false
     var orthoSize: Float = 10f
 
+    // Cached matrices to reduce allocations
+    private val cachedViewMatrix = Matrix4f()
+    private val cachedProjectionMatrix = Matrix4f()
+    private val cachedViewProjectionMatrix = Matrix4f()
+    private val tempTarget = Vector3f()
+
+    // Frustum for culling
+    private val frustum = Frustum()
+    private var frustumDirty = true
+    private var lastAspectRatio = 0f
+
     init {
         updateVectors()
     }
 
     fun getViewMatrix(): Matrix4f {
-        val target = Vector3f()
-        position.add(front, target)
-        return Matrix4f().lookAt(position, target, up)
+        tempTarget.set(position).add(front)
+        cachedViewMatrix.identity().lookAt(position, tempTarget, up)
+        frustumDirty = true
+        return cachedViewMatrix
+    }
+
+    /**
+     * Get a cached copy of the view matrix (avoids allocation).
+     * Use this when you don't need to modify the matrix.
+     */
+    fun getViewMatrixCached(): Matrix4f {
+        tempTarget.set(position).add(front)
+        return cachedViewMatrix.identity().lookAt(position, tempTarget, up)
     }
 
     fun getProjectionMatrix(aspectRatio: Float): Matrix4f {
+        if (aspectRatio != lastAspectRatio) {
+            frustumDirty = true
+            lastAspectRatio = aspectRatio
+        }
+
         return if (orthographic) {
             val halfHeight = orthoSize / 2
             val halfWidth = halfHeight * aspectRatio
-            Matrix4f().ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, nearPlane, farPlane)
+            cachedProjectionMatrix.identity().ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, nearPlane, farPlane)
         } else {
-            Matrix4f().perspective(Math.toRadians(fov.toDouble()).toFloat(), aspectRatio, nearPlane, farPlane)
+            cachedProjectionMatrix.identity().perspective(Math.toRadians(fov.toDouble()).toFloat(), aspectRatio, nearPlane, farPlane)
         }
+    }
+
+    /**
+     * Get the cached frustum for culling.
+     * Automatically updates if the camera has moved.
+     */
+    fun getFrustum(aspectRatio: Float): Frustum {
+        if (frustumDirty) {
+            updateFrustum(aspectRatio)
+        }
+        return frustum
+    }
+
+    /**
+     * Force update the frustum.
+     */
+    fun updateFrustum(aspectRatio: Float) {
+        getViewMatrixCached()
+        getProjectionMatrix(aspectRatio)
+        cachedProjectionMatrix.mul(cachedViewMatrix, cachedViewProjectionMatrix)
+        frustum.update(cachedViewProjectionMatrix)
+        frustumDirty = false
+    }
+
+    /**
+     * Mark frustum as needing update (call after any camera parameter changes).
+     */
+    fun invalidateFrustum() {
+        frustumDirty = true
+    }
+
+    /**
+     * Get the combined view-projection matrix.
+     */
+    fun getViewProjectionMatrix(aspectRatio: Float): Matrix4f {
+        getViewMatrixCached()
+        getProjectionMatrix(aspectRatio)
+        return cachedProjectionMatrix.mul(cachedViewMatrix, cachedViewProjectionMatrix)
     }
 
     fun moveForward(deltaTime: Float) {
         val velocity = moveSpeed * deltaTime
         val movement = Vector3f(front).mul(velocity)
         position.add(movement)
+        frustumDirty = true
     }
 
     fun moveBackward(deltaTime: Float) {
         val velocity = moveSpeed * deltaTime
         val movement = Vector3f(front).mul(velocity)
         position.sub(movement)
+        frustumDirty = true
     }
 
     fun moveLeft(deltaTime: Float) {
         val velocity = moveSpeed * deltaTime
         val movement = Vector3f(right).mul(velocity)
         position.sub(movement)
+        frustumDirty = true
     }
 
     fun moveRight(deltaTime: Float) {
         val velocity = moveSpeed * deltaTime
         val movement = Vector3f(right).mul(velocity)
         position.add(movement)
+        frustumDirty = true
     }
 
     fun moveUp(deltaTime: Float) {
         val velocity = moveSpeed * deltaTime
         position.y += velocity
+        frustumDirty = true
     }
 
     fun moveDown(deltaTime: Float) {
         val velocity = moveSpeed * deltaTime
         position.y -= velocity
+        frustumDirty = true
     }
 
     fun rotate(xOffset: Float, yOffset: Float, constrainPitch: Boolean = true) {
@@ -88,11 +159,13 @@ class Camera(
         }
 
         updateVectors()
+        frustumDirty = true
     }
 
     fun zoom(yOffset: Float) {
         fov -= yOffset
         fov = fov.coerceIn(1f, 120f)
+        frustumDirty = true
     }
 
     private fun updateVectors() {
@@ -120,9 +193,11 @@ class Camera(
         yaw = Math.toDegrees(Math.atan2(direction.z.toDouble(), direction.x.toDouble())).toFloat()
 
         updateVectors()
+        frustumDirty = true
     }
 
     fun setPosition(x: Float, y: Float, z: Float) {
         position.set(x, y, z)
+        frustumDirty = true
     }
 }
