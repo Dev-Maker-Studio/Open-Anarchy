@@ -81,25 +81,108 @@ object ModelLoader {
     }
 
     /**
+     * Texture bounding box data for a material - used to compute normalized UVs
+     * that are consistent across all faces using the same texture.
+     */
+    private data class TextureBounds(
+        val minX: Int, val maxX: Int,
+        val minY: Int, val maxY: Int,
+        val minZ: Int, val maxZ: Int
+    ) {
+        val rangeX: Float get() = (maxX - minX).coerceAtLeast(1).toFloat()
+        val rangeY: Float get() = (maxY - minY).coerceAtLeast(1).toFloat()
+        val rangeZ: Float get() = (maxZ - minZ).coerceAtLeast(1).toFloat()
+    }
+
+    /**
+     * Compute bounding box for all faces using a given texture ID.
+     * This allows us to compute normalized UVs that span [0,1] across the texture region.
+     */
+    private fun computeTextureBounds(def: ModelDefinition, textureId: Int): TextureBounds {
+        var minX = Int.MAX_VALUE
+        var maxX = Int.MIN_VALUE
+        var minY = Int.MAX_VALUE
+        var maxY = Int.MIN_VALUE
+        var minZ = Int.MAX_VALUE
+        var maxZ = Int.MIN_VALUE
+
+        for (i in 0 until def.faceCount) {
+            val faceTexId = def.faceTextures?.get(i)?.toInt() ?: -1
+            if (faceTexId != textureId) continue
+
+            val aIdx = def.faceA[i]
+            val bIdx = def.faceB[i]
+            val cIdx = def.faceC[i]
+
+            for (idx in listOf(aIdx, bIdx, cIdx)) {
+                if (idx < 0 || idx >= def.vertexCount) continue
+                minX = minOf(minX, def.vertexX[idx])
+                maxX = maxOf(maxX, def.vertexX[idx])
+                minY = minOf(minY, def.vertexY[idx])
+                maxY = maxOf(maxY, def.vertexY[idx])
+                minZ = minOf(minZ, def.vertexZ[idx])
+                maxZ = maxOf(maxZ, def.vertexZ[idx])
+            }
+        }
+
+        // Handle empty bounds
+        if (minX == Int.MAX_VALUE) {
+            return TextureBounds(0, 1, 0, 1, 0, 1)
+        }
+
+        return TextureBounds(minX, maxX, minY, maxY, minZ, maxZ)
+    }
+
+    /** Cache of texture bounds per model per material */
+    private val textureBoundsCache = mutableMapOf<Pair<Int, Int>, TextureBounds>()
+
+    /**
      * Compute UV coordinates for a textured face using RS texture triangle projection.
      *
-     * If faceTexturePointer == -1: use default UVs (0,1), (1,1), (0,0)
+     * If faceTexturePointer == -1: use bounding-box normalized UVs (consistent across all faces)
      * Otherwise: project face vertices onto texture triangle plane
      */
-    private fun computeUVs(def: ModelDefinition, faceIdx: Int, aIdx: Int, bIdx: Int, cIdx: Int): FloatArray {
+    private fun computeUVs(def: ModelDefinition, faceIdx: Int, aIdx: Int, bIdx: Int, cIdx: Int, textureId: Int = -1): FloatArray {
         val texturePointer = def.faceTexturePointers?.get(faceIdx)?.toInt()?.and(0xff) ?: 255
 
-        // If no texture pointer or invalid, use default UVs
+        // If no texture pointer or invalid, use bounding-box normalized UVs
+        // This ensures adjacent triangles sharing vertices get the same UV at those vertices
         if (texturePointer == 255 || texturePointer >= def.textureTriangleCount) {
-            return floatArrayOf(0f, 1f, 1f, 1f, 0f, 0f)
+            // Get cached bounds for this texture on this model
+            val cacheKey = Pair(def.id, textureId)
+            val bounds = textureBoundsCache.getOrPut(cacheKey) {
+                computeTextureBounds(def, textureId)
+            }
+
+            // Project onto XY plane (horizontal plane in RS) - this maps the texture
+            // across the horizontal extent of all faces using this material
+            // Use XY so vertical (Y in RS = height) doesn't affect the V coordinate gradient
+            val aU = (def.vertexX[aIdx] - bounds.minX) / bounds.rangeX
+            val aV = (def.vertexY[aIdx] - bounds.minY) / bounds.rangeY
+            val bU = (def.vertexX[bIdx] - bounds.minX) / bounds.rangeX
+            val bV = (def.vertexY[bIdx] - bounds.minY) / bounds.rangeY
+            val cU = (def.vertexX[cIdx] - bounds.minX) / bounds.rangeX
+            val cV = (def.vertexY[cIdx] - bounds.minY) / bounds.rangeY
+            return floatArrayOf(aU, aV, bU, bV, cU, cV)
         }
 
         // Check mapping type - only planar (type 0) is fully supported
         val mappingType = def.texturesMapping?.get(texturePointer)?.toInt()?.and(0xff) ?: 0
         if (mappingType != 0) {
-            // Cylindrical mapping (types 1-3) requires additional data not yet decoded
-            // Fall back to default UVs
-            return floatArrayOf(0f, 1f, 1f, 1f, 0f, 0f)
+            // For cylindrical/spherical/rectangular mappings without full support,
+            // fall back to bounding-box normalized UVs
+            val cacheKey = Pair(def.id, textureId)
+            val bounds = textureBoundsCache.getOrPut(cacheKey) {
+                computeTextureBounds(def, textureId)
+            }
+
+            val aU = (def.vertexX[aIdx] - bounds.minX) / bounds.rangeX
+            val aV = (def.vertexY[aIdx] - bounds.minY) / bounds.rangeY
+            val bU = (def.vertexX[bIdx] - bounds.minX) / bounds.rangeX
+            val bV = (def.vertexY[bIdx] - bounds.minY) / bounds.rangeY
+            val cU = (def.vertexX[cIdx] - bounds.minX) / bounds.rangeX
+            val cV = (def.vertexY[cIdx] - bounds.minY) / bounds.rangeY
+            return floatArrayOf(aU, aV, bU, bV, cU, cV)
         }
 
         // Get texture triangle vertices
@@ -149,17 +232,17 @@ object ModelLoader {
         val nz = e1x * e2y - e1y * e2x
 
         // Compute U basis vector: cross(e2, n) / dot(cross(e2, n), e1)
-        var uBasisX = e2y * nz - e2z * ny
-        var uBasisY = e2z * nx - e2x * nz
-        var uBasisZ = e2x * ny - e2y * nx
+        val uBasisX = e2y * nz - e2z * ny
+        val uBasisY = e2z * nx - e2x * nz
+        val uBasisZ = e2x * ny - e2y * nx
         var uDenom = uBasisX * e1x + uBasisY * e1y + uBasisZ * e1z
         if (uDenom == 0f) uDenom = 1f
         val uScale = 1f / uDenom
 
         // Compute V basis vector: cross(e1, n) / dot(cross(e1, n), e2)
-        var vBasisX = e1y * nz - e1z * ny
-        var vBasisY = e1z * nx - e1x * nz
-        var vBasisZ = e1x * ny - e1y * nx
+        val vBasisX = e1y * nz - e1z * ny
+        val vBasisY = e1z * nx - e1x * nz
+        val vBasisZ = e1x * ny - e1y * nx
         var vDenom = vBasisX * e2x + vBasisY * e2y + vBasisZ * e2z
         if (vDenom == 0f) vDenom = 1f
         val vScale = 1f / vDenom
@@ -304,7 +387,7 @@ object ModelLoader {
 
             // UV coordinates - compute from texture triangle projection
             val uvs = if (textureId >= 0) {
-                computeUVs(def, i, aIdx, bIdx, cIdx)
+                computeUVs(def, i, aIdx, bIdx, cIdx, textureId)
             } else {
                 floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
             }
@@ -387,6 +470,7 @@ object ModelLoader {
 
     fun clearCache() {
         definitionCache.clear()
+        textureBoundsCache.clear()
     }
 
     fun getCachedDefinition(modelId: Int): ModelDefinition? = definitionCache[modelId]

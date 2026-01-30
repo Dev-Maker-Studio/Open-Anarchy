@@ -449,6 +449,13 @@ class ModelViewer(
 
         // Render textured batches with textured shader
         if (texturedModelNodes.isNotEmpty() && currentTexturedModel != null) {
+            // Enable alpha blending for smooth texture edges
+            renderSystem.enableBlending()
+            // Enable alpha-to-coverage for smoother alpha edges with MSAA
+            renderSystem.enableAlphaToCoverage()
+            // Disable face culling - RS models often have two-sided faces
+            renderSystem.disableCullFace()
+
             texturedShader.bind()
             texturedShader.setUniform("view", viewMatrix)
             texturedShader.setUniform("projection", projectionMatrix)
@@ -470,6 +477,11 @@ class ModelViewer(
 
             TextureLoader.unbindTexture()
             texturedShader.unbind()
+
+            // Restore default state
+            renderSystem.disableBlending()
+            renderSystem.disableAlphaToCoverage()
+            renderSystem.enableCullFace()
         }
 
         // Render ImGui
