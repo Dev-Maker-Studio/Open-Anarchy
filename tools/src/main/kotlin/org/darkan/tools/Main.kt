@@ -47,7 +47,7 @@ private fun printHelp() {
 
         Modes:
           model      - View 3D models from the cache (default)
-          map        - View terrain/map regions
+          map        - View terrain/map regions with full scene rendering
           interface  - View UI interfaces and components
 
         Controls (Model Viewer):
@@ -63,9 +63,19 @@ private fun printHelp() {
           ESC         - Release mouse
 
         Controls (Map Viewer):
+          WASD        - Move camera
+          Space/Shift - Move up/down
+          Right Click - Look around
+          Scroll      - Zoom
+          Ctrl        - Fast movement
           Arrow Keys  - Navigate regions
           PgUp/PgDn   - Change plane level
-          WASD        - Move camera
+          1-4         - Select plane directly
+          M           - Toggle multi/single region mode
+          T           - Toggle terrain
+          F1          - Toggle debug panel
+          F2          - Toggle navigation panel
+          F3          - Toggle wireframe
 
         Examples:
           ./gradlew :tools:run

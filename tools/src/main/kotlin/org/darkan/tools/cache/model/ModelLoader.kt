@@ -1,6 +1,7 @@
 package org.darkan.tools.cache.model
 
 import org.darkan.tools.engine.render.Mesh
+import org.darkan.tools.engine.render.MeshData
 import org.darkan.tools.util.ColorUtil
 import org.darkan.tools.util.CoordinateUtil
 import org.joml.Vector3f
@@ -466,6 +467,194 @@ object ModelLoader {
      */
     fun createMesh(def: ModelDefinition): Mesh? {
         return createTexturedModel(def)?.mesh
+    }
+
+    /**
+     * Create MeshData list from a model definition for instanced rendering.
+     * Similar to createTexturedModel but returns raw arrays instead of GPU meshes.
+     */
+    fun createMeshDataList(cache: Cache, modelId: Int): List<MeshData>? {
+        val def = loadDefinition(cache, modelId) ?: return null
+        return createMeshDataListFromDef(def)
+    }
+
+    /**
+     * Create MeshData list from a model definition for instanced rendering.
+     */
+    fun createMeshDataListFromDef(def: ModelDefinition): List<MeshData>? {
+        if (def.faceCount == 0) return null
+
+        fun isValidIndex(idx: Int) = idx >= 0 && idx < def.vertexCount
+
+        // Calculate per-vertex normals by accumulating face normals (smooth shading)
+        val vertexNormals = Array(def.vertexCount) { VertexNormal() }
+
+        // First pass: accumulate face normals at each vertex
+        for (i in 0 until def.faceCount) {
+            val aIdx = def.faceA[i]
+            val bIdx = def.faceB[i]
+            val cIdx = def.faceC[i]
+
+            if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) continue
+
+            val ax = def.vertexX[aIdx]
+            val ay = def.vertexY[aIdx]
+            val az = def.vertexZ[aIdx]
+            val bx = def.vertexX[bIdx]
+            val by = def.vertexY[bIdx]
+            val bz = def.vertexZ[bIdx]
+            val cx = def.vertexX[cIdx]
+            val cy = def.vertexY[cIdx]
+            val cz = def.vertexZ[cIdx]
+
+            val dx1 = bx - ax
+            val dy1 = by - ay
+            val dz1 = bz - az
+            val dx2 = cx - ax
+            val dy2 = cy - ay
+            val dz2 = cz - az
+
+            var nx = (dy1 * dz2 - dz1 * dy2).toFloat()
+            var ny = (dz1 * dx2 - dx1 * dz2).toFloat()
+            var nz = (dx1 * dy2 - dy1 * dx2).toFloat()
+
+            var len = sqrt(nx * nx + ny * ny + nz * nz)
+            if (len > 0) {
+                len = 1f / len
+                nx *= len
+                ny *= len
+                nz *= len
+            }
+
+            vertexNormals[aIdx].x += nx
+            vertexNormals[aIdx].y += ny
+            vertexNormals[aIdx].z += nz
+            vertexNormals[aIdx].magnitude++
+
+            vertexNormals[bIdx].x += nx
+            vertexNormals[bIdx].y += ny
+            vertexNormals[bIdx].z += nz
+            vertexNormals[bIdx].magnitude++
+
+            vertexNormals[cIdx].x += nx
+            vertexNormals[cIdx].y += ny
+            vertexNormals[cIdx].z += nz
+            vertexNormals[cIdx].magnitude++
+        }
+
+        fun getVertexNormal(idx: Int): Vector3f {
+            val vn = vertexNormals[idx]
+            if (vn.magnitude == 0) return Vector3f(0f, 1f, 0f)
+
+            var nx = vn.x / vn.magnitude
+            var ny = vn.y / vn.magnitude
+            var nz = vn.z / vn.magnitude
+
+            val len = sqrt(nx * nx + ny * ny + nz * nz)
+            if (len > 0) {
+                val invLen = 1f / len
+                nx *= invLen
+                ny *= invLen
+                nz *= invLen
+            }
+
+            return Vector3f(nx, -ny, -nz)
+        }
+
+        // Group faces by texture ID (-1 for untextured)
+        val facesByTexture = mutableMapOf<Int, MutableList<FaceData>>()
+
+        for (i in 0 until def.faceCount) {
+            val aIdx = def.faceA[i]
+            val bIdx = def.faceB[i]
+            val cIdx = def.faceC[i]
+
+            if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) continue
+
+            val alpha = def.faceAlphas?.get(i)?.toInt()?.and(0xff) ?: 255
+            if (alpha == 0) continue
+
+            val textureId = def.faceTextures?.get(i)?.toInt() ?: -1
+
+            val pos0 = CoordinateUtil.rsToOpenGL(def.vertexX[aIdx], def.vertexY[aIdx], def.vertexZ[aIdx])
+            val pos1 = CoordinateUtil.rsToOpenGL(def.vertexX[bIdx], def.vertexY[bIdx], def.vertexZ[bIdx])
+            val pos2 = CoordinateUtil.rsToOpenGL(def.vertexX[cIdx], def.vertexY[cIdx], def.vertexZ[cIdx])
+
+            val hsl = def.faceColors[i].toInt() and 0xffff
+            val color = if (hsl == 0 || hsl == 65535) {
+                Vector3f(0.8f, 0.8f, 0.8f)
+            } else {
+                ColorUtil.hslToRgb(hsl)
+            }
+
+            val uvs = if (textureId >= 0) {
+                computeUVs(def, i, aIdx, bIdx, cIdx, textureId)
+            } else {
+                floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
+            }
+
+            val norm0 = getVertexNormal(aIdx)
+            val norm1 = getVertexNormal(bIdx)
+            val norm2 = getVertexNormal(cIdx)
+
+            facesByTexture.getOrPut(textureId) { mutableListOf() }.add(
+                FaceData(pos0, pos1, pos2, color, norm0, norm1, norm2,
+                         uvs[0], uvs[1], uvs[2], uvs[3], uvs[4], uvs[5])
+            )
+        }
+
+        if (facesByTexture.isEmpty()) return null
+
+        val result = mutableListOf<MeshData>()
+
+        // Build MeshData for each texture batch (including -1 for untextured)
+        for ((textureId, faces) in facesByTexture) {
+            val meshData = buildMeshData(faces, textureId)
+            result.add(meshData)
+        }
+
+        return result
+    }
+
+    private fun buildMeshData(faces: List<FaceData>, textureId: Int): MeshData {
+        val positions = mutableListOf<Float>()
+        val colors = mutableListOf<Float>()
+        val texCoords = mutableListOf<Float>()
+        val normals = mutableListOf<Float>()
+        val indices = mutableListOf<Int>()
+        var vertexIndex = 0
+
+        for (face in faces) {
+            positions.addAll(listOf(face.v0.x, face.v0.y, face.v0.z))
+            positions.addAll(listOf(face.v1.x, face.v1.y, face.v1.z))
+            positions.addAll(listOf(face.v2.x, face.v2.y, face.v2.z))
+
+            colors.addAll(listOf(face.color.x, face.color.y, face.color.z))
+            colors.addAll(listOf(face.color.x, face.color.y, face.color.z))
+            colors.addAll(listOf(face.color.x, face.color.y, face.color.z))
+
+            texCoords.addAll(listOf(face.u0, face.v0Uv))
+            texCoords.addAll(listOf(face.u1, face.v1Uv))
+            texCoords.addAll(listOf(face.u2, face.v2Uv))
+
+            normals.addAll(listOf(face.n0.x, face.n0.y, face.n0.z))
+            normals.addAll(listOf(face.n1.x, face.n1.y, face.n1.z))
+            normals.addAll(listOf(face.n2.x, face.n2.y, face.n2.z))
+
+            indices.add(vertexIndex)
+            indices.add(vertexIndex + 1)
+            indices.add(vertexIndex + 2)
+            vertexIndex += 3
+        }
+
+        return MeshData(
+            positions = positions.toFloatArray(),
+            colors = if (colors.isNotEmpty()) colors.toFloatArray() else null,
+            textureCoords = if (texCoords.isNotEmpty()) texCoords.toFloatArray() else null,
+            normals = if (normals.isNotEmpty()) normals.toFloatArray() else null,
+            indices = indices.toIntArray(),
+            textureId = textureId
+        )
     }
 
     fun clearCache() {

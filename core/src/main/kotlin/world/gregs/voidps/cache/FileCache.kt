@@ -61,10 +61,19 @@ class FileCache(
         if (matchingIndex == -1) {
             return null
         }
-        val hash = index + (archive shl 6)
+
+        // If XTEA key is provided directly, use it; otherwise fall back to the class field map
+        // For MAPS index, create a temporary map with the archive ID as key
+        val effectiveXteas = if (xtea != null && index == Index.MAPS) {
+            mapOf(archive to xtea)
+        } else {
+            xteas
+        }
+
+        val hash = index + (archive shl 6) + (if (xtea != null) xtea.contentHashCode() else 0)
         val data = dataCache.getOrPut(hash) {
             val indexRaf = indexes[index] ?: return null
-            fileData(context, main, length, indexRaf, index, archive, xteas) ?: return null
+            fileData(context, main, length, indexRaf, index, archive, effectiveXteas) ?: return null
         }
         return data[matchingIndex]
     }

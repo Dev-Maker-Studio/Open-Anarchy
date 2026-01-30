@@ -15,7 +15,8 @@ class Mesh(
     normals: FloatArray? = null,
     indices: IntArray
 ) {
-    private var vaoId: Int = 0
+    var vaoId: Int = 0
+        private set
     private val vboIds = mutableListOf<Int>()
     val vertexCount: Int = indices.size
 

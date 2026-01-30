@@ -21,14 +21,21 @@ open class ObjectDecoder(
 
     override fun ObjectDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            1 -> {
+            1, 5 -> {
                 val count = buffer.readUnsignedByte()
-                shapes = Array(count) { ObjectShape.forId(buffer.readByte()) }
+                shapes = arrayOfNulls<ObjectShape>(count) as Array<ObjectShape>
                 modelIds = Array(count) { IntArray(0) }
 
-                repeat(count) { shape ->
-                    val models = buffer.readUnsignedByte()
-                    modelIds?.set(shape, IntArray(models) { buffer.readBigSmart() })
+                // Read type and models for each entry sequentially (not all types first!)
+                repeat(count) { index ->
+                    shapes!![index] = ObjectShape.forId(buffer.readByte())
+                    val modelCount = buffer.readUnsignedByte()
+                    modelIds?.set(index, IntArray(modelCount) { buffer.readBigSmart() })
+                }
+
+                // Opcode 5 has an additional set of model IDs that we skip
+                if (opcode == 5) {
+                    skipReadModelIds(buffer)
                 }
             }
             2 -> name = buffer.readString()
@@ -98,6 +105,10 @@ open class ObjectDecoder(
 
                 for (index in 0 until count)
                     recolorDPalette!![index] = buffer.readByte().toByte()
+            }
+            44, 45 -> {
+                // Unknown - just skip the short
+                buffer.readUnsignedShort()
             }
             62 -> mirrored = true
             64 -> {
@@ -286,10 +297,48 @@ open class ObjectDecoder(
             178 -> {
                 ambientSoundMaxHearDistance = buffer.readUnsignedByte()
             }
+            186 -> {
+                // Unknown opcode - skip byte
+                buffer.readUnsignedByte()
+            }
+            188 -> {
+                // Empty/flag opcode - nothing to read
+            }
             189 -> {
                 dynamicTint = true
             }
+            in 190..195 -> {
+                // Unknown opcodes - just skip the short
+                buffer.readUnsignedShort()
+            }
+            196, 197 -> {
+                // Unknown opcodes - just skip the byte
+                buffer.readUnsignedByte()
+            }
+            198, 199 -> {
+                // Empty/flag opcodes - nothing to read
+            }
+            201 -> {
+                // Unknown opcode - skip 6 smarts
+                buffer.readSmart()
+                buffer.readSmart()
+                buffer.readSmart()
+                buffer.readSmart()
+                buffer.readSmart()
+                buffer.readSmart()
+            }
             249 -> readParameters(buffer, parameters)
+        }
+    }
+
+    private fun skipReadModelIds(buffer: Reader) {
+        val length = buffer.readUnsignedByte()
+        for (i in 0 until length) {
+            buffer.skip(1)  // Skip type
+            val modelCount = buffer.readUnsignedByte()
+            for (j in 0 until modelCount) {
+                buffer.readBigSmart()  // Skip model ID
+            }
         }
     }
 
