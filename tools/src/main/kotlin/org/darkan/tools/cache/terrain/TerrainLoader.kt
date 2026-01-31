@@ -239,7 +239,9 @@ object TerrainLoader {
 
     /**
      * Create separate mesh batches for textured and untextured terrain tiles.
-     * Uses blended underlay colors that match the client's 11x11 averaging algorithm.
+     * Uses proper tile shape tessellation with the RS client's shape lookup tables.
+     * Shapes create paths, edges, diagonal cuts, etc. by tessellating tiles into
+     * multiple triangles with some belonging to overlay and others to underlay.
      */
     private fun createBatchedTerrainMeshes(region: RegionData, plane: Int): TerrainMeshes {
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
@@ -247,169 +249,92 @@ object TerrainLoader {
         // Pre-compute blended underlay colors for the entire region
         val blendedUnderlayColors = computeBlendedUnderlayColors(region, plane)
 
-        // Group tiles by texture ID (-1 for color-only)
-        data class TileVertex(
-            val x: Float, val y: Float, val z: Float,
-            val r: Float, val g: Float, val b: Float,
-            val u: Float, val v: Float,
-            val nx: Float, val ny: Float, val nz: Float
-        )
-
         // Collect vertices grouped by texture ID
-        val textureGroups = mutableMapOf<Int, MutableList<TileVertex>>()
+        val textureGroups = mutableMapOf<Int, MutableList<ShapedVertex>>()
 
         for (x in 0 until 63) {
             for (y in 0 until 63) {
                 val tile = region.tiles[plane][x][y]
 
+                // Skip tiles with no overlay and no underlay
+                if (tile.overlayId == 0 && tile.underlayId == 0) continue
+
                 // Calculate heights for this tile's corners
-                // Client formula: -rawHeight * 8 * 4 = -rawHeight * 32 (stored as negative, Y-down)
-                // For OpenGL (Y-up), we use positive heights for raised terrain
-                // Scale: height * 32 / 128 = height / 4
-                val h00 = region.tiles[plane][x][y].height * HEIGHT_SCALE
-                val h10 = region.tiles[plane][x + 1][y].height * HEIGHT_SCALE
-                val h01 = region.tiles[plane][x][y + 1].height * HEIGHT_SCALE
-                val h11 = region.tiles[plane][x + 1][y + 1].height * HEIGHT_SCALE
+                // heights array: [SW, SE, NW, NE]
+                val heights = floatArrayOf(
+                    region.tiles[plane][x][y].height * HEIGHT_SCALE,         // SW (0,0)
+                    region.tiles[plane][x + 1][y].height * HEIGHT_SCALE,     // SE (1,0)
+                    region.tiles[plane][x][y + 1].height * HEIGHT_SCALE,     // NW (0,1)
+                    region.tiles[plane][x + 1][y + 1].height * HEIGHT_SCALE  // NE (1,1)
+                )
 
-                // Vertex positions
-                val x0 = x * tileSize
-                val x1 = (x + 1) * tileSize
-                val z0 = -y * tileSize
-                val z1 = -(y + 1) * tileSize
-
-                // Determine texture ID and colors
-                val textureId: Int
-                val cornerColors: Array<Vector3f>
-                val uvScale: Float
-
-                // Check if overlay has texture
+                // Get overlay and underlay definitions
                 val overlayDef = if (tile.overlayId > 0) getOverlayDefinition(tile.overlayId) else null
                 val underlayDef = if (tile.underlayId > 0) getUnderlayDefinition(tile.underlayId) else null
 
-                if (overlayDef != null && overlayDef.texture >= 0) {
-                    // Overlay has texture - tint with overlay color
-                    textureId = overlayDef.texture
-                    uvScale = overlayDef.scale.toFloat() / 512f
-                    // Use overlay color for tinting (texture color * vertex color)
-                    // If colour is 0 or -1, use white (no tinting)
-                    val tintColor = if (overlayDef.colour > 0 && overlayDef.colour != -1) {
+                // Determine colors and textures for overlay and underlay
+                val underlayColor = getBlendedUnderlayColor(blendedUnderlayColors, x, y)
+                val overlayColor = if (tile.overlayId > 0) getOverlayColor(tile.overlayId) else underlayColor
+
+                // Determine texture IDs
+                val overlayTextureId = overlayDef?.texture ?: -1
+                val underlayTextureId = underlayDef?.texture ?: -1
+
+                // Determine UV scales
+                val overlayUvScale = if (overlayDef != null && overlayDef.texture >= 0) {
+                    overlayDef.scale.toFloat() / 512f
+                } else {
+                    1f
+                }
+                val underlayUvScale = if (underlayDef != null && underlayDef.texture >= 0) {
+                    underlayDef.scale.toFloat() / 512f
+                } else {
+                    1f
+                }
+
+                // Adjust colors for textured tiles (use white or tint color)
+                val finalOverlayColor = if (overlayTextureId >= 0) {
+                    if (overlayDef != null && overlayDef.colour > 0 && overlayDef.colour != -1) {
                         ColorUtil.hslToRgb(overlayDef.colour)
                     } else {
                         Vector3f(1f, 1f, 1f)
                     }
-                    cornerColors = arrayOf(tintColor, tintColor, tintColor, tintColor)
-                } else if (underlayDef != null && underlayDef.texture >= 0) {
-                    // Underlay has texture - tint with underlay color
-                    textureId = underlayDef.texture
-                    uvScale = underlayDef.scale.toFloat() / 512f
-                    // Use blended underlay color for tinting
-                    val tintColor = getBlendedUnderlayColor(blendedUnderlayColors, x, y)
-                    cornerColors = arrayOf(tintColor, tintColor, tintColor, tintColor)
                 } else {
-                    // Color-only tile - use blended underlay colors
-                    textureId = -1
-                    uvScale = 1f
-
-                    // Use pre-computed blended underlay color for this tile
-                    val underlayColor = getBlendedUnderlayColor(blendedUnderlayColors, x, y)
-                    val overlayColor = if (tile.overlayId > 0) getOverlayColor(tile.overlayId) else underlayColor
-
-                    if (tile.overlayId > 0 && tile.overlayShape < OVERLAY_SHAPES.size) {
-                        val shape = OVERLAY_SHAPES[tile.overlayShape]
-                        val rotatedShape = rotateShape(shape, tile.overlayRotation)
-                        cornerColors = arrayOf(
-                            if (rotatedShape[0]) overlayColor else underlayColor,
-                            if (rotatedShape[1]) overlayColor else underlayColor,
-                            if (rotatedShape[2]) overlayColor else underlayColor,
-                            if (rotatedShape[3]) overlayColor else underlayColor
-                        )
-                    } else {
-                        cornerColors = arrayOf(underlayColor, underlayColor, underlayColor, underlayColor)
-                    }
+                    overlayColor
                 }
 
-                // Calculate normals
-                val v0 = Vector3f(x0, h00, z0)
-                val v1 = Vector3f(x1, h10, z0)
-                val v2 = Vector3f(x0, h01, z1)
-                val v3 = Vector3f(x1, h11, z1)
-                val n1 = CoordinateUtil.calculateNormal(v0, v1, v2)
-                val n2 = CoordinateUtil.calculateNormal(v1, v3, v2)
-
-                // UV coordinates - apply rotation based on overlay rotation (0-3)
-                // RS client transforms UVs based on overlayRotation (see MapLoader.kt):
-                // Rotation 0: normal
-                // Rotation 1: 90 degrees clockwise
-                // Rotation 2: 180 degrees
-                // Rotation 3: 270 degrees clockwise (90 CCW)
-                //
-                // Also apply V-flip to correct OpenGL coordinate system
-                // (OpenGL has origin at bottom-left, RS has it at top-left for textures)
-                val uvSW: Pair<Float, Float>
-                val uvSE: Pair<Float, Float>
-                val uvNE: Pair<Float, Float>
-                val uvNW: Pair<Float, Float>
-
-                when (tile.overlayRotation) {
-                    0 -> {
-                        // No rotation, but flip V for OpenGL
-                        // RS: SW=(0,0), SE=(512,0), NE=(512,512), NW=(0,512)
-                        // After V-flip: SW=(0,scale), SE=(scale,scale), NE=(scale,0), NW=(0,0)
-                        uvSW = Pair(0f, uvScale)
-                        uvSE = Pair(uvScale, uvScale)
-                        uvNE = Pair(uvScale, 0f)
-                        uvNW = Pair(0f, 0f)
-                    }
-                    1 -> {
-                        // 90 CW rotation + V flip
-                        // RS formula: sizesX=deltaY, sizesY=512-deltaX
-                        // RS: SW=(0,512), SE=(0,0), NE=(512,0), NW=(512,512)
-                        // After V-flip: SW=(0,0), SE=(0,scale), NE=(scale,scale), NW=(scale,0)
-                        uvSW = Pair(0f, 0f)
-                        uvSE = Pair(0f, uvScale)
-                        uvNE = Pair(uvScale, uvScale)
-                        uvNW = Pair(uvScale, 0f)
-                    }
-                    2 -> {
-                        // 180 rotation + V flip
-                        // RS formula: sizesX=512-deltaX, sizesY=512-deltaY
-                        // RS: SW=(512,512), SE=(0,512), NE=(0,0), NW=(512,0)
-                        // After V-flip: SW=(scale,0), SE=(0,0), NE=(0,scale), NW=(scale,scale)
-                        uvSW = Pair(uvScale, 0f)
-                        uvSE = Pair(0f, 0f)
-                        uvNE = Pair(0f, uvScale)
-                        uvNW = Pair(uvScale, uvScale)
-                    }
-                    3 -> {
-                        // 270 CW (90 CCW) rotation + V flip
-                        // RS formula: sizesX=512-deltaY, sizesY=deltaX
-                        // RS: SW=(512,0), SE=(512,512), NE=(0,512), NW=(0,0)
-                        // After V-flip: SW=(scale,scale), SE=(scale,0), NE=(0,0), NW=(0,scale)
-                        uvSW = Pair(uvScale, uvScale)
-                        uvSE = Pair(uvScale, 0f)
-                        uvNE = Pair(0f, 0f)
-                        uvNW = Pair(0f, uvScale)
-                    }
-                    else -> {
-                        // Default: same as rotation 0
-                        uvSW = Pair(0f, uvScale)
-                        uvSE = Pair(uvScale, uvScale)
-                        uvNE = Pair(uvScale, 0f)
-                        uvNW = Pair(0f, 0f)
-                    }
+                val finalUnderlayColor = if (underlayTextureId >= 0) {
+                    underlayColor
+                } else {
+                    underlayColor
                 }
 
-                val group = textureGroups.getOrPut(textureId) { mutableListOf() }
+                // Determine the shape to use
+                // If shape is 0 and no overlay, treat as full underlay (shape 12)
+                var shape = tile.overlayShape
+                if (shape == 0 && tile.overlayId == 0) {
+                    shape = 12  // Shape 12 = full underlay (0 overlay faces, 2 underlay faces)
+                }
 
-                // First triangle: SW, SE, NW (corners 0, 1, 3)
-                group.add(TileVertex(x0, h00, z0, cornerColors[0].x, cornerColors[0].y, cornerColors[0].z, uvSW.first, uvSW.second, n1.x, n1.y, n1.z))
-                group.add(TileVertex(x1, h10, z0, cornerColors[1].x, cornerColors[1].y, cornerColors[1].z, uvSE.first, uvSE.second, n1.x, n1.y, n1.z))
-                group.add(TileVertex(x0, h01, z1, cornerColors[3].x, cornerColors[3].y, cornerColors[3].z, uvNW.first, uvNW.second, n1.x, n1.y, n1.z))
+                // Generate shaped vertices for this tile
+                val vertices = generateShapedTile(
+                    x, y,
+                    shape, tile.overlayRotation,
+                    tileSize,
+                    heights,
+                    finalOverlayColor,
+                    finalUnderlayColor,
+                    overlayTextureId,
+                    underlayTextureId,
+                    overlayUvScale,
+                    underlayUvScale
+                )
 
-                // Second triangle: SE, NE, NW (corners 1, 2, 3)
-                group.add(TileVertex(x1, h10, z0, cornerColors[1].x, cornerColors[1].y, cornerColors[1].z, uvSE.first, uvSE.second, n2.x, n2.y, n2.z))
-                group.add(TileVertex(x1, h11, z1, cornerColors[2].x, cornerColors[2].y, cornerColors[2].z, uvNE.first, uvNE.second, n2.x, n2.y, n2.z))
-                group.add(TileVertex(x0, h01, z1, cornerColors[3].x, cornerColors[3].y, cornerColors[3].z, uvNW.first, uvNW.second, n2.x, n2.y, n2.z))
+                // Add vertices to appropriate texture groups
+                for (vertex in vertices) {
+                    val group = textureGroups.getOrPut(vertex.textureId) { mutableListOf() }
+                    group.add(vertex)
+                }
             }
         }
 
@@ -521,6 +446,10 @@ object TerrainLoader {
         return TileData(height, overlayId, overlayShape, overlayRotation, underlayId, flags)
     }
 
+    /**
+     * Create a single terrain mesh with proper tile shape tessellation.
+     * This is the legacy non-batched path for simple rendering without textures.
+     */
     private fun createTerrainMesh(region: RegionData, plane: Int): Mesh {
         val positions = mutableListOf<Float>()
         val colors = mutableListOf<Float>()
@@ -537,89 +466,57 @@ object TerrainLoader {
             for (y in 0 until 63) {
                 val tile = region.tiles[plane][x][y]
 
-                // Calculate heights for this tile's corners
-                // Client formula: -rawHeight * 8 * 4 = -rawHeight * 32 (stored as negative, Y-down)
-                // For OpenGL (Y-up), we use positive heights for raised terrain
-                // Scale: height * 32 / 128 = height / 4
-                val h00 = region.tiles[plane][x][y].height * HEIGHT_SCALE
-                val h10 = region.tiles[plane][x + 1][y].height * HEIGHT_SCALE
-                val h01 = region.tiles[plane][x][y + 1].height * HEIGHT_SCALE
-                val h11 = region.tiles[plane][x + 1][y + 1].height * HEIGHT_SCALE
+                // Skip tiles with no overlay and no underlay
+                if (tile.overlayId == 0 && tile.underlayId == 0) continue
 
-                // Vertex positions
-                val x0 = x * tileSize
-                val x1 = (x + 1) * tileSize
-                val z0 = -y * tileSize
-                val z1 = -(y + 1) * tileSize
+                // Calculate heights for this tile's corners
+                // heights array: [SW, SE, NW, NE]
+                val heights = floatArrayOf(
+                    region.tiles[plane][x][y].height * HEIGHT_SCALE,         // SW (0,0)
+                    region.tiles[plane][x + 1][y].height * HEIGHT_SCALE,     // SE (1,0)
+                    region.tiles[plane][x][y + 1].height * HEIGHT_SCALE,     // NW (0,1)
+                    region.tiles[plane][x + 1][y + 1].height * HEIGHT_SCALE  // NE (1,1)
+                )
 
                 // Get blended underlay color for this tile
                 val underlayColor = getBlendedUnderlayColor(blendedUnderlayColors, x, y)
                 val overlayColor = if (tile.overlayId > 0) getOverlayColor(tile.overlayId) else underlayColor
 
-                // Determine corner colors based on overlay shape
-                // Corner order: [SW, SE, NE, NW] = [(x, y), (x+1, y), (x+1, y+1), (x, y+1)]
-                val cornerColors: Array<Vector3f>
-                if (tile.overlayId > 0 && tile.overlayShape < OVERLAY_SHAPES.size) {
-                    val shape = OVERLAY_SHAPES[tile.overlayShape]
-                    val rotatedShape = rotateShape(shape, tile.overlayRotation)
-                    cornerColors = arrayOf(
-                        if (rotatedShape[0]) overlayColor else underlayColor, // SW corner (x, y)
-                        if (rotatedShape[1]) overlayColor else underlayColor, // SE corner (x+1, y)
-                        if (rotatedShape[2]) overlayColor else underlayColor, // NE corner (x+1, y+1)
-                        if (rotatedShape[3]) overlayColor else underlayColor  // NW corner (x, y+1)
-                    )
-                } else {
-                    // No overlay or unknown shape - use underlay for all corners
-                    cornerColors = arrayOf(underlayColor, underlayColor, underlayColor, underlayColor)
+                // Determine the shape to use
+                // If shape is 0 and no overlay, treat as full underlay (shape 12)
+                var shape = tile.overlayShape
+                if (shape == 0 && tile.overlayId == 0) {
+                    shape = 12  // Shape 12 = full underlay (0 overlay faces, 2 underlay faces)
                 }
 
-                // First triangle: SW, SE, NW (corners 0, 1, 3)
-                positions.addAll(listOf(x0, h00, z0))  // SW
-                positions.addAll(listOf(x1, h10, z0))  // SE
-                positions.addAll(listOf(x0, h01, z1))  // NW
+                // Generate shaped vertices for this tile (no textures in legacy path)
+                val vertices = generateShapedTile(
+                    x, y,
+                    shape, tile.overlayRotation,
+                    tileSize,
+                    heights,
+                    overlayColor,
+                    underlayColor,
+                    -1,  // No overlay texture
+                    -1,  // No underlay texture
+                    1f,
+                    1f
+                )
 
-                colors.addAll(listOf(cornerColors[0].x, cornerColors[0].y, cornerColors[0].z))  // SW
-                colors.addAll(listOf(cornerColors[1].x, cornerColors[1].y, cornerColors[1].z))  // SE
-                colors.addAll(listOf(cornerColors[3].x, cornerColors[3].y, cornerColors[3].z))  // NW
-
-                // Calculate normal for first triangle
-                val v0 = Vector3f(x0, h00, z0)
-                val v1 = Vector3f(x1, h10, z0)
-                val v2 = Vector3f(x0, h01, z1)
-                val n1 = CoordinateUtil.calculateNormal(v0, v1, v2)
-
-                normals.addAll(listOf(n1.x, n1.y, n1.z))
-                normals.addAll(listOf(n1.x, n1.y, n1.z))
-                normals.addAll(listOf(n1.x, n1.y, n1.z))
-
-                indices.add(vertexIndex)
-                indices.add(vertexIndex + 1)
-                indices.add(vertexIndex + 2)
-                vertexIndex += 3
-
-                // Second triangle: SE, NE, NW (corners 1, 2, 3)
-                positions.addAll(listOf(x1, h10, z0))  // SE
-                positions.addAll(listOf(x1, h11, z1))  // NE
-                positions.addAll(listOf(x0, h01, z1))  // NW
-
-                colors.addAll(listOf(cornerColors[1].x, cornerColors[1].y, cornerColors[1].z))  // SE
-                colors.addAll(listOf(cornerColors[2].x, cornerColors[2].y, cornerColors[2].z))  // NE
-                colors.addAll(listOf(cornerColors[3].x, cornerColors[3].y, cornerColors[3].z))  // NW
-
-                // Calculate normal for second triangle
-                val v3 = Vector3f(x1, h10, z0)
-                val v4 = Vector3f(x1, h11, z1)
-                val v5 = Vector3f(x0, h01, z1)
-                val n2 = CoordinateUtil.calculateNormal(v3, v4, v5)
-
-                normals.addAll(listOf(n2.x, n2.y, n2.z))
-                normals.addAll(listOf(n2.x, n2.y, n2.z))
-                normals.addAll(listOf(n2.x, n2.y, n2.z))
-
-                indices.add(vertexIndex)
-                indices.add(vertexIndex + 1)
-                indices.add(vertexIndex + 2)
-                vertexIndex += 3
+                // Add vertices to arrays
+                for (vertex in vertices) {
+                    positions.add(vertex.x)
+                    positions.add(vertex.y)
+                    positions.add(vertex.z)
+                    colors.add(vertex.r)
+                    colors.add(vertex.g)
+                    colors.add(vertex.b)
+                    normals.add(vertex.nx)
+                    normals.add(vertex.ny)
+                    normals.add(vertex.nz)
+                    indices.add(vertexIndex)
+                    vertexIndex++
+                }
             }
         }
 
@@ -772,69 +669,299 @@ object TerrainLoader {
      */
     private const val HEIGHT_SCALE = 32f * CoordinateUtil.DEFAULT_SCALE  // = 32 / 128 = 0.25
 
+    // ==================== TILE SHAPE TESSELLATION SYSTEM ====================
+    //
+    // RS tiles use a sophisticated tessellation system where each tile can have
+    // different shapes (not just squares). The shape determines how the tile is
+    // divided into triangles, with some triangles belonging to the overlay and
+    // others to the underlay.
+    //
+    // There are 13 predefined vertex positions within each tile:
+    // Index 0: SW corner (0, 0)
+    // Index 1: South midpoint (256, 0)
+    // Index 2: SE corner (512, 0)
+    // Index 3: East midpoint (512, 256)
+    // Index 4: NE corner (512, 512)
+    // Index 5: North midpoint (256, 512)
+    // Index 6: NW corner (0, 512)
+    // Index 7: West midpoint (0, 256)
+    // Index 8: Interior (128, 256)
+    // Index 9: Interior (256, 384)
+    // Index 10: Interior (128, 128)
+    // Index 11: Interior (384, 128)
+    // Index 12: Center (256, 256)
+    //
+    // Tile unit is 512, so these define positions as fractions of the tile.
+
     /**
-     * Overlay shapes define which corners of a tile use overlay vs underlay color.
-     * Each shape is an array of 4 booleans [SW, SE, NE, NW] indicating overlay corners.
-     * RS uses 23 predefined shapes (0-22).
-     *
-     * Shapes are:
-     * 0: Full tile (all overlay)
-     * 1-8: Half tiles with various orientations
-     * 9-16: Diagonal and corner shapes
-     * 17-22: Detailed corner shapes
+     * X offsets for the 13 vertex positions within a tile (0-512 scale).
+     * Indexed by vertex index 0-12.
      */
-    private val OVERLAY_SHAPES: Array<BooleanArray> = arrayOf(
-        // Shape 0: Full tile - all overlay
-        booleanArrayOf(true, true, true, true),
+    private val TILE_VERTEX_X = intArrayOf(0, 256, 512, 512, 512, 256, 0, 0, 128, 256, 128, 384, 256)
 
-        // Shape 1-4: Half tiles (two adjacent corners)
-        booleanArrayOf(true, true, false, false),  // 1: South half (SW, SE)
-        booleanArrayOf(false, true, true, false),  // 2: East half (SE, NE)
-        booleanArrayOf(false, false, true, true),  // 3: North half (NE, NW)
-        booleanArrayOf(true, false, false, true),  // 4: West half (SW, NW)
+    /**
+     * Y offsets for the 13 vertex positions within a tile (0-512 scale).
+     * Indexed by vertex index 0-12.
+     */
+    private val TILE_VERTEX_Y = intArrayOf(0, 0, 0, 256, 512, 512, 512, 256, 256, 384, 128, 128, 256)
 
-        // Shape 5-8: Diagonal half tiles
-        booleanArrayOf(true, false, true, false),  // 5: Diagonal SW-NE
-        booleanArrayOf(false, true, false, true),  // 6: Diagonal SE-NW
-        booleanArrayOf(true, true, false, true),   // 7: All except NE
-        booleanArrayOf(true, true, true, false),   // 8: All except NW
+    /**
+     * Number of triangles belonging to the overlay for each shape (0-14).
+     * Shape 12 has 0 overlay faces (empty/special), shape 13 has 4 (full tile).
+     */
+    private val OVERLAY_FACE_COUNT = intArrayOf(2, 1, 1, 1, 2, 2, 2, 1, 3, 3, 3, 2, 0, 4, 0)
 
-        // Shape 9-12: Single corner
-        booleanArrayOf(true, false, false, false), // 9: Only SW
-        booleanArrayOf(false, true, false, false), // 10: Only SE
-        booleanArrayOf(false, false, true, false), // 11: Only NE
-        booleanArrayOf(false, false, false, true), // 12: Only NW
+    /**
+     * Number of triangles belonging to the underlay for each shape (0-14).
+     */
+    private val UNDERLAY_FACE_COUNT = intArrayOf(0, 1, 2, 2, 1, 1, 2, 3, 1, 3, 3, 4, 2, 0, 4)
 
-        // Shape 13-16: Three corners (L-shapes)
-        booleanArrayOf(true, true, false, true),   // 13: All except NE (alternative)
-        booleanArrayOf(true, true, true, false),   // 14: All except NW (alternative)
-        booleanArrayOf(false, true, true, true),   // 15: All except SW
-        booleanArrayOf(true, false, true, true),   // 16: All except SE
-
-        // Shape 17-22: Detailed corner and edge shapes
-        booleanArrayOf(true, false, false, true),  // 17: SW and NW (west edge)
-        booleanArrayOf(true, true, false, false),  // 18: SW and SE (south edge)
-        booleanArrayOf(false, true, true, false),  // 19: SE and NE (east edge)
-        booleanArrayOf(false, false, true, true),  // 20: NE and NW (north edge)
-        booleanArrayOf(true, false, true, false),  // 21: Diagonal (SW, NE)
-        booleanArrayOf(false, true, false, true)   // 22: Diagonal (SE, NW)
+    /**
+     * Triangle vertex A indices for each shape.
+     * First OVERLAY_FACE_COUNT[shape] entries are overlay triangles,
+     * remaining entries are underlay triangles.
+     */
+    private val TRIANGLE_A = arrayOf(
+        intArrayOf(0, 2),           // Shape 0: 2 overlay faces
+        intArrayOf(0, 2),           // Shape 1: 1 overlay, 1 underlay
+        intArrayOf(0, 0, 2),        // Shape 2: 1 overlay, 2 underlay
+        intArrayOf(2, 0, 0),        // Shape 3: 1 overlay, 2 underlay
+        intArrayOf(0, 2, 0),        // Shape 4: 2 overlay, 1 underlay
+        intArrayOf(0, 0, 2),        // Shape 5: 2 overlay, 1 underlay
+        intArrayOf(0, 5, 1, 4),     // Shape 6: 2 overlay, 2 underlay
+        intArrayOf(0, 4, 4, 4),     // Shape 7: 1 overlay, 3 underlay
+        intArrayOf(4, 4, 4, 0),     // Shape 8: 3 overlay, 1 underlay
+        intArrayOf(6, 6, 6, 2, 2, 2), // Shape 9: 3 overlay, 3 underlay
+        intArrayOf(2, 2, 2, 6, 6, 6), // Shape 10: 3 overlay, 3 underlay
+        intArrayOf(0, 11, 6, 6, 6, 4), // Shape 11: 2 overlay, 4 underlay
+        intArrayOf(0, 2),           // Shape 12: 0 overlay, 2 underlay
+        intArrayOf(0, 4, 4, 4),     // Shape 13: 4 overlay, 0 underlay
+        intArrayOf(0, 4, 4, 4)      // Shape 14: 0 overlay, 4 underlay
     )
 
     /**
-     * Rotate a shape by the given number of 90-degree clockwise rotations.
-     * The corners are ordered [SW, SE, NE, NW], so rotating CW shifts the indices.
+     * Triangle vertex B indices for each shape.
      */
-    private fun rotateShape(shape: BooleanArray, rotation: Int): BooleanArray {
-        if (rotation == 0) return shape
+    private val TRIANGLE_B = arrayOf(
+        intArrayOf(2, 4),
+        intArrayOf(2, 4),
+        intArrayOf(5, 2, 4),
+        intArrayOf(4, 5, 2),
+        intArrayOf(2, 4, 5),
+        intArrayOf(5, 2, 4),
+        intArrayOf(1, 6, 2, 5),
+        intArrayOf(1, 6, 7, 1),
+        intArrayOf(6, 7, 1, 1),
+        intArrayOf(0, 8, 9, 8, 9, 4),
+        intArrayOf(8, 9, 4, 0, 8, 9),
+        intArrayOf(2, 10, 0, 10, 11, 11),
+        intArrayOf(2, 4),
+        intArrayOf(1, 6, 7, 1),
+        intArrayOf(1, 6, 7, 1)
+    )
 
-        val result = BooleanArray(4)
-        val rot = rotation and 3  // Ensure rotation is 0-3
+    /**
+     * Triangle vertex C indices for each shape.
+     */
+    private val TRIANGLE_C = arrayOf(
+        intArrayOf(6, 6),
+        intArrayOf(6, 6),
+        intArrayOf(6, 5, 5),
+        intArrayOf(5, 6, 5),
+        intArrayOf(5, 5, 6),
+        intArrayOf(6, 5, 5),
+        intArrayOf(5, 0, 4, 1),
+        intArrayOf(7, 7, 1, 2),
+        intArrayOf(7, 1, 2, 7),
+        intArrayOf(8, 9, 4, 0, 8, 9),
+        intArrayOf(0, 8, 9, 8, 9, 4),
+        intArrayOf(11, 0, 10, 11, 4, 2),
+        intArrayOf(6, 6),
+        intArrayOf(7, 7, 1, 2),
+        intArrayOf(7, 7, 1, 2)
+    )
 
-        // Clockwise rotation: SW -> SE -> NE -> NW -> SW
-        // Each rotation shifts indices by 1
-        for (i in 0 until 4) {
-            result[(i + rot) and 3] = shape[i]
+    /**
+     * Data class to hold vertex data for shaped tile generation.
+     */
+    private data class ShapedVertex(
+        val x: Float, val y: Float, val z: Float,
+        val r: Float, val g: Float, val b: Float,
+        val u: Float, val v: Float,
+        val nx: Float, val ny: Float, val nz: Float,
+        val textureId: Int
+    )
+
+    /**
+     * Generates shaped triangles for a tile, returning separate lists for overlay and underlay triangles.
+     *
+     * @param x Tile X coordinate within region
+     * @param y Tile Y coordinate within region
+     * @param shape The tile shape (0-11 typically used)
+     * @param rotation The shape rotation (0-3)
+     * @param tileSize The size of each tile in world units
+     * @param heights Array of corner heights [SW, SE, NW, NE]
+     * @param overlayColor Color for overlay triangles
+     * @param underlayColor Color for underlay triangles
+     * @param overlayTextureId Texture ID for overlay (-1 for color only)
+     * @param underlayTextureId Texture ID for underlay (-1 for color only)
+     * @param overlayUvScale UV scale for overlay texture
+     * @param underlayUvScale UV scale for underlay texture
+     * @return List of ShapedVertex objects for all triangles
+     */
+    private fun generateShapedTile(
+        x: Int, y: Int,
+        shape: Int, rotation: Int,
+        tileSize: Float,
+        heights: FloatArray, // [h00, h10, h01, h11] = [SW, SE, NW, NE]
+        overlayColor: Vector3f,
+        underlayColor: Vector3f,
+        overlayTextureId: Int,
+        underlayTextureId: Int,
+        overlayUvScale: Float,
+        underlayUvScale: Float
+    ): List<ShapedVertex> {
+        val vertices = mutableListOf<ShapedVertex>()
+
+        // Clamp shape to valid range
+        val safeShape = shape.coerceIn(0, TRIANGLE_A.size - 1)
+
+        val overlayFaces = OVERLAY_FACE_COUNT[safeShape]
+        val underlayFaces = UNDERLAY_FACE_COUNT[safeShape]
+        val totalFaces = overlayFaces + underlayFaces
+
+        if (totalFaces == 0) return vertices
+
+        val triA = TRIANGLE_A[safeShape]
+        val triB = TRIANGLE_B[safeShape]
+        val triC = TRIANGLE_C[safeShape]
+
+        // Base position for this tile
+        val baseX = x * tileSize
+        val baseZ = -y * tileSize  // Flip Z for OpenGL
+
+        // Generate rotated vertex positions for this tile
+        // RS rotates UVs and vertex positions based on rotation
+        val vertexX = FloatArray(13)
+        val vertexZ = FloatArray(13)
+        val vertexY = FloatArray(13)  // Heights
+
+        for (i in 0 until 13) {
+            // Get base vertex offset (0-512 range)
+            var vx = TILE_VERTEX_X[i]
+            var vy = TILE_VERTEX_Y[i]
+
+            // Apply rotation (each rotation is 90 degrees CW)
+            when (rotation) {
+                1 -> {
+                    val temp = vx
+                    vx = vy
+                    vy = 512 - temp
+                }
+                2 -> {
+                    vx = 512 - vx
+                    vy = 512 - vy
+                }
+                3 -> {
+                    val temp = vx
+                    vx = 512 - vy
+                    vy = temp
+                }
+            }
+
+            // Convert to world coordinates
+            vertexX[i] = baseX + (vx.toFloat() / 512f) * tileSize
+            vertexZ[i] = baseZ - (vy.toFloat() / 512f) * tileSize  // Flip for OpenGL
+
+            // Interpolate height based on position within tile
+            val fx = vx.toFloat() / 512f
+            val fy = vy.toFloat() / 512f
+
+            // Bilinear interpolation of heights
+            // heights = [SW (0,0), SE (1,0), NW (0,1), NE (1,1)]
+            val h00 = heights[0]  // SW
+            val h10 = heights[1]  // SE
+            val h01 = heights[2]  // NW
+            val h11 = heights[3]  // NE
+
+            vertexY[i] = (1 - fx) * (1 - fy) * h00 +
+                         fx * (1 - fy) * h10 +
+                         (1 - fx) * fy * h01 +
+                         fx * fy * h11
         }
-        return result
+
+        // Generate triangles
+        for (face in 0 until totalFaces) {
+            if (face >= triA.size) break
+
+            val ia = triA[face]
+            val ib = triB[face]
+            val ic = triC[face]
+
+            // Get vertex positions
+            val ax = vertexX[ia]
+            val ay = vertexY[ia]
+            val az = vertexZ[ia]
+            val bx = vertexX[ib]
+            val by = vertexY[ib]
+            val bz = vertexZ[ib]
+            val cx = vertexX[ic]
+            val cy = vertexY[ic]
+            val cz = vertexZ[ic]
+
+            // Calculate normal for this triangle
+            val v1 = Vector3f(bx - ax, by - ay, bz - az)
+            val v2 = Vector3f(cx - ax, cy - ay, cz - az)
+            val normal = Vector3f()
+            v1.cross(v2, normal).normalize()
+
+            // Determine if this is overlay or underlay
+            val isOverlay = face < overlayFaces
+            val color = if (isOverlay) overlayColor else underlayColor
+            val textureId = if (isOverlay) overlayTextureId else underlayTextureId
+            val uvScale = if (isOverlay) overlayUvScale else underlayUvScale
+
+            // Helper to create vertex
+            fun createVertex(px: Float, py: Float, pz: Float, vIdx: Int): ShapedVertex {
+                // UV coordinates based on position within tile
+                val baseVx = TILE_VERTEX_X[vIdx]
+                val baseVy = TILE_VERTEX_Y[vIdx]
+                var uvx = baseVx
+                var uvy = baseVy
+
+                // Apply same rotation to UVs
+                when (rotation) {
+                    1 -> {
+                        val temp = uvx
+                        uvx = uvy
+                        uvy = 512 - temp
+                    }
+                    2 -> {
+                        uvx = 512 - uvx
+                        uvy = 512 - uvy
+                    }
+                    3 -> {
+                        val temp = uvx
+                        uvx = 512 - uvy
+                        uvy = temp
+                    }
+                }
+
+                return ShapedVertex(
+                    px, py, pz,
+                    color.x, color.y, color.z,
+                    uvx.toFloat() / 512f * uvScale,
+                    uvy.toFloat() / 512f * uvScale,
+                    normal.x, normal.y, normal.z,
+                    textureId
+                )
+            }
+
+            vertices.add(createVertex(ax, ay, az, ia))
+            vertices.add(createVertex(bx, by, bz, ib))
+            vertices.add(createVertex(cx, cy, cz, ic))
+        }
+
+        return vertices
     }
 }
