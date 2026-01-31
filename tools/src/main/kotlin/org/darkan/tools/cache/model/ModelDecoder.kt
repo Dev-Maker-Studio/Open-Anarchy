@@ -9,6 +9,9 @@ import world.gregs.voidps.cache.Index
  * Based on reference implementation from darkan-bot.
  */
 object ModelDecoder {
+    // Set to true to enable debug output for model version/upscale decisions
+    private const val DEBUG_VERSION = false
+
     fun decode(cache: Cache, modelId: Int): ModelDefinition? {
         val data = cache.data(Index.MODELS, modelId) ?: return null
         return try {
@@ -46,6 +49,17 @@ object ModelDecoder {
         val footerFlags = buffer.readUnsignedByte()
 
         val hasFaceTypes = (footerFlags and 0x1) == 1
+        val hasVersion = (footerFlags and 0x8) == 0x8
+
+        // Read version if flag is set
+        // Version byte is stored at data.size - 24 (one byte before the 23-byte footer)
+        var version = 12  // Default version for models without explicit version
+        if (hasVersion) {
+            buffer.position(data.size - 24)  // Version byte is immediately before the footer
+            version = buffer.readUnsignedByte()
+            buffer.position(data.size - 23 + 6)  // Continue reading from after footerFlags
+        }
+
         val modelPriority = buffer.readUnsignedByte()
         val hasFaceAlpha = buffer.readUnsignedByte()
         val hasFaceSkins = buffer.readUnsignedByte()
@@ -194,6 +208,20 @@ object ModelDecoder {
             vertexZ[i] = vZ
         }
 
+        // Upscale vertices if version < 13 (required to match scene coordinates)
+        // RS models with older format have vertices at 1/4 scale
+        val shouldUpscale = version < 13
+        if (DEBUG_VERSION) {
+            println("Model $modelId: version=$version, hasVersion=$hasVersion, footerFlags=0x${footerFlags.toString(16)}, shouldUpscale=$shouldUpscale")
+        }
+        if (shouldUpscale) {
+            for (i in 0 until vertexCount) {
+                vertexX[i] = vertexX[i] shl 2
+                vertexY[i] = vertexY[i] shl 2
+                vertexZ[i] = vertexZ[i] shl 2
+            }
+        }
+
         // Decode face index types
         buffer.position(faceIndexTypesOffset)
         val faceIndexTypes = ByteArray(faceCount)
@@ -333,6 +361,7 @@ object ModelDecoder {
 
         return ModelDefinition(
             id = modelId,
+            version = version,
             vertexCount = vertexCount,
             faceCount = faceCount,
             vertexX = vertexX,
@@ -482,6 +511,17 @@ object ModelDecoder {
             vertexZ[i] = vZ
         }
 
+        // Old format models always have implicit version 12, so always upscale by 4
+        val version = 12
+        if (DEBUG_VERSION) {
+            println("Model $modelId (old format): version=$version, shouldUpscale=true")
+        }
+        for (i in 0 until vertexCount) {
+            vertexX[i] = vertexX[i] shl 2
+            vertexY[i] = vertexY[i] shl 2
+            vertexZ[i] = vertexZ[i] shl 2
+        }
+
         // Decode face index types
         buffer.position(faceIndexTypesOffset)
         val faceIndexTypes = ByteArray(faceCount)
@@ -569,6 +609,7 @@ object ModelDecoder {
 
         return ModelDefinition(
             id = modelId,
+            version = version,
             vertexCount = vertexCount,
             faceCount = faceCount,
             vertexX = vertexX,

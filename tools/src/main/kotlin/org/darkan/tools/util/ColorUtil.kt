@@ -8,20 +8,45 @@ object ColorUtil {
     private const val BRIGHTNESS = 0.7
 
     /**
-     * Convert RuneScape HSL color to RGB.
-     * RS HSL format: 6 bits hue (0-63), 3 bits saturation (0-7), 7 bits lightness (0-127)
+     * Convert RuneScape packed HSL color (16-bit) to RGB.
+     * RS HSL format: 6 bits hue (0-63) at bits 10-15, 3 bits saturation (0-7) at bits 7-9, 7 bits lightness (0-127) at bits 0-6
      *
-     * This matches the RS client's calculateHslToRgbTable() method, including:
-     * - Proper offset values for hue and saturation
-     * - Gamma correction (brightness ~0.7)
+     * Uses the same algorithm as the RS client's calculateHslToRgbTable().
      */
     fun hslToRgb(hsl: Int): Vector3f {
-        // RS uses these offsets to avoid pure black/white at extremes
-        val h = (hsl shr 10 and 0x3f) / 64.0 + 0.0078125
-        val s = (hsl shr 7 and 0x7) / 8.0 + 0.0625
-        val l = (hsl and 0x7f) / 128.0
+        // Extract components matching client's bit layout
+        val hueRaw = (hsl shr 10) and 0x3f    // 6 bits at position 10 (0-63)
+        val satRaw = (hsl shr 7) and 0x7      // 3 bits at position 7 (0-7)
+        val lightRaw = hsl and 0x7f           // 7 bits at position 0 (0-127)
+
+        // Convert to normalized values matching client algorithm
+        // Client uses: hue/64 + 0.0078125, sat/8 + 0.0625, lightness/128
+        val h = hueRaw.toDouble() / 64.0 + 0.0078125
+        val s = satRaw.toDouble() / 8.0 + 0.0625
+        val l = lightRaw.toDouble() / 128.0
 
         return hslToRgbRS(h, s, l)
+    }
+
+    /**
+     * Pack raw HSL values (0-255 range) into RS 16-bit HSL format.
+     * This matches the client's hsl16to24() function used for underlay blending.
+     *
+     * @param hue Hue value (0-255, typically hueSum * 256 / divisorSum)
+     * @param saturation Saturation value (0-255)
+     * @param lightness Lightness value (0-255)
+     */
+    fun packHsl16(hue: Int, saturation: Int, lightness: Int): Int {
+        var sat = saturation
+        // Apply saturation reduction at high lightness (same as client)
+        when {
+            lightness > 243 -> sat = sat shr 4
+            lightness > 217 -> sat = sat shr 3
+            lightness > 192 -> sat = sat shr 2
+            lightness > 179 -> sat = sat shr 1
+        }
+        // Pack into RS HSL format: hue(6 bits) << 10 | sat(3 bits) << 7 | lightness(7 bits)
+        return ((hue and 0xff) shr 2 shl 10) + (lightness shr 1) + (sat shr 5 shl 7)
     }
 
     /**
@@ -31,49 +56,47 @@ object ColorUtil {
      * @param l Lightness [0-1]
      */
     private fun hslToRgbRS(h: Double, s: Double, l: Double): Vector3f {
-        var r = l
-        var g = l
-        var b = l
+        val r: Double
+        val g: Double
+        val b: Double
 
-        if (s != 0.0) {
-            val q = if (l < 0.5) l * (s + 1.0) else s + l - l * s
-            val p = l * 2.0 - q
+        if (s == 0.0) {
+            // Achromatic (grayscale)
+            r = l
+            g = l
+            b = l
+        } else {
+            val q = if (l < 0.5) l * (1.0 + s) else l + s - l * s
+            val p = 2.0 * l - q
 
-            // Red (hue + 1/3)
-            var hueR = h + 1.0 / 3.0
-            if (hueR > 1.0) hueR -= 1.0
-            r = when {
-                hueR * 6.0 < 1.0 -> p + (q - p) * 6.0 * hueR
-                hueR * 2.0 < 1.0 -> q
-                hueR * 3.0 < 2.0 -> p + 6.0 * (2.0 / 3.0 - hueR) * (q - p)
-                else -> p
-            }
-
-            // Green (hue)
-            g = when {
-                h * 6.0 < 1.0 -> p + 6.0 * (q - p) * h
-                h * 2.0 < 1.0 -> q
-                h * 3.0 < 2.0 -> 6.0 * (2.0 / 3.0 - h) * (q - p) + p
-                else -> p
-            }
-
-            // Blue (hue - 1/3)
-            var hueB = h - 1.0 / 3.0
-            if (hueB < 0.0) hueB += 1.0
-            b = when {
-                hueB * 6.0 < 1.0 -> hueB * 6.0 * (q - p) + p
-                hueB * 2.0 < 1.0 -> q
-                hueB * 3.0 < 2.0 -> 6.0 * (2.0 / 3.0 - hueB) * (q - p) + p
-                else -> p
-            }
+            r = hueToRgbChannel(p, q, h + 1.0 / 3.0)
+            g = hueToRgbChannel(p, q, h)
+            b = hueToRgbChannel(p, q, h - 1.0 / 3.0)
         }
 
         // Apply gamma correction (brightness)
-        r = r.pow(BRIGHTNESS)
-        g = g.pow(BRIGHTNESS)
-        b = b.pow(BRIGHTNESS)
+        val rGamma = r.pow(BRIGHTNESS)
+        val gGamma = g.pow(BRIGHTNESS)
+        val bGamma = b.pow(BRIGHTNESS)
 
-        return Vector3f(r.toFloat(), g.toFloat(), b.toFloat())
+        return Vector3f(rGamma.toFloat(), gGamma.toFloat(), bGamma.toFloat())
+    }
+
+    /**
+     * Helper function for HSL to RGB conversion.
+     * Converts a hue value to an RGB channel value.
+     */
+    private fun hueToRgbChannel(p: Double, q: Double, t: Double): Double {
+        var hue = t
+        if (hue < 0.0) hue += 1.0
+        if (hue > 1.0) hue -= 1.0
+
+        return when {
+            hue < 1.0 / 6.0 -> p + (q - p) * 6.0 * hue
+            hue < 1.0 / 2.0 -> q
+            hue < 2.0 / 3.0 -> p + (q - p) * (2.0 / 3.0 - hue) * 6.0
+            else -> p
+        }
     }
 
     /**

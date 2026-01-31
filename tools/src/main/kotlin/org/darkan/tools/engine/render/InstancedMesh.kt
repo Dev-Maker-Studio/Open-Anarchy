@@ -65,20 +65,20 @@ class InstancedMesh(
         }
 
         // Color VBO (attribute 1)
-        if (colors != null) {
-            val colorBuffer = MemoryUtil.memAllocFloat(colors.size)
-            try {
-                colorBuffer.put(colors).flip()
-                val colorVbo = glGenBuffers()
-                vboIds.add(colorVbo)
-                glBindBuffer(GL_ARRAY_BUFFER, colorVbo)
-                glBufferData(GL_ARRAY_BUFFER, colorBuffer, GL_STATIC_DRAW)
-                glEnableVertexAttribArray(1)
-                glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0)
-                glVertexAttribDivisor(1, 0) // Per-vertex, not per-instance
-            } finally {
-                MemoryUtil.memFree(colorBuffer)
-            }
+        // Always set up colors - use provided colors or default to white (1,1,1) for all vertices
+        val colorData = colors ?: FloatArray(positions.size) { 1f } // Default white if no colors
+        val colorBuffer = MemoryUtil.memAllocFloat(colorData.size)
+        try {
+            colorBuffer.put(colorData).flip()
+            val colorVbo = glGenBuffers()
+            vboIds.add(colorVbo)
+            glBindBuffer(GL_ARRAY_BUFFER, colorVbo)
+            glBufferData(GL_ARRAY_BUFFER, colorBuffer, GL_STATIC_DRAW)
+            glEnableVertexAttribArray(1)
+            glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0)
+            glVertexAttribDivisor(1, 0) // Per-vertex, not per-instance
+        } finally {
+            MemoryUtil.memFree(colorBuffer)
         }
 
         // Texture coordinate VBO (attribute 2)
@@ -99,20 +99,25 @@ class InstancedMesh(
         }
 
         // Normal VBO (attribute 3)
-        if (normals != null) {
-            val normalBuffer = MemoryUtil.memAllocFloat(normals.size)
-            try {
-                normalBuffer.put(normals).flip()
-                val normalVbo = glGenBuffers()
-                vboIds.add(normalVbo)
-                glBindBuffer(GL_ARRAY_BUFFER, normalVbo)
-                glBufferData(GL_ARRAY_BUFFER, normalBuffer, GL_STATIC_DRAW)
-                glEnableVertexAttribArray(3)
-                glVertexAttribPointer(3, 3, GL_FLOAT, false, 0, 0)
-                glVertexAttribDivisor(3, 0) // Per-vertex
-            } finally {
-                MemoryUtil.memFree(normalBuffer)
+        // Always set up normals - use provided normals or default to up (0,1,0) for all vertices
+        val normalData = normals ?: FloatArray(positions.size) { i ->
+            when (i % 3) {
+                1 -> 1f  // Y component = 1 (up)
+                else -> 0f
             }
+        }
+        val normalBuffer = MemoryUtil.memAllocFloat(normalData.size)
+        try {
+            normalBuffer.put(normalData).flip()
+            val normalVbo = glGenBuffers()
+            vboIds.add(normalVbo)
+            glBindBuffer(GL_ARRAY_BUFFER, normalVbo)
+            glBufferData(GL_ARRAY_BUFFER, normalBuffer, GL_STATIC_DRAW)
+            glEnableVertexAttribArray(3)
+            glVertexAttribPointer(3, 3, GL_FLOAT, false, 0, 0)
+            glVertexAttribDivisor(3, 0) // Per-vertex
+        } finally {
+            MemoryUtil.memFree(normalBuffer)
         }
 
         // Instance matrix VBO (attributes 4-7)
