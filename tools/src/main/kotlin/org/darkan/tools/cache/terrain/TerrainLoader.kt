@@ -99,6 +99,7 @@ object TerrainLoader {
         val underlayDefs = underlays ?: return blendedColors
 
         // Temporary arrays for accumulating HSL values across rows (same pattern as client)
+        // These maintain a sliding window across X - initialized to 0 for the plane
         val underlayHue = IntArray(64)
         val underlaySaturation = IntArray(64)
         val underlayLightness = IntArray(64)
@@ -106,23 +107,16 @@ object TerrainLoader {
         val underlayCount = IntArray(64)
 
         for (x in -5 until 64) {
-            // Reset accumulators for this column
-            for (y in 0 until 64) {
-                underlayHue[y] = 0
-                underlaySaturation[y] = 0
-                underlayLightness[y] = 0
-                underlayDivisor[y] = 0
-                underlayCount[y] = 0
-            }
-
-            // Add underlay values from tiles within the 11-tile X window
+            // Update column accumulators with sliding window (add at x+5, subtract at x-5)
             for (y in 0 until 64) {
                 // Add tile at x+5 (forward edge of window)
                 val forwardX = x + 5
                 if (forwardX in 0 until 64) {
                     val underlayId = region.tiles[plane][forwardX][y].underlayId
-                    if (underlayId > 0 && underlayId < underlayDefs.size) {
-                        val def = underlayDefs[underlayId]
+                    // RS client uses (underlayId - 1) for definition lookup
+                    val defIndex = underlayId - 1
+                    if (defIndex >= 0 && defIndex < underlayDefs.size) {
+                        val def = underlayDefs[defIndex]
                         underlayHue[y] += def.hue
                         underlaySaturation[y] += def.saturation
                         underlayLightness[y] += def.lightness
@@ -135,8 +129,10 @@ object TerrainLoader {
                 val backwardX = x - 5
                 if (backwardX in 0 until 64) {
                     val underlayId = region.tiles[plane][backwardX][y].underlayId
-                    if (underlayId > 0 && underlayId < underlayDefs.size) {
-                        val def = underlayDefs[underlayId]
+                    // RS client uses (underlayId - 1) for definition lookup
+                    val defIndex = underlayId - 1
+                    if (defIndex >= 0 && defIndex < underlayDefs.size) {
+                        val def = underlayDefs[defIndex]
                         underlayHue[y] -= def.hue
                         underlaySaturation[y] -= def.saturation
                         underlayLightness[y] -= def.lightness
@@ -291,17 +287,24 @@ object TerrainLoader {
                 val underlayDef = if (tile.underlayId > 0) getUnderlayDefinition(tile.underlayId) else null
 
                 if (overlayDef != null && overlayDef.texture >= 0) {
-                    // Overlay has texture
+                    // Overlay has texture - tint with overlay color
                     textureId = overlayDef.texture
                     uvScale = overlayDef.scale.toFloat() / 512f
-                    val white = Vector3f(1f, 1f, 1f)
-                    cornerColors = arrayOf(white, white, white, white)
+                    // Use overlay color for tinting (texture color * vertex color)
+                    // If colour is 0 or -1, use white (no tinting)
+                    val tintColor = if (overlayDef.colour > 0 && overlayDef.colour != -1) {
+                        ColorUtil.hslToRgb(overlayDef.colour)
+                    } else {
+                        Vector3f(1f, 1f, 1f)
+                    }
+                    cornerColors = arrayOf(tintColor, tintColor, tintColor, tintColor)
                 } else if (underlayDef != null && underlayDef.texture >= 0) {
-                    // Underlay has texture
+                    // Underlay has texture - tint with underlay color
                     textureId = underlayDef.texture
                     uvScale = underlayDef.scale.toFloat() / 512f
-                    val white = Vector3f(1f, 1f, 1f)
-                    cornerColors = arrayOf(white, white, white, white)
+                    // Use blended underlay color for tinting
+                    val tintColor = getBlendedUnderlayColor(blendedUnderlayColors, x, y)
+                    cornerColors = arrayOf(tintColor, tintColor, tintColor, tintColor)
                 } else {
                     // Color-only tile - use blended underlay colors
                     textureId = -1
@@ -333,12 +336,68 @@ object TerrainLoader {
                 val n1 = CoordinateUtil.calculateNormal(v0, v1, v2)
                 val n2 = CoordinateUtil.calculateNormal(v1, v3, v2)
 
-                // UV coordinates - tile maps to full texture, scaled by definition
-                // SW (x,y) = (0,0), SE (x+1,y) = (1,0), NE (x+1,y+1) = (1,1), NW (x,y+1) = (0,1)
-                val uvSW = Pair(0f, 0f)
-                val uvSE = Pair(uvScale, 0f)
-                val uvNE = Pair(uvScale, uvScale)
-                val uvNW = Pair(0f, uvScale)
+                // UV coordinates - apply rotation based on overlay rotation (0-3)
+                // RS client transforms UVs based on overlayRotation (see MapLoader.kt):
+                // Rotation 0: normal
+                // Rotation 1: 90 degrees clockwise
+                // Rotation 2: 180 degrees
+                // Rotation 3: 270 degrees clockwise (90 CCW)
+                //
+                // Also apply V-flip to correct OpenGL coordinate system
+                // (OpenGL has origin at bottom-left, RS has it at top-left for textures)
+                val uvSW: Pair<Float, Float>
+                val uvSE: Pair<Float, Float>
+                val uvNE: Pair<Float, Float>
+                val uvNW: Pair<Float, Float>
+
+                when (tile.overlayRotation) {
+                    0 -> {
+                        // No rotation, but flip V for OpenGL
+                        // RS: SW=(0,0), SE=(512,0), NE=(512,512), NW=(0,512)
+                        // After V-flip: SW=(0,scale), SE=(scale,scale), NE=(scale,0), NW=(0,0)
+                        uvSW = Pair(0f, uvScale)
+                        uvSE = Pair(uvScale, uvScale)
+                        uvNE = Pair(uvScale, 0f)
+                        uvNW = Pair(0f, 0f)
+                    }
+                    1 -> {
+                        // 90 CW rotation + V flip
+                        // RS formula: sizesX=deltaY, sizesY=512-deltaX
+                        // RS: SW=(0,512), SE=(0,0), NE=(512,0), NW=(512,512)
+                        // After V-flip: SW=(0,0), SE=(0,scale), NE=(scale,scale), NW=(scale,0)
+                        uvSW = Pair(0f, 0f)
+                        uvSE = Pair(0f, uvScale)
+                        uvNE = Pair(uvScale, uvScale)
+                        uvNW = Pair(uvScale, 0f)
+                    }
+                    2 -> {
+                        // 180 rotation + V flip
+                        // RS formula: sizesX=512-deltaX, sizesY=512-deltaY
+                        // RS: SW=(512,512), SE=(0,512), NE=(0,0), NW=(512,0)
+                        // After V-flip: SW=(scale,0), SE=(0,0), NE=(0,scale), NW=(scale,scale)
+                        uvSW = Pair(uvScale, 0f)
+                        uvSE = Pair(0f, 0f)
+                        uvNE = Pair(0f, uvScale)
+                        uvNW = Pair(uvScale, uvScale)
+                    }
+                    3 -> {
+                        // 270 CW (90 CCW) rotation + V flip
+                        // RS formula: sizesX=512-deltaY, sizesY=deltaX
+                        // RS: SW=(512,0), SE=(512,512), NE=(0,512), NW=(0,0)
+                        // After V-flip: SW=(scale,scale), SE=(scale,0), NE=(0,0), NW=(0,scale)
+                        uvSW = Pair(uvScale, uvScale)
+                        uvSE = Pair(uvScale, 0f)
+                        uvNE = Pair(0f, 0f)
+                        uvNW = Pair(0f, uvScale)
+                    }
+                    else -> {
+                        // Default: same as rotation 0
+                        uvSW = Pair(0f, uvScale)
+                        uvSE = Pair(uvScale, uvScale)
+                        uvNE = Pair(uvScale, 0f)
+                        uvNW = Pair(0f, 0f)
+                    }
+                }
 
                 val group = textureGroups.getOrPut(textureId) { mutableListOf() }
 
@@ -587,8 +646,10 @@ object TerrainLoader {
         if (underlayId <= 0) return DEFAULT_GRASS_COLOR
 
         val defs = underlays
-        if (defs != null && underlayId < defs.size) {
-            val def = defs[underlayId]
+        // RS client uses (underlayId - 1) for definition lookup
+        val defIndex = underlayId - 1
+        if (defs != null && defIndex >= 0 && defIndex < defs.size) {
+            val def = defs[defIndex]
 
             // Use the pre-computed HSL values from UnderlayDecoder
             // The client's calculateHsl16 computes these for blending purposes
@@ -629,8 +690,10 @@ object TerrainLoader {
         if (overlayId <= 0) return DEFAULT_GRASS_COLOR
 
         val defs = overlays
-        if (defs != null && overlayId < defs.size) {
-            val def = defs[overlayId]
+        // RS client uses (overlayId - 1) for definition lookup
+        val defIndex = overlayId - 1
+        if (defs != null && defIndex >= 0 && defIndex < defs.size) {
+            val def = defs[defIndex]
             // Use colour (tileColorHsl) for terrain rendering
             // blendColour is for minimap display, not terrain
             val color = def.colour
@@ -647,18 +710,22 @@ object TerrainLoader {
 
     /**
      * Get underlay definition by ID.
+     * Note: RS client uses (id - 1) for definition lookup.
      */
     fun getUnderlayDefinition(underlayId: Int): UnderlayDefinition? {
         val defs = underlays ?: return null
-        return if (underlayId in defs.indices) defs[underlayId] else null
+        val defIndex = underlayId - 1
+        return if (defIndex >= 0 && defIndex < defs.size) defs[defIndex] else null
     }
 
     /**
      * Get overlay definition by ID.
+     * Note: RS client uses (id - 1) for definition lookup.
      */
     fun getOverlayDefinition(overlayId: Int): OverlayDefinition? {
         val defs = overlays ?: return null
-        return if (overlayId in defs.indices) defs[overlayId] else null
+        val defIndex = overlayId - 1
+        return if (defIndex >= 0 && defIndex < defs.size) defs[defIndex] else null
     }
 
     fun clearCache() {
