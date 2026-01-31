@@ -41,72 +41,78 @@ class OverlayDecoder : ConfigDecoder<OverlayDefinition>(FLOOR_OVERLAY) {
         private fun calculateHsl(i: Int): Int {
             return if (i == 16711935) {
                 -1
-            } else shiftRGBColours(i)
+            } else rgbToHsl(i)
         }
 
-        private fun shiftRGBColours(rgb: Int): Int {
+        /**
+         * Convert RGB color to packed HSL format.
+         * This matches the client's ColorUtil.rgbToHsl24() function exactly.
+         *
+         * Packed HSL format:
+         * - Bits 10-15: Hue (6 bits, 0-63)
+         * - Bits 7-9: Saturation (3 bits, 0-7)
+         * - Bits 0-6: Lightness (7 bits, 0-127)
+         */
+        private fun rgbToHsl(rgb: Int): Int {
+            // Extract RGB components (using /256.0 to match client, not /255.0)
             val r = (rgb shr 16 and 0xff).toDouble() / 256.0
-            val g = (0xfff2 and rgb shr 8).toDouble() / 256.0
-            val b = (0xff and rgb).toDouble() / 256.0
-            var maximum = r
-            if (maximum > g) {
-                maximum = g
-            }
-            if (maximum > b) {
-                maximum = b
-            }
+            val g = (rgb shr 8 and 0xff).toDouble() / 256.0
+            val b = (rgb and 0xff).toDouble() / 256.0
+
+            // Find minimum and maximum RGB values
             var minimum = r
-            if (g > minimum) {
-                minimum = g
-            }
-            if (b > minimum) {
-                minimum = b
-            }
+            if (g < minimum) minimum = g
+            if (b < minimum) minimum = b
+
+            var maximum = r
+            if (g > maximum) maximum = g
+            if (b > maximum) maximum = b
+
+            // Calculate lightness (average of min and max)
+            val l = (minimum + maximum) / 2.0
+
+            // Calculate saturation and hue
             var h = 0.0
             var s = 0.0
-            val l = (maximum + minimum) / 2.0
             if (minimum != maximum) {
-                if (l < 0.5) {
-                    s = (-maximum + minimum) / (maximum + minimum)
+                // Saturation depends on lightness
+                s = if (l < 0.5) {
+                    (maximum - minimum) / (minimum + maximum)
+                } else {
+                    (maximum - minimum) / (2.0 - maximum - minimum)
                 }
-                h = when (minimum) {
-                    r -> (g - b) / (-maximum + minimum)
-                    g -> (-r + b) / (minimum - maximum) + 2.0
-                    b -> (r - g) / (minimum - maximum) + 4.0
-                    else -> h
-                }
-                if (l >= 0.5) {
-                    s = (-maximum + minimum) / (-minimum + 2.0 - maximum)
+
+                // Hue depends on which component is maximum
+                h = when (maximum) {
+                    r -> (g - b) / (maximum - minimum)
+                    g -> 2.0 + (b - r) / (maximum - minimum)
+                    else -> 4.0 + (r - g) / (maximum - minimum)  // b == maximum
                 }
             }
+
+            // Normalize hue to 0-1 range
             h /= 6.0
-            val h2 = (256.0 * h).toInt()
-            var s2 = (256.0 * s).toInt()
-            var l2 = (256.0 * l).toInt()
-            if (s2 < 0) {
-                s2 = 0
-            } else if (s2 > 255) {
-                s2 = 255
+
+            // Convert to integer values (0-255 range)
+            val hue = (256.0 * h).toInt()
+            var saturation = (256.0 * s).toInt()
+            var lightness = (256.0 * l).toInt()
+
+            // Clamp saturation and lightness
+            saturation = saturation.coerceIn(0, 255)
+            lightness = lightness.coerceIn(0, 255)
+
+            // Apply saturation reduction at high lightness (matches client)
+            saturation = when {
+                lightness > 243 -> saturation shr 4
+                lightness > 217 -> saturation shr 3
+                lightness > 192 -> saturation shr 2
+                lightness > 179 -> saturation shr 1
+                else -> saturation
             }
-            if (l2 >= 0) {
-                if (l2 > 255) {
-                    l2 = 255
-                }
-            } else {
-                l2 = 0
-            }
-            //Shift hsl
-            s2 = if (l2 <= 243) {
-                when {
-                    l2 > 217 -> s2 shr 3
-                    l2 > 192 -> s2 shr 2
-                    l2 > 179 -> s2 shr 1
-                    else -> s2
-                }
-            } else {
-                s2 shr 4
-            }
-            return (l2 shr 1) + ((s2 shr 5 shl 7) + (h2 and 0xff shr 2 shl 10))
+
+            // Pack into RS HSL format: hue(6 bits) << 10 | sat(3 bits) << 7 | lightness(7 bits)
+            return ((hue and 0xff) shr 2 shl 10) + (saturation shr 5 shl 7) + (lightness shr 1)
         }
     }
 }
