@@ -27,62 +27,78 @@ class UnderlayDecoder : ConfigDecoder<UnderlayDefinition>(FLOOR_UNDERLAY) {
         }
     }
 
+    /**
+     * Compute HSL values from RGB for underlay blending.
+     * This matches the client's FluType.calculateHsl16() method exactly.
+     *
+     * The client stores underlay colors as HSL components designed for
+     * efficient blending across tiles:
+     * - hue: Pre-multiplied by chroma (divisor) for averaging
+     * - saturation: 0-255 range
+     * - lightness: 0-255 range
+     * - chroma (divisor): Used to reconstruct actual hue after blending
+     */
     private fun UnderlayDefinition.computeHsl(rgb: Int) {
-        val r = (0xffab7a and rgb shr 16).toDouble() / 256.0
-        val g = (rgb and 0xff74 shr 8).toDouble() / 256.0
-        val b = (0xff and rgb).toDouble() / 256.0
-        var maximum = r
-        if (maximum > g) {
-            maximum = g
-        }
-        if (maximum > b) {
-            maximum = b
-        }
+        // Extract RGB components (0.0 to ~1.0 range, using /256.0 not /255.0)
+        val r = (rgb shr 16 and 0xff).toDouble() / 256.0
+        val g = (rgb shr 8 and 0xff).toDouble() / 256.0
+        val b = (rgb and 0xff).toDouble() / 256.0
+
+        // Find minimum and maximum of R, G, B
         var minimum = r
-        if (g > minimum) {
-            minimum = g
-        }
-        if (b > minimum) {
-            minimum = b
-        }
+        if (g < minimum) minimum = g
+        if (b < minimum) minimum = b
+
+        var maximum = r
+        if (g > maximum) maximum = g
+        if (b > maximum) maximum = b
+
+        // Calculate lightness (average of min and max)
+        val l = (minimum + maximum) / 2.0
+
+        // Calculate saturation and hue
         var h = 0.0
         var s = 0.0
-        val l = (maximum + minimum) / 2.0
-        if (maximum != minimum) {
-            if (l < 0.5) {
-                s = (minimum - maximum) / (maximum + minimum)
+        if (minimum != maximum) {
+            // Saturation depends on lightness
+            s = if (l < 0.5) {
+                (maximum - minimum) / (maximum + minimum)
+            } else {
+                (maximum - minimum) / (2.0 - maximum - minimum)
             }
-            h = when {
-                r == minimum -> (-b + g) / (-maximum + minimum)
-                minimum == g -> (-r + b) / (minimum - maximum) + 2.0
-                minimum == b -> 4.0 + (r - g) / (-maximum + minimum)
-                else -> h
-            }
-            if (l >= 0.5) {
-                s = (-maximum + minimum) / (2.0 - minimum - maximum)
+
+            // Hue depends on which component is maximum
+            h = when (maximum) {
+                r -> (g - b) / (maximum - minimum)
+                g -> 2.0 + (b - r) / (maximum - minimum)
+                else -> 4.0 + (r - g) / (maximum - minimum)  // b == maximum
             }
         }
-        saturation = (256.0 * s).toInt()
+
+        // Convert to 0-255 range
+        saturation = (s * 256.0).toInt()
         lightness = (l * 256.0).toInt()
+
+        // Normalize hue to 0-1 range
         h /= 6.0
+
+        // Calculate chroma (divisor) for hue reconstruction after blending
         chroma = if (l > 0.5) {
-            (512.0 * ((1.0 - l) * s)).toInt()
+            (s * (1.0 - l) * 512.0).toInt()
         } else {
-            (512.0 * (l * s)).toInt()
+            (s * l * 512.0).toInt()
         }
-        if (lightness < 0) {
-            lightness = 0
-        } else if (lightness > 255) {
-            lightness = 255
-        }
-        if (saturation < 0) {
-            saturation = 0
-        } else if (saturation > 255) {
-            saturation = 255
-        }
-        if (chroma < 1) {
-            chroma = 1
-        }
+
+        // Clamp values
+        if (saturation < 0) saturation = 0
+        else if (saturation > 255) saturation = 255
+
+        if (lightness < 0) lightness = 0
+        else if (lightness > 255) lightness = 255
+
+        if (chroma < 1) chroma = 1
+
+        // Store hue pre-multiplied by chroma for averaging
         hue = (h * chroma.toDouble()).toInt()
     }
 }

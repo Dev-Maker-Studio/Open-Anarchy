@@ -55,6 +55,20 @@ interface CullableObject {
 
 /**
  * Simple implementation of CullableObject for scene objects.
+ *
+ * Contains full transform data (position, rotation, scale, offset) needed
+ * for correct rendering. Transform order matches the RS client:
+ * Scale -> Rotate -> Offset -> Translate
+ *
+ * @param objectId The object definition ID
+ * @param modelId The model ID to render
+ * @param bounds Bounding box for culling
+ * @param position World position (translation)
+ * @param regionId The region this object belongs to
+ * @param plane The plane level (0-3)
+ * @param rotation Rotation around Y axis in radians
+ * @param scale Scale factors (default 1,1,1)
+ * @param offset Model offset applied after rotation (from definition offsetX/Y/Z)
  */
 data class SceneObject(
     override val objectId: Int,
@@ -62,7 +76,10 @@ data class SceneObject(
     override val bounds: AABB,
     override val position: Vector3f,
     override val regionId: Int,
-    override val plane: Int = 0
+    override val plane: Int = 0,
+    val rotation: Float = 0f,
+    val scale: Vector3f = Vector3f(1f, 1f, 1f),
+    val offset: Vector3f = Vector3f(0f, 0f, 0f)
 ) : CullableObject
 
 /**

@@ -362,9 +362,12 @@ object ModelLoader {
 
             if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) continue
 
-            // Check alpha - skip fully transparent faces
-            val alpha = def.faceAlphas?.get(i)?.toInt()?.and(0xff) ?: 255
-            if (alpha == 0) continue
+            // Check alpha - RS uses inverted alpha where:
+            // - alpha = 0 means OPAQUE (fully visible)
+            // - alpha = 255 means FULLY TRANSPARENT (invisible)
+            // If faceAlphas is null, faces are opaque (visible)
+            val alpha = def.faceAlphas?.get(i)?.toInt()?.and(0xff) ?: 0
+            if (alpha == 255) continue  // Skip fully transparent faces
 
             // Get texture ID for this face (-1 if none)
             // faceTextures values are already adjusted (-1 means no texture after decoding)
@@ -380,8 +383,9 @@ object ModelLoader {
             // For textured faces, this will be modulated by the texture
             // For untextured faces, this is the final color
             val hsl = def.faceColors[i].toInt() and 0xffff
-            val color = if (hsl == 0 || hsl == 65535) {
-                Vector3f(0.8f, 0.8f, 0.8f) // Default gray for invalid colors
+            // HSL value 0 is valid (black), only 65535 (0xFFFF) is a sentinel for "no color"
+            val color = if (hsl == 65535) {
+                Vector3f(1f, 1f, 1f) // White for textured faces without explicit color
             } else {
                 ColorUtil.hslToRgb(hsl)
             }
@@ -473,16 +477,42 @@ object ModelLoader {
      * Create MeshData list from a model definition for instanced rendering.
      * Similar to createTexturedModel but returns raw arrays instead of GPU meshes.
      */
-    fun createMeshDataList(cache: Cache, modelId: Int): List<MeshData>? {
+    fun createMeshDataList(cache: Cache, modelId: Int, debug: Boolean = false): List<MeshData>? {
         val def = loadDefinition(cache, modelId) ?: return null
-        return createMeshDataListFromDef(def)
+        return createMeshDataListFromDef(def, if (debug) modelId else -1)
     }
 
     /**
      * Create MeshData list from a model definition for instanced rendering.
      */
-    fun createMeshDataListFromDef(def: ModelDefinition): List<MeshData>? {
+    fun createMeshDataListFromDef(def: ModelDefinition, debugModelId: Int = -1): List<MeshData>? {
         if (def.faceCount == 0) return null
+
+        // Debug output for specific models
+        if (debugModelId > 0 && def.id == debugModelId) {
+            var minX = Int.MAX_VALUE; var maxX = Int.MIN_VALUE
+            var minY = Int.MAX_VALUE; var maxY = Int.MIN_VALUE
+            var minZ = Int.MAX_VALUE; var maxZ = Int.MIN_VALUE
+            for (i in 0 until def.vertexCount) {
+                minX = minOf(minX, def.vertexX[i]); maxX = maxOf(maxX, def.vertexX[i])
+                minY = minOf(minY, def.vertexY[i]); maxY = maxOf(maxY, def.vertexY[i])
+                minZ = minOf(minZ, def.vertexZ[i]); maxZ = maxOf(maxZ, def.vertexZ[i])
+            }
+            println("=== DEBUG Model $debugModelId RAW vertex bounds ===")
+            println("  X: [$minX, $maxX] (range: ${maxX - minX})")
+            println("  Y: [$minY, $maxY] (range: ${maxY - minY})")
+            println("  Z: [$minZ, $maxZ] (range: ${maxZ - minZ})")
+            val scaledMinX = minX * CoordinateUtil.DEFAULT_SCALE
+            val scaledMaxX = maxX * CoordinateUtil.DEFAULT_SCALE
+            val scaledMinY = -maxY * CoordinateUtil.DEFAULT_SCALE  // Y inverted
+            val scaledMaxY = -minY * CoordinateUtil.DEFAULT_SCALE
+            val scaledMinZ = -maxZ * CoordinateUtil.DEFAULT_SCALE  // Z inverted
+            val scaledMaxZ = -minZ * CoordinateUtil.DEFAULT_SCALE
+            println("=== SCALED (OpenGL) vertex bounds (scale=1/128) ===")
+            println("  X: [$scaledMinX, $scaledMaxX] (range: ${scaledMaxX - scaledMinX})")
+            println("  Y: [$scaledMinY, $scaledMaxY] (range: ${scaledMaxY - scaledMinY})")
+            println("  Z: [$scaledMinZ, $scaledMaxZ] (range: ${scaledMaxZ - scaledMinZ})")
+        }
 
         fun isValidIndex(idx: Int) = idx >= 0 && idx < def.vertexCount
 
@@ -571,8 +601,12 @@ object ModelLoader {
 
             if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) continue
 
-            val alpha = def.faceAlphas?.get(i)?.toInt()?.and(0xff) ?: 255
-            if (alpha == 0) continue
+            // Check alpha - RS uses inverted alpha where:
+            // - alpha = 0 means OPAQUE (fully visible)
+            // - alpha = 255 means FULLY TRANSPARENT (invisible)
+            // If faceAlphas is null, faces are opaque (visible)
+            val alpha = def.faceAlphas?.get(i)?.toInt()?.and(0xff) ?: 0
+            if (alpha == 255) continue  // Skip fully transparent faces
 
             val textureId = def.faceTextures?.get(i)?.toInt() ?: -1
 
@@ -581,8 +615,9 @@ object ModelLoader {
             val pos2 = CoordinateUtil.rsToOpenGL(def.vertexX[cIdx], def.vertexY[cIdx], def.vertexZ[cIdx])
 
             val hsl = def.faceColors[i].toInt() and 0xffff
-            val color = if (hsl == 0 || hsl == 65535) {
-                Vector3f(0.8f, 0.8f, 0.8f)
+            // HSL value 0 is valid (black), only 65535 (0xFFFF) is a sentinel for "no color"
+            val color = if (hsl == 65535) {
+                Vector3f(1f, 1f, 1f) // White for textured faces without explicit color
             } else {
                 ColorUtil.hslToRgb(hsl)
             }
@@ -606,6 +641,16 @@ object ModelLoader {
         if (facesByTexture.isEmpty()) return null
 
         val result = mutableListOf<MeshData>()
+
+        // Debug: log batch info for combined models (debugModelId != -1 means debug is enabled)
+        if (debugModelId != -1) {
+            println("=== createMeshDataListFromDef for model $debugModelId ===")
+            println("  Total faces processed: ${facesByTexture.values.sumOf { it.size }}")
+            println("  Batches: ${facesByTexture.size}")
+            for ((texId, faces) in facesByTexture) {
+                println("    textureId=$texId: ${faces.size} faces")
+            }
+        }
 
         // Build MeshData for each texture batch (including -1 for untextured)
         for ((textureId, faces) in facesByTexture) {
@@ -660,7 +705,114 @@ object ModelLoader {
     fun clearCache() {
         definitionCache.clear()
         textureBoundsCache.clear()
+        combinedDefinitionCache.clear()
     }
 
     fun getCachedDefinition(modelId: Int): ModelDefinition? = definitionCache[modelId]
+
+    // Cache for combined model definitions (key is sorted list of model IDs)
+    private val combinedDefinitionCache = mutableMapOf<List<Int>, ModelDefinition?>()
+
+    /**
+     * Load multiple model definitions and combine them into a single definition.
+     * This matches how the RS client combines multiple models for multi-model objects
+     * (e.g., fountains with water + stone base, lanterns with frame + window).
+     *
+     * @param cache The game cache
+     * @param modelIds List of model IDs to combine
+     * @return Combined model definition, or null if no models could be loaded
+     */
+    fun loadCombinedDefinition(cache: Cache, modelIds: List<Int>): ModelDefinition? {
+        if (modelIds.isEmpty()) return null
+        if (modelIds.size == 1) return loadDefinition(cache, modelIds[0])
+
+        // Use sorted list as cache key for consistent lookup
+        val cacheKey = modelIds.sorted()
+        return combinedDefinitionCache.getOrPut(cacheKey) {
+            // Load all individual models
+            val models = modelIds.mapNotNull { loadDefinition(cache, it) }
+            if (models.isEmpty()) return@getOrPut null
+
+            // Combine using the first model's ID as the combined ID
+            // (with negative sign to distinguish from regular model IDs)
+            val combinedId = -(modelIds.hashCode() and 0x7FFFFFFF)
+            ModelDefinition.combine(models, combinedId)
+        }
+    }
+
+    /**
+     * Create MeshData list from multiple model IDs (combined).
+     * This is the primary method for loading multi-model objects.
+     *
+     * @param cache The game cache
+     * @param modelIds List of model IDs to combine
+     * @param debug Enable debug output
+     * @return List of MeshData for instanced rendering, or null if loading fails
+     */
+    fun createCombinedMeshDataList(cache: Cache, modelIds: List<Int>, debug: Boolean = false): List<MeshData>? {
+        if (modelIds.isEmpty()) return null
+        if (modelIds.size == 1) return createMeshDataList(cache, modelIds[0], debug)
+
+        // Debug: trace individual models before combination
+        if (debug) {
+            println("=== COMBINING MODELS: $modelIds ===")
+            for (modelId in modelIds) {
+                val def = loadDefinition(cache, modelId)
+                if (def != null) {
+                    println("  Model $modelId: ${def.faceCount} faces, hasTextures=${def.faceTextures != null}")
+                    if (def.faceTextures != null) {
+                        val texturedFaces = def.faceTextures!!.count { it.toInt() >= 0 }
+                        val untexturedFaces = def.faceCount - texturedFaces
+                        println("    Textured faces: $texturedFaces, Untextured faces: $untexturedFaces")
+                    }
+                }
+            }
+        }
+
+        val combinedDef = loadCombinedDefinition(cache, modelIds) ?: return null
+
+        if (debug) {
+            println("  Combined: ${combinedDef.faceCount} faces, ${combinedDef.vertexCount} vertices")
+            println("    hasTextures=${combinedDef.faceTextures != null}")
+            if (combinedDef.faceTextures != null) {
+                val texturedFaces = combinedDef.faceTextures!!.count { it.toInt() >= 0 }
+                val untexturedFaces = combinedDef.faceCount - texturedFaces
+                println("    Textured faces: $texturedFaces, Untextured faces: $untexturedFaces")
+                // Check for invalid face indices
+                var invalidFaces = 0
+                for (i in 0 until combinedDef.faceCount) {
+                    val a = combinedDef.faceA[i]
+                    val b = combinedDef.faceB[i]
+                    val c = combinedDef.faceC[i]
+                    if (a < 0 || a >= combinedDef.vertexCount ||
+                        b < 0 || b >= combinedDef.vertexCount ||
+                        c < 0 || c >= combinedDef.vertexCount) {
+                        invalidFaces++
+                    }
+                }
+                if (invalidFaces > 0) {
+                    println("    WARNING: $invalidFaces faces have invalid vertex indices!")
+                }
+            }
+            // Check for faces skipped due to alpha=255 (fully transparent in RS inverted alpha)
+            if (combinedDef.faceAlphas != null) {
+                val transparentFaces = combinedDef.faceAlphas!!.count { (it.toInt() and 0xff) == 255 }
+                if (transparentFaces > 0) {
+                    println("    Note: $transparentFaces faces have alpha=255 (fully transparent, will be skipped)")
+                }
+            }
+        }
+
+        return createMeshDataListFromDef(combinedDef, if (debug) combinedDef.id else -1)
+    }
+
+    /**
+     * Generate a unique combined model ID from a list of model IDs.
+     * Used as a key for registering combined models with InstanceManager.
+     */
+    fun getCombinedModelId(modelIds: List<Int>): Int {
+        if (modelIds.size == 1) return modelIds[0]
+        // Use negative hash to distinguish from regular model IDs
+        return -(modelIds.sorted().hashCode() and 0x7FFFFFFF)
+    }
 }

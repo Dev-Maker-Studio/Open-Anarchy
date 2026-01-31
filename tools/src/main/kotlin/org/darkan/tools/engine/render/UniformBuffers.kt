@@ -190,6 +190,8 @@ class UniformBuffers {
         val blockIndex = glGetUniformBlockIndex(shader.id, blockName)
         if (blockIndex != GL_INVALID_INDEX) {
             glUniformBlockBinding(shader.id, blockIndex, cameraBinding)
+        } else {
+            System.err.println("UBO WARNING: $blockName not found in shader ${shader.id}")
         }
     }
 
@@ -200,6 +202,8 @@ class UniformBuffers {
         val blockIndex = glGetUniformBlockIndex(shader.id, blockName)
         if (blockIndex != GL_INVALID_INDEX) {
             glUniformBlockBinding(shader.id, blockIndex, lightingBinding)
+        } else {
+            System.err.println("UBO WARNING: $blockName not found in shader ${shader.id}")
         }
     }
 

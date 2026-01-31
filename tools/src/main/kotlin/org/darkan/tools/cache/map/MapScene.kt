@@ -5,6 +5,7 @@ import org.darkan.core.map.RegionData
 import org.darkan.core.map.RegionLoader
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.terrain.TerrainLoader
+import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.render.Camera
 import org.darkan.tools.engine.render.InstanceManager
 import org.darkan.tools.engine.render.Mesh
@@ -258,8 +259,14 @@ class MapScene(
         }
     }
 
+    // Temporary matrix for building instance transforms
+    private val tempModelMatrix = Matrix4f()
+
     /**
      * Internal method to render objects using instanced rendering.
+     *
+     * Uses full transform data from SceneObject:
+     * Transform order: Scale -> Rotate -> Offset -> Translate
      */
     private fun renderObjectsInternal(
         colorShader: ShaderProgram,
@@ -277,12 +284,15 @@ class MapScene(
             // Only render objects on the current plane
             if (sceneObj.plane != currentPlane) continue
 
-            if (instanceManager.addInstance(
-                sceneObj.modelId,
-                sceneObj.position.x,
-                sceneObj.position.y,
-                sceneObj.position.z
-            )) {
+            // Build full transform matrix: Scale -> Rotate -> Offset -> Translate
+            // Matrix operations are right-to-left
+            tempModelMatrix.identity()
+                .translate(sceneObj.position)     // 4. Move to world position
+                .translate(sceneObj.offset)       // 3. Apply definition offset (after rotation)
+                .rotateY(sceneObj.rotation)       // 2. Rotate around Y axis
+                .scale(sceneObj.scale)            // 1. Scale
+
+            if (instanceManager.addInstance(sceneObj.modelId, tempModelMatrix)) {
                 addedInstances++
             }
         }
@@ -291,7 +301,11 @@ class MapScene(
         instanceManager.uploadAll()
 
         if (texturedShader != null && bindTexture != null) {
-            instanceManager.renderAll(colorShader, texturedShader, bindTexture)
+            // Convert material IDs to OpenGL texture IDs before binding
+            instanceManager.renderAll(colorShader, texturedShader) { materialId ->
+                val textureId = TextureLoader.getTextureForMaterial(cache, materialId)
+                bindTexture(textureId)
+            }
         } else {
             instanceManager.renderUntextured(colorShader)
         }
@@ -349,6 +363,8 @@ class MapScene(
         cullingSystem.registerRegion(chunk)
 
         // Register objects with culling system (all planes)
+        // Include full transform data (rotation, scale, offset) for correct rendering
+        // Use combined model ID for multi-model objects
         for ((plane, objects) in objectsByPlane) {
             for (obj in objects) {
                 val objBounds = AABB(
@@ -356,16 +372,19 @@ class MapScene(
                     Vector3f(obj.worldPosition.x + 2f, obj.worldPosition.y + 2f, obj.worldPosition.z + 2f)
                 )
 
-                for (modelId in obj.modelIds) {
-                    cullingSystem.registerObject(SceneObject(
-                        objectId = obj.mapObject.id,
-                        modelId = modelId,
-                        bounds = objBounds,
-                        position = obj.worldPosition,
-                        regionId = regionId,
-                        plane = plane
-                    ))
-                }
+                // Use combined model ID instead of individual model IDs
+                val combinedModelId = ObjectRenderer.getCombinedModelId(obj.modelIds)
+                cullingSystem.registerObject(SceneObject(
+                    objectId = obj.mapObject.id,
+                    modelId = combinedModelId,
+                    bounds = objBounds,
+                    position = obj.worldPosition,
+                    regionId = regionId,
+                    plane = plane,
+                    rotation = obj.rotation,
+                    scale = obj.scale,
+                    offset = obj.offset
+                ))
             }
         }
 
@@ -395,33 +414,34 @@ class MapScene(
 
     /**
      * Register models needed for object instances.
+     * Uses combined models for multi-model objects (matching RS client behavior).
      */
     private fun registerObjectModels(objects: List<ObjectInstance>) {
         for (obj in objects) {
-            for (modelId in obj.modelIds) {
-                if (registeredModels.contains(modelId)) continue
+            // Get the combined model ID for this object's models
+            val combinedId = ObjectRenderer.getCombinedModelId(obj.modelIds)
+            if (registeredModels.contains(combinedId)) continue
 
-                // Use the new ModelLoader method that creates MeshData directly
-                val meshDataList = ModelLoader.createMeshDataList(cache, modelId)
-                if (meshDataList != null && meshDataList.isNotEmpty()) {
-                    instanceManager.registerModel(modelId, meshDataList)
-                    registeredModels.add(modelId)
-                }
+            // Load and combine all models for this object
+            val meshDataList = ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
+            if (meshDataList != null && meshDataList.isNotEmpty()) {
+                instanceManager.registerModel(combinedId, meshDataList)
+                registeredModels.add(combinedId)
             }
         }
     }
 
     /**
-     * Get tile height at world coordinates.
+     * Get tile height at LOCAL coordinates (0-63).
+     * Height scale must match TerrainLoader.HEIGHT_SCALE = 32 * DEFAULT_SCALE
+     * to ensure objects sit correctly on the terrain surface.
      */
-    private fun getTileHeight(data: RegionData, worldX: Int, worldY: Int, plane: Int): Float {
-        val localX = worldX and 63
-        val localY = worldY and 63
-
+    private fun getTileHeight(data: RegionData, localX: Int, localY: Int, plane: Int): Float {
         if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) return 0f
 
         val tileInfo = RegionLoader.getTileInfo(data.tiles, localX, localY, plane)
-        return tileInfo.height * 8f * CoordinateUtil.DEFAULT_SCALE
+        // Use same height scale as TerrainLoader: rawHeight * 32 / 128 = rawHeight * 0.25
+        return tileInfo.height * 32f * CoordinateUtil.DEFAULT_SCALE
     }
 
     /**

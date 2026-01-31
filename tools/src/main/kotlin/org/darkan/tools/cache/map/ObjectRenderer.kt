@@ -14,6 +14,10 @@ import world.gregs.voidps.cache.definition.data.ObjectDefinition
 
 /**
  * Represents a renderable map object instance.
+ *
+ * The offset field contains the definition's model offset (offsetX, offsetY, offsetZ)
+ * converted to OpenGL coordinates. These offsets should be applied AFTER rotation
+ * to match the client's behavior.
  */
 data class ObjectInstance(
     val mapObject: MapObject,
@@ -21,16 +25,40 @@ data class ObjectInstance(
     val modelIds: List<Int>,
     val worldPosition: Vector3f,
     val rotation: Float,  // Radians
-    val scale: Vector3f
+    val scale: Vector3f,
+    val offset: Vector3f = Vector3f()  // Model offset applied after rotation
 )
 
 /**
  * Converts MapObjects into renderable instances with proper model selection
  * based on object shape and transforms.
+ *
+ * Following the RS client (SceneGraph.addObject), ALL objects are positioned
+ * at the CENTER of their tile footprint. For walls (size 1x1), this is the
+ * tile center. The wall model geometry extends from this center point to the
+ * appropriate tile edge based on rotation.
  */
 object ObjectRenderer {
     // Cached model meshes
     private val loadedModels = mutableSetOf<Int>()
+
+    // Wall shape IDs that need edge positioning
+    private val WALL_SHAPES = setOf(
+        ObjectShape.WALL_STRAIGHT.id,           // 0
+        ObjectShape.WALL_DIAGONAL_CORNER.id,    // 1
+        ObjectShape.WALL_WHOLE_CORNER.id,       // 2
+        ObjectShape.WALL_STRAIGHT_CORNER.id,    // 3
+        ObjectShape.WALL_INTERACT.id            // 9
+    )
+
+    // Wall decoration shapes that also use edge positioning
+    private val WALL_DECORATION_SHAPES = setOf(
+        ObjectShape.STRAIGHT_INSIDE_WALL_DEC.id,    // 4
+        ObjectShape.STRAIGHT_OUSIDE_WALL_DEC.id,    // 5
+        ObjectShape.DIAGONAL_OUTSIDE_WALL_DEC.id,   // 6
+        ObjectShape.DIAGONAL_INSIDE_WALL_DEC.id,    // 7
+        ObjectShape.DIAGONAL_INWALL_DEC.id          // 8
+    )
 
     /**
      * Load object definitions from the cache.
@@ -98,25 +126,106 @@ object ObjectRenderer {
 
     /**
      * Convert rotation value (0-3) to radians.
-     * RS rotation: 0=south, 1=west, 2=north, 3=east (counter-clockwise)
+     *
+     * RS rotation (when viewed from above +Y axis):
+     * - 0 = facing south (toward RS Z-)
+     * - 1 = facing west (toward RS X-)  - 90 degrees CCW from 0
+     * - 2 = facing north (toward RS Z+) - 180 degrees from 0
+     * - 3 = facing east (toward RS X+)  - 270 degrees CCW from 0
+     *
+     * Since model coordinates are converted with Z negated (rsToOpenGL),
+     * the rotation direction is inverted. RS CCW becomes OpenGL CW.
+     * Therefore we use NEGATIVE angles in OpenGL.
+     *
+     * JOML rotateY uses CCW rotation (looking down -Y toward origin),
+     * so negative angles produce CW rotation (matching RS CCW with flipped Z).
      */
     fun rotationToRadians(rotation: Int): Float {
         return when (rotation and 3) {
-            0 -> 0f                      // South
-            1 -> Math.PI.toFloat() / 2   // West (90 degrees CCW)
-            2 -> Math.PI.toFloat()       // North (180 degrees)
-            3 -> Math.PI.toFloat() * 3/2 // East (270 degrees CCW)
+            0 -> 0f                          // No rotation
+            1 -> -Math.PI.toFloat() / 2      // -90 degrees (CW in OpenGL = CCW in RS)
+            2 -> -Math.PI.toFloat()          // -180 degrees
+            3 -> -Math.PI.toFloat() * 3 / 2  // -270 degrees (or +90 degrees)
             else -> 0f
         }
     }
 
     /**
+     * Calculate the position offset for objects.
+     *
+     * In the RS client (see SceneGraph.addObject in darkan-bot), ALL objects are
+     * positioned at the CENTER of their tile footprint using:
+     *   sceneX = (baseX << 9) + (locSizeX << 8) = baseX * 512 + locSizeX * 256
+     *   sceneY = (baseY << 9) + (locSizeY << 8) = baseY * 512 + locSizeY * 256
+     *
+     * For walls (size 1x1), this equals: baseX * 512 + 256, baseY * 512 + 256
+     * This places them at the CENTER of their tile, not at the corner.
+     *
+     * The wall model geometry is designed to extend from this center point to the
+     * appropriate tile edge based on rotation.
+     *
+     * @param shape The object shape ID
+     * @param rotation The rotation value (0-3)
+     * @param tileSize The size of one tile in world units
+     * @param sizeX Object size in X direction (tiles)
+     * @param sizeY Object size in Y direction (tiles)
+     * @return Pair of (offsetX, offsetZ) to add to the base tile position
+     */
+    private fun getObjectPositionOffset(
+        shape: Int,
+        rotation: Int,
+        tileSize: Float,
+        sizeX: Int = 1,
+        sizeY: Int = 1
+    ): Pair<Float, Float> {
+        // ALL objects (including walls) are centered within their tile footprint
+        // RS formula: sceneX = baseX * 512 + sizeX * 256
+        // In our coords with Z negated: offsetX = sizeX * tileSize / 2, offsetZ = -sizeY * tileSize / 2
+        return Pair(sizeX * tileSize * 0.5f, -sizeY * tileSize * 0.5f)
+    }
+
+    /**
+     * Calculate the decoration displacement offset for wall decorations.
+     *
+     * NOTE: Wall decoration models in RS are already positioned correctly relative
+     * to the tile origin. The decorDisplacement value is used by the client for
+     * other purposes (like collision), not for rendering offset.
+     *
+     * Wall decorations are placed at the same tile position as walls, and the model
+     * geometry itself handles the visual offset from the wall surface.
+     *
+     * @param shape The decoration shape (4-8)
+     * @param rotation The rotation value (0-3)
+     * @param decorDisplacement The displacement value from object definition (default 64) - currently unused
+     * @return Vector3f offset (always zero - model handles its own positioning)
+     */
+    fun getWallDecorationOffset(shape: Int, rotation: Int, decorDisplacement: Int): org.joml.Vector3f {
+        // Wall decoration models are already positioned correctly relative to tile origin
+        // No additional offset needed - the model geometry handles visual placement
+        return org.joml.Vector3f(0f, 0f, 0f)
+    }
+
+    /**
+     * Check if an object shape is a wall that needs edge positioning.
+     */
+    fun isWallShape(shape: Int): Boolean {
+        return shape in WALL_SHAPES || shape in WALL_DECORATION_SHAPES
+    }
+
+    /**
      * Create renderable instances from a list of MapObjects for ALL planes.
+     *
+     * The client places objects using the average height of 4 corner tiles
+     * at the object's bounding box center (see SceneGraph.addObject in darkan-bot).
+     * For objects spanning multiple tiles, it samples the center tiles.
+     *
+     * Positions are computed in WORLD coordinates (based on regionX, regionY).
+     * The tileHeights callback receives LOCAL coordinates (0-63).
      *
      * @param objects List of map objects from RegionLoader
      * @param regionX Region X coordinate (for world position calculation)
      * @param regionY Region Y coordinate
-     * @param tileHeights Optional height data for terrain conforming (takes x, y, plane)
+     * @param tileHeights Optional height data callback (takes localX, localY, plane). Returns scaled height.
      * @return Map of plane -> list of ObjectInstance
      */
     fun createInstancesAllPlanes(
@@ -126,6 +235,9 @@ object ObjectRenderer {
         tileHeights: ((Int, Int, Int) -> Float)? = null
     ): Map<Int, List<ObjectInstance>> {
         val instancesByPlane = mutableMapOf<Int, MutableList<ObjectInstance>>()
+        val baseWorldX = regionX * 64
+        val baseWorldY = regionY * 64
+        val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
 
         for (obj in objects) {
             val plane = obj.level
@@ -133,30 +245,97 @@ object ObjectRenderer {
             val modelIds = getModelIds(def, obj.shape)
             if (modelIds.isEmpty()) continue
 
-            // Calculate world position
-            // obj.x and obj.y are world tile coordinates
-            val worldX = obj.x * 512f
-            val worldY = obj.y * 512f
+            // Convert to local tile coordinates
+            val localTileX = obj.x - baseWorldX
+            val localTileY = obj.y - baseWorldY
 
-            // Get height at this position if available
-            val height = tileHeights?.invoke(obj.x, obj.y, plane) ?: 0f
+            // Skip if outside region bounds
+            if (localTileX < 0 || localTileX >= 64 || localTileY < 0 || localTileY >= 64) continue
 
-            // Apply definition offsets
-            val offsetX = def.offsetX.toFloat()
-            val offsetY = def.offsetY.toFloat()
-            val offsetZ = def.offsetZ.toFloat()
+            // Calculate object size (may be rotated)
+            val sizeX: Int
+            val sizeY: Int
+            if (obj.rotation == 1 || obj.rotation == 3) {
+                sizeX = def.sizeY
+                sizeY = def.sizeX
+            } else {
+                sizeX = def.sizeX
+                sizeY = def.sizeY
+            }
 
-            // Convert to OpenGL coordinates
-            val position = CoordinateUtil.rsToOpenGL(
-                (worldX + offsetX).toInt(),
-                (height + offsetY).toInt(),
-                (worldY + offsetZ).toInt()
-            )
+            // Calculate the 4 corner tile coordinates for height sampling (in local coords)
+            // Following client logic: sample center tiles of object bounding box
+            val xA: Int
+            val xB: Int
+            if (localTileX + sizeX <= 64) {
+                xA = localTileX + (sizeX shr 1)
+                xB = localTileX + ((sizeX + 1) shr 1)
+            } else {
+                xA = localTileX
+                xB = localTileX + 1
+            }
 
-            // Calculate scale from definition
+            val yA: Int
+            val yB: Int
+            if (localTileY + sizeY <= 64) {
+                yA = localTileY + (sizeY shr 1)
+                yB = localTileY + ((sizeY + 1) shr 1)
+            } else {
+                yA = localTileY
+                yB = localTileY + 1
+            }
+
+            // Clamp to valid tile range
+            val x0 = xA.coerceIn(0, 63)
+            val x1 = xB.coerceIn(0, 63)
+            val y0 = yA.coerceIn(0, 63)
+            val y1 = yB.coerceIn(0, 63)
+
+            // Get average height of the 4 corners (matching client algorithm)
+            val terrainHeight = if (tileHeights != null) {
+                val h00 = tileHeights.invoke(x0, y0, plane)
+                val h10 = tileHeights.invoke(x1, y0, plane)
+                val h01 = tileHeights.invoke(x0, y1, plane)
+                val h11 = tileHeights.invoke(x1, y1, plane)
+                (h00 + h10 + h01 + h11) / 4f
+            } else {
+                0f
+            }
+
+            // Calculate WORLD position
+            // World coords: starts at region origin, not (0,0)
+            val worldTileX = regionX * 64 + localTileX
+            val worldTileY = regionY * 64 + localTileY
+
+            // Position in OpenGL coords
+            // RS client places ALL objects at tile CENTER using:
+            //   sceneX = (baseX << 9) + (locSizeX << 8) = baseX * 512 + sizeX * 256
+            val basePosX = worldTileX * tileSize
+            val basePosZ = -worldTileY * tileSize
+
+            // Get position offset (centers object within its tile footprint)
+            val (posOffsetX, posOffsetZ) = getObjectPositionOffset(obj.shape, obj.rotation, tileSize, sizeX, sizeY)
+            val posX = basePosX + posOffsetX
+            val posZ = basePosZ + posOffsetZ
+
+            // Y position: terrain height (definition offsets applied separately in transform)
+            val posY = terrainHeight
+
+            val position = Vector3f(posX, posY, posZ)
+
+            // Calculate scale from definition (default is 128 = 1.0 scale)
             val scaleX = def.resizeX / 128f
             val scaleY = def.resizeY / 128f
             val scaleZ = def.resizeZ / 128f
+
+            // Definition offsets (already in RS units * 4, convert to OpenGL units)
+            // Applied AFTER rotation in the client (in world space)
+            val defOffsetX = def.offsetX * CoordinateUtil.DEFAULT_SCALE
+            val defOffsetY = def.offsetY * CoordinateUtil.DEFAULT_SCALE
+            val defOffsetZ = def.offsetZ * CoordinateUtil.DEFAULT_SCALE
+
+            // Calculate wall decoration offset if applicable
+            val decorOffset = getWallDecorationOffset(obj.shape, obj.rotation, def.decorDisplacement)
 
             val instance = ObjectInstance(
                 mapObject = obj,
@@ -164,7 +343,13 @@ object ObjectRenderer {
                 modelIds = modelIds,
                 worldPosition = position,
                 rotation = rotationToRadians(obj.rotation),
-                scale = Vector3f(scaleX, scaleY, scaleZ)
+                scale = Vector3f(scaleX, scaleY, scaleZ),
+                // Combine definition offset with decoration offset
+                offset = Vector3f(
+                    defOffsetX + decorOffset.x,
+                    -defOffsetY + decorOffset.y,
+                    -defOffsetZ + decorOffset.z
+                )
             )
 
             instancesByPlane.getOrPut(plane) { mutableListOf() }.add(instance)
@@ -176,11 +361,17 @@ object ObjectRenderer {
     /**
      * Create renderable instances from a list of MapObjects for a specific plane.
      *
+     * The client places objects using the average height of 4 corner tiles
+     * at the object's bounding box center (see SceneGraph.addObject in darkan-bot).
+     *
+     * Positions are computed in WORLD coordinates (based on regionX, regionY).
+     * The tileHeights callback receives LOCAL coordinates (0-63).
+     *
      * @param objects List of map objects from RegionLoader
      * @param regionX Region X coordinate (for world position calculation)
      * @param regionY Region Y coordinate
      * @param plane The plane level
-     * @param tileHeights Optional height data for terrain conforming
+     * @param tileHeights Optional height data callback (takes localX, localY). Returns scaled height.
      * @return List of ObjectInstance ready for rendering
      */
     fun createInstances(
@@ -191,6 +382,9 @@ object ObjectRenderer {
         tileHeights: ((Int, Int) -> Float)? = null
     ): List<ObjectInstance> {
         val instances = mutableListOf<ObjectInstance>()
+        val baseWorldX = regionX * 64
+        val baseWorldY = regionY * 64
+        val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
 
         for (obj in objects) {
             if (obj.level != plane) continue
@@ -199,30 +393,95 @@ object ObjectRenderer {
             val modelIds = getModelIds(def, obj.shape)
             if (modelIds.isEmpty()) continue
 
-            // Calculate world position
-            // obj.x and obj.y are world tile coordinates
-            val worldX = obj.x * 512f
-            val worldY = obj.y * 512f
+            // Convert to local tile coordinates
+            val localTileX = obj.x - baseWorldX
+            val localTileY = obj.y - baseWorldY
 
-            // Get height at this position if available
-            val height = tileHeights?.invoke(obj.x, obj.y) ?: 0f
+            // Skip if outside region bounds
+            if (localTileX < 0 || localTileX >= 64 || localTileY < 0 || localTileY >= 64) continue
 
-            // Apply definition offsets
-            val offsetX = def.offsetX.toFloat()
-            val offsetY = def.offsetY.toFloat()
-            val offsetZ = def.offsetZ.toFloat()
+            // Calculate object size (may be rotated)
+            val sizeX: Int
+            val sizeY: Int
+            if (obj.rotation == 1 || obj.rotation == 3) {
+                sizeX = def.sizeY
+                sizeY = def.sizeX
+            } else {
+                sizeX = def.sizeX
+                sizeY = def.sizeY
+            }
 
-            // Convert to OpenGL coordinates
-            val position = CoordinateUtil.rsToOpenGL(
-                (worldX + offsetX).toInt(),
-                (height + offsetY).toInt(),
-                (worldY + offsetZ).toInt()
-            )
+            // Calculate the 4 corner tile coordinates for height sampling (in local coords)
+            val xA: Int
+            val xB: Int
+            if (localTileX + sizeX <= 64) {
+                xA = localTileX + (sizeX shr 1)
+                xB = localTileX + ((sizeX + 1) shr 1)
+            } else {
+                xA = localTileX
+                xB = localTileX + 1
+            }
 
-            // Calculate scale from definition
+            val yA: Int
+            val yB: Int
+            if (localTileY + sizeY <= 64) {
+                yA = localTileY + (sizeY shr 1)
+                yB = localTileY + ((sizeY + 1) shr 1)
+            } else {
+                yA = localTileY
+                yB = localTileY + 1
+            }
+
+            // Clamp to valid tile range
+            val x0 = xA.coerceIn(0, 63)
+            val x1 = xB.coerceIn(0, 63)
+            val y0 = yA.coerceIn(0, 63)
+            val y1 = yB.coerceIn(0, 63)
+
+            // Get average height of the 4 corners (matching client algorithm)
+            val terrainHeight = if (tileHeights != null) {
+                val h00 = tileHeights.invoke(x0, y0)
+                val h10 = tileHeights.invoke(x1, y0)
+                val h01 = tileHeights.invoke(x0, y1)
+                val h11 = tileHeights.invoke(x1, y1)
+                (h00 + h10 + h01 + h11) / 4f
+            } else {
+                0f
+            }
+
+            // Calculate WORLD position
+            val worldTileX = regionX * 64 + localTileX
+            val worldTileY = regionY * 64 + localTileY
+
+            // Position in OpenGL coords
+            // RS client places ALL objects at tile CENTER using:
+            //   sceneX = (baseX << 9) + (locSizeX << 8) = baseX * 512 + sizeX * 256
+            val basePosX = worldTileX * tileSize
+            val basePosZ = -worldTileY * tileSize
+
+            // Get position offset (centers object within its tile footprint)
+            val (posOffsetX, posOffsetZ) = getObjectPositionOffset(obj.shape, obj.rotation, tileSize, sizeX, sizeY)
+            val posX = basePosX + posOffsetX
+            val posZ = basePosZ + posOffsetZ
+
+            // Y position: terrain height (definition offsets applied separately in transform)
+            val posY = terrainHeight
+
+            val position = Vector3f(posX, posY, posZ)
+
+            // Calculate scale from definition (default is 128 = 1.0 scale)
             val scaleX = def.resizeX / 128f
             val scaleY = def.resizeY / 128f
             val scaleZ = def.resizeZ / 128f
+
+            // Definition offsets (already in RS units * 4, convert to OpenGL units)
+            // Applied AFTER rotation in the client (in world space)
+            val defOffsetX = def.offsetX * CoordinateUtil.DEFAULT_SCALE
+            val defOffsetY = def.offsetY * CoordinateUtil.DEFAULT_SCALE
+            val defOffsetZ = def.offsetZ * CoordinateUtil.DEFAULT_SCALE
+
+            // Calculate wall decoration offset if applicable
+            val decorOffset = getWallDecorationOffset(obj.shape, obj.rotation, def.decorDisplacement)
 
             instances.add(ObjectInstance(
                 mapObject = obj,
@@ -230,7 +489,13 @@ object ObjectRenderer {
                 modelIds = modelIds,
                 worldPosition = position,
                 rotation = rotationToRadians(obj.rotation),
-                scale = Vector3f(scaleX, scaleY, scaleZ)
+                scale = Vector3f(scaleX, scaleY, scaleZ),
+                // Combine definition offset with decoration offset
+                offset = Vector3f(
+                    defOffsetX + decorOffset.x,
+                    -defOffsetY + decorOffset.y,
+                    -defOffsetZ + decorOffset.z
+                )
             ))
         }
 
@@ -301,6 +566,12 @@ object ObjectRenderer {
     /**
      * Add object instances to an InstanceManager for rendering.
      *
+     * Transform order matches the client:
+     * 1. Scale by resizeX/Y/Z
+     * 2. Rotate around Y axis
+     * 3. Apply definition offset (offsetX/Y/Z) AFTER rotation
+     * 4. Translate to world position
+     *
      * @param instanceManager The instance manager
      * @param instances List of ObjectInstance from createInstances()
      */
@@ -314,11 +585,15 @@ object ObjectRenderer {
             for (modelId in instance.modelIds) {
                 if (!instanceManager.isModelRegistered(modelId)) continue
 
-                // Build model matrix: translate, rotate, scale
+                // Build model matrix matching client order:
+                // Client applies to model vertices in order: Rotate -> Scale -> Offset
+                // Then model is placed at world position
+                // Matrix operations are right-to-left
                 modelMatrix.identity()
-                    .translate(instance.worldPosition)
-                    .rotateY(instance.rotation)
-                    .scale(instance.scale)
+                    .translate(instance.worldPosition)  // 4. Move to world position
+                    .translate(instance.offset)         // 3. Apply definition offset
+                    .scale(instance.scale)              // 2. Scale
+                    .rotateY(instance.rotation)         // 1. Rotate
 
                 instanceManager.addInstance(modelId, modelMatrix)
             }
@@ -344,5 +619,17 @@ object ObjectRenderer {
      */
     fun clearAll() {
         loadedModels.clear()
+    }
+
+    /**
+     * Get the combined model ID for an object's models.
+     * For objects with multiple model IDs, this returns a unique ID that represents
+     * all models combined into a single mesh (matching RS client behavior).
+     *
+     * @param modelIds The list of model IDs for the object
+     * @return A unique ID for the combined model (negative for multi-model, positive for single)
+     */
+    fun getCombinedModelId(modelIds: List<Int>): Int {
+        return ModelLoader.getCombinedModelId(modelIds)
     }
 }

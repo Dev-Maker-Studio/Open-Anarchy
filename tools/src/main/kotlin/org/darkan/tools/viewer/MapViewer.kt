@@ -89,10 +89,10 @@ class MapViewer(
     private var showTerrain = true
     private var useMultiRegion = false  // Toggle between single/multi region mode (default: single)
 
-    // Lighting
-    private val ambientLight = Vector3f(0.5f, 0.5f, 0.5f)
+    // Lighting - brighter values for better model visibility
+    private val ambientLight = Vector3f(0.6f, 0.6f, 0.6f)
     private val lightDirection = Vector3f(-0.5f, -1f, -0.5f).normalize()
-    private val lightColor = Vector3f(0.7f, 0.7f, 0.7f)
+    private val lightColor = Vector3f(0.8f, 0.8f, 0.8f)
     private val clearColor = Vector3f(0.4f, 0.6f, 0.8f)
 
     // Known regions for quick navigation
@@ -111,6 +111,7 @@ class MapViewer(
 
     // Single-region support
     private var singleRegionNode: SceneNode? = null
+    private var singleRegionTerrainBatches: TerrainLoader.TerrainMeshes? = null
     private var singleRegionInstanceManager: InstanceManager? = null
     private var singleRegionObjects: List<ObjectInstance> = emptyList()
     private val singleRegionModels = mutableSetOf<Int>()
@@ -134,6 +135,7 @@ class MapViewer(
         // Load floor and object definitions (needed for both modes)
         TerrainLoader.loadDefinitions(cache)
         ObjectRenderer.loadDefinitions(cache)
+
 
         // Initialize map scene with XTEA support (lazy - for multi-region mode)
         mapScene = MapScene(cache, viewRadius = 2)
@@ -350,11 +352,46 @@ class MapViewer(
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         }
 
-        // Render terrain with UBO shader
-        singleRegionNode?.let { node ->
-            uboColorShader.bind()
-            uboColorShader.setUniform("model", Matrix4f().identity())
-            node.mesh?.render()
+        // Render terrain - try batched meshes first, fall back to single mesh
+        val terrainBatches = singleRegionTerrainBatches
+        if (terrainBatches != null) {
+            val modelMatrix = Matrix4f().identity()
+
+            // Render color mesh (untextured tiles)
+            terrainBatches.colorMesh?.let { mesh ->
+                uboColorShader.bind()
+                uboColorShader.setUniform("model", modelMatrix)
+                mesh.render()
+            }
+
+            // Render textured terrain batches
+            val batches = terrainBatches.texturedBatches
+            if (batches.isNotEmpty()) {
+                renderSystem.enableBlending()
+                renderSystem.disableCullFace()
+
+                uboTexturedShader.bind()
+                uboTexturedShader.setUniform("model", modelMatrix)
+                uboTexturedShader.setUniform("textureSampler", 0)
+
+                for (batch in batches) {
+                    TextureLoader.bindTexture(
+                        TextureLoader.getTextureForMaterial(cache, batch.textureId)
+                    )
+                    batch.mesh.render()
+                }
+
+                TextureLoader.unbindTexture()
+                renderSystem.disableBlending()
+                renderSystem.enableCullFace()
+            }
+        } else {
+            // Fallback to old single mesh rendering
+            singleRegionNode?.let { node ->
+                uboColorShader.bind()
+                uboColorShader.setUniform("model", Matrix4f().identity())
+                node.mesh?.render()
+            }
         }
 
         // Render objects
@@ -375,30 +412,74 @@ class MapViewer(
 
         var addedCount = 0
         for (obj in singleRegionObjects) {
-            for (modelId in obj.modelIds) {
-                // Build transform matrix with position, rotation, and scale
-                tempModelMatrix.identity()
-                    .translate(obj.worldPosition)
-                    .rotateY(obj.rotation)
-                    .scale(obj.scale)
+            // Use combined model ID for multi-model objects
+            val combinedModelId = ObjectRenderer.getCombinedModelId(obj.modelIds)
 
-                if (instanceManager.addInstance(modelId, tempModelMatrix)) {
-                    addedCount++
-                }
+            // Build transform matrix matching client order:
+            // Client applies to model vertices in order: Rotate -> Scale -> Offset
+            // Then model is placed at world position
+            // Matrix operations are right-to-left, so we specify them in reverse order
+            tempModelMatrix.identity()
+                .translate(obj.worldPosition)        // 4. Move to world position
+                .translate(obj.offset)               // 3. Apply definition offset
+                .scale(obj.scale)                    // 2. Scale
+                .rotateY(obj.rotation)               // 1. Rotate
+
+            if (instanceManager.addInstance(combinedModelId, tempModelMatrix)) {
+                addedCount++
             }
         }
 
         instanceManager.uploadAll()
 
-        if (debugObjectRenderFrame < 5) {
+        // Debug output for first frame only
+        if (debugObjectRenderFrame == 0) {
             val stats = instanceManager.getStats()
-            println("Frame $debugObjectRenderFrame: Added $addedCount instances, draw calls: ${stats.drawCalls}, registered models: ${stats.registeredModels}")
+            val untexturedCount = stats.instancesPerBatch.count { it.key.textureId == -1 && it.value > 0 }
+            val texturedCount = stats.instancesPerBatch.count { it.key.textureId != -1 && it.value > 0 }
+            println("Objects: $addedCount instances, ${stats.registeredModels} models, untextured=$untexturedCount, textured=$texturedCount batches")
+
+            // Debug: show first multi-model object's batch instance counts
+            for (obj in singleRegionObjects) {
+                if (obj.modelIds.size > 1) {
+                    val combinedId = ObjectRenderer.getCombinedModelId(obj.modelIds)
+                    val batchesForModel = stats.instancesPerBatch.filter { it.key.modelId == combinedId }
+                    println("=== Multi-model ${obj.definition.name} batch instance counts ===")
+                    for ((key, count) in batchesForModel) {
+                        println("  Batch (modelId=${key.modelId}, textureId=${key.textureId}): $count instances")
+                    }
+                    break // Only show first one
+                }
+            }
             debugObjectRenderFrame++
         }
 
-        instanceManager.renderAll(instancedColorShader, instancedTexturedShader) { textureId ->
+        // IMPORTANT: Disable face culling for RS models which often have two-sided faces
+        renderSystem.disableCullFace()
+
+        // Render untextured batches first (vertex colors only)
+        // The shader uses UBOs for camera/lighting which were already updated
+        instanceManager.renderUntextured(instancedColorShader)
+
+        // Render textured batches with proper GL state (like ModelViewer)
+        renderSystem.enableBlending()
+        renderSystem.enableAlphaToCoverage()
+
+        instancedTexturedShader.bind()
+        instancedTexturedShader.setUniform("textureSampler", 0)
+
+        instanceManager.renderTextured(instancedTexturedShader) { materialId ->
+            // Convert material ID to OpenGL texture ID (same as ModelViewer)
+            val textureId = TextureLoader.getTextureForMaterial(cache, materialId)
             TextureLoader.bindTexture(textureId)
         }
+
+        TextureLoader.unbindTexture()
+
+        // Restore GL state
+        renderSystem.disableBlending()
+        renderSystem.disableAlphaToCoverage()
+        renderSystem.enableCullFace()
     }
 
     private fun renderUI() {
@@ -542,11 +623,21 @@ class MapViewer(
         // Clean up existing resources
         cleanupSingleRegion()
 
-        // Load terrain mesh
-        val mesh = TerrainLoader.loadRegionMesh(cache, regionX, regionY, plane)
-        if (mesh != null) {
-            singleRegionNode = SceneNode(mesh = mesh)
-            scene.addNode("terrain", singleRegionNode!!)
+        // Load terrain meshes with texture batching
+        singleRegionTerrainBatches = TerrainLoader.loadRegionMeshes(cache, regionX, regionY, plane)
+        if (singleRegionTerrainBatches != null) {
+            val batches = singleRegionTerrainBatches!!
+            println("Loaded terrain: color mesh=${batches.colorMesh != null}, textured batches=${batches.texturedBatches.size}")
+            batches.texturedBatches.forEach { batch ->
+                println("  Terrain texture batch: textureId=${batch.textureId}")
+            }
+        } else {
+            // Fallback to old single mesh if batched loading fails
+            val mesh = TerrainLoader.loadRegionMesh(cache, regionX, regionY, plane)
+            if (mesh != null) {
+                singleRegionNode = SceneNode(mesh = mesh)
+                scene.addNode("terrain", singleRegionNode!!)
+            }
         }
 
         // Load objects
@@ -581,19 +672,49 @@ class MapViewer(
             println("Objects for plane $plane: ${singleRegionObjects.size}")
 
             // Register models with instance manager
+            // Use combined models for multi-model objects (matching RS client behavior)
             var registeredCount = 0
+            var multiModelCount = 0
+            var debuggedMultiModel = false
             for (obj in singleRegionObjects) {
-                for (modelId in obj.modelIds) {
-                    if (singleRegionModels.contains(modelId)) continue
-                    val meshDataList = ModelLoader.createMeshDataList(cache, modelId)
-                    if (meshDataList != null && meshDataList.isNotEmpty()) {
-                        singleRegionInstanceManager!!.registerModel(modelId, meshDataList)
-                        singleRegionModels.add(modelId)
-                        registeredCount++
+                // Get the combined model ID for this object's models
+                val combinedId = ObjectRenderer.getCombinedModelId(obj.modelIds)
+                if (singleRegionModels.contains(combinedId)) continue
+
+                val isMultiModel = obj.modelIds.size > 1
+                if (isMultiModel) {
+                    multiModelCount++
+                }
+
+                // Load and combine all models for this object
+                // Enable debug for first multi-model object
+                val enableDebug = isMultiModel && !debuggedMultiModel
+                val meshDataList = ModelLoader.createCombinedMeshDataList(cache, obj.modelIds, enableDebug)
+                if (meshDataList != null && meshDataList.isNotEmpty()) {
+                    // Debug: trace first multi-model object
+                    if (enableDebug) {
+                        debuggedMultiModel = true
+                        println("=== MULTI-MODEL MESHDATA: ${obj.definition.name} (id=${obj.definition.id}) ===")
+                        println("  Model IDs: ${obj.modelIds}")
+                        println("  Combined ID: $combinedId")
+                        println("  MeshData batches: ${meshDataList.size}")
+                        for ((idx, mesh) in meshDataList.withIndex()) {
+                            val faceCount = mesh.indices.size / 3
+                            println("    Batch $idx: textureId=${mesh.textureId}, faces=$faceCount, verts=${mesh.positions.size/3}")
+                            // Verify positions are not all zero
+                            val nonZeroPositions = mesh.positions.count { it != 0f }
+                            if (nonZeroPositions == 0 && mesh.positions.isNotEmpty()) {
+                                println("      WARNING: All positions are zero!")
+                            }
+                        }
                     }
+                    singleRegionInstanceManager!!.registerModel(combinedId, meshDataList)
+                    singleRegionModels.add(combinedId)
+                    registeredCount++
                 }
             }
-            println("Registered $registeredCount unique models")
+            println("Registered $registeredCount unique models (combined) for ${singleRegionObjects.size} object instances")
+            println("Multi-model objects found: $multiModelCount")
         } else {
             println("Failed to load region data for ($regionX, $regionY)")
         }
@@ -614,6 +735,8 @@ class MapViewer(
             it.cleanup()
         }
         singleRegionNode = null
+        // Clean up batched terrain meshes (handled by TerrainLoader cache, just clear reference)
+        singleRegionTerrainBatches = null
         singleRegionInstanceManager?.cleanup()
         singleRegionInstanceManager = null
         singleRegionObjects = emptyList()
@@ -632,6 +755,13 @@ class MapViewer(
      * Create object instances using LOCAL coordinates for single-region rendering.
      * The terrain mesh is at (0,0) to (63*tileSize, -63*tileSize) in local coords,
      * so objects must be positioned relative to (0,0), not world coords.
+     *
+     * The client places objects using the average height of the 4 corners at the object's
+     * position (see SceneGraph.addObject in darkan-bot). For objects spanning multiple tiles,
+     * it samples the center tiles of the object's bounding box.
+     *
+     * Height scale must match TerrainLoader.HEIGHT_SCALE = 32 * DEFAULT_SCALE
+     * to ensure objects sit correctly on the terrain surface.
      */
     private fun createLocalObjectInstances(
         regionData: RegionData,
@@ -643,6 +773,10 @@ class MapViewer(
         val baseWorldX = regionX * 64
         val baseWorldY = regionY * 64
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+
+        // Height scale must match TerrainLoader.HEIGHT_SCALE for objects to sit on terrain
+        // Terrain: rawHeight * 32 / 128 = rawHeight * 0.25
+        val heightScale = 32f * CoordinateUtil.DEFAULT_SCALE
 
         for (obj in regionData.objects) {
             if (obj.level != plane) continue
@@ -658,22 +792,89 @@ class MapViewer(
             // Skip if outside region bounds
             if (localTileX < 0 || localTileX >= 64 || localTileY < 0 || localTileY >= 64) continue
 
-            // Get height at this local position
-            val tileInfo = RegionLoader.getTileInfo(regionData.tiles, localTileX, localTileY, plane)
-            val height = tileInfo.height * 8f * CoordinateUtil.DEFAULT_SCALE
+            // Calculate object size (may be rotated)
+            val sizeX: Int
+            val sizeY: Int
+            if (obj.rotation == 1 || obj.rotation == 3) {
+                sizeX = def.sizeY
+                sizeY = def.sizeX
+            } else {
+                sizeX = def.sizeX
+                sizeY = def.sizeY
+            }
+
+            // Calculate the 4 corner tile coordinates for height sampling
+            // Following client logic: sample center tiles of object bounding box
+            val xA: Int
+            val xB: Int
+            if (localTileX + sizeX <= 64) {
+                xA = localTileX + (sizeX shr 1)
+                xB = localTileX + ((sizeX + 1) shr 1)
+            } else {
+                xA = localTileX
+                xB = localTileX + 1
+            }
+
+            val yA: Int
+            val yB: Int
+            if (localTileY + sizeY <= 64) {
+                yA = localTileY + (sizeY shr 1)
+                yB = localTileY + ((sizeY + 1) shr 1)
+            } else {
+                yA = localTileY
+                yB = localTileY + 1
+            }
+
+            // Clamp to valid tile range
+            val x0 = xA.coerceIn(0, 63)
+            val x1 = xB.coerceIn(0, 63)
+            val y0 = yA.coerceIn(0, 63)
+            val y1 = yB.coerceIn(0, 63)
+
+            // Get average height of the 4 corners (matching client algorithm)
+            val h00 = RegionLoader.getTileInfo(regionData.tiles, x0, y0, plane).height
+            val h10 = RegionLoader.getTileInfo(regionData.tiles, x1, y0, plane).height
+            val h01 = RegionLoader.getTileInfo(regionData.tiles, x0, y1, plane).height
+            val h11 = RegionLoader.getTileInfo(regionData.tiles, x1, y1, plane).height
+            val averageHeight = (h00 + h10 + h01 + h11) / 4f
+
+            // Apply height scale (same as terrain)
+            val terrainHeight = averageHeight * heightScale
 
             // Calculate local position (matching terrain mesh coordinates)
             // Terrain uses: x = localX * tileSize, z = -localY * tileSize
-            val posX = localTileX * tileSize
-            val posY = height + def.offsetY * CoordinateUtil.DEFAULT_SCALE
-            val posZ = -localTileY * tileSize
+            //
+            // RS client (SceneGraph.addObject) places ALL objects at tile CENTER:
+            //   sceneX = (baseX << 9) + (locSizeX << 8) = baseX * 512 + sizeX * 256
+            //   sceneY = (baseY << 9) + (locSizeY << 8) = baseY * 512 + sizeY * 256
+            //
+            // For walls (size 1x1): sceneX = baseX * 512 + 256 (tile center)
+            // Wall model geometry extends from center to the appropriate edge.
+            val basePosX = localTileX * tileSize
+            val basePosZ = -localTileY * tileSize
+
+            // ALL objects (including walls) are centered within their tile footprint
+            val posX = basePosX + (sizeX * tileSize * 0.5f)
+            val posZ = basePosZ - (sizeY * tileSize * 0.5f)
+
+            // Y position: terrain height (definition offsets applied separately in transform)
+            val posY = terrainHeight
 
             val position = Vector3f(posX, posY, posZ)
 
-            // Calculate scale from definition
+            // Calculate scale from definition (default is 128 = 1.0 scale)
             val scaleX = def.resizeX / 128f
             val scaleY = def.resizeY / 128f
             val scaleZ = def.resizeZ / 128f
+
+            // Definition offsets (already in RS units * 4, convert to OpenGL units)
+            // Applied AFTER rotation in the client (in world space)
+            val defOffsetX = def.offsetX * CoordinateUtil.DEFAULT_SCALE
+            val defOffsetY = def.offsetY * CoordinateUtil.DEFAULT_SCALE
+            val defOffsetZ = def.offsetZ * CoordinateUtil.DEFAULT_SCALE
+
+            // Calculate wall decoration offset if applicable
+            val decorOffset = ObjectRenderer.getWallDecorationOffset(obj.shape, obj.rotation, def.decorDisplacement)
 
             instances.add(ObjectInstance(
                 mapObject = obj,
@@ -681,7 +882,13 @@ class MapViewer(
                 modelIds = modelIds,
                 worldPosition = position,
                 rotation = ObjectRenderer.rotationToRadians(obj.rotation),
-                scale = Vector3f(scaleX, scaleY, scaleZ)
+                scale = Vector3f(scaleX, scaleY, scaleZ),
+                // Combine definition offset with decoration offset
+                offset = Vector3f(
+                    defOffsetX + decorOffset.x,
+                    -defOffsetY + decorOffset.y,
+                    -defOffsetZ + decorOffset.z
+                )
             ))
         }
 
