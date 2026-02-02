@@ -1,6 +1,7 @@
 package org.darkan.tools.cache.map
 
 import org.darkan.core.model.ObjectShape
+import org.darkan.core.model.Vars
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.model.TexturedModel
 import org.darkan.tools.engine.render.InstanceManager
@@ -49,6 +50,18 @@ object ObjectRenderer {
     // Cached model meshes
     private val loadedModels = mutableSetOf<Int>()
 
+    /**
+     * Vars instance for object transform resolution.
+     *
+     * Uses the core engine's Vars class for var/varbit access. Initialized
+     * without a session since the map viewer doesn't need network sync.
+     *
+     * For the map viewer, all vars default to 0, which shows the default
+     * (first) transform variant. This can be modified via setVar/setVarBit
+     * to see different object states.
+     */
+    val vars: Vars = Vars().initWithoutSession()
+
     // Wall shape IDs that need edge positioning
     private val WALL_SHAPES = setOf(
         ObjectShape.WALL_STRAIGHT.id,           // 0
@@ -77,11 +90,70 @@ object ObjectRenderer {
     }
 
     /**
-     * Get object definition by ID.
+     * Get object definition by ID (raw, without transform resolution).
      */
-    fun getDefinition(objectId: Int): ObjectDefinition? {
+    fun getRawDefinition(objectId: Int): ObjectDefinition? {
         val defs = Cache.objects
         return if (objectId in defs.indices) defs[objectId] else null
+    }
+
+    /**
+     * Get object definition by ID, resolving any transforms.
+     *
+     * Objects can transform based on player variables (varbits/varps).
+     * This method resolves the transform using the core engine's var system.
+     *
+     * @param objectId The object ID to look up
+     * @return The resolved ObjectDefinition, or null if the object should not be rendered
+     */
+    fun getDefinition(objectId: Int): ObjectDefinition? {
+        val def = getRawDefinition(objectId) ?: return null
+        return resolveTransform(def)
+    }
+
+    /**
+     * Resolve transform for an object definition.
+     *
+     * Uses the core engine's varbit/varp system (Cache.varbits, Vars.BIT_MASKS)
+     * to resolve object transforms based on variable values.
+     *
+     * Transform logic (from RS client ObjectType.getMultiLoc):
+     * 1. If varbitId != -1, get var value from varbit
+     * 2. Else if varpId != -1, get var value from varp
+     * 3. If var value is a valid index into transforms array (excluding last element), use that transform ID
+     * 4. Otherwise, use the last element of transforms array as fallback
+     * 5. If transform ID is -1, the object should not be rendered
+     *
+     * @param def The object definition (may have transforms)
+     * @return The resolved definition, or null if transform says don't render
+     */
+    fun resolveTransform(def: ObjectDefinition): ObjectDefinition? {
+        val transforms = def.transforms
+        // No transforms - return original definition
+        if (transforms == null || transforms.isEmpty()) return def
+
+        // Get var value using core engine's Vars class
+        val varValue = when {
+            def.varbit != -1 -> vars.getVarBit(def.varbit)
+            def.varp != -1 -> vars.getVar(def.varp)
+            else -> 0
+        }
+
+        // Resolve transform ID
+        // transforms array has N+1 elements where the last is the fallback
+        // Valid indices are 0 to transforms.size - 2
+        val transformId = if (varValue >= 0 && varValue < transforms.size - 1) {
+            transforms[varValue]
+        } else {
+            // Use last element as fallback
+            transforms[transforms.size - 1]
+        }
+
+        // Transform ID of -1 means don't render
+        if (transformId == -1) return null
+
+        // Look up the transformed definition
+        return getRawDefinition(transformId)
     }
 
     /**
