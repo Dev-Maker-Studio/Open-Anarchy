@@ -38,6 +38,17 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
         return this
     }
 
+    /**
+     * Initialize vars without a session for offline/tool usage.
+     * This allows using getVar/setVar/getVarBit/setVarBit without network sync.
+     */
+    fun initWithoutSession(): Vars {
+        varpValues = IntArray(Cache.get().fileCount(Index.CONFIGS, Config.VARP)+1)
+        modified = HashSet()
+        vars.forEach { (varId, value) -> setVar(varId, value) }
+        return this
+    }
+
     fun setVar(id: Int, value: Int, forceSend: Boolean = false, save: Boolean = false) {
         if (forceSend)
             modified.add(id)
