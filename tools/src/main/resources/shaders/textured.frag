@@ -21,7 +21,8 @@ void main() {
         vec4 texColor = texture(textureSampler, vTexCoord);
         baseColor = texColor.rgb * vColor; // Blend texture with vertex color
         alpha = texColor.a;
-        // Alpha-to-coverage handles smooth edges - no discard needed
+        // Discard transparent fragments (cutout transparency for leaves, etc.)
+        if (alpha < 0.5) discard;
     } else {
         baseColor = vColor;
     }
