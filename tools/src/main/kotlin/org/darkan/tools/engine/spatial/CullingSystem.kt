@@ -56,9 +56,9 @@ interface CullableObject {
 /**
  * Simple implementation of CullableObject for scene objects.
  *
- * Contains full transform data (position, rotation, scale, offset) needed
+ * Contains full transform data (position, rotation, scale, offset, terrain tilt) needed
  * for correct rendering. Transform order matches the RS client:
- * Scale -> Rotate -> Offset -> Translate
+ * RotateY -> TiltX -> TiltZ -> Scale -> Offset -> HeightAdjust -> Translate
  *
  * @param objectId The object definition ID
  * @param modelId The model ID to render
@@ -69,6 +69,9 @@ interface CullableObject {
  * @param rotation Rotation around Y axis in radians
  * @param scale Scale factors (default 1,1,1)
  * @param offset Model offset applied after rotation (from definition offsetX/Y/Z)
+ * @param tiltX Terrain alignment X-axis rotation in radians (pitch)
+ * @param tiltZ Terrain alignment Z-axis rotation in radians (roll)
+ * @param heightAdjustment Terrain height adjustment (applied after offset)
  */
 data class SceneObject(
     override val objectId: Int,
@@ -79,7 +82,10 @@ data class SceneObject(
     override val plane: Int = 0,
     val rotation: Float = 0f,
     val scale: Vector3f = Vector3f(1f, 1f, 1f),
-    val offset: Vector3f = Vector3f(0f, 0f, 0f)
+    val offset: Vector3f = Vector3f(0f, 0f, 0f),
+    val tiltX: Float = 0f,
+    val tiltZ: Float = 0f,
+    val heightAdjustment: Float = 0f
 ) : CullableObject
 
 /**

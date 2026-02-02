@@ -8,7 +8,6 @@ import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.render.Camera
 import org.darkan.tools.engine.render.InstanceManager
-import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.engine.render.ShaderProgram
 import org.darkan.tools.engine.spatial.AABB
 import org.darkan.tools.engine.spatial.CullResult
@@ -31,7 +30,7 @@ data class LoadedRegion(
     val regionY: Int,
     val regionId: Int,
     val data: RegionData,
-    val terrainMeshes: Array<Mesh?>,  // One per plane (0-3)
+    val terrainMeshesByPlane: Array<TerrainLoader.TerrainMeshes?>,  // Batched meshes per plane (0-3)
     val objectsByPlane: Map<Int, List<ObjectInstance>>,  // Objects grouped by plane
     val chunk: RegionChunk
 ) {
@@ -51,7 +50,7 @@ data class LoadedRegion(
     override fun hashCode(): Int = regionId
 
     fun cleanup() {
-        terrainMeshes.forEach { it?.cleanup() }
+        terrainMeshesByPlane.forEach { it?.cleanup() }
     }
 }
 
@@ -227,6 +226,11 @@ class MapScene(
     /**
      * Render terrain only (for debugging or simple views).
      */
+    /**
+     * Render terrain using color-only shader.
+     * Note: Textured terrain batches are not rendered in multi-region mode.
+     * For full textured terrain support, use single-region mode.
+     */
     fun renderTerrain(shader: ShaderProgram) {
         val cullResult = lastCullResult
         if (cullResult == null) {
@@ -244,13 +248,14 @@ class MapScene(
         var rendered = 0
         for (regionChunk in cullResult.visibleRegions) {
             val loaded = loadedRegions[regionChunk.regionId] ?: continue
-            val terrainMesh = loaded.terrainMeshes[currentPlane] ?: continue
+            val terrainMeshes = loaded.terrainMeshesByPlane[currentPlane] ?: continue
+            val colorMesh = terrainMeshes.colorMesh ?: continue
 
             val model = Matrix4f().identity()
                 .translate(regionChunk.bounds.minX, 0f, regionChunk.bounds.minZ)
 
             shader.setUniform("model", model)
-            terrainMesh.render()
+            colorMesh.render()
             rendered++
         }
 
@@ -265,8 +270,9 @@ class MapScene(
     /**
      * Internal method to render objects using instanced rendering.
      *
-     * Uses full transform data from SceneObject:
-     * Transform order: Scale -> Rotate -> Offset -> Translate
+     * Uses full transform data from SceneObject including terrain alignment.
+     * Transform order matches RS client (right-to-left matrix operations):
+     * RotateY -> TiltX -> TiltZ -> Scale -> Offset -> HeightAdjust -> Translate
      */
     private fun renderObjectsInternal(
         colorShader: ShaderProgram,
@@ -284,13 +290,28 @@ class MapScene(
             // Only render objects on the current plane
             if (sceneObj.plane != currentPlane) continue
 
-            // Build full transform matrix: Scale -> Rotate -> Offset -> Translate
-            // Matrix operations are right-to-left
+            // Build full transform matrix matching RS client order:
+            // RS applies: RotateY -> TiltX -> TiltZ (in that order on vertices)
+            // Matrix equivalent (right-to-left): TiltZ * TiltX * RotateY
             tempModelMatrix.identity()
-                .translate(sceneObj.position)     // 4. Move to world position
-                .translate(sceneObj.offset)       // 3. Apply definition offset (after rotation)
-                .rotateY(sceneObj.rotation)       // 2. Rotate around Y axis
-                .scale(sceneObj.scale)            // 1. Scale
+                .translate(sceneObj.position)     // 6. Move to world position
+
+            // Apply terrain alignment height adjustment
+            if (sceneObj.heightAdjustment != 0f) {
+                tempModelMatrix.translate(0f, sceneObj.heightAdjustment, 0f)  // 5. Height adjustment
+            }
+
+            tempModelMatrix
+                .translate(sceneObj.offset)       // 4. Apply definition offset
+                .scale(sceneObj.scale)            // 3. Scale
+
+            // Apply terrain tilt rotations (for groundContourType=3 objects)
+            if (sceneObj.tiltX != 0f || sceneObj.tiltZ != 0f) {
+                tempModelMatrix.rotateZ(sceneObj.tiltZ)  // 2. Roll tilt
+                tempModelMatrix.rotateX(sceneObj.tiltX)  // 1b. Pitch tilt
+            }
+
+            tempModelMatrix.rotateY(sceneObj.rotation)  // 1a. Object Y rotation
 
             if (instanceManager.addInstance(sceneObj.modelId, tempModelMatrix)) {
                 addedInstances++
@@ -326,10 +347,10 @@ class MapScene(
         // Load region data (terrain + objects)
         val data = RegionLoader.loadRegion(cache, regionX, regionY) ?: return
 
-        // Create terrain meshes for all planes
-        val terrainMeshes = arrayOfNulls<Mesh>(4)
+        // Create batched terrain meshes for all planes
+        val terrainMeshesByPlane = arrayOfNulls<TerrainLoader.TerrainMeshes>(4)
         for (plane in 0 until 4) {
-            terrainMeshes[plane] = TerrainLoader.loadRegionMesh(cache, regionX, regionY, plane)
+            terrainMeshesByPlane[plane] = TerrainLoader.loadRegionMeshes(cache, regionX, regionY, plane)
         }
 
         // Create object instances for ALL planes
@@ -363,7 +384,7 @@ class MapScene(
         cullingSystem.registerRegion(chunk)
 
         // Register objects with culling system (all planes)
-        // Include full transform data (rotation, scale, offset) for correct rendering
+        // Include full transform data (rotation, scale, offset, terrain alignment) for correct rendering
         // Use combined model ID for multi-model objects
         for ((plane, objects) in objectsByPlane) {
             for (obj in objects) {
@@ -383,7 +404,10 @@ class MapScene(
                     plane = plane,
                     rotation = obj.rotation,
                     scale = obj.scale,
-                    offset = obj.offset
+                    offset = obj.offset,
+                    tiltX = obj.terrainAlignment.tiltX,
+                    tiltZ = obj.terrainAlignment.tiltZ,
+                    heightAdjustment = obj.terrainAlignment.heightAdjustment
                 ))
             }
         }
@@ -393,7 +417,7 @@ class MapScene(
             regionY = regionY,
             regionId = regionId,
             data = data,
-            terrainMeshes = terrainMeshes,
+            terrainMeshesByPlane = terrainMeshesByPlane,
             objectsByPlane = objectsByPlane,
             chunk = chunk
         )
