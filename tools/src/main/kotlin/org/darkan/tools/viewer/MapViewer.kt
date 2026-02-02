@@ -30,6 +30,7 @@ import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL11.*
 import org.lwjgl.opengl.GL13.GL_MULTISAMPLE
 import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.definition.data.MapDefinition
 
 /**
  * Map/terrain viewer with full scene rendering support.
@@ -1035,6 +1036,17 @@ class MapViewer(
     }
 
     /**
+     * Check if a tile has the bridge flag set on plane 1.
+     * The bridge flag (0x2) on plane 1 indicates that objects from higher planes
+     * should be rendered on the plane below (linkBelow behavior).
+     */
+    private fun hasBridgeFlag(regionData: RegionData, localX: Int, localY: Int): Boolean {
+        if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) return false
+        val settingsIndex = MapDefinition.index(localX, localY, 1)
+        return (regionData.settings[settingsIndex].toInt() and 0x2) == 0x2
+    }
+
+    /**
      * Create object instances using LOCAL coordinates for single-region rendering.
      * The terrain mesh is at (0,0) to (63*tileSize, -63*tileSize) in local coords,
      * so objects must be positioned relative to (0,0), not world coords.
@@ -1045,6 +1057,12 @@ class MapViewer(
      *
      * Height scale must match TerrainLoader.HEIGHT_SCALE = 32 * DEFAULT_SCALE
      * to ensure objects sit correctly on the terrain surface.
+     *
+     * Bridge Shifting (linkBelow):
+     * When viewing plane N and the bridge flag (0x2) is set on plane 1 at a tile,
+     * objects from plane N+1 are also rendered. These objects keep their original
+     * plane's height so they appear elevated on the bridge deck.
+     * See Scene.linkBelow() in darkan-bot for reference implementation.
      */
     private fun createLocalObjectInstances(
         regionData: RegionData,
@@ -1062,18 +1080,30 @@ class MapViewer(
         val heightScale = 32f * CoordinateUtil.DEFAULT_SCALE
 
         for (obj in regionData.objects) {
-            if (obj.level != plane) continue
-
-            val def = ObjectRenderer.getDefinition(obj.id) ?: continue
-            val modelIds = ObjectRenderer.getModelIds(def, obj.shape)
-            if (modelIds.isEmpty()) continue
-
             // Convert world tile to local tile
             val localTileX = obj.x - baseWorldX
             val localTileY = obj.y - baseWorldY
 
             // Skip if outside region bounds
             if (localTileX < 0 || localTileX >= 64 || localTileY < 0 || localTileY >= 64) continue
+
+            // Determine if this object should be rendered on the current view plane
+            // Normal case: obj.level == plane
+            // Bridge case: obj.level == plane + 1 AND bridge flag is set at this tile
+            val shouldRender = when {
+                obj.level == plane -> true
+                obj.level == plane + 1 && plane < 3 && hasBridgeFlag(regionData, localTileX, localTileY) -> true
+                else -> false
+            }
+            if (!shouldRender) continue
+
+            // Use the object's actual plane for height sampling
+            // This keeps bridge objects elevated at their original height
+            val heightPlane = obj.level
+
+            val def = ObjectRenderer.getDefinition(obj.id) ?: continue
+            val modelIds = ObjectRenderer.getModelIds(def, obj.shape)
+            if (modelIds.isEmpty()) continue
 
             // Calculate object size (may be rotated)
             val sizeX: Int
@@ -1115,10 +1145,11 @@ class MapViewer(
             val y1 = yB.coerceIn(0, 63)
 
             // Get average height of the 4 corners (matching client algorithm)
-            val h00 = RegionLoader.getTileInfo(regionData.tiles, x0, y0, plane).height
-            val h10 = RegionLoader.getTileInfo(regionData.tiles, x1, y0, plane).height
-            val h01 = RegionLoader.getTileInfo(regionData.tiles, x0, y1, plane).height
-            val h11 = RegionLoader.getTileInfo(regionData.tiles, x1, y1, plane).height
+            // Use heightPlane (object's actual plane) so bridge objects stay elevated
+            val h00 = RegionLoader.getTileInfo(regionData.tiles, x0, y0, heightPlane).height
+            val h10 = RegionLoader.getTileInfo(regionData.tiles, x1, y0, heightPlane).height
+            val h01 = RegionLoader.getTileInfo(regionData.tiles, x0, y1, heightPlane).height
+            val h11 = RegionLoader.getTileInfo(regionData.tiles, x1, y1, heightPlane).height
             val averageHeight = (h00 + h10 + h01 + h11) / 4f
 
             // Apply height scale (same as terrain)
@@ -1161,6 +1192,7 @@ class MapViewer(
 
             // Calculate terrain alignment for objects with groundContourType 1, 2, or 3
             // This tilts the object to match the terrain slope
+            // Use heightPlane for consistency with height sampling
             val terrainAlignment = TerrainAligner.calculateObjectTilt(
                 localTileX = localTileX,
                 localTileY = localTileY,
@@ -1172,7 +1204,7 @@ class MapViewer(
                 heightSampler = { tx, ty ->
                     val clampedX = tx.coerceIn(0, 63)
                     val clampedY = ty.coerceIn(0, 63)
-                    RegionLoader.getTileInfo(regionData.tiles, clampedX, clampedY, plane).height * heightScale
+                    RegionLoader.getTileInfo(regionData.tiles, clampedX, clampedY, heightPlane).height * heightScale
                 }
             )
 

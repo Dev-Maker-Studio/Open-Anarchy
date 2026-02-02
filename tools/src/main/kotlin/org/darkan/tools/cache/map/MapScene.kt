@@ -19,6 +19,7 @@ import org.darkan.tools.util.CoordinateUtil
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.definition.data.MapObject
 import kotlin.math.floor
 
@@ -121,6 +122,38 @@ class MapScene(
     // Tile size in world units
     private val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
     private val regionSize = 64 * tileSize
+
+    /**
+     * Check if a tile has the bridge flag set on plane 1.
+     * The bridge flag (0x2) on plane 1 indicates that objects from higher planes
+     * should be rendered on the plane below (linkBelow behavior).
+     */
+    private fun hasBridgeFlag(regionData: RegionData, localX: Int, localY: Int): Boolean {
+        if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) return false
+        val settingsIndex = MapDefinition.index(localX, localY, 1)
+        return (regionData.settings[settingsIndex].toInt() and 0x2) == 0x2
+    }
+
+    /**
+     * Determine if an object should be rendered on the current view plane.
+     * Implements bridge shifting (linkBelow): objects from plane N+1 are also
+     * rendered on plane N when the bridge flag (0x2) is set on plane 1 at that tile.
+     */
+    private fun shouldRenderObject(sceneObj: SceneObject, viewPlane: Int): Boolean {
+        // Normal case: object is on the current plane
+        if (sceneObj.plane == viewPlane) return true
+
+        // Bridge case: object is on plane above and bridge flag is set
+        if (sceneObj.plane == viewPlane + 1 && viewPlane < 3) {
+            val loaded = loadedRegions[sceneObj.regionId] ?: return false
+            // Convert world position back to local tile coordinates
+            val localX = ((sceneObj.position.x / tileSize) - loaded.regionX * 64).toInt()
+            val localY = ((-sceneObj.position.z / tileSize) - loaded.regionY * 64).toInt()
+            return hasBridgeFlag(loaded.data, localX, localY)
+        }
+
+        return false
+    }
 
     /**
      * Initialize the map scene.
@@ -284,11 +317,12 @@ class MapScene(
         instanceManager.prepareFrame()
 
         // Add visible objects to instance batches (filter by current plane)
+        // Bridge shifting: also include objects from plane+1 at bridge locations
         var addedInstances = 0
         for (obj in cullResult.visibleObjects) {
             val sceneObj = obj as? SceneObject ?: continue
-            // Only render objects on the current plane
-            if (sceneObj.plane != currentPlane) continue
+            // Check if object should be rendered on the current plane (including bridge shifting)
+            if (!shouldRenderObject(sceneObj, currentPlane)) continue
 
             // Build full transform matrix matching RS client order:
             // RS applies: Mirror -> RotateY -> TiltX -> TiltZ (in that order on vertices)

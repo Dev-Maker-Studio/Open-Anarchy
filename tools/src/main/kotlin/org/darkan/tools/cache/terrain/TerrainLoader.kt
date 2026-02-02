@@ -1066,13 +1066,22 @@ object TerrainLoader {
             // Determine if overlay/underlay exist (matching RS client's null checks)
             // This is used to skip rendering faces for non-existent layers
             //
-            // RS client (MapLoader.kt lines 574-576) treats overlays with tileColorHsl == -1 as null:
+            // RS client (MapLoader.kt lines 574-576) treats overlays with tileColorHsl == -1 as null
+            // ONLY when BOTH color fields are -1:
             //   if (initialOverlay.tileColorHsl == -1 && initialOverlay.minimapColorHsl == -1) {
             //       initialOverlay = null
             //   }
-            // We match this by checking colour != -1 (tileColorHsl equivalent)
-            val hasValidOverlayColor = overlayDef != null && overlayDef.colour != -1
-            val hasOverlay = tile.overlayId > 0 && overlayDef != null && hasValidOverlayColor
+            //
+            // Additionally, overlays with a valid texture should always be rendered since the
+            // texture provides visual content even without a tileColor (getOverlayColorHsl uses
+            // the material's color when tileColorHsl is -1 but texture is valid).
+            //
+            // Our fields: colour = tileColorHsl, blendColour = minimapColorHsl, texture = texture
+            val hasValidOverlay = if (overlayDef != null) {
+                // Overlay is valid if it has a texture OR if not both color fields are -1
+                overlayDef.texture >= 0 || !(overlayDef.colour == -1 && overlayDef.blendColour == -1)
+            } else false
+            val hasOverlay = tile.overlayId > 0 && hasValidOverlay
             // Check if underlay has valid color data at ALL 4 corners.
             // If ANY corner has HSL = 0 (no surrounding underlay data on this plane), the vertex
             // at that corner would get the green fallback color, creating visible green patches.
@@ -1173,28 +1182,26 @@ object TerrainLoader {
         // None of these affect terrain mesh generation. The generateTileVertices function
         // already skips tiles with no underlay/overlay data (line 991 check).
         //
-        // The real fix for green tiles is in hasOverlay/hasUnderlay checks above, which now
-        // properly handle overlays with colour == -1 (matching RS client's null-setting logic).
+        // IMPORTANT: The RS client does NOT use visibility checks for terrain generation.
+        // addBlendedTiles() in MapLoader.kt simply iterates all tiles and generates terrain
+        // for any tile with overlayId != 0 || underlayId != 0.
+        //
+        // The isVisible() function is used for OBJECTS (entities), not terrain.
+        // Terrain is always generated regardless of the INVISIBLE flag or bridge flags.
+        //
+        // The generateTileVertices function already skips tiles with no overlay/underlay data.
+        // The hasOverlay/hasUnderlay checks handle the RS client's null-setting logic for
+        // overlays with colour == -1 (matching RS client behavior).
         for (x in 0 until 64) {
             for (y in 0 until 64) {
-                // Use RS client's visibility logic to determine which tiles to render.
-                // The isVisible() check is mainly for:
-                // - Bridge flag on plane 0 makes tile always visible
-                // - Invisible flag (0x10) hides tiles unless overridden
-                // - Collision plane calculation affects visibility determination
-                //
-                // However, generateTileVertices internally checks tile.overlayId == 0 && tile.underlayId == 0
-                // and returns early, so tiles with no terrain data are naturally skipped.
-                if (isTileVisible(region.tiles, plane, plane, x, y)) {
-                    generateTileVertices(
-                        x, y,
-                        plane,
-                        vertexNormalsX,
-                        vertexNormalsY,
-                        vertexNormalsZ,
-                        blendedUnderlayColors
-                    )
-                }
+                generateTileVertices(
+                    x, y,
+                    plane,
+                    vertexNormalsX,
+                    vertexNormalsY,
+                    vertexNormalsZ,
+                    blendedUnderlayColors
+                )
             }
         }
 
