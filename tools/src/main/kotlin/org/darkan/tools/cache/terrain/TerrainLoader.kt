@@ -644,13 +644,15 @@ object TerrainLoader {
     /**
      * Convert packed HSL corner colors to RGB Vector3f array.
      * Used for overlay colors that don't need HSL blending.
+     * Falls back to black (not green) for invalid HSL = 0 values.
      */
     private fun hslCornersToRgb(hslCorners: IntArray): Array<Vector3f> {
+        val black = Vector3f(0f, 0f, 0f)
         return arrayOf(
-            if (hslCorners[0] != 0) ColorUtil.hslToRgb(hslCorners[0]) else DEFAULT_GRASS_COLOR,
-            if (hslCorners[1] != 0) ColorUtil.hslToRgb(hslCorners[1]) else DEFAULT_GRASS_COLOR,
-            if (hslCorners[2] != 0) ColorUtil.hslToRgb(hslCorners[2]) else DEFAULT_GRASS_COLOR,
-            if (hslCorners[3] != 0) ColorUtil.hslToRgb(hslCorners[3]) else DEFAULT_GRASS_COLOR
+            if (hslCorners[0] != 0) ColorUtil.hslToRgb(hslCorners[0]) else black,
+            if (hslCorners[1] != 0) ColorUtil.hslToRgb(hslCorners[1]) else black,
+            if (hslCorners[2] != 0) ColorUtil.hslToRgb(hslCorners[2]) else black,
+            if (hslCorners[3] != 0) ColorUtil.hslToRgb(hslCorners[3]) else black
         )
     }
 
@@ -718,15 +720,6 @@ object TerrainLoader {
             println("  Expected factor range: $maxShadow (shadow) to $maxLit (lit)")
         }
 
-        // Determine which planes we need to compute normals and colors for.
-        // For bridge support: when rendering plane 0 and bridge flag is set on plane 1,
-        // we also need to render terrain from plane 1 (the ground under the bridge).
-        // The linkedPlane is the plane whose terrain gets "linked below" to the current plane.
-        val linkedPlane = if (plane < 3) plane + 1 else -1
-        val hasAnyBridges = linkedPlane >= 0 && (0 until 64).any { x ->
-            (0 until 64).any { y -> isBridgeTile(region.tiles, x, y) }
-        }
-
         // Helper function to compute normals for a specific plane
         fun computeVertexNormals(p: Int): Triple<Array<FloatArray>, Array<FloatArray>, Array<FloatArray>> {
             val normalsX = Array(65) { FloatArray(65) }
@@ -775,18 +768,8 @@ object TerrainLoader {
         // lighting variation even in homogeneous areas.
         val (vertexNormalsX, vertexNormalsY, vertexNormalsZ) = computeVertexNormals(plane)
 
-        // Also compute normals for the linked plane if bridges exist
-        val linkedNormals = if (hasAnyBridges && linkedPlane >= 0) {
-            computeVertexNormals(linkedPlane)
-        } else null
-
         // Pre-compute blended underlay colors for the main plane
         val blendedUnderlayColors = computeBlendedUnderlayColors(region, plane)
-
-        // Also compute blended colors for the linked plane if bridges exist
-        val linkedBlendedColors = if (hasAnyBridges && linkedPlane >= 0) {
-            computeBlendedUnderlayColors(region, linkedPlane)
-        } else null
 
         // Debug: Verify corner color consistency between adjacent tiles
         if (debugVertexColorsOnce) {
@@ -1082,8 +1065,20 @@ object TerrainLoader {
 
             // Determine if overlay/underlay exist (matching RS client's null checks)
             // This is used to skip rendering faces for non-existent layers
-            val hasOverlay = tile.overlayId > 0 && overlayDef != null
-            val hasUnderlay = tile.underlayId > 0 && underlayDef != null
+            //
+            // RS client (MapLoader.kt lines 574-576) treats overlays with tileColorHsl == -1 as null:
+            //   if (initialOverlay.tileColorHsl == -1 && initialOverlay.minimapColorHsl == -1) {
+            //       initialOverlay = null
+            //   }
+            // We match this by checking colour != -1 (tileColorHsl equivalent)
+            val hasValidOverlayColor = overlayDef != null && overlayDef.colour != -1
+            val hasOverlay = tile.overlayId > 0 && overlayDef != null && hasValidOverlayColor
+            // Check if underlay has valid color data at ALL 4 corners.
+            // If ANY corner has HSL = 0 (no surrounding underlay data on this plane), the vertex
+            // at that corner would get the green fallback color, creating visible green patches.
+            // We require ALL corners to have valid data to ensure proper color at every vertex.
+            val hasValidUnderlayColors = underlayCornerHsl.all { it != 0 }
+            val hasUnderlay = tile.underlayId > 0 && underlayDef != null && hasValidUnderlayColors
 
             // Generate shaped vertices for this tile
             val vertices = generateShapedTile(
@@ -1111,43 +1106,86 @@ object TerrainLoader {
             }
         }
 
+        // ===== DEBUG: BRIDGE TILE ANALYSIS =====
+        // Collect bridge tile debug info BEFORE the main iteration
+        if (debugBridgeTilesOnce && plane == 0) {
+            debugBridgeTilesOnce = false
+            println("\n=== BRIDGE TILE DEBUG (Region ${region.regionId}, Plane $plane) ===")
+
+            var bridgeCount = 0
+            var plane0HasTerrainCount = 0
+            var plane0InvisibleCount = 0
+            var plane0BridgeFlagCount = 0
+            var plane1HasTerrainCount = 0
+            var plane1InvisibleCount = 0
+
+            for (x in 0 until 64) {
+                for (y in 0 until 64) {
+                    if (isBridgeTile(region.tiles, x, y)) {
+                        bridgeCount++
+                        val tile0 = region.tiles[0][x][y]
+                        val tile1 = region.tiles[1][x][y]
+
+                        if (tile0.underlayId > 0 || tile0.overlayId > 0) plane0HasTerrainCount++
+                        if (tile0.isInvisible) plane0InvisibleCount++
+                        if (tile0.isBridge) plane0BridgeFlagCount++
+                        if (tile1.underlayId > 0 || tile1.overlayId > 0) plane1HasTerrainCount++
+                        if (tile1.isInvisible) plane1InvisibleCount++
+
+                        // Print detailed info for first few bridge tiles
+                        if (bridgeCount <= 5) {
+                            println("  Bridge tile at ($x, $y):")
+                            println("    Plane 0: underlay=${tile0.underlayId}, overlay=${tile0.overlayId}, flags=0x${tile0.flags.toString(16)}")
+                            println("      isInvisible=${tile0.isInvisible}, isBridge=${tile0.isBridge}")
+                            println("    Plane 1: underlay=${tile1.underlayId}, overlay=${tile1.overlayId}, flags=0x${tile1.flags.toString(16)}")
+                            println("      isInvisible=${tile1.isInvisible}, isBridge=${tile1.isBridge}")
+
+                            // Check blended colors for plane 0
+                            val sw0 = blendedUnderlayColors[x][y]
+                            val se0 = blendedUnderlayColors[(x + 1).coerceAtMost(63)][y]
+                            println("    Plane 0 blended colors: SW=$sw0, SE=$se0")
+                        }
+                    }
+                }
+            }
+
+            println("\n  Summary:")
+            println("    Total bridge tiles: $bridgeCount")
+            println("    Plane 0 with terrain: $plane0HasTerrainCount")
+            println("    Plane 0 invisible: $plane0InvisibleCount")
+            println("    Plane 0 bridge flag: $plane0BridgeFlagCount")
+            println("    Plane 1 with terrain: $plane1HasTerrainCount")
+            println("    Plane 1 invisible: $plane1InvisibleCount")
+            println("=== END BRIDGE TILE DEBUG ===\n")
+        }
+
         // Iterate through all 64x64 tiles
         //
-        // BRIDGE HANDLING: The RS client's linkBelow() shifts SCENE TILE OBJECTS (walls, decorations)
-        // but NOT the terrain geometry. Both plane 0 (ground under bridge) and plane 1 (bridge deck)
-        // terrain meshes exist and are rendered, with depth testing determining visibility.
+        // TERRAIN GENERATION (based on RS client analysis of MapLoader.kt addBlendedTiles):
+        // The RS client generates terrain for ALL tiles where overlayId != 0 || underlayId != 0.
+        // There is NO special handling for bridge flags in terrain generation.
         //
-        // Our approach: Render BOTH terrains at bridge locations to match the RS client:
-        // 1. Always render plane 0's terrain (ground under bridge) - this maintains continuous
-        //    terrain with no height discontinuities at tile boundaries
-        // 2. Also render plane 1's terrain (bridge deck) at bridge locations - this adds the
-        //    elevated bridge surface on top of the ground
+        // The bridge flag (tileFunctionMasks[1][x][y] & 0x2) affects:
+        // - linkBelow(): shifts Scene Tile OBJECTS down one plane (called AFTER terrain generation)
+        // - isVisible(): determines Scene Tile visibility for objects, not terrain
+        // - getCollisionPlane(): adjusts collision detection
         //
-        // This avoids the height mismatch problem: non-bridge tiles share continuous edges with
-        // plane 0 terrain, and bridge surfaces float above as separate geometry.
+        // None of these affect terrain mesh generation. The generateTileVertices function
+        // already skips tiles with no underlay/overlay data (line 991 check).
+        //
+        // The real fix for green tiles is in hasOverlay/hasUnderlay checks above, which now
+        // properly handle overlays with colour == -1 (matching RS client's null-setting logic).
         for (x in 0 until 64) {
             for (y in 0 until 64) {
-                // Check if this is a bridge location (bridge flag 0x2 on plane 1)
-                val isBridgeLocation = isBridgeTile(region.tiles, x, y)
-                val tile = region.tiles[plane][x][y]
-
-                // Determine if we should render plane 0's terrain at this location
-                // For bridge locations: always render the ground (it's under the bridge)
-                // For non-bridge locations: use normal visibility check
-                val shouldRenderMainTerrain = if (isBridgeLocation) {
-                    // At bridge locations, render plane 0 terrain if it has underlay/overlay data
-                    // This is the ground under the bridge
-                    tile.underlayId > 0 || tile.overlayId > 0
-                } else {
-                    // Non-bridge locations: use standard RS client visibility check
-                    // RS client's SettingsBits.isVisible():
-                    // - Bridge flag (0x2) on plane 0 makes tile always visible
-                    // - Otherwise: visible if NOT invisible AND collision plane matches viewing plane
-                    isTileVisible(region.tiles, plane, plane, x, y)
-                }
-
-                // Render plane 0's terrain for continuous ground surface
-                if (shouldRenderMainTerrain) {
+                // Use RS client's visibility logic to determine which tiles to render.
+                // The isVisible() check is mainly for:
+                // - Bridge flag on plane 0 makes tile always visible
+                // - Invisible flag (0x10) hides tiles unless overridden
+                // - Collision plane calculation affects visibility determination
+                //
+                // However, generateTileVertices internally checks tile.overlayId == 0 && tile.underlayId == 0
+                // and returns early, so tiles with no terrain data are naturally skipped.
+                if (isTileVisible(region.tiles, plane, plane, x, y)) {
                     generateTileVertices(
                         x, y,
                         plane,
@@ -1156,23 +1194,6 @@ object TerrainLoader {
                         vertexNormalsZ,
                         blendedUnderlayColors
                     )
-                }
-
-                // At bridge locations, ALSO render plane 1's terrain (bridge deck)
-                // This creates the elevated bridge surface using plane 1's own heights
-                if (isBridgeLocation && linkedNormals != null && linkedBlendedColors != null && linkedPlane >= 0) {
-                    val linkedTile = region.tiles[linkedPlane][x][y]
-                    // Only render if the linked plane has terrain data
-                    if (linkedTile.overlayId > 0 || linkedTile.underlayId > 0) {
-                        generateTileVertices(
-                            x, y,
-                            linkedPlane,
-                            linkedNormals.first,
-                            linkedNormals.second,
-                            linkedNormals.third,
-                            linkedBlendedColors
-                        )
-                    }
                 }
             }
         }
@@ -1393,9 +1414,11 @@ object TerrainLoader {
         debugLightingOnce = true
         debugTileBoundaryOnce = true
         debugShapedTileOnce = true
+        debugBridgeTilesOnce = true
     }
 
     private var debugLightingOnce = true
+    private var debugBridgeTilesOnce = true
 
     /**
      * Clear all caches including definitions.
@@ -1905,7 +1928,9 @@ object TerrainLoader {
 
                 // Blend in HSL space
                 var blendedHsl = ColorUtil.bilinearBlendHsl(hslSW, hslSE, hslNW, hslNE, fx, fy)
-                if (blendedHsl == 0) return DEFAULT_GRASS_COLOR
+                // This should never happen if hasValidUnderlayColors check is correct (all corners non-zero).
+                // If it does, return black instead of green to make any bugs less visually jarring.
+                if (blendedHsl == 0) return Vector3f(0f, 0f, 0f)
 
                 // Apply deterministic per-vertex brightness noise (like RS client's HSL-to-RGB)
                 // RS client adds +-1.5% random brightness: d_1 = 0.7 + (Math.random() * 0.03 - 0.015)
