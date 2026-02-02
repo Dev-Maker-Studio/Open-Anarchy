@@ -184,6 +184,13 @@ class TextureType(data: ByteArray) {
                 blueBuffer = palette[2]
             }
 
+            // Get opacity from the dedicated opacity operation (for proper texture transparency)
+            val opacityBuffer: IntArray = if (opacityOperation.monochrome) {
+                opacityOperation.getMonochromeOutput(row)
+            } else {
+                opacityOperation.getColorOutput(row)[0]
+            }
+
             // Process pixels from right to left (matching RS client behavior)
             // This horizontally flips the texture as the client expects
             for (x in width - 1 downTo 0) {
@@ -196,11 +203,13 @@ class TextureType(data: ByteArray) {
                 green = BRIGHTNESS_TABLE[green]
                 blue = BRIGHTNESS_TABLE[blue]
 
-                // For model viewer, use full opacity for non-black pixels (like getPixelsRgb does)
+                // Get alpha from opacity operation, but black pixels are always transparent
+                // This matches the RS client behavior for texture transparency
                 val alpha: Int = if (red == 0 && green == 0 && blue == 0) {
                     0
                 } else {
-                    255
+                    // Scale opacity value the same way as color values (shift right 4 bits)
+                    (opacityBuffer[x] shr 4).coerceIn(0, 255)
                 }
 
                 pixels[pixelIndex++] = (alpha shl 24) or (red shl 16) or (green shl 8) or blue

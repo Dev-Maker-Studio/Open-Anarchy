@@ -17,6 +17,9 @@ void main() {
     vec3 baseColor = texColor.rgb * vColor; // Blend texture with vertex color
     float alpha = texColor.a;
 
+    // Discard transparent fragments (cutout transparency for leaves, etc.)
+    if (alpha < 0.5) discard;
+
     // Flip normal for back faces (two-sided lighting)
     vec3 norm = normalize(vNormal);
     if (!gl_FrontFacing) {
