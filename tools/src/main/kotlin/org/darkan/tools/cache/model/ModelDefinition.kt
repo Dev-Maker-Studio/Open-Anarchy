@@ -39,7 +39,24 @@ data class ModelDefinition(
     val textureCoordV: FloatArray?,
     val vertexNormalsX: IntArray?,
     val vertexNormalsY: IntArray?,
-    val vertexNormalsZ: IntArray?
+    val vertexNormalsZ: IntArray?,
+    // Complex texture mapping fields (for types 1-3: cylindrical, cube, spherical)
+    /** Scale X for complex texture mappings (types 1-3) - indexed by complex texture index */
+    val texturesScaleX: IntArray?,
+    /** Scale Y for complex texture mappings (types 1-3) - indexed by complex texture index */
+    val texturesScaleY: IntArray?,
+    /** Scale Z for complex texture mappings (types 1-3) - indexed by complex texture index */
+    val texturesScaleZ: IntArray?,
+    /** Rotation (0-255 maps to 0-2pi) for complex mappings - indexed by complex texture index */
+    val texturesRotation: ByteArray?,
+    /** Direction/orientation (0-3) for complex mappings - indexed by complex texture index */
+    val texturesDirection: ByteArray?,
+    /** Animation speed offset for complex mappings - indexed by complex texture index */
+    val texturesSpeed: IntArray?,
+    /** Cube mapping U translation - indexed by cube texture index (type 2 only) */
+    val texturesUtrans: IntArray?,
+    /** Cube mapping V translation - indexed by cube texture index (type 2 only) */
+    val texturesVtrans: IntArray?
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -77,7 +94,15 @@ data class ModelDefinition(
             textureCoordV = null,
             vertexNormalsX = null,
             vertexNormalsY = null,
-            vertexNormalsZ = null
+            vertexNormalsZ = null,
+            texturesScaleX = null,
+            texturesScaleY = null,
+            texturesScaleZ = null,
+            texturesRotation = null,
+            texturesDirection = null,
+            texturesSpeed = null,
+            texturesUtrans = null,
+            texturesVtrans = null
         )
 
         /**
@@ -99,16 +124,20 @@ data class ModelDefinition(
             if (models.isEmpty()) return null
             if (models.size == 1) return models[0]
 
-            // First pass: count totals
+            // First pass: count totals and check for complex texture data
             var totalVertices = 0
             var totalFaces = 0
             var totalTextures = 0
+            var totalComplexTextures = 0  // Types 1-3
+            var totalCubeTextures = 0     // Type 2 only
             var hasAlpha = false
             var hasRenderTypes = false
             var hasPriorities = false
             var hasFaceTextures = false
             var hasFaceTexturePointers = false
             var hasTexturesMapping = false
+            var hasComplexTextureData = false
+            var hasCubeTextureData = false
             var maxVersion = 0
 
             for (model in models) {
@@ -121,7 +150,18 @@ data class ModelDefinition(
                 hasFaceTextures = hasFaceTextures || model.faceTextures != null
                 hasFaceTexturePointers = hasFaceTexturePointers || model.faceTexturePointers != null
                 hasTexturesMapping = hasTexturesMapping || model.texturesMapping != null
+                hasComplexTextureData = hasComplexTextureData || model.texturesScaleX != null
+                hasCubeTextureData = hasCubeTextureData || model.texturesUtrans != null
                 if (model.version > maxVersion) maxVersion = model.version
+
+                // Count complex and cube texture triangles
+                if (model.texturesMapping != null) {
+                    for (t in 0 until model.textureTriangleCount) {
+                        val mapping = model.texturesMapping[t].toInt() and 0xff
+                        if (mapping in 1..3) totalComplexTextures++
+                        if (mapping == 2) totalCubeTextures++
+                    }
+                }
             }
 
             // Allocate combined arrays
@@ -141,6 +181,16 @@ data class ModelDefinition(
             val combinedTextureFaceX = if (totalTextures > 0) ShortArray(totalTextures) else null
             val combinedTextureFaceY = if (totalTextures > 0) ShortArray(totalTextures) else null
             val combinedTextureFaceZ = if (totalTextures > 0) ShortArray(totalTextures) else null
+            // Complex texture data arrays (indexed by complex texture index)
+            val combinedTexturesScaleX = if (hasComplexTextureData && totalComplexTextures > 0) IntArray(totalComplexTextures) else null
+            val combinedTexturesScaleY = if (hasComplexTextureData && totalComplexTextures > 0) IntArray(totalComplexTextures) else null
+            val combinedTexturesScaleZ = if (hasComplexTextureData && totalComplexTextures > 0) IntArray(totalComplexTextures) else null
+            val combinedTexturesRotation = if (hasComplexTextureData && totalComplexTextures > 0) ByteArray(totalComplexTextures) else null
+            val combinedTexturesDirection = if (hasComplexTextureData && totalComplexTextures > 0) ByteArray(totalComplexTextures) else null
+            val combinedTexturesSpeed = if (hasComplexTextureData && totalComplexTextures > 0) IntArray(totalComplexTextures) else null
+            // Cube texture data arrays (indexed by cube texture index, type 2 only)
+            val combinedTexturesUtrans = if (hasCubeTextureData && totalCubeTextures > 0) IntArray(totalCubeTextures) else null
+            val combinedTexturesVtrans = if (hasCubeTextureData && totalCubeTextures > 0) IntArray(totalCubeTextures) else null
 
             // Vertex welding map: (x, y, z) -> welded vertex index
             // This matches the RS client's Mesh.connect() method which welds vertices at identical positions
@@ -163,6 +213,8 @@ data class ModelDefinition(
             // Second pass: combine data
             var faceOffset = 0
             var textureOffset = 0
+            var complexTextureOffset = 0  // Offset into combined complex texture arrays
+            var cubeTextureOffset = 0     // Offset into combined cube texture arrays
 
             for (model in models) {
                 // Build vertex index mapping for this model (old index -> welded index)
@@ -201,10 +253,14 @@ data class ModelDefinition(
                 // Copy texture triangles with remapped vertex indices
                 // Note: Negative indices (like -32767) are sentinel values meaning "no texture vertex"
                 // and should be preserved as-is rather than remapped
+                // Track local complex/cube texture indices for this model
+                var modelComplexIdx = 0
+                var modelCubeIdx = 0
                 for (t in 0 until model.textureTriangleCount) {
                     val destIdx = textureOffset + t
+                    val mapping = model.texturesMapping?.get(t)?.toInt()?.and(0xff) ?: 0
                     combinedTexturesMapping?.let { arr ->
-                        arr[destIdx] = model.texturesMapping?.get(t) ?: 0
+                        arr[destIdx] = mapping.toByte()
                     }
                     combinedTextureFaceX?.let { arr ->
                         val oldIdx = model.textureFaceX?.get(t)?.toInt() ?: 0
@@ -230,10 +286,50 @@ data class ModelDefinition(
                             model.textureFaceZ?.get(t) ?: 0
                         }
                     }
+
+                    // Copy complex texture data (types 1-3)
+                    if (mapping in 1..3) {
+                        val srcComplexIdx = modelComplexIdx
+                        val dstComplexIdx = complexTextureOffset + modelComplexIdx
+                        combinedTexturesScaleX?.let { arr ->
+                            arr[dstComplexIdx] = model.texturesScaleX?.get(srcComplexIdx) ?: 0
+                        }
+                        combinedTexturesScaleY?.let { arr ->
+                            arr[dstComplexIdx] = model.texturesScaleY?.get(srcComplexIdx) ?: 0
+                        }
+                        combinedTexturesScaleZ?.let { arr ->
+                            arr[dstComplexIdx] = model.texturesScaleZ?.get(srcComplexIdx) ?: 0
+                        }
+                        combinedTexturesRotation?.let { arr ->
+                            arr[dstComplexIdx] = model.texturesRotation?.get(srcComplexIdx) ?: 0
+                        }
+                        combinedTexturesDirection?.let { arr ->
+                            arr[dstComplexIdx] = model.texturesDirection?.get(srcComplexIdx) ?: 0
+                        }
+                        combinedTexturesSpeed?.let { arr ->
+                            arr[dstComplexIdx] = model.texturesSpeed?.get(srcComplexIdx) ?: 0
+                        }
+                        modelComplexIdx++
+
+                        // Copy cube texture data (type 2 only)
+                        if (mapping == 2) {
+                            val srcCubeIdx = modelCubeIdx
+                            val dstCubeIdx = cubeTextureOffset + modelCubeIdx
+                            combinedTexturesUtrans?.let { arr ->
+                                arr[dstCubeIdx] = model.texturesUtrans?.get(srcCubeIdx) ?: 0
+                            }
+                            combinedTexturesVtrans?.let { arr ->
+                                arr[dstCubeIdx] = model.texturesVtrans?.get(srcCubeIdx) ?: 0
+                            }
+                            modelCubeIdx++
+                        }
+                    }
                 }
 
                 faceOffset += model.faceCount
                 textureOffset += model.textureTriangleCount
+                complexTextureOffset += modelComplexIdx
+                cubeTextureOffset += modelCubeIdx
             }
 
             // Create final welded vertex arrays
@@ -267,7 +363,15 @@ data class ModelDefinition(
                 textureCoordV = null,
                 vertexNormalsX = null,
                 vertexNormalsY = null,
-                vertexNormalsZ = null
+                vertexNormalsZ = null,
+                texturesScaleX = combinedTexturesScaleX,
+                texturesScaleY = combinedTexturesScaleY,
+                texturesScaleZ = combinedTexturesScaleZ,
+                texturesRotation = combinedTexturesRotation,
+                texturesDirection = combinedTexturesDirection,
+                texturesSpeed = combinedTexturesSpeed,
+                texturesUtrans = combinedTexturesUtrans,
+                texturesVtrans = combinedTexturesVtrans
             )
         }
     }

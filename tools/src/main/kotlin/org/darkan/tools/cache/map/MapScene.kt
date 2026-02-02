@@ -291,8 +291,8 @@ class MapScene(
             if (sceneObj.plane != currentPlane) continue
 
             // Build full transform matrix matching RS client order:
-            // RS applies: RotateY -> TiltX -> TiltZ (in that order on vertices)
-            // Matrix equivalent (right-to-left): TiltZ * TiltX * RotateY
+            // RS applies: Mirror -> RotateY -> TiltX -> TiltZ (in that order on vertices)
+            // Matrix equivalent (right-to-left): TiltZ * TiltX * RotateY * Mirror
             tempModelMatrix.identity()
                 .translate(sceneObj.position)     // 6. Move to world position
 
@@ -312,6 +312,12 @@ class MapScene(
             }
 
             tempModelMatrix.rotateY(sceneObj.rotation)  // 1a. Object Y rotation
+
+            // Apply mirroring if needed (negates Z coordinates)
+            // This is applied last in the matrix chain = first on vertices
+            if (sceneObj.mirrored) {
+                tempModelMatrix.scale(1f, 1f, -1f)  // 0. Mirror across XY plane
+            }
 
             if (instanceManager.addInstance(sceneObj.modelId, tempModelMatrix)) {
                 addedInstances++
@@ -407,7 +413,8 @@ class MapScene(
                     offset = obj.offset,
                     tiltX = obj.terrainAlignment.tiltX,
                     tiltZ = obj.terrainAlignment.tiltZ,
-                    heightAdjustment = obj.terrainAlignment.heightAdjustment
+                    heightAdjustment = obj.terrainAlignment.heightAdjustment,
+                    mirrored = obj.mirrored
                 ))
             }
         }

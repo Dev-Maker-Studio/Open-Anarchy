@@ -111,6 +111,50 @@ object TerrainLoader {
         override fun hashCode(): Int = regionId
     }
 
+    /**
+     * Tile function mask flags from the RS client (SettingsBits.kt / MapLoader.kt).
+     * These flags control collision, visibility, and height behavior.
+     *
+     * From SettingsBits.java in darkan-bot client:
+     * - isVisible(collisionPlane, z, x, y): returns true if:
+     *     (flags[0][x][y] & 0x2) != 0, OR
+     *     ((flags[z][x][y] & 0x10) == 0 AND getCollisionPlane(z,x,y) == collisionPlane)
+     * - getCollisionPlane(z, x, y): returns:
+     *     0 if (flags[z][x][y] & 0x8) != 0
+     *     z - 1 if z > 0 AND (flags[1][x][y] & 0x2) != 0
+     *     z otherwise
+     */
+    object TileFlags {
+        /** Tile is blocked for walking (adds collision flag) */
+        const val BLOCK_WALK = 0x1
+
+        /**
+         * This tile is a bridge - affects height calculation and visibility.
+         *
+         * When set on plane 0: Forces tile to always be visible (overrides INVISIBLE)
+         * When set on plane 1:
+         *   - Collision plane for planes > 0 is reduced by 1
+         *   - Objects use height from plane+1
+         *   - Terrain below bridges is linked for proper rendering
+         */
+        const val BRIDGE = 0x2
+
+        /**
+         * Force collision plane to 0 regardless of actual plane.
+         * Used for areas that should always use ground-level collision.
+         * In getCollisionPlane(): if set, returns 0.
+         */
+        const val FORCE_COLLISION_PLANE_0 = 0x8
+
+        /**
+         * Tile is not visible (used for hidden areas, interiors, etc).
+         * When set, the tile should not be rendered UNLESS:
+         * - The bridge flag (0x2) is set on plane 0 at this location
+         * - The collision plane doesn't match the viewing plane
+         */
+        const val INVISIBLE = 0x10
+    }
+
     data class TileData(
         val height: Int,
         val overlayId: Int,
@@ -118,7 +162,132 @@ object TerrainLoader {
         val overlayRotation: Int,
         val underlayId: Int,
         val flags: Int
-    )
+    ) {
+        /** Check if tile has a specific flag set */
+        fun hasFlag(flag: Int): Boolean = (flags and flag) == flag
+
+        /** Check if this tile is marked as a bridge */
+        val isBridge: Boolean get() = hasFlag(TileFlags.BRIDGE)
+
+        /** Check if this tile should block walking */
+        val blocksWalk: Boolean get() = hasFlag(TileFlags.BLOCK_WALK)
+
+        /** Check if this tile is invisible (should not be rendered) */
+        val isInvisible: Boolean get() = hasFlag(TileFlags.INVISIBLE)
+
+        /** Check if this tile forces collision to plane 0 */
+        val forcesCollisionPlane0: Boolean get() = hasFlag(TileFlags.FORCE_COLLISION_PLANE_0)
+    }
+
+    /**
+     * Calculate the collision plane for a tile, matching the RS client's SettingsBits.getCollisionPlane().
+     *
+     * The collision plane determines which plane's collision data is used and affects visibility.
+     *
+     * @param tiles The 4-plane tile array for the region
+     * @param z The current plane level
+     * @param x The tile X coordinate (0-63)
+     * @param y The tile Y coordinate (0-63)
+     * @return The collision plane (0-3)
+     */
+    fun getCollisionPlane(tiles: Array<Array<Array<TileData>>>, z: Int, x: Int, y: Int): Int {
+        // If FORCE_COLLISION_PLANE_0 flag is set on this tile, always return 0
+        if (tiles[z][x][y].forcesCollisionPlane0) {
+            return 0
+        }
+        // If we're on a plane > 0 AND the bridge flag is set on plane 1 at this position,
+        // the collision plane is reduced by 1 (allowing walking under bridges)
+        if (z > 0 && tiles[1][x][y].isBridge) {
+            return z - 1
+        }
+        return z
+    }
+
+    /**
+     * Check if a tile at the given position should be visible for a specific viewing plane.
+     *
+     * This matches the RS client's SettingsBits.isVisible() logic:
+     * - If bridge flag (0x2) is set on plane 0, the tile is ALWAYS visible
+     * - Otherwise, visible if NOT invisible AND collision plane matches viewing plane
+     *
+     * @param tiles The 4-plane tile array for the region
+     * @param viewingPlane The plane we're viewing (typically the player's plane)
+     * @param z The tile's plane level
+     * @param x The tile X coordinate (0-63)
+     * @param y The tile Y coordinate (0-63)
+     * @return True if the tile should be rendered
+     */
+    fun isTileVisible(tiles: Array<Array<Array<TileData>>>, viewingPlane: Int, z: Int, x: Int, y: Int): Boolean {
+        // Bridge flag on plane 0 makes tile always visible (used for bridges/overhangs)
+        if (tiles[0][x][y].isBridge) {
+            return true
+        }
+        // Otherwise, check: not invisible AND collision plane matches viewing plane
+        return !tiles[z][x][y].isInvisible && getCollisionPlane(tiles, z, x, y) == viewingPlane
+    }
+
+    /**
+     * Check if the bridge flag is set on plane 1 at this position.
+     * When set, objects should use height from the plane above their current plane.
+     *
+     * @param tiles The 4-plane tile array for the region
+     * @param x The tile X coordinate (0-63)
+     * @param y The tile Y coordinate (0-63)
+     * @return True if bridge flag is set on plane 1
+     */
+    fun isBridgeTile(tiles: Array<Array<Array<TileData>>>, x: Int, y: Int): Boolean {
+        return tiles[1][x][y].isBridge
+    }
+
+    /**
+     * Get the height plane to use for an object at the given position.
+     * Following the RS client (MapRegion.tileheightForAbsolutePosition):
+     * - Check if bridge flag (0x2) is set on level 1 at this position
+     * - If so, and current plane < 3, use height from plane + 1
+     * - Otherwise use the current plane's height
+     *
+     * @param tiles The 4-plane tile array for the region
+     * @param plane The object's plane level
+     * @param x The tile X coordinate (0-63)
+     * @param y The tile Y coordinate (0-63)
+     * @return The plane to use for height lookup
+     */
+    fun getHeightPlane(tiles: Array<Array<Array<TileData>>>, plane: Int, x: Int, y: Int): Int {
+        if (plane < 3 && isBridgeTile(tiles, x, y)) {
+            return plane + 1
+        }
+        return plane
+    }
+
+    /**
+     * Check if terrain from a higher plane should be rendered due to bridge linkBelow.
+     *
+     * In the RS client, linkBelow() shifts terrain from higher planes down to lower planes
+     * at bridge locations. This function determines if terrain from sourcePlane should
+     * be visible when rendering targetPlane due to this bridge shifting.
+     *
+     * The logic mirrors Scene.linkBelow():
+     * - When bridge flag (0x2) is set on plane 1, terrain is shifted down
+     * - Plane 1 terrain appears at plane 0 (ground under bridge)
+     * - Plane 2 terrain appears at plane 1
+     * - Plane 3 terrain appears at plane 2
+     *
+     * @param tiles The 4-plane tile array for the region
+     * @param sourcePlane The plane whose terrain data we're considering
+     * @param targetPlane The plane we're rendering/viewing
+     * @param x The tile X coordinate (0-63)
+     * @param y The tile Y coordinate (0-63)
+     * @return True if sourcePlane terrain should appear at targetPlane due to bridge
+     */
+    fun isBridgeLinkedPlane(tiles: Array<Array<Array<TileData>>>, sourcePlane: Int, targetPlane: Int, x: Int, y: Int): Boolean {
+        // Bridge linking only occurs when bridge flag is set on plane 1
+        if (!isBridgeTile(tiles, x, y)) {
+            return false
+        }
+        // linkBelow shifts terrain down by 1 plane: sourcePlane appears at (sourcePlane - 1)
+        // So terrain from plane N appears at plane (N-1) after linkBelow
+        return sourcePlane > 0 && sourcePlane - 1 == targetPlane
+    }
 
     /**
      * A terrain batch for a specific texture.
@@ -500,10 +669,15 @@ object TerrainLoader {
      * Tiles with texture IDs from underlay/overlay definitions go into textured batches,
      * while tiles with only color information go into the color mesh.
      *
+     * Uses the RS client's visibility logic to determine which tiles to render:
+     * - Bridge flag on plane 0 makes tiles always visible
+     * - Invisible flag (0x10) hides tiles unless overridden by bridge
+     * - Collision plane calculation affects visibility determination
+     *
      * @param cache The game cache
      * @param regionX Region X coordinate
      * @param regionY Region Y coordinate
-     * @param plane Plane level (0-3)
+     * @param plane Plane level (0-3) - this is both the tile plane AND the viewing plane
      * @return TerrainMeshes containing color mesh and textured batches, or null if region not found
      */
     fun loadRegionMeshes(cache: Cache, regionX: Int, regionY: Int, plane: Int = 0): TerrainMeshes? {
@@ -544,65 +718,75 @@ object TerrainLoader {
             println("  Expected factor range: $maxShadow (shadow) to $maxLit (lit)")
         }
 
-        // Pre-compute per-vertex normals for the entire 65x65 grid of tile vertices
+        // Determine which planes we need to compute normals and colors for.
+        // For bridge support: when rendering plane 0 and bridge flag is set on plane 1,
+        // we also need to render terrain from plane 1 (the ground under the bridge).
+        // The linkedPlane is the plane whose terrain gets "linked below" to the current plane.
+        val linkedPlane = if (plane < 3) plane + 1 else -1
+        val hasAnyBridges = linkedPlane >= 0 && (0 until 64).any { x ->
+            (0 until 64).any { y -> isBridgeTile(region.tiles, x, y) }
+        }
+
+        // Helper function to compute normals for a specific plane
+        fun computeVertexNormals(p: Int): Triple<Array<FloatArray>, Array<FloatArray>, Array<FloatArray>> {
+            val normalsX = Array(65) { FloatArray(65) }
+            val normalsY = Array(65) { FloatArray(65) }
+            val normalsZ = Array(65) { FloatArray(65) }
+
+            for (vx in 0 until 65) {
+                for (vy in 0 until 65) {
+                    val xMinus = (vx - 1).coerceIn(0, 63)
+                    val xPlus = (vx + 1).coerceIn(0, 63)
+                    val yMinus = (vy - 1).coerceIn(0, 63)
+                    val yPlus = (vy + 1).coerceIn(0, 63)
+                    val xCur = vx.coerceIn(0, 63)
+                    val yCur = vy.coerceIn(0, 63)
+
+                    val heightWest = region.tiles[p][xMinus][yCur].height * HEIGHT_SCALE
+                    val heightEast = region.tiles[p][xPlus][yCur].height * HEIGHT_SCALE
+                    val heightSouth = region.tiles[p][xCur][yMinus].height * HEIGHT_SCALE
+                    val heightNorth = region.tiles[p][xCur][yPlus].height * HEIGHT_SCALE
+
+                    val heightDeltaX = heightEast - heightWest
+                    val heightDeltaY = heightNorth - heightSouth
+
+                    val nx = heightDeltaX
+                    val ny = tileSize * 2f
+                    val nz = heightDeltaY
+
+                    val len = kotlin.math.sqrt(nx * nx + ny * ny + nz * nz)
+                    if (len > 0.0001f) {
+                        normalsX[vx][vy] = nx / len
+                        normalsY[vx][vy] = ny / len
+                        normalsZ[vx][vy] = nz / len
+                    } else {
+                        normalsX[vx][vy] = 0f
+                        normalsY[vx][vy] = 1f
+                        normalsZ[vx][vy] = 0f
+                    }
+                }
+            }
+            return Triple(normalsX, normalsY, normalsZ)
+        }
+
+        // Pre-compute per-vertex normals for the main plane
         // This matches the RS client's GroundGL.kt lines 98-106 which computes normals
         // from height differences between neighboring tiles, creating smooth per-vertex
         // lighting variation even in homogeneous areas.
-        val vertexNormalsX = Array(65) { FloatArray(65) }
-        val vertexNormalsY = Array(65) { FloatArray(65) }
-        val vertexNormalsZ = Array(65) { FloatArray(65) }
+        val (vertexNormalsX, vertexNormalsY, vertexNormalsZ) = computeVertexNormals(plane)
 
-        for (vx in 0 until 65) {
-            for (vy in 0 until 65) {
-                // Get heights at neighboring vertices (clamped to valid range)
-                // RS client uses heights[x+1][y] - heights[x-1][y] for the gradient
-                val xMinus = (vx - 1).coerceIn(0, 63)
-                val xPlus = (vx + 1).coerceIn(0, 63)
-                val yMinus = (vy - 1).coerceIn(0, 63)
-                val yPlus = (vy + 1).coerceIn(0, 63)
-                val xCur = vx.coerceIn(0, 63)
-                val yCur = vy.coerceIn(0, 63)
+        // Also compute normals for the linked plane if bridges exist
+        val linkedNormals = if (hasAnyBridges && linkedPlane >= 0) {
+            computeVertexNormals(linkedPlane)
+        } else null
 
-                // Get heights at the neighboring vertices
-                // Note: tile heights are stored at [plane][x][y], and the height at vertex (vx, vy)
-                // is the height of tile (vx, vy) corner
-                val heightWest = region.tiles[plane][xMinus][yCur].height * HEIGHT_SCALE
-                val heightEast = region.tiles[plane][xPlus][yCur].height * HEIGHT_SCALE
-                val heightSouth = region.tiles[plane][xCur][yMinus].height * HEIGHT_SCALE
-                val heightNorth = region.tiles[plane][xCur][yPlus].height * HEIGHT_SCALE
-
-                // Compute height gradients (matching RS client lines 100-101)
-                // heightDeltaHorizontal = heights[x+1][y] - heights[x-1][y]
-                // heightDeltaVertical = heights[x][y+1] - heights[x][y-1]
-                val heightDeltaX = heightEast - heightWest
-                val heightDeltaY = heightNorth - heightSouth
-
-                // Compute normal from gradients (matching RS client lines 102-105)
-                // The RS client uses: intensity = 1 / sqrt(512*512*4 + dX^2 + dY^2)
-                // normalX = heightDeltaX * intensity
-                // normalY = -512*2 * intensity (pointing up in RS coords)
-                // normalZ = heightDeltaY * intensity
-                // We simplify to normalized tangent cross product
-                val tileScale = tileSize // One tile width
-                val nx = heightDeltaX
-                val ny = tileScale * 2f  // Corresponds to -512*2 in RS (Y-up in OpenGL)
-                val nz = heightDeltaY
-
-                val len = kotlin.math.sqrt(nx * nx + ny * ny + nz * nz)
-                if (len > 0.0001f) {
-                    vertexNormalsX[vx][vy] = nx / len
-                    vertexNormalsY[vx][vy] = ny / len
-                    vertexNormalsZ[vx][vy] = nz / len
-                } else {
-                    vertexNormalsX[vx][vy] = 0f
-                    vertexNormalsY[vx][vy] = 1f
-                    vertexNormalsZ[vx][vy] = 0f
-                }
-            }
-        }
-
-        // Pre-compute blended underlay colors for the entire region
+        // Pre-compute blended underlay colors for the main plane
         val blendedUnderlayColors = computeBlendedUnderlayColors(region, plane)
+
+        // Also compute blended colors for the linked plane if bridges exist
+        val linkedBlendedColors = if (hasAnyBridges && linkedPlane >= 0) {
+            computeBlendedUnderlayColors(region, linkedPlane)
+        } else null
 
         // Debug: Verify corner color consistency between adjacent tiles
         if (debugVertexColorsOnce) {
@@ -808,114 +992,187 @@ object TerrainLoader {
         // Collect vertices grouped by texture ID
         val textureGroups = mutableMapOf<Int, MutableList<ShapedVertex>>()
 
-        // Iterate through all 64x64 tiles, clamping height lookups for edge tiles
-        // This matches the RS client's iteration pattern
-        for (x in 0 until 64) {
-            // Calculate next X with clamping for edge tiles
+        // Helper function to generate terrain for a tile at a specific plane
+        // using the provided normals and blended colors
+        fun generateTileVertices(
+            x: Int, y: Int,
+            sourcePlane: Int,
+            normalsX: Array<FloatArray>,
+            normalsY: Array<FloatArray>,
+            normalsZ: Array<FloatArray>,
+            blendedColors: Array<IntArray>
+        ) {
+            val tile = region.tiles[sourcePlane][x][y]
+
+            // Skip tiles with no overlay and no underlay
+            if (tile.overlayId == 0 && tile.underlayId == 0) return
+
+            // Calculate next coordinates with clamping for edge tiles
             val nextX = if (x < 63) x + 1 else x
+            val nextY = if (y < 63) y + 1 else y
+
+            // Calculate heights for this tile's corners using the source plane's heights
+            // heights array: [SW, SE, NW, NE]
+            val heights = floatArrayOf(
+                region.tiles[sourcePlane][x][y].height * HEIGHT_SCALE,             // SW (0,0)
+                region.tiles[sourcePlane][nextX][y].height * HEIGHT_SCALE,         // SE (1,0)
+                region.tiles[sourcePlane][x][nextY].height * HEIGHT_SCALE,         // NW (0,1)
+                region.tiles[sourcePlane][nextX][nextY].height * HEIGHT_SCALE      // NE (1,1)
+            )
+
+            // Get overlay and underlay definitions
+            val overlayDef = if (tile.overlayId > 0) getOverlayDefinition(tile.overlayId) else null
+            val underlayDef = if (tile.underlayId > 0) getUnderlayDefinition(tile.underlayId) else null
+
+            // Get blended corner HSL colors for underlay (SW, SE, NW, NE order)
+            val underlayCornerHsl = getCornerHslColors(blendedColors, x, y)
+            val underlayCornerColors = hslCornersToRgb(underlayCornerHsl)
+            val overlayColor = if (tile.overlayId > 0) getOverlayColor(tile.overlayId) else underlayCornerColors[0]
+
+            // Determine texture IDs
+            val overlayTextureId = overlayDef?.texture ?: -1
+            val underlayTextureId = underlayDef?.texture ?: -1
+
+            // Determine UV scales
+            val overlayUvScale = if (overlayDef != null && overlayDef.texture >= 0) {
+                overlayDef.scale.toFloat() / 512f
+            } else {
+                1f
+            }
+            val underlayUvScale = if (underlayDef != null && underlayDef.texture >= 0) {
+                underlayDef.scale.toFloat() / 512f
+            } else {
+                1f
+            }
+
+            // Adjust colors for textured tiles (use white or tint color)
+            val finalOverlayColor = if (overlayTextureId >= 0) {
+                if (overlayDef != null && overlayDef.colour > 0 && overlayDef.colour != -1) {
+                    ColorUtil.hslToRgb(overlayDef.colour)
+                } else {
+                    Vector3f(1f, 1f, 1f)
+                }
+            } else {
+                overlayColor
+            }
+
+            // Check if overlay blends with underlay (opcode 12 in RS client)
+            val overlayBlendsWithUnderlay = overlayDef?.underlayOverrides ?: false
+
+            // Get overlay's packed HSL color for blending overlay edges
+            val overlayHsl = if (overlayDef != null && overlayDef.colour > 0 && overlayDef.colour != -1) {
+                overlayDef.colour
+            } else {
+                0
+            }
+
+            // Determine the shape to use
+            var shape = tile.overlayShape
+            if (shape == 0 && tile.overlayId == 0) {
+                shape = 12  // Shape 12 = full underlay (0 overlay faces, 2 underlay faces)
+            }
+
+            // Get pre-computed normals for this tile's 4 corners
+            val cornerNormals = arrayOf(
+                Vector3f(normalsX[x][y], normalsY[x][y], normalsZ[x][y]),           // SW
+                Vector3f(normalsX[nextX][y], normalsY[nextX][y], normalsZ[nextX][y]), // SE
+                Vector3f(normalsX[x][nextY], normalsY[x][nextY], normalsZ[x][nextY]), // NW
+                Vector3f(normalsX[nextX][nextY], normalsY[nextX][nextY], normalsZ[nextX][nextY]) // NE
+            )
+
+            // Determine if overlay/underlay exist (matching RS client's null checks)
+            // This is used to skip rendering faces for non-existent layers
+            val hasOverlay = tile.overlayId > 0 && overlayDef != null
+            val hasUnderlay = tile.underlayId > 0 && underlayDef != null
+
+            // Generate shaped vertices for this tile
+            val vertices = generateShapedTile(
+                x, y,
+                shape, tile.overlayRotation,
+                tileSize,
+                heights,
+                finalOverlayColor,
+                underlayCornerHsl,
+                overlayTextureId,
+                underlayTextureId,
+                overlayUvScale,
+                underlayUvScale,
+                overlayBlendsWithUnderlay,
+                overlayHsl,
+                cornerNormals,
+                hasOverlay = hasOverlay,
+                hasUnderlay = hasUnderlay
+            )
+
+            // Add vertices to appropriate texture groups
+            for (vertex in vertices) {
+                val group = textureGroups.getOrPut(vertex.textureId) { mutableListOf() }
+                group.add(vertex)
+            }
+        }
+
+        // Iterate through all 64x64 tiles
+        //
+        // BRIDGE HANDLING: The RS client's linkBelow() shifts SCENE TILE OBJECTS (walls, decorations)
+        // but NOT the terrain geometry. Both plane 0 (ground under bridge) and plane 1 (bridge deck)
+        // terrain meshes exist and are rendered, with depth testing determining visibility.
+        //
+        // Our approach: Render BOTH terrains at bridge locations to match the RS client:
+        // 1. Always render plane 0's terrain (ground under bridge) - this maintains continuous
+        //    terrain with no height discontinuities at tile boundaries
+        // 2. Also render plane 1's terrain (bridge deck) at bridge locations - this adds the
+        //    elevated bridge surface on top of the ground
+        //
+        // This avoids the height mismatch problem: non-bridge tiles share continuous edges with
+        // plane 0 terrain, and bridge surfaces float above as separate geometry.
+        for (x in 0 until 64) {
             for (y in 0 until 64) {
+                // Check if this is a bridge location (bridge flag 0x2 on plane 1)
+                val isBridgeLocation = isBridgeTile(region.tiles, x, y)
                 val tile = region.tiles[plane][x][y]
 
-                // Skip tiles with no overlay and no underlay
-                if (tile.overlayId == 0 && tile.underlayId == 0) continue
-
-                // Calculate next Y with clamping for edge tiles
-                val nextY = if (y < 63) y + 1 else y
-
-                // Calculate heights for this tile's corners
-                // heights array: [SW, SE, NW, NE]
-                val heights = floatArrayOf(
-                    region.tiles[plane][x][y].height * HEIGHT_SCALE,             // SW (0,0)
-                    region.tiles[plane][nextX][y].height * HEIGHT_SCALE,         // SE (1,0)
-                    region.tiles[plane][x][nextY].height * HEIGHT_SCALE,         // NW (0,1)
-                    region.tiles[plane][nextX][nextY].height * HEIGHT_SCALE      // NE (1,1)
-                )
-
-                // Get overlay and underlay definitions
-                val overlayDef = if (tile.overlayId > 0) getOverlayDefinition(tile.overlayId) else null
-                val underlayDef = if (tile.underlayId > 0) getUnderlayDefinition(tile.underlayId) else null
-
-                // Get blended corner HSL colors for underlay (SW, SE, NW, NE order)
-                val underlayCornerHsl = getCornerHslColors(blendedUnderlayColors, x, y)
-                val underlayCornerColors = hslCornersToRgb(underlayCornerHsl)
-                val overlayColor = if (tile.overlayId > 0) getOverlayColor(tile.overlayId) else underlayCornerColors[0]
-
-                // Determine texture IDs
-                val overlayTextureId = overlayDef?.texture ?: -1
-                val underlayTextureId = underlayDef?.texture ?: -1
-
-                // Determine UV scales
-                val overlayUvScale = if (overlayDef != null && overlayDef.texture >= 0) {
-                    overlayDef.scale.toFloat() / 512f
+                // Determine if we should render plane 0's terrain at this location
+                // For bridge locations: always render the ground (it's under the bridge)
+                // For non-bridge locations: use normal visibility check
+                val shouldRenderMainTerrain = if (isBridgeLocation) {
+                    // At bridge locations, render plane 0 terrain if it has underlay/overlay data
+                    // This is the ground under the bridge
+                    tile.underlayId > 0 || tile.overlayId > 0
                 } else {
-                    1f
-                }
-                val underlayUvScale = if (underlayDef != null && underlayDef.texture >= 0) {
-                    underlayDef.scale.toFloat() / 512f
-                } else {
-                    1f
+                    // Non-bridge locations: use standard RS client visibility check
+                    // RS client's SettingsBits.isVisible():
+                    // - Bridge flag (0x2) on plane 0 makes tile always visible
+                    // - Otherwise: visible if NOT invisible AND collision plane matches viewing plane
+                    isTileVisible(region.tiles, plane, plane, x, y)
                 }
 
-                // Adjust colors for textured tiles (use white or tint color)
-                val finalOverlayColor = if (overlayTextureId >= 0) {
-                    if (overlayDef != null && overlayDef.colour > 0 && overlayDef.colour != -1) {
-                        ColorUtil.hslToRgb(overlayDef.colour)
-                    } else {
-                        Vector3f(1f, 1f, 1f)
+                // Render plane 0's terrain for continuous ground surface
+                if (shouldRenderMainTerrain) {
+                    generateTileVertices(
+                        x, y,
+                        plane,
+                        vertexNormalsX,
+                        vertexNormalsY,
+                        vertexNormalsZ,
+                        blendedUnderlayColors
+                    )
+                }
+
+                // At bridge locations, ALSO render plane 1's terrain (bridge deck)
+                // This creates the elevated bridge surface using plane 1's own heights
+                if (isBridgeLocation && linkedNormals != null && linkedBlendedColors != null && linkedPlane >= 0) {
+                    val linkedTile = region.tiles[linkedPlane][x][y]
+                    // Only render if the linked plane has terrain data
+                    if (linkedTile.overlayId > 0 || linkedTile.underlayId > 0) {
+                        generateTileVertices(
+                            x, y,
+                            linkedPlane,
+                            linkedNormals.first,
+                            linkedNormals.second,
+                            linkedNormals.third,
+                            linkedBlendedColors
+                        )
                     }
-                } else {
-                    overlayColor
-                }
-
-                // Check if overlay blends with underlay (opcode 12 in RS client)
-                // This flag causes overlay edge vertices to use blended underlay colors
-                // for smooth transitions between overlay and underlay areas
-                val overlayBlendsWithUnderlay = overlayDef?.underlayOverrides ?: false
-
-                // Get overlay's packed HSL color for blending overlay edges
-                val overlayHsl = if (overlayDef != null && overlayDef.colour > 0 && overlayDef.colour != -1) {
-                    overlayDef.colour
-                } else {
-                    0
-                }
-
-                // Determine the shape to use
-                // If shape is 0 and no overlay, treat as full underlay (shape 12)
-                var shape = tile.overlayShape
-                if (shape == 0 && tile.overlayId == 0) {
-                    shape = 12  // Shape 12 = full underlay (0 overlay faces, 2 underlay faces)
-                }
-
-                // Get pre-computed normals for this tile's 4 corners (SW, SE, NW, NE)
-                // These are computed from neighboring tile heights for smooth lighting variation
-                val cornerNormals = arrayOf(
-                    Vector3f(vertexNormalsX[x][y], vertexNormalsY[x][y], vertexNormalsZ[x][y]),           // SW
-                    Vector3f(vertexNormalsX[nextX][y], vertexNormalsY[nextX][y], vertexNormalsZ[nextX][y]), // SE
-                    Vector3f(vertexNormalsX[x][nextY], vertexNormalsY[x][nextY], vertexNormalsZ[x][nextY]), // NW
-                    Vector3f(vertexNormalsX[nextX][nextY], vertexNormalsY[nextX][nextY], vertexNormalsZ[nextX][nextY]) // NE
-                )
-
-                // Generate shaped vertices for this tile with per-vertex blended colors
-                val vertices = generateShapedTile(
-                    x, y,
-                    shape, tile.overlayRotation,
-                    tileSize,
-                    heights,
-                    finalOverlayColor,
-                    underlayCornerHsl,  // Pass HSL for proper HSL-space blending
-                    overlayTextureId,
-                    underlayTextureId,
-                    overlayUvScale,
-                    underlayUvScale,
-                    overlayBlendsWithUnderlay,
-                    overlayHsl,
-                    cornerNormals  // Pre-computed normals from neighboring tile heights
-                )
-
-                // Add vertices to appropriate texture groups
-                for (vertex in vertices) {
-                    val group = textureGroups.getOrPut(vertex.textureId) { mutableListOf() }
-                    group.add(vertex)
                 }
             }
         }
@@ -1420,7 +1677,9 @@ object TerrainLoader {
         cornerNormals: Array<Vector3f> = arrayOf(
             Vector3f(0f, 1f, 0f), Vector3f(0f, 1f, 0f),
             Vector3f(0f, 1f, 0f), Vector3f(0f, 1f, 0f)
-        )
+        ),
+        hasOverlay: Boolean = true,
+        hasUnderlay: Boolean = true
     ): List<ShapedVertex> {
         val vertices = mutableListOf<ShapedVertex>()
 
@@ -1434,8 +1693,14 @@ object TerrainLoader {
         // This creates 4 triangles using a center vertex for proper HSL interpolation
         val useEnhanced = enableEnhancedTessellation && (safeShape == 0 || safeShape == 12)
 
-        val overlayFaces = if (useEnhanced) OVERLAY_FACE_COUNT_ENHANCED[safeShape] else OVERLAY_FACE_COUNT[safeShape]
-        val underlayFaces = if (useEnhanced) UNDERLAY_FACE_COUNT_ENHANCED[safeShape] else UNDERLAY_FACE_COUNT[safeShape]
+        // Get face counts from shape tables, but only if the layer actually exists
+        // This matches the RS client which skips overlay/underlay faces if the definition is null
+        val overlayFaces = if (hasOverlay) {
+            if (useEnhanced) OVERLAY_FACE_COUNT_ENHANCED[safeShape] else OVERLAY_FACE_COUNT[safeShape]
+        } else 0
+        val underlayFaces = if (hasUnderlay) {
+            if (useEnhanced) UNDERLAY_FACE_COUNT_ENHANCED[safeShape] else UNDERLAY_FACE_COUNT[safeShape]
+        } else 0
         val totalFaces = overlayFaces + underlayFaces
 
         if (totalFaces == 0) return vertices

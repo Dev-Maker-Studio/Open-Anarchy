@@ -58,7 +58,7 @@ interface CullableObject {
  *
  * Contains full transform data (position, rotation, scale, offset, terrain tilt) needed
  * for correct rendering. Transform order matches the RS client:
- * RotateY -> TiltX -> TiltZ -> Scale -> Offset -> HeightAdjust -> Translate
+ * Mirror -> RotateY -> TiltX -> TiltZ -> Scale -> Offset -> HeightAdjust -> Translate
  *
  * @param objectId The object definition ID
  * @param modelId The model ID to render
@@ -72,6 +72,7 @@ interface CullableObject {
  * @param tiltX Terrain alignment X-axis rotation in radians (pitch)
  * @param tiltZ Terrain alignment Z-axis rotation in radians (roll)
  * @param heightAdjustment Terrain height adjustment (applied after offset)
+ * @param mirrored Whether to mirror the model (negate Z before rotation)
  */
 data class SceneObject(
     override val objectId: Int,
@@ -85,7 +86,8 @@ data class SceneObject(
     val offset: Vector3f = Vector3f(0f, 0f, 0f),
     val tiltX: Float = 0f,
     val tiltZ: Float = 0f,
-    val heightAdjustment: Float = 0f
+    val heightAdjustment: Float = 0f,
+    val mirrored: Boolean = false
 ) : CullableObject
 
 /**

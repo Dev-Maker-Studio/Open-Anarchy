@@ -79,6 +79,7 @@ object ModelDecoder {
         // Decode texture mapping types first (they're at the start of the file)
         var simpleTextureFaceCount = 0
         var complexTextureFaceCount = 0
+        var cubeTextureFaceCount = 0
         var texturesMapping: ByteArray? = null
         if (texturedFaceCount > 0) {
             texturesMapping = ByteArray(texturedFaceCount)
@@ -91,6 +92,9 @@ object ModelDecoder {
                 }
                 if (mapping.toInt() in 1..3) {
                     complexTextureFaceCount++
+                }
+                if (mapping.toInt() == 2) {
+                    cubeTextureFaceCount++
                 }
             }
         }
@@ -159,6 +163,29 @@ object ModelDecoder {
 
         val complexTexTriOffset = offset
         offset += complexTextureFaceCount * 6
+
+        // Complex texture transformation data
+        // Calculate bytes per complex texture based on version:
+        // - Version < 14: 6 bytes (UShort + UShort + UShort for scales)
+        // - Version 14: 7 bytes (UShort + UMedium + UShort for scales)
+        // - Version >= 15: 9 bytes (UMedium + UMedium + UMedium for scales)
+        val textureScaleBytes = when {
+            version < 14 -> 6
+            version == 14 -> 7
+            else -> 9
+        }
+        val complexTexScaleOffset = offset
+        offset += complexTextureFaceCount * textureScaleBytes
+
+        val complexTexRotationOffset = offset
+        offset += complexTextureFaceCount
+
+        val complexTexDirectionOffset = offset
+        offset += complexTextureFaceCount
+
+        // Speed offset - 1 byte per complex texture, plus 2 bytes for each cube texture (U/V trans)
+        val complexTexSpeedOffset = offset
+        offset += complexTextureFaceCount + cubeTextureFaceCount * 2
 
         // Validate data fits
         val minRequired = vertexZOffset + vertexZLength
@@ -334,14 +361,51 @@ object ModelDecoder {
         var textureFaceX: ShortArray? = null
         var textureFaceY: ShortArray? = null
         var textureFaceZ: ShortArray? = null
+        // Complex texture transformation arrays (indexed by complex texture index)
+        var texturesScaleX: IntArray? = null
+        var texturesScaleY: IntArray? = null
+        var texturesScaleZ: IntArray? = null
+        var texturesRotation: ByteArray? = null
+        var texturesDirection: ByteArray? = null
+        var texturesSpeed: IntArray? = null
+        // Cube texture arrays (indexed by cube texture index)
+        var texturesUtrans: IntArray? = null
+        var texturesVtrans: IntArray? = null
 
         if (texturedFaceCount > 0 && simpleTexTriOffset + simpleTextureFaceCount * 6 <= data.size) {
             textureFaceX = ShortArray(texturedFaceCount)
             textureFaceY = ShortArray(texturedFaceCount)
             textureFaceZ = ShortArray(texturedFaceCount)
 
+            // Allocate complex texture arrays if we have any complex mappings
+            if (complexTextureFaceCount > 0) {
+                texturesScaleX = IntArray(complexTextureFaceCount)
+                texturesScaleY = IntArray(complexTextureFaceCount)
+                texturesScaleZ = IntArray(complexTextureFaceCount)
+                texturesRotation = ByteArray(complexTextureFaceCount)
+                texturesDirection = ByteArray(complexTextureFaceCount)
+                texturesSpeed = IntArray(complexTextureFaceCount)
+            }
+            if (cubeTextureFaceCount > 0) {
+                texturesUtrans = IntArray(cubeTextureFaceCount)
+                texturesVtrans = IntArray(cubeTextureFaceCount)
+            }
+
+            // Create additional buffers for reading complex texture data at different offsets
+            val scaleBuffer = BufferReader(data)
+            val rotationBuffer = BufferReader(data)
+            val directionBuffer = BufferReader(data)
+            val speedBuffer = BufferReader(data)
+
             buffer.position(simpleTexTriOffset)
             buffer2.position(complexTexTriOffset)
+            scaleBuffer.position(complexTexScaleOffset)
+            rotationBuffer.position(complexTexRotationOffset)
+            directionBuffer.position(complexTexDirectionOffset)
+            speedBuffer.position(complexTexSpeedOffset)
+
+            var complexIdx = 0
+            var cubeIdx = 0
 
             for (i in 0 until texturedFaceCount) {
                 val mappingType = texturesMapping?.get(i)?.toInt()?.and(0xff) ?: 0
@@ -351,10 +415,38 @@ object ModelDecoder {
                     textureFaceY[i] = buffer.readUnsignedShort().toShort()
                     textureFaceZ[i] = buffer.readUnsignedShort().toShort()
                 } else if (mappingType in 1..3) {
-                    // Complex/cylindrical mapping - read from complexTexTriOffset
+                    // Complex mapping - read triangle vertices from complexTexTriOffset
                     textureFaceX[i] = buffer2.readUnsignedShort().toShort()
                     textureFaceY[i] = buffer2.readUnsignedShort().toShort()
                     textureFaceZ[i] = buffer2.readUnsignedShort().toShort()
+
+                    // Read scale values based on version
+                    if (version < 15) {
+                        texturesScaleX!![complexIdx] = scaleBuffer.readUnsignedShort()
+                        if (version < 14) {
+                            texturesScaleY!![complexIdx] = scaleBuffer.readUnsignedShort()
+                        } else {
+                            texturesScaleY!![complexIdx] = readUnsignedMedium(scaleBuffer)
+                        }
+                        texturesScaleZ!![complexIdx] = scaleBuffer.readUnsignedShort()
+                    } else {
+                        texturesScaleX!![complexIdx] = readUnsignedMedium(scaleBuffer)
+                        texturesScaleY!![complexIdx] = readUnsignedMedium(scaleBuffer)
+                        texturesScaleZ!![complexIdx] = readUnsignedMedium(scaleBuffer)
+                    }
+
+                    texturesRotation!![complexIdx] = rotationBuffer.readByte().toByte()
+                    texturesDirection!![complexIdx] = directionBuffer.readByte().toByte()
+                    texturesSpeed!![complexIdx] = speedBuffer.readByte()
+
+                    // Type 2 (cube mapping) has additional U/V translation
+                    if (mappingType == 2) {
+                        texturesUtrans!![cubeIdx] = speedBuffer.readByte()
+                        texturesVtrans!![cubeIdx] = speedBuffer.readByte()
+                        cubeIdx++
+                    }
+
+                    complexIdx++
                 }
             }
         }
@@ -385,7 +477,15 @@ object ModelDecoder {
             textureCoordV = null,
             vertexNormalsX = null,
             vertexNormalsY = null,
-            vertexNormalsZ = null
+            vertexNormalsZ = null,
+            texturesScaleX = texturesScaleX,
+            texturesScaleY = texturesScaleY,
+            texturesScaleZ = texturesScaleZ,
+            texturesRotation = texturesRotation,
+            texturesDirection = texturesDirection,
+            texturesSpeed = texturesSpeed,
+            texturesUtrans = texturesUtrans,
+            texturesVtrans = texturesVtrans
         )
     }
 
@@ -633,7 +733,15 @@ object ModelDecoder {
             textureCoordV = null,
             vertexNormalsX = null,
             vertexNormalsY = null,
-            vertexNormalsZ = null
+            vertexNormalsZ = null,
+            texturesScaleX = null,
+            texturesScaleY = null,
+            texturesScaleZ = null,
+            texturesRotation = null,
+            texturesDirection = null,
+            texturesSpeed = null,
+            texturesUtrans = null,
+            texturesVtrans = null
         )
     }
 
@@ -649,6 +757,16 @@ object ModelDecoder {
         } else {
             ((peek shl 8) or buffer.readUnsignedByte()) - 49152
         }
+    }
+
+    /**
+     * Read an unsigned medium (3-byte) value in big-endian format.
+     */
+    private fun readUnsignedMedium(buffer: BufferReader): Int {
+        val b1 = buffer.readUnsignedByte()
+        val b2 = buffer.readUnsignedByte()
+        val b3 = buffer.readUnsignedByte()
+        return (b1 shl 16) or (b2 shl 8) or b3
     }
 
     fun getModelCount(cache: Cache): Int {

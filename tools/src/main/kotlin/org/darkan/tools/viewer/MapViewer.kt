@@ -406,11 +406,32 @@ class MapViewer(
 
     private var debugObjectRenderFrame = 0
     private val tempModelMatrix = Matrix4f()
+    private var wallRotationDebugDone = false
 
     private fun renderSingleRegionObjects() {
         val instanceManager = singleRegionInstanceManager ?: return
 
         instanceManager.prepareFrame()
+
+        // Debug: verify wall rotations are different on first frame
+        if (!wallRotationDebugDone) {
+            wallRotationDebugDone = true
+            val wallsByRotation = singleRegionObjects
+                .filter { it.mapObject.shape == 0 } // WALL_STRAIGHT
+                .groupBy { it.mapObject.rotation }
+            println("=== WALL ROTATION DEBUG ===")
+            for ((rot, walls) in wallsByRotation.entries.sortedBy { it.key }) {
+                val radians = walls.firstOrNull()?.rotation ?: 0f
+                val degrees = Math.toDegrees(radians.toDouble())
+                println("  Rotation $rot: ${walls.size} walls, radians=$radians, degrees=$degrees")
+                // Print first wall's matrix values
+                walls.firstOrNull()?.let { wall ->
+                    val testMatrix = Matrix4f().identity().rotateY(wall.rotation)
+                    println("    Matrix m00=${testMatrix.m00()} m02=${testMatrix.m02()} m20=${testMatrix.m20()} m22=${testMatrix.m22()}")
+                }
+            }
+            println("===========================")
+        }
 
         var addedCount = 0
         for (obj in singleRegionObjects) {
@@ -448,6 +469,12 @@ class MapViewer(
             }
 
             tempModelMatrix.rotateY(obj.rotation)   // 1. Object Y rotation (first in app order)
+
+            // Apply mirroring if needed (negates Z coordinates)
+            // This is applied last in the matrix chain = first on vertices
+            if (obj.mirrored) {
+                tempModelMatrix.scale(1f, 1f, -1f)  // 0. Mirror across XY plane
+            }
 
             if (instanceManager.addInstance(combinedModelId, tempModelMatrix)) {
                 addedCount++
@@ -1162,7 +1189,8 @@ class MapViewer(
                     -defOffsetY + decorOffset.y,
                     -defOffsetZ + decorOffset.z
                 ),
-                terrainAlignment = terrainAlignment
+                terrainAlignment = terrainAlignment,
+                mirrored = def.mirrored
             ))
         }
 
