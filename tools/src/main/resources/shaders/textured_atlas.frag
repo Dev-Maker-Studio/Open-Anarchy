@@ -4,6 +4,7 @@ in vec3 vColor;
 in vec2 vTexCoord;
 in vec3 vNormal;
 in vec3 vFragPos;
+flat in int vMirrored;
 
 out vec4 FragColor;
 
@@ -22,8 +23,15 @@ void main() {
     if (alpha < 0.5) discard;
 
     // Flip normal for back faces (two-sided lighting)
+    // For mirrored objects, the winding order is reversed, so gl_FrontFacing is inverted
+    // We need to account for this to get correct lighting
     vec3 norm = normalize(vNormal);
-    if (!gl_FrontFacing) {
+    bool isFrontFace = gl_FrontFacing;
+    if (vMirrored == 1) {
+        // For mirrored objects, the notion of front/back is reversed
+        isFrontFace = !isFrontFace;
+    }
+    if (!isFrontFace) {
         norm = -norm;
     }
 

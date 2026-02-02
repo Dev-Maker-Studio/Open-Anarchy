@@ -13,6 +13,7 @@ layout(location = 7) in vec4 instanceMatrix3;
 out vec3 vColor;
 out vec3 vNormal;
 out vec3 vFragPos;
+flat out int vMirrored;
 
 // Camera uniform block
 layout(std140) uniform CameraBlock {
@@ -30,4 +31,10 @@ void main() {
     vNormal = mat3(transpose(inverse(model))) * aNormal;
     vColor = aColor;
     gl_Position = viewProjection * vec4(vFragPos, 1.0);
+
+    // Detect mirroring by checking if the determinant of the 3x3 rotation/scale matrix is negative
+    // A negative determinant indicates a reflection (mirroring) transform
+    mat3 normalMatrix = mat3(model);
+    float det = determinant(normalMatrix);
+    vMirrored = (det < 0.0) ? 1 : 0;
 }

@@ -34,7 +34,8 @@ data class ObjectInstance(
     val rotation: Float,  // Y-axis rotation in radians
     val scale: Vector3f,
     val offset: Vector3f = Vector3f(),  // Model offset applied after rotation
-    val terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE  // Terrain tilt
+    val terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE,  // Terrain tilt
+    val mirrored: Boolean = false  // Whether to mirror the model (negate Z)
 )
 
 /**
@@ -437,6 +438,11 @@ object ObjectRenderer {
                 TerrainAligner.AlignmentResult.NONE
             }
 
+            // Check if model should be mirrored (following RS client logic)
+            // RS mirrors when: definition.inverted OR (WALL_WHOLE_CORNER and rotation > 3)
+            // We only handle definition.mirrored for now; WALL_WHOLE_CORNER with rotation+4 is not yet supported
+            val shouldMirror = def.mirrored
+
             val instance = ObjectInstance(
                 mapObject = obj,
                 definition = def,
@@ -450,7 +456,8 @@ object ObjectRenderer {
                     -defOffsetY + decorOffset.y,
                     -defOffsetZ + decorOffset.z
                 ),
-                terrainAlignment = terrainAlignment
+                terrainAlignment = terrainAlignment,
+                mirrored = shouldMirror
             )
 
             instancesByPlane.getOrPut(plane) { mutableListOf() }.add(instance)
@@ -605,6 +612,9 @@ object ObjectRenderer {
                 TerrainAligner.AlignmentResult.NONE
             }
 
+            // Check if model should be mirrored (following RS client logic)
+            val shouldMirror = def.mirrored
+
             instances.add(ObjectInstance(
                 mapObject = obj,
                 definition = def,
@@ -618,7 +628,8 @@ object ObjectRenderer {
                     -defOffsetY + decorOffset.y,
                     -defOffsetZ + decorOffset.z
                 ),
-                terrainAlignment = terrainAlignment
+                terrainAlignment = terrainAlignment,
+                mirrored = shouldMirror
             ))
         }
 
@@ -690,6 +701,7 @@ object ObjectRenderer {
      * Add object instances to an InstanceManager for rendering.
      *
      * Transform order matches the client:
+     * 0. Mirror (negate Z) if definition.mirrored is true
      * 1. Rotate around Y axis (object orientation)
      * 2. Apply terrain tilt (X and Z rotations) for groundContourType=3 objects
      * 3. Scale by resizeX/Y/Z
@@ -711,8 +723,8 @@ object ObjectRenderer {
                 if (!instanceManager.isModelRegistered(modelId)) continue
 
                 // Build model matrix matching client order:
-                // RS applies: RotateY -> TiltX -> TiltZ (in that order on vertices)
-                // Matrix equivalent (right-to-left): TiltZ * TiltX * RotateY
+                // RS applies: Mirror -> RotateY -> TiltX -> TiltZ (in that order on vertices)
+                // Matrix equivalent (right-to-left): TiltZ * TiltX * RotateY * Mirror
                 modelMatrix.identity()
                     .translate(instance.worldPosition)  // 6. Move to world position
 
@@ -732,6 +744,12 @@ object ObjectRenderer {
                 }
 
                 modelMatrix.rotateY(instance.rotation)  // 1. Object Y rotation
+
+                // Apply mirroring if needed (negates Z coordinates)
+                // This is applied last in the matrix chain = first on vertices
+                if (instance.mirrored) {
+                    modelMatrix.scale(1f, 1f, -1f)  // 0. Mirror across XY plane
+                }
 
                 instanceManager.addInstance(modelId, modelMatrix)
             }
