@@ -13,7 +13,9 @@ class Mesh(
     colors: FloatArray? = null,
     textureCoords: FloatArray? = null,
     normals: FloatArray? = null,
-    indices: IntArray
+    indices: IntArray,
+    /** Number of components per color vertex: 3 for RGB, 4 for RGBA */
+    colorComponents: Int = 3
 ) {
     var vaoId: Int = 0
         private set
@@ -41,7 +43,7 @@ class Mesh(
             glEnableVertexAttribArray(0)
             glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0)
 
-            // Color VBO
+            // Color VBO (supports 3 or 4 components for RGB or RGBA)
             if (colors != null) {
                 colorBuffer = MemoryUtil.memAllocFloat(colors.size)
                 colorBuffer.put(colors).flip()
@@ -50,7 +52,7 @@ class Mesh(
                 glBindBuffer(GL_ARRAY_BUFFER, colorVbo)
                 glBufferData(GL_ARRAY_BUFFER, colorBuffer, GL_STATIC_DRAW)
                 glEnableVertexAttribArray(1)
-                glVertexAttribPointer(1, 3, GL_FLOAT, false, 0, 0)
+                glVertexAttribPointer(1, colorComponents, GL_FLOAT, false, 0, 0)
             }
 
             // Texture coordinate VBO

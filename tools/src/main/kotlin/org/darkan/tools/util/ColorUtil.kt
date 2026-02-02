@@ -8,24 +8,321 @@ object ColorUtil {
     private const val BRIGHTNESS = 0.7
 
     /**
+     * Generate deterministic noise based on world position for terrain color variation.
+     * This matches the RS client's HSL-to-RGB conversion which adds +-1.5% random brightness:
+     *   val d_1 = 0.7 + (Math.random() * 0.03 - 0.015)
+     *
+     * We use deterministic hash-based noise so the terrain doesn't shimmer when reloaded
+     * or when the camera moves.
+     *
+     * @param worldX World X position (can be tile index or world coordinate)
+     * @param worldZ World Z position (can be tile index or world coordinate)
+     * @param variation Amount of variation (0.03 = +-1.5%, 0.06 = +-3%)
+     * @return Noise factor centered at 1.0, e.g. 0.97-1.03 for +-3%
+     */
+    fun getVertexNoise(worldX: Float, worldZ: Float, variation: Float = 0.03f): Float {
+        // Use a simple hash combining both coordinates for pseudo-random but deterministic noise
+        // The magic numbers create good distribution without obvious patterns
+        val seed = (worldX * 12.9898 + worldZ * 78.233)
+        val hash = kotlin.math.sin(seed) * 43758.5453
+        // Get fractional part for 0-1 range
+        val noise = (hash - kotlin.math.floor(hash)).toFloat()
+        // Convert to centered variation: [0,1] -> [1-variation/2, 1+variation/2]
+        return 1.0f - variation * 0.5f + noise * variation
+    }
+
+    /**
+     * Apply brightness noise to a packed HSL color.
+     * Modifies the lightness component while preserving hue and saturation.
+     *
+     * @param packedHsl Packed HSL color (16-bit RS format)
+     * @param noiseFactor Brightness multiplier (e.g., 0.97 to 1.03)
+     * @return Modified packed HSL color
+     */
+    fun applyBrightnessNoise(packedHsl: Int, noiseFactor: Float): Int {
+        if (packedHsl == 0) return 0
+
+        // Extract HSL components
+        val hue = packedHsl and 0xfc00        // Bits 10-15 (masked to keep position)
+        val saturation = packedHsl and 0x380  // Bits 7-9 (masked to keep position)
+        val lightness = packedHsl and 0x7f    // Bits 0-6 (0-127 range)
+
+        // Apply noise to lightness
+        var newLightness = (lightness * noiseFactor).toInt()
+
+        // Clamp to valid range (2-126 to avoid pure black/white)
+        if (newLightness < 2) {
+            newLightness = 2
+        } else if (newLightness > 126) {
+            newLightness = 126
+        }
+
+        // Repack HSL with modified lightness
+        return hue or saturation or newLightness
+    }
+
+    /**
      * Convert RuneScape packed HSL color (16-bit) to RGB.
      * RS HSL format: 6 bits hue (0-63) at bits 10-15, 3 bits saturation (0-7) at bits 7-9, 7 bits lightness (0-127) at bits 0-6
      *
-     * Uses the same algorithm as the RS client's calculateHslToRgbTable().
+     * Uses the EXACT algorithm from the RS client's calculateHslToRgbTable() function.
+     * This is TRUE HSL (Hue-Saturation-Lightness), NOT HSV!
+     *
+     * The RS client code (from ColorUtil.kt lines 140-206):
+     * - Hue: (hsl >> 10 & 0x3f) / 64.0 + 0.0078125
+     * - Saturation: 0.0625 + (hsl >> 7 & 0x7) / 8.0
+     * - Lightness: (hsl & 0x7f) / 128.0
+     * - Standard HSL-to-RGB conversion with q = l*(1+s) if l<0.5, else q = l+s-l*s
+     * - Applies gamma correction with brightness ~0.7
      */
     fun hslToRgb(hsl: Int): Vector3f {
+        // Extract components matching client's bit layout (EXACTLY as in calculateHslToRgbTable)
+        val hue = (hsl shr 10 and 0x3f) / 64.0 + 0.0078125  // d_4 in client
+        val saturation = 0.0625 + (hsl shr 7 and 0x7) / 8.0  // d_6 in client
+        val lightness = (hsl and 0x7f) / 128.0               // d_8 in client
+
+        // Initialize RGB to lightness (achromatic case)
+        var r = lightness  // d_10 in client
+        var g = lightness  // d_12 in client
+        var b = lightness  // d_14 in client
+
+        // Only apply hue/saturation if saturation > 0
+        if (saturation != 0.0) {
+            // Calculate q (d_16 in client): the "chroma" factor
+            val q: Double = if (lightness < 0.5) {
+                lightness * (saturation + 1.0)
+            } else {
+                saturation + lightness - lightness * saturation
+            }
+
+            // Calculate p (d_18 in client): the other bound
+            val p = lightness * 2.0 - q
+
+            // Calculate red (hue + 1/3)
+            var hueR = 0.3333333333333333 + hue
+            if (hueR > 1.0) hueR -= 1.0
+
+            // Calculate blue (hue - 1/3)
+            var hueB = hue - 0.3333333333333333
+            if (hueB < 0.0) hueB += 1.0
+
+            // Convert hue to RGB using standard formula (EXACT RS client algorithm)
+            // Red channel
+            r = if (hueR * 6.0 < 1.0) {
+                p + (q - p) * 6.0 * hueR
+            } else if (2.0 * hueR < 1.0) {
+                q
+            } else if (3.0 * hueR < 2.0) {
+                p + 6.0 * (0.6666666666666666 - hueR) * (q - p)
+            } else {
+                p
+            }
+
+            // Green channel (uses raw hue)
+            g = if (6.0 * hue < 1.0) {
+                p + 6.0 * (q - p) * hue
+            } else if (hue * 2.0 < 1.0) {
+                q
+            } else if (3.0 * hue < 2.0) {
+                6.0 * (0.6666666666666666 - hue) * (q - p) + p
+            } else {
+                p
+            }
+
+            // Blue channel
+            b = if (hueB * 6.0 < 1.0) {
+                hueB * 6.0 * (q - p) + p
+            } else if (hueB * 2.0 < 1.0) {
+                q
+            } else if (hueB * 3.0 < 2.0) {
+                6.0 * (0.6666666666666666 - hueB) * (q - p) + p
+            } else {
+                p
+            }
+        }
+
+        // Apply gamma correction (brightness ~0.7, with small random variation in RS client)
+        // RS client: d_1 = 0.7 + (Math.random() * 0.03 - 0.015)
+        // We use fixed 0.7 for consistency
+        val rGamma = r.pow(BRIGHTNESS).toFloat()
+        val gGamma = g.pow(BRIGHTNESS).toFloat()
+        val bGamma = b.pow(BRIGHTNESS).toFloat()
+
+        return Vector3f(rGamma, gGamma, bGamma)
+    }
+
+    /**
+     * OLD HSV-based conversion (WRONG for terrain, but kept for comparison/debugging).
+     * This was what we were using before - terrain uses TRUE HSL, not HSV!
+     */
+    fun hsvToRgb(hsl: Int): Vector3f {
         // Extract components matching client's bit layout
         val hueRaw = (hsl shr 10) and 0x3f    // 6 bits at position 10 (0-63)
         val satRaw = (hsl shr 7) and 0x7      // 3 bits at position 7 (0-7)
-        val lightRaw = hsl and 0x7f           // 7 bits at position 0 (0-127)
+        val valueRaw = hsl and 0x7f           // 7 bits at position 0 (0-127)
 
-        // Convert to normalized values matching client algorithm
-        // Client uses: hue/64 + 0.0078125, sat/8 + 0.0625, lightness/128
-        val h = hueRaw.toDouble() / 64.0 + 0.0078125
-        val s = satRaw.toDouble() / 8.0 + 0.0625
-        val l = lightRaw.toDouble() / 128.0
+        // HSV conversion parameters
+        val hueDegrees = 360.0f * (hueRaw / 64.0f + 0.0078125f)
+        val saturation = satRaw / 8.0f + 0.0625f
+        val value = valueRaw / 128.0f
 
-        return hslToRgbRS(h, s, l)
+        // HSV to RGB conversion
+        var r = 0.0f
+        var g = 0.0f
+        var b = 0.0f
+
+        val hueNorm = hueDegrees / 60.0f
+        val hueSector = hueNorm.toInt()
+        val hueFraction = hueNorm - hueSector
+        val p = value * (1.0f - saturation)
+        val q = value * (1.0f - saturation * hueFraction)
+        val t = (1.0f - saturation * (1.0f - hueFraction)) * value
+
+        when (hueSector % 6) {
+            0 -> { r = value; g = t; b = p }
+            1 -> { r = q; g = value; b = p }
+            2 -> { r = p; g = value; b = t }
+            3 -> { r = p; g = q; b = value }
+            4 -> { r = t; g = p; b = value }
+            5 -> { r = value; g = p; b = q }
+        }
+
+        // Apply gamma correction
+        val rGamma = r.toDouble().pow(BRIGHTNESS).toFloat()
+        val gGamma = g.toDouble().pow(BRIGHTNESS).toFloat()
+        val bGamma = b.toDouble().pow(BRIGHTNESS).toFloat()
+
+        return Vector3f(rGamma, gGamma, bGamma)
+    }
+
+    /**
+     * Debug: Compare HSL vs HSV conversion for a given packed color.
+     * Call this to see how much brighter the HSL version is.
+     */
+    fun debugColorComparison(packedHsl: Int, label: String = "") {
+        val hsl = hslToRgb(packedHsl)
+        val hsv = hsvToRgb(packedHsl)
+
+        val hslR = (hsl.x * 255).toInt()
+        val hslG = (hsl.y * 255).toInt()
+        val hslB = (hsl.z * 255).toInt()
+        val hsvR = (hsv.x * 255).toInt()
+        val hsvG = (hsv.y * 255).toInt()
+        val hsvB = (hsv.z * 255).toInt()
+
+        // Calculate brightness (sum of RGB)
+        val hslBrightness = hslR + hslG + hslB
+        val hsvBrightness = hsvR + hsvG + hsvB
+
+        println("[ColorUtil] $label packed=0x${packedHsl.toString(16)} ($packedHsl)")
+        println("  HSL (new): RGB($hslR, $hslG, $hslB) brightness=$hslBrightness")
+        println("  HSV (old): RGB($hsvR, $hsvG, $hsvB) brightness=$hsvBrightness")
+        println("  Difference: ${hslBrightness - hsvBrightness} (${((hslBrightness - hsvBrightness) * 100.0 / hsvBrightness).toInt()}%)")
+    }
+
+    /**
+     * Debug: Trace through HSL-to-RGB conversion step by step for a specific value.
+     * Matches RS client's calculateHslToRgbTable() algorithm.
+     * Use this to verify our conversion matches the RS client exactly.
+     *
+     * Example grass HSL values:
+     *   0x3212 (12818) - typical grass green
+     *   0x3210 (12816) - similar grass green
+     */
+    fun debugHslConversionTrace(packedHsl: Int) {
+        println("\n=== HSL-to-RGB TRACE for packed HSL = 0x${packedHsl.toString(16)} ($packedHsl) ===")
+
+        // Step 1: Extract components (EXACT RS client algorithm)
+        val hue = (packedHsl shr 10 and 0x3f) / 64.0 + 0.0078125  // d_4 in client
+        val saturation = 0.0625 + (packedHsl shr 7 and 0x7) / 8.0  // d_6 in client
+        val lightness = (packedHsl and 0x7f) / 128.0               // d_8 in client
+
+        println("Step 1: Extract components")
+        println("  Raw bits: hue_bits=${packedHsl shr 10 and 0x3f}, sat_bits=${packedHsl shr 7 and 0x7}, light_bits=${packedHsl and 0x7f}")
+        println("  Converted: hue=$hue, saturation=$saturation, lightness=$lightness")
+
+        // Step 2: HSL to RGB conversion (before gamma)
+        var r = lightness
+        var g = lightness
+        var b = lightness
+
+        if (saturation != 0.0) {
+            val q: Double = if (lightness < 0.5) {
+                lightness * (saturation + 1.0)
+            } else {
+                saturation + lightness - lightness * saturation
+            }
+            val p = lightness * 2.0 - q
+
+            println("Step 2: Calculate q and p")
+            println("  q = $q (chroma factor)")
+            println("  p = $p (other bound)")
+
+            var hueR = 0.3333333333333333 + hue
+            if (hueR > 1.0) hueR -= 1.0
+            var hueB = hue - 0.3333333333333333
+            if (hueB < 0.0) hueB += 1.0
+
+            // Red
+            r = if (hueR * 6.0 < 1.0) {
+                p + (q - p) * 6.0 * hueR
+            } else if (2.0 * hueR < 1.0) {
+                q
+            } else if (3.0 * hueR < 2.0) {
+                p + 6.0 * (0.6666666666666666 - hueR) * (q - p)
+            } else {
+                p
+            }
+
+            // Green
+            g = if (6.0 * hue < 1.0) {
+                p + 6.0 * (q - p) * hue
+            } else if (hue * 2.0 < 1.0) {
+                q
+            } else if (3.0 * hue < 2.0) {
+                6.0 * (0.6666666666666666 - hue) * (q - p) + p
+            } else {
+                p
+            }
+
+            // Blue
+            b = if (hueB * 6.0 < 1.0) {
+                hueB * 6.0 * (q - p) + p
+            } else if (hueB * 2.0 < 1.0) {
+                q
+            } else if (hueB * 3.0 < 2.0) {
+                6.0 * (0.6666666666666666 - hueB) * (q - p) + p
+            } else {
+                p
+            }
+        }
+
+        println("Step 3: Linear RGB (before gamma)")
+        println("  R=$r, G=$g, B=$b")
+        println("  RGB 0-255: R=${(r * 255).toInt()}, G=${(g * 255).toInt()}, B=${(b * 255).toInt()}")
+
+        // Step 4: Apply gamma (brightness ~0.7)
+        val rGamma = r.pow(BRIGHTNESS)
+        val gGamma = g.pow(BRIGHTNESS)
+        val bGamma = b.pow(BRIGHTNESS)
+
+        println("Step 4: After gamma correction (brightness=$BRIGHTNESS)")
+        println("  R=$rGamma, G=$gGamma, B=$bGamma")
+        println("  RGB 0-255: R=${(rGamma * 255).toInt()}, G=${(gGamma * 255).toInt()}, B=${(bGamma * 255).toInt()}")
+
+        // Compare with RS client output format (0-256 range, packed)
+        val i_26 = (rGamma * 256.0).toInt()
+        val i_17 = (gGamma * 256.0).toInt()
+        val i_27 = (bGamma * 256.0).toInt()
+        val packedRgb = i_27 + (i_17 shl 8) + (i_26 shl 16)
+
+        println("Step 5: RS client packed format")
+        println("  Packed RGB24 = 0x${packedRgb.toString(16)} (R=${i_26}, G=${i_17}, B=${i_27})")
+
+        // Check if this looks like vibrant green
+        val isVibrantGreen = gGamma > rGamma && gGamma > bGamma && gGamma > 0.3
+        println("\nResult: ${if (isVibrantGreen) "VIBRANT GREEN" else "NOT VIBRANT"}")
+        println("=== END TRACE ===\n")
     }
 
     /**
@@ -47,56 +344,6 @@ object ColorUtil {
         }
         // Pack into RS HSL format: hue(6 bits) << 10 | sat(3 bits) << 7 | lightness(7 bits)
         return ((hue and 0xff) shr 2 shl 10) + (lightness shr 1) + (sat shr 5 shl 7)
-    }
-
-    /**
-     * Convert HSL to RGB using RS-style algorithm with gamma correction.
-     * @param h Hue [0-1]
-     * @param s Saturation [0-1]
-     * @param l Lightness [0-1]
-     */
-    private fun hslToRgbRS(h: Double, s: Double, l: Double): Vector3f {
-        val r: Double
-        val g: Double
-        val b: Double
-
-        if (s == 0.0) {
-            // Achromatic (grayscale)
-            r = l
-            g = l
-            b = l
-        } else {
-            val q = if (l < 0.5) l * (1.0 + s) else l + s - l * s
-            val p = 2.0 * l - q
-
-            r = hueToRgbChannel(p, q, h + 1.0 / 3.0)
-            g = hueToRgbChannel(p, q, h)
-            b = hueToRgbChannel(p, q, h - 1.0 / 3.0)
-        }
-
-        // Apply gamma correction (brightness)
-        val rGamma = r.pow(BRIGHTNESS)
-        val gGamma = g.pow(BRIGHTNESS)
-        val bGamma = b.pow(BRIGHTNESS)
-
-        return Vector3f(rGamma.toFloat(), gGamma.toFloat(), bGamma.toFloat())
-    }
-
-    /**
-     * Helper function for HSL to RGB conversion.
-     * Converts a hue value to an RGB channel value.
-     */
-    private fun hueToRgbChannel(p: Double, q: Double, t: Double): Double {
-        var hue = t
-        if (hue < 0.0) hue += 1.0
-        if (hue > 1.0) hue -= 1.0
-
-        return when {
-            hue < 1.0 / 6.0 -> p + (q - p) * 6.0 * hue
-            hue < 1.0 / 2.0 -> q
-            hue < 2.0 / 3.0 -> p + (q - p) * (2.0 / 3.0 - hue) * 6.0
-            else -> p
-        }
     }
 
     /**
@@ -178,5 +425,186 @@ object ColorUtil {
             a.y + (b.y - a.y) * t,
             a.z + (b.z - a.z) * t
         )
+    }
+
+    /**
+     * Blend two packed HSL colors in HSL space.
+     * Matches the RS client's ColorUtil.blend() function exactly.
+     *
+     * @param colorA First packed HSL color
+     * @param colorB Second packed HSL color
+     * @param factor Blend factor (0-128, where 0=colorA, 128=colorB)
+     * @return Blended packed HSL color
+     */
+    fun blendHsl(colorA: Int, colorB: Int, factor: Int): Int {
+        if (colorA == colorB) return colorA
+
+        val invFactor = 128 - factor
+        // Blend each component separately in packed format
+        val lightness = (invFactor * (colorA and 0x7f) + (colorB and 0x7f) * factor) shr 7
+        val saturation = (invFactor * (colorA and 0x380) + factor * (colorB and 0x380)) shr 7
+        val hue = ((colorB and 0xfc00) * factor + invFactor * (colorA and 0xfc00)) shr 7
+        return (hue and 0xfc00) or (saturation and 0x380) or (lightness and 0x7f)
+    }
+
+    /**
+     * Bilinearly interpolate 4 packed HSL corner colors.
+     * Used for terrain vertex color blending.
+     *
+     * @param sw Southwest corner packed HSL
+     * @param se Southeast corner packed HSL
+     * @param nw Northwest corner packed HSL
+     * @param ne Northeast corner packed HSL
+     * @param fx X interpolation factor (0-1)
+     * @param fy Y interpolation factor (0-1)
+     * @return Interpolated packed HSL color
+     */
+    fun bilinearBlendHsl(sw: Int, se: Int, nw: Int, ne: Int, fx: Float, fy: Float): Int {
+        // Convert to 0-128 range for blend function
+        val factorX = (fx * 128).toInt().coerceIn(0, 128)
+        val factorY = (fy * 128).toInt().coerceIn(0, 128)
+
+        // Blend along X axis first
+        val south = blendHsl(sw, se, factorX)
+        val north = blendHsl(nw, ne, factorX)
+
+        // Then blend along Y axis
+        return blendHsl(south, north, factorY)
+    }
+
+    /**
+     * Apply terrain lighting to a packed HSL color.
+     * This matches the RS client's lighting algorithm from GroundGL.resetLight().
+     *
+     * The RS client calculates a light strength value (0-74 typically) based on:
+     * 1. Base strength of 74
+     * 2. Subtracted by shadow intensity at this vertex
+     * 3. Then: lightness = lightStrength * (originalLightness) >> 7
+     *
+     * For HD mode, it also applies directional lighting:
+     * - Computes dot(normal, sunDirection)
+     * - Multiplies final RGB by this factor
+     *
+     * This function provides a simplified version that modifies lightness based
+     * on the dot product between the surface normal and light direction.
+     *
+     * @param packedHsl The packed HSL color (16-bit RS format)
+     * @param lightFactor Light intensity factor (0.0 = dark, 1.0 = full, >1.0 = brighter)
+     * @return Modified packed HSL color with adjusted lightness
+     */
+    fun applyLightToHsl(packedHsl: Int, lightFactor: Float): Int {
+        if (packedHsl == 0) return 0
+
+        // Extract HSL components
+        val hue = packedHsl and 0xfc00        // Bits 10-15 (masked to keep position)
+        val saturation = packedHsl and 0x380  // Bits 7-9 (masked to keep position)
+        val lightness = packedHsl and 0x7f    // Bits 0-6 (0-127 range)
+
+        // Apply light factor to lightness
+        // RS client uses: lightness = lightStrength * (color.lightness) >> 7
+        // where lightStrength is typically 74 (base) minus shadow intensity
+        // So lightStrength ranges roughly from 0 to 74
+        // This means the multiplier is roughly 0.0 to 0.58
+        //
+        // We scale lightFactor to match: 0.5 = ambient, 1.0 = full light
+        // newLightness = lightness * lightFactor, clamped to [2, 126]
+        var newLightness = (lightness * lightFactor).toInt()
+
+        // Clamp to valid range (RS client uses 2-126 to avoid pure black/white)
+        if (newLightness < 2) {
+            newLightness = 2
+        } else if (newLightness > 126) {
+            newLightness = 126
+        }
+
+        // Repack HSL with modified lightness
+        return hue or saturation or newLightness
+    }
+
+    /**
+     * Calculate terrain lighting factor based on surface normal and light direction.
+     * This matches the RS client's per-vertex lighting calculation EXACTLY.
+     *
+     * The RS client (GroundGL.kt lines 98-107) computes normals from height gradients:
+     * - lightingX = heightDeltaHorizontal * intensity
+     * - lightingY = (-512 * 2) * intensity (points downward in RS coords)
+     * - lightingZ = heightDeltaVertical * intensity
+     *
+     * Then applies directional lighting (lines 453-456):
+     * - dot = sunDirection.x * normalX + sunDirection.y * normalY + sunDirection.z * normalZ
+     * - factor = sunBrightness + dot * (dot > 0 ? brightFactor : darkFactor)
+     *
+     * RS default lighting parameters (from EnvironmentManager.kt line 160):
+     * - Sun position: (-200, -240, -200) -> normalized: (-0.53, -0.64, -0.53)
+     * - sunBrightness: ~0.9 (from 0.7 + brightness*0.1 + randomOffset)
+     * - brightFactor (aFloat8433): 0.69921875 (light-facing surfaces)
+     * - darkFactor (aFloat8434): 1.2 (shadow-facing surfaces)
+     *
+     * @param normalX Surface normal X component
+     * @param normalY Surface normal Y component (positive = up in OpenGL)
+     * @param normalZ Surface normal Z component
+     * @param lightDirX Light direction X (RS default: -0.53)
+     * @param lightDirY Light direction Y (RS default: -0.64, pointing down toward ground)
+     * @param lightDirZ Light direction Z (RS default: -0.53)
+     * @param sunBrightness Base ambient brightness (RS default: ~0.9)
+     * @param brightFactor Factor for lit surfaces (RS default: 0.7)
+     * @param darkFactor Factor for shadowed surfaces (RS default: 1.2)
+     * @return Light factor to apply to lightness
+     */
+    fun calculateTerrainLightFactor(
+        normalX: Float, normalY: Float, normalZ: Float,
+        lightDirX: Float = -0.53f, lightDirY: Float = -0.64f, lightDirZ: Float = -0.53f,
+        sunBrightness: Float = 0.9f,
+        brightFactor: Float = 0.7f,
+        darkFactor: Float = 1.2f
+    ): Float {
+        // Dot product between normal and light direction
+        // In OpenGL: normal.Y is up, light direction should point toward the surface
+        // RS uses negative Y for the sun direction (sun above, shining down)
+        val dot = normalX * lightDirX + normalY * lightDirY + normalZ * lightDirZ
+
+        // RS client formula: factor = sunBrightness + dot * (dot > 0 ? brightFactor : darkFactor)
+        // When dot > 0: surface faces toward light -> brighter
+        // When dot < 0: surface faces away from light -> darker
+        // The asymmetric factors create more contrast: shadows are darker than highlights are bright
+        val factor = if (dot > 0f) {
+            sunBrightness + dot * brightFactor
+        } else {
+            sunBrightness + dot * darkFactor
+        }
+
+        // Clamp to reasonable range to avoid over-bright or too-dark
+        return factor.coerceIn(0.4f, 1.3f)
+    }
+
+    /**
+     * Calculate terrain lighting with separate parameters for more control.
+     * This version matches the older API signature for backward compatibility.
+     *
+     * @param normalX Surface normal X component
+     * @param normalY Surface normal Y component
+     * @param normalZ Surface normal Z component
+     * @param lightDirX Light direction X (default: RS-style -0.53)
+     * @param lightDirY Light direction Y (default: RS-style -0.64)
+     * @param lightDirZ Light direction Z (default: RS-style -0.53)
+     * @param ambientFactor Minimum light factor (maps to sunBrightness)
+     * @param diffuseStrength Diffuse strength (maps to brightFactor)
+     * @return Light factor to apply to lightness
+     */
+    fun calculateTerrainLightFactorSimple(
+        normalX: Float, normalY: Float, normalZ: Float,
+        lightDirX: Float, lightDirY: Float, lightDirZ: Float,
+        ambientFactor: Float,
+        diffuseStrength: Float
+    ): Float {
+        // This version provides a simpler ambient+diffuse model
+        // while still using the correct RS-style light direction
+        val dot = normalX * lightDirX + normalY * lightDirY + normalZ * lightDirZ
+
+        // For the simple model: ambient + max(0, dot) * diffuse
+        // This gives a gentler transition than the RS formula
+        val diffuse = if (dot > 0) dot * diffuseStrength else dot * diffuseStrength * 0.5f
+
+        return (ambientFactor + diffuse).coerceIn(0.4f, 1.2f)
     }
 }

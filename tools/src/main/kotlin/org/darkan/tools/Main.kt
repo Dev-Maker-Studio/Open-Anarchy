@@ -33,6 +33,9 @@ fun main(args: Array<String>) {
         "fountain" -> {
             debugFountain(cache)
         }
+        "contour", "contour3" -> {
+            scanContourType3(cache)
+        }
         "help", "-h", "--help" -> {
             printHelp()
         }
@@ -156,6 +159,89 @@ private fun analyzeModelFaces(def: org.darkan.tools.cache.model.ModelDefinition)
         }
         println("      Bounds X: [$minX, $maxX] Y: [$minY, $maxY] Z: [$minZ, $maxZ]")
     }
+}
+
+/**
+ * Scan the cache for objects with groundContourType=3 (hillChange terrain alignment).
+ */
+private fun scanContourType3(cache: Cache) {
+    println("\n=== Scanning for objects with groundContourType=3 (hillChange) ===")
+
+    val objects = Cache.objects
+    println("Total objects: ${objects.size}")
+
+    // Count by groundContourType
+    val countByType = mutableMapOf<Int, Int>()
+    val type3ObjectIds = mutableSetOf<Int>()
+
+    for (obj in objects) {
+        val type = obj.groundContourType.toInt()
+        countByType[type] = (countByType[type] ?: 0) + 1
+        if (type == 3) {
+            type3ObjectIds.add(obj.id)
+        }
+    }
+
+    println("\ngroundContourType distribution:")
+    for ((type, count) in countByType.toSortedMap()) {
+        val typeName = when (type) {
+            0 -> "none"
+            1 -> "vertex deform"
+            2 -> "partial"
+            3 -> "hillChange (tilt)"
+            4 -> "next level"
+            5 -> "stretch"
+            else -> "unknown"
+        }
+        println("  Type $type ($typeName): $count objects")
+    }
+
+    println("\n=== Objects with groundContourType=3 (first 20) ===")
+    for (objId in type3ObjectIds.take(20)) {
+        val obj = objects[objId]
+        println("  ID ${obj.id}: ${obj.name}, modifier=${obj.groundContourModifier}")
+    }
+
+    if (type3ObjectIds.size > 20) {
+        println("  ... and ${type3ObjectIds.size - 20} more")
+    }
+
+    // Now scan regions to find ones containing type 3 objects
+    println("\n=== Scanning regions for groundContourType=3 objects ===")
+    org.darkan.core.map.MapXteas.load()
+
+    val regionsWithType3 = mutableMapOf<Int, Int>() // regionId -> count
+
+    // Scan all valid regions
+    for (regionX in 0 until 256) {
+        for (regionY in 0 until 256) {
+            val regionData = try {
+                org.darkan.core.map.RegionLoader.loadRegion(cache, regionX, regionY)
+            } catch (e: Exception) {
+                null
+            }
+            if (regionData == null) continue
+
+            val type3Count = regionData.objects.count { type3ObjectIds.contains(it.id) }
+            if (type3Count > 0) {
+                val regionId = (regionX shl 8) or regionY
+                regionsWithType3[regionId] = type3Count
+            }
+        }
+    }
+
+    println("\nRegions containing groundContourType=3 objects (first 20):")
+    for ((regionId, count) in regionsWithType3.entries.sortedByDescending { it.value }.take(20)) {
+        val regionX = regionId shr 8
+        val regionY = regionId and 0xFF
+        println("  Region ($regionX, $regionY) ID=$regionId: $count type 3 objects")
+    }
+
+    if (regionsWithType3.size > 20) {
+        println("  ... and ${regionsWithType3.size - 20} more regions")
+    }
+
+    println("\n=== Scan complete ===")
 }
 
 private fun printHelp() {

@@ -18,15 +18,22 @@ import world.gregs.voidps.cache.definition.data.ObjectDefinition
  * The offset field contains the definition's model offset (offsetX, offsetY, offsetZ)
  * converted to OpenGL coordinates. These offsets should be applied AFTER rotation
  * to match the client's behavior.
+ *
+ * Terrain alignment is applied for objects with groundContourType 1, 2, or 3:
+ * - Type 1: Full vertex displacement (approximated with rotation)
+ * - Type 2: Partial vertex displacement (approximated with rotation)
+ * - Type 3: Hill change (exact rotation implementation)
+ * All three types cause the object to tilt to match the terrain slope.
  */
 data class ObjectInstance(
     val mapObject: MapObject,
     val definition: ObjectDefinition,
     val modelIds: List<Int>,
     val worldPosition: Vector3f,
-    val rotation: Float,  // Radians
+    val rotation: Float,  // Y-axis rotation in radians
     val scale: Vector3f,
-    val offset: Vector3f = Vector3f()  // Model offset applied after rotation
+    val offset: Vector3f = Vector3f(),  // Model offset applied after rotation
+    val terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE  // Terrain tilt
 )
 
 /**
@@ -337,6 +344,27 @@ object ObjectRenderer {
             // Calculate wall decoration offset if applicable
             val decorOffset = getWallDecorationOffset(obj.shape, obj.rotation, def.decorDisplacement)
 
+            // Calculate terrain alignment for objects with groundContourType 1, 2, or 3
+            // Must pass the same averageHeight that the object is positioned at
+            val terrainAlignment = if (tileHeights != null) {
+                TerrainAligner.calculateObjectTilt(
+                    localTileX = localTileX,
+                    localTileY = localTileY,
+                    sizeX = sizeX,
+                    sizeY = sizeY,
+                    groundContourType = def.groundContourType.toInt(),
+                    groundContourModifier = def.groundContourModifier,
+                    averageHeight = terrainHeight,  // Pass the same height object is positioned at
+                    heightSampler = { tx, ty ->
+                        val clampedX = tx.coerceIn(0, 63)
+                        val clampedY = ty.coerceIn(0, 63)
+                        tileHeights.invoke(clampedX, clampedY, plane)
+                    }
+                )
+            } else {
+                TerrainAligner.AlignmentResult.NONE
+            }
+
             val instance = ObjectInstance(
                 mapObject = obj,
                 definition = def,
@@ -349,7 +377,8 @@ object ObjectRenderer {
                     defOffsetX + decorOffset.x,
                     -defOffsetY + decorOffset.y,
                     -defOffsetZ + decorOffset.z
-                )
+                ),
+                terrainAlignment = terrainAlignment
             )
 
             instancesByPlane.getOrPut(plane) { mutableListOf() }.add(instance)
@@ -483,6 +512,27 @@ object ObjectRenderer {
             // Calculate wall decoration offset if applicable
             val decorOffset = getWallDecorationOffset(obj.shape, obj.rotation, def.decorDisplacement)
 
+            // Calculate terrain alignment for objects with groundContourType 1, 2, or 3
+            // Must pass the same averageHeight that the object is positioned at
+            val terrainAlignment = if (tileHeights != null) {
+                TerrainAligner.calculateObjectTilt(
+                    localTileX = localTileX,
+                    localTileY = localTileY,
+                    sizeX = sizeX,
+                    sizeY = sizeY,
+                    groundContourType = def.groundContourType.toInt(),
+                    groundContourModifier = def.groundContourModifier,
+                    averageHeight = terrainHeight,  // Pass the same height object is positioned at
+                    heightSampler = { tx, ty ->
+                        val clampedX = tx.coerceIn(0, 63)
+                        val clampedY = ty.coerceIn(0, 63)
+                        tileHeights.invoke(clampedX, clampedY)
+                    }
+                )
+            } else {
+                TerrainAligner.AlignmentResult.NONE
+            }
+
             instances.add(ObjectInstance(
                 mapObject = obj,
                 definition = def,
@@ -495,7 +545,8 @@ object ObjectRenderer {
                     defOffsetX + decorOffset.x,
                     -defOffsetY + decorOffset.y,
                     -defOffsetZ + decorOffset.z
-                )
+                ),
+                terrainAlignment = terrainAlignment
             ))
         }
 
@@ -567,10 +618,12 @@ object ObjectRenderer {
      * Add object instances to an InstanceManager for rendering.
      *
      * Transform order matches the client:
-     * 1. Scale by resizeX/Y/Z
-     * 2. Rotate around Y axis
-     * 3. Apply definition offset (offsetX/Y/Z) AFTER rotation
-     * 4. Translate to world position
+     * 1. Rotate around Y axis (object orientation)
+     * 2. Apply terrain tilt (X and Z rotations) for groundContourType=3 objects
+     * 3. Scale by resizeX/Y/Z
+     * 4. Apply definition offset (offsetX/Y/Z) AFTER rotation
+     * 5. Apply terrain height adjustment
+     * 6. Translate to world position
      *
      * @param instanceManager The instance manager
      * @param instances List of ObjectInstance from createInstances()
@@ -586,14 +639,27 @@ object ObjectRenderer {
                 if (!instanceManager.isModelRegistered(modelId)) continue
 
                 // Build model matrix matching client order:
-                // Client applies to model vertices in order: Rotate -> Scale -> Offset
-                // Then model is placed at world position
-                // Matrix operations are right-to-left
+                // RS applies: RotateY -> TiltX -> TiltZ (in that order on vertices)
+                // Matrix equivalent (right-to-left): TiltZ * TiltX * RotateY
                 modelMatrix.identity()
-                    .translate(instance.worldPosition)  // 4. Move to world position
-                    .translate(instance.offset)         // 3. Apply definition offset
-                    .scale(instance.scale)              // 2. Scale
-                    .rotateY(instance.rotation)         // 1. Rotate
+                    .translate(instance.worldPosition)  // 6. Move to world position
+
+                // Apply terrain alignment height adjustment
+                if (instance.terrainAlignment.needsAlignment()) {
+                    modelMatrix.translate(0f, instance.terrainAlignment.heightAdjustment, 0f)
+                }
+
+                modelMatrix
+                    .translate(instance.offset)         // 5. Apply definition offset
+                    .scale(instance.scale)              // 4. Scale
+
+                // Apply terrain tilt rotations
+                if (instance.terrainAlignment.needsAlignment()) {
+                    modelMatrix.rotateZ(instance.terrainAlignment.tiltZ)  // 3. Roll tilt
+                    modelMatrix.rotateX(instance.terrainAlignment.tiltX)  // 2. Pitch tilt
+                }
+
+                modelMatrix.rotateY(instance.rotation)  // 1. Object Y rotation
 
                 instanceManager.addInstance(modelId, modelMatrix)
             }

@@ -2,6 +2,8 @@ package org.darkan.tools.viewer
 
 import imgui.ImGui
 import imgui.flag.ImGuiWindowFlags
+import imgui.type.ImBoolean
+import imgui.type.ImFloat
 import imgui.type.ImInt
 import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionData
@@ -9,6 +11,7 @@ import org.darkan.core.map.RegionLoader
 import org.darkan.tools.cache.map.MapScene
 import org.darkan.tools.cache.map.ObjectInstance
 import org.darkan.tools.cache.map.ObjectRenderer
+import org.darkan.tools.cache.map.TerrainAligner
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
@@ -17,7 +20,6 @@ import org.darkan.tools.engine.render.Camera
 import org.darkan.tools.engine.render.InstanceManager
 import org.darkan.tools.engine.render.ShaderProgram
 import org.darkan.tools.engine.render.UniformBuffers
-import org.darkan.tools.engine.scene.SceneNode
 import org.darkan.tools.engine.window.WindowConfig
 import org.darkan.tools.ui.DebugPanel
 import org.darkan.tools.ui.ImGuiLayer
@@ -110,7 +112,6 @@ class MapViewer(
     )
 
     // Single-region support
-    private var singleRegionNode: SceneNode? = null
     private var singleRegionTerrainBatches: TerrainLoader.TerrainMeshes? = null
     private var singleRegionInstanceManager: InstanceManager? = null
     private var singleRegionObjects: List<ObjectInstance> = emptyList()
@@ -176,29 +177,30 @@ class MapViewer(
     }
 
     private fun loadUBOShaders() {
-        // Load UBO color shader (for terrain)
-        val colorVert = loadShaderSource("/shaders/ubo_color.vert")
-        val colorFrag = loadShaderSource("/shaders/ubo_color.frag")
+        // Load terrain color shader with RGB vertex colors
+        val terrainColorVert = loadShaderSource("/shaders/terrain_color.vert")
+        val terrainColorFrag = loadShaderSource("/shaders/terrain_color.frag")
 
         uboColorShader = ShaderProgram.createWithUniforms(
-            colorVert, colorFrag,
+            terrainColorVert, terrainColorFrag,
             "model"
         )
         uniformBuffers.bindToShader(uboColorShader)
 
-        // Load UBO textured shader (for terrain)
-        val texturedVert = loadShaderSource("/shaders/ubo_textured.vert")
-        val texturedFrag = loadShaderSource("/shaders/ubo_textured.frag")
+        // Load terrain textured shader with RGB vertex colors
+        val terrainTexturedVert = loadShaderSource("/shaders/terrain_textured.vert")
+        val terrainTexturedFrag = loadShaderSource("/shaders/terrain_textured.frag")
 
         uboTexturedShader = ShaderProgram.createWithUniforms(
-            texturedVert, texturedFrag,
+            terrainTexturedVert, terrainTexturedFrag,
             "model", "textureSampler"
         )
         uniformBuffers.bindToShader(uboTexturedShader)
 
-        // Load instanced shaders (for objects)
+        // Load instanced shaders (for objects - use standard RGB shaders)
         val instancedColorVert = loadShaderSource("/shaders/ubo_instanced.vert")
-        instancedColorShader = ShaderProgram.create(instancedColorVert, colorFrag)
+        val instancedColorFrag = loadShaderSource("/shaders/ubo_color.frag")
+        instancedColorShader = ShaderProgram.create(instancedColorVert, instancedColorFrag)
         uniformBuffers.bindToShader(instancedColorShader)
 
         val instancedTexturedVert = loadShaderSource("/shaders/ubo_instanced_textured.vert")
@@ -323,8 +325,14 @@ class MapViewer(
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         }
 
+        // Disable face culling for terrain (two-sided rendering)
+        renderSystem.disableCullFace()
+
         // Render terrain (non-instanced)
         mapScene.renderTerrain(uboColorShader)
+
+        // Restore GL state for objects
+        renderSystem.enableCullFace()
 
         // Render objects (instanced)
         mapScene.renderObjects(
@@ -352,12 +360,15 @@ class MapViewer(
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         }
 
-        // Render terrain - try batched meshes first, fall back to single mesh
+        // Render terrain with vertex color blending (no alpha needed - colors match at boundaries)
         val terrainBatches = singleRegionTerrainBatches
         if (terrainBatches != null) {
             val modelMatrix = Matrix4f().identity()
 
-            // Render color mesh (untextured tiles)
+            // Disable face culling for terrain (two-sided rendering)
+            renderSystem.disableCullFace()
+
+            // Render color mesh (untextured tiles) with RGB colors
             terrainBatches.colorMesh?.let { mesh ->
                 uboColorShader.bind()
                 uboColorShader.setUniform("model", modelMatrix)
@@ -367,9 +378,6 @@ class MapViewer(
             // Render textured terrain batches
             val batches = terrainBatches.texturedBatches
             if (batches.isNotEmpty()) {
-                renderSystem.enableBlending()
-                renderSystem.disableCullFace()
-
                 uboTexturedShader.bind()
                 uboTexturedShader.setUniform("model", modelMatrix)
                 uboTexturedShader.setUniform("textureSampler", 0)
@@ -382,16 +390,10 @@ class MapViewer(
                 }
 
                 TextureLoader.unbindTexture()
-                renderSystem.disableBlending()
-                renderSystem.enableCullFace()
             }
-        } else {
-            // Fallback to old single mesh rendering
-            singleRegionNode?.let { node ->
-                uboColorShader.bind()
-                uboColorShader.setUniform("model", Matrix4f().identity())
-                node.mesh?.render()
-            }
+
+            // Restore GL state
+            renderSystem.enableCullFace()
         }
 
         // Render objects
@@ -416,14 +418,36 @@ class MapViewer(
             val combinedModelId = ObjectRenderer.getCombinedModelId(obj.modelIds)
 
             // Build transform matrix matching client order:
-            // Client applies to model vertices in order: Rotate -> Scale -> Offset
-            // Then model is placed at world position
+            // RS client applies to model vertices: Rotate Y -> Terrain Tilt -> Scale -> Offset
+            // Then model is placed at world position with height adjustment
             // Matrix operations are right-to-left, so we specify them in reverse order
+            //
+            // For terrain alignment (groundContourType=3), the client's hillChange applies:
+            // 1. X-axis rotation (pitch tilt based on N/S slope)
+            // 2. Z-axis rotation (roll tilt based on E/W slope)
+            // 3. Y translation (height adjustment to sit on lowest corner)
             tempModelMatrix.identity()
-                .translate(obj.worldPosition)        // 4. Move to world position
-                .translate(obj.offset)               // 3. Apply definition offset
-                .scale(obj.scale)                    // 2. Scale
-                .rotateY(obj.rotation)               // 1. Rotate
+                .translate(obj.worldPosition)        // 6. Move to world position
+
+            // Apply terrain alignment (height adjustment + tilt rotations)
+            if (obj.terrainAlignment.needsAlignment()) {
+                // Height adjustment from terrain alignment (after world position)
+                tempModelMatrix.translate(0f, obj.terrainAlignment.heightAdjustment, 0f)
+            }
+
+            tempModelMatrix
+                .translate(obj.offset)               // 5. Apply definition offset
+                .scale(obj.scale)                    // 4. Scale
+
+            // Apply terrain tilt rotations (after Y rotation in application order)
+            // RS applies: RotateY -> TiltX -> TiltZ (in that order on vertices)
+            // Matrix equivalent (right-to-left): TiltZ * TiltX * RotateY
+            if (obj.terrainAlignment.needsAlignment()) {
+                tempModelMatrix.rotateZ(obj.terrainAlignment.tiltZ)  // 3. Roll tilt (last in app order)
+                tempModelMatrix.rotateX(obj.terrainAlignment.tiltX)  // 2. Pitch tilt
+            }
+
+            tempModelMatrix.rotateY(obj.rotation)   // 1. Object Y rotation (first in app order)
 
             if (instanceManager.addInstance(combinedModelId, tempModelMatrix)) {
                 addedCount++
@@ -582,6 +606,241 @@ class MapViewer(
                 showTerrain = !showTerrain
             }
 
+            // Terrain blending toggle
+            val blendingEnabled = ImBoolean(TerrainLoader.enableBlending)
+            if (ImGui.checkbox("Terrain Blending", blendingEnabled)) {
+                TerrainLoader.enableBlending = blendingEnabled.get()
+                println("[MapViewer] Terrain blending: ${if (blendingEnabled.get()) "ENABLED" else "DISABLED"}")
+                // Reload terrain to apply the change
+                TerrainLoader.clearCache()
+                if (!useMultiRegion) {
+                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                } else {
+                    // Force multi-region reload
+                    mapScene.cleanup()
+                    mapScene.initialize()
+                    jumpToRegion(currentRegionX, currentRegionY)
+                }
+            }
+
+            // Overlay toggle (for debugging underlay-only terrain)
+            val overlaysEnabled = ImBoolean(TerrainLoader.enableOverlays)
+            if (ImGui.checkbox("Show Overlays", overlaysEnabled)) {
+                TerrainLoader.enableOverlays = overlaysEnabled.get()
+                println("[MapViewer] Overlay rendering: ${if (overlaysEnabled.get()) "ENABLED" else "DISABLED"}")
+                // Reload terrain to apply the change
+                TerrainLoader.clearCache()
+                if (!useMultiRegion) {
+                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                } else {
+                    mapScene.cleanup()
+                    mapScene.initialize()
+                    jumpToRegion(currentRegionX, currentRegionY)
+                }
+            }
+
+            // Color noise toggle - adds subtle per-vertex brightness variation like RS client
+            val colorNoiseEnabled = ImBoolean(TerrainLoader.enableColorNoise)
+            if (ImGui.checkbox("Color Noise", colorNoiseEnabled)) {
+                TerrainLoader.enableColorNoise = colorNoiseEnabled.get()
+                println("[MapViewer] Color noise: ${if (colorNoiseEnabled.get()) "ENABLED" else "DISABLED"}")
+                // Reload terrain to apply the change
+                TerrainLoader.clearCache()
+                if (!useMultiRegion) {
+                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                } else {
+                    mapScene.cleanup()
+                    mapScene.initialize()
+                    jumpToRegion(currentRegionX, currentRegionY)
+                }
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Adds subtle per-vertex brightness variation\nlike the RS client (+-1.5%% noise)")
+            }
+
+            // Terrain lighting toggle
+            val lightingEnabled = ImBoolean(TerrainLoader.enableLighting)
+            if (ImGui.checkbox("Terrain Lighting", lightingEnabled)) {
+                TerrainLoader.enableLighting = lightingEnabled.get()
+                println("[MapViewer] Terrain lighting: ${if (lightingEnabled.get()) "ENABLED" else "DISABLED"}")
+                TerrainLoader.clearCache()
+                if (!useMultiRegion) {
+                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                } else {
+                    mapScene.cleanup()
+                    mapScene.initialize()
+                    jumpToRegion(currentRegionX, currentRegionY)
+                }
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Applies RS-style per-vertex lighting based on\nterrain normals and sun direction")
+            }
+
+            // Lighting parameters section (collapsible)
+            if (TerrainLoader.enableLighting && ImGui.collapsingHeader("Lighting Parameters")) {
+                ImGui.indent()
+
+                // Sun direction sliders
+                ImGui.text("Light Direction")
+                val lightDirX = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_X)
+                val lightDirY = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_Y)
+                val lightDirZ = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_Z)
+
+                var lightingChanged = false
+                ImGui.setNextItemWidth(100f)
+                if (ImGui.sliderFloat("Dir X", lightDirX, -1f, 1f)) {
+                    TerrainLoader.LIGHT_DIRECTION_X = lightDirX[0]
+                    lightingChanged = true
+                }
+                ImGui.setNextItemWidth(100f)
+                if (ImGui.sliderFloat("Dir Y", lightDirY, -1f, 1f)) {
+                    TerrainLoader.LIGHT_DIRECTION_Y = lightDirY[0]
+                    lightingChanged = true
+                }
+                ImGui.setNextItemWidth(100f)
+                if (ImGui.sliderFloat("Dir Z", lightDirZ, -1f, 1f)) {
+                    TerrainLoader.LIGHT_DIRECTION_Z = lightDirZ[0]
+                    lightingChanged = true
+                }
+
+                ImGui.spacing()
+
+                // RS lighting parameters
+                ImGui.text("RS Lighting Formula:")
+                ImGui.textWrapped("factor = sunBrightness + dot * (dot>0 ? bright : dark)")
+
+                val sunBrightness = floatArrayOf(TerrainLoader.SUN_BRIGHTNESS)
+                val brightFactor = floatArrayOf(TerrainLoader.BRIGHT_FACTOR)
+                val darkFactor = floatArrayOf(TerrainLoader.DARK_FACTOR)
+
+                ImGui.setNextItemWidth(100f)
+                if (ImGui.sliderFloat("Sun Brightness", sunBrightness, 0.5f, 1.5f)) {
+                    TerrainLoader.SUN_BRIGHTNESS = sunBrightness[0]
+                    lightingChanged = true
+                }
+                if (ImGui.isItemHovered()) {
+                    ImGui.setTooltip("Base ambient brightness (default: 1.2)")
+                }
+
+                ImGui.setNextItemWidth(100f)
+                if (ImGui.sliderFloat("Bright Factor", brightFactor, 0.2f, 1.5f)) {
+                    TerrainLoader.BRIGHT_FACTOR = brightFactor[0]
+                    lightingChanged = true
+                }
+                if (ImGui.isItemHovered()) {
+                    ImGui.setTooltip("Factor for lit surfaces (default: 0.865)")
+                }
+
+                ImGui.setNextItemWidth(100f)
+                if (ImGui.sliderFloat("Dark Factor", darkFactor, 0.5f, 2.0f)) {
+                    TerrainLoader.DARK_FACTOR = darkFactor[0]
+                    lightingChanged = true
+                }
+                if (ImGui.isItemHovered()) {
+                    ImGui.setTooltip("Factor for shadowed surfaces (default: 0.814)")
+                }
+
+                // Reset to defaults button
+                if (ImGui.button("Reset to Defaults")) {
+                    TerrainLoader.LIGHT_DIRECTION_X = 0.163f
+                    TerrainLoader.LIGHT_DIRECTION_Y = 0.070f
+                    TerrainLoader.LIGHT_DIRECTION_Z = 1.00f
+                    TerrainLoader.SUN_BRIGHTNESS = 1.2f
+                    TerrainLoader.BRIGHT_FACTOR = 0.865f
+                    TerrainLoader.DARK_FACTOR = 0.814f
+                    lightingChanged = true
+                }
+
+                // Reload terrain if parameters changed
+                if (lightingChanged) {
+                    TerrainLoader.clearCache()
+                    if (!useMultiRegion) {
+                        loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                    } else {
+                        mapScene.cleanup()
+                        mapScene.initialize()
+                        jumpToRegion(currentRegionX, currentRegionY)
+                    }
+                }
+
+                ImGui.unindent()
+            }
+
+            ImGui.separator()
+
+            // Terrain alignment toggle (for objects with groundContourType=3)
+            val terrainAlignEnabled = ImBoolean(TerrainAligner.enabled)
+            if (ImGui.checkbox("Terrain Alignment", terrainAlignEnabled)) {
+                TerrainAligner.enabled = terrainAlignEnabled.get()
+                println("[MapViewer] Terrain alignment: ${if (terrainAlignEnabled.get()) "ENABLED" else "DISABLED"}")
+                // Reload objects to apply the change
+                if (!useMultiRegion) {
+                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                } else {
+                    mapScene.cleanup()
+                    mapScene.initialize()
+                    jumpToRegion(currentRegionX, currentRegionY)
+                }
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Tilt objects to match terrain slopes\n(RS groundContourType=3 / hillChange)")
+            }
+
+            // Tilt negation toggles (for coordinate system debugging)
+            if (TerrainAligner.enabled && ImGui.collapsingHeader("Tilt Debug")) {
+                ImGui.indent()
+
+                // Show debug stats
+                ImGui.text("Stats: ${TerrainAligner.getDebugStats()}")
+
+                val negateXTilt = ImBoolean(TerrainAligner.negateXTilt)
+                if (ImGui.checkbox("Negate X Tilt", negateXTilt)) {
+                    TerrainAligner.negateXTilt = negateXTilt.get()
+                    println("[MapViewer] Negate X tilt: ${if (negateXTilt.get()) "YES" else "NO"}")
+                    if (!useMultiRegion) {
+                        loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                    } else {
+                        mapScene.cleanup()
+                        mapScene.initialize()
+                        jumpToRegion(currentRegionX, currentRegionY)
+                    }
+                }
+                if (ImGui.isItemHovered()) {
+                    ImGui.setTooltip("Negate X-axis tilt (pitch) for coordinate system fix")
+                }
+
+                val negateZTilt = ImBoolean(TerrainAligner.negateZTilt)
+                if (ImGui.checkbox("Negate Z Tilt", negateZTilt)) {
+                    TerrainAligner.negateZTilt = negateZTilt.get()
+                    println("[MapViewer] Negate Z tilt: ${if (negateZTilt.get()) "YES" else "NO"}")
+                    if (!useMultiRegion) {
+                        loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                    } else {
+                        mapScene.cleanup()
+                        mapScene.initialize()
+                        jumpToRegion(currentRegionX, currentRegionY)
+                    }
+                }
+                if (ImGui.isItemHovered()) {
+                    ImGui.setTooltip("Negate Z-axis tilt (roll) for coordinate system fix")
+                }
+
+                // Button to enable debug logging
+                if (ImGui.button("Enable Debug Logging")) {
+                    TerrainAligner.enableDebug(true)
+                    println("[MapViewer] Terrain alignment debug enabled - reload region to see stats")
+                    if (!useMultiRegion) {
+                        loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                    } else {
+                        mapScene.cleanup()
+                        mapScene.initialize()
+                        jumpToRegion(currentRegionX, currentRegionY)
+                    }
+                }
+
+                ImGui.unindent()
+            }
+
             ImGui.separator()
 
             // Controls help
@@ -632,12 +891,7 @@ class MapViewer(
                 println("  Terrain texture batch: textureId=${batch.textureId}")
             }
         } else {
-            // Fallback to old single mesh if batched loading fails
-            val mesh = TerrainLoader.loadRegionMesh(cache, regionX, regionY, plane)
-            if (mesh != null) {
-                singleRegionNode = SceneNode(mesh = mesh)
-                scene.addNode("terrain", singleRegionNode!!)
-            }
+            println("Failed to load terrain meshes for region ($regionX, $regionY)")
         }
 
         // Load objects
@@ -670,6 +924,13 @@ class MapViewer(
             singleRegionObjects = createLocalObjectInstances(regionData, regionX, regionY, plane)
 
             println("Objects for plane $plane: ${singleRegionObjects.size}")
+
+            // Debug: Count objects by groundContourType
+            val contourTypeCounts = singleRegionObjects.groupBy { it.definition.groundContourType.toInt() }
+                .mapValues { it.value.size }
+            println("  groundContourType distribution: $contourTypeCounts")
+            val alignedCount = singleRegionObjects.count { it.terrainAlignment.needsAlignment() }
+            println("  Objects with terrain alignment: $alignedCount")
 
             // Register models with instance manager
             // Use combined models for multi-model objects (matching RS client behavior)
@@ -730,12 +991,7 @@ class MapViewer(
     }
 
     private fun cleanupSingleRegion() {
-        singleRegionNode?.let {
-            scene.removeNode("terrain")
-            it.cleanup()
-        }
-        singleRegionNode = null
-        // Clean up batched terrain meshes (handled by TerrainLoader cache, just clear reference)
+        // Clear reference to batched terrain meshes (actual cleanup is handled by TerrainLoader cache)
         singleRegionTerrainBatches = null
         singleRegionInstanceManager?.cleanup()
         singleRegionInstanceManager = null
@@ -876,6 +1132,23 @@ class MapViewer(
             // Calculate wall decoration offset if applicable
             val decorOffset = ObjectRenderer.getWallDecorationOffset(obj.shape, obj.rotation, def.decorDisplacement)
 
+            // Calculate terrain alignment for objects with groundContourType 1, 2, or 3
+            // This tilts the object to match the terrain slope
+            val terrainAlignment = TerrainAligner.calculateObjectTilt(
+                localTileX = localTileX,
+                localTileY = localTileY,
+                sizeX = sizeX,
+                sizeY = sizeY,
+                groundContourType = def.groundContourType.toInt(),
+                groundContourModifier = def.groundContourModifier,
+                averageHeight = terrainHeight,  // Pass the same height object is positioned at
+                heightSampler = { tx, ty ->
+                    val clampedX = tx.coerceIn(0, 63)
+                    val clampedY = ty.coerceIn(0, 63)
+                    RegionLoader.getTileInfo(regionData.tiles, clampedX, clampedY, plane).height * heightScale
+                }
+            )
+
             instances.add(ObjectInstance(
                 mapObject = obj,
                 definition = def,
@@ -888,7 +1161,8 @@ class MapViewer(
                     defOffsetX + decorOffset.x,
                     -defOffsetY + decorOffset.y,
                     -defOffsetZ + decorOffset.z
-                )
+                ),
+                terrainAlignment = terrainAlignment
             ))
         }
 
