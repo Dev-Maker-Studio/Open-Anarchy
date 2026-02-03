@@ -66,6 +66,7 @@ interface CullableObject {
  * @param position World position (translation)
  * @param regionId The region this object belongs to
  * @param plane The plane level (0-3)
+ * @param shape The object shape (0-22, used for roof filtering)
  * @param rotation Rotation around Y axis in radians
  * @param scale Scale factors (default 1,1,1)
  * @param offset Model offset applied after rotation (from definition offsetX/Y/Z)
@@ -81,6 +82,7 @@ data class SceneObject(
     override val position: Vector3f,
     override val regionId: Int,
     override val plane: Int = 0,
+    val shape: Int = 0,
     val rotation: Float = 0f,
     val scale: Vector3f = Vector3f(1f, 1f, 1f),
     val offset: Vector3f = Vector3f(0f, 0f, 0f),
