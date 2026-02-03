@@ -112,9 +112,12 @@ class MapScene(
     private var centerRegionX = -1
     private var centerRegionY = -1
 
-    // Current plane being rendered
+    // Current plane being rendered (for terrain and bridge shifting)
     var currentPlane = 0
         private set
+
+    // Whether to render roof shapes (12-21)
+    var showRoofs = true
 
     // Last culling result
     private var lastCullResult: CullResult? = null
@@ -135,24 +138,23 @@ class MapScene(
     }
 
     /**
-     * Determine if an object should be rendered on the current view plane.
-     * Implements bridge shifting (linkBelow): objects from plane N+1 are also
-     * rendered on plane N when the bridge flag (0x2) is set on plane 1 at that tile.
+     * Determine if an object should be rendered.
+     *
+     * Multi-plane rendering: ALL objects from all planes are rendered, each using
+     * its own plane's height data for positioning.
+     *
+     * Roof filtering: When showRoofs is false, objects with roof shapes (12-21) are skipped.
+     *
+     * Bridge shifting (linkBelow): When the bridge flag (0x2) is set on plane 1,
+     * objects at that tile use the height of the plane below.
      */
-    private fun shouldRenderObject(sceneObj: SceneObject, viewPlane: Int): Boolean {
-        // Normal case: object is on the current plane
-        if (sceneObj.plane == viewPlane) return true
+    private fun shouldRenderObject(sceneObj: SceneObject): Boolean {
+        // Roof shapes (12-21) - skip when showRoofs is false
+        val isRoofShape = sceneObj.shape in 12..21
+        if (!showRoofs && isRoofShape) return false
 
-        // Bridge case: object is on plane above and bridge flag is set
-        if (sceneObj.plane == viewPlane + 1 && viewPlane < 3) {
-            val loaded = loadedRegions[sceneObj.regionId] ?: return false
-            // Convert world position back to local tile coordinates
-            val localX = ((sceneObj.position.x / tileSize) - loaded.regionX * 64).toInt()
-            val localY = ((-sceneObj.position.z / tileSize) - loaded.regionY * 64).toInt()
-            return hasBridgeFlag(loaded.data, localX, localY)
-        }
-
-        return false
+        // Multi-plane rendering: render ALL objects from all planes
+        return true
     }
 
     /**
@@ -316,13 +318,14 @@ class MapScene(
         // Prepare instance data
         instanceManager.prepareFrame()
 
-        // Add visible objects to instance batches (filter by current plane)
-        // Bridge shifting: also include objects from plane+1 at bridge locations
+        // Add visible objects to instance batches
+        // Multi-plane rendering: render ALL objects from all planes
+        // Roof filtering: skip roof shapes (12-21) when showRoofs is false
         var addedInstances = 0
         for (obj in cullResult.visibleObjects) {
             val sceneObj = obj as? SceneObject ?: continue
-            // Check if object should be rendered on the current plane (including bridge shifting)
-            if (!shouldRenderObject(sceneObj, currentPlane)) continue
+            // Check if object should be rendered (roof filtering)
+            if (!shouldRenderObject(sceneObj)) continue
 
             // Build full transform matrix matching RS client order:
             // RS applies: Mirror -> RotateY -> TiltX -> TiltZ (in that order on vertices)
@@ -453,6 +456,7 @@ class MapScene(
                     position = obj.worldPosition,
                     regionId = regionId,
                     plane = plane,
+                    shape = obj.mapObject.shape,
                     rotation = obj.rotation,
                     scale = obj.scale,
                     offset = obj.offset,

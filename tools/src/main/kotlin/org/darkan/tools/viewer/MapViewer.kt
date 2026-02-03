@@ -41,7 +41,9 @@ import world.gregs.voidps.cache.definition.data.MapDefinition
  * - Multi-region terrain rendering with actual underlay/overlay colors
  * - XTEA-encrypted object loading
  * - Region streaming based on camera position
- * - Plane selection (0-3)
+ * - Multi-plane object rendering (renders ALL planes 0-3 simultaneously)
+ * - Roof toggling (hide shapes 12-21 to see inside buildings)
+ * - Plane selection (0-3) for terrain and bridge shifting
  * - Quick navigation to known locations
  *
  * Controls:
@@ -57,6 +59,7 @@ import world.gregs.voidps.cache.definition.data.MapDefinition
  * - F2: Toggle navigation panel
  * - F3: Wireframe mode
  * - T: Toggle terrain
+ * - R: Toggle roofs (hide to see inside buildings)
  * - G: Toggle grid
  */
 class MapViewer(
@@ -93,6 +96,7 @@ class MapViewer(
     private var showNavPanel = true
     private var showTerrain = true
     private var useMultiRegion = false  // Toggle between single/multi region mode (default: single)
+    private var showRoofs = true  // Toggle roof visibility (shapes 12-21)
 
     // Lighting - brighter values for better model visibility
     private val ambientLight = Vector3f(0.6f, 0.6f, 0.6f)
@@ -249,6 +253,15 @@ class MapViewer(
         if (input.keyboard.isKeyPressed(GLFW_KEY_F2)) showNavPanel = !showNavPanel
         if (input.keyboard.isKeyPressed(GLFW_KEY_F3)) renderSystem.toggleWireframe()
         if (input.keyboard.isKeyPressed(GLFW_KEY_T)) showTerrain = !showTerrain
+        if (input.keyboard.isKeyPressed(GLFW_KEY_R)) {
+            showRoofs = !showRoofs
+            mapScene.showRoofs = showRoofs  // Sync with MapScene for multi-region mode
+            println("[MapViewer] Show roofs: $showRoofs")
+            // Reload objects to apply the change (single-region only - multi-region filters dynamically)
+            if (!useMultiRegion) {
+                loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+            }
+        }
         if (input.keyboard.isKeyPressed(GLFW_KEY_M)) {
             useMultiRegion = !useMultiRegion
             if (useMultiRegion) {
@@ -658,6 +671,21 @@ class MapViewer(
                 showTerrain = !showTerrain
             }
 
+            // Roof visibility toggle
+            val roofsEnabled = ImBoolean(showRoofs)
+            if (ImGui.checkbox("Show Roofs (R)", roofsEnabled)) {
+                showRoofs = roofsEnabled.get()
+                mapScene.showRoofs = showRoofs  // Sync with MapScene for multi-region mode
+                println("[MapViewer] Show roofs: ${if (showRoofs) "ENABLED" else "DISABLED"}")
+                // Reload objects to apply the change (single-region only - multi-region filters dynamically)
+                if (!useMultiRegion) {
+                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                }
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Toggle visibility of roof shapes (12-21)\nHide roofs to see inside buildings")
+            }
+
             // Terrain blending toggle
             val blendingEnabled = ImBoolean(TerrainLoader.enableBlending)
             if (ImGui.checkbox("Terrain Blending", blendingEnabled)) {
@@ -896,7 +924,7 @@ class MapViewer(
             ImGui.separator()
 
             // Controls help
-            ImGui.textWrapped("WASD move, Space/Shift up/down, Right-click look, Arrows navigate, Ctrl fast")
+            ImGui.textWrapped("WASD move, Space/Shift up/down, Right-click look, Arrows navigate, Ctrl fast, R roofs")
         }
         ImGui.end()
     }
@@ -980,7 +1008,12 @@ class MapViewer(
             // Pass terrainData.tiles for height lookups (matches TerrainLoader's computed heights)
             singleRegionObjects = createLocalObjectInstances(regionData, terrainData.tiles, regionX, regionY, plane)
 
-            println("Objects for plane $plane: ${singleRegionObjects.size}")
+            // Debug: Show multi-plane object stats
+            val objectsByPlane = singleRegionObjects.groupBy { it.mapObject.level }
+            val roofCount = singleRegionObjects.count { it.mapObject.shape in 12..21 }
+            println("Multi-plane objects loaded: ${singleRegionObjects.size} total")
+            println("  By plane: " + objectsByPlane.entries.sortedBy { it.key }.joinToString { "P${it.key}=${it.value.size}" })
+            println("  Roof shapes (12-21): $roofCount (showRoofs=$showRoofs)")
 
             // Debug: Count objects by groundContourType
             val contourTypeCounts = singleRegionObjects.groupBy { it.definition.groundContourType.toInt() }
@@ -1249,6 +1282,15 @@ class MapViewer(
      * The terrain mesh is at (0,0) to (63*tileSize, -63*tileSize) in local coords,
      * so objects must be positioned relative to (0,0), not world coords.
      *
+     * Multi-Plane Rendering:
+     * This function renders ALL objects from ALL planes (0-3) simultaneously.
+     * Each object uses its own plane (obj.level) for height sampling, so objects
+     * on higher planes (like rooftops, treetops) appear at the correct elevation.
+     *
+     * Roof Toggling:
+     * When showRoofs is false, objects with roof shapes (12-21) are skipped.
+     * This allows seeing inside buildings by hiding the roofs.
+     *
      * The client places objects using the average height of the 4 corners at the object's
      * position (see SceneGraph.addObject in darkan-bot). For objects spanning multiple tiles,
      * it samples the center tiles of the object's bounding box.
@@ -1257,9 +1299,9 @@ class MapViewer(
      * to ensure objects sit correctly on the terrain surface.
      *
      * Bridge Shifting (linkBelow):
-     * When viewing plane N and the bridge flag (0x2) is set on plane 1 at a tile,
-     * objects from plane N+1 are also rendered. These objects keep their original
-     * plane's height so they appear elevated on the bridge deck.
+     * When the bridge flag (0x2) is set on plane 1 at a tile, objects at that tile
+     * use the height of the plane below (linkBelow behavior). This makes bridge deck
+     * objects (railings, etc.) sit at the lower plane's height.
      * See Scene.linkBelow() in darkan-bot for reference implementation.
      */
     // Debug flag for bridge analysis
@@ -1300,28 +1342,28 @@ class MapViewer(
             // Skip if outside region bounds
             if (localTileX < 0 || localTileX >= 64 || localTileY < 0 || localTileY >= 64) continue
 
-            // Determine if this object should be rendered on the current view plane
-            // Normal case: obj.level == plane
-            // Bridge case: obj.level == plane + 1 AND bridge flag is set at this tile
-            val isBridgeShifted = obj.level == plane + 1 && plane < 3 && hasBridgeFlag(regionData, localTileX, localTileY)
-            val shouldRender = when {
-                obj.level == plane -> true
-                isBridgeShifted -> true
-                else -> false
-            }
-            if (!shouldRender) continue
+            // Roof shapes (12-21) - skip when showRoofs is false
+            val isRoofShape = obj.shape in 12..21
+            if (!showRoofs && isRoofShape) continue
 
-            // Track bridge-shifted objects for debugging
-            if (isBridgeShifted) {
+            // Multi-plane rendering: Render ALL objects from ALL planes (0-3)
+            // Each object uses its own plane's height data for vertical positioning
+            //
+            // Bridge tiles: Objects at bridge locations use their OWN plane's height.
+            // The bridge deck (plane 1) has elevated height data, so objects there
+            // (railings, deck tiles, etc.) render at the elevated bridge height.
+            val isBridgeTile = hasBridgeFlag(regionData, localTileX, localTileY)
+
+            // Track bridge objects for debugging
+            if (isBridgeTile && obj.level > 0) {
                 bridgeShiftedObjects++
-                // Debug only walls
                 if (obj.shape in 0..3) {
                     bridgeShiftedWalls++
                 }
             }
 
             // Use the object's actual plane for height sampling
-            // This keeps bridge objects elevated at their original height
+            // Each object renders at its own plane's height
             val heightPlane = obj.level
 
             val def = ObjectRenderer.getDefinition(obj.id) ?: continue
