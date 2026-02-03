@@ -384,8 +384,11 @@ class MapScene(
         val regionX = regionId shr 8
         val regionY = regionId and 0xff
 
-        // Load region data (terrain + objects)
+        // Load region data from core RegionLoader (has objects and settings)
         val data = RegionLoader.loadRegion(cache, regionX, regionY) ?: return
+
+        // Load terrain data from TerrainLoader (has computed heights)
+        val terrainData = TerrainLoader.loadRegion(cache, regionX, regionY)
 
         // Create batched terrain meshes for all planes
         val terrainMeshesByPlane = arrayOfNulls<TerrainLoader.TerrainMeshes>(4)
@@ -394,11 +397,19 @@ class MapScene(
         }
 
         // Create object instances for ALL planes
+        // Use TerrainLoader's computed heights for consistency with terrain mesh
         val objectsByPlane = ObjectRenderer.createInstancesAllPlanes(
             data.objects,
             regionX,
             regionY
-        ) { x, y, plane -> getTileHeight(data, x, y, plane) }
+        ) { x, y, plane ->
+            if (terrainData != null) {
+                TerrainLoader.getTileHeightScaled(terrainData.tiles, x, y, plane)
+            } else {
+                // Fallback to old method if terrain data unavailable
+                getTileHeight(data, x, y, plane)
+            }
+        }
 
         // Register needed models for all planes
         for ((_, objects) in objectsByPlane) {
@@ -498,14 +509,19 @@ class MapScene(
 
     /**
      * Get tile height at LOCAL coordinates (0-63).
-     * Height scale must match TerrainLoader.HEIGHT_SCALE = 32 * DEFAULT_SCALE
-     * to ensure objects sit correctly on the terrain surface.
+     * This is a FALLBACK method using core RegionLoader's raw heights.
+     *
+     * Prefer using TerrainLoader.getTileHeightScaled() which computes authentic
+     * RS heights (cumulative, multi-octave noise) matching the terrain mesh.
+     *
+     * @deprecated Use TerrainLoader.getTileHeightScaled for heights matching terrain mesh
      */
     private fun getTileHeight(data: RegionData, localX: Int, localY: Int, plane: Int): Float {
         if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) return 0f
 
         val tileInfo = RegionLoader.getTileInfo(data.tiles, localX, localY, plane)
-        // Use same height scale as TerrainLoader: rawHeight * 32 / 128 = rawHeight * 0.25
+        // Old formula: rawHeight * 32 * DEFAULT_SCALE
+        // Note: This doesn't match TerrainLoader's computed heights
         return tileInfo.height * 32f * CoordinateUtil.DEFAULT_SCALE
     }
 

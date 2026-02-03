@@ -3,6 +3,7 @@ package org.darkan.tools.cache.terrain
 import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.util.ColorUtil
 import org.darkan.tools.util.CoordinateUtil
+import org.darkan.tools.util.TileUtils
 import org.joml.Vector3f
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
@@ -288,6 +289,49 @@ object TerrainLoader {
         // So terrain from plane N appears at plane (N-1) after linkBelow
         return sourcePlane > 0 && sourcePlane - 1 == targetPlane
     }
+
+    /**
+     * Get the raw (unscaled) height value at a tile position.
+     *
+     * The height values are computed during region decode using the RS client's exact algorithm:
+     * - Plane 0: procedural noise * 32 or heightByte * 32
+     * - Plane 1+: previousHeight + 960 or previousHeight + heightByte * 32
+     *
+     * Heights are stored as positive values (higher terrain = larger value).
+     *
+     * @param tiles The 4-plane tile array from RegionData
+     * @param localX Local X coordinate (0-63)
+     * @param localY Local Y coordinate (0-63)
+     * @param plane Plane level (0-3)
+     * @return The height in RS units (typically 960-1920+ for ground level)
+     */
+    fun getTileHeight(tiles: Array<Array<Array<TileData>>>, localX: Int, localY: Int, plane: Int): Int {
+        val x = localX.coerceIn(0, 63)
+        val y = localY.coerceIn(0, 63)
+        val p = plane.coerceIn(0, 3)
+        return tiles[p][x][y].height
+    }
+
+    /**
+     * Get the scaled height value at a tile position in OpenGL world units.
+     *
+     * This applies HEIGHT_SCALE to convert RS height units to OpenGL coordinates.
+     *
+     * @param tiles The 4-plane tile array from RegionData
+     * @param localX Local X coordinate (0-63)
+     * @param localY Local Y coordinate (0-63)
+     * @param plane Plane level (0-3)
+     * @return The height in OpenGL world units
+     */
+    fun getTileHeightScaled(tiles: Array<Array<Array<TileData>>>, localX: Int, localY: Int, plane: Int): Float {
+        return getTileHeight(tiles, localX, localY, plane) * HEIGHT_SCALE
+    }
+
+    /**
+     * Get the height scale factor used to convert RS heights to OpenGL coordinates.
+     * This is exposed so other components (like MapViewer) can use the same scale.
+     */
+    fun getHeightScale(): Float = HEIGHT_SCALE
 
     /**
      * A terrain batch for a specific texture.
@@ -1264,6 +1308,35 @@ object TerrainLoader {
         return TerrainMeshes(colorMesh, texturedBatches)
     }
 
+    /**
+     * Temporary tile data used during decoding, before height computation.
+     * Stores raw height byte and whether explicit height was provided (opcode 1).
+     */
+    private data class RawTileData(
+        val heightByte: Int,        // Raw height byte (0-255), or 0 if opcode 0
+        val hasExplicitHeight: Boolean,  // True if opcode 1 was used (explicit height)
+        val overlayId: Int,
+        val overlayShape: Int,
+        val overlayRotation: Int,
+        val underlayId: Int,
+        val flags: Int
+    )
+
+    /**
+     * Decode a region from cache with authentic RS client height computation.
+     *
+     * The RS client computes tile heights cumulatively:
+     * - Plane 0: Either procedural noise or explicit height * 32 (negated)
+     * - Plane 1+: Previous plane height minus offset (960 default or explicit * 32)
+     *
+     * Heights in RS are NEGATIVE (higher elevation = more negative value).
+     * We store them as positive values for easier use in OpenGL (negate RS convention).
+     *
+     * @param cache The game cache
+     * @param regionX Region X coordinate
+     * @param regionY Region Y coordinate
+     * @return RegionData with computed absolute heights, or null if region doesn't exist
+     */
     private fun decodeRegion(cache: Cache, regionX: Int, regionY: Int): RegionData? {
         val mapArchive = cache.archiveId(Index.MAPS, "m${regionX}_$regionY")
         if (mapArchive == -1) return null
@@ -1271,12 +1344,75 @@ object TerrainLoader {
         val data = cache.data(Index.MAPS, mapArchive) ?: return null
         val buffer = BufferReader(data)
 
-        val tiles = Array(4) { Array(64) { Array(64) { TileData(0, 0, 0, 0, 0, 0) } } }
+        // First pass: decode raw tile data for all planes
+        val rawTiles = Array(4) { Array(64) { Array(64) { RawTileData(0, false, 0, 0, 0, 0, 0) } } }
 
         for (plane in 0 until 4) {
             for (x in 0 until 64) {
                 for (y in 0 until 64) {
-                    tiles[plane][x][y] = decodeTile(buffer)
+                    rawTiles[plane][x][y] = decodeRawTile(buffer)
+                }
+            }
+        }
+
+        // Second pass: compute cumulative heights plane by plane
+        // Heights are stored as positive values (negated from RS convention)
+        // This is the EXACT algorithm from MapLoader.decodeTile in the RS client
+        val tiles = Array(4) { Array(64) { Array(64) { TileData(0, 0, 0, 0, 0, 0) } } }
+
+        // Absolute tile coordinates for procedural height generation
+        val baseAbsX = regionX * 64
+        val baseAbsY = regionY * 64
+
+        for (plane in 0 until 4) {
+            for (x in 0 until 64) {
+                for (y in 0 until 64) {
+                    val raw = rawTiles[plane][x][y]
+                    val absX = baseAbsX + x
+                    val absY = baseAbsY + y
+
+                    // Compute height following RS client logic from MapLoader.decodeTile
+                    val height: Int = if (plane == 0) {
+                        if (!raw.hasExplicitHeight) {
+                            // Opcode 0 on plane 0: use procedural noise
+                            // RS: tileHeights[0][x][y] = -TileUtils.calculateTileheight(absX + 932731, absY + 556238) * 8 shl 2
+                            // The result is negative in RS (higher = more negative), we store positive
+                            TileUtils.calculateTileheight(
+                                absX + TileUtils.MAGIC_X_OFFSET,
+                                absY + TileUtils.MAGIC_Y_OFFSET
+                            ) * TileUtils.HEIGHT_MULTIPLIER
+                        } else {
+                            // Opcode 1 on plane 0: use explicit height
+                            // RS: tileHeights[0][x][y] = -heightByte * 8 shl 2 = -heightByte * 32
+                            // We store positive (negate RS convention)
+                            raw.heightByte * TileUtils.HEIGHT_MULTIPLIER
+                        }
+                    } else {
+                        // Planes 1, 2, 3: cumulative from previous plane
+                        val prevHeight = tiles[plane - 1][x][y].height
+
+                        if (!raw.hasExplicitHeight) {
+                            // Opcode 0 on plane > 0: use default floor-to-floor offset
+                            // RS: tileHeights[plane][x][y] = tileHeights[plane-1][x][y] - 960
+                            // In RS, heights are negative, so subtracting makes them more negative (higher)
+                            // We store positive, so we ADD the offset to go higher
+                            prevHeight + TileUtils.DEFAULT_PLANE_HEIGHT_OFFSET
+                        } else {
+                            // Opcode 1 on plane > 0: use explicit offset from previous plane
+                            // RS: tileHeights[plane][x][y] = tileHeights[plane-1][x][y] - (heightByte * 8 shl 2)
+                            // We store positive, so we ADD
+                            prevHeight + raw.heightByte * TileUtils.HEIGHT_MULTIPLIER
+                        }
+                    }
+
+                    tiles[plane][x][y] = TileData(
+                        height,
+                        raw.overlayId,
+                        raw.overlayShape,
+                        raw.overlayRotation,
+                        raw.underlayId,
+                        raw.flags
+                    )
                 }
             }
         }
@@ -1284,8 +1420,13 @@ object TerrainLoader {
         return RegionData((regionX shl 8) or regionY, tiles)
     }
 
-    private fun decodeTile(buffer: BufferReader): TileData {
-        var height = 0
+    /**
+     * Decode raw tile data from the buffer.
+     * This extracts the raw bytes without computing cumulative heights.
+     */
+    private fun decodeRawTile(buffer: BufferReader): RawTileData {
+        var heightByte = 0
+        var hasExplicitHeight = false
         var overlayId = 0
         var overlayShape = 0
         var overlayRotation = 0
@@ -1294,23 +1435,33 @@ object TerrainLoader {
 
         while (true) {
             val opcode = buffer.readUnsignedByte()
-            if (opcode == 0) {
-                break
-            } else if (opcode == 1) {
-                height = buffer.readUnsignedByte()
-                break
-            } else if (opcode <= 49) {
-                overlayId = buffer.readUnsignedByte()
-                overlayShape = (opcode - 2) / 4
-                overlayRotation = (opcode - 2) and 3
-            } else if (opcode <= 81) {
-                flags = opcode - 49
-            } else {
-                underlayId = opcode - 81
+            when {
+                opcode == 0 -> {
+                    // No explicit height - use procedural noise or default plane offset
+                    hasExplicitHeight = false
+                    break
+                }
+                opcode == 1 -> {
+                    // Explicit height byte provided
+                    heightByte = buffer.readUnsignedByte()
+                    hasExplicitHeight = true
+                    break
+                }
+                opcode <= 49 -> {
+                    overlayId = buffer.readUnsignedByte()
+                    overlayShape = (opcode - 2) / 4
+                    overlayRotation = (opcode - 2) and 3
+                }
+                opcode <= 81 -> {
+                    flags = opcode - 49
+                }
+                else -> {
+                    underlayId = opcode - 81
+                }
             }
         }
 
-        return TileData(height, overlayId, overlayShape, overlayRotation, underlayId, flags)
+        return RawTileData(heightByte, hasExplicitHeight, overlayId, overlayShape, overlayRotation, underlayId, flags)
     }
 
     /**
@@ -1456,12 +1607,23 @@ object TerrainLoader {
     private val DEFAULT_GRASS_COLOR = Vector3f(0.3f, 0.55f, 0.25f)
 
     /**
-     * Height scaling factor to match client.
-     * Client stores: -rawHeight * 8 * 4 = -rawHeight * 32 (negative = positive elevation)
-     * For OpenGL (Y-up): rawHeight * 32 / 128 = rawHeight / 4
-     * This matches the visual scale when combined with tile size.
+     * Height scaling factor for converting RS heights to OpenGL world coordinates.
+     *
+     * Heights in TileData are now stored as absolute computed values in RS units,
+     * matching exactly what the RS client computes:
+     * - Plane 0: procedural noise * 32 or heightByte * 32
+     * - Plane 1+: previousHeight + offset (960 default or heightByte * 32)
+     *
+     * We store heights as POSITIVE values (opposite of RS convention where heights are negative).
+     * This means higher terrain has larger height values.
+     *
+     * To convert to OpenGL world coordinates, we just apply the standard scale factor.
+     * DEFAULT_SCALE = 1/128, so HEIGHT_SCALE = 1/128.
+     *
+     * Example: A tile at ground level might have height = 1920 (60 * 32)
+     * OpenGL Y = 1920 * (1/128) = 15.0 units
      */
-    private const val HEIGHT_SCALE = 32f * CoordinateUtil.DEFAULT_SCALE  // = 32 / 128 = 0.25
+    private const val HEIGHT_SCALE = CoordinateUtil.DEFAULT_SCALE  // = 1/128
 
     // ==================== TILE SHAPE TESSELLATION SYSTEM ====================
     //

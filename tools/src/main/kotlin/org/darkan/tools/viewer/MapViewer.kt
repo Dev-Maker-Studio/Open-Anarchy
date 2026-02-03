@@ -8,6 +8,8 @@ import imgui.type.ImInt
 import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionData
 import org.darkan.core.map.RegionLoader
+import org.darkan.core.model.ObjectShape
+import world.gregs.voidps.cache.definition.data.MapObject
 import org.darkan.tools.cache.map.MapScene
 import org.darkan.tools.cache.map.ObjectInstance
 import org.darkan.tools.cache.map.ObjectRenderer
@@ -491,6 +493,28 @@ class MapViewer(
             val texturedCount = stats.instancesPerBatch.count { it.key.textureId != -1 && it.value > 0 }
             println("Objects: $addedCount instances, ${stats.registeredModels} models, untextured=$untexturedCount, textured=$texturedCount batches")
 
+            // Debug: Check instance counts for bridge wall models
+            val bridgeWallModelIds = listOf(48961, 48969)
+            for (modelId in bridgeWallModelIds) {
+                val batchesForModel = stats.instancesPerBatch.filter { it.key.modelId == modelId }
+                if (batchesForModel.isNotEmpty()) {
+                    println("=== Bridge wall model $modelId instance counts ===")
+                    for ((key, count) in batchesForModel) {
+                        println("  Batch (textureId=${key.textureId}): $count instances")
+                    }
+                } else {
+                    println("=== Bridge wall model $modelId has NO instances (found ${batchesForModel.size} batches) ===")
+                    // Check how many bridge wall objects have this model
+                    val wallsWithModel = singleRegionObjects.filter { obj ->
+                        obj.modelIds.any { it == modelId }
+                    }
+                    println("    Objects with this model: ${wallsWithModel.size}")
+                    wallsWithModel.take(3).forEach { obj ->
+                        println("      ID=${obj.mapObject.id}, shape=${obj.mapObject.shape}, plane=${obj.mapObject.level}, pos=(${obj.mapObject.x}, ${obj.mapObject.y})")
+                    }
+                }
+            }
+
             // Debug: show first multi-model object's batch instance counts
             for (obj in singleRegionObjects) {
                 if (obj.modelIds.size > 1) {
@@ -940,7 +964,11 @@ class MapViewer(
         }
 
         val regionData = RegionLoader.loadRegion(cache, regionX, regionY)
-        if (regionData != null) {
+        // Also load terrain data from TerrainLoader for height values
+        // TerrainLoader computes authentic RS heights (cumulative, multi-octave noise)
+        val terrainData = TerrainLoader.loadRegion(cache, regionX, regionY)
+
+        if (regionData != null && terrainData != null) {
             println("Region data loaded: ${regionData.objects.size} objects total")
 
             // Create instance manager for this region (smaller capacity than multi-region)
@@ -949,7 +977,8 @@ class MapViewer(
             // Create object instances for this plane using LOCAL coordinates
             // The terrain mesh is at local coords (0,0) to (63,63) tiles
             // So objects must also be at local coordinates
-            singleRegionObjects = createLocalObjectInstances(regionData, regionX, regionY, plane)
+            // Pass terrainData.tiles for height lookups (matches TerrainLoader's computed heights)
+            singleRegionObjects = createLocalObjectInstances(regionData, terrainData.tiles, regionX, regionY, plane)
 
             println("Objects for plane $plane: ${singleRegionObjects.size}")
 
@@ -1004,6 +1033,16 @@ class MapViewer(
             }
             println("Registered $registeredCount unique models (combined) for ${singleRegionObjects.size} object instances")
             println("Multi-model objects found: $multiModelCount")
+
+            // Debug: Check if bridge wall models are registered
+            val bridgeWallModelIds = listOf(48961, 48969)
+            for (modelId in bridgeWallModelIds) {
+                if (singleRegionModels.contains(modelId)) {
+                    println("Bridge wall model $modelId is registered")
+                } else {
+                    println("Bridge wall model $modelId is NOT registered!")
+                }
+            }
         } else {
             println("Failed to load region data for ($regionX, $regionY)")
         }
@@ -1027,10 +1066,20 @@ class MapViewer(
         singleRegionModels.clear()
     }
 
+    /**
+     * Get terrain height at a world position.
+     * Note: This function uses core RegionLoader which has raw heights.
+     * For accurate heights matching the terrain mesh, use TerrainLoader's computed heights.
+     *
+     * @deprecated Use TerrainLoader.getTileHeightScaled for heights matching terrain mesh
+     */
+    @Suppress("unused")
     private fun getTerrainHeight(regionData: RegionData, worldX: Int, worldY: Int, plane: Int): Float {
         val localX = worldX and 63
         val localY = worldY and 63
         if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) return 0f
+        // Note: This uses RegionLoader's raw height * 8 formula
+        // For consistency with terrain mesh, load TerrainLoader's RegionData instead
         val tileInfo = RegionLoader.getTileInfo(regionData.tiles, localX, localY, plane)
         return tileInfo.height * 8f * CoordinateUtil.DEFAULT_SCALE
     }
@@ -1044,6 +1093,155 @@ class MapViewer(
         if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) return false
         val settingsIndex = MapDefinition.index(localX, localY, 1)
         return (regionData.settings[settingsIndex].toInt() and 0x2) == 0x2
+    }
+
+    /**
+     * Debug function to analyze bridge tiles and identify all objects at bridge locations.
+     * Helps diagnose missing railings by showing exactly what objects exist at bridge tiles
+     * across all planes and whether they should be rendered.
+     */
+    private fun debugBridgeObjects(
+        regionData: RegionData,
+        regionX: Int,
+        regionY: Int,
+        baseWorldX: Int,
+        baseWorldY: Int
+    ) {
+        println("\n========== BRIDGE OBJECT DEBUG ==========")
+        println("Region: ($regionX, $regionY) - Base world: ($baseWorldX, $baseWorldY)")
+
+        // Find all tiles with bridge flag
+        val bridgeTiles = mutableListOf<Pair<Int, Int>>()
+        for (y in 0 until 64) {
+            for (x in 0 until 64) {
+                if (hasBridgeFlag(regionData, x, y)) {
+                    bridgeTiles.add(Pair(x, y))
+                }
+            }
+        }
+
+        println("Found ${bridgeTiles.size} tiles with bridge flag (0x2) set on plane 1")
+
+        if (bridgeTiles.isEmpty()) {
+            println("No bridge tiles found in this region!")
+            println("==========================================\n")
+            return
+        }
+
+        // Show first 10 bridge tile locations
+        println("\nBridge tile locations (first 10):")
+        bridgeTiles.take(10).forEach { (x, y) ->
+            println("  Local ($x, $y) -> World (${baseWorldX + x}, ${baseWorldY + y})")
+        }
+
+        // Collect all objects at bridge tiles across all planes
+        val objectsAtBridgeTiles = mutableMapOf<Pair<Int, Int>, MutableList<MapObject>>()
+        for (obj in regionData.objects) {
+            val localX = obj.x - baseWorldX
+            val localY = obj.y - baseWorldY
+            if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) continue
+
+            val tileKey = Pair(localX, localY)
+            if (bridgeTiles.contains(tileKey)) {
+                objectsAtBridgeTiles.getOrPut(tileKey) { mutableListOf() }.add(obj)
+            }
+        }
+
+        println("\n--- Objects at bridge tiles (by tile) ---")
+        val shapeCounts = mutableMapOf<Int, Int>()
+        val planeDistribution = mutableMapOf<Int, Int>()
+        var totalObjectsAtBridges = 0
+
+        // Analyze first 5 bridge tiles in detail
+        bridgeTiles.take(5).forEach { (x, y) ->
+            val objects = objectsAtBridgeTiles[Pair(x, y)] ?: emptyList()
+            println("\nTile ($x, $y) - ${objects.size} objects:")
+
+            objects.sortedBy { it.level }.forEach { obj ->
+                val def = ObjectRenderer.getDefinition(obj.id)
+                val shapeName = try {
+                    ObjectShape.entries.find { it.id == obj.shape }?.name ?: "UNKNOWN"
+                } catch (e: Exception) { "UNKNOWN" }
+
+                val modelIds = if (def != null) ObjectRenderer.getModelIds(def, obj.shape) else emptyList()
+                val hasModels = modelIds.isNotEmpty()
+
+                // Check if this object would be rendered on plane 0
+                val wouldRenderOnPlane0 = when {
+                    obj.level == 0 -> true
+                    obj.level == 1 && hasBridgeFlag(regionData, x, y) -> true
+                    else -> false
+                }
+
+                println("    ID: ${obj.id}, Plane: ${obj.level}, Shape: ${obj.shape} ($shapeName), Rot: ${obj.rotation}")
+                println("        Name: ${def?.name ?: "null"}")
+                println("        Models: ${if (hasModels) modelIds.joinToString() else "NONE"}")
+                println("        Size: ${def?.sizeX ?: 1}x${def?.sizeY ?: 1}")
+                println("        Would render on plane 0: $wouldRenderOnPlane0")
+
+                shapeCounts[obj.shape] = (shapeCounts[obj.shape] ?: 0) + 1
+                planeDistribution[obj.level] = (planeDistribution[obj.level] ?: 0) + 1
+                totalObjectsAtBridges++
+            }
+        }
+
+        // Count all objects at all bridge tiles
+        objectsAtBridgeTiles.values.flatten().forEach { obj ->
+            if (!bridgeTiles.take(5).contains(Pair(obj.x - baseWorldX, obj.y - baseWorldY))) {
+                shapeCounts[obj.shape] = (shapeCounts[obj.shape] ?: 0) + 1
+                planeDistribution[obj.level] = (planeDistribution[obj.level] ?: 0) + 1
+                totalObjectsAtBridges++
+            }
+        }
+
+        println("\n--- Summary Statistics ---")
+        println("Total objects at bridge tiles: $totalObjectsAtBridges")
+
+        println("\nObjects by plane:")
+        planeDistribution.toSortedMap().forEach { (plane, count) ->
+            println("  Plane $plane: $count objects")
+        }
+
+        println("\nObjects by shape:")
+        shapeCounts.toSortedMap().forEach { (shape, count) ->
+            val shapeName = try {
+                ObjectShape.entries.find { it.id == shape }?.name ?: "UNKNOWN"
+            } catch (e: Exception) { "UNKNOWN" }
+            println("  Shape $shape ($shapeName): $count objects")
+        }
+
+        // Specifically look for wall types (shapes 0-3) and wall decorations (shapes 4-8)
+        val wallShapes = listOf(0, 1, 2, 3)  // WALL_STRAIGHT, WALL_DIAGONAL_CORNER, WALL_WHOLE_CORNER, WALL_STRAIGHT_CORNER
+        val wallDecoShapes = listOf(4, 5, 6, 7, 8)  // WALL_INTERACT, WALL_DIAGONAL, WALL_OPPOSITE_CORNER, WALL_OPPOSITE, WALL_DIAGONAL_CORNER_OPPOSITE
+
+        val wallObjectsPlane1 = objectsAtBridgeTiles.values.flatten()
+            .filter { it.level == 1 && wallShapes.contains(it.shape) }
+        val wallDecoObjectsPlane1 = objectsAtBridgeTiles.values.flatten()
+            .filter { it.level == 1 && wallDecoShapes.contains(it.shape) }
+
+        println("\n--- Potential Railing Candidates (plane 1) ---")
+        println("Wall objects (shapes 0-3) on plane 1: ${wallObjectsPlane1.size}")
+        println("Wall decoration objects (shapes 4-8) on plane 1: ${wallDecoObjectsPlane1.size}")
+
+        if (wallObjectsPlane1.isNotEmpty()) {
+            println("\nFirst 5 wall objects on plane 1 (potential railings):")
+            wallObjectsPlane1.take(5).forEach { obj ->
+                val def = ObjectRenderer.getDefinition(obj.id)
+                val modelIds = if (def != null) ObjectRenderer.getModelIds(def, obj.shape) else emptyList()
+                println("  ID: ${obj.id} (${def?.name}), Shape: ${obj.shape}, Models: ${modelIds.joinToString()}")
+            }
+        }
+
+        if (wallDecoObjectsPlane1.isNotEmpty()) {
+            println("\nFirst 5 wall decoration objects on plane 1:")
+            wallDecoObjectsPlane1.take(5).forEach { obj ->
+                val def = ObjectRenderer.getDefinition(obj.id)
+                val modelIds = if (def != null) ObjectRenderer.getModelIds(def, obj.shape) else emptyList()
+                println("  ID: ${obj.id} (${def?.name}), Shape: ${obj.shape}, Models: ${modelIds.joinToString()}")
+            }
+        }
+
+        println("\n==========================================\n")
     }
 
     /**
@@ -1064,8 +1262,12 @@ class MapViewer(
      * plane's height so they appear elevated on the bridge deck.
      * See Scene.linkBelow() in darkan-bot for reference implementation.
      */
+    // Debug flag for bridge analysis
+    private var bridgeDebugDone = false
+
     private fun createLocalObjectInstances(
         regionData: RegionData,
+        terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>,
         regionX: Int,
         regionY: Int,
         plane: Int
@@ -1075,9 +1277,20 @@ class MapViewer(
         val baseWorldY = regionY * 64
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
 
-        // Height scale must match TerrainLoader.HEIGHT_SCALE for objects to sit on terrain
-        // Terrain: rawHeight * 32 / 128 = rawHeight * 0.25
-        val heightScale = 32f * CoordinateUtil.DEFAULT_SCALE
+        // Get the height scale from TerrainLoader to ensure consistency
+        // TerrainLoader now stores computed absolute heights (already includes * 32)
+        // so HEIGHT_SCALE = 1/128 converts to OpenGL units
+        val heightScale = TerrainLoader.getHeightScale()
+
+        // Debug: Analyze bridge tiles and their objects
+        if (!bridgeDebugDone && plane == 0) {
+            bridgeDebugDone = true
+            debugBridgeObjects(regionData, regionX, regionY, baseWorldX, baseWorldY)
+        }
+
+        // Debug counters for bridge-shifted objects
+        var bridgeShiftedObjects = 0
+        var bridgeShiftedWalls = 0
 
         for (obj in regionData.objects) {
             // Convert world tile to local tile
@@ -1090,12 +1303,22 @@ class MapViewer(
             // Determine if this object should be rendered on the current view plane
             // Normal case: obj.level == plane
             // Bridge case: obj.level == plane + 1 AND bridge flag is set at this tile
+            val isBridgeShifted = obj.level == plane + 1 && plane < 3 && hasBridgeFlag(regionData, localTileX, localTileY)
             val shouldRender = when {
                 obj.level == plane -> true
-                obj.level == plane + 1 && plane < 3 && hasBridgeFlag(regionData, localTileX, localTileY) -> true
+                isBridgeShifted -> true
                 else -> false
             }
             if (!shouldRender) continue
+
+            // Track bridge-shifted objects for debugging
+            if (isBridgeShifted) {
+                bridgeShiftedObjects++
+                // Debug only walls
+                if (obj.shape in 0..3) {
+                    bridgeShiftedWalls++
+                }
+            }
 
             // Use the object's actual plane for height sampling
             // This keeps bridge objects elevated at their original height
@@ -1146,10 +1369,11 @@ class MapViewer(
 
             // Get average height of the 4 corners (matching client algorithm)
             // Use heightPlane (object's actual plane) so bridge objects stay elevated
-            val h00 = RegionLoader.getTileInfo(regionData.tiles, x0, y0, heightPlane).height
-            val h10 = RegionLoader.getTileInfo(regionData.tiles, x1, y0, heightPlane).height
-            val h01 = RegionLoader.getTileInfo(regionData.tiles, x0, y1, heightPlane).height
-            val h11 = RegionLoader.getTileInfo(regionData.tiles, x1, y1, heightPlane).height
+            // Heights now come from TerrainLoader which computes authentic RS heights
+            val h00 = TerrainLoader.getTileHeight(terrainTiles, x0, y0, heightPlane)
+            val h10 = TerrainLoader.getTileHeight(terrainTiles, x1, y0, heightPlane)
+            val h01 = TerrainLoader.getTileHeight(terrainTiles, x0, y1, heightPlane)
+            val h11 = TerrainLoader.getTileHeight(terrainTiles, x1, y1, heightPlane)
             val averageHeight = (h00 + h10 + h01 + h11) / 4f
 
             // Apply height scale (same as terrain)
@@ -1202,9 +1426,8 @@ class MapViewer(
                 groundContourModifier = def.groundContourModifier,
                 averageHeight = terrainHeight,  // Pass the same height object is positioned at
                 heightSampler = { tx, ty ->
-                    val clampedX = tx.coerceIn(0, 63)
-                    val clampedY = ty.coerceIn(0, 63)
-                    RegionLoader.getTileInfo(regionData.tiles, clampedX, clampedY, heightPlane).height * heightScale
+                    // Use TerrainLoader's computed heights
+                    TerrainLoader.getTileHeightScaled(terrainTiles, tx, ty, heightPlane)
                 }
             )
 
@@ -1224,6 +1447,26 @@ class MapViewer(
                 terrainAlignment = terrainAlignment,
                 mirrored = def.mirrored
             ))
+        }
+
+        // Print bridge-shifted object statistics and positions
+        if (bridgeShiftedObjects > 0) {
+            println("  Bridge-shifted objects included: $bridgeShiftedObjects total, $bridgeShiftedWalls walls (shapes 0-3)")
+
+            // Debug: Print positions of first 5 bridge-shifted wall instances
+            val bridgeWallInstances = instances.filter {
+                it.mapObject.level == plane + 1 &&
+                it.mapObject.shape in 0..3 &&
+                hasBridgeFlag(regionData, it.mapObject.x - baseWorldX, it.mapObject.y - baseWorldY)
+            }
+            if (bridgeWallInstances.isNotEmpty()) {
+                println("  First 5 bridge-shifted wall positions:")
+                bridgeWallInstances.take(5).forEach { wall ->
+                    val localX = wall.mapObject.x - baseWorldX
+                    val localY = wall.mapObject.y - baseWorldY
+                    println("    ID=${wall.mapObject.id}, tile=($localX, $localY), pos=${wall.worldPosition}, rot=${wall.rotation}")
+                }
+            }
         }
 
         return instances
