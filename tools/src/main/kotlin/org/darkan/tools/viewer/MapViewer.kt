@@ -15,6 +15,7 @@ import org.darkan.tools.cache.map.ObjectInstance
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.map.TerrainAligner
 import org.darkan.tools.cache.model.ModelLoader
+import org.darkan.tools.cache.model.ModelModifications
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.Engine
@@ -420,39 +421,17 @@ class MapViewer(
         }
     }
 
-    private var debugObjectRenderFrame = 0
     private val tempModelMatrix = Matrix4f()
-    private var wallRotationDebugDone = false
 
     private fun renderSingleRegionObjects() {
         val instanceManager = singleRegionInstanceManager ?: return
 
         instanceManager.prepareFrame()
 
-        // Debug: verify wall rotations are different on first frame
-        if (!wallRotationDebugDone) {
-            wallRotationDebugDone = true
-            val wallsByRotation = singleRegionObjects
-                .filter { it.mapObject.shape == 0 } // WALL_STRAIGHT
-                .groupBy { it.mapObject.rotation }
-            println("=== WALL ROTATION DEBUG ===")
-            for ((rot, walls) in wallsByRotation.entries.sortedBy { it.key }) {
-                val radians = walls.firstOrNull()?.rotation ?: 0f
-                val degrees = Math.toDegrees(radians.toDouble())
-                println("  Rotation $rot: ${walls.size} walls, radians=$radians, degrees=$degrees")
-                // Print first wall's matrix values
-                walls.firstOrNull()?.let { wall ->
-                    val testMatrix = Matrix4f().identity().rotateY(wall.rotation)
-                    println("    Matrix m00=${testMatrix.m00()} m02=${testMatrix.m02()} m20=${testMatrix.m20()} m22=${testMatrix.m22()}")
-                }
-            }
-            println("===========================")
-        }
-
         var addedCount = 0
         for (obj in singleRegionObjects) {
-            // Use combined model ID for multi-model objects
-            val combinedModelId = ObjectRenderer.getCombinedModelId(obj.modelIds)
+            // Use combined model ID for multi-model objects, including modifications
+            val combinedModelId = ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
 
             // Build transform matrix matching client order:
             // RS client applies to model vertices: Rotate Y -> Terrain Tilt -> Scale -> Offset
@@ -498,50 +477,6 @@ class MapViewer(
         }
 
         instanceManager.uploadAll()
-
-        // Debug output for first frame only
-        if (debugObjectRenderFrame == 0) {
-            val stats = instanceManager.getStats()
-            val untexturedCount = stats.instancesPerBatch.count { it.key.textureId == -1 && it.value > 0 }
-            val texturedCount = stats.instancesPerBatch.count { it.key.textureId != -1 && it.value > 0 }
-            println("Objects: $addedCount instances, ${stats.registeredModels} models, untextured=$untexturedCount, textured=$texturedCount batches")
-
-            // Debug: Check instance counts for bridge wall models
-            val bridgeWallModelIds = listOf(48961, 48969)
-            for (modelId in bridgeWallModelIds) {
-                val batchesForModel = stats.instancesPerBatch.filter { it.key.modelId == modelId }
-                if (batchesForModel.isNotEmpty()) {
-                    println("=== Bridge wall model $modelId instance counts ===")
-                    for ((key, count) in batchesForModel) {
-                        println("  Batch (textureId=${key.textureId}): $count instances")
-                    }
-                } else {
-                    println("=== Bridge wall model $modelId has NO instances (found ${batchesForModel.size} batches) ===")
-                    // Check how many bridge wall objects have this model
-                    val wallsWithModel = singleRegionObjects.filter { obj ->
-                        obj.modelIds.any { it == modelId }
-                    }
-                    println("    Objects with this model: ${wallsWithModel.size}")
-                    wallsWithModel.take(3).forEach { obj ->
-                        println("      ID=${obj.mapObject.id}, shape=${obj.mapObject.shape}, plane=${obj.mapObject.level}, pos=(${obj.mapObject.x}, ${obj.mapObject.y})")
-                    }
-                }
-            }
-
-            // Debug: show first multi-model object's batch instance counts
-            for (obj in singleRegionObjects) {
-                if (obj.modelIds.size > 1) {
-                    val combinedId = ObjectRenderer.getCombinedModelId(obj.modelIds)
-                    val batchesForModel = stats.instancesPerBatch.filter { it.key.modelId == combinedId }
-                    println("=== Multi-model ${obj.definition.name} batch instance counts ===")
-                    for ((key, count) in batchesForModel) {
-                        println("  Batch (modelId=${key.modelId}, textureId=${key.textureId}): $count instances")
-                    }
-                    break // Only show first one
-                }
-            }
-            debugObjectRenderFrame++
-        }
 
         // IMPORTANT: Disable face culling for RS models which often have two-sided faces
         renderSystem.disableCullFace()
@@ -964,41 +899,17 @@ class MapViewer(
 
         // Load terrain meshes with texture batching
         singleRegionTerrainBatches = TerrainLoader.loadRegionMeshes(cache, regionX, regionY, plane)
-        if (singleRegionTerrainBatches != null) {
-            val batches = singleRegionTerrainBatches!!
-            println("Loaded terrain: color mesh=${batches.colorMesh != null}, textured batches=${batches.texturedBatches.size}")
-            batches.texturedBatches.forEach { batch ->
-                println("  Terrain texture batch: textureId=${batch.textureId}")
-            }
-        } else {
+        if (singleRegionTerrainBatches == null) {
             println("Failed to load terrain meshes for region ($regionX, $regionY)")
         }
 
         // Load objects
-        val regionId = (regionX shl 8) or regionY
-        println("Loading region ($regionX, $regionY) = ID $regionId")
-        println("  XTEA keys for region: ${MapXteas.getKeys(regionId)?.contentToString() ?: "NONE"}")
-
-        // Debug: Check if archives exist
-        val terrainArchive = cache.archiveId(world.gregs.voidps.cache.Index.MAPS, "m${regionX}_$regionY")
-        val objectArchive = cache.archiveId(world.gregs.voidps.cache.Index.MAPS, "l${regionX}_$regionY")
-        println("  Terrain archive (m${regionX}_$regionY): $terrainArchive")
-        println("  Object archive (l${regionX}_$regionY): $objectArchive")
-
-        if (objectArchive != -1) {
-            val xtea = MapXteas.getKeys(regionId)
-            val objectData = cache.data(world.gregs.voidps.cache.Index.MAPS, objectArchive, 0, xtea)
-            println("  Object data size: ${objectData?.size ?: 0} bytes")
-        }
-
         val regionData = RegionLoader.loadRegion(cache, regionX, regionY)
         // Also load terrain data from TerrainLoader for height values
         // TerrainLoader computes authentic RS heights (cumulative, multi-octave noise)
         val terrainData = TerrainLoader.loadRegion(cache, regionX, regionY)
 
         if (regionData != null && terrainData != null) {
-            println("Region data loaded: ${regionData.objects.size} objects total")
-
             // Create instance manager for this region (smaller capacity than multi-region)
             singleRegionInstanceManager = InstanceManager(maxInstancesPerMesh = 5000)
 
@@ -1008,74 +919,29 @@ class MapViewer(
             // Pass terrainData.tiles for height lookups (matches TerrainLoader's computed heights)
             singleRegionObjects = createLocalObjectInstances(regionData, terrainData.tiles, regionX, regionY, plane)
 
-            // Debug: Show multi-plane object stats
-            val objectsByPlane = singleRegionObjects.groupBy { it.mapObject.level }
-            val roofCount = singleRegionObjects.count { it.mapObject.shape in 12..21 }
-            println("Multi-plane objects loaded: ${singleRegionObjects.size} total")
-            println("  By plane: " + objectsByPlane.entries.sortedBy { it.key }.joinToString { "P${it.key}=${it.value.size}" })
-            println("  Roof shapes (12-21): $roofCount (showRoofs=$showRoofs)")
-
-            // Debug: Count objects by groundContourType
-            val contourTypeCounts = singleRegionObjects.groupBy { it.definition.groundContourType.toInt() }
-                .mapValues { it.value.size }
-            println("  groundContourType distribution: $contourTypeCounts")
-            val alignedCount = singleRegionObjects.count { it.terrainAlignment.needsAlignment() }
-            println("  Objects with terrain alignment: $alignedCount")
-
             // Register models with instance manager
             // Use combined models for multi-model objects (matching RS client behavior)
+            // Apply retexturing/recoloring from ObjectDefinition if present
             var registeredCount = 0
-            var multiModelCount = 0
-            var debuggedMultiModel = false
             for (obj in singleRegionObjects) {
-                // Get the combined model ID for this object's models
-                val combinedId = ObjectRenderer.getCombinedModelId(obj.modelIds)
+                // Get the combined model ID for this object's models, including modifications
+                // Objects with different retexture/recolor mappings get separate registrations
+                val combinedId = ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
                 if (singleRegionModels.contains(combinedId)) continue
 
-                val isMultiModel = obj.modelIds.size > 1
-                if (isMultiModel) {
-                    multiModelCount++
+                // Load and combine all models for this object with modifications applied
+                val meshDataList = if (obj.modifications.hasModifications()) {
+                    ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
+                } else {
+                    ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
                 }
-
-                // Load and combine all models for this object
-                // Enable debug for first multi-model object
-                val enableDebug = isMultiModel && !debuggedMultiModel
-                val meshDataList = ModelLoader.createCombinedMeshDataList(cache, obj.modelIds, enableDebug)
                 if (meshDataList != null && meshDataList.isNotEmpty()) {
-                    // Debug: trace first multi-model object
-                    if (enableDebug) {
-                        debuggedMultiModel = true
-                        println("=== MULTI-MODEL MESHDATA: ${obj.definition.name} (id=${obj.definition.id}) ===")
-                        println("  Model IDs: ${obj.modelIds}")
-                        println("  Combined ID: $combinedId")
-                        println("  MeshData batches: ${meshDataList.size}")
-                        for ((idx, mesh) in meshDataList.withIndex()) {
-                            val faceCount = mesh.indices.size / 3
-                            println("    Batch $idx: textureId=${mesh.textureId}, faces=$faceCount, verts=${mesh.positions.size/3}")
-                            // Verify positions are not all zero
-                            val nonZeroPositions = mesh.positions.count { it != 0f }
-                            if (nonZeroPositions == 0 && mesh.positions.isNotEmpty()) {
-                                println("      WARNING: All positions are zero!")
-                            }
-                        }
-                    }
                     singleRegionInstanceManager!!.registerModel(combinedId, meshDataList)
                     singleRegionModels.add(combinedId)
                     registeredCount++
                 }
             }
-            println("Registered $registeredCount unique models (combined) for ${singleRegionObjects.size} object instances")
-            println("Multi-model objects found: $multiModelCount")
-
-            // Debug: Check if bridge wall models are registered
-            val bridgeWallModelIds = listOf(48961, 48969)
-            for (modelId in bridgeWallModelIds) {
-                if (singleRegionModels.contains(modelId)) {
-                    println("Bridge wall model $modelId is registered")
-                } else {
-                    println("Bridge wall model $modelId is NOT registered!")
-                }
-            }
+            println("Region ($regionX, $regionY): ${singleRegionObjects.size} objects, $registeredCount models")
         } else {
             println("Failed to load region data for ($regionX, $regionY)")
         }
@@ -1473,6 +1339,9 @@ class MapViewer(
                 }
             )
 
+            // Get model modifications (retexturing/recoloring) from definition
+            val modifications = ObjectRenderer.getModifications(def)
+
             // WALL_WHOLE_CORNER (shape 2) creates TWO wall segments at the same position:
             // - Primary wall: mirrored, using the original rotation
             // - Secondary wall: not mirrored (unless def.mirrored), using (rotation + 1) & 3
@@ -1494,7 +1363,8 @@ class MapViewer(
                         -defOffsetZ + decorOffset.z
                     ),
                     terrainAlignment = terrainAlignment,
-                    mirrored = true  // Primary wall is always mirrored for WALL_WHOLE_CORNER
+                    mirrored = true,  // Primary wall is always mirrored for WALL_WHOLE_CORNER
+                    modifications = modifications
                 ))
 
                 // Secondary wall - not mirrored (unless def.mirrored), rotated by +90 degrees
@@ -1512,7 +1382,8 @@ class MapViewer(
                         -defOffsetZ + decorOffset.z
                     ),
                     terrainAlignment = terrainAlignment,
-                    mirrored = def.mirrored  // Secondary wall uses definition.mirrored only
+                    mirrored = def.mirrored,  // Secondary wall uses definition.mirrored only
+                    modifications = modifications
                 ))
             } else {
                 // Normal object - single instance
@@ -1530,7 +1401,8 @@ class MapViewer(
                         -defOffsetZ + decorOffset.z
                     ),
                     terrainAlignment = terrainAlignment,
-                    mirrored = def.mirrored
+                    mirrored = def.mirrored,
+                    modifications = modifications
                 ))
             }
         }

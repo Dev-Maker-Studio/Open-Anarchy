@@ -51,6 +51,120 @@ private data class FaceData(
 )
 
 /**
+ * Model modifications from ObjectDefinition for retexturing/recoloring.
+ * These are applied when creating mesh data to substitute textures and colors.
+ *
+ * @param retextureSrc Source texture IDs to replace
+ * @param retextureDst Destination texture IDs (same length as retextureSrc)
+ * @param recolorSrc Source HSL colors to replace
+ * @param recolorDst Destination HSL colors (same length as recolorSrc)
+ */
+data class ModelModifications(
+    val retextureSrc: ShortArray? = null,
+    val retextureDst: ShortArray? = null,
+    val recolorSrc: ShortArray? = null,
+    val recolorDst: ShortArray? = null
+) {
+    /**
+     * Check if any modifications are defined.
+     */
+    fun hasModifications(): Boolean {
+        return (retextureSrc != null && retextureSrc.isNotEmpty()) ||
+               (recolorSrc != null && recolorSrc.isNotEmpty())
+    }
+
+    /**
+     * Apply texture substitution to a texture ID.
+     */
+    fun applyRetexture(textureId: Int): Int {
+        if (retextureSrc == null || retextureDst == null) return textureId
+        for (i in retextureSrc.indices) {
+            val srcTexId = retextureSrc[i].toInt() and 0xffff
+            if (srcTexId == textureId && i < retextureDst.size) {
+                val dstTexId = retextureDst[i].toInt() and 0xffff
+                return dstTexId
+            }
+        }
+        return textureId
+    }
+
+    /**
+     * Apply color substitution to an HSL color.
+     */
+    fun applyRecolor(hsl: Int): Int {
+        if (recolorSrc == null || recolorDst == null) return hsl
+        for (i in recolorSrc.indices) {
+            val srcHsl = recolorSrc[i].toInt() and 0xffff
+            if (srcHsl == hsl && i < recolorDst.size) {
+                val dstHsl = recolorDst[i].toInt() and 0xffff
+                return dstHsl
+            }
+        }
+        return hsl
+    }
+
+    /**
+     * Generate a unique key component for caching based on modifications.
+     */
+    fun cacheKeyComponent(): String {
+        if (!hasModifications()) return ""
+        val sb = StringBuilder()
+        if (retextureSrc != null && retextureDst != null) {
+            sb.append("_rt")
+            for (i in retextureSrc.indices) {
+                if (i < retextureDst.size) {
+                    sb.append("_${retextureSrc[i].toInt() and 0xffff}>${retextureDst[i].toInt() and 0xffff}")
+                }
+            }
+        }
+        if (recolorSrc != null && recolorDst != null) {
+            sb.append("_rc")
+            for (i in recolorSrc.indices) {
+                if (i < recolorDst.size) {
+                    sb.append("_${recolorSrc[i].toInt() and 0xffff}>${recolorDst[i].toInt() and 0xffff}")
+                }
+            }
+        }
+        return sb.toString()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as ModelModifications
+        if (retextureSrc != null) {
+            if (other.retextureSrc == null) return false
+            if (!retextureSrc.contentEquals(other.retextureSrc)) return false
+        } else if (other.retextureSrc != null) return false
+        if (retextureDst != null) {
+            if (other.retextureDst == null) return false
+            if (!retextureDst.contentEquals(other.retextureDst)) return false
+        } else if (other.retextureDst != null) return false
+        if (recolorSrc != null) {
+            if (other.recolorSrc == null) return false
+            if (!recolorSrc.contentEquals(other.recolorSrc)) return false
+        } else if (other.recolorSrc != null) return false
+        if (recolorDst != null) {
+            if (other.recolorDst == null) return false
+            if (!recolorDst.contentEquals(other.recolorDst)) return false
+        } else if (other.recolorDst != null) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = retextureSrc?.contentHashCode() ?: 0
+        result = 31 * result + (retextureDst?.contentHashCode() ?: 0)
+        result = 31 * result + (recolorSrc?.contentHashCode() ?: 0)
+        result = 31 * result + (recolorDst?.contentHashCode() ?: 0)
+        return result
+    }
+
+    companion object {
+        val NONE = ModelModifications()
+    }
+}
+
+/**
  * Converts ModelDefinitions to renderable Meshes with texture support.
  */
 object ModelLoader {
@@ -879,8 +993,10 @@ object ModelLoader {
             if (alpha == 255) continue  // Skip fully transparent faces
 
             // Get texture ID for this face (-1 if none)
-            // faceTextures values are already adjusted (-1 means no texture after decoding)
-            val textureId = def.faceTextures?.get(i)?.toInt() ?: -1
+            // faceTextures values are stored as signed Short but represent unsigned texture IDs
+            // Use signed comparison for -1 (no texture), but apply 0xffff mask for actual IDs
+            val textureIdSigned = def.faceTextures?.get(i)?.toInt() ?: -1
+            val textureId = if (textureIdSigned == -1) -1 else (textureIdSigned and 0xffff)
             if (textureId >= 0) hasAnyTextures = true
 
             // Get positions
@@ -988,13 +1104,44 @@ object ModelLoader {
      */
     fun createMeshDataList(cache: Cache, modelId: Int, debug: Boolean = false): List<MeshData>? {
         val def = loadDefinition(cache, modelId) ?: return null
-        return createMeshDataListFromDef(def, if (debug) modelId else -1)
+        return createMeshDataListFromDef(def, ModelModifications.NONE, if (debug) modelId else -1)
+    }
+
+    /**
+     * Create MeshData list from a model definition for instanced rendering with modifications.
+     * Similar to createTexturedModel but returns raw arrays instead of GPU meshes.
+     *
+     * @param cache The game cache
+     * @param modelId The model ID to load
+     * @param modifications Retexture/recolor modifications to apply
+     * @param debug Enable debug output
+     */
+    fun createMeshDataListWithModifications(
+        cache: Cache,
+        modelId: Int,
+        modifications: ModelModifications,
+        debug: Boolean = false
+    ): List<MeshData>? {
+        val def = loadDefinition(cache, modelId) ?: return null
+        return createMeshDataListFromDef(def, modifications, if (debug) modelId else -1)
     }
 
     /**
      * Create MeshData list from a model definition for instanced rendering.
+     * Overload without modifications for backwards compatibility.
      */
     fun createMeshDataListFromDef(def: ModelDefinition, debugModelId: Int = -1): List<MeshData>? {
+        return createMeshDataListFromDef(def, ModelModifications.NONE, debugModelId)
+    }
+
+    /**
+     * Create MeshData list from a model definition for instanced rendering.
+     *
+     * @param def The model definition
+     * @param modifications Retexture/recolor modifications to apply
+     * @param debugModelId Model ID for debug output (-1 to disable)
+     */
+    fun createMeshDataListFromDef(def: ModelDefinition, modifications: ModelModifications, debugModelId: Int = -1): List<MeshData>? {
         if (def.faceCount == 0) return null
 
         // Debug output for specific models
@@ -1117,13 +1264,24 @@ object ModelLoader {
             val alpha = def.faceAlphas?.get(i)?.toInt()?.and(0xff) ?: 0
             if (alpha == 255) continue  // Skip fully transparent faces
 
-            val textureId = def.faceTextures?.get(i)?.toInt() ?: -1
+            // Get raw texture ID and apply retexturing if modifications provided
+            // Note: faceTextures values are stored as signed Short but represent unsigned texture IDs
+            // Use signed comparison for -1 (no texture), but apply 0xffff mask for actual IDs
+            val rawTextureIdSigned = def.faceTextures?.get(i)?.toInt() ?: -1
+            val rawTextureId = if (rawTextureIdSigned == -1) -1 else (rawTextureIdSigned and 0xffff)
+            val textureId = if (rawTextureId >= 0) {
+                modifications.applyRetexture(rawTextureId)
+            } else {
+                rawTextureId
+            }
 
             val pos0 = CoordinateUtil.rsToOpenGL(def.vertexX[aIdx], def.vertexY[aIdx], def.vertexZ[aIdx])
             val pos1 = CoordinateUtil.rsToOpenGL(def.vertexX[bIdx], def.vertexY[bIdx], def.vertexZ[bIdx])
             val pos2 = CoordinateUtil.rsToOpenGL(def.vertexX[cIdx], def.vertexY[cIdx], def.vertexZ[cIdx])
 
-            val hsl = def.faceColors[i].toInt() and 0xffff
+            // Get raw HSL color and apply recoloring if modifications provided
+            val rawHsl = def.faceColors[i].toInt() and 0xffff
+            val hsl = modifications.applyRecolor(rawHsl)
             // HSL value 0 is valid (black), only 65535 (0xFFFF) is a sentinel for "no color"
             val color = if (hsl == 65535) {
                 Vector3f(1f, 1f, 1f) // White for textured faces without explicit color
@@ -1150,16 +1308,6 @@ object ModelLoader {
         if (facesByTexture.isEmpty()) return null
 
         val result = mutableListOf<MeshData>()
-
-        // Debug: log batch info for combined models (debugModelId != -1 means debug is enabled)
-        if (debugModelId != -1) {
-            println("=== createMeshDataListFromDef for model $debugModelId ===")
-            println("  Total faces processed: ${facesByTexture.values.sumOf { it.size }}")
-            println("  Batches: ${facesByTexture.size}")
-            for ((texId, faces) in facesByTexture) {
-                println("    textureId=$texId: ${faces.size} faces")
-            }
-        }
 
         // Build MeshData for each texture batch (including -1 for untextured)
         for ((textureId, faces) in facesByTexture) {
@@ -1256,64 +1404,38 @@ object ModelLoader {
      *
      * @param cache The game cache
      * @param modelIds List of model IDs to combine
-     * @param debug Enable debug output
+     * @param debug Enable debug output (currently unused, kept for API compatibility)
      * @return List of MeshData for instanced rendering, or null if loading fails
      */
     fun createCombinedMeshDataList(cache: Cache, modelIds: List<Int>, debug: Boolean = false): List<MeshData>? {
         if (modelIds.isEmpty()) return null
         if (modelIds.size == 1) return createMeshDataList(cache, modelIds[0], debug)
 
-        // Debug: trace individual models before combination
-        if (debug) {
-            println("=== COMBINING MODELS: $modelIds ===")
-            for (modelId in modelIds) {
-                val def = loadDefinition(cache, modelId)
-                if (def != null) {
-                    println("  Model $modelId: ${def.faceCount} faces, hasTextures=${def.faceTextures != null}")
-                    if (def.faceTextures != null) {
-                        val texturedFaces = def.faceTextures!!.count { it.toInt() >= 0 }
-                        val untexturedFaces = def.faceCount - texturedFaces
-                        println("    Textured faces: $texturedFaces, Untextured faces: $untexturedFaces")
-                    }
-                }
-            }
-        }
+        val combinedDef = loadCombinedDefinition(cache, modelIds) ?: return null
+        return createMeshDataListFromDef(combinedDef, ModelModifications.NONE, -1)
+    }
+
+    /**
+     * Create MeshData list from multiple model IDs (combined) with modifications.
+     * This is the primary method for loading multi-model objects with retexturing/recoloring.
+     *
+     * @param cache The game cache
+     * @param modelIds List of model IDs to combine
+     * @param modifications Retexture/recolor modifications to apply
+     * @param debug Enable debug output (currently unused, kept for API compatibility)
+     * @return List of MeshData for instanced rendering, or null if loading fails
+     */
+    fun createCombinedMeshDataListWithModifications(
+        cache: Cache,
+        modelIds: List<Int>,
+        modifications: ModelModifications,
+        debug: Boolean = false
+    ): List<MeshData>? {
+        if (modelIds.isEmpty()) return null
+        if (modelIds.size == 1) return createMeshDataListWithModifications(cache, modelIds[0], modifications, debug)
 
         val combinedDef = loadCombinedDefinition(cache, modelIds) ?: return null
-
-        if (debug) {
-            println("  Combined: ${combinedDef.faceCount} faces, ${combinedDef.vertexCount} vertices")
-            println("    hasTextures=${combinedDef.faceTextures != null}")
-            if (combinedDef.faceTextures != null) {
-                val texturedFaces = combinedDef.faceTextures!!.count { it.toInt() >= 0 }
-                val untexturedFaces = combinedDef.faceCount - texturedFaces
-                println("    Textured faces: $texturedFaces, Untextured faces: $untexturedFaces")
-                // Check for invalid face indices
-                var invalidFaces = 0
-                for (i in 0 until combinedDef.faceCount) {
-                    val a = combinedDef.faceA[i]
-                    val b = combinedDef.faceB[i]
-                    val c = combinedDef.faceC[i]
-                    if (a < 0 || a >= combinedDef.vertexCount ||
-                        b < 0 || b >= combinedDef.vertexCount ||
-                        c < 0 || c >= combinedDef.vertexCount) {
-                        invalidFaces++
-                    }
-                }
-                if (invalidFaces > 0) {
-                    println("    WARNING: $invalidFaces faces have invalid vertex indices!")
-                }
-            }
-            // Check for faces skipped due to alpha=255 (fully transparent in RS inverted alpha)
-            if (combinedDef.faceAlphas != null) {
-                val transparentFaces = combinedDef.faceAlphas!!.count { (it.toInt() and 0xff) == 255 }
-                if (transparentFaces > 0) {
-                    println("    Note: $transparentFaces faces have alpha=255 (fully transparent, will be skipped)")
-                }
-            }
-        }
-
-        return createMeshDataListFromDef(combinedDef, if (debug) combinedDef.id else -1)
+        return createMeshDataListFromDef(combinedDef, modifications, -1)
     }
 
     /**
@@ -1324,5 +1446,175 @@ object ModelLoader {
         if (modelIds.size == 1) return modelIds[0]
         // Use negative hash to distinguish from regular model IDs
         return -(modelIds.sorted().hashCode() and 0x7FFFFFFF)
+    }
+
+    /**
+     * Generate a unique combined model ID that includes modifications.
+     * Used as a key for registering combined models with retexturing/recoloring.
+     *
+     * @param modelIds List of model IDs
+     * @param modifications Retexture/recolor modifications
+     * @return A unique ID for the model+modifications combination
+     */
+    fun getCombinedModelIdWithModifications(modelIds: List<Int>, modifications: ModelModifications): Int {
+        val baseId = getCombinedModelId(modelIds)
+        if (!modifications.hasModifications()) return baseId
+        // Combine base ID with modifications hash for unique key
+        val modHash = modifications.hashCode() and 0x7FFFFFFF
+        // Use a different sign pattern to distinguish from plain combined models
+        return -(baseId xor modHash)
+    }
+
+    /**
+     * Debug function to analyze UV computation for a specific face.
+     */
+    fun debugUVComputation(def: ModelDefinition, faceIdx: Int) {
+        if (faceIdx < 0 || faceIdx >= def.faceCount) {
+            println("Invalid face index $faceIdx")
+            return
+        }
+
+        val aIdx = def.faceA[faceIdx]
+        val bIdx = def.faceB[faceIdx]
+        val cIdx = def.faceC[faceIdx]
+
+        println("=== Face $faceIdx UV Debug ===")
+        println("Vertex indices: A=$aIdx, B=$bIdx, C=$cIdx")
+        println("Vertex A: (${def.vertexX[aIdx]}, ${def.vertexY[aIdx]}, ${def.vertexZ[aIdx]})")
+        println("Vertex B: (${def.vertexX[bIdx]}, ${def.vertexY[bIdx]}, ${def.vertexZ[bIdx]})")
+        println("Vertex C: (${def.vertexX[cIdx]}, ${def.vertexY[cIdx]}, ${def.vertexZ[cIdx]})")
+
+        val texturePointer = def.faceTexturePointers?.get(faceIdx)?.toInt()?.and(0xff) ?: 255
+        println("Texture pointer: $texturePointer")
+
+        if (texturePointer == 255 || texturePointer >= def.textureTriangleCount) {
+            println("No valid texture pointer")
+            return
+        }
+
+        val mappingType = def.texturesMapping?.get(texturePointer)?.toInt()?.and(0xff) ?: 0
+        println("Mapping type: $mappingType")
+
+        if (mappingType != 2) {
+            println("Not cube mapping (type 2), skipping detailed debug")
+            return
+        }
+
+        // Generate/get transform data
+        val transformData = textureTransformCache.getOrPut(def.id) {
+            generateTextureTransformData(def)
+        }
+        if (transformData == null) {
+            println("Failed to generate transform data")
+            return
+        }
+
+        val centerX = transformData.centerX[texturePointer]
+        val centerY = transformData.centerY[texturePointer]
+        val centerZ = transformData.centerZ[texturePointer]
+        println("Texture center: ($centerX, $centerY, $centerZ)")
+
+        val complexIdx = transformData.complexIndex[texturePointer]
+        val cubeIdx = transformData.cubeIndex[texturePointer]
+        println("Complex index: $complexIdx, Cube index: $cubeIdx")
+
+        val scaleXVal = def.texturesScaleX?.get(complexIdx) ?: 64
+        val scaleYVal = def.texturesScaleY?.get(complexIdx) ?: 64
+        val scaleZVal = def.texturesScaleZ?.get(complexIdx) ?: 64
+        println("Raw scale values: X=$scaleXVal, Y=$scaleYVal, Z=$scaleZVal")
+
+        val scaleX = 64.0f / scaleXVal
+        val scaleY = 64.0f / scaleYVal
+        val scaleZ = 64.0f / scaleZVal
+        println("Computed scales: X=$scaleX, Y=$scaleY, Z=$scaleZ")
+
+        val rotation = def.texturesRotation?.get(complexIdx)?.toInt()?.and(0xff) ?: 0
+        val direction = def.texturesDirection?.get(complexIdx)?.toInt()?.and(0xff) ?: 0
+        val speed = def.texturesSpeed?.get(complexIdx) ?: 0
+        println("Rotation: $rotation, Direction: $direction, Speed: $speed")
+
+        val uTrans = def.texturesUtrans?.get(cubeIdx) ?: 0
+        val vTrans = def.texturesVtrans?.get(cubeIdx) ?: 0
+        println("UTrans: $uTrans, VTrans: $vTrans")
+
+        val n = def.textureFaceX?.get(texturePointer)?.toInt() ?: 0
+        val m = def.textureFaceY?.get(texturePointer)?.toInt() ?: 0
+        val p = def.textureFaceZ?.get(texturePointer)?.toInt() ?: 0
+        println("Texture face (n, m, p): ($n, $m, $p)")
+
+        val matrix = transformData.matrix[texturePointer]
+        println("Matrix: ${matrix.toList()}")
+
+        // Compute face normal
+        val dx1 = def.vertexX[bIdx] - def.vertexX[aIdx]
+        val dy1 = def.vertexY[bIdx] - def.vertexY[aIdx]
+        val dz1 = def.vertexZ[bIdx] - def.vertexZ[aIdx]
+        val dx2 = def.vertexX[cIdx] - def.vertexX[aIdx]
+        val dy2 = def.vertexY[cIdx] - def.vertexY[aIdx]
+        val dz2 = def.vertexZ[cIdx] - def.vertexZ[aIdx]
+        val fnx = dy1 * dz2 - dz1 * dy2
+        val fny = dz1 * dx2 - dx1 * dz2
+        val fnz = dx1 * dy2 - dy1 * dx2
+        println("Face normal (raw): ($fnx, $fny, $fnz)")
+
+        // Transform normal by matrix
+        val tnxRaw = fnx * matrix[0] + fny * matrix[1] + fnz * matrix[2]
+        val tnyRaw = fnx * matrix[3] + fny * matrix[4] + fnz * matrix[5]
+        val tnzRaw = fnx * matrix[6] + fny * matrix[7] + fnz * matrix[8]
+        println("Transformed normal (before scale div): ($tnxRaw, $tnyRaw, $tnzRaw)")
+
+        val tnx = tnxRaw / scaleX
+        val tny = tnyRaw / scaleY
+        val tnz = tnzRaw / scaleZ
+        println("Transformed normal (after scale div): ($tnx, $tny, $tnz)")
+
+        val cubeFace = getCubeFace(tnx, tny, tnz)
+        println("Cube face: $cubeFace (0=+Y, 1=-Y, 2=+Z, 3=-Z, 4=+X, 5=-X)")
+
+        // Compute UV for vertex A
+        val dxA = (def.vertexX[aIdx] - centerX).toFloat()
+        val dyA = (def.vertexY[aIdx] - centerY).toFloat()
+        val dzA = (def.vertexZ[aIdx] - centerZ).toFloat()
+        println("Vertex A offset from center: ($dxA, $dyA, $dzA)")
+
+        val txA = dxA * matrix[0] + dyA * matrix[1] + dzA * matrix[2]
+        val tyA = dxA * matrix[3] + dyA * matrix[4] + dzA * matrix[5]
+        val tzA = dxA * matrix[6] + dyA * matrix[7] + dzA * matrix[8]
+        println("Vertex A transformed: tx=$txA, ty=$tyA, tz=$tzA")
+
+        val speedOffset = speed / 256.0f
+        val uTransF = uTrans / 256.0f
+        val vTransF = vTrans / 256.0f
+
+        var uA: Float
+        var vA: Float
+        when (cubeFace) {
+            0 -> { uA = txA + speedOffset + 0.5f; vA = -tzA + vTransF + 0.5f }
+            1 -> { uA = txA + speedOffset + 0.5f; vA = tzA + vTransF + 0.5f }
+            2 -> { uA = -txA + speedOffset + 0.5f; vA = -tyA + uTransF + 0.5f }
+            3 -> { uA = txA + speedOffset + 0.5f; vA = -tyA + uTransF + 0.5f }
+            4 -> { uA = tzA + vTransF + 0.5f; vA = -tyA + uTransF + 0.5f }
+            else -> { uA = -tzA + vTransF + 0.5f; vA = -tyA + uTransF + 0.5f }
+        }
+        println("Vertex A UV (before direction): u=$uA, v=$vA")
+
+        // Apply direction
+        val uvA = FloatArray(2)
+        when (direction) {
+            1 -> { uvA[0] = -vA; uvA[1] = uA }
+            2 -> { uvA[0] = -uA; uvA[1] = -vA }
+            3 -> { uvA[0] = vA; uvA[1] = -uA }
+            else -> { uvA[0] = uA; uvA[1] = vA }
+        }
+        println("Vertex A UV (after direction $direction): u=${uvA[0]}, v=${uvA[1]}")
+
+        // Now compute full UVs using the actual function
+        val textureId = def.faceTextures?.get(faceIdx)?.toInt()?.and(0xffff) ?: -1
+        val uvs = computeUVs(def, faceIdx, aIdx, bIdx, cIdx, textureId)
+        println("\nFinal UVs from computeUVs:")
+        println("  A: (${uvs[0]}, ${uvs[1]})")
+        println("  B: (${uvs[2]}, ${uvs[3]})")
+        println("  C: (${uvs[4]}, ${uvs[5]})")
+        println("=== End UV Debug ===")
     }
 }
