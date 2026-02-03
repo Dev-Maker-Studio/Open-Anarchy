@@ -19,8 +19,10 @@ import org.darkan.tools.cache.model.ModelModifications
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.Engine
+import org.darkan.tools.engine.input.TilePicker
 import org.darkan.tools.engine.render.Camera
 import org.darkan.tools.engine.render.InstanceManager
+import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.engine.render.ShaderProgram
 import org.darkan.tools.engine.render.UniformBuffers
 import org.darkan.tools.engine.window.WindowConfig
@@ -125,6 +127,13 @@ class MapViewer(
     private var singleRegionObjects: List<ObjectInstance> = emptyList()
     private val singleRegionModels = mutableSetOf<Int>()
 
+    // Tile picker for debugging UV issues
+    private val tilePicker = TilePicker()
+    private var showTilePickerPanel = true
+    private var singleRegionTerrainData: TerrainLoader.RegionData? = null
+    private var singleRegionMapObjects: List<MapObject> = emptyList()  // Raw MapObjects for tile picker
+    private var tileHighlightMesh: Mesh? = null
+
     override fun onInit() {
         // Initialize texture loader
         TextureLoader.init(cache)
@@ -144,6 +153,7 @@ class MapViewer(
         // Load floor and object definitions (needed for both modes)
         TerrainLoader.loadDefinitions(cache)
         ObjectRenderer.loadDefinitions(cache)
+
 
 
         // Initialize map scene with XTEA support (lazy - for multi-region mode)
@@ -179,9 +189,6 @@ class MapViewer(
             loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
         }
 
-        println("Map Viewer initialized")
-        println("  XTEA keys loaded: ${MapXteas.size()}")
-        println("  Multi-region mode: $useMultiRegion")
     }
 
     private fun loadUBOShaders() {
@@ -257,7 +264,6 @@ class MapViewer(
         if (input.keyboard.isKeyPressed(GLFW_KEY_R)) {
             showRoofs = !showRoofs
             mapScene.showRoofs = showRoofs  // Sync with MapScene for multi-region mode
-            println("[MapViewer] Show roofs: $showRoofs")
             // Reload objects to apply the change (single-region only - multi-region filters dynamically)
             if (!useMultiRegion) {
                 loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
@@ -296,6 +302,124 @@ class MapViewer(
         if (input.keyboard.isKeyPressed(GLFW_KEY_PAGE_DOWN)) {
             if (currentPlane > 0) setPlane(currentPlane - 1)
         }
+
+        // Toggle tile picker panel (F4)
+        if (input.keyboard.isKeyPressed(GLFW_KEY_F4)) {
+            showTilePickerPanel = !showTilePickerPanel
+        }
+
+        // Tile picking (left-click in single-region mode only)
+        if (!useMultiRegion && input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+            handleTilePick()
+        }
+    }
+
+    /**
+     * Handle tile picking via left-click.
+     */
+    private fun handleTilePick() {
+        val terrainData = singleRegionTerrainData ?: return
+        val cam = scene.camera
+
+        // Convert mouse position to world ray
+        tilePicker.screenToWorldRay(
+            input.mouse.x.toFloat(),
+            input.mouse.y.toFloat(),
+            window.width,
+            window.height,
+            cam,
+            getAspectRatio()
+        )
+
+        // Pick tile
+        val selectedTile = tilePicker.pickTile(
+            terrainData.tiles,
+            currentRegionX,
+            currentRegionY,
+            currentPlane
+        )
+
+        if (selectedTile != null) {
+            // Update tile details with object lookup
+            tilePicker.updateTileDetails(
+                terrainData.tiles,
+                cache,
+                singleRegionMapObjects,
+                currentRegionX * 64,
+                currentRegionY * 64
+            )
+
+            // Update highlight mesh
+            updateTileHighlight(terrainData.tiles)
+        }
+    }
+
+    /**
+     * Update the tile highlight mesh for the selected tile.
+     */
+    private fun updateTileHighlight(terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>) {
+        val tile = tilePicker.selectedTile ?: return
+
+        // Clean up old mesh
+        tileHighlightMesh?.cleanup()
+
+        val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+        val heightScale = TerrainLoader.getHeightScale()
+
+        // Get corner heights
+        val x = tile.localX
+        val y = tile.localY
+        val nextX = (x + 1).coerceAtMost(63)
+        val nextY = (y + 1).coerceAtMost(63)
+
+        val h00 = terrainTiles[tile.plane][x][y].height * heightScale
+        val h10 = terrainTiles[tile.plane][nextX][y].height * heightScale
+        val h01 = terrainTiles[tile.plane][x][nextY].height * heightScale
+        val h11 = terrainTiles[tile.plane][nextX][nextY].height * heightScale
+
+        // Calculate world positions for corners (with small Y offset to prevent z-fighting)
+        val yOffset = 0.1f
+        val x0 = x * tileSize
+        val x1 = (x + 1) * tileSize
+        val z0 = -y * tileSize
+        val z1 = -(y + 1) * tileSize
+
+        // Create line mesh for tile outline
+        val positions = floatArrayOf(
+            // Bottom edge (SW -> SE)
+            x0, h00 + yOffset, z0,
+            x1, h10 + yOffset, z0,
+            // Right edge (SE -> NE)
+            x1, h10 + yOffset, z0,
+            x1, h11 + yOffset, z1,
+            // Top edge (NE -> NW)
+            x1, h11 + yOffset, z1,
+            x0, h01 + yOffset, z1,
+            // Left edge (NW -> SW)
+            x0, h01 + yOffset, z1,
+            x0, h00 + yOffset, z0
+        )
+
+        // Bright yellow color for highlight
+        val colors = FloatArray(8 * 3) { i ->
+            when (i % 3) {
+                0 -> 1f  // R
+                1 -> 1f  // G
+                2 -> 0f  // B
+                else -> 1f
+            }
+        }
+
+        val indices = IntArray(8) { it }
+
+        tileHighlightMesh = Mesh(
+            positions = positions,
+            colors = colors,
+            textureCoords = null,
+            normals = null,
+            indices = indices,
+            colorComponents = 3
+        )
     }
 
     override fun onUpdate(deltaTime: Float) {
@@ -413,12 +537,41 @@ class MapViewer(
             renderSystem.enableCullFace()
         }
 
+        // Render tile highlight (if any selected tile)
+        renderTileHighlight()
+
         // Render objects
         renderSingleRegionObjects()
 
         if (renderSystem.wireframeMode) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
         }
+    }
+
+    /**
+     * Render the tile highlight outline for the selected tile.
+     */
+    private fun renderTileHighlight() {
+        val highlightMesh = tileHighlightMesh ?: return
+
+        // Use simple shader for the highlight (no lighting)
+        simpleShader.bind()
+        simpleShader.setUniform("model", Matrix4f().identity())
+        simpleShader.setUniform("view", scene.camera.getViewMatrix())
+        simpleShader.setUniform("projection", scene.camera.getProjectionMatrix(getAspectRatio()))
+
+        // Disable depth test to always show highlight, or enable with slight offset
+        glDisable(GL_DEPTH_TEST)
+
+        // Set line width (if supported)
+        glLineWidth(3f)
+
+        // Render as lines
+        highlightMesh.renderLines()
+
+        // Restore state
+        glLineWidth(1f)
+        glEnable(GL_DEPTH_TEST)
     }
 
     private val tempModelMatrix = Matrix4f()
@@ -513,7 +666,7 @@ class MapViewer(
         debugPanel.fps = fps
         debugPanel.deltaTime = deltaTime
         debugPanel.wireframeMode = renderSystem.wireframeMode
-        debugPanel.render(if (useMultiRegion) mapCamera else scene.camera) {
+        debugPanel.render(if (useMultiRegion) mapCamera else scene.camera, window.width, window.height) {
             renderSystem.toggleWireframe()
         }
 
@@ -522,16 +675,214 @@ class MapViewer(
             renderNavigationPanel()
         }
 
+        // Tile picker panel (only in single-region mode)
+        if (showTilePickerPanel && !useMultiRegion) {
+            renderTilePickerPanel()
+        }
+
         imGui.endFrame()
     }
 
-    private fun renderNavigationPanel() {
-        ImGui.setNextWindowPos(window.width - 290f, 10f)
-        ImGui.setNextWindowSize(280f, 0f)
+    // Track first frame for initial positioning of panels
+    private var tilePickerFirstFrame = true
+    private var navPanelFirstFrame = true
 
-        val flags = ImGuiWindowFlags.NoMove or ImGuiWindowFlags.NoResize or ImGuiWindowFlags.AlwaysAutoResize
+    /**
+     * Render the tile picker information panel.
+     * Shows detailed information about the selected tile for debugging UV issues.
+     */
+    private fun renderTilePickerPanel() {
+        // Set size constraints: min width 320, max height 80% of screen
+        val maxHeight = window.height * 0.8f
+        ImGui.setNextWindowSizeConstraints(320f, 150f, 450f, maxHeight)
+
+        // Only set initial position on first frame
+        if (tilePickerFirstFrame) {
+            ImGui.setNextWindowPos(10f, 180f)
+            tilePickerFirstFrame = false
+        }
+
+        // Allow moving and resizing, scrollbar appears automatically when needed
+        val flags = ImGuiWindowFlags.None
+
+        if (ImGui.begin("Tile Picker (F4) - Click to Select", flags)) {
+            // Clamp window position to stay on screen
+            clampWindowToScreen()
+            val details = tilePicker.selectedTileDetails
+            val tile = tilePicker.selectedTile
+
+            if (tile == null) {
+                ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Left-click on terrain to select a tile")
+                ImGui.separator()
+                ImGui.text("This panel shows tile details for debugging")
+                ImGui.text("overlay/underlay textures and UV mapping.")
+            } else {
+                // Tile coordinates
+                ImGui.text("Tile Coordinates")
+                ImGui.separator()
+                ImGui.text("  Region: (%d, %d)".format(tile.regionX, tile.regionY))
+                ImGui.text("  Local:  (%d, %d)".format(tile.localX, tile.localY))
+                ImGui.text("  Plane:  %d".format(tile.plane))
+                ImGui.text("  World:  (%.2f, %.2f, %.2f)".format(tile.worldX, tile.worldY, tile.worldZ))
+
+                if (details != null) {
+                    val tileData = details.tileData
+                    if (tileData != null) {
+                        ImGui.spacing()
+                        ImGui.text("Tile Data")
+                        ImGui.separator()
+                        ImGui.text("  Height:   %d".format(tileData.height))
+                        ImGui.text("  Flags:    0x%02X".format(tileData.flags))
+                        if (tileData.flags != 0) {
+                            val flagsList = mutableListOf<String>()
+                            if (tileData.blocksWalk) flagsList.add("BLOCK_WALK")
+                            if (tileData.isBridge) flagsList.add("BRIDGE")
+                            if (tileData.isInvisible) flagsList.add("INVISIBLE")
+                            if (tileData.forcesCollisionPlane0) flagsList.add("FORCE_PLANE_0")
+                            ImGui.text("            ${flagsList.joinToString(", ")}")
+                        }
+
+                        ImGui.spacing()
+                        ImGui.text("Overlay")
+                        ImGui.separator()
+                        ImGui.text("  ID:       %d".format(tileData.overlayId))
+                        ImGui.text("  Shape:    %d".format(tileData.overlayShape))
+                        ImGui.text("  Rotation: %d".format(tileData.overlayRotation))
+
+                        val overlayDef = details.overlayDef
+                        if (overlayDef != null) {
+                            ImGui.text("  Texture:  %d".format(overlayDef.texture))
+                            ImGui.text("  Scale:    %d".format(overlayDef.scale))
+                            ImGui.text("  Colour:   0x%04X (%d)".format(overlayDef.colour, overlayDef.colour))
+                            ImGui.text("  BlendCol: 0x%04X (%d)".format(overlayDef.blendColour, overlayDef.blendColour))
+                            ImGui.text("  Underlay Override: %s".format(overlayDef.underlayOverrides))
+
+                            // UV coordinates for overlay
+                            val uvs = details.cornerUVsOverlay
+                            if (uvs != null) {
+                                ImGui.text("  UV Scale: %.4f (1/%d)".format(1f / overlayDef.scale.toFloat(), overlayDef.scale))
+                                ImGui.text("  UV SW: (%.3f, %.3f)".format(uvs[0][0], uvs[0][1]))
+                                ImGui.text("  UV SE: (%.3f, %.3f)".format(uvs[1][0], uvs[1][1]))
+                                ImGui.text("  UV NW: (%.3f, %.3f)".format(uvs[2][0], uvs[2][1]))
+                                ImGui.text("  UV NE: (%.3f, %.3f)".format(uvs[3][0], uvs[3][1]))
+                            }
+                        } else if (tileData.overlayId > 0) {
+                            ImGui.textColored(1f, 0.5f, 0.5f, 1f, "  (Definition not found)")
+                        }
+
+                        ImGui.spacing()
+                        ImGui.text("Underlay")
+                        ImGui.separator()
+                        ImGui.text("  ID:       %d".format(tileData.underlayId))
+
+                        val underlayDef = details.underlayDef
+                        if (underlayDef != null) {
+                            ImGui.text("  Texture:  %d".format(underlayDef.texture))
+                            ImGui.text("  Scale:    %d".format(underlayDef.scale))
+                            ImGui.text("  Colour:   0x%06X".format(underlayDef.colour))
+                            ImGui.text("  Hue:      %d".format(underlayDef.hue))
+                            ImGui.text("  Sat:      %d".format(underlayDef.saturation))
+                            ImGui.text("  Light:    %d".format(underlayDef.lightness))
+                            ImGui.text("  Chroma:   %d".format(underlayDef.chroma))
+
+                            // UV coordinates for underlay
+                            val uvs = details.cornerUVsUnderlay
+                            if (uvs != null) {
+                                ImGui.text("  UV Scale: %.4f (1/%d)".format(1f / underlayDef.scale.toFloat(), underlayDef.scale))
+                                ImGui.text("  UV SW: (%.3f, %.3f)".format(uvs[0][0], uvs[0][1]))
+                                ImGui.text("  UV SE: (%.3f, %.3f)".format(uvs[1][0], uvs[1][1]))
+                                ImGui.text("  UV NW: (%.3f, %.3f)".format(uvs[2][0], uvs[2][1]))
+                                ImGui.text("  UV NE: (%.3f, %.3f)".format(uvs[3][0], uvs[3][1]))
+                            }
+                        } else if (tileData.underlayId > 0) {
+                            ImGui.textColored(1f, 0.5f, 0.5f, 1f, "  (Definition not found)")
+                        }
+
+                        // Corner heights
+                        ImGui.spacing()
+                        ImGui.text("Corner Heights (scaled)")
+                        ImGui.separator()
+                        ImGui.text("  SW: %.2f  SE: %.2f".format(details.cornerHeights[0], details.cornerHeights[1]))
+                        ImGui.text("  NW: %.2f  NE: %.2f".format(details.cornerHeights[2], details.cornerHeights[3]))
+
+                        // Objects on tile
+                        ImGui.spacing()
+                        ImGui.text("Objects on Tile (%d)".format(details.objects.size))
+                        ImGui.separator()
+                        if (details.objects.isEmpty()) {
+                            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "  (No objects)")
+                        } else {
+                            for ((index, tileObj) in details.objects.withIndex()) {
+                                val obj = tileObj.mapObject
+                                val def = tileObj.definition
+                                if (ImGui.treeNode("obj_$index", "Object %d: %s".format(obj.id, def.name.ifEmpty { "<unnamed>" }))) {
+                                    ImGui.text("  Shape: %d, Rotation: %d".format(obj.shape, obj.rotation))
+                                    ImGui.text("  World Pos: (%d, %d)".format(obj.x, obj.y))
+                                    ImGui.text("  Size: %dx%d".format(def.sizeX, def.sizeY))
+
+                                    // Model IDs
+                                    ImGui.text("  Model IDs: %s".format(
+                                        if (tileObj.modelIds.isEmpty()) "(none)"
+                                        else tileObj.modelIds.joinToString(", ")
+                                    ))
+
+                                    // Texture IDs
+                                    ImGui.text("  Texture IDs: %s".format(
+                                        if (tileObj.textureIds.isEmpty()) "(none)"
+                                        else tileObj.textureIds.sorted().joinToString(", ")
+                                    ))
+
+                                    // Object retexturing/recoloring if present
+                                    if (def.retextureSrc != null && def.retextureDst != null) {
+                                        ImGui.textColored(0.5f, 1f, 0.5f, 1f, "  Has Retexturing")
+                                        for (i in def.retextureSrc!!.indices) {
+                                            if (i < def.retextureDst!!.size) {
+                                                val src = def.retextureSrc!![i].toInt() and 0xffff
+                                                val dst = def.retextureDst!![i].toInt() and 0xffff
+                                                ImGui.text("    Tex %d -> %d".format(src, dst))
+                                            }
+                                        }
+                                    }
+                                    if (def.recolorSrc != null && def.recolorDst != null) {
+                                        ImGui.textColored(0.5f, 0.5f, 1f, 1f, "  Has Recoloring")
+                                    }
+
+                                    ImGui.treePop()
+                                }
+                            }
+                        }
+                    }
+                }
+
+                ImGui.spacing()
+                ImGui.separator()
+                if (ImGui.button("Clear Selection")) {
+                    tilePicker.clearSelection()
+                    tileHighlightMesh?.cleanup()
+                    tileHighlightMesh = null
+                }
+            }
+        }
+        ImGui.end()
+    }
+
+    private fun renderNavigationPanel() {
+        // Set size constraints: min width 280, max height 80% of screen
+        val maxHeight = window.height * 0.8f
+        ImGui.setNextWindowSizeConstraints(280f, 200f, 400f, maxHeight)
+
+        // Only set initial position on first frame (right side of screen)
+        if (navPanelFirstFrame) {
+            ImGui.setNextWindowPos(window.width - 290f, 10f)
+            navPanelFirstFrame = false
+        }
+
+        // Allow moving and resizing, scrollbar appears automatically when needed
+        val flags = ImGuiWindowFlags.None
 
         if (ImGui.begin("Navigation (F2)", flags)) {
+            // Clamp window position to stay on screen
+            clampWindowToScreen()
             // Mode indicator
             ImGui.text("Mode: %s".format(if (useMultiRegion) "Multi-Region" else "Single"))
             if (ImGui.button(if (useMultiRegion) "Switch to Single (M)" else "Switch to Multi (M)")) {
@@ -611,7 +962,6 @@ class MapViewer(
             if (ImGui.checkbox("Show Roofs (R)", roofsEnabled)) {
                 showRoofs = roofsEnabled.get()
                 mapScene.showRoofs = showRoofs  // Sync with MapScene for multi-region mode
-                println("[MapViewer] Show roofs: ${if (showRoofs) "ENABLED" else "DISABLED"}")
                 // Reload objects to apply the change (single-region only - multi-region filters dynamically)
                 if (!useMultiRegion) {
                     loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
@@ -625,7 +975,6 @@ class MapViewer(
             val blendingEnabled = ImBoolean(TerrainLoader.enableBlending)
             if (ImGui.checkbox("Terrain Blending", blendingEnabled)) {
                 TerrainLoader.enableBlending = blendingEnabled.get()
-                println("[MapViewer] Terrain blending: ${if (blendingEnabled.get()) "ENABLED" else "DISABLED"}")
                 // Reload terrain to apply the change
                 TerrainLoader.clearCache()
                 if (!useMultiRegion) {
@@ -642,7 +991,6 @@ class MapViewer(
             val overlaysEnabled = ImBoolean(TerrainLoader.enableOverlays)
             if (ImGui.checkbox("Show Overlays", overlaysEnabled)) {
                 TerrainLoader.enableOverlays = overlaysEnabled.get()
-                println("[MapViewer] Overlay rendering: ${if (overlaysEnabled.get()) "ENABLED" else "DISABLED"}")
                 // Reload terrain to apply the change
                 TerrainLoader.clearCache()
                 if (!useMultiRegion) {
@@ -658,7 +1006,6 @@ class MapViewer(
             val colorNoiseEnabled = ImBoolean(TerrainLoader.enableColorNoise)
             if (ImGui.checkbox("Color Noise", colorNoiseEnabled)) {
                 TerrainLoader.enableColorNoise = colorNoiseEnabled.get()
-                println("[MapViewer] Color noise: ${if (colorNoiseEnabled.get()) "ENABLED" else "DISABLED"}")
                 // Reload terrain to apply the change
                 TerrainLoader.clearCache()
                 if (!useMultiRegion) {
@@ -677,7 +1024,6 @@ class MapViewer(
             val lightingEnabled = ImBoolean(TerrainLoader.enableLighting)
             if (ImGui.checkbox("Terrain Lighting", lightingEnabled)) {
                 TerrainLoader.enableLighting = lightingEnabled.get()
-                println("[MapViewer] Terrain lighting: ${if (lightingEnabled.get()) "ENABLED" else "DISABLED"}")
                 TerrainLoader.clearCache()
                 if (!useMultiRegion) {
                     loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
@@ -787,7 +1133,6 @@ class MapViewer(
             val terrainAlignEnabled = ImBoolean(TerrainAligner.enabled)
             if (ImGui.checkbox("Terrain Alignment", terrainAlignEnabled)) {
                 TerrainAligner.enabled = terrainAlignEnabled.get()
-                println("[MapViewer] Terrain alignment: ${if (terrainAlignEnabled.get()) "ENABLED" else "DISABLED"}")
                 // Reload objects to apply the change
                 if (!useMultiRegion) {
                     loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
@@ -811,7 +1156,6 @@ class MapViewer(
                 val negateXTilt = ImBoolean(TerrainAligner.negateXTilt)
                 if (ImGui.checkbox("Negate X Tilt", negateXTilt)) {
                     TerrainAligner.negateXTilt = negateXTilt.get()
-                    println("[MapViewer] Negate X tilt: ${if (negateXTilt.get()) "YES" else "NO"}")
                     if (!useMultiRegion) {
                         loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
                     } else {
@@ -827,7 +1171,6 @@ class MapViewer(
                 val negateZTilt = ImBoolean(TerrainAligner.negateZTilt)
                 if (ImGui.checkbox("Negate Z Tilt", negateZTilt)) {
                     TerrainAligner.negateZTilt = negateZTilt.get()
-                    println("[MapViewer] Negate Z tilt: ${if (negateZTilt.get()) "YES" else "NO"}")
                     if (!useMultiRegion) {
                         loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
                     } else {
@@ -843,7 +1186,6 @@ class MapViewer(
                 // Button to enable debug logging
                 if (ImGui.button("Enable Debug Logging")) {
                     TerrainAligner.enableDebug(true)
-                    println("[MapViewer] Terrain alignment debug enabled - reload region to see stats")
                     if (!useMultiRegion) {
                         loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
                     } else {
@@ -897,17 +1239,24 @@ class MapViewer(
         // Clean up existing resources
         cleanupSingleRegion()
 
+        // Clear tile picker selection when loading new region
+        tilePicker.clearSelection()
+        tileHighlightMesh?.cleanup()
+        tileHighlightMesh = null
+
         // Load terrain meshes with texture batching
         singleRegionTerrainBatches = TerrainLoader.loadRegionMeshes(cache, regionX, regionY, plane)
-        if (singleRegionTerrainBatches == null) {
-            println("Failed to load terrain meshes for region ($regionX, $regionY)")
-        }
 
         // Load objects
         val regionData = RegionLoader.loadRegion(cache, regionX, regionY)
         // Also load terrain data from TerrainLoader for height values
         // TerrainLoader computes authentic RS heights (cumulative, multi-octave noise)
         val terrainData = TerrainLoader.loadRegion(cache, regionX, regionY)
+
+        // Store terrain data for tile picker
+        singleRegionTerrainData = terrainData
+        // Store raw MapObjects for tile picker object lookup
+        singleRegionMapObjects = regionData?.objects ?: emptyList()
 
         if (regionData != null && terrainData != null) {
             // Create instance manager for this region (smaller capacity than multi-region)
@@ -941,9 +1290,6 @@ class MapViewer(
                     registeredCount++
                 }
             }
-            println("Region ($regionX, $regionY): ${singleRegionObjects.size} objects, $registeredCount models")
-        } else {
-            println("Failed to load region data for ($regionX, $regionY)")
         }
 
         // Center camera on the local terrain mesh (not world coordinates)
@@ -959,10 +1305,15 @@ class MapViewer(
     private fun cleanupSingleRegion() {
         // Clear reference to batched terrain meshes (actual cleanup is handled by TerrainLoader cache)
         singleRegionTerrainBatches = null
+        singleRegionTerrainData = null
+        singleRegionMapObjects = emptyList()
         singleRegionInstanceManager?.cleanup()
         singleRegionInstanceManager = null
         singleRegionObjects = emptyList()
         singleRegionModels.clear()
+        tilePicker.clearSelection()
+        tileHighlightMesh?.cleanup()
+        tileHighlightMesh = null
     }
 
     /**
@@ -995,155 +1346,6 @@ class MapViewer(
     }
 
     /**
-     * Debug function to analyze bridge tiles and identify all objects at bridge locations.
-     * Helps diagnose missing railings by showing exactly what objects exist at bridge tiles
-     * across all planes and whether they should be rendered.
-     */
-    private fun debugBridgeObjects(
-        regionData: RegionData,
-        regionX: Int,
-        regionY: Int,
-        baseWorldX: Int,
-        baseWorldY: Int
-    ) {
-        println("\n========== BRIDGE OBJECT DEBUG ==========")
-        println("Region: ($regionX, $regionY) - Base world: ($baseWorldX, $baseWorldY)")
-
-        // Find all tiles with bridge flag
-        val bridgeTiles = mutableListOf<Pair<Int, Int>>()
-        for (y in 0 until 64) {
-            for (x in 0 until 64) {
-                if (hasBridgeFlag(regionData, x, y)) {
-                    bridgeTiles.add(Pair(x, y))
-                }
-            }
-        }
-
-        println("Found ${bridgeTiles.size} tiles with bridge flag (0x2) set on plane 1")
-
-        if (bridgeTiles.isEmpty()) {
-            println("No bridge tiles found in this region!")
-            println("==========================================\n")
-            return
-        }
-
-        // Show first 10 bridge tile locations
-        println("\nBridge tile locations (first 10):")
-        bridgeTiles.take(10).forEach { (x, y) ->
-            println("  Local ($x, $y) -> World (${baseWorldX + x}, ${baseWorldY + y})")
-        }
-
-        // Collect all objects at bridge tiles across all planes
-        val objectsAtBridgeTiles = mutableMapOf<Pair<Int, Int>, MutableList<MapObject>>()
-        for (obj in regionData.objects) {
-            val localX = obj.x - baseWorldX
-            val localY = obj.y - baseWorldY
-            if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) continue
-
-            val tileKey = Pair(localX, localY)
-            if (bridgeTiles.contains(tileKey)) {
-                objectsAtBridgeTiles.getOrPut(tileKey) { mutableListOf() }.add(obj)
-            }
-        }
-
-        println("\n--- Objects at bridge tiles (by tile) ---")
-        val shapeCounts = mutableMapOf<Int, Int>()
-        val planeDistribution = mutableMapOf<Int, Int>()
-        var totalObjectsAtBridges = 0
-
-        // Analyze first 5 bridge tiles in detail
-        bridgeTiles.take(5).forEach { (x, y) ->
-            val objects = objectsAtBridgeTiles[Pair(x, y)] ?: emptyList()
-            println("\nTile ($x, $y) - ${objects.size} objects:")
-
-            objects.sortedBy { it.level }.forEach { obj ->
-                val def = ObjectRenderer.getDefinition(obj.id)
-                val shapeName = try {
-                    ObjectShape.entries.find { it.id == obj.shape }?.name ?: "UNKNOWN"
-                } catch (e: Exception) { "UNKNOWN" }
-
-                val modelIds = if (def != null) ObjectRenderer.getModelIds(def, obj.shape) else emptyList()
-                val hasModels = modelIds.isNotEmpty()
-
-                // Check if this object would be rendered on plane 0
-                val wouldRenderOnPlane0 = when {
-                    obj.level == 0 -> true
-                    obj.level == 1 && hasBridgeFlag(regionData, x, y) -> true
-                    else -> false
-                }
-
-                println("    ID: ${obj.id}, Plane: ${obj.level}, Shape: ${obj.shape} ($shapeName), Rot: ${obj.rotation}")
-                println("        Name: ${def?.name ?: "null"}")
-                println("        Models: ${if (hasModels) modelIds.joinToString() else "NONE"}")
-                println("        Size: ${def?.sizeX ?: 1}x${def?.sizeY ?: 1}")
-                println("        Would render on plane 0: $wouldRenderOnPlane0")
-
-                shapeCounts[obj.shape] = (shapeCounts[obj.shape] ?: 0) + 1
-                planeDistribution[obj.level] = (planeDistribution[obj.level] ?: 0) + 1
-                totalObjectsAtBridges++
-            }
-        }
-
-        // Count all objects at all bridge tiles
-        objectsAtBridgeTiles.values.flatten().forEach { obj ->
-            if (!bridgeTiles.take(5).contains(Pair(obj.x - baseWorldX, obj.y - baseWorldY))) {
-                shapeCounts[obj.shape] = (shapeCounts[obj.shape] ?: 0) + 1
-                planeDistribution[obj.level] = (planeDistribution[obj.level] ?: 0) + 1
-                totalObjectsAtBridges++
-            }
-        }
-
-        println("\n--- Summary Statistics ---")
-        println("Total objects at bridge tiles: $totalObjectsAtBridges")
-
-        println("\nObjects by plane:")
-        planeDistribution.toSortedMap().forEach { (plane, count) ->
-            println("  Plane $plane: $count objects")
-        }
-
-        println("\nObjects by shape:")
-        shapeCounts.toSortedMap().forEach { (shape, count) ->
-            val shapeName = try {
-                ObjectShape.entries.find { it.id == shape }?.name ?: "UNKNOWN"
-            } catch (e: Exception) { "UNKNOWN" }
-            println("  Shape $shape ($shapeName): $count objects")
-        }
-
-        // Specifically look for wall types (shapes 0-3) and wall decorations (shapes 4-8)
-        val wallShapes = listOf(0, 1, 2, 3)  // WALL_STRAIGHT, WALL_DIAGONAL_CORNER, WALL_WHOLE_CORNER, WALL_STRAIGHT_CORNER
-        val wallDecoShapes = listOf(4, 5, 6, 7, 8)  // WALL_INTERACT, WALL_DIAGONAL, WALL_OPPOSITE_CORNER, WALL_OPPOSITE, WALL_DIAGONAL_CORNER_OPPOSITE
-
-        val wallObjectsPlane1 = objectsAtBridgeTiles.values.flatten()
-            .filter { it.level == 1 && wallShapes.contains(it.shape) }
-        val wallDecoObjectsPlane1 = objectsAtBridgeTiles.values.flatten()
-            .filter { it.level == 1 && wallDecoShapes.contains(it.shape) }
-
-        println("\n--- Potential Railing Candidates (plane 1) ---")
-        println("Wall objects (shapes 0-3) on plane 1: ${wallObjectsPlane1.size}")
-        println("Wall decoration objects (shapes 4-8) on plane 1: ${wallDecoObjectsPlane1.size}")
-
-        if (wallObjectsPlane1.isNotEmpty()) {
-            println("\nFirst 5 wall objects on plane 1 (potential railings):")
-            wallObjectsPlane1.take(5).forEach { obj ->
-                val def = ObjectRenderer.getDefinition(obj.id)
-                val modelIds = if (def != null) ObjectRenderer.getModelIds(def, obj.shape) else emptyList()
-                println("  ID: ${obj.id} (${def?.name}), Shape: ${obj.shape}, Models: ${modelIds.joinToString()}")
-            }
-        }
-
-        if (wallDecoObjectsPlane1.isNotEmpty()) {
-            println("\nFirst 5 wall decoration objects on plane 1:")
-            wallDecoObjectsPlane1.take(5).forEach { obj ->
-                val def = ObjectRenderer.getDefinition(obj.id)
-                val modelIds = if (def != null) ObjectRenderer.getModelIds(def, obj.shape) else emptyList()
-                println("  ID: ${obj.id} (${def?.name}), Shape: ${obj.shape}, Models: ${modelIds.joinToString()}")
-            }
-        }
-
-        println("\n==========================================\n")
-    }
-
-    /**
      * Create object instances using LOCAL coordinates for single-region rendering.
      * The terrain mesh is at (0,0) to (63*tileSize, -63*tileSize) in local coords,
      * so objects must be positioned relative to (0,0), not world coords.
@@ -1170,9 +1372,6 @@ class MapViewer(
      * objects (railings, etc.) sit at the lower plane's height.
      * See Scene.linkBelow() in darkan-bot for reference implementation.
      */
-    // Debug flag for bridge analysis
-    private var bridgeDebugDone = false
-
     private fun createLocalObjectInstances(
         regionData: RegionData,
         terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>,
@@ -1189,16 +1388,6 @@ class MapViewer(
         // TerrainLoader now stores computed absolute heights (already includes * 32)
         // so HEIGHT_SCALE = 1/128 converts to OpenGL units
         val heightScale = TerrainLoader.getHeightScale()
-
-        // Debug: Analyze bridge tiles and their objects
-        if (!bridgeDebugDone && plane == 0) {
-            bridgeDebugDone = true
-            debugBridgeObjects(regionData, regionX, regionY, baseWorldX, baseWorldY)
-        }
-
-        // Debug counters for bridge-shifted objects
-        var bridgeShiftedObjects = 0
-        var bridgeShiftedWalls = 0
 
         for (obj in regionData.objects) {
             // Convert world tile to local tile
@@ -1219,14 +1408,6 @@ class MapViewer(
             // The bridge deck (plane 1) has elevated height data, so objects there
             // (railings, deck tiles, etc.) render at the elevated bridge height.
             val isBridgeTile = hasBridgeFlag(regionData, localTileX, localTileY)
-
-            // Track bridge objects for debugging
-            if (isBridgeTile && obj.level > 0) {
-                bridgeShiftedObjects++
-                if (obj.shape in 0..3) {
-                    bridgeShiftedWalls++
-                }
-            }
 
             // Use the object's actual plane for height sampling
             // Each object renders at its own plane's height
@@ -1407,27 +1588,33 @@ class MapViewer(
             }
         }
 
-        // Print bridge-shifted object statistics and positions
-        if (bridgeShiftedObjects > 0) {
-            println("  Bridge-shifted objects included: $bridgeShiftedObjects total, $bridgeShiftedWalls walls (shapes 0-3)")
-
-            // Debug: Print positions of first 5 bridge-shifted wall instances
-            val bridgeWallInstances = instances.filter {
-                it.mapObject.level == plane + 1 &&
-                it.mapObject.shape in 0..3 &&
-                hasBridgeFlag(regionData, it.mapObject.x - baseWorldX, it.mapObject.y - baseWorldY)
-            }
-            if (bridgeWallInstances.isNotEmpty()) {
-                println("  First 5 bridge-shifted wall positions:")
-                bridgeWallInstances.take(5).forEach { wall ->
-                    val localX = wall.mapObject.x - baseWorldX
-                    val localY = wall.mapObject.y - baseWorldY
-                    println("    ID=${wall.mapObject.id}, tile=($localX, $localY), pos=${wall.worldPosition}, rot=${wall.rotation}")
-                }
-            }
-        }
-
         return instances
+    }
+
+    /**
+     * Clamp the current ImGui window position to stay within screen bounds.
+     * Call this inside ImGui.begin() block.
+     */
+    private fun clampWindowToScreen() {
+        val pos = ImGui.getWindowPos()
+        val size = ImGui.getWindowSize()
+        val screenWidth = window.width.toFloat()
+        val screenHeight = window.height.toFloat()
+
+        var newX = pos.x
+        var newY = pos.y
+
+        // Clamp X: keep at least 50px visible on screen
+        if (newX + size.x < 50f) newX = 50f - size.x
+        if (newX > screenWidth - 50f) newX = screenWidth - 50f
+
+        // Clamp Y: keep title bar on screen (at least 20px from top)
+        if (newY < 0f) newY = 0f
+        if (newY > screenHeight - 50f) newY = screenHeight - 50f
+
+        if (newX != pos.x || newY != pos.y) {
+            ImGui.setWindowPos(newX, newY)
+        }
     }
 
     override fun onCleanup() {

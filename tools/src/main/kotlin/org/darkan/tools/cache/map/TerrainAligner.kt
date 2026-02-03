@@ -516,10 +516,6 @@ object TerrainAligner {
         val result = AlignmentResult(tiltXRadians, tiltZRadians, heightAdjustment)
         if (result.needsAlignment()) {
             nonZeroTiltCount++
-            if (debugEnabled && nonZeroTiltCount <= 10) {
-                println("[TerrainAligner] Object at ($localTileX,$localTileY): tiltX=${Math.toDegrees(tiltXRadians.toDouble())}deg, tiltZ=${Math.toDegrees(tiltZRadians.toDouble())}deg, heightAdj=$heightAdjustment")
-                println("  Heights: SW=$heightSW, SE=$heightSE, NW=$heightNW, NE=$heightNE")
-            }
         }
         return result
     }

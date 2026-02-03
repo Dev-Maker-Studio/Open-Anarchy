@@ -366,31 +366,7 @@ object TerrainLoader {
         underlays = UnderlayDecoder().load(cache)
         overlays = OverlayDecoder().load(cache)
         definitionsLoaded = true
-
-        // Debug: Print some underlay definitions and color comparisons
-        if (debugDefinitions) {
-            debugDefinitions = false
-            println("[TerrainLoader] Loaded ${underlays?.size ?: 0} underlay definitions")
-            println("\n=== COLOR CONVERSION COMPARISON (HSL vs old HSV) ===")
-            underlays?.take(10)?.forEachIndexed { idx, def ->
-                println("  Underlay $idx: colour=0x${def.colour.toString(16)}, hue=${def.hue}, sat=${def.saturation}, light=${def.lightness}, chroma=${def.chroma}")
-                // Pack and compare color conversion
-                if (def.chroma > 0) {
-                    val hue = def.hue * 256 / def.chroma
-                    val packedHsl = ColorUtil.packHsl16(hue, def.saturation, def.lightness)
-                    ColorUtil.debugColorComparison(packedHsl, "    Underlay $idx")
-                }
-            }
-            println("=== END COLOR COMPARISON ===\n")
-
-            // Trace through a typical grass color step by step
-            println("\n=== DETAILED COLOR TRACE (typical grass) ===")
-            ColorUtil.debugHslConversionTrace(0x3212)  // 12818 - typical grass green
-            ColorUtil.debugHslConversionTrace(0x3210)  // 12816 - similar grass
-        }
     }
-
-    private var debugDefinitions = true
 
     /**
      * Compute blended underlay colors for a region plane using the RS client's EXACT algorithm.
@@ -524,121 +500,7 @@ object TerrainLoader {
             }
         }
 
-        // Debug output for tile (32, 32) to verify blending is working
-        if (debugBlendingOnce) {
-            debugBlendingOnce = false
-            println("[TerrainLoader] === BLENDING DEBUG (enableBlending=$enableBlending) ===")
-            println("[TerrainLoader] Blending stats: $nonZeroCount non-zero colors")
-
-            // Print detailed info for tile (32, 32)
-            val debugX = 32
-            val debugY = 32
-            val blendedHsl = blendedColors[debugX][debugY]
-            val tile = region.tiles[plane][debugX][debugY]
-            val rawId = tile.underlayId
-            val rawDef = if (rawId > 0) underlayDefs.getOrNull(rawId - 1) else null
-
-            println("[TerrainLoader] Tile ($debugX, $debugY) analysis:")
-            println("  underlayId = $rawId")
-            if (rawDef != null) {
-                println("  Raw underlay definition:")
-                println("    colour (RGB24) = 0x${rawDef.colour.toString(16)}")
-                println("    hue = ${rawDef.hue}")
-                println("    saturation = ${rawDef.saturation}")
-                println("    lightness = ${rawDef.lightness}")
-                println("    chroma = ${rawDef.chroma}")
-                val rawHsl = if (rawDef.chroma > 0) {
-                    ColorUtil.packHsl16(rawDef.hue * 256 / rawDef.chroma, rawDef.saturation, rawDef.lightness)
-                } else 0
-                val rawRgb = ColorUtil.hslToRgb(rawHsl)
-                println("  Raw packed HSL = $rawHsl")
-                println("  Raw RGB = (${rawRgb.x}, ${rawRgb.y}, ${rawRgb.z})")
-            }
-
-            val blendedRgb = ColorUtil.hslToRgb(blendedHsl)
-            println("  Blended packed HSL = $blendedHsl")
-            println("  Blended RGB = (${blendedRgb.x}, ${blendedRgb.y}, ${blendedRgb.z})")
-
-            // Check neighbors to verify blending is affecting colors
-            println("  Neighbor underlay IDs:")
-            for (dy in -2..2) {
-                val row = StringBuilder("    y=${debugY + dy}: ")
-                for (dx in -2..2) {
-                    val nx = (debugX + dx).coerceIn(0, 63)
-                    val ny = (debugY + dy).coerceIn(0, 63)
-                    row.append("${region.tiles[plane][nx][ny].underlayId} ")
-                }
-                println(row)
-            }
-        }
-
         return blendedColors
-    }
-
-    // Debug flags - only print once
-    private var debugBlendingOnce = true
-    private var debugVertexColorsOnce = true
-    private var debugTileBoundaryOnce = true
-
-    /**
-     * Verify that corner colors are consistent between adjacent tiles.
-     * For smooth rendering, tile A's SE corner must match tile B's SW corner (where B is to the right of A).
-     * This function checks all adjacent tile pairs and reports any mismatches.
-     */
-    private fun verifyCornerColorConsistency(blendedColors: Array<IntArray>) {
-        println("[TerrainLoader] === CORNER COLOR CONSISTENCY CHECK ===")
-        var mismatches = 0
-
-        // Check horizontal adjacencies (tile x's SE corner = tile x+1's SW corner)
-        for (x in 0 until 62) {
-            for (y in 0 until 63) {
-                // Tile (x,y)'s SE corner uses blendedColors[x+1][y]
-                // Tile (x+1,y)'s SW corner uses blendedColors[x+1][y]
-                // These should be identical (same lookup)
-                val tileASE = blendedColors[(x + 1).coerceAtMost(63)][y]
-                val tileBSW = blendedColors[(x + 1).coerceAtMost(63)][y]
-                if (tileASE != tileBSW) {
-                    mismatches++
-                    if (mismatches <= 5) {
-                        println("  H-mismatch at ($x,$y)-(${x+1},$y): SE=$tileASE, SW=$tileBSW")
-                    }
-                }
-            }
-        }
-
-        // Check vertical adjacencies (tile y's NW corner = tile y+1's SW corner)
-        for (x in 0 until 63) {
-            for (y in 0 until 62) {
-                // Tile (x,y)'s NW corner uses blendedColors[x][y+1]
-                // Tile (x,y+1)'s SW corner uses blendedColors[x][y+1]
-                // These should be identical (same lookup)
-                val tileANW = blendedColors[x][(y + 1).coerceAtMost(63)]
-                val tileBSW = blendedColors[x][(y + 1).coerceAtMost(63)]
-                if (tileANW != tileBSW) {
-                    mismatches++
-                    if (mismatches <= 5) {
-                        println("  V-mismatch at ($x,$y)-(${x},$y+1): NW=$tileANW, SW=$tileBSW")
-                    }
-                }
-            }
-        }
-
-        println("[TerrainLoader] Total corner color mismatches: $mismatches")
-
-        // Print a few sample corner lookups to verify the algorithm
-        println("[TerrainLoader] Sample corner color lookups (should show gradient):")
-        for (testX in listOf(10, 30, 50)) {
-            val testY = 30
-            val sw = blendedColors[testX][testY]
-            val se = blendedColors[(testX + 1).coerceAtMost(63)][testY]
-            val nw = blendedColors[testX][(testY + 1).coerceAtMost(63)]
-            val ne = blendedColors[(testX + 1).coerceAtMost(63)][(testY + 1).coerceAtMost(63)]
-            println("  Tile ($testX, $testY): SW=0x${sw.toString(16)} SE=0x${se.toString(16)} NW=0x${nw.toString(16)} NE=0x${ne.toString(16)}")
-
-            // Also show what the interpolated midpoint would be
-            val midHsl = ColorUtil.bilinearBlendHsl(sw, se, nw, ne, 0.5f, 0.5f)
-            println("    Center interpolation: 0x${midHsl.toString(16)}")
-        }
     }
 
     /**
@@ -675,13 +537,6 @@ object TerrainLoader {
         val nwHsl = getBlendedUnderlayColorHsl(blendedColors, x, nwY)
         val neHsl = getBlendedUnderlayColorHsl(blendedColors, neX, neY)
 
-        // Debug: Log first few tiles with varying corner colors
-        if (debugCornerColorsCount < 5 && (swHsl != seHsl || swHsl != nwHsl || swHsl != neHsl)) {
-            debugCornerColorsCount++
-            println("[TerrainLoader] Tile ($x, $y) has varying corner colors:")
-            println("  SW=$swHsl SE=$seHsl NW=$nwHsl NE=$neHsl")
-        }
-
         return intArrayOf(swHsl, seHsl, nwHsl, neHsl)
     }
 
@@ -699,9 +554,6 @@ object TerrainLoader {
             if (hslCorners[3] != 0) ColorUtil.hslToRgb(hslCorners[3]) else black
         )
     }
-
-    private var debugCornerColorsCount = 0
-    private var debugShapedTileOnce = true
 
     fun loadRegion(cache: Cache, regionX: Int, regionY: Int): RegionData? {
         val regionId = (regionX shl 8) or regionY
@@ -732,10 +584,20 @@ object TerrainLoader {
 
         val regionId = (regionX shl 8) or regionY
         val cacheKey = regionId * 4 + plane
-        return batchedMeshCache.getOrPut(cacheKey) {
-            val region = loadRegion(cache, regionX, regionY) ?: return@getOrPut null
-            createBatchedTerrainMeshes(region, plane)
+
+        // Check if we need to regenerate (not in cache)
+        val cached = batchedMeshCache[cacheKey]
+        if (cached != null) {
+            return cached
         }
+
+        // Generate new meshes - log overlay state for debugging
+        println("[TerrainLoader] Generating meshes for region ($regionX, $regionY) plane $plane - enableOverlays=$enableOverlays")
+
+        val region = loadRegion(cache, regionX, regionY) ?: return null
+        val meshes = createBatchedTerrainMeshes(region, plane)
+        batchedMeshCache[cacheKey] = meshes
+        return meshes
     }
 
     /**
@@ -746,23 +608,6 @@ object TerrainLoader {
      */
     private fun createBatchedTerrainMeshes(region: RegionData, plane: Int): TerrainMeshes {
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
-
-        // Debug lighting configuration
-        if (debugLightingOnce) {
-            debugLightingOnce = false
-            println("\n=== TERRAIN LIGHTING DEBUG (RS-Style) ===")
-            println("  enableLighting = $enableLighting")
-            println("  lightDirection = ($LIGHT_DIRECTION_X, $LIGHT_DIRECTION_Y, $LIGHT_DIRECTION_Z)")
-            println("  RS default sun position: (-200, -240, -200) -> normalized: (-0.53, -0.64, -0.53)")
-            println("  sunBrightness = $SUN_BRIGHTNESS (RS default: ~0.9)")
-            println("  brightFactor = $BRIGHT_FACTOR (RS default: 0.7, for lit surfaces)")
-            println("  darkFactor = $DARK_FACTOR (RS default: 1.2, for shadowed surfaces)")
-            println("  RS formula: factor = sunBrightness + dot * (dot > 0 ? brightFactor : darkFactor)")
-            // Calculate expected range: when dot = 1 (fully lit) and dot = -1 (fully shadowed)
-            val maxLit = SUN_BRIGHTNESS + 1.0f * BRIGHT_FACTOR
-            val maxShadow = SUN_BRIGHTNESS + (-1.0f) * DARK_FACTOR
-            println("  Expected factor range: $maxShadow (shadow) to $maxLit (lit)")
-        }
 
         // Helper function to compute normals for a specific plane
         fun computeVertexNormals(p: Int): Triple<Array<FloatArray>, Array<FloatArray>, Array<FloatArray>> {
@@ -815,207 +660,6 @@ object TerrainLoader {
         // Pre-compute blended underlay colors for the main plane
         val blendedUnderlayColors = computeBlendedUnderlayColors(region, plane)
 
-        // Debug: Verify corner color consistency between adjacent tiles
-        if (debugVertexColorsOnce) {
-            debugVertexColorsOnce = false
-            verifyCornerColorConsistency(blendedUnderlayColors)
-        }
-
-        // Debug: Trace EXACT vertex colors at tile boundaries
-        if (debugTileBoundaryOnce) {
-            debugTileBoundaryOnce = false
-            println("\n=== TILE BOUNDARY DEBUG ===")
-
-            // Find adjacent tiles that are BOTH pure underlay (no overlay)
-            var foundPureUnderlay = false
-            var testX = -1
-            var testY = -1
-            for (x in 5 until 60) {
-                for (y in 5 until 60) {
-                    val tile1 = region.tiles[plane][x][y]
-                    val tile2 = region.tiles[plane][x + 1][y]
-                    // Both tiles must have underlay but no overlay, and different underlay IDs
-                    if (tile1.underlayId > 0 && tile2.underlayId > 0 &&
-                        tile1.overlayId == 0 && tile2.overlayId == 0 &&
-                        tile1.underlayId != tile2.underlayId) {
-                        testX = x
-                        testY = y
-                        foundPureUnderlay = true
-                        break
-                    }
-                }
-                if (foundPureUnderlay) break
-            }
-
-            if (!foundPureUnderlay) {
-                // Find ANY adjacent pure underlay tiles
-                for (x in 5 until 60) {
-                    for (y in 5 until 60) {
-                        val tile1 = region.tiles[plane][x][y]
-                        val tile2 = region.tiles[plane][x + 1][y]
-                        if (tile1.underlayId > 0 && tile2.underlayId > 0 &&
-                            tile1.overlayId == 0 && tile2.overlayId == 0) {
-                            testX = x
-                            testY = y
-                            foundPureUnderlay = true
-                            break
-                        }
-                    }
-                    if (foundPureUnderlay) break
-                }
-            }
-
-            // Also find a tile with varying corner colors (where gradient should be visible)
-            println("\n=== LOOKING FOR TILES WITH VISIBLE GRADIENT (varying corner colors) ===")
-            var foundGradient = false
-            for (x in 5 until 60) {
-                for (y in 5 until 60) {
-                    val tile = region.tiles[plane][x][y]
-                    if (tile.underlayId > 0 && tile.overlayId == 0) {
-                        val sw = blendedUnderlayColors[x][y]
-                        val se = blendedUnderlayColors[(x + 1).coerceAtMost(63)][y]
-                        val nw = blendedUnderlayColors[x][(y + 1).coerceAtMost(63)]
-                        val ne = blendedUnderlayColors[(x + 1).coerceAtMost(63)][(y + 1).coerceAtMost(63)]
-                        if (sw != se || sw != nw || sw != ne) {
-                            println("  Tile ($x,$y) has gradient: SW=$sw SE=$se NW=$nw NE=$ne")
-                            println("    underlayId=${tile.underlayId}")
-
-                            // Check adjacent tile to see if colors match at boundary
-                            val tile2 = region.tiles[plane][(x + 1).coerceAtMost(63)][y]
-                            if (tile2.underlayId > 0 && tile2.overlayId == 0) {
-                                val tile2_sw = blendedUnderlayColors[(x + 1).coerceAtMost(63)][y]
-                                val tile2_nw = blendedUnderlayColors[(x + 1).coerceAtMost(63)][(y + 1).coerceAtMost(63)]
-                                println("    Adjacent tile (${x+1},$y): SW=$tile2_sw NW=$tile2_nw")
-                                println("    Boundary match? SE==SW:${se==tile2_sw}, NE==NW:${ne==tile2_nw}")
-                            }
-                            foundGradient = true
-                            if (foundGradient) break
-                        }
-                    }
-                }
-                if (foundGradient) break
-            }
-
-            if (foundPureUnderlay) {
-                println("Found PURE UNDERLAY adjacent tiles at ($testX,$testY) and (${testX+1},$testY)")
-                val tile1 = region.tiles[plane][testX][testY]
-                val tile2 = region.tiles[plane][testX + 1][testY]
-                println("  Tile ($testX,$testY): underlayId=${tile1.underlayId}, overlayId=${tile1.overlayId}")
-                println("  Tile (${testX+1},$testY): underlayId=${tile2.underlayId}, overlayId=${tile2.overlayId}")
-
-                // Check the shared edge colors
-                val tile1_SE = blendedUnderlayColors[(testX + 1).coerceAtMost(63)][testY]
-                val tile2_SW = blendedUnderlayColors[(testX + 1).coerceAtMost(63)][testY]
-                val tile1_NE = blendedUnderlayColors[(testX + 1).coerceAtMost(63)][(testY + 1).coerceAtMost(63)]
-                val tile2_NW = blendedUnderlayColors[(testX + 1).coerceAtMost(63)][(testY + 1).coerceAtMost(63)]
-
-                println("\n=== SHARED EDGE COLORS ===")
-                println("  Tile ($testX,$testY) SE = blendedColors[${testX+1}][$testY] = $tile1_SE (0x${tile1_SE.toString(16)})")
-                println("  Tile (${testX+1},$testY) SW = blendedColors[${testX+1}][$testY] = $tile2_SW (0x${tile2_SW.toString(16)})")
-                println("  MATCH? ${tile1_SE == tile2_SW}")
-
-                val rgb1 = ColorUtil.hslToRgb(tile1_SE)
-                val rgb2 = ColorUtil.hslToRgb(tile2_SW)
-                println("  RGB at shared edge: (${rgb1.x}, ${rgb1.y}, ${rgb1.z})")
-
-                // Also check the 4 corners of tile1 to see the gradient
-                val sw = blendedUnderlayColors[testX][testY]
-                val se = blendedUnderlayColors[(testX + 1).coerceAtMost(63)][testY]
-                val nw = blendedUnderlayColors[testX][(testY + 1).coerceAtMost(63)]
-                val ne = blendedUnderlayColors[(testX + 1).coerceAtMost(63)][(testY + 1).coerceAtMost(63)]
-                println("\n  Tile ($testX,$testY) corner HSLs: SW=$sw SE=$se NW=$nw NE=$ne")
-
-                val rgbSW = ColorUtil.hslToRgb(sw)
-                val rgbSE = ColorUtil.hslToRgb(se)
-                val rgbNW = ColorUtil.hslToRgb(nw)
-                val rgbNE = ColorUtil.hslToRgb(ne)
-                println("  SW RGB: (${rgbSW.x}, ${rgbSW.y}, ${rgbSW.z})")
-                println("  SE RGB: (${rgbSE.x}, ${rgbSE.y}, ${rgbSE.z})")
-                println("  NW RGB: (${rgbNW.x}, ${rgbNW.y}, ${rgbNW.z})")
-                println("  NE RGB: (${rgbNE.x}, ${rgbNE.y}, ${rgbNE.z})")
-
-            } else {
-                println("No adjacent pure underlay tiles found - all tiles have overlays")
-                println("Overlay tiles intentionally create sharp color transitions")
-            }
-
-            // Check HSL to RGB conversion for typical neighboring values
-            println("\n=== HSL QUANTIZATION TEST ===")
-            for (hsl in listOf(12816, 12817, 12818, 12819, 12820, 12689)) {
-                val rgb = ColorUtil.hslToRgb(hsl)
-                println("  HSL $hsl (0x${hsl.toString(16)}): RGB=(${rgb.x}, ${rgb.y}, ${rgb.z})")
-            }
-            println("  Note: Adjacent HSL values should have similar RGB to avoid harsh edges")
-
-            // Count how many tiles are pure underlay vs have overlay
-            var pureUnderlayCount = 0
-            var overlayCount = 0
-            var partialOverlayCount = 0
-            var fullOverlayCount = 0
-            val shapeDistribution = mutableMapOf<Int, Int>()
-
-            for (x in 0 until 64) {
-                for (y in 0 until 64) {
-                    val tile = region.tiles[plane][x][y]
-                    if (tile.underlayId > 0 && tile.overlayId == 0) {
-                        pureUnderlayCount++
-                    } else if (tile.overlayId > 0) {
-                        overlayCount++
-                        val shape = tile.overlayShape
-                        shapeDistribution[shape] = (shapeDistribution[shape] ?: 0) + 1
-                        // Shape 0 = full overlay, shapes 1-11 = partial overlay
-                        if (shape == 0) {
-                            fullOverlayCount++
-                        } else {
-                            partialOverlayCount++
-                        }
-                    }
-                }
-            }
-            println("\n=== TILE STATS ===")
-            println("  Pure underlay tiles: $pureUnderlayCount")
-            println("  Overlay tiles: $overlayCount")
-            println("    Full overlay (shape 0): $fullOverlayCount")
-            println("    Partial overlay (shapes 1-11): $partialOverlayCount")
-            println("  Shape distribution: $shapeDistribution")
-
-            // Find a partial overlay tile and show its color situation
-            println("\n=== PARTIAL OVERLAY EXAMPLE ===")
-            for (x in 5 until 60) {
-                for (y in 5 until 60) {
-                    val tile = region.tiles[plane][x][y]
-                    if (tile.overlayId > 0 && tile.overlayShape in 1..11 && tile.underlayId > 0) {
-                        val overlayDef = getOverlayDefinition(tile.overlayId)
-                        val underlayDef = getUnderlayDefinition(tile.underlayId)
-                        val overlayColor = if (tile.overlayId > 0) getOverlayColor(tile.overlayId) else null
-                        val underlayHsl = getCornerHslColors(blendedUnderlayColors, x, y)
-                        val underlayRgb = hslCornersToRgb(underlayHsl)
-
-                        println("  Tile ($x,$y): shape=${tile.overlayShape}, rotation=${tile.overlayRotation}")
-                        println("    overlayId=${tile.overlayId}, underlayId=${tile.underlayId}")
-                        println("    Overlay color: $overlayColor")
-                        println("    Underlay corner HSLs: ${underlayHsl.toList()}")
-                        println("    Underlay corner RGBs: SW=${underlayRgb[0]} SE=${underlayRgb[1]}")
-
-                        // Compare overlay and underlay colors
-                        if (overlayColor != null) {
-                            val diff = (overlayColor.x - underlayRgb[0].x).let { kotlin.math.abs(it) } +
-                                       (overlayColor.y - underlayRgb[0].y).let { kotlin.math.abs(it) } +
-                                       (overlayColor.z - underlayRgb[0].z).let { kotlin.math.abs(it) }
-                            println("    Color difference (overlay vs underlay SW): $diff")
-                            if (diff > 0.3f) {
-                                println("    WARNING: Large color difference - this creates harsh edges")
-                            }
-                        }
-                        break
-                    }
-                }
-                break
-            }
-
-            println("=== END TILE BOUNDARY DEBUG ===\n")
-        }
-
         // Collect vertices grouped by texture ID
         val textureGroups = mutableMapOf<Int, MutableList<ShapedVertex>>()
 
@@ -1060,16 +704,29 @@ object TerrainLoader {
             val overlayTextureId = overlayDef?.texture ?: -1
             val underlayTextureId = underlayDef?.texture ?: -1
 
-            // Determine UV scales
-            val overlayUvScale = if (overlayDef != null && overlayDef.texture >= 0) {
-                overlayDef.scale.toFloat() / 512f
+            // Determine UV scales - RS client uses SCENE coordinates for texture mapping.
+            //
+            // RS client (GroundGL.resetLight lines 506-514, GroundMaterialGL.method12085 line 195):
+            // 1. Stores raw scene coordinates as texture coordinates: UV = (sceneX, sceneY)
+            // 2. Applies texture matrix scaling: glScalef(1/textureScale, 1/textureScale, 1)
+            //
+            // Scene coordinates are: sceneX = tileX * 512 + localOffset (where localOffset is 0-512)
+            // This means textures tile CONTINUOUSLY across the entire terrain, not per-tile.
+            //
+            // With textureScale=560 (texture 928): UV = sceneCoord / 560
+            // At tile (39,25): sceneX = 39*512 + offset = 19968 to 20480
+            // UV range: 35.66 to 36.57 (texture covers ~0.91 tiles, appearing roughly once per tile)
+            //
+            // We store 1/scale as uvScale and compute: u = sceneCoord * uvScale
+            val overlayUvScale = if (overlayDef != null && overlayDef.texture >= 0 && overlayDef.scale > 0) {
+                1f / overlayDef.scale.toFloat()
             } else {
-                1f
+                1f / 512f  // Default scale
             }
-            val underlayUvScale = if (underlayDef != null && underlayDef.texture >= 0) {
-                underlayDef.scale.toFloat() / 512f
+            val underlayUvScale = if (underlayDef != null && underlayDef.texture >= 0 && underlayDef.scale > 0) {
+                1f / underlayDef.scale.toFloat()
             } else {
-                1f
+                1f / 512f  // Default scale
             }
 
             // Adjust colors for textured tiles (use white or tint color)
@@ -1149,7 +806,8 @@ object TerrainLoader {
                 overlayHsl,
                 cornerNormals,
                 hasOverlay = hasOverlay,
-                hasUnderlay = hasUnderlay
+                hasUnderlay = hasUnderlay,
+                regionId = region.regionId
             )
 
             // Add vertices to appropriate texture groups
@@ -1157,59 +815,6 @@ object TerrainLoader {
                 val group = textureGroups.getOrPut(vertex.textureId) { mutableListOf() }
                 group.add(vertex)
             }
-        }
-
-        // ===== DEBUG: BRIDGE TILE ANALYSIS =====
-        // Collect bridge tile debug info BEFORE the main iteration
-        if (debugBridgeTilesOnce && plane == 0) {
-            debugBridgeTilesOnce = false
-            println("\n=== BRIDGE TILE DEBUG (Region ${region.regionId}, Plane $plane) ===")
-
-            var bridgeCount = 0
-            var plane0HasTerrainCount = 0
-            var plane0InvisibleCount = 0
-            var plane0BridgeFlagCount = 0
-            var plane1HasTerrainCount = 0
-            var plane1InvisibleCount = 0
-
-            for (x in 0 until 64) {
-                for (y in 0 until 64) {
-                    if (isBridgeTile(region.tiles, x, y)) {
-                        bridgeCount++
-                        val tile0 = region.tiles[0][x][y]
-                        val tile1 = region.tiles[1][x][y]
-
-                        if (tile0.underlayId > 0 || tile0.overlayId > 0) plane0HasTerrainCount++
-                        if (tile0.isInvisible) plane0InvisibleCount++
-                        if (tile0.isBridge) plane0BridgeFlagCount++
-                        if (tile1.underlayId > 0 || tile1.overlayId > 0) plane1HasTerrainCount++
-                        if (tile1.isInvisible) plane1InvisibleCount++
-
-                        // Print detailed info for first few bridge tiles
-                        if (bridgeCount <= 5) {
-                            println("  Bridge tile at ($x, $y):")
-                            println("    Plane 0: underlay=${tile0.underlayId}, overlay=${tile0.overlayId}, flags=0x${tile0.flags.toString(16)}")
-                            println("      isInvisible=${tile0.isInvisible}, isBridge=${tile0.isBridge}")
-                            println("    Plane 1: underlay=${tile1.underlayId}, overlay=${tile1.overlayId}, flags=0x${tile1.flags.toString(16)}")
-                            println("      isInvisible=${tile1.isInvisible}, isBridge=${tile1.isBridge}")
-
-                            // Check blended colors for plane 0
-                            val sw0 = blendedUnderlayColors[x][y]
-                            val se0 = blendedUnderlayColors[(x + 1).coerceAtMost(63)][y]
-                            println("    Plane 0 blended colors: SW=$sw0, SE=$se0")
-                        }
-                    }
-                }
-            }
-
-            println("\n  Summary:")
-            println("    Total bridge tiles: $bridgeCount")
-            println("    Plane 0 with terrain: $plane0HasTerrainCount")
-            println("    Plane 0 invisible: $plane0InvisibleCount")
-            println("    Plane 0 bridge flag: $plane0BridgeFlagCount")
-            println("    Plane 1 with terrain: $plane1HasTerrainCount")
-            println("    Plane 1 invisible: $plane1InvisibleCount")
-            println("=== END BRIDGE TILE DEBUG ===\n")
         }
 
         // Iterate through all 64x64 tiles
@@ -1303,6 +908,12 @@ object TerrainLoader {
 
             val mesh = Mesh(positions, colors, texCoords, normals, indices, colorComponents = 3)
             texturedBatches.add(TerrainBatch(mesh, texId))
+        }
+
+        // Debug: Log which textures are included in this terrain mesh
+        if (texturedBatches.isNotEmpty()) {
+            val textureList = texturedBatches.map { it.textureId }.sorted().joinToString(", ")
+            println("[TerrainLoader] Region ${region.regionId} plane $plane: textured batches with textures [$textureList]")
         }
 
         return TerrainMeshes(colorMesh, texturedBatches)
@@ -1561,22 +1172,11 @@ object TerrainLoader {
     }
 
     fun clearCache() {
+        println("[TerrainLoader] clearCache() called - clearing ${batchedMeshCache.size} cached meshes")
         batchedMeshCache.values.forEach { it?.cleanup() }
         batchedMeshCache.clear()
         regionCache.clear()
-        // Reset debug flags so we can see new output
-        debugBlendingOnce = true
-        debugDefinitions = true
-        debugCornerColorsCount = 0
-        debugVertexColorsOnce = true
-        debugLightingOnce = true
-        debugTileBoundaryOnce = true
-        debugShapedTileOnce = true
-        debugBridgeTilesOnce = true
     }
-
-    private var debugLightingOnce = true
-    private var debugBridgeTilesOnce = true
 
     /**
      * Clear all caches including definitions.
@@ -1871,12 +1471,10 @@ object TerrainLoader {
             Vector3f(0f, 1f, 0f), Vector3f(0f, 1f, 0f)
         ),
         hasOverlay: Boolean = true,
-        hasUnderlay: Boolean = true
+        hasUnderlay: Boolean = true,
+        regionId: Int = 0
     ): List<ShapedVertex> {
         val vertices = mutableListOf<ShapedVertex>()
-
-        // Debug is now handled elsewhere
-        val debugThisTile = false
 
         // Clamp shape to valid range
         val safeShape = shape.coerceIn(0, TRIANGLE_A.size - 1)
@@ -2018,43 +1616,8 @@ object TerrainLoader {
             else -> arrayOf(underlayCornerHsl[0], underlayCornerHsl[1], underlayCornerHsl[2], underlayCornerHsl[3])
         }
 
-        // Debug: For test tiles, print the corner colors used for interpolation
-        if (debugThisTile) {
-            println("\n=== SHAPED TILE DEBUG: Tile ($x, $y) ===")
-            println("  Shape: $safeShape, Rotation: $rotation")
-            println("  Input underlayCornerHsl: SW=${underlayCornerHsl[0]}, SE=${underlayCornerHsl[1]}, NW=${underlayCornerHsl[2]}, NE=${underlayCornerHsl[3]}")
-            println("  After rotation: hslSW=$hslSW, hslSE=$hslSE, hslNW=$hslNW, hslNE=$hslNE")
-
-            // Print the positions of the 4 corner vertices (indices 0, 2, 4, 6)
-            println("  Vertex positions (after rotation):")
-            for (corner in listOf(0, 2, 4, 6)) {
-                val cornerName = when (corner) {
-                    0 -> "SW"
-                    2 -> "SE"
-                    4 -> "NE"
-                    6 -> "NW"
-                    else -> "?"
-                }
-                println("    $cornerName (idx $corner): local(${vertexLocalX[corner]}, ${vertexLocalY[corner]}) -> world(${vertexX[corner]}, ${vertexZ[corner]})")
-            }
-
-            // Calculate what color each corner vertex would get
-            println("  Interpolated corner colors (what vertices will use):")
-            for (corner in listOf(0, 2, 4, 6)) {
-                val cornerName = when (corner) {
-                    0 -> "SW"
-                    2 -> "SE"
-                    4 -> "NE"
-                    6 -> "NW"
-                    else -> "?"
-                }
-                val fx = vertexLocalX[corner].toFloat() / 512f
-                val fy = vertexLocalY[corner].toFloat() / 512f
-                val blendedHsl = ColorUtil.bilinearBlendHsl(hslSW, hslSE, hslNW, hslNE, fx, fy)
-                val rgb = ColorUtil.hslToRgb(blendedHsl)
-                println("    $cornerName: fx=$fx, fy=$fy -> HSL=$blendedHsl -> RGB=(${rgb.x}, ${rgb.y}, ${rgb.z})")
-            }
-        }
+        // Track skipped overlay faces for debugging
+        var skippedOverlayFaces = 0
 
         // Generate triangles
         for (face in 0 until totalFaces) {
@@ -2064,7 +1627,10 @@ object TerrainLoader {
             val isOverlay = face < overlayFaces
 
             // Skip overlay faces if overlays are disabled
-            if (isOverlay && !enableOverlays) continue
+            if (isOverlay && !enableOverlays) {
+                skippedOverlayFaces++
+                continue
+            }
 
             val ia = triA[face]
             val ib = triB[face]
@@ -2256,9 +1822,27 @@ object TerrainLoader {
                 // Get color based on overlay/underlay, passing world position for noise calculation
                 val color = if (isOverlay) getOverlayVertexColor(vIdx, px, pz) else interpolateUnderlayColor(vIdx, px, pz)
 
-                // UV coordinates based on position within tile
-                val uvx = vertexLocalX[vIdx]
-                val uvy = vertexLocalY[vIdx]
+                // UV coordinates using RS client's SCENE coordinate system.
+                //
+                // RS client (GroundGL.resetLight): stores sceneX/sceneY as texture coordinates
+                // where sceneX = (tileX << tileScale) + localOffset = tileX * 512 + localOffset
+                //
+                // The RS client then applies glScalef(1/textureScale, 1/textureScale, 1) in the
+                // texture matrix before rendering (GroundMaterialGL.method12085).
+                //
+                // This creates CONTINUOUS tiling across the entire terrain rather than per-tile.
+                // For texture 928 (scale=560): texture repeats every 560 units, so roughly once
+                // per tile (512 units), matching the visual appearance in the RS client.
+                val localX = vertexLocalX[vIdx]
+                val localY = vertexLocalY[vIdx]
+
+                // Scene coordinates = tile position * 512 + local offset within tile
+                val sceneX = (x * 512 + localX).toFloat()
+                val sceneY = (y * 512 + localY).toFloat()
+
+                // Apply UV scale (= 1 / textureScale)
+                val u = sceneX * uvScale
+                val v = sceneY * uvScale
 
                 // Use the pre-computed smooth normal for this vertex
                 val smoothNormal = vertexNormals[vIdx]
@@ -2266,16 +1850,25 @@ object TerrainLoader {
                 return ShapedVertex(
                     px, py, pz,
                     color.x, color.y, color.z,
-                    uvx.toFloat() / 512f * uvScale,
-                    uvy.toFloat() / 512f * uvScale,
+                    u,
+                    v,
                     smoothNormal.x, smoothNormal.y, smoothNormal.z,
                     textureId
                 )
             }
 
-            vertices.add(createVertex(ax, ay, az, ia))
-            vertices.add(createVertex(bx, by, bz, ib))
-            vertices.add(createVertex(cx, cy, cz, ic))
+            val va = createVertex(ax, ay, az, ia)
+            val vb = createVertex(bx, by, bz, ib)
+            val vc = createVertex(cx, cy, cz, ic)
+
+            vertices.add(va)
+            vertices.add(vb)
+            vertices.add(vc)
+        }
+
+        // Debug: Report when overlay faces are being skipped (only once per region to avoid spam)
+        if (skippedOverlayFaces > 0 && x == 0 && y == 0) {
+            println("[TerrainLoader] Overlays disabled: skipping overlay faces (enableOverlays=$enableOverlays)")
         }
 
         return vertices

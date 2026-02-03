@@ -365,10 +365,13 @@ object ModelLoader {
                     }
                     scaleY = 64.0f / (def.texturesScaleY?.get(complexIdx) ?: 1)
                 } else if (mapping == 2) {
-                    // Cube mapping
-                    scaleX = 64.0f / (def.texturesScaleX?.get(complexIdx) ?: 1)
-                    scaleY = 64.0f / (def.texturesScaleY?.get(complexIdx) ?: 1)
-                    scaleZ = 64.0f / (def.texturesScaleZ?.get(complexIdx) ?: 1)
+                    // Cube mapping - protect against division by zero
+                    val rawX = def.texturesScaleX?.get(complexIdx) ?: 1
+                    val rawY = def.texturesScaleY?.get(complexIdx) ?: 1
+                    val rawZ = def.texturesScaleZ?.get(complexIdx) ?: 1
+                    scaleX = 64.0f / (if (rawX == 0) 1 else rawX)
+                    scaleY = 64.0f / (if (rawY == 0) 1 else rawY)
+                    scaleZ = 64.0f / (if (rawZ == 0) 1 else rawZ)
                 } else {
                     // Spherical mapping (type 3)
                     scaleX = (def.texturesScaleX?.get(complexIdx) ?: 1024) / 1024.0f
@@ -524,6 +527,18 @@ object ModelLoader {
 
     /**
      * Map cube/rectangular UV coordinates (type 2).
+     *
+     * This matches the RS client's mapRectangularUv function exactly.
+     * The cube face determines which pair of transformed coordinates to use:
+     * - Face 0 (+Y): tx for U, -tz for V
+     * - Face 1 (-Y): tx for U, tz for V
+     * - Face 2 (+Z): -tx for U, -ty for V
+     * - Face 3 (-Z): tx for U, -ty for V
+     * - Face 4 (+X): tz for U, -ty for V
+     * - Face 5 (-X): -tz for U, -ty for V
+     *
+     * Parameters speedOffset, uTrans, vTrans come from the texture definition
+     * and control animation/translation of the texture.
      */
     private fun mapCubeUV(
         vx: Int, vy: Int, vz: Int,
@@ -532,11 +547,13 @@ object ModelLoader {
         speedOffset: Float, uTrans: Float, vTrans: Float,
         uv: FloatArray
     ) {
+        // Transform vertex position relative to center through texture matrix
         val dx = (vx - centerX).toFloat()
         val dy = (vy - centerY).toFloat()
         val dz = (vz - centerZ).toFloat()
 
-        // Transform by matrix
+        // Matrix rows [0-2], [3-5], [6-8] transform to X, Y, Z axes respectively
+        // This includes the scale factor that was baked into the matrix
         val tx = dx * matrix[0] + dy * matrix[1] + dz * matrix[2]
         val ty = dx * matrix[3] + dy * matrix[4] + dz * matrix[5]
         val tz = dx * matrix[6] + dy * matrix[7] + dz * matrix[8]
@@ -545,57 +562,83 @@ object ModelLoader {
         var v: Float
 
         // Project onto appropriate cube face
+        // This matches the RS client's mapRectangularUv switch statement exactly:
+        // - f_14 = tx, f_15 = ty, f_16 = tz
+        // - f_10 = speedOffset, f_11 = uTrans, f_12 = vTrans
         when (cubeFace) {
-            0 -> { // +Y
+            0 -> { // +Y face: u = tx + speedOffset, v = -tz + vTrans
                 u = tx + speedOffset + 0.5f
                 v = -tz + vTrans + 0.5f
             }
-            1 -> { // -Y
+            1 -> { // -Y face: u = tx + speedOffset, v = tz + vTrans
                 u = tx + speedOffset + 0.5f
                 v = tz + vTrans + 0.5f
             }
-            2 -> { // +Z
+            2 -> { // +Z face: u = -tx + speedOffset, v = -ty + uTrans
                 u = -tx + speedOffset + 0.5f
                 v = -ty + uTrans + 0.5f
             }
-            3 -> { // -Z
+            3 -> { // -Z face: u = tx + speedOffset, v = -ty + uTrans
                 u = tx + speedOffset + 0.5f
                 v = -ty + uTrans + 0.5f
             }
-            4 -> { // +X
+            4 -> { // +X face: u = tz + vTrans, v = -ty + uTrans
                 u = tz + vTrans + 0.5f
                 v = -ty + uTrans + 0.5f
             }
-            else -> { // -X (5)
+            else -> { // -X face (5): u = -tz + vTrans, v = -ty + uTrans
                 u = -tz + vTrans + 0.5f
                 v = -ty + uTrans + 0.5f
             }
         }
 
-        // Apply direction rotation
+        // Apply direction rotation (0-3 for 0/90/180/270 degrees)
         applyDirection(direction, u, v, uv)
     }
 
     /**
-     * Determine which face of a cube a normal points to.
+     * Determine which face of a cube a transformed normal points to.
+     *
+     * This matches the RS client's getCubeFace function exactly.
+     * Returns:
+     * - 0: +Y face (normal points up)
+     * - 1: -Y face (normal points down)
+     * - 2: +Z face (normal points forward)
+     * - 3: -Z face (normal points backward)
+     * - 4: +X face (normal points right)
+     * - 5: -X face (normal points left)
+     *
+     * The face with the largest absolute component wins.
+     * Ties are broken in order: Y > Z > X (due to the if-else chain structure).
      */
     private fun getCubeFace(nx: Float, ny: Float, nz: Float): Int {
-        val ax = if (nx < 0) -nx else nx
-        val ay = if (ny < 0) -ny else ny
-        val az = if (nz < 0) -nz else nz
+        // Get absolute values for comparison
+        val ax = if (nx < 0.0f) -nx else nx
+        val ay = if (ny < 0.0f) -ny else ny
+        val az = if (nz < 0.0f) -nz else nz
 
+        // Determine dominant axis and sign
+        // This matches the client's ternary operator chain exactly
         return if (ay > ax && ay > az) {
-            if (ny > 0) 0 else 1  // +Y or -Y
+            if (ny > 0.0f) 0 else 1  // Y is dominant: +Y or -Y
         } else if (az > ax && az > ay) {
-            if (nz > 0) 2 else 3  // +Z or -Z
+            if (nz > 0.0f) 2 else 3  // Z is dominant: +Z or -Z
         } else {
-            if (nx > 0) 4 else 5  // +X or -X
+            if (nx > 0.0f) 4 else 5  // X is dominant (or tied): +X or -X
         }
     }
 
     /**
-     * Apply direction rotation to UV coordinates.
+     * Apply direction rotation to UV coordinates and flip V for OpenGL.
      * Direction 0 = no rotation, 1-3 = 90/180/270 degree rotations.
+     *
+     * The V flip (1 - V) corrects for the difference between RS and OpenGL texture coordinates:
+     * - RS textures have V=0 at top, V=1 at bottom
+     * - OpenGL textures have V=0 at bottom, V=1 at top
+     * - Since we flip texture data when loading (TextureLoader.createTextureFromArgb),
+     *   we must also flip V coordinates for correct sampling.
+     * - This works correctly for repeating textures because:
+     *   frac(1 - V) maps RS sample positions to correct OpenGL positions.
      */
     private fun applyDirection(direction: Int, u: Float, v: Float, uv: FloatArray) {
         when (direction) {
@@ -616,6 +659,8 @@ object ModelLoader {
                 uv[1] = v
             }
         }
+        // Flip V for OpenGL (RS has V=0 at top, OpenGL has V=0 at bottom with flipped texture)
+        uv[1] = 1.0f - uv[1]
     }
 
     /**
@@ -658,11 +703,11 @@ object ModelLoader {
         }
 
         val aU = (def.vertexX[aIdx] - bounds.minX) / bounds.rangeX
-        val aV = (def.vertexY[aIdx] - bounds.minY) / bounds.rangeY
+        val aV = 1.0f - (def.vertexY[aIdx] - bounds.minY) / bounds.rangeY  // Flip V for OpenGL
         val bU = (def.vertexX[bIdx] - bounds.minX) / bounds.rangeX
-        val bV = (def.vertexY[bIdx] - bounds.minY) / bounds.rangeY
+        val bV = 1.0f - (def.vertexY[bIdx] - bounds.minY) / bounds.rangeY  // Flip V for OpenGL
         val cU = (def.vertexX[cIdx] - bounds.minX) / bounds.rangeX
-        val cV = (def.vertexY[cIdx] - bounds.minY) / bounds.rangeY
+        val cV = 1.0f - (def.vertexY[cIdx] - bounds.minY) / bounds.rangeY  // Flip V for OpenGL
         return floatArrayOf(aU, aV, bU, bV, cU, cV)
     }
 
@@ -725,11 +770,11 @@ object ModelLoader {
         val vScale = 1f / vDenom
 
         val aU = (uBasisX * v0x + uBasisY * v0y + uBasisZ * v0z) * uScale
-        val aV = (vBasisX * v0x + vBasisY * v0y + vBasisZ * v0z) * vScale
+        val aV = 1.0f - (vBasisX * v0x + vBasisY * v0y + vBasisZ * v0z) * vScale  // Flip V for OpenGL
         val bU = (uBasisX * v1x + uBasisY * v1y + uBasisZ * v1z) * uScale
-        val bV = (vBasisX * v1x + vBasisY * v1y + vBasisZ * v1z) * vScale
+        val bV = 1.0f - (vBasisX * v1x + vBasisY * v1y + vBasisZ * v1z) * vScale  // Flip V for OpenGL
         val cU = (uBasisX * v2x + uBasisY * v2y + uBasisZ * v2z) * uScale
-        val cV = (vBasisX * v2x + vBasisY * v2y + vBasisZ * v2z) * vScale
+        val cV = 1.0f - (vBasisX * v2x + vBasisY * v2y + vBasisZ * v2z) * vScale  // Flip V for OpenGL
 
         return floatArrayOf(aU, aV, bU, bV, cU, cV)
     }
@@ -784,7 +829,27 @@ object ModelLoader {
 
     /**
      * Type 2: Cube/rectangular projection.
+     *
+     * This matches the RS client's cube mapping logic exactly (ModelGL.kt lines 715-740):
+     * 1. Compute face normal via cross product of edges
+     * 2. Transform normal by texture matrix (which has scale baked in)
+     * 3. UN-scale the transformed normal to determine which cube face
+     * 4. Project all three vertices using mapCubeUV (which uses the scaled matrix)
+     *
+     * The key insight is that scale is baked into the matrix for UV projection,
+     * but we need to remove it for cube face determination so the face selection
+     * is based on the un-scaled orientation.
      */
+    // Debug flag for UV computation
+    private var debugCubeUv = false
+
+    /**
+     * Enable/disable debug output for cube UV computation.
+     */
+    fun setDebugCubeUv(enable: Boolean) {
+        debugCubeUv = enable
+    }
+
     private fun computeCubeUVs(def: ModelDefinition, faceIdx: Int, texturePointer: Int, aIdx: Int, bIdx: Int, cIdx: Int): FloatArray {
         val transformData = textureTransformCache.getOrPut(def.id) {
             generateTextureTransformData(def)
@@ -796,35 +861,56 @@ object ModelLoader {
         val matrix = transformData.matrix[texturePointer]
         if (matrix.isEmpty()) return floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
 
-        // Use pre-computed indices (O(1) instead of O(n))
+        // Use pre-computed sparse indices for O(1) array access
         val complexIdx = transformData.complexIndex[texturePointer]
         val cubeIdx = transformData.cubeIndex[texturePointer]
+
+        // Get cube mapping parameters from sparse arrays
         val direction = def.texturesDirection?.get(complexIdx)?.toInt()?.and(0xff) ?: 0
         val speedOffset = (def.texturesSpeed?.get(complexIdx) ?: 0) / 256.0f
         val uTrans = (def.texturesUtrans?.get(cubeIdx) ?: 0) / 256.0f
         val vTrans = (def.texturesVtrans?.get(cubeIdx) ?: 0) / 256.0f
 
-        // Compute face normal to determine cube face
+        // Compute face normal via cross product (B-A) x (C-A)
+        // This matches the client's: i_100-i_108 calculations
         val dx1 = def.vertexX[bIdx] - def.vertexX[aIdx]
         val dy1 = def.vertexY[bIdx] - def.vertexY[aIdx]
         val dz1 = def.vertexZ[bIdx] - def.vertexZ[aIdx]
         val dx2 = def.vertexX[cIdx] - def.vertexX[aIdx]
         val dy2 = def.vertexY[cIdx] - def.vertexY[aIdx]
         val dz2 = def.vertexZ[cIdx] - def.vertexZ[aIdx]
-        val fnx = dy1 * dz2 - dz1 * dy2
-        val fny = dz1 * dx2 - dx1 * dz2
-        val fnz = dx1 * dy2 - dy1 * dx2
+        val fnx = dy1 * dz2 - dz1 * dy2  // i_106
+        val fny = dz1 * dx2 - dx1 * dz2  // i_107
+        val fnz = dx1 * dy2 - dy1 * dx2  // i_108
 
-        // Get scales
-        val scaleX = 64.0f / (def.texturesScaleX?.get(complexIdx) ?: 64)
-        val scaleY = 64.0f / (def.texturesScaleY?.get(complexIdx) ?: 64)
-        val scaleZ = 64.0f / (def.texturesScaleZ?.get(complexIdx) ?: 64)
+        // Get scales for un-scaling the transformed normal
+        // The matrix already has scale baked in, so we need to divide by scale
+        // to get the true face orientation. This matches: f_52, f_53, f_54
+        val rawScaleX = def.texturesScaleX?.get(complexIdx) ?: 1
+        val rawScaleY = def.texturesScaleY?.get(complexIdx) ?: 1
+        val rawScaleZ = def.texturesScaleZ?.get(complexIdx) ?: 1
+        // Protect against division by zero
+        val scaleX = 64.0f / (if (rawScaleX == 0) 1 else rawScaleX)
+        val scaleY = 64.0f / (if (rawScaleY == 0) 1 else rawScaleY)
+        val scaleZ = 64.0f / (if (rawScaleZ == 0) 1 else rawScaleZ)
 
-        // Transform normal by matrix and determine cube face
+        // Transform normal by matrix, then divide by scale to un-do the scaling
+        // This gives us the true face orientation for cube face selection
+        // Matches client: f_55 = (i_106 * matrix[0] + i_107 * matrix[1] + i_108 * matrix[2]) / f_52
         val tnx = (fnx * matrix[0] + fny * matrix[1] + fnz * matrix[2]) / scaleX
         val tny = (fnx * matrix[3] + fny * matrix[4] + fnz * matrix[5]) / scaleY
         val tnz = (fnx * matrix[6] + fny * matrix[7] + fnz * matrix[8]) / scaleZ
         val cubeFace = getCubeFace(tnx, tny, tnz)
+
+        if (debugCubeUv && faceIdx < 3) {
+            println("  computeCubeUVs(face=$faceIdx, texPtr=$texturePointer, verts=($aIdx,$bIdx,$cIdx))")
+            println("    center=($centerX, $centerY, $centerZ)")
+            println("    direction=$direction, speedOffset=$speedOffset, uTrans=$uTrans, vTrans=$vTrans")
+            println("    rawScale=($rawScaleX, $rawScaleY, $rawScaleZ) -> scale=($scaleX, $scaleY, $scaleZ)")
+            println("    faceNormal=($fnx, $fny, $fnz)")
+            println("    transformedNormal=($tnx, $tny, $tnz) -> cubeFace=$cubeFace")
+            println("    matrix=[${matrix.take(3).joinToString()}], [${matrix.drop(3).take(3).joinToString()}], [${matrix.drop(6).joinToString()}]")
+        }
 
         val uvA = FloatArray(2)
         val uvB = FloatArray(2)
@@ -833,6 +919,12 @@ object ModelLoader {
         mapCubeUV(def.vertexX[aIdx], def.vertexY[aIdx], def.vertexZ[aIdx], centerX, centerY, centerZ, cubeFace, matrix, direction, speedOffset, uTrans, vTrans, uvA)
         mapCubeUV(def.vertexX[bIdx], def.vertexY[bIdx], def.vertexZ[bIdx], centerX, centerY, centerZ, cubeFace, matrix, direction, speedOffset, uTrans, vTrans, uvB)
         mapCubeUV(def.vertexX[cIdx], def.vertexY[cIdx], def.vertexZ[cIdx], centerX, centerY, centerZ, cubeFace, matrix, direction, speedOffset, uTrans, vTrans, uvC)
+
+        if (debugCubeUv && faceIdx < 3) {
+            println("    A(${def.vertexX[aIdx]}, ${def.vertexY[aIdx]}, ${def.vertexZ[aIdx]}) -> UV(${uvA[0]}, ${uvA[1]})")
+            println("    B(${def.vertexX[bIdx]}, ${def.vertexY[bIdx]}, ${def.vertexZ[bIdx]}) -> UV(${uvB[0]}, ${uvB[1]})")
+            println("    C(${def.vertexX[cIdx]}, ${def.vertexY[cIdx]}, ${def.vertexZ[cIdx]}) -> UV(${uvC[0]}, ${uvC[1]})")
+        }
 
         return floatArrayOf(uvA[0], uvA[1], uvB[0], uvB[1], uvC[0], uvC[1])
     }
@@ -1139,36 +1231,11 @@ object ModelLoader {
      *
      * @param def The model definition
      * @param modifications Retexture/recolor modifications to apply
-     * @param debugModelId Model ID for debug output (-1 to disable)
+     * @param debugModelId Unused, kept for API compatibility
      */
+    @Suppress("UNUSED_PARAMETER")
     fun createMeshDataListFromDef(def: ModelDefinition, modifications: ModelModifications, debugModelId: Int = -1): List<MeshData>? {
         if (def.faceCount == 0) return null
-
-        // Debug output for specific models
-        if (debugModelId > 0 && def.id == debugModelId) {
-            var minX = Int.MAX_VALUE; var maxX = Int.MIN_VALUE
-            var minY = Int.MAX_VALUE; var maxY = Int.MIN_VALUE
-            var minZ = Int.MAX_VALUE; var maxZ = Int.MIN_VALUE
-            for (i in 0 until def.vertexCount) {
-                minX = minOf(minX, def.vertexX[i]); maxX = maxOf(maxX, def.vertexX[i])
-                minY = minOf(minY, def.vertexY[i]); maxY = maxOf(maxY, def.vertexY[i])
-                minZ = minOf(minZ, def.vertexZ[i]); maxZ = maxOf(maxZ, def.vertexZ[i])
-            }
-            println("=== DEBUG Model $debugModelId RAW vertex bounds ===")
-            println("  X: [$minX, $maxX] (range: ${maxX - minX})")
-            println("  Y: [$minY, $maxY] (range: ${maxY - minY})")
-            println("  Z: [$minZ, $maxZ] (range: ${maxZ - minZ})")
-            val scaledMinX = minX * CoordinateUtil.DEFAULT_SCALE
-            val scaledMaxX = maxX * CoordinateUtil.DEFAULT_SCALE
-            val scaledMinY = -maxY * CoordinateUtil.DEFAULT_SCALE  // Y inverted
-            val scaledMaxY = -minY * CoordinateUtil.DEFAULT_SCALE
-            val scaledMinZ = -maxZ * CoordinateUtil.DEFAULT_SCALE  // Z inverted
-            val scaledMaxZ = -minZ * CoordinateUtil.DEFAULT_SCALE
-            println("=== SCALED (OpenGL) vertex bounds (scale=1/128) ===")
-            println("  X: [$scaledMinX, $scaledMaxX] (range: ${scaledMaxX - scaledMinX})")
-            println("  Y: [$scaledMinY, $scaledMaxY] (range: ${scaledMaxY - scaledMinY})")
-            println("  Z: [$scaledMinZ, $scaledMaxZ] (range: ${scaledMaxZ - scaledMinZ})")
-        }
 
         fun isValidIndex(idx: Int) = idx >= 0 && idx < def.vertexCount
 
@@ -1465,156 +1532,4 @@ object ModelLoader {
         return -(baseId xor modHash)
     }
 
-    /**
-     * Debug function to analyze UV computation for a specific face.
-     */
-    fun debugUVComputation(def: ModelDefinition, faceIdx: Int) {
-        if (faceIdx < 0 || faceIdx >= def.faceCount) {
-            println("Invalid face index $faceIdx")
-            return
-        }
-
-        val aIdx = def.faceA[faceIdx]
-        val bIdx = def.faceB[faceIdx]
-        val cIdx = def.faceC[faceIdx]
-
-        println("=== Face $faceIdx UV Debug ===")
-        println("Vertex indices: A=$aIdx, B=$bIdx, C=$cIdx")
-        println("Vertex A: (${def.vertexX[aIdx]}, ${def.vertexY[aIdx]}, ${def.vertexZ[aIdx]})")
-        println("Vertex B: (${def.vertexX[bIdx]}, ${def.vertexY[bIdx]}, ${def.vertexZ[bIdx]})")
-        println("Vertex C: (${def.vertexX[cIdx]}, ${def.vertexY[cIdx]}, ${def.vertexZ[cIdx]})")
-
-        val texturePointer = def.faceTexturePointers?.get(faceIdx)?.toInt()?.and(0xff) ?: 255
-        println("Texture pointer: $texturePointer")
-
-        if (texturePointer == 255 || texturePointer >= def.textureTriangleCount) {
-            println("No valid texture pointer")
-            return
-        }
-
-        val mappingType = def.texturesMapping?.get(texturePointer)?.toInt()?.and(0xff) ?: 0
-        println("Mapping type: $mappingType")
-
-        if (mappingType != 2) {
-            println("Not cube mapping (type 2), skipping detailed debug")
-            return
-        }
-
-        // Generate/get transform data
-        val transformData = textureTransformCache.getOrPut(def.id) {
-            generateTextureTransformData(def)
-        }
-        if (transformData == null) {
-            println("Failed to generate transform data")
-            return
-        }
-
-        val centerX = transformData.centerX[texturePointer]
-        val centerY = transformData.centerY[texturePointer]
-        val centerZ = transformData.centerZ[texturePointer]
-        println("Texture center: ($centerX, $centerY, $centerZ)")
-
-        val complexIdx = transformData.complexIndex[texturePointer]
-        val cubeIdx = transformData.cubeIndex[texturePointer]
-        println("Complex index: $complexIdx, Cube index: $cubeIdx")
-
-        val scaleXVal = def.texturesScaleX?.get(complexIdx) ?: 64
-        val scaleYVal = def.texturesScaleY?.get(complexIdx) ?: 64
-        val scaleZVal = def.texturesScaleZ?.get(complexIdx) ?: 64
-        println("Raw scale values: X=$scaleXVal, Y=$scaleYVal, Z=$scaleZVal")
-
-        val scaleX = 64.0f / scaleXVal
-        val scaleY = 64.0f / scaleYVal
-        val scaleZ = 64.0f / scaleZVal
-        println("Computed scales: X=$scaleX, Y=$scaleY, Z=$scaleZ")
-
-        val rotation = def.texturesRotation?.get(complexIdx)?.toInt()?.and(0xff) ?: 0
-        val direction = def.texturesDirection?.get(complexIdx)?.toInt()?.and(0xff) ?: 0
-        val speed = def.texturesSpeed?.get(complexIdx) ?: 0
-        println("Rotation: $rotation, Direction: $direction, Speed: $speed")
-
-        val uTrans = def.texturesUtrans?.get(cubeIdx) ?: 0
-        val vTrans = def.texturesVtrans?.get(cubeIdx) ?: 0
-        println("UTrans: $uTrans, VTrans: $vTrans")
-
-        val n = def.textureFaceX?.get(texturePointer)?.toInt() ?: 0
-        val m = def.textureFaceY?.get(texturePointer)?.toInt() ?: 0
-        val p = def.textureFaceZ?.get(texturePointer)?.toInt() ?: 0
-        println("Texture face (n, m, p): ($n, $m, $p)")
-
-        val matrix = transformData.matrix[texturePointer]
-        println("Matrix: ${matrix.toList()}")
-
-        // Compute face normal
-        val dx1 = def.vertexX[bIdx] - def.vertexX[aIdx]
-        val dy1 = def.vertexY[bIdx] - def.vertexY[aIdx]
-        val dz1 = def.vertexZ[bIdx] - def.vertexZ[aIdx]
-        val dx2 = def.vertexX[cIdx] - def.vertexX[aIdx]
-        val dy2 = def.vertexY[cIdx] - def.vertexY[aIdx]
-        val dz2 = def.vertexZ[cIdx] - def.vertexZ[aIdx]
-        val fnx = dy1 * dz2 - dz1 * dy2
-        val fny = dz1 * dx2 - dx1 * dz2
-        val fnz = dx1 * dy2 - dy1 * dx2
-        println("Face normal (raw): ($fnx, $fny, $fnz)")
-
-        // Transform normal by matrix
-        val tnxRaw = fnx * matrix[0] + fny * matrix[1] + fnz * matrix[2]
-        val tnyRaw = fnx * matrix[3] + fny * matrix[4] + fnz * matrix[5]
-        val tnzRaw = fnx * matrix[6] + fny * matrix[7] + fnz * matrix[8]
-        println("Transformed normal (before scale div): ($tnxRaw, $tnyRaw, $tnzRaw)")
-
-        val tnx = tnxRaw / scaleX
-        val tny = tnyRaw / scaleY
-        val tnz = tnzRaw / scaleZ
-        println("Transformed normal (after scale div): ($tnx, $tny, $tnz)")
-
-        val cubeFace = getCubeFace(tnx, tny, tnz)
-        println("Cube face: $cubeFace (0=+Y, 1=-Y, 2=+Z, 3=-Z, 4=+X, 5=-X)")
-
-        // Compute UV for vertex A
-        val dxA = (def.vertexX[aIdx] - centerX).toFloat()
-        val dyA = (def.vertexY[aIdx] - centerY).toFloat()
-        val dzA = (def.vertexZ[aIdx] - centerZ).toFloat()
-        println("Vertex A offset from center: ($dxA, $dyA, $dzA)")
-
-        val txA = dxA * matrix[0] + dyA * matrix[1] + dzA * matrix[2]
-        val tyA = dxA * matrix[3] + dyA * matrix[4] + dzA * matrix[5]
-        val tzA = dxA * matrix[6] + dyA * matrix[7] + dzA * matrix[8]
-        println("Vertex A transformed: tx=$txA, ty=$tyA, tz=$tzA")
-
-        val speedOffset = speed / 256.0f
-        val uTransF = uTrans / 256.0f
-        val vTransF = vTrans / 256.0f
-
-        var uA: Float
-        var vA: Float
-        when (cubeFace) {
-            0 -> { uA = txA + speedOffset + 0.5f; vA = -tzA + vTransF + 0.5f }
-            1 -> { uA = txA + speedOffset + 0.5f; vA = tzA + vTransF + 0.5f }
-            2 -> { uA = -txA + speedOffset + 0.5f; vA = -tyA + uTransF + 0.5f }
-            3 -> { uA = txA + speedOffset + 0.5f; vA = -tyA + uTransF + 0.5f }
-            4 -> { uA = tzA + vTransF + 0.5f; vA = -tyA + uTransF + 0.5f }
-            else -> { uA = -tzA + vTransF + 0.5f; vA = -tyA + uTransF + 0.5f }
-        }
-        println("Vertex A UV (before direction): u=$uA, v=$vA")
-
-        // Apply direction
-        val uvA = FloatArray(2)
-        when (direction) {
-            1 -> { uvA[0] = -vA; uvA[1] = uA }
-            2 -> { uvA[0] = -uA; uvA[1] = -vA }
-            3 -> { uvA[0] = vA; uvA[1] = -uA }
-            else -> { uvA[0] = uA; uvA[1] = vA }
-        }
-        println("Vertex A UV (after direction $direction): u=${uvA[0]}, v=${uvA[1]}")
-
-        // Now compute full UVs using the actual function
-        val textureId = def.faceTextures?.get(faceIdx)?.toInt()?.and(0xffff) ?: -1
-        val uvs = computeUVs(def, faceIdx, aIdx, bIdx, cIdx, textureId)
-        println("\nFinal UVs from computeUVs:")
-        println("  A: (${uvs[0]}, ${uvs[1]})")
-        println("  B: (${uvs[2]}, ${uvs[3]})")
-        println("  C: (${uvs[4]}, ${uvs[5]})")
-        println("=== End UV Debug ===")
-    }
 }

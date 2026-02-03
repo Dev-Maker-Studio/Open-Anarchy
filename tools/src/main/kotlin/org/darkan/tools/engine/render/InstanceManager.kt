@@ -76,7 +76,6 @@ class InstanceManager(
         for (meshData in meshDataList) {
             // Skip empty batches
             if (meshData.positions.isEmpty() || meshData.indices.isEmpty()) {
-                println("WARNING: Skipping empty batch for model $modelId, textureId=${meshData.textureId}")
                 continue
             }
 

@@ -254,33 +254,16 @@ class MapScene(
         renderObjectsInternal(instancedColorShader, instancedTexturedShader, cullResult, bindTexture)
     }
 
-    // Debug flag - set to true for verbose logging
-    private var debugRender = false
-    private var debugFrameCount = 0
-
-    /**
-     * Render terrain only (for debugging or simple views).
-     */
     /**
      * Render terrain using color-only shader.
      * Note: Textured terrain batches are not rendered in multi-region mode.
      * For full textured terrain support, use single-region mode.
      */
     fun renderTerrain(shader: ShaderProgram) {
-        val cullResult = lastCullResult
-        if (cullResult == null) {
-            if (debugRender && debugFrameCount++ < 10) println("[Render] No cull result")
-            return
-        }
-
-        if (debugRender && debugFrameCount < 10) {
-            println("[Render] Visible regions: ${cullResult.visibleRegionCount}, plane: $currentPlane")
-            debugFrameCount++
-        }
+        val cullResult = lastCullResult ?: return
 
         shader.bind()
 
-        var rendered = 0
         for (regionChunk in cullResult.visibleRegions) {
             val loaded = loadedRegions[regionChunk.regionId] ?: continue
             val terrainMeshes = loaded.terrainMeshesByPlane[currentPlane] ?: continue
@@ -291,11 +274,6 @@ class MapScene(
 
             shader.setUniform("model", model)
             colorMesh.render()
-            rendered++
-        }
-
-        if (debugRender && debugFrameCount <= 10) {
-            println("[Render] Rendered $rendered terrain meshes")
         }
     }
 
@@ -372,11 +350,6 @@ class MapScene(
             }
         } else {
             instanceManager.renderUntextured(colorShader)
-        }
-
-        if (debugRender && debugFrameCount <= 10) {
-            val stats = instanceManager.getStats()
-            println("[Objects] Visible: ${cullResult.visibleObjects.size}, Added instances: $addedInstances, Draw calls: ${stats.drawCalls}, Registered models: ${stats.registeredModels}")
         }
     }
 

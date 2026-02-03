@@ -114,6 +114,16 @@ class Mesh(
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
     }
 
+    /**
+     * Render the mesh as lines (GL_LINES primitive type).
+     * Useful for outlines and debug visualization.
+     */
+    fun renderLines() {
+        glBindVertexArray(vaoId)
+        glDrawElements(GL_LINES, vertexCount, GL_UNSIGNED_INT, 0)
+        glBindVertexArray(0)
+    }
+
     fun cleanup() {
         glDisableVertexAttribArray(0)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
