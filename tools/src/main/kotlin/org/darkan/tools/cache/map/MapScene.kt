@@ -439,7 +439,7 @@ class MapScene(
 
         // Register objects with culling system (all planes)
         // Include full transform data (rotation, scale, offset, terrain alignment) for correct rendering
-        // Use combined model ID for multi-model objects
+        // Use combined model ID for multi-model objects, including modifications
         for ((plane, objects) in objectsByPlane) {
             for (obj in objects) {
                 val objBounds = AABB(
@@ -447,8 +447,8 @@ class MapScene(
                     Vector3f(obj.worldPosition.x + 2f, obj.worldPosition.y + 2f, obj.worldPosition.z + 2f)
                 )
 
-                // Use combined model ID instead of individual model IDs
-                val combinedModelId = ObjectRenderer.getCombinedModelId(obj.modelIds)
+                // Use combined model ID with modifications for objects with retexturing/recoloring
+                val combinedModelId = ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
                 cullingSystem.registerObject(SceneObject(
                     objectId = obj.mapObject.id,
                     modelId = combinedModelId,
@@ -495,15 +495,21 @@ class MapScene(
     /**
      * Register models needed for object instances.
      * Uses combined models for multi-model objects (matching RS client behavior).
+     * Applies retexturing/recoloring from ObjectDefinition if present.
      */
     private fun registerObjectModels(objects: List<ObjectInstance>) {
         for (obj in objects) {
-            // Get the combined model ID for this object's models
-            val combinedId = ObjectRenderer.getCombinedModelId(obj.modelIds)
+            // Get the combined model ID for this object's models, including modifications
+            // Objects with different retexture/recolor mappings get separate registrations
+            val combinedId = ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
             if (registeredModels.contains(combinedId)) continue
 
-            // Load and combine all models for this object
-            val meshDataList = ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
+            // Load and combine all models for this object with modifications applied
+            val meshDataList = if (obj.modifications.hasModifications()) {
+                ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
+            } else {
+                ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
+            }
             if (meshDataList != null && meshDataList.isNotEmpty()) {
                 instanceManager.registerModel(combinedId, meshDataList)
                 registeredModels.add(combinedId)

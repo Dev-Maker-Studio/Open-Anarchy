@@ -185,10 +185,18 @@ class TextureType(data: ByteArray) {
             }
 
             // Get opacity from the dedicated opacity operation (for proper texture transparency)
-            val opacityBuffer: IntArray = if (opacityOperation.monochrome) {
-                opacityOperation.getMonochromeOutput(row)
+            // Only use the opacity operation if it's different from the opaque operation.
+            // When they're the same, the texture has no dedicated opacity channel and should
+            // be treated as fully opaque for non-black pixels.
+            val hasOpacityChannel = opacityOperation !== opaqueOperation
+            val opacityBuffer: IntArray? = if (hasOpacityChannel) {
+                if (opacityOperation.monochrome) {
+                    opacityOperation.getMonochromeOutput(row)
+                } else {
+                    opacityOperation.getColorOutput(row)[0]
+                }
             } else {
-                opacityOperation.getColorOutput(row)[0]
+                null
             }
 
             // Process pixels from right to left (matching RS client behavior)
@@ -203,13 +211,16 @@ class TextureType(data: ByteArray) {
                 green = BRIGHTNESS_TABLE[green]
                 blue = BRIGHTNESS_TABLE[blue]
 
-                // Get alpha from opacity operation, but black pixels are always transparent
-                // This matches the RS client behavior for texture transparency
+                // Get alpha: black pixels are always transparent.
+                // If texture has a dedicated opacity channel, use it.
+                // Otherwise, treat non-black pixels as fully opaque.
                 val alpha: Int = if (red == 0 && green == 0 && blue == 0) {
                     0
-                } else {
+                } else if (opacityBuffer != null) {
                     // Scale opacity value the same way as color values (shift right 4 bits)
                     (opacityBuffer[x] shr 4).coerceIn(0, 255)
+                } else {
+                    255
                 }
 
                 pixels[pixelIndex++] = (alpha shl 24) or (red shl 16) or (green shl 8) or blue

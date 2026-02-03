@@ -3,6 +3,7 @@ package org.darkan.tools.cache.map
 import org.darkan.core.model.ObjectShape
 import org.darkan.core.model.Vars
 import org.darkan.tools.cache.model.ModelLoader
+import org.darkan.tools.cache.model.ModelModifications
 import org.darkan.tools.cache.model.TexturedModel
 import org.darkan.tools.engine.render.InstanceManager
 import org.darkan.tools.engine.render.MeshData
@@ -25,6 +26,9 @@ import world.gregs.voidps.cache.definition.data.ObjectDefinition
  * - Type 2: Partial vertex displacement (approximated with rotation)
  * - Type 3: Hill change (exact rotation implementation)
  * All three types cause the object to tilt to match the terrain slope.
+ *
+ * Model modifications (retexturing/recoloring) are applied when loading the mesh data.
+ * These come from ObjectDefinition.retextureSrc/Dst and recolorSrc/Dst arrays.
  */
 data class ObjectInstance(
     val mapObject: MapObject,
@@ -35,7 +39,8 @@ data class ObjectInstance(
     val scale: Vector3f,
     val offset: Vector3f = Vector3f(),  // Model offset applied after rotation
     val terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE,  // Terrain tilt
-    val mirrored: Boolean = false  // Whether to mirror the model (negate Z)
+    val mirrored: Boolean = false,  // Whether to mirror the model (negate Z)
+    val modifications: ModelModifications = ModelModifications.NONE  // Retexture/recolor modifications
 )
 
 /**
@@ -442,6 +447,9 @@ object ObjectRenderer {
             // RS mirrors when: definition.inverted OR (WALL_WHOLE_CORNER and rotation > 3)
             val baseMirror = def.mirrored
 
+            // Get model modifications (retexturing/recoloring) from definition
+            val modifications = getModifications(def)
+
             // WALL_WHOLE_CORNER (shape 2) creates TWO wall segments at the same position:
             // - Primary wall: mirrored, using the original rotation
             // - Secondary wall: not mirrored, using (rotation + 1) & 3
@@ -463,7 +471,8 @@ object ObjectRenderer {
                         -defOffsetZ + decorOffset.z
                     ),
                     terrainAlignment = terrainAlignment,
-                    mirrored = true  // Primary wall is always mirrored for WALL_WHOLE_CORNER
+                    mirrored = true,  // Primary wall is always mirrored for WALL_WHOLE_CORNER
+                    modifications = modifications
                 )
                 instancesByPlane.getOrPut(plane) { mutableListOf() }.add(primaryInstance)
 
@@ -482,7 +491,8 @@ object ObjectRenderer {
                         -defOffsetZ + decorOffset.z
                     ),
                     terrainAlignment = terrainAlignment,
-                    mirrored = baseMirror  // Secondary wall uses definition.mirrored only
+                    mirrored = baseMirror,  // Secondary wall uses definition.mirrored only
+                    modifications = modifications
                 )
                 instancesByPlane.getOrPut(plane) { mutableListOf() }.add(secondaryInstance)
             } else {
@@ -500,7 +510,8 @@ object ObjectRenderer {
                         -defOffsetZ + decorOffset.z
                     ),
                     terrainAlignment = terrainAlignment,
-                    mirrored = baseMirror
+                    mirrored = baseMirror,
+                    modifications = modifications
                 )
                 instancesByPlane.getOrPut(plane) { mutableListOf() }.add(instance)
             }
@@ -658,6 +669,9 @@ object ObjectRenderer {
             // Check if model should be mirrored (following RS client logic)
             val baseMirror = def.mirrored
 
+            // Get model modifications (retexturing/recoloring) from definition
+            val modifications = getModifications(def)
+
             // WALL_WHOLE_CORNER (shape 2) creates TWO wall segments at the same position:
             // - Primary wall: mirrored, using the original rotation
             // - Secondary wall: not mirrored, using (rotation + 1) & 3
@@ -679,7 +693,8 @@ object ObjectRenderer {
                         -defOffsetZ + decorOffset.z
                     ),
                     terrainAlignment = terrainAlignment,
-                    mirrored = true  // Primary wall is always mirrored for WALL_WHOLE_CORNER
+                    mirrored = true,  // Primary wall is always mirrored for WALL_WHOLE_CORNER
+                    modifications = modifications
                 ))
 
                 // Secondary wall - not mirrored, rotated by +90 degrees
@@ -697,7 +712,8 @@ object ObjectRenderer {
                         -defOffsetZ + decorOffset.z
                     ),
                     terrainAlignment = terrainAlignment,
-                    mirrored = baseMirror  // Secondary wall uses definition.mirrored only
+                    mirrored = baseMirror,  // Secondary wall uses definition.mirrored only
+                    modifications = modifications
                 ))
             } else {
                 // Normal object - single instance
@@ -714,7 +730,8 @@ object ObjectRenderer {
                         -defOffsetZ + decorOffset.z
                     ),
                     terrainAlignment = terrainAlignment,
-                    mirrored = baseMirror
+                    mirrored = baseMirror,
+                    modifications = modifications
                 ))
             }
         }
@@ -873,5 +890,39 @@ object ObjectRenderer {
      */
     fun getCombinedModelId(modelIds: List<Int>): Int {
         return ModelLoader.getCombinedModelId(modelIds)
+    }
+
+    /**
+     * Get the combined model ID for an object's models with modifications.
+     * This includes retexturing/recoloring in the unique ID so that objects
+     * with different modifications get separate mesh registrations.
+     *
+     * @param modelIds The list of model IDs for the object
+     * @param modifications The retexture/recolor modifications
+     * @return A unique ID for the model+modifications combination
+     */
+    fun getCombinedModelIdWithModifications(modelIds: List<Int>, modifications: ModelModifications): Int {
+        return ModelLoader.getCombinedModelIdWithModifications(modelIds, modifications)
+    }
+
+    /**
+     * Create ModelModifications from an ObjectDefinition.
+     * Extracts retextureSrc/Dst and recolorSrc/Dst arrays.
+     *
+     * @param def The object definition
+     * @return ModelModifications instance (may be NONE if no modifications)
+     */
+    fun getModifications(def: ObjectDefinition): ModelModifications {
+        val hasRetexture = def.retextureSrc != null && def.retextureDst != null
+        val hasRecolor = def.recolorSrc != null && def.recolorDst != null
+
+        if (!hasRetexture && !hasRecolor) return ModelModifications.NONE
+
+        return ModelModifications(
+            retextureSrc = def.retextureSrc,
+            retextureDst = def.retextureDst,
+            recolorSrc = def.recolorSrc,
+            recolorDst = def.recolorDst
+        )
     }
 }

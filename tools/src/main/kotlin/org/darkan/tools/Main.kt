@@ -36,6 +36,9 @@ fun main(args: Array<String>) {
         "contour", "contour3" -> {
             scanContourType3(cache)
         }
+        "tree" -> {
+            analyzeTree(cache, args.getOrNull(1)?.toIntOrNull() ?: 38789)
+        }
         "help", "-h", "--help" -> {
             printHelp()
         }
@@ -242,6 +245,143 @@ private fun scanContourType3(cache: Cache) {
     }
 
     println("\n=== Scan complete ===")
+}
+
+/**
+ * Analyze a tree object's model data to debug texture/UV issues.
+ */
+private fun analyzeTree(cache: Cache, objectId: Int) {
+    println("\n=== Analyzing Object $objectId (Tree) ===")
+
+    val objects = Cache.objects
+    if (objectId >= objects.size) {
+        println("ERROR: Object ID $objectId is out of range")
+        return
+    }
+
+    val obj = objects[objectId]
+    println("Name: ${obj.name}")
+    println("Size: ${obj.sizeX}x${obj.sizeY}")
+    println("Shapes: ${obj.shapes?.contentToString()}")
+    println("ModelIds: ${obj.modelIds?.map { it.contentToString() }}")
+    println("Retexture Src: ${obj.retextureSrc?.toList()?.map { it.toInt() and 0xffff }}")
+    println("Retexture Dst: ${obj.retextureDst?.toList()?.map { it.toInt() and 0xffff }}")
+    println("Recolor Src: ${obj.recolorSrc?.toList()?.map { it.toInt() and 0xffff }}")
+    println("Recolor Dst: ${obj.recolorDst?.toList()?.map { it.toInt() and 0xffff }}")
+
+    // Analyze each model
+    obj.modelIds?.forEachIndexed { groupIdx, modelGroup ->
+        println("\n=== Model Group $groupIdx (shape=${obj.shapes?.getOrNull(groupIdx)}) ===")
+        for (modelId in modelGroup) {
+            analyzeModel(cache, modelId)
+        }
+    }
+
+    // Compare with a known-working tree (oak tree is object 1276)
+    println("\n=== Comparing with Oak Tree (object 1276) ===")
+    val oak = objects.getOrNull(1276)
+    if (oak != null) {
+        println("Oak Name: ${oak.name}")
+        println("Oak ModelIds: ${oak.modelIds?.map { it.contentToString() }}")
+        println("Oak Retexture Src: ${oak.retextureSrc?.toList()?.map { it.toInt() and 0xffff }}")
+        println("Oak Retexture Dst: ${oak.retextureDst?.toList()?.map { it.toInt() and 0xffff }}")
+
+        // Analyze oak's models
+        oak.modelIds?.forEachIndexed { groupIdx, modelGroup ->
+            println("\n=== Oak Model Group $groupIdx ===")
+            for (modelId in modelGroup) {
+                analyzeModel(cache, modelId)
+            }
+        }
+    }
+
+    println("\n=== Analysis complete ===")
+}
+
+/**
+ * Analyze a single model's texture data.
+ */
+private fun analyzeModel(cache: Cache, modelId: Int) {
+    val def = ModelLoader.loadDefinition(cache, modelId)
+    if (def == null) {
+        println("  Model $modelId: FAILED TO LOAD")
+        return
+    }
+
+    println("\n  Model $modelId: ${def.vertexCount} verts, ${def.faceCount} faces")
+
+    // Analyze texture triangles
+    println("    textureTriangleCount: ${def.textureTriangleCount}")
+    if (def.textureTriangleCount > 0) {
+        println("    texturesMapping: ${def.texturesMapping?.take(def.textureTriangleCount)?.toList()?.map { it.toInt() and 0xff }}")
+        println("    textureFaceX: ${def.textureFaceX?.take(def.textureTriangleCount)?.toList()?.map { it.toInt() and 0xffff }}")
+        println("    textureFaceY: ${def.textureFaceY?.take(def.textureTriangleCount)?.toList()?.map { it.toInt() and 0xffff }}")
+        println("    textureFaceZ: ${def.textureFaceZ?.take(def.textureTriangleCount)?.toList()?.map { it.toInt() and 0xffff }}")
+        println("    texturesScaleX: ${def.texturesScaleX?.toList()}")
+        println("    texturesScaleY: ${def.texturesScaleY?.toList()}")
+        println("    texturesScaleZ: ${def.texturesScaleZ?.toList()}")
+        println("    texturesRotation: ${def.texturesRotation?.toList()?.map { it.toInt() and 0xff }}")
+        println("    texturesDirection: ${def.texturesDirection?.toList()?.map { it.toInt() and 0xff }}")
+        println("    texturesSpeed: ${def.texturesSpeed?.toList()}")
+        println("    texturesUtrans: ${def.texturesUtrans?.toList()}")
+        println("    texturesVtrans: ${def.texturesVtrans?.toList()}")
+    }
+
+    // Analyze face textures
+    val texturedFaces = mutableMapOf<Int, MutableList<Int>>() // textureId -> list of face indices
+    for (i in 0 until def.faceCount) {
+        val texIdSigned = def.faceTextures?.get(i)?.toInt() ?: -1
+        if (texIdSigned != -1) {
+            val texId = texIdSigned and 0xffff
+            texturedFaces.getOrPut(texId) { mutableListOf() }.add(i)
+        }
+    }
+
+    println("    Textured faces by texture ID:")
+    for ((texId, faces) in texturedFaces) {
+        println("      Texture $texId: ${faces.size} faces")
+
+        // Show texture pointers for first few faces
+        val facesToShow = faces.take(3)
+        for (faceIdx in facesToShow) {
+            val pointer = def.faceTexturePointers?.get(faceIdx)?.toInt()?.and(0xff) ?: 255
+            println("        Face $faceIdx: texturePointer=$pointer")
+
+            // If pointer is valid, show which texture triangle it references
+            if (pointer != 255 && pointer < def.textureTriangleCount) {
+                val mappingType = def.texturesMapping?.get(pointer)?.toInt()?.and(0xff) ?: 0
+                println("          mappingType=$mappingType")
+                val tFaceX = def.textureFaceX?.get(pointer)?.toInt()?.and(0xffff) ?: 0
+                val tFaceY = def.textureFaceY?.get(pointer)?.toInt()?.and(0xffff) ?: 0
+                val tFaceZ = def.textureFaceZ?.get(pointer)?.toInt()?.and(0xffff) ?: 0
+                println("          textureFace: X=$tFaceX, Y=$tFaceY, Z=$tFaceZ")
+
+                // Check if these indices point to valid vertices
+                if (tFaceX < def.vertexCount && tFaceY < def.vertexCount && tFaceZ < def.vertexCount) {
+                    val v0 = Triple(def.vertexX[tFaceX], def.vertexY[tFaceX], def.vertexZ[tFaceX])
+                    val v1 = Triple(def.vertexX[tFaceY], def.vertexY[tFaceY], def.vertexZ[tFaceY])
+                    val v2 = Triple(def.vertexX[tFaceZ], def.vertexY[tFaceZ], def.vertexZ[tFaceZ])
+                    println("          textureTriangle verts: $v0 -> $v1 -> $v2")
+
+                    // Compute edge lengths to understand texture triangle size
+                    val e1Len = kotlin.math.sqrt(
+                        ((v1.first - v0.first) * (v1.first - v0.first) +
+                         (v1.second - v0.second) * (v1.second - v0.second) +
+                         (v1.third - v0.third) * (v1.third - v0.third)).toFloat()
+                    )
+                    val e2Len = kotlin.math.sqrt(
+                        ((v2.first - v0.first) * (v2.first - v0.first) +
+                         (v2.second - v0.second) * (v2.second - v0.second) +
+                         (v2.third - v0.third) * (v2.third - v0.third)).toFloat()
+                    )
+                    println("          textureTriangle edge lengths: e1=$e1Len, e2=$e2Len")
+                }
+            }
+        }
+    }
+
+    // Standard face analysis
+    analyzeModelFaces(def)
 }
 
 private fun printHelp() {
