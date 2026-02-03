@@ -440,27 +440,70 @@ object ObjectRenderer {
 
             // Check if model should be mirrored (following RS client logic)
             // RS mirrors when: definition.inverted OR (WALL_WHOLE_CORNER and rotation > 3)
-            // We only handle definition.mirrored for now; WALL_WHOLE_CORNER with rotation+4 is not yet supported
-            val shouldMirror = def.mirrored
+            val baseMirror = def.mirrored
 
-            val instance = ObjectInstance(
-                mapObject = obj,
-                definition = def,
-                modelIds = modelIds,
-                worldPosition = position,
-                rotation = rotationToRadians(obj.rotation),
-                scale = Vector3f(scaleX, scaleY, scaleZ),
-                // Combine definition offset with decoration offset
-                offset = Vector3f(
-                    defOffsetX + decorOffset.x,
-                    -defOffsetY + decorOffset.y,
-                    -defOffsetZ + decorOffset.z
-                ),
-                terrainAlignment = terrainAlignment,
-                mirrored = shouldMirror
-            )
+            // WALL_WHOLE_CORNER (shape 2) creates TWO wall segments at the same position:
+            // - Primary wall: mirrored, using the original rotation
+            // - Secondary wall: not mirrored, using (rotation + 1) & 3
+            // This creates an L-shaped corner wall.
+            val isWallWholeCorner = obj.shape == ObjectShape.WALL_WHOLE_CORNER.id
 
-            instancesByPlane.getOrPut(plane) { mutableListOf() }.add(instance)
+            if (isWallWholeCorner) {
+                // Primary wall - mirrored (rotation + 4 in client causes inversion)
+                val primaryInstance = ObjectInstance(
+                    mapObject = obj,
+                    definition = def,
+                    modelIds = modelIds,
+                    worldPosition = Vector3f(position),
+                    rotation = rotationToRadians(obj.rotation),
+                    scale = Vector3f(scaleX, scaleY, scaleZ),
+                    offset = Vector3f(
+                        defOffsetX + decorOffset.x,
+                        -defOffsetY + decorOffset.y,
+                        -defOffsetZ + decorOffset.z
+                    ),
+                    terrainAlignment = terrainAlignment,
+                    mirrored = true  // Primary wall is always mirrored for WALL_WHOLE_CORNER
+                )
+                instancesByPlane.getOrPut(plane) { mutableListOf() }.add(primaryInstance)
+
+                // Secondary wall - not mirrored, rotated by +90 degrees
+                val secondaryRotation = (obj.rotation + 1) and 3
+                val secondaryInstance = ObjectInstance(
+                    mapObject = obj,
+                    definition = def,
+                    modelIds = modelIds,
+                    worldPosition = Vector3f(position),
+                    rotation = rotationToRadians(secondaryRotation),
+                    scale = Vector3f(scaleX, scaleY, scaleZ),
+                    offset = Vector3f(
+                        defOffsetX + decorOffset.x,
+                        -defOffsetY + decorOffset.y,
+                        -defOffsetZ + decorOffset.z
+                    ),
+                    terrainAlignment = terrainAlignment,
+                    mirrored = baseMirror  // Secondary wall uses definition.mirrored only
+                )
+                instancesByPlane.getOrPut(plane) { mutableListOf() }.add(secondaryInstance)
+            } else {
+                // Normal object - single instance
+                val instance = ObjectInstance(
+                    mapObject = obj,
+                    definition = def,
+                    modelIds = modelIds,
+                    worldPosition = position,
+                    rotation = rotationToRadians(obj.rotation),
+                    scale = Vector3f(scaleX, scaleY, scaleZ),
+                    offset = Vector3f(
+                        defOffsetX + decorOffset.x,
+                        -defOffsetY + decorOffset.y,
+                        -defOffsetZ + decorOffset.z
+                    ),
+                    terrainAlignment = terrainAlignment,
+                    mirrored = baseMirror
+                )
+                instancesByPlane.getOrPut(plane) { mutableListOf() }.add(instance)
+            }
         }
 
         return instancesByPlane
@@ -613,24 +656,67 @@ object ObjectRenderer {
             }
 
             // Check if model should be mirrored (following RS client logic)
-            val shouldMirror = def.mirrored
+            val baseMirror = def.mirrored
 
-            instances.add(ObjectInstance(
-                mapObject = obj,
-                definition = def,
-                modelIds = modelIds,
-                worldPosition = position,
-                rotation = rotationToRadians(obj.rotation),
-                scale = Vector3f(scaleX, scaleY, scaleZ),
-                // Combine definition offset with decoration offset
-                offset = Vector3f(
-                    defOffsetX + decorOffset.x,
-                    -defOffsetY + decorOffset.y,
-                    -defOffsetZ + decorOffset.z
-                ),
-                terrainAlignment = terrainAlignment,
-                mirrored = shouldMirror
-            ))
+            // WALL_WHOLE_CORNER (shape 2) creates TWO wall segments at the same position:
+            // - Primary wall: mirrored, using the original rotation
+            // - Secondary wall: not mirrored, using (rotation + 1) & 3
+            // This creates an L-shaped corner wall.
+            val isWallWholeCorner = obj.shape == ObjectShape.WALL_WHOLE_CORNER.id
+
+            if (isWallWholeCorner) {
+                // Primary wall - mirrored (rotation + 4 in client causes inversion)
+                instances.add(ObjectInstance(
+                    mapObject = obj,
+                    definition = def,
+                    modelIds = modelIds,
+                    worldPosition = Vector3f(position),
+                    rotation = rotationToRadians(obj.rotation),
+                    scale = Vector3f(scaleX, scaleY, scaleZ),
+                    offset = Vector3f(
+                        defOffsetX + decorOffset.x,
+                        -defOffsetY + decorOffset.y,
+                        -defOffsetZ + decorOffset.z
+                    ),
+                    terrainAlignment = terrainAlignment,
+                    mirrored = true  // Primary wall is always mirrored for WALL_WHOLE_CORNER
+                ))
+
+                // Secondary wall - not mirrored, rotated by +90 degrees
+                val secondaryRotation = (obj.rotation + 1) and 3
+                instances.add(ObjectInstance(
+                    mapObject = obj,
+                    definition = def,
+                    modelIds = modelIds,
+                    worldPosition = Vector3f(position),
+                    rotation = rotationToRadians(secondaryRotation),
+                    scale = Vector3f(scaleX, scaleY, scaleZ),
+                    offset = Vector3f(
+                        defOffsetX + decorOffset.x,
+                        -defOffsetY + decorOffset.y,
+                        -defOffsetZ + decorOffset.z
+                    ),
+                    terrainAlignment = terrainAlignment,
+                    mirrored = baseMirror  // Secondary wall uses definition.mirrored only
+                ))
+            } else {
+                // Normal object - single instance
+                instances.add(ObjectInstance(
+                    mapObject = obj,
+                    definition = def,
+                    modelIds = modelIds,
+                    worldPosition = position,
+                    rotation = rotationToRadians(obj.rotation),
+                    scale = Vector3f(scaleX, scaleY, scaleZ),
+                    offset = Vector3f(
+                        defOffsetX + decorOffset.x,
+                        -defOffsetY + decorOffset.y,
+                        -defOffsetZ + decorOffset.z
+                    ),
+                    terrainAlignment = terrainAlignment,
+                    mirrored = baseMirror
+                ))
+            }
         }
 
         return instances

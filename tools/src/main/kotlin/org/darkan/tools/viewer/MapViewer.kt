@@ -1431,22 +1431,66 @@ class MapViewer(
                 }
             )
 
-            instances.add(ObjectInstance(
-                mapObject = obj,
-                definition = def,
-                modelIds = modelIds,
-                worldPosition = position,
-                rotation = ObjectRenderer.rotationToRadians(obj.rotation),
-                scale = Vector3f(scaleX, scaleY, scaleZ),
-                // Combine definition offset with decoration offset
-                offset = Vector3f(
-                    defOffsetX + decorOffset.x,
-                    -defOffsetY + decorOffset.y,
-                    -defOffsetZ + decorOffset.z
-                ),
-                terrainAlignment = terrainAlignment,
-                mirrored = def.mirrored
-            ))
+            // WALL_WHOLE_CORNER (shape 2) creates TWO wall segments at the same position:
+            // - Primary wall: mirrored, using the original rotation
+            // - Secondary wall: not mirrored (unless def.mirrored), using (rotation + 1) & 3
+            // This creates an L-shaped corner wall.
+            val isWallWholeCorner = obj.shape == ObjectShape.WALL_WHOLE_CORNER.id
+
+            if (isWallWholeCorner) {
+                // Primary wall - mirrored (rotation + 4 in client causes inversion)
+                instances.add(ObjectInstance(
+                    mapObject = obj,
+                    definition = def,
+                    modelIds = modelIds,
+                    worldPosition = Vector3f(position),
+                    rotation = ObjectRenderer.rotationToRadians(obj.rotation),
+                    scale = Vector3f(scaleX, scaleY, scaleZ),
+                    offset = Vector3f(
+                        defOffsetX + decorOffset.x,
+                        -defOffsetY + decorOffset.y,
+                        -defOffsetZ + decorOffset.z
+                    ),
+                    terrainAlignment = terrainAlignment,
+                    mirrored = true  // Primary wall is always mirrored for WALL_WHOLE_CORNER
+                ))
+
+                // Secondary wall - not mirrored (unless def.mirrored), rotated by +90 degrees
+                val secondaryRotation = (obj.rotation + 1) and 3
+                instances.add(ObjectInstance(
+                    mapObject = obj,
+                    definition = def,
+                    modelIds = modelIds,
+                    worldPosition = Vector3f(position),
+                    rotation = ObjectRenderer.rotationToRadians(secondaryRotation),
+                    scale = Vector3f(scaleX, scaleY, scaleZ),
+                    offset = Vector3f(
+                        defOffsetX + decorOffset.x,
+                        -defOffsetY + decorOffset.y,
+                        -defOffsetZ + decorOffset.z
+                    ),
+                    terrainAlignment = terrainAlignment,
+                    mirrored = def.mirrored  // Secondary wall uses definition.mirrored only
+                ))
+            } else {
+                // Normal object - single instance
+                instances.add(ObjectInstance(
+                    mapObject = obj,
+                    definition = def,
+                    modelIds = modelIds,
+                    worldPosition = position,
+                    rotation = ObjectRenderer.rotationToRadians(obj.rotation),
+                    scale = Vector3f(scaleX, scaleY, scaleZ),
+                    // Combine definition offset with decoration offset
+                    offset = Vector3f(
+                        defOffsetX + decorOffset.x,
+                        -defOffsetY + decorOffset.y,
+                        -defOffsetZ + decorOffset.z
+                    ),
+                    terrainAlignment = terrainAlignment,
+                    mirrored = def.mirrored
+                ))
+            }
         }
 
         // Print bridge-shifted object statistics and positions
