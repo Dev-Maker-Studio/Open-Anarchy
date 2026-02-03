@@ -26,6 +26,10 @@ class InterfaceViewer(
     private var selectedComponent = 0
     private val interfaceIdInput = ImInt(0)
 
+    // Track first frame for initial positioning of panels
+    private var browserFirstFrame = true
+    private var detailsFirstFrame = true
+
     override fun onInit() {
         imGui = ImGuiLayer(window)
         imGui.init()
@@ -89,7 +93,7 @@ class InterfaceViewer(
 
         debugPanel.fps = fps
         debugPanel.deltaTime = deltaTime
-        debugPanel.render(scene.camera) {}
+        debugPanel.render(scene.camera, window.width, window.height) {}
 
         renderInterfaceBrowser()
         renderComponentDetails()
@@ -103,10 +107,20 @@ class InterfaceViewer(
     }
 
     private fun renderInterfaceBrowser() {
-        imgui.ImGui.setNextWindowPos(10f, 10f)
-        imgui.ImGui.setNextWindowSize(300f, 400f)
+        // Set size constraints: min width 300, max height 80% of screen
+        val maxHeight = window.height * 0.8f
+        imgui.ImGui.setNextWindowSizeConstraints(300f, 200f, 450f, maxHeight)
 
-        if (imgui.ImGui.begin("Interface Browser", imgui.flag.ImGuiWindowFlags.NoMove or imgui.flag.ImGuiWindowFlags.NoResize)) {
+        // Only set initial position on first frame
+        if (browserFirstFrame) {
+            imgui.ImGui.setNextWindowPos(10f, 10f)
+            browserFirstFrame = false
+        }
+
+        // Allow moving and resizing, scrollbar appears automatically when needed
+        if (imgui.ImGui.begin("Interface Browser", imgui.flag.ImGuiWindowFlags.None)) {
+            // Clamp window position to stay on screen
+            clampWindowToScreen()
             imgui.ImGui.text("Interface ID:")
 
             interfaceIdInput.set(currentInterfaceId)
@@ -147,10 +161,20 @@ class InterfaceViewer(
         val def = interfaceDefs?.getOrNull(currentInterfaceId) ?: return
         val component = def.components?.getOrNull(selectedComponent) ?: return
 
-        imgui.ImGui.setNextWindowPos(imgui.ImGui.getIO().displaySizeX - 310f, 10f)
-        imgui.ImGui.setNextWindowSize(300f, 400f)
+        // Set size constraints: min width 300, max height 80% of screen
+        val maxHeight = window.height * 0.8f
+        imgui.ImGui.setNextWindowSizeConstraints(300f, 200f, 450f, maxHeight)
 
-        if (imgui.ImGui.begin("Component Details", imgui.flag.ImGuiWindowFlags.NoMove or imgui.flag.ImGuiWindowFlags.NoResize)) {
+        // Only set initial position on first frame (right side of screen)
+        if (detailsFirstFrame) {
+            imgui.ImGui.setNextWindowPos(imgui.ImGui.getIO().displaySizeX - 310f, 10f)
+            detailsFirstFrame = false
+        }
+
+        // Allow moving and resizing, scrollbar appears automatically when needed
+        if (imgui.ImGui.begin("Component Details", imgui.flag.ImGuiWindowFlags.None)) {
+            // Clamp window position to stay on screen
+            clampWindowToScreen()
             imgui.ImGui.text("ID: ${component.id}")
             imgui.ImGui.text("Type: ${getComponentTypeString(component.type)}")
             imgui.ImGui.separator()
@@ -187,6 +211,32 @@ class InterfaceViewer(
             6 -> "Model"
             9 -> "Line"
             else -> "Type $type"
+        }
+    }
+
+    /**
+     * Clamp the current ImGui window position to stay within screen bounds.
+     * Call this inside ImGui.begin() block.
+     */
+    private fun clampWindowToScreen() {
+        val pos = imgui.ImGui.getWindowPos()
+        val size = imgui.ImGui.getWindowSize()
+        val screenWidth = window.width.toFloat()
+        val screenHeight = window.height.toFloat()
+
+        var newX = pos.x
+        var newY = pos.y
+
+        // Clamp X: keep at least 50px visible on screen
+        if (newX + size.x < 50f) newX = 50f - size.x
+        if (newX > screenWidth - 50f) newX = screenWidth - 50f
+
+        // Clamp Y: keep title bar on screen (at least 20px from top)
+        if (newY < 0f) newY = 0f
+        if (newY > screenHeight - 50f) newY = screenHeight - 50f
+
+        if (newX != pos.x || newY != pos.y) {
+            imgui.ImGui.setWindowPos(newX, newY)
         }
     }
 

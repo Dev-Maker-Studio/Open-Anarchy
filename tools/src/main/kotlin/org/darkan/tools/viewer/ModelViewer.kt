@@ -23,9 +23,13 @@ import kotlin.math.min
 
 /**
  * Interactive model viewer application.
+ *
+ * @param cache The game cache to load models from
+ * @param initialModelId Optional model ID to load on startup. If null, tries default models.
  */
 class ModelViewer(
-    private val cache: Cache
+    private val cache: Cache,
+    private val initialModelId: Int? = null
 ) : Engine(WindowConfig(title = "Darkan Model Viewer", width = 1280, height = 720)) {
 
     private lateinit var imGui: ImGuiLayer
@@ -103,17 +107,16 @@ class ModelViewer(
         gridNode = SceneNode(mesh = Mesh.createGrid(20f, 20))
         scene.addNode("grid", gridNode!!)
 
-        // Load default model - try several until we find a valid one
-        var loaded = false
-        for (id in listOf(54, 27, 0, 1, 10, 100, 1000, 2000, 5000)) {
-            if (loadModel(id)) {
-                println("Successfully loaded model $id")
-                loaded = true
-                break
+        // Load initial model - either from command line arg or try defaults
+        if (initialModelId != null) {
+            loadModel(initialModelId)
+        } else {
+            // Load default model - try several until we find a valid one
+            for (id in listOf(54, 27, 0, 1, 10, 100, 1000, 2000, 5000)) {
+                if (loadModel(id)) {
+                    break
+                }
             }
-        }
-        if (!loaded) {
-            println("Warning: Could not load any default model")
         }
     }
 
@@ -154,14 +157,12 @@ class ModelViewer(
             }
 
             if (totalVertices > 0) {
-                println("Loaded model $modelId: $totalVertices vertices, ${texturedModel.textureBatches.size} texture batches")
                 currentTexturedModel = texturedModel
                 currentModelId = modelId
                 return true
             }
         }
 
-        println("Failed to load model $modelId")
         modelNode = null
         currentModelId = -1
         return false
@@ -285,7 +286,6 @@ class ModelViewer(
         if (closestFace >= 0) {
             selectedFaceIndex = closestFace
             selectedFaceInfo = buildFaceInfo(def, closestFace)
-            println("Selected face $closestFace")
         }
     }
 
@@ -491,7 +491,7 @@ class ModelViewer(
         debugPanel.deltaTime = deltaTime
         debugPanel.modelCount = if (currentModelId >= 0) 1 else 0
         debugPanel.wireframeMode = renderSystem.wireframeMode
-        debugPanel.render(scene.camera) {
+        debugPanel.render(scene.camera, window.width, window.height) {
             renderSystem.toggleWireframe()
         }
 
@@ -508,15 +508,28 @@ class ModelViewer(
         imGui.endFrame()
     }
 
+    // Track first frame for initial positioning
+    private var facePickerFirstFrame = true
+
     /**
      * Render the face picker information panel.
      */
     private fun renderFacePickerPanel() {
-        imgui.ImGui.setNextWindowPos(imgui.ImGui.getIO().displaySizeX - 350f, 10f)
-        imgui.ImGui.setNextWindowSize(340f, 0f)
+        // Set size constraints: min width 340, max height 80% of screen
+        val maxHeight = window.height * 0.8f
+        imgui.ImGui.setNextWindowSizeConstraints(340f, 150f, 450f, maxHeight)
 
-        val flags = imgui.flag.ImGuiWindowFlags.NoMove or imgui.flag.ImGuiWindowFlags.NoResize
+        // Only set initial position on first frame
+        if (facePickerFirstFrame) {
+            imgui.ImGui.setNextWindowPos(imgui.ImGui.getIO().displaySizeX - 350f, 10f)
+            facePickerFirstFrame = false
+        }
+
+        // Allow moving and resizing, scrollbar appears automatically when needed
+        val flags = imgui.flag.ImGuiWindowFlags.None
         if (imgui.ImGui.begin("Face Picker (F4)", flags)) {
+            // Clamp window position to stay on screen
+            clampWindowToScreen()
             imgui.ImGui.text("Left-click to select face")
             imgui.ImGui.text("Middle-click to clear selection")
             imgui.ImGui.separator()
@@ -594,17 +607,7 @@ class ModelViewer(
 
                 // Copy button for easy sharing
                 if (imgui.ImGui.button("Copy Face Info")) {
-                    val infoStr = buildString {
-                        appendLine("Face #${info.faceIndex}")
-                        appendLine("Vertices: A=${info.vertexA}, B=${info.vertexB}, C=${info.vertexC}")
-                        appendLine("HSL: ${info.hslColor} (H=$hue S=$sat L=$light)")
-                        appendLine("Texture Raw: ${info.rawTextureValue}, Material ID: ${info.textureId}")
-                        appendLine("Alpha: ${info.alpha}, RenderType: ${info.renderType}, Priority: ${info.priority}")
-                    }
-                    // Note: Would need GLFW clipboard support to actually copy
-                    println("=== FACE INFO ===")
-                    println(infoStr)
-                    println("=================")
+                    // Face info is displayed in the panel - clipboard copy would require GLFW integration
                 }
             } else {
                 imgui.ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "No face selected")
@@ -665,6 +668,32 @@ class ModelViewer(
             imgui.ImGui.text("Face Picker: F4")
         }
         imgui.ImGui.end()
+    }
+
+    /**
+     * Clamp the current ImGui window position to stay within screen bounds.
+     * Call this inside ImGui.begin() block.
+     */
+    private fun clampWindowToScreen() {
+        val pos = imgui.ImGui.getWindowPos()
+        val size = imgui.ImGui.getWindowSize()
+        val screenWidth = window.width.toFloat()
+        val screenHeight = window.height.toFloat()
+
+        var newX = pos.x
+        var newY = pos.y
+
+        // Clamp X: keep at least 50px visible on screen
+        if (newX + size.x < 50f) newX = 50f - size.x
+        if (newX > screenWidth - 50f) newX = screenWidth - 50f
+
+        // Clamp Y: keep title bar on screen (at least 20px from top)
+        if (newY < 0f) newY = 0f
+        if (newY > screenHeight - 50f) newY = screenHeight - 50f
+
+        if (newX != pos.x || newY != pos.y) {
+            imgui.ImGui.setWindowPos(newX, newY)
+        }
     }
 
     override fun onCleanup() {

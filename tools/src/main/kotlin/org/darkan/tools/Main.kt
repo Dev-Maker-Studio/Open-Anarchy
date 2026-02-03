@@ -1,6 +1,10 @@
 package org.darkan.tools
 
+import org.darkan.core.map.MapXteas
+import org.darkan.core.map.RegionLoader
+import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.model.ModelLoader
+import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.viewer.InterfaceViewer
 import org.darkan.tools.viewer.MapViewer
 import org.darkan.tools.viewer.ModelViewer
@@ -19,8 +23,9 @@ fun main(args: Array<String>) {
 
     when (mode.lowercase()) {
         "model", "models" -> {
-            println("Starting Model Viewer...")
-            ModelViewer(cache).run()
+            val modelId = args.getOrNull(1)?.toIntOrNull()
+            println("Starting Model Viewer..." + (modelId?.let { " with model ID $it" } ?: ""))
+            ModelViewer(cache, modelId).run()
         }
         "map", "maps", "terrain" -> {
             println("Starting Map Viewer...")
@@ -30,14 +35,22 @@ fun main(args: Array<String>) {
             println("Starting Interface Viewer...")
             InterfaceViewer(cache).run()
         }
-        "fountain" -> {
-            debugFountain(cache)
+        "diagnose", "debug" -> {
+            // Diagnostic mode: diagnose <regionX> <regionY> <localX> <localY> [plane]
+            val regionX = args.getOrNull(1)?.toIntOrNull() ?: 50
+            val regionY = args.getOrNull(2)?.toIntOrNull() ?: 50
+            val localX = args.getOrNull(3)?.toIntOrNull() ?: 39
+            val localY = args.getOrNull(4)?.toIntOrNull() ?: 25
+            val plane = args.getOrNull(5)?.toIntOrNull() ?: 0
+            runDiagnostic(cache, regionX, regionY, localX, localY, plane)
         }
-        "contour", "contour3" -> {
-            scanContourType3(cache)
+        "object", "obj" -> {
+            val objectId = args.getOrNull(1)?.toIntOrNull() ?: 45149
+            runObjectDiagnostic(cache, objectId)
         }
-        "tree" -> {
-            analyzeTree(cache, args.getOrNull(1)?.toIntOrNull() ?: 38789)
+        "uv", "uvdebug" -> {
+            val modelId = args.getOrNull(1)?.toIntOrNull() ?: 48861
+            runUVDiagnostic(cache, modelId)
         }
         "help", "-h", "--help" -> {
             printHelp()
@@ -50,348 +63,494 @@ fun main(args: Array<String>) {
 }
 
 /**
- * Debug the fountain rendering issue by analyzing fountain objects and their models.
+ * Run diagnostic on a specific tile to find what objects are there and what textures they use.
  */
-private fun debugFountain(cache: Cache) {
-    println("\n=== Fountain Debug Tool ===")
+private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int, localY: Int, plane: Int) {
+    println("\n=== TILE DIAGNOSTIC ===")
+    println("Region: ($regionX, $regionY)")
+    println("Local: ($localX, $localY)")
+    println("Plane: $plane")
+    println()
 
-    // Load all object definitions
-    val objects = Cache.objects
-    println("Loaded ${objects.size} object definitions")
+    // Load definitions
+    TerrainLoader.loadDefinitions(cache)
+    ObjectRenderer.loadDefinitions(cache)
 
-    // Search for fountain objects
-    println("\n=== Searching for 'fountain' objects ===")
-    val fountains = objects.filter { it.name.contains("fountain", ignoreCase = true) }
+    // Load XTEA keys
+    if (!MapXteas.isLoaded()) {
+        MapXteas.load()
+    }
 
-    for (obj in fountains) {
-        println("\n--- Object ID: ${obj.id} ---")
-        println("  Name: ${obj.name}")
-        println("  Size: ${obj.sizeX}x${obj.sizeY}")
-        println("  Shapes: ${obj.shapes?.contentToString()}")
-        println("  ModelIds: ${obj.modelIds?.map { it.contentToString() }}")
+    // Load terrain data
+    val terrainData = TerrainLoader.loadRegion(cache, regionX, regionY)
+    if (terrainData == null) {
+        println("ERROR: Could not load terrain data for region ($regionX, $regionY)")
+        return
+    }
 
-        // Analyze each model
-        obj.modelIds?.forEachIndexed { groupIdx, modelGroup ->
-            println("  Model Group $groupIdx (shape=${obj.shapes?.getOrNull(groupIdx)}):")
-            for (modelId in modelGroup) {
-                val def = ModelLoader.loadDefinition(cache, modelId)
-                if (def != null) {
-                    println("    Model $modelId: ${def.vertexCount} verts, ${def.faceCount} faces")
-                    analyzeModelFaces(def)
-                } else {
-                    println("    Model $modelId: FAILED TO LOAD")
+    // Get tile info
+    val tile = terrainData.tiles[plane][localX][localY]
+    println("--- TERRAIN TILE DATA ---")
+    println("  Height: ${tile.height}")
+    println("  Overlay ID: ${tile.overlayId}")
+    println("  Overlay Shape: ${tile.overlayShape}")
+    println("  Overlay Rotation: ${tile.overlayRotation}")
+    println("  Underlay ID: ${tile.underlayId}")
+    println("  Flags: 0x${tile.flags.toString(16)}")
+
+    // Get overlay definition if present
+    if (tile.overlayId > 0) {
+        val overlayDef = TerrainLoader.getOverlayDefinition(tile.overlayId)
+        if (overlayDef != null) {
+            println("  Overlay Definition:")
+            println("    Texture: ${overlayDef.texture}")
+            println("    Scale: ${overlayDef.scale}")
+            println("    Colour: ${overlayDef.colour}")
+            println("    BlendColour: ${overlayDef.blendColour}")
+            println("    UnderlayOverrides: ${overlayDef.underlayOverrides}")
+        }
+    }
+
+    // Get underlay definition if present
+    if (tile.underlayId > 0) {
+        val underlayDef = TerrainLoader.getUnderlayDefinition(tile.underlayId)
+        if (underlayDef != null) {
+            println("  Underlay Definition:")
+            println("    Texture: ${underlayDef.texture}")
+            println("    Scale: ${underlayDef.scale}")
+            println("    Colour: ${underlayDef.colour}")
+        }
+    }
+
+    // Load region objects
+    println("\n--- OBJECTS AT THIS TILE ---")
+    val regionData = RegionLoader.loadRegion(cache, regionX, regionY)
+    if (regionData == null) {
+        println("ERROR: Could not load region data for ($regionX, $regionY)")
+        return
+    }
+
+    val baseWorldX = regionX * 64
+    val baseWorldY = regionY * 64
+    val worldX = baseWorldX + localX
+    val worldY = baseWorldY + localY
+
+    // Find objects at or near this tile
+    var foundObjects = 0
+    for (obj in regionData.objects) {
+        // Check if object is at or overlaps this tile
+        val def = ObjectRenderer.getDefinition(obj.id)
+        val sizeX = def?.sizeX ?: 1
+        val sizeY = def?.sizeY ?: 1
+
+        // Calculate object footprint
+        val objMinX = obj.x
+        val objMaxX = obj.x + sizeX - 1
+        val objMinY = obj.y
+        val objMaxY = obj.y + sizeY - 1
+
+        // Check if our tile is within the object's footprint
+        if (worldX in objMinX..objMaxX && worldY in objMinY..objMaxY) {
+            foundObjects++
+            println("\nObject #$foundObjects:")
+            println("  ID: ${obj.id}")
+            println("  Position: (${obj.x}, ${obj.y}) - Local: (${obj.x - baseWorldX}, ${obj.y - baseWorldY})")
+            println("  Plane: ${obj.level}")
+            println("  Shape: ${obj.shape}")
+            println("  Rotation: ${obj.rotation}")
+
+            if (def != null) {
+                println("  Definition:")
+                println("    Name: ${def.name}")
+                println("    Size: ${def.sizeX} x ${def.sizeY}")
+                println("    Options: ${def.options?.toList()}")
+
+                // Get model IDs for this object
+                val modelIds = ObjectRenderer.getModelIds(def, obj.shape)
+                println("    Model IDs: $modelIds")
+
+                // Check each model for textures
+                for (modelId in modelIds) {
+                    val modelDef = ModelLoader.loadDefinition(cache, modelId)
+                    if (modelDef != null) {
+                        println("\n    Model $modelId:")
+                        println("      Vertices: ${modelDef.vertexCount}")
+                        println("      Faces: ${modelDef.faceCount}")
+                        println("      Texture Triangles: ${modelDef.textureTriangleCount}")
+
+                        // Find all textures used by this model
+                        val usedTextures = mutableSetOf<Int>()
+                        if (modelDef.faceTextures != null) {
+                            for (f in 0 until modelDef.faceCount) {
+                                val texId = modelDef.faceTextures[f].toInt()
+                                if (texId != -1) {
+                                    usedTextures.add(texId and 0xffff)
+                                }
+                            }
+                        }
+                        if (usedTextures.isNotEmpty()) {
+                            println("      Textures used: $usedTextures")
+
+                            // Check if texture 928 is used
+                            if (928 in usedTextures) {
+                                println("      *** TEXTURE 928 FOUND IN THIS MODEL ***")
+
+                                // Get detailed UV info for faces with texture 928
+                                println("      Faces with texture 928:")
+                                for (f in 0 until modelDef.faceCount) {
+                                    val texId = modelDef.faceTextures?.get(f)?.toInt() ?: -1
+                                    if ((texId and 0xffff) == 928) {
+                                        val texPointer = modelDef.faceTexturePointers?.get(f)?.toInt()?.and(0xff) ?: 255
+                                        println("        Face $f: texturePointer=$texPointer")
+
+                                        if (texPointer != 255 && texPointer < modelDef.textureTriangleCount) {
+                                            val mapping = modelDef.texturesMapping?.get(texPointer)?.toInt()?.and(0xff) ?: 0
+                                            println("          mappingType=$mapping")
+                                            if (modelDef.textureFaceX != null) {
+                                                val tA = modelDef.textureFaceX[texPointer].toInt()
+                                                val tB = modelDef.textureFaceY?.get(texPointer)?.toInt() ?: 0
+                                                val tC = modelDef.textureFaceZ?.get(texPointer)?.toInt() ?: 0
+                                                println("          textureTriangle: ($tA, $tB, $tC)")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            println("      Textures: (none - vertex colors only)")
+                        }
+                    }
                 }
             }
         }
     }
 
-    // Check specific object IDs that might be fountains
-    println("\n=== Checking specific object IDs ===")
-    val specificIds = listOf(24214, 24215, 24216, 24267, 878, 879, 880, 881, 882, 883, 884, 885,
-                             36974, 36975, 36976, 37267)
-    for (id in specificIds) {
-        if (id < objects.size) {
-            val obj = objects[id]
-            if (obj.name.isNotEmpty() && obj.name != "null") {
-                println("Object $id: ${obj.name}, models=${obj.modelIds?.map { it.contentToString() }}")
+    if (foundObjects == 0) {
+        println("  (No objects found at this tile)")
+    }
+
+    // Also check nearby tiles (within 3 tile radius) for large objects
+    println("\n--- NEARBY OBJECTS (3 tile radius) USING TEXTURE 928 ---")
+    var nearbyWithTexture928 = 0
+    for (obj in regionData.objects) {
+        val objLocalX = obj.x - baseWorldX
+        val objLocalY = obj.y - baseWorldY
+
+        // Check if object is within 3 tiles of our target
+        if (kotlin.math.abs(objLocalX - localX) <= 3 && kotlin.math.abs(objLocalY - localY) <= 3) {
+            val def = ObjectRenderer.getDefinition(obj.id) ?: continue
+            val modelIds = ObjectRenderer.getModelIds(def, obj.shape)
+
+            for (modelId in modelIds) {
+                val modelDef = ModelLoader.loadDefinition(cache, modelId) ?: continue
+                if (modelDef.faceTextures == null) continue
+
+                var hasTexture928 = false
+                for (f in 0 until modelDef.faceCount) {
+                    val texId = modelDef.faceTextures[f].toInt() and 0xffff
+                    if (texId == 928) {
+                        hasTexture928 = true
+                        break
+                    }
+                }
+
+                if (hasTexture928) {
+                    nearbyWithTexture928++
+                    println("\nNearby Object #$nearbyWithTexture928:")
+                    println("  ID: ${obj.id} (${def.name})")
+                    println("  Position: Local (${objLocalX}, ${objLocalY})")
+                    println("  Plane: ${obj.level}")
+                    println("  Shape: ${obj.shape}")
+                    println("  Model: $modelId")
+                    break
+                }
             }
         }
     }
 
-    println("\n=== Debug complete ===")
-}
-
-/**
- * Analyze the faces of a model definition and print detailed information.
- */
-private fun analyzeModelFaces(def: org.darkan.tools.cache.model.ModelDefinition) {
-    var texturedFaces = 0
-    var untexturedFaces = 0
-    var opaqueFaces = 0      // alpha = 0 in RS means opaque
-    var semiTransparentFaces = 0  // 0 < alpha < 255
-    var fullyTransparentFaces = 0  // alpha = 255 means invisible
-    val textureIds = mutableSetOf<Int>()
-    val renderTypes = mutableMapOf<Int, Int>()
-    val colors = mutableSetOf<Int>()
-
-    for (i in 0 until def.faceCount) {
-        // Check texture
-        val texId = def.faceTextures?.get(i)?.toInt() ?: -1
-        if (texId >= 0) {
-            texturedFaces++
-            textureIds.add(texId)
-        } else {
-            untexturedFaces++
-        }
-
-        // Track colors
-        colors.add(def.faceColors[i].toInt() and 0xFFFF)
-
-        // Check alpha - RS uses inverted alpha:
-        // - alpha = 0 means OPAQUE (fully visible)
-        // - alpha = 255 means FULLY TRANSPARENT (invisible)
-        val alpha = def.faceAlphas?.get(i)?.toInt()?.and(0xff) ?: 0
-        when {
-            alpha == 0 -> opaqueFaces++
-            alpha == 255 -> fullyTransparentFaces++
-            else -> semiTransparentFaces++
-        }
-
-        // Track render types
-        val rt = def.faceRenderTypes?.get(i)?.toInt()?.and(0xff) ?: 0
-        renderTypes[rt] = (renderTypes[rt] ?: 0) + 1
+    if (nearbyWithTexture928 == 0) {
+        println("  (No nearby objects using texture 928)")
     }
 
-    println("      Textured faces: $texturedFaces, Untextured: $untexturedFaces")
-    println("      Opaque (alpha=0): $opaqueFaces, Semi-transparent: $semiTransparentFaces, Invisible (alpha=255): $fullyTransparentFaces")
-    if (textureIds.isNotEmpty()) {
-        println("      Texture IDs used: $textureIds")
-    }
-    println("      Render types: $renderTypes")
-    println("      Unique colors: ${colors.size}")
+    // Check ALL objects in the region for texture 928
+    println("\n--- ALL OBJECTS IN REGION USING TEXTURE 928 ---")
+    var allWithTexture928 = 0
+    for (obj in regionData.objects) {
+        val def = ObjectRenderer.getDefinition(obj.id) ?: continue
+        val modelIds = ObjectRenderer.getModelIds(def, obj.shape)
 
-    // Show bounds
-    if (def.vertexCount > 0) {
-        var minX = Int.MAX_VALUE; var maxX = Int.MIN_VALUE
-        var minY = Int.MAX_VALUE; var maxY = Int.MIN_VALUE
-        var minZ = Int.MAX_VALUE; var maxZ = Int.MIN_VALUE
-        for (i in 0 until def.vertexCount) {
-            minX = minOf(minX, def.vertexX[i]); maxX = maxOf(maxX, def.vertexX[i])
-            minY = minOf(minY, def.vertexY[i]); maxY = maxOf(maxY, def.vertexY[i])
-            minZ = minOf(minZ, def.vertexZ[i]); maxZ = maxOf(maxZ, def.vertexZ[i])
-        }
-        println("      Bounds X: [$minX, $maxX] Y: [$minY, $maxY] Z: [$minZ, $maxZ]")
-    }
-}
+        for (modelId in modelIds) {
+            val modelDef = ModelLoader.loadDefinition(cache, modelId) ?: continue
+            if (modelDef.faceTextures == null) continue
 
-/**
- * Scan the cache for objects with groundContourType=3 (hillChange terrain alignment).
- */
-private fun scanContourType3(cache: Cache) {
-    println("\n=== Scanning for objects with groundContourType=3 (hillChange) ===")
-
-    val objects = Cache.objects
-    println("Total objects: ${objects.size}")
-
-    // Count by groundContourType
-    val countByType = mutableMapOf<Int, Int>()
-    val type3ObjectIds = mutableSetOf<Int>()
-
-    for (obj in objects) {
-        val type = obj.groundContourType.toInt()
-        countByType[type] = (countByType[type] ?: 0) + 1
-        if (type == 3) {
-            type3ObjectIds.add(obj.id)
-        }
-    }
-
-    println("\ngroundContourType distribution:")
-    for ((type, count) in countByType.toSortedMap()) {
-        val typeName = when (type) {
-            0 -> "none"
-            1 -> "vertex deform"
-            2 -> "partial"
-            3 -> "hillChange (tilt)"
-            4 -> "next level"
-            5 -> "stretch"
-            else -> "unknown"
-        }
-        println("  Type $type ($typeName): $count objects")
-    }
-
-    println("\n=== Objects with groundContourType=3 (first 20) ===")
-    for (objId in type3ObjectIds.take(20)) {
-        val obj = objects[objId]
-        println("  ID ${obj.id}: ${obj.name}, modifier=${obj.groundContourModifier}")
-    }
-
-    if (type3ObjectIds.size > 20) {
-        println("  ... and ${type3ObjectIds.size - 20} more")
-    }
-
-    // Now scan regions to find ones containing type 3 objects
-    println("\n=== Scanning regions for groundContourType=3 objects ===")
-    org.darkan.core.map.MapXteas.load()
-
-    val regionsWithType3 = mutableMapOf<Int, Int>() // regionId -> count
-
-    // Scan all valid regions
-    for (regionX in 0 until 256) {
-        for (regionY in 0 until 256) {
-            val regionData = try {
-                org.darkan.core.map.RegionLoader.loadRegion(cache, regionX, regionY)
-            } catch (e: Exception) {
-                null
+            var hasTexture928 = false
+            for (f in 0 until modelDef.faceCount) {
+                val texId = modelDef.faceTextures[f].toInt() and 0xffff
+                if (texId == 928) {
+                    hasTexture928 = true
+                    break
+                }
             }
-            if (regionData == null) continue
 
-            val type3Count = regionData.objects.count { type3ObjectIds.contains(it.id) }
-            if (type3Count > 0) {
-                val regionId = (regionX shl 8) or regionY
-                regionsWithType3[regionId] = type3Count
+            if (hasTexture928) {
+                allWithTexture928++
+                val objLocalX = obj.x - baseWorldX
+                val objLocalY = obj.y - baseWorldY
+                println("\n  Object #$allWithTexture928:")
+                println("    ID: ${obj.id} (${def.name})")
+                println("    Position: Local ($objLocalX, $objLocalY)")
+                println("    Size: ${def.sizeX} x ${def.sizeY}")
+                println("    Plane: ${obj.level}")
+                println("    Shape: ${obj.shape}")
+                println("    Model: $modelId")
+                break
             }
         }
     }
 
-    println("\nRegions containing groundContourType=3 objects (first 20):")
-    for ((regionId, count) in regionsWithType3.entries.sortedByDescending { it.value }.take(20)) {
-        val regionX = regionId shr 8
-        val regionY = regionId and 0xFF
-        println("  Region ($regionX, $regionY) ID=$regionId: $count type 3 objects")
+    if (allWithTexture928 == 0) {
+        println("  (No objects in this region use texture 928)")
     }
 
-    if (regionsWithType3.size > 20) {
-        println("  ... and ${regionsWithType3.size - 20} more regions")
+    // Print underlay/overlay info for nearby tiles to check texture continuity
+    println("\n--- NEARBY TILE TEXTURES (3x3 around target) ---")
+    for (dy in -1..1) {
+        for (dx in -1..1) {
+            val checkX = localX + dx
+            val checkY = localY + dy
+            if (checkX < 0 || checkX >= 64 || checkY < 0 || checkY >= 64) continue
+
+            val checkTile = terrainData.tiles[plane][checkX][checkY]
+            val overlayTex = if (checkTile.overlayId > 0) {
+                TerrainLoader.getOverlayDefinition(checkTile.overlayId)?.texture ?: -1
+            } else -1
+            val underlayTex = if (checkTile.underlayId > 0) {
+                TerrainLoader.getUnderlayDefinition(checkTile.underlayId)?.texture ?: -1
+            } else -1
+
+            println("  Tile ($checkX, $checkY): overlay=${checkTile.overlayId}(tex=$overlayTex), underlay=${checkTile.underlayId}(tex=$underlayTex)")
+        }
     }
 
-    println("\n=== Scan complete ===")
+    println("\n=== DIAGNOSTIC COMPLETE ===")
 }
 
 /**
- * Analyze a tree object's model data to debug texture/UV issues.
+ * Run UV debugging on a specific model to trace through the UV calculation.
  */
-private fun analyzeTree(cache: Cache, objectId: Int) {
-    println("\n=== Analyzing Object $objectId (Tree) ===")
+private fun runUVDiagnostic(cache: Cache, modelId: Int) {
+    println("\n=== UV DIAGNOSTIC: Model $modelId ===")
 
-    val objects = Cache.objects
-    if (objectId >= objects.size) {
-        println("ERROR: Object ID $objectId is out of range")
+    // Enable debug output
+    ModelLoader.setDebugCubeUv(true)
+
+    // Clear cache to force recomputation
+    ModelLoader.clearCache()
+
+    // Load the model
+    val meshDataList = ModelLoader.createMeshDataList(cache, modelId, debug = true)
+    if (meshDataList == null) {
+        println("ERROR: Could not load model $modelId")
         return
     }
 
-    val obj = objects[objectId]
-    println("Name: ${obj.name}")
-    println("Size: ${obj.sizeX}x${obj.sizeY}")
-    println("Shapes: ${obj.shapes?.contentToString()}")
-    println("ModelIds: ${obj.modelIds?.map { it.contentToString() }}")
-    println("Retexture Src: ${obj.retextureSrc?.toList()?.map { it.toInt() and 0xffff }}")
-    println("Retexture Dst: ${obj.retextureDst?.toList()?.map { it.toInt() and 0xffff }}")
-    println("Recolor Src: ${obj.recolorSrc?.toList()?.map { it.toInt() and 0xffff }}")
-    println("Recolor Dst: ${obj.recolorDst?.toList()?.map { it.toInt() and 0xffff }}")
+    println("\nMeshData batches: ${meshDataList.size}")
+    for ((i, meshData) in meshDataList.withIndex()) {
+        println("  Batch $i: textureId=${meshData.textureId}, vertices=${meshData.positions.size / 3}, indices=${meshData.indices.size}")
 
-    // Analyze each model
-    obj.modelIds?.forEachIndexed { groupIdx, modelGroup ->
-        println("\n=== Model Group $groupIdx (shape=${obj.shapes?.getOrNull(groupIdx)}) ===")
-        for (modelId in modelGroup) {
-            analyzeModel(cache, modelId)
-        }
-    }
-
-    // Compare with a known-working tree (oak tree is object 1276)
-    println("\n=== Comparing with Oak Tree (object 1276) ===")
-    val oak = objects.getOrNull(1276)
-    if (oak != null) {
-        println("Oak Name: ${oak.name}")
-        println("Oak ModelIds: ${oak.modelIds?.map { it.contentToString() }}")
-        println("Oak Retexture Src: ${oak.retextureSrc?.toList()?.map { it.toInt() and 0xffff }}")
-        println("Oak Retexture Dst: ${oak.retextureDst?.toList()?.map { it.toInt() and 0xffff }}")
-
-        // Analyze oak's models
-        oak.modelIds?.forEachIndexed { groupIdx, modelGroup ->
-            println("\n=== Oak Model Group $groupIdx ===")
-            for (modelId in modelGroup) {
-                analyzeModel(cache, modelId)
+        // Print first 9 vertices (3 faces) with their UVs
+        if (meshData.textureCoords != null) {
+            val numVerts = minOf(9, meshData.positions.size / 3)
+            println("    First $numVerts vertices:")
+            for (v in 0 until numVerts) {
+                val px = meshData.positions[v * 3]
+                val py = meshData.positions[v * 3 + 1]
+                val pz = meshData.positions[v * 3 + 2]
+                val u = meshData.textureCoords!![v * 2]
+                val vCoord = meshData.textureCoords!![v * 2 + 1]
+                println("      V$v: pos=($px, $py, $pz) uv=($u, $vCoord)")
             }
         }
     }
 
-    println("\n=== Analysis complete ===")
+    // Disable debug output
+    ModelLoader.setDebugCubeUv(false)
+
+    println("\n=== UV DIAGNOSTIC COMPLETE ===")
 }
 
 /**
- * Analyze a single model's texture data.
+ * Diagnose a specific object ID to dump its definition and model texture info.
  */
-private fun analyzeModel(cache: Cache, modelId: Int) {
-    val def = ModelLoader.loadDefinition(cache, modelId)
+private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
+    println("\n=== OBJECT DIAGNOSTIC: ID $objectId ===")
+
+    // Load definitions
+    ObjectRenderer.loadDefinitions(cache)
+
+    val def = ObjectRenderer.getDefinition(objectId)
     if (def == null) {
-        println("  Model $modelId: FAILED TO LOAD")
+        println("ERROR: Object $objectId not found")
         return
     }
 
-    println("\n  Model $modelId: ${def.vertexCount} verts, ${def.faceCount} faces")
+    println("Name: ${def.name}")
+    println("Size: ${def.sizeX} x ${def.sizeY}")
+    println("Options: ${def.options?.toList()}")
+    println("ModelIds: ${def.modelIds?.contentDeepToString()}")
 
-    // Analyze texture triangles
-    println("    textureTriangleCount: ${def.textureTriangleCount}")
-    if (def.textureTriangleCount > 0) {
-        println("    texturesMapping: ${def.texturesMapping?.take(def.textureTriangleCount)?.toList()?.map { it.toInt() and 0xff }}")
-        println("    textureFaceX: ${def.textureFaceX?.take(def.textureTriangleCount)?.toList()?.map { it.toInt() and 0xffff }}")
-        println("    textureFaceY: ${def.textureFaceY?.take(def.textureTriangleCount)?.toList()?.map { it.toInt() and 0xffff }}")
-        println("    textureFaceZ: ${def.textureFaceZ?.take(def.textureTriangleCount)?.toList()?.map { it.toInt() and 0xffff }}")
-        println("    texturesScaleX: ${def.texturesScaleX?.toList()}")
-        println("    texturesScaleY: ${def.texturesScaleY?.toList()}")
-        println("    texturesScaleZ: ${def.texturesScaleZ?.toList()}")
-        println("    texturesRotation: ${def.texturesRotation?.toList()?.map { it.toInt() and 0xff }}")
-        println("    texturesDirection: ${def.texturesDirection?.toList()?.map { it.toInt() and 0xff }}")
-        println("    texturesSpeed: ${def.texturesSpeed?.toList()}")
-        println("    texturesUtrans: ${def.texturesUtrans?.toList()}")
-        println("    texturesVtrans: ${def.texturesVtrans?.toList()}")
+    // Check for retexturing
+    if (def.retextureSrc != null || def.retextureDst != null) {
+        println("RETEXTURING: src=${def.retextureSrc?.map { it.toInt() and 0xffff }}, dst=${def.retextureDst?.map { it.toInt() and 0xffff }}")
+    }
+    if (def.recolorSrc != null || def.recolorDst != null) {
+        println("RECOLORING: src=${def.recolorSrc?.map { it.toInt() and 0xffff }}, dst=${def.recolorDst?.map { it.toInt() and 0xffff }}")
     }
 
-    // Analyze face textures
-    val texturedFaces = mutableMapOf<Int, MutableList<Int>>() // textureId -> list of face indices
-    for (i in 0 until def.faceCount) {
-        val texIdSigned = def.faceTextures?.get(i)?.toInt() ?: -1
-        if (texIdSigned != -1) {
-            val texId = texIdSigned and 0xffff
-            texturedFaces.getOrPut(texId) { mutableListOf() }.add(i)
+    // Get all model IDs for this object (all shapes combined)
+    val allModelIds = mutableSetOf<Int>()
+    def.modelIds?.forEach { modelIdArray ->
+        modelIdArray.forEach { modelId -> allModelIds.add(modelId) }
+    }
+
+    println("\n--- MODELS ---")
+    for (modelId in allModelIds) {
+        println("\nModel $modelId:")
+        val modelDef = ModelLoader.loadDefinition(cache, modelId)
+        if (modelDef == null) {
+            println("  ERROR: Could not load model")
+            continue
         }
-    }
 
-    println("    Textured faces by texture ID:")
-    for ((texId, faces) in texturedFaces) {
-        println("      Texture $texId: ${faces.size} faces")
+        println("  Version: ${modelDef.version}")
+        println("  Vertices: ${modelDef.vertexCount}")
+        println("  Faces: ${modelDef.faceCount}")
+        println("  Texture Triangles: ${modelDef.textureTriangleCount}")
 
-        // Show texture pointers for first few faces
-        val facesToShow = faces.take(3)
-        for (faceIdx in facesToShow) {
-            val pointer = def.faceTexturePointers?.get(faceIdx)?.toInt()?.and(0xff) ?: 255
-            println("        Face $faceIdx: texturePointer=$pointer")
+        // Count texture mapping types
+        var type0Count = 0
+        var type1Count = 0
+        var type2Count = 0
+        var type3Count = 0
+        if (modelDef.texturesMapping != null) {
+            for (i in 0 until modelDef.textureTriangleCount) {
+                when (modelDef.texturesMapping[i].toInt() and 0xff) {
+                    0 -> type0Count++
+                    1 -> type1Count++
+                    2 -> type2Count++
+                    3 -> type3Count++
+                }
+            }
+        }
+        println("  Mapping types: type0(planar)=$type0Count, type1(cylindrical)=$type1Count, type2(cube)=$type2Count, type3(spherical)=$type3Count")
 
-            // If pointer is valid, show which texture triangle it references
-            if (pointer != 255 && pointer < def.textureTriangleCount) {
-                val mappingType = def.texturesMapping?.get(pointer)?.toInt()?.and(0xff) ?: 0
-                println("          mappingType=$mappingType")
-                val tFaceX = def.textureFaceX?.get(pointer)?.toInt()?.and(0xffff) ?: 0
-                val tFaceY = def.textureFaceY?.get(pointer)?.toInt()?.and(0xffff) ?: 0
-                val tFaceZ = def.textureFaceZ?.get(pointer)?.toInt()?.and(0xffff) ?: 0
-                println("          textureFace: X=$tFaceX, Y=$tFaceY, Z=$tFaceZ")
+        // Show texture triangles details
+        if (modelDef.textureTriangleCount > 0) {
+            println("  Texture Triangles:")
+            for (t in 0 until modelDef.textureTriangleCount) {
+                val mapping = modelDef.texturesMapping?.get(t)?.toInt()?.and(0xff) ?: 0
+                val tA = modelDef.textureFaceX?.get(t)?.toInt() ?: 0
+                val tB = modelDef.textureFaceY?.get(t)?.toInt() ?: 0
+                val tC = modelDef.textureFaceZ?.get(t)?.toInt() ?: 0
+                println("    [$t] mapping=$mapping, vertices=($tA, $tB, $tC)")
+            }
+        }
 
-                // Check if these indices point to valid vertices
-                if (tFaceX < def.vertexCount && tFaceY < def.vertexCount && tFaceZ < def.vertexCount) {
-                    val v0 = Triple(def.vertexX[tFaceX], def.vertexY[tFaceX], def.vertexZ[tFaceX])
-                    val v1 = Triple(def.vertexX[tFaceY], def.vertexY[tFaceY], def.vertexZ[tFaceY])
-                    val v2 = Triple(def.vertexX[tFaceZ], def.vertexY[tFaceZ], def.vertexZ[tFaceZ])
-                    println("          textureTriangle verts: $v0 -> $v1 -> $v2")
+        // Show complex texture data if present
+        if (modelDef.texturesScaleX != null) {
+            println("  Complex Texture Data (indexed by complex texture index):")
+            for (i in modelDef.texturesScaleX.indices) {
+                val scaleX = modelDef.texturesScaleX[i]
+                val scaleY = modelDef.texturesScaleY?.get(i) ?: 0
+                val scaleZ = modelDef.texturesScaleZ?.get(i) ?: 0
+                val rotation = modelDef.texturesRotation?.get(i)?.toInt()?.and(0xff) ?: 0
+                val direction = modelDef.texturesDirection?.get(i)?.toInt()?.and(0xff) ?: 0
+                val speed = modelDef.texturesSpeed?.get(i) ?: 0
+                println("    Complex[$i]: scale=($scaleX, $scaleY, $scaleZ), rot=$rotation, dir=$direction, speed=$speed")
+            }
+        }
 
-                    // Compute edge lengths to understand texture triangle size
-                    val e1Len = kotlin.math.sqrt(
-                        ((v1.first - v0.first) * (v1.first - v0.first) +
-                         (v1.second - v0.second) * (v1.second - v0.second) +
-                         (v1.third - v0.third) * (v1.third - v0.third)).toFloat()
-                    )
-                    val e2Len = kotlin.math.sqrt(
-                        ((v2.first - v0.first) * (v2.first - v0.first) +
-                         (v2.second - v0.second) * (v2.second - v0.second) +
-                         (v2.third - v0.third) * (v2.third - v0.third)).toFloat()
-                    )
-                    println("          textureTriangle edge lengths: e1=$e1Len, e2=$e2Len")
+        // Show cube texture data if present
+        if (modelDef.texturesUtrans != null) {
+            println("  Cube Texture Data (indexed by cube texture index):")
+            for (i in modelDef.texturesUtrans.indices) {
+                val uTrans = modelDef.texturesUtrans[i]
+                val vTrans = modelDef.texturesVtrans?.get(i) ?: 0
+                println("    Cube[$i]: uTrans=$uTrans, vTrans=$vTrans")
+            }
+        }
+
+        // Find all textures used by faces
+        val usedTextures = mutableMapOf<Int, Int>() // textureId -> count
+        val textureMappings = mutableMapOf<Int, MutableSet<Int>>() // textureId -> set of mapping types used
+        if (modelDef.faceTextures != null) {
+            for (f in 0 until modelDef.faceCount) {
+                val texId = modelDef.faceTextures[f].toInt()
+                if (texId != -1) {
+                    val actualTexId = texId and 0xffff
+                    usedTextures[actualTexId] = (usedTextures[actualTexId] ?: 0) + 1
+
+                    val texPointer = modelDef.faceTexturePointers?.get(f)?.toInt()?.and(0xff) ?: 255
+                    if (texPointer != 255 && texPointer < modelDef.textureTriangleCount) {
+                        val mapping = modelDef.texturesMapping?.get(texPointer)?.toInt()?.and(0xff) ?: 0
+                        textureMappings.getOrPut(actualTexId) { mutableSetOf() }.add(mapping)
+                    }
+                }
+            }
+        }
+
+        if (usedTextures.isNotEmpty()) {
+            println("  Face Textures Used:")
+            for ((texId, count) in usedTextures.entries.sortedBy { it.key }) {
+                val mappings = textureMappings[texId] ?: emptySet()
+                println("    Texture $texId: $count faces, mappings=${mappings.sorted()}")
+            }
+        }
+
+        // Detailed face analysis for first 10 textured faces
+        println("  First 10 textured faces:")
+        var texturedCount = 0
+        for (f in 0 until modelDef.faceCount) {
+            if (texturedCount >= 10) break
+
+            val texId = modelDef.faceTextures?.get(f)?.toInt() ?: -1
+            if (texId == -1) continue
+
+            texturedCount++
+            val actualTexId = texId and 0xffff
+            val texPointer = modelDef.faceTexturePointers?.get(f)?.toInt()?.and(0xff) ?: 255
+            val aIdx = modelDef.faceA[f]
+            val bIdx = modelDef.faceB[f]
+            val cIdx = modelDef.faceC[f]
+
+            println("    Face $f: tex=$actualTexId, pointer=$texPointer, verts=($aIdx, $bIdx, $cIdx)")
+
+            if (texPointer != 255 && texPointer < modelDef.textureTriangleCount) {
+                val mapping = modelDef.texturesMapping?.get(texPointer)?.toInt()?.and(0xff) ?: 0
+                println("      mapping=$mapping")
+
+                // Show vertex positions for the face
+                if (aIdx < modelDef.vertexCount && bIdx < modelDef.vertexCount && cIdx < modelDef.vertexCount) {
+                    println("      A: (${modelDef.vertexX[aIdx]}, ${modelDef.vertexY[aIdx]}, ${modelDef.vertexZ[aIdx]})")
+                    println("      B: (${modelDef.vertexX[bIdx]}, ${modelDef.vertexY[bIdx]}, ${modelDef.vertexZ[bIdx]})")
+                    println("      C: (${modelDef.vertexX[cIdx]}, ${modelDef.vertexY[cIdx]}, ${modelDef.vertexZ[cIdx]})")
                 }
             }
         }
     }
 
-    // Standard face analysis
-    analyzeModelFaces(def)
+    println("\n=== DIAGNOSTIC COMPLETE ===")
 }
 
 private fun printHelp() {
     println("""
         Darkan Tools - Game Asset Viewer
 
-        Usage: ./gradlew :tools:run --args="<mode>"
+        Usage: ./gradlew :tools:run --args="<mode> [options]"
 
         Modes:
-          model      - View 3D models from the cache (default)
+          model [id]  - View 3D models from the cache (default)
+                        Optional: specify a model ID to load on startup
           map        - View terrain/map regions with full scene rendering
           interface  - View UI interfaces and components
 
@@ -425,6 +584,7 @@ private fun printHelp() {
         Examples:
           ./gradlew :tools:run
           ./gradlew :tools:run --args="model"
+          ./gradlew :tools:run --args="model 12345"
           ./gradlew :tools:run --args="map"
           ./gradlew :tools:run --args="interface"
     """.trimIndent())

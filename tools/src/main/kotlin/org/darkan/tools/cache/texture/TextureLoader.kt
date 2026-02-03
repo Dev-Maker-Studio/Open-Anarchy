@@ -1,5 +1,6 @@
 package org.darkan.tools.cache.texture
 
+import org.darkan.tools.cache.texture.ops.TextureOpPerlinNoise
 import org.lwjgl.opengl.EXTTextureFilterAnisotropic
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL11.*
@@ -107,10 +108,38 @@ object TextureLoader {
             val data = cache.data(Index.TEXTURES, textureId) ?: return@getOrPut null
             if (data.isEmpty()) return@getOrPut null
             try {
-                TextureType(data)
+                val textureType = TextureType(data)
+
+                // Debug output for texture 928
+                if (textureId == 928) {
+                    debugTexture928(textureType)
+                }
+
+                textureType
             } catch (e: Exception) {
                 // Invalid texture data - return null
                 null
+            }
+        }
+    }
+
+    /**
+     * Debug helper to print texture 928's operation graph and Perlin noise parameters.
+     */
+    private fun debugTexture928(textureType: TextureType) {
+        val opNames = textureType.textureOperations.map { it::class.simpleName ?: "Unknown" }
+        System.err.println("[Texture 928] Operations: $opNames")
+
+        for (op in textureType.textureOperations) {
+            if (op is TextureOpPerlinNoise) {
+                // Access private fields via reflection
+                val scaleXField = TextureOpPerlinNoise::class.java.getDeclaredField("texCoordScaleX")
+                val scaleYField = TextureOpPerlinNoise::class.java.getDeclaredField("texCoordScaleY")
+                scaleXField.isAccessible = true
+                scaleYField.isAccessible = true
+                val scaleX = scaleXField.getInt(op)
+                val scaleY = scaleYField.getInt(op)
+                System.err.println("[Texture 928] PerlinNoise: texCoordScaleX=$scaleX, texCoordScaleY=$scaleY")
             }
         }
     }
@@ -275,11 +304,15 @@ object TextureLoader {
 
         val buffer = MemoryUtil.memAlloc(width * height * 4)
         try {
-            for (pixel in pixels) {
-                buffer.put(((pixel shr 16) and 0xFF).toByte()) // R
-                buffer.put(((pixel shr 8) and 0xFF).toByte())  // G
-                buffer.put((pixel and 0xFF).toByte())          // B
-                buffer.put(((pixel shr 24) and 0xFF).toByte()) // A
+            // Flip texture vertically for OpenGL (OpenGL V=0 at bottom, textures have row 0 at top)
+            for (y in (height - 1) downTo 0) {
+                for (x in 0 until width) {
+                    val pixel = pixels[y * width + x]
+                    buffer.put(((pixel shr 16) and 0xFF).toByte()) // R
+                    buffer.put(((pixel shr 8) and 0xFF).toByte())  // G
+                    buffer.put((pixel and 0xFF).toByte())          // B
+                    buffer.put(((pixel shr 24) and 0xFF).toByte()) // A
+                }
             }
             buffer.flip()
 
@@ -329,4 +362,5 @@ object TextureLoader {
             defaultTextureId = 0
         }
     }
+
 }

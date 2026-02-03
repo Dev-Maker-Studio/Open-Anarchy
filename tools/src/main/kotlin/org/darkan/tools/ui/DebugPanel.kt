@@ -16,17 +16,32 @@ class DebugPanel {
     var modelCount = 0
     var wireframeMode = false
 
+    // Track if this is the first frame (for initial positioning)
+    private var firstFrame = true
+
     fun render(camera: Camera, onWireframeToggle: () -> Unit) {
+        render(camera, 800, 600, onWireframeToggle)
+    }
+
+    fun render(camera: Camera, windowWidth: Int, windowHeight: Int, onWireframeToggle: () -> Unit) {
         if (!visible) return
 
-        ImGui.setNextWindowPos(10f, 10f)
-        ImGui.setNextWindowSize(250f, 0f)
+        // Set size constraints: min width 250, max height 80% of screen
+        val maxHeight = windowHeight * 0.8f
+        ImGui.setNextWindowSizeConstraints(250f, 100f, 400f, maxHeight)
 
-        val flags = ImGuiWindowFlags.NoMove or
-                    ImGuiWindowFlags.NoResize or
-                    ImGuiWindowFlags.AlwaysAutoResize
+        // Only set initial position on first frame
+        if (firstFrame) {
+            ImGui.setNextWindowPos(10f, 10f)
+            firstFrame = false
+        }
 
-        if (ImGui.begin("Debug Info", flags)) {
+        // Allow moving and resizing, scrollbar appears automatically when needed
+        val flags = ImGuiWindowFlags.None
+
+        if (ImGui.begin("Debug Info (F1)", flags)) {
+            // Clamp window position to stay on screen
+            clampWindowToScreen(windowWidth.toFloat(), windowHeight.toFloat())
             ImGui.text("FPS: $fps")
             ImGui.text("Delta: %.3f ms".format(deltaTime * 1000))
             ImGui.separator()
@@ -61,5 +76,29 @@ class DebugPanel {
 
     fun toggleVisibility() {
         visible = !visible
+    }
+
+    /**
+     * Clamp the current window position to stay within screen bounds.
+     * Call this inside ImGui.begin() block.
+     */
+    private fun clampWindowToScreen(screenWidth: Float, screenHeight: Float) {
+        val pos = ImGui.getWindowPos()
+        val size = ImGui.getWindowSize()
+
+        var newX = pos.x
+        var newY = pos.y
+
+        // Clamp X: keep at least 50px visible on screen
+        if (newX + size.x < 50f) newX = 50f - size.x
+        if (newX > screenWidth - 50f) newX = screenWidth - 50f
+
+        // Clamp Y: keep title bar on screen (at least 20px from top)
+        if (newY < 0f) newY = 0f
+        if (newY > screenHeight - 50f) newY = screenHeight - 50f
+
+        if (newX != pos.x || newY != pos.y) {
+            ImGui.setWindowPos(newX, newY)
+        }
     }
 }

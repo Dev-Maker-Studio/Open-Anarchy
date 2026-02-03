@@ -9,8 +9,6 @@ import world.gregs.voidps.cache.Index
  * Based on reference implementation from darkan-bot.
  */
 object ModelDecoder {
-    // Set to true to enable debug output for model version/upscale decisions
-    private const val DEBUG_VERSION = false
 
     fun decode(cache: Cache, modelId: Int): ModelDefinition? {
         val data = cache.data(Index.MODELS, modelId) ?: return null
@@ -238,9 +236,6 @@ object ModelDecoder {
         // Upscale vertices if version < 13 (required to match scene coordinates)
         // RS models with older format have vertices at 1/4 scale
         val shouldUpscale = version < 13
-        if (DEBUG_VERSION) {
-            println("Model $modelId: version=$version, hasVersion=$hasVersion, footerFlags=0x${footerFlags.toString(16)}, shouldUpscale=$shouldUpscale")
-        }
         if (shouldUpscale) {
             for (i in 0 until vertexCount) {
                 vertexX[i] = vertexX[i] shl 2
@@ -449,6 +444,28 @@ object ModelDecoder {
                     complexIdx++
                 }
             }
+
+            // Upscale texture scales if vertices were upscaled (version < 13)
+            // This matches the RS client's upscale() function which scales both vertices AND texture scales
+            // Important: For cylindrical mapping (type 1), texturesScaleZ is NOT upscaled
+            if (shouldUpscale && complexTextureFaceCount > 0 && texturesScaleX != null) {
+                val scaleX = texturesScaleX
+                val scaleY = texturesScaleY!!
+                val scaleZ = texturesScaleZ!!
+                var scaleIdx = 0
+                for (i in 0 until texturedFaceCount) {
+                    val mappingType = texturesMapping?.get(i)?.toInt()?.and(0xff) ?: 0
+                    if (mappingType in 1..3) {
+                        scaleX[scaleIdx] = scaleX[scaleIdx] shl 2
+                        scaleY[scaleIdx] = scaleY[scaleIdx] shl 2
+                        // For cylindrical mapping (type 1), don't upscale Z
+                        if (mappingType != 1) {
+                            scaleZ[scaleIdx] = scaleZ[scaleIdx] shl 2
+                        }
+                        scaleIdx++
+                    }
+                }
+            }
         }
 
         return ModelDefinition(
@@ -613,9 +630,6 @@ object ModelDecoder {
 
         // Old format models always have implicit version 12, so always upscale by 4
         val version = 12
-        if (DEBUG_VERSION) {
-            println("Model $modelId (old format): version=$version, shouldUpscale=true")
-        }
         for (i in 0 until vertexCount) {
             vertexX[i] = vertexX[i] shl 2
             vertexY[i] = vertexY[i] shl 2
