@@ -169,7 +169,6 @@ data class ModelModifications(
  */
 object ModelLoader {
     private val definitionCache = mutableMapOf<Int, ModelDefinition?>()
-
     /**
      * Load a textured model. Creates new mesh objects each time since meshes
      * contain OpenGL resources that may be cleaned up by the caller.
@@ -198,62 +197,6 @@ object ModelLoader {
         var z: Float = 0f
         var magnitude: Int = 0
     }
-
-    /**
-     * Texture bounding box data for a material - used to compute normalized UVs
-     * that are consistent across all faces using the same texture.
-     */
-    private data class TextureBounds(
-        val minX: Int, val maxX: Int,
-        val minY: Int, val maxY: Int,
-        val minZ: Int, val maxZ: Int
-    ) {
-        val rangeX: Float get() = (maxX - minX).coerceAtLeast(1).toFloat()
-        val rangeY: Float get() = (maxY - minY).coerceAtLeast(1).toFloat()
-        val rangeZ: Float get() = (maxZ - minZ).coerceAtLeast(1).toFloat()
-    }
-
-    /**
-     * Compute bounding box for all faces using a given texture ID.
-     * This allows us to compute normalized UVs that span [0,1] across the texture region.
-     */
-    private fun computeTextureBounds(def: ModelDefinition, textureId: Int): TextureBounds {
-        var minX = Int.MAX_VALUE
-        var maxX = Int.MIN_VALUE
-        var minY = Int.MAX_VALUE
-        var maxY = Int.MIN_VALUE
-        var minZ = Int.MAX_VALUE
-        var maxZ = Int.MIN_VALUE
-
-        for (i in 0 until def.faceCount) {
-            val faceTexId = def.faceTextures?.get(i)?.toInt() ?: -1
-            if (faceTexId != textureId) continue
-
-            val aIdx = def.faceA[i]
-            val bIdx = def.faceB[i]
-            val cIdx = def.faceC[i]
-
-            for (idx in listOf(aIdx, bIdx, cIdx)) {
-                if (idx < 0 || idx >= def.vertexCount) continue
-                minX = minOf(minX, def.vertexX[idx])
-                maxX = maxOf(maxX, def.vertexX[idx])
-                minY = minOf(minY, def.vertexY[idx])
-                maxY = maxOf(maxY, def.vertexY[idx])
-                minZ = minOf(minZ, def.vertexZ[idx])
-                maxZ = maxOf(maxZ, def.vertexZ[idx])
-            }
-        }
-
-        // Handle empty bounds
-        if (minX == Int.MAX_VALUE) {
-            return TextureBounds(0, 1, 0, 1, 0, 1)
-        }
-
-        return TextureBounds(minX, maxX, minY, maxY, minZ, maxZ)
-    }
-
-    /** Cache of texture bounds per model per material */
-    private val textureBoundsCache = mutableMapOf<Pair<Int, Int>, TextureBounds>()
 
     /** Cache of texture transform data per model */
     private val textureTransformCache = mutableMapOf<Int, TextureTransformData?>()
@@ -672,14 +615,16 @@ object ModelLoader {
      * - Type 2: Cube/rectangular projection
      * - Type 3: Spherical projection
      *
-     * If faceTexturePointer == -1: use bounding-box normalized UVs (consistent across all faces)
+     * If faceTexturePointer == -1 (no texture pointer): use fixed UVs matching the RS client.
+     * The client uses: (0, 1), (1, 1), (0, 0) which after V-flip for OpenGL become: (0, 0), (1, 0), (0, 1).
      */
     private fun computeUVs(def: ModelDefinition, faceIdx: Int, aIdx: Int, bIdx: Int, cIdx: Int, textureId: Int = -1): FloatArray {
         val texturePointer = def.faceTexturePointers?.get(faceIdx)?.toInt()?.and(0xff) ?: 255
 
-        // If no texture pointer or invalid, use bounding-box normalized UVs
+        // If no texture pointer or invalid, use fixed UVs matching the RS client behavior.
+        // The RS client uses: u=(0,1,0) v=(1,1,0). After V-flip for OpenGL: v=(0,0,1).
         if (texturePointer == 255 || texturePointer >= def.textureTriangleCount) {
-            return computeFallbackUVs(def, aIdx, bIdx, cIdx, textureId)
+            return FIXED_FALLBACK_UVS
         }
 
         val mappingType = def.texturesMapping?.get(texturePointer)?.toInt()?.and(0xff) ?: 0
@@ -689,42 +634,46 @@ object ModelLoader {
             1 -> computeCylindricalUVs(def, texturePointer, aIdx, bIdx, cIdx)
             2 -> computeCubeUVs(def, faceIdx, texturePointer, aIdx, bIdx, cIdx)
             3 -> computeSphericalUVs(def, texturePointer, aIdx, bIdx, cIdx)
-            else -> computeFallbackUVs(def, aIdx, bIdx, cIdx, textureId)
+            else -> FIXED_FALLBACK_UVS
         }
     }
 
     /**
-     * Fallback UV calculation using bounding-box normalization.
+     * Fixed fallback UV coordinates matching the RS client behavior.
+     *
+     * When a face has a material/texture but no texture pointer (textureOnFace == -1),
+     * the RS client uses these fixed UVs:
+     *   u[0]=0.0, v[0]=1.0  (vertex A)
+     *   u[1]=1.0, v[1]=1.0  (vertex B)
+     *   u[2]=0.0, v[2]=0.0  (vertex C)
+     *
+     * After V-flip for OpenGL (V_gl = 1 - V_rs):
+     *   u[0]=0.0, v[0]=0.0  (vertex A)
+     *   u[1]=1.0, v[1]=0.0  (vertex B)
+     *   u[2]=0.0, v[2]=1.0  (vertex C)
      */
-    private fun computeFallbackUVs(def: ModelDefinition, aIdx: Int, bIdx: Int, cIdx: Int, textureId: Int): FloatArray {
-        val cacheKey = Pair(def.id, textureId)
-        val bounds = textureBoundsCache.getOrPut(cacheKey) {
-            computeTextureBounds(def, textureId)
-        }
-
-        val aU = (def.vertexX[aIdx] - bounds.minX) / bounds.rangeX
-        val aV = 1.0f - (def.vertexY[aIdx] - bounds.minY) / bounds.rangeY  // Flip V for OpenGL
-        val bU = (def.vertexX[bIdx] - bounds.minX) / bounds.rangeX
-        val bV = 1.0f - (def.vertexY[bIdx] - bounds.minY) / bounds.rangeY  // Flip V for OpenGL
-        val cU = (def.vertexX[cIdx] - bounds.minX) / bounds.rangeX
-        val cV = 1.0f - (def.vertexY[cIdx] - bounds.minY) / bounds.rangeY  // Flip V for OpenGL
-        return floatArrayOf(aU, aV, bU, bV, cU, cV)
-    }
+    private val FIXED_FALLBACK_UVS = floatArrayOf(0f, 0f, 1f, 0f, 0f, 1f)
 
     /**
      * Type 0: Planar projection onto texture triangle plane.
+     *
+     * Implements the RS client's planar UV mapping exactly:
+     * 1. Get texture triangle vertices (textureFaceX/Y/Z[texturePointer])
+     * 2. Compute projection basis using cross products
+     * 3. Project face vertices onto the texture triangle plane
+     * 4. V is flipped (1-V) to compensate for OpenGL texture coordinate convention
      */
     private fun computePlanarUVs(def: ModelDefinition, texturePointer: Int, aIdx: Int, bIdx: Int, cIdx: Int, textureId: Int): FloatArray {
-        val texFaceX = def.textureFaceX ?: return floatArrayOf(0f, 1f, 1f, 1f, 0f, 0f)
-        val texFaceY = def.textureFaceY ?: return floatArrayOf(0f, 1f, 1f, 1f, 0f, 0f)
-        val texFaceZ = def.textureFaceZ ?: return floatArrayOf(0f, 1f, 1f, 1f, 0f, 0f)
+        val texFaceX = def.textureFaceX ?: return FIXED_FALLBACK_UVS
+        val texFaceY = def.textureFaceY ?: return FIXED_FALLBACK_UVS
+        val texFaceZ = def.textureFaceZ ?: return FIXED_FALLBACK_UVS
 
         val tAIdx = texFaceX[texturePointer].toInt() and 0xffff
         val tBIdx = texFaceY[texturePointer].toInt() and 0xffff
         val tCIdx = texFaceZ[texturePointer].toInt() and 0xffff
 
         if (tAIdx >= def.vertexCount || tBIdx >= def.vertexCount || tCIdx >= def.vertexCount) {
-            return computeFallbackUVs(def, aIdx, bIdx, cIdx, textureId)
+            return FIXED_FALLBACK_UVS
         }
 
         val tAx = def.vertexX[tAIdx].toFloat()
@@ -840,16 +789,6 @@ object ModelLoader {
      * but we need to remove it for cube face determination so the face selection
      * is based on the un-scaled orientation.
      */
-    // Debug flag for UV computation
-    private var debugCubeUv = false
-
-    /**
-     * Enable/disable debug output for cube UV computation.
-     */
-    fun setDebugCubeUv(enable: Boolean) {
-        debugCubeUv = enable
-    }
-
     private fun computeCubeUVs(def: ModelDefinition, faceIdx: Int, texturePointer: Int, aIdx: Int, bIdx: Int, cIdx: Int): FloatArray {
         val transformData = textureTransformCache.getOrPut(def.id) {
             generateTextureTransformData(def)
@@ -902,16 +841,6 @@ object ModelLoader {
         val tnz = (fnx * matrix[6] + fny * matrix[7] + fnz * matrix[8]) / scaleZ
         val cubeFace = getCubeFace(tnx, tny, tnz)
 
-        if (debugCubeUv && faceIdx < 3) {
-            println("  computeCubeUVs(face=$faceIdx, texPtr=$texturePointer, verts=($aIdx,$bIdx,$cIdx))")
-            println("    center=($centerX, $centerY, $centerZ)")
-            println("    direction=$direction, speedOffset=$speedOffset, uTrans=$uTrans, vTrans=$vTrans")
-            println("    rawScale=($rawScaleX, $rawScaleY, $rawScaleZ) -> scale=($scaleX, $scaleY, $scaleZ)")
-            println("    faceNormal=($fnx, $fny, $fnz)")
-            println("    transformedNormal=($tnx, $tny, $tnz) -> cubeFace=$cubeFace")
-            println("    matrix=[${matrix.take(3).joinToString()}], [${matrix.drop(3).take(3).joinToString()}], [${matrix.drop(6).joinToString()}]")
-        }
-
         val uvA = FloatArray(2)
         val uvB = FloatArray(2)
         val uvC = FloatArray(2)
@@ -919,12 +848,6 @@ object ModelLoader {
         mapCubeUV(def.vertexX[aIdx], def.vertexY[aIdx], def.vertexZ[aIdx], centerX, centerY, centerZ, cubeFace, matrix, direction, speedOffset, uTrans, vTrans, uvA)
         mapCubeUV(def.vertexX[bIdx], def.vertexY[bIdx], def.vertexZ[bIdx], centerX, centerY, centerZ, cubeFace, matrix, direction, speedOffset, uTrans, vTrans, uvB)
         mapCubeUV(def.vertexX[cIdx], def.vertexY[cIdx], def.vertexZ[cIdx], centerX, centerY, centerZ, cubeFace, matrix, direction, speedOffset, uTrans, vTrans, uvC)
-
-        if (debugCubeUv && faceIdx < 3) {
-            println("    A(${def.vertexX[aIdx]}, ${def.vertexY[aIdx]}, ${def.vertexZ[aIdx]}) -> UV(${uvA[0]}, ${uvA[1]})")
-            println("    B(${def.vertexX[bIdx]}, ${def.vertexY[bIdx]}, ${def.vertexZ[bIdx]}) -> UV(${uvB[0]}, ${uvB[1]})")
-            println("    C(${def.vertexX[cIdx]}, ${def.vertexY[cIdx]}, ${def.vertexZ[cIdx]}) -> UV(${uvC[0]}, ${uvC[1]})")
-        }
 
         return floatArrayOf(uvA[0], uvA[1], uvB[0], uvB[1], uvC[0], uvC[1])
     }
@@ -980,6 +903,7 @@ object ModelLoader {
      */
     fun createTexturedModel(def: ModelDefinition): TexturedModel? {
         if (def.faceCount == 0) return null
+
 
         fun isValidIndex(idx: Int) = idx >= 0 && idx < def.vertexCount
 
@@ -1428,7 +1352,6 @@ object ModelLoader {
 
     fun clearCache() {
         definitionCache.clear()
-        textureBoundsCache.clear()
         textureTransformCache.clear()
         combinedDefinitionCache.clear()
     }

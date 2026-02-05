@@ -471,6 +471,101 @@ object TextureLoader {
         return decodeSpriteToData(data, subIndex)
     }
 
+    /**
+     * Debug: Dump the generated texture pixels to a PPM image file for visual inspection.
+     * The image is saved WITHOUT vertical flip (as generated, row 0 = top).
+     */
+    fun dumpTextureImage(cache: Cache, materialId: Int, outputPath: String) {
+        val textureType = loadTextureType(cache, materialId)
+        if (textureType == null) {
+            println("dumpTextureImage: Could not load texture type for material $materialId")
+            return
+        }
+        val material = getMaterial(materialId)
+        val textureSize = getTextureSize(material)
+        val opaque = isMaterialOpaque(material)
+
+        val pixels = if (opaque) {
+            textureType.getPixelsRgb(
+                textureSize, textureSize,
+                spriteLoader = { spriteId -> loadSpriteData(cache, spriteId) },
+                textureLoader = { matId, w, h -> generateTexturePixels(cache, matId, w, h) },
+                brightness = 0.7
+            )
+        } else {
+            textureType.getPixelsArgb(
+                textureSize, textureSize,
+                spriteLoader = { spriteId -> loadSpriteData(cache, spriteId) },
+                textureLoader = { matId, w, h -> generateTexturePixels(cache, matId, w, h) },
+                brightness = 0.7
+            )
+        }
+
+        // Apply same alpha post-processing as getTextureForMaterial
+        if (material != null && material.anInt1226 != 2) {
+            val effectCombiner = material.anInt1226
+            if (effectCombiner == 0) {
+                val rawAlpha = material.aByte1225.toInt() and 0xFF
+                val constAlpha = if (rawAlpha == 0) 255 else rawAlpha
+                for (i in pixels.indices) {
+                    val px = pixels[i]
+                    pixels[i] = (constAlpha shl 24) or (px and 0x00FFFFFF)
+                }
+            } else {
+                for (i in pixels.indices) {
+                    val px = pixels[i]
+                    val rgb = px and 0x00FFFFFF
+                    pixels[i] = if (rgb != 0) (0xFF shl 24) or rgb else 0
+                }
+            }
+        }
+
+        // Write as PPM (P3 format) - shows RGB, ignoring alpha
+        // Also write a separate file with alpha channel visualized
+        val sb = StringBuilder()
+        sb.appendLine("P3")
+        sb.appendLine("$textureSize $textureSize")
+        sb.appendLine("255")
+        for (y in 0 until textureSize) {
+            for (x in 0 until textureSize) {
+                val pixel = pixels[y * textureSize + x]
+                val r = (pixel shr 16) and 0xFF
+                val g = (pixel shr 8) and 0xFF
+                val b = pixel and 0xFF
+                sb.append("$r $g $b ")
+            }
+            sb.appendLine()
+        }
+        java.io.File(outputPath).writeText(sb.toString())
+
+        // Also write alpha channel as grayscale
+        val sbAlpha = StringBuilder()
+        sbAlpha.appendLine("P2")
+        sbAlpha.appendLine("$textureSize $textureSize")
+        sbAlpha.appendLine("255")
+        for (y in 0 until textureSize) {
+            for (x in 0 until textureSize) {
+                val pixel = pixels[y * textureSize + x]
+                val a = (pixel shr 24) and 0xFF
+                sbAlpha.append("$a ")
+            }
+            sbAlpha.appendLine()
+        }
+        java.io.File(outputPath.replace(".ppm", "_alpha.ppm")).writeText(sbAlpha.toString())
+
+        // Print stats
+        var nonBlack = 0
+        var transparent = 0
+        for (pixel in pixels) {
+            val rgb = pixel and 0x00FFFFFF
+            val a = (pixel shr 24) and 0xFF
+            if (rgb != 0) nonBlack++
+            if (a == 0) transparent++
+        }
+        println("dumpTextureImage($materialId): ${textureSize}x${textureSize}, opaque=$opaque, effectCombiner=${material?.anInt1226}, nonBlack=$nonBlack/${pixels.size}, transparent=$transparent/${pixels.size}")
+        println("  Saved to $outputPath")
+    }
+
     fun clearCache() {
         textureCache.values.forEach { glDeleteTextures(it) }
         textureCache.clear()
