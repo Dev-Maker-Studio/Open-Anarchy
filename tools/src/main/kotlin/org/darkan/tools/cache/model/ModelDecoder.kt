@@ -338,7 +338,7 @@ object ModelDecoder {
         }
 
         // Decode face texture pointers (index into texture triangles for UV projection)
-        val faceTexturePointers: ByteArray? = if (hasFaceTextures == 1 && texturedFaceCount > 0 && textureIndicesOffset + faceCount <= data.size) {
+        val faceTexturePointers: ByteArray? = if (hasFaceTextures == 1 && texturedFaceCount > 0 && textureIndicesOffset + textureIndicesLength <= data.size) {
             buffer.position(textureIndicesOffset)
             ByteArray(faceCount) { faceIdx ->
                 // Only decode texture pointer if face has a material

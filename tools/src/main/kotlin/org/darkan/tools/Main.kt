@@ -349,9 +349,6 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
 private fun runUVDiagnostic(cache: Cache, modelId: Int) {
     println("\n=== UV DIAGNOSTIC: Model $modelId ===")
 
-    // Enable debug output
-    ModelLoader.setDebugCubeUv(true)
-
     // Clear cache to force recomputation
     ModelLoader.clearCache()
 
@@ -380,9 +377,6 @@ private fun runUVDiagnostic(cache: Cache, modelId: Int) {
             }
         }
     }
-
-    // Disable debug output
-    ModelLoader.setDebugCubeUv(false)
 
     println("\n=== UV DIAGNOSTIC COMPLETE ===")
 }
