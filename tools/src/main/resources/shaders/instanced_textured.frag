@@ -15,11 +15,11 @@ uniform vec3 lightColor;
 
 void main() {
     vec4 texColor = texture(textureSampler, vTexCoord);
-    vec3 baseColor = texColor.rgb * vColor; // Blend texture with vertex color
     float alpha = texColor.a;
-
-    // Discard transparent fragments (cutout transparency for leaves, etc.)
-    if (alpha < 0.5) discard;
+    if (alpha < 0.01) discard;
+    // Multiplicative blend: texture color modulated by vertex color
+    // Matches RS client: color = texColor * vColor
+    vec3 baseColor = texColor.rgb * vColor;
 
     // Flip normal for back faces (two-sided lighting)
     // For mirrored objects, the winding order is reversed, so gl_FrontFacing is inverted

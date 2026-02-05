@@ -51,6 +51,14 @@ class RenderSystem(private val window: Window) {
         glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE)
     }
 
+    fun enableDepthWrite() {
+        glDepthMask(true)
+    }
+
+    fun disableDepthWrite() {
+        glDepthMask(false)
+    }
+
     fun enableCullFace() {
         glEnable(GL_CULL_FACE)
         glCullFace(GL_BACK)

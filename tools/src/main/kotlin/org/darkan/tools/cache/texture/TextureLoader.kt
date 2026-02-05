@@ -1,10 +1,8 @@
 package org.darkan.tools.cache.texture
 
-import org.darkan.tools.cache.texture.ops.TextureOpPerlinNoise
 import org.lwjgl.opengl.EXTTextureFilterAnisotropic
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL11.*
-import org.lwjgl.opengl.GL12.GL_CLAMP_TO_EDGE
 import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
 import org.lwjgl.opengl.GL30.glGenerateMipmap
@@ -12,6 +10,8 @@ import org.lwjgl.system.MemoryUtil
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
+import world.gregs.voidps.cache.definition.data.MaterialDefinition
+import world.gregs.voidps.cache.definition.decoder.MaterialDecoder
 
 /**
  * Loads textures from the cache using the full RS procedural texture system:
@@ -26,13 +26,86 @@ object TextureLoader {
     private var defaultTextureId: Int = 0
     private var cacheRef: Cache? = null
 
-    /** Default texture size for procedural generation */
-    private const val TEXTURE_SIZE = 128
+    /** Material definitions loaded from the cache, indexed by material ID */
+    private var materialDefinitions: Array<MaterialDefinition> = emptyArray()
+
+    /** Default texture size for procedural generation (128 for normal, 64 for small) */
+    private const val TEXTURE_SIZE_NORMAL = 128
+    private const val TEXTURE_SIZE_SMALL = 64
 
     fun init(cache: Cache) {
         cacheRef = cache
         defaultTextureId = createCheckerTexture()
         TextureRaster.calculateTable()
+
+        // Load all material definitions once at init time
+        materialDefinitions = MaterialDecoder().load(cache)
+    }
+
+    /**
+     * Get the MaterialDefinition for a given material ID, or null if not found.
+     */
+    private fun getMaterial(materialId: Int): MaterialDefinition? {
+        if (materialId < 0 || materialId >= materialDefinitions.size) return null
+        return materialDefinitions[materialId]
+    }
+
+    /**
+     * Determine if a material should use the opaque pixel path.
+     * Matches the RS client logic:
+     *   effectCombiner != 2 && effectId != 1 && effectId != 7
+     *
+     * If no material definition exists, defaults to opaque (most materials are opaque).
+     */
+    private fun isMaterialOpaque(material: MaterialDefinition?): Boolean {
+        if (material == null) return true
+        val effectId = material.type.toInt()
+        val effectCombiner = material.anInt1226
+        return effectCombiner != 2 && effectId != 1 && effectId != 7
+    }
+
+    /**
+     * Public query: does the given material render as fully opaque?
+     *
+     * This answers the RENDERING question (opaque pass vs transparent pass),
+     * not the texture GENERATION question (getPixelsRgb vs getPixelsArgb).
+     *
+     * After alpha post-processing:
+     *   - Standard opaque materials (not effectId 1/7, not effectCombiner 2):
+     *     all pixels get alpha=255 via isMaterialOpaque → opaque path → true
+     *   - effectCombiner=0 with constAlpha=255: all pixels get alpha=255 → true
+     *   - effectCombiner=0 with constAlpha<255: all pixels get partial alpha → false
+     *   - effectCombiner=1 (binary alpha): some pixels alpha=0 → false
+     *   - effectCombiner=2 (per-pixel alpha): variable alpha → false
+     */
+    fun isOpaque(textureId: Int): Boolean {
+        if (textureId < 0) return true
+        val material = getMaterial(textureId) ?: return true
+        val effectId = material.type.toInt()
+        val effectCombiner = material.anInt1226
+
+        // Standard opaque materials (not effectId 1/7, not effectCombiner 2)
+        if (effectCombiner != 2 && effectId != 1 && effectId != 7) return true
+
+        // For effectCombiner 0: check if constant alpha makes it opaque
+        if (effectCombiner == 0) {
+            val rawAlpha = material.aByte1225.toInt() and 0xFF
+            val constAlpha = if (rawAlpha == 0) 255 else rawAlpha
+            return constAlpha == 255
+        }
+
+        // effectCombiner 1 (binary) or 2 (per-pixel): needs transparency handling
+        return false
+    }
+
+    /**
+     * Get the texture size for a material based on its isSmall flag.
+     * true (isSmall) -> 64x64, false -> 128x128.
+     * Defaults to 128 if no material definition exists.
+     */
+    private fun getTextureSize(material: MaterialDefinition?): Int {
+        if (material == null) return TEXTURE_SIZE_NORMAL
+        return if (material.aBoolean1204) TEXTURE_SIZE_SMALL else TEXTURE_SIZE_NORMAL
     }
 
     /**
@@ -49,19 +122,73 @@ object TextureLoader {
         return textureCache.getOrPut(textureId) {
             // Try to load and generate the texture using the full operation pipeline
             val textureType = loadTextureType(cache, textureId)
-            if (textureType != null) {
-                val pixels = textureType.getPixelsArgb(
-                    TEXTURE_SIZE,
-                    TEXTURE_SIZE,
-                    spriteLoader = { spriteId ->
-                        loadSpriteData(cache, spriteId)
-                    },
-                    textureLoader = { materialId, width, height ->
-                        generateTexturePixels(cache, materialId, width, height)
-                    }
-                )
 
-                return@getOrPut createTextureFromArgb(pixels, TEXTURE_SIZE, TEXTURE_SIZE)
+            if (textureType != null) {
+                val material = getMaterial(textureId)
+                val textureSize = getTextureSize(material)
+                val opaque = isMaterialOpaque(material)
+
+                val pixels = if (opaque) {
+                    // Opaque path: alpha=255 for non-black, alpha=0 for black.
+                    // Does NOT evaluate the opacity operation.
+                    textureType.getPixelsRgb(
+                        textureSize,
+                        textureSize,
+                        spriteLoader = { spriteId ->
+                            loadSpriteData(cache, spriteId)
+                        },
+                        textureLoader = { materialId, width, height ->
+                            generateTexturePixels(cache, materialId, width, height)
+                        },
+                        brightness = 0.7
+                    )
+                } else {
+                    // Transparent path: alpha from the opacity operation.
+                    textureType.getPixelsArgb(
+                        textureSize,
+                        textureSize,
+                        spriteLoader = { spriteId ->
+                            loadSpriteData(cache, spriteId)
+                        },
+                        textureLoader = { materialId, width, height ->
+                            generateTexturePixels(cache, materialId, width, height)
+                        },
+                        brightness = 0.7
+                    )
+                }
+
+                // Post-process alpha based on effectCombiner.
+                // In the RS client, effectCombiner controls how alpha is actually used:
+                //   effectCombiner=2: per-pixel alpha from opacity operation (keep as-is)
+                //   effectCombiner=0: constant alpha applied to ALL pixels (including black).
+                //     The RS client's software rasterizer uses constant alpha for every texel,
+                //     and its GL path uses BlendMode.NONE, so black pixels render as black,
+                //     not as holes. Our shader discards alpha<0.01, so we must set alpha on
+                //     all pixels to prevent black texels from being discarded.
+                //   effectCombiner=1: binary alpha (0 for black/transparent, 255 for non-black).
+                //     This creates hard-edged transparency masks (e.g., foliage, fences).
+                if (material != null && material.anInt1226 != 2) {
+                    val effectCombiner = material.anInt1226
+                    if (effectCombiner == 0) {
+                        // Constant alpha for ALL pixels (including black).
+                        // The client renders all pixels; black shows as black, not transparent.
+                        val rawAlpha = material.aByte1225.toInt() and 0xFF
+                        val constAlpha = if (rawAlpha == 0) 255 else rawAlpha
+                        for (i in pixels.indices) {
+                            val px = pixels[i]
+                            pixels[i] = (constAlpha shl 24) or (px and 0x00FFFFFF)
+                        }
+                    } else {
+                        // effectCombiner=1 (binary) or other: alpha is 0 for black, 255 for non-black
+                        for (i in pixels.indices) {
+                            val px = pixels[i]
+                            val rgb = px and 0x00FFFFFF
+                            pixels[i] = if (rgb != 0) (0xFF shl 24) or rgb else 0
+                        }
+                    }
+                }
+
+                return@getOrPut createTextureFromArgb(pixels, textureSize, textureSize)
             }
 
             // Fallback: try loading texture ID directly as sprite ID (some models use this)
@@ -75,18 +202,29 @@ object TextureLoader {
     }
 
     /**
-     * Generate raw ARGB pixels for a texture (used for nested texture references).
-     * This is separate from getTextureForMaterial to avoid circular GL texture creation.
+     * Generate raw pixels for a texture (used for nested texture references).
+     * The client uses materialProvider.getPixels(materialId, 1.0f, size, size, false)
+     * for nested TextureOpTexture references, which is the RGB (opaque) path with
+     * brightness=1.0. This is separate from getTextureForMaterial to avoid circular
+     * GL texture creation.
      */
     private val pixelCache = mutableMapOf<Int, IntArray?>()
 
-    private fun generateTexturePixels(cache: Cache, textureId: Int, width: Int, height: Int): IntArray? {
+    private fun generateTexturePixels(cache: Cache, textureId: Int, @Suppress("UNUSED_PARAMETER") width: Int, @Suppress("UNUSED_PARAMETER") height: Int): IntArray? {
         // Use a simple cache to avoid redundant generation
         return pixelCache.getOrPut(textureId) {
             val textureType = loadTextureType(cache, textureId) ?: return@getOrPut null
-            textureType.getPixelsArgb(
-                width,
-                height,
+
+            // In the RS client, TextureOpTexture.createImageCache() loads nested textures
+            // at the NESTED material's own size (based on isSmall), NOT the parent's.
+            // We must do the same here to avoid array bounds mismatches.
+            val nestedMaterial = getMaterial(textureId)
+            val nestedSize = getTextureSize(nestedMaterial)
+
+            // Nested textures always use the RGB (opaque) path with brightness=1.0
+            val result = textureType.getPixelsRgb(
+                nestedSize,
+                nestedSize,
                 spriteLoader = { spriteId ->
                     loadSpriteData(cache, spriteId)
                 },
@@ -95,8 +233,11 @@ object TextureLoader {
                     if (materialId != textureId) { // Avoid infinite recursion
                         generateTexturePixels(cache, materialId, w, h)
                     } else null
-                }
+                },
+                brightness = 1.0
             )
+
+            result
         }
     }
 
@@ -108,38 +249,10 @@ object TextureLoader {
             val data = cache.data(Index.TEXTURES, textureId) ?: return@getOrPut null
             if (data.isEmpty()) return@getOrPut null
             try {
-                val textureType = TextureType(data)
-
-                // Debug output for texture 928
-                if (textureId == 928) {
-                    debugTexture928(textureType)
-                }
-
-                textureType
+                TextureType(data)
             } catch (e: Exception) {
                 // Invalid texture data - return null
                 null
-            }
-        }
-    }
-
-    /**
-     * Debug helper to print texture 928's operation graph and Perlin noise parameters.
-     */
-    private fun debugTexture928(textureType: TextureType) {
-        val opNames = textureType.textureOperations.map { it::class.simpleName ?: "Unknown" }
-        System.err.println("[Texture 928] Operations: $opNames")
-
-        for (op in textureType.textureOperations) {
-            if (op is TextureOpPerlinNoise) {
-                // Access private fields via reflection
-                val scaleXField = TextureOpPerlinNoise::class.java.getDeclaredField("texCoordScaleX")
-                val scaleYField = TextureOpPerlinNoise::class.java.getDeclaredField("texCoordScaleY")
-                scaleXField.isAccessible = true
-                scaleYField.isAccessible = true
-                val scaleX = scaleXField.getInt(op)
-                val scaleY = scaleYField.getInt(op)
-                System.err.println("[Texture 928] PerlinNoise: texCoordScaleX=$scaleX, texCoordScaleY=$scaleY")
             }
         }
     }
@@ -349,6 +462,13 @@ object TextureLoader {
 
     fun unbindTexture() {
         glBindTexture(GL_TEXTURE_2D, 0)
+    }
+
+    /**
+     * Public access to sprite decoding for diagnostic tools.
+     */
+    fun decodeSpriteToDataPublic(data: ByteArray, subIndex: Int): SpriteData? {
+        return decodeSpriteToData(data, subIndex)
     }
 
     fun clearCache() {
