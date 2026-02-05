@@ -20,10 +20,11 @@ void main() {
 
     if (useTexture) {
         vec4 texColor = texture(textureSampler, vTexCoord);
-        baseColor = texColor.rgb * vColor; // Blend texture with vertex color
         alpha = texColor.a;
-        // Discard transparent fragments (cutout transparency for leaves, etc.)
-        if (alpha < 0.5) discard;
+        if (alpha < 0.01) discard;
+        // Multiplicative blend: texture color modulated by vertex color
+        // Matches RS client: color = texColor * vColor
+        baseColor = texColor.rgb * vColor;
     } else {
         baseColor = vColor;
     }

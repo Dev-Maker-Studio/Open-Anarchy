@@ -4,11 +4,15 @@ import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionLoader
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.model.ModelLoader
+import org.darkan.tools.cache.texture.*
+import org.darkan.tools.cache.texture.ops.*
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.viewer.InterfaceViewer
 import org.darkan.tools.viewer.MapViewer
 import org.darkan.tools.viewer.ModelViewer
+import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.Index
 
 /**
  * Main entry point for Darkan Tools.
@@ -51,6 +55,10 @@ fun main(args: Array<String>) {
         "uv", "uvdebug" -> {
             val modelId = args.getOrNull(1)?.toIntOrNull() ?: 48861
             runUVDiagnostic(cache, modelId)
+        }
+        "texture", "tex" -> {
+            val texId = args.getOrNull(1)?.toIntOrNull() ?: 725
+            runTextureDiagnostic(cache, texId)
         }
         "help", "-h", "--help" -> {
             printHelp()
@@ -540,6 +548,270 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
     }
 
     println("\n=== DIAGNOSTIC COMPLETE ===")
+}
+
+/**
+ * Run a texture diagnostic without requiring OpenGL.
+ * Loads the texture type from cache, decodes its operations, loads sprites,
+ * generates pixels, and prints detailed information about each step.
+ */
+private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
+    println("\n=== TEXTURE DIAGNOSTIC: ID $textureId ===\n")
+
+    // Step 1: Check TEXTURES index structure
+    val textureArchives = cache.archives(Index.TEXTURES)
+    println("TEXTURES index (${Index.TEXTURES}):")
+    println("  Total archives: ${textureArchives.size}")
+    println("  Archive $textureId exists: ${textureId in textureArchives}")
+    val filesInArchive = cache.files(Index.TEXTURES, textureId)
+    println("  Files in archive $textureId: ${filesInArchive.toList()}")
+
+    // Step 2: Load raw data
+    val rawData = cache.data(Index.TEXTURES, textureId)
+    if (rawData == null) {
+        println("  ERROR: cache.data(TEXTURES, $textureId) returned NULL")
+        // Try alternate addressing
+        val altData = cache.data(Index.TEXTURES, 0, textureId)
+        println("  Alternate: cache.data(TEXTURES, 0, $textureId) returned ${if (altData != null) "${altData.size} bytes" else "NULL"}")
+        println("\n=== DIAGNOSTIC COMPLETE ===")
+        return
+    }
+    println("  Raw data: ${rawData.size} bytes")
+    println("  First 32 bytes: ${rawData.take(32).map { "0x${(it.toInt() and 0xFF).toString(16).padStart(2, '0')}" }}")
+
+    // Step 3: Decode TextureType
+    val textureType: TextureType
+    try {
+        textureType = TextureType(rawData)
+    } catch (e: Exception) {
+        println("  ERROR decoding TextureType: ${e.message}")
+        e.printStackTrace()
+        println("\n=== DIAGNOSTIC COMPLETE ===")
+        return
+    }
+
+    println("\n--- OPERATIONS (${textureType.textureOperations.size}) ---")
+    for ((i, op) in textureType.textureOperations.withIndex()) {
+        val labels = mutableListOf<String>()
+        if (op === textureType.opaqueOperation) labels.add("OPAQUE")
+        if (op === textureType.opacityOperation) labels.add("OPACITY")
+        if (op === textureType.hdrOperation) labels.add("HDR")
+        val labelStr = if (labels.isNotEmpty()) " <== ${labels.joinToString(", ")}" else ""
+
+        val extra = when (op) {
+            is TextureOpTiledSprite -> " (TiledSprite) spriteId=${op.spriteId}"
+            is TextureOpSprite -> " spriteId=${op.spriteId}"
+            is TextureOpTexture -> " materialId=${op.getMaterialId()}"
+            else -> ""
+        }
+        val childIndices = op.operations.mapIndexed { ci, child ->
+            if (child != null) {
+                val childIdx = textureType.textureOperations.indexOf(child)
+                "$ci->op[$childIdx]"
+            } else "$ci->null"
+        }
+        val childStr = if (childIndices.isNotEmpty()) " children=[${childIndices.joinToString(", ")}]" else ""
+        println("  [$i] ${op::class.simpleName} monochrome=${op.monochrome} cache=${op.imageCacheCapacity}$extra$childStr$labelStr")
+    }
+
+    println("\n  textureFileIds (sprites): ${textureType.textureFileIds.toList()}")
+    println("  materialFileIds (nested textures): ${textureType.materialFileIds.toList()}")
+
+    // Step 4: Load sprites
+    println("\n--- SPRITE LOADING ---")
+    for (op in textureType.textureOperations) {
+        if (op is TextureOpSprite && op.spriteId >= 0) {
+            val spriteId = op.spriteId
+            val spriteData = cache.data(Index.SPRITES, spriteId)
+            if (spriteData == null) {
+                println("  Sprite $spriteId: cache.data(SPRITES, $spriteId) returned NULL")
+                // Try alternate addressing
+                val altData = cache.data(Index.SPRITES, 0, spriteId)
+                println("  Sprite $spriteId: alternate cache.data(SPRITES, 0, $spriteId) returned ${if (altData != null) "${altData.size} bytes" else "NULL"}")
+                continue
+            }
+            println("  Sprite $spriteId: ${spriteData.size} bytes raw data")
+
+            // Decode sprite header
+            try {
+                val buf = BufferReader(spriteData)
+                buf.position(spriteData.size - 2)
+                val spriteCount = buf.readShort() and 0xFFFF
+                println("    spriteCount: $spriteCount")
+
+                if (spriteCount > 0) {
+                    buf.position(spriteData.size - 7 - spriteCount * 8)
+                    val biggestWidth = buf.readShort()
+                    val biggestHeight = buf.readShort()
+                    val paletteSize = buf.readUnsignedByte() + 1
+                    println("    biggestWidth=$biggestWidth, biggestHeight=$biggestHeight, paletteSize=$paletteSize")
+
+                    val minX = IntArray(spriteCount) { buf.readShort() }
+                    // skip minY, widths, heights
+                    buf.position(spriteData.size - 7 - spriteCount * 8 + 5 + spriteCount)
+                    val minY = IntArray(spriteCount) { buf.readShort() }
+                    val widths = IntArray(spriteCount) { buf.readShort() }
+                    val heights = IntArray(spriteCount) { buf.readShort() }
+
+                    // Re-read correctly: after palette size, we have minX[N], minY[N], widths[N], heights[N]
+                    buf.position(spriteData.size - 7 - spriteCount * 8 + 5)
+                    for (j in 0 until spriteCount) { minX[j] = buf.readShort() }
+                    for (j in 0 until spriteCount) { minY[j] = buf.readShort() }
+                    for (j in 0 until spriteCount) { widths[j] = buf.readShort() }
+                    for (j in 0 until spriteCount) { heights[j] = buf.readShort() }
+
+                    println("    sub[0]: minX=${minX[0]}, minY=${minY[0]}, width=${widths[0]}, height=${heights[0]}")
+
+                    // Read pixel flags
+                    buf.position(0)
+                    val flags = buf.readUnsignedByte()
+                    val hasAlpha = (flags and 0x2) != 0
+                    val columnMajor = (flags and 0x1) != 0
+                    println("    sub[0] flags: hasAlpha=$hasAlpha, columnMajor=$columnMajor")
+
+                    val fullWidth = if (biggestWidth > 0) biggestWidth else widths[0]
+                    val fullHeight = if (biggestHeight > 0) biggestHeight else heights[0]
+                    println("    fullCanvas: ${fullWidth}x${fullHeight}")
+
+                    // Try full decode
+                    val decoded = TextureLoader.decodeSpriteToDataPublic(spriteData, 0)
+                    if (decoded != null) {
+                        val nonZero = decoded.pixels.count { it != 0 }
+                        val nonBlackRgb = decoded.pixels.count { (it and 0xFFFFFF) != 0 }
+                        println("    DECODED: ${decoded.width}x${decoded.height}, ${decoded.pixels.size} pixels, $nonZero non-zero, $nonBlackRgb non-black-RGB")
+                        val samples = decoded.pixels.filter { (it and 0xFFFFFF) != 0 }.take(5)
+                        println("    sample non-black pixels: ${samples.map { "0x${it.toUInt().toString(16)}" }}")
+                    } else {
+                        println("    DECODE RETURNED NULL")
+                    }
+                }
+            } catch (e: Exception) {
+                println("    ERROR parsing sprite header: ${e.message}")
+            }
+        }
+    }
+
+    // Step 5: Generate pixels without OpenGL
+    println("\n--- PIXEL GENERATION ---")
+    TextureRaster.calculateTable()
+
+    // Load sprites into operations
+    for (op in textureType.textureOperations) {
+        if (op is TextureOpSprite && op.spriteId >= 0) {
+            val spriteRawData = cache.data(Index.SPRITES, op.spriteId) ?: continue
+            val decoded = TextureLoader.decodeSpriteToDataPublic(spriteRawData, 0)
+            if (decoded != null) {
+                op.loadSprite(decoded.pixels, decoded.width, decoded.height)
+                println("  Loaded sprite ${op.spriteId} into ${op::class.simpleName}: ${decoded.width}x${decoded.height}")
+            } else {
+                println("  FAILED to decode sprite ${op.spriteId} for ${op::class.simpleName}")
+            }
+        }
+    }
+
+    // Load nested textures
+    for (op in textureType.textureOperations) {
+        if (op is TextureOpTexture && op.getMaterialId() >= 0) {
+            val nestedId = op.getMaterialId()
+            val nestedData = cache.data(Index.TEXTURES, nestedId)
+            if (nestedData != null) {
+                try {
+                    val nestedType = TextureType(nestedData)
+                    // Load sprites for nested texture
+                    for (nestedOp in nestedType.textureOperations) {
+                        if (nestedOp is TextureOpSprite && nestedOp.spriteId >= 0) {
+                            val spriteRawData = cache.data(Index.SPRITES, nestedOp.spriteId) ?: continue
+                            val decoded = TextureLoader.decodeSpriteToDataPublic(spriteRawData, 0)
+                            if (decoded != null) {
+                                nestedOp.loadSprite(decoded.pixels, decoded.width, decoded.height)
+                            }
+                        }
+                    }
+                    val nestedPixels = nestedType.getPixelsArgb(128, 128, { sid ->
+                        val sData = cache.data(Index.SPRITES, sid) ?: return@getPixelsArgb null
+                        TextureLoader.decodeSpriteToDataPublic(sData, 0)
+                    })
+                    op.texturePixels = nestedPixels
+                    op.textureWidth = 128
+                    op.textureHeight = 128
+                    val nonZero = nestedPixels.count { it != 0 }
+                    println("  Loaded nested texture $nestedId: $nonZero non-zero pixels")
+                } catch (e: Exception) {
+                    println("  FAILED to load nested texture $nestedId: ${e.message}")
+                }
+            } else {
+                println("  Nested texture $nestedId: cache data is NULL")
+            }
+        }
+    }
+
+    // Generate pixels
+    val w = 128
+    val h = 128
+    try {
+        val pixels = textureType.getPixelsArgb(w, h, { sid ->
+            val sData = cache.data(Index.SPRITES, sid) ?: return@getPixelsArgb null
+            TextureLoader.decodeSpriteToDataPublic(sData, 0)
+        })
+
+        val nonTransparent = pixels.count { (it shr 24) and 0xFF > 0 }
+        val nonBlack = pixels.count { (it and 0xFFFFFF) != 0 }
+        println("\n  RESULT: ${pixels.size} pixels")
+        println("  Non-transparent (alpha > 0): $nonTransparent")
+        println("  Non-black (RGB != 0): $nonBlack")
+
+        if (nonBlack > 0) {
+            val samples = pixels.filter { (it and 0xFFFFFF) != 0 }.take(10)
+            println("  Sample non-black: ${samples.map { "A=${(it shr 24) and 0xFF} R=${(it shr 16) and 0xFF} G=${(it shr 8) and 0xFF} B=${it and 0xFF}" }}")
+        }
+
+        if (nonTransparent == 0 && nonBlack == 0) {
+            println("\n  *** ALL PIXELS ARE BLACK/TRANSPARENT ***")
+            println("  This confirms the bug. Checking intermediate operations...")
+
+            // Re-run with per-operation tracing
+            for (op in textureType.textureOperations) {
+                op.createImageCache(w, h)
+            }
+            TextureType.setBrightness(0.7)
+            TextureRaster.setDimensions(w, h)
+
+            // Check each operation's output for row 0
+            for ((i, op) in textureType.textureOperations.withIndex()) {
+                try {
+                    val hasOutput: Boolean
+                    if (op.monochrome) {
+                        val row = op.getMonochromeOutput(0)
+                        val nonZero = row.count { it != 0 }
+                        hasOutput = nonZero > 0
+                        println("    Op[$i] ${op::class.simpleName} (mono): $nonZero/${row.size} non-zero values. First 5: ${row.take(5).toList()}")
+                    } else {
+                        val palette = op.getColorOutput(0)
+                        val nonZeroR = palette[0].count { it != 0 }
+                        val nonZeroG = palette[1].count { it != 0 }
+                        val nonZeroB = palette[2].count { it != 0 }
+                        hasOutput = nonZeroR > 0 || nonZeroG > 0 || nonZeroB > 0
+                        println("    Op[$i] ${op::class.simpleName} (color): R=$nonZeroR/$w G=$nonZeroG/$w B=$nonZeroB/$w non-zero. First 5 R: ${palette[0].take(5).toList()}")
+                    }
+                    if (!hasOutput) {
+                        println("    *** Op[$i] ${op::class.simpleName} PRODUCES ALL ZEROS ***")
+                    }
+                } catch (e: Exception) {
+                    println("    Op[$i] ${op::class.simpleName} THREW: ${e.message}")
+                }
+            }
+
+            // Clean up
+            for (op in textureType.textureOperations) {
+                op.clearImageCache()
+            }
+        }
+    } catch (e: Exception) {
+        println("  ERROR generating pixels: ${e.message}")
+        e.printStackTrace()
+    }
+
+    println("\n=== TEXTURE DIAGNOSTIC COMPLETE ===")
 }
 
 private fun printHelp() {

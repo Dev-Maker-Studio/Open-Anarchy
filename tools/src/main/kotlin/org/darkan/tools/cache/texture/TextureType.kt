@@ -4,6 +4,7 @@ import org.darkan.tools.cache.texture.ops.*
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
  * Represents a texture definition with its operation DAG.
@@ -116,20 +117,16 @@ class TextureType(data: ByteArray) {
     }
 
     /**
-     * Generate ARGB pixel data for this texture.
-     *
-     * @param width The output width
-     * @param height The output height
-     * @param spriteLoader Function to load sprite pixels by ID
-     * @param textureLoader Optional function to load nested texture pixels by material ID
-     * @return ARGB pixel array (width * height)
+     * Prepare texture operations by loading sprites and nested textures,
+     * creating image caches, and setting up brightness/dimensions.
      */
-    fun getPixelsArgb(
+    private fun prepareOperations(
         width: Int,
         height: Int,
+        brightness: Double,
         spriteLoader: (Int) -> SpriteData?,
         textureLoader: ((Int, Int, Int) -> IntArray?)? = null
-    ): IntArray {
+    ) {
         // Load required sprites
         for (operation in textureOperations) {
             if (operation is TextureOpSprite && operation.spriteId >= 0) {
@@ -147,8 +144,12 @@ class TextureType(data: ByteArray) {
                     val pixels = textureLoader(operation.getMaterialId(), width, height)
                     if (pixels != null) {
                         operation.texturePixels = pixels
-                        operation.textureWidth = width
-                        operation.textureHeight = height
+                        // The nested texture may have been generated at a different size
+                        // than the parent (e.g. 64x64 vs 128x128 based on isSmall).
+                        // Derive actual dimensions from the pixel array (RS textures are square).
+                        val actualSize = sqrt(pixels.size.toDouble()).toInt()
+                        operation.textureWidth = actualSize
+                        operation.textureHeight = actualSize
                     }
                 }
             }
@@ -160,8 +161,39 @@ class TextureType(data: ByteArray) {
         }
 
         // Set up brightness and dimensions
-        setBrightness(0.7)
+        setBrightness(brightness)
         TextureRaster.setDimensions(width, height)
+    }
+
+    /**
+     * Cleanup image caches for all operations after pixel generation.
+     */
+    private fun cleanupOperations() {
+        for (operation in textureOperations) {
+            operation.clearImageCache()
+        }
+    }
+
+    /**
+     * Generate ARGB pixel data for this texture using the transparent path.
+     * Reads alpha from the opacity operation. Used for materials with
+     * transparent effects (effectId 1 or 7, or effectCombiner == 2).
+     *
+     * @param width The output width
+     * @param height The output height
+     * @param brightness The brightness/gamma value (typically 0.7)
+     * @param spriteLoader Function to load sprite pixels by ID
+     * @param textureLoader Optional function to load nested texture pixels by material ID
+     * @return ARGB pixel array (width * height)
+     */
+    fun getPixelsArgb(
+        width: Int,
+        height: Int,
+        spriteLoader: (Int) -> SpriteData?,
+        textureLoader: ((Int, Int, Int) -> IntArray?)? = null,
+        brightness: Double = 0.7
+    ): IntArray {
+        prepareOperations(width, height, brightness, spriteLoader, textureLoader)
 
         val pixels = IntArray(width * height)
         var pixelIndex = 0
@@ -184,19 +216,13 @@ class TextureType(data: ByteArray) {
                 blueBuffer = palette[2]
             }
 
-            // Get opacity from the dedicated opacity operation (for proper texture transparency)
-            // Only use the opacity operation if it's different from the opaque operation.
-            // When they're the same, the texture has no dedicated opacity channel and should
-            // be treated as fully opaque for non-black pixels.
-            val hasOpacityChannel = opacityOperation !== opaqueOperation
-            val opacityBuffer: IntArray? = if (hasOpacityChannel) {
-                if (opacityOperation.monochrome) {
-                    opacityOperation.getMonochromeOutput(row)
-                } else {
-                    opacityOperation.getColorOutput(row)[0]
-                }
+            // Evaluate the opacity operation for alpha values.
+            // When opacityOperation === opaqueOperation, the image cache returns
+            // the already-computed data (dirty=false), so this is efficient.
+            val opacityBuffer: IntArray = if (opacityOperation.monochrome) {
+                opacityOperation.getMonochromeOutput(row)
             } else {
-                null
+                opacityOperation.getColorOutput(row)[0]
             }
 
             // Process pixels from right to left (matching RS client behavior)
@@ -211,27 +237,90 @@ class TextureType(data: ByteArray) {
                 green = BRIGHTNESS_TABLE[green]
                 blue = BRIGHTNESS_TABLE[blue]
 
-                // Get alpha: black pixels are always transparent.
-                // If texture has a dedicated opacity channel, use it.
-                // Otherwise, treat non-black pixels as fully opaque.
+                // Black pixels are always fully transparent.
+                // Non-black pixels use the opacity channel value.
                 val alpha: Int = if (red == 0 && green == 0 && blue == 0) {
                     0
-                } else if (opacityBuffer != null) {
-                    // Scale opacity value the same way as color values (shift right 4 bits)
-                    (opacityBuffer[x] shr 4).coerceIn(0, 255)
                 } else {
-                    255
+                    (opacityBuffer[x] shr 4).coerceIn(0, 255)
                 }
 
                 pixels[pixelIndex++] = (alpha shl 24) or (red shl 16) or (green shl 8) or blue
             }
         }
 
-        // Cleanup caches
-        for (operation in textureOperations) {
-            operation.clearImageCache()
+        cleanupOperations()
+        return pixels
+    }
+
+    /**
+     * Generate RGB pixel data for this texture using the opaque path.
+     * Does NOT evaluate the opacity operation. Forces alpha=255 for all
+     * non-black pixels and alpha=0 for black pixels. This matches the RS
+     * client's getPixelsRgb() method used for opaque materials.
+     *
+     * @param width The output width
+     * @param height The output height
+     * @param brightness The brightness/gamma value (typically 0.7)
+     * @param spriteLoader Function to load sprite pixels by ID
+     * @param textureLoader Optional function to load nested texture pixels by material ID
+     * @return ARGB pixel array (width * height) with alpha=255 for non-black, alpha=0 for black
+     */
+    fun getPixelsRgb(
+        width: Int,
+        height: Int,
+        spriteLoader: (Int) -> SpriteData?,
+        textureLoader: ((Int, Int, Int) -> IntArray?)? = null,
+        brightness: Double = 0.7
+    ): IntArray {
+        prepareOperations(width, height, brightness, spriteLoader, textureLoader)
+
+        val pixels = IntArray(width * height)
+        var pixelIndex = 0
+
+        // Generate row by row
+        for (row in 0 until height) {
+            val redBuffer: IntArray
+            val greenBuffer: IntArray
+            val blueBuffer: IntArray
+
+            if (opaqueOperation.monochrome) {
+                val buffer = opaqueOperation.getMonochromeOutput(row)
+                redBuffer = buffer
+                greenBuffer = buffer
+                blueBuffer = buffer
+            } else {
+                val palette = opaqueOperation.getColorOutput(row)
+                redBuffer = palette[0]
+                greenBuffer = palette[1]
+                blueBuffer = palette[2]
+            }
+
+            // NOTE: Opacity operation is NOT evaluated in the opaque path
+
+            // Process pixels from right to left (matching RS client behavior)
+            // This horizontally flips the texture as the client expects
+            for (x in width - 1 downTo 0) {
+                var red = (redBuffer[x] shr 4).coerceIn(0, 255)
+                var green = (greenBuffer[x] shr 4).coerceIn(0, 255)
+                var blue = (blueBuffer[x] shr 4).coerceIn(0, 255)
+
+                // Apply brightness curve
+                red = BRIGHTNESS_TABLE[red]
+                green = BRIGHTNESS_TABLE[green]
+                blue = BRIGHTNESS_TABLE[blue]
+
+                // Opaque path: alpha=255 for non-black, alpha=0 for black
+                val pixel = blue + (green shl 8) + (red shl 16)
+                if (pixel != 0) {
+                    pixels[pixelIndex++] = pixel or 0xFF000000.toInt()
+                } else {
+                    pixels[pixelIndex++] = 0
+                }
+            }
         }
 
+        cleanupOperations()
         return pixels
     }
 

@@ -60,7 +60,6 @@ class ModelViewer(
         val hslColor: Int,
         val rgbColor: Vector3f,
         val textureId: Int,    // -1 if no texture
-        val rawTextureValue: Int,
         val alpha: Int,
         val renderType: Int,
         val priority: Int,
@@ -380,8 +379,8 @@ class ModelViewer(
         val hsl = def.faceColors[faceIndex].toInt() and 0xFFFF
         val rgb = ColorUtil.hslToRgb(hsl)
 
-        val rawTex = def.faceTextures?.get(faceIndex)?.toInt()?.and(0xFFFF) ?: 0
-        val textureId = if (rawTex > 0 && rawTex != 65535) rawTex - 1 else -1
+        val textureIdSigned = def.faceTextures?.get(faceIndex)?.toInt() ?: -1
+        val textureId = if (textureIdSigned == -1) -1 else (textureIdSigned and 0xFFFF)
 
         val alpha = def.faceAlphas?.get(faceIndex)?.toInt()?.and(0xFF) ?: 255
         val renderType = def.faceRenderTypes?.get(faceIndex)?.toInt()?.and(0xFF) ?: 0
@@ -401,7 +400,6 @@ class ModelViewer(
             hslColor = hsl,
             rgbColor = rgb,
             textureId = textureId,
-            rawTextureValue = rawTex,
             alpha = alpha,
             renderType = renderType,
             priority = priority,
@@ -447,12 +445,10 @@ class ModelViewer(
 
         colorShader.unbind()
 
-        // Render textured batches with textured shader
+        // Render textured batches using two-pass approach matching the RS client:
+        // Pass 1: Opaque materials (no blending, depth write ON)
+        // Pass 2: Transparent materials (alpha blending, depth write OFF but depth test ON)
         if (texturedModelNodes.isNotEmpty() && currentTexturedModel != null) {
-            // Enable alpha blending for smooth texture edges
-            renderSystem.enableBlending()
-            // Enable alpha-to-coverage for smoother alpha edges with MSAA
-            renderSystem.enableAlphaToCoverage()
             // Disable face culling - RS models often have two-sided faces
             renderSystem.disableCullFace()
 
@@ -464,10 +460,15 @@ class ModelViewer(
             texturedShader.setUniform("lightColor", scene.lightColor)
             texturedShader.setUniform("textureSampler", 0)
 
+            // --- Pass 1: Opaque batches ---
+            // No blending, depth write enabled (default state)
+            renderSystem.disableBlending()
+            renderSystem.enableDepthWrite()
+
             currentTexturedModel!!.textureBatches.forEachIndexed { index, batch ->
+                if (!TextureLoader.isOpaque(batch.textureId)) return@forEachIndexed
                 val node = texturedModelNodes.getOrNull(index) ?: return@forEachIndexed
 
-                // Bind texture for this batch
                 val textureId = TextureLoader.getTextureForMaterial(cache, batch.textureId)
                 TextureLoader.bindTexture(textureId, 0)
                 texturedShader.setUniform("useTexture", true)
@@ -475,12 +476,27 @@ class ModelViewer(
                 node.mesh?.render()
             }
 
-            TextureLoader.unbindTexture()
-            texturedShader.unbind()
+            // --- Pass 2: Transparent batches ---
+            // Enable alpha blending, disable depth write (but depth test remains on)
+            renderSystem.enableBlending()
+            renderSystem.disableDepthWrite()
+
+            currentTexturedModel!!.textureBatches.forEachIndexed { index, batch ->
+                if (TextureLoader.isOpaque(batch.textureId)) return@forEachIndexed
+                val node = texturedModelNodes.getOrNull(index) ?: return@forEachIndexed
+
+                val textureId = TextureLoader.getTextureForMaterial(cache, batch.textureId)
+                TextureLoader.bindTexture(textureId, 0)
+                texturedShader.setUniform("useTexture", true)
+                texturedShader.setUniform("model", node.getModelMatrix())
+                node.mesh?.render()
+            }
 
             // Restore default state
+            renderSystem.enableDepthWrite()
             renderSystem.disableBlending()
-            renderSystem.disableAlphaToCoverage()
+            TextureLoader.unbindTexture()
+            texturedShader.unbind()
             renderSystem.enableCullFace()
         }
 
@@ -579,9 +595,8 @@ class ModelViewer(
 
                 // Texture info
                 imgui.ImGui.text("Texture:")
-                imgui.ImGui.bulletText("Raw Value: ${info.rawTextureValue} (0x${info.rawTextureValue.toString(16).uppercase()})")
                 if (info.textureId >= 0) {
-                    imgui.ImGui.textColored(1f, 1f, 0f, 1f, "Material ID: ${info.textureId}")
+                    imgui.ImGui.textColored(1f, 1f, 0f, 1f, "Texture ID: ${info.textureId}")
                 } else {
                     imgui.ImGui.text("No texture (untextured face)")
                 }
