@@ -342,15 +342,31 @@ object TerrainLoader {
     )
 
     /**
-     * Container for terrain meshes with separate batches for textured and untextured tiles.
+     * A terrain batch for a single texture layer rendered with per-vertex alpha.
+     * Used in multi-pass alpha rendering where each non-winning texture is rendered
+     * as a separate pass on top of the opaque base layer. The mesh contains a
+     * per-vertex alpha attribute (location 4) that the terrain_alpha shader uses
+     * to blend this layer over the base via standard alpha blending.
+     */
+    data class AlphaTerrainBatch(
+        val mesh: Mesh,
+        val textureId: Int  // Single texture for this alpha layer
+    )
+
+    /**
+     * Container for terrain meshes with separate batches for textured, alpha-blended, and untextured tiles.
+     * The rendering order is: colorMesh (opaque) -> texturedBatches (opaque, includes winning textures)
+     * -> alphaBatches (rendered with GL alpha blending on top).
      */
     data class TerrainMeshes(
         val colorMesh: Mesh?,
-        val texturedBatches: List<TerrainBatch>
+        val texturedBatches: List<TerrainBatch>,
+        val alphaBatches: List<AlphaTerrainBatch> = emptyList()
     ) {
         fun cleanup() {
             colorMesh?.cleanup()
             texturedBatches.forEach { it.mesh.cleanup() }
+            alphaBatches.forEach { it.mesh.cleanup() }
         }
     }
 
@@ -664,7 +680,8 @@ object TerrainLoader {
         val textureGroups = mutableMapOf<Int, MutableList<ShapedVertex>>()
 
         // Helper function to generate terrain for a tile at a specific plane
-        // using the provided normals and blended colors
+        // using the provided normals and blended colors.
+        // Now uses the full client blending analysis pipeline.
         fun generateTileVertices(
             x: Int, y: Int,
             sourcePlane: Int,
@@ -677,6 +694,9 @@ object TerrainLoader {
 
             // Skip tiles with no overlay and no underlay
             if (tile.overlayId == 0 && tile.underlayId == 0) return
+
+            // Run full blending analysis for this tile
+            val blendState = analyzeTileBlending(region, sourcePlane, x, y, blendedColors)
 
             // Calculate next coordinates with clamping for edge tiles
             val nextX = if (x < 63) x + 1 else x
@@ -697,39 +717,63 @@ object TerrainLoader {
 
             // Get blended corner HSL colors for underlay (SW, SE, NW, NE order)
             val underlayCornerHsl = getCornerHslColors(blendedColors, x, y)
-            val underlayCornerColors = hslCornersToRgb(underlayCornerHsl)
-            val overlayColor = if (tile.overlayId > 0) getOverlayColor(tile.overlayId) else underlayCornerColors[0]
+            val overlayColor = if (tile.overlayId > 0) getOverlayColor(tile.overlayId) else Vector3f(0f, 0f, 0f)
 
             // Determine texture IDs
             val overlayTextureId = overlayDef?.texture ?: -1
             val underlayTextureId = underlayDef?.texture ?: -1
 
-            // Determine UV scales - RS client uses SCENE coordinates for texture mapping.
-            //
-            // RS client (GroundGL.resetLight lines 506-514, GroundMaterialGL.method12085 line 195):
-            // 1. Stores raw scene coordinates as texture coordinates: UV = (sceneX, sceneY)
-            // 2. Applies texture matrix scaling: glScalef(1/textureScale, 1/textureScale, 1)
-            //
-            // Scene coordinates are: sceneX = tileX * 512 + localOffset (where localOffset is 0-512)
-            // This means textures tile CONTINUOUSLY across the entire terrain, not per-tile.
-            //
-            // With textureScale=560 (texture 928): UV = sceneCoord / 560
-            // At tile (39,25): sceneX = 39*512 + offset = 19968 to 20480
-            // UV range: 35.66 to 36.57 (texture covers ~0.91 tiles, appearing roughly once per tile)
-            //
-            // We store 1/scale as uvScale and compute: u = sceneCoord * uvScale
+            // Determine UV scales
             val overlayUvScale = if (overlayDef != null && overlayDef.texture >= 0 && overlayDef.scale > 0) {
                 1f / overlayDef.scale.toFloat()
             } else {
-                1f / 512f  // Default scale
+                1f / 512f
             }
             val underlayUvScale = if (underlayDef != null && underlayDef.texture >= 0 && underlayDef.scale > 0) {
                 1f / underlayDef.scale.toFloat()
             } else {
-                1f / 512f  // Default scale
+                1f / 512f
             }
 
-            // Adjust colors for textured tiles (use white or tint color)
+            // Get corner underlay definitions for per-vertex texture selection
+            // (matching client's addUnderlayTiles: each corner uses the underlay from its adjacent tile)
+            // SW corner = this tile, SE corner = east neighbor, NW corner = north neighbor, NE corner = NE neighbor
+            val cornerUnderlayTextures: IntArray
+            val cornerUnderlayScales: FloatArray
+            if (underlayDef != null) {
+                val tiles = region.tiles[sourcePlane]
+                val nextXClamped = if (x < 63) x + 1 else x
+                val nextYClamped = if (y < 63) y + 1 else y
+
+                // Corner underlay IDs (client: underlayA=this, underlayB=north, underlayC=NE, underlayD=east)
+                val swUnderlayId = tile.underlayId  // This tile
+                val seUnderlayId = tiles[nextXClamped][y].underlayId.let { if (it == 0) swUnderlayId else it }
+                val nwUnderlayId = tiles[x][nextYClamped].underlayId.let { if (it == 0) swUnderlayId else it }
+                val neUnderlayId = tiles[nextXClamped][nextYClamped].underlayId.let { if (it == 0) swUnderlayId else it }
+
+                val swDef = getUnderlayDefinition(swUnderlayId)
+                val seDef = getUnderlayDefinition(seUnderlayId)
+                val nwDef = getUnderlayDefinition(nwUnderlayId)
+                val neDef = getUnderlayDefinition(neUnderlayId)
+
+                cornerUnderlayTextures = intArrayOf(
+                    swDef?.texture ?: -1,
+                    seDef?.texture ?: -1,
+                    nwDef?.texture ?: -1,
+                    neDef?.texture ?: -1
+                )
+                cornerUnderlayScales = floatArrayOf(
+                    if (swDef != null && swDef.texture >= 0 && swDef.scale > 0) 1f / swDef.scale.toFloat() else 1f / 512f,
+                    if (seDef != null && seDef.texture >= 0 && seDef.scale > 0) 1f / seDef.scale.toFloat() else 1f / 512f,
+                    if (nwDef != null && nwDef.texture >= 0 && nwDef.scale > 0) 1f / nwDef.scale.toFloat() else 1f / 512f,
+                    if (neDef != null && neDef.texture >= 0 && neDef.scale > 0) 1f / neDef.scale.toFloat() else 1f / 512f
+                )
+            } else {
+                cornerUnderlayTextures = intArrayOf(-1, -1, -1, -1)
+                cornerUnderlayScales = floatArrayOf(1f/512f, 1f/512f, 1f/512f, 1f/512f)
+            }
+
+            // Adjust colors for textured tiles
             val finalOverlayColor = if (overlayTextureId >= 0) {
                 if (overlayDef != null && overlayDef.colour > 0 && overlayDef.colour != -1) {
                     ColorUtil.hslToRgb(overlayDef.colour)
@@ -740,60 +784,41 @@ object TerrainLoader {
                 overlayColor
             }
 
-            // Check if overlay blends with underlay (opcode 12 in RS client)
-            val overlayBlendsWithUnderlay = overlayDef?.underlayOverrides ?: false
-
-            // Get overlay's packed HSL color for blending overlay edges
+            // Get overlay's packed HSL color
             val overlayHsl = if (overlayDef != null && overlayDef.colour > 0 && overlayDef.colour != -1) {
                 overlayDef.colour
             } else {
                 0
             }
 
-            // Determine the shape to use
-            var shape = tile.overlayShape
-            if (shape == 0 && tile.overlayId == 0) {
-                shape = 12  // Shape 12 = full underlay (0 overlay faces, 2 underlay faces)
+            // Determine the effective shape and rotation from blend analysis
+            val effectiveShape = blendState?.effectiveShape ?: run {
+                var s = tile.overlayShape
+                if (s == 0 && tile.overlayId == 0) s = 12
+                s
             }
+            val effectiveRotation = blendState?.effectiveRotation ?: tile.overlayRotation
 
             // Get pre-computed normals for this tile's 4 corners
             val cornerNormals = arrayOf(
-                Vector3f(normalsX[x][y], normalsY[x][y], normalsZ[x][y]),           // SW
-                Vector3f(normalsX[nextX][y], normalsY[nextX][y], normalsZ[nextX][y]), // SE
-                Vector3f(normalsX[x][nextY], normalsY[x][nextY], normalsZ[x][nextY]), // NW
-                Vector3f(normalsX[nextX][nextY], normalsY[nextX][nextY], normalsZ[nextX][nextY]) // NE
+                Vector3f(normalsX[x][y], normalsY[x][y], normalsZ[x][y]),
+                Vector3f(normalsX[nextX][y], normalsY[nextX][y], normalsZ[nextX][y]),
+                Vector3f(normalsX[x][nextY], normalsY[x][nextY], normalsZ[x][nextY]),
+                Vector3f(normalsX[nextX][nextY], normalsY[nextX][nextY], normalsZ[nextX][nextY])
             )
 
-            // Determine if overlay/underlay exist (matching RS client's null checks)
-            // This is used to skip rendering faces for non-existent layers
-            //
-            // RS client (MapLoader.kt lines 574-576) treats overlays with tileColorHsl == -1 as null
-            // ONLY when BOTH color fields are -1:
-            //   if (initialOverlay.tileColorHsl == -1 && initialOverlay.minimapColorHsl == -1) {
-            //       initialOverlay = null
-            //   }
-            //
-            // Additionally, overlays with a valid texture should always be rendered since the
-            // texture provides visual content even without a tileColor (getOverlayColorHsl uses
-            // the material's color when tileColorHsl is -1 but texture is valid).
-            //
-            // Our fields: colour = tileColorHsl, blendColour = minimapColorHsl, texture = texture
+            // Determine if overlay/underlay exist
             val hasValidOverlay = if (overlayDef != null) {
-                // Overlay is valid if it has a texture OR if not both color fields are -1
                 overlayDef.texture >= 0 || !(overlayDef.colour == -1 && overlayDef.blendColour == -1)
             } else false
             val hasOverlay = tile.overlayId > 0 && hasValidOverlay
-            // Check if underlay has valid color data at ALL 4 corners.
-            // If ANY corner has HSL = 0 (no surrounding underlay data on this plane), the vertex
-            // at that corner would get the green fallback color, creating visible green patches.
-            // We require ALL corners to have valid data to ensure proper color at every vertex.
             val hasValidUnderlayColors = underlayCornerHsl.all { it != 0 }
             val hasUnderlay = tile.underlayId > 0 && underlayDef != null && hasValidUnderlayColors
 
-            // Generate shaped vertices for this tile
+            // Generate shaped vertices for this tile using the blend state
             val vertices = generateShapedTile(
                 x, y,
-                shape, tile.overlayRotation,
+                effectiveShape, effectiveRotation,
                 tileSize,
                 heights,
                 finalOverlayColor,
@@ -802,12 +827,15 @@ object TerrainLoader {
                 underlayTextureId,
                 overlayUvScale,
                 underlayUvScale,
-                overlayBlendsWithUnderlay,
+                overlayDef?.underlayOverrides ?: false,
                 overlayHsl,
                 cornerNormals,
                 hasOverlay = hasOverlay,
                 hasUnderlay = hasUnderlay,
-                regionId = region.regionId
+                regionId = region.regionId,
+                blendState = blendState,
+                cornerUnderlayTextures = cornerUnderlayTextures,
+                cornerUnderlayScales = cornerUnderlayScales
             )
 
             // Add vertices to appropriate texture groups
@@ -854,8 +882,47 @@ object TerrainLoader {
             }
         }
 
+        // Separate vertices into opaque (alpha == 1.0) and alpha (alpha < 1.0) groups.
+        // Opaque vertices go into standard textured/color batches.
+        // Alpha vertices go into alpha batches rendered with the terrain_alpha shader.
+        //
+        // Vertices are processed in groups of 3 (triangles). If ALL vertices in a
+        // triangle have alpha == 1.0, it goes to the opaque group. Otherwise it goes
+        // to an alpha group keyed by texture ID.
+        val opaqueGroups = mutableMapOf<Int, MutableList<ShapedVertex>>()
+        val alphaGroups = mutableMapOf<Int, MutableList<ShapedVertex>>()
+
+        for ((texId, verts) in textureGroups) {
+            // Process in groups of 3 (triangles)
+            var i = 0
+            while (i + 2 < verts.size) {
+                val v0 = verts[i]
+                val v1 = verts[i + 1]
+                val v2 = verts[i + 2]
+
+                // Check if any vertex in this triangle has alpha < 1.0
+                val needsAlpha = v0.alpha < 1f || v1.alpha < 1f || v2.alpha < 1f
+
+                if (needsAlpha && v0.textureId >= 0) {
+                    // Alpha layer - group by texture ID
+                    val group = alphaGroups.getOrPut(v0.textureId) { mutableListOf() }
+                    group.add(v0); group.add(v1); group.add(v2)
+                } else {
+                    // Opaque - add to normal group
+                    val group = opaqueGroups.getOrPut(texId) { mutableListOf() }
+                    group.add(v0); group.add(v1); group.add(v2)
+                }
+                i += 3
+            }
+            // Handle remaining vertices (should be 0 if all triangles are complete)
+            while (i < verts.size) {
+                opaqueGroups.getOrPut(texId) { mutableListOf() }.add(verts[i])
+                i++
+            }
+        }
+
         // Build color mesh (textureId == -1) with RGB colors
-        val colorMesh = textureGroups[-1]?.let { vertices ->
+        val colorMesh = opaqueGroups[-1]?.let { vertices ->
             if (vertices.isEmpty()) return@let null
 
             val positions = FloatArray(vertices.size * 3)
@@ -879,9 +946,9 @@ object TerrainLoader {
             Mesh(positions, colors, null, normals, indices, colorComponents = 3)
         }
 
-        // Build textured batches with RGB colors
+        // Build opaque textured batches with RGB colors
         val texturedBatches = mutableListOf<TerrainBatch>()
-        for ((texId, vertices) in textureGroups) {
+        for ((texId, vertices) in opaqueGroups) {
             if (texId == -1) continue // Skip color group
             if (vertices.isEmpty()) continue
 
@@ -910,13 +977,52 @@ object TerrainLoader {
             texturedBatches.add(TerrainBatch(mesh, texId))
         }
 
+        // Build alpha terrain batches (per-vertex alpha for multi-pass blending)
+        val alphaBatches = mutableListOf<AlphaTerrainBatch>()
+        for ((texId, vertices) in alphaGroups) {
+            if (vertices.isEmpty()) continue
+
+            val positions = FloatArray(vertices.size * 3)
+            val colors = FloatArray(vertices.size * 3)
+            val texCoords = FloatArray(vertices.size * 2)
+            val normals = FloatArray(vertices.size * 3)
+            val alphas = FloatArray(vertices.size)
+            val indices = IntArray(vertices.size)
+
+            vertices.forEachIndexed { i, v ->
+                positions[i * 3] = v.x
+                positions[i * 3 + 1] = v.y
+                positions[i * 3 + 2] = v.z
+                colors[i * 3] = v.r
+                colors[i * 3 + 1] = v.g
+                colors[i * 3 + 2] = v.b
+                texCoords[i * 2] = v.u
+                texCoords[i * 2 + 1] = v.v
+                normals[i * 3] = v.nx
+                normals[i * 3 + 1] = v.ny
+                normals[i * 3 + 2] = v.nz
+                alphas[i] = v.alpha
+                indices[i] = i
+            }
+
+            val mesh = Mesh.createWithAlpha(
+                positions, colors, texCoords, normals,
+                alphas, indices
+            )
+            alphaBatches.add(AlphaTerrainBatch(mesh, texId))
+        }
+
         // Debug: Log which textures are included in this terrain mesh
         if (texturedBatches.isNotEmpty()) {
             val textureList = texturedBatches.map { it.textureId }.sorted().joinToString(", ")
             println("[TerrainLoader] Region ${region.regionId} plane $plane: textured batches with textures [$textureList]")
         }
+        if (alphaBatches.isNotEmpty()) {
+            val alphaList = alphaBatches.map { it.textureId }.sorted().joinToString(", ")
+            println("[TerrainLoader] Region ${region.regionId} plane $plane: alpha batches with textures [$alphaList]")
+        }
 
-        return TerrainMeshes(colorMesh, texturedBatches)
+        return TerrainMeshes(colorMesh, texturedBatches, alphaBatches)
     }
 
     /**
@@ -1420,16 +1526,743 @@ object TerrainLoader {
         intArrayOf(7, 7, 1, 2)
     )
 
+    // ==================== NEIGHBOR-DRIVEN BLENDING MODE TABLES ====================
+    //
+    // Used when !overlaySupportsBlending && any hasFacesOn[0..3] is true.
+    // This mode creates blended transitions between neighboring overlay tiles
+    // by inserting additional edge triangles at tile boundaries.
+
+    /** Neighbor-driven mode: vertex A indices (client: anIntArrayArray3774) */
+    private val NEIGHBOR_BLEND_A = arrayOf(
+        intArrayOf(0, 2, 4, 6), intArrayOf(6, 0, 2, 4), intArrayOf(6, 0, 2),
+        intArrayOf(2, 6, 0), intArrayOf(0, 2, 6), intArrayOf(6, 0, 2),
+        intArrayOf(5, 6, 0, 1, 2, 4), intArrayOf(7, 2, 4, 4), intArrayOf(2, 4, 4, 7),
+        intArrayOf(6, 6, 4, 0, 2, 2), intArrayOf(0, 2, 2, 6, 6, 4),
+        intArrayOf(0, 2, 2, 4, 6, 6), intArrayOf(0, 2, 4, 6)
+    )
+
+    /** Neighbor-driven mode: vertex B indices (client: anIntArrayArray3830) */
+    private val NEIGHBOR_BLEND_B = arrayOf(
+        intArrayOf(2, 4, 6, 0), intArrayOf(0, 2, 4, 6), intArrayOf(0, 2, 4),
+        intArrayOf(4, 0, 2), intArrayOf(2, 4, 0), intArrayOf(0, 2, 4),
+        intArrayOf(6, 0, 1, 2, 4, 5), intArrayOf(0, 4, 7, 6), intArrayOf(4, 7, 6, 0),
+        intArrayOf(0, 8, 6, 2, 9, 4), intArrayOf(2, 9, 4, 0, 8, 6),
+        intArrayOf(2, 11, 4, 6, 10, 0), intArrayOf(2, 4, 6, 0)
+    )
+
+    /** Neighbor-driven mode: vertex C indices (client: anIntArrayArray3831) */
+    private val NEIGHBOR_BLEND_C = arrayOf(
+        intArrayOf(12, 12, 12, 12), intArrayOf(12, 12, 12, 12), intArrayOf(5, 5, 5),
+        intArrayOf(5, 5, 5), intArrayOf(5, 5, 5), intArrayOf(5, 5, 5),
+        intArrayOf(12, 12, 12, 12, 12, 12), intArrayOf(1, 1, 1, 7), intArrayOf(1, 1, 7, 1),
+        intArrayOf(8, 9, 9, 8, 8, 9), intArrayOf(8, 8, 9, 8, 9, 9),
+        intArrayOf(10, 10, 11, 11, 11, 10), intArrayOf(12, 12, 12, 12)
+    )
+
+    /** Neighbor-driven mode: overlay face counts per shape (client: anIntArray3826) */
+    private val NEIGHBOR_BLEND_OVERLAY_COUNT = intArrayOf(4, 2, 1, 1, 2, 2, 3, 1, 3, 3, 3, 2, 0)
+
+    /** Neighbor-driven mode: underlay face counts per shape (client: anIntArray3847) */
+    private val NEIGHBOR_BLEND_UNDERLAY_COUNT = intArrayOf(0, 2, 2, 2, 1, 1, 3, 3, 1, 3, 3, 4, 4)
+
+    /** Neighbor-driven mode: face counts for edge insertion (client: anIntArrayArray3828) */
+    private val NEIGHBOR_BLEND_FACE_COUNTS = arrayOf(
+        intArrayOf(0, 1, 2, 3), intArrayOf(1, 2, 3, 0), intArrayOf(1, 2, -1, 0),
+        intArrayOf(2, 0, -1, 1), intArrayOf(0, 1, -1, 2), intArrayOf(1, 2, -1, 0),
+        intArrayOf(-1, 4, -1, 1), intArrayOf(-1, 1, 3, -1), intArrayOf(-1, 0, 2, -1),
+        intArrayOf(3, 5, 2, 0), intArrayOf(0, 2, 5, 3), intArrayOf(0, 2, 3, 5),
+        intArrayOf(0, 1, 2, 3)
+    )
+
+    // ==================== OVERLAY-SUPPORTS-BLENDING MODE TABLES ====================
+    //
+    // Used when the overlay has blendsWithUnderlay=true AND there is an underlay.
+    // This mode creates smooth blending between overlay and underlay colors at tile
+    // boundaries, with additional vertex positions for smoother gradients.
+
+    /** Overlay-supports-blending mode: vertex A indices (client: anIntArrayArray3775) */
+    private val OVERLAY_BLEND_A = arrayOf(
+        intArrayOf(0, 2, 4, 6), intArrayOf(6, 0, 2, 3, 5, 3), intArrayOf(6, 0, 2, 4),
+        intArrayOf(2, 5, 6, 1), intArrayOf(0, 2, 6), intArrayOf(6, 0, 2),
+        intArrayOf(5, 6, 0, 1, 2, 4), intArrayOf(7, 7, 1, 2, 4, 6), intArrayOf(2, 4, 4, 7),
+        intArrayOf(6, 6, 4, 0, 1, 1, 3, 3), intArrayOf(0, 2, 2, 6, 6, 4),
+        intArrayOf(0, 2, 2, 3, 7, 0, 4, 3), intArrayOf(0, 2, 4, 6)
+    )
+
+    /** Overlay-supports-blending mode: vertex B indices (client: anIntArrayArray3821) */
+    private val OVERLAY_BLEND_B = arrayOf(
+        intArrayOf(2, 4, 6, 0), intArrayOf(0, 2, 3, 5, 6, 4), intArrayOf(0, 1, 4, 5),
+        intArrayOf(4, 6, 0, 2), intArrayOf(2, 4, 0), intArrayOf(0, 2, 4),
+        intArrayOf(6, 0, 1, 2, 4, 5), intArrayOf(0, 1, 2, 4, 6, 7), intArrayOf(4, 7, 6, 0),
+        intArrayOf(0, 8, 6, 1, 9, 2, 9, 4), intArrayOf(2, 9, 4, 0, 8, 6),
+        intArrayOf(2, 11, 3, 7, 10, 10, 6, 6), intArrayOf(2, 4, 6, 0)
+    )
+
+    /** Overlay-supports-blending mode: vertex C indices (client: anIntArrayArray3836) */
+    private val OVERLAY_BLEND_C = arrayOf(
+        intArrayOf(12, 12, 12, 12), intArrayOf(12, 12, 12, 12, 12, 5), intArrayOf(5, 5, 1, 1),
+        intArrayOf(5, 1, 1, 5), intArrayOf(5, 5, 5), intArrayOf(5, 5, 5),
+        intArrayOf(12, 12, 12, 12, 12, 12), intArrayOf(1, 12, 12, 12, 12, 12), intArrayOf(1, 1, 7, 1),
+        intArrayOf(8, 9, 9, 8, 8, 3, 1, 9), intArrayOf(8, 8, 9, 8, 9, 9),
+        intArrayOf(10, 10, 11, 11, 11, 7, 3, 7), intArrayOf(12, 12, 12, 12)
+    )
+
+    /** Overlay-supports-blending mode: overlay face counts (client: OVERLAY_FACE_COUNT_BLENDED) */
+    private val OVERLAY_BLEND_OVERLAY_COUNT = intArrayOf(4, 2, 1, 1, 2, 2, 3, 1, 3, 3, 3, 2, 0)
+
+    /** Overlay-supports-blending mode: underlay face counts (client: UNDERLAY_FACE_COUNT_BLENDED) */
+    private val OVERLAY_BLEND_UNDERLAY_COUNT = intArrayOf(0, 4, 3, 3, 1, 1, 3, 5, 1, 5, 3, 6, 4)
+
+    /** Overlay-supports-blending mode: face counts for edge insertion (client: anIntArrayArray3833) */
+    private val OVERLAY_BLEND_FACE_COUNTS = arrayOf(
+        intArrayOf(0, 1, 2, 3), intArrayOf(1, -1, -1, 0), intArrayOf(-1, 2, -1, 0),
+        intArrayOf(-1, 0, -1, 2), intArrayOf(0, 1, -1, 2), intArrayOf(1, 2, -1, 0),
+        intArrayOf(-1, 4, -1, 1), intArrayOf(-1, 3, 4, -1), intArrayOf(-1, 0, 2, -1),
+        intArrayOf(-1, -1, 2, 0), intArrayOf(0, 2, 5, 3), intArrayOf(0, -1, 6, -1),
+        intArrayOf(0, 1, 2, 3)
+    )
+
+    // ==================== SHAPE SUPPORTS HEIGHT TABLE ====================
+    //
+    // For each shape (0-14), for each vertex (0-12), whether that vertex
+    // belongs to the overlay (true) or underlay (false). Used to determine
+    // which vertices get overlay colors vs underlay colors.
+    // (Already exists in the file as OVERLAY_SHAPE_SUPPORTS_HEIGHT in TRIANGLE_A comments,
+    // but used directly from the client's static arrays in the blending system.)
+
+    /** pathSquares: edge collision check for non-blending overlays (client: pathSquares) */
+    private val PATH_SQUARES = arrayOf(
+        BooleanArray(4), BooleanArray(4),
+        booleanArrayOf(false, false, true, false), booleanArrayOf(false, false, true, false),
+        booleanArrayOf(false, false, true, false), booleanArrayOf(false, false, true, false),
+        booleanArrayOf(true, false, true, false), booleanArrayOf(true, false, false, true),
+        booleanArrayOf(true, false, false, true), BooleanArray(4), BooleanArray(4),
+        BooleanArray(4), BooleanArray(4)
+    )
+
+    /** pathBlendings: edge collision check for blending overlays (client: pathBlendings) */
+    private val PATH_BLENDINGS = arrayOf(
+        BooleanArray(4), booleanArrayOf(false, true, true, false),
+        booleanArrayOf(true, false, true, false), booleanArrayOf(true, false, true, false),
+        booleanArrayOf(false, false, true, false), booleanArrayOf(false, false, true, false),
+        booleanArrayOf(true, false, true, false), booleanArrayOf(true, false, false, true),
+        booleanArrayOf(true, false, false, true), booleanArrayOf(true, true, false, false),
+        BooleanArray(4), booleanArrayOf(false, true, false, true), BooleanArray(4)
+    )
+
+    /**
+     * OVERLAY_SHAPE_SUPPORTS_HEIGHT table from the client.
+     * For each shape (0-14) and each vertex index (0-12), indicates whether that
+     * vertex position belongs to the overlay region of the tile shape.
+     * Used for neighbor blending analysis and vertex color assignment.
+     */
+    private val SHAPE_VERTEX_IS_OVERLAY = arrayOf(
+        booleanArrayOf(true, true, true, true, true, true, true, true, true, true, true, true, true),
+        booleanArrayOf(true, true, true, false, false, false, true, true, false, false, false, false, true),
+        booleanArrayOf(true, false, false, false, false, true, true, true, false, false, false, false, false),
+        booleanArrayOf(false, false, true, true, true, true, false, false, false, false, false, false, false),
+        booleanArrayOf(true, true, true, true, true, true, false, false, false, false, false, false, false),
+        booleanArrayOf(true, true, true, false, false, true, true, true, false, false, false, false, false),
+        booleanArrayOf(true, true, false, false, false, true, true, true, false, false, false, false, true),
+        booleanArrayOf(true, true, false, false, false, false, false, true, false, false, false, false, false),
+        booleanArrayOf(false, true, true, true, true, true, true, true, false, false, false, false, false),
+        booleanArrayOf(true, false, false, false, true, true, true, true, true, true, false, false, false),
+        booleanArrayOf(true, true, true, true, true, false, false, false, true, true, false, false, false),
+        booleanArrayOf(true, true, true, false, false, false, false, false, false, false, true, true, false),
+        BooleanArray(13),
+        booleanArrayOf(true, true, true, true, true, true, true, true, true, true, true, true, true),
+        BooleanArray(13)
+    )
+
+    // ==================== BLENDING STATE ====================
+    //
+    // Per-tile blending state computed by the analysis methods.
+    // This captures the client's mutable state (pathShape, tileRotation, hasFacesOn,
+    // waterSlots, overlayFunctionMask, etc.) in an immutable data class so tiles
+    // can be generated independently after analysis.
+
+    /**
+     * Per-tile blending analysis result from the client's addBlendedTiles() pipeline.
+     * Captures all the state needed to select face tables and generate vertices.
+     */
+    private data class TileBlendState(
+        /** The effective overlay shape after potential promotion to 13/14 */
+        val effectiveShape: Int,
+        /** The effective tile rotation after diagonal selection */
+        val effectiveRotation: Int,
+        /** Whether overlay supports blending (blendsWithUnderlay AND has underlay AND shape != 0) */
+        val overlaySupportsBlending: Boolean,
+        /** Whether the tile is unblendable (no neighbor blending and no overlay blending) */
+        val unblendable: Boolean,
+        /** Edge blending flags: [south, east, north, west] */
+        val hasFacesOn: BooleanArray,
+        /** Per-vertex slot priority (-1 = no neighbor overlay) for vertices 0-12 */
+        val waterSlots: IntArray,
+        /** Per-vertex overlay HSL colors from neighbors (valid when waterSlots[i] >= 0) */
+        val overlayTileColors: IntArray,
+        /** Per-vertex overlay texture IDs from neighbors */
+        val waterTextureIds: IntArray,
+        /** Per-vertex overlay texture scales from neighbors */
+        val waterTextureScaling: IntArray,
+        /** The overlay's own HSL color */
+        val overlayHslColor: Int,
+        /** The overlay's own texture ID */
+        val overlayTextureIdBlend: Int,
+        /** The overlay's own texture scale */
+        val overlayTextureScale: Int,
+        /** Whether the overlay casts shadows */
+        val hasShadows: Boolean,
+        /** Selected face table A indices for this tile */
+        val triA: IntArray,
+        /** Selected face table B indices for this tile */
+        val triB: IntArray,
+        /** Selected face table C indices for this tile */
+        val triC: IntArray,
+        /** Overlay face count for this tile from the selected table */
+        val overlayFaceCount: Int,
+        /** Underlay face count for this tile from the selected table */
+        val underlayFaceCount: Int,
+        /** Face counts for edge insertion (null for unblendable mode) */
+        val edgeFaceCounts: IntArray?,
+        /** Total overlay faces processed (for face index tracking) */
+        val overlayTotalFaces: Int,
+        /** Per-corner underlay texture IDs: [SW, SE, NW, NE] for per-vertex texture selection */
+        val cornerUnderlayTextures: IntArray = intArrayOf(-1, -1, -1, -1),
+        /** Per-corner underlay UV scales: [SW, SE, NW, NE] for per-vertex texture selection */
+        val cornerUnderlayScales: FloatArray = floatArrayOf(1f/512f, 1f/512f, 1f/512f, 1f/512f)
+    )
+
+    /**
+     * Analyze blending for a single tile, implementing the client's full
+     * calculateUnderlayRotation -> calculateOverlayDisplay -> calculateOverlayRotation
+     * -> calculateFaceCounts pipeline.
+     *
+     * @param region The region data
+     * @param plane The plane level
+     * @param x Tile X coordinate
+     * @param y Tile Y coordinate
+     * @return TileBlendState with all blending decisions, or null if tile has no overlay/underlay
+     */
+    private fun analyzeTileBlending(
+        region: RegionData,
+        plane: Int,
+        x: Int, y: Int,
+        blendedColors: Array<IntArray>
+    ): TileBlendState? {
+        val tile = region.tiles[plane][x][y]
+        val overlayId = tile.overlayId
+        val underlayId = tile.underlayId
+        if (overlayId == 0 && underlayId == 0) return null
+
+        val overlayDefs = overlays ?: return null
+        val underlayDefs = underlays ?: return null
+
+        // Get definitions
+        var overlayDef = if (overlayId > 0 && overlayId - 1 < overlayDefs.size) overlayDefs[overlayId - 1] else null
+        val underlayDef = if (underlayId > 0 && underlayId - 1 < underlayDefs.size) underlayDefs[underlayId - 1] else null
+
+        // Determine initial shape
+        var pathShape = tile.overlayShape
+        if (pathShape == 0 && overlayDef == null) {
+            pathShape = 12
+        }
+
+        // Check if overlay is valid (matching client's null-setting logic)
+        val originalOverlay = overlayDef
+        var hasShadows = false
+        var overlayBlends = false
+        val hasFacesOn = BooleanArray(4)
+
+        if (overlayDef != null) {
+            if (overlayDef.colour == -1 && overlayDef.blendColour == -1) {
+                overlayDef = null
+            } else if (underlayDef != null && pathShape != 0) {
+                overlayBlends = overlayDef.underlayOverrides
+            }
+        }
+
+        // Calculate underlay rotation (diagonal selection)
+        val nextX = if (x < 63) x + 1 else x
+        val nextY = if (y < 63) y + 1 else y
+        var tileRotation = tile.overlayRotation
+
+        tileRotation = calculateUnderlayRotationLocal(
+            underlayId.toByte(), x, y, nextX, nextY, region, plane, pathShape, tileRotation
+        )
+
+        // Initialize per-vertex blending state
+        val waterSlots = IntArray(13) { -1 }
+        val overlayFunctionMask = IntArray(13) { 1 }
+        val overlayTileColors = IntArray(13)
+        val waterTextureIds = IntArray(13)
+        val waterTextureScaling = IntArray(13)
+
+        // Run neighbor overlay analysis and rotation promotion
+        calculateOverlayDisplayLocal(
+            overlayDef, x, y, region, plane, pathShape, tileRotation, overlayBlends,
+            hasFacesOn, waterSlots, overlayFunctionMask, overlayTileColors,
+            waterTextureIds, waterTextureScaling
+        )
+
+        // Determine multi-color state (not critical for our rendering, but affects data flow)
+        val blendings = if (overlayDef != null && overlayDef.underlayOverrides) {
+            PATH_BLENDINGS.getOrNull(pathShape) ?: BooleanArray(4)
+        } else {
+            PATH_SQUARES.getOrNull(pathShape) ?: BooleanArray(4)
+        }
+
+        // Check for additional edge promotion based on overlayFunctionMask
+        if (pathShape < blendings.size) {
+            if (!blendings[(tileRotation + 1) and 0x3]) {
+                hasFacesOn[1] = hasFacesOn[1] || ((overlayFunctionMask[2] and overlayFunctionMask[4]) == 0)
+            }
+            if (!blendings[(tileRotation + 3) and 0x3]) {
+                hasFacesOn[3] = hasFacesOn[3] || ((overlayFunctionMask[6] and overlayFunctionMask[0]) == 0)
+            }
+            if (!blendings[tileRotation and 0x3]) {
+                hasFacesOn[0] = hasFacesOn[0] || ((overlayFunctionMask[0] and overlayFunctionMask[2]) == 0)
+            }
+            if (!blendings[(tileRotation + 2) and 0x3]) {
+                hasFacesOn[2] = hasFacesOn[2] || ((overlayFunctionMask[4] and overlayFunctionMask[6]) == 0)
+            }
+        }
+
+        // Diagonal shape promotion (shape 0/12 -> 13/14)
+        if (!overlayBlends && (pathShape == 0 || pathShape == 12)) {
+            if (hasFacesOn[0] && !hasFacesOn[1] && !hasFacesOn[2] && hasFacesOn[3]) {
+                hasFacesOn[3] = false; hasFacesOn[0] = false
+                pathShape = if (pathShape == 0) 13 else 14
+                tileRotation = 0
+            } else if (hasFacesOn[0] && hasFacesOn[1] && !hasFacesOn[2] && !hasFacesOn[3]) {
+                hasFacesOn[1] = false; hasFacesOn[0] = false
+                pathShape = if (pathShape == 0) 13 else 14
+                tileRotation = 3
+            } else if (!hasFacesOn[0] && hasFacesOn[1] && hasFacesOn[2] && !hasFacesOn[3]) {
+                hasFacesOn[2] = false; hasFacesOn[1] = false
+                pathShape = if (pathShape == 0) 13 else 14
+                tileRotation = 2
+            } else if (!hasFacesOn[0] && !hasFacesOn[1] && hasFacesOn[2] && hasFacesOn[3]) {
+                hasFacesOn[3] = false; hasFacesOn[2] = false
+                pathShape = if (pathShape == 0) 13 else 14
+                tileRotation = 1
+            }
+        }
+
+        // Determine blending mode
+        val unblendable = !overlayBlends && !hasFacesOn[0] && !hasFacesOn[1] && !hasFacesOn[2] && !hasFacesOn[3]
+
+        // Select face tables based on blending mode
+        val triA: IntArray
+        val triB: IntArray
+        val triC: IntArray
+        val overlayFaces: Int
+        val underlayFaces: Int
+        val edgeFaceCounts: IntArray?
+
+        if (unblendable) {
+            // Use standard unblendable tables (shapes 0-14)
+            triA = TRIANGLE_A.getOrNull(pathShape) ?: intArrayOf()
+            triB = TRIANGLE_B.getOrNull(pathShape) ?: intArrayOf()
+            triC = TRIANGLE_C.getOrNull(pathShape) ?: intArrayOf()
+            overlayFaces = if (overlayDef != null) OVERLAY_FACE_COUNT.getOrElse(pathShape) { 0 } else 0
+            underlayFaces = if (underlayDef != null) UNDERLAY_FACE_COUNT.getOrElse(pathShape) { 0 } else 0
+            edgeFaceCounts = null
+        } else if (overlayBlends) {
+            // Use overlay-supports-blending tables (shapes 0-12)
+            val safeShape = pathShape.coerceIn(0, OVERLAY_BLEND_A.size - 1)
+            triA = OVERLAY_BLEND_A[safeShape]
+            triB = OVERLAY_BLEND_B[safeShape]
+            triC = OVERLAY_BLEND_C[safeShape]
+            overlayFaces = if (overlayDef != null) OVERLAY_BLEND_OVERLAY_COUNT.getOrElse(safeShape) { 0 } else 0
+            underlayFaces = if (underlayDef != null) OVERLAY_BLEND_UNDERLAY_COUNT.getOrElse(safeShape) { 0 } else 0
+            edgeFaceCounts = OVERLAY_BLEND_FACE_COUNTS.getOrNull(safeShape)
+        } else {
+            // Use neighbor-driven blending tables (shapes 0-12)
+            val safeShape = pathShape.coerceIn(0, NEIGHBOR_BLEND_A.size - 1)
+            triA = NEIGHBOR_BLEND_A[safeShape]
+            triB = NEIGHBOR_BLEND_B[safeShape]
+            triC = NEIGHBOR_BLEND_C[safeShape]
+            overlayFaces = if (overlayDef != null) NEIGHBOR_BLEND_OVERLAY_COUNT.getOrElse(safeShape) { 0 } else 0
+            underlayFaces = if (underlayDef != null) NEIGHBOR_BLEND_UNDERLAY_COUNT.getOrElse(safeShape) { 0 } else 0
+            edgeFaceCounts = NEIGHBOR_BLEND_FACE_COUNTS.getOrNull(safeShape)
+        }
+
+        // Overlay color and texture
+        val overlayHsl = if (overlayDef != null && overlayDef.colour != -1) overlayDef.colour else -1
+        val overlayTexId = overlayDef?.texture ?: -1
+        val overlayTexScale = overlayDef?.scale ?: 256
+
+        // Shadow check
+        if (overlayDef != null && pathShape != 12 && overlayDef.colour != -1 && overlayDef.blockShadow) {
+            hasShadows = true
+        }
+
+        return TileBlendState(
+            effectiveShape = pathShape,
+            effectiveRotation = tileRotation,
+            overlaySupportsBlending = overlayBlends,
+            unblendable = unblendable,
+            hasFacesOn = hasFacesOn,
+            waterSlots = waterSlots,
+            overlayTileColors = overlayTileColors,
+            waterTextureIds = waterTextureIds,
+            waterTextureScaling = waterTextureScaling,
+            overlayHslColor = overlayHsl,
+            overlayTextureIdBlend = overlayTexId,
+            overlayTextureScale = overlayTexScale,
+            hasShadows = hasShadows,
+            triA = triA,
+            triB = triB,
+            triC = triC,
+            overlayFaceCount = overlayFaces,
+            underlayFaceCount = underlayFaces,
+            edgeFaceCounts = edgeFaceCounts,
+            overlayTotalFaces = 0
+        )
+    }
+
+    /**
+     * Local implementation of calculateUnderlayRotation matching the client.
+     * Determines which diagonal to use for plain tiles (shape 0/12) based on
+     * underlay continuity with neighbors.
+     */
+    private fun calculateUnderlayRotationLocal(
+        underlayId: Byte, x: Int, y: Int, nextX: Int, nextY: Int,
+        region: RegionData, plane: Int, pathShape: Int, currentRotation: Int
+    ): Int {
+        if ((pathShape == 0 || pathShape == 12) && x > 0 && y > 0 && x < 64 && y < 64) {
+            val tiles = region.tiles[plane]
+            val uid = underlayId.toInt()
+            var swScore = if (tiles[x - 1][y - 1].underlayId.toByte().toInt() == uid) 1 else -1
+            var seScore = if (tiles[nextX][y - 1].underlayId.toByte().toInt() == uid) 1 else -1
+            var neScore = if (tiles[nextX][nextY].underlayId.toByte().toInt() == uid) 1 else -1
+            var nwScore = if (tiles[x - 1][nextY].underlayId.toByte().toInt() == uid) 1 else -1
+
+            if (tiles[x][y - 1].underlayId.toByte().toInt() == uid) { swScore++; seScore++ } else { swScore--; seScore-- }
+            if (tiles[nextX][y].underlayId.toByte().toInt() == uid) { seScore++; neScore++ } else { seScore--; neScore-- }
+            if (tiles[x][nextY].underlayId.toByte().toInt() == uid) { neScore++; nwScore++ } else { neScore--; nwScore-- }
+            if (tiles[x - 1][y].underlayId.toByte().toInt() == uid) { nwScore++; swScore++ } else { nwScore--; swScore-- }
+
+            var swNeDelta = Math.abs(swScore - neScore)
+            var seNwDelta = Math.abs(seScore - nwScore)
+
+            if (swNeDelta == seNwDelta) {
+                // Tie-break with height difference
+                swNeDelta = Math.abs(tiles[x][y].height - tiles[nextX][nextY].height)
+                seNwDelta = Math.abs(tiles[nextX][y].height - tiles[x][nextY].height)
+            }
+
+            return if (swNeDelta < seNwDelta) 1 else 0
+        }
+        return currentRotation
+    }
+
+    /**
+     * Local implementation of calculateOverlayDisplay matching the client.
+     * Examines all 8 neighboring tiles to find overlays with blendsWithUnderlay=true
+     * that should blend their colors into this tile's vertices.
+     */
+    private fun calculateOverlayDisplayLocal(
+        overlayType: OverlayDefinition?,
+        x: Int, y: Int,
+        region: RegionData, plane: Int,
+        pathShape: Int, tileRotation: Int,
+        overlayBlends: Boolean,
+        hasFacesOn: BooleanArray,
+        waterSlots: IntArray,
+        overlayFunctionMask: IntArray,
+        overlayTileColors: IntArray,
+        waterTextureIds: IntArray,
+        waterTextureScaling: IntArray
+    ) {
+        val overlayDefs = overlays ?: return
+        val tiles = region.tiles[plane]
+
+        val blendingAttributes = if (overlayType != null && overlayType.underlayOverrides) {
+            PATH_BLENDINGS.getOrNull(pathShape) ?: BooleanArray(4)
+        } else {
+            PATH_SQUARES.getOrNull(pathShape) ?: BooleanArray(4)
+        }
+
+        // Check diagonal neighbors (corners)
+        // SW neighbor: tiles[x-1][y-1], affects vertex slot 0
+        if (y > 0 && x > 0) {
+            val nOverlayId = tiles[x - 1][y - 1].overlayId
+            if (nOverlayId > 0 && nOverlayId - 1 < overlayDefs.size) {
+                val overlay = overlayDefs[nOverlayId - 1]
+                if (overlay.colour != -1 && overlay.underlayOverrides) {
+                    val shape = tiles[x - 1][y - 1].overlayShape
+                    val rotation = (tiles[x - 1][y - 1].overlayRotation * 2 + 4) and 0x7
+                    if (shape < SHAPE_VERTEX_IS_OVERLAY.size && rotation < SHAPE_VERTEX_IS_OVERLAY[shape].size
+                        && SHAPE_VERTEX_IS_OVERLAY[shape][rotation]) {
+                        overlayTileColors[0] = overlay.colour
+                        waterTextureIds[0] = overlay.texture
+                        waterTextureScaling[0] = overlay.scale
+                        waterSlots[0] = overlay.anInt3633
+                        overlayFunctionMask[0] = 256
+                    }
+                }
+            }
+        }
+
+        // SE neighbor: tiles[x+1][y-1], affects vertex slot 2
+        if (y > 0 && x < 63) {
+            val nOverlayId = tiles[x + 1][y - 1].overlayId
+            if (nOverlayId > 0 && nOverlayId - 1 < overlayDefs.size) {
+                val overlay = overlayDefs[nOverlayId - 1]
+                if (overlay.colour != -1 && overlay.underlayOverrides) {
+                    val shape = tiles[x + 1][y - 1].overlayShape
+                    val rotation = (tiles[x + 1][y - 1].overlayRotation * 2 + 6) and 0x7
+                    if (shape < SHAPE_VERTEX_IS_OVERLAY.size && rotation < SHAPE_VERTEX_IS_OVERLAY[shape].size
+                        && SHAPE_VERTEX_IS_OVERLAY[shape][rotation]) {
+                        overlayTileColors[2] = overlay.colour
+                        waterTextureIds[2] = overlay.texture
+                        waterTextureScaling[2] = overlay.scale
+                        waterSlots[2] = overlay.anInt3633
+                        overlayFunctionMask[2] = 512
+                    }
+                }
+            }
+        }
+
+        // NW neighbor: tiles[x-1][y+1], affects vertex slot 6
+        if (y < 63 && x > 0) {
+            val nOverlayId = tiles[x - 1][y + 1].overlayId
+            if (nOverlayId > 0 && nOverlayId - 1 < overlayDefs.size) {
+                val overlay = overlayDefs[nOverlayId - 1]
+                if (overlay.colour != -1 && overlay.underlayOverrides) {
+                    val shape = tiles[x - 1][y + 1].overlayShape
+                    val rotation = (tiles[x - 1][y + 1].overlayRotation * 2 + 2) and 0x7
+                    if (shape < SHAPE_VERTEX_IS_OVERLAY.size && rotation < SHAPE_VERTEX_IS_OVERLAY[shape].size
+                        && SHAPE_VERTEX_IS_OVERLAY[shape][rotation]) {
+                        overlayTileColors[6] = overlay.colour
+                        waterTextureIds[6] = overlay.texture
+                        waterTextureScaling[6] = overlay.scale
+                        waterSlots[6] = overlay.anInt3633
+                        overlayFunctionMask[6] = 64
+                    }
+                }
+            }
+        }
+
+        // NE neighbor: tiles[x+1][y+1], affects vertex slot 4
+        if (y < 63 && x < 63) {
+            val nOverlayId = tiles[x + 1][y + 1].overlayId
+            if (nOverlayId > 0 && nOverlayId - 1 < overlayDefs.size) {
+                val overlay = overlayDefs[nOverlayId - 1]
+                if (overlay.colour != -1 && overlay.underlayOverrides) {
+                    val shape = tiles[x + 1][y + 1].overlayShape
+                    val rotation = (tiles[x + 1][y + 1].overlayRotation * 2) and 0x7
+                    if (shape < SHAPE_VERTEX_IS_OVERLAY.size && rotation < SHAPE_VERTEX_IS_OVERLAY[shape].size
+                        && SHAPE_VERTEX_IS_OVERLAY[shape][rotation]) {
+                        overlayTileColors[4] = overlay.colour
+                        waterTextureIds[4] = overlay.texture
+                        waterTextureScaling[4] = overlay.scale
+                        waterSlots[4] = overlay.anInt3633
+                        overlayFunctionMask[4] = 128
+                    }
+                }
+            }
+        }
+
+        // Cardinal neighbors: South (y-1), North (y+1), West (x-1), East (x+1)
+        // These affect 3 vertex slots each and set hasFacesOn flags
+
+        // South neighbor: tiles[x][y-1]
+        if (y > 0) {
+            val nOverlayId = tiles[x][y - 1].overlayId
+            if (nOverlayId > 0 && nOverlayId - 1 < overlayDefs.size) {
+                val overlay = overlayDefs[nOverlayId - 1]
+                if (overlay.colour != -1) {
+                    val shape = tiles[x][y - 1].overlayShape
+                    val rotation = tiles[x][y - 1].overlayRotation
+                    if (overlay.underlayOverrides) {
+                        var slotA = 2
+                        var slotB = (rotation * 2 + 4)
+                        for (i in 0..2) {
+                            slotB = slotB and 0x7
+                            slotA = slotA and 0x7
+                            if (shape < SHAPE_VERTEX_IS_OVERLAY.size && slotB < SHAPE_VERTEX_IS_OVERLAY[shape].size
+                                && SHAPE_VERTEX_IS_OVERLAY[shape][slotB] && waterSlots[slotA] <= overlay.anInt3633) {
+                                overlayTileColors[slotA] = overlay.colour
+                                waterTextureIds[slotA] = overlay.texture
+                                waterTextureScaling[slotA] = overlay.scale
+                                if (overlay.anInt3633 == waterSlots[slotA]) {
+                                    overlayFunctionMask[slotA] = overlayFunctionMask[slotA] or 0x20
+                                } else {
+                                    overlayFunctionMask[slotA] = 32
+                                }
+                                waterSlots[slotA] = overlay.anInt3633
+                            }
+                            slotB++
+                            slotA--
+                        }
+                        if (pathShape < blendingAttributes.size && !blendingAttributes[tileRotation and 0x3]) {
+                            hasFacesOn[0] = if (shape < PATH_BLENDINGS.size) PATH_BLENDINGS[shape][(rotation + 2) and 0x3] else false
+                        }
+                    } else if (pathShape < blendingAttributes.size && !blendingAttributes[tileRotation and 0x3]) {
+                        hasFacesOn[0] = if (shape < PATH_SQUARES.size) PATH_SQUARES[shape][(rotation + 2) and 0x3] else false
+                    }
+                }
+            }
+        }
+
+        // North neighbor: tiles[x][y+1]
+        if (y < 63) {
+            val nOverlayId = tiles[x][y + 1].overlayId
+            if (nOverlayId > 0 && nOverlayId - 1 < overlayDefs.size) {
+                val overlay = overlayDefs[nOverlayId - 1]
+                if (overlay.colour != -1) {
+                    val shape = tiles[x][y + 1].overlayShape
+                    val rotation = tiles[x][y + 1].overlayRotation
+                    if (overlay.underlayOverrides) {
+                        var slotA = 4
+                        var slotB = (rotation * 2 + 2)
+                        for (i in 0..2) {
+                            slotB = slotB and 0x7
+                            slotA = slotA and 0x7
+                            if (shape < SHAPE_VERTEX_IS_OVERLAY.size && slotB < SHAPE_VERTEX_IS_OVERLAY[shape].size
+                                && SHAPE_VERTEX_IS_OVERLAY[shape][slotB] && waterSlots[slotA] <= overlay.anInt3633) {
+                                overlayTileColors[slotA] = overlay.colour
+                                waterTextureIds[slotA] = overlay.texture
+                                waterTextureScaling[slotA] = overlay.scale
+                                if (overlay.anInt3633 == waterSlots[slotA]) {
+                                    overlayFunctionMask[slotA] = overlayFunctionMask[slotA] or 0x10
+                                } else {
+                                    overlayFunctionMask[slotA] = 16
+                                }
+                                waterSlots[slotA] = overlay.anInt3633
+                            }
+                            slotB--
+                            slotA++
+                        }
+                        if (pathShape < blendingAttributes.size && !blendingAttributes[(tileRotation + 2) and 0x3]) {
+                            hasFacesOn[2] = if (shape < PATH_BLENDINGS.size) PATH_BLENDINGS[shape][rotation and 0x3] else false
+                        }
+                    } else if (pathShape < blendingAttributes.size && !blendingAttributes[(tileRotation + 2) and 0x3]) {
+                        hasFacesOn[2] = if (shape < PATH_SQUARES.size) PATH_SQUARES[shape][rotation and 0x3] else false
+                    }
+                }
+            }
+        }
+
+        // West neighbor: tiles[x-1][y]
+        if (x > 0) {
+            val nOverlayId = tiles[x - 1][y].overlayId
+            if (nOverlayId > 0 && nOverlayId - 1 < overlayDefs.size) {
+                val overlay = overlayDefs[nOverlayId - 1]
+                if (overlay.colour != -1) {
+                    val shape = tiles[x - 1][y].overlayShape
+                    val rotation = tiles[x - 1][y].overlayRotation
+                    if (overlay.underlayOverrides) {
+                        var slotA = 6
+                        var slotB = (rotation * 2 + 4)
+                        for (i in 0..2) {
+                            slotB = slotB and 0x7
+                            slotA = slotA and 0x7
+                            if (shape < SHAPE_VERTEX_IS_OVERLAY.size && slotB < SHAPE_VERTEX_IS_OVERLAY[shape].size
+                                && SHAPE_VERTEX_IS_OVERLAY[shape][slotB] && waterSlots[slotA] <= overlay.anInt3633) {
+                                overlayTileColors[slotA] = overlay.colour
+                                waterTextureIds[slotA] = overlay.texture
+                                waterTextureScaling[slotA] = overlay.scale
+                                if (overlay.anInt3633 == waterSlots[slotA]) {
+                                    overlayFunctionMask[slotA] = overlayFunctionMask[slotA] or 0x8
+                                } else {
+                                    overlayFunctionMask[slotA] = 8
+                                }
+                                waterSlots[slotA] = overlay.anInt3633
+                            }
+                            slotB--
+                            slotA++
+                        }
+                        if (pathShape < blendingAttributes.size && !blendingAttributes[(tileRotation + 3) and 0x3]) {
+                            hasFacesOn[3] = if (shape < PATH_BLENDINGS.size) PATH_BLENDINGS[shape][(rotation + 1) and 0x3] else false
+                        }
+                    } else if (pathShape < blendingAttributes.size && !blendingAttributes[(tileRotation + 3) and 0x3]) {
+                        hasFacesOn[3] = if (shape < PATH_SQUARES.size) PATH_SQUARES[shape][(rotation + 1) and 0x3] else false
+                    }
+                }
+            }
+        }
+
+        // East neighbor: tiles[x+1][y]
+        if (x < 63) {
+            val nOverlayId = tiles[x + 1][y].overlayId
+            if (nOverlayId > 0 && nOverlayId - 1 < overlayDefs.size) {
+                val overlay = overlayDefs[nOverlayId - 1]
+                if (overlay.colour != -1) {
+                    val shape = tiles[x + 1][y].overlayShape
+                    val rotation = tiles[x + 1][y].overlayRotation
+                    if (overlay.underlayOverrides) {
+                        var slotB = 4
+                        var slotA = (rotation * 2 + 6)
+                        for (i in 0..2) {
+                            slotA = slotA and 0x7
+                            slotB = slotB and 0x7
+                            if (shape < SHAPE_VERTEX_IS_OVERLAY.size && slotA < SHAPE_VERTEX_IS_OVERLAY[shape].size
+                                && SHAPE_VERTEX_IS_OVERLAY[shape][slotA] && waterSlots[slotB] <= overlay.anInt3633) {
+                                overlayTileColors[slotB] = overlay.colour
+                                waterTextureIds[slotB] = overlay.texture
+                                waterTextureScaling[slotB] = overlay.scale
+                                if (overlay.anInt3633 == waterSlots[slotB]) {
+                                    overlayFunctionMask[slotB] = overlayFunctionMask[slotB] or 0x4
+                                } else {
+                                    overlayFunctionMask[slotB] = 4
+                                }
+                                waterSlots[slotB] = overlay.anInt3633
+                            }
+                            slotA++
+                            slotB--
+                        }
+                        if (pathShape < blendingAttributes.size && !blendingAttributes[(tileRotation + 1) and 0x3]) {
+                            hasFacesOn[1] = if (shape < PATH_BLENDINGS.size) PATH_BLENDINGS[shape][(rotation + 3) and 0x3] else false
+                        }
+                    } else if (pathShape < blendingAttributes.size && !blendingAttributes[(tileRotation + 1) and 0x3]) {
+                        hasFacesOn[1] = if (shape < PATH_SQUARES.size) PATH_SQUARES[shape][(rotation + 3) and 0x3] else false
+                    }
+                }
+            }
+        }
+
+        // Self-overlay blending: if this tile's overlay blends with underlay,
+        // set its own color into vertex slots where SHAPE_VERTEX_IS_OVERLAY is true
+        if (overlayType != null && overlayType.underlayOverrides) {
+            for (index in 0..7) {
+                val signedRotation = (index - tileRotation * 2) and 0x7
+                if (pathShape < SHAPE_VERTEX_IS_OVERLAY.size && index < SHAPE_VERTEX_IS_OVERLAY[pathShape].size
+                    && SHAPE_VERTEX_IS_OVERLAY[pathShape][index] && waterSlots[signedRotation] <= overlayType.anInt3633) {
+                    overlayTileColors[signedRotation] = overlayType.colour
+                    waterTextureIds[signedRotation] = overlayType.texture
+                    waterTextureScaling[signedRotation] = overlayType.scale
+                    if (overlayType.anInt3633 == waterSlots[signedRotation]) {
+                        overlayFunctionMask[signedRotation] = overlayFunctionMask[signedRotation] or 0x2
+                    } else {
+                        overlayFunctionMask[signedRotation] = 2
+                    }
+                    waterSlots[signedRotation] = overlayType.anInt3633
+                }
+            }
+        }
+    }
+
     /**
      * Data class to hold vertex data for shaped tile generation.
-     * Uses RGB color only - smooth blending comes from matching vertex colors at boundaries.
+     * Supports multi-pass alpha rendering for smooth underlay transitions.
+     *
+     * The alpha field controls per-vertex opacity for multi-pass blending.
+     * Opaque vertices (alpha=1.0) go into standard textured batches.
+     * Translucent vertices (alpha<1.0) go into alpha batches that are rendered
+     * on top of the opaque base layer with GL alpha blending. The GPU interpolates
+     * alpha across the triangle for smooth per-fragment transitions between textures.
      */
     private data class ShapedVertex(
         val x: Float, val y: Float, val z: Float,
         val r: Float, val g: Float, val b: Float,
         val u: Float, val v: Float,
         val nx: Float, val ny: Float, val nz: Float,
-        val textureId: Int
+        val textureId: Int,
+        /** Per-vertex alpha for multi-pass blending (1.0 = fully opaque, 0.0 = fully transparent) */
+        val alpha: Float = 1f
     )
 
     /**
@@ -1472,107 +2305,106 @@ object TerrainLoader {
         ),
         hasOverlay: Boolean = true,
         hasUnderlay: Boolean = true,
-        regionId: Int = 0
+        regionId: Int = 0,
+        blendState: TileBlendState? = null,
+        cornerUnderlayTextures: IntArray = intArrayOf(-1, -1, -1, -1),
+        cornerUnderlayScales: FloatArray = floatArrayOf(1f/512f, 1f/512f, 1f/512f, 1f/512f)
     ): List<ShapedVertex> {
         val vertices = mutableListOf<ShapedVertex>()
 
-        // Clamp shape to valid range
         val safeShape = shape.coerceIn(0, TRIANGLE_A.size - 1)
 
-        // Use enhanced tessellation for shapes 0 and 12 if enabled
-        // This creates 4 triangles using a center vertex for proper HSL interpolation
-        val useEnhanced = enableEnhancedTessellation && (safeShape == 0 || safeShape == 12)
+        // Determine face tables and counts based on whether we have blend state
+        val triA: IntArray
+        val triB: IntArray
+        val triC: IntArray
+        val overlayFaces: Int
+        val underlayFaces: Int
 
-        // Get face counts from shape tables, but only if the layer actually exists
-        // This matches the RS client which skips overlay/underlay faces if the definition is null
-        val overlayFaces = if (hasOverlay) {
-            if (useEnhanced) OVERLAY_FACE_COUNT_ENHANCED[safeShape] else OVERLAY_FACE_COUNT[safeShape]
-        } else 0
-        val underlayFaces = if (hasUnderlay) {
-            if (useEnhanced) UNDERLAY_FACE_COUNT_ENHANCED[safeShape] else UNDERLAY_FACE_COUNT[safeShape]
-        } else 0
+        if (blendState != null) {
+            // For unblendable tiles with shape 0/12, prefer enhanced tessellation for smoother gradients
+            val useEnhanced = blendState.unblendable && enableEnhancedTessellation && (safeShape == 0 || safeShape == 12)
+            if (useEnhanced) {
+                triA = TRIANGLE_A_ENHANCED[safeShape]
+                triB = TRIANGLE_B_ENHANCED[safeShape]
+                triC = TRIANGLE_C_ENHANCED[safeShape]
+                overlayFaces = if (hasOverlay) OVERLAY_FACE_COUNT_ENHANCED[safeShape] else 0
+                underlayFaces = if (hasUnderlay) UNDERLAY_FACE_COUNT_ENHANCED[safeShape] else 0
+            } else {
+                triA = blendState.triA
+                triB = blendState.triB
+                triC = blendState.triC
+                overlayFaces = if (hasOverlay) blendState.overlayFaceCount else 0
+                underlayFaces = if (hasUnderlay) blendState.underlayFaceCount else 0
+            }
+        } else {
+            // Fallback: use enhanced tessellation for shapes 0 and 12 if enabled
+            val useEnhanced = enableEnhancedTessellation && (safeShape == 0 || safeShape == 12)
+            triA = if (useEnhanced) TRIANGLE_A_ENHANCED[safeShape] else TRIANGLE_A[safeShape]
+            triB = if (useEnhanced) TRIANGLE_B_ENHANCED[safeShape] else TRIANGLE_B[safeShape]
+            triC = if (useEnhanced) TRIANGLE_C_ENHANCED[safeShape] else TRIANGLE_C[safeShape]
+            overlayFaces = if (hasOverlay) {
+                if (useEnhanced) OVERLAY_FACE_COUNT_ENHANCED[safeShape] else OVERLAY_FACE_COUNT[safeShape]
+            } else 0
+            underlayFaces = if (hasUnderlay) {
+                if (useEnhanced) UNDERLAY_FACE_COUNT_ENHANCED[safeShape] else UNDERLAY_FACE_COUNT[safeShape]
+            } else 0
+        }
+
         val totalFaces = overlayFaces + underlayFaces
-
         if (totalFaces == 0) return vertices
-
-        val triA = if (useEnhanced) TRIANGLE_A_ENHANCED[safeShape] else TRIANGLE_A[safeShape]
-        val triB = if (useEnhanced) TRIANGLE_B_ENHANCED[safeShape] else TRIANGLE_B[safeShape]
-        val triC = if (useEnhanced) TRIANGLE_C_ENHANCED[safeShape] else TRIANGLE_C[safeShape]
 
         // Base position for this tile
         val baseX = x * tileSize
         val baseZ = -y * tileSize  // Flip Z for OpenGL
 
         // Generate rotated vertex positions for this tile
-        // RS rotates UVs and vertex positions based on rotation
         val vertexX = FloatArray(13)
         val vertexZ = FloatArray(13)
-        val vertexY = FloatArray(13)  // Heights
-        // Store the rotated local positions for color interpolation (0-512 range)
+        val vertexY = FloatArray(13)
         val vertexLocalX = IntArray(13)
         val vertexLocalY = IntArray(13)
 
         for (i in 0 until 13) {
-            // Get base vertex offset (0-512 range)
             var vx = TILE_VERTEX_X[i]
             var vy = TILE_VERTEX_Y[i]
 
-            // Apply rotation (each rotation is 90 degrees CW)
             when (rotation) {
-                1 -> {
-                    val temp = vx
-                    vx = vy
-                    vy = 512 - temp
-                }
-                2 -> {
-                    vx = 512 - vx
-                    vy = 512 - vy
-                }
-                3 -> {
-                    val temp = vx
-                    vx = 512 - vy
-                    vy = temp
-                }
+                1 -> { val temp = vx; vx = vy; vy = 512 - temp }
+                2 -> { vx = 512 - vx; vy = 512 - vy }
+                3 -> { val temp = vx; vx = 512 - vy; vy = temp }
             }
 
-            // Store rotated local position for color interpolation
             vertexLocalX[i] = vx
             vertexLocalY[i] = vy
-
-            // Convert to world coordinates
             vertexX[i] = baseX + (vx.toFloat() / 512f) * tileSize
-            vertexZ[i] = baseZ - (vy.toFloat() / 512f) * tileSize  // Flip for OpenGL
+            vertexZ[i] = baseZ - (vy.toFloat() / 512f) * tileSize
 
-            // Interpolate height based on position within tile
             val fx = vx.toFloat() / 512f
             val fy = vy.toFloat() / 512f
-
-            // Bilinear interpolation of heights
-            // heights = [SW (0,0), SE (1,0), NW (0,1), NE (1,1)]
-            val h00 = heights[0]  // SW
-            val h10 = heights[1]  // SE
-            val h01 = heights[2]  // NW
-            val h11 = heights[3]  // NE
-
-            vertexY[i] = (1 - fx) * (1 - fy) * h00 +
-                         fx * (1 - fy) * h10 +
-                         (1 - fx) * fy * h01 +
-                         fx * fy * h11
+            vertexY[i] = (1 - fx) * (1 - fy) * heights[0] +
+                         fx * (1 - fy) * heights[1] +
+                         (1 - fx) * fy * heights[2] +
+                         fx * fy * heights[3]
         }
 
-        // Interpolate normals from pre-computed corner normals
-        // The corner normals are computed from neighboring tile heights (like RS client's GroundGL)
-        // This creates smooth lighting variation across tiles even in homogeneous areas.
-        //
-        // Corner normals are: [SW, SE, NW, NE]
-        // But we need to rotate them to match the shape rotation, just like we rotate colors.
+        // Compute per-vertex quadrant for underlay texture selection
+        // (matching client's addUnderlayTiles: SW=0, SE=1, NW=2, NE=3)
+        fun getVertexQuadrant(vIdx: Int): Int {
+            val lx = vertexLocalX[vIdx]
+            val ly = vertexLocalY[vIdx]
+            return if (lx < 256) {
+                if (ly < 256) 0 else 2  // SW or NW
+            } else {
+                if (ly < 256) 1 else 3  // SE or NE
+            }
+        }
+
+        // Interpolate normals from corner normals
         val (nSW, nSE, nNW, nNE) = when (rotation) {
             0 -> arrayOf(cornerNormals[0], cornerNormals[1], cornerNormals[2], cornerNormals[3])
-            // Rotation 1 (90 CW): rotate normals CCW to compensate
             1 -> arrayOf(cornerNormals[1], cornerNormals[3], cornerNormals[0], cornerNormals[2])
-            // Rotation 2 (180)
             2 -> arrayOf(cornerNormals[3], cornerNormals[2], cornerNormals[1], cornerNormals[0])
-            // Rotation 3 (270 CW = 90 CCW)
             3 -> arrayOf(cornerNormals[2], cornerNormals[0], cornerNormals[3], cornerNormals[1])
             else -> arrayOf(cornerNormals[0], cornerNormals[1], cornerNormals[2], cornerNormals[3])
         }
@@ -1580,295 +2412,365 @@ object TerrainLoader {
         val vertexNormals = Array(13) { i ->
             val fx = vertexLocalX[i].toFloat() / 512f
             val fy = vertexLocalY[i].toFloat() / 512f
-
-            // Bilinear interpolation of normals from corner values
-            // This creates smooth lighting variation across the tile
             val southNormal = Vector3f(nSW).lerp(nSE, fx)
             val northNormal = Vector3f(nNW).lerp(nNE, fx)
             val interpolated = Vector3f(southNormal).lerp(northNormal, fy)
-
-            // Normalize the result (interpolated normals may not be unit length)
             val len = interpolated.length()
-            if (len > 0.0001f) {
-                interpolated.div(len)
-            } else {
-                Vector3f(0f, 1f, 0f)
-            }
+            if (len > 0.0001f) interpolated.div(len) else Vector3f(0f, 1f, 0f)
         }
 
-        // Extract packed HSL corner colors: [SW, SE, NW, NE]
-        // IMPORTANT: These must be rotated to match the rotated vertex positions.
-        // The shape rotation rotates vertex positions but we need to interpolate
-        // colors based on the ROTATED positions, so we rotate the corner colors
-        // in the OPPOSITE direction to compensate.
-        //
-        // Original positions: SW(0,0), SE(512,0), NW(0,512), NE(512,512)
-        // After rotation, vertices move but we still use fx,fy from rotated positions.
-        // To get correct interpolation, we rotate corner colors to match.
+        // Rotate underlay corner colors to match rotation
         val (hslSW, hslSE, hslNW, hslNE) = when (rotation) {
             0 -> arrayOf(underlayCornerHsl[0], underlayCornerHsl[1], underlayCornerHsl[2], underlayCornerHsl[3])
-            // Rotation 1 (90 CW): SW->NW, SE->SW, NW->NE, NE->SE (rotate colors CCW)
             1 -> arrayOf(underlayCornerHsl[1], underlayCornerHsl[3], underlayCornerHsl[0], underlayCornerHsl[2])
-            // Rotation 2 (180): SW->NE, SE->NW, NW->SE, NE->SW
             2 -> arrayOf(underlayCornerHsl[3], underlayCornerHsl[2], underlayCornerHsl[1], underlayCornerHsl[0])
-            // Rotation 3 (270 CW = 90 CCW): SW->SE, SE->NE, NW->SW, NE->NW
             3 -> arrayOf(underlayCornerHsl[2], underlayCornerHsl[0], underlayCornerHsl[3], underlayCornerHsl[1])
             else -> arrayOf(underlayCornerHsl[0], underlayCornerHsl[1], underlayCornerHsl[2], underlayCornerHsl[3])
         }
 
-        // Track skipped overlay faces for debugging
+        // Helper: apply lighting and noise to an HSL color and convert to RGB
+        fun applyEffectsAndConvert(hsl: Int, vIdx: Int, worldPosX: Float, worldPosZ: Float): Vector3f {
+            var result = hsl
+            if (result == 0) return Vector3f(0f, 0f, 0f)
+            if (enableColorNoise) {
+                result = ColorUtil.applyBrightnessNoise(result, ColorUtil.getVertexNoise(worldPosX, worldPosZ, colorNoiseAmount))
+            }
+            if (enableLighting) {
+                val normal = vertexNormals[vIdx]
+                val lightFactor = ColorUtil.calculateTerrainLightFactor(
+                    normal.x, normal.y, normal.z,
+                    LIGHT_DIRECTION_X, LIGHT_DIRECTION_Y, LIGHT_DIRECTION_Z,
+                    SUN_BRIGHTNESS, BRIGHT_FACTOR, DARK_FACTOR
+                )
+                result = ColorUtil.applyLightToHsl(result, lightFactor)
+            }
+            return ColorUtil.hslToRgb(result)
+        }
+
+        // Helper: get underlay color for a vertex, considering neighbor overlay blending
+        fun getUnderlayVertexColor(vIdx: Int, worldPosX: Float, worldPosZ: Float): Vector3f {
+            // Check if this vertex has a neighbor overlay color from the blend analysis
+            if (blendState != null && vIdx < 8) {
+                val slot = (vIdx - rotation * 2) and 0x7
+                if (blendState.waterSlots[slot] >= 0) {
+                    // Use the neighbor overlay's color at this vertex
+                    val neighborHsl = blendState.overlayTileColors[slot]
+                    if (neighborHsl != 0) {
+                        return applyEffectsAndConvert(neighborHsl, vIdx, worldPosX, worldPosZ)
+                    }
+                }
+            }
+
+            // Check if this vertex should use overlay color (for overlaySupportsBlending mode)
+            if (blendState != null && blendState.overlaySupportsBlending && vIdx < 13) {
+                val unrotatedIdx = if (vIdx < 8) vIdx else vIdx  // Interior vertices don't rotate
+                if (blendState.effectiveShape < SHAPE_VERTEX_IS_OVERLAY.size
+                    && unrotatedIdx < SHAPE_VERTEX_IS_OVERLAY[blendState.effectiveShape].size
+                    && SHAPE_VERTEX_IS_OVERLAY[blendState.effectiveShape][unrotatedIdx]) {
+                    // This vertex belongs to the overlay region - use overlay color
+                    val oHsl = blendState.overlayHslColor
+                    if (oHsl > 0) {
+                        return applyEffectsAndConvert(oHsl, vIdx, worldPosX, worldPosZ)
+                    }
+                }
+            }
+
+            // Standard underlay bilinear interpolation in HSL space
+            val localX = vertexLocalX[vIdx]
+            val localY = vertexLocalY[vIdx]
+            val fx = localX.toFloat() / 512f
+            val fy = localY.toFloat() / 512f
+
+            // Bilinear blend corner colors
+            var blendedHsl: Int
+            if (localX == 0 && localY == 0) {
+                blendedHsl = hslSW
+            } else if (localX == 0 && localY == 512) {
+                blendedHsl = hslNW
+            } else if (localX == 512 && localY == 512) {
+                blendedHsl = hslNE
+            } else if (localX == 512 && localY == 0) {
+                blendedHsl = hslSE
+            } else {
+                // Interior point: bilinear interpolation using RS blend()
+                // Blend factor is (localPos << 7) >> 9 = localPos / 4
+                // But the client uses: sizeX shl 7 shr 9 which is localX / 4 (0-128 range for 0-512)
+                val factorX = (localX shl 7) shr 9  // = localX / 4, range 0-128
+                val factorY = (localY shl 7) shr 9  // = localY / 4, range 0-128
+                val south = ColorUtil.blendHsl(hslSW, hslSE, factorX)
+                val north = ColorUtil.blendHsl(hslNW, hslNE, factorX)
+                blendedHsl = ColorUtil.blendHsl(south, north, factorY)
+            }
+
+            if (blendedHsl == 0) return Vector3f(0f, 0f, 0f)
+            return applyEffectsAndConvert(blendedHsl, vIdx, worldPosX, worldPosZ)
+        }
+
+        // Helper: get overlay color for a vertex, checking neighbor overrides
+        fun getOverlayVertexColor(vIdx: Int, worldPosX: Float, worldPosZ: Float): Vector3f {
+            // Check if this vertex has a higher-priority neighbor overlay
+            if (blendState != null && vIdx < 8) {
+                val slot = (vIdx - rotation * 2) and 0x7
+                if (blendState.waterSlots[slot] > (blendState.overlayHslColor shr 8)) {
+                    // Higher priority neighbor wins
+                    val neighborHsl = blendState.overlayTileColors[slot]
+                    if (neighborHsl != 0) {
+                        return applyEffectsAndConvert(neighborHsl, vIdx, worldPosX, worldPosZ)
+                    }
+                }
+            }
+
+            // Use the tile's own overlay color
+            if (overlayHsl != 0) {
+                return applyEffectsAndConvert(overlayHsl, vIdx, worldPosX, worldPosZ)
+            }
+
+            // For textured overlays without color, apply lighting in RGB space
+            val lightFactor = if (enableLighting) {
+                val normal = vertexNormals[vIdx]
+                ColorUtil.calculateTerrainLightFactor(
+                    normal.x, normal.y, normal.z,
+                    LIGHT_DIRECTION_X, LIGHT_DIRECTION_Y, LIGHT_DIRECTION_Z,
+                    SUN_BRIGHTNESS, BRIGHT_FACTOR, DARK_FACTOR
+                )
+            } else 1.0f
+            val noiseFactor = if (enableColorNoise) {
+                ColorUtil.getVertexNoise(worldPosX, worldPosZ, colorNoiseAmount)
+            } else 1.0f
+            val combinedFactor = lightFactor * noiseFactor
+            return Vector3f(
+                (overlayColor.x * combinedFactor).coerceIn(0f, 1f),
+                (overlayColor.y * combinedFactor).coerceIn(0f, 1f),
+                (overlayColor.z * combinedFactor).coerceIn(0f, 1f)
+            )
+        }
+
+        // Process the face tables using the client's addOverlayTiles + addUnderlayTiles pattern.
+        // The client iterates overlay faces first, then underlay faces, using a shared index
+        // (overlayTotalFaces) that tracks progress through the combined face table.
+        // When hasFacesOn flags are set and the current face matches an edgeFaceCounts entry,
+        // edge triangles are inserted that bridge between the main tile and the neighbor.
+
+        var overlayTotalFaces = 0
         var skippedOverlayFaces = 0
 
-        // Generate triangles
-        for (face in 0 until totalFaces) {
-            if (face >= triA.size) break
+        // Helper to emit a single triangle using multi-pass alpha rendering.
+        // For underlay triangles where vertices span different textures:
+        //   1. The "winning" texture (most common corner texture) is emitted as a standard
+        //      opaque triangle into the regular textured batch.
+        //   2. Each non-winning texture is emitted AGAIN as an alpha-blended layer with
+        //      per-vertex alpha derived from bilinear weights of corners using that texture.
+        // This handles 2, 3, and 4 texture junctions correctly.
+        fun emitTriangle(ia: Int, ib: Int, ic: Int, isOverlay: Boolean, textureId: Int, uvScale: Float) {
+            val vertexIndicesArr = intArrayOf(ia, ib, ic)
 
-            // Determine if this is overlay or underlay
-            val isOverlay = face < overlayFaces
-
-            // Skip overlay faces if overlays are disabled
-            if (isOverlay && !enableOverlays) {
-                skippedOverlayFaces++
-                continue
+            // Check if this is an underlay triangle with texture variation across corners
+            val tileHasTextureVariation = !isOverlay && run {
+                val validTextures = cornerUnderlayTextures.filter { it >= 0 }
+                validTextures.distinct().size >= 2
             }
 
-            val ia = triA[face]
-            val ib = triB[face]
-            val ic = triC[face]
+            // Helper to create a vertex with a given texture, UV scale, and alpha
+            fun createVertex(vIdx: Int, texId: Int, vUvScale: Float, vAlpha: Float): ShapedVertex {
+                val px = vertexX[vIdx]
+                val py = vertexY[vIdx]
+                val pz = vertexZ[vIdx]
+                val color = if (isOverlay) getOverlayVertexColor(vIdx, px, pz)
+                            else getUnderlayVertexColor(vIdx, px, pz)
 
-            // Get vertex positions
-            val ax = vertexX[ia]
-            val ay = vertexY[ia]
-            val az = vertexZ[ia]
-            val bx = vertexX[ib]
-            val by = vertexY[ib]
-            val bz = vertexZ[ib]
-            val cx = vertexX[ic]
-            val cy = vertexY[ic]
-            val cz = vertexZ[ic]
-
-            val textureId = if (isOverlay) overlayTextureId else underlayTextureId
-            val uvScale = if (isOverlay) overlayUvScale else underlayUvScale
-
-            // Helper to interpolate underlay color in HSL space (matching RS client)
-            // Applies terrain lighting based on vertex normal BEFORE HSL->RGB conversion
-            // Also applies deterministic per-vertex brightness noise like the RS client
-            fun interpolateUnderlayColor(vIdx: Int, worldPosX: Float, worldPosZ: Float): Vector3f {
-                val localX = vertexLocalX[vIdx]
-                val localY = vertexLocalY[vIdx]
-
-                // Bilinear interpolation in HSL space using RS blend function
-                val fx = localX.toFloat() / 512f
-                val fy = localY.toFloat() / 512f
-
-                // Blend in HSL space
-                var blendedHsl = ColorUtil.bilinearBlendHsl(hslSW, hslSE, hslNW, hslNE, fx, fy)
-                // This should never happen if hasValidUnderlayColors check is correct (all corners non-zero).
-                // If it does, return black instead of green to make any bugs less visually jarring.
-                if (blendedHsl == 0) return Vector3f(0f, 0f, 0f)
-
-                // Apply deterministic per-vertex brightness noise (like RS client's HSL-to-RGB)
-                // RS client adds +-1.5% random brightness: d_1 = 0.7 + (Math.random() * 0.03 - 0.015)
-                // We use world position for determinism to avoid shimmering
-                if (enableColorNoise) {
-                    val noiseFactor = ColorUtil.getVertexNoise(worldPosX, worldPosZ, colorNoiseAmount)
-                    blendedHsl = ColorUtil.applyBrightnessNoise(blendedHsl, noiseFactor)
-                }
-
-                // Apply terrain lighting based on vertex normal
-                // This matches the RS client's lighting algorithm from GroundGL.resetLight()
-                // where lightness is modified based on height gradients before RGB conversion
-                // RS formula: factor = sunBrightness + dot * (dot > 0 ? brightFactor : darkFactor)
-                if (enableLighting) {
-                    val normal = vertexNormals[vIdx]
-                    val lightFactor = ColorUtil.calculateTerrainLightFactor(
-                        normal.x, normal.y, normal.z,
-                        LIGHT_DIRECTION_X, LIGHT_DIRECTION_Y, LIGHT_DIRECTION_Z,
-                        SUN_BRIGHTNESS, BRIGHT_FACTOR, DARK_FACTOR
-                    )
-                    blendedHsl = ColorUtil.applyLightToHsl(blendedHsl, lightFactor)
-                }
-
-                return ColorUtil.hslToRgb(blendedHsl)
-            }
-
-            // Helper to get overlay color with blending at tile boundary vertices
-            // This creates smooth transitions between overlay and underlay areas by:
-            // 1. For tiles with blendsWithUnderlay=true: blend overlay edge vertices with underlay
-            // 2. For partial overlay tiles (shapes 1-11): blend at boundary edges to avoid harsh seams
-            // Also applies terrain lighting and brightness noise for consistent shading
-            fun getOverlayVertexColor(vIdx: Int, worldPosX: Float, worldPosZ: Float): Vector3f {
-                // Calculate lighting factor for this vertex (used for both blended and unblended cases)
-                // RS formula: factor = sunBrightness + dot * (dot > 0 ? brightFactor : darkFactor)
-                val lightFactor = if (enableLighting) {
-                    val normal = vertexNormals[vIdx]
-                    ColorUtil.calculateTerrainLightFactor(
-                        normal.x, normal.y, normal.z,
-                        LIGHT_DIRECTION_X, LIGHT_DIRECTION_Y, LIGHT_DIRECTION_Z,
-                        SUN_BRIGHTNESS, BRIGHT_FACTOR, DARK_FACTOR
-                    )
-                } else {
-                    1.0f
-                }
-
-                // Calculate noise factor for this vertex position
-                val noiseFactor = if (enableColorNoise) {
-                    ColorUtil.getVertexNoise(worldPosX, worldPosZ, colorNoiseAmount)
-                } else {
-                    1.0f
-                }
-
-                // Interior vertices (8-12) always use flat overlay color without boundary blending
-                if (vIdx >= 8) {
-                    if (overlayHsl != 0) {
-                        var modifiedHsl = overlayHsl
-                        if (enableColorNoise) {
-                            modifiedHsl = ColorUtil.applyBrightnessNoise(modifiedHsl, noiseFactor)
-                        }
-                        if (enableLighting) {
-                            modifiedHsl = ColorUtil.applyLightToHsl(modifiedHsl, lightFactor)
-                        }
-                        return ColorUtil.hslToRgb(modifiedHsl)
-                    }
-                    // For textured overlays, apply noise and lighting in RGB space
-                    val combinedFactor = if (enableLighting) lightFactor * noiseFactor else noiseFactor
-                    return if (enableColorNoise || enableLighting) {
-                        Vector3f(
-                            (overlayColor.x * combinedFactor).coerceIn(0f, 1f),
-                            (overlayColor.y * combinedFactor).coerceIn(0f, 1f),
-                            (overlayColor.z * combinedFactor).coerceIn(0f, 1f)
-                        )
-                    } else {
-                        overlayColor
-                    }
-                }
-
-                // For edge/corner vertices (0-7), apply boundary blending
-                // This creates smooth transitions at the tile boundary
-                val localX = vertexLocalX[vIdx]
-                val localY = vertexLocalY[vIdx]
-                val fx = localX.toFloat() / 512f
-                val fy = localY.toFloat() / 512f
-
-                // Get the underlay blended color at this vertex position
-                val underlayBlendedHsl = ColorUtil.bilinearBlendHsl(hslSW, hslSE, hslNW, hslNE, fx, fy)
-
-                // For overlays that explicitly blend with underlay (blendsWithUnderlay=true),
-                // or for partial overlay tiles, blend at boundary vertices
-                // Full overlay tiles (shape 0) without blendsWithUnderlay don't blend
-                val shouldBlendAtBoundary = overlayBlendsWithUnderlay || (safeShape != 0 && safeShape != 12)
-
-                if (!shouldBlendAtBoundary || underlayBlendedHsl == 0 || overlayHsl == 0) {
-                    // No blending - use pure overlay color
-                    if (overlayHsl != 0) {
-                        var modifiedHsl = overlayHsl
-                        if (enableColorNoise) {
-                            modifiedHsl = ColorUtil.applyBrightnessNoise(modifiedHsl, noiseFactor)
-                        }
-                        if (enableLighting) {
-                            modifiedHsl = ColorUtil.applyLightToHsl(modifiedHsl, lightFactor)
-                        }
-                        return ColorUtil.hslToRgb(modifiedHsl)
-                    }
-                    val combinedFactor = if (enableLighting) lightFactor * noiseFactor else noiseFactor
-                    return if (enableColorNoise || enableLighting) {
-                        Vector3f(
-                            (overlayColor.x * combinedFactor).coerceIn(0f, 1f),
-                            (overlayColor.y * combinedFactor).coerceIn(0f, 1f),
-                            (overlayColor.z * combinedFactor).coerceIn(0f, 1f)
-                        )
-                    } else {
-                        overlayColor
-                    }
-                }
-
-                // Blend overlay color with underlay color at boundary vertices
-                // The blend factor is based on distance from tile center
-                // Corners (dist=1) use more underlay, center (dist=0) uses pure overlay
-                val distFromCenter = maxOf(
-                    kotlin.math.abs(fx - 0.5f),
-                    kotlin.math.abs(fy - 0.5f)
-                ) * 2f  // 0 at center, 1 at edges
-
-                // At corners (dist=1), use 50% underlay blend for blendsWithUnderlay overlays
-                // For partial shapes without blendsWithUnderlay, use a smaller blend (32) for subtler transition
-                val maxBlend = if (overlayBlendsWithUnderlay) 64 else 32
-                val blendFactor = (distFromCenter * maxBlend).toInt().coerceIn(0, 128)
-
-                if (blendFactor == 0) {
-                    var modifiedHsl = overlayHsl
-                    if (enableColorNoise) {
-                        modifiedHsl = ColorUtil.applyBrightnessNoise(modifiedHsl, noiseFactor)
-                    }
-                    if (enableLighting) {
-                        modifiedHsl = ColorUtil.applyLightToHsl(modifiedHsl, lightFactor)
-                    }
-                    return ColorUtil.hslToRgb(modifiedHsl)
-                }
-
-                // Blend overlay HSL with underlay HSL, then apply noise and lighting
-                var blendedHsl = ColorUtil.blendHsl(overlayHsl, underlayBlendedHsl, blendFactor)
-                if (enableColorNoise) {
-                    blendedHsl = ColorUtil.applyBrightnessNoise(blendedHsl, noiseFactor)
-                }
-                if (enableLighting) {
-                    blendedHsl = ColorUtil.applyLightToHsl(blendedHsl, lightFactor)
-                }
-                return ColorUtil.hslToRgb(blendedHsl)
-            }
-
-            // Helper to create vertex with smooth normal and RGB color
-            fun createVertex(px: Float, py: Float, pz: Float, vIdx: Int): ShapedVertex {
-                // Get color based on overlay/underlay, passing world position for noise calculation
-                val color = if (isOverlay) getOverlayVertexColor(vIdx, px, pz) else interpolateUnderlayColor(vIdx, px, pz)
-
-                // UV coordinates using RS client's SCENE coordinate system.
-                //
-                // RS client (GroundGL.resetLight): stores sceneX/sceneY as texture coordinates
-                // where sceneX = (tileX << tileScale) + localOffset = tileX * 512 + localOffset
-                //
-                // The RS client then applies glScalef(1/textureScale, 1/textureScale, 1) in the
-                // texture matrix before rendering (GroundMaterialGL.method12085).
-                //
-                // This creates CONTINUOUS tiling across the entire terrain rather than per-tile.
-                // For texture 928 (scale=560): texture repeats every 560 units, so roughly once
-                // per tile (512 units), matching the visual appearance in the RS client.
-                val localX = vertexLocalX[vIdx]
-                val localY = vertexLocalY[vIdx]
-
-                // Scene coordinates = tile position * 512 + local offset within tile
-                val sceneX = (x * 512 + localX).toFloat()
-                val sceneY = (y * 512 + localY).toFloat()
-
-                // Apply UV scale (= 1 / textureScale)
-                val u = sceneX * uvScale
-                val v = sceneY * uvScale
-
-                // Use the pre-computed smooth normal for this vertex
+                val localXVal = vertexLocalX[vIdx]
+                val localYVal = vertexLocalY[vIdx]
+                val sceneX = (x * 512 + localXVal).toFloat()
+                val sceneY = (y * 512 + localYVal).toFloat()
                 val smoothNormal = vertexNormals[vIdx]
+
+                val u = sceneX * vUvScale
+                val v = sceneY * vUvScale
 
                 return ShapedVertex(
                     px, py, pz,
                     color.x, color.y, color.z,
-                    u,
-                    v,
+                    u, v,
                     smoothNormal.x, smoothNormal.y, smoothNormal.z,
-                    textureId
+                    texId,
+                    alpha = vAlpha
                 )
             }
 
-            val va = createVertex(ax, ay, az, ia)
-            val vb = createVertex(bx, by, bz, ib)
-            val vc = createVertex(cx, cy, cz, ic)
+            if (tileHasTextureVariation) {
+                // Multi-pass alpha rendering for texture variation tiles.
+                // Determine "winning" texture = most common corner texture (tie-break: lower texture ID)
+                val cornerTexCounts = cornerUnderlayTextures.filter { it >= 0 }
+                    .groupBy { it }.mapValues { it.value.size }
+                val maxCount = cornerTexCounts.values.maxOrNull() ?: 0
+                val winningTexId = cornerTexCounts.entries
+                    .filter { it.value == maxCount }
+                    .minByOrNull { it.key }?.key ?: textureId
 
-            vertices.add(va)
-            vertices.add(vb)
-            vertices.add(vc)
+                // Look up UV scale for the winning texture
+                var winningUvScale = uvScale
+                for (ci in 0..3) {
+                    if (cornerUnderlayTextures[ci] == winningTexId) {
+                        winningUvScale = cornerUnderlayScales[ci]
+                        break
+                    }
+                }
+
+                // 1. Emit the triangle into the REGULAR textured batch with the winning texture (full opacity)
+                for (vIdx in vertexIndicesArr) {
+                    vertices.add(createVertex(vIdx, winningTexId, winningUvScale, 1f))
+                }
+
+                // 2. For each non-winning distinct corner texture, emit the triangle AGAIN
+                //    into an alpha batch with per-vertex alpha from bilinear weights
+                val distinctTextures = cornerUnderlayTextures.filter { it >= 0 }.distinct()
+                for (layerTexId in distinctTextures) {
+                    if (layerTexId == winningTexId) continue
+
+                    // Look up UV scale for this layer texture
+                    var layerUvScale = uvScale
+                    for (ci in 0..3) {
+                        if (cornerUnderlayTextures[ci] == layerTexId) {
+                            layerUvScale = cornerUnderlayScales[ci]
+                            break
+                        }
+                    }
+
+                    // Emit triangle with per-vertex alpha
+                    for (vIdx in vertexIndicesArr) {
+                        val localXVal = vertexLocalX[vIdx]
+                        val localYVal = vertexLocalY[vIdx]
+                        val fx = localXVal.toFloat() / 512f
+                        val fy = localYVal.toFloat() / 512f
+                        val wSW = (1f - fx) * (1f - fy)  // corner 0
+                        val wSE = fx * (1f - fy)          // corner 1
+                        val wNW = (1f - fx) * fy           // corner 2
+                        val wNE = fx * fy                  // corner 3
+
+                        // Alpha = sum of bilinear weights for corners that have this texture
+                        val cornerWeights = floatArrayOf(wSW, wSE, wNW, wNE)
+                        var alpha = 0f
+                        for (ci in 0..3) {
+                            if (cornerUnderlayTextures[ci] == layerTexId) {
+                                alpha += cornerWeights[ci]
+                            }
+                        }
+
+                        vertices.add(createVertex(vIdx, layerTexId, layerUvScale, alpha))
+                    }
+                }
+            } else {
+                // No texture variation - standard single-texture path (full opacity)
+                for (vi in 0..2) {
+                    val vIdx = vertexIndicesArr[vi]
+                    val q = getVertexQuadrant(vIdx)
+                    val myTexId = if (!isOverlay && cornerUnderlayTextures[q] >= 0) cornerUnderlayTextures[q] else textureId
+                    val myUvScale = if (!isOverlay && cornerUnderlayTextures[q] >= 0) cornerUnderlayScales[q] else uvScale
+                    vertices.add(createVertex(vIdx, myTexId, myUvScale, 1f))
+                }
+            }
         }
 
-        // Debug: Report when overlay faces are being skipped (only once per region to avoid spam)
-        if (skippedOverlayFaces > 0 && x == 0 && y == 0) {
-            println("[TerrainLoader] Overlays disabled: skipping overlay faces (enableOverlays=$enableOverlays)")
+        // Helper to emit a triangle from face table indices with edge triangle expansion
+        fun emitFace(isOverlay: Boolean, faceIndex: Int) {
+            if (isOverlay && !enableOverlays) {
+                skippedOverlayFaces++
+                overlayTotalFaces++
+                return
+            }
+
+            // Determine texture and UV scale for this face
+            val faceTextureId: Int
+            val faceUvScale: Float
+
+            if (isOverlay) {
+                faceTextureId = overlayTextureId
+                faceUvScale = overlayUvScale
+            } else {
+                // Per-face underlay texture from corner quadrant selection
+                // (matching client's addUnderlayTiles per-vertex texture assignment)
+                val faceVertexA = if (overlayTotalFaces < triA.size) triA[overlayTotalFaces] else 0
+                val quadrant = getVertexQuadrant(faceVertexA)
+                faceTextureId = cornerUnderlayTextures[quadrant]
+                faceUvScale = cornerUnderlayScales[quadrant]
+            }
+
+            // Determine if this face triggers edge triangle insertion
+            // The client checks: hasFacesOn[edge] && overlayTotalFaces == edgeFaceCounts[edge]
+            // Edge mapping: 0=south (vertex 1), 1=east (vertex 3), 2=north (vertex 5), 3=west (vertex 7)
+            val edgeFaceCounts = blendState?.edgeFaceCounts
+            val hasFacesOn = blendState?.hasFacesOn
+
+            // Check each edge direction for insertion
+            // Client checks edges in order S(0), N(2), E(1), W(3) - order matters for if-else-if
+            val edgeCheckOrder = intArrayOf(0, 2, 1, 3)  // S, N, E, W (matching client)
+            val edgeVertices = intArrayOf(1, 3, 5, 7)    // S, E, N, W edge midpoint vertices
+            var edgeInserted = false
+
+            if (edgeFaceCounts != null && hasFacesOn != null) {
+                for (checkIdx in 0..3) {
+                    val edge = edgeCheckOrder[checkIdx]
+                    val rotatedEdge = (edge - rotation) and 0x3
+                    if (hasFacesOn[rotatedEdge] && edgeFaceCounts[edge] == overlayTotalFaces) {
+                        edgeInserted = true
+                        val edgeVertex = edgeVertices[edge]
+
+                        // For underlay edge triangles, use the edge vertex's quadrant texture
+                        val edgeTextureId: Int
+                        val edgeUvScale: Float
+                        if (!isOverlay) {
+                            val edgeQuadrant = getVertexQuadrant(edgeVertex)
+                            edgeTextureId = cornerUnderlayTextures[edgeQuadrant]
+                            edgeUvScale = cornerUnderlayScales[edgeQuadrant]
+                        } else {
+                            edgeTextureId = faceTextureId
+                            edgeUvScale = faceUvScale
+                        }
+
+                        // Emit 2 triangles: original triangle split by the edge midpoint
+                        // Triangle 1: triA[faceIndex], edgeVertex, triC[faceIndex]
+                        // Triangle 2: triA[faceIndex], triB[faceIndex], edgeVertex
+                        // (matching client's 6-vertex expansion)
+                        val ia1 = triA[overlayTotalFaces]
+                        val ic1 = triC[overlayTotalFaces]
+                        val ib2 = triB[overlayTotalFaces]
+
+                        // Triangle 1: A -> edgeVertex -> C
+                        emitTriangle(ia1, edgeVertex, ic1, isOverlay, edgeTextureId, edgeUvScale)
+                        // Triangle 2: edgeVertex -> B -> C
+                        emitTriangle(edgeVertex, ib2, ic1, isOverlay, edgeTextureId, edgeUvScale)
+                        break
+                    }
+                }
+            }
+
+            if (!edgeInserted) {
+                // Standard triangle: A, B, C from face tables
+                if (overlayTotalFaces < triA.size) {
+                    val ia = triA[overlayTotalFaces]
+                    val ib = triB[overlayTotalFaces]
+                    val ic = triC[overlayTotalFaces]
+                    emitTriangle(ia, ib, ic, isOverlay, faceTextureId, faceUvScale)
+                }
+            }
+
+            overlayTotalFaces++
+        }
+
+        // Emit overlay faces first, then underlay faces
+        for (face in 0 until overlayFaces) {
+            emitFace(true, face)
+        }
+
+        // If overlay faces were skipped (no visible overlay), advance the counter
+        // to match the client's behavior where overlayTotalFaces is always advanced
+        // past overlay entries before underlay faces begin
+        if (overlayFaces == 0 && blendState != null) {
+            overlayTotalFaces = blendState.overlayFaceCount
+        }
+
+        for (face in 0 until underlayFaces) {
+            emitFace(false, face)
         }
 
         return vertices

@@ -133,6 +133,52 @@ class Mesh(
     }
 
     companion object {
+        /**
+         * Create a mesh with a per-vertex alpha attribute for multi-pass alpha blending.
+         * Used for terrain layers rendered on top of an opaque base with alpha blending
+         * (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA). Each vertex carries an alpha value
+         * that controls how much this layer replaces the base at that point.
+         *
+         * Vertex attributes:
+         *   location 0: position (vec3)
+         *   location 1: color (vec3 RGB)
+         *   location 2: texCoord (vec2)
+         *   location 3: normal (vec3)
+         *   location 4: alpha (float)
+         */
+        fun createWithAlpha(
+            positions: FloatArray,
+            colors: FloatArray,
+            textureCoords: FloatArray,
+            normals: FloatArray,
+            alphas: FloatArray,
+            indices: IntArray
+        ): Mesh {
+            val mesh = Mesh(positions, colors, textureCoords, normals, indices, colorComponents = 3)
+
+            // Add per-vertex alpha VBO at location 4
+            glBindVertexArray(mesh.vaoId)
+
+            var alphaBuffer: FloatBuffer? = null
+            try {
+                alphaBuffer = MemoryUtil.memAllocFloat(alphas.size)
+                alphaBuffer.put(alphas).flip()
+                val alphaVbo = glGenBuffers()
+                mesh.vboIds.add(alphaVbo)
+                glBindBuffer(GL_ARRAY_BUFFER, alphaVbo)
+                glBufferData(GL_ARRAY_BUFFER, alphaBuffer, GL_STATIC_DRAW)
+                glEnableVertexAttribArray(4)
+                glVertexAttribPointer(4, 1, GL_FLOAT, false, 0, 0)
+            } finally {
+                alphaBuffer?.let { MemoryUtil.memFree(it) }
+            }
+
+            glBindBuffer(GL_ARRAY_BUFFER, 0)
+            glBindVertexArray(0)
+
+            return mesh
+        }
+
         fun createTriangle(): Mesh {
             val positions = floatArrayOf(
                 0.0f, 0.5f, 0.0f,

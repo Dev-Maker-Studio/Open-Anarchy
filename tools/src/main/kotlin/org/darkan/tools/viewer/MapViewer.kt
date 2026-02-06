@@ -78,6 +78,7 @@ class MapViewer(
     private lateinit var uniformBuffers: UniformBuffers
     private lateinit var uboColorShader: ShaderProgram
     private lateinit var uboTexturedShader: ShaderProgram
+    private lateinit var terrainAlphaShader: ShaderProgram
 
     // Instanced shaders for object rendering
     private lateinit var instancedColorShader: ShaderProgram
@@ -219,6 +220,16 @@ class MapViewer(
             "model", "textureSampler"
         )
         uniformBuffers.bindToShader(uboTexturedShader)
+
+        // Load terrain alpha shader for multi-pass alpha blending of underlay textures
+        val terrainAlphaVert = loadShaderSource("/shaders/terrain_alpha.vert")
+        val terrainAlphaFrag = loadShaderSource("/shaders/terrain_alpha.frag")
+
+        terrainAlphaShader = ShaderProgram.createWithUniforms(
+            terrainAlphaVert, terrainAlphaFrag,
+            "model", "textureSampler"
+        )
+        uniformBuffers.bindToShader(terrainAlphaShader)
 
         // Load instanced shaders (for objects - use standard RGB shaders)
         val instancedColorVert = loadShaderSource("/shaders/ubo_instanced.vert")
@@ -524,7 +535,7 @@ class MapViewer(
                 mesh.render()
             }
 
-            // Render textured terrain batches
+            // Render textured terrain batches (single texture per triangle)
             val batches = terrainBatches.texturedBatches
             if (batches.isNotEmpty()) {
                 uboTexturedShader.bind()
@@ -539,6 +550,36 @@ class MapViewer(
                 }
 
                 TextureLoader.unbindTexture()
+            }
+
+            // Render alpha terrain batches (multi-pass alpha blending)
+            // Each batch is a single texture layer rendered on top of the opaque base
+            // with per-vertex alpha controlling the blend strength.
+            val alpha = terrainBatches.alphaBatches
+            if (alpha.isNotEmpty()) {
+                // Alpha layers render at the same depth as the opaque base.
+                // Use GL_LEQUAL so equal-depth fragments pass, and disable depth
+                // writes so alpha layers don't block each other.
+                glDepthFunc(GL_LEQUAL)
+                glDepthMask(false)
+                glEnable(GL_BLEND)
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+                terrainAlphaShader.bind()
+                terrainAlphaShader.setUniform("model", modelMatrix)
+                terrainAlphaShader.setUniform("textureSampler", 0)
+
+                for (batch in alpha) {
+                    TextureLoader.bindTexture(
+                        TextureLoader.getTextureForMaterial(cache, batch.textureId)
+                    )
+                    batch.mesh.render()
+                }
+
+                TextureLoader.unbindTexture()
+                glDisable(GL_BLEND)
+                glDepthMask(true)
+                glDepthFunc(GL_LESS)
             }
 
             // Restore GL state
@@ -1729,6 +1770,7 @@ class MapViewer(
         uniformBuffers.cleanup()
         uboColorShader.cleanup()
         uboTexturedShader.cleanup()
+        terrainAlphaShader.cleanup()
         instancedColorShader.cleanup()
         instancedTexturedShader.cleanup()
         TerrainLoader.clearCache()
