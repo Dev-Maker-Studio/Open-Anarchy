@@ -6,7 +6,7 @@ data class MaterialDefinition(
     override var id: Int = -1,
     var useTextureColour: Boolean = false,
     var aBoolean1204: Boolean = false,
-    var aBoolean1205: Boolean = false,
+    var skipTriangles: Boolean = false,
     var aByte1217: Byte = 0,
     var aByte1225: Byte = 0,
     var type: Byte = 0,

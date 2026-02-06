@@ -400,6 +400,8 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
     println("Size: ${def.sizeX} x ${def.sizeY}")
     println("Options: ${def.options?.toList()}")
     println("ModelIds: ${def.modelIds?.contentDeepToString()}")
+    println("Ambient: ${def.ambient}")
+    println("Contrast: ${def.contrast}")
 
     // Check for retexturing
     if (def.retextureSrc != null || def.retextureDst != null) {
@@ -537,6 +539,96 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
                     println("      B: (${modelDef.vertexX[bIdx]}, ${modelDef.vertexY[bIdx]}, ${modelDef.vertexZ[bIdx]})")
                     println("      C: (${modelDef.vertexX[cIdx]}, ${modelDef.vertexY[cIdx]}, ${modelDef.vertexZ[cIdx]})")
                 }
+            }
+        }
+
+        // Show ALL untextured faces and their details
+        println("  Untextured faces (faceTextures == -1):")
+        var untexturedCount = 0
+        for (f in 0 until modelDef.faceCount) {
+            val texId = modelDef.faceTextures?.get(f)?.toInt() ?: -1
+            if (texId != -1) continue
+
+            untexturedCount++
+            val rawHsl = modelDef.faceColors[f].toInt() and 0xffff
+            val renderTypeRaw = modelDef.faceRenderTypes?.get(f)
+            val renderType = renderTypeRaw?.toInt()?.and(0xff) ?: 0
+            val alpha = modelDef.faceAlphas?.get(f)?.toInt()?.and(0xff) ?: 0
+            val texPointer = modelDef.faceTexturePointers?.get(f)?.toInt() ?: -999
+            val rawFaceColor = modelDef.faceColors[f]
+            println("    Face $f: HSL=$rawHsl (raw=$rawFaceColor), renderType=$renderType (raw=$renderTypeRaw), alpha=$alpha, texPointer=$texPointer")
+        }
+        if (untexturedCount == 0) {
+            println("    (None - all faces are textured)")
+        } else {
+            println("    Total untextured: $untexturedCount")
+        }
+
+        // Verify texture transition point - show faces around the textured/untextured boundary
+        if (modelDef.faceTextures != null) {
+            println("  Texture boundary analysis (faces 760-774):")
+            for (f in 760 until minOf(774, modelDef.faceCount)) {
+                val texIdSigned = modelDef.faceTextures[f].toInt()
+                val texId = if (texIdSigned == -1) -1 else (texIdSigned and 0xffff)
+                val rawHsl = modelDef.faceColors[f].toInt() and 0xffff
+                println("    Face $f: texId=$texId, HSL=$rawHsl")
+            }
+        }
+
+        // Check footer flags for billboard/particle effects data
+        val rawModelData = cache.data(Index.MODELS, modelId)
+        if (rawModelData != null && rawModelData.size >= 24) {
+            val footerFlags = rawModelData[rawModelData.size - 18].toInt() and 0xff
+            val hasFaceTypes = (footerFlags and 0x1) == 1
+            val hasParticleEffects = (footerFlags and 0x2) == 2
+            val hasBillboards = (footerFlags and 0x4) == 4
+            val hasVersion = (footerFlags and 0x8) == 8
+            println("  Footer flags: 0x${footerFlags.toString(16)}")
+            println("    hasFaceTypes=$hasFaceTypes, hasParticleEffects=$hasParticleEffects, hasBillboards=$hasBillboards, hasVersion=$hasVersion")
+
+            if (hasBillboards) {
+                // Read billboard data from the end of structured data
+                // This requires computing the 'index' offset like the client does
+                println("  MODEL HAS BILLBOARD DATA - these faces may be billboard anchors!")
+            }
+        }
+
+        // Specific face 769 analysis (if it exists)
+        if (modelDef.faceCount > 769) {
+            println("  === FACE 769 DETAILED ANALYSIS ===")
+            val f = 769
+            val rawHsl = modelDef.faceColors[f].toInt() and 0xffff
+            val renderType = modelDef.faceRenderTypes?.get(f)?.toInt()?.and(0xff) ?: 0
+            val alpha = modelDef.faceAlphas?.get(f)?.toInt()?.and(0xff) ?: 0
+            val rawTexIdSigned = modelDef.faceTextures?.get(f)?.toInt() ?: -1
+            val rawTexId = if (rawTexIdSigned == -1) -1 else (rawTexIdSigned and 0xffff)
+            val texPointer = modelDef.faceTexturePointers?.get(f)?.toInt() ?: -999
+            val aIdx = modelDef.faceA[f]
+            val bIdx = modelDef.faceB[f]
+            val cIdx = modelDef.faceC[f]
+            println("    HSL: $rawHsl (raw short: ${modelDef.faceColors[f]})")
+            println("    RenderType: $renderType")
+            println("    Alpha: $alpha")
+            println("    TextureId (signed): $rawTexIdSigned")
+            println("    TextureId (unsigned): $rawTexId")
+            println("    TexturePointer: $texPointer")
+            println("    Vertices: A=$aIdx, B=$bIdx, C=$cIdx")
+            if (aIdx < modelDef.vertexCount && bIdx < modelDef.vertexCount && cIdx < modelDef.vertexCount) {
+                println("    A pos: (${modelDef.vertexX[aIdx]}, ${modelDef.vertexY[aIdx]}, ${modelDef.vertexZ[aIdx]})")
+                println("    B pos: (${modelDef.vertexX[bIdx]}, ${modelDef.vertexY[bIdx]}, ${modelDef.vertexZ[bIdx]})")
+                println("    C pos: (${modelDef.vertexX[cIdx]}, ${modelDef.vertexY[cIdx]}, ${modelDef.vertexZ[cIdx]})")
+            }
+            // Check surrounding faces for context
+            println("  === FACES 765-773 (around face 769) ===")
+            for (nearby in 765..773) {
+                if (nearby < 0 || nearby >= modelDef.faceCount) continue
+                val nHsl = modelDef.faceColors[nearby].toInt() and 0xffff
+                val nRender = modelDef.faceRenderTypes?.get(nearby)?.toInt()?.and(0xff) ?: 0
+                val nTexSigned = modelDef.faceTextures?.get(nearby)?.toInt() ?: -1
+                val nTex = if (nTexSigned == -1) -1 else (nTexSigned and 0xffff)
+                val nPtr = modelDef.faceTexturePointers?.get(nearby)?.toInt() ?: -999
+                val nAlpha = modelDef.faceAlphas?.get(nearby)?.toInt()?.and(0xff) ?: 0
+                println("    Face $nearby: HSL=$nHsl, tex=$nTex, ptr=$nPtr, render=$nRender, alpha=$nAlpha")
             }
         }
     }

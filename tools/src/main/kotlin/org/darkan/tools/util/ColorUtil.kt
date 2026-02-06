@@ -275,6 +275,35 @@ object ColorUtil {
     }
 
     /**
+     * Blend (modulate) the lightness component of a packed RS HSL color by a factor.
+     * This matches the RS client's ModelGL.blendColorLightness() exactly.
+     *
+     * In the RS client, every model face color is passed through this function with the
+     * model's ambient value (default 64, adjusted by ObjectDefinition.ambient). The formula
+     * multiplies the 7-bit lightness by the factor and right-shifts by 7, effectively
+     * scaling lightness by factor/128.
+     *
+     * For example, with the default ambient of 64:
+     *   lightness 63 -> 63 * 64 >> 7 = 31 (halved)
+     *
+     * With object ambient=25 (adjustedAmbient = 64+25 = 89):
+     *   lightness 63 -> 63 * 89 >> 7 = 43
+     *
+     * @param hslColor Packed 16-bit RS HSL color
+     * @param lightnessFactor Ambient factor (typically 64 + objectDef.ambient)
+     * @return Modified packed HSL color with blended lightness
+     */
+    fun blendColorLightness(hslColor: Int, lightnessFactor: Int): Int {
+        var blendedLightness = (hslColor and 0x7f) * lightnessFactor shr 7
+        if (blendedLightness < 2) {
+            blendedLightness = 2
+        } else if (blendedLightness > 126) {
+            blendedLightness = 126
+        }
+        return (hslColor and 0xff80) + blendedLightness
+    }
+
+    /**
      * Adjust brightness of a color.
      */
     fun adjustBrightness(color: Vector3f, brightness: Int): Vector3f {

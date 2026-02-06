@@ -99,6 +99,19 @@ object TextureLoader {
     }
 
     /**
+     * Check if a material's faces should be skipped (not rendered).
+     * Matches the RS client's ModelGL behavior where faces with
+     * MaterialType.skipTriangles == true are excluded from rendering.
+     *
+     * @param materialId The material/texture ID from faceTextures
+     * @return true if the material's faces should not be rendered
+     */
+    fun shouldSkipMaterial(materialId: Int): Boolean {
+        if (materialId < 0) return false
+        return getMaterial(materialId)?.skipTriangles ?: false
+    }
+
+    /**
      * Get the texture size for a material based on its isSmall flag.
      * true (isSmall) -> 64x64, false -> 128x128.
      * Defaults to 128 if no material definition exists.

@@ -998,7 +998,12 @@ object ObjectRenderer {
 
     /**
      * Create ModelModifications from an ObjectDefinition.
-     * Extracts retextureSrc/Dst and recolorSrc/Dst arrays.
+     * Extracts retextureSrc/Dst, recolorSrc/Dst arrays, and ambient lightness factor.
+     *
+     * The ambient value matches the RS client's formula: adjustedAmbient = 64 + def.ambient.
+     * The RS client always applies blendColorLightness(hsl, adjustedAmbient) to every face
+     * color, which scales the lightness component by adjustedAmbient/128. With the default
+     * ambient of 0, this halves the lightness (64/128 = 0.5).
      *
      * @param def The object definition
      * @return ModelModifications instance (may be NONE if no modifications)
@@ -1006,14 +1011,18 @@ object ObjectRenderer {
     fun getModifications(def: ObjectDefinition): ModelModifications {
         val hasRetexture = def.retextureSrc != null && def.retextureDst != null
         val hasRecolor = def.recolorSrc != null && def.recolorDst != null
+        val adjustedAmbient = ModelModifications.DEFAULT_AMBIENT + def.ambient
 
-        if (!hasRetexture && !hasRecolor) return ModelModifications.NONE
+        if (!hasRetexture && !hasRecolor && adjustedAmbient == ModelModifications.DEFAULT_AMBIENT) {
+            return ModelModifications.NONE
+        }
 
         return ModelModifications(
             retextureSrc = def.retextureSrc,
             retextureDst = def.retextureDst,
             recolorSrc = def.recolorSrc,
-            recolorDst = def.recolorDst
+            recolorDst = def.recolorDst,
+            ambient = adjustedAmbient
         )
     }
 }

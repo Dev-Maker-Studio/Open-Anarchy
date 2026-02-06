@@ -42,7 +42,7 @@ class MaterialDecoder : DefinitionDecoder<MaterialDefinition>(TEXTURE_DEFINITION
             texture.aBoolean1204 = reader.readUnsignedBoolean()
         }
         for (texture in data) {
-            texture.aBoolean1205 = reader.readUnsignedBoolean()
+            texture.skipTriangles = reader.readUnsignedBoolean()
         }
         for (texture in data) {
             texture.aByte1217 = reader.readByte().toByte()
