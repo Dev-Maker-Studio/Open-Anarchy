@@ -21,11 +21,13 @@ import world.gregs.voidps.cache.definition.data.ObjectDefinition
  * converted to OpenGL coordinates. These offsets should be applied AFTER rotation
  * to match the client's behavior.
  *
- * Terrain alignment is applied for objects with groundContourType 1, 2, or 3:
- * - Type 1: Full vertex displacement (approximated with rotation)
- * - Type 2: Partial vertex displacement (approximated with rotation)
- * - Type 3: Hill change (exact rotation implementation)
- * All three types cause the object to tilt to match the terrain slope.
+ * Terrain alignment is applied for objects with groundContourType 3 (hillChange)
+ * via the terrainAlignment field, which provides rotation-based slope matching.
+ *
+ * Objects with groundContourType 1 use per-vertex terrain displacement instead
+ * of rotation. These objects carry their RS-space positioning data (rsSceneX,
+ * rsSceneY, rsAverageHeight) so that VertexDisplacer can create displaced mesh
+ * copies during region loading.
  *
  * Model modifications (retexturing/recoloring) are applied when loading the mesh data.
  * These come from ObjectDefinition.retextureSrc/Dst and recolorSrc/Dst arrays.
@@ -38,9 +40,14 @@ data class ObjectInstance(
     val rotation: Float,  // Y-axis rotation in radians
     val scale: Vector3f,
     val offset: Vector3f = Vector3f(),  // Model offset applied after rotation
-    val terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE,  // Terrain tilt
+    val terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE,  // Terrain tilt (type 3 only)
     val mirrored: Boolean = false,  // Whether to mirror the model (negate Z)
-    val modifications: ModelModifications = ModelModifications.NONE  // Retexture/recolor modifications
+    val modifications: ModelModifications = ModelModifications.NONE,  // Retexture/recolor modifications
+    val groundContourType: Int = 0,  // Ground contour type from ObjectDefinition (0-5)
+    val groundContourModifier: Int = -1,  // Ground contour modifier from ObjectDefinition
+    val rsSceneX: Int = 0,  // RS scene X position (baseX * 512 + sizeX * 256) for vertex displacement
+    val rsSceneY: Int = 0,  // RS scene Y position (baseY * 512 + sizeY * 256) for vertex displacement
+    val rsAverageHeight: Int = 0  // Average terrain height in RS units for vertex displacement
 )
 
 /**
@@ -311,13 +318,16 @@ object ObjectRenderer {
      * @param regionX Region X coordinate (for world position calculation)
      * @param regionY Region Y coordinate
      * @param tileHeights Optional height data callback (takes localX, localY, plane). Returns scaled height.
+     * @param rsHeightSampler Optional callback returning raw RS height (unscaled int) at (localX, localY, plane).
+     *                        Used for per-vertex displacement (contourType 1) to match RS integer arithmetic exactly.
      * @return Map of plane -> list of ObjectInstance
      */
     fun createInstancesAllPlanes(
         objects: List<MapObject>,
         regionX: Int,
         regionY: Int,
-        tileHeights: ((Int, Int, Int) -> Float)? = null
+        tileHeights: ((Int, Int, Int) -> Float)? = null,
+        rsHeightSampler: ((Int, Int, Int) -> Int)? = null
     ): Map<Int, List<ObjectInstance>> {
         val instancesByPlane = mutableMapOf<Int, MutableList<ObjectInstance>>()
         val baseWorldX = regionX * 64
@@ -385,6 +395,30 @@ object ObjectRenderer {
                 (h00 + h10 + h01 + h11) / 4f
             } else {
                 0f
+            }
+
+            // Compute RS-unit scene position and average height for per-vertex displacement.
+            // These match the RS client's SceneGraph.addObject:
+            //   sceneX = (baseX << 9) + (locSizeX << 8)
+            //   sceneY = (baseY << 9) + (locSizeY << 8)
+            //   averageHeight = (h00 + h10 + h01 + h11) shr 2
+            // The sceneX/Y are region-local (relative to region's scene origin).
+            val contourType = def.groundContourType.toInt()
+            val contourMod = def.groundContourModifier
+            val rsSceneX: Int
+            val rsSceneY: Int
+            val rsAvgHeight: Int
+            if (VertexDisplacer.needsDisplacement(contourType, contourMod) && rsHeightSampler != null) {
+                rsSceneX = (localTileX shl 9) + (sizeX shl 8)
+                rsSceneY = (localTileY shl 9) + (sizeY shl 8)
+                rsAvgHeight = (rsHeightSampler.invoke(x0, y0, plane) +
+                    rsHeightSampler.invoke(x1, y0, plane) +
+                    rsHeightSampler.invoke(x0, y1, plane) +
+                    rsHeightSampler.invoke(x1, y1, plane)) shr 2
+            } else {
+                rsSceneX = 0
+                rsSceneY = 0
+                rsAvgHeight = 0
             }
 
             // Calculate WORLD position
@@ -472,7 +506,12 @@ object ObjectRenderer {
                     ),
                     terrainAlignment = terrainAlignment,
                     mirrored = true,  // Primary wall is always mirrored for WALL_WHOLE_CORNER
-                    modifications = modifications
+                    modifications = modifications,
+                    groundContourType = contourType,
+                    groundContourModifier = contourMod,
+                    rsSceneX = rsSceneX,
+                    rsSceneY = rsSceneY,
+                    rsAverageHeight = rsAvgHeight
                 )
                 instancesByPlane.getOrPut(plane) { mutableListOf() }.add(primaryInstance)
 
@@ -492,7 +531,12 @@ object ObjectRenderer {
                     ),
                     terrainAlignment = terrainAlignment,
                     mirrored = baseMirror,  // Secondary wall uses definition.mirrored only
-                    modifications = modifications
+                    modifications = modifications,
+                    groundContourType = contourType,
+                    groundContourModifier = contourMod,
+                    rsSceneX = rsSceneX,
+                    rsSceneY = rsSceneY,
+                    rsAverageHeight = rsAvgHeight
                 )
                 instancesByPlane.getOrPut(plane) { mutableListOf() }.add(secondaryInstance)
             } else {
@@ -511,7 +555,12 @@ object ObjectRenderer {
                     ),
                     terrainAlignment = terrainAlignment,
                     mirrored = baseMirror,
-                    modifications = modifications
+                    modifications = modifications,
+                    groundContourType = contourType,
+                    groundContourModifier = contourMod,
+                    rsSceneX = rsSceneX,
+                    rsSceneY = rsSceneY,
+                    rsAverageHeight = rsAvgHeight
                 )
                 instancesByPlane.getOrPut(plane) { mutableListOf() }.add(instance)
             }
@@ -534,6 +583,8 @@ object ObjectRenderer {
      * @param regionY Region Y coordinate
      * @param plane The plane level
      * @param tileHeights Optional height data callback (takes localX, localY). Returns scaled height.
+     * @param rsHeightSampler Optional callback returning raw RS height (unscaled int) at (localX, localY).
+     *                        Used for per-vertex displacement (contourType 1) to match RS integer arithmetic exactly.
      * @return List of ObjectInstance ready for rendering
      */
     fun createInstances(
@@ -541,7 +592,8 @@ object ObjectRenderer {
         regionX: Int,
         regionY: Int,
         plane: Int,
-        tileHeights: ((Int, Int) -> Float)? = null
+        tileHeights: ((Int, Int) -> Float)? = null,
+        rsHeightSampler: ((Int, Int) -> Int)? = null
     ): List<ObjectInstance> {
         val instances = mutableListOf<ObjectInstance>()
         val baseWorldX = regionX * 64
@@ -609,6 +661,25 @@ object ObjectRenderer {
                 (h00 + h10 + h01 + h11) / 4f
             } else {
                 0f
+            }
+
+            // Compute RS-unit scene position and average height for per-vertex displacement
+            val contourType = def.groundContourType.toInt()
+            val contourMod = def.groundContourModifier
+            val rsSceneX: Int
+            val rsSceneY: Int
+            val rsAvgHeight: Int
+            if (VertexDisplacer.needsDisplacement(contourType, contourMod) && rsHeightSampler != null) {
+                rsSceneX = (localTileX shl 9) + (sizeX shl 8)
+                rsSceneY = (localTileY shl 9) + (sizeY shl 8)
+                rsAvgHeight = (rsHeightSampler.invoke(x0, y0) +
+                    rsHeightSampler.invoke(x1, y0) +
+                    rsHeightSampler.invoke(x0, y1) +
+                    rsHeightSampler.invoke(x1, y1)) shr 2
+            } else {
+                rsSceneX = 0
+                rsSceneY = 0
+                rsAvgHeight = 0
             }
 
             // Calculate WORLD position
@@ -694,7 +765,12 @@ object ObjectRenderer {
                     ),
                     terrainAlignment = terrainAlignment,
                     mirrored = true,  // Primary wall is always mirrored for WALL_WHOLE_CORNER
-                    modifications = modifications
+                    modifications = modifications,
+                    groundContourType = contourType,
+                    groundContourModifier = contourMod,
+                    rsSceneX = rsSceneX,
+                    rsSceneY = rsSceneY,
+                    rsAverageHeight = rsAvgHeight
                 ))
 
                 // Secondary wall - not mirrored, rotated by +90 degrees
@@ -713,7 +789,12 @@ object ObjectRenderer {
                     ),
                     terrainAlignment = terrainAlignment,
                     mirrored = baseMirror,  // Secondary wall uses definition.mirrored only
-                    modifications = modifications
+                    modifications = modifications,
+                    groundContourType = contourType,
+                    groundContourModifier = contourMod,
+                    rsSceneX = rsSceneX,
+                    rsSceneY = rsSceneY,
+                    rsAverageHeight = rsAvgHeight
                 ))
             } else {
                 // Normal object - single instance
@@ -731,7 +812,12 @@ object ObjectRenderer {
                     ),
                     terrainAlignment = terrainAlignment,
                     mirrored = baseMirror,
-                    modifications = modifications
+                    modifications = modifications,
+                    groundContourType = contourType,
+                    groundContourModifier = contourMod,
+                    rsSceneX = rsSceneX,
+                    rsSceneY = rsSceneY,
+                    rsAverageHeight = rsAvgHeight
                 ))
             }
         }
@@ -801,7 +887,12 @@ object ObjectRenderer {
     }
 
     /**
-     * Add object instances to an InstanceManager for rendering.
+     * Add object instances to an InstanceManager for instanced rendering.
+     *
+     * This handles the standard instanced path where all instances of a model
+     * share the same geometry. Objects with groundContourType 1 that need
+     * per-vertex displacement are also added here (their displaced meshes are
+     * registered separately by MapScene).
      *
      * Transform order matches the client:
      * 0. Mirror (negate Z) if definition.mirrored is true

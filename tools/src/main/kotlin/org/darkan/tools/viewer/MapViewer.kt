@@ -14,6 +14,7 @@ import org.darkan.tools.cache.map.MapScene
 import org.darkan.tools.cache.map.ObjectInstance
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.map.TerrainAligner
+import org.darkan.tools.cache.map.VertexDisplacer
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.model.ModelModifications
 import org.darkan.tools.cache.terrain.TerrainLoader
@@ -23,6 +24,7 @@ import org.darkan.tools.engine.input.TilePicker
 import org.darkan.tools.engine.render.Camera
 import org.darkan.tools.engine.render.InstanceManager
 import org.darkan.tools.engine.render.Mesh
+import org.darkan.tools.engine.render.MeshData
 import org.darkan.tools.engine.render.ShaderProgram
 import org.darkan.tools.engine.render.UniformBuffers
 import org.darkan.tools.engine.window.WindowConfig
@@ -126,6 +128,12 @@ class MapViewer(
     private var singleRegionInstanceManager: InstanceManager? = null
     private var singleRegionObjects: List<ObjectInstance> = emptyList()
     private val singleRegionModels = mutableSetOf<Int>()
+
+    // Displaced model tracking for contourType 1 objects in single-region mode.
+    // Maps ObjectInstance identity hash -> displaced model ID.
+    // Each contourType 1 instance gets unique geometry with per-vertex terrain displacement.
+    private val singleRegionDisplacedModels = mutableMapOf<Int, Int>()
+    private var nextSingleRegionDisplacedId = Int.MIN_VALUE / 2
 
     // Tile picker for debugging UV issues
     private val tilePicker = TilePicker()
@@ -583,8 +591,11 @@ class MapViewer(
 
         var addedCount = 0
         for (obj in singleRegionObjects) {
-            // Use combined model ID for multi-model objects, including modifications
-            val combinedModelId = ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
+            // For contourType 1 objects with displacement, use the displaced model ID
+            // so the rendering path picks up the displaced geometry.
+            // Fall back to the standard combined model ID for all other objects.
+            val combinedModelId = singleRegionDisplacedModels[System.identityHashCode(obj)]
+                ?: ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
 
             // Build transform matrix matching client order:
             // RS client applies to model vertices: Rotate Y -> Terrain Tilt -> Scale -> Offset
@@ -1290,6 +1301,63 @@ class MapViewer(
                     registeredCount++
                 }
             }
+
+            // Register displaced meshes for contourType 1 objects.
+            // Each instance gets a unique mesh with per-vertex terrain displacement,
+            // registered with a unique model ID. These use the instanced rendering path
+            // with 1 instance each (the displacement is baked into the geometry).
+            val terrainTiles = terrainData.tiles
+            for (obj in singleRegionObjects) {
+                if (!VertexDisplacer.needsDisplacement(obj.groundContourType, obj.groundContourModifier)) continue
+
+                // Load base model MeshData (with modifications if any)
+                val baseMeshDataList = if (obj.modifications.hasModifications()) {
+                    ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
+                } else {
+                    ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
+                }
+                if (baseMeshDataList == null || baseMeshDataList.isEmpty()) continue
+
+                // Apply per-vertex displacement to each mesh batch
+                val displacedMeshDataList = mutableListOf<MeshData>()
+                var anyDisplaced = false
+
+                for (meshData in baseMeshDataList) {
+                    val displaced = VertexDisplacer.displaceVertices(
+                        meshData = meshData,
+                        sceneX = obj.rsSceneX,
+                        sceneY = obj.rsSceneY,
+                        averageHeight = obj.rsAverageHeight,
+                        plane = obj.mapObject.level,
+                        tiles = terrainTiles,
+                        regionBaseX = regionX * 64,
+                        regionBaseY = regionY * 64,
+                        rsRotation = obj.mapObject.rotation,
+                        mirrored = obj.mirrored,
+                        resizeX = obj.definition.resizeX,
+                        resizeY = obj.definition.resizeY,
+                        resizeZ = obj.definition.resizeZ,
+                        rsOffsetX = obj.definition.offsetX,
+                        rsOffsetZ = obj.definition.offsetZ
+                    )
+
+                    if (displaced != null) {
+                        displacedMeshDataList.add(displaced)
+                        anyDisplaced = true
+                    } else {
+                        // No displacement needed for this batch (flat terrain), use original
+                        displacedMeshDataList.add(meshData)
+                    }
+                }
+
+                if (anyDisplaced) {
+                    // Register displaced mesh with a unique model ID
+                    val displacedId = nextSingleRegionDisplacedId++
+                    singleRegionInstanceManager!!.registerModel(displacedId, displacedMeshDataList)
+                    singleRegionModels.add(displacedId)
+                    singleRegionDisplacedModels[System.identityHashCode(obj)] = displacedId
+                }
+            }
         }
 
         // Center camera on the local terrain mesh (not world coordinates)
@@ -1311,6 +1379,8 @@ class MapViewer(
         singleRegionInstanceManager = null
         singleRegionObjects = emptyList()
         singleRegionModels.clear()
+        singleRegionDisplacedModels.clear()
+        nextSingleRegionDisplacedId = Int.MIN_VALUE / 2
         tilePicker.clearSelection()
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
@@ -1520,6 +1590,27 @@ class MapViewer(
                 }
             )
 
+            // Compute RS-unit scene position and average height for per-vertex displacement.
+            // These match the RS client's SceneGraph.addObject:
+            //   sceneX = (baseX << 9) + (locSizeX << 8)
+            //   sceneY = (baseY << 9) + (locSizeY << 8)
+            //   averageHeight = (h00 + h10 + h01 + h11) shr 2
+            val contourType = def.groundContourType.toInt()
+            val contourMod = def.groundContourModifier
+            val rsSceneX: Int
+            val rsSceneY: Int
+            val rsAvgHeight: Int
+            if (VertexDisplacer.needsDisplacement(contourType, contourMod)) {
+                rsSceneX = (localTileX shl 9) + (sizeX shl 8)
+                rsSceneY = (localTileY shl 9) + (sizeY shl 8)
+                // Use integer average (shr 2) matching RS client, NOT floating-point /4f
+                rsAvgHeight = (h00 + h10 + h01 + h11) shr 2
+            } else {
+                rsSceneX = 0
+                rsSceneY = 0
+                rsAvgHeight = 0
+            }
+
             // Get model modifications (retexturing/recoloring) from definition
             val modifications = ObjectRenderer.getModifications(def)
 
@@ -1545,7 +1636,12 @@ class MapViewer(
                     ),
                     terrainAlignment = terrainAlignment,
                     mirrored = true,  // Primary wall is always mirrored for WALL_WHOLE_CORNER
-                    modifications = modifications
+                    modifications = modifications,
+                    groundContourType = contourType,
+                    groundContourModifier = contourMod,
+                    rsSceneX = rsSceneX,
+                    rsSceneY = rsSceneY,
+                    rsAverageHeight = rsAvgHeight
                 ))
 
                 // Secondary wall - not mirrored (unless def.mirrored), rotated by +90 degrees
@@ -1564,7 +1660,12 @@ class MapViewer(
                     ),
                     terrainAlignment = terrainAlignment,
                     mirrored = def.mirrored,  // Secondary wall uses definition.mirrored only
-                    modifications = modifications
+                    modifications = modifications,
+                    groundContourType = contourType,
+                    groundContourModifier = contourMod,
+                    rsSceneX = rsSceneX,
+                    rsSceneY = rsSceneY,
+                    rsAverageHeight = rsAvgHeight
                 ))
             } else {
                 // Normal object - single instance
@@ -1583,7 +1684,12 @@ class MapViewer(
                     ),
                     terrainAlignment = terrainAlignment,
                     mirrored = def.mirrored,
-                    modifications = modifications
+                    modifications = modifications,
+                    groundContourType = contourType,
+                    groundContourModifier = contourMod,
+                    rsSceneX = rsSceneX,
+                    rsSceneY = rsSceneY,
+                    rsAverageHeight = rsAvgHeight
                 ))
             }
         }

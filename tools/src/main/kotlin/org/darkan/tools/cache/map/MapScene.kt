@@ -8,6 +8,7 @@ import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.render.Camera
 import org.darkan.tools.engine.render.InstanceManager
+import org.darkan.tools.engine.render.MeshData
 import org.darkan.tools.engine.render.ShaderProgram
 import org.darkan.tools.engine.spatial.AABB
 import org.darkan.tools.engine.spatial.CullResult
@@ -105,8 +106,17 @@ class MapScene(
     // Instance manager for object batching
     private val instanceManager = InstanceManager(maxInstancesPerMesh = 50000)
 
-    // Registered model IDs
+    // Registered model IDs (standard instanced models)
     private val registeredModels = mutableSetOf<Int>()
+
+    // Displaced model IDs for contourType 1 objects.
+    // Maps ObjectInstance identity hash -> displaced model ID.
+    // Each contourType 1 instance gets unique geometry with per-vertex terrain displacement,
+    // registered with the instanceManager under a unique negative ID.
+    private val displacedModelIds = mutableMapOf<Int, Int>()
+
+    // Counter for generating unique displaced model IDs (starts very negative to avoid collision)
+    private var nextDisplacedModelId = Int.MIN_VALUE / 2
 
     // Current center region
     private var centerRegionX = -1
@@ -374,22 +384,39 @@ class MapScene(
 
         // Create object instances for ALL planes
         // Use TerrainLoader's computed heights for consistency with terrain mesh
+        // Also provide RS-unit height sampler for per-vertex displacement (contourType 1)
         val objectsByPlane = ObjectRenderer.createInstancesAllPlanes(
             data.objects,
             regionX,
-            regionY
-        ) { x, y, plane ->
-            if (terrainData != null) {
-                TerrainLoader.getTileHeightScaled(terrainData.tiles, x, y, plane)
+            regionY,
+            tileHeights = { x, y, plane ->
+                if (terrainData != null) {
+                    TerrainLoader.getTileHeightScaled(terrainData.tiles, x, y, plane)
+                } else {
+                    // Fallback to old method if terrain data unavailable
+                    getTileHeight(data, x, y, plane)
+                }
+            },
+            rsHeightSampler = if (terrainData != null) {
+                { x, y, plane -> TerrainLoader.getTileHeight(terrainData.tiles, x, y, plane) }
             } else {
-                // Fallback to old method if terrain data unavailable
-                getTileHeight(data, x, y, plane)
+                null
             }
-        }
+        )
 
-        // Register needed models for all planes
+        // Register needed models for all planes (standard instanced path)
         for ((_, objects) in objectsByPlane) {
             registerObjectModels(objects)
+        }
+
+        // Register displaced meshes for contourType 1 objects.
+        // Each instance gets a unique mesh with per-vertex terrain displacement,
+        // registered with a unique model ID. These use the instanced rendering path
+        // with 1 instance each (the displacement is baked into the geometry).
+        if (terrainData != null) {
+            for ((plane, objects) in objectsByPlane) {
+                registerDisplacedModels(objects, plane, terrainData, regionX, regionY)
+            }
         }
 
         // Calculate region bounds in world space
@@ -413,6 +440,7 @@ class MapScene(
         // Register objects with culling system (all planes)
         // Include full transform data (rotation, scale, offset, terrain alignment) for correct rendering
         // Use combined model ID for multi-model objects, including modifications
+        // For contourType 1 objects with displacement, use the displaced model ID
         for ((plane, objects) in objectsByPlane) {
             for (obj in objects) {
                 val objBounds = AABB(
@@ -420,8 +448,9 @@ class MapScene(
                     Vector3f(obj.worldPosition.x + 2f, obj.worldPosition.y + 2f, obj.worldPosition.z + 2f)
                 )
 
-                // Use combined model ID with modifications for objects with retexturing/recoloring
-                val combinedModelId = ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
+                // For contourType 1 objects with displacement, use the displaced model ID
+                // so the rendering path picks up the displaced geometry
+                val combinedModelId = getModelIdForInstance(obj)
                 cullingSystem.registerObject(SceneObject(
                     objectId = obj.mapObject.id,
                     modelId = combinedModelId,
@@ -488,6 +517,109 @@ class MapScene(
                 registeredModels.add(combinedId)
             }
         }
+    }
+
+    /**
+     * Register displaced meshes for contourType 1 objects.
+     *
+     * For each object with groundContourType 1, this:
+     * 1. Loads the base model MeshData
+     * 2. Applies per-vertex terrain displacement using VertexDisplacer
+     * 3. Registers the displaced mesh with a unique model ID in the instanceManager
+     * 4. Stores the mapping from object identity -> displaced model ID
+     *
+     * These displaced meshes are rendered via the standard instanced path with
+     * 1 instance each (the displacement is baked into the geometry, so the
+     * transform matrix only needs translation/rotation/scale, no tilt).
+     *
+     * @param objects List of ObjectInstance for a single plane
+     * @param plane The plane level (0-3)
+     * @param terrainData Terrain data containing tile heights
+     * @param regionX Region X coordinate
+     * @param regionY Region Y coordinate
+     */
+    private fun registerDisplacedModels(
+        objects: List<ObjectInstance>,
+        plane: Int,
+        terrainData: TerrainLoader.RegionData,
+        regionX: Int,
+        regionY: Int
+    ) {
+        val regionBaseX = regionX * 64
+        val regionBaseY = regionY * 64
+
+        for (obj in objects) {
+            if (!VertexDisplacer.needsDisplacement(obj.groundContourType, obj.groundContourModifier)) {
+                continue
+            }
+
+            // Load base model MeshData (with modifications if any)
+            val baseMeshDataList = if (obj.modifications.hasModifications()) {
+                ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
+            } else {
+                ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
+            }
+            if (baseMeshDataList == null || baseMeshDataList.isEmpty()) continue
+
+            // Apply per-vertex displacement to each mesh batch
+            val displacedMeshDataList = mutableListOf<MeshData>()
+            var anyDisplaced = false
+
+            for (meshData in baseMeshDataList) {
+                val displaced = VertexDisplacer.displaceVertices(
+                    meshData = meshData,
+                    sceneX = obj.rsSceneX,
+                    sceneY = obj.rsSceneY,
+                    averageHeight = obj.rsAverageHeight,
+                    plane = plane,
+                    tiles = terrainData.tiles,
+                    regionBaseX = regionBaseX,
+                    regionBaseY = regionBaseY,
+                    rsRotation = obj.mapObject.rotation,
+                    mirrored = obj.mirrored,
+                    resizeX = obj.definition.resizeX,
+                    resizeY = obj.definition.resizeY,
+                    resizeZ = obj.definition.resizeZ,
+                    rsOffsetX = obj.definition.offsetX,
+                    rsOffsetZ = obj.definition.offsetZ
+                )
+
+                if (displaced != null) {
+                    displacedMeshDataList.add(displaced)
+                    anyDisplaced = true
+                } else {
+                    // No displacement needed for this batch (flat terrain), use original
+                    displacedMeshDataList.add(meshData)
+                }
+            }
+
+            if (!anyDisplaced) {
+                // All batches had flat terrain, no displacement needed.
+                // Object will use the standard shared model via registerObjectModels.
+                continue
+            }
+
+            // Register displaced mesh with a unique model ID
+            val displacedId = nextDisplacedModelId++
+            instanceManager.registerModel(displacedId, displacedMeshDataList)
+            registeredModels.add(displacedId)
+
+            // Map this object instance to its displaced model ID
+            displacedModelIds[System.identityHashCode(obj)] = displacedId
+        }
+    }
+
+    /**
+     * Get the model ID to use for rendering an ObjectInstance.
+     *
+     * For contourType 1 objects that have displaced geometry, returns the
+     * displaced model ID. For all other objects, returns the standard
+     * combined model ID (with modifications).
+     */
+    private fun getModelIdForInstance(obj: ObjectInstance): Int {
+        val displacedId = displacedModelIds[System.identityHashCode(obj)]
+        if (displacedId != null) return displacedId
+        return ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
     }
 
     /**
@@ -570,6 +702,7 @@ class MapScene(
         cullingSystem.clear()
         instanceManager.cleanup()
         registeredModels.clear()
+        displacedModelIds.clear()
         TerrainLoader.clearCache()
         RegionLoader.clearCache()
     }
