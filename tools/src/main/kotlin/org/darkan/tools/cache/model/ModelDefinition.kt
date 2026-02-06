@@ -232,7 +232,10 @@ data class ModelDefinition(
                     combinedFaceColors[destIdx] = model.faceColors[f]
 
                     combinedFaceAlphas?.let { arr ->
-                        arr[destIdx] = model.faceAlphas?.get(f) ?: -1
+                        // Default to 0 (opaque) when a model has no faceAlphas array.
+                        // RS uses inverted alpha: 0 = opaque, 255 = fully transparent.
+                        // Using -1 (0xFF = 255) would incorrectly mark faces as invisible.
+                        arr[destIdx] = model.faceAlphas?.get(f) ?: 0
                     }
                     combinedFaceRenderTypes?.let { arr ->
                         arr[destIdx] = model.faceRenderTypes?.get(f) ?: 0

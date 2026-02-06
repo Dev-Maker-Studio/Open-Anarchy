@@ -1,5 +1,6 @@
 package org.darkan.tools.cache.model
 
+import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.engine.render.MeshData
 import org.darkan.tools.util.ColorUtil
@@ -63,14 +64,16 @@ data class ModelModifications(
     val retextureSrc: ShortArray? = null,
     val retextureDst: ShortArray? = null,
     val recolorSrc: ShortArray? = null,
-    val recolorDst: ShortArray? = null
+    val recolorDst: ShortArray? = null,
+    val ambient: Int = DEFAULT_AMBIENT
 ) {
     /**
-     * Check if any modifications are defined.
+     * Check if any modifications are defined (beyond the default ambient).
      */
     fun hasModifications(): Boolean {
         return (retextureSrc != null && retextureSrc.isNotEmpty()) ||
-               (recolorSrc != null && recolorSrc.isNotEmpty())
+               (recolorSrc != null && recolorSrc.isNotEmpty()) ||
+               ambient != DEFAULT_AMBIENT
     }
 
     /**
@@ -125,6 +128,9 @@ data class ModelModifications(
                 }
             }
         }
+        if (ambient != DEFAULT_AMBIENT) {
+            sb.append("_amb$ambient")
+        }
         return sb.toString()
     }
 
@@ -132,6 +138,7 @@ data class ModelModifications(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
         other as ModelModifications
+        if (ambient != other.ambient) return false
         if (retextureSrc != null) {
             if (other.retextureSrc == null) return false
             if (!retextureSrc.contentEquals(other.retextureSrc)) return false
@@ -156,10 +163,19 @@ data class ModelModifications(
         result = 31 * result + (retextureDst?.contentHashCode() ?: 0)
         result = 31 * result + (recolorSrc?.contentHashCode() ?: 0)
         result = 31 * result + (recolorDst?.contentHashCode() ?: 0)
+        result = 31 * result + ambient
         return result
     }
 
     companion object {
+        /**
+         * Default ambient factor matching the RS client base value.
+         * The RS client computes adjustedAmbient = 64 + objectDef.ambient,
+         * where objectDef.ambient defaults to 0. So the base is always 64.
+         * This factor scales the 7-bit lightness: lightness * 64 >> 7 = lightness / 2.
+         */
+        const val DEFAULT_AMBIENT = 64
+
         val NONE = ModelModifications()
     }
 }
@@ -900,8 +916,12 @@ object ModelLoader {
     /**
      * Create a textured model with faces batched by texture ID for efficient rendering.
      * Uses smooth shading with per-vertex normals calculated by accumulating face normals.
+     *
+     * @param def The model definition
+     * @param ambient Ambient lightness factor (default 64, matching RS client base).
+     *   The RS client computes this as 64 + objectDef.ambient.
      */
-    fun createTexturedModel(def: ModelDefinition): TexturedModel? {
+    fun createTexturedModel(def: ModelDefinition, ambient: Int = ModelModifications.DEFAULT_AMBIENT): TexturedModel? {
         if (def.faceCount == 0) return null
 
 
@@ -911,7 +931,13 @@ object ModelLoader {
         val vertexNormals = Array(def.vertexCount) { VertexNormal() }
 
         // First pass: accumulate face normals at each vertex
+        // Only render type 0 faces contribute to smooth vertex normals (matching RS client).
+        // Render type 1 = flat shading (uses face normal, not vertex normals).
+        // Render type 2 = hidden face (excluded entirely from rendering and normals).
         for (i in 0 until def.faceCount) {
+            val faceRenderType = def.faceRenderTypes?.get(i)?.toInt()?.and(0xff) ?: 0
+            if (faceRenderType != 0) continue  // Only type 0 accumulates vertex normals
+
             val aIdx = def.faceA[i]
             val bIdx = def.faceB[i]
             val cIdx = def.faceC[i]
@@ -1001,6 +1027,13 @@ object ModelLoader {
 
             if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) continue
 
+            // Skip faces with render type 2 (hidden faces).
+            // The RS client (ModelGL.kt) excludes these from rendering entirely.
+            // They are used for internal purposes (billboard anchors, etc.) and
+            // may contain arbitrary color values that should not be displayed.
+            val renderType = def.faceRenderTypes?.get(i)?.toInt()?.and(0xff) ?: 0
+            if (renderType == 2) continue
+
             // Check alpha - RS uses inverted alpha where:
             // - alpha = 0 means OPAQUE (fully visible)
             // - alpha = 255 means FULLY TRANSPARENT (invisible)
@@ -1015,6 +1048,15 @@ object ModelLoader {
             val textureId = if (textureIdSigned == -1) -1 else (textureIdSigned and 0xffff)
             if (textureId >= 0) hasAnyTextures = true
 
+            // Skip faces whose material has skipTriangles set (matches RS client ModelGL behavior)
+            if (textureId >= 0 && TextureLoader.shouldSkipMaterial(textureId)) continue
+
+            // Skip untextured faces on models that have a faceTextures array.
+            // These are dynamic content placeholders (e.g., signpost destination labels)
+            // that the game engine covers with sprites at runtime.
+            // Without the sprite overlay system, they display raw placeholder colors.
+            if (def.faceTextures != null && textureId == -1) continue
+
             // Get positions
             val pos0 = CoordinateUtil.rsToOpenGL(def.vertexX[aIdx], def.vertexY[aIdx], def.vertexZ[aIdx])
             val pos1 = CoordinateUtil.rsToOpenGL(def.vertexX[bIdx], def.vertexY[bIdx], def.vertexZ[bIdx])
@@ -1023,7 +1065,11 @@ object ModelLoader {
             // Get color - use HSL color for all faces
             // For textured faces, this will be modulated by the texture
             // For untextured faces, this is the final color
-            val hsl = def.faceColors[i].toInt() and 0xffff
+            val rawHsl = def.faceColors[i].toInt() and 0xffff
+            // Apply ambient lightness modulation matching the RS client's blendColorLightness().
+            // The RS client always applies this: hslToRgb(blendColorLightness(hsl, ambient)).
+            // This scales the 7-bit lightness component by ambient/128.
+            val hsl = if (rawHsl == 65535) rawHsl else ColorUtil.blendColorLightness(rawHsl, ambient)
             // HSL value 0 is valid (black), only 65535 (0xFFFF) is a sentinel for "no color"
             val color = if (hsl == 65535) {
                 Vector3f(1f, 1f, 1f) // White for textured faces without explicit color
@@ -1167,7 +1213,12 @@ object ModelLoader {
         val vertexNormals = Array(def.vertexCount) { VertexNormal() }
 
         // First pass: accumulate face normals at each vertex
+        // Only render type 0 faces contribute to smooth vertex normals (matching RS client).
+        // Render type 1 = flat shading, render type 2 = hidden face.
         for (i in 0 until def.faceCount) {
+            val faceRenderType = def.faceRenderTypes?.get(i)?.toInt()?.and(0xff) ?: 0
+            if (faceRenderType != 0) continue  // Only type 0 accumulates vertex normals
+
             val aIdx = def.faceA[i]
             val bIdx = def.faceB[i]
             val cIdx = def.faceC[i]
@@ -1248,6 +1299,13 @@ object ModelLoader {
 
             if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) continue
 
+            // Skip faces with render type 2 (hidden faces).
+            // The RS client (ModelGL.kt) excludes these from rendering entirely.
+            // They are used for internal purposes (billboard anchors, etc.) and
+            // may contain arbitrary color values that should not be displayed.
+            val renderType = def.faceRenderTypes?.get(i)?.toInt()?.and(0xff) ?: 0
+            if (renderType == 2) continue
+
             // Check alpha - RS uses inverted alpha where:
             // - alpha = 0 means OPAQUE (fully visible)
             // - alpha = 255 means FULLY TRANSPARENT (invisible)
@@ -1266,13 +1324,26 @@ object ModelLoader {
                 rawTextureId
             }
 
+            // Skip faces whose material has skipTriangles set (matches RS client ModelGL behavior)
+            if (textureId >= 0 && TextureLoader.shouldSkipMaterial(textureId)) continue
+
+            // Skip untextured faces on models that have a faceTextures array.
+            // These are dynamic content placeholders (e.g., signpost destination labels)
+            // that the game engine covers with sprites at runtime.
+            // Without the sprite overlay system, they display raw placeholder colors.
+            if (def.faceTextures != null && textureId == -1) continue
+
             val pos0 = CoordinateUtil.rsToOpenGL(def.vertexX[aIdx], def.vertexY[aIdx], def.vertexZ[aIdx])
             val pos1 = CoordinateUtil.rsToOpenGL(def.vertexX[bIdx], def.vertexY[bIdx], def.vertexZ[bIdx])
             val pos2 = CoordinateUtil.rsToOpenGL(def.vertexX[cIdx], def.vertexY[cIdx], def.vertexZ[cIdx])
 
             // Get raw HSL color and apply recoloring if modifications provided
             val rawHsl = def.faceColors[i].toInt() and 0xffff
-            val hsl = modifications.applyRecolor(rawHsl)
+            val recoloredHsl = modifications.applyRecolor(rawHsl)
+            // Apply ambient lightness modulation matching the RS client's blendColorLightness().
+            // The RS client always applies this: hslToRgb(blendColorLightness(hsl, ambient)).
+            // This scales the 7-bit lightness component by ambient/128.
+            val hsl = if (recoloredHsl == 65535) recoloredHsl else ColorUtil.blendColorLightness(recoloredHsl, modifications.ambient)
             // HSL value 0 is valid (black), only 65535 (0xFFFF) is a sentinel for "no color"
             val color = if (hsl == 65535) {
                 Vector3f(1f, 1f, 1f) // White for textured faces without explicit color
