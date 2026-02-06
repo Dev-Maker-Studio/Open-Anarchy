@@ -16,10 +16,12 @@ import kotlin.math.min
  * - Type 4: Next level (uses height from the level above)
  * - Type 5: Stretch (stretches model between current and next level)
  *
- * Since we use GPU instancing (shared geometry), we cannot implement true per-vertex
- * displacement (types 1 and 2). Instead, we approximate ALL alignment types (1, 2, 3)
- * using the hillChange rotation algorithm. This gives a reasonable visual result for
- * objects on sloped terrain.
+ * Type 3 (hillChange) uses whole-model rotation, which we implement exactly here.
+ *
+ * Types 1 and 2 require per-vertex displacement and are handled separately by
+ * VertexDisplacer. This class returns NONE for those types so that the object
+ * remains upright when rendered via the instanced path. The per-vertex displacement
+ * is applied as a mesh modification before rendering, not as a matrix transform.
  *
  * The hillChange algorithm (type 3 in RS) works by:
  * 1. Sampling heights at 4 corners around the object center
@@ -335,15 +337,13 @@ object TerrainAligner {
     /**
      * Calculate terrain alignment for an object using rotation-based slope matching.
      *
-     * This function handles groundContourTypes 1, 2, and 3:
-     * - Type 1 (Full Displacement): RS adjusts each vertex Y to terrain height.
-     *   We approximate this with whole-model rotation to match slope.
-     * - Type 2 (Partial Displacement): RS adjusts lower vertices only.
-     *   We approximate this same as type 1.
-     * - Type 3 (Hill Change): RS rotates whole model to match slope.
-     *   We implement this exactly, using groundContourModifier for sampling area.
+     * This function ONLY applies rotation for groundContourType 3 (hillChange).
+     * Types 1 and 2 require per-vertex displacement handled by VertexDisplacer,
+     * so this function returns NONE for those types. The object will remain upright
+     * at the correct average terrain height, and per-vertex displacement is applied
+     * separately as a mesh modification.
      *
-     * Types 0, 4, and 5 return NONE (no rotation alignment).
+     * Types 0, 4, and 5 also return NONE (no rotation alignment).
      *
      * IMPORTANT: Objects with groundContourModifier >= 16384 are EXEMPT from contouring,
      * even if they have a non-zero groundContourType. This is used by the RS client
@@ -374,17 +374,21 @@ object TerrainAligner {
 
         // Ground contour types:
         // 0 = No alignment (but still positioned at terrain height)
-        // 1 = Full vertex displacement (each vertex follows terrain) - approximated with rotation
-        // 2 = Partial vertex displacement (lower vertices follow terrain) - approximated with rotation
-        // 3 = Hill change (whole model rotates to match slope) - exact implementation
+        // 1 = Full vertex displacement (each vertex follows terrain) - handled by VertexDisplacer
+        // 2 = Partial vertex displacement (lower vertices follow terrain) - handled by VertexDisplacer
+        // 3 = Hill change (whole model rotates to match slope) - exact implementation here
         // 4 = Next level (uses height from level above) - not supported in viewer
         // 5 = Stretch (stretches between levels) - not supported in viewer
         //
-        // Since we use GPU instancing, we cannot do true per-vertex terrain displacement
-        // (types 1 and 2). Instead, we approximate both by using the same rotation-based
-        // alignment as type 3. This gives a reasonable visual result for objects on slopes.
+        // Only type 3 uses whole-model rotation. Types 1 and 2 use per-vertex
+        // displacement which is applied separately as mesh modifications (see
+        // VertexDisplacer). Applying rotation to type 1/2 objects produces incorrect
+        // results (e.g., tall trees visibly tilting, bridge walls not connecting).
 
-        if (groundContourType == 0 || groundContourType == 4 || groundContourType == 5) {
+        if (groundContourType != 3) {
+            // Only type 3 uses rotation-based alignment.
+            // Types 1 and 2 are handled by VertexDisplacer.
+            // Types 0, 4, 5 need no alignment at all.
             return AlignmentResult.NONE
         }
 
@@ -397,20 +401,15 @@ object TerrainAligner {
         }
 
         alignedTypeCount++
-        when (groundContourType) {
-            1 -> type1Count++
-            2 -> type2Count++
-            3 -> type3Count++
-        }
+        type3Count++
 
-        // Unpack modifier - only used for type 3
-        // Types 1 and 2 always use object tile size for sampling
+        // Unpack modifier for type 3
         val width: Float
         val length: Float
         val maxTiltX: Int
         val maxTiltZ: Int
 
-        if (groundContourType == 3 && groundContourModifier > 0) {
+        if (groundContourModifier > 0) {
             // Type 3 with explicit modifier: unpack width/length and max angles
             // Standard format: width/length in units of 4, angles shifted by 6
             width = ((groundContourModifier and 0xFF) * 4).toFloat()
@@ -418,7 +417,7 @@ object TerrainAligner {
             maxTiltX = ((groundContourModifier shr 16) and 0xFF) shl 6
             maxTiltZ = ((groundContourModifier shr 24) and 0xFF) shl 6
         } else {
-            // Types 1, 2, or type 3 without modifier: use object tile size
+            // Type 3 without modifier: use object tile size
             // RS uses 512 units per tile
             width = (sizeX * 512).toFloat()
             length = (sizeY * 512).toFloat()
