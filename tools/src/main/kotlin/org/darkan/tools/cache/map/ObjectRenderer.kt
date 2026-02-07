@@ -64,6 +64,23 @@ object ObjectRenderer {
     private val loadedModels = mutableSetOf<Int>()
 
     /**
+     * Reference to the game cache, stored during [loadDefinitions].
+     * Used internally for model definition lookups (e.g., alpha transition checks).
+     */
+    private lateinit var gameCache: Cache
+
+    /**
+     * Whether ground decorations are rendered.
+     *
+     * When true (default), ALL ground decorations render -- matching the RS client's
+     * default groundDecoration preference (value 1 = ON).
+     *
+     * When false, only interactive, movement-blocking, or forceDisplayDecoration
+     * ground decorations render (matching the client's preference value 0 = OFF).
+     */
+    var groundDecorationEnabled: Boolean = true
+
+    /**
      * Vars instance for object transform resolution.
      *
      * Uses the core engine's Vars class for var/varbit access. Initialized
@@ -98,6 +115,7 @@ object ObjectRenderer {
      * Uses the pre-loaded Cache.objects for efficiency.
      */
     fun loadDefinitions(cache: Cache) {
+        gameCache = cache
         // Cache.objects is lazy-loaded, just trigger initialization
         Cache.objects
     }
@@ -183,17 +201,17 @@ object ObjectRenderer {
         val modelIds = def.modelIds ?: return emptyList()
         val shapes = def.shapes
 
-        if (shapes == null) {
-            // No shapes array - all models apply to all shapes
-            // Return first group's models
-            return modelIds.firstOrNull()?.toList() ?: emptyList()
-        }
+        // Matching client's getStationaryModel(): if shapes is null, no shape-specific
+        // models exist, so no model can be resolved for any shape.
+        // (In practice, shapes and modelIds are always decoded together from opcode 1/5,
+        // so shapes==null implies modelIds==null, but be safe.)
+        if (shapes == null) return emptyList()
 
         // Find model group matching this shape
         val targetShape = try {
             ObjectShape.forId(shape)
         } catch (e: IllegalArgumentException) {
-            return modelIds.firstOrNull()?.toList() ?: emptyList()
+            return emptyList()
         }
 
         for (i in shapes.indices) {
@@ -202,7 +220,8 @@ object ObjectRenderer {
             }
         }
 
-        // Fallback: try to find scenery type for shapes 10-11
+        // Fallback: shapes 10 and 11 are interchangeable in the client
+        // (both handled as interactive objects in SceneGraph.addObject)
         if (shape == 10 || shape == 11) {
             for (i in shapes.indices) {
                 if ((shapes[i] == ObjectShape.SCENERY_INTERACT || shapes[i] == ObjectShape.GROUND_INTERACT)
@@ -212,8 +231,8 @@ object ObjectRenderer {
             }
         }
 
-        // Last resort: return first available models
-        return modelIds.firstOrNull()?.toList() ?: emptyList()
+        // No matching shape found - client's getStationaryModel() returns null here
+        return emptyList()
     }
 
     /**
@@ -305,6 +324,82 @@ object ObjectRenderer {
     }
 
     /**
+     * Determine whether a ground decoration object should be rendered when
+     * [groundDecorationEnabled] is false.
+     *
+     * Matches the RS727 client's SceneGraph.addObject() filtering for shape 22
+     * (GROUND_DECORATION). When the ground decoration preference is OFF (value 0),
+     * the client only renders ground decorations that are interactive, block
+     * movement, or have forceDisplayDecoration set.
+     *
+     * This method is only called when [groundDecorationEnabled] is false (the user
+     * has toggled ground decorations off). When the preference is ON (default),
+     * all ground decorations render unconditionally, matching the RS client's
+     * default groundDecoration preference (value 1).
+     *
+     * The hasActions computation mirrors the client's ObjectType.postDecode():
+     * if interactive == -1 (not set by cache decode), it is computed from whether
+     * the object has a single SCENERY_INTERACT shape or has any non-null options.
+     *
+     * @param def The resolved object definition
+     * @return true if the ground decoration should be rendered, false to skip it
+     */
+    fun shouldRenderGroundDecoration(def: ObjectDefinition): Boolean {
+        // Compute hasActions matching client ObjectType.postDecode()
+        var hasActions = def.interactive
+        if (hasActions == -1) {
+            hasActions = 0
+            // Check if the object has exactly one shape and it's SCENERY_INTERACT (10)
+            val shapes = def.shapes
+            if (shapes != null && shapes.size == 1 && shapes[0] == ObjectShape.SCENERY_INTERACT) {
+                hasActions = 1
+            }
+            // Check if the object has any non-null options (indices 0..4)
+            if (hasActions == 0) {
+                val options = def.options
+                if (options != null) {
+                    for (i in 0..minOf(4, options.size - 1)) {
+                        if (options[i] != null) {
+                            hasActions = 1
+                            break
+                        }
+                    }
+                }
+            }
+        }
+
+        // Client filter: render if hasActions != 0 OR blocksMovement == 1 OR forceDisplayDecoration
+        return hasActions != 0 || def.solid == 1 || def.forceDisplayDecoration
+    }
+
+    /**
+     * Check whether a ground decoration's models have alpha transition, which
+     * determines if the decoration would be visible in the RS client.
+     *
+     * In the RS client's Scene.drawTiles() rendering pipeline:
+     * 1. Non-alpha objects are drawn BEFORE terrain (front-to-back depth sort)
+     * 2. Terrain is drawn second, overwriting non-alpha objects at the same depth
+     * 3. Alpha objects are drawn AFTER terrain (back-to-front depth sort)
+     *
+     * In the RS client, entirely untextured ground decoration models (like model 1105
+     * for object 16438) sit at terrain level and are hidden by the terrain mesh due
+     * to GL_LEQUAL depth testing. These are engine markers/placeholders, not meant
+     * to be visually rendered. Ground decorations with textured faces (farming patches,
+     * floor markings, etc.) render correctly above terrain.
+     *
+     * @param cache The game cache (for loading model definitions)
+     * @param modelIds The model IDs for the ground decoration object
+     * @return true if ANY model has textured faces (decoration is visible),
+     *         false if all models are entirely untextured (hidden marker)
+     */
+    fun isGroundDecorationVisible(cache: Cache, modelIds: List<Int>): Boolean {
+        for (modelId in modelIds) {
+            if (ModelLoader.modelHasTextures(cache, modelId)) return true
+        }
+        return false
+    }
+
+    /**
      * Create renderable instances from a list of MapObjects for ALL planes.
      *
      * The client places objects using the average height of 4 corner tiles
@@ -339,6 +434,11 @@ object ObjectRenderer {
             val def = getDefinition(obj.id) ?: continue
             val modelIds = getModelIds(def, obj.shape)
             if (modelIds.isEmpty()) continue
+
+            // Filter non-interactive ground decorations when preference is off
+            if (obj.shape == ObjectShape.GROUND_DECORATION.id && !groundDecorationEnabled && !shouldRenderGroundDecoration(def)) continue
+            // Skip untextured ground decoration markers (hidden under terrain in client due to GL_LEQUAL)
+            if (obj.shape == ObjectShape.GROUND_DECORATION.id && !isGroundDecorationVisible(gameCache, modelIds)) continue
 
             // Convert to local tile coordinates
             val localTileX = obj.x - baseWorldX
@@ -606,6 +706,11 @@ object ObjectRenderer {
             val def = getDefinition(obj.id) ?: continue
             val modelIds = getModelIds(def, obj.shape)
             if (modelIds.isEmpty()) continue
+
+            // Filter non-interactive ground decorations when preference is off
+            if (obj.shape == ObjectShape.GROUND_DECORATION.id && !groundDecorationEnabled && !shouldRenderGroundDecoration(def)) continue
+            // Skip untextured ground decoration markers (hidden under terrain in client due to GL_LEQUAL)
+            if (obj.shape == ObjectShape.GROUND_DECORATION.id && !isGroundDecorationVisible(gameCache, modelIds)) continue
 
             // Convert to local tile coordinates
             val localTileX = obj.x - baseWorldX
@@ -958,7 +1063,15 @@ object ObjectRenderer {
 
         for (obj in objects) {
             val def = getDefinition(obj.id) ?: continue
-            modelIds.addAll(getModelIds(def, obj.shape))
+            val objModelIds = getModelIds(def, obj.shape)
+            if (objModelIds.isEmpty()) continue
+
+            // Filter non-interactive ground decorations when preference is off
+            if (obj.shape == ObjectShape.GROUND_DECORATION.id && !groundDecorationEnabled && !shouldRenderGroundDecoration(def)) continue
+            // Skip untextured ground decoration markers (hidden under terrain in client due to GL_LEQUAL)
+            if (obj.shape == ObjectShape.GROUND_DECORATION.id && !isGroundDecorationVisible(gameCache, objModelIds)) continue
+
+            modelIds.addAll(objModelIds)
         }
 
         return modelIds

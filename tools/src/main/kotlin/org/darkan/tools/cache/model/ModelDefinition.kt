@@ -1,6 +1,25 @@
 package org.darkan.tools.cache.model
 
 /**
+ * Billboard attachment data decoded from model binary footer.
+ *
+ * Each billboard defines a 2D textured quad attached to a face in the model.
+ * The BillboardType config (loaded from cache index 29) determines whether the
+ * anchor face is hidden (hasUid=true) and what material to render in its place.
+ *
+ * @param billboardId BillboardType config ID (index 29, archive 0)
+ * @param appliesOnFace Face index this billboard is attached to
+ * @param depth Depth byte (used for animation grouping)
+ * @param distance Distance offset from the anchor face centroid (signed)
+ */
+data class BillboardData(
+    val billboardId: Int,
+    val appliesOnFace: Int,
+    val depth: Int,
+    val distance: Int
+)
+
+/**
  * Decoded model data from the RS cache.
  *
  * Note: RS models with version < 13 need their vertices upscaled by 4 to match
@@ -56,7 +75,9 @@ data class ModelDefinition(
     /** Cube mapping U translation - indexed by cube texture index (type 2 only) */
     val texturesUtrans: IntArray?,
     /** Cube mapping V translation - indexed by cube texture index (type 2 only) */
-    val texturesVtrans: IntArray?
+    val texturesVtrans: IntArray?,
+    /** Billboard attachments decoded from model footer (null if no billboards) */
+    val billboards: Array<BillboardData>? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -102,7 +123,8 @@ data class ModelDefinition(
             texturesDirection = null,
             texturesSpeed = null,
             texturesUtrans = null,
-            texturesVtrans = null
+            texturesVtrans = null,
+            billboards = null
         )
 
         /**
@@ -138,12 +160,14 @@ data class ModelDefinition(
             var hasTexturesMapping = false
             var hasComplexTextureData = false
             var hasCubeTextureData = false
+            var totalBillboards = 0
             var maxVersion = 0
 
             for (model in models) {
                 totalVertices += model.vertexCount
                 totalFaces += model.faceCount
                 totalTextures += model.textureTriangleCount
+                if (model.billboards != null) totalBillboards += model.billboards.size
                 hasAlpha = hasAlpha || model.faceAlphas != null
                 hasRenderTypes = hasRenderTypes || model.faceRenderTypes != null
                 hasPriorities = hasPriorities || model.facePriorities != null
@@ -210,17 +234,38 @@ data class ModelDefinition(
                 }
             }
 
+            // Allocate combined billboard array
+            val combinedBillboards = if (totalBillboards > 0) {
+                Array(totalBillboards) { BillboardData(0, 0, 0, 0) }
+            } else null
+
             // Second pass: combine data
             var faceOffset = 0
             var textureOffset = 0
             var complexTextureOffset = 0  // Offset into combined complex texture arrays
             var cubeTextureOffset = 0     // Offset into combined cube texture arrays
+            var billboardOffset = 0
 
             for (model in models) {
                 // Build vertex index mapping for this model (old index -> welded index)
                 val vertexMap = IntArray(model.vertexCount)
                 for (v in 0 until model.vertexCount) {
                     vertexMap[v] = weldVertex(model.vertexX[v], model.vertexY[v], model.vertexZ[v])
+                }
+
+                // Copy billboards with adjusted face indices (must be done before faces
+                // are counted, matching the RS client's Mesh combine constructor)
+                if (model.billboards != null) {
+                    for (b in model.billboards.indices) {
+                        val bb = model.billboards[b]
+                        combinedBillboards!![billboardOffset + b] = BillboardData(
+                            billboardId = bb.billboardId,
+                            appliesOnFace = bb.appliesOnFace + faceOffset,
+                            depth = bb.depth,
+                            distance = bb.distance
+                        )
+                    }
+                    billboardOffset += model.billboards.size
                 }
 
                 // Copy faces with remapped vertex indices
@@ -374,7 +419,8 @@ data class ModelDefinition(
                 texturesDirection = combinedTexturesDirection,
                 texturesSpeed = combinedTexturesSpeed,
                 texturesUtrans = combinedTexturesUtrans,
-                texturesVtrans = combinedTexturesVtrans
+                texturesVtrans = combinedTexturesVtrans,
+                billboards = combinedBillboards
             )
         }
     }

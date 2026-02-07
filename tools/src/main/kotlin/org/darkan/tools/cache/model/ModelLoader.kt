@@ -185,13 +185,26 @@ data class ModelModifications(
  */
 object ModelLoader {
     private val definitionCache = mutableMapOf<Int, ModelDefinition?>()
+
+    /**
+     * When true, untextured faces on models that also have textured faces are hidden.
+     * This filters out "marker faces" - solid-color backing panels for text labels,
+     * ground marker squares, and other untextured placeholder geometry that has no
+     * visual value without a text/overlay rendering system.
+     *
+     * Models that are entirely untextured (no textured faces at all) render normally.
+     * Only "mixed" models (both textured and untextured faces) are affected.
+     *
+     * Examples: signpost label backing panels (model 68750), ground markers (model 1105).
+     */
+    var hideUntexturedMarkerFaces: Boolean = true
     /**
      * Load a textured model. Creates new mesh objects each time since meshes
      * contain OpenGL resources that may be cleaned up by the caller.
      */
     fun loadTexturedModel(cache: Cache, modelId: Int): TexturedModel? {
         val def = loadDefinition(cache, modelId) ?: return null
-        return createTexturedModel(def)
+        return createTexturedModel(def, cache = cache)
     }
 
     fun loadMesh(cache: Cache, modelId: Int): Mesh? {
@@ -202,6 +215,30 @@ object ModelLoader {
         return definitionCache.getOrPut(modelId) {
             ModelDecoder.decode(cache, modelId)
         }
+    }
+
+    /**
+     * Check whether a model has any textured faces.
+     *
+     * In the RS client, ground decorations (shape 22) that are entirely untextured
+     * sit at terrain level and are hidden by the terrain mesh due to GL_LEQUAL depth
+     * testing and render order (non-alpha objects draw before terrain in drawTiles()).
+     * These are engine markers/placeholders (e.g., model 1105 for object 16438).
+     *
+     * Ground decorations with textured faces (farming patches, floor markings, etc.)
+     * are visually distinct and render correctly.
+     *
+     * @param cache The game cache
+     * @param modelId The model ID to check
+     * @return true if the model has at least one textured face
+     */
+    fun modelHasTextures(cache: Cache, modelId: Int): Boolean {
+        val def = loadDefinition(cache, modelId) ?: return false
+        val textures = def.faceTextures ?: return false
+        for (i in textures.indices) {
+            if (textures[i].toInt() != -1) return true
+        }
+        return false
     }
 
     /**
@@ -921,7 +958,7 @@ object ModelLoader {
      * @param ambient Ambient lightness factor (default 64, matching RS client base).
      *   The RS client computes this as 64 + objectDef.ambient.
      */
-    fun createTexturedModel(def: ModelDefinition, ambient: Int = ModelModifications.DEFAULT_AMBIENT): TexturedModel? {
+    fun createTexturedModel(def: ModelDefinition, ambient: Int = ModelModifications.DEFAULT_AMBIENT, cache: Cache? = null): TexturedModel? {
         if (def.faceCount == 0) return null
 
 
@@ -1016,11 +1053,38 @@ object ModelLoader {
             return Vector3f(nx, -ny, -nz)
         }
 
+        // Build set of face indices hidden by billboard hasUid.
+        // In the RS client (ModelGL.kt lines 354-378), if ANY billboard attached to a face
+        // has hasUid=true, that face is removed from rendering and replaced by the billboard quad.
+        val billboardHiddenFaces = mutableSetOf<Int>()
+        if (cache != null && def.billboards != null) {
+            for (bb in def.billboards) {
+                if (bb.appliesOnFace < 0 || bb.appliesOnFace >= def.faceCount) continue
+                val type = BillboardTypeLoader.get(cache, bb.billboardId)
+                if (type.hasUid) {
+                    billboardHiddenFaces.add(bb.appliesOnFace)
+                }
+            }
+        }
+
+        // Pre-scan: check if the model has any textured faces (for marker face filtering).
+        // A "mixed" model has both textured and untextured faces. When hideUntexturedMarkerFaces
+        // is enabled, untextured faces on mixed models are skipped (they are likely backing panels
+        // or marker geometry that serves no visual purpose without text overlays).
+        val modelHasTexturedFaces = if (hideUntexturedMarkerFaces) {
+            def.faceTextures?.any { it.toInt() != -1 } == true
+        } else {
+            false
+        }
+
         // Group faces by texture ID (-1 for untextured)
         val facesByTexture = mutableMapOf<Int, MutableList<FaceData>>()
         var hasAnyTextures = false
 
         for (i in 0 until def.faceCount) {
+            // Skip faces hidden by billboard system (hasUid billboards replace the anchor face)
+            if (i in billboardHiddenFaces) continue
+
             val aIdx = def.faceA[i]
             val bIdx = def.faceB[i]
             val cIdx = def.faceC[i]
@@ -1048,14 +1112,12 @@ object ModelLoader {
             val textureId = if (textureIdSigned == -1) -1 else (textureIdSigned and 0xffff)
             if (textureId >= 0) hasAnyTextures = true
 
+            // Hide untextured marker faces on mixed models (models with both textured and
+            // untextured faces). These are typically label backing panels or ground markers.
+            if (modelHasTexturedFaces && textureId == -1) continue
+
             // Skip faces whose material has skipTriangles set (matches RS client ModelGL behavior)
             if (textureId >= 0 && TextureLoader.shouldSkipMaterial(textureId)) continue
-
-            // Skip untextured faces on models that have a faceTextures array.
-            // These are dynamic content placeholders (e.g., signpost destination labels)
-            // that the game engine covers with sprites at runtime.
-            // Without the sprite overlay system, they display raw placeholder colors.
-            if (def.faceTextures != null && textureId == -1) continue
 
             // Get positions
             val pos0 = CoordinateUtil.rsToOpenGL(def.vertexX[aIdx], def.vertexY[aIdx], def.vertexZ[aIdx])
@@ -1095,6 +1157,15 @@ object ModelLoader {
             )
         }
 
+        // Generate billboard quads for billboards that have a material to render.
+        // Each billboard generates a quad (2 triangles) at the anchor face centroid,
+        // textured with the billboard's materialId and colored with the anchor face HSL.
+        // Matches the RS client's ModelGL.kt billboard effect creation (lines 431-472).
+        if (cache != null && def.billboards != null) {
+            generateBillboardQuads(def, cache, ambient, facesByTexture, ::getVertexNormal, ::isValidIndex)
+            hasAnyTextures = hasAnyTextures || facesByTexture.keys.any { it >= 0 }
+        }
+
         if (facesByTexture.isEmpty()) return null
 
         // Build mesh for untextured faces
@@ -1110,6 +1181,192 @@ object ModelLoader {
             }
 
         return TexturedModel(colorBatch, textureBatches, hasAnyTextures)
+    }
+
+    /**
+     * Generate textured billboard quads and add them to the facesByTexture map.
+     *
+     * For each billboard attachment on the model:
+     * 1. Look up the BillboardType config from cache
+     * 2. Skip billboards with no material (materialId == -1) or stationary effects
+     * 3. Compute the anchor face centroid in RS coordinates
+     * 4. Generate a quad oriented along the anchor face normal, sized by size2d x size3d
+     * 5. Add 2 FaceData triangles textured with the billboard's materialId
+     *
+     * This matches the RS client's ModelGL.kt billboard effect creation (lines 431-472),
+     * adapted for static mesh generation. The client creates BillboardEffectGL objects
+     * that are rendered as camera-facing quads at runtime; here we approximate with
+     * face-normal-oriented quads since we generate static geometry.
+     *
+     * @param def The model definition
+     * @param cache The game cache for loading billboard type configs
+     * @param ambient Ambient lightness factor
+     * @param facesByTexture The face batch map to add billboard faces to
+     * @param getVertexNormal Function to get a vertex normal in OpenGL space
+     * @param isValidIndex Function to validate vertex indices
+     */
+    private fun generateBillboardQuads(
+        def: ModelDefinition,
+        cache: Cache,
+        ambient: Int,
+        facesByTexture: MutableMap<Int, MutableList<FaceData>>,
+        getVertexNormal: (Int) -> Vector3f,
+        isValidIndex: (Int) -> Boolean
+    ) {
+        val billboards = def.billboards ?: return
+        val scale = CoordinateUtil.DEFAULT_SCALE
+
+        for (bb in billboards) {
+            val type = BillboardTypeLoader.get(cache, bb.billboardId)
+
+            // Skip billboards with no material to render
+            if (type.materialId == -1) continue
+
+            // Skip stationary billboards (bloom-only effect, no visible quad)
+            if (type.stationary) continue
+
+            // Validate anchor face index
+            val faceIdx = bb.appliesOnFace
+            if (faceIdx < 0 || faceIdx >= def.faceCount) continue
+
+            val aIdx = def.faceA[faceIdx]
+            val bIdx = def.faceB[faceIdx]
+            val cIdx = def.faceC[faceIdx]
+            if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) continue
+
+            // Compute face centroid in RS coordinates (matching client BillboardEffectGL
+            // which stores faceA/faceB/faceC vertex indices for centroid calculation)
+            val cx = (def.vertexX[aIdx] + def.vertexX[bIdx] + def.vertexX[cIdx]) / 3.0f
+            val cy = (def.vertexY[aIdx] + def.vertexY[bIdx] + def.vertexY[cIdx]) / 3.0f
+            val cz = (def.vertexZ[aIdx] + def.vertexZ[bIdx] + def.vertexZ[cIdx]) / 3.0f
+
+            // Convert centroid to OpenGL space
+            val center = CoordinateUtil.rsToOpenGL(cx, cy, cz)
+
+            // Compute face normal in OpenGL space for quad orientation
+            val edge1x = (def.vertexX[bIdx] - def.vertexX[aIdx]).toFloat()
+            val edge1y = (def.vertexY[bIdx] - def.vertexY[aIdx]).toFloat()
+            val edge1z = (def.vertexZ[bIdx] - def.vertexZ[aIdx]).toFloat()
+            val edge2x = (def.vertexX[cIdx] - def.vertexX[aIdx]).toFloat()
+            val edge2y = (def.vertexY[cIdx] - def.vertexY[aIdx]).toFloat()
+            val edge2z = (def.vertexZ[cIdx] - def.vertexZ[aIdx]).toFloat()
+
+            // Cross product in RS space
+            var nx = edge1y * edge2z - edge1z * edge2y
+            var ny = edge1z * edge2x - edge1x * edge2z
+            var nz = edge1x * edge2y - edge1y * edge2x
+
+            var len = sqrt(nx * nx + ny * ny + nz * nz)
+            if (len < 0.001f) {
+                // Degenerate face, use default up normal in RS space
+                nx = 0f; ny = -1f; nz = 0f; len = 1f
+            }
+            val invLen = 1f / len
+            nx *= invLen; ny *= invLen; nz *= invLen
+
+            // Convert normal to OpenGL space: flip Y and Z
+            val normalGL = Vector3f(nx, -ny, -nz)
+
+            // Build tangent frame from the face normal.
+            // Choose an arbitrary "up" vector that isn't parallel to the normal.
+            val up = if (kotlin.math.abs(normalGL.y) < 0.99f) {
+                Vector3f(0f, 1f, 0f)
+            } else {
+                Vector3f(1f, 0f, 0f)
+            }
+            // tangent = normalize(up x normal)
+            val tangent = Vector3f()
+            up.cross(normalGL, tangent)
+            tangent.normalize()
+            // bitangent = normal x tangent
+            val bitangent = Vector3f()
+            normalGL.cross(tangent, bitangent)
+            bitangent.normalize()
+
+            // Billboard size in OpenGL units (RS model units * scale)
+            // size2d = horizontal width, size3d = vertical height
+            val halfW = (type.size2d / 2.0f) * scale
+            val halfH = (type.size3d / 2.0f) * scale
+
+            // Generate quad corners: center +/- tangent*halfW +/- bitangent*halfH
+            // Apply billboard distance offset along the face normal
+            val distOffset = bb.distance.toFloat() * scale
+            val offsetCenter = Vector3f(
+                center.x + normalGL.x * distOffset,
+                center.y + normalGL.y * distOffset,
+                center.z + normalGL.z * distOffset
+            )
+
+            val v0 = Vector3f(
+                offsetCenter.x - tangent.x * halfW - bitangent.x * halfH,
+                offsetCenter.y - tangent.y * halfW - bitangent.y * halfH,
+                offsetCenter.z - tangent.z * halfW - bitangent.z * halfH
+            )
+            val v1 = Vector3f(
+                offsetCenter.x + tangent.x * halfW - bitangent.x * halfH,
+                offsetCenter.y + tangent.y * halfW - bitangent.y * halfH,
+                offsetCenter.z + tangent.z * halfW - bitangent.z * halfH
+            )
+            val v2 = Vector3f(
+                offsetCenter.x + tangent.x * halfW + bitangent.x * halfH,
+                offsetCenter.y + tangent.y * halfW + bitangent.y * halfH,
+                offsetCenter.z + tangent.z * halfW + bitangent.z * halfH
+            )
+            val v3 = Vector3f(
+                offsetCenter.x - tangent.x * halfW + bitangent.x * halfH,
+                offsetCenter.y - tangent.y * halfW + bitangent.y * halfH,
+                offsetCenter.z - tangent.z * halfW + bitangent.z * halfH
+            )
+
+            // Get color from anchor face HSL (matching client ModelGL.kt line 455:
+            // ColorUtil.hslToRgb[mesh.facesColor[billboard.appliesOnFace] & 0xffff])
+            val rawHsl = def.faceColors[faceIdx].toInt() and 0xffff
+            val hsl = if (rawHsl == 65535) rawHsl else ColorUtil.blendColorLightness(rawHsl, ambient)
+            val color = if (hsl == 65535) {
+                Vector3f(1f, 1f, 1f)
+            } else {
+                ColorUtil.hslToRgb(hsl)
+            }
+
+            // UV coordinates for the quad (full texture coverage)
+            // V is flipped for OpenGL (1-V)
+            val materialId = type.materialId
+
+            // Add two triangles forming the quad (v0-v1-v2 and v0-v2-v3)
+            // Front face: CCW winding when viewed from the normal direction
+            val faces = facesByTexture.getOrPut(materialId) { mutableListOf() }
+            faces.add(
+                FaceData(
+                    v0, v1, v2, color,
+                    normalGL, normalGL, normalGL,
+                    0f, 1f,  1f, 1f,  1f, 0f
+                )
+            )
+            faces.add(
+                FaceData(
+                    v0, v2, v3, color,
+                    normalGL, normalGL, normalGL,
+                    0f, 1f,  1f, 0f,  0f, 0f
+                )
+            )
+
+            // Back face: reversed winding for two-sided visibility
+            val backNormal = Vector3f(-normalGL.x, -normalGL.y, -normalGL.z)
+            faces.add(
+                FaceData(
+                    v2, v1, v0, color,
+                    backNormal, backNormal, backNormal,
+                    1f, 0f,  1f, 1f,  0f, 1f
+                )
+            )
+            faces.add(
+                FaceData(
+                    v3, v2, v0, color,
+                    backNormal, backNormal, backNormal,
+                    0f, 0f,  1f, 0f,  0f, 1f
+                )
+            )
+        }
     }
 
     private fun buildMesh(faces: List<FaceData>): Mesh {
@@ -1166,7 +1423,7 @@ object ModelLoader {
      */
     fun createMeshDataList(cache: Cache, modelId: Int, debug: Boolean = false): List<MeshData>? {
         val def = loadDefinition(cache, modelId) ?: return null
-        return createMeshDataListFromDef(def, ModelModifications.NONE, if (debug) modelId else -1)
+        return createMeshDataListFromDef(def, ModelModifications.NONE, if (debug) modelId else -1, cache)
     }
 
     /**
@@ -1185,7 +1442,7 @@ object ModelLoader {
         debug: Boolean = false
     ): List<MeshData>? {
         val def = loadDefinition(cache, modelId) ?: return null
-        return createMeshDataListFromDef(def, modifications, if (debug) modelId else -1)
+        return createMeshDataListFromDef(def, modifications, if (debug) modelId else -1, cache)
     }
 
     /**
@@ -1193,7 +1450,7 @@ object ModelLoader {
      * Overload without modifications for backwards compatibility.
      */
     fun createMeshDataListFromDef(def: ModelDefinition, debugModelId: Int = -1): List<MeshData>? {
-        return createMeshDataListFromDef(def, ModelModifications.NONE, debugModelId)
+        return createMeshDataListFromDef(def, ModelModifications.NONE, debugModelId, null)
     }
 
     /**
@@ -1204,7 +1461,7 @@ object ModelLoader {
      * @param debugModelId Unused, kept for API compatibility
      */
     @Suppress("UNUSED_PARAMETER")
-    fun createMeshDataListFromDef(def: ModelDefinition, modifications: ModelModifications, debugModelId: Int = -1): List<MeshData>? {
+    fun createMeshDataListFromDef(def: ModelDefinition, modifications: ModelModifications, debugModelId: Int = -1, cache: Cache? = null): List<MeshData>? {
         if (def.faceCount == 0) return null
 
         fun isValidIndex(idx: Int) = idx >= 0 && idx < def.vertexCount
@@ -1289,10 +1546,35 @@ object ModelLoader {
             return Vector3f(nx, -ny, -nz)
         }
 
+        // Build set of face indices hidden by billboard hasUid.
+        // In the RS client (ModelGL.kt lines 354-378), if ANY billboard attached to a face
+        // has hasUid=true, that face is removed from rendering and replaced by the billboard quad.
+        val billboardHiddenFaces = mutableSetOf<Int>()
+        if (cache != null && def.billboards != null) {
+            for (bb in def.billboards) {
+                if (bb.appliesOnFace < 0 || bb.appliesOnFace >= def.faceCount) continue
+                val type = BillboardTypeLoader.get(cache, bb.billboardId)
+                if (type.hasUid) {
+                    billboardHiddenFaces.add(bb.appliesOnFace)
+                }
+            }
+        }
+
+        // Pre-scan: check if the model has any textured faces (for marker face filtering).
+        // Same logic as createTexturedModel - hide untextured faces on mixed models.
+        val modelHasTexturedFaces = if (hideUntexturedMarkerFaces) {
+            def.faceTextures?.any { it.toInt() != -1 } == true
+        } else {
+            false
+        }
+
         // Group faces by texture ID (-1 for untextured)
         val facesByTexture = mutableMapOf<Int, MutableList<FaceData>>()
 
         for (i in 0 until def.faceCount) {
+            // Skip faces hidden by billboard system (hasUid billboards replace the anchor face)
+            if (i in billboardHiddenFaces) continue
+
             val aIdx = def.faceA[i]
             val bIdx = def.faceB[i]
             val cIdx = def.faceC[i]
@@ -1324,14 +1606,12 @@ object ModelLoader {
                 rawTextureId
             }
 
+            // Hide untextured marker faces on mixed models (models with both textured and
+            // untextured faces). These are typically label backing panels or ground markers.
+            if (modelHasTexturedFaces && textureId == -1) continue
+
             // Skip faces whose material has skipTriangles set (matches RS client ModelGL behavior)
             if (textureId >= 0 && TextureLoader.shouldSkipMaterial(textureId)) continue
-
-            // Skip untextured faces on models that have a faceTextures array.
-            // These are dynamic content placeholders (e.g., signpost destination labels)
-            // that the game engine covers with sprites at runtime.
-            // Without the sprite overlay system, they display raw placeholder colors.
-            if (def.faceTextures != null && textureId == -1) continue
 
             val pos0 = CoordinateUtil.rsToOpenGL(def.vertexX[aIdx], def.vertexY[aIdx], def.vertexZ[aIdx])
             val pos1 = CoordinateUtil.rsToOpenGL(def.vertexX[bIdx], def.vertexY[bIdx], def.vertexZ[bIdx])
@@ -1365,6 +1645,11 @@ object ModelLoader {
                 FaceData(pos0, pos1, pos2, color, norm0, norm1, norm2,
                          uvs[0], uvs[1], uvs[2], uvs[3], uvs[4], uvs[5])
             )
+        }
+
+        // Generate billboard quads for billboards that have a material to render.
+        if (cache != null && def.billboards != null) {
+            generateBillboardQuads(def, cache, modifications.ambient, facesByTexture, ::getVertexNormal, ::isValidIndex)
         }
 
         if (facesByTexture.isEmpty()) return null
@@ -1425,6 +1710,7 @@ object ModelLoader {
         definitionCache.clear()
         textureTransformCache.clear()
         combinedDefinitionCache.clear()
+        BillboardTypeLoader.clearCache()
     }
 
     fun getCachedDefinition(modelId: Int): ModelDefinition? = definitionCache[modelId]
@@ -1473,7 +1759,7 @@ object ModelLoader {
         if (modelIds.size == 1) return createMeshDataList(cache, modelIds[0], debug)
 
         val combinedDef = loadCombinedDefinition(cache, modelIds) ?: return null
-        return createMeshDataListFromDef(combinedDef, ModelModifications.NONE, -1)
+        return createMeshDataListFromDef(combinedDef, ModelModifications.NONE, -1, cache)
     }
 
     /**
@@ -1496,7 +1782,7 @@ object ModelLoader {
         if (modelIds.size == 1) return createMeshDataListWithModifications(cache, modelIds[0], modifications, debug)
 
         val combinedDef = loadCombinedDefinition(cache, modelIds) ?: return null
-        return createMeshDataListFromDef(combinedDef, modifications, -1)
+        return createMeshDataListFromDef(combinedDef, modifications, -1, cache)
     }
 
     /**

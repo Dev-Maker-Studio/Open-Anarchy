@@ -1023,6 +1023,39 @@ class MapViewer(
                 ImGui.setTooltip("Toggle visibility of roof shapes (12-21)\nHide roofs to see inside buildings")
             }
 
+            // Ground decoration toggle
+            val groundDecEnabled = ImBoolean(ObjectRenderer.groundDecorationEnabled)
+            if (ImGui.checkbox("Ground Decorations", groundDecEnabled)) {
+                ObjectRenderer.groundDecorationEnabled = groundDecEnabled.get()
+                if (!useMultiRegion) {
+                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                } else {
+                    mapScene.cleanup()
+                    mapScene.initialize()
+                    jumpToRegion(currentRegionX, currentRegionY)
+                }
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Toggle ground decoration rendering\nWhen off, only interactive/blocking ground decorations render")
+            }
+
+            // Marker face filter toggle
+            val hideMarkerFaces = ImBoolean(ModelLoader.hideUntexturedMarkerFaces)
+            if (ImGui.checkbox("Hide Marker Faces", hideMarkerFaces)) {
+                ModelLoader.hideUntexturedMarkerFaces = hideMarkerFaces.get()
+                // Reload to regenerate meshes with the new filter setting
+                if (!useMultiRegion) {
+                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+                } else {
+                    mapScene.cleanup()
+                    mapScene.initialize()
+                    jumpToRegion(currentRegionX, currentRegionY)
+                }
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Hide untextured faces on models that also have textured faces.\nFilters out label backing panels, ground markers, and other\nplaceholder geometry (e.g. signpost green panels).")
+            }
+
             // Terrain blending toggle
             val blendingEnabled = ImBoolean(TerrainLoader.enableBlending)
             if (ImGui.checkbox("Terrain Blending", blendingEnabled)) {
@@ -1527,6 +1560,11 @@ class MapViewer(
             val def = ObjectRenderer.getDefinition(obj.id) ?: continue
             val modelIds = ObjectRenderer.getModelIds(def, obj.shape)
             if (modelIds.isEmpty()) continue
+
+            // Filter non-interactive ground decorations when preference is off
+            if (obj.shape == ObjectShape.GROUND_DECORATION.id && !ObjectRenderer.groundDecorationEnabled && !ObjectRenderer.shouldRenderGroundDecoration(def)) continue
+            // Skip untextured ground decoration markers (hidden under terrain in client due to GL_LEQUAL)
+            if (obj.shape == ObjectShape.GROUND_DECORATION.id && !ObjectRenderer.isGroundDecorationVisible(cache, modelIds)) continue
 
             // Calculate object size (may be rotated)
             val sizeX: Int

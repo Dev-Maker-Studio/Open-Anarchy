@@ -60,6 +60,10 @@ fun main(args: Array<String>) {
             val texId = args.getOrNull(1)?.toIntOrNull() ?: 725
             runTextureDiagnostic(cache, texId)
         }
+        "faces", "facegeom" -> {
+            val modelId = args.getOrNull(1)?.toIntOrNull() ?: 68750
+            runFaceGeometryDiagnostic(cache, modelId)
+        }
         "help", "-h", "--help" -> {
             printHelp()
         }
@@ -399,7 +403,11 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
     println("Name: ${def.name}")
     println("Size: ${def.sizeX} x ${def.sizeY}")
     println("Options: ${def.options?.toList()}")
+    println("Shapes: ${def.shapes?.map { it.name + "(${it.id})" }}")
     println("ModelIds: ${def.modelIds?.contentDeepToString()}")
+    println("Interactive: ${def.interactive}")
+    println("Solid: ${def.solid}")
+    println("ForceDisplayDecoration: ${def.forceDisplayDecoration}")
     println("Ambient: ${def.ambient}")
     println("Contrast: ${def.contrast}")
 
@@ -587,9 +595,20 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
             println("    hasFaceTypes=$hasFaceTypes, hasParticleEffects=$hasParticleEffects, hasBillboards=$hasBillboards, hasVersion=$hasVersion")
 
             if (hasBillboards) {
-                // Read billboard data from the end of structured data
-                // This requires computing the 'index' offset like the client does
                 println("  MODEL HAS BILLBOARD DATA - these faces may be billboard anchors!")
+            }
+
+            // Print decoded billboard data from ModelDefinition
+            if (modelDef.billboards != null) {
+                println("  Decoded billboards (${modelDef.billboards.size}):")
+                for ((bi, bb) in modelDef.billboards.withIndex()) {
+                    println("    [$bi] id=${bb.billboardId}, face=${bb.appliesOnFace}, depth=${bb.depth}, distance=${bb.distance}")
+                    // Load the BillboardType config
+                    val bbType = org.darkan.tools.cache.model.BillboardTypeLoader.get(cache, bb.billboardId)
+                    println("         type: materialId=${bbType.materialId}, size2d=${bbType.size2d}, size3d=${bbType.size3d}, shape=${bbType.shape}, blend=${bbType.blendType}, stationary=${bbType.stationary}, hasUid=${bbType.hasUid}")
+                }
+            } else {
+                println("  Decoded billboards: null (no billboard data decoded)")
             }
         }
 
@@ -900,6 +919,107 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
     println("\n=== TEXTURE DIAGNOSTIC COMPLETE ===")
 }
 
+/**
+ * Diagnostic to investigate face geometry for coplanarity and render-order occlusion.
+ * Prints vertex positions for untextured faces and their nearby textured neighbors
+ * to determine if untextured faces are hidden by depth test ordering.
+ */
+private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
+    println("\n=== FACE GEOMETRY DIAGNOSTIC: Model $modelId ===")
+
+    val def = ModelLoader.loadDefinition(cache, modelId)
+    if (def == null) {
+        println("ERROR: Could not load model $modelId")
+        return
+    }
+
+    println("Vertices: ${def.vertexCount}, Faces: ${def.faceCount}")
+    println("Texture Triangles: ${def.textureTriangleCount}")
+
+    // Find untextured faces
+    println("\n--- UNTEXTURED FACES ---")
+    val untexturedFaces = mutableListOf<Int>()
+    for (f in 0 until def.faceCount) {
+        val texId = def.faceTextures?.get(f)?.toInt() ?: -1
+        if (texId == -1) {
+            untexturedFaces.add(f)
+        }
+    }
+
+    if (untexturedFaces.isEmpty()) {
+        println("No untextured faces found.")
+        println("\n=== DIAGNOSTIC COMPLETE ===")
+        return
+    }
+
+    println("Found ${untexturedFaces.size} untextured faces: $untexturedFaces")
+
+    for (f in untexturedFaces) {
+        val aIdx = def.faceA[f]
+        val bIdx = def.faceB[f]
+        val cIdx = def.faceC[f]
+        val hsl = def.faceColors[f].toInt() and 0xffff
+        val renderType = def.faceRenderTypes?.get(f)?.toInt()?.and(0xff) ?: 0
+        val alpha = def.faceAlphas?.get(f)?.toInt()?.and(0xff) ?: 0
+
+        println("\n  Face $f: HSL=$hsl, renderType=$renderType, alpha=$alpha")
+        println("    A[$aIdx]: (${def.vertexX[aIdx]}, ${def.vertexY[aIdx]}, ${def.vertexZ[aIdx]})")
+        println("    B[$bIdx]: (${def.vertexX[bIdx]}, ${def.vertexY[bIdx]}, ${def.vertexZ[bIdx]})")
+        println("    C[$cIdx]: (${def.vertexX[cIdx]}, ${def.vertexY[cIdx]}, ${def.vertexZ[cIdx]})")
+
+        // Compute face normal
+        val dx1 = (def.vertexX[bIdx] - def.vertexX[aIdx]).toFloat()
+        val dy1 = (def.vertexY[bIdx] - def.vertexY[aIdx]).toFloat()
+        val dz1 = (def.vertexZ[bIdx] - def.vertexZ[aIdx]).toFloat()
+        val dx2 = (def.vertexX[cIdx] - def.vertexX[aIdx]).toFloat()
+        val dy2 = (def.vertexY[cIdx] - def.vertexY[aIdx]).toFloat()
+        val dz2 = (def.vertexZ[cIdx] - def.vertexZ[aIdx]).toFloat()
+        val nx = dy1 * dz2 - dz1 * dy2
+        val ny = dz1 * dx2 - dx1 * dz2
+        val nz = dx1 * dy2 - dy1 * dx2
+        val len = kotlin.math.sqrt(nx * nx + ny * ny + nz * nz)
+        if (len > 0) {
+            println("    Normal: (${nx/len}, ${ny/len}, ${nz/len})")
+        }
+
+        // Compute face area
+        val area = len / 2f
+        println("    Area: $area sq units")
+
+        // Compute centroid
+        val cx = (def.vertexX[aIdx] + def.vertexX[bIdx] + def.vertexX[cIdx]) / 3f
+        val cy = (def.vertexY[aIdx] + def.vertexY[bIdx] + def.vertexY[cIdx]) / 3f
+        val cz = (def.vertexZ[aIdx] + def.vertexZ[bIdx] + def.vertexZ[cIdx]) / 3f
+        println("    Centroid: ($cx, $cy, $cz)")
+
+        // Find nearby textured faces (sharing at least one vertex)
+        val faceVertices = setOf(aIdx, bIdx, cIdx)
+        println("    Nearby textured faces sharing vertices:")
+        var nearbyCount = 0
+        for (other in 0 until def.faceCount) {
+            if (other == f) continue
+            val otherTexId = def.faceTextures?.get(other)?.toInt() ?: -1
+            if (otherTexId == -1) continue // Skip other untextured faces
+
+            val otherVerts = setOf(def.faceA[other], def.faceB[other], def.faceC[other])
+            val shared = faceVertices.intersect(otherVerts)
+            if (shared.isNotEmpty()) {
+                nearbyCount++
+                val otherTex = otherTexId and 0xffff
+                println("      Face $other (tex=$otherTex): shares vertices $shared")
+                println("        A[${def.faceA[other]}]: (${def.vertexX[def.faceA[other]]}, ${def.vertexY[def.faceA[other]]}, ${def.vertexZ[def.faceA[other]]})")
+                println("        B[${def.faceB[other]}]: (${def.vertexX[def.faceB[other]]}, ${def.vertexY[def.faceB[other]]}, ${def.vertexZ[def.faceB[other]]})")
+                println("        C[${def.faceC[other]}]: (${def.vertexX[def.faceC[other]]}, ${def.vertexY[def.faceC[other]]}, ${def.vertexZ[def.faceC[other]]})")
+            }
+        }
+        if (nearbyCount == 0) {
+            println("      (none)")
+        }
+    }
+
+    println("\n=== DIAGNOSTIC COMPLETE ===")
+}
+
 private fun printHelp() {
     println("""
         Darkan Tools - Game Asset Viewer
@@ -911,6 +1031,10 @@ private fun printHelp() {
                         Optional: specify a model ID to load on startup
           map        - View terrain/map regions with full scene rendering
           interface  - View UI interfaces and components
+          faces [id] - Print face geometry diagnostic for a model
+                        Shows untextured face positions, normals, and
+                        nearby textured faces for coplanarity analysis
+                        Default model: 68750 (signpost)
 
         Controls (Model Viewer):
           WASD        - Move camera
