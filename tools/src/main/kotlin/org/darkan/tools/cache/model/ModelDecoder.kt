@@ -47,6 +47,8 @@ object ModelDecoder {
         val footerFlags = buffer.readUnsignedByte()
 
         val hasFaceTypes = (footerFlags and 0x1) == 1
+        val hasParticleEffects = (footerFlags and 0x2) == 0x2
+        val hasBillboards = (footerFlags and 0x4) == 0x4
         val hasVersion = (footerFlags and 0x8) == 0x8
 
         // Read version if flag is set
@@ -184,6 +186,9 @@ object ModelDecoder {
         // Speed offset - 1 byte per complex texture, plus 2 bytes for each cube texture (U/V trans)
         val complexTexSpeedOffset = offset
         offset += complexTextureFaceCount + cubeTextureFaceCount * 2
+
+        // Footer section (particles + billboards) starts here
+        val footerOffset = offset
 
         // Validate data fits
         val minRequired = vertexZOffset + vertexZLength
@@ -468,6 +473,46 @@ object ModelDecoder {
             }
         }
 
+        // Decode footer section: particle effects and billboards
+        // This matches the client's Mesh.kt decodeNewFormat (lines 580-618)
+        var billboards: Array<BillboardData>? = null
+
+        if (hasParticleEffects || hasBillboards) {
+            buffer.position(footerOffset)
+
+            if (hasParticleEffects) {
+                // Skip particle emitter data
+                val emitterCount = buffer.readUnsignedByte()
+                if (emitterCount > 0) {
+                    for (i in 0 until emitterCount) {
+                        buffer.readUnsignedShort()  // particleId
+                        buffer.readUnsignedShort()  // faceIndex
+                    }
+                }
+                // Skip particle effector data
+                val effectorCount = buffer.readUnsignedByte()
+                if (effectorCount > 0) {
+                    for (i in 0 until effectorCount) {
+                        buffer.readUnsignedShort()  // effectId
+                        buffer.readUnsignedShort()  // appliesOnVertex
+                    }
+                }
+            }
+
+            if (hasBillboards) {
+                val billboardCount = buffer.readUnsignedByte()
+                if (billboardCount > 0) {
+                    billboards = Array(billboardCount) { i ->
+                        val id = buffer.readUnsignedShort()
+                        val face = buffer.readUnsignedShort()
+                        val depth = buffer.readUnsignedByte()
+                        val distance = buffer.readByte()  // signed byte
+                        BillboardData(id, face, depth, distance)
+                    }
+                }
+            }
+        }
+
         return ModelDefinition(
             id = modelId,
             version = version,
@@ -502,7 +547,8 @@ object ModelDecoder {
             texturesDirection = texturesDirection,
             texturesSpeed = texturesSpeed,
             texturesUtrans = texturesUtrans,
-            texturesVtrans = texturesVtrans
+            texturesVtrans = texturesVtrans,
+            billboards = billboards
         )
     }
 

@@ -34,7 +34,8 @@ data class LoadedRegion(
     val data: RegionData,
     val terrainMeshesByPlane: Array<TerrainLoader.TerrainMeshes?>,  // Batched meshes per plane (0-3)
     val objectsByPlane: Map<Int, List<ObjectInstance>>,  // Objects grouped by plane
-    val chunk: RegionChunk
+    val chunk: RegionChunk,
+    val displacedModelIds: MutableSet<Int> = mutableSetOf()  // Displaced model IDs owned by this region
 ) {
     // Legacy accessor for backwards compatibility
     val objects: List<ObjectInstance>
@@ -409,16 +410,6 @@ class MapScene(
             registerObjectModels(objects)
         }
 
-        // Register displaced meshes for contourType 1 objects.
-        // Each instance gets a unique mesh with per-vertex terrain displacement,
-        // registered with a unique model ID. These use the instanced rendering path
-        // with 1 instance each (the displacement is baked into the geometry).
-        if (terrainData != null) {
-            for ((plane, objects) in objectsByPlane) {
-                registerDisplacedModels(objects, plane, terrainData, regionX, regionY)
-            }
-        }
-
         // Calculate region bounds in world space
         val worldMinX = regionX * 64 * tileSize
         val worldMinZ = -regionY * 64 * tileSize - regionSize
@@ -433,6 +424,27 @@ class MapScene(
             yMin = -100f,
             yMax = 500f
         )
+
+        // Create LoadedRegion early so registerDisplacedModels can track displaced IDs on it
+        val loaded = LoadedRegion(
+            regionX = regionX,
+            regionY = regionY,
+            regionId = regionId,
+            data = data,
+            terrainMeshesByPlane = terrainMeshesByPlane,
+            objectsByPlane = objectsByPlane,
+            chunk = chunk
+        )
+
+        // Register displaced meshes for contourType 1 objects.
+        // Each instance gets a unique mesh with per-vertex terrain displacement,
+        // registered with a unique model ID. These use the instanced rendering path
+        // with 1 instance each (the displacement is baked into the geometry).
+        if (terrainData != null) {
+            for ((plane, objects) in objectsByPlane) {
+                registerDisplacedModels(objects, plane, terrainData, regionX, regionY, loaded)
+            }
+        }
 
         // Register with culling system
         cullingSystem.registerRegion(chunk)
@@ -470,15 +482,7 @@ class MapScene(
             }
         }
 
-        loadedRegions[regionId] = LoadedRegion(
-            regionX = regionX,
-            regionY = regionY,
-            regionId = regionId,
-            data = data,
-            terrainMeshesByPlane = terrainMeshesByPlane,
-            objectsByPlane = objectsByPlane,
-            chunk = chunk
-        )
+        loadedRegions[regionId] = loaded
     }
 
     /**
@@ -486,6 +490,19 @@ class MapScene(
      */
     private fun unloadRegion(regionId: Int) {
         val loaded = loadedRegions.remove(regionId) ?: return
+
+        // Unregister displaced models owned by this region
+        for (displacedId in loaded.displacedModelIds) {
+            instanceManager.unregisterModel(displacedId)
+            registeredModels.remove(displacedId)
+        }
+
+        // Clean up displacedModelIds entries for this region's objects
+        for ((_, objects) in loaded.objectsByPlane) {
+            for (obj in objects) {
+                displacedModelIds.remove(System.identityHashCode(obj))
+            }
+        }
 
         // Cleanup terrain meshes
         loaded.cleanup()
@@ -543,7 +560,8 @@ class MapScene(
         plane: Int,
         terrainData: TerrainLoader.RegionData,
         regionX: Int,
-        regionY: Int
+        regionY: Int,
+        loadedRegion: LoadedRegion
     ) {
         val regionBaseX = regionX * 64
         val regionBaseY = regionY * 64
@@ -603,6 +621,7 @@ class MapScene(
             val displacedId = nextDisplacedModelId++
             instanceManager.registerModel(displacedId, displacedMeshDataList)
             registeredModels.add(displacedId)
+            loadedRegion.displacedModelIds.add(displacedId)
 
             // Map this object instance to its displaced model ID
             displacedModelIds[System.identityHashCode(obj)] = displacedId

@@ -228,10 +228,7 @@ class InstanceManager(
         texturedShader: ShaderProgram,
         bindTexture: (textureId: Int) -> Unit
     ) {
-        // Render untextured first
         renderUntextured(colorShader)
-
-        // Then textured
         renderTextured(texturedShader, bindTexture)
     }
 
