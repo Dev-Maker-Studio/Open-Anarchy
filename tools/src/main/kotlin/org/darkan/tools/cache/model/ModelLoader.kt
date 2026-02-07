@@ -187,18 +187,6 @@ object ModelLoader {
     private val definitionCache = mutableMapOf<Int, ModelDefinition?>()
 
     /**
-     * When true, untextured faces on models that also have textured faces are hidden.
-     * This filters out "marker faces" - solid-color backing panels for text labels,
-     * ground marker squares, and other untextured placeholder geometry that has no
-     * visual value without a text/overlay rendering system.
-     *
-     * Models that are entirely untextured (no textured faces at all) render normally.
-     * Only "mixed" models (both textured and untextured faces) are affected.
-     *
-     * Examples: signpost label backing panels (model 68750), ground markers (model 1105).
-     */
-    var hideUntexturedMarkerFaces: Boolean = true
-    /**
      * Load a textured model. Creates new mesh objects each time since meshes
      * contain OpenGL resources that may be cleaned up by the caller.
      */
@@ -1067,16 +1055,6 @@ object ModelLoader {
             }
         }
 
-        // Pre-scan: check if the model has any textured faces (for marker face filtering).
-        // A "mixed" model has both textured and untextured faces. When hideUntexturedMarkerFaces
-        // is enabled, untextured faces on mixed models are skipped (they are likely backing panels
-        // or marker geometry that serves no visual purpose without text overlays).
-        val modelHasTexturedFaces = if (hideUntexturedMarkerFaces) {
-            def.faceTextures?.any { it.toInt() != -1 } == true
-        } else {
-            false
-        }
-
         // Group faces by texture ID (-1 for untextured)
         val facesByTexture = mutableMapOf<Int, MutableList<FaceData>>()
         var hasAnyTextures = false
@@ -1111,10 +1089,6 @@ object ModelLoader {
             val textureIdSigned = def.faceTextures?.get(i)?.toInt() ?: -1
             val textureId = if (textureIdSigned == -1) -1 else (textureIdSigned and 0xffff)
             if (textureId >= 0) hasAnyTextures = true
-
-            // Hide untextured marker faces on mixed models (models with both textured and
-            // untextured faces). These are typically label backing panels or ground markers.
-            if (modelHasTexturedFaces && textureId == -1) continue
 
             // Skip faces whose material has skipTriangles set (matches RS client ModelGL behavior)
             if (textureId >= 0 && TextureLoader.shouldSkipMaterial(textureId)) continue
@@ -1560,14 +1534,6 @@ object ModelLoader {
             }
         }
 
-        // Pre-scan: check if the model has any textured faces (for marker face filtering).
-        // Same logic as createTexturedModel - hide untextured faces on mixed models.
-        val modelHasTexturedFaces = if (hideUntexturedMarkerFaces) {
-            def.faceTextures?.any { it.toInt() != -1 } == true
-        } else {
-            false
-        }
-
         // Group faces by texture ID (-1 for untextured)
         val facesByTexture = mutableMapOf<Int, MutableList<FaceData>>()
 
@@ -1605,10 +1571,6 @@ object ModelLoader {
             } else {
                 rawTextureId
             }
-
-            // Hide untextured marker faces on mixed models (models with both textured and
-            // untextured faces). These are typically label backing panels or ground markers.
-            if (modelHasTexturedFaces && textureId == -1) continue
 
             // Skip faces whose material has skipTriangles set (matches RS client ModelGL behavior)
             if (textureId >= 0 && TextureLoader.shouldSkipMaterial(textureId)) continue

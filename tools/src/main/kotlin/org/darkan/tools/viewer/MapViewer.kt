@@ -1,27 +1,28 @@
 package org.darkan.tools.viewer
 
 import imgui.ImGui
+import imgui.flag.ImGuiCol
+import imgui.flag.ImGuiHoveredFlags
+import imgui.flag.ImGuiTreeNodeFlags
 import imgui.flag.ImGuiWindowFlags
 import imgui.type.ImBoolean
-import imgui.type.ImFloat
 import imgui.type.ImInt
+import imgui.type.ImString
 import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionData
 import org.darkan.core.map.RegionLoader
 import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.cache.definition.data.MapObject
-import org.darkan.tools.cache.map.MapScene
+import world.gregs.voidps.cache.definition.data.ObjectDefinition
 import org.darkan.tools.cache.map.ObjectInstance
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.map.TerrainAligner
 import org.darkan.tools.cache.map.VertexDisplacer
 import org.darkan.tools.cache.model.ModelLoader
-import org.darkan.tools.cache.model.ModelModifications
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.Engine
 import org.darkan.tools.engine.input.TilePicker
-import org.darkan.tools.engine.render.Camera
 import org.darkan.tools.engine.render.InstanceManager
 import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.engine.render.MeshData
@@ -43,13 +44,13 @@ import world.gregs.voidps.cache.definition.data.MapDefinition
  * Map/terrain viewer with full scene rendering support.
  *
  * Features:
- * - Multi-region terrain rendering with actual underlay/overlay colors
+ * - Single-region terrain rendering with actual underlay/overlay colors
  * - XTEA-encrypted object loading
- * - Region streaming based on camera position
  * - Multi-plane object rendering (renders ALL planes 0-3 simultaneously)
  * - Roof toggling (hide shapes 12-21 to see inside buildings)
  * - Plane selection (0-3) for terrain and bridge shifting
  * - Quick navigation to known locations
+ * - Integrated map editor panel with inspection tools
  *
  * Controls:
  * - WASD: Move camera
@@ -61,8 +62,8 @@ import world.gregs.voidps.cache.definition.data.MapDefinition
  * - PgUp/PgDn: Change plane
  * - 1-4: Select plane directly
  * - F1: Toggle debug panel
- * - F2: Toggle navigation panel
  * - F3: Wireframe mode
+ * - F5: Toggle map editor panel
  * - T: Toggle terrain
  * - R: Toggle roofs (hide to see inside buildings)
  * - G: Toggle grid
@@ -70,9 +71,6 @@ import world.gregs.voidps.cache.definition.data.MapDefinition
 class MapViewer(
     private val cache: Cache
 ) : Engine(WindowConfig(title = "Darkan Map Viewer", width = 1280, height = 720)) {
-
-    // Map scene manager for multi-region support
-    private lateinit var mapScene: MapScene
 
     // UBO-based shaders for efficient rendering
     private lateinit var uniformBuffers: UniformBuffers
@@ -88,9 +86,6 @@ class MapViewer(
     private lateinit var imGui: ImGuiLayer
     private lateinit var debugPanel: DebugPanel
 
-    // Camera (separate from scene camera for direct control)
-    private val mapCamera = Camera()
-
     // Current state
     private var currentRegionX = 50
     private var currentRegionY = 50
@@ -99,9 +94,7 @@ class MapViewer(
     // UI state
     private val regionXInput = ImInt(50)
     private val regionYInput = ImInt(50)
-    private var showNavPanel = true
     private var showTerrain = true
-    private var useMultiRegion = false  // Toggle between single/multi region mode (default: single)
     private var showRoofs = true  // Toggle roof visibility (shapes 12-21)
 
     // Lighting - brighter values for better model visibility
@@ -124,24 +117,37 @@ class MapViewer(
         "Wilderness" to Pair(48, 55)
     )
 
-    // Single-region support
-    private var singleRegionTerrainBatches: TerrainLoader.TerrainMeshes? = null
-    private var singleRegionInstanceManager: InstanceManager? = null
-    private var singleRegionObjects: List<ObjectInstance> = emptyList()
-    private val singleRegionModels = mutableSetOf<Int>()
+    // Region rendering state
+    private var terrainBatches: TerrainLoader.TerrainMeshes? = null
+    private var instanceManager: InstanceManager? = null
+    private var objectInstances: List<ObjectInstance> = emptyList()
+    private val registeredModels = mutableSetOf<Int>()
 
-    // Displaced model tracking for contourType 1 objects in single-region mode.
+    // Displaced model tracking for contourType 1 objects.
     // Maps ObjectInstance identity hash -> displaced model ID.
     // Each contourType 1 instance gets unique geometry with per-vertex terrain displacement.
-    private val singleRegionDisplacedModels = mutableMapOf<Int, Int>()
-    private var nextSingleRegionDisplacedId = Int.MIN_VALUE / 2
+    private val displacedModels = mutableMapOf<Int, Int>()
+    private var nextDisplacedId = Int.MIN_VALUE / 2
 
     // Tile picker for debugging UV issues
     private val tilePicker = TilePicker()
-    private var showTilePickerPanel = true
-    private var singleRegionTerrainData: TerrainLoader.RegionData? = null
-    private var singleRegionMapObjects: List<MapObject> = emptyList()  // Raw MapObjects for tile picker
+    private var terrainData: TerrainLoader.RegionData? = null
+    private var mapObjects: List<MapObject> = emptyList()  // Raw MapObjects for tile picker
     private var tileHighlightMesh: Mesh? = null
+
+    // Map editor panel state
+    private var showEditorPanel = true
+    private var editorPanelFirstFrame = true
+    private var currentEditorTool = EditorTool.SELECT
+
+    // Editor panel input state
+    private val editorObjectSearchQuery = ImString(256)
+    private val editorOverlayUnderlayId = ImInt(0)
+    private var editorPaintMode = 0  // 0 = Overlay, 1 = Underlay
+    private val editorBrushSize = intArrayOf(1)
+    private val editorHeightBrushRadius = intArrayOf(1)
+    private val editorHeightStrength = intArrayOf(5)
+    private var editorHeightMode = 0  // 0 = Raise, 1 = Lower, 2 = Smooth
 
     override fun onInit() {
         // Initialize texture loader
@@ -159,23 +165,11 @@ class MapViewer(
         // Load UBO shaders
         loadUBOShaders()
 
-        // Load floor and object definitions (needed for both modes)
+        // Load floor and object definitions
         TerrainLoader.loadDefinitions(cache)
         ObjectRenderer.loadDefinitions(cache)
 
-
-
-        // Initialize map scene with XTEA support (lazy - for multi-region mode)
-        mapScene = MapScene(cache, viewRadius = 2)
-
-        // Configure camera for map viewing
-        mapCamera.setPosition(0f, 100f, 0f)
-        mapCamera.pitch = -60f
-        mapCamera.yaw = 0f
-        mapCamera.moveSpeed = 100f
-        mapCamera.farPlane = 3000f
-
-        // Also setup the scene camera for single-region mode
+        // Setup the scene camera
         scene.camera.setPosition(0f, 50f, 50f)
         scene.camera.pitch = -45f
         scene.camera.yaw = -90f
@@ -186,18 +180,11 @@ class MapViewer(
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_MULTISAMPLE)
 
-        // Initialize based on default mode
-        if (useMultiRegion) {
-            mapScene.initialize()
-            jumpToRegion(currentRegionX, currentRegionY)
-        } else {
-            // Load XTEA keys for object loading
-            if (!MapXteas.isLoaded()) {
-                MapXteas.load()
-            }
-            loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
+        // Load XTEA keys for object loading
+        if (!MapXteas.isLoaded()) {
+            MapXteas.load()
         }
-
+        loadRegion(currentRegionX, currentRegionY, currentPlane)
     }
 
     private fun loadUBOShaders() {
@@ -251,11 +238,11 @@ class MapViewer(
             return
         }
 
-        val cam = if (useMultiRegion) mapCamera else scene.camera
+        val cam = scene.camera
 
         // Speed multiplier
         val speedMult = if (input.keyboard.isKeyDown(GLFW_KEY_LEFT_CONTROL)) 4f else 1f
-        cam.moveSpeed = if (useMultiRegion) 100f * speedMult else 20f * speedMult
+        cam.moveSpeed = 20f * speedMult
 
         // Camera movement
         if (input.keyboard.isKeyDown(GLFW_KEY_W)) cam.moveForward(deltaTime)
@@ -277,29 +264,11 @@ class MapViewer(
 
         // Toggle keys
         if (input.keyboard.isKeyPressed(GLFW_KEY_F1)) debugPanel.toggleVisibility()
-        if (input.keyboard.isKeyPressed(GLFW_KEY_F2)) showNavPanel = !showNavPanel
         if (input.keyboard.isKeyPressed(GLFW_KEY_F3)) renderSystem.toggleWireframe()
         if (input.keyboard.isKeyPressed(GLFW_KEY_T)) showTerrain = !showTerrain
         if (input.keyboard.isKeyPressed(GLFW_KEY_R)) {
             showRoofs = !showRoofs
-            mapScene.showRoofs = showRoofs  // Sync with MapScene for multi-region mode
-            // Reload objects to apply the change (single-region only - multi-region filters dynamically)
-            if (!useMultiRegion) {
-                loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-            }
-        }
-        if (input.keyboard.isKeyPressed(GLFW_KEY_M)) {
-            useMultiRegion = !useMultiRegion
-            if (useMultiRegion) {
-                // Switching to multi-region: clean up single-region resources
-                cleanupSingleRegion()
-                mapScene.initialize()
-                jumpToRegion(currentRegionX, currentRegionY)
-            } else {
-                // Switching to single-region: clean up multi-region resources
-                mapScene.cleanup()
-                loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-            }
+            reloadRegion()
         }
 
         // Plane selection (1-4 keys)
@@ -322,13 +291,16 @@ class MapViewer(
             if (currentPlane > 0) setPlane(currentPlane - 1)
         }
 
-        // Toggle tile picker panel (F4)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_F4)) {
-            showTilePickerPanel = !showTilePickerPanel
+        // Toggle map editor panel (F5)
+        if (input.keyboard.isKeyPressed(GLFW_KEY_F5)) {
+            showEditorPanel = !showEditorPanel
+            if (showEditorPanel) {
+                editorPanelFirstFrame = true
+            }
         }
 
-        // Tile picking (left-click in single-region mode only)
-        if (!useMultiRegion && input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+        // Tile picking (left-click)
+        if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
             handleTilePick()
         }
     }
@@ -337,7 +309,7 @@ class MapViewer(
      * Handle tile picking via left-click.
      */
     private fun handleTilePick() {
-        val terrainData = singleRegionTerrainData ?: return
+        val td = terrainData ?: return
         val cam = scene.camera
 
         // Convert mouse position to world ray
@@ -352,7 +324,7 @@ class MapViewer(
 
         // Pick tile
         val selectedTile = tilePicker.pickTile(
-            terrainData.tiles,
+            td.tiles,
             currentRegionX,
             currentRegionY,
             currentPlane
@@ -361,15 +333,15 @@ class MapViewer(
         if (selectedTile != null) {
             // Update tile details with object lookup
             tilePicker.updateTileDetails(
-                terrainData.tiles,
+                td.tiles,
                 cache,
-                singleRegionMapObjects,
+                mapObjects,
                 currentRegionX * 64,
                 currentRegionY * 64
             )
 
             // Update highlight mesh
-            updateTileHighlight(terrainData.tiles)
+            updateTileHighlight(td.tiles)
         }
     }
 
@@ -442,19 +414,7 @@ class MapViewer(
     }
 
     override fun onUpdate(deltaTime: Float) {
-        if (useMultiRegion) {
-            // Update map scene based on camera position
-            mapScene.update(mapCamera.position.x, mapCamera.position.z)
-
-            // Perform frustum culling
-            mapScene.cull(mapCamera, getAspectRatio())
-
-            // Update current region based on camera
-            val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
-            val regionSize = 64 * tileSize
-            currentRegionX = (mapCamera.position.x / regionSize).toInt().coerceIn(0, 255)
-            currentRegionY = (-mapCamera.position.z / regionSize).toInt().coerceIn(0, 255)
-        }
+        // Reserved for future use (animation, streaming, etc.)
     }
 
     override fun onRender() {
@@ -462,53 +422,14 @@ class MapViewer(
         glClearColor(clearColor.x, clearColor.y, clearColor.z, 1.0f)
         glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
 
-        if (useMultiRegion) {
-            renderMultiRegion()
-        } else {
-            renderSingleRegion()
-        }
+        renderScene()
 
         // Render UI
         renderUI()
     }
 
-    private fun renderMultiRegion() {
-        // Update shared uniforms
-        uniformBuffers.updateCamera(
-            mapCamera.getViewMatrix(),
-            mapCamera.getProjectionMatrix(getAspectRatio()),
-            mapCamera.position
-        )
-        uniformBuffers.updateLighting(ambientLight, lightDirection, lightColor)
-
-        if (renderSystem.wireframeMode) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-        }
-
-        // Disable face culling for terrain (two-sided rendering)
-        renderSystem.disableCullFace()
-
-        // Render terrain (non-instanced)
-        mapScene.renderTerrain(uboColorShader)
-
-        // Restore GL state for objects
-        renderSystem.enableCullFace()
-
-        // Render objects (instanced)
-        mapScene.renderObjects(
-            instancedColorShader,
-            instancedTexturedShader
-        ) { textureId ->
-            TextureLoader.bindTexture(textureId)
-        }
-
-        if (renderSystem.wireframeMode) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-        }
-    }
-
-    private fun renderSingleRegion() {
-        // Update UBOs for lighting (same as multi-region)
+    private fun renderScene() {
+        // Update UBOs for lighting
         uniformBuffers.updateCamera(
             scene.camera.getViewMatrix(),
             scene.camera.getProjectionMatrix(getAspectRatio()),
@@ -521,22 +442,22 @@ class MapViewer(
         }
 
         // Render terrain with vertex color blending (no alpha needed - colors match at boundaries)
-        val terrainBatches = singleRegionTerrainBatches
-        if (terrainBatches != null) {
+        val tb = terrainBatches
+        if (tb != null) {
             val modelMatrix = Matrix4f().identity()
 
             // Disable face culling for terrain (two-sided rendering)
             renderSystem.disableCullFace()
 
             // Render color mesh (untextured tiles) with RGB colors
-            terrainBatches.colorMesh?.let { mesh ->
+            tb.colorMesh?.let { mesh ->
                 uboColorShader.bind()
                 uboColorShader.setUniform("model", modelMatrix)
                 mesh.render()
             }
 
             // Render textured terrain batches (single texture per triangle)
-            val batches = terrainBatches.texturedBatches
+            val batches = tb.texturedBatches
             if (batches.isNotEmpty()) {
                 uboTexturedShader.bind()
                 uboTexturedShader.setUniform("model", modelMatrix)
@@ -555,7 +476,7 @@ class MapViewer(
             // Render alpha terrain batches (multi-pass alpha blending)
             // Each batch is a single texture layer rendered on top of the opaque base
             // with per-vertex alpha controlling the blend strength.
-            val alpha = terrainBatches.alphaBatches
+            val alpha = tb.alphaBatches
             if (alpha.isNotEmpty()) {
                 // Alpha layers render at the same depth as the opaque base.
                 // Use GL_LEQUAL so equal-depth fragments pass, and disable depth
@@ -590,7 +511,7 @@ class MapViewer(
         renderTileHighlight()
 
         // Render objects
-        renderSingleRegionObjects()
+        renderObjects()
 
         if (renderSystem.wireframeMode) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
@@ -625,17 +546,17 @@ class MapViewer(
 
     private val tempModelMatrix = Matrix4f()
 
-    private fun renderSingleRegionObjects() {
-        val instanceManager = singleRegionInstanceManager ?: return
+    private fun renderObjects() {
+        val im = instanceManager ?: return
 
-        instanceManager.prepareFrame()
+        im.prepareFrame()
 
         var addedCount = 0
-        for (obj in singleRegionObjects) {
+        for (obj in objectInstances) {
             // For contourType 1 objects with displacement, use the displaced model ID
             // so the rendering path picks up the displaced geometry.
             // Fall back to the standard combined model ID for all other objects.
-            val combinedModelId = singleRegionDisplacedModels[System.identityHashCode(obj)]
+            val combinedModelId = displacedModels[System.identityHashCode(obj)]
                 ?: ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
 
             // Build transform matrix matching client order:
@@ -676,19 +597,19 @@ class MapViewer(
                 tempModelMatrix.scale(1f, 1f, -1f)  // 0. Mirror across XY plane
             }
 
-            if (instanceManager.addInstance(combinedModelId, tempModelMatrix)) {
+            if (im.addInstance(combinedModelId, tempModelMatrix)) {
                 addedCount++
             }
         }
 
-        instanceManager.uploadAll()
+        im.uploadAll()
 
         // IMPORTANT: Disable face culling for RS models which often have two-sided faces
         renderSystem.disableCullFace()
 
         // Render untextured batches first (vertex colors only)
         // The shader uses UBOs for camera/lighting which were already updated
-        instanceManager.renderUntextured(instancedColorShader)
+        im.renderUntextured(instancedColorShader)
 
         // Render textured batches with proper GL state (like ModelViewer)
         renderSystem.enableBlending()
@@ -697,7 +618,7 @@ class MapViewer(
         instancedTexturedShader.bind()
         instancedTexturedShader.setUniform("textureSampler", 0)
 
-        instanceManager.renderTextured(instancedTexturedShader) { materialId ->
+        im.renderTextured(instancedTexturedShader) { materialId ->
             // Convert material ID to OpenGL texture ID (same as ModelViewer)
             val textureId = TextureLoader.getTextureForMaterial(cache, materialId)
             TextureLoader.bindTexture(textureId)
@@ -711,6 +632,10 @@ class MapViewer(
         renderSystem.enableCullFace()
     }
 
+    // ========================================================================
+    // UI Rendering
+    // ========================================================================
+
     private fun renderUI() {
         imGui.beginFrame()
 
@@ -718,57 +643,486 @@ class MapViewer(
         debugPanel.fps = fps
         debugPanel.deltaTime = deltaTime
         debugPanel.wireframeMode = renderSystem.wireframeMode
-        debugPanel.render(if (useMultiRegion) mapCamera else scene.camera, window.width, window.height) {
+        debugPanel.render(scene.camera, window.width, window.height) {
             renderSystem.toggleWireframe()
         }
 
-        // Navigation panel
-        if (showNavPanel) {
-            renderNavigationPanel()
-        }
-
-        // Tile picker panel (only in single-region mode)
-        if (showTilePickerPanel && !useMultiRegion) {
-            renderTilePickerPanel()
+        // Map editor panel (sole control surface)
+        if (showEditorPanel) {
+            renderMapEditorPanel()
         }
 
         imGui.endFrame()
     }
 
-    // Track first frame for initial positioning of panels
-    private var tilePickerFirstFrame = true
-    private var navPanelFirstFrame = true
-
     /**
-     * Render the tile picker information panel.
-     * Shows detailed information about the selected tile for debugging UV issues.
+     * Render the unified Map Editor panel.
+     * Contains navigation, view toggles, tool palette, tool content,
+     * rendering settings, and controls help.
      */
-    private fun renderTilePickerPanel() {
-        // Set size constraints: min width 320, max height 80% of screen
+    private fun renderMapEditorPanel() {
+        // Size constraints: 320-400 width, 200 to 80% screen height
         val maxHeight = window.height * 0.8f
-        ImGui.setNextWindowSizeConstraints(320f, 150f, 450f, maxHeight)
+        ImGui.setNextWindowSizeConstraints(320f, 200f, 400f, maxHeight)
 
-        // Only set initial position on first frame
-        if (tilePickerFirstFrame) {
-            ImGui.setNextWindowPos(10f, 180f)
-            tilePickerFirstFrame = false
+        // Set initial position on first frame (right side)
+        if (editorPanelFirstFrame) {
+            ImGui.setNextWindowPos(window.width - 340f, 10f)
+            ImGui.setNextWindowSize(340f, 600f)
+            editorPanelFirstFrame = false
         }
 
-        // Allow moving and resizing, scrollbar appears automatically when needed
         val flags = ImGuiWindowFlags.None
 
-        if (ImGui.begin("Tile Picker (F4) - Click to Select", flags)) {
-            // Clamp window position to stay on screen
+        if (ImGui.begin("Map Editor (F5)", flags)) {
             clampWindowToScreen()
-            val details = tilePicker.selectedTileDetails
-            val tile = tilePicker.selectedTile
 
-            if (tile == null) {
-                ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Left-click on terrain to select a tile")
-                ImGui.separator()
-                ImGui.text("This panel shows tile details for debugging")
-                ImGui.text("overlay/underlay textures and UV mapping.")
+            // --- Navigation Section ---
+            renderNavigationSection()
+
+            ImGui.separator()
+
+            // --- View Toggles Section ---
+            renderViewTogglesSection()
+
+            ImGui.separator()
+
+            // --- Tool Palette ---
+            renderToolPalette()
+
+            ImGui.spacing()
+
+            // --- Tool-specific content ---
+            renderCurrentToolContent()
+
+            ImGui.separator()
+
+            // --- Rendering Settings (collapsible) ---
+            renderRenderingSettingsSection()
+
+            ImGui.separator()
+
+            // Controls help
+            ImGui.textWrapped("WASD move, Space/Shift up/down, Right-click look, Arrows navigate, Ctrl fast, R roofs")
+        }
+        ImGui.end()
+    }
+
+    /**
+     * Navigation section: region coordinates, plane radio buttons, go-to input, quick locations.
+     */
+    private fun renderNavigationSection() {
+        // Current position
+        ImGui.text("Region: (%d, %d)".format(currentRegionX, currentRegionY))
+        ImGui.sameLine()
+        ImGui.text("  Plane:")
+        for (plane in 0..3) {
+            ImGui.sameLine()
+            if (ImGui.radioButton("$plane##plane", currentPlane == plane)) {
+                setPlane(plane)
+            }
+        }
+
+        // Go-to region input
+        ImGui.setNextItemWidth(80f)
+        ImGui.inputInt("X##region", regionXInput)
+        ImGui.sameLine()
+        ImGui.setNextItemWidth(80f)
+        ImGui.inputInt("Y##region", regionYInput)
+        ImGui.sameLine()
+        if (ImGui.button("Go", 40f, 0f)) {
+            jumpToRegion(regionXInput.get().coerceIn(0, 255), regionYInput.get().coerceIn(0, 255))
+        }
+
+        // Quick locations (collapsible)
+        if (ImGui.collapsingHeader("Quick Locations")) {
+            var col = 0
+            for ((name, coords) in knownRegions) {
+                if (col > 0) ImGui.sameLine()
+                if (ImGui.button(name, 130f, 0f)) {
+                    regionXInput.set(coords.first)
+                    regionYInput.set(coords.second)
+                    jumpToRegion(coords.first, coords.second)
+                }
+                col = (col + 1) % 2
+            }
+        }
+    }
+
+    /**
+     * View toggles section: terrain, roofs, ground decorations in a row.
+     */
+    private fun renderViewTogglesSection() {
+        // Terrain toggle
+        if (ImGui.checkbox("Terrain (T)", showTerrain)) {
+            showTerrain = !showTerrain
+        }
+
+        ImGui.sameLine()
+
+        // Roof visibility toggle
+        val roofsEnabled = ImBoolean(showRoofs)
+        if (ImGui.checkbox("Roofs (R)", roofsEnabled)) {
+            showRoofs = roofsEnabled.get()
+            reloadRegion()
+        }
+        if (ImGui.isItemHovered()) {
+            ImGui.setTooltip("Toggle visibility of roof shapes (12-21)\nHide roofs to see inside buildings")
+        }
+
+        // Ground decoration toggle
+        val groundDecEnabled = ImBoolean(ObjectRenderer.groundDecorationEnabled)
+        if (ImGui.checkbox("Ground Decorations", groundDecEnabled)) {
+            ObjectRenderer.groundDecorationEnabled = groundDecEnabled.get()
+            reloadRegion()
+        }
+        if (ImGui.isItemHovered()) {
+            ImGui.setTooltip("Toggle ground decoration rendering\nWhen off, only interactive/blocking ground decorations render")
+        }
+    }
+
+    /**
+     * Tool palette: buttons for each editor tool.
+     */
+    private fun renderToolPalette() {
+        ImGui.text("Tool")
+
+        for (tool in EditorTool.entries) {
+            if (tool.ordinal > 0) ImGui.sameLine()
+
+            val isSelected = currentEditorTool == tool
+            if (isSelected) {
+                ImGui.pushStyleColor(ImGuiCol.Button, 0.26f, 0.59f, 0.98f, 1f)
+                ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.26f, 0.59f, 0.98f, 0.8f)
+            }
+
+            val label = if (tool.wip) "${tool.label}*" else tool.label
+            if (ImGui.button(label)) {
+                currentEditorTool = tool
+            }
+            if (tool.wip && ImGui.isItemHovered()) {
+                ImGui.setTooltip("${tool.label} (WIP - not yet functional)")
+            }
+
+            if (isSelected) {
+                ImGui.popStyleColor(2)
+            }
+        }
+    }
+
+    /**
+     * Dispatch to the current tool's content renderer.
+     */
+    private fun renderCurrentToolContent() {
+        when (currentEditorTool) {
+            EditorTool.SELECT -> renderEditorSelectTool()
+            EditorTool.OBJECT_PLACE -> renderEditorObjectPlaceTool()
+            EditorTool.OBJECT_MOVE -> renderEditorObjectMoveTool()
+            EditorTool.TERRAIN_PAINT -> renderEditorTerrainPaintTool()
+            EditorTool.HEIGHT_EDIT -> renderEditorHeightEditTool()
+            EditorTool.FLAG_EDIT -> renderEditorFlagEditTool()
+        }
+    }
+
+    /**
+     * Rendering settings section: blending, overlays, noise, lighting parameters,
+     * terrain alignment, and tilt debug.
+     */
+    private fun renderRenderingSettingsSection() {
+        if (!ImGui.collapsingHeader("Rendering Settings")) return
+
+        // Terrain blending toggle
+        val blendingEnabled = ImBoolean(TerrainLoader.enableBlending)
+        if (ImGui.checkbox("Terrain Blending", blendingEnabled)) {
+            TerrainLoader.enableBlending = blendingEnabled.get()
+            reloadTerrain()
+        }
+
+        // Overlay toggle (for debugging underlay-only terrain)
+        val overlaysEnabled = ImBoolean(TerrainLoader.enableOverlays)
+        if (ImGui.checkbox("Show Overlays", overlaysEnabled)) {
+            TerrainLoader.enableOverlays = overlaysEnabled.get()
+            reloadTerrain()
+        }
+
+        // Color noise toggle - adds subtle per-vertex brightness variation like RS client
+        val colorNoiseEnabled = ImBoolean(TerrainLoader.enableColorNoise)
+        if (ImGui.checkbox("Color Noise", colorNoiseEnabled)) {
+            TerrainLoader.enableColorNoise = colorNoiseEnabled.get()
+            reloadTerrain()
+        }
+        if (ImGui.isItemHovered()) {
+            ImGui.setTooltip("Adds subtle per-vertex brightness variation\nlike the RS client (+-1.5%% noise)")
+        }
+
+        // Terrain lighting toggle
+        val lightingEnabled = ImBoolean(TerrainLoader.enableLighting)
+        if (ImGui.checkbox("Terrain Lighting", lightingEnabled)) {
+            TerrainLoader.enableLighting = lightingEnabled.get()
+            reloadTerrain()
+        }
+        if (ImGui.isItemHovered()) {
+            ImGui.setTooltip("Applies RS-style per-vertex lighting based on\nterrain normals and sun direction")
+        }
+
+        // Lighting parameters section (collapsible)
+        if (TerrainLoader.enableLighting && ImGui.collapsingHeader("Lighting Parameters")) {
+            ImGui.indent()
+
+            // Sun direction sliders
+            ImGui.text("Light Direction")
+            val lightDirX = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_X)
+            val lightDirY = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_Y)
+            val lightDirZ = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_Z)
+
+            var lightingChanged = false
+            ImGui.setNextItemWidth(100f)
+            if (ImGui.sliderFloat("Dir X", lightDirX, -1f, 1f)) {
+                TerrainLoader.LIGHT_DIRECTION_X = lightDirX[0]
+                lightingChanged = true
+            }
+            ImGui.setNextItemWidth(100f)
+            if (ImGui.sliderFloat("Dir Y", lightDirY, -1f, 1f)) {
+                TerrainLoader.LIGHT_DIRECTION_Y = lightDirY[0]
+                lightingChanged = true
+            }
+            ImGui.setNextItemWidth(100f)
+            if (ImGui.sliderFloat("Dir Z", lightDirZ, -1f, 1f)) {
+                TerrainLoader.LIGHT_DIRECTION_Z = lightDirZ[0]
+                lightingChanged = true
+            }
+
+            ImGui.spacing()
+
+            // RS lighting parameters
+            ImGui.text("RS Lighting Formula:")
+            ImGui.textWrapped("factor = sunBrightness + dot * (dot>0 ? bright : dark)")
+
+            val sunBrightness = floatArrayOf(TerrainLoader.SUN_BRIGHTNESS)
+            val brightFactor = floatArrayOf(TerrainLoader.BRIGHT_FACTOR)
+            val darkFactor = floatArrayOf(TerrainLoader.DARK_FACTOR)
+
+            ImGui.setNextItemWidth(100f)
+            if (ImGui.sliderFloat("Sun Brightness", sunBrightness, 0.5f, 1.5f)) {
+                TerrainLoader.SUN_BRIGHTNESS = sunBrightness[0]
+                lightingChanged = true
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Base ambient brightness (default: 1.2)")
+            }
+
+            ImGui.setNextItemWidth(100f)
+            if (ImGui.sliderFloat("Bright Factor", brightFactor, 0.2f, 1.5f)) {
+                TerrainLoader.BRIGHT_FACTOR = brightFactor[0]
+                lightingChanged = true
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Factor for lit surfaces (default: 0.865)")
+            }
+
+            ImGui.setNextItemWidth(100f)
+            if (ImGui.sliderFloat("Dark Factor", darkFactor, 0.5f, 2.0f)) {
+                TerrainLoader.DARK_FACTOR = darkFactor[0]
+                lightingChanged = true
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Factor for shadowed surfaces (default: 0.814)")
+            }
+
+            // Reset to defaults button
+            if (ImGui.button("Reset to Defaults")) {
+                TerrainLoader.LIGHT_DIRECTION_X = 0.163f
+                TerrainLoader.LIGHT_DIRECTION_Y = 0.070f
+                TerrainLoader.LIGHT_DIRECTION_Z = 1.00f
+                TerrainLoader.SUN_BRIGHTNESS = 1.2f
+                TerrainLoader.BRIGHT_FACTOR = 0.865f
+                TerrainLoader.DARK_FACTOR = 0.814f
+                lightingChanged = true
+            }
+
+            // Reload terrain if parameters changed
+            if (lightingChanged) {
+                reloadTerrain()
+            }
+
+            ImGui.unindent()
+        }
+
+        ImGui.spacing()
+
+        // Terrain alignment toggle (for objects with groundContourType=3)
+        val terrainAlignEnabled = ImBoolean(TerrainAligner.enabled)
+        if (ImGui.checkbox("Terrain Alignment", terrainAlignEnabled)) {
+            TerrainAligner.enabled = terrainAlignEnabled.get()
+            reloadRegion()
+        }
+        if (ImGui.isItemHovered()) {
+            ImGui.setTooltip("Tilt objects to match terrain slopes\n(RS groundContourType=3 / hillChange)")
+        }
+
+        // Tilt negation toggles (for coordinate system debugging)
+        if (TerrainAligner.enabled && ImGui.collapsingHeader("Tilt Debug")) {
+            ImGui.indent()
+
+            // Show debug stats
+            ImGui.text("Stats: ${TerrainAligner.getDebugStats()}")
+
+            val negateXTilt = ImBoolean(TerrainAligner.negateXTilt)
+            if (ImGui.checkbox("Negate X Tilt", negateXTilt)) {
+                TerrainAligner.negateXTilt = negateXTilt.get()
+                reloadRegion()
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Negate X-axis tilt (pitch) for coordinate system fix")
+            }
+
+            val negateZTilt = ImBoolean(TerrainAligner.negateZTilt)
+            if (ImGui.checkbox("Negate Z Tilt", negateZTilt)) {
+                TerrainAligner.negateZTilt = negateZTilt.get()
+                reloadRegion()
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Negate Z-axis tilt (roll) for coordinate system fix")
+            }
+
+            // Button to enable debug logging
+            if (ImGui.button("Enable Debug Logging")) {
+                TerrainAligner.enableDebug(true)
+                reloadRegion()
+            }
+
+            ImGui.unindent()
+        }
+    }
+
+    // ========================================================================
+    // Editor Tool Content
+    // ========================================================================
+
+    /**
+     * SELECT tool content: Object Inspector, Tile Inspector, and Tile Details (Debug).
+     */
+    private fun renderEditorSelectTool() {
+        val details = tilePicker.selectedTileDetails
+        val tile = tilePicker.selectedTile
+
+        if (tile == null) {
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Left-click on terrain to select a tile")
+            return
+        }
+
+        // --- Object Inspector ---
+        if (ImGui.collapsingHeader("Object Inspector")) {
+            if (details == null || details.objects.isEmpty()) {
+                ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "No objects on selected tile")
             } else {
+                for ((index, tileObj) in details.objects.withIndex()) {
+                    val obj = tileObj.mapObject
+                    val def = tileObj.definition
+
+                    val objName = def.name.ifEmpty { "<unnamed>" }
+                    if (ImGui.treeNode("editor_obj_$index", "#%d: %s".format(obj.id, objName))) {
+
+                        // Shape name lookup
+                        val shapeName = ObjectShape.entries.find { it.id == obj.shape }?.name ?: "Unknown"
+                        ImGui.text("Shape:    %s (%d)".format(shapeName, obj.shape))
+                        ImGui.text("Rotation: %d".format(obj.rotation))
+
+                        // Model IDs
+                        ImGui.text("Models:   %s".format(
+                            if (tileObj.modelIds.isEmpty()) "(none)"
+                            else tileObj.modelIds.joinToString(", ")
+                        ))
+
+                        // Interactive flag
+                        val interactiveLabel = when (def.interactive) {
+                            -1 -> "Default (-1)"
+                            0 -> "No (0)"
+                            1 -> "Yes (1)"
+                            else -> "${def.interactive}"
+                        }
+                        ImGui.text("Interactive: %s".format(interactiveLabel))
+
+                        ImGui.spacing()
+                        ImGui.text("Definition Properties")
+                        ImGui.indent()
+                        ImGui.text("Size:     %dx%d".format(def.sizeX, def.sizeY))
+                        ImGui.text("Solid:    %d".format(def.solid))
+
+                        val blocksProjectile = (def.block and ObjectDefinition.PROJECTILE) != 0
+                        ImGui.text("Blocks Projectile: %s".format(if (blocksProjectile) "Yes" else "No"))
+                        ImGui.unindent()
+
+                        ImGui.spacing()
+
+                        // Placeholder action buttons (disabled)
+                        ImGui.beginDisabled()
+                        ImGui.button("Edit##edit_$index")
+                        ImGui.sameLine()
+                        ImGui.button("Delete##delete_$index")
+                        ImGui.endDisabled()
+                        if (ImGui.isItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) {
+                            ImGui.setTooltip("Not yet implemented")
+                        }
+
+                        ImGui.treePop()
+                    }
+                }
+            }
+        }
+
+        // --- Tile Inspector ---
+        if (ImGui.collapsingHeader("Tile Inspector")) {
+            if (details == null || details.tileData == null) {
+                ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "No tile data available")
+            } else {
+                val tileData = details.tileData
+
+                ImGui.text("Position: (%d, %d) Plane %d".format(tile.localX, tile.localY, tile.plane))
+                ImGui.text("Height:   %d".format(tileData.height))
+
+                ImGui.spacing()
+                ImGui.text("Overlay")
+                ImGui.indent()
+                ImGui.text("ID:       %d".format(tileData.overlayId))
+                ImGui.text("Shape:    %d".format(tileData.overlayShape))
+                ImGui.text("Rotation: %d".format(tileData.overlayRotation))
+                ImGui.unindent()
+
+                ImGui.spacing()
+                ImGui.text("Underlay")
+                ImGui.indent()
+                ImGui.text("ID:       %d".format(tileData.underlayId))
+                ImGui.unindent()
+
+                ImGui.spacing()
+                ImGui.text("Flags (0x%02X)".format(tileData.flags))
+                ImGui.indent()
+
+                // Read-only flag checkboxes
+                ImGui.beginDisabled()
+                val blocksWalk = ImBoolean(tileData.flags and 0x1 != 0)
+                ImGui.checkbox("Blocks Walk (0x1)", blocksWalk)
+                val bridge = ImBoolean(tileData.flags and 0x2 != 0)
+                ImGui.checkbox("Bridge (0x2)", bridge)
+                val invisible = ImBoolean(tileData.flags and 0x4 != 0)
+                ImGui.checkbox("Invisible (0x4)", invisible)
+                val forcePlane0 = ImBoolean(tileData.flags and 0x8 != 0)
+                ImGui.checkbox("Force Plane 0 (0x8)", forcePlane0)
+                ImGui.endDisabled()
+
+                ImGui.unindent()
+            }
+        }
+
+        // --- Tile Details (Debug) ---
+        // Detailed overlay/underlay definitions, UV coords, corner heights, and per-object info.
+        if (ImGui.collapsingHeader("Tile Details (Debug)")) {
+            if (details == null || details.tileData == null) {
+                ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "No tile data available")
+            } else {
+                val tileData = details.tileData
+
                 // Tile coordinates
                 ImGui.text("Tile Coordinates")
                 ImGui.separator()
@@ -777,131 +1131,112 @@ class MapViewer(
                 ImGui.text("  Plane:  %d".format(tile.plane))
                 ImGui.text("  World:  (%.2f, %.2f, %.2f)".format(tile.worldX, tile.worldY, tile.worldZ))
 
-                if (details != null) {
-                    val tileData = details.tileData
-                    if (tileData != null) {
-                        ImGui.spacing()
-                        ImGui.text("Tile Data")
-                        ImGui.separator()
-                        ImGui.text("  Height:   %d".format(tileData.height))
-                        ImGui.text("  Flags:    0x%02X".format(tileData.flags))
-                        if (tileData.flags != 0) {
-                            val flagsList = mutableListOf<String>()
-                            if (tileData.blocksWalk) flagsList.add("BLOCK_WALK")
-                            if (tileData.isBridge) flagsList.add("BRIDGE")
-                            if (tileData.isInvisible) flagsList.add("INVISIBLE")
-                            if (tileData.forcesCollisionPlane0) flagsList.add("FORCE_PLANE_0")
-                            ImGui.text("            ${flagsList.joinToString(", ")}")
-                        }
+                ImGui.spacing()
+                ImGui.text("Overlay Definition")
+                ImGui.separator()
+                ImGui.text("  ID:       %d".format(tileData.overlayId))
+                ImGui.text("  Shape:    %d".format(tileData.overlayShape))
+                ImGui.text("  Rotation: %d".format(tileData.overlayRotation))
 
-                        ImGui.spacing()
-                        ImGui.text("Overlay")
-                        ImGui.separator()
-                        ImGui.text("  ID:       %d".format(tileData.overlayId))
-                        ImGui.text("  Shape:    %d".format(tileData.overlayShape))
-                        ImGui.text("  Rotation: %d".format(tileData.overlayRotation))
+                val overlayDef = details.overlayDef
+                if (overlayDef != null) {
+                    ImGui.text("  Texture:  %d".format(overlayDef.texture))
+                    ImGui.text("  Scale:    %d".format(overlayDef.scale))
+                    ImGui.text("  Colour:   0x%04X (%d)".format(overlayDef.colour, overlayDef.colour))
+                    ImGui.text("  BlendCol: 0x%04X (%d)".format(overlayDef.blendColour, overlayDef.blendColour))
+                    ImGui.text("  Underlay Override: %s".format(overlayDef.underlayOverrides))
 
-                        val overlayDef = details.overlayDef
-                        if (overlayDef != null) {
-                            ImGui.text("  Texture:  %d".format(overlayDef.texture))
-                            ImGui.text("  Scale:    %d".format(overlayDef.scale))
-                            ImGui.text("  Colour:   0x%04X (%d)".format(overlayDef.colour, overlayDef.colour))
-                            ImGui.text("  BlendCol: 0x%04X (%d)".format(overlayDef.blendColour, overlayDef.blendColour))
-                            ImGui.text("  Underlay Override: %s".format(overlayDef.underlayOverrides))
+                    // UV coordinates for overlay
+                    val uvs = details.cornerUVsOverlay
+                    if (uvs != null) {
+                        ImGui.text("  UV Scale: %.4f (1/%d)".format(1f / overlayDef.scale.toFloat(), overlayDef.scale))
+                        ImGui.text("  UV SW: (%.3f, %.3f)".format(uvs[0][0], uvs[0][1]))
+                        ImGui.text("  UV SE: (%.3f, %.3f)".format(uvs[1][0], uvs[1][1]))
+                        ImGui.text("  UV NW: (%.3f, %.3f)".format(uvs[2][0], uvs[2][1]))
+                        ImGui.text("  UV NE: (%.3f, %.3f)".format(uvs[3][0], uvs[3][1]))
+                    }
+                } else if (tileData.overlayId > 0) {
+                    ImGui.textColored(1f, 0.5f, 0.5f, 1f, "  (Definition not found)")
+                }
 
-                            // UV coordinates for overlay
-                            val uvs = details.cornerUVsOverlay
-                            if (uvs != null) {
-                                ImGui.text("  UV Scale: %.4f (1/%d)".format(1f / overlayDef.scale.toFloat(), overlayDef.scale))
-                                ImGui.text("  UV SW: (%.3f, %.3f)".format(uvs[0][0], uvs[0][1]))
-                                ImGui.text("  UV SE: (%.3f, %.3f)".format(uvs[1][0], uvs[1][1]))
-                                ImGui.text("  UV NW: (%.3f, %.3f)".format(uvs[2][0], uvs[2][1]))
-                                ImGui.text("  UV NE: (%.3f, %.3f)".format(uvs[3][0], uvs[3][1]))
-                            }
-                        } else if (tileData.overlayId > 0) {
-                            ImGui.textColored(1f, 0.5f, 0.5f, 1f, "  (Definition not found)")
-                        }
+                ImGui.spacing()
+                ImGui.text("Underlay Definition")
+                ImGui.separator()
+                ImGui.text("  ID:       %d".format(tileData.underlayId))
 
-                        ImGui.spacing()
-                        ImGui.text("Underlay")
-                        ImGui.separator()
-                        ImGui.text("  ID:       %d".format(tileData.underlayId))
+                val underlayDef = details.underlayDef
+                if (underlayDef != null) {
+                    ImGui.text("  Texture:  %d".format(underlayDef.texture))
+                    ImGui.text("  Scale:    %d".format(underlayDef.scale))
+                    ImGui.text("  Colour:   0x%06X".format(underlayDef.colour))
+                    ImGui.text("  Hue:      %d".format(underlayDef.hue))
+                    ImGui.text("  Sat:      %d".format(underlayDef.saturation))
+                    ImGui.text("  Light:    %d".format(underlayDef.lightness))
+                    ImGui.text("  Chroma:   %d".format(underlayDef.chroma))
 
-                        val underlayDef = details.underlayDef
-                        if (underlayDef != null) {
-                            ImGui.text("  Texture:  %d".format(underlayDef.texture))
-                            ImGui.text("  Scale:    %d".format(underlayDef.scale))
-                            ImGui.text("  Colour:   0x%06X".format(underlayDef.colour))
-                            ImGui.text("  Hue:      %d".format(underlayDef.hue))
-                            ImGui.text("  Sat:      %d".format(underlayDef.saturation))
-                            ImGui.text("  Light:    %d".format(underlayDef.lightness))
-                            ImGui.text("  Chroma:   %d".format(underlayDef.chroma))
+                    // UV coordinates for underlay
+                    val uvs = details.cornerUVsUnderlay
+                    if (uvs != null) {
+                        ImGui.text("  UV Scale: %.4f (1/%d)".format(1f / underlayDef.scale.toFloat(), underlayDef.scale))
+                        ImGui.text("  UV SW: (%.3f, %.3f)".format(uvs[0][0], uvs[0][1]))
+                        ImGui.text("  UV SE: (%.3f, %.3f)".format(uvs[1][0], uvs[1][1]))
+                        ImGui.text("  UV NW: (%.3f, %.3f)".format(uvs[2][0], uvs[2][1]))
+                        ImGui.text("  UV NE: (%.3f, %.3f)".format(uvs[3][0], uvs[3][1]))
+                    }
+                } else if (tileData.underlayId > 0) {
+                    ImGui.textColored(1f, 0.5f, 0.5f, 1f, "  (Definition not found)")
+                }
 
-                            // UV coordinates for underlay
-                            val uvs = details.cornerUVsUnderlay
-                            if (uvs != null) {
-                                ImGui.text("  UV Scale: %.4f (1/%d)".format(1f / underlayDef.scale.toFloat(), underlayDef.scale))
-                                ImGui.text("  UV SW: (%.3f, %.3f)".format(uvs[0][0], uvs[0][1]))
-                                ImGui.text("  UV SE: (%.3f, %.3f)".format(uvs[1][0], uvs[1][1]))
-                                ImGui.text("  UV NW: (%.3f, %.3f)".format(uvs[2][0], uvs[2][1]))
-                                ImGui.text("  UV NE: (%.3f, %.3f)".format(uvs[3][0], uvs[3][1]))
-                            }
-                        } else if (tileData.underlayId > 0) {
-                            ImGui.textColored(1f, 0.5f, 0.5f, 1f, "  (Definition not found)")
-                        }
+                // Corner heights
+                ImGui.spacing()
+                ImGui.text("Corner Heights (scaled)")
+                ImGui.separator()
+                ImGui.text("  SW: %.2f  SE: %.2f".format(details.cornerHeights[0], details.cornerHeights[1]))
+                ImGui.text("  NW: %.2f  NE: %.2f".format(details.cornerHeights[2], details.cornerHeights[3]))
 
-                        // Corner heights
-                        ImGui.spacing()
-                        ImGui.text("Corner Heights (scaled)")
-                        ImGui.separator()
-                        ImGui.text("  SW: %.2f  SE: %.2f".format(details.cornerHeights[0], details.cornerHeights[1]))
-                        ImGui.text("  NW: %.2f  NE: %.2f".format(details.cornerHeights[2], details.cornerHeights[3]))
+                // Objects on tile (detailed view with model/texture/retexture info)
+                ImGui.spacing()
+                ImGui.text("Objects on Tile (%d)".format(details.objects.size))
+                ImGui.separator()
+                if (details.objects.isEmpty()) {
+                    ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "  (No objects)")
+                } else {
+                    for ((index, tileObj) in details.objects.withIndex()) {
+                        val obj = tileObj.mapObject
+                        val def = tileObj.definition
+                        if (ImGui.treeNode("debug_obj_$index", "Object %d: %s".format(obj.id, def.name.ifEmpty { "<unnamed>" }))) {
+                            ImGui.text("  Shape: %d, Rotation: %d".format(obj.shape, obj.rotation))
+                            ImGui.text("  World Pos: (%d, %d)".format(obj.x, obj.y))
+                            ImGui.text("  Size: %dx%d".format(def.sizeX, def.sizeY))
 
-                        // Objects on tile
-                        ImGui.spacing()
-                        ImGui.text("Objects on Tile (%d)".format(details.objects.size))
-                        ImGui.separator()
-                        if (details.objects.isEmpty()) {
-                            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "  (No objects)")
-                        } else {
-                            for ((index, tileObj) in details.objects.withIndex()) {
-                                val obj = tileObj.mapObject
-                                val def = tileObj.definition
-                                if (ImGui.treeNode("obj_$index", "Object %d: %s".format(obj.id, def.name.ifEmpty { "<unnamed>" }))) {
-                                    ImGui.text("  Shape: %d, Rotation: %d".format(obj.shape, obj.rotation))
-                                    ImGui.text("  World Pos: (%d, %d)".format(obj.x, obj.y))
-                                    ImGui.text("  Size: %dx%d".format(def.sizeX, def.sizeY))
+                            // Model IDs
+                            ImGui.text("  Model IDs: %s".format(
+                                if (tileObj.modelIds.isEmpty()) "(none)"
+                                else tileObj.modelIds.joinToString(", ")
+                            ))
 
-                                    // Model IDs
-                                    ImGui.text("  Model IDs: %s".format(
-                                        if (tileObj.modelIds.isEmpty()) "(none)"
-                                        else tileObj.modelIds.joinToString(", ")
-                                    ))
+                            // Texture IDs
+                            ImGui.text("  Texture IDs: %s".format(
+                                if (tileObj.textureIds.isEmpty()) "(none)"
+                                else tileObj.textureIds.sorted().joinToString(", ")
+                            ))
 
-                                    // Texture IDs
-                                    ImGui.text("  Texture IDs: %s".format(
-                                        if (tileObj.textureIds.isEmpty()) "(none)"
-                                        else tileObj.textureIds.sorted().joinToString(", ")
-                                    ))
-
-                                    // Object retexturing/recoloring if present
-                                    if (def.retextureSrc != null && def.retextureDst != null) {
-                                        ImGui.textColored(0.5f, 1f, 0.5f, 1f, "  Has Retexturing")
-                                        for (i in def.retextureSrc!!.indices) {
-                                            if (i < def.retextureDst!!.size) {
-                                                val src = def.retextureSrc!![i].toInt() and 0xffff
-                                                val dst = def.retextureDst!![i].toInt() and 0xffff
-                                                ImGui.text("    Tex %d -> %d".format(src, dst))
-                                            }
-                                        }
+                            // Object retexturing/recoloring if present
+                            if (def.retextureSrc != null && def.retextureDst != null) {
+                                ImGui.textColored(0.5f, 1f, 0.5f, 1f, "  Has Retexturing")
+                                for (i in def.retextureSrc!!.indices) {
+                                    if (i < def.retextureDst!!.size) {
+                                        val src = def.retextureSrc!![i].toInt() and 0xffff
+                                        val dst = def.retextureDst!![i].toInt() and 0xffff
+                                        ImGui.text("    Tex %d -> %d".format(src, dst))
                                     }
-                                    if (def.recolorSrc != null && def.recolorDst != null) {
-                                        ImGui.textColored(0.5f, 0.5f, 1f, 1f, "  Has Recoloring")
-                                    }
-
-                                    ImGui.treePop()
                                 }
                             }
+                            if (def.recolorSrc != null && def.recolorDst != null) {
+                                ImGui.textColored(0.5f, 0.5f, 1f, 1f, "  Has Recoloring")
+                            }
+
+                            ImGui.treePop()
                         }
                     }
                 }
@@ -915,389 +1250,171 @@ class MapViewer(
                 }
             }
         }
-        ImGui.end()
     }
 
-    private fun renderNavigationPanel() {
-        // Set size constraints: min width 280, max height 80% of screen
-        val maxHeight = window.height * 0.8f
-        ImGui.setNextWindowSizeConstraints(280f, 200f, 400f, maxHeight)
+    /**
+     * OBJECT_PLACE tool content: Object browser for searching and placing objects.
+     */
+    private fun renderEditorObjectPlaceTool() {
+        if (ImGui.collapsingHeader("Object Browser", ImGuiTreeNodeFlags.DefaultOpen)) {
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Search objects to place")
+            ImGui.spacing()
 
-        // Only set initial position on first frame (right side of screen)
-        if (navPanelFirstFrame) {
-            ImGui.setNextWindowPos(window.width - 290f, 10f)
-            navPanelFirstFrame = false
+            ImGui.setNextItemWidth(-1f)
+            ImGui.inputText("##obj_search", editorObjectSearchQuery)
+
+            ImGui.spacing()
+
+            // Scrollable placeholder list area
+            val listHeight = ImGui.getContentRegionAvailY().coerceAtLeast(100f).coerceAtMost(300f)
+            if (ImGui.beginChild("obj_search_results", 0f, listHeight, true)) {
+                val query = editorObjectSearchQuery.get().trim()
+                if (query.isEmpty()) {
+                    ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "Type a name or ID to search...")
+                } else {
+                    ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "Object search not yet implemented")
+                    ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "Query: \"%s\"".format(query))
+                }
+            }
+            ImGui.endChild()
+
+            ImGui.spacing()
+            ImGui.beginDisabled()
+            ImGui.button("Place Selected Object")
+            ImGui.endDisabled()
         }
+    }
 
-        // Allow moving and resizing, scrollbar appears automatically when needed
-        val flags = ImGuiWindowFlags.None
+    /**
+     * OBJECT_MOVE tool content: placeholder for moving objects.
+     */
+    private fun renderEditorObjectMoveTool() {
+        ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click an object to select it, then drag to move.")
+        ImGui.spacing()
+        ImGui.textColored(1f, 0.8f, 0.3f, 1f, "This tool is not yet functional.")
+    }
 
-        if (ImGui.begin("Navigation (F2)", flags)) {
-            // Clamp window position to stay on screen
-            clampWindowToScreen()
-            // Mode indicator
-            ImGui.text("Mode: %s".format(if (useMultiRegion) "Multi-Region" else "Single"))
-            if (ImGui.button(if (useMultiRegion) "Switch to Single (M)" else "Switch to Multi (M)")) {
-                useMultiRegion = !useMultiRegion
-                if (useMultiRegion) {
-                    cleanupSingleRegion()
-                    mapScene.initialize()
-                    jumpToRegion(currentRegionX, currentRegionY)
-                } else {
-                    mapScene.cleanup()
-                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                }
+    /**
+     * TERRAIN_PAINT tool content: overlay/underlay painting controls.
+     */
+    private fun renderEditorTerrainPaintTool() {
+        if (ImGui.collapsingHeader("Terrain Painter", ImGuiTreeNodeFlags.DefaultOpen)) {
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click to paint terrain")
+            ImGui.spacing()
+
+            // Paint mode: Overlay / Underlay
+            ImGui.text("Paint Mode")
+            if (ImGui.radioButton("Overlay", editorPaintMode == 0)) {
+                editorPaintMode = 0
             }
-
-            ImGui.separator()
-
-            // Current position
-            ImGui.text("Region: (%d, %d)".format(currentRegionX, currentRegionY))
-            ImGui.text("Plane: %d".format(currentPlane))
-
-            if (useMultiRegion) {
-                val stats = mapScene.getStats()
-                ImGui.text("Loaded: %d regions".format(stats.loadedRegions))
-                ImGui.text("Visible: %d regions".format(stats.visibleRegions))
-                ImGui.text("XTEA Keys: %d".format(MapXteas.size()))
-            }
-
-            ImGui.separator()
-
-            // Region navigation
-            ImGui.text("Go to Region:")
-            ImGui.setNextItemWidth(80f)
-            ImGui.inputInt("X", regionXInput)
             ImGui.sameLine()
-            ImGui.setNextItemWidth(80f)
-            ImGui.inputInt("Y", regionYInput)
-
-            if (ImGui.button("Go", 60f, 0f)) {
-                jumpToRegion(regionXInput.get().coerceIn(0, 255), regionYInput.get().coerceIn(0, 255))
+            if (ImGui.radioButton("Underlay", editorPaintMode == 1)) {
+                editorPaintMode = 1
             }
 
-            ImGui.separator()
+            ImGui.spacing()
 
-            // Plane selection
-            ImGui.text("Plane (1-4 / PgUp/PgDn):")
-            for (plane in 0..3) {
-                if (plane > 0) ImGui.sameLine()
-                if (ImGui.radioButton("$plane", currentPlane == plane)) {
-                    setPlane(plane)
-                }
+            // ID input
+            val idLabel = if (editorPaintMode == 0) "Overlay ID" else "Underlay ID"
+            ImGui.setNextItemWidth(120f)
+            ImGui.inputInt(idLabel, editorOverlayUnderlayId)
+
+            ImGui.spacing()
+
+            // Brush size slider
+            ImGui.setNextItemWidth(120f)
+            ImGui.sliderInt("Brush Size", editorBrushSize, 1, 5)
+
+            ImGui.spacing()
+            ImGui.beginDisabled()
+            ImGui.button("Apply Paint")
+            ImGui.endDisabled()
+        }
+    }
+
+    /**
+     * HEIGHT_EDIT tool content: height brush controls.
+     */
+    private fun renderEditorHeightEditTool() {
+        if (ImGui.collapsingHeader("Height Editor", ImGuiTreeNodeFlags.DefaultOpen)) {
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click and drag to edit height")
+            ImGui.spacing()
+
+            // Brush radius slider
+            ImGui.setNextItemWidth(120f)
+            ImGui.sliderInt("Brush Radius", editorHeightBrushRadius, 1, 3)
+
+            // Strength slider
+            ImGui.setNextItemWidth(120f)
+            ImGui.sliderInt("Strength", editorHeightStrength, 1, 10)
+
+            ImGui.spacing()
+
+            // Mode radio buttons
+            ImGui.text("Mode")
+            if (ImGui.radioButton("Raise", editorHeightMode == 0)) {
+                editorHeightMode = 0
+            }
+            ImGui.sameLine()
+            if (ImGui.radioButton("Lower", editorHeightMode == 1)) {
+                editorHeightMode = 1
+            }
+            ImGui.sameLine()
+            if (ImGui.radioButton("Smooth", editorHeightMode == 2)) {
+                editorHeightMode = 2
             }
 
-            ImGui.separator()
+            ImGui.spacing()
+            ImGui.beginDisabled()
+            ImGui.button("Apply Height Change")
+            ImGui.endDisabled()
+        }
+    }
 
-            // Quick locations
-            ImGui.text("Quick Locations:")
-            var col = 0
-            for ((name, coords) in knownRegions) {
-                if (col > 0) ImGui.sameLine()
-                if (ImGui.button(name, 130f, 0f)) {
-                    regionXInput.set(coords.first)
-                    regionYInput.set(coords.second)
-                    jumpToRegion(coords.first, coords.second)
-                }
-                col = (col + 1) % 2
-            }
+    /**
+     * FLAG_EDIT tool content: tile flag toggle checkboxes.
+     */
+    private fun renderEditorFlagEditTool() {
+        if (ImGui.collapsingHeader("Flag Editor", ImGuiTreeNodeFlags.DefaultOpen)) {
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click tile to toggle flags")
+            ImGui.spacing()
 
-            ImGui.separator()
+            val details = tilePicker.selectedTileDetails
+            val tileData = details?.tileData
 
-            // Layer toggles
-            if (ImGui.checkbox("Show Terrain (T)", showTerrain)) {
-                showTerrain = !showTerrain
-            }
-
-            // Roof visibility toggle
-            val roofsEnabled = ImBoolean(showRoofs)
-            if (ImGui.checkbox("Show Roofs (R)", roofsEnabled)) {
-                showRoofs = roofsEnabled.get()
-                mapScene.showRoofs = showRoofs  // Sync with MapScene for multi-region mode
-                // Reload objects to apply the change (single-region only - multi-region filters dynamically)
-                if (!useMultiRegion) {
-                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                }
-            }
-            if (ImGui.isItemHovered()) {
-                ImGui.setTooltip("Toggle visibility of roof shapes (12-21)\nHide roofs to see inside buildings")
-            }
-
-            // Ground decoration toggle
-            val groundDecEnabled = ImBoolean(ObjectRenderer.groundDecorationEnabled)
-            if (ImGui.checkbox("Ground Decorations", groundDecEnabled)) {
-                ObjectRenderer.groundDecorationEnabled = groundDecEnabled.get()
-                if (!useMultiRegion) {
-                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                } else {
-                    mapScene.cleanup()
-                    mapScene.initialize()
-                    jumpToRegion(currentRegionX, currentRegionY)
-                }
-            }
-            if (ImGui.isItemHovered()) {
-                ImGui.setTooltip("Toggle ground decoration rendering\nWhen off, only interactive/blocking ground decorations render")
-            }
-
-            // Marker face filter toggle
-            val hideMarkerFaces = ImBoolean(ModelLoader.hideUntexturedMarkerFaces)
-            if (ImGui.checkbox("Hide Marker Faces", hideMarkerFaces)) {
-                ModelLoader.hideUntexturedMarkerFaces = hideMarkerFaces.get()
-                // Reload to regenerate meshes with the new filter setting
-                if (!useMultiRegion) {
-                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                } else {
-                    mapScene.cleanup()
-                    mapScene.initialize()
-                    jumpToRegion(currentRegionX, currentRegionY)
-                }
-            }
-            if (ImGui.isItemHovered()) {
-                ImGui.setTooltip("Hide untextured faces on models that also have textured faces.\nFilters out label backing panels, ground markers, and other\nplaceholder geometry (e.g. signpost green panels).")
-            }
-
-            // Terrain blending toggle
-            val blendingEnabled = ImBoolean(TerrainLoader.enableBlending)
-            if (ImGui.checkbox("Terrain Blending", blendingEnabled)) {
-                TerrainLoader.enableBlending = blendingEnabled.get()
-                // Reload terrain to apply the change
-                TerrainLoader.clearCache()
-                if (!useMultiRegion) {
-                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                } else {
-                    // Force multi-region reload
-                    mapScene.cleanup()
-                    mapScene.initialize()
-                    jumpToRegion(currentRegionX, currentRegionY)
-                }
-            }
-
-            // Overlay toggle (for debugging underlay-only terrain)
-            val overlaysEnabled = ImBoolean(TerrainLoader.enableOverlays)
-            if (ImGui.checkbox("Show Overlays", overlaysEnabled)) {
-                TerrainLoader.enableOverlays = overlaysEnabled.get()
-                // Reload terrain to apply the change
-                TerrainLoader.clearCache()
-                if (!useMultiRegion) {
-                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                } else {
-                    mapScene.cleanup()
-                    mapScene.initialize()
-                    jumpToRegion(currentRegionX, currentRegionY)
-                }
-            }
-
-            // Color noise toggle - adds subtle per-vertex brightness variation like RS client
-            val colorNoiseEnabled = ImBoolean(TerrainLoader.enableColorNoise)
-            if (ImGui.checkbox("Color Noise", colorNoiseEnabled)) {
-                TerrainLoader.enableColorNoise = colorNoiseEnabled.get()
-                // Reload terrain to apply the change
-                TerrainLoader.clearCache()
-                if (!useMultiRegion) {
-                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                } else {
-                    mapScene.cleanup()
-                    mapScene.initialize()
-                    jumpToRegion(currentRegionX, currentRegionY)
-                }
-            }
-            if (ImGui.isItemHovered()) {
-                ImGui.setTooltip("Adds subtle per-vertex brightness variation\nlike the RS client (+-1.5%% noise)")
-            }
-
-            // Terrain lighting toggle
-            val lightingEnabled = ImBoolean(TerrainLoader.enableLighting)
-            if (ImGui.checkbox("Terrain Lighting", lightingEnabled)) {
-                TerrainLoader.enableLighting = lightingEnabled.get()
-                TerrainLoader.clearCache()
-                if (!useMultiRegion) {
-                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                } else {
-                    mapScene.cleanup()
-                    mapScene.initialize()
-                    jumpToRegion(currentRegionX, currentRegionY)
-                }
-            }
-            if (ImGui.isItemHovered()) {
-                ImGui.setTooltip("Applies RS-style per-vertex lighting based on\nterrain normals and sun direction")
-            }
-
-            // Lighting parameters section (collapsible)
-            if (TerrainLoader.enableLighting && ImGui.collapsingHeader("Lighting Parameters")) {
-                ImGui.indent()
-
-                // Sun direction sliders
-                ImGui.text("Light Direction")
-                val lightDirX = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_X)
-                val lightDirY = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_Y)
-                val lightDirZ = floatArrayOf(TerrainLoader.LIGHT_DIRECTION_Z)
-
-                var lightingChanged = false
-                ImGui.setNextItemWidth(100f)
-                if (ImGui.sliderFloat("Dir X", lightDirX, -1f, 1f)) {
-                    TerrainLoader.LIGHT_DIRECTION_X = lightDirX[0]
-                    lightingChanged = true
-                }
-                ImGui.setNextItemWidth(100f)
-                if (ImGui.sliderFloat("Dir Y", lightDirY, -1f, 1f)) {
-                    TerrainLoader.LIGHT_DIRECTION_Y = lightDirY[0]
-                    lightingChanged = true
-                }
-                ImGui.setNextItemWidth(100f)
-                if (ImGui.sliderFloat("Dir Z", lightDirZ, -1f, 1f)) {
-                    TerrainLoader.LIGHT_DIRECTION_Z = lightDirZ[0]
-                    lightingChanged = true
-                }
-
+            if (tileData == null) {
+                ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "Select a tile first (left-click)")
+            } else {
+                ImGui.text("Tile (%d, %d) - Current flags: 0x%02X".format(
+                    details.tile.localX, details.tile.localY, tileData.flags
+                ))
                 ImGui.spacing()
 
-                // RS lighting parameters
-                ImGui.text("RS Lighting Formula:")
-                ImGui.textWrapped("factor = sunBrightness + dot * (dot>0 ? bright : dark)")
+                // Editable flag checkboxes (placeholder - changes are not persisted)
+                ImGui.beginDisabled()
+                val blocksWalk = ImBoolean(tileData.flags and 0x1 != 0)
+                ImGui.checkbox("Blocks Walk (0x1)##flag_edit", blocksWalk)
+                val bridgeFlag = ImBoolean(tileData.flags and 0x2 != 0)
+                ImGui.checkbox("Bridge (0x2)##flag_edit", bridgeFlag)
+                val invisibleFlag = ImBoolean(tileData.flags and 0x4 != 0)
+                ImGui.checkbox("Invisible (0x4)##flag_edit", invisibleFlag)
+                val forcePlane0Flag = ImBoolean(tileData.flags and 0x8 != 0)
+                ImGui.checkbox("Force Plane 0 (0x8)##flag_edit", forcePlane0Flag)
+                ImGui.endDisabled()
 
-                val sunBrightness = floatArrayOf(TerrainLoader.SUN_BRIGHTNESS)
-                val brightFactor = floatArrayOf(TerrainLoader.BRIGHT_FACTOR)
-                val darkFactor = floatArrayOf(TerrainLoader.DARK_FACTOR)
-
-                ImGui.setNextItemWidth(100f)
-                if (ImGui.sliderFloat("Sun Brightness", sunBrightness, 0.5f, 1.5f)) {
-                    TerrainLoader.SUN_BRIGHTNESS = sunBrightness[0]
-                    lightingChanged = true
-                }
-                if (ImGui.isItemHovered()) {
-                    ImGui.setTooltip("Base ambient brightness (default: 1.2)")
-                }
-
-                ImGui.setNextItemWidth(100f)
-                if (ImGui.sliderFloat("Bright Factor", brightFactor, 0.2f, 1.5f)) {
-                    TerrainLoader.BRIGHT_FACTOR = brightFactor[0]
-                    lightingChanged = true
-                }
-                if (ImGui.isItemHovered()) {
-                    ImGui.setTooltip("Factor for lit surfaces (default: 0.865)")
-                }
-
-                ImGui.setNextItemWidth(100f)
-                if (ImGui.sliderFloat("Dark Factor", darkFactor, 0.5f, 2.0f)) {
-                    TerrainLoader.DARK_FACTOR = darkFactor[0]
-                    lightingChanged = true
-                }
-                if (ImGui.isItemHovered()) {
-                    ImGui.setTooltip("Factor for shadowed surfaces (default: 0.814)")
-                }
-
-                // Reset to defaults button
-                if (ImGui.button("Reset to Defaults")) {
-                    TerrainLoader.LIGHT_DIRECTION_X = 0.163f
-                    TerrainLoader.LIGHT_DIRECTION_Y = 0.070f
-                    TerrainLoader.LIGHT_DIRECTION_Z = 1.00f
-                    TerrainLoader.SUN_BRIGHTNESS = 1.2f
-                    TerrainLoader.BRIGHT_FACTOR = 0.865f
-                    TerrainLoader.DARK_FACTOR = 0.814f
-                    lightingChanged = true
-                }
-
-                // Reload terrain if parameters changed
-                if (lightingChanged) {
-                    TerrainLoader.clearCache()
-                    if (!useMultiRegion) {
-                        loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                    } else {
-                        mapScene.cleanup()
-                        mapScene.initialize()
-                        jumpToRegion(currentRegionX, currentRegionY)
-                    }
-                }
-
-                ImGui.unindent()
+                ImGui.spacing()
+                ImGui.textColored(1f, 0.8f, 0.3f, 1f, "Flag editing not yet functional")
             }
-
-            ImGui.separator()
-
-            // Terrain alignment toggle (for objects with groundContourType=3)
-            val terrainAlignEnabled = ImBoolean(TerrainAligner.enabled)
-            if (ImGui.checkbox("Terrain Alignment", terrainAlignEnabled)) {
-                TerrainAligner.enabled = terrainAlignEnabled.get()
-                // Reload objects to apply the change
-                if (!useMultiRegion) {
-                    loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                } else {
-                    mapScene.cleanup()
-                    mapScene.initialize()
-                    jumpToRegion(currentRegionX, currentRegionY)
-                }
-            }
-            if (ImGui.isItemHovered()) {
-                ImGui.setTooltip("Tilt objects to match terrain slopes\n(RS groundContourType=3 / hillChange)")
-            }
-
-            // Tilt negation toggles (for coordinate system debugging)
-            if (TerrainAligner.enabled && ImGui.collapsingHeader("Tilt Debug")) {
-                ImGui.indent()
-
-                // Show debug stats
-                ImGui.text("Stats: ${TerrainAligner.getDebugStats()}")
-
-                val negateXTilt = ImBoolean(TerrainAligner.negateXTilt)
-                if (ImGui.checkbox("Negate X Tilt", negateXTilt)) {
-                    TerrainAligner.negateXTilt = negateXTilt.get()
-                    if (!useMultiRegion) {
-                        loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                    } else {
-                        mapScene.cleanup()
-                        mapScene.initialize()
-                        jumpToRegion(currentRegionX, currentRegionY)
-                    }
-                }
-                if (ImGui.isItemHovered()) {
-                    ImGui.setTooltip("Negate X-axis tilt (pitch) for coordinate system fix")
-                }
-
-                val negateZTilt = ImBoolean(TerrainAligner.negateZTilt)
-                if (ImGui.checkbox("Negate Z Tilt", negateZTilt)) {
-                    TerrainAligner.negateZTilt = negateZTilt.get()
-                    if (!useMultiRegion) {
-                        loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                    } else {
-                        mapScene.cleanup()
-                        mapScene.initialize()
-                        jumpToRegion(currentRegionX, currentRegionY)
-                    }
-                }
-                if (ImGui.isItemHovered()) {
-                    ImGui.setTooltip("Negate Z-axis tilt (roll) for coordinate system fix")
-                }
-
-                // Button to enable debug logging
-                if (ImGui.button("Enable Debug Logging")) {
-                    TerrainAligner.enableDebug(true)
-                    if (!useMultiRegion) {
-                        loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-                    } else {
-                        mapScene.cleanup()
-                        mapScene.initialize()
-                        jumpToRegion(currentRegionX, currentRegionY)
-                    }
-                }
-
-                ImGui.unindent()
-            }
-
-            ImGui.separator()
-
-            // Controls help
-            ImGui.textWrapped("WASD move, Space/Shift up/down, Right-click look, Arrows navigate, Ctrl fast, R roofs")
         }
-        ImGui.end()
     }
+
+    // ========================================================================
+    // Region Loading and Navigation
+    // ========================================================================
 
     private fun setPlane(plane: Int) {
         currentPlane = plane.coerceIn(0, 3)
-        mapScene.setPlane(currentPlane)
-
-        if (!useMultiRegion) {
-            loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-        }
+        loadRegion(currentRegionX, currentRegionY, currentPlane)
     }
 
     private fun navigateRegion(dx: Int, dy: Int) {
@@ -1312,17 +1429,18 @@ class MapViewer(
         regionXInput.set(currentRegionX)
         regionYInput.set(currentRegionY)
 
-        if (useMultiRegion) {
-            val newPos = mapScene.jumpToRegion(currentRegionX, currentRegionY)
-            mapCamera.setPosition(newPos.x, newPos.y + 50f, newPos.z)
-        } else {
-            loadSingleRegion(currentRegionX, currentRegionY, currentPlane)
-        }
+        loadRegion(currentRegionX, currentRegionY, currentPlane)
     }
 
-    private fun loadSingleRegion(regionX: Int, regionY: Int, plane: Int) {
+    /** Reload the current region (same coordinates and plane). */
+    private fun reloadRegion() = loadRegion(currentRegionX, currentRegionY, currentPlane)
+
+    /** Clear terrain cache and reload the current region. */
+    private fun reloadTerrain() { TerrainLoader.clearCache(); reloadRegion() }
+
+    private fun loadRegion(regionX: Int, regionY: Int, plane: Int) {
         // Clean up existing resources
-        cleanupSingleRegion()
+        cleanupRegion()
 
         // Clear tile picker selection when loading new region
         tilePicker.clearSelection()
@@ -1330,38 +1448,38 @@ class MapViewer(
         tileHighlightMesh = null
 
         // Load terrain meshes with texture batching
-        singleRegionTerrainBatches = TerrainLoader.loadRegionMeshes(cache, regionX, regionY, plane)
+        terrainBatches = TerrainLoader.loadRegionMeshes(cache, regionX, regionY, plane)
 
         // Load objects
         val regionData = RegionLoader.loadRegion(cache, regionX, regionY)
         // Also load terrain data from TerrainLoader for height values
         // TerrainLoader computes authentic RS heights (cumulative, multi-octave noise)
-        val terrainData = TerrainLoader.loadRegion(cache, regionX, regionY)
+        val td = TerrainLoader.loadRegion(cache, regionX, regionY)
 
         // Store terrain data for tile picker
-        singleRegionTerrainData = terrainData
+        terrainData = td
         // Store raw MapObjects for tile picker object lookup
-        singleRegionMapObjects = regionData?.objects ?: emptyList()
+        mapObjects = regionData?.objects ?: emptyList()
 
-        if (regionData != null && terrainData != null) {
+        if (regionData != null && td != null) {
             // Create instance manager for this region (smaller capacity than multi-region)
-            singleRegionInstanceManager = InstanceManager(maxInstancesPerMesh = 5000)
+            instanceManager = InstanceManager(maxInstancesPerMesh = 5000)
 
             // Create object instances for this plane using LOCAL coordinates
             // The terrain mesh is at local coords (0,0) to (63,63) tiles
             // So objects must also be at local coordinates
-            // Pass terrainData.tiles for height lookups (matches TerrainLoader's computed heights)
-            singleRegionObjects = createLocalObjectInstances(regionData, terrainData.tiles, regionX, regionY, plane)
+            // Pass td.tiles for height lookups (matches TerrainLoader's computed heights)
+            objectInstances = createObjectInstances(regionData, td.tiles, regionX, regionY, plane)
 
             // Register models with instance manager
             // Use combined models for multi-model objects (matching RS client behavior)
             // Apply retexturing/recoloring from ObjectDefinition if present
             var registeredCount = 0
-            for (obj in singleRegionObjects) {
+            for (obj in objectInstances) {
                 // Get the combined model ID for this object's models, including modifications
                 // Objects with different retexture/recolor mappings get separate registrations
                 val combinedId = ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
-                if (singleRegionModels.contains(combinedId)) continue
+                if (registeredModels.contains(combinedId)) continue
 
                 // Load and combine all models for this object with modifications applied
                 val meshDataList = if (obj.modifications.hasModifications()) {
@@ -1370,8 +1488,8 @@ class MapViewer(
                     ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
                 }
                 if (meshDataList != null && meshDataList.isNotEmpty()) {
-                    singleRegionInstanceManager!!.registerModel(combinedId, meshDataList)
-                    singleRegionModels.add(combinedId)
+                    instanceManager!!.registerModel(combinedId, meshDataList)
+                    registeredModels.add(combinedId)
                     registeredCount++
                 }
             }
@@ -1380,8 +1498,8 @@ class MapViewer(
             // Each instance gets a unique mesh with per-vertex terrain displacement,
             // registered with a unique model ID. These use the instanced rendering path
             // with 1 instance each (the displacement is baked into the geometry).
-            val terrainTiles = terrainData.tiles
-            for (obj in singleRegionObjects) {
+            val terrainTiles = td.tiles
+            for (obj in objectInstances) {
                 if (!VertexDisplacer.needsDisplacement(obj.groundContourType, obj.groundContourModifier)) continue
 
                 // Load base model MeshData (with modifications if any)
@@ -1426,10 +1544,10 @@ class MapViewer(
 
                 if (anyDisplaced) {
                     // Register displaced mesh with a unique model ID
-                    val displacedId = nextSingleRegionDisplacedId++
-                    singleRegionInstanceManager!!.registerModel(displacedId, displacedMeshDataList)
-                    singleRegionModels.add(displacedId)
-                    singleRegionDisplacedModels[System.identityHashCode(obj)] = displacedId
+                    val displacedId = nextDisplacedId++
+                    instanceManager!!.registerModel(displacedId, displacedMeshDataList)
+                    registeredModels.add(displacedId)
+                    displacedModels[System.identityHashCode(obj)] = displacedId
                 }
             }
         }
@@ -1444,17 +1562,17 @@ class MapViewer(
         scene.camera.yaw = 0f
     }
 
-    private fun cleanupSingleRegion() {
+    private fun cleanupRegion() {
         // Clear reference to batched terrain meshes (actual cleanup is handled by TerrainLoader cache)
-        singleRegionTerrainBatches = null
-        singleRegionTerrainData = null
-        singleRegionMapObjects = emptyList()
-        singleRegionInstanceManager?.cleanup()
-        singleRegionInstanceManager = null
-        singleRegionObjects = emptyList()
-        singleRegionModels.clear()
-        singleRegionDisplacedModels.clear()
-        nextSingleRegionDisplacedId = Int.MIN_VALUE / 2
+        terrainBatches = null
+        terrainData = null
+        mapObjects = emptyList()
+        instanceManager?.cleanup()
+        instanceManager = null
+        objectInstances = emptyList()
+        registeredModels.clear()
+        displacedModels.clear()
+        nextDisplacedId = Int.MIN_VALUE / 2
         tilePicker.clearSelection()
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
@@ -1516,7 +1634,7 @@ class MapViewer(
      * objects (railings, etc.) sit at the lower plane's height.
      * See Scene.linkBelow() in darkan-bot for reference implementation.
      */
-    private fun createLocalObjectInstances(
+    private fun createObjectInstances(
         regionData: RegionData,
         terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>,
         regionX: Int,
@@ -1803,8 +1921,7 @@ class MapViewer(
     }
 
     override fun onCleanup() {
-        cleanupSingleRegion()
-        mapScene.cleanup()
+        cleanupRegion()
         uniformBuffers.cleanup()
         uboColorShader.cleanup()
         uboTexturedShader.cleanup()
@@ -1814,5 +1931,19 @@ class MapViewer(
         TerrainLoader.clearCache()
         RegionLoader.clearCache()
         imGui.cleanup()
+    }
+
+    /**
+     * Available editing tools for the Map Editor panel.
+     * SELECT is the default mode (existing tile-pick behavior).
+     * Other tools are placeholders for future editing functionality.
+     */
+    private enum class EditorTool(val label: String, val wip: Boolean = true) {
+        SELECT("Select", wip = false),
+        OBJECT_PLACE("Place Object"),
+        OBJECT_MOVE("Move Object"),
+        TERRAIN_PAINT("Paint Terrain"),
+        HEIGHT_EDIT("Edit Height"),
+        FLAG_EDIT("Edit Flags")
     }
 }
