@@ -75,11 +75,12 @@ class ChunkedTerrain(val regionX: Int, val regionY: Int, val plane: Int) {
     fun buildAll(
         region: TerrainLoader.RegionData,
         blendedColors: Array<IntArray>,
-        normalsX: Array<FloatArray>, normalsY: Array<FloatArray>, normalsZ: Array<FloatArray>
+        normalsX: Array<FloatArray>, normalsY: Array<FloatArray>, normalsZ: Array<FloatArray>,
+        neighbors: TerrainLoader.NeighborData? = null
     ) {
         for (cx in 0 until CHUNKS_PER_AXIS) {
             for (cy in 0 until CHUNKS_PER_AXIS) {
-                rebuildChunk(cx, cy, region, blendedColors, normalsX, normalsY, normalsZ)
+                rebuildChunk(cx, cy, region, blendedColors, normalsX, normalsY, normalsZ, neighbors)
             }
         }
     }
@@ -94,10 +95,11 @@ class ChunkedTerrain(val regionX: Int, val regionY: Int, val plane: Int) {
         dirtyChunks: Set<ChunkCoord>,
         region: TerrainLoader.RegionData,
         blendedColors: Array<IntArray>,
-        normalsX: Array<FloatArray>, normalsY: Array<FloatArray>, normalsZ: Array<FloatArray>
+        normalsX: Array<FloatArray>, normalsY: Array<FloatArray>, normalsZ: Array<FloatArray>,
+        neighbors: TerrainLoader.NeighborData? = null
     ) {
         for (coord in dirtyChunks) {
-            rebuildChunk(coord.chunkX, coord.chunkY, region, blendedColors, normalsX, normalsY, normalsZ)
+            rebuildChunk(coord.chunkX, coord.chunkY, region, blendedColors, normalsX, normalsY, normalsZ, neighbors)
         }
     }
 
@@ -110,7 +112,8 @@ class ChunkedTerrain(val regionX: Int, val regionY: Int, val plane: Int) {
         cx: Int, cy: Int,
         region: TerrainLoader.RegionData,
         blendedColors: Array<IntArray>,
-        normalsX: Array<FloatArray>, normalsY: Array<FloatArray>, normalsZ: Array<FloatArray>
+        normalsX: Array<FloatArray>, normalsY: Array<FloatArray>, normalsZ: Array<FloatArray>,
+        neighbors: TerrainLoader.NeighborData? = null
     ) {
         val chunk = chunks[cx][cy]
 
@@ -124,7 +127,8 @@ class ChunkedTerrain(val regionX: Int, val regionY: Int, val plane: Int) {
                 val tileX = startX + dx
                 val tileY = startY + dy
                 val vertices = TerrainLoader.generateTileVertices(
-                    region, plane, tileX, tileY, blendedColors, normalsX, normalsY, normalsZ
+                    region, plane, tileX, tileY, blendedColors, normalsX, normalsY, normalsZ,
+                    neighbors
                 )
                 allVertices.addAll(vertices)
             }

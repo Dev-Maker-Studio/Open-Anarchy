@@ -49,6 +49,9 @@ class TerrainEditManager(
 
     private lateinit var chunkedTerrain: ChunkedTerrain
 
+    /** Neighbor data for seamless edge blending. Built once at init from cached regions. */
+    private var neighbors: TerrainLoader.NeighborData? = null
+
     // Pre-computed region-wide data (recomputed when dirty)
     private lateinit var blendedColors: Array<IntArray>
     private lateinit var normalsX: Array<FloatArray>
@@ -75,6 +78,9 @@ class TerrainEditManager(
         val regionData = TerrainLoader.loadRegion(cache, regionX, regionY)
             ?: error("Failed to load region ($regionX, $regionY)")
 
+        // Build neighbor data for seamless edge blending (cheap - uses cached RegionData)
+        neighbors = TerrainLoader.buildNeighborData(cache, regionX, regionY)
+
         mutableData = MutableRegionData(regionData)
         chunkedTerrain = ChunkedTerrain(regionX, regionY, plane)
 
@@ -82,7 +88,7 @@ class TerrainEditManager(
         recomputeBlendingAndNormals()
 
         // Build all 64 chunks (needed for editing)
-        chunkedTerrain.buildAll(mutableData.toRegionData(), blendedColors, normalsX, normalsY, normalsZ)
+        chunkedTerrain.buildAll(mutableData.toRegionData(), blendedColors, normalsX, normalsY, normalsZ, neighbors)
 
         // Build merged meshes for efficient viewing
         buildMergedMeshes()
@@ -97,7 +103,7 @@ class TerrainEditManager(
         chunkedTerrain.cleanup()
         chunkedTerrain = ChunkedTerrain(regionX, regionY, plane)
         recomputeBlendingAndNormals()
-        chunkedTerrain.buildAll(mutableData.toRegionData(), blendedColors, normalsX, normalsY, normalsZ)
+        chunkedTerrain.buildAll(mutableData.toRegionData(), blendedColors, normalsX, normalsY, normalsZ, neighbors)
         mutableData.clearDirty()
 
         // Rebuild merged meshes for the new plane
@@ -124,12 +130,12 @@ class TerrainEditManager(
 
         // 1. Recompute blended underlay colors if underlay changed
         if (mutableData.blendingDirty) {
-            blendedColors = TerrainLoader.computeBlendedUnderlayColors(regionSnapshot, plane)
+            blendedColors = TerrainLoader.computeBlendedUnderlayColors(regionSnapshot, plane, neighbors)
         }
 
         // 2. Recompute vertex normals if heights changed
         if (mutableData.heightsDirty) {
-            val (nx, ny, nz) = TerrainLoader.computeVertexNormals(mutableData.toTileArray(), plane)
+            val (nx, ny, nz) = TerrainLoader.computeVertexNormals(mutableData.toTileArray(), plane, neighbors)
             normalsX = nx
             normalsY = ny
             normalsZ = nz
@@ -137,7 +143,7 @@ class TerrainEditManager(
 
         // 3. Rebuild only dirty chunks
         val dirtyChunks = mutableData.getDirtyChunks()
-        chunkedTerrain.rebuildChunks(dirtyChunks, regionSnapshot, blendedColors, normalsX, normalsY, normalsZ)
+        chunkedTerrain.rebuildChunks(dirtyChunks, regionSnapshot, blendedColors, normalsX, normalsY, normalsZ, neighbors)
 
         // 4. Collect result and reset dirty state
         val result = EditResult(dirtyChunks)
@@ -169,7 +175,8 @@ class TerrainEditManager(
             for (y in 0 until 64) {
                 val vertices = TerrainLoader.generateTileVertices(
                     regionSnapshot, plane, x, y,
-                    blendedColors, normalsX, normalsY, normalsZ
+                    blendedColors, normalsX, normalsY, normalsZ,
+                    neighbors
                 )
                 for (vertex in vertices) {
                     textureGroups.getOrPut(vertex.textureId) { mutableListOf() }.add(vertex)
@@ -316,8 +323,8 @@ class TerrainEditManager(
      */
     private fun recomputeBlendingAndNormals() {
         val regionSnapshot = mutableData.toRegionData()
-        blendedColors = TerrainLoader.computeBlendedUnderlayColors(regionSnapshot, plane)
-        val (nx, ny, nz) = TerrainLoader.computeVertexNormals(mutableData.toTileArray(), plane)
+        blendedColors = TerrainLoader.computeBlendedUnderlayColors(regionSnapshot, plane, neighbors)
+        val (nx, ny, nz) = TerrainLoader.computeVertexNormals(mutableData.toTileArray(), plane, neighbors)
         normalsX = nx
         normalsY = ny
         normalsZ = nz
