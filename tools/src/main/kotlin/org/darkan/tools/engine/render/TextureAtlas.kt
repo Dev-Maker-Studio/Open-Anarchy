@@ -62,7 +62,7 @@ data class AtlasRegion(
  *
  * @param size Total atlas page size in pixels (e.g., 4096)
  * @param textureSize Size of individual textures in pixels (e.g., 128)
- * @param border Number of border pixels on each side (e.g., 2)
+ * @param border Number of border pixels on each side (e.g., 8)
  */
 private class AtlasPage(
     val size: Int,
@@ -137,13 +137,16 @@ private class AtlasPage(
             fillBorderPixels(texturePixels, width, height, slotX, slotY)
         }
 
-        // Calculate UV coordinates for the INNER texture area (excluding border)
+        // Calculate UV coordinates for the INNER texture area (excluding border).
+        // Apply half-pixel inset so that UVs map to texel CENTERS rather than edges.
+        // Without this, bilinear filtering at the boundary samples 50% from the
+        // border texel, which can cause subtle bleed from adjacent atlas entries.
         val innerX = slotX + border
         val innerY = slotY + border
-        val u0 = innerX.toFloat() / size
-        val v0 = innerY.toFloat() / size
-        val u1 = (innerX + textureSize).toFloat() / size
-        val v1 = (innerY + textureSize).toFloat() / size
+        val u0 = (innerX + 0.5f) / size
+        val v0 = (innerY + 0.5f) / size
+        val u1 = (innerX + textureSize - 0.5f) / size
+        val v1 = (innerY + textureSize - 0.5f) / size
 
         currentColumn++
 
@@ -306,17 +309,17 @@ private class AtlasPage(
  * which is critical for terrain textures that tile via GL_REPEAT (emulated with
  * fract() in the shader).
  *
- * With 128px textures + 2px border on a 4096 atlas: floor(4096/132) = 31 tiles
- * per side = 961 textures/page, sufficient for all RS terrain textures.
+ * With 128px textures + 8px border on a 4096 atlas: floor(4096/144) = 28 tiles
+ * per side = 784 textures/page, sufficient for all RS terrain textures.
  *
  * @param atlasSize Size of each atlas page (e.g., 4096 for 4096x4096)
  * @param textureSize Size of individual textures (e.g., 128 for 128x128)
- * @param border Number of border pixels on each side for bleed prevention (default 2)
+ * @param border Number of border pixels on each side for bleed prevention (default 8)
  */
 class TextureAtlas(
     private val atlasSize: Int = 4096,
     private val textureSize: Int = 128,
-    private val border: Int = 2
+    private val border: Int = 8
 ) {
     private val pages = mutableListOf<AtlasPage>()
     private val regions = mutableMapOf<Int, AtlasRegion>()

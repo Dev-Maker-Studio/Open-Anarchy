@@ -246,9 +246,9 @@ class MapViewer(
 
         // Create object texture atlas for collapsing texture-based draw call splits.
         // Textures are packed incrementally as models register with the InstanceManager.
-        // Uses 128px texture slots with 2px border on a 4096x4096 atlas page,
-        // giving 961 slots per page (typically sufficient for all object textures in a 3x3 view).
-        objectAtlas = TextureAtlas(atlasSize = 4096, textureSize = 128, border = 2)
+        // Uses 128px texture slots with 8px border on a 4096x4096 atlas page,
+        // giving 784 slots per page (typically sufficient for all object textures in a 3x3 view).
+        objectAtlas = TextureAtlas(atlasSize = 4096, textureSize = 128, border = 8)
 
         // Setup the scene camera (will be repositioned when region loads)
         scene.camera.setPosition(0f, 50f, 50f)
@@ -289,7 +289,7 @@ class MapViewer(
         println("[MapViewer] Building terrain atlas with ${textureIds.size} textures...")
         System.out.flush()
         val startTime = System.nanoTime()
-        val atlas = TextureAtlas(atlasSize = 4096, textureSize = 128, border = 2)
+        val atlas = TextureAtlas(atlasSize = 4096, textureSize = 128, border = 8)
 
         var loaded = 0
         var failed = 0
