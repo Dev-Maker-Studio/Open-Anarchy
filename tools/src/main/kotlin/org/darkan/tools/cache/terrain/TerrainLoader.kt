@@ -113,6 +113,151 @@ object TerrainLoader {
     }
 
     /**
+     * Holds references to neighboring region data for seamless edge blending.
+     * Each neighbor provides tile data needed for height lookups, normal computation,
+     * and underlay blending at region boundaries. References are to cached RegionData
+     * instances from [regionCache], so no extra memory is allocated for tile arrays.
+     *
+     * Directions use RS conventions: X increases east, Y increases north.
+     */
+    class NeighborData {
+        var east: RegionData? = null       // Region at (rx+1, ry)
+        var north: RegionData? = null      // Region at (rx, ry+1)
+        var northeast: RegionData? = null  // Region at (rx+1, ry+1)
+        var west: RegionData? = null       // Region at (rx-1, ry)
+        var south: RegionData? = null      // Region at (rx, ry-1)
+        var northwest: RegionData? = null  // Region at (rx-1, ry+1)
+        var southeast: RegionData? = null  // Region at (rx+1, ry-1)
+        var southwest: RegionData? = null  // Region at (rx-1, ry-1)
+    }
+
+    /**
+     * Build [NeighborData] for a region by loading neighboring regions from cache.
+     * Uses [loadRegion] which caches results, so repeated calls are cheap.
+     *
+     * @param cache The game cache
+     * @param rx Region X coordinate
+     * @param ry Region Y coordinate
+     * @return NeighborData with all available neighbors populated
+     */
+    fun buildNeighborData(cache: Cache, rx: Int, ry: Int): NeighborData {
+        val nd = NeighborData()
+        if (rx + 1 <= 255) nd.east = loadRegion(cache, rx + 1, ry)
+        if (ry + 1 <= 255) nd.north = loadRegion(cache, rx, ry + 1)
+        if (rx + 1 <= 255 && ry + 1 <= 255) nd.northeast = loadRegion(cache, rx + 1, ry + 1)
+        if (rx - 1 >= 0) nd.west = loadRegion(cache, rx - 1, ry)
+        if (ry - 1 >= 0) nd.south = loadRegion(cache, rx, ry - 1)
+        if (rx - 1 >= 0 && ry + 1 <= 255) nd.northwest = loadRegion(cache, rx - 1, ry + 1)
+        if (rx + 1 <= 255 && ry - 1 >= 0) nd.southeast = loadRegion(cache, rx + 1, ry - 1)
+        if (rx - 1 >= 0 && ry - 1 >= 0) nd.southwest = loadRegion(cache, rx - 1, ry - 1)
+        return nd
+    }
+
+    /**
+     * Get tile height at extended coordinates that may be outside the 0-63 range.
+     * For coordinates within 0-63, reads from the current region. For coordinates
+     * outside that range, reads from the appropriate neighbor region.
+     *
+     * @param region The current region data
+     * @param neighbors Neighbor data (null falls back to clamped behavior)
+     * @param plane The plane level
+     * @param x Tile X coordinate (can be -5 to 68 for blending window)
+     * @param y Tile Y coordinate (can be -5 to 68 for blending window)
+     * @return Scaled height value in OpenGL world units
+     */
+    private fun getExtendedHeight(region: RegionData, neighbors: NeighborData?, plane: Int, x: Int, y: Int): Float {
+        if (x in 0..63 && y in 0..63) {
+            return region.tiles[plane][x][y].height * HEIGHT_SCALE
+        }
+        if (neighbors == null) {
+            val cx = x.coerceIn(0, 63)
+            val cy = y.coerceIn(0, 63)
+            return region.tiles[plane][cx][cy].height * HEIGHT_SCALE
+        }
+        val neighborRegion: RegionData?
+        val nx: Int
+        val ny: Int
+        when {
+            x > 63 && y > 63 -> { neighborRegion = neighbors.northeast; nx = x - 64; ny = y - 64 }
+            x > 63 && y < 0  -> { neighborRegion = neighbors.southeast; nx = x - 64; ny = y + 64 }
+            x < 0  && y > 63 -> { neighborRegion = neighbors.northwest; nx = x + 64; ny = y - 64 }
+            x < 0  && y < 0  -> { neighborRegion = neighbors.southwest; nx = x + 64; ny = y + 64 }
+            x > 63            -> { neighborRegion = neighbors.east;      nx = x - 64; ny = y }
+            x < 0             -> { neighborRegion = neighbors.west;      nx = x + 64; ny = y }
+            y > 63            -> { neighborRegion = neighbors.north;     nx = x;      ny = y - 64 }
+            y < 0             -> { neighborRegion = neighbors.south;     nx = x;      ny = y + 64 }
+            else              -> { return region.tiles[plane][x][y].height * HEIGHT_SCALE }
+        }
+        if (neighborRegion == null || nx !in 0..63 || ny !in 0..63) {
+            val cx = x.coerceIn(0, 63)
+            val cy = y.coerceIn(0, 63)
+            return region.tiles[plane][cx][cy].height * HEIGHT_SCALE
+        }
+        return neighborRegion.tiles[plane][nx][ny].height * HEIGHT_SCALE
+    }
+
+    /**
+     * Get raw (unscaled) tile height at extended coordinates for normal computation.
+     */
+    private fun getExtendedHeightRaw(tiles: Array<Array<Array<TileData>>>, neighbors: NeighborData?, neighborPlane: Int, x: Int, y: Int): Float {
+        if (x in 0..63 && y in 0..63) {
+            return tiles[neighborPlane][x][y].height * HEIGHT_SCALE
+        }
+        if (neighbors == null) {
+            val cx = x.coerceIn(0, 63)
+            val cy = y.coerceIn(0, 63)
+            return tiles[neighborPlane][cx][cy].height * HEIGHT_SCALE
+        }
+        val neighborRegion: RegionData?
+        val nx: Int
+        val ny: Int
+        when {
+            x > 63 && y > 63 -> { neighborRegion = neighbors.northeast; nx = x - 64; ny = y - 64 }
+            x > 63 && y < 0  -> { neighborRegion = neighbors.southeast; nx = x - 64; ny = y + 64 }
+            x < 0  && y > 63 -> { neighborRegion = neighbors.northwest; nx = x + 64; ny = y - 64 }
+            x < 0  && y < 0  -> { neighborRegion = neighbors.southwest; nx = x + 64; ny = y + 64 }
+            x > 63            -> { neighborRegion = neighbors.east;      nx = x - 64; ny = y }
+            x < 0             -> { neighborRegion = neighbors.west;      nx = x + 64; ny = y }
+            y > 63            -> { neighborRegion = neighbors.north;     nx = x;      ny = y - 64 }
+            y < 0             -> { neighborRegion = neighbors.south;     nx = x;      ny = y + 64 }
+            else              -> { return tiles[neighborPlane][x][y].height * HEIGHT_SCALE }
+        }
+        if (neighborRegion == null || nx !in 0..63 || ny !in 0..63) {
+            val cx = x.coerceIn(0, 63)
+            val cy = y.coerceIn(0, 63)
+            return tiles[neighborPlane][cx][cy].height * HEIGHT_SCALE
+        }
+        return neighborRegion.tiles[neighborPlane][nx][ny].height * HEIGHT_SCALE
+    }
+
+    /**
+     * Get underlay ID at extended coordinates using neighbor data.
+     * Returns 0 (no underlay) if the neighbor region is not available.
+     */
+    private fun getExtendedUnderlayId(region: RegionData, neighbors: NeighborData?, plane: Int, x: Int, y: Int): Int {
+        if (x in 0..63 && y in 0..63) {
+            return region.tiles[plane][x][y].underlayId
+        }
+        if (neighbors == null) return 0
+        val neighborRegion: RegionData?
+        val nx: Int
+        val ny: Int
+        when {
+            x > 63 && y > 63 -> { neighborRegion = neighbors.northeast; nx = x - 64; ny = y - 64 }
+            x > 63 && y < 0  -> { neighborRegion = neighbors.southeast; nx = x - 64; ny = y + 64 }
+            x < 0  && y > 63 -> { neighborRegion = neighbors.northwest; nx = x + 64; ny = y - 64 }
+            x < 0  && y < 0  -> { neighborRegion = neighbors.southwest; nx = x + 64; ny = y + 64 }
+            x > 63            -> { neighborRegion = neighbors.east;      nx = x - 64; ny = y }
+            x < 0             -> { neighborRegion = neighbors.west;      nx = x + 64; ny = y }
+            y > 63            -> { neighborRegion = neighbors.north;     nx = x;      ny = y - 64 }
+            y < 0             -> { neighborRegion = neighbors.south;     nx = x;      ny = y + 64 }
+            else              -> return region.tiles[plane][x][y].underlayId
+        }
+        if (neighborRegion == null || nx !in 0..63 || ny !in 0..63) return 0
+        return neighborRegion.tiles[plane][nx][ny].underlayId
+    }
+
+    /**
      * Tile function mask flags from the RS client (SettingsBits.kt / MapLoader.kt).
      * These flags control collision, visibility, and height behavior.
      *
@@ -402,15 +547,20 @@ object TerrainLoader {
      * @param plane The plane level to compute colors for
      * @return A 64x64 array of packed HSL color values, one for each tile
      */
-    internal fun computeBlendedUnderlayColors(region: RegionData, plane: Int): Array<IntArray> {
-        val blendedColors = Array(64) { IntArray(64) }
+    internal fun computeBlendedUnderlayColors(region: RegionData, plane: Int, neighbors: NeighborData? = null): Array<IntArray> {
+        // Output is 65x65 so getCornerHslColors can sample at (x+1, y+1) without clamping.
+        // Index 64 represents the first tile of the neighbor region on that axis.
+        val blendedColors = Array(65) { IntArray(65) }
         val underlayDefs = underlays ?: return blendedColors
+
+        // Helper to get underlay ID at any coordinate using neighbor data
+        fun underlayAt(tx: Int, ty: Int): Int = getExtendedUnderlayId(region, neighbors, plane, tx, ty)
 
         // If blending is disabled, return raw underlay colors
         if (!enableBlending) {
-            for (x in 0 until 64) {
-                for (y in 0 until 64) {
-                    val underlayId = region.tiles[plane][x][y].underlayId
+            for (x in 0 until 65) {
+                for (y in 0 until 65) {
+                    val underlayId = underlayAt(x, y)
                     val defIndex = underlayId - 1
                     if (defIndex >= 0 && defIndex < underlayDefs.size) {
                         val def = underlayDefs[defIndex]
@@ -427,46 +577,60 @@ object TerrainLoader {
         // Debug: Track how many tiles get blended colors
         var nonZeroCount = 0
 
-        // Column accumulators for the sliding window (exactly matching RS client)
-        // These accumulate values for all tiles in the current X-window for each Y row
-        val underlayHue = IntArray(64)
-        val underlaySaturation = IntArray(64)
-        val underlayLightness = IntArray(64)
-        val underlayDivisor = IntArray(64)  // Called "divisor" in RS client, same as "chroma"
-        val underlayCount = IntArray(64)
+        // We need blended colors for output tiles 0..64 on each axis.
+        // The sliding window for each output tile (x,y) covers tiles from
+        // (x-5, y-5) to (x+5, y+5), an 11x11 area.
+        //
+        // With neighbor data, the window can extend into neighboring regions.
+        // Tile coordinates range from -5 to 69 for the full window coverage.
+        //
+        // Column accumulators track the X-window sum for each Y row.
+        // They need to cover tile Y = -5..69 -> mapped to indices 0..74 via offset +5.
+        //
+        // X iteration starts at -10 so that forwardX = x+5 = -5 is added first,
+        // building up the full window before we start computing output at x=0.
+        // Similarly, Y iteration starts at -10 for the same reason.
+        val extYSize = 75  // covers Y = -5..69 -> index = tileY + 5
+        val underlayHue = IntArray(extYSize)
+        val underlaySaturation = IntArray(extYSize)
+        val underlayLightness = IntArray(extYSize)
+        val underlayDivisor = IntArray(extYSize)
+        val underlayCount = IntArray(extYSize)
 
-        // X sliding window: iterate from -5 to include the leading edge properly
-        for (x in -5 until 64) {
-            // Update column accumulators: add at forward edge (x+5), subtract at back edge (x-5)
-            for (y in 0 until 64) {
+        for (x in -10..64) {
+            // Update column accumulators for each extended Y row.
+            // Add forward edge (x+5), subtract back edge (x-5) for the 11-column window.
+            for (tileY in -5..69) {
+                val accIdx = tileY + 5  // Map to 0..74
+
                 // Add tile at x+5 (forward edge of X window)
                 val forwardX = x + 5
-                if (forwardX in 0 until 64) {
-                    val underlayId = region.tiles[plane][forwardX][y].underlayId
-                    if (underlayId > 0) {
-                        val def = underlayDefs.getOrNull(underlayId - 1)
+                if (forwardX in -5..69) {
+                    val fwdUnderlayId = underlayAt(forwardX, tileY)
+                    if (fwdUnderlayId > 0) {
+                        val def = underlayDefs.getOrNull(fwdUnderlayId - 1)
                         if (def != null) {
-                            underlayHue[y] += def.hue
-                            underlaySaturation[y] += def.saturation
-                            underlayLightness[y] += def.lightness
-                            underlayDivisor[y] += def.chroma
-                            underlayCount[y]++
+                            underlayHue[accIdx] += def.hue
+                            underlaySaturation[accIdx] += def.saturation
+                            underlayLightness[accIdx] += def.lightness
+                            underlayDivisor[accIdx] += def.chroma
+                            underlayCount[accIdx]++
                         }
                     }
                 }
 
-                // Subtract tile at x-5 (back edge of X window)
+                // Subtract tile at x-5 (back edge of X window, leaving the window)
                 val backwardX = x - 5
-                if (backwardX in 0 until 64) {
-                    val underlayId = region.tiles[plane][backwardX][y].underlayId
-                    if (underlayId > 0) {
-                        val def = underlayDefs.getOrNull(underlayId - 1)
+                if (backwardX in -5..69) {
+                    val bkwdUnderlayId = underlayAt(backwardX, tileY)
+                    if (bkwdUnderlayId > 0) {
+                        val def = underlayDefs.getOrNull(bkwdUnderlayId - 1)
                         if (def != null) {
-                            underlayHue[y] -= def.hue
-                            underlaySaturation[y] -= def.saturation
-                            underlayLightness[y] -= def.lightness
-                            underlayDivisor[y] -= def.chroma
-                            underlayCount[y]--
+                            underlayHue[accIdx] -= def.hue
+                            underlaySaturation[accIdx] -= def.saturation
+                            underlayLightness[accIdx] -= def.lightness
+                            underlayDivisor[accIdx] -= def.chroma
+                            underlayCount[accIdx]--
                         }
                     }
                 }
@@ -480,32 +644,33 @@ object TerrainLoader {
                 var divisorSum = 0
                 var depth = 0
 
-                // Y sliding window
-                for (y in -5 until 64) {
+                // Y sliding window starts at -10 to build up the full window
+                // before producing output at y=0.
+                for (y in -10..64) {
                     // Add row at y+5 (forward edge of Y window)
                     val forwardY = y + 5
-                    if (forwardY in 0 until 64) {
-                        hueSum += underlayHue[forwardY]
-                        saturationSum += underlaySaturation[forwardY]
-                        lightnessSum += underlayLightness[forwardY]
-                        divisorSum += underlayDivisor[forwardY]
-                        depth += underlayCount[forwardY]
+                    if (forwardY in -5..69) {
+                        val accIdx = forwardY + 5
+                        hueSum += underlayHue[accIdx]
+                        saturationSum += underlaySaturation[accIdx]
+                        lightnessSum += underlayLightness[accIdx]
+                        divisorSum += underlayDivisor[accIdx]
+                        depth += underlayCount[accIdx]
                     }
 
-                    // Subtract row at y-5 (back edge of Y window)
+                    // Subtract row at y-5 (back edge of Y window, leaving the window)
                     val backwardY = y - 5
-                    if (backwardY in 0 until 64) {
-                        hueSum -= underlayHue[backwardY]
-                        saturationSum -= underlaySaturation[backwardY]
-                        lightnessSum -= underlayLightness[backwardY]
-                        divisorSum -= underlayDivisor[backwardY]
-                        depth -= underlayCount[backwardY]
+                    if (backwardY in -5..69) {
+                        val accIdx = backwardY + 5
+                        hueSum -= underlayHue[accIdx]
+                        saturationSum -= underlaySaturation[accIdx]
+                        lightnessSum -= underlayLightness[accIdx]
+                        divisorSum -= underlayDivisor[accIdx]
+                        depth -= underlayCount[accIdx]
                     }
 
-                    // Compute blended color for tile (x, y) - exactly matching RS client formula
+                    // Compute blended color for output tile (x, y)
                     if (y >= 0 && divisorSum > 0 && depth > 0) {
-                        // RS client formula from MapLoader.kt line 167:
-                        // paletteIndices[x][y] = ColorUtil.hsl16to24(hueSum * 256 / dividerSum, saturationSum / depth, lightnessSum / depth)
                         val hue = hueSum * 256 / divisorSum
                         val saturation = saturationSum / depth
                         val lightness = lightnessSum / depth
@@ -524,7 +689,7 @@ object TerrainLoader {
      * Returns the packed HSL value for further processing.
      */
     private fun getBlendedUnderlayColorHsl(blendedColors: Array<IntArray>, x: Int, y: Int): Int {
-        if (x !in 0 until 64 || y !in 0 until 64) return 0
+        if (x !in 0..64 || y !in 0..64) return 0
         return blendedColors[x][y]
     }
 
@@ -538,20 +703,14 @@ object TerrainLoader {
      * - NE corner (1,1): paletteIndices[x+1][y+1]
      * - SE corner (1,0): paletteIndices[x+1][y]
      *
-     * Note: blendedColors is 64x64, so we must clamp indices to valid range.
-     * The tile at (x,y) uses blended colors from tiles at its corners.
+     * blendedColors is 65x65 (indices 0..64), so (x+1) and (y+1) are always in range
+     * for tiles 0..63. No clamping is needed.
      */
     private fun getCornerHslColors(blendedColors: Array<IntArray>, x: Int, y: Int): IntArray {
-        // Clamp indices to valid range (0-63) for the 64x64 array
-        val seX = (x + 1).coerceAtMost(63)
-        val nwY = (y + 1).coerceAtMost(63)
-        val neX = (x + 1).coerceAtMost(63)
-        val neY = (y + 1).coerceAtMost(63)
-
         val swHsl = getBlendedUnderlayColorHsl(blendedColors, x, y)
-        val seHsl = getBlendedUnderlayColorHsl(blendedColors, seX, y)
-        val nwHsl = getBlendedUnderlayColorHsl(blendedColors, x, nwY)
-        val neHsl = getBlendedUnderlayColorHsl(blendedColors, neX, neY)
+        val seHsl = getBlendedUnderlayColorHsl(blendedColors, x + 1, y)
+        val nwHsl = getBlendedUnderlayColorHsl(blendedColors, x, y + 1)
+        val neHsl = getBlendedUnderlayColorHsl(blendedColors, x + 1, y + 1)
 
         return intArrayOf(swHsl, seHsl, nwHsl, neHsl)
     }
@@ -594,25 +753,32 @@ object TerrainLoader {
      * @param plane Plane level (0-3) - this is both the tile plane AND the viewing plane
      * @return TerrainMeshes containing color mesh and textured batches, or null if region not found
      */
-    fun loadRegionMeshes(cache: Cache, regionX: Int, regionY: Int, plane: Int = 0): TerrainMeshes? {
+    fun loadRegionMeshes(cache: Cache, regionX: Int, regionY: Int, plane: Int = 0, neighbors: NeighborData? = null): TerrainMeshes? {
         // Ensure definitions are loaded
         loadDefinitions(cache)
 
         val regionId = (regionX shl 8) or regionY
         val cacheKey = regionId * 4 + plane
 
-        // Check if we need to regenerate (not in cache)
-        val cached = batchedMeshCache[cacheKey]
-        if (cached != null) {
-            return cached
+        // When neighbors are provided, skip the cache because the mesh depends on
+        // neighbor data which may differ between calls. Context regions loaded without
+        // neighbors can still use the cache.
+        if (neighbors == null) {
+            val cached = batchedMeshCache[cacheKey]
+            if (cached != null) {
+                return cached
+            }
         }
 
         // Generate new meshes - log overlay state for debugging
         println("[TerrainLoader] Generating meshes for region ($regionX, $regionY) plane $plane - enableOverlays=$enableOverlays")
 
         val region = loadRegion(cache, regionX, regionY) ?: return null
-        val meshes = createBatchedTerrainMeshes(region, plane)
-        batchedMeshCache[cacheKey] = meshes
+        val meshes = createBatchedTerrainMeshes(region, plane, neighbors)
+        // Only cache when no neighbors (backward-compatible path)
+        if (neighbors == null) {
+            batchedMeshCache[cacheKey] = meshes
+        }
         return meshes
     }
 
@@ -625,25 +791,24 @@ object TerrainLoader {
      * @param plane The plane level to compute normals for
      * @return Triple of (normalsX, normalsY, normalsZ) arrays
      */
-    internal fun computeVertexNormals(tiles: Array<Array<Array<TileData>>>, plane: Int): Triple<Array<FloatArray>, Array<FloatArray>, Array<FloatArray>> {
+    internal fun computeVertexNormals(tiles: Array<Array<Array<TileData>>>, plane: Int, neighbors: NeighborData? = null): Triple<Array<FloatArray>, Array<FloatArray>, Array<FloatArray>> {
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
         val normalsX = Array(65) { FloatArray(65) }
         val normalsY = Array(65) { FloatArray(65) }
         val normalsZ = Array(65) { FloatArray(65) }
 
+        // Vertex indices go from 0 to 64 (65 vertices per axis for 64 tiles).
+        // Vertex at index 0 is the SW corner of tile 0, vertex at index 64 is the
+        // NE corner of tile 63 (which is also the SW corner of the neighbor's tile 0).
+        // Normal computation samples heights at (vx-1, vy) and (vx+1, vy) etc.
+        // At boundaries (vx=0, vx=64, vy=0, vy=64), these samples extend into
+        // neighbor regions. With neighbors=null, falls back to clamped behavior.
         for (vx in 0 until 65) {
             for (vy in 0 until 65) {
-                val xMinus = (vx - 1).coerceIn(0, 63)
-                val xPlus = (vx + 1).coerceIn(0, 63)
-                val yMinus = (vy - 1).coerceIn(0, 63)
-                val yPlus = (vy + 1).coerceIn(0, 63)
-                val xCur = vx.coerceIn(0, 63)
-                val yCur = vy.coerceIn(0, 63)
-
-                val heightWest = tiles[plane][xMinus][yCur].height * HEIGHT_SCALE
-                val heightEast = tiles[plane][xPlus][yCur].height * HEIGHT_SCALE
-                val heightSouth = tiles[plane][xCur][yMinus].height * HEIGHT_SCALE
-                val heightNorth = tiles[plane][xCur][yPlus].height * HEIGHT_SCALE
+                val heightWest  = getExtendedHeightRaw(tiles, neighbors, plane, vx - 1, vy)
+                val heightEast  = getExtendedHeightRaw(tiles, neighbors, plane, vx + 1, vy)
+                val heightSouth = getExtendedHeightRaw(tiles, neighbors, plane, vx, vy - 1)
+                val heightNorth = getExtendedHeightRaw(tiles, neighbors, plane, vx, vy + 1)
 
                 val heightDeltaX = heightEast - heightWest
                 val heightDeltaY = heightNorth - heightSouth
@@ -685,7 +850,8 @@ object TerrainLoader {
         region: RegionData, plane: Int,
         x: Int, y: Int,
         blendedColors: Array<IntArray>,
-        normalsX: Array<FloatArray>, normalsY: Array<FloatArray>, normalsZ: Array<FloatArray>
+        normalsX: Array<FloatArray>, normalsY: Array<FloatArray>, normalsZ: Array<FloatArray>,
+        neighbors: NeighborData? = null
     ): List<ShapedVertex> {
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
         val tile = region.tiles[plane][x][y]
@@ -696,17 +862,15 @@ object TerrainLoader {
         // Run full blending analysis for this tile
         val blendState = analyzeTileBlending(region, plane, x, y, blendedColors)
 
-        // Calculate next coordinates with clamping for edge tiles
-        val nextX = if (x < 63) x + 1 else x
-        val nextY = if (y < 63) y + 1 else y
-
-        // Calculate heights for this tile's corners using the source plane's heights
+        // Calculate heights for this tile's corners using extended lookups for edge tiles.
+        // At region edges (x=63 or y=63), the +1 coordinates read from neighbor regions
+        // instead of clamping to the same tile (which caused height seams).
         // heights array: [SW, SE, NW, NE]
         val heights = floatArrayOf(
-            region.tiles[plane][x][y].height * HEIGHT_SCALE,             // SW (0,0)
-            region.tiles[plane][nextX][y].height * HEIGHT_SCALE,         // SE (1,0)
-            region.tiles[plane][x][nextY].height * HEIGHT_SCALE,         // NW (0,1)
-            region.tiles[plane][nextX][nextY].height * HEIGHT_SCALE      // NE (1,1)
+            getExtendedHeight(region, neighbors, plane, x, y),         // SW (0,0)
+            getExtendedHeight(region, neighbors, plane, x + 1, y),     // SE (1,0)
+            getExtendedHeight(region, neighbors, plane, x, y + 1),     // NW (0,1)
+            getExtendedHeight(region, neighbors, plane, x + 1, y + 1)  // NE (1,1)
         )
 
         // Get overlay and underlay definitions
@@ -739,15 +903,12 @@ object TerrainLoader {
         val cornerUnderlayTextures: IntArray
         val cornerUnderlayScales: FloatArray
         if (underlayDef != null) {
-            val tiles = region.tiles[plane]
-            val nextXClamped = if (x < 63) x + 1 else x
-            val nextYClamped = if (y < 63) y + 1 else y
-
-            // Corner underlay IDs (client: underlayA=this, underlayB=north, underlayC=NE, underlayD=east)
+            // Corner underlay IDs using extended lookups for edge tiles.
+            // At region edges, reads from neighbor regions instead of clamping.
             val swUnderlayId = tile.underlayId  // This tile
-            val seUnderlayId = tiles[nextXClamped][y].underlayId.let { if (it == 0) swUnderlayId else it }
-            val nwUnderlayId = tiles[x][nextYClamped].underlayId.let { if (it == 0) swUnderlayId else it }
-            val neUnderlayId = tiles[nextXClamped][nextYClamped].underlayId.let { if (it == 0) swUnderlayId else it }
+            val seUnderlayId = getExtendedUnderlayId(region, neighbors, plane, x + 1, y).let { if (it == 0) swUnderlayId else it }
+            val nwUnderlayId = getExtendedUnderlayId(region, neighbors, plane, x, y + 1).let { if (it == 0) swUnderlayId else it }
+            val neUnderlayId = getExtendedUnderlayId(region, neighbors, plane, x + 1, y + 1).let { if (it == 0) swUnderlayId else it }
 
             val swDef = getUnderlayDefinition(swUnderlayId)
             val seDef = getUnderlayDefinition(seUnderlayId)
@@ -797,12 +958,13 @@ object TerrainLoader {
         }
         val effectiveRotation = blendState?.effectiveRotation ?: tile.overlayRotation
 
-        // Get pre-computed normals for this tile's 4 corners
+        // Get pre-computed normals for this tile's 4 corners.
+        // Normals arrays are 65x65, so x+1 and y+1 (up to 64) are always valid indices.
         val cornerNormals = arrayOf(
             Vector3f(normalsX[x][y], normalsY[x][y], normalsZ[x][y]),
-            Vector3f(normalsX[nextX][y], normalsY[nextX][y], normalsZ[nextX][y]),
-            Vector3f(normalsX[x][nextY], normalsY[x][nextY], normalsZ[x][nextY]),
-            Vector3f(normalsX[nextX][nextY], normalsY[nextX][nextY], normalsZ[nextX][nextY])
+            Vector3f(normalsX[x + 1][y], normalsY[x + 1][y], normalsZ[x + 1][y]),
+            Vector3f(normalsX[x][y + 1], normalsY[x][y + 1], normalsZ[x][y + 1]),
+            Vector3f(normalsX[x + 1][y + 1], normalsY[x + 1][y + 1], normalsZ[x + 1][y + 1])
         )
 
         // Determine if overlay/underlay exist
@@ -843,17 +1005,16 @@ object TerrainLoader {
      * Shapes create paths, edges, diagonal cuts, etc. by tessellating tiles into
      * multiple triangles with some belonging to overlay and others to underlay.
      */
-    private fun createBatchedTerrainMeshes(region: RegionData, plane: Int): TerrainMeshes {
+    private fun createBatchedTerrainMeshes(region: RegionData, plane: Int, neighbors: NeighborData? = null): TerrainMeshes {
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
 
-        // Pre-compute per-vertex normals for the main plane
-        // This matches the RS client's GroundGL.kt lines 98-106 which computes normals
-        // from height differences between neighboring tiles, creating smooth per-vertex
-        // lighting variation even in homogeneous areas.
-        val (vertexNormalsX, vertexNormalsY, vertexNormalsZ) = computeVertexNormals(region.tiles, plane)
+        // Pre-compute per-vertex normals for the main plane, using neighbor data
+        // for correct normals at region boundaries.
+        val (vertexNormalsX, vertexNormalsY, vertexNormalsZ) = computeVertexNormals(region.tiles, plane, neighbors)
 
-        // Pre-compute blended underlay colors for the main plane
-        val blendedUnderlayColors = computeBlendedUnderlayColors(region, plane)
+        // Pre-compute blended underlay colors for the main plane, using neighbor data
+        // so the 11x11 blending window extends into neighboring regions at edges.
+        val blendedUnderlayColors = computeBlendedUnderlayColors(region, plane, neighbors)
 
         // Collect vertices grouped by texture ID
         val textureGroups = mutableMapOf<Int, MutableList<ShapedVertex>>()
@@ -890,7 +1051,8 @@ object TerrainLoader {
                     blendedUnderlayColors,
                     vertexNormalsX,
                     vertexNormalsY,
-                    vertexNormalsZ
+                    vertexNormalsZ,
+                    neighbors
                 )
                 for (vertex in vertices) {
                     val group = textureGroups.getOrPut(vertex.textureId) { mutableListOf() }

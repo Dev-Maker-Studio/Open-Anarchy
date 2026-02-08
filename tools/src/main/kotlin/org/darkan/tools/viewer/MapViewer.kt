@@ -1627,13 +1627,13 @@ class MapViewer(
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
 
-        // Clear context region references.
-        // TerrainMeshes are owned by TerrainLoader's batchedMeshCache, not by us.
-        // TerrainLoader.clearCache() (called on reloadTerrain) handles their GPU cleanup.
+        // Clean up and clear context region references.
+        // Context regions built with neighbor data own their terrain meshes and must
+        // clean them up explicitly. Also clear the batched mesh cache for any stale entries.
         for (i in contextRegions.indices) {
+            contextRegions[i]?.cleanup()
             contextRegions[i] = null
         }
-        // Clear the batched mesh cache so stale context region GPU resources are freed
         TerrainLoader.clearBatchedMeshCache()
     }
 
@@ -1659,8 +1659,9 @@ class MapViewer(
             // Compute model matrix for this neighbor's terrain
             contextModelMatrices[i].identity().translate(rx * 64 * tileSize, 0f, -ry * 64 * tileSize)
 
-            // Load terrain meshes (static, non-editable)
-            val terrainMeshes = TerrainLoader.loadRegionMeshes(cache, rx, ry, plane)
+            // Load terrain meshes with neighbor data for seamless edge blending
+            val ctxNeighbors = TerrainLoader.buildNeighborData(cache, rx, ry)
+            val terrainMeshes = TerrainLoader.loadRegionMeshes(cache, rx, ry, plane, ctxNeighbors)
             if (terrainMeshes == null) {
                 contextRegions[i] = null
                 continue
@@ -2120,15 +2121,20 @@ class MapViewer(
      * A surrounding (context) region rendered as static, non-editable terrain + objects.
      * These provide visual context around the editable center region.
      *
-     * Note: terrainMeshes are OWNED by TerrainLoader's batchedMeshCache and must NOT
-     * be cleaned up here. Call TerrainLoader.clearCache() to release them.
+     * When built with neighbor data, terrainMeshes are owned by this ContextRegion and
+     * must be cleaned up via [cleanup]. When built without neighbor data, they may be
+     * owned by TerrainLoader's batchedMeshCache.
      */
     private class ContextRegion(
         val regionX: Int,
         val regionY: Int,
         val terrainMeshes: TerrainLoader.TerrainMeshes,
         val objectInstances: List<ObjectInstance>
-    )
+    ) {
+        fun cleanup() {
+            terrainMeshes.cleanup()
+        }
+    }
 
     /**
      * Available editing tools for the Map Editor panel.
