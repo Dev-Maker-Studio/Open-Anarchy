@@ -47,7 +47,8 @@ data class ObjectInstance(
     val groundContourModifier: Int = -1,  // Ground contour modifier from ObjectDefinition
     val rsSceneX: Int = 0,  // RS scene X position (baseX * 512 + sizeX * 256) for vertex displacement
     val rsSceneY: Int = 0,  // RS scene Y position (baseY * 512 + sizeY * 256) for vertex displacement
-    var rsAverageHeight: Int = 0  // Average terrain height in RS units for vertex displacement
+    var rsAverageHeight: Int = 0,  // Average terrain height in RS units for vertex displacement
+    val cachedCombinedModelId: Int = ModelLoader.getCombinedModelIdWithModifications(modelIds, modifications)
 )
 
 /**

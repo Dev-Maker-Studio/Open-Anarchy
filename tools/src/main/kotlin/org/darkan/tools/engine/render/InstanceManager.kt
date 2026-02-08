@@ -31,6 +31,8 @@ data class MeshData(
 
 /**
  * Batch key for grouping instances by model and material.
+ * Used for the public API (stats, registration). Hot-path lookups
+ * use packed Long keys via [packKey] for zero-allocation performance.
  */
 data class InstanceBatchKey(
     val modelId: Int,
@@ -52,15 +54,26 @@ class InstanceManager(
     // Registered mesh data by model ID
     private val meshRegistry = mutableMapOf<Int, MutableList<MeshData>>()
 
-    // Instanced meshes by batch key
-    private val instancedMeshes = mutableMapOf<InstanceBatchKey, InstancedMesh>()
+    // Instanced meshes by packed Long key (modelId << 32 | textureId)
+    private val instancedMeshes = HashMap<Long, InstancedMesh>()
 
-    // Pending instances for current frame
-    private val pendingInstances = mutableMapOf<InstanceBatchKey, MutableList<Matrix4f>>()
+    // Pre-sorted list of textured entries for rendering (rebuilt on model registration)
+    private var sortedTexturedEntries: List<Map.Entry<Long, InstancedMesh>> = emptyList()
+    private var texturedEntriesDirty = true
 
     // Statistics
     private var totalInstancesThisFrame = 0
     private var drawCallsThisFrame = 0
+
+    /** Pack modelId and textureId into a single Long key for zero-allocation lookups. */
+    private fun packKey(modelId: Int, textureId: Int): Long =
+        (modelId.toLong() shl 32) or (textureId.toLong() and 0xFFFFFFFFL)
+
+    /** Extract textureId from a packed Long key. */
+    private fun unpackTextureId(key: Long): Int = key.toInt()
+
+    /** Extract modelId from a packed Long key. */
+    private fun unpackModelId(key: Long): Int = (key ushr 32).toInt()
 
     /**
      * Register mesh data for a model ID.
@@ -68,8 +81,9 @@ class InstanceManager(
      *
      * @param modelId The model identifier
      * @param meshDataList List of mesh data (one per texture batch)
+     * @param maxInstances Override max instances for this model (defaults to [maxInstancesPerMesh])
      */
-    fun registerModel(modelId: Int, meshDataList: List<MeshData>) {
+    fun registerModel(modelId: Int, meshDataList: List<MeshData>, maxInstances: Int = maxInstancesPerMesh) {
         meshRegistry[modelId] = meshDataList.toMutableList()
 
         // Create instanced meshes for each batch
@@ -79,7 +93,7 @@ class InstanceManager(
                 continue
             }
 
-            val key = InstanceBatchKey(modelId, meshData.textureId)
+            val key = packKey(modelId, meshData.textureId)
             if (!instancedMeshes.containsKey(key)) {
                 instancedMeshes[key] = InstancedMesh(
                     positions = meshData.positions,
@@ -87,10 +101,12 @@ class InstanceManager(
                     textureCoords = meshData.textureCoords,
                     normals = meshData.normals,
                     indices = meshData.indices,
-                    maxInstances = maxInstancesPerMesh
+                    maxInstances = maxInstances
                 )
             }
         }
+
+        texturedEntriesDirty = true
     }
 
     /**
@@ -102,7 +118,6 @@ class InstanceManager(
      * Prepare for a new frame. Clears all pending instances.
      */
     fun prepareFrame() {
-        pendingInstances.clear()
         totalInstancesThisFrame = 0
         drawCallsThisFrame = 0
 
@@ -124,7 +139,7 @@ class InstanceManager(
 
         var allAdded = true
         for (meshData in meshDataList) {
-            val key = InstanceBatchKey(modelId, meshData.textureId)
+            val key = packKey(modelId, meshData.textureId)
             val mesh = instancedMeshes[key] ?: continue
 
             if (!mesh.addInstance(modelMatrix)) {
@@ -147,7 +162,7 @@ class InstanceManager(
 
         var allAdded = true
         for (meshData in meshDataList) {
-            val key = InstanceBatchKey(modelId, meshData.textureId)
+            val key = packKey(modelId, meshData.textureId)
             val mesh = instancedMeshes[key] ?: continue
 
             if (!mesh.addInstance(x, y, z, scale)) {
@@ -185,17 +200,27 @@ class InstanceManager(
         shader.bind()
 
         for ((key, mesh) in instancedMeshes) {
-            if (key.textureId != -1) continue // Skip textured batches
+            if (unpackTextureId(key) != -1) continue // Skip textured batches
             if (mesh.getInstanceCount() == 0) continue
 
-            setupCallback?.invoke(key)
+            setupCallback?.invoke(InstanceBatchKey(unpackModelId(key), unpackTextureId(key)))
             mesh.render()
             drawCallsThisFrame++
         }
     }
 
+    /** Rebuild the sorted textured entries list if dirty. */
+    private fun ensureSortedTexturedEntries() {
+        if (!texturedEntriesDirty) return
+        sortedTexturedEntries = instancedMeshes.entries
+            .filter { unpackTextureId(it.key) != -1 }
+            .sortedBy { unpackTextureId(it.key) }
+        texturedEntriesDirty = false
+    }
+
     /**
-     * Render all instanced meshes with textures.
+     * Render all instanced meshes with textures, sorted by texture ID
+     * to minimize texture state changes.
      *
      * @param shader The shader to use
      * @param bindTexture Callback to bind texture for each batch
@@ -206,11 +231,18 @@ class InstanceManager(
     ) {
         shader.bind()
 
-        for ((key, mesh) in instancedMeshes) {
-            if (key.textureId == -1) continue // Skip untextured batches
+        ensureSortedTexturedEntries()
+
+        var lastTextureId = -1
+        for (entry in sortedTexturedEntries) {
+            val mesh = entry.value
             if (mesh.getInstanceCount() == 0) continue
 
-            bindTexture(key.textureId)
+            val textureId = unpackTextureId(entry.key)
+            if (textureId != lastTextureId) {
+                bindTexture(textureId)
+                lastTextureId = textureId
+            }
             mesh.render()
             drawCallsThisFrame++
         }
@@ -236,7 +268,10 @@ class InstanceManager(
      * Get statistics for the current frame.
      */
     fun getStats(): InstanceStats {
-        val instanceCounts = instancedMeshes.mapValues { it.value.getInstanceCount() }
+        val instanceCounts = mutableMapOf<InstanceBatchKey, Int>()
+        for ((key, mesh) in instancedMeshes) {
+            instanceCounts[InstanceBatchKey(unpackModelId(key), unpackTextureId(key))] = mesh.getInstanceCount()
+        }
         return InstanceStats(
             totalInstances = totalInstancesThisFrame,
             drawCalls = drawCallsThisFrame,
@@ -255,7 +290,8 @@ class InstanceManager(
         }
         instancedMeshes.clear()
         meshRegistry.clear()
-        pendingInstances.clear()
+        sortedTexturedEntries = emptyList()
+        texturedEntriesDirty = true
     }
 
     /**
@@ -265,9 +301,11 @@ class InstanceManager(
         val meshDataList = meshRegistry.remove(modelId) ?: return
 
         for (meshData in meshDataList) {
-            val key = InstanceBatchKey(modelId, meshData.textureId)
+            val key = packKey(modelId, meshData.textureId)
             instancedMeshes.remove(key)?.cleanup()
         }
+
+        texturedEntriesDirty = true
     }
 }
 

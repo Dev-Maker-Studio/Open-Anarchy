@@ -17,6 +17,9 @@ import org.lwjgl.system.MemoryUtil
  * the current capacity, buffers are reallocated automatically via
  * glBufferData (full reallocation) rather than crashing.
  *
+ * Uses glDrawArrays instead of glDrawElements since terrain uses
+ * non-indexed triangle lists (sequential vertex order).
+ *
  * @param maxVertices Initial maximum number of vertices this chunk can hold
  * @param hasTexcoords Whether this mesh has texture coordinates (location 2)
  * @param hasAlpha Whether this mesh has per-vertex alpha (location 4)
@@ -32,7 +35,6 @@ class ChunkMesh private constructor(
     private var texcoordVbo: Int = 0
     private var normalVbo: Int = 0
     private var alphaVbo: Int = 0
-    private var indexVbo: Int = 0
 
     /** Actual number of vertices currently uploaded (0 = empty/skip). */
     var vertexCount: Int = 0; private set
@@ -80,28 +82,15 @@ class ChunkMesh private constructor(
             glVertexAttribPointer(4, 1, GL_FLOAT, false, 0, 0)
         }
 
-        // Index VBO -- pre-fill with sequential indices (0, 1, 2, ...)
-        // since terrain uses non-indexed triangle lists
-        indexVbo = glGenBuffers()
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVbo)
-        val indexBuffer = MemoryUtil.memAllocInt(maxVertices)
-        try {
-            for (i in 0 until maxVertices) indexBuffer.put(i)
-            indexBuffer.flip()
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW)
-        } finally {
-            MemoryUtil.memFree(indexBuffer)
-        }
-
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
     }
 
     /**
      * Grow all pre-allocated buffers to accommodate [newMax] vertices.
-     * This performs a full glBufferData reallocation on every VBO and rebuilds
-     * the sequential index buffer. Called automatically by [upload] when the
-     * vertex count exceeds the current capacity.
+     * This performs a full glBufferData reallocation on every VBO.
+     * Called automatically by [upload] when the vertex count exceeds
+     * the current capacity.
      */
     private fun grow(newMax: Int) {
         maxVertices = newMax
@@ -129,17 +118,6 @@ class ChunkMesh private constructor(
         if (hasAlpha) {
             glBindBuffer(GL_ARRAY_BUFFER, alphaVbo)
             glBufferData(GL_ARRAY_BUFFER, (maxVertices * 4).toLong(), GL_DYNAMIC_DRAW)
-        }
-
-        // Rebuild sequential index buffer
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVbo)
-        val indexBuffer = MemoryUtil.memAllocInt(maxVertices)
-        try {
-            for (i in 0 until maxVertices) indexBuffer.put(i)
-            indexBuffer.flip()
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW)
-        } finally {
-            MemoryUtil.memFree(indexBuffer)
         }
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
@@ -239,7 +217,7 @@ class ChunkMesh private constructor(
     fun render() {
         if (vertexCount == 0) return
         glBindVertexArray(vaoId)
-        glDrawElements(GL_TRIANGLES, vertexCount, GL_UNSIGNED_INT, 0)
+        glDrawArrays(GL_TRIANGLES, 0, vertexCount)
         glBindVertexArray(0)
     }
 
@@ -254,7 +232,6 @@ class ChunkMesh private constructor(
         if (hasTexcoords) glDeleteBuffers(texcoordVbo)
         glDeleteBuffers(normalVbo)
         if (hasAlpha) glDeleteBuffers(alphaVbo)
-        glDeleteBuffers(indexVbo)
         glDeleteVertexArrays(vaoId)
     }
 

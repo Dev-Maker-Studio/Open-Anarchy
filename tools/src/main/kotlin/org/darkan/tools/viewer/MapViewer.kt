@@ -134,6 +134,11 @@ class MapViewer(
     // Spatial index for object-tile lookup (populated for future terrain reactivity)
     private val objectsByTile = mutableMapOf<Long, MutableList<ObjectInstance>>()
 
+    // Pre-allocated texture binding callback to avoid per-frame lambda allocation
+    private val terrainTextureBinding: (Int) -> Unit = { texId ->
+        TextureLoader.bindTexture(TextureLoader.getTextureForMaterial(cache, texId))
+    }
+
     // Tile picker for debugging UV issues
     private val tilePicker = TilePicker()
     private var terrainData: TerrainLoader.RegionData? = null
@@ -197,10 +202,7 @@ class MapViewer(
         val terrainColorVert = loadShaderSource("/shaders/terrain_color.vert")
         val terrainColorFrag = loadShaderSource("/shaders/terrain_color.frag")
 
-        uboColorShader = ShaderProgram.createWithUniforms(
-            terrainColorVert, terrainColorFrag,
-            "model"
-        )
+        uboColorShader = ShaderProgram.create(terrainColorVert, terrainColorFrag)
         uniformBuffers.bindToShader(uboColorShader)
 
         // Load terrain textured shader with RGB vertex colors
@@ -209,7 +211,7 @@ class MapViewer(
 
         uboTexturedShader = ShaderProgram.createWithUniforms(
             terrainTexturedVert, terrainTexturedFrag,
-            "model", "textureSampler"
+            "textureSampler"
         )
         uniformBuffers.bindToShader(uboTexturedShader)
 
@@ -219,7 +221,7 @@ class MapViewer(
 
         terrainAlphaShader = ShaderProgram.createWithUniforms(
             terrainAlphaVert, terrainAlphaFrag,
-            "model", "textureSampler"
+            "textureSampler"
         )
         uniformBuffers.bindToShader(terrainAlphaShader)
 
@@ -451,23 +453,17 @@ class MapViewer(
 
         // Render terrain via chunked edit manager (identical output to monolithic path)
         editManager?.let { em ->
-            val modelMatrix = Matrix4f().identity()
-
             // Disable face culling for terrain (two-sided rendering)
             renderSystem.disableCullFace()
 
             // Pass 1: Color mesh (untextured tiles) with RGB colors
             uboColorShader.bind()
-            em.renderColor(uboColorShader, modelMatrix)
+            em.renderColor(uboColorShader)
 
             // Pass 2: Textured terrain (single texture per triangle)
             uboTexturedShader.bind()
             uboTexturedShader.setUniform("textureSampler", 0)
-            em.renderTextured(uboTexturedShader, modelMatrix) { texId ->
-                TextureLoader.bindTexture(
-                    TextureLoader.getTextureForMaterial(cache, texId)
-                )
-            }
+            em.renderTextured(uboTexturedShader, terrainTextureBinding)
             TextureLoader.unbindTexture()
 
             // Pass 3: Alpha terrain (multi-pass alpha blending)
@@ -481,11 +477,7 @@ class MapViewer(
 
             terrainAlphaShader.bind()
             terrainAlphaShader.setUniform("textureSampler", 0)
-            em.renderAlpha(terrainAlphaShader, modelMatrix) { texId ->
-                TextureLoader.bindTexture(
-                    TextureLoader.getTextureForMaterial(cache, texId)
-                )
-            }
+            em.renderAlpha(terrainAlphaShader, terrainTextureBinding)
 
             TextureLoader.unbindTexture()
             glDisable(GL_BLEND)
@@ -544,9 +536,9 @@ class MapViewer(
         for (obj in objectInstances) {
             // For contourType 1 objects with displacement, use the displaced model ID
             // so the rendering path picks up the displaced geometry.
-            // Fall back to the standard combined model ID for all other objects.
+            // Fall back to the cached combined model ID for all other objects.
             val combinedModelId = displacedModels[System.identityHashCode(obj)]
-                ?: ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
+                ?: obj.cachedCombinedModelId
 
             // Build transform matrix matching client order:
             // RS client applies to model vertices: Rotate Y -> Terrain Tilt -> Scale -> Offset
@@ -1468,9 +1460,8 @@ class MapViewer(
             // Apply retexturing/recoloring from ObjectDefinition if present
             var registeredCount = 0
             for (obj in objectInstances) {
-                // Get the combined model ID for this object's models, including modifications
-                // Objects with different retexture/recolor mappings get separate registrations
-                val combinedId = ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
+                // Use the cached combined model ID (includes modifications hash)
+                val combinedId = obj.cachedCombinedModelId
                 if (registeredModels.contains(combinedId)) continue
 
                 // Load and combine all models for this object with modifications applied
@@ -1536,8 +1527,9 @@ class MapViewer(
 
                 if (anyDisplaced) {
                     // Register displaced mesh with a unique model ID
+                    // Displaced models are unique per-instance, so only need capacity for 1-4 instances
                     val displacedId = nextDisplacedId++
-                    instanceManager!!.registerModel(displacedId, displacedMeshDataList)
+                    instanceManager!!.registerModel(displacedId, displacedMeshDataList, maxInstances = 4)
                     registeredModels.add(displacedId)
                     displacedModels[System.identityHashCode(obj)] = displacedId
                 }

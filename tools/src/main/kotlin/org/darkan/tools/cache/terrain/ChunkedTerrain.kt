@@ -2,7 +2,6 @@ package org.darkan.tools.cache.terrain
 
 import org.darkan.tools.engine.render.ChunkMesh
 import org.darkan.tools.engine.render.ShaderProgram
-import org.joml.Matrix4f
 
 /**
  * Manages 64 terrain chunks (8x8 grid) for one region+plane, each independently rebuildable.
@@ -308,12 +307,8 @@ class ChunkedTerrain(val regionX: Int, val regionY: Int, val plane: Int) {
 
     // ---- Rendering ----
 
-    /**
-     * Render all non-empty color chunks (untextured terrain).
-     * Sets the model matrix uniform once, then iterates all chunks.
-     */
-    fun renderColor(shader: ShaderProgram, modelMatrix: Matrix4f) {
-        shader.setUniform("model", modelMatrix)
+    /** Render all non-empty color chunks (untextured terrain). */
+    fun renderColor(shader: ShaderProgram) {
         for (cx in 0 until CHUNKS_PER_AXIS) {
             for (cy in 0 until CHUNKS_PER_AXIS) {
                 chunks[cx][cy].colorMesh?.render()
@@ -324,10 +319,9 @@ class ChunkedTerrain(val regionX: Int, val regionY: Int, val plane: Int) {
     /**
      * Render all non-empty textured chunks (opaque textured terrain).
      * The [bindTexture] callback is invoked before each texture group to bind the
-     * appropriate GL texture. Sets the model matrix uniform once.
+     * appropriate GL texture.
      */
-    fun renderTextured(shader: ShaderProgram, modelMatrix: Matrix4f, bindTexture: (Int) -> Unit) {
-        shader.setUniform("model", modelMatrix)
+    fun renderTextured(shader: ShaderProgram, bindTexture: (Int) -> Unit) {
         for (cx in 0 until CHUNKS_PER_AXIS) {
             for (cy in 0 until CHUNKS_PER_AXIS) {
                 for ((texId, mesh) in chunks[cx][cy].texturedMeshes) {
@@ -343,10 +337,9 @@ class ChunkedTerrain(val regionX: Int, val regionY: Int, val plane: Int) {
     /**
      * Render all non-empty alpha chunks (semi-transparent textured terrain).
      * The [bindTexture] callback is invoked before each texture group to bind the
-     * appropriate GL texture. Sets the model matrix uniform once.
+     * appropriate GL texture.
      */
-    fun renderAlpha(shader: ShaderProgram, modelMatrix: Matrix4f, bindTexture: (Int) -> Unit) {
-        shader.setUniform("model", modelMatrix)
+    fun renderAlpha(shader: ShaderProgram, bindTexture: (Int) -> Unit) {
         for (cx in 0 until CHUNKS_PER_AXIS) {
             for (cy in 0 until CHUNKS_PER_AXIS) {
                 for ((texId, mesh) in chunks[cx][cy].alphaMeshes) {
