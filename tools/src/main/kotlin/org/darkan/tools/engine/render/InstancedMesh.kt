@@ -180,6 +180,23 @@ class InstancedMesh(
     }
 
     /**
+     * Add an instance with a pre-computed 16-float column-major matrix array.
+     * Avoids per-instance Matrix4f allocation on the hot path.
+     *
+     * @param matrixData 16 floats representing a 4x4 column-major matrix
+     * @return true if the instance was added, false if buffer is full
+     */
+    fun addInstanceRaw(matrixData: FloatArray): Boolean {
+        if (instanceCount >= maxInstances) {
+            return false
+        }
+
+        instanceBuffer.put(matrixData)
+        instanceCount++
+        return true
+    }
+
+    /**
      * Add an instance at a position with optional scale.
      */
     fun addInstance(x: Float, y: Float, z: Float, scale: Float = 1f): Boolean {

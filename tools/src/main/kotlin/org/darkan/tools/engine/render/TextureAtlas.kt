@@ -15,20 +15,23 @@ import kotlin.math.sqrt
 /**
  * Represents a region within a texture atlas.
  * Contains UV coordinates for transforming mesh UVs to atlas space.
+ *
+ * The UV coordinates map to the INNER texture area, excluding any border pixels.
+ * Shader code should use: atlasUV = vec2(u0, v0) + fract(localUV) * vec2(uScale, vScale)
  */
 data class AtlasRegion(
     val atlasPageIndex: Int,
-    val u0: Float,  // Left edge in atlas [0, 1]
-    val v0: Float,  // Top edge in atlas [0, 1]
-    val u1: Float,  // Right edge in atlas [0, 1]
-    val v1: Float,  // Bottom edge in atlas [0, 1]
+    val u0: Float,  // Left edge of inner texture in atlas [0, 1]
+    val v0: Float,  // Top edge of inner texture in atlas [0, 1]
+    val u1: Float,  // Right edge of inner texture in atlas [0, 1]
+    val v1: Float,  // Bottom edge of inner texture in atlas [0, 1]
     val originalWidth: Int,
     val originalHeight: Int
 ) {
-    /** Width of the region in atlas UV space */
+    /** Width of the inner region in atlas UV space */
     val uScale: Float get() = u1 - u0
 
-    /** Height of the region in atlas UV space */
+    /** Height of the inner region in atlas UV space */
     val vScale: Float get() = v1 - v0
 
     /**
@@ -51,22 +54,33 @@ data class AtlasRegion(
 }
 
 /**
- * Atlas page containing packed textures.
+ * Atlas page containing packed textures with optional border pixels.
+ *
+ * Each texture slot occupies (textureSize + 2*border) pixels in both dimensions.
+ * Border pixels are filled with toroidal wrapping (opposite-edge pixels) to prevent
+ * bilinear/mipmap bleeding across adjacent textures in the atlas.
+ *
+ * @param size Total atlas page size in pixels (e.g., 4096)
+ * @param textureSize Size of individual textures in pixels (e.g., 128)
+ * @param border Number of border pixels on each side (e.g., 2)
  */
 private class AtlasPage(
     val size: Int,
-    val textureSize: Int
+    val textureSize: Int,
+    val border: Int = 0
 ) {
     val glTextureId: Int = glGenTextures()
     val pixels: IntArray = IntArray(size * size)
 
+    /** Total size of each slot including border on both sides */
+    private val slotSize = textureSize + 2 * border
+
     // Packing state - simple row-based packing
     private var currentRow = 0
     private var currentColumn = 0
-    private var rowHeight = textureSize
 
-    // Textures per row
-    private val texturesPerRow = size / textureSize
+    // Textures per row (based on slot size which includes border)
+    val texturesPerRow = size / slotSize
 
     init {
         // Initialize with transparent black
@@ -93,6 +107,9 @@ private class AtlasPage(
     /**
      * Try to add a texture to this page.
      *
+     * The returned [AtlasRegion] UV coordinates map to the inner texture area
+     * (excluding border pixels), so shaders sample correctly from the content region.
+     *
      * @return The region if successful, null if no space
      */
     fun addTexture(texturePixels: IntArray, width: Int, height: Int): AtlasRegion? {
@@ -108,18 +125,25 @@ private class AtlasPage(
             return null
         }
 
-        // Calculate position in atlas
-        val x = currentColumn * textureSize
-        val y = currentRow * textureSize
+        // Calculate slot position in atlas (slot = texture + border on each side)
+        val slotX = currentColumn * slotSize
+        val slotY = currentRow * slotSize
 
-        // Copy pixels to atlas
-        copyPixels(texturePixels, width, height, x, y)
+        // Copy pixels to atlas (inner area starts at slotX+border, slotY+border)
+        copyPixels(texturePixels, width, height, slotX + border, slotY + border)
 
-        // Calculate UV coordinates
-        val u0 = x.toFloat() / size
-        val v0 = y.toFloat() / size
-        val u1 = (x + textureSize).toFloat() / size
-        val v1 = (y + textureSize).toFloat() / size
+        // Fill border pixels with toroidal wrapping if border > 0
+        if (border > 0) {
+            fillBorderPixels(texturePixels, width, height, slotX, slotY)
+        }
+
+        // Calculate UV coordinates for the INNER texture area (excluding border)
+        val innerX = slotX + border
+        val innerY = slotY + border
+        val u0 = innerX.toFloat() / size
+        val v0 = innerY.toFloat() / size
+        val u1 = (innerX + textureSize).toFloat() / size
+        val v1 = (innerY + textureSize).toFloat() / size
 
         currentColumn++
 
@@ -135,10 +159,14 @@ private class AtlasPage(
     /**
      * Copy texture pixels into the atlas at the specified position.
      * Handles scaling if the source is smaller than textureSize.
+     *
+     * @param src Source ARGB pixel data
+     * @param srcWidth Source texture width
+     * @param srcHeight Source texture height
+     * @param destX Destination X in atlas pixels (inner area start, after border)
+     * @param destY Destination Y in atlas pixels (inner area start, after border)
      */
     private fun copyPixels(src: IntArray, srcWidth: Int, srcHeight: Int, destX: Int, destY: Int) {
-        // For now, assume source is exactly textureSize x textureSize or smaller
-        // Scale up if smaller using nearest neighbor
         val scaleX = srcWidth.toFloat() / textureSize
         val scaleY = srcHeight.toFloat() / textureSize
 
@@ -152,6 +180,81 @@ private class AtlasPage(
 
                 if (srcIdx < src.size && destIdx < pixels.size) {
                     pixels[destIdx] = src[srcIdx]
+                }
+            }
+        }
+    }
+
+    /**
+     * Fill border pixels around the inner texture area with toroidal wrapping.
+     *
+     * Toroidal wrapping means border pixels sample from the opposite edge of the texture,
+     * emulating GL_REPEAT behavior. This prevents bilinear/mipmap filtering from bleeding
+     * adjacent atlas textures into each other.
+     *
+     * For a texture at inner position (innerX, innerY) with size textureSize:
+     * - Left border: copies from right edge of texture (columns textureSize-border..textureSize-1)
+     * - Right border: copies from left edge of texture (columns 0..border-1)
+     * - Top border: copies from bottom edge of texture (rows textureSize-border..textureSize-1)
+     * - Bottom border: copies from top edge of texture (rows 0..border-1)
+     * - Corner borders: wrap both axes (e.g., top-left border = bottom-right corner of texture)
+     *
+     * The source pixels may have a different size than textureSize. We use the same
+     * nearest-neighbor scaling as [copyPixels] to maintain consistency.
+     *
+     * @param src Source ARGB pixel data
+     * @param srcWidth Source texture width
+     * @param srcHeight Source texture height
+     * @param slotX Slot X position in atlas (start of border area)
+     * @param slotY Slot Y position in atlas (start of border area)
+     */
+    private fun fillBorderPixels(src: IntArray, srcWidth: Int, srcHeight: Int, slotX: Int, slotY: Int) {
+        val scaleX = srcWidth.toFloat() / textureSize
+        val scaleY = srcHeight.toFloat() / textureSize
+
+        // Helper: sample a pixel from the source texture at logical coordinates (tx, ty)
+        // in textureSize space, with toroidal wrapping applied.
+        fun sampleWrapped(tx: Int, ty: Int): Int {
+            // Apply toroidal wrapping: map any coordinate into [0, textureSize)
+            val wrappedTx = ((tx % textureSize) + textureSize) % textureSize
+            val wrappedTy = ((ty % textureSize) + textureSize) % textureSize
+
+            val sx = (wrappedTx * scaleX).toInt().coerceIn(0, srcWidth - 1)
+            val sy = (wrappedTy * scaleY).toInt().coerceIn(0, srcHeight - 1)
+            val srcIdx = sy * srcWidth + sx
+            return if (srcIdx < src.size) src[srcIdx] else 0
+        }
+
+        // Fill the entire border region. The slot occupies slotSize x slotSize pixels.
+        // Inner texture occupies [border, border+textureSize) within the slot.
+        // We need to fill:
+        //   - Top border rows: row 0..border-1 (entire width)
+        //   - Bottom border rows: row border+textureSize..slotSize-1 (entire width)
+        //   - Left border columns: column 0..border-1 (only inner rows, corners already done)
+        //   - Right border columns: column border+textureSize..slotSize-1 (only inner rows)
+
+        // Process ALL border pixels uniformly. For each pixel in the slot that is
+        // outside the inner area, compute its wrapped source coordinate.
+        for (dy in 0 until slotSize) {
+            for (dx in 0 until slotSize) {
+                // Skip inner texture area (already filled by copyPixels)
+                if (dx in border until border + textureSize && dy in border until border + textureSize) {
+                    continue
+                }
+
+                // Map slot-relative pixel to texture-relative coordinate.
+                // The inner area starts at offset (border, border), so:
+                //   textureX = dx - border
+                //   textureY = dy - border
+                // For border pixels this will be negative or >= textureSize, which
+                // sampleWrapped handles via modular arithmetic.
+                val tx = dx - border
+                val ty = dy - border
+
+                val pixel = sampleWrapped(tx, ty)
+                val destIdx = (slotY + dy) * size + (slotX + dx)
+                if (destIdx in pixels.indices) {
+                    pixels[destIdx] = pixel
                 }
             }
         }
@@ -197,18 +300,32 @@ private class AtlasPage(
  * Packs multiple textures into large atlas pages. Each texture gets
  * a region with UV transformation data for shader use.
  *
+ * When [border] > 0, each atlas slot is enlarged by 2*border pixels and the
+ * border pixels are filled with toroidal wrapping (opposite-edge pixels).
+ * This prevents bilinear/mipmap bleeding across adjacent textures in the atlas,
+ * which is critical for terrain textures that tile via GL_REPEAT (emulated with
+ * fract() in the shader).
+ *
+ * With 128px textures + 2px border on a 4096 atlas: floor(4096/132) = 31 tiles
+ * per side = 961 textures/page, sufficient for all RS terrain textures.
+ *
  * @param atlasSize Size of each atlas page (e.g., 4096 for 4096x4096)
  * @param textureSize Size of individual textures (e.g., 128 for 128x128)
+ * @param border Number of border pixels on each side for bleed prevention (default 2)
  */
 class TextureAtlas(
     private val atlasSize: Int = 4096,
-    private val textureSize: Int = 128
+    private val textureSize: Int = 128,
+    private val border: Int = 2
 ) {
     private val pages = mutableListOf<AtlasPage>()
     private val regions = mutableMapOf<Int, AtlasRegion>()
 
-    // Textures per page = (atlasSize / textureSize)^2
-    val texturesPerPage: Int = (atlasSize / textureSize) * (atlasSize / textureSize)
+    /** Size of each slot including border: textureSize + 2 * border */
+    private val slotSize = textureSize + 2 * border
+
+    // Textures per page = (atlasSize / slotSize)^2
+    val texturesPerPage: Int = (atlasSize / slotSize) * (atlasSize / slotSize)
 
     /**
      * Add a texture to the atlas.
@@ -217,7 +334,7 @@ class TextureAtlas(
      * @param pixels ARGB pixel data
      * @param width Texture width
      * @param height Texture height
-     * @return The atlas region for this texture
+     * @return The atlas region for this texture (UV coordinates map to inner area)
      */
     fun addTexture(textureId: Int, pixels: IntArray, width: Int = textureSize, height: Int = textureSize): AtlasRegion {
         // Check if already added
@@ -237,7 +354,7 @@ class TextureAtlas(
 
         // No space in existing pages, create new
         if (region == null) {
-            val newPage = AtlasPage(atlasSize, textureSize)
+            val newPage = AtlasPage(atlasSize, textureSize, border)
             pages.add(newPage)
             pageIndex = pages.size - 1
             region = newPage.addTexture(pixels, width, height)!!
@@ -306,6 +423,11 @@ class TextureAtlas(
      * Get total number of textures in the atlas.
      */
     fun getTextureCount(): Int = regions.size
+
+    /**
+     * Get the configured border size in pixels.
+     */
+    fun getBorder(): Int = border
 
     /**
      * Get statistics about atlas utilization.

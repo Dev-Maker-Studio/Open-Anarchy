@@ -71,8 +71,12 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
         onInit()
     }
 
+    private var loopFrameCount = 0
+
     private fun loop() {
         while (!window.shouldClose()) {
+            val logFrame = loopFrameCount < 5
+
             val currentTime = System.nanoTime()
             deltaTime = (currentTime - lastFrameTime) / 1_000_000_000f
             lastFrameTime = currentTime
@@ -96,8 +100,19 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
             renderSystem.clear()
             onRender()
 
+            if (logFrame) {
+                println("[ENGINE] Frame $loopFrameCount: onRender() returned, calling window.update()")
+                System.out.flush()
+            }
+
             input.update()
             window.update()
+
+            if (logFrame) {
+                println("[ENGINE] Frame $loopFrameCount: window.update() returned, frame complete")
+                System.out.flush()
+            }
+            loopFrameCount++
         }
     }
 

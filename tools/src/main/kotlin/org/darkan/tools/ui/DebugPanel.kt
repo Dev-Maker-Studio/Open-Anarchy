@@ -1,11 +1,15 @@
 package org.darkan.tools.ui
 
 import imgui.ImGui
+import imgui.flag.ImGuiCol
+import imgui.flag.ImGuiTreeNodeFlags
 import imgui.flag.ImGuiWindowFlags
 import org.darkan.tools.engine.render.Camera
+import org.darkan.tools.engine.render.RenderMetrics
 
 /**
- * Debug information panel showing FPS, camera position, and render stats.
+ * Debug information panel showing FPS, camera position, render stats,
+ * and comprehensive performance metrics from [RenderMetrics].
  */
 class DebugPanel {
     var visible = true
@@ -26,9 +30,9 @@ class DebugPanel {
     fun render(camera: Camera, windowWidth: Int, windowHeight: Int, onWireframeToggle: () -> Unit) {
         if (!visible) return
 
-        // Set size constraints: min width 250, max height 80% of screen
+        // Set size constraints: min width 280, max height 80% of screen
         val maxHeight = windowHeight * 0.8f
-        ImGui.setNextWindowSizeConstraints(250f, 100f, 400f, maxHeight)
+        ImGui.setNextWindowSizeConstraints(280f, 100f, 420f, maxHeight)
 
         // Only set initial position on first frame
         if (firstFrame) {
@@ -53,10 +57,9 @@ class DebugPanel {
             ImGui.text("Yaw: %.1f  Pitch: %.1f".format(camera.yaw, camera.pitch))
             ImGui.separator()
 
-            ImGui.text("Render Stats:")
-            ImGui.text("  Vertices: $vertexCount")
-            ImGui.text("  Draw Calls: $drawCalls")
-            ImGui.text("  Models: $modelCount")
+            // Performance Metrics section (collapsible, open by default)
+            renderPerformanceMetrics()
+
             ImGui.separator()
 
             if (ImGui.checkbox("Wireframe", wireframeMode)) {
@@ -72,6 +75,78 @@ class DebugPanel {
             ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "  ESC - Release Mouse")
         }
         ImGui.end()
+    }
+
+    /**
+     * Render the comprehensive performance metrics section.
+     * Reads all data from [RenderMetrics].
+     */
+    private fun renderPerformanceMetrics() {
+        if (!ImGui.collapsingHeader("Render Stats##perf", ImGuiTreeNodeFlags.DefaultOpen)) return
+
+        val m = RenderMetrics
+
+        // --- Draw Calls ---
+        ImGui.text("Draw Calls")
+        ImGui.indent()
+        ImGui.text("Terrain Opaque:   %d".format(m.terrainOpaqueDrawCalls))
+        ImGui.text("Terrain Alpha:    %d".format(m.terrainAlphaDrawCalls))
+        ImGui.text("Instanced (objs): %d".format(m.instancedDrawCalls))
+        ImGui.text("Indirect (MDI):   %d".format(m.indirectDrawCalls))
+        ImGui.text("Static Batch:     %d".format(m.staticBatchDrawCalls))
+
+        // Total in accent color
+        ImGui.pushStyleColor(ImGuiCol.Text, 0.4f, 0.8f, 1.0f, 1.0f)
+        ImGui.text("Total:            %d".format(m.totalDrawCalls))
+        ImGui.popStyleColor()
+        ImGui.unindent()
+
+        ImGui.spacing()
+
+        // --- Geometry ---
+        ImGui.text("Geometry")
+        ImGui.indent()
+        ImGui.text("Triangles:  %,d".format(m.trianglesSubmitted))
+        ImGui.text("Instances:  %,d".format(m.instanceCount))
+        ImGui.text("Batch Meshes: %d".format(m.staticBatchMeshCount))
+        ImGui.unindent()
+
+        ImGui.spacing()
+
+        // --- Frame Timing ---
+        ImGui.text("Frame Timing")
+        ImGui.indent()
+        ImGui.text("Render:     %.2f ms".format(m.renderTimeMs))
+        ImGui.text("Transform:  %.2f ms".format(m.transformTimeMs))
+        ImGui.text("Upload:     %.2f ms".format(m.uploadTimeMs))
+        ImGui.unindent()
+
+        ImGui.spacing()
+
+        // --- Load Timing (collapsible) ---
+        if (ImGui.collapsingHeader("Load Timing##load")) {
+            ImGui.indent()
+            ImGui.text("Region Load:  %.1f ms".format(m.terrainLoadTimeMs))
+            ImGui.text("Object Load:  %.1f ms".format(m.objectLoadTimeMs))
+            ImGui.unindent()
+        }
+
+        // --- Atlas Stats (collapsible) ---
+        if (ImGui.collapsingHeader("Atlas Stats##atlas")) {
+            ImGui.indent()
+            ImGui.text("Terrain Atlas")
+            ImGui.text("  Textures: %d".format(m.terrainAtlasTextures))
+            ImGui.text("  Pages:    %d".format(m.terrainAtlasPages))
+            ImGui.text("  Usage:    %.0f%%".format(m.terrainAtlasUtilization))
+
+            ImGui.spacing()
+
+            ImGui.text("Object Atlas")
+            ImGui.text("  Textures: %d".format(m.objectAtlasTextures))
+            ImGui.text("  Pages:    %d".format(m.objectAtlasPages))
+            ImGui.text("  Usage:    %.0f%%".format(m.objectAtlasUtilization))
+            ImGui.unindent()
+        }
     }
 
     fun toggleVisibility() {

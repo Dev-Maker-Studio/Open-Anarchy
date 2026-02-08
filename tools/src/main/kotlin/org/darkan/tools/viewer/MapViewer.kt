@@ -8,6 +8,10 @@ import imgui.flag.ImGuiWindowFlags
 import imgui.type.ImBoolean
 import imgui.type.ImInt
 import imgui.type.ImString
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionData
 import org.darkan.core.map.RegionLoader
@@ -25,10 +29,17 @@ import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.Engine
 import org.darkan.tools.engine.input.TilePicker
+import org.darkan.tools.engine.render.BatchKey
+import org.darkan.tools.engine.render.GeometryTransformer
+import org.darkan.tools.engine.render.IndirectRenderer
 import org.darkan.tools.engine.render.InstanceManager
 import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.engine.render.MeshData
+import org.darkan.tools.engine.render.RenderMetrics
+import org.darkan.tools.engine.render.StaticBatcher
+import org.darkan.tools.engine.render.TexturePixelProvider
 import org.darkan.tools.engine.render.ShaderProgram
+import org.darkan.tools.engine.render.TextureAtlas
 import org.darkan.tools.engine.render.UniformBuffers
 import org.darkan.tools.engine.window.WindowConfig
 import org.darkan.tools.ui.DebugPanel
@@ -39,7 +50,10 @@ import org.joml.Vector3f
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL11.*
 import org.lwjgl.opengl.GL13.GL_MULTISAMPLE
+import org.lwjgl.opengl.GL13.GL_TEXTURE0
+import org.lwjgl.opengl.GL13.glActiveTexture
 import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.MemoryCache
 import world.gregs.voidps.cache.definition.data.MapDefinition
 
 /**
@@ -80,9 +94,47 @@ class MapViewer(
     private lateinit var uboTexturedShader: ShaderProgram
     private lateinit var terrainAlphaShader: ShaderProgram
 
-    // Instanced shaders for object rendering
+    // Atlas shaders for unified terrain rendering
+    private var terrainAtlasShader: ShaderProgram? = null
+    private var terrainAtlasAlphaShader: ShaderProgram? = null
+
+    // Terrain texture atlas
+    private var terrainAtlas: TextureAtlas? = null
+    private val SENTINEL_TEXTURE_ID = Int.MAX_VALUE
+
+    // Object texture atlas for collapsing texture-based draw call splits.
+    // Built incrementally as models are registered with the InstanceManager.
+    // Separate from the terrain atlas (different lifecycle and texture set).
+    private var objectAtlas: TextureAtlas? = null
+
+    // Merged atlas terrain meshes (all 9 regions merged into 2 draw calls)
+    private var mergedOpaqueTerrain: Mesh? = null
+    private var mergedAlphaTerrain: Mesh? = null
+
+    // Instanced shaders for object rendering (center region)
     private lateinit var instancedColorShader: ShaderProgram
     private lateinit var instancedTexturedShader: ShaderProgram
+
+    // Multi-Draw Indirect shaders and renderer for center region objects (GL 4.3).
+    // When available, replaces per-mesh instanced draws with 1-3 MDI calls.
+    // Falls back to InstanceManager if initialization fails.
+    //
+    // DISABLED: The IndirectRenderer causes a render loop hang on first frame after loading.
+    // Suspected causes: persistent mapped buffer fence sync issues, glGetTexImage GPU readback
+    // stalls during buildTextureArray(), or massive SSBO allocation (~86MB for triple-buffered
+    // persistent mapping). The legacy InstanceManager path works correctly.
+    // Set useIndirectRendering = true to re-enable for debugging.
+    private val useIndirectRendering = false
+    private var indirectColorShader: ShaderProgram? = null
+    private var indirectTexturedShader: ShaderProgram? = null
+    private var indirectRenderer: IndirectRenderer? = null
+
+    // Non-instanced UBO shaders for static batched context objects
+    private lateinit var staticColorShader: ShaderProgram
+    private lateinit var staticTexturedShader: ShaderProgram
+
+    // Static batcher for context region objects (replaces per-frame instancing)
+    private var contextObjectBatcher: StaticBatcher? = null
 
     // UI
     private lateinit var imGui: ImGuiLayer
@@ -189,6 +241,15 @@ class MapViewer(
         TerrainLoader.loadDefinitions(cache)
         ObjectRenderer.loadDefinitions(cache)
 
+        // Build terrain texture atlas from all overlay/underlay texture definitions
+        buildTerrainAtlas()
+
+        // Create object texture atlas for collapsing texture-based draw call splits.
+        // Textures are packed incrementally as models register with the InstanceManager.
+        // Uses 128px texture slots with 2px border on a 4096x4096 atlas page,
+        // giving 961 slots per page (typically sufficient for all object textures in a 3x3 view).
+        objectAtlas = TextureAtlas(atlasSize = 4096, textureSize = 128, border = 2)
+
         // Setup the scene camera (will be repositioned when region loads)
         scene.camera.setPosition(0f, 50f, 50f)
         scene.camera.pitch = -45f
@@ -205,6 +266,78 @@ class MapViewer(
             MapXteas.load()
         }
         loadRegion(currentRegionX, currentRegionY, currentPlane)
+    }
+
+    /**
+     * Build the terrain texture atlas containing all overlay/underlay textures.
+     * Scans all overlay and underlay definitions for unique texture IDs, generates
+     * each texture's pixels via the procedural texture system, and packs them into
+     * a single atlas. Also adds a 1x1 white sentinel pixel for untextured (color-only)
+     * tiles so they can share the same shader as textured tiles.
+     *
+     * After building, wires up [TerrainLoader.atlasLookup] and
+     * [TerrainLoader.sentinelAtlasTransform] so that [TerrainLoader.computeTerrainMeshData]
+     * produces per-vertex atlas UV transforms.
+     */
+    private fun buildTerrainAtlas() {
+        val textureIds = TerrainLoader.getUniqueTextureIds()
+        if (textureIds.isEmpty()) {
+            println("[MapViewer] No terrain textures found in definitions, atlas disabled")
+            return
+        }
+
+        println("[MapViewer] Building terrain atlas with ${textureIds.size} textures...")
+        System.out.flush()
+        val startTime = System.nanoTime()
+        val atlas = TextureAtlas(atlasSize = 4096, textureSize = 128, border = 2)
+
+        var loaded = 0
+        var failed = 0
+        val sortedIds = textureIds.sorted()
+        for ((index, texId) in sortedIds.withIndex()) {
+            print("[MapViewer]   Texture $texId (${index + 1}/${sortedIds.size})...")
+            System.out.flush()
+            try {
+                val result = TextureLoader.getTexturePixelsForMaterial(cache, texId)
+                if (result != null) {
+                    val (pixels, width, height) = result
+                    atlas.addTexture(texId, pixels, width, height)
+                    loaded++
+                    println(" OK")
+                } else {
+                    failed++
+                    println(" null")
+                }
+            } catch (e: Throwable) {
+                println(" FAILED: ${e.message}")
+                failed++
+            }
+        }
+        val elapsed = (System.nanoTime() - startTime) / 1_000_000
+        println("[MapViewer]   Texture generation completed in ${elapsed}ms: $loaded loaded, $failed failed")
+
+        // Add sentinel white pixel texture for color-only tiles.
+        // A 1x1 pure white pixel means texColor.rgb = (1,1,1), so
+        // finalColor = texColor * vertexColor = vertexColor (correct for untextured tiles).
+        val whitePixel = intArrayOf(0xFFFFFFFF.toInt())
+        atlas.addTexture(SENTINEL_TEXTURE_ID, whitePixel, 1, 1)
+
+        // Upload to GPU
+        atlas.upload()
+        terrainAtlas = atlas
+
+        val stats = atlas.getStats()
+        println("[MapViewer] Terrain atlas built: ${stats.textureCount} textures on ${stats.pageCount} page(s), " +
+                "$loaded loaded, $failed failed, utilization ${(stats.utilization * 100).toInt()}%")
+
+        // Wire up TerrainLoader atlas lookup so computeTerrainMeshData produces
+        // per-vertex atlas transform arrays.
+        val sentinelRegion = atlas.getRegion(SENTINEL_TEXTURE_ID)!!
+        TerrainLoader.atlasLookup = { textureId ->
+            val region = atlas.getRegion(textureId) ?: sentinelRegion
+            region.getTransformVec4()
+        }
+        TerrainLoader.sentinelAtlasTransform = sentinelRegion.getTransformVec4()
     }
 
     private fun loadUBOShaders() {
@@ -238,7 +371,7 @@ class MapViewer(
         )
         uniformBuffers.bindToShader(terrainAlphaShader)
 
-        // Load instanced shaders (for objects - use standard RGB shaders)
+        // Load instanced shaders (for center region objects - use standard RGB shaders)
         val instancedColorVert = loadShaderSource("/shaders/ubo_instanced.vert")
         val instancedColorFrag = loadShaderSource("/shaders/ubo_color.frag")
         instancedColorShader = ShaderProgram.create(instancedColorVert, instancedColorFrag)
@@ -251,6 +384,72 @@ class MapViewer(
             "textureSampler"
         )
         uniformBuffers.bindToShader(instancedTexturedShader)
+
+        // Load Multi-Draw Indirect shaders (GL 4.3 SSBO-based).
+        // These read instance matrices from an SSBO indexed by gl_BaseInstance + gl_InstanceID
+        // instead of per-instance vertex attributes. Falls back gracefully if shaders fail.
+        if (useIndirectRendering) {
+            try {
+                val indColorVert = loadShaderSource("/shaders/indirect_color.vert")
+                val indColorFrag = loadShaderSource("/shaders/indirect_color.frag")
+                indirectColorShader = ShaderProgram.create(indColorVert, indColorFrag)
+                uniformBuffers.bindToShader(indirectColorShader!!)
+
+                val indTexturedVert = loadShaderSource("/shaders/indirect_textured.vert")
+                val indTexturedFrag = loadShaderSource("/shaders/indirect_textured.frag")
+                indirectTexturedShader = ShaderProgram.createWithUniforms(
+                    indTexturedVert, indTexturedFrag,
+                    "textureArray"
+                )
+                uniformBuffers.bindToShader(indirectTexturedShader!!)
+
+                println("[MapViewer] Indirect draw shaders loaded successfully")
+            } catch (e: Exception) {
+                System.err.println("[MapViewer] Failed to load indirect draw shaders, falling back to instanced rendering: ${e.message}")
+                indirectColorShader?.cleanup()
+                indirectColorShader = null
+                indirectTexturedShader?.cleanup()
+                indirectTexturedShader = null
+            }
+        } else {
+            println("[MapViewer] Indirect rendering disabled, using legacy instanced path")
+        }
+
+        // Load non-instanced UBO shaders for static batched context region objects.
+        // These use the same UBO blocks as instanced shaders but take a model uniform
+        // instead of per-instance matrix attributes.
+        val staticColorVert = loadShaderSource("/shaders/ubo_color.vert")
+        val staticColorFrag = loadShaderSource("/shaders/ubo_color.frag")
+        staticColorShader = ShaderProgram.createWithUniforms(
+            staticColorVert, staticColorFrag,
+            "model"
+        )
+        uniformBuffers.bindToShader(staticColorShader)
+
+        val staticTexturedVert = loadShaderSource("/shaders/ubo_textured.vert")
+        val staticTexturedFrag = loadShaderSource("/shaders/ubo_textured.frag")
+        staticTexturedShader = ShaderProgram.createWithUniforms(
+            staticTexturedVert, staticTexturedFrag,
+            "model", "textureSampler"
+        )
+        uniformBuffers.bindToShader(staticTexturedShader)
+
+        // Load atlas terrain shaders
+        val atlasVert = loadShaderSource("/shaders/terrain_atlas.vert")
+        val atlasFrag = loadShaderSource("/shaders/terrain_atlas.frag")
+        terrainAtlasShader = ShaderProgram.createWithUniforms(
+            atlasVert, atlasFrag,
+            "model", "atlasTexture"
+        )
+        uniformBuffers.bindToShader(terrainAtlasShader!!)
+
+        val atlasAlphaVert = loadShaderSource("/shaders/terrain_atlas_alpha.vert")
+        val atlasAlphaFrag = loadShaderSource("/shaders/terrain_atlas_alpha.frag")
+        terrainAtlasAlphaShader = ShaderProgram.createWithUniforms(
+            atlasAlphaVert, atlasAlphaFrag,
+            "model", "atlasTexture"
+        )
+        uniformBuffers.bindToShader(terrainAtlasAlphaShader!!)
     }
 
     override fun onInput() {
@@ -447,20 +646,57 @@ class MapViewer(
         val editResult = editManager?.processEdits() ?: EditResult.NONE
         // editResult.hasChanges can be used later for object reactivity (e.g., repositioning
         // objects on modified terrain)
+
+        // When terrain edits occur, the merged atlas terrain becomes stale.
+        // Invalidate it so the renderer falls back to the legacy per-region path
+        // until the next full region reload rebuilds the merged meshes.
+        if (editResult.hasChanges && mergedOpaqueTerrain != null) {
+            mergedOpaqueTerrain?.cleanup()
+            mergedOpaqueTerrain = null
+            mergedAlphaTerrain?.cleanup()
+            mergedAlphaTerrain = null
+        }
     }
 
+    // Frame counter for debug logging (only logs first few frames to avoid spam)
+    private var frameNumber = 0
+
     override fun onRender() {
+        val logFrame = frameNumber < 5
+        if (logFrame) {
+            println("[RENDER] Frame $frameNumber: onRender() start")
+            System.out.flush()
+        }
+
+        // Reset per-frame performance counters
+        RenderMetrics.resetFrame()
+
         // Clear
         glClearColor(clearColor.x, clearColor.y, clearColor.z, 1.0f)
         glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
 
+        val renderStart = RenderMetrics.startTiming()
         renderScene()
+        RenderMetrics.renderTimeMs = RenderMetrics.endTiming(renderStart)
+
+        if (logFrame) {
+            println("[RENDER] Frame $frameNumber: renderScene() done in ${RenderMetrics.renderTimeMs}ms")
+            System.out.flush()
+        }
 
         // Render UI
         renderUI()
+
+        if (logFrame) {
+            println("[RENDER] Frame $frameNumber: onRender() complete")
+            System.out.flush()
+        }
+        frameNumber++
     }
 
     private fun renderScene() {
+        val logFrame = frameNumber < 5
+
         // Update UBOs for lighting
         uniformBuffers.updateCamera(
             scene.camera.getViewMatrix(),
@@ -473,72 +709,135 @@ class MapViewer(
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         }
 
-        // Render terrain via chunked edit manager (identical output to monolithic path)
-        editManager?.let { em ->
-            // Disable face culling for terrain (two-sided rendering)
+        // Render terrain - use atlas path (2 draw calls) when available,
+        // fall back to legacy multi-pass path otherwise
+        val atlas = terrainAtlas
+        val opaqueAtlasMesh = mergedOpaqueTerrain
+        val alphaAtlasMesh = mergedAlphaTerrain
+        val atlasShader = terrainAtlasShader
+        val atlasAlphaShader = terrainAtlasAlphaShader
+
+        if (atlas != null && atlasShader != null && atlasAlphaShader != null && (opaqueAtlasMesh != null || alphaAtlasMesh != null)) {
+            // ===== Atlas rendering path: 2 draw calls for ALL terrain =====
             renderSystem.disableCullFace()
+            val identityModel = Matrix4f().identity()
 
-            // Pass 1: Color mesh (untextured tiles) with RGB colors
-            uboColorShader.bind()
-            em.renderColor(uboColorShader, centerModelMatrix)
-            // Render context region color meshes
-            for (i in contextRegions.indices) {
-                val ctx = contextRegions[i] ?: continue
-                uboColorShader.setUniform("model", contextModelMatrices[i])
-                ctx.terrainMeshes.colorMesh?.render()
+            // Bind atlas texture to GL_TEXTURE0
+            atlas.bindPage(0, 0)
+
+            // Draw 1: Opaque terrain (color + textured, merged with atlas)
+            if (opaqueAtlasMesh != null) {
+                atlasShader.bind()
+                atlasShader.setUniform("model", identityModel)
+                atlasShader.setUniform("atlasTexture", 0)
+                opaqueAtlasMesh.render()
+                RenderMetrics.terrainOpaqueDrawCalls++
+                RenderMetrics.trianglesSubmitted += opaqueAtlasMesh.vertexCount / 3
             }
 
-            // Pass 2: Textured terrain (single texture per triangle)
-            uboTexturedShader.bind()
-            uboTexturedShader.setUniform("textureSampler", 0)
-            em.renderTextured(uboTexturedShader, centerModelMatrix, terrainTextureBinding)
-            // Render context region textured meshes
-            for (i in contextRegions.indices) {
-                val ctx = contextRegions[i] ?: continue
-                uboTexturedShader.setUniform("model", contextModelMatrices[i])
-                for (batch in ctx.terrainMeshes.texturedBatches) {
-                    terrainTextureBinding(batch.textureId)
-                    batch.mesh.render()
-                }
-            }
-            TextureLoader.unbindTexture()
+            // Draw 2: Alpha terrain (with GL alpha blending state)
+            if (alphaAtlasMesh != null) {
+                glDepthFunc(GL_LEQUAL)
+                glDepthMask(false)
+                glEnable(GL_BLEND)
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
-            // Pass 3: Alpha terrain (multi-pass alpha blending)
-            // Alpha layers render at the same depth as the opaque base.
-            // Use GL_LEQUAL so equal-depth fragments pass, and disable depth
-            // writes so alpha layers don't block each other.
-            glDepthFunc(GL_LEQUAL)
-            glDepthMask(false)
-            glEnable(GL_BLEND)
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+                atlasAlphaShader.bind()
+                atlasAlphaShader.setUniform("model", identityModel)
+                atlasAlphaShader.setUniform("atlasTexture", 0)
+                alphaAtlasMesh.render()
+                RenderMetrics.terrainAlphaDrawCalls++
+                RenderMetrics.trianglesSubmitted += alphaAtlasMesh.vertexCount / 3
 
-            terrainAlphaShader.bind()
-            terrainAlphaShader.setUniform("textureSampler", 0)
-            em.renderAlpha(terrainAlphaShader, centerModelMatrix, terrainTextureBinding)
-            // Render context region alpha meshes
-            for (i in contextRegions.indices) {
-                val ctx = contextRegions[i] ?: continue
-                terrainAlphaShader.setUniform("model", contextModelMatrices[i])
-                for (batch in ctx.terrainMeshes.alphaBatches) {
-                    terrainTextureBinding(batch.textureId)
-                    batch.mesh.render()
-                }
+                glDisable(GL_BLEND)
+                glDepthMask(true)
+                glDepthFunc(GL_LESS)
             }
 
-            TextureLoader.unbindTexture()
-            glDisable(GL_BLEND)
-            glDepthMask(true)
-            glDepthFunc(GL_LESS)
+            // Unbind atlas texture
+            glActiveTexture(GL_TEXTURE0)
+            glBindTexture(GL_TEXTURE_2D, 0)
 
-            // Restore GL state
             renderSystem.enableCullFace()
+        } else {
+            // ===== Legacy rendering path: multi-pass per-texture draws =====
+            editManager?.let { em ->
+                renderSystem.disableCullFace()
+
+                // Pass 1: Color mesh (untextured tiles) with RGB colors
+                uboColorShader.bind()
+                em.renderColor(uboColorShader, centerModelMatrix)
+                RenderMetrics.terrainOpaqueDrawCalls++ // center color mesh
+                for (i in contextRegions.indices) {
+                    val ctx = contextRegions[i] ?: continue
+                    uboColorShader.setUniform("model", contextModelMatrices[i])
+                    ctx.terrainMeshes.colorMesh?.let { mesh ->
+                        mesh.render()
+                        RenderMetrics.terrainOpaqueDrawCalls++
+                        RenderMetrics.trianglesSubmitted += mesh.vertexCount / 3
+                    }
+                }
+
+                // Pass 2: Textured terrain (single texture per triangle)
+                uboTexturedShader.bind()
+                uboTexturedShader.setUniform("textureSampler", 0)
+                em.renderTextured(uboTexturedShader, centerModelMatrix, terrainTextureBinding)
+                for (i in contextRegions.indices) {
+                    val ctx = contextRegions[i] ?: continue
+                    uboTexturedShader.setUniform("model", contextModelMatrices[i])
+                    for (batch in ctx.terrainMeshes.texturedBatches) {
+                        terrainTextureBinding(batch.textureId)
+                        batch.mesh.render()
+                        RenderMetrics.terrainOpaqueDrawCalls++
+                        RenderMetrics.trianglesSubmitted += batch.mesh.vertexCount / 3
+                    }
+                }
+                TextureLoader.unbindTexture()
+
+                // Pass 3: Alpha terrain (multi-pass alpha blending)
+                glDepthFunc(GL_LEQUAL)
+                glDepthMask(false)
+                glEnable(GL_BLEND)
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+                terrainAlphaShader.bind()
+                terrainAlphaShader.setUniform("textureSampler", 0)
+                em.renderAlpha(terrainAlphaShader, centerModelMatrix, terrainTextureBinding)
+                for (i in contextRegions.indices) {
+                    val ctx = contextRegions[i] ?: continue
+                    terrainAlphaShader.setUniform("model", contextModelMatrices[i])
+                    for (batch in ctx.terrainMeshes.alphaBatches) {
+                        terrainTextureBinding(batch.textureId)
+                        batch.mesh.render()
+                        RenderMetrics.terrainAlphaDrawCalls++
+                        RenderMetrics.trianglesSubmitted += batch.mesh.vertexCount / 3
+                    }
+                }
+
+                TextureLoader.unbindTexture()
+                glDisable(GL_BLEND)
+                glDepthMask(true)
+                glDepthFunc(GL_LESS)
+
+                renderSystem.enableCullFace()
+            }
         }
 
         // Render tile highlight (if any selected tile)
         renderTileHighlight()
 
+        if (logFrame) {
+            println("[RENDER] Frame $frameNumber:   terrain done, starting renderObjects()")
+            System.out.flush()
+        }
+
         // Render objects
         renderObjects()
+
+        if (logFrame) {
+            println("[RENDER] Frame $frameNumber:   renderObjects() done")
+            System.out.flush()
+        }
 
         if (renderSystem.wireframeMode) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
@@ -571,101 +870,312 @@ class MapViewer(
         glEnable(GL_DEPTH_TEST)
     }
 
-    private val tempModelMatrix = Matrix4f()
+    /**
+     * Pre-computed instance entry from the parallel transform phase.
+     * Contains the model ID and the raw 16-float column-major matrix data
+     * ready for direct upload to the GPU via [InstanceManager.addInstanceRaw].
+     */
+    private data class InstanceEntry(val modelId: Int, val matrixData: FloatArray)
+
+    /** Chunk size for parallel transform computation. */
+    private val PARALLEL_CHUNK_SIZE = 512
 
     private fun renderObjects() {
         val im = instanceManager ?: return
+        val logFrame = frameNumber < 5
 
-        im.prepareFrame()
+        // Only instance center region objects -- context region objects are statically batched.
+        // Snapshot the displaced models map for thread-safe reads.
+        val displacedSnapshot = displacedModels
+        val centerObjects = objectInstances
 
+        if (logFrame) {
+            println("[RENDER] Frame $frameNumber:     renderObjects: ${centerObjects.size} objects")
+            System.out.flush()
+        }
+
+        // --- Parallel phase: compute transforms on Dispatchers.Default ---
+        // Each coroutine gets its own thread-local Matrix4f to avoid allocation
+        // on the hot path. The transform computation is pure math with no GL calls.
+        val transformStart = RenderMetrics.startTiming()
+        val entries: List<InstanceEntry> = if (centerObjects.size <= PARALLEL_CHUNK_SIZE) {
+            // Small object count: compute sequentially to avoid coroutine overhead
+            val tempMatrix = Matrix4f()
+            centerObjects.map { obj ->
+                computeInstanceEntry(obj, displacedSnapshot, tempMatrix)
+            }
+        } else {
+            runBlocking(Dispatchers.Default) {
+                centerObjects.chunked(PARALLEL_CHUNK_SIZE).map { chunk ->
+                    async {
+                        val tempMatrix = Matrix4f()  // Thread-local: one per coroutine
+                        chunk.map { obj ->
+                            computeInstanceEntry(obj, displacedSnapshot, tempMatrix)
+                        }
+                    }
+                }.awaitAll().flatten()
+            }
+        }
+        RenderMetrics.transformTimeMs = RenderMetrics.endTiming(transformStart)
+
+        if (logFrame) {
+            println("[RENDER] Frame $frameNumber:     transforms done in ${RenderMetrics.transformTimeMs}ms")
+            System.out.flush()
+        }
+
+        // --- Sequential phase: GL calls on main thread ---
+        val ir = indirectRenderer
+        val useIndirect = ir != null && ir.isReady()
+
+        val uploadStart = RenderMetrics.startTiming()
         var addedCount = 0
 
-        // Collect all objects: center region + context regions
-        val allObjectInstances = buildList {
-            addAll(objectInstances)
-            for (ctx in contextRegions) {
-                if (ctx != null) addAll(ctx.objectInstances)
+        if (useIndirect) {
+            // Multi-Draw Indirect path: feed instances into IndirectRenderer
+            ir.prepareFrame()
+            for (entry in entries) {
+                if (ir.addInstanceRaw(entry.modelId, entry.matrixData)) {
+                    addedCount++
+                }
             }
+            ir.uploadAll()
+        } else {
+            // Legacy instanced path: feed instances into InstanceManager
+            im.prepareFrame()
+            for (entry in entries) {
+                if (im.addInstanceRaw(entry.modelId, entry.matrixData)) {
+                    addedCount++
+                }
+            }
+            im.uploadAll()
         }
 
-        for (obj in allObjectInstances) {
-            // For contourType 1 objects with displacement, use the displaced model ID
-            // so the rendering path picks up the displaced geometry.
-            // Fall back to the cached combined model ID for all other objects.
-            val combinedModelId = displacedModels[System.identityHashCode(obj)]
-                ?: obj.cachedCombinedModelId
+        RenderMetrics.uploadTimeMs = RenderMetrics.endTiming(uploadStart)
+        RenderMetrics.instanceCount = addedCount
 
-            // Build transform matrix matching client order:
-            // RS client applies to model vertices: Rotate Y -> Terrain Tilt -> Scale -> Offset
-            // Then model is placed at world position with height adjustment
-            // Matrix operations are right-to-left, so we specify them in reverse order
-            //
-            // For terrain alignment (groundContourType=3), the client's hillChange applies:
-            // 1. X-axis rotation (pitch tilt based on N/S slope)
-            // 2. Z-axis rotation (roll tilt based on E/W slope)
-            // 3. Y translation (height adjustment to sit on lowest corner)
-            tempModelMatrix.identity()
-                .translate(obj.worldPosition)        // 6. Move to world position
-
-            // Apply terrain alignment (height adjustment + tilt rotations)
-            if (obj.terrainAlignment.needsAlignment()) {
-                // Height adjustment from terrain alignment (after world position)
-                tempModelMatrix.translate(0f, obj.terrainAlignment.heightAdjustment, 0f)
-            }
-
-            tempModelMatrix
-                .translate(obj.offset)               // 5. Apply definition offset
-                .scale(obj.scale)                    // 4. Scale
-
-            // Apply terrain tilt rotations (after Y rotation in application order)
-            // RS applies: RotateY -> TiltX -> TiltZ (in that order on vertices)
-            // Matrix equivalent (right-to-left): TiltZ * TiltX * RotateY
-            if (obj.terrainAlignment.needsAlignment()) {
-                tempModelMatrix.rotateZ(obj.terrainAlignment.tiltZ)  // 3. Roll tilt (last in app order)
-                tempModelMatrix.rotateX(obj.terrainAlignment.tiltX)  // 2. Pitch tilt
-            }
-
-            tempModelMatrix.rotateY(obj.rotation)   // 1. Object Y rotation (first in app order)
-
-            // Apply mirroring if needed (negates Z coordinates)
-            // This is applied last in the matrix chain = first on vertices
-            if (obj.mirrored) {
-                tempModelMatrix.scale(1f, 1f, -1f)  // 0. Mirror across XY plane
-            }
-
-            if (im.addInstance(combinedModelId, tempModelMatrix)) {
-                addedCount++
-            }
+        if (logFrame) {
+            println("[RENDER] Frame $frameNumber:     upload done in ${RenderMetrics.uploadTimeMs}ms, $addedCount instances, indirect=$useIndirect")
+            System.out.flush()
         }
-
-        im.uploadAll()
 
         // IMPORTANT: Disable face culling for RS models which often have two-sided faces
         renderSystem.disableCullFace()
 
-        // Render untextured batches first (vertex colors only)
-        // The shader uses UBOs for camera/lighting which were already updated
-        im.renderUntextured(instancedColorShader)
+        if (useIndirect) {
+            // === Multi-Draw Indirect rendering: 1-2 draw calls for ALL center objects ===
+            val indColorShader = indirectColorShader!!
+            val indTexShader = indirectTexturedShader!!
 
-        // Render textured batches with proper GL state (like ModelViewer)
+            // Render untextured objects (1 MDI call)
+            ir.renderUntextured(indColorShader)
+
+            // Render textured objects (1 MDI call) with proper GL state
+            renderSystem.enableBlending()
+            renderSystem.enableAlphaToCoverage()
+
+            indTexShader.bind()
+            indTexShader.setUniform("textureArray", 0)
+            ir.renderTextured(indTexShader)
+
+            renderSystem.disableBlending()
+            renderSystem.disableAlphaToCoverage()
+
+            // Capture MDI draw call count
+            RenderMetrics.indirectDrawCalls = ir.getDrawCallCount()
+            RenderMetrics.trianglesSubmitted += ir.getTotalTrianglesSubmitted()
+        } else {
+            // === Legacy instanced rendering: per-mesh draw calls ===
+
+            // Render instanced center region objects (untextured)
+            im.renderUntextured(instancedColorShader)
+
+            // Render instanced center region objects (textured) with proper GL state
+            renderSystem.enableBlending()
+            renderSystem.enableAlphaToCoverage()
+
+            instancedTexturedShader.bind()
+            instancedTexturedShader.setUniform("textureSampler", 0)
+
+            if (im.objectAtlas != null) {
+                im.renderTexturedWithAtlas(instancedTexturedShader) { materialId ->
+                    val glTexId = TextureLoader.getTextureForMaterial(cache, materialId)
+                    TextureLoader.bindTexture(glTexId)
+                }
+            } else {
+                im.renderTextured(instancedTexturedShader) { materialId ->
+                    val glTexId = TextureLoader.getTextureForMaterial(cache, materialId)
+                    TextureLoader.bindTexture(glTexId)
+                }
+            }
+
+            TextureLoader.unbindTexture()
+            renderSystem.disableBlending()
+            renderSystem.disableAlphaToCoverage()
+
+            // Capture instanced draw call count from InstanceManager
+            val instanceStats = im.getStats()
+            RenderMetrics.instancedDrawCalls = instanceStats.drawCalls
+            RenderMetrics.trianglesSubmitted += countInstancedTriangles(im)
+        }
+
+        if (logFrame) {
+            println("[RENDER] Frame $frameNumber:     instanced rendering done")
+            System.out.flush()
+        }
+
+        // Render static batched context region objects
+        renderStaticBatchedObjects()
+
+        if (logFrame) {
+            println("[RENDER] Frame $frameNumber:     static batched objects done")
+            System.out.flush()
+        }
+
+        renderSystem.enableCullFace()
+    }
+
+    /**
+     * Render context region objects from static batched meshes.
+     * These meshes have geometry pre-transformed to world space during region loading,
+     * so they render with an identity model matrix and no per-frame transform computation.
+     *
+     * Batches are keyed by [BatchKey]:
+     * - UNTEXTURED: vertex colors only, drawn with [staticColorShader]
+     * - Atlas page (atlasPageIndex >= 0): drawn with [staticTexturedShader], atlas page bound
+     * - Fallback texture (textureId >= 0, atlasPageIndex == -1): drawn with [staticTexturedShader],
+     *   individual texture bound via TextureLoader
+     */
+    private fun renderStaticBatchedObjects() {
+        val batcher = contextObjectBatcher ?: return
+        val meshes = batcher.getAllMeshes()
+        if (meshes.isEmpty()) return
+
+        RenderMetrics.staticBatchMeshCount = meshes.size
+
+        val identityModel = Matrix4f().identity()
+        val atlas = objectAtlas
+
+        // Render untextured batches
+        val untexturedMesh = meshes[BatchKey.UNTEXTURED]
+        if (untexturedMesh != null) {
+            staticColorShader.bind()
+            staticColorShader.setUniform("model", identityModel)
+            untexturedMesh.render()
+            RenderMetrics.staticBatchDrawCalls++
+            RenderMetrics.trianglesSubmitted += untexturedMesh.vertexCount / 3
+        }
+
+        // Render textured batches (atlas pages and fallback textures)
+        val texturedKeys = meshes.keys.filter { it != BatchKey.UNTEXTURED }
+        if (texturedKeys.isEmpty()) return
+
         renderSystem.enableBlending()
         renderSystem.enableAlphaToCoverage()
 
-        instancedTexturedShader.bind()
-        instancedTexturedShader.setUniform("textureSampler", 0)
+        staticTexturedShader.bind()
+        staticTexturedShader.setUniform("model", identityModel)
+        staticTexturedShader.setUniform("textureSampler", 0)
 
-        im.renderTextured(instancedTexturedShader) { materialId ->
-            // Convert material ID to OpenGL texture ID (same as ModelViewer)
-            val textureId = TextureLoader.getTextureForMaterial(cache, materialId)
-            TextureLoader.bindTexture(textureId)
+        // Sort by atlas page index to minimize texture binds
+        val sortedKeys = texturedKeys.sortedBy { it.atlasPageIndex }
+
+        var lastBoundPage = -2  // -2 = nothing bound yet
+        for (key in sortedKeys) {
+            val mesh = meshes[key] ?: continue
+
+            if (key.atlasPageIndex >= 0 && atlas != null) {
+                // Atlas page batch: bind the atlas page
+                if (key.atlasPageIndex != lastBoundPage) {
+                    atlas.bindPage(key.atlasPageIndex, 0)
+                    lastBoundPage = key.atlasPageIndex
+                }
+            } else if (key.textureId >= 0) {
+                // Fallback texture batch: bind individual texture
+                val glTexId = TextureLoader.getTextureForMaterial(cache, key.textureId)
+                TextureLoader.bindTexture(glTexId)
+                lastBoundPage = -2
+            }
+
+            mesh.render()
+            RenderMetrics.staticBatchDrawCalls++
+            RenderMetrics.trianglesSubmitted += mesh.vertexCount / 3
         }
 
         TextureLoader.unbindTexture()
-
-        // Restore GL state
         renderSystem.disableBlending()
         renderSystem.disableAlphaToCoverage()
-        renderSystem.enableCullFace()
+    }
+
+    /**
+     * Count the total triangles rendered by the InstanceManager this frame.
+     * Delegates to [InstanceManager.getTotalTrianglesSubmitted] which sums
+     * (vertexCount/3 * instanceCount) for each active instanced mesh.
+     */
+    private fun countInstancedTriangles(im: InstanceManager): Int {
+        return im.getTotalTrianglesSubmitted()
+    }
+
+    /**
+     * Compute an [InstanceEntry] for a single object instance.
+     * This is a pure math function with no GL calls, safe for use from any thread.
+     *
+     * @param obj The object instance to compute the transform for
+     * @param displacedSnapshot Read-only snapshot of displaced model ID overrides
+     * @param tempMatrix Thread-local Matrix4f reused across calls to avoid allocation
+     * @return An InstanceEntry with the model ID and pre-computed raw matrix data
+     */
+    private fun computeInstanceEntry(
+        obj: ObjectInstance,
+        displacedSnapshot: Map<Int, Int>,
+        tempMatrix: Matrix4f
+    ): InstanceEntry {
+        // For contourType 1 objects with displacement, use the displaced model ID
+        // so the rendering path picks up the displaced geometry.
+        // Fall back to the cached combined model ID for all other objects.
+        val combinedModelId = displacedSnapshot[System.identityHashCode(obj)]
+            ?: obj.cachedCombinedModelId
+
+        // Build transform matrix matching client order:
+        // RS client applies to model vertices: Rotate Y -> Terrain Tilt -> Scale -> Offset
+        // Then model is placed at world position with height adjustment
+        // Matrix operations are right-to-left, so we specify them in reverse order
+        //
+        // For terrain alignment (groundContourType=3), the client's hillChange applies:
+        // 1. X-axis rotation (pitch tilt based on N/S slope)
+        // 2. Z-axis rotation (roll tilt based on E/W slope)
+        // 3. Y translation (height adjustment to sit on lowest corner)
+        tempMatrix.identity()
+            .translate(obj.worldPosition)        // 6. Move to world position
+
+        // Apply terrain alignment (height adjustment + tilt rotations)
+        if (obj.terrainAlignment.needsAlignment()) {
+            // Height adjustment from terrain alignment (after world position)
+            tempMatrix.translate(0f, obj.terrainAlignment.heightAdjustment, 0f)
+        }
+
+        tempMatrix
+            .translate(obj.offset)               // 5. Apply definition offset
+            .scale(obj.scale)                    // 4. Scale
+
+        // Apply terrain tilt rotations (after Y rotation in application order)
+        // RS applies: RotateY -> TiltX -> TiltZ (in that order on vertices)
+        // Matrix equivalent (right-to-left): TiltZ * TiltX * RotateY
+        if (obj.terrainAlignment.needsAlignment()) {
+            tempMatrix.rotateZ(obj.terrainAlignment.tiltZ)  // 3. Roll tilt (last in app order)
+            tempMatrix.rotateX(obj.terrainAlignment.tiltX)  // 2. Pitch tilt
+        }
+
+        tempMatrix.rotateY(obj.rotation)   // 1. Object Y rotation (first in app order)
+
+        // Apply mirroring if needed (negates Z coordinates)
+        // This is applied last in the matrix chain = first on vertices
+        if (obj.mirrored) {
+            tempMatrix.scale(1f, 1f, -1f)  // 0. Mirror across XY plane
+        }
+
+        val matrixData = FloatArray(16)
+        tempMatrix.get(matrixData)
+        return InstanceEntry(combinedModelId, matrixData)
     }
 
     // ========================================================================
@@ -1477,6 +1987,206 @@ class MapViewer(
         reloadRegion()
     }
 
+    /**
+     * Build merged atlas terrain meshes from the center region (editManager) and
+     * all 8 context regions. Produces exactly 2 draw calls: one opaque and one alpha.
+     *
+     * For the center region, terrain mesh data is obtained from the editManager's
+     * current tile state. For context regions, it is obtained from their already-
+     * computed TerrainMeshData (via computeTerrainMeshData which was called during
+     * loadContextRegions).
+     *
+     * Each region's local-coordinate vertices are offset by the region's world
+     * position (regionX * 64 * tileSize, 0, -regionY * 64 * tileSize) before
+     * merging, so the merged mesh is in world coordinates and can be drawn with
+     * an identity model matrix.
+     */
+    private fun buildMergedAtlasTerrain(centerRx: Int, centerRy: Int, plane: Int, tileSize: Float) {
+        val atlas = terrainAtlas ?: return
+
+        // Collect all TerrainMeshData from all 9 regions.
+        // Each entry is (meshData, regionX, regionY) so we can offset positions.
+        data class RegionMeshEntry(
+            val data: TerrainLoader.TerrainMeshData,
+            val rx: Int,
+            val ry: Int
+        )
+
+        val entries = mutableListOf<RegionMeshEntry>()
+
+        // Center region: compute mesh data from editManager's current state
+        val em = editManager
+        if (em != null) {
+            val centerTd = TerrainLoader.loadRegion(cache, centerRx, centerRy)
+            if (centerTd != null) {
+                val neighbors = TerrainLoader.buildNeighborData(cache, centerRx, centerRy)
+                val centerMeshData = TerrainLoader.computeTerrainMeshData(centerTd, plane, neighbors)
+                entries.add(RegionMeshEntry(centerMeshData, centerRx, centerRy))
+            }
+        }
+
+        // Context regions: compute mesh data for each
+        for (i in CONTEXT_OFFSETS.indices) {
+            val ctx = contextRegions[i] ?: continue
+            val rx = ctx.regionX
+            val ry = ctx.regionY
+            val td = TerrainLoader.loadRegion(cache, rx, ry) ?: continue
+            val neighbors = TerrainLoader.buildNeighborData(cache, rx, ry)
+            val meshData = TerrainLoader.computeTerrainMeshData(td, plane, neighbors)
+            entries.add(RegionMeshEntry(meshData, rx, ry))
+        }
+
+        if (entries.isEmpty()) return
+
+        // Merge all opaque data (color + textured, since atlas unifies them)
+        // All color meshes have atlas transforms (sentinel white pixel), and all
+        // textured meshes have atlas transforms, so they can all go into one mesh.
+        val allOpaquePositions = mutableListOf<FloatArray>()
+        val allOpaqueColors = mutableListOf<FloatArray>()
+        val allOpaqueTexCoords = mutableListOf<FloatArray>()
+        val allOpaqueNormals = mutableListOf<FloatArray>()
+        val allOpaqueAtlasTransforms = mutableListOf<FloatArray>()
+        val allOpaqueIndices = mutableListOf<IntArray>()
+        var opaqueVertexOffset = 0
+
+        val allAlphaPositions = mutableListOf<FloatArray>()
+        val allAlphaColors = mutableListOf<FloatArray>()
+        val allAlphaTexCoords = mutableListOf<FloatArray>()
+        val allAlphaNormals = mutableListOf<FloatArray>()
+        val allAlphaAlphas = mutableListOf<FloatArray>()
+        val allAlphaAtlasTransforms = mutableListOf<FloatArray>()
+        val allAlphaIndices = mutableListOf<IntArray>()
+        var alphaVertexOffset = 0
+
+        for (entry in entries) {
+            val offsetX = entry.rx * 64 * tileSize
+            val offsetZ = -entry.ry * 64 * tileSize
+
+            // Helper: offset positions from local coords to world coords
+            fun offsetPositions(positions: FloatArray): FloatArray {
+                val result = positions.copyOf()
+                var i = 0
+                while (i < result.size) {
+                    result[i] += offsetX       // x
+                    // result[i+1] unchanged   // y (height is already correct)
+                    result[i + 2] += offsetZ   // z
+                    i += 3
+                }
+                return result
+            }
+
+            // Helper: offset indices by running vertex count
+            fun offsetIndices(indices: IntArray, offset: Int): IntArray {
+                if (offset == 0) return indices
+                val result = IntArray(indices.size)
+                for (j in indices.indices) {
+                    result[j] = indices[j] + offset
+                }
+                return result
+            }
+
+            val data = entry.data
+
+            // Add color mesh (untextured) to opaque pool
+            data.colorArrays?.let { c ->
+                if (c.positions.isNotEmpty() && c.atlasTransforms != null && c.texCoords != null) {
+                    val vertCount = c.positions.size / 3
+                    allOpaquePositions.add(offsetPositions(c.positions))
+                    allOpaqueColors.add(c.colors)
+                    allOpaqueTexCoords.add(c.texCoords)
+                    allOpaqueNormals.add(c.normals)
+                    allOpaqueAtlasTransforms.add(c.atlasTransforms)
+                    allOpaqueIndices.add(offsetIndices(c.indices, opaqueVertexOffset))
+                    opaqueVertexOffset += vertCount
+                }
+            }
+
+            // Add textured meshes to opaque pool
+            for (t in data.texturedArrays) {
+                if (t.positions.isNotEmpty() && t.atlasTransforms != null) {
+                    val vertCount = t.positions.size / 3
+                    allOpaquePositions.add(offsetPositions(t.positions))
+                    allOpaqueColors.add(t.colors)
+                    allOpaqueTexCoords.add(t.texCoords)
+                    allOpaqueNormals.add(t.normals)
+                    allOpaqueAtlasTransforms.add(t.atlasTransforms)
+                    allOpaqueIndices.add(offsetIndices(t.indices, opaqueVertexOffset))
+                    opaqueVertexOffset += vertCount
+                }
+            }
+
+            // Add alpha meshes to alpha pool
+            for (a in data.alphaArrays) {
+                if (a.positions.isNotEmpty() && a.atlasTransforms != null) {
+                    val vertCount = a.positions.size / 3
+                    allAlphaPositions.add(offsetPositions(a.positions))
+                    allAlphaColors.add(a.colors)
+                    allAlphaTexCoords.add(a.texCoords)
+                    allAlphaNormals.add(a.normals)
+                    allAlphaAlphas.add(a.alphas)
+                    allAlphaAtlasTransforms.add(a.atlasTransforms)
+                    allAlphaIndices.add(offsetIndices(a.indices, alphaVertexOffset))
+                    alphaVertexOffset += vertCount
+                }
+            }
+        }
+
+        // Build the merged opaque mesh
+        if (opaqueVertexOffset > 0) {
+            val positions = concatFloatArrays(allOpaquePositions)
+            val colors = concatFloatArrays(allOpaqueColors)
+            val texCoords = concatFloatArrays(allOpaqueTexCoords)
+            val normals = concatFloatArrays(allOpaqueNormals)
+            val atlasTransforms = concatFloatArrays(allOpaqueAtlasTransforms)
+            val indices = concatIntArrays(allOpaqueIndices)
+
+            mergedOpaqueTerrain = Mesh.createWithAtlasTransform(
+                positions, colors, texCoords, normals, atlasTransforms, indices
+            )
+            println("[MapViewer] Merged opaque terrain: $opaqueVertexOffset vertices, ${indices.size} indices")
+        }
+
+        // Build the merged alpha mesh
+        if (alphaVertexOffset > 0) {
+            val positions = concatFloatArrays(allAlphaPositions)
+            val colors = concatFloatArrays(allAlphaColors)
+            val texCoords = concatFloatArrays(allAlphaTexCoords)
+            val normals = concatFloatArrays(allAlphaNormals)
+            val alphas = concatFloatArrays(allAlphaAlphas)
+            val atlasTransforms = concatFloatArrays(allAlphaAtlasTransforms)
+            val indices = concatIntArrays(allAlphaIndices)
+
+            mergedAlphaTerrain = Mesh.createWithAtlasAndAlpha(
+                positions, colors, texCoords, normals, alphas, atlasTransforms, indices
+            )
+            println("[MapViewer] Merged alpha terrain: $alphaVertexOffset vertices, ${indices.size} indices")
+        }
+    }
+
+    /** Concatenate a list of FloatArrays into one. */
+    private fun concatFloatArrays(arrays: List<FloatArray>): FloatArray {
+        val totalSize = arrays.sumOf { it.size }
+        val result = FloatArray(totalSize)
+        var offset = 0
+        for (arr in arrays) {
+            arr.copyInto(result, offset)
+            offset += arr.size
+        }
+        return result
+    }
+
+    /** Concatenate a list of IntArrays into one. */
+    private fun concatIntArrays(arrays: List<IntArray>): IntArray {
+        val totalSize = arrays.sumOf { it.size }
+        val result = IntArray(totalSize)
+        var offset = 0
+        for (arr in arrays) {
+            arr.copyInto(result, offset)
+            offset += arr.size
+        }
+        return result
+    }
+
     private fun loadRegion(regionX: Int, regionY: Int, plane: Int) {
         // Clean up existing resources
         cleanupRegion()
@@ -1486,8 +2196,14 @@ class MapViewer(
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
 
+        // Time overall region loading (terrain + objects + context)
+        val regionLoadStart = RenderMetrics.startTiming()
+
         // Initialize chunked terrain via edit manager (replaces monolithic loadRegionMeshes)
         editManager = TerrainEditManager(regionX, regionY, plane, cache).also { it.init() }
+
+        // Time object loading phase (instance creation + model registration)
+        val objectLoadStart = RenderMetrics.startTiming()
 
         // Load objects
         val regionData = RegionLoader.loadRegion(cache, regionX, regionY)
@@ -1501,8 +2217,36 @@ class MapViewer(
         mapObjects = regionData?.objects ?: emptyList()
 
         if (regionData != null && td != null) {
-            // Create instance manager for this region (larger capacity for multi-region objects)
-            instanceManager = InstanceManager(maxInstancesPerMesh = 50000)
+            // Create instance manager for this region (larger capacity for multi-region objects).
+            // Pass the object atlas and pixel provider so textured models have their
+            // textures packed into the atlas at registration time, with UVs remapped to
+            // atlas space. This collapses texture-based draw call splits.
+            val atlas = objectAtlas
+            instanceManager = InstanceManager(
+                maxInstancesPerMesh = 50000,
+                objectAtlas = atlas,
+                texturePixelProvider = if (atlas != null) {
+                    TexturePixelProvider { textureId ->
+                        TextureLoader.getTexturePixelsForMaterial(cache, textureId)
+                    }
+                } else null
+            )
+
+            // Create IndirectRenderer if shaders are available and indirect rendering is enabled.
+            // Uses the same object atlas and pixel provider as InstanceManager.
+            if (useIndirectRendering && indirectColorShader != null && indirectTexturedShader != null) {
+                val ir = IndirectRenderer(
+                    maxTotalInstances = 200000,
+                    objectAtlas = atlas,
+                    texturePixelProvider = if (atlas != null) {
+                        TexturePixelProvider { textureId ->
+                            TextureLoader.getTexturePixelsForMaterial(cache, textureId)
+                        }
+                    } else null
+                )
+                ir.init()
+                indirectRenderer = ir
+            }
 
             // Create object instances for this plane using WORLD coordinates
             // The terrain mesh uses local coords (0-63) but is positioned via model matrix
@@ -1527,6 +2271,7 @@ class MapViewer(
                 }
                 if (meshDataList != null && meshDataList.isNotEmpty()) {
                     instanceManager!!.registerModel(combinedId, meshDataList)
+                    indirectRenderer?.registerModel(combinedId, meshDataList)
                     registeredModels.add(combinedId)
                     registeredCount++
                 }
@@ -1585,6 +2330,7 @@ class MapViewer(
                     // Displaced models are unique per-instance, so only need capacity for 1-4 instances
                     val displacedId = nextDisplacedId++
                     instanceManager!!.registerModel(displacedId, displacedMeshDataList, maxInstances = 4)
+                    indirectRenderer?.registerModel(displacedId, displacedMeshDataList)
                     registeredModels.add(displacedId)
                     displacedModels[System.identityHashCode(obj)] = displacedId
                 }
@@ -1601,6 +2347,46 @@ class MapViewer(
         // Load surrounding context regions (terrain + objects)
         loadContextRegions(regionX, regionY, plane)
 
+        // Upload object atlas to GPU after all models have been registered.
+        // Textures were packed incrementally during registerModel() calls above
+        // and in loadContextRegions(). Now upload all pages at once.
+        val atlas = objectAtlas
+        if (atlas != null && atlas.getTextureCount() > 0) {
+            atlas.upload()
+            val stats = atlas.getStats()
+            println("[MapViewer] Object atlas: ${stats.textureCount} textures on ${stats.pageCount} page(s), " +
+                    "utilization ${(stats.utilization * 100).toInt()}%")
+        }
+
+        // Build shared geometry for IndirectRenderer (must happen after atlas upload
+        // so that the texture array can be built from the uploaded atlas pages).
+        val ir = indirectRenderer
+        if (ir != null) {
+            try {
+                ir.buildSharedGeometry()
+                println("[MapViewer] IndirectRenderer: ${ir.getRegisteredModelCount()} models, " +
+                        "${ir.getMeshEntryCount()} mesh entries in shared geometry buffer")
+            } catch (e: Exception) {
+                System.err.println("[MapViewer] IndirectRenderer build failed, falling back to instanced: ${e.message}")
+                ir.cleanup()
+                indirectRenderer = null
+            }
+        }
+
+        // Build merged atlas terrain meshes (2 draw calls for all 9 regions)
+        if (terrainAtlas != null) {
+            buildMergedAtlasTerrain(regionX, regionY, plane, tileSize)
+        }
+
+        // Record total region load time (terrain + objects + context + atlas build)
+        RenderMetrics.terrainLoadTimeMs = RenderMetrics.endTiming(regionLoadStart)
+
+        // Record object load time (instance creation, model registration, context regions, atlas upload)
+        RenderMetrics.objectLoadTimeMs = RenderMetrics.endTiming(objectLoadStart)
+
+        // Populate atlas stats for the debug panel
+        updateAtlasStats()
+
         // Center camera on the world-space center of this region
         val worldCenterX = (regionX * 64 + 32) * tileSize
         val worldCenterZ = -(regionY * 64 + 32) * tileSize
@@ -1610,7 +2396,42 @@ class MapViewer(
         scene.camera.farPlane = 4000f
     }
 
+    /**
+     * Populate [RenderMetrics] atlas stats from current terrain and object atlases.
+     */
+    private fun updateAtlasStats() {
+        val tAtlas = terrainAtlas
+        if (tAtlas != null) {
+            val stats = tAtlas.getStats()
+            RenderMetrics.terrainAtlasTextures = stats.textureCount
+            RenderMetrics.terrainAtlasPages = stats.pageCount
+            RenderMetrics.terrainAtlasUtilization = stats.utilization * 100f
+        } else {
+            RenderMetrics.terrainAtlasTextures = 0
+            RenderMetrics.terrainAtlasPages = 0
+            RenderMetrics.terrainAtlasUtilization = 0f
+        }
+
+        val oAtlas = objectAtlas
+        if (oAtlas != null && oAtlas.getTextureCount() > 0) {
+            val stats = oAtlas.getStats()
+            RenderMetrics.objectAtlasTextures = stats.textureCount
+            RenderMetrics.objectAtlasPages = stats.pageCount
+            RenderMetrics.objectAtlasUtilization = stats.utilization * 100f
+        } else {
+            RenderMetrics.objectAtlasTextures = 0
+            RenderMetrics.objectAtlasPages = 0
+            RenderMetrics.objectAtlasUtilization = 0f
+        }
+    }
+
     private fun cleanupRegion() {
+        // Clean up merged atlas terrain meshes
+        mergedOpaqueTerrain?.cleanup()
+        mergedOpaqueTerrain = null
+        mergedAlphaTerrain?.cleanup()
+        mergedAlphaTerrain = null
+
         // Clean up chunked terrain GPU resources
         editManager?.cleanup()
         editManager = null
@@ -1619,6 +2440,8 @@ class MapViewer(
         objectsByTile.clear()
         instanceManager?.cleanup()
         instanceManager = null
+        indirectRenderer?.cleanup()
+        indirectRenderer = null
         objectInstances = emptyList()
         registeredModels.clear()
         displacedModels.clear()
@@ -1626,6 +2449,10 @@ class MapViewer(
         tilePicker.clearSelection()
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
+
+        // Clean up static batched context region objects
+        contextObjectBatcher?.cleanup()
+        contextObjectBatcher = null
 
         // Clean up and clear context region references.
         // Context regions built with neighbor data own their terrain meshes and must
@@ -1638,12 +2465,187 @@ class MapViewer(
     }
 
     /**
+     * CPU-computed data for a context region, ready for GPU upload on the main thread.
+     * Produced by the parallel phase of [loadContextRegions] and consumed by the
+     * sequential GPU upload phase.
+     */
+    private class ContextRegionCpuData(
+        val index: Int,
+        val rx: Int,
+        val ry: Int,
+        val terrainMeshData: TerrainLoader.TerrainMeshData,
+        val objectInstances: List<ObjectInstance>,
+        /** Map of combinedModelId -> MeshData list, for models not yet registered with InstanceManager. */
+        val newModelMeshData: Map<Int, List<MeshData>>,
+        /** Map of combinedModelId -> MeshData list for ALL models (including already registered).
+         *  Used for static batch building where we need the original vertex data. */
+        val allModelMeshData: Map<Int, List<MeshData>>
+    )
+
+    /**
      * Load the 8 surrounding context regions for visual context.
-     * Each neighbor gets static terrain meshes and objects placed in world coordinates.
-     * Objects from context regions go through the same instance manager as the center region.
+     * Each neighbor gets static terrain meshes and objects are statically batched
+     * into merged meshes grouped by texture/atlas page.
+     *
+     * Context region objects are static (never edited while the player is in the
+     * center region), so we bake their world-space geometry into StaticBatcher
+     * meshes during loading instead of computing transforms every frame.
+     *
+     * When running with a MemoryCache (MEM_CACHE=true), this uses parallel loading:
+     * - Phase 1 (parallel, Dispatchers.Default): For all 8 regions concurrently --
+     *   decode region data, build neighbor data, compute terrain mesh arrays (CPU only),
+     *   create object instances, and load model MeshData from cache.
+     * - Phase 2 (main thread, sequential): Upload terrain mesh data to GPU,
+     *   register models with InstanceManager (for center region), build static batches.
+     *
+     * When running with FileCache, falls back to sequential loading since FileCache
+     * is not safe for concurrent access.
      */
     private fun loadContextRegions(centerRegionX: Int, centerRegionY: Int, plane: Int) {
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+        val useParallel = cache is MemoryCache
+
+        if (useParallel) {
+            loadContextRegionsParallel(centerRegionX, centerRegionY, plane, tileSize)
+        } else {
+            loadContextRegionsSequential(centerRegionX, centerRegionY, plane, tileSize)
+        }
+    }
+
+    /**
+     * Parallel implementation of context region loading.
+     * Phase 1 runs on Dispatchers.Default, Phase 2 runs on the calling (main) thread.
+     */
+    private fun loadContextRegionsParallel(centerRegionX: Int, centerRegionY: Int, plane: Int, tileSize: Float) {
+        val showRoofsLocal = showRoofs  // Capture for safe use in parallel lambdas
+
+        // Collect the set of already-registered model IDs at the start so parallel
+        // workers can check against it without synchronization. Any model ID in this
+        // snapshot does not need its MeshData loaded for InstanceManager registration,
+        // but we still need ALL MeshData for static batch building.
+        val alreadyRegistered = registeredModels.toSet()
+
+        // Phase 1 (parallel): CPU-only computation for all 8 context regions
+        val cpuResults: List<ContextRegionCpuData?> = runBlocking {
+            CONTEXT_OFFSETS.indices.map { i ->
+                async(Dispatchers.Default) {
+                    val rx = centerRegionX + CONTEXT_OFFSETS[i][0]
+                    val ry = centerRegionY + CONTEXT_OFFSETS[i][1]
+
+                    // Skip if out of bounds
+                    if (rx < 0 || rx > 255 || ry < 0 || ry > 255) return@async null
+
+                    // Load terrain region data (thread-safe ConcurrentHashMap cache)
+                    val terrainData = TerrainLoader.loadRegion(cache, rx, ry) ?: return@async null
+
+                    // Build neighbor data (calls TerrainLoader.loadRegion, thread-safe)
+                    val ctxNeighbors = TerrainLoader.buildNeighborData(cache, rx, ry)
+
+                    // Compute terrain mesh data (pure CPU, no GL calls)
+                    TerrainLoader.loadDefinitions(cache)
+                    val terrainMeshData = TerrainLoader.computeTerrainMeshData(terrainData, plane, ctxNeighbors)
+
+                    // Load object data (RegionLoader with useCache=false for thread safety)
+                    val ctxRegionData = RegionLoader.loadRegion(cache, rx, ry, useCache = false)
+                    val ctxTiles = terrainData.tiles
+                    var ctxObjectInstances: List<ObjectInstance> = emptyList()
+                    val newModelMeshData = mutableMapOf<Int, List<MeshData>>()
+                    val allModelMeshData = mutableMapOf<Int, List<MeshData>>()
+
+                    if (ctxRegionData != null) {
+                        // Create instances for all planes using world coordinates
+                        val allPlaneInstances = ObjectRenderer.createInstancesAllPlanes(
+                            objects = ctxRegionData.objects,
+                            regionX = rx,
+                            regionY = ry,
+                            tileHeights = { localX, localY, p ->
+                                TerrainLoader.getTileHeightScaled(ctxTiles, localX, localY, p)
+                            },
+                            rsHeightSampler = { localX, localY, p ->
+                                TerrainLoader.getTileHeight(ctxTiles, localX, localY, p)
+                            }
+                        )
+
+                        // Flatten and filter
+                        ctxObjectInstances = allPlaneInstances.values.flatten().let { instances ->
+                            if (!showRoofsLocal) instances.filter { it.mapObject.shape !in 12..21 }
+                            else instances
+                        }
+
+                        // Pre-load model MeshData for ALL models used by context objects.
+                        // ModelLoader caches are ConcurrentHashMap -- thread-safe.
+                        // allModelMeshData is needed for static batch building (vertex data).
+                        // newModelMeshData tracks only models not yet registered with InstanceManager.
+                        for (obj in ctxObjectInstances) {
+                            val combinedId = obj.cachedCombinedModelId
+                            if (allModelMeshData.containsKey(combinedId)) continue
+
+                            val meshDataList = if (obj.modifications.hasModifications()) {
+                                ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
+                            } else {
+                                ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
+                            }
+                            if (meshDataList != null && meshDataList.isNotEmpty()) {
+                                allModelMeshData[combinedId] = meshDataList
+                                if (!alreadyRegistered.contains(combinedId)) {
+                                    newModelMeshData[combinedId] = meshDataList
+                                }
+                            }
+                        }
+                    }
+
+                    ContextRegionCpuData(i, rx, ry, terrainMeshData, ctxObjectInstances, newModelMeshData, allModelMeshData)
+                }
+            }.map { it.await() }
+        }
+
+        // Phase 2 (main thread): GPU upload, model registration, and static batch building
+        for (i in cpuResults.indices) {
+            val cpuData = cpuResults[i]
+            if (cpuData == null) {
+                // Out of bounds or missing region data
+                contextRegions[i] = null
+                contextModelMatrices[i].identity()
+                continue
+            }
+
+            val rx = cpuData.rx
+            val ry = cpuData.ry
+
+            // Compute model matrix for this neighbor's terrain
+            contextModelMatrices[i].identity().translate(rx * 64 * tileSize, 0f, -ry * 64 * tileSize)
+
+            // Upload terrain mesh data to GPU (GL calls happen here)
+            val terrainMeshes = TerrainLoader.uploadTerrainMeshData(cpuData.terrainMeshData)
+
+            // Register NEW models with the shared instance manager (needed for center region
+            // objects that may share model IDs with context region objects)
+            val im = instanceManager
+            val ir = indirectRenderer
+            if (im != null) {
+                for ((combinedId, meshDataList) in cpuData.newModelMeshData) {
+                    if (!registeredModels.contains(combinedId)) {
+                        im.registerModel(combinedId, meshDataList)
+                        ir?.registerModel(combinedId, meshDataList)
+                        registeredModels.add(combinedId)
+                    }
+                }
+            }
+
+            contextRegions[i] = ContextRegion(rx, ry, terrainMeshes, cpuData.objectInstances)
+        }
+
+        // Phase 3 (main thread): Build static batches from all context region objects
+        buildContextObjectBatches(cpuResults)
+    }
+
+    /**
+     * Sequential (original) implementation of context region loading.
+     * Used as fallback when running with FileCache (not thread-safe for concurrent access).
+     */
+    private fun loadContextRegionsSequential(centerRegionX: Int, centerRegionY: Int, plane: Int, tileSize: Float) {
+        // Collect all context region data for static batch building
+        val allContextData = mutableListOf<Pair<List<ObjectInstance>, Map<Int, List<MeshData>>>>()
 
         for (i in CONTEXT_OFFSETS.indices) {
             val rx = centerRegionX + CONTEXT_OFFSETS[i][0]
@@ -1672,6 +2674,7 @@ class MapViewer(
             val ctxRegionData = RegionLoader.loadRegion(cache, rx, ry)
             val ctxTerrainData = TerrainLoader.loadRegion(cache, rx, ry)
             var ctxObjectInstances: List<ObjectInstance> = emptyList()
+            val allModelMeshData = mutableMapOf<Int, List<MeshData>>()
 
             if (ctxRegionData != null && ctxTerrainData != null) {
                 val ctxTiles = ctxTerrainData.tiles
@@ -1696,20 +2699,26 @@ class MapViewer(
                     else instances
                 }
 
-                // Register models from context region objects with the shared instance manager
+                // Load MeshData and register models with the shared instance manager.
+                // Also collect ALL MeshData for static batch building.
                 val im = instanceManager
-                if (im != null) {
-                    for (obj in ctxObjectInstances) {
-                        val combinedId = obj.cachedCombinedModelId
-                        if (registeredModels.contains(combinedId)) continue
+                val ir = indirectRenderer
+                for (obj in ctxObjectInstances) {
+                    val combinedId = obj.cachedCombinedModelId
+                    if (allModelMeshData.containsKey(combinedId)) continue
 
-                        val meshDataList = if (obj.modifications.hasModifications()) {
-                            ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
-                        } else {
-                            ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
-                        }
-                        if (meshDataList != null && meshDataList.isNotEmpty()) {
+                    val meshDataList = if (obj.modifications.hasModifications()) {
+                        ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
+                    } else {
+                        ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
+                    }
+                    if (meshDataList != null && meshDataList.isNotEmpty()) {
+                        allModelMeshData[combinedId] = meshDataList
+                        // Register with InstanceManager if not already registered
+                        // (needed for center region objects that may share model IDs)
+                        if (im != null && !registeredModels.contains(combinedId)) {
                             im.registerModel(combinedId, meshDataList)
+                            ir?.registerModel(combinedId, meshDataList)
                             registeredModels.add(combinedId)
                         }
                     }
@@ -1717,7 +2726,181 @@ class MapViewer(
             }
 
             contextRegions[i] = ContextRegion(rx, ry, terrainMeshes, ctxObjectInstances)
+            allContextData.add(Pair(ctxObjectInstances, allModelMeshData))
         }
+
+        // Build static batches from all context region objects
+        buildContextObjectBatchesFromData(allContextData)
+    }
+
+    /**
+     * Build static batches from context region data collected during parallel loading.
+     *
+     * For each context region object, computes its world-space transform matrix
+     * (same math as [computeInstanceEntry]), transforms the model's vertex data
+     * to world space, and adds the transformed geometry to a [StaticBatcher]
+     * grouped by [BatchKey] (atlas page or texture ID).
+     *
+     * The resulting merged meshes are drawn with a single draw call per batch key,
+     * eliminating per-frame transform computation for context region objects.
+     */
+    private fun buildContextObjectBatches(cpuResults: List<ContextRegionCpuData?>) {
+        val allContextData = mutableListOf<Pair<List<ObjectInstance>, Map<Int, List<MeshData>>>>()
+        for (cpuData in cpuResults) {
+            if (cpuData == null) continue
+            allContextData.add(Pair(cpuData.objectInstances, cpuData.allModelMeshData))
+        }
+        buildContextObjectBatchesFromData(allContextData)
+    }
+
+    /**
+     * Build static batches from collected context region object data.
+     *
+     * @param allContextData List of (objectInstances, allModelMeshData) pairs,
+     *        one per context region that has objects.
+     */
+    private fun buildContextObjectBatchesFromData(
+        allContextData: List<Pair<List<ObjectInstance>, Map<Int, List<MeshData>>>>
+    ) {
+        // Clean up any existing batcher
+        contextObjectBatcher?.cleanup()
+        contextObjectBatcher = null
+
+        // Collect all context objects with their MeshData
+        var totalObjects = 0
+        for ((instances, _) in allContextData) {
+            totalObjects += instances.size
+        }
+        if (totalObjects == 0) return
+
+        val batcher = StaticBatcher()
+        val transformer = GeometryTransformer()
+        val tempMatrix = Matrix4f()
+        val atlas = objectAtlas
+
+        var batchedCount = 0
+        var skippedCount = 0
+
+        for ((instances, meshDataMap) in allContextData) {
+            for (obj in instances) {
+                val combinedId = obj.cachedCombinedModelId
+                val meshDataList = meshDataMap[combinedId]
+                if (meshDataList == null || meshDataList.isEmpty()) {
+                    skippedCount++
+                    continue
+                }
+
+                // Compute world-space transform matrix (same as computeInstanceEntry)
+                tempMatrix.identity()
+                    .translate(obj.worldPosition)
+
+                if (obj.terrainAlignment.needsAlignment()) {
+                    tempMatrix.translate(0f, obj.terrainAlignment.heightAdjustment, 0f)
+                }
+
+                tempMatrix
+                    .translate(obj.offset)
+                    .scale(obj.scale)
+
+                if (obj.terrainAlignment.needsAlignment()) {
+                    tempMatrix.rotateZ(obj.terrainAlignment.tiltZ)
+                    tempMatrix.rotateX(obj.terrainAlignment.tiltX)
+                }
+
+                tempMatrix.rotateY(obj.rotation)
+
+                if (obj.mirrored) {
+                    tempMatrix.scale(1f, 1f, -1f)
+                }
+
+                // Transform each MeshData batch and add to the batcher
+                for (meshData in meshDataList) {
+                    if (meshData.positions.isEmpty() || meshData.indices.isEmpty()) continue
+
+                    // Determine the batch key based on texture and atlas state
+                    val batchKey = resolveBatchKey(meshData, atlas)
+
+                    // Remap UVs to atlas space if this mesh uses the atlas
+                    val texCoords = if (batchKey.atlasPageIndex >= 0 && atlas != null && meshData.textureId >= 0) {
+                        remapTexCoordsToAtlas(meshData.textureCoords, meshData.textureId, atlas)
+                    } else {
+                        meshData.textureCoords
+                    }
+
+                    // Transform geometry to world space and add to batcher.
+                    // Use transformMatchingInstanced to match the instanced shader's normal
+                    // transformation (mat3(model) * normal) for pixel-identical output.
+                    val transformed = transformer.transformMatchingInstanced(
+                        meshData.positions,
+                        meshData.colors,
+                        texCoords,
+                        meshData.normals,
+                        meshData.indices,
+                        tempMatrix
+                    )
+                    batcher.addGeometry(batchKey, transformed)
+                }
+
+                batchedCount++
+            }
+        }
+
+        if (batchedCount > 0) {
+            // Build merged GPU meshes from accumulated geometry
+            batcher.buildMeshes()
+            contextObjectBatcher = batcher
+
+            val stats = batcher.getStats()
+            println("[MapViewer] Static batched $batchedCount context objects into ${stats.batchCount} batches " +
+                    "(${stats.totalVertices} vertices, ${stats.totalTriangles} triangles), skipped $skippedCount")
+        }
+    }
+
+    /**
+     * Resolve the [BatchKey] for a MeshData entry based on the object atlas state.
+     *
+     * - Untextured (textureId == -1): [BatchKey.UNTEXTURED]
+     * - Textured with atlas region: BatchKey(textureId = -1, atlasPageIndex = pageIndex)
+     * - Textured without atlas / atlas full: BatchKey(textureId = originalId, atlasPageIndex = -1)
+     */
+    private fun resolveBatchKey(meshData: MeshData, atlas: TextureAtlas?): BatchKey {
+        if (meshData.textureId == -1) return BatchKey.UNTEXTURED
+
+        if (atlas != null) {
+            val region = atlas.getRegion(meshData.textureId)
+            if (region != null) {
+                return BatchKey(textureId = -1, atlasPageIndex = region.atlasPageIndex)
+            }
+        }
+
+        // Fallback: no atlas or texture not packed
+        return BatchKey(textureId = meshData.textureId, atlasPageIndex = -1)
+    }
+
+    /**
+     * Remap texture coordinates from local [0,1] space to atlas UV space.
+     * Returns the remapped coordinates, or null if input is null.
+     */
+    private fun remapTexCoordsToAtlas(
+        texCoords: FloatArray?,
+        textureId: Int,
+        atlas: TextureAtlas
+    ): FloatArray? {
+        if (texCoords == null) return null
+        val region = atlas.getRegion(textureId) ?: return texCoords
+
+        val remapped = FloatArray(texCoords.size)
+        val uScale = region.u1 - region.u0
+        val vScale = region.v1 - region.v0
+
+        var i = 0
+        while (i < texCoords.size - 1) {
+            remapped[i] = region.u0 + texCoords[i] * uScale
+            remapped[i + 1] = region.v0 + texCoords[i + 1] * vScale
+            i += 2
+        }
+
+        return remapped
     }
 
     /**
@@ -2112,6 +3295,18 @@ class MapViewer(
         terrainAlphaShader.cleanup()
         instancedColorShader.cleanup()
         instancedTexturedShader.cleanup()
+        indirectColorShader?.cleanup()
+        indirectTexturedShader?.cleanup()
+        staticColorShader.cleanup()
+        staticTexturedShader.cleanup()
+        terrainAtlasShader?.cleanup()
+        terrainAtlasAlphaShader?.cleanup()
+        terrainAtlas?.cleanup()
+        terrainAtlas = null
+        objectAtlas?.cleanup()
+        objectAtlas = null
+        // Clear atlas lookup so TerrainLoader reverts to legacy mode
+        TerrainLoader.atlasLookup = null
         TerrainLoader.clearCache()
         RegionLoader.clearCache()
         imGui.cleanup()

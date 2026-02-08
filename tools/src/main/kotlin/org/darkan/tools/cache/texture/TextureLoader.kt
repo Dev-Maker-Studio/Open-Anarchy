@@ -140,6 +140,7 @@ object TextureLoader {
                 val material = getMaterial(textureId)
                 val textureSize = getTextureSize(material)
                 val opaque = isMaterialOpaque(material)
+                TextureRaster.generationStartNanos = System.nanoTime()
 
                 val pixels = if (opaque) {
                     // Opaque path: alpha=255 for non-black, alpha=0 for black.
@@ -215,6 +216,94 @@ object TextureLoader {
     }
 
     /**
+     * Get raw ARGB pixel data for a material WITHOUT creating a GL texture.
+     *
+     * This extracts the pixel generation and alpha post-processing logic from
+     * [getTextureForMaterial] so it can be used to populate texture atlases
+     * without creating individual GL textures.
+     *
+     * The returned pixels are in ARGB format with the same alpha post-processing
+     * applied as [getTextureForMaterial] (effectCombiner-based alpha handling).
+     *
+     * @param cache The game cache
+     * @param textureId The texture/material ID
+     * @return Triple of (ARGB pixels, width, height) or null if the texture doesn't exist
+     */
+    fun getTexturePixelsForMaterial(cache: Cache, textureId: Int): Triple<IntArray, Int, Int>? {
+        if (textureId < 0) return null
+        // Guard against circular references at the top level too
+        if (textureId in generatingSet) return null
+
+        val textureType = loadTextureType(cache, textureId) ?: return null
+
+        val material = getMaterial(textureId)
+        val textureSize = getTextureSize(material)
+        val opaque = isMaterialOpaque(material)
+
+        generatingSet.add(textureId)
+        TextureRaster.generationStartNanos = System.nanoTime()
+        val pixels = try {
+            if (opaque) {
+                textureType.getPixelsRgb(
+                    textureSize,
+                    textureSize,
+                    spriteLoader = { spriteId -> loadSpriteData(cache, spriteId) },
+                    textureLoader = { materialId, width, height ->
+                        generateTexturePixels(cache, materialId, width, height)
+                    },
+                    brightness = 0.7
+                )
+            } else {
+                textureType.getPixelsArgb(
+                    textureSize,
+                    textureSize,
+                    spriteLoader = { spriteId -> loadSpriteData(cache, spriteId) },
+                    textureLoader = { materialId, width, height ->
+                        generateTexturePixels(cache, materialId, width, height)
+                    },
+                    brightness = 0.7
+                )
+            }
+        } finally {
+            generatingSet.remove(textureId)
+        }
+
+        // Apply same alpha post-processing as getTextureForMaterial
+        if (material != null && material.anInt1226 != 2) {
+            val effectCombiner = material.anInt1226
+            if (effectCombiner == 0) {
+                val rawAlpha = material.aByte1225.toInt() and 0xFF
+                val constAlpha = if (rawAlpha == 0) 255 else rawAlpha
+                for (i in pixels.indices) {
+                    val px = pixels[i]
+                    pixels[i] = (constAlpha shl 24) or (px and 0x00FFFFFF)
+                }
+            } else {
+                for (i in pixels.indices) {
+                    val px = pixels[i]
+                    val rgb = px and 0x00FFFFFF
+                    pixels[i] = if (rgb != 0) (0xFF shl 24) or rgb else 0
+                }
+            }
+        }
+
+        return Triple(pixels, textureSize, textureSize)
+    }
+
+    /**
+     * Get the texture size for a material by its ID.
+     * Returns the size in pixels (128 for normal, 64 for small textures).
+     * Defaults to 128 if no material definition exists.
+     *
+     * @param textureId The texture/material ID
+     * @return Texture size in pixels
+     */
+    fun getTextureSizeForMaterial(textureId: Int): Int {
+        if (textureId < 0) return TEXTURE_SIZE_NORMAL
+        return getTextureSize(getMaterial(textureId))
+    }
+
+    /**
      * Generate raw pixels for a texture (used for nested texture references).
      * The client uses materialProvider.getPixels(materialId, 1.0f, size, size, false)
      * for nested TextureOpTexture references, which is the RGB (opaque) path with
@@ -222,35 +311,39 @@ object TextureLoader {
      * GL texture creation.
      */
     private val pixelCache = mutableMapOf<Int, IntArray?>()
+    private val generatingSet = mutableSetOf<Int>()
 
     private fun generateTexturePixels(cache: Cache, textureId: Int, @Suppress("UNUSED_PARAMETER") width: Int, @Suppress("UNUSED_PARAMETER") height: Int): IntArray? {
+        // Break circular texture references (A→B→A) by tracking in-progress generation
+        if (textureId in generatingSet) return null
+
         // Use a simple cache to avoid redundant generation
         return pixelCache.getOrPut(textureId) {
-            val textureType = loadTextureType(cache, textureId) ?: return@getOrPut null
+            generatingSet.add(textureId)
+            try {
+                val textureType = loadTextureType(cache, textureId) ?: return@getOrPut null
 
-            // In the RS client, TextureOpTexture.createImageCache() loads nested textures
-            // at the NESTED material's own size (based on isSmall), NOT the parent's.
-            // We must do the same here to avoid array bounds mismatches.
-            val nestedMaterial = getMaterial(textureId)
-            val nestedSize = getTextureSize(nestedMaterial)
+                // In the RS client, TextureOpTexture.createImageCache() loads nested textures
+                // at the NESTED material's own size (based on isSmall), NOT the parent's.
+                // We must do the same here to avoid array bounds mismatches.
+                val nestedMaterial = getMaterial(textureId)
+                val nestedSize = getTextureSize(nestedMaterial)
 
-            // Nested textures always use the RGB (opaque) path with brightness=1.0
-            val result = textureType.getPixelsRgb(
-                nestedSize,
-                nestedSize,
-                spriteLoader = { spriteId ->
-                    loadSpriteData(cache, spriteId)
-                },
-                textureLoader = { materialId, w, h ->
-                    // Recursive call for deeply nested textures
-                    if (materialId != textureId) { // Avoid infinite recursion
+                // Nested textures always use the RGB (opaque) path with brightness=1.0
+                textureType.getPixelsRgb(
+                    nestedSize,
+                    nestedSize,
+                    spriteLoader = { spriteId ->
+                        loadSpriteData(cache, spriteId)
+                    },
+                    textureLoader = { materialId, w, h ->
                         generateTexturePixels(cache, materialId, w, h)
-                    } else null
-                },
-                brightness = 1.0
-            )
-
-            result
+                    },
+                    brightness = 1.0
+                )
+            } finally {
+                generatingSet.remove(textureId)
+            }
         }
     }
 

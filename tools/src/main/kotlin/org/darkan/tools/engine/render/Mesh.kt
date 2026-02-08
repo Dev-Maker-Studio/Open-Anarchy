@@ -179,6 +179,110 @@ class Mesh(
             return mesh
         }
 
+        /**
+         * Create a mesh with a per-vertex atlas transform attribute for atlased texture rendering.
+         * The atlas transform (vec4) at location 5 provides (u0, v0, uScale, vScale) to map
+         * local texture coordinates into atlas UV space via: atlasUV = offset + fract(localUV) * scale.
+         *
+         * Vertex attributes:
+         *   location 0: position (vec3)
+         *   location 1: color (vec3 RGB)
+         *   location 2: texCoord (vec2)
+         *   location 3: normal (vec3)
+         *   location 5: atlasTransform (vec4)
+         */
+        fun createWithAtlasTransform(
+            positions: FloatArray,
+            colors: FloatArray,
+            textureCoords: FloatArray,
+            normals: FloatArray,
+            atlasTransforms: FloatArray,
+            indices: IntArray
+        ): Mesh {
+            val mesh = Mesh(positions, colors, textureCoords, normals, indices, colorComponents = 3)
+
+            // Add per-vertex atlas transform VBO at location 5
+            glBindVertexArray(mesh.vaoId)
+
+            var atlasBuffer: FloatBuffer? = null
+            try {
+                atlasBuffer = MemoryUtil.memAllocFloat(atlasTransforms.size)
+                atlasBuffer.put(atlasTransforms).flip()
+                val atlasVbo = glGenBuffers()
+                mesh.vboIds.add(atlasVbo)
+                glBindBuffer(GL_ARRAY_BUFFER, atlasVbo)
+                glBufferData(GL_ARRAY_BUFFER, atlasBuffer, GL_STATIC_DRAW)
+                glEnableVertexAttribArray(5)
+                glVertexAttribPointer(5, 4, GL_FLOAT, false, 0, 0)
+            } finally {
+                atlasBuffer?.let { MemoryUtil.memFree(it) }
+            }
+
+            glBindBuffer(GL_ARRAY_BUFFER, 0)
+            glBindVertexArray(0)
+
+            return mesh
+        }
+
+        /**
+         * Create a mesh with both per-vertex alpha and atlas transform attributes.
+         * Combines the alpha blending attribute (location 4) with the atlas transform
+         * attribute (location 5) for alpha-blended terrain rendered from an atlas.
+         *
+         * Vertex attributes:
+         *   location 0: position (vec3)
+         *   location 1: color (vec3 RGB)
+         *   location 2: texCoord (vec2)
+         *   location 3: normal (vec3)
+         *   location 4: alpha (float)
+         *   location 5: atlasTransform (vec4)
+         */
+        fun createWithAtlasAndAlpha(
+            positions: FloatArray,
+            colors: FloatArray,
+            textureCoords: FloatArray,
+            normals: FloatArray,
+            alphas: FloatArray,
+            atlasTransforms: FloatArray,
+            indices: IntArray
+        ): Mesh {
+            val mesh = Mesh(positions, colors, textureCoords, normals, indices, colorComponents = 3)
+
+            glBindVertexArray(mesh.vaoId)
+
+            var alphaBuffer: FloatBuffer? = null
+            var atlasBuffer: FloatBuffer? = null
+            try {
+                // Add per-vertex alpha VBO at location 4
+                alphaBuffer = MemoryUtil.memAllocFloat(alphas.size)
+                alphaBuffer.put(alphas).flip()
+                val alphaVbo = glGenBuffers()
+                mesh.vboIds.add(alphaVbo)
+                glBindBuffer(GL_ARRAY_BUFFER, alphaVbo)
+                glBufferData(GL_ARRAY_BUFFER, alphaBuffer, GL_STATIC_DRAW)
+                glEnableVertexAttribArray(4)
+                glVertexAttribPointer(4, 1, GL_FLOAT, false, 0, 0)
+
+                // Add per-vertex atlas transform VBO at location 5
+                atlasBuffer = MemoryUtil.memAllocFloat(atlasTransforms.size)
+                atlasBuffer.put(atlasTransforms).flip()
+                val atlasVbo = glGenBuffers()
+                mesh.vboIds.add(atlasVbo)
+                glBindBuffer(GL_ARRAY_BUFFER, atlasVbo)
+                glBufferData(GL_ARRAY_BUFFER, atlasBuffer, GL_STATIC_DRAW)
+                glEnableVertexAttribArray(5)
+                glVertexAttribPointer(5, 4, GL_FLOAT, false, 0, 0)
+            } finally {
+                alphaBuffer?.let { MemoryUtil.memFree(it) }
+                atlasBuffer?.let { MemoryUtil.memFree(it) }
+            }
+
+            glBindBuffer(GL_ARRAY_BUFFER, 0)
+            glBindVertexArray(0)
+
+            return mesh
+        }
+
         fun createTriangle(): Mesh {
             val positions = floatArrayOf(
                 0.0f, 0.5f, 0.0f,

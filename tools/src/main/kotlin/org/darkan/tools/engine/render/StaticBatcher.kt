@@ -52,6 +52,7 @@ class GeometryTransformer {
 
     /**
      * Transform geometry by a model matrix.
+     * Uses the mathematically correct inverse-transpose for normal transformation.
      */
     fun transform(
         positions: FloatArray,
@@ -61,12 +62,51 @@ class GeometryTransformer {
         indices: IntArray,
         modelMatrix: Matrix4f
     ): TransformedGeometry {
+        return transformInternal(positions, colors, textureCoords, normals, indices, modelMatrix, useInverseTranspose = true)
+    }
+
+    /**
+     * Transform geometry by a model matrix, using mat3(model) for normals.
+     * This matches the instanced shader's normal transformation
+     * (`mat3 normalMatrix = mat3(model); vNormal = normalMatrix * aNormal;`)
+     * which is needed for pixel-identical output when replacing instanced rendering
+     * with static batched rendering.
+     */
+    fun transformMatchingInstanced(
+        positions: FloatArray,
+        colors: FloatArray?,
+        textureCoords: FloatArray?,
+        normals: FloatArray?,
+        indices: IntArray,
+        modelMatrix: Matrix4f
+    ): TransformedGeometry {
+        return transformInternal(positions, colors, textureCoords, normals, indices, modelMatrix, useInverseTranspose = false)
+    }
+
+    /**
+     * Internal transform implementation.
+     *
+     * @param useInverseTranspose If true, uses inverse(transpose(model)) for normals (correct).
+     *        If false, uses mat3(model) directly (matches instanced shader behavior).
+     */
+    private fun transformInternal(
+        positions: FloatArray,
+        colors: FloatArray?,
+        textureCoords: FloatArray?,
+        normals: FloatArray?,
+        indices: IntArray,
+        modelMatrix: Matrix4f,
+        useInverseTranspose: Boolean
+    ): TransformedGeometry {
         val transformedPositions = FloatArray(positions.size)
         val transformedNormals = normals?.let { FloatArray(it.size) }
 
-        // Calculate normal matrix
-        modelMatrix.invert(normalMatrix)
-        normalMatrix.transpose()
+        if (useInverseTranspose) {
+            // Calculate normal matrix as inverse(transpose(model))
+            modelMatrix.invert(normalMatrix)
+            normalMatrix.transpose()
+        }
+        // else: use modelMatrix directly for normals (mat3(model) behavior)
 
         // Transform positions
         var i = 0
@@ -81,10 +121,11 @@ class GeometryTransformer {
 
         // Transform normals
         if (normals != null && transformedNormals != null) {
+            val effectiveNormalMatrix = if (useInverseTranspose) normalMatrix else modelMatrix
             i = 0
             while (i < normals.size) {
                 tempNormal.set(normals[i], normals[i + 1], normals[i + 2])
-                normalMatrix.transformDirection(tempNormal)
+                effectiveNormalMatrix.transformDirection(tempNormal)
                 tempNormal.normalize()
                 transformedNormals[i] = tempNormal.x
                 transformedNormals[i + 1] = tempNormal.y
