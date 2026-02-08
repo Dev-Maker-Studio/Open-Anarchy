@@ -19,6 +19,8 @@ import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.map.TerrainAligner
 import org.darkan.tools.cache.map.VertexDisplacer
 import org.darkan.tools.cache.model.ModelLoader
+import org.darkan.tools.cache.terrain.TerrainEditManager
+import org.darkan.tools.cache.terrain.EditResult
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.Engine
@@ -118,7 +120,7 @@ class MapViewer(
     )
 
     // Region rendering state
-    private var terrainBatches: TerrainLoader.TerrainMeshes? = null
+    private var editManager: TerrainEditManager? = null
     private var instanceManager: InstanceManager? = null
     private var objectInstances: List<ObjectInstance> = emptyList()
     private val registeredModels = mutableSetOf<Int>()
@@ -128,6 +130,9 @@ class MapViewer(
     // Each contourType 1 instance gets unique geometry with per-vertex terrain displacement.
     private val displacedModels = mutableMapOf<Int, Int>()
     private var nextDisplacedId = Int.MIN_VALUE / 2
+
+    // Spatial index for object-tile lookup (populated for future terrain reactivity)
+    private val objectsByTile = mutableMapOf<Long, MutableList<ObjectInstance>>()
 
     // Tile picker for debugging UV issues
     private val tilePicker = TilePicker()
@@ -414,7 +419,10 @@ class MapViewer(
     }
 
     override fun onUpdate(deltaTime: Float) {
-        // Reserved for future use (animation, streaming, etc.)
+        // Process any pending terrain edits (dirty chunk rebuilds)
+        val editResult = editManager?.processEdits() ?: EditResult.NONE
+        // editResult.hasChanges can be used later for object reactivity (e.g., repositioning
+        // objects on modified terrain)
     }
 
     override fun onRender() {
@@ -441,67 +449,48 @@ class MapViewer(
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         }
 
-        // Render terrain with vertex color blending (no alpha needed - colors match at boundaries)
-        val tb = terrainBatches
-        if (tb != null) {
+        // Render terrain via chunked edit manager (identical output to monolithic path)
+        editManager?.let { em ->
             val modelMatrix = Matrix4f().identity()
 
             // Disable face culling for terrain (two-sided rendering)
             renderSystem.disableCullFace()
 
-            // Render color mesh (untextured tiles) with RGB colors
-            tb.colorMesh?.let { mesh ->
-                uboColorShader.bind()
-                uboColorShader.setUniform("model", modelMatrix)
-                mesh.render()
+            // Pass 1: Color mesh (untextured tiles) with RGB colors
+            uboColorShader.bind()
+            em.renderColor(uboColorShader, modelMatrix)
+
+            // Pass 2: Textured terrain (single texture per triangle)
+            uboTexturedShader.bind()
+            uboTexturedShader.setUniform("textureSampler", 0)
+            em.renderTextured(uboTexturedShader, modelMatrix) { texId ->
+                TextureLoader.bindTexture(
+                    TextureLoader.getTextureForMaterial(cache, texId)
+                )
+            }
+            TextureLoader.unbindTexture()
+
+            // Pass 3: Alpha terrain (multi-pass alpha blending)
+            // Alpha layers render at the same depth as the opaque base.
+            // Use GL_LEQUAL so equal-depth fragments pass, and disable depth
+            // writes so alpha layers don't block each other.
+            glDepthFunc(GL_LEQUAL)
+            glDepthMask(false)
+            glEnable(GL_BLEND)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+            terrainAlphaShader.bind()
+            terrainAlphaShader.setUniform("textureSampler", 0)
+            em.renderAlpha(terrainAlphaShader, modelMatrix) { texId ->
+                TextureLoader.bindTexture(
+                    TextureLoader.getTextureForMaterial(cache, texId)
+                )
             }
 
-            // Render textured terrain batches (single texture per triangle)
-            val batches = tb.texturedBatches
-            if (batches.isNotEmpty()) {
-                uboTexturedShader.bind()
-                uboTexturedShader.setUniform("model", modelMatrix)
-                uboTexturedShader.setUniform("textureSampler", 0)
-
-                for (batch in batches) {
-                    TextureLoader.bindTexture(
-                        TextureLoader.getTextureForMaterial(cache, batch.textureId)
-                    )
-                    batch.mesh.render()
-                }
-
-                TextureLoader.unbindTexture()
-            }
-
-            // Render alpha terrain batches (multi-pass alpha blending)
-            // Each batch is a single texture layer rendered on top of the opaque base
-            // with per-vertex alpha controlling the blend strength.
-            val alpha = tb.alphaBatches
-            if (alpha.isNotEmpty()) {
-                // Alpha layers render at the same depth as the opaque base.
-                // Use GL_LEQUAL so equal-depth fragments pass, and disable depth
-                // writes so alpha layers don't block each other.
-                glDepthFunc(GL_LEQUAL)
-                glDepthMask(false)
-                glEnable(GL_BLEND)
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
-                terrainAlphaShader.bind()
-                terrainAlphaShader.setUniform("model", modelMatrix)
-                terrainAlphaShader.setUniform("textureSampler", 0)
-
-                for (batch in alpha) {
-                    TextureLoader.bindTexture(
-                        TextureLoader.getTextureForMaterial(cache, batch.textureId)
-                    )
-                    batch.mesh.render()
-                }
-
-                TextureLoader.unbindTexture()
-                glDisable(GL_BLEND)
-                glDepthMask(true)
-                glDepthFunc(GL_LESS)
-            }
+            TextureLoader.unbindTexture()
+            glDisable(GL_BLEND)
+            glDepthMask(true)
+            glDepthFunc(GL_LESS)
 
             // Restore GL state
             renderSystem.enableCullFace()
@@ -1436,7 +1425,10 @@ class MapViewer(
     private fun reloadRegion() = loadRegion(currentRegionX, currentRegionY, currentPlane)
 
     /** Clear terrain cache and reload the current region. */
-    private fun reloadTerrain() { TerrainLoader.clearCache(); reloadRegion() }
+    private fun reloadTerrain() {
+        TerrainLoader.clearCache()
+        reloadRegion()
+    }
 
     private fun loadRegion(regionX: Int, regionY: Int, plane: Int) {
         // Clean up existing resources
@@ -1447,8 +1439,8 @@ class MapViewer(
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
 
-        // Load terrain meshes with texture batching
-        terrainBatches = TerrainLoader.loadRegionMeshes(cache, regionX, regionY, plane)
+        // Initialize chunked terrain via edit manager (replaces monolithic loadRegionMeshes)
+        editManager = TerrainEditManager(regionX, regionY, plane, cache).also { it.init() }
 
         // Load objects
         val regionData = RegionLoader.loadRegion(cache, regionX, regionY)
@@ -1550,6 +1542,9 @@ class MapViewer(
                     displacedModels[System.identityHashCode(obj)] = displacedId
                 }
             }
+
+            // Populate object spatial index for future terrain reactivity
+            populateObjectSpatialIndex()
         }
 
         // Center camera on the local terrain mesh (not world coordinates)
@@ -1563,10 +1558,12 @@ class MapViewer(
     }
 
     private fun cleanupRegion() {
-        // Clear reference to batched terrain meshes (actual cleanup is handled by TerrainLoader cache)
-        terrainBatches = null
+        // Clean up chunked terrain GPU resources
+        editManager?.cleanup()
+        editManager = null
         terrainData = null
         mapObjects = emptyList()
+        objectsByTile.clear()
         instanceManager?.cleanup()
         instanceManager = null
         objectInstances = emptyList()
@@ -1892,6 +1889,44 @@ class MapViewer(
         }
 
         return instances
+    }
+
+    /** Pack two tile coordinates into a single Long for use as a map key. */
+    private fun packXY(x: Int, y: Int): Long = (x.toLong() shl 32) or (y.toLong() and 0xFFFFFFFFL)
+
+    /**
+     * Populate the [objectsByTile] spatial index from the current [objectInstances].
+     * Each object is indexed by every tile it occupies (based on its footprint size).
+     * Multi-tile objects are expanded across their full bounding box.
+     */
+    private fun populateObjectSpatialIndex() {
+        objectsByTile.clear()
+        for (obj in objectInstances) {
+            val localTileX = obj.mapObject.x - currentRegionX * 64
+            val localTileY = obj.mapObject.y - currentRegionY * 64
+
+            // Determine footprint size (accounting for rotation swap)
+            val sizeX: Int
+            val sizeY: Int
+            if (obj.mapObject.rotation == 1 || obj.mapObject.rotation == 3) {
+                sizeX = obj.definition.sizeY
+                sizeY = obj.definition.sizeX
+            } else {
+                sizeX = obj.definition.sizeX
+                sizeY = obj.definition.sizeY
+            }
+
+            // Index every tile in the object's footprint
+            for (dx in 0 until sizeX) {
+                for (dy in 0 until sizeY) {
+                    val tx = localTileX + dx
+                    val ty = localTileY + dy
+                    if (tx in 0..63 && ty in 0..63) {
+                        objectsByTile.getOrPut(packXY(tx, ty)) { mutableListOf() }.add(obj)
+                    }
+                }
+            }
+        }
     }
 
     /**

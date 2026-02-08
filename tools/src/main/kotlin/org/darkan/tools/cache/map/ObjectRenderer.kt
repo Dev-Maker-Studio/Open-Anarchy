@@ -36,18 +36,18 @@ data class ObjectInstance(
     val mapObject: MapObject,
     val definition: ObjectDefinition,
     val modelIds: List<Int>,
-    val worldPosition: Vector3f,
+    var worldPosition: Vector3f,
     val rotation: Float,  // Y-axis rotation in radians
     val scale: Vector3f,
     val offset: Vector3f = Vector3f(),  // Model offset applied after rotation
-    val terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE,  // Terrain tilt (type 3 only)
+    var terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE,  // Terrain tilt (type 3 only)
     val mirrored: Boolean = false,  // Whether to mirror the model (negate Z)
     val modifications: ModelModifications = ModelModifications.NONE,  // Retexture/recolor modifications
     val groundContourType: Int = 0,  // Ground contour type from ObjectDefinition (0-5)
     val groundContourModifier: Int = -1,  // Ground contour modifier from ObjectDefinition
     val rsSceneX: Int = 0,  // RS scene X position (baseX * 512 + sizeX * 256) for vertex displacement
     val rsSceneY: Int = 0,  // RS scene Y position (baseY * 512 + sizeY * 256) for vertex displacement
-    val rsAverageHeight: Int = 0  // Average terrain height in RS units for vertex displacement
+    var rsAverageHeight: Int = 0  // Average terrain height in RS units for vertex displacement
 )
 
 /**
