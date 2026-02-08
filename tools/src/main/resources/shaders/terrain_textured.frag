@@ -9,15 +9,6 @@ out vec4 FragColor;
 
 uniform sampler2D textureSampler;
 
-// Lighting uniform block (kept for compatibility, but not used for terrain)
-// Terrain colors are pre-lit on the CPU using the RS client's HSL lighting algorithm.
-// Applying shader lighting on top would cause double-darkening.
-layout(std140) uniform LightingBlock {
-    vec3 ambientLight;
-    vec3 lightDirection;
-    vec3 lightColor;
-};
-
 void main() {
     vec4 texColor = texture(textureSampler, vTexCoord);
 

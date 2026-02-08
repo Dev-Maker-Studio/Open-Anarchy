@@ -1,11 +1,17 @@
 package org.darkan.tools.cache.terrain
 
+import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.engine.render.ShaderProgram
-import org.joml.Matrix4f
 import world.gregs.voidps.cache.Cache
 
 /**
  * Orchestrates dirty tracking, recomputation, and chunk rebuilding for real-time terrain editing.
+ *
+ * Uses a dual-path rendering strategy:
+ * - **Merged meshes** (default): Region-level static meshes with ~16 draw calls total.
+ *   Built after init and after edits are committed. Used for the 99% viewing use case.
+ * - **Chunked terrain**: Per-chunk dynamic meshes with ~1,024 draw calls.
+ *   Used during active editing for responsive per-chunk rebuilds.
  *
  * Ties together [MutableRegionData] (dirty tracking / tile mutation) and [ChunkedTerrain]
  * (chunk mesh management). Editor tools modify [mutableData] directly via its setHeight,
@@ -25,9 +31,9 @@ import world.gregs.voidps.cache.Cache
  * val result = editManager.processEdits()
  *
  * // In render pass:
- * editManager.renderColor(shader, modelMatrix)
- * editManager.renderTextured(shader, modelMatrix, ::bindTexture)
- * editManager.renderAlpha(shader, modelMatrix, ::bindTexture)
+ * editManager.renderColor(shader)
+ * editManager.renderTextured(shader, ::bindTexture)
+ * editManager.renderAlpha(shader, ::bindTexture)
  * ```
  */
 class TerrainEditManager(
@@ -48,10 +54,18 @@ class TerrainEditManager(
     private lateinit var normalsY: Array<FloatArray>
     private lateinit var normalsZ: Array<FloatArray>
 
+    // Merged meshes for efficient viewing (region-level, ~16 draw calls)
+    private var mergedColorMesh: Mesh? = null
+    private var mergedTexturedBatches: List<TerrainLoader.TerrainBatch> = emptyList()
+    private var mergedAlphaBatches: List<TerrainLoader.AlphaTerrainBatch> = emptyList()
+
+    /** When true, render from merged meshes. When false (active editing), render from chunks. */
+    private var useMergedMeshes: Boolean = false
+
     /**
      * Initialize from cache data. Loads the region, ensures underlay/overlay definitions
      * are available, creates a mutable copy, computes blending and normals, and builds
-     * all 64 chunks.
+     * all 64 chunks. Then builds merged meshes for efficient viewing.
      */
     fun init() {
         // Ensure underlay/overlay definitions are loaded for blending computation
@@ -66,8 +80,11 @@ class TerrainEditManager(
         // Compute initial blending and normals
         recomputeBlendingAndNormals()
 
-        // Build all 64 chunks
+        // Build all 64 chunks (needed for editing)
         chunkedTerrain.buildAll(mutableData.toRegionData(), blendedColors, normalsX, normalsY, normalsZ)
+
+        // Build merged meshes for efficient viewing
+        buildMergedMeshes()
     }
 
     /**
@@ -81,6 +98,9 @@ class TerrainEditManager(
         recomputeBlendingAndNormals()
         chunkedTerrain.buildAll(mutableData.toRegionData(), blendedColors, normalsX, normalsY, normalsZ)
         mutableData.clearDirty()
+
+        // Rebuild merged meshes for the new plane
+        buildMergedMeshes()
     }
 
     /**
@@ -88,12 +108,16 @@ class TerrainEditManager(
      * 1. Recomputes blended underlay colors if any underlay was changed
      * 2. Recomputes vertex normals if any height was changed
      * 3. Rebuilds only the dirty chunks
+     * 4. When edits are cleared, rebuilds merged meshes
      *
      * @return [EditResult] describing which chunks were rebuilt, for downstream
      *         reactivity (e.g., repositioning objects on changed terrain).
      */
     fun processEdits(): EditResult {
         if (!mutableData.hasDirty()) return EditResult.NONE
+
+        // Switch to chunked rendering during active editing
+        useMergedMeshes = false
 
         val regionSnapshot = mutableData.toRegionData()
 
@@ -117,7 +141,172 @@ class TerrainEditManager(
         // 4. Collect result and reset dirty state
         val result = EditResult(dirtyChunks)
         mutableData.clearDirty()
+
+        // 5. Rebuild merged meshes now that editing is done
+        buildMergedMeshes()
+
         return result
+    }
+
+    /**
+     * Build merged region-level meshes from the current tile state.
+     * Produces one color Mesh, one textured Mesh per texture ID, and one alpha
+     * Mesh per texture ID. These use GL_STATIC_DRAW for optimal GPU throughput.
+     *
+     * This replaces ~1,024 chunk draw calls with ~16 merged draw calls.
+     */
+    private fun buildMergedMeshes() {
+        // Clean up previous merged meshes
+        cleanupMergedMeshes()
+
+        val regionSnapshot = mutableData.toRegionData()
+
+        // Collect all vertices for the entire region, grouped by texture ID
+        val textureGroups = mutableMapOf<Int, MutableList<TerrainLoader.ShapedVertex>>()
+
+        for (x in 0 until 64) {
+            for (y in 0 until 64) {
+                val vertices = TerrainLoader.generateTileVertices(
+                    regionSnapshot, plane, x, y,
+                    blendedColors, normalsX, normalsY, normalsZ
+                )
+                for (vertex in vertices) {
+                    textureGroups.getOrPut(vertex.textureId) { mutableListOf() }.add(vertex)
+                }
+            }
+        }
+
+        // Separate into opaque and alpha groups by triangle
+        val opaqueGroups = mutableMapOf<Int, MutableList<TerrainLoader.ShapedVertex>>()
+        val alphaGroups = mutableMapOf<Int, MutableList<TerrainLoader.ShapedVertex>>()
+
+        for ((texId, verts) in textureGroups) {
+            var i = 0
+            while (i + 2 < verts.size) {
+                val v0 = verts[i]
+                val v1 = verts[i + 1]
+                val v2 = verts[i + 2]
+
+                val needsAlpha = v0.alpha < 1f || v1.alpha < 1f || v2.alpha < 1f
+
+                if (needsAlpha && v0.textureId >= 0) {
+                    val group = alphaGroups.getOrPut(v0.textureId) { mutableListOf() }
+                    group.add(v0); group.add(v1); group.add(v2)
+                } else {
+                    val group = opaqueGroups.getOrPut(texId) { mutableListOf() }
+                    group.add(v0); group.add(v1); group.add(v2)
+                }
+                i += 3
+            }
+            while (i < verts.size) {
+                opaqueGroups.getOrPut(texId) { mutableListOf() }.add(verts[i])
+                i++
+            }
+        }
+
+        // Build color mesh (textureId == -1)
+        mergedColorMesh = opaqueGroups[-1]?.let { vertices ->
+            if (vertices.isEmpty()) return@let null
+            buildColorMesh(vertices)
+        }
+
+        // Build opaque textured batches
+        val texturedList = mutableListOf<TerrainLoader.TerrainBatch>()
+        for ((texId, vertices) in opaqueGroups) {
+            if (texId == -1 || vertices.isEmpty()) continue
+            texturedList.add(TerrainLoader.TerrainBatch(buildTexturedMesh(vertices), texId))
+        }
+        mergedTexturedBatches = texturedList
+
+        // Build alpha batches
+        val alphaList = mutableListOf<TerrainLoader.AlphaTerrainBatch>()
+        for ((texId, vertices) in alphaGroups) {
+            if (vertices.isEmpty()) continue
+            alphaList.add(TerrainLoader.AlphaTerrainBatch(buildAlphaMesh(vertices), texId))
+        }
+        mergedAlphaBatches = alphaList
+
+        useMergedMeshes = true
+    }
+
+    private fun buildColorMesh(vertices: List<TerrainLoader.ShapedVertex>): Mesh {
+        val count = vertices.size
+        val positions = FloatArray(count * 3)
+        val colors = FloatArray(count * 3)
+        val normals = FloatArray(count * 3)
+        val indices = IntArray(count)
+
+        for (i in vertices.indices) {
+            val v = vertices[i]
+            positions[i * 3]     = v.x
+            positions[i * 3 + 1] = v.y
+            positions[i * 3 + 2] = v.z
+            colors[i * 3]     = v.r
+            colors[i * 3 + 1] = v.g
+            colors[i * 3 + 2] = v.b
+            normals[i * 3]     = v.nx
+            normals[i * 3 + 1] = v.ny
+            normals[i * 3 + 2] = v.nz
+            indices[i] = i
+        }
+
+        return Mesh(positions, colors, null, normals, indices, colorComponents = 3)
+    }
+
+    private fun buildTexturedMesh(vertices: List<TerrainLoader.ShapedVertex>): Mesh {
+        val count = vertices.size
+        val positions = FloatArray(count * 3)
+        val colors = FloatArray(count * 3)
+        val texCoords = FloatArray(count * 2)
+        val normals = FloatArray(count * 3)
+        val indices = IntArray(count)
+
+        for (i in vertices.indices) {
+            val v = vertices[i]
+            positions[i * 3]     = v.x
+            positions[i * 3 + 1] = v.y
+            positions[i * 3 + 2] = v.z
+            colors[i * 3]     = v.r
+            colors[i * 3 + 1] = v.g
+            colors[i * 3 + 2] = v.b
+            texCoords[i * 2]     = v.u
+            texCoords[i * 2 + 1] = v.v
+            normals[i * 3]     = v.nx
+            normals[i * 3 + 1] = v.ny
+            normals[i * 3 + 2] = v.nz
+            indices[i] = i
+        }
+
+        return Mesh(positions, colors, texCoords, normals, indices, colorComponents = 3)
+    }
+
+    private fun buildAlphaMesh(vertices: List<TerrainLoader.ShapedVertex>): Mesh {
+        val count = vertices.size
+        val positions = FloatArray(count * 3)
+        val colors = FloatArray(count * 3)
+        val texCoords = FloatArray(count * 2)
+        val normals = FloatArray(count * 3)
+        val alphas = FloatArray(count)
+        val indices = IntArray(count)
+
+        for (i in vertices.indices) {
+            val v = vertices[i]
+            positions[i * 3]     = v.x
+            positions[i * 3 + 1] = v.y
+            positions[i * 3 + 2] = v.z
+            colors[i * 3]     = v.r
+            colors[i * 3 + 1] = v.g
+            colors[i * 3 + 2] = v.b
+            texCoords[i * 2]     = v.u
+            texCoords[i * 2 + 1] = v.v
+            normals[i * 3]     = v.nx
+            normals[i * 3 + 1] = v.ny
+            normals[i * 3 + 2] = v.nz
+            alphas[i] = v.alpha
+            indices[i] = i
+        }
+
+        return Mesh.createWithAlpha(positions, colors, texCoords, normals, alphas, indices)
     }
 
     /**
@@ -133,24 +322,53 @@ class TerrainEditManager(
         normalsZ = nz
     }
 
-    /** Render all non-empty color chunks (untextured terrain). */
-    fun renderColor(shader: ShaderProgram, modelMatrix: Matrix4f) {
-        chunkedTerrain.renderColor(shader, modelMatrix)
+    /** Render all non-empty color terrain (untextured). */
+    fun renderColor(shader: ShaderProgram) {
+        if (useMergedMeshes) {
+            mergedColorMesh?.render()
+        } else {
+            chunkedTerrain.renderColor(shader)
+        }
     }
 
-    /** Render all non-empty textured chunks (opaque textured terrain). */
-    fun renderTextured(shader: ShaderProgram, modelMatrix: Matrix4f, bindTexture: (Int) -> Unit) {
-        chunkedTerrain.renderTextured(shader, modelMatrix, bindTexture)
+    /** Render all non-empty textured terrain (opaque). */
+    fun renderTextured(shader: ShaderProgram, bindTexture: (Int) -> Unit) {
+        if (useMergedMeshes) {
+            for (batch in mergedTexturedBatches) {
+                bindTexture(batch.textureId)
+                batch.mesh.render()
+            }
+        } else {
+            chunkedTerrain.renderTextured(shader, bindTexture)
+        }
     }
 
-    /** Render all non-empty alpha chunks (semi-transparent textured terrain). */
-    fun renderAlpha(shader: ShaderProgram, modelMatrix: Matrix4f, bindTexture: (Int) -> Unit) {
-        chunkedTerrain.renderAlpha(shader, modelMatrix, bindTexture)
+    /** Render all non-empty alpha terrain (semi-transparent). */
+    fun renderAlpha(shader: ShaderProgram, bindTexture: (Int) -> Unit) {
+        if (useMergedMeshes) {
+            for (batch in mergedAlphaBatches) {
+                bindTexture(batch.textureId)
+                batch.mesh.render()
+            }
+        } else {
+            chunkedTerrain.renderAlpha(shader, bindTexture)
+        }
     }
 
-    /** Release all GPU resources held by chunk meshes. */
+    /** Release all GPU resources held by chunk meshes and merged meshes. */
     fun cleanup() {
         chunkedTerrain.cleanup()
+        cleanupMergedMeshes()
+    }
+
+    private fun cleanupMergedMeshes() {
+        mergedColorMesh?.cleanup()
+        mergedColorMesh = null
+        for (batch in mergedTexturedBatches) batch.mesh.cleanup()
+        mergedTexturedBatches = emptyList()
+        for (batch in mergedAlphaBatches) batch.mesh.cleanup()
+        mergedAlphaBatches = emptyList()
+        useMergedMeshes = false
     }
 }
 

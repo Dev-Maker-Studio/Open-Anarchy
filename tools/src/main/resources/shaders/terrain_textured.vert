@@ -18,12 +18,10 @@ layout(std140) uniform CameraBlock {
     vec3 cameraPos;
 };
 
-uniform mat4 model;
-
 void main() {
-    vFragPos = vec3(model * vec4(aPosition, 1.0));
-    vNormal = mat3(transpose(inverse(model))) * aNormal;
+    vFragPos = aPosition;
+    vNormal = aNormal;
     vColor = aColor;
     vTexCoord = aTexCoord;
-    gl_Position = viewProjection * vec4(vFragPos, 1.0);
+    gl_Position = viewProjection * vec4(aPosition, 1.0);
 }
