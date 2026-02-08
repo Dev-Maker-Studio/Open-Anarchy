@@ -73,6 +73,12 @@ class TilePicker {
     var selectedTileDetails: TileDetails? = null
         private set
 
+    // World offset for the region being picked.
+    // Ray coordinates are in world space; subtract these offsets to get local-tile-space
+    // coordinates for intersection testing against the local terrain grid.
+    var worldOffsetX: Float = 0f
+    var worldOffsetZ: Float = 0f
+
     // Ray for debugging
     private val rayOrigin = Vector3f()
     private val rayDirection = Vector3f()
@@ -152,7 +158,7 @@ class TilePicker {
 
         // March along the ray to find terrain intersection
         // Use binary search refinement for accuracy
-        val maxDistance = 2000f
+        val maxDistance = 4000f
         val stepSize = tileSize * 0.5f  // Half tile per step
 
         var currentPoint = Vector3f(rayOrigin)
@@ -166,9 +172,9 @@ class TilePicker {
             currentPoint.add(step)
             distance += stepSize
 
-            // Convert world position to tile coordinates
-            val localX = (currentPoint.x / tileSize).toInt()
-            val localY = (-currentPoint.z / tileSize).toInt()  // Z is negated in OpenGL
+            // Convert world position to local tile coordinates by subtracting the region offset
+            val localX = ((currentPoint.x - worldOffsetX) / tileSize).toInt()
+            val localY = (-(currentPoint.z - worldOffsetZ) / tileSize).toInt()  // Z is negated in OpenGL
 
             // Check if within region bounds
             if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) {
@@ -177,9 +183,10 @@ class TilePicker {
             }
 
             // Get terrain height at this position (interpolate between corners)
+            // Pass LOCAL coordinates to height lookup (subtract world offset)
             val terrainHeight = getInterpolatedHeight(
                 terrainTiles, localX, localY, plane,
-                currentPoint.x, currentPoint.z, tileSize, heightScale
+                currentPoint.x - worldOffsetX, currentPoint.z - worldOffsetZ, tileSize, heightScale
             )
 
             val isAbove = currentPoint.y > terrainHeight
@@ -192,9 +199,9 @@ class TilePicker {
                     terrainTiles, plane, tileSize, heightScale
                 )
 
-                // Get final tile coordinates
-                val finalLocalX = (intersection.x / tileSize).toInt().coerceIn(0, 63)
-                val finalLocalY = (-intersection.z / tileSize).toInt().coerceIn(0, 63)
+                // Get final tile coordinates (in local space)
+                val finalLocalX = ((intersection.x - worldOffsetX) / tileSize).toInt().coerceIn(0, 63)
+                val finalLocalY = (-(intersection.z - worldOffsetZ) / tileSize).toInt().coerceIn(0, 63)
 
                 selectedTile = SelectedTile(
                     regionX = regionX,
@@ -272,8 +279,8 @@ class TilePicker {
         for (i in 0 until 10) {  // 10 iterations for good precision
             mid.set(a).add(b).mul(0.5f)
 
-            val localX = (mid.x / tileSize).toInt()
-            val localY = (-mid.z / tileSize).toInt()
+            val localX = ((mid.x - worldOffsetX) / tileSize).toInt()
+            val localY = (-(mid.z - worldOffsetZ) / tileSize).toInt()
 
             if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) {
                 // Out of bounds, move towards in-bounds point
@@ -283,7 +290,8 @@ class TilePicker {
             }
 
             val terrainHeight = getInterpolatedHeight(
-                tiles, localX, localY, plane, mid.x, mid.z, tileSize, heightScale
+                tiles, localX, localY, plane,
+                mid.x - worldOffsetX, mid.z - worldOffsetZ, tileSize, heightScale
             )
 
             if (mid.y > terrainHeight) {

@@ -12,6 +12,8 @@ out float vAlpha;
 out vec3 vNormal;
 out vec3 vFragPos;
 
+uniform mat4 model;
+
 // Camera uniform block
 layout(std140) uniform CameraBlock {
     mat4 view;
@@ -21,10 +23,11 @@ layout(std140) uniform CameraBlock {
 };
 
 void main() {
-    vFragPos = aPosition;
-    vNormal = aNormal;
+    vec4 worldPos = model * vec4(aPosition, 1.0);
+    vFragPos = worldPos.xyz;
+    vNormal = aNormal;  // No transpose(inverse()) needed - model is translation only
     vColor = aColor;
     vTexCoord = aTexCoord;
     vAlpha = aAlpha;
-    gl_Position = viewProjection * vec4(aPosition, 1.0);
+    gl_Position = viewProjection * worldPos;
 }

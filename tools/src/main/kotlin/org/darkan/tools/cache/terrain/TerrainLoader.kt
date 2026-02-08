@@ -1302,6 +1302,16 @@ object TerrainLoader {
     }
 
     /**
+     * Clear the batched mesh cache only (GPU resources for terrain meshes).
+     * Does NOT clear the region data cache, so terrain tile data can be reused.
+     * Call this when context region meshes need to be freed between region loads.
+     */
+    fun clearBatchedMeshCache() {
+        batchedMeshCache.values.forEach { it?.cleanup() }
+        batchedMeshCache.clear()
+    }
+
+    /**
      * Clear all caches including definitions.
      */
     fun clearAll() {
