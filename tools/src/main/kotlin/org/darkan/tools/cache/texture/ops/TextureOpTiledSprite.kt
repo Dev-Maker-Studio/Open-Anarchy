@@ -14,7 +14,7 @@ class TextureOpTiledSprite : TextureOpSprite() {
             val outputRed = output[0]
             val outputGreen = output[1]
             val outputBlue = output[2]
-            val tileY = y % spriteHeight * spriteWidth
+            val tileY = y % spriteHeight * spriteHeight
 
             for (x in 0 until TextureRaster.currentWidth) {
                 val pixel = spritePixels!![x % spriteWidth + tileY]

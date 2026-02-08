@@ -1,5 +1,8 @@
 package org.darkan.tools.cache.terrain
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.util.ColorUtil
 import org.darkan.tools.util.CoordinateUtil
@@ -12,13 +15,20 @@ import world.gregs.voidps.cache.config.data.OverlayDefinition
 import world.gregs.voidps.cache.config.data.UnderlayDefinition
 import world.gregs.voidps.cache.config.decoder.OverlayDecoder
 import world.gregs.voidps.cache.config.decoder.UnderlayDecoder
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Loads terrain data from the cache and creates renderable meshes.
  * Uses actual underlay and overlay definitions for accurate colors.
  */
 object TerrainLoader {
-    private val regionCache = mutableMapOf<Int, RegionData?>()
+    /** Thread-safe wrapper for ConcurrentHashMap (which disallows null values). */
+    private sealed class CacheResult<out T> {
+        data class Found<T>(val value: T) : CacheResult<T>()
+        data object NotFound : CacheResult<Nothing>()
+    }
+
+    private val regionCache = ConcurrentHashMap<Int, CacheResult<RegionData>>()
 
     // Lazy-loaded definitions from cache
     private var underlays: Array<UnderlayDefinition>? = null
@@ -515,7 +525,116 @@ object TerrainLoader {
         }
     }
 
-    private val batchedMeshCache = mutableMapOf<Int, TerrainMeshes?>()
+    // ==================== ATLAS UV LOOKUP ====================
+    //
+    // When set, terrain mesh data will include per-vertex atlas transform arrays.
+    // This allows all terrain textures to be merged into a single draw call per
+    // pass (opaque / alpha) by sampling from a texture atlas instead of individual
+    // GL textures.
+
+    /**
+     * Optional atlas UV lookup function. When non-null, [computeTerrainMeshData]
+     * populates per-vertex atlas transform arrays (4 floats per vertex: u0, v0,
+     * uScale, vScale) enabling atlas-based terrain rendering.
+     *
+     * The function takes a texture ID and returns a FloatArray of [u0, v0, uScale,
+     * vScale] that maps fract(localUV) into atlas UV space.
+     *
+     * When null, the legacy per-texture-batch code path is used and no atlas
+     * transform arrays are generated.
+     */
+    var atlasLookup: ((textureId: Int) -> FloatArray)? = null
+
+    /**
+     * Sentinel atlas transform used for color-only tiles when atlas mode is active.
+     * This should map to a solid white 1x1 pixel region in the atlas so that
+     * color-only tiles produce texColor = white, making the final color equal to
+     * the vertex color (texColor.rgb * vColor).
+     *
+     * Default value maps to full atlas (0,0,1,1) which is a reasonable fallback
+     * but should be overridden to point at an actual white pixel in the atlas.
+     */
+    var sentinelAtlasTransform: FloatArray = floatArrayOf(0f, 0f, 1f, 1f)
+
+    // ==================== GPU-FREE MESH DATA CLASSES ====================
+    //
+    // These hold the intermediate FloatArray/IntArray results of terrain mesh
+    // computation, before any OpenGL calls. They enable splitting mesh generation
+    // into a pure-CPU phase (computeTerrainMeshData) and a GL-only upload phase
+    // (uploadTerrainMeshData), which is required for parallel multi-region loading
+    // since GL calls must remain on the main thread.
+
+    /**
+     * Pre-computed array data for a color-only (untextured) terrain mesh.
+     * Contains vertex positions, RGB colors, normals, and indices.
+     *
+     * When atlas mode is enabled, also includes texture coordinates (all zeros)
+     * and atlas transforms (sentinel white pixel) so color-only tiles can be
+     * merged into the same draw call as textured tiles.
+     */
+    data class ColorMeshArrays(
+        val positions: FloatArray,
+        val colors: FloatArray,
+        val normals: FloatArray,
+        val indices: IntArray,
+        /** Texture coordinates for atlas mode (all zeros). Null when atlas is not active. */
+        val texCoords: FloatArray? = null,
+        /** Atlas transforms for atlas mode (sentinel white pixel). Null when atlas is not active. */
+        val atlasTransforms: FloatArray? = null
+    )
+
+    /**
+     * Pre-computed array data for an opaque textured terrain mesh batch.
+     * Contains vertex positions, RGB colors, texture coordinates, normals, indices,
+     * and the texture ID for this batch.
+     *
+     * When atlas mode is enabled, also includes per-vertex atlas transforms
+     * (4 floats per vertex: u0, v0, uScale, vScale).
+     */
+    data class TexturedMeshArrays(
+        val positions: FloatArray,
+        val colors: FloatArray,
+        val texCoords: FloatArray,
+        val normals: FloatArray,
+        val indices: IntArray,
+        val textureId: Int,
+        /** Per-vertex atlas UV transforms. Null when atlas is not active. */
+        val atlasTransforms: FloatArray? = null
+    )
+
+    /**
+     * Pre-computed array data for an alpha-blended terrain mesh batch.
+     * Contains vertex positions, RGB colors, texture coordinates, normals,
+     * per-vertex alpha values, indices, and the texture ID for this batch.
+     *
+     * When atlas mode is enabled, also includes per-vertex atlas transforms
+     * (4 floats per vertex: u0, v0, uScale, vScale).
+     */
+    data class AlphaMeshArrays(
+        val positions: FloatArray,
+        val colors: FloatArray,
+        val texCoords: FloatArray,
+        val normals: FloatArray,
+        val indices: IntArray,
+        val alphas: FloatArray,
+        val textureId: Int,
+        /** Per-vertex atlas UV transforms. Null when atlas is not active. */
+        val atlasTransforms: FloatArray? = null
+    )
+
+    /**
+     * Container for all pre-computed terrain mesh array data for a single region/plane.
+     * This is the output of [computeTerrainMeshData] and the input to [uploadTerrainMeshData].
+     * Contains no OpenGL resources -- purely CPU-side data that is safe to compute
+     * on any thread.
+     */
+    data class TerrainMeshData(
+        val colorArrays: ColorMeshArrays?,
+        val texturedArrays: List<TexturedMeshArrays>,
+        val alphaArrays: List<AlphaMeshArrays>
+    )
+
+    private val batchedMeshCache = ConcurrentHashMap<Int, CacheResult<TerrainMeshes>>()
 
     /**
      * Load floor definitions (underlays and overlays) from the cache.
@@ -732,8 +851,13 @@ object TerrainLoader {
 
     fun loadRegion(cache: Cache, regionX: Int, regionY: Int): RegionData? {
         val regionId = (regionX shl 8) or regionY
-        return regionCache.getOrPut(regionId) {
-            decodeRegion(cache, regionX, regionY)
+        val result = regionCache.computeIfAbsent(regionId) {
+            val data = decodeRegion(cache, regionX, regionY)
+            if (data != null) CacheResult.Found(data) else CacheResult.NotFound
+        }
+        return when (result) {
+            is CacheResult.Found -> result.value
+            is CacheResult.NotFound -> null
         }
     }
 
@@ -765,8 +889,8 @@ object TerrainLoader {
         // neighbors can still use the cache.
         if (neighbors == null) {
             val cached = batchedMeshCache[cacheKey]
-            if (cached != null) {
-                return cached
+            if (cached is CacheResult.Found) {
+                return cached.value
             }
         }
 
@@ -777,7 +901,7 @@ object TerrainLoader {
         val meshes = createBatchedTerrainMeshes(region, plane, neighbors)
         // Only cache when no neighbors (backward-compatible path)
         if (neighbors == null) {
-            batchedMeshCache[cacheKey] = meshes
+            batchedMeshCache[cacheKey] = CacheResult.Found(meshes)
         }
         return meshes
     }
@@ -1001,13 +1125,41 @@ object TerrainLoader {
 
     /**
      * Create separate mesh batches for textured and untextured terrain tiles.
+     * Delegates to [computeTerrainMeshData] (pure CPU) followed by [uploadTerrainMeshData] (GL-only).
+     *
      * Uses proper tile shape tessellation with the RS client's shape lookup tables.
      * Shapes create paths, edges, diagonal cuts, etc. by tessellating tiles into
      * multiple triangles with some belonging to overlay and others to underlay.
      */
     private fun createBatchedTerrainMeshes(region: RegionData, plane: Int, neighbors: NeighborData? = null): TerrainMeshes {
-        val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+        val meshData = computeTerrainMeshData(region, plane, neighbors)
+        return uploadTerrainMeshData(meshData)
+    }
 
+    /**
+     * Compute all terrain mesh array data for a region/plane without any OpenGL calls.
+     *
+     * This function is the pure-CPU phase of terrain mesh generation. It performs:
+     * 1. Per-vertex normal computation
+     * 2. Blended underlay color computation (11x11 sliding window)
+     * 3. Tile vertex generation for all 64x64 tiles
+     * 4. Separation of vertices into opaque color, opaque textured, and alpha groups
+     * 5. Packing of vertex attributes into FloatArray/IntArray data
+     *
+     * The returned [TerrainMeshData] contains no GL resources and is safe to compute
+     * on any thread. Pass the result to [uploadTerrainMeshData] on the main GL thread
+     * to create GPU-resident [Mesh] objects.
+     *
+     * Thread safety: This function reads only from immutable [RegionData], pre-computed
+     * blended colors, and pre-computed normals. All intermediate state is local.
+     * Multiple invocations on different regions can run concurrently.
+     *
+     * @param region The region data containing tile information
+     * @param plane The plane level (0-3)
+     * @param neighbors Optional neighbor data for seamless edge blending
+     * @return Pre-computed mesh array data ready for GPU upload
+     */
+    fun computeTerrainMeshData(region: RegionData, plane: Int, neighbors: NeighborData? = null): TerrainMeshData {
         // Pre-compute per-vertex normals for the main plane, using neighbor data
         // for correct normals at region boundaries.
         val (vertexNormalsX, vertexNormalsY, vertexNormalsZ) = computeVertexNormals(region.tiles, plane, neighbors)
@@ -1100,14 +1252,21 @@ object TerrainLoader {
             }
         }
 
-        // Build color mesh (textureId == -1) with RGB colors
-        val colorMesh = opaqueGroups[-1]?.let { vertices ->
+        // Capture atlas lookup once for this computation (thread-safe snapshot)
+        val currentAtlasLookup = atlasLookup
+        val currentSentinelTransform = sentinelAtlasTransform
+
+        // Build color mesh arrays (textureId == -1) with RGB colors
+        val colorArrays = opaqueGroups[-1]?.let { vertices ->
             if (vertices.isEmpty()) return@let null
 
             val positions = FloatArray(vertices.size * 3)
-            val colors = FloatArray(vertices.size * 3)  // RGB (3 components)
+            val colors = FloatArray(vertices.size * 3)
             val normals = FloatArray(vertices.size * 3)
             val indices = IntArray(vertices.size)
+            // Atlas mode: include texCoords (all zeros) and atlas transforms (sentinel)
+            val texCoords = if (currentAtlasLookup != null) FloatArray(vertices.size * 2) else null
+            val atlasTransforms = if (currentAtlasLookup != null) FloatArray(vertices.size * 4) else null
 
             vertices.forEachIndexed { i, v ->
                 positions[i * 3] = v.x
@@ -1120,22 +1279,35 @@ object TerrainLoader {
                 normals[i * 3 + 1] = v.ny
                 normals[i * 3 + 2] = v.nz
                 indices[i] = i
+                if (texCoords != null) {
+                    texCoords[i * 2] = 0f
+                    texCoords[i * 2 + 1] = 0f
+                }
+                if (atlasTransforms != null) {
+                    atlasTransforms[i * 4] = currentSentinelTransform[0]
+                    atlasTransforms[i * 4 + 1] = currentSentinelTransform[1]
+                    atlasTransforms[i * 4 + 2] = currentSentinelTransform[2]
+                    atlasTransforms[i * 4 + 3] = currentSentinelTransform[3]
+                }
             }
 
-            Mesh(positions, colors, null, normals, indices, colorComponents = 3)
+            ColorMeshArrays(positions, colors, normals, indices, texCoords, atlasTransforms)
         }
 
-        // Build opaque textured batches with RGB colors
-        val texturedBatches = mutableListOf<TerrainBatch>()
+        // Build opaque textured mesh arrays with RGB colors
+        val texturedArrays = mutableListOf<TexturedMeshArrays>()
         for ((texId, vertices) in opaqueGroups) {
             if (texId == -1) continue // Skip color group
             if (vertices.isEmpty()) continue
 
             val positions = FloatArray(vertices.size * 3)
-            val colors = FloatArray(vertices.size * 3)  // RGB (3 components)
+            val colors = FloatArray(vertices.size * 3)
             val texCoords = FloatArray(vertices.size * 2)
             val normals = FloatArray(vertices.size * 3)
             val indices = IntArray(vertices.size)
+            val atlasTransforms = if (currentAtlasLookup != null) FloatArray(vertices.size * 4) else null
+            // Look up atlas transform once per batch (all vertices share the same texture)
+            val batchAtlasTransform = currentAtlasLookup?.invoke(texId)
 
             vertices.forEachIndexed { i, v ->
                 positions[i * 3] = v.x
@@ -1150,14 +1322,19 @@ object TerrainLoader {
                 normals[i * 3 + 1] = v.ny
                 normals[i * 3 + 2] = v.nz
                 indices[i] = i
+                if (atlasTransforms != null && batchAtlasTransform != null) {
+                    atlasTransforms[i * 4] = batchAtlasTransform[0]
+                    atlasTransforms[i * 4 + 1] = batchAtlasTransform[1]
+                    atlasTransforms[i * 4 + 2] = batchAtlasTransform[2]
+                    atlasTransforms[i * 4 + 3] = batchAtlasTransform[3]
+                }
             }
 
-            val mesh = Mesh(positions, colors, texCoords, normals, indices, colorComponents = 3)
-            texturedBatches.add(TerrainBatch(mesh, texId))
+            texturedArrays.add(TexturedMeshArrays(positions, colors, texCoords, normals, indices, texId, atlasTransforms))
         }
 
-        // Build alpha terrain batches (per-vertex alpha for multi-pass blending)
-        val alphaBatches = mutableListOf<AlphaTerrainBatch>()
+        // Build alpha mesh arrays (per-vertex alpha for multi-pass blending)
+        val alphaArrays = mutableListOf<AlphaMeshArrays>()
         for ((texId, vertices) in alphaGroups) {
             if (vertices.isEmpty()) continue
 
@@ -1167,6 +1344,8 @@ object TerrainLoader {
             val normals = FloatArray(vertices.size * 3)
             val alphas = FloatArray(vertices.size)
             val indices = IntArray(vertices.size)
+            val atlasTransforms = if (currentAtlasLookup != null) FloatArray(vertices.size * 4) else null
+            val batchAtlasTransform = currentAtlasLookup?.invoke(texId)
 
             vertices.forEachIndexed { i, v ->
                 positions[i * 3] = v.x
@@ -1182,23 +1361,306 @@ object TerrainLoader {
                 normals[i * 3 + 2] = v.nz
                 alphas[i] = v.alpha
                 indices[i] = i
+                if (atlasTransforms != null && batchAtlasTransform != null) {
+                    atlasTransforms[i * 4] = batchAtlasTransform[0]
+                    atlasTransforms[i * 4 + 1] = batchAtlasTransform[1]
+                    atlasTransforms[i * 4 + 2] = batchAtlasTransform[2]
+                    atlasTransforms[i * 4 + 3] = batchAtlasTransform[3]
+                }
             }
 
-            val mesh = Mesh.createWithAlpha(
-                positions, colors, texCoords, normals,
-                alphas, indices
-            )
-            alphaBatches.add(AlphaTerrainBatch(mesh, texId))
+            alphaArrays.add(AlphaMeshArrays(positions, colors, texCoords, normals, indices, alphas, texId, atlasTransforms))
         }
 
         // Debug: Log which textures are included in this terrain mesh
-        if (texturedBatches.isNotEmpty()) {
-            val textureList = texturedBatches.map { it.textureId }.sorted().joinToString(", ")
+        if (texturedArrays.isNotEmpty()) {
+            val textureList = texturedArrays.map { it.textureId }.sorted().joinToString(", ")
             println("[TerrainLoader] Region ${region.regionId} plane $plane: textured batches with textures [$textureList]")
         }
-        if (alphaBatches.isNotEmpty()) {
-            val alphaList = alphaBatches.map { it.textureId }.sorted().joinToString(", ")
+        if (alphaArrays.isNotEmpty()) {
+            val alphaList = alphaArrays.map { it.textureId }.sorted().joinToString(", ")
             println("[TerrainLoader] Region ${region.regionId} plane $plane: alpha batches with textures [$alphaList]")
+        }
+
+        return TerrainMeshData(colorArrays, texturedArrays, alphaArrays)
+    }
+
+    /**
+     * Parallel version of [computeTerrainMeshData] that distributes tile vertex generation
+     * across multiple threads using Kotlin coroutines.
+     *
+     * After the sequential phases (normal computation, underlay blending) complete,
+     * the 64x64 tile vertex generation is parallelized by column: each of the 64 columns
+     * (x=0..63) is processed as a separate coroutine on [Dispatchers.Default]. Within each
+     * column, the 64 tiles (y=0..63) are processed sequentially. Results are then flattened
+     * in x-order to preserve deterministic vertex ordering for pixel-identical output.
+     *
+     * The subsequent phases (opaque/alpha separation, array packing) run sequentially
+     * on the merged vertex list.
+     *
+     * Thread safety: [generateTileVertices] reads only from immutable [RegionData],
+     * pre-computed blended colors, and pre-computed normals. All intermediate state
+     * within each tile is local. This makes column-parallel execution safe.
+     *
+     * @param region The region data containing tile information
+     * @param plane The plane level (0-3)
+     * @param neighbors Optional neighbor data for seamless edge blending
+     * @return Pre-computed mesh array data ready for GPU upload
+     */
+    suspend fun computeTerrainMeshDataParallel(region: RegionData, plane: Int, neighbors: NeighborData? = null): TerrainMeshData {
+        // Phase 1 (sequential): compute normals and blended colors.
+        // These are read-only inputs to the parallel tile vertex generation.
+        val (vertexNormalsX, vertexNormalsY, vertexNormalsZ) = computeVertexNormals(region.tiles, plane, neighbors)
+        val blendedUnderlayColors = computeBlendedUnderlayColors(region, plane, neighbors)
+
+        // Phase 2 (parallel): generate tile vertices for each column concurrently.
+        // Each async block processes all 64 tiles in one column and returns a flat list
+        // of ShapedVertex in (y=0..63) order. The outer map preserves x-order.
+        val allVerticesByColumn: List<List<ShapedVertex>> = coroutineScope {
+            (0 until 64).map { x ->
+                async(Dispatchers.Default) {
+                    val columnVertices = mutableListOf<ShapedVertex>()
+                    for (y in 0 until 64) {
+                        columnVertices.addAll(
+                            generateTileVertices(
+                                region, plane,
+                                x, y,
+                                blendedUnderlayColors,
+                                vertexNormalsX,
+                                vertexNormalsY,
+                                vertexNormalsZ,
+                                neighbors
+                            )
+                        )
+                    }
+                    columnVertices as List<ShapedVertex>
+                }
+            }.map { it.await() }
+        }
+
+        // Phase 3 (sequential): group vertices by texture ID in deterministic order.
+        val textureGroups = mutableMapOf<Int, MutableList<ShapedVertex>>()
+        for (columnVertices in allVerticesByColumn) {
+            for (vertex in columnVertices) {
+                textureGroups.getOrPut(vertex.textureId) { mutableListOf() }.add(vertex)
+            }
+        }
+
+        // Phase 4 (sequential): separate into opaque/alpha, pack arrays.
+        // This is identical to the sequential computeTerrainMeshData implementation.
+        val opaqueGroups = mutableMapOf<Int, MutableList<ShapedVertex>>()
+        val alphaGroups = mutableMapOf<Int, MutableList<ShapedVertex>>()
+
+        for ((texId, verts) in textureGroups) {
+            var i = 0
+            while (i + 2 < verts.size) {
+                val v0 = verts[i]
+                val v1 = verts[i + 1]
+                val v2 = verts[i + 2]
+
+                val needsAlpha = v0.alpha < 1f || v1.alpha < 1f || v2.alpha < 1f
+
+                if (needsAlpha && v0.textureId >= 0) {
+                    val group = alphaGroups.getOrPut(v0.textureId) { mutableListOf() }
+                    group.add(v0); group.add(v1); group.add(v2)
+                } else {
+                    val group = opaqueGroups.getOrPut(texId) { mutableListOf() }
+                    group.add(v0); group.add(v1); group.add(v2)
+                }
+                i += 3
+            }
+            while (i < verts.size) {
+                opaqueGroups.getOrPut(texId) { mutableListOf() }.add(verts[i])
+                i++
+            }
+        }
+
+        // Capture atlas lookup once for this computation (thread-safe snapshot)
+        val currentAtlasLookup = atlasLookup
+        val currentSentinelTransform = sentinelAtlasTransform
+
+        // Pack color mesh arrays
+        val colorArrays = opaqueGroups[-1]?.let { vertices ->
+            if (vertices.isEmpty()) return@let null
+
+            val positions = FloatArray(vertices.size * 3)
+            val colors = FloatArray(vertices.size * 3)
+            val normals = FloatArray(vertices.size * 3)
+            val indices = IntArray(vertices.size)
+            val texCoords = if (currentAtlasLookup != null) FloatArray(vertices.size * 2) else null
+            val atlasTransforms = if (currentAtlasLookup != null) FloatArray(vertices.size * 4) else null
+
+            vertices.forEachIndexed { i, v ->
+                positions[i * 3] = v.x
+                positions[i * 3 + 1] = v.y
+                positions[i * 3 + 2] = v.z
+                colors[i * 3] = v.r
+                colors[i * 3 + 1] = v.g
+                colors[i * 3 + 2] = v.b
+                normals[i * 3] = v.nx
+                normals[i * 3 + 1] = v.ny
+                normals[i * 3 + 2] = v.nz
+                indices[i] = i
+                if (texCoords != null) {
+                    texCoords[i * 2] = 0f
+                    texCoords[i * 2 + 1] = 0f
+                }
+                if (atlasTransforms != null) {
+                    atlasTransforms[i * 4] = currentSentinelTransform[0]
+                    atlasTransforms[i * 4 + 1] = currentSentinelTransform[1]
+                    atlasTransforms[i * 4 + 2] = currentSentinelTransform[2]
+                    atlasTransforms[i * 4 + 3] = currentSentinelTransform[3]
+                }
+            }
+
+            ColorMeshArrays(positions, colors, normals, indices, texCoords, atlasTransforms)
+        }
+
+        // Pack textured mesh arrays
+        val texturedArrays = mutableListOf<TexturedMeshArrays>()
+        for ((texId, vertices) in opaqueGroups) {
+            if (texId == -1) continue
+            if (vertices.isEmpty()) continue
+
+            val positions = FloatArray(vertices.size * 3)
+            val colors = FloatArray(vertices.size * 3)
+            val texCoords = FloatArray(vertices.size * 2)
+            val normals = FloatArray(vertices.size * 3)
+            val indices = IntArray(vertices.size)
+            val atlasTransforms = if (currentAtlasLookup != null) FloatArray(vertices.size * 4) else null
+            val batchAtlasTransform = currentAtlasLookup?.invoke(texId)
+
+            vertices.forEachIndexed { i, v ->
+                positions[i * 3] = v.x
+                positions[i * 3 + 1] = v.y
+                positions[i * 3 + 2] = v.z
+                colors[i * 3] = v.r
+                colors[i * 3 + 1] = v.g
+                colors[i * 3 + 2] = v.b
+                texCoords[i * 2] = v.u
+                texCoords[i * 2 + 1] = v.v
+                normals[i * 3] = v.nx
+                normals[i * 3 + 1] = v.ny
+                normals[i * 3 + 2] = v.nz
+                indices[i] = i
+                if (atlasTransforms != null && batchAtlasTransform != null) {
+                    atlasTransforms[i * 4] = batchAtlasTransform[0]
+                    atlasTransforms[i * 4 + 1] = batchAtlasTransform[1]
+                    atlasTransforms[i * 4 + 2] = batchAtlasTransform[2]
+                    atlasTransforms[i * 4 + 3] = batchAtlasTransform[3]
+                }
+            }
+
+            texturedArrays.add(TexturedMeshArrays(positions, colors, texCoords, normals, indices, texId, atlasTransforms))
+        }
+
+        // Pack alpha mesh arrays
+        val alphaArrays = mutableListOf<AlphaMeshArrays>()
+        for ((texId, vertices) in alphaGroups) {
+            if (vertices.isEmpty()) continue
+
+            val positions = FloatArray(vertices.size * 3)
+            val colors = FloatArray(vertices.size * 3)
+            val texCoords = FloatArray(vertices.size * 2)
+            val normals = FloatArray(vertices.size * 3)
+            val alphas = FloatArray(vertices.size)
+            val indices = IntArray(vertices.size)
+            val atlasTransforms = if (currentAtlasLookup != null) FloatArray(vertices.size * 4) else null
+            val batchAtlasTransform = currentAtlasLookup?.invoke(texId)
+
+            vertices.forEachIndexed { i, v ->
+                positions[i * 3] = v.x
+                positions[i * 3 + 1] = v.y
+                positions[i * 3 + 2] = v.z
+                colors[i * 3] = v.r
+                colors[i * 3 + 1] = v.g
+                colors[i * 3 + 2] = v.b
+                texCoords[i * 2] = v.u
+                texCoords[i * 2 + 1] = v.v
+                normals[i * 3] = v.nx
+                normals[i * 3 + 1] = v.ny
+                normals[i * 3 + 2] = v.nz
+                alphas[i] = v.alpha
+                indices[i] = i
+                if (atlasTransforms != null && batchAtlasTransform != null) {
+                    atlasTransforms[i * 4] = batchAtlasTransform[0]
+                    atlasTransforms[i * 4 + 1] = batchAtlasTransform[1]
+                    atlasTransforms[i * 4 + 2] = batchAtlasTransform[2]
+                    atlasTransforms[i * 4 + 3] = batchAtlasTransform[3]
+                }
+            }
+
+            alphaArrays.add(AlphaMeshArrays(positions, colors, texCoords, normals, indices, alphas, texId, atlasTransforms))
+        }
+
+        if (texturedArrays.isNotEmpty()) {
+            val textureList = texturedArrays.map { it.textureId }.sorted().joinToString(", ")
+            println("[TerrainLoader] Region ${region.regionId} plane $plane: textured batches with textures [$textureList]")
+        }
+        if (alphaArrays.isNotEmpty()) {
+            val alphaList = alphaArrays.map { it.textureId }.sorted().joinToString(", ")
+            println("[TerrainLoader] Region ${region.regionId} plane $plane: alpha batches with textures [$alphaList]")
+        }
+
+        return TerrainMeshData(colorArrays, texturedArrays, alphaArrays)
+    }
+
+    /**
+     * Upload pre-computed terrain mesh data to the GPU, creating [Mesh] objects.
+     *
+     * This function is the GL-only phase of terrain mesh generation. It takes the
+     * [TerrainMeshData] produced by [computeTerrainMeshData] and creates OpenGL
+     * VAO/VBO resources from the pre-computed arrays.
+     *
+     * IMPORTANT: This function MUST be called on the main GL thread only.
+     *
+     * @param data Pre-computed mesh array data from [computeTerrainMeshData]
+     * @return [TerrainMeshes] containing GPU-resident mesh objects ready for rendering
+     */
+    fun uploadTerrainMeshData(data: TerrainMeshData): TerrainMeshes {
+        // Upload color mesh.
+        // When atlas transforms are present, use the atlas-aware factory method
+        // so color-only tiles can be merged into atlas draw calls.
+        val colorMesh = data.colorArrays?.let { arrays ->
+            if (arrays.atlasTransforms != null && arrays.texCoords != null) {
+                Mesh.createWithAtlasTransform(
+                    arrays.positions, arrays.colors, arrays.texCoords, arrays.normals,
+                    arrays.atlasTransforms, arrays.indices
+                )
+            } else {
+                Mesh(arrays.positions, arrays.colors, null, arrays.normals, arrays.indices, colorComponents = 3)
+            }
+        }
+
+        // Upload opaque textured batches.
+        // When atlas transforms are present, include them as a vertex attribute.
+        val texturedBatches = data.texturedArrays.map { arrays ->
+            val mesh = if (arrays.atlasTransforms != null) {
+                Mesh.createWithAtlasTransform(
+                    arrays.positions, arrays.colors, arrays.texCoords, arrays.normals,
+                    arrays.atlasTransforms, arrays.indices
+                )
+            } else {
+                Mesh(arrays.positions, arrays.colors, arrays.texCoords, arrays.normals, arrays.indices, colorComponents = 3)
+            }
+            TerrainBatch(mesh, arrays.textureId)
+        }
+
+        // Upload alpha terrain batches.
+        // When atlas transforms are present, include both alpha and atlas transform attributes.
+        val alphaBatches = data.alphaArrays.map { arrays ->
+            val mesh = if (arrays.atlasTransforms != null) {
+                Mesh.createWithAtlasAndAlpha(
+                    arrays.positions, arrays.colors, arrays.texCoords, arrays.normals,
+                    arrays.alphas, arrays.atlasTransforms, arrays.indices
+                )
+            } else {
+                Mesh.createWithAlpha(
+                    arrays.positions, arrays.colors, arrays.texCoords, arrays.normals,
+                    arrays.alphas, arrays.indices
+                )
+            }
+            AlphaTerrainBatch(mesh, arrays.textureId)
         }
 
         return TerrainMeshes(colorMesh, texturedBatches, alphaBatches)
@@ -1456,9 +1918,28 @@ object TerrainLoader {
         return if (defIndex >= 0 && defIndex < defs.size) defs[defIndex] else null
     }
 
+    /**
+     * Collect all unique texture IDs referenced by overlay and underlay definitions.
+     * Used to pre-populate a terrain texture atlas with all possible terrain textures.
+     *
+     * Must be called after [loadDefinitions].
+     *
+     * @return Set of texture IDs (always >= 0, -1 values filtered out)
+     */
+    fun getUniqueTextureIds(): Set<Int> {
+        val textureIds = mutableSetOf<Int>()
+        overlays?.forEach { def ->
+            if (def.texture >= 0) textureIds.add(def.texture)
+        }
+        underlays?.forEach { def ->
+            if (def.texture >= 0) textureIds.add(def.texture)
+        }
+        return textureIds
+    }
+
     fun clearCache() {
         println("[TerrainLoader] clearCache() called - clearing ${batchedMeshCache.size} cached meshes")
-        batchedMeshCache.values.forEach { it?.cleanup() }
+        batchedMeshCache.values.forEach { (it as? CacheResult.Found)?.value?.cleanup() }
         batchedMeshCache.clear()
         regionCache.clear()
     }
@@ -1469,7 +1950,7 @@ object TerrainLoader {
      * Call this when context region meshes need to be freed between region loads.
      */
     fun clearBatchedMeshCache() {
-        batchedMeshCache.values.forEach { it?.cleanup() }
+        batchedMeshCache.values.forEach { (it as? CacheResult.Found)?.value?.cleanup() }
         batchedMeshCache.clear()
     }
 

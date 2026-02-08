@@ -44,6 +44,13 @@ object TextureRaster {
     var widthScale: Int = 0
         private set
 
+    /** Wall-clock start time (nanos) for the current texture generation pass.
+     *  Set before each top-level generation in TextureLoader.
+     *  Checked in cache access (getPalette), row loops, and leaf operation loops;
+     *  if it exceeds [MAX_GENERATION_NANOS] a [TextureGenerationException] is thrown. */
+    var generationStartNanos: Long = 0L
+    const val MAX_GENERATION_NANOS: Long = 5_000_000_000L // 5 seconds
+
     /**
      * Initialize the sine/cosine lookup tables.
      * Call this once at startup before using texture operations.

@@ -43,11 +43,12 @@ class TextureOpIrregularBricks : TextureOperation(0, true) {
         var isSecondRow = true
         var brickCount = 0
         var previousBrickCount = 0
+        var previousBrickIndex = 0
 
         val scaledMinWidth = minBrickWidth * TextureRaster.currentWidth shr 12
         val scaledMaxWidth = maxBrickWidth * TextureRaster.currentWidth shr 12
-        val scaledMinHeight = minBrickHeight * TextureRaster.currentHeight shr 12
-        val scaledMaxHeight = maxBrickHeight * TextureRaster.currentHeight shr 12
+        val scaledMinHeight = widthVariation * TextureRaster.currentHeight shr 12
+        val scaledMaxHeight = minBrickHeight * TextureRaster.currentHeight shr 12
 
         if (scaledMaxHeight <= 1) {
             return
@@ -56,6 +57,10 @@ class TextureOpIrregularBricks : TextureOperation(0, true) {
         cornerRadius = TextureRaster.currentWidth / 8 * maxBrickHeight shr 12
 
         while (true) {
+            if (TextureRaster.generationStartNanos != 0L &&
+                System.nanoTime() - TextureRaster.generationStartNanos > TextureRaster.MAX_GENERATION_NANOS) {
+                return
+            }
             var brickWidth = scaledMinWidth + nextUnbiasedRandom(random, scaledMaxWidth - scaledMinWidth)
             var brickHeight = scaledMinHeight + nextUnbiasedRandom(random, scaledMaxHeight - scaledMinHeight)
             var brickEnd = brickWidth + currentRowStart
@@ -70,8 +75,8 @@ class TextureOpIrregularBricks : TextureOperation(0, true) {
             if (isSecondRow) {
                 verticalPos = 0
             } else {
-                var searchIndex = previousBrickCount
-                val searchBrickInfo = previousBrickInfo[previousBrickCount]
+                var searchIndex = previousBrickIndex
+                val searchBrickInfo = previousBrickInfo[previousBrickIndex]
                 var overlapCount = 0
                 var searchEnd = brickEnd + previousOffset
 
@@ -82,18 +87,18 @@ class TextureOpIrregularBricks : TextureOperation(0, true) {
                     val currentBrickInfo = previousBrickInfo[searchIndex]
                     if (searchEnd >= currentBrickInfo[0] && searchEnd <= currentBrickInfo[1]) {
                         verticalPos = searchBrickInfo[2]
-                        if (searchIndex != previousBrickCount) {
+                        if (searchIndex != previousBrickIndex) {
                             var searchStart = currentRowStart + previousOffset
                             if (searchStart < 0) searchStart += TextureRaster.currentWidth
                             if (searchStart > TextureRaster.currentWidth) searchStart -= TextureRaster.currentWidth
 
                             for (i in 1..overlapCount) {
-                                val overlapBrick = previousBrickInfo[(i + previousBrickCount) % previousBrickCount]
+                                val overlapBrick = previousBrickInfo[(i + previousBrickIndex) % previousBrickCount]
                                 verticalPos = verticalPos.coerceAtLeast(overlapBrick[2])
                             }
 
                             for (i in 0..overlapCount) {
-                                val overlapBrick = previousBrickInfo[(i + previousBrickCount) % previousBrickCount]
+                                val overlapBrick = previousBrickInfo[(i + previousBrickIndex) % previousBrickCount]
                                 val overlap2 = overlapBrick[2]
                                 if (overlap2 != verticalPos) {
                                     val left = overlapBrick[0]
@@ -114,12 +119,13 @@ class TextureOpIrregularBricks : TextureOperation(0, true) {
                                 }
                             }
                         }
-                        previousBrickCount = searchIndex
+                        previousBrickIndex = searchIndex
                         break
                     }
                     searchIndex++
                     if (searchIndex >= previousBrickCount) searchIndex = 0
                     overlapCount++
+                    if (overlapCount > previousBrickInfo.size) return // safety bound
                 }
             }
 
@@ -155,15 +161,18 @@ class TextureOpIrregularBricks : TextureOperation(0, true) {
                 if (normalizedOffset < 0) normalizedOffset += TextureRaster.currentWidth
                 if (normalizedOffset > TextureRaster.currentWidth) normalizedOffset -= TextureRaster.currentWidth
 
-                previousBrickCount = 0
+                previousBrickIndex = 0
+                var searchIterations = 0
                 while (true) {
-                    val brick = previousBrickInfo[previousBrickCount]
+                    val brick = previousBrickInfo[previousBrickIndex]
                     if (normalizedOffset >= brick[0] && normalizedOffset <= brick[1]) {
                         isSecondRow = false
                         break
                     }
-                    previousBrickCount++
-                    if (previousBrickCount >= previousBrickInfo.size) previousBrickCount = 0
+                    previousBrickIndex++
+                    if (previousBrickIndex >= previousBrickCount) previousBrickIndex = 0
+                    searchIterations++
+                    if (searchIterations > previousBrickInfo.size) return // safety bound
                 }
 
                 currentRowStart = 0

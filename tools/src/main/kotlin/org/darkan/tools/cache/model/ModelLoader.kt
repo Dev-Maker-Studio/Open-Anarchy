@@ -7,6 +7,7 @@ import org.darkan.tools.util.ColorUtil
 import org.darkan.tools.util.CoordinateUtil
 import org.joml.Vector3f
 import world.gregs.voidps.cache.Cache
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -184,7 +185,13 @@ data class ModelModifications(
  * Converts ModelDefinitions to renderable Meshes with texture support.
  */
 object ModelLoader {
-    private val definitionCache = mutableMapOf<Int, ModelDefinition?>()
+    /** Thread-safe wrapper for ConcurrentHashMap (which disallows null values). */
+    private sealed class CacheResult<out T> {
+        data class Found<T>(val value: T) : CacheResult<T>()
+        data object NotFound : CacheResult<Nothing>()
+    }
+
+    private val definitionCache = ConcurrentHashMap<Int, CacheResult<ModelDefinition>>()
 
     /**
      * When true, untextured faces on models that also have textured faces are hidden.
@@ -212,8 +219,13 @@ object ModelLoader {
     }
 
     fun loadDefinition(cache: Cache, modelId: Int): ModelDefinition? {
-        return definitionCache.getOrPut(modelId) {
-            ModelDecoder.decode(cache, modelId)
+        val result = definitionCache.computeIfAbsent(modelId) {
+            val def = ModelDecoder.decode(cache, modelId)
+            if (def != null) CacheResult.Found(def) else CacheResult.NotFound
+        }
+        return when (result) {
+            is CacheResult.Found -> result.value
+            is CacheResult.NotFound -> null
         }
     }
 
@@ -252,7 +264,7 @@ object ModelLoader {
     }
 
     /** Cache of texture transform data per model */
-    private val textureTransformCache = mutableMapOf<Int, TextureTransformData?>()
+    private val textureTransformCache = ConcurrentHashMap<Int, CacheResult<TextureTransformData>>()
 
     /**
      * Pre-computed texture transformation data for complex mappings (types 1-3).
@@ -786,9 +798,12 @@ object ModelLoader {
      */
     private fun computeCylindricalUVs(def: ModelDefinition, texturePointer: Int, aIdx: Int, bIdx: Int, cIdx: Int): FloatArray {
         // Get or compute texture transform data
-        val transformData = textureTransformCache.getOrPut(def.id) {
-            generateTextureTransformData(def)
-        } ?: return floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
+        val transformResult = textureTransformCache.computeIfAbsent(def.id) {
+            val data = generateTextureTransformData(def)
+            if (data != null) CacheResult.Found(data) else CacheResult.NotFound
+        }
+        val transformData = (transformResult as? CacheResult.Found)?.value
+            ?: return floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
 
         val centerX = transformData.centerX[texturePointer]
         val centerY = transformData.centerY[texturePointer]
@@ -843,9 +858,12 @@ object ModelLoader {
      * is based on the un-scaled orientation.
      */
     private fun computeCubeUVs(def: ModelDefinition, faceIdx: Int, texturePointer: Int, aIdx: Int, bIdx: Int, cIdx: Int): FloatArray {
-        val transformData = textureTransformCache.getOrPut(def.id) {
-            generateTextureTransformData(def)
-        } ?: return floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
+        val transformResult = textureTransformCache.computeIfAbsent(def.id) {
+            val data = generateTextureTransformData(def)
+            if (data != null) CacheResult.Found(data) else CacheResult.NotFound
+        }
+        val transformData = (transformResult as? CacheResult.Found)?.value
+            ?: return floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
 
         val centerX = transformData.centerX[texturePointer]
         val centerY = transformData.centerY[texturePointer]
@@ -909,9 +927,12 @@ object ModelLoader {
      * Type 3: Spherical projection.
      */
     private fun computeSphericalUVs(def: ModelDefinition, texturePointer: Int, aIdx: Int, bIdx: Int, cIdx: Int): FloatArray {
-        val transformData = textureTransformCache.getOrPut(def.id) {
-            generateTextureTransformData(def)
-        } ?: return floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
+        val transformResult = textureTransformCache.computeIfAbsent(def.id) {
+            val data = generateTextureTransformData(def)
+            if (data != null) CacheResult.Found(data) else CacheResult.NotFound
+        }
+        val transformData = (transformResult as? CacheResult.Found)?.value
+            ?: return floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
 
         val centerX = transformData.centerX[texturePointer]
         val centerY = transformData.centerY[texturePointer]
@@ -1713,10 +1734,12 @@ object ModelLoader {
         BillboardTypeLoader.clearCache()
     }
 
-    fun getCachedDefinition(modelId: Int): ModelDefinition? = definitionCache[modelId]
+    fun getCachedDefinition(modelId: Int): ModelDefinition? {
+        return (definitionCache[modelId] as? CacheResult.Found)?.value
+    }
 
     // Cache for combined model definitions (key is sorted list of model IDs)
-    private val combinedDefinitionCache = mutableMapOf<List<Int>, ModelDefinition?>()
+    private val combinedDefinitionCache = ConcurrentHashMap<List<Int>, CacheResult<ModelDefinition>>()
 
     /**
      * Load multiple model definitions and combine them into a single definition.
@@ -1733,15 +1756,20 @@ object ModelLoader {
 
         // Use sorted list as cache key for consistent lookup
         val cacheKey = modelIds.sorted()
-        return combinedDefinitionCache.getOrPut(cacheKey) {
+        val result = combinedDefinitionCache.computeIfAbsent(cacheKey) {
             // Load all individual models
             val models = modelIds.mapNotNull { loadDefinition(cache, it) }
-            if (models.isEmpty()) return@getOrPut null
+            if (models.isEmpty()) return@computeIfAbsent CacheResult.NotFound
 
             // Combine using the first model's ID as the combined ID
             // (with negative sign to distinguish from regular model IDs)
             val combinedId = -(modelIds.hashCode() and 0x7FFFFFFF)
-            ModelDefinition.combine(models, combinedId)
+            val combined = ModelDefinition.combine(models, combinedId)
+            if (combined != null) CacheResult.Found(combined) else CacheResult.NotFound
+        }
+        return when (result) {
+            is CacheResult.Found -> result.value
+            is CacheResult.NotFound -> null
         }
     }
 

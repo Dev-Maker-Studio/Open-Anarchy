@@ -39,7 +39,7 @@ class TextureOpBoxBlur : TextureOperation(1, false) {
                 for (x in 0 until TextureRaster.currentWidth) {
                     blurredRow[x] = sum * divisorX shr 16
                     sum -= childRow[(x - radiusX) and TextureRaster.rowEnd]
-                    sum += childRow[(x + radiusX + 1) and TextureRaster.rowEnd]
+                    sum += childRow[(x + radiusX) and TextureRaster.rowEnd]
                 }
 
                 rowCache[ky + radiusY - y] = blurredRow
@@ -100,7 +100,7 @@ class TextureOpBoxBlur : TextureOperation(1, false) {
                     sumG -= childG[removeIdx]
                     sumB -= childB[removeIdx]
 
-                    val addIdx = (x + radiusX + 1) and TextureRaster.rowEnd
+                    val addIdx = (x + radiusX) and TextureRaster.rowEnd
                     sumR += childR[addIdx]
                     sumG += childG[addIdx]
                     sumB += childB[addIdx]

@@ -1,8 +1,14 @@
 package org.darkan.tools.cache.texture.cache
 
+import org.darkan.tools.cache.texture.TextureGenerationException
+import org.darkan.tools.cache.texture.TextureRaster
+
 /**
  * LRU cache for color (RGB) texture operation output.
  * Stores texture data row by row with 3 channels (red, green, blue).
+ *
+ * Uses an intrusive doubly-linked list for O(1) promote-to-front and
+ * evict-from-tail operations, matching the RS client's LRU implementation.
  *
  * @param capacity The number of rows to cache
  * @param totalRows The total number of rows in the texture
@@ -24,8 +30,11 @@ class ColorImageCache(
     /** Maps row index to cache entry, null if not cached */
     private var rowToEntry: Array<ColorImageCacheEntry?> = arrayOfNulls(totalRows)
 
-    /** LRU list of cache entries */
-    private val lruList = mutableListOf<ColorImageCacheEntry>()
+    /** Head (most recently used) of the intrusive doubly-linked list */
+    private var head: ColorImageCacheEntry? = null
+
+    /** Tail (least recently used) of the intrusive doubly-linked list */
+    private var tail: ColorImageCacheEntry? = null
 
     /** Number of cache slots currently in use */
     private var usedSlots: Int = 0
@@ -41,6 +50,10 @@ class ColorImageCache(
      * @return The RGB palette data for this row
      */
     fun getPalette(rowIndex: Int): Array<IntArray> {
+        if (TextureRaster.generationStartNanos != 0L &&
+            System.nanoTime() - TextureRaster.generationStartNanos > TextureRaster.MAX_GENERATION_NANOS) {
+            throw TextureGenerationException("Texture generation timeout in cache access")
+        }
         // Case 1: Full cache (capacity == totalRows)
         if (totalRows == capacity) {
             dirty = rowToEntry[rowIndex] == null
@@ -55,13 +68,13 @@ class ColorImageCache(
             return paletteData[0]
         }
 
-        // Case 3: LRU cache
+        // Case 3: LRU cache with O(1) intrusive linked list
         var entry = rowToEntry[rowIndex]
         if (entry == null) {
             dirty = true
             if (usedSlots >= capacity) {
-                // Evict oldest entry
-                val oldEntry = lruList.removeAt(lruList.size - 1)
+                // Evict oldest entry (tail)
+                val oldEntry = removeTail()!!
                 entry = ColorImageCacheEntry(rowIndex, oldEntry.cacheIndex)
                 rowToEntry[oldEntry.rowIndex] = null
             } else {
@@ -70,12 +83,38 @@ class ColorImageCache(
             rowToEntry[rowIndex] = entry
         } else {
             dirty = false
-            lruList.remove(entry)
+            unlink(entry)
         }
 
         // Move to front of LRU list
-        lruList.add(0, entry)
+        insertAtHead(entry)
         return paletteData[entry.cacheIndex]
+    }
+
+    /** Unlink an entry from the doubly-linked list. O(1). */
+    private fun unlink(entry: ColorImageCacheEntry) {
+        val p = entry.prev
+        val n = entry.next
+        if (p != null) p.next = n else head = n
+        if (n != null) n.prev = p else tail = p
+        entry.prev = null
+        entry.next = null
+    }
+
+    /** Insert an entry at the head (most recently used). O(1). */
+    private fun insertAtHead(entry: ColorImageCacheEntry) {
+        entry.prev = null
+        entry.next = head
+        if (head != null) head!!.prev = entry
+        head = entry
+        if (tail == null) tail = entry
+    }
+
+    /** Remove and return the tail (least recently used) entry. O(1). */
+    private fun removeTail(): ColorImageCacheEntry? {
+        val t = tail ?: return null
+        unlink(t)
+        return t
     }
 
     /**
@@ -84,7 +123,8 @@ class ColorImageCache(
     fun clear() {
         paletteData = emptyArray()
         rowToEntry = emptyArray()
-        lruList.clear()
+        head = null
+        tail = null
         usedSlots = 0
         lastRowIndex = -1
     }
@@ -114,8 +154,12 @@ class ColorImageCache(
 
 /**
  * Cache entry that tracks which row is stored at which cache index.
+ * Contains intrusive doubly-linked list pointers for O(1) LRU operations.
  */
 class ColorImageCacheEntry(
     val rowIndex: Int,
     val cacheIndex: Int
-)
+) {
+    var prev: ColorImageCacheEntry? = null
+    var next: ColorImageCacheEntry? = null
+}

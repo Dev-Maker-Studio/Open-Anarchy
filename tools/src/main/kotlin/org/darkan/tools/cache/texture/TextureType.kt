@@ -140,6 +140,10 @@ class TextureType(data: ByteArray) {
         // Load required nested textures
         if (textureLoader != null) {
             for (operation in textureOperations) {
+                if (TextureRaster.generationStartNanos != 0L &&
+                    System.nanoTime() - TextureRaster.generationStartNanos > TextureRaster.MAX_GENERATION_NANOS) {
+                    throw TextureGenerationException("Texture generation timeout during nested texture loading")
+                }
                 if (operation is TextureOpTexture && operation.getMaterialId() >= 0) {
                     val pixels = textureLoader(operation.getMaterialId(), width, height)
                     if (pixels != null) {
@@ -195,62 +199,70 @@ class TextureType(data: ByteArray) {
     ): IntArray {
         prepareOperations(width, height, brightness, spriteLoader, textureLoader)
 
-        val pixels = IntArray(width * height)
-        var pixelIndex = 0
+        try {
+            val pixels = IntArray(width * height)
+            var pixelIndex = 0
 
-        // Generate row by row
-        for (row in 0 until height) {
-            val redBuffer: IntArray
-            val greenBuffer: IntArray
-            val blueBuffer: IntArray
-
-            if (opaqueOperation.monochrome) {
-                val buffer = opaqueOperation.getMonochromeOutput(row)
-                redBuffer = buffer
-                greenBuffer = buffer
-                blueBuffer = buffer
-            } else {
-                val palette = opaqueOperation.getColorOutput(row)
-                redBuffer = palette[0]
-                greenBuffer = palette[1]
-                blueBuffer = palette[2]
-            }
-
-            // Evaluate the opacity operation for alpha values.
-            // When opacityOperation === opaqueOperation, the image cache returns
-            // the already-computed data (dirty=false), so this is efficient.
-            val opacityBuffer: IntArray = if (opacityOperation.monochrome) {
-                opacityOperation.getMonochromeOutput(row)
-            } else {
-                opacityOperation.getColorOutput(row)[0]
-            }
-
-            // Process pixels from right to left (matching RS client behavior)
-            // This horizontally flips the texture as the client expects
-            for (x in width - 1 downTo 0) {
-                var red = (redBuffer[x] shr 4).coerceIn(0, 255)
-                var green = (greenBuffer[x] shr 4).coerceIn(0, 255)
-                var blue = (blueBuffer[x] shr 4).coerceIn(0, 255)
-
-                // Apply brightness curve
-                red = BRIGHTNESS_TABLE[red]
-                green = BRIGHTNESS_TABLE[green]
-                blue = BRIGHTNESS_TABLE[blue]
-
-                // Black pixels are always fully transparent.
-                // Non-black pixels use the opacity channel value.
-                val alpha: Int = if (red == 0 && green == 0 && blue == 0) {
-                    0
-                } else {
-                    (opacityBuffer[x] shr 4).coerceIn(0, 255)
+            // Generate row by row
+            for (row in 0 until height) {
+                if (TextureRaster.generationStartNanos != 0L &&
+                    System.nanoTime() - TextureRaster.generationStartNanos > TextureRaster.MAX_GENERATION_NANOS) {
+                    throw TextureGenerationException("Texture generation timeout at row $row")
                 }
 
-                pixels[pixelIndex++] = (alpha shl 24) or (red shl 16) or (green shl 8) or blue
-            }
-        }
+                val redBuffer: IntArray
+                val greenBuffer: IntArray
+                val blueBuffer: IntArray
 
-        cleanupOperations()
-        return pixels
+                if (opaqueOperation.monochrome) {
+                    val buffer = opaqueOperation.getMonochromeOutput(row)
+                    redBuffer = buffer
+                    greenBuffer = buffer
+                    blueBuffer = buffer
+                } else {
+                    val palette = opaqueOperation.getColorOutput(row)
+                    redBuffer = palette[0]
+                    greenBuffer = palette[1]
+                    blueBuffer = palette[2]
+                }
+
+                // Evaluate the opacity operation for alpha values.
+                // When opacityOperation === opaqueOperation, the image cache returns
+                // the already-computed data (dirty=false), so this is efficient.
+                val opacityBuffer: IntArray = if (opacityOperation.monochrome) {
+                    opacityOperation.getMonochromeOutput(row)
+                } else {
+                    opacityOperation.getColorOutput(row)[0]
+                }
+
+                // Process pixels from right to left (matching RS client behavior)
+                // This horizontally flips the texture as the client expects
+                for (x in width - 1 downTo 0) {
+                    var red = (redBuffer[x] shr 4).coerceIn(0, 255)
+                    var green = (greenBuffer[x] shr 4).coerceIn(0, 255)
+                    var blue = (blueBuffer[x] shr 4).coerceIn(0, 255)
+
+                    // Apply brightness curve
+                    red = BRIGHTNESS_TABLE[red]
+                    green = BRIGHTNESS_TABLE[green]
+                    blue = BRIGHTNESS_TABLE[blue]
+
+                    // Black pixels are always fully transparent.
+                    // Non-black pixels use the opacity channel value.
+                    val alpha: Int = if (red == 0 && green == 0 && blue == 0) {
+                        0
+                    } else {
+                        (opacityBuffer[x] shr 4).coerceIn(0, 255)
+                    }
+
+                    pixels[pixelIndex++] = (alpha shl 24) or (red shl 16) or (green shl 8) or blue
+                }
+            }
+
+            return pixels
+        } finally {
+            cleanupOperations()
+        }
     }
 
     /**
@@ -275,53 +287,61 @@ class TextureType(data: ByteArray) {
     ): IntArray {
         prepareOperations(width, height, brightness, spriteLoader, textureLoader)
 
-        val pixels = IntArray(width * height)
-        var pixelIndex = 0
+        try {
+            val pixels = IntArray(width * height)
+            var pixelIndex = 0
 
-        // Generate row by row
-        for (row in 0 until height) {
-            val redBuffer: IntArray
-            val greenBuffer: IntArray
-            val blueBuffer: IntArray
+            // Generate row by row
+            for (row in 0 until height) {
+                if (TextureRaster.generationStartNanos != 0L &&
+                    System.nanoTime() - TextureRaster.generationStartNanos > TextureRaster.MAX_GENERATION_NANOS) {
+                    throw TextureGenerationException("Texture generation timeout at row $row")
+                }
 
-            if (opaqueOperation.monochrome) {
-                val buffer = opaqueOperation.getMonochromeOutput(row)
-                redBuffer = buffer
-                greenBuffer = buffer
-                blueBuffer = buffer
-            } else {
-                val palette = opaqueOperation.getColorOutput(row)
-                redBuffer = palette[0]
-                greenBuffer = palette[1]
-                blueBuffer = palette[2]
-            }
+                val redBuffer: IntArray
+                val greenBuffer: IntArray
+                val blueBuffer: IntArray
 
-            // NOTE: Opacity operation is NOT evaluated in the opaque path
-
-            // Process pixels from right to left (matching RS client behavior)
-            // This horizontally flips the texture as the client expects
-            for (x in width - 1 downTo 0) {
-                var red = (redBuffer[x] shr 4).coerceIn(0, 255)
-                var green = (greenBuffer[x] shr 4).coerceIn(0, 255)
-                var blue = (blueBuffer[x] shr 4).coerceIn(0, 255)
-
-                // Apply brightness curve
-                red = BRIGHTNESS_TABLE[red]
-                green = BRIGHTNESS_TABLE[green]
-                blue = BRIGHTNESS_TABLE[blue]
-
-                // Opaque path: alpha=255 for non-black, alpha=0 for black
-                val pixel = blue + (green shl 8) + (red shl 16)
-                if (pixel != 0) {
-                    pixels[pixelIndex++] = pixel or 0xFF000000.toInt()
+                if (opaqueOperation.monochrome) {
+                    val buffer = opaqueOperation.getMonochromeOutput(row)
+                    redBuffer = buffer
+                    greenBuffer = buffer
+                    blueBuffer = buffer
                 } else {
-                    pixels[pixelIndex++] = 0
+                    val palette = opaqueOperation.getColorOutput(row)
+                    redBuffer = palette[0]
+                    greenBuffer = palette[1]
+                    blueBuffer = palette[2]
+                }
+
+                // NOTE: Opacity operation is NOT evaluated in the opaque path
+
+                // Process pixels from right to left (matching RS client behavior)
+                // This horizontally flips the texture as the client expects
+                for (x in width - 1 downTo 0) {
+                    var red = (redBuffer[x] shr 4).coerceIn(0, 255)
+                    var green = (greenBuffer[x] shr 4).coerceIn(0, 255)
+                    var blue = (blueBuffer[x] shr 4).coerceIn(0, 255)
+
+                    // Apply brightness curve
+                    red = BRIGHTNESS_TABLE[red]
+                    green = BRIGHTNESS_TABLE[green]
+                    blue = BRIGHTNESS_TABLE[blue]
+
+                    // Opaque path: alpha=255 for non-black, alpha=0 for black
+                    val pixel = blue + (green shl 8) + (red shl 16)
+                    if (pixel != 0) {
+                        pixels[pixelIndex++] = pixel or 0xFF000000.toInt()
+                    } else {
+                        pixels[pixelIndex++] = 0
+                    }
                 }
             }
-        }
 
-        cleanupOperations()
-        return pixels
+            return pixels
+        } finally {
+            cleanupOperations()
+        }
     }
 
     companion object {

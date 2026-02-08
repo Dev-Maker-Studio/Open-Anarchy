@@ -146,3 +146,9 @@ abstract class TextureOperation(
         }
     }
 }
+
+/**
+ * Thrown when texture generation exceeds the operation access limit,
+ * indicating a likely infinite loop in the operation pipeline.
+ */
+class TextureGenerationException(message: String) : RuntimeException(message)
