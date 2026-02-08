@@ -125,6 +125,16 @@ class MapViewer(
     private var objectInstances: List<ObjectInstance> = emptyList()
     private val registeredModels = mutableSetOf<Int>()
 
+    // Multi-region context: 8 surrounding regions rendered as static terrain + objects
+    private var contextRegions: Array<ContextRegion?> = arrayOfNulls(8)
+    private val CONTEXT_OFFSETS = arrayOf(
+        intArrayOf(-1, 1),  intArrayOf(0, 1),  intArrayOf(1, 1),
+        intArrayOf(-1, 0),                      intArrayOf(1, 0),
+        intArrayOf(-1, -1), intArrayOf(0, -1), intArrayOf(1, -1)
+    )
+    private val centerModelMatrix = Matrix4f()
+    private val contextModelMatrices = Array(8) { Matrix4f() }
+
     // Displaced model tracking for contourType 1 objects.
     // Maps ObjectInstance identity hash -> displaced model ID.
     // Each contourType 1 instance gets unique geometry with per-vertex terrain displacement.
@@ -179,12 +189,12 @@ class MapViewer(
         TerrainLoader.loadDefinitions(cache)
         ObjectRenderer.loadDefinitions(cache)
 
-        // Setup the scene camera
+        // Setup the scene camera (will be repositioned when region loads)
         scene.camera.setPosition(0f, 50f, 50f)
         scene.camera.pitch = -45f
         scene.camera.yaw = -90f
         scene.camera.moveSpeed = 20f
-        scene.camera.farPlane = 2000f
+        scene.camera.farPlane = 4000f
 
         // Enable depth testing and multisampling
         glEnable(GL_DEPTH_TEST)
@@ -202,7 +212,10 @@ class MapViewer(
         val terrainColorVert = loadShaderSource("/shaders/terrain_color.vert")
         val terrainColorFrag = loadShaderSource("/shaders/terrain_color.frag")
 
-        uboColorShader = ShaderProgram.create(terrainColorVert, terrainColorFrag)
+        uboColorShader = ShaderProgram.createWithUniforms(
+            terrainColorVert, terrainColorFrag,
+            "model"
+        )
         uniformBuffers.bindToShader(uboColorShader)
 
         // Load terrain textured shader with RGB vertex colors
@@ -211,7 +224,7 @@ class MapViewer(
 
         uboTexturedShader = ShaderProgram.createWithUniforms(
             terrainTexturedVert, terrainTexturedFrag,
-            "textureSampler"
+            "model", "textureSampler"
         )
         uniformBuffers.bindToShader(uboTexturedShader)
 
@@ -221,7 +234,7 @@ class MapViewer(
 
         terrainAlphaShader = ShaderProgram.createWithUniforms(
             terrainAlphaVert, terrainAlphaFrag,
-            "textureSampler"
+            "model", "textureSampler"
         )
         uniformBuffers.bindToShader(terrainAlphaShader)
 
@@ -318,6 +331,12 @@ class MapViewer(
     private fun handleTilePick() {
         val td = terrainData ?: return
         val cam = scene.camera
+        val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+
+        // Set the world offset for the tile picker so it converts world-space
+        // ray positions into local tile coordinates (0-63)
+        tilePicker.worldOffsetX = currentRegionX * 64 * tileSize
+        tilePicker.worldOffsetZ = -currentRegionY * 64 * tileSize
 
         // Convert mouse position to world ray
         tilePicker.screenToWorldRay(
@@ -375,12 +394,15 @@ class MapViewer(
         val h01 = terrainTiles[tile.plane][x][nextY].height * heightScale
         val h11 = terrainTiles[tile.plane][nextX][nextY].height * heightScale
 
-        // Calculate world positions for corners (with small Y offset to prevent z-fighting)
+        // Calculate WORLD positions for corners (with small Y offset to prevent z-fighting)
+        // Offset by the center region's world origin so highlight aligns with world-space terrain
+        val worldOriginX = currentRegionX * 64 * tileSize
+        val worldOriginZ = -currentRegionY * 64 * tileSize
         val yOffset = 0.1f
-        val x0 = x * tileSize
-        val x1 = (x + 1) * tileSize
-        val z0 = -y * tileSize
-        val z1 = -(y + 1) * tileSize
+        val x0 = worldOriginX + x * tileSize
+        val x1 = worldOriginX + (x + 1) * tileSize
+        val z0 = worldOriginZ + (-y * tileSize)
+        val z1 = worldOriginZ + (-(y + 1) * tileSize)
 
         // Create line mesh for tile outline
         val positions = floatArrayOf(
@@ -458,12 +480,27 @@ class MapViewer(
 
             // Pass 1: Color mesh (untextured tiles) with RGB colors
             uboColorShader.bind()
-            em.renderColor(uboColorShader)
+            em.renderColor(uboColorShader, centerModelMatrix)
+            // Render context region color meshes
+            for (i in contextRegions.indices) {
+                val ctx = contextRegions[i] ?: continue
+                uboColorShader.setUniform("model", contextModelMatrices[i])
+                ctx.terrainMeshes.colorMesh?.render()
+            }
 
             // Pass 2: Textured terrain (single texture per triangle)
             uboTexturedShader.bind()
             uboTexturedShader.setUniform("textureSampler", 0)
-            em.renderTextured(uboTexturedShader, terrainTextureBinding)
+            em.renderTextured(uboTexturedShader, centerModelMatrix, terrainTextureBinding)
+            // Render context region textured meshes
+            for (i in contextRegions.indices) {
+                val ctx = contextRegions[i] ?: continue
+                uboTexturedShader.setUniform("model", contextModelMatrices[i])
+                for (batch in ctx.terrainMeshes.texturedBatches) {
+                    terrainTextureBinding(batch.textureId)
+                    batch.mesh.render()
+                }
+            }
             TextureLoader.unbindTexture()
 
             // Pass 3: Alpha terrain (multi-pass alpha blending)
@@ -477,7 +514,16 @@ class MapViewer(
 
             terrainAlphaShader.bind()
             terrainAlphaShader.setUniform("textureSampler", 0)
-            em.renderAlpha(terrainAlphaShader, terrainTextureBinding)
+            em.renderAlpha(terrainAlphaShader, centerModelMatrix, terrainTextureBinding)
+            // Render context region alpha meshes
+            for (i in contextRegions.indices) {
+                val ctx = contextRegions[i] ?: continue
+                terrainAlphaShader.setUniform("model", contextModelMatrices[i])
+                for (batch in ctx.terrainMeshes.alphaBatches) {
+                    terrainTextureBinding(batch.textureId)
+                    batch.mesh.render()
+                }
+            }
 
             TextureLoader.unbindTexture()
             glDisable(GL_BLEND)
@@ -533,7 +579,16 @@ class MapViewer(
         im.prepareFrame()
 
         var addedCount = 0
-        for (obj in objectInstances) {
+
+        // Collect all objects: center region + context regions
+        val allObjectInstances = buildList {
+            addAll(objectInstances)
+            for (ctx in contextRegions) {
+                if (ctx != null) addAll(ctx.objectInstances)
+            }
+        }
+
+        for (obj in allObjectInstances) {
             // For contourType 1 objects with displacement, use the displaced model ID
             // so the rendering path picks up the displaced geometry.
             // Fall back to the cached combined model ID for all other objects.
@@ -1446,12 +1501,12 @@ class MapViewer(
         mapObjects = regionData?.objects ?: emptyList()
 
         if (regionData != null && td != null) {
-            // Create instance manager for this region (smaller capacity than multi-region)
-            instanceManager = InstanceManager(maxInstancesPerMesh = 5000)
+            // Create instance manager for this region (larger capacity for multi-region objects)
+            instanceManager = InstanceManager(maxInstancesPerMesh = 50000)
 
-            // Create object instances for this plane using LOCAL coordinates
-            // The terrain mesh is at local coords (0,0) to (63,63) tiles
-            // So objects must also be at local coordinates
+            // Create object instances for this plane using WORLD coordinates
+            // The terrain mesh uses local coords (0-63) but is positioned via model matrix
+            // Objects use world tile coordinates to align with the translated terrain
             // Pass td.tiles for height lookups (matches TerrainLoader's computed heights)
             objectInstances = createObjectInstances(regionData, td.tiles, regionX, regionY, plane)
 
@@ -1539,14 +1594,20 @@ class MapViewer(
             populateObjectSpatialIndex()
         }
 
-        // Center camera on the local terrain mesh (not world coordinates)
-        // Terrain mesh spans from (0, 0) to (63 * tileSize, -63 * tileSize)
+        // Compute model matrices for terrain positioning (local coords -> world coords)
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
-        val meshCenterX = 32f * tileSize
-        val meshCenterZ = -32f * tileSize
-        scene.camera.setPosition(meshCenterX, 50f, meshCenterZ + 80f)
+        centerModelMatrix.identity().translate(regionX * 64 * tileSize, 0f, -regionY * 64 * tileSize)
+
+        // Load surrounding context regions (terrain + objects)
+        loadContextRegions(regionX, regionY, plane)
+
+        // Center camera on the world-space center of this region
+        val worldCenterX = (regionX * 64 + 32) * tileSize
+        val worldCenterZ = -(regionY * 64 + 32) * tileSize
+        scene.camera.setPosition(worldCenterX, 50f, worldCenterZ + 80f)
         scene.camera.pitch = -35f
         scene.camera.yaw = 0f
+        scene.camera.farPlane = 4000f
     }
 
     private fun cleanupRegion() {
@@ -1565,6 +1626,97 @@ class MapViewer(
         tilePicker.clearSelection()
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
+
+        // Clear context region references.
+        // TerrainMeshes are owned by TerrainLoader's batchedMeshCache, not by us.
+        // TerrainLoader.clearCache() (called on reloadTerrain) handles their GPU cleanup.
+        for (i in contextRegions.indices) {
+            contextRegions[i] = null
+        }
+        // Clear the batched mesh cache so stale context region GPU resources are freed
+        TerrainLoader.clearBatchedMeshCache()
+    }
+
+    /**
+     * Load the 8 surrounding context regions for visual context.
+     * Each neighbor gets static terrain meshes and objects placed in world coordinates.
+     * Objects from context regions go through the same instance manager as the center region.
+     */
+    private fun loadContextRegions(centerRegionX: Int, centerRegionY: Int, plane: Int) {
+        val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+
+        for (i in CONTEXT_OFFSETS.indices) {
+            val rx = centerRegionX + CONTEXT_OFFSETS[i][0]
+            val ry = centerRegionY + CONTEXT_OFFSETS[i][1]
+
+            // Skip if out of bounds
+            if (rx < 0 || rx > 255 || ry < 0 || ry > 255) {
+                contextRegions[i] = null
+                contextModelMatrices[i].identity()
+                continue
+            }
+
+            // Compute model matrix for this neighbor's terrain
+            contextModelMatrices[i].identity().translate(rx * 64 * tileSize, 0f, -ry * 64 * tileSize)
+
+            // Load terrain meshes (static, non-editable)
+            val terrainMeshes = TerrainLoader.loadRegionMeshes(cache, rx, ry, plane)
+            if (terrainMeshes == null) {
+                contextRegions[i] = null
+                continue
+            }
+
+            // Load objects for this context region using ObjectRenderer.createInstancesAllPlanes
+            // which produces WORLD-coord object instances
+            val ctxRegionData = RegionLoader.loadRegion(cache, rx, ry)
+            val ctxTerrainData = TerrainLoader.loadRegion(cache, rx, ry)
+            var ctxObjectInstances: List<ObjectInstance> = emptyList()
+
+            if (ctxRegionData != null && ctxTerrainData != null) {
+                val ctxTiles = ctxTerrainData.tiles
+
+                // Create instances for all planes using world coordinates
+                val allPlaneInstances = ObjectRenderer.createInstancesAllPlanes(
+                    objects = ctxRegionData.objects,
+                    regionX = rx,
+                    regionY = ry,
+                    tileHeights = { localX, localY, p ->
+                        TerrainLoader.getTileHeightScaled(ctxTiles, localX, localY, p)
+                    },
+                    rsHeightSampler = { localX, localY, p ->
+                        TerrainLoader.getTileHeight(ctxTiles, localX, localY, p)
+                    }
+                )
+
+                // Flatten all planes into a single list (all rendered simultaneously)
+                // Apply roof filtering consistent with the center region
+                ctxObjectInstances = allPlaneInstances.values.flatten().let { instances ->
+                    if (!showRoofs) instances.filter { it.mapObject.shape !in 12..21 }
+                    else instances
+                }
+
+                // Register models from context region objects with the shared instance manager
+                val im = instanceManager
+                if (im != null) {
+                    for (obj in ctxObjectInstances) {
+                        val combinedId = obj.cachedCombinedModelId
+                        if (registeredModels.contains(combinedId)) continue
+
+                        val meshDataList = if (obj.modifications.hasModifications()) {
+                            ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
+                        } else {
+                            ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
+                        }
+                        if (meshDataList != null && meshDataList.isNotEmpty()) {
+                            im.registerModel(combinedId, meshDataList)
+                            registeredModels.add(combinedId)
+                        }
+                    }
+                }
+            }
+
+            contextRegions[i] = ContextRegion(rx, ry, terrainMeshes, ctxObjectInstances)
+        }
     }
 
     /**
@@ -1724,8 +1876,10 @@ class MapViewer(
             // Apply height scale (same as terrain)
             val terrainHeight = averageHeight * heightScale
 
-            // Calculate local position (matching terrain mesh coordinates)
-            // Terrain uses: x = localX * tileSize, z = -localY * tileSize
+            // Calculate WORLD position (not local) for multi-region rendering.
+            // Objects use world tile coordinates so they align with terrain positioned
+            // via the model matrix. Terrain mesh vertices are in local coords (0-63),
+            // but the model uniform translates them to world space.
             //
             // RS client (SceneGraph.addObject) places ALL objects at tile CENTER:
             //   sceneX = (baseX << 9) + (locSizeX << 8) = baseX * 512 + sizeX * 256
@@ -1733,8 +1887,10 @@ class MapViewer(
             //
             // For walls (size 1x1): sceneX = baseX * 512 + 256 (tile center)
             // Wall model geometry extends from center to the appropriate edge.
-            val basePosX = localTileX * tileSize
-            val basePosZ = -localTileY * tileSize
+            val worldTileX = regionX * 64 + localTileX
+            val worldTileY = regionY * 64 + localTileY
+            val basePosX = worldTileX * tileSize
+            val basePosZ = -worldTileY * tileSize
 
             // ALL objects (including walls) are centered within their tile footprint
             val posX = basePosX + (sizeX * tileSize * 0.5f)
@@ -1959,6 +2115,20 @@ class MapViewer(
         RegionLoader.clearCache()
         imGui.cleanup()
     }
+
+    /**
+     * A surrounding (context) region rendered as static, non-editable terrain + objects.
+     * These provide visual context around the editable center region.
+     *
+     * Note: terrainMeshes are OWNED by TerrainLoader's batchedMeshCache and must NOT
+     * be cleaned up here. Call TerrainLoader.clearCache() to release them.
+     */
+    private class ContextRegion(
+        val regionX: Int,
+        val regionY: Int,
+        val terrainMeshes: TerrainLoader.TerrainMeshes,
+        val objectInstances: List<ObjectInstance>
+    )
 
     /**
      * Available editing tools for the Map Editor panel.

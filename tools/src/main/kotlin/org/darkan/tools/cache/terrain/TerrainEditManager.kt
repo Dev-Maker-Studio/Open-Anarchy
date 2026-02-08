@@ -2,6 +2,7 @@ package org.darkan.tools.cache.terrain
 
 import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.engine.render.ShaderProgram
+import org.joml.Matrix4f
 import world.gregs.voidps.cache.Cache
 
 /**
@@ -323,7 +324,8 @@ class TerrainEditManager(
     }
 
     /** Render all non-empty color terrain (untextured). */
-    fun renderColor(shader: ShaderProgram) {
+    fun renderColor(shader: ShaderProgram, modelMatrix: Matrix4f) {
+        shader.setUniform("model", modelMatrix)
         if (useMergedMeshes) {
             mergedColorMesh?.render()
         } else {
@@ -332,7 +334,8 @@ class TerrainEditManager(
     }
 
     /** Render all non-empty textured terrain (opaque). */
-    fun renderTextured(shader: ShaderProgram, bindTexture: (Int) -> Unit) {
+    fun renderTextured(shader: ShaderProgram, modelMatrix: Matrix4f, bindTexture: (Int) -> Unit) {
+        shader.setUniform("model", modelMatrix)
         if (useMergedMeshes) {
             for (batch in mergedTexturedBatches) {
                 bindTexture(batch.textureId)
@@ -344,7 +347,8 @@ class TerrainEditManager(
     }
 
     /** Render all non-empty alpha terrain (semi-transparent). */
-    fun renderAlpha(shader: ShaderProgram, bindTexture: (Int) -> Unit) {
+    fun renderAlpha(shader: ShaderProgram, modelMatrix: Matrix4f, bindTexture: (Int) -> Unit) {
+        shader.setUniform("model", modelMatrix)
         if (useMergedMeshes) {
             for (batch in mergedAlphaBatches) {
                 bindTexture(batch.textureId)
