@@ -138,15 +138,17 @@ private class AtlasPage(
         }
 
         // Calculate UV coordinates for the INNER texture area (excluding border).
-        // Apply half-pixel inset so that UVs map to texel CENTERS rather than edges.
-        // Without this, bilinear filtering at the boundary samples 50% from the
-        // border texel, which can cause subtle bleed from adjacent atlas entries.
+        // No half-pixel inset is applied here: the 8-pixel toroidal border provides
+        // sufficient bleed prevention for bilinear/mipmap filtering, and textureGrad()
+        // in the terrain shader prevents mip level discontinuities at fract() seams.
+        // Applying a half-pixel inset here would compress the UV range for objects
+        // (which use linear UV remapping rather than fract()-based tiling).
         val innerX = slotX + border
         val innerY = slotY + border
-        val u0 = (innerX + 0.5f) / size
-        val v0 = (innerY + 0.5f) / size
-        val u1 = (innerX + textureSize - 0.5f) / size
-        val v1 = (innerY + textureSize - 0.5f) / size
+        val u0 = innerX.toFloat() / size
+        val v0 = innerY.toFloat() / size
+        val u1 = (innerX + textureSize).toFloat() / size
+        val v1 = (innerY + textureSize).toFloat() / size
 
         currentColumn++
 
@@ -176,7 +178,10 @@ private class AtlasPage(
         for (dy in 0 until textureSize) {
             for (dx in 0 until textureSize) {
                 val sx = (dx * scaleX).toInt().coerceIn(0, srcWidth - 1)
-                val sy = (dy * scaleY).toInt().coerceIn(0, srcHeight - 1)
+                // Flip source Y to match the vertical flip done by TextureLoader.createTextureFromArgb.
+                // OpenGL has V=0 at bottom, RS textures have row 0 at top. Individual textures are
+                // flipped during upload; atlas textures must be flipped here for consistency.
+                val sy = ((textureSize - 1 - dy) * scaleY).toInt().coerceIn(0, srcHeight - 1)
 
                 val srcIdx = sy * srcWidth + sx
                 val destIdx = (destY + dy) * size + (destX + dx)
@@ -217,13 +222,16 @@ private class AtlasPage(
 
         // Helper: sample a pixel from the source texture at logical coordinates (tx, ty)
         // in textureSize space, with toroidal wrapping applied.
+        // The Y coordinate is flipped to match the V-flip applied in copyPixels, since
+        // both read directly from the source array (not the already-flipped pixels[]).
         fun sampleWrapped(tx: Int, ty: Int): Int {
             // Apply toroidal wrapping: map any coordinate into [0, textureSize)
             val wrappedTx = ((tx % textureSize) + textureSize) % textureSize
             val wrappedTy = ((ty % textureSize) + textureSize) % textureSize
 
             val sx = (wrappedTx * scaleX).toInt().coerceIn(0, srcWidth - 1)
-            val sy = (wrappedTy * scaleY).toInt().coerceIn(0, srcHeight - 1)
+            // Flip Y to match copyPixels V-flip (read from bottom of source upward)
+            val sy = ((textureSize - 1 - wrappedTy) * scaleY).toInt().coerceIn(0, srcHeight - 1)
             val srcIdx = sy * srcWidth + sx
             return if (srcIdx < src.size) src[srcIdx] else 0
         }

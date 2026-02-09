@@ -244,11 +244,11 @@ class MapViewer(
         // Build terrain texture atlas from all overlay/underlay texture definitions
         buildTerrainAtlas()
 
-        // Create object texture atlas for collapsing texture-based draw call splits.
-        // Textures are packed incrementally as models register with the InstanceManager.
-        // Uses 128px texture slots with 8px border on a 4096x4096 atlas page,
-        // giving 784 slots per page (typically sufficient for all object textures in a 3x3 view).
-        objectAtlas = TextureAtlas(atlasSize = 4096, textureSize = 128, border = 8)
+        // Object atlas disabled: the CPU-side UV remap (remapUVsToAtlas) cannot handle
+        // model UVs outside [0,1] which rely on GL_REPEAT for tiling. This causes wrong
+        // UV projections and spurious transparency when remapped UVs sample empty atlas space.
+        // To re-enable, this needs shader-side fract()+remap like the terrain atlas does.
+        objectAtlas = null
 
         // Setup the scene camera (will be repositioned when region loads)
         scene.camera.setPosition(0f, 50f, 50f)
