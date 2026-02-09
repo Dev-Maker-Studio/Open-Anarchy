@@ -87,11 +87,12 @@ object TextureLoader {
         // Standard opaque materials (not effectId 1/7, not effectCombiner 2)
         if (effectCombiner != 2 && effectId != 1 && effectId != 7) return true
 
-        // For effectCombiner 0: check if constant alpha makes it opaque
+        // For effectCombiner 0: check if constant alpha makes it opaque.
+        // aByte1225 is a signed byte: only negative values (unsigned >= 128) trigger
+        // BlendMode.ALPHA in the RS client. Positive values are color blend weights,
+        // not render alpha, so the material is still opaque.
         if (effectCombiner == 0) {
-            val rawAlpha = material.aByte1225.toInt() and 0xFF
-            val constAlpha = if (rawAlpha == 0) 255 else rawAlpha
-            return constAlpha == 255
+            return material.aByte1225.toInt() >= 0
         }
 
         // effectCombiner 1 (binary) or 2 (per-pixel): needs transparency handling
@@ -185,9 +186,12 @@ object TextureLoader {
                     val effectCombiner = material.anInt1226
                     if (effectCombiner == 0) {
                         // Constant alpha for ALL pixels (including black).
-                        // The client renders all pixels; black shows as black, not transparent.
-                        val rawAlpha = material.aByte1225.toInt() and 0xFF
-                        val constAlpha = if (rawAlpha == 0) 255 else rawAlpha
+                        // aByte1225 is a signed byte: only negative values (unsigned >= 128)
+                        // trigger BlendMode.ALPHA in the RS client GL path. Positive values
+                        // are color blend weights (texture vs face color), NOT render alpha.
+                        // Zero is treated as fully opaque (1.0).
+                        val signedAlpha = material.aByte1225.toInt()
+                        val constAlpha = if (signedAlpha >= 0) 255 else (signedAlpha and 0xFF)
                         for (i in pixels.indices) {
                             val px = pixels[i]
                             pixels[i] = (constAlpha shl 24) or (px and 0x00FFFFFF)
@@ -272,8 +276,8 @@ object TextureLoader {
         if (material != null && material.anInt1226 != 2) {
             val effectCombiner = material.anInt1226
             if (effectCombiner == 0) {
-                val rawAlpha = material.aByte1225.toInt() and 0xFF
-                val constAlpha = if (rawAlpha == 0) 255 else rawAlpha
+                val signedAlpha = material.aByte1225.toInt()
+                val constAlpha = if (signedAlpha >= 0) 255 else (signedAlpha and 0xFF)
                 for (i in pixels.indices) {
                     val px = pixels[i]
                     pixels[i] = (constAlpha shl 24) or (px and 0x00FFFFFF)
@@ -611,8 +615,8 @@ object TextureLoader {
         if (material != null && material.anInt1226 != 2) {
             val effectCombiner = material.anInt1226
             if (effectCombiner == 0) {
-                val rawAlpha = material.aByte1225.toInt() and 0xFF
-                val constAlpha = if (rawAlpha == 0) 255 else rawAlpha
+                val signedAlpha = material.aByte1225.toInt()
+                val constAlpha = if (signedAlpha >= 0) 255 else (signedAlpha and 0xFF)
                 for (i in pixels.indices) {
                     val px = pixels[i]
                     pixels[i] = (constAlpha shl 24) or (px and 0x00FFFFFF)
