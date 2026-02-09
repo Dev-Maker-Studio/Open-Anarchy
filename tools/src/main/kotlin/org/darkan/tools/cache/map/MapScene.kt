@@ -22,6 +22,7 @@ import org.joml.Vector3f
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.definition.data.MapObject
+import java.util.IdentityHashMap
 import kotlin.math.floor
 
 /**
@@ -111,10 +112,11 @@ class MapScene(
     private val registeredModels = mutableSetOf<Int>()
 
     // Displaced model IDs for contourType 1 objects.
-    // Maps ObjectInstance identity hash -> displaced model ID.
+    // Maps ObjectInstance reference -> displaced model ID using IdentityHashMap
+    // to avoid System.identityHashCode() collisions that cause wrong mesh lookups.
     // Each contourType 1 instance gets unique geometry with per-vertex terrain displacement,
     // registered with the instanceManager under a unique negative ID.
-    private val displacedModelIds = mutableMapOf<Int, Int>()
+    private val displacedModelIds = IdentityHashMap<ObjectInstance, Int>()
 
     // Counter for generating unique displaced model IDs (starts very negative to avoid collision)
     private var nextDisplacedModelId = Int.MIN_VALUE / 2
@@ -500,7 +502,7 @@ class MapScene(
         // Clean up displacedModelIds entries for this region's objects
         for ((_, objects) in loaded.objectsByPlane) {
             for (obj in objects) {
-                displacedModelIds.remove(System.identityHashCode(obj))
+                displacedModelIds.remove(obj)
             }
         }
 
@@ -624,7 +626,7 @@ class MapScene(
             loadedRegion.displacedModelIds.add(displacedId)
 
             // Map this object instance to its displaced model ID
-            displacedModelIds[System.identityHashCode(obj)] = displacedId
+            displacedModelIds[obj] = displacedId
         }
     }
 
@@ -636,7 +638,7 @@ class MapScene(
      * combined model ID (with modifications).
      */
     private fun getModelIdForInstance(obj: ObjectInstance): Int {
-        val displacedId = displacedModelIds[System.identityHashCode(obj)]
+        val displacedId = displacedModelIds[obj]
         if (displacedId != null) return displacedId
         return ObjectRenderer.getCombinedModelIdWithModifications(obj.modelIds, obj.modifications)
     }

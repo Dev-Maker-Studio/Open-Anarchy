@@ -8,6 +8,7 @@ import org.darkan.tools.util.CoordinateUtil
 import org.joml.Vector3f
 import world.gregs.voidps.cache.Cache
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -1731,6 +1732,8 @@ object ModelLoader {
         definitionCache.clear()
         textureTransformCache.clear()
         combinedDefinitionCache.clear()
+        syntheticIdMapping.clear()
+        nextSyntheticId.set(-1)
         BillboardTypeLoader.clearCache()
     }
 
@@ -1814,30 +1817,44 @@ object ModelLoader {
     }
 
     /**
+     * Mapping from composite string keys to unique negative Int IDs.
+     * Used by [getCombinedModelId] and [getCombinedModelIdWithModifications]
+     * to guarantee collision-free IDs for multi-model and modified-model combinations.
+     *
+     * Single models without modifications use their raw model ID (positive) directly.
+     * All other combinations get a unique negative ID from [nextSyntheticId].
+     */
+    private val syntheticIdMapping = ConcurrentHashMap<String, Int>()
+    private val nextSyntheticId = AtomicInteger(-1)
+
+    /**
      * Generate a unique combined model ID from a list of model IDs.
      * Used as a key for registering combined models with InstanceManager.
+     *
+     * Single-model lists return the model ID directly (positive).
+     * Multi-model lists get a unique negative ID (collision-free).
      */
     fun getCombinedModelId(modelIds: List<Int>): Int {
         if (modelIds.size == 1) return modelIds[0]
-        // Use negative hash to distinguish from regular model IDs
-        return -(modelIds.sorted().hashCode() and 0x7FFFFFFF)
+        val key = "m_${modelIds.sorted()}"
+        return syntheticIdMapping.computeIfAbsent(key) { nextSyntheticId.getAndDecrement() }
     }
 
     /**
      * Generate a unique combined model ID that includes modifications.
      * Used as a key for registering combined models with retexturing/recoloring.
      *
+     * Single models without modifications return the model ID directly.
+     * All other combinations get a unique negative ID (collision-free).
+     *
      * @param modelIds List of model IDs
      * @param modifications Retexture/recolor modifications
      * @return A unique ID for the model+modifications combination
      */
     fun getCombinedModelIdWithModifications(modelIds: List<Int>, modifications: ModelModifications): Int {
-        val baseId = getCombinedModelId(modelIds)
-        if (!modifications.hasModifications()) return baseId
-        // Combine base ID with modifications hash for unique key
-        val modHash = modifications.hashCode() and 0x7FFFFFFF
-        // Use a different sign pattern to distinguish from plain combined models
-        return -(baseId xor modHash)
+        if (!modifications.hasModifications()) return getCombinedModelId(modelIds)
+        val key = "x_${modelIds.sorted()}_${modifications.cacheKeyComponent()}"
+        return syntheticIdMapping.computeIfAbsent(key) { nextSyntheticId.getAndDecrement() }
     }
 
 }
