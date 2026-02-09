@@ -971,14 +971,12 @@ class MapViewer(
 
             // Render textured objects (1 MDI call) with proper GL state
             renderSystem.enableBlending()
-            renderSystem.enableAlphaToCoverage()
 
             indTexShader.bind()
             indTexShader.setUniform("textureArray", 0)
             ir.renderTextured(indTexShader)
 
             renderSystem.disableBlending()
-            renderSystem.disableAlphaToCoverage()
 
             // Capture MDI draw call count
             RenderMetrics.indirectDrawCalls = ir.getDrawCallCount()
@@ -989,9 +987,11 @@ class MapViewer(
             // Render instanced center region objects (untextured)
             im.renderUntextured(instancedColorShader)
 
-            // Render instanced center region objects (textured) with proper GL state
+            // Render instanced center region objects (textured) with proper GL state.
+            // Only use standard alpha blending (no alpha-to-coverage) to match the RS client.
+            // Alpha-to-coverage + blending double-applies transparency, making semi-transparent
+            // textures far too transparent (e.g., alpha=0.5 → ~25% effective opacity).
             renderSystem.enableBlending()
-            renderSystem.enableAlphaToCoverage()
 
             instancedTexturedShader.bind()
             instancedTexturedShader.setUniform("textureSampler", 0)
@@ -1010,7 +1010,6 @@ class MapViewer(
 
             TextureLoader.unbindTexture()
             renderSystem.disableBlending()
-            renderSystem.disableAlphaToCoverage()
 
             // Capture instanced draw call count from InstanceManager
             val instanceStats = im.getStats()
@@ -1070,7 +1069,6 @@ class MapViewer(
         if (texturedKeys.isEmpty()) return
 
         renderSystem.enableBlending()
-        renderSystem.enableAlphaToCoverage()
 
         staticTexturedShader.bind()
         staticTexturedShader.setUniform("model", identityModel)
@@ -1103,7 +1101,6 @@ class MapViewer(
 
         TextureLoader.unbindTexture()
         renderSystem.disableBlending()
-        renderSystem.disableAlphaToCoverage()
     }
 
     /**
