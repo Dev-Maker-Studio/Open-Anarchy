@@ -25,7 +25,6 @@ import org.darkan.tools.util.CoordinateUtil
 import org.joml.Matrix4f
 import java.util.IdentityHashMap
 import world.gregs.voidps.cache.Cache
-import world.gregs.voidps.cache.MemoryCache
 import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.definition.data.MapObject
 
@@ -620,13 +619,7 @@ class RegionManager(
     )
 
     private fun loadContextRegions(centerRegionX: Int, centerRegionY: Int, plane: Int) {
-        val useParallel = cache is MemoryCache
-
-        if (useParallel) {
-            loadContextRegionsParallel(centerRegionX, centerRegionY, plane)
-        } else {
-            loadContextRegionsSequential(centerRegionX, centerRegionY, plane)
-        }
+        loadContextRegionsParallel(centerRegionX, centerRegionY, plane)
     }
 
     private fun loadContextRegionsParallel(centerRegionX: Int, centerRegionY: Int, plane: Int) {
@@ -815,139 +808,6 @@ class RegionManager(
         } else {
             // Phase 3: Build static batches with displacement support
             buildContextObjectBatches(cpuResults)
-        }
-    }
-
-    private fun loadContextRegionsSequential(centerRegionX: Int, centerRegionY: Int, plane: Int) {
-        val allContextData = mutableListOf<ContextBatchInput>()
-        val offsets = getContextOffsets()
-
-        for (offset in offsets) {
-            val rx = centerRegionX + offset[0]
-            val ry = centerRegionY + offset[1]
-
-            if (rx < 0 || rx > 255 || ry < 0 || ry > 255) continue
-
-            val modelMatrix = Matrix4f().identity().translate(
-                rx * 64 * TILE_SIZE, 0f, -ry * 64 * TILE_SIZE
-            )
-            contextModelMatrices.add(modelMatrix)
-
-            val ctxNeighbors = TerrainLoader.buildNeighborData(cache, rx, ry)
-            val terrainMeshes = TerrainLoader.loadRegionMeshes(cache, rx, ry, plane, ctxNeighbors)
-            if (terrainMeshes == null) continue
-
-            val ctxRegionData = RegionLoader.loadRegion(cache, rx, ry)
-            val ctxTerrainData = TerrainLoader.loadRegion(cache, rx, ry)
-            var ctxObjectInstances: List<ObjectInstance> = emptyList()
-            val allModelMeshData = mutableMapOf<Int, List<MeshData>>()
-            val displacedMeshData = mutableMapOf<Int, List<MeshData>>()
-
-            if (ctxRegionData != null && ctxTerrainData != null) {
-                val ctxTiles = ctxTerrainData.tiles
-
-                val allPlaneInstances = ObjectRenderer.createInstancesAllPlanes(
-                    objects = ctxRegionData.objects,
-                    regionX = rx,
-                    regionY = ry,
-                    tileHeights = { localX, localY, p ->
-                        TerrainLoader.getTileHeightScaled(ctxTiles, localX, localY, p)
-                    },
-                    rsHeightSampler = { localX, localY, p ->
-                        TerrainLoader.getTileHeight(ctxTiles, localX, localY, p)
-                    }
-                )
-
-                ctxObjectInstances = allPlaneInstances.values.flatten().let { instances ->
-                    if (!showRoofs) instances.filter { it.mapObject.shape !in 12..21 }
-                    else instances
-                }
-
-                val im = instanceManager
-                for (obj in ctxObjectInstances) {
-                    val combinedId = obj.cachedCombinedModelId
-                    if (allModelMeshData.containsKey(combinedId)) continue
-
-                    val meshDataList = if (obj.modifications.hasModifications()) {
-                        ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
-                    } else {
-                        ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
-                    }
-                    if (meshDataList != null && meshDataList.isNotEmpty()) {
-                        allModelMeshData[combinedId] = meshDataList
-                        if (im != null && !registeredModels.contains(combinedId)) {
-                            im.registerModel(combinedId, meshDataList)
-                            registeredModels.add(combinedId)
-                        }
-                    }
-                }
-
-                // When debugContextInstanced is on, also register any models that were already
-                // registered (from center region) -- they are already in InstanceManager, so this
-                // is a no-op for those. The key thing is ALL models end up in allModelMeshData.
-                // (Already handled above since we populate allModelMeshData for all objects.)
-
-                // Compute vertex displacement for contourType 1 objects.
-                // Key by list index (not identityHashCode) to avoid hash collisions.
-                for ((objIndex, obj) in ctxObjectInstances.withIndex()) {
-                    if (!VertexDisplacer.needsDisplacement(obj.groundContourType, obj.groundContourModifier)) continue
-
-                    val baseMeshDataList = allModelMeshData[obj.cachedCombinedModelId] ?: continue
-                    val displaced = mutableListOf<MeshData>()
-                    var anyDisplaced = false
-
-                    for (meshData in baseMeshDataList) {
-                        val displacedMesh = VertexDisplacer.displaceVertices(
-                            meshData = meshData,
-                            sceneX = obj.rsSceneX,
-                            sceneY = obj.rsSceneY,
-                            averageHeight = obj.rsAverageHeight,
-                            plane = obj.mapObject.level,
-                            tiles = ctxTiles,
-                            regionBaseX = rx * 64,
-                            regionBaseY = ry * 64,
-                            rsRotation = obj.mapObject.rotation,
-                            mirrored = obj.mirrored,
-                            resizeX = obj.definition.resizeX,
-                            resizeY = obj.definition.resizeY,
-                            resizeZ = obj.definition.resizeZ,
-                            rsOffsetX = obj.definition.offsetX,
-                            rsOffsetZ = obj.definition.offsetZ
-                        )
-
-                        if (displacedMesh != null) {
-                            displaced.add(displacedMesh)
-                            anyDisplaced = true
-                        } else {
-                            displaced.add(meshData)
-                        }
-                    }
-
-                    if (anyDisplaced) {
-                        displacedMeshData[objIndex] = displaced
-
-                        // In debug instanced mode, register displaced mesh with InstanceManager
-                        if (debugContextInstanced && im != null) {
-                            val displacedId = nextDisplacedId++
-                            im.registerModel(displacedId, displaced, maxInstances = 4)
-                            registeredModels.add(displacedId)
-                            displacedModels[obj] = displacedId
-                        }
-                    }
-                }
-            }
-
-            contextRegions.add(LoadedContextRegion(rx, ry, terrainMeshes, ctxObjectInstances))
-            allContextData.add(ContextBatchInput(ctxObjectInstances, allModelMeshData, displacedMeshData))
-        }
-
-        if (debugContextInstanced) {
-            // Store all context object instances for instanced rendering in the viewer
-            contextObjectInstances = allContextData.flatMap { it.instances }
-            println("[RegionManager] debugContextInstanced (sequential): ${contextObjectInstances.size} context objects " +
-                    "stored for instanced rendering (no static batching)")
-        } else {
-            buildContextObjectBatchesFromData(allContextData)
         }
     }
 

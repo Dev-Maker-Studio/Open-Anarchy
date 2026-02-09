@@ -227,11 +227,11 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
 
         const val INDEX_SIZE = 6
         const val WHIRLPOOL_SIZE = 64
-        private const val SECTOR_SIZE = 520
-        private const val SECTOR_HEADER_SIZE_SMALL = 8
-        private const val SECTOR_DATA_SIZE_SMALL = 512
-        private const val SECTOR_HEADER_SIZE_BIG = 10
-        private const val SECTOR_DATA_SIZE_BIG = 510
+        internal const val SECTOR_SIZE = 520
+        internal const val SECTOR_HEADER_SIZE_SMALL = 8
+        internal const val SECTOR_DATA_SIZE_SMALL = 512
+        internal const val SECTOR_HEADER_SIZE_BIG = 10
+        internal const val SECTOR_DATA_SIZE_BIG = 510
 
         private fun BufferReader.readSmart(version: Int) = if (version >= 7) readBigSmart() else readUnsignedShort()
 
