@@ -65,11 +65,7 @@ class AsyncRegionManager(
     private val cache: Cache
 ) {
     private val gpuUploadQueue = GpuUploadQueue()
-    // Single-threaded dispatcher: FileCache is NOT thread-safe (LinkedHashMap LRU caches,
-    // shared RandomAccessFile seek/read, shared DecompressionContext). Concurrent coroutines
-    // corrupt internal state, producing garbled terrain/object data for some regions.
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private val loadingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
+    private val loadingScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val regions = ConcurrentHashMap<RegionKey, AsyncRegionData>()
 
     // Configuration
@@ -172,24 +168,15 @@ class AsyncRegionManager(
 
         // Cancel and remove in-progress regions so they can be re-loaded fresh.
         // Only keep READY regions; cancelled coroutines leave stale state.
-        val cancelledJobs = mutableListOf<Job>()
         val inProgressKeys = regions.entries
             .filter { it.value.state == RegionState.CPU_LOADING || it.value.state == RegionState.GPU_PENDING }
             .map { it.key }
         for (key in inProgressKeys) {
             val data = regions.remove(key)
-            data?.loadJob?.let {
-                it.cancel()
-                cancelledJobs.add(it)
-            }
+            data?.loadJob?.cancel()
             gpuUploadQueue.cancelRegion(key.toLong())
             data?.terrainMeshes?.cleanup()
             data?.batchMeshes?.values?.forEach { it.cleanup() }
-        }
-        // Wait for cancelled coroutines to fully stop so no background thread is
-        // accessing the (non-thread-safe) Cache during the synchronous center load below.
-        if (cancelledJobs.isNotEmpty()) {
-            runBlocking { cancelledJobs.forEach { it.join() } }
         }
 
         // Compute which regions to keep vs unload
@@ -686,7 +673,6 @@ class AsyncRegionManager(
     }
 
     private fun cancelAllLoading() {
-        val jobs = regions.values.mapNotNull { it.loadJob }
         loadingScope.coroutineContext.cancelChildren()
         gpuUploadQueue.cancelAll()
 
@@ -694,11 +680,6 @@ class AsyncRegionManager(
             data.loadJob?.cancel()
             data.terrainMeshes?.cleanup()
             data.batchMeshes?.values?.forEach { it.cleanup() }
-        }
-        // Wait for all background coroutines to fully stop so no concurrent
-        // cache access occurs during the subsequent synchronous load.
-        if (jobs.isNotEmpty()) {
-            runBlocking { jobs.forEach { it.join() } }
         }
         regions.clear()
         registeredModels.clear()
