@@ -191,6 +191,27 @@ class MapViewer(
     private val editorHeightStrength = intArrayOf(5)
     private var editorHeightMode = 0  // 0 = Raise, 1 = Lower, 2 = Smooth
 
+    // Overlay shape/rotation for terrain paint tool
+    private val editorOverlayShape = intArrayOf(0)
+    private val editorOverlayRotation = intArrayOf(0)
+
+    // Drag tracking for continuous tools (prevents re-painting same tile)
+    private val editedTilesThisDrag = mutableSetOf<Pair<Int, Int>>()
+
+    // Object place tool state
+    private var objectSearchResults: List<ObjectDefinition> = emptyList()
+    private var selectedObjectId = -1
+    private val editorObjectShape = intArrayOf(10)  // Default to CENTREPIECE_STRAIGHT
+    private val editorObjectRotation = intArrayOf(0)
+
+    // Object move tool state
+    private data class MovingObject(
+        val instance: ObjectInstance,
+        val originalX: Int,
+        val originalY: Int
+    )
+    private var movingObject: MovingObject? = null
+
     override fun onInit() {
         // Initialize texture loader
         TextureLoader.init(cache)
@@ -493,9 +514,46 @@ class MapViewer(
             }
         }
 
-        // Tile picking (left-click)
-        if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-            handleTilePick()
+        // Tool-based left-click dispatch
+        when (currentEditorTool) {
+            EditorTool.SELECT -> {
+                if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+                    handleTilePick()
+                }
+            }
+            EditorTool.TERRAIN_PAINT -> {
+                if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {
+                    handleTerrainPaint()
+                }
+                if (input.mouse.isButtonReleased(GLFW_MOUSE_BUTTON_LEFT)) {
+                    editedTilesThisDrag.clear()
+                }
+            }
+            EditorTool.HEIGHT_EDIT -> {
+                if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {
+                    handleHeightEdit()
+                }
+            }
+            EditorTool.FLAG_EDIT -> {
+                if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+                    handleTilePick()
+                }
+            }
+            EditorTool.OBJECT_PLACE -> {
+                if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+                    handleObjectPlace()
+                }
+            }
+            EditorTool.OBJECT_MOVE -> {
+                if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT) && movingObject == null) {
+                    handleObjectMoveStart()
+                } else if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_LEFT) && movingObject != null) {
+                    handleObjectMoveDrag()
+                }
+                if (input.mouse.isButtonReleased(GLFW_MOUSE_BUTTON_LEFT) && movingObject != null) {
+                    handleObjectMoveEnd()
+                }
+            }
         }
     }
 
@@ -543,6 +601,323 @@ class MapViewer(
             // Update highlight mesh
             updateTileHighlight(td.tiles)
         }
+    }
+
+    /**
+     * Perform a raycast to find the tile coordinate under the cursor.
+     * Unlike handleTilePick(), this does NOT update selection state or highlight mesh.
+     */
+    private fun getTileUnderCursor(): Pair<Int, Int>? {
+        val td = asyncRegionManager.centerTerrainData ?: return null
+        val cam = scene.camera
+        val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+
+        tilePicker.worldOffsetX = currentRegionX * 64 * tileSize
+        tilePicker.worldOffsetZ = -currentRegionY * 64 * tileSize
+
+        tilePicker.screenToWorldRay(
+            input.mouse.x.toFloat(),
+            input.mouse.y.toFloat(),
+            window.width,
+            window.height,
+            cam,
+            getAspectRatio()
+        )
+
+        val picked = tilePicker.pickTile(
+            td.tiles,
+            currentRegionX,
+            currentRegionY,
+            currentPlane
+        ) ?: return null
+
+        return Pair(picked.localX, picked.localY)
+    }
+
+    /**
+     * Handle terrain painting. Called continuously while mouse button is held.
+     * Uses editorBrushSize radius, applies overlay or underlay based on editorPaintMode.
+     */
+    private fun handleTerrainPaint() {
+        val em = editManager ?: return
+        val center = getTileUnderCursor() ?: return
+        val radius = editorBrushSize[0] - 1  // brush size 1 = single tile (radius 0)
+        val id = editorOverlayUnderlayId.get()
+
+        for (dx in -radius..radius) {
+            for (dy in -radius..radius) {
+                val tx = center.first + dx
+                val ty = center.second + dy
+                if (tx < 0 || tx > 63 || ty < 0 || ty > 63) continue
+                val key = Pair(tx, ty)
+                if (key in editedTilesThisDrag) continue
+                editedTilesThisDrag.add(key)
+
+                if (editorPaintMode == 0) {
+                    // Overlay
+                    em.mutableData.setOverlayId(
+                        currentPlane, tx, ty,
+                        id,
+                        editorOverlayShape[0],
+                        editorOverlayRotation[0]
+                    )
+                } else {
+                    // Underlay
+                    em.mutableData.setUnderlayId(currentPlane, tx, ty, id)
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle height editing. Called continuously while mouse button is held.
+     * Applies raise, lower, or smooth based on editorHeightMode.
+     * No drag throttle -- continuous application for sculpting feel.
+     */
+    private fun handleHeightEdit() {
+        val em = editManager ?: return
+        val center = getTileUnderCursor() ?: return
+        val radius = editorHeightBrushRadius[0]
+        val strength = editorHeightStrength[0]
+
+        when (editorHeightMode) {
+            0, 1 -> {
+                // Raise (0) or Lower (1)
+                // RS heights are negative (higher terrain = more negative)
+                val sign = if (editorHeightMode == 0) -1 else 1
+                for (dx in -radius..radius) {
+                    for (dy in -radius..radius) {
+                        val tx = center.first + dx
+                        val ty = center.second + dy
+                        if (tx < 0 || tx > 63 || ty < 0 || ty > 63) continue
+
+                        // Distance-based falloff
+                        val dist = kotlin.math.sqrt((dx * dx + dy * dy).toFloat())
+                        val falloff = (1f - dist / (radius + 1)).coerceIn(0f, 1f)
+                        val delta = (strength * falloff * sign).toInt()
+
+                        val current = em.mutableData.tiles[currentPlane][tx][ty].height
+                        em.mutableData.setHeight(currentPlane, tx, ty, current + delta)
+                    }
+                }
+            }
+            2 -> {
+                // Smooth: average height in radius, move each tile halfway toward average
+                var sum = 0L
+                var count = 0
+                for (dx in -radius..radius) {
+                    for (dy in -radius..radius) {
+                        val tx = center.first + dx
+                        val ty = center.second + dy
+                        if (tx < 0 || tx > 63 || ty < 0 || ty > 63) continue
+                        sum += em.mutableData.tiles[currentPlane][tx][ty].height
+                        count++
+                    }
+                }
+                if (count == 0) return
+                val avg = (sum / count).toInt()
+
+                for (dx in -radius..radius) {
+                    for (dy in -radius..radius) {
+                        val tx = center.first + dx
+                        val ty = center.second + dy
+                        if (tx < 0 || tx > 63 || ty < 0 || ty > 63) continue
+                        val current = em.mutableData.tiles[currentPlane][tx][ty].height
+                        val newHeight = current + (avg - current) / 2
+                        em.mutableData.setHeight(currentPlane, tx, ty, newHeight)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Recompute Y positions for all center objects using current mutable tile heights.
+     * Called when terrain height edits occur so objects follow the terrain.
+     *
+     * The height sampling algorithm matches ObjectRenderer.createInstancesAllPlanes():
+     * for objects fitting within the region, it samples the center tiles of the
+     * bounding box rather than the full footprint corners.
+     */
+    private fun updateObjectHeights() {
+        val em = editManager ?: return
+        val heightScale = TerrainLoader.getHeightScale()
+        val baseWorldX = currentRegionX * 64
+        val baseWorldY = currentRegionY * 64
+
+        for (obj in asyncRegionManager.centerObjects) {
+            val mo = obj.mapObject
+            val def = obj.definition
+
+            // Convert to local tile coordinates
+            val localTileX = mo.x - baseWorldX
+            val localTileY = mo.y - baseWorldY
+            if (localTileX < 0 || localTileX >= 64 || localTileY < 0 || localTileY >= 64) continue
+
+            // Calculate object size (may be rotated)
+            val sizeX: Int
+            val sizeY: Int
+            if (mo.rotation == 1 || mo.rotation == 3) {
+                sizeX = def.sizeY
+                sizeY = def.sizeX
+            } else {
+                sizeX = def.sizeX
+                sizeY = def.sizeY
+            }
+
+            // Calculate center tile coordinates for height sampling (matching ObjectRenderer)
+            val xA: Int
+            val xB: Int
+            if (localTileX + sizeX <= 64) {
+                xA = localTileX + (sizeX shr 1)
+                xB = localTileX + ((sizeX + 1) shr 1)
+            } else {
+                xA = localTileX
+                xB = localTileX + 1
+            }
+
+            val yA: Int
+            val yB: Int
+            if (localTileY + sizeY <= 64) {
+                yA = localTileY + (sizeY shr 1)
+                yB = localTileY + ((sizeY + 1) shr 1)
+            } else {
+                yA = localTileY
+                yB = localTileY + 1
+            }
+
+            // Clamp to valid tile range
+            val x0 = xA.coerceIn(0, 63)
+            val x1 = xB.coerceIn(0, 63)
+            val y0 = yA.coerceIn(0, 63)
+            val y1 = yB.coerceIn(0, 63)
+
+            // Average height of 4 sample points (matching client algorithm)
+            val plane = mo.level
+            val h00 = em.mutableData.tiles[plane][x0][y0].height * heightScale
+            val h10 = em.mutableData.tiles[plane][x1][y0].height * heightScale
+            val h01 = em.mutableData.tiles[plane][x0][y1].height * heightScale
+            val h11 = em.mutableData.tiles[plane][x1][y1].height * heightScale
+            val newHeight = (h00 + h10 + h01 + h11) / 4f
+
+            // Update Y position (worldPosition is a mutable var Vector3f)
+            obj.worldPosition.y = newHeight
+
+            // Recompute terrain alignment for type 3 objects (hillChange tilt)
+            if (obj.groundContourType == 3) {
+                obj.terrainAlignment = TerrainAligner.calculateObjectTilt(
+                    localTileX = localTileX,
+                    localTileY = localTileY,
+                    sizeX = sizeX,
+                    sizeY = sizeY,
+                    groundContourType = obj.groundContourType,
+                    groundContourModifier = obj.groundContourModifier,
+                    averageHeight = newHeight,
+                    heightSampler = { tx, ty ->
+                        val cx = tx.coerceIn(0, 63)
+                        val cy = ty.coerceIn(0, 63)
+                        em.mutableData.tiles[plane][cx][cy].height * heightScale
+                    }
+                )
+            }
+        }
+    }
+
+    /**
+     * Search object definitions by name (case-insensitive substring) or exact ID.
+     * Returns at most [limit] results.
+     */
+    private fun searchObjectDefinitions(query: String, limit: Int = 50): List<ObjectDefinition> {
+        val defs = Cache.objects
+        val results = mutableListOf<ObjectDefinition>()
+
+        // Try exact ID match first
+        val idMatch = query.toIntOrNull()
+        if (idMatch != null && idMatch in defs.indices) {
+            val def = defs[idMatch]
+            if (def.name != "null") results.add(def)
+        }
+
+        // Name search
+        val lowerQuery = query.lowercase()
+        for (def in defs) {
+            if (results.size >= limit) break
+            if (def.name == "null" || def.id == -1) continue
+            if (def.name.lowercase().contains(lowerQuery) && def !in results) {
+                results.add(def)
+            }
+        }
+
+        return results
+    }
+
+    /**
+     * Handle object placement at the clicked tile.
+     */
+    private fun handleObjectPlace() {
+        if (selectedObjectId < 0) return
+        val tile = getTileUnderCursor() ?: return
+
+        val def = ObjectRenderer.getDefinition(selectedObjectId) ?: return
+        val shape = editorObjectShape[0]
+        val rotation = editorObjectRotation[0]
+
+        val worldX = currentRegionX * 64 + tile.first
+        val worldY = currentRegionY * 64 + tile.second
+
+        println("[MapEditor] Placed object '${def.name}' (id=$selectedObjectId) at ($worldX, $worldY) plane=$currentPlane shape=$shape rot=$rotation")
+
+        // TODO: Register object model with InstanceManager and add to scene
+        // For now, just update tile details to show it in the inspector
+        handleTilePick()
+    }
+
+    /**
+     * Start moving an object. Find the object at the clicked tile.
+     */
+    private fun handleObjectMoveStart() {
+        val tile = getTileUnderCursor() ?: return
+        val objects = asyncRegionManager.centerMapObjects
+
+        val worldX = currentRegionX * 64 + tile.first
+        val worldY = currentRegionY * 64 + tile.second
+
+        // Find an object at this tile
+        for (obj in objects) {
+            val def = ObjectRenderer.getDefinition(obj.id) ?: continue
+            val sizeX: Int
+            val sizeY: Int
+            if (obj.rotation == 1 || obj.rotation == 3) {
+                sizeX = def.sizeY
+                sizeY = def.sizeX
+            } else {
+                sizeX = def.sizeX
+                sizeY = def.sizeY
+            }
+
+            if (worldX in obj.x until (obj.x + sizeX) &&
+                worldY in obj.y until (obj.y + sizeY) &&
+                obj.level == currentPlane) {
+                // For now, just select the tile and print info
+                println("[MapEditor] Selected object '${def.name}' (id=${obj.id}) at (${obj.x}, ${obj.y}) for moving")
+                handleTilePick()
+                return
+            }
+        }
+    }
+
+    /**
+     * Drag the moving object to a new tile position.
+     */
+    private fun handleObjectMoveDrag() {
+        // TODO: Update object position in real-time as cursor moves
+    }
+
+    /**
+     * Finalize the object move.
+     */
+    private fun handleObjectMoveEnd() {
+        movingObject = null
     }
 
     /**
@@ -667,6 +1042,11 @@ class MapViewer(
         // When terrain edits occur, the merged atlas terrain becomes stale.
         if (editResult.hasChanges && asyncRegionManager.mergedOpaqueTerrain != null) {
             asyncRegionManager.invalidateMergedTerrain()
+        }
+
+        // Reposition objects when terrain heights change
+        if (editResult.heightsChanged) {
+            updateObjectHeights()
         }
     }
 
@@ -1411,8 +1791,10 @@ class MapViewer(
     private fun renderToolPalette() {
         ImGui.text("Tool")
 
+        val buttonWidth = (ImGui.getContentRegionAvailX() - ImGui.getStyle().itemSpacingX * 2f) / 3f
+
         for (tool in EditorTool.entries) {
-            if (tool.ordinal > 0) ImGui.sameLine()
+            if (tool.ordinal % 3 != 0) ImGui.sameLine()
 
             val isSelected = currentEditorTool == tool
             if (isSelected) {
@@ -1421,7 +1803,7 @@ class MapViewer(
             }
 
             val label = if (tool.wip) "${tool.label}*" else tool.label
-            if (ImGui.button(label)) {
+            if (ImGui.button(label, buttonWidth, 0f)) {
                 currentEditorTool = tool
             }
             if (tool.wip && ImGui.isItemHovered()) {
@@ -1886,37 +2268,77 @@ class MapViewer(
             ImGui.spacing()
 
             ImGui.setNextItemWidth(-1f)
-            ImGui.inputText("##obj_search", editorObjectSearchQuery)
+            if (ImGui.inputText("##obj_search", editorObjectSearchQuery)) {
+                val query = editorObjectSearchQuery.get().trim()
+                objectSearchResults = if (query.length >= 2) {
+                    searchObjectDefinitions(query)
+                } else {
+                    emptyList()
+                }
+            }
 
             ImGui.spacing()
 
-            // Scrollable placeholder list area
+            // Scrollable results list
             val listHeight = ImGui.getContentRegionAvailY().coerceAtLeast(100f).coerceAtMost(300f)
             if (ImGui.beginChild("obj_search_results", 0f, listHeight, true)) {
                 val query = editorObjectSearchQuery.get().trim()
-                if (query.isEmpty()) {
-                    ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "Type a name or ID to search...")
+                if (query.length < 2) {
+                    ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "Type 2+ characters to search...")
+                } else if (objectSearchResults.isEmpty()) {
+                    ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "No results for \"%s\"".format(query))
                 } else {
-                    ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "Object search not yet implemented")
-                    ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "Query: \"%s\"".format(query))
+                    for (def in objectSearchResults) {
+                        val isSelected = selectedObjectId == def.id
+                        val label = "%d: %s".format(def.id, def.name)
+                        if (ImGui.selectable(label, isSelected)) {
+                            selectedObjectId = def.id
+                        }
+                        if (ImGui.isItemHovered()) {
+                            ImGui.setTooltip("ID: %d\nSize: %dx%d".format(def.id, def.sizeX, def.sizeY))
+                        }
+                    }
                 }
             }
             ImGui.endChild()
 
-            ImGui.spacing()
-            ImGui.beginDisabled()
-            ImGui.button("Place Selected Object")
-            ImGui.endDisabled()
+            // Shape and rotation controls
+            if (selectedObjectId >= 0) {
+                ImGui.spacing()
+                ImGui.separator()
+                ImGui.spacing()
+                val selDef = ObjectRenderer.getDefinition(selectedObjectId)
+                if (selDef != null) {
+                    ImGui.text("Selected: %s (ID: %d)".format(selDef.name, selDef.id))
+                }
+                ImGui.setNextItemWidth(120f)
+                ImGui.sliderInt("Shape##obj", editorObjectShape, 0, 22)
+                ImGui.setNextItemWidth(120f)
+                ImGui.sliderInt("Rotation##obj", editorObjectRotation, 0, 3)
+                ImGui.spacing()
+                ImGui.textColored(0.3f, 0.9f, 0.3f, 1f, "Left-click terrain to place")
+            }
         }
     }
 
     /**
-     * OBJECT_MOVE tool content: placeholder for moving objects.
+     * OBJECT_MOVE tool content: click an object to identify it, drag to move (WIP).
      */
     private fun renderEditorObjectMoveTool() {
         ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click an object to select it, then drag to move.")
         ImGui.spacing()
-        ImGui.textColored(1f, 0.8f, 0.3f, 1f, "This tool is not yet functional.")
+
+        val moving = movingObject
+        if (moving != null) {
+            ImGui.textColored(0.3f, 0.9f, 0.3f, 1f, "Moving: ${moving.instance}")
+            ImGui.spacing()
+            if (ImGui.button("Cancel Move")) {
+                movingObject = null
+            }
+        } else {
+            ImGui.textColored(1f, 0.8f, 0.3f, 1f, "Object dragging is a work in progress.")
+            ImGui.textColored(1f, 0.8f, 0.3f, 1f, "Click an object to identify it.")
+        }
     }
 
     /**
@@ -1924,7 +2346,7 @@ class MapViewer(
      */
     private fun renderEditorTerrainPaintTool() {
         if (ImGui.collapsingHeader("Terrain Painter", ImGuiTreeNodeFlags.DefaultOpen)) {
-            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click to paint terrain")
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click or drag to paint terrain")
             ImGui.spacing()
 
             // Paint mode: Overlay / Underlay
@@ -1944,6 +2366,14 @@ class MapViewer(
             ImGui.setNextItemWidth(120f)
             ImGui.inputInt(idLabel, editorOverlayUnderlayId)
 
+            // Overlay-specific: shape and rotation
+            if (editorPaintMode == 0) {
+                ImGui.setNextItemWidth(120f)
+                ImGui.sliderInt("Shape", editorOverlayShape, 0, 11)
+                ImGui.setNextItemWidth(120f)
+                ImGui.sliderInt("Rotation", editorOverlayRotation, 0, 3)
+            }
+
             ImGui.spacing()
 
             // Brush size slider
@@ -1951,9 +2381,7 @@ class MapViewer(
             ImGui.sliderInt("Brush Size", editorBrushSize, 1, 5)
 
             ImGui.spacing()
-            ImGui.beginDisabled()
-            ImGui.button("Apply Paint")
-            ImGui.endDisabled()
+            ImGui.textColored(0.3f, 0.9f, 0.3f, 1f, "Left-click or drag to paint")
         }
     }
 
@@ -1990,9 +2418,7 @@ class MapViewer(
             }
 
             ImGui.spacing()
-            ImGui.beginDisabled()
-            ImGui.button("Apply Height Change")
-            ImGui.endDisabled()
+            ImGui.textColored(0.3f, 0.9f, 0.3f, 1f, "Left-click and drag to edit height")
         }
     }
 
@@ -2001,34 +2427,56 @@ class MapViewer(
      */
     private fun renderEditorFlagEditTool() {
         if (ImGui.collapsingHeader("Flag Editor", ImGuiTreeNodeFlags.DefaultOpen)) {
-            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click tile to toggle flags")
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click tile to select, toggle flags below")
             ImGui.spacing()
 
-            val details = tilePicker.selectedTileDetails
-            val tileData = details?.tileData
+            val tile = tilePicker.selectedTile
+            val em = editManager
 
-            if (tileData == null) {
+            if (tile == null) {
                 ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "Select a tile first (left-click)")
+            } else if (em == null) {
+                ImGui.textColored(1f, 0.4f, 0.4f, 1f, "No edit manager available")
             } else {
-                ImGui.text("Tile (%d, %d) - Current flags: 0x%02X".format(
-                    details.tile.localX, details.tile.localY, tileData.flags
-                ))
+                val x = tile.localX
+                val y = tile.localY
+                val currentFlags = em.mutableData.tiles[currentPlane][x][y].flags
+
+                ImGui.text("Tile (%d, %d) - Flags: 0x%02X".format(x, y, currentFlags))
                 ImGui.spacing()
 
-                // Editable flag checkboxes (placeholder - changes are not persisted)
-                ImGui.beginDisabled()
-                val blocksWalk = ImBoolean(tileData.flags and 0x1 != 0)
-                ImGui.checkbox("Blocks Walk (0x1)##flag_edit", blocksWalk)
-                val bridgeFlag = ImBoolean(tileData.flags and 0x2 != 0)
-                ImGui.checkbox("Bridge (0x2)##flag_edit", bridgeFlag)
-                val invisibleFlag = ImBoolean(tileData.flags and 0x4 != 0)
-                ImGui.checkbox("Invisible (0x4)##flag_edit", invisibleFlag)
-                val forcePlane0Flag = ImBoolean(tileData.flags and 0x8 != 0)
-                ImGui.checkbox("Force Plane 0 (0x8)##flag_edit", forcePlane0Flag)
-                ImGui.endDisabled()
+                // Flag checkboxes -- each toggles a single bit
+                var newFlags = currentFlags
 
-                ImGui.spacing()
-                ImGui.textColored(1f, 0.8f, 0.3f, 1f, "Flag editing not yet functional")
+                val blocksWalk = ImBoolean(currentFlags and 0x1 != 0)
+                if (ImGui.checkbox("Blocks Walk (0x1)##flag_edit", blocksWalk)) {
+                    newFlags = if (blocksWalk.get()) newFlags or 0x1 else newFlags and 0x1.inv()
+                }
+                val bridge = ImBoolean(currentFlags and 0x2 != 0)
+                if (ImGui.checkbox("Bridge (0x2)##flag_edit", bridge)) {
+                    newFlags = if (bridge.get()) newFlags or 0x2 else newFlags and 0x2.inv()
+                }
+                val invisible = ImBoolean(currentFlags and 0x4 != 0)
+                if (ImGui.checkbox("Invisible (0x4)##flag_edit", invisible)) {
+                    newFlags = if (invisible.get()) newFlags or 0x4 else newFlags and 0x4.inv()
+                }
+                val forcePlane0 = ImBoolean(currentFlags and 0x8 != 0)
+                if (ImGui.checkbox("Force Plane 0 (0x8)##flag_edit", forcePlane0)) {
+                    newFlags = if (forcePlane0.get()) newFlags or 0x8 else newFlags and 0x8.inv()
+                }
+
+                // Apply changes if flags were modified
+                if (newFlags != currentFlags) {
+                    em.mutableData.setFlags(currentPlane, x, y, newFlags)
+                    // Refresh tile details so the inspector shows updated data
+                    tilePicker.updateTileDetails(
+                        em.mutableData.toTileArray(),
+                        cache,
+                        asyncRegionManager.centerMapObjects,
+                        currentRegionX * 64,
+                        currentRegionY * 64
+                    )
+                }
             }
         }
     }
@@ -2255,10 +2703,10 @@ class MapViewer(
      */
     private enum class EditorTool(val label: String, val wip: Boolean = true) {
         SELECT("Select", wip = false),
-        OBJECT_PLACE("Place Object"),
-        OBJECT_MOVE("Move Object"),
-        TERRAIN_PAINT("Paint Terrain"),
-        HEIGHT_EDIT("Edit Height"),
-        FLAG_EDIT("Edit Flags")
+        OBJECT_PLACE("Place Object", wip = false),
+        OBJECT_MOVE("Move Object", wip = false),
+        TERRAIN_PAINT("Paint Terrain", wip = false),
+        HEIGHT_EDIT("Edit Height", wip = false),
+        FLAG_EDIT("Edit Flags", wip = false)
     }
 }

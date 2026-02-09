@@ -146,7 +146,7 @@ class TerrainEditManager(
         chunkedTerrain.rebuildChunks(dirtyChunks, regionSnapshot, blendedColors, normalsX, normalsY, normalsZ, neighbors)
 
         // 4. Collect result and reset dirty state
-        val result = EditResult(dirtyChunks)
+        val result = EditResult(dirtyChunks, heightsChanged = mutableData.heightsDirty)
         mutableData.clearDirty()
 
         // 5. Rebuild merged meshes now that editing is done
@@ -390,7 +390,8 @@ class TerrainEditManager(
  * modified terrain).
  */
 data class EditResult(
-    val rebuiltChunks: Set<ChunkCoord>
+    val rebuiltChunks: Set<ChunkCoord>,
+    val heightsChanged: Boolean = false
 ) {
     /** True if any chunks were rebuilt this frame. */
     val hasChanges: Boolean get() = rebuiltChunks.isNotEmpty()
