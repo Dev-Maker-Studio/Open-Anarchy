@@ -851,14 +851,15 @@ object TerrainLoader {
 
     fun loadRegion(cache: Cache, regionX: Int, regionY: Int): RegionData? {
         val regionId = (regionX shl 8) or regionY
-        val result = regionCache.computeIfAbsent(regionId) {
-            val data = decodeRegion(cache, regionX, regionY)
-            if (data != null) CacheResult.Found(data) else CacheResult.NotFound
-        }
-        return when (result) {
-            is CacheResult.Found -> result.value
-            is CacheResult.NotFound -> null
-        }
+        // Only cache successful results. Failed decodes (null) are not cached so they
+        // can be retried — transient failures from concurrent cache access would otherwise
+        // be permanently cached as NotFound, breaking subsequent loads of valid regions.
+        val cached = regionCache[regionId]
+        if (cached != null) return (cached as? CacheResult.Found)?.value
+
+        val data = decodeRegion(cache, regionX, regionY) ?: return null
+        regionCache[regionId] = CacheResult.Found(data)
+        return data
     }
 
     /**

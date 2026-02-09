@@ -7,6 +7,7 @@ import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
 import org.lwjgl.opengl.GL30.glGenerateMipmap
 import org.lwjgl.system.MemoryUtil
+import java.util.concurrent.ConcurrentHashMap
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
@@ -21,8 +22,8 @@ import world.gregs.voidps.cache.definition.decoder.MaterialDecoder
  */
 object TextureLoader {
     private val textureCache = mutableMapOf<Int, Int>() // textureId -> GL texture ID
-    private val spriteDataCache = mutableMapOf<Int, SpriteData?>() // spriteId -> SpriteData
-    private val textureTypeCache = mutableMapOf<Int, TextureType?>() // textureId -> TextureType
+    private val spriteDataCache = ConcurrentHashMap<Int, SpriteData?>() // spriteId -> SpriteData
+    private val textureTypeCache = ConcurrentHashMap<Int, TextureType?>() // textureId -> TextureType
     private var defaultTextureId: Int = 0
     private var cacheRef: Cache? = null
 
@@ -236,7 +237,7 @@ object TextureLoader {
     fun getTexturePixelsForMaterial(cache: Cache, textureId: Int): Triple<IntArray, Int, Int>? {
         if (textureId < 0) return null
         // Guard against circular references at the top level too
-        if (textureId in generatingSet) return null
+        if (textureId in generatingSet.get()) return null
 
         val textureType = loadTextureType(cache, textureId) ?: return null
 
@@ -244,7 +245,7 @@ object TextureLoader {
         val textureSize = getTextureSize(material)
         val opaque = isMaterialOpaque(material)
 
-        generatingSet.add(textureId)
+        generatingSet.get().add(textureId)
         TextureRaster.generationStartNanos = System.nanoTime()
         val pixels = try {
             if (opaque) {
@@ -269,7 +270,7 @@ object TextureLoader {
                 )
             }
         } finally {
-            generatingSet.remove(textureId)
+            generatingSet.get().remove(textureId)
         }
 
         // Apply same alpha post-processing as getTextureForMaterial
@@ -314,18 +315,21 @@ object TextureLoader {
      * brightness=1.0. This is separate from getTextureForMaterial to avoid circular
      * GL texture creation.
      */
-    private val pixelCache = mutableMapOf<Int, IntArray?>()
-    private val generatingSet = mutableSetOf<Int>()
+    private val pixelCache = ConcurrentHashMap<Int, IntArray?>()
+    private val generatingSet: ThreadLocal<MutableSet<Int>> = ThreadLocal.withInitial { mutableSetOf() }
 
     private fun generateTexturePixels(cache: Cache, textureId: Int, @Suppress("UNUSED_PARAMETER") width: Int, @Suppress("UNUSED_PARAMETER") height: Int): IntArray? {
-        // Break circular texture references (A→B→A) by tracking in-progress generation
-        if (textureId in generatingSet) return null
+        // Break circular texture references (A->B->A) by tracking in-progress generation
+        if (textureId in generatingSet.get()) return null
 
-        // Use a simple cache to avoid redundant generation
-        return pixelCache.getOrPut(textureId) {
-            generatingSet.add(textureId)
+        // Check cache first (fast path avoids computeIfAbsent overhead)
+        pixelCache[textureId]?.let { return it }
+
+        // Use computeIfAbsent for atomic insertion (avoids redundant concurrent generation)
+        return pixelCache.computeIfAbsent(textureId) {
+            generatingSet.get().add(textureId)
             try {
-                val textureType = loadTextureType(cache, textureId) ?: return@getOrPut null
+                val textureType = loadTextureType(cache, textureId) ?: return@computeIfAbsent null
 
                 // In the RS client, TextureOpTexture.createImageCache() loads nested textures
                 // at the NESTED material's own size (based on isSmall), NOT the parent's.
@@ -346,7 +350,7 @@ object TextureLoader {
                     brightness = 1.0
                 )
             } finally {
-                generatingSet.remove(textureId)
+                generatingSet.get().remove(textureId)
             }
         }
     }
@@ -355,9 +359,9 @@ object TextureLoader {
      * Load a TextureType from the TEXTURES index.
      */
     private fun loadTextureType(cache: Cache, textureId: Int): TextureType? {
-        return textureTypeCache.getOrPut(textureId) {
-            val data = cache.data(Index.TEXTURES, textureId) ?: return@getOrPut null
-            if (data.isEmpty()) return@getOrPut null
+        return textureTypeCache.computeIfAbsent(textureId) {
+            val data = cache.data(Index.TEXTURES, textureId) ?: return@computeIfAbsent null
+            if (data.isEmpty()) return@computeIfAbsent null
             try {
                 TextureType(data)
             } catch (e: Exception) {
@@ -371,8 +375,8 @@ object TextureLoader {
      * Load sprite data for use by TextureOpSprite operations.
      */
     private fun loadSpriteData(cache: Cache, spriteId: Int): SpriteData? {
-        return spriteDataCache.getOrPut(spriteId) {
-            val data = cache.data(Index.SPRITES, spriteId) ?: return@getOrPut null
+        return spriteDataCache.computeIfAbsent(spriteId) {
+            val data = cache.data(Index.SPRITES, spriteId) ?: return@computeIfAbsent null
             decodeSpriteToData(data, 0)
         }
     }
@@ -682,6 +686,7 @@ object TextureLoader {
         spriteDataCache.clear()
         textureTypeCache.clear()
         pixelCache.clear()
+        generatingSet.get().clear()
         if (defaultTextureId != 0) {
             glDeleteTextures(defaultTextureId)
             defaultTextureId = 0

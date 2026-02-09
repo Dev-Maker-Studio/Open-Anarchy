@@ -60,6 +60,9 @@ class DebugPanel {
             // Performance Metrics section (collapsible, open by default)
             renderPerformanceMetrics()
 
+            // Show async loading progress if regions are loading
+            renderAsyncLoadingProgress()
+
             ImGui.separator()
 
             if (ImGui.checkbox("Wireframe", wireframeMode)) {
@@ -147,6 +150,30 @@ class DebugPanel {
             ImGui.text("  Usage:    %.0f%%".format(m.objectAtlasUtilization))
             ImGui.unindent()
         }
+    }
+
+    /**
+     * Show async loading progress when regions are loading in background.
+     * Reads from [RenderMetrics] snapshot values.
+     */
+    private fun renderAsyncLoadingProgress() {
+        val m = RenderMetrics
+        if (m.regionsLoading <= 0 && m.pendingGpuTasks <= 0) return
+
+        ImGui.spacing()
+        ImGui.pushStyleColor(ImGuiCol.Text, 1f, 0.8f, 0.3f, 1f)
+        ImGui.text("Loading...")
+        ImGui.popStyleColor()
+
+        ImGui.indent()
+        ImGui.text("Regions: %d ready, %d loading".format(m.regionsReady, m.regionsLoading))
+        if (m.pendingGpuTasks > 0) {
+            ImGui.text("GPU Tasks: %d pending".format(m.pendingGpuTasks))
+        }
+        if (m.gpuUploadTasksProcessed > 0) {
+            ImGui.text("GPU Drain: %d tasks, %.1f ms".format(m.gpuUploadTasksProcessed, m.gpuUploadDrainTimeMs))
+        }
+        ImGui.unindent()
     }
 
     fun toggleVisibility() {

@@ -20,6 +20,8 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
     var scene = Scene()
         protected set
 
+    protected var isInitialLoading = false
+
     private var lastFrameTime: Long = 0
     var deltaTime: Float = 0f
         private set
@@ -94,11 +96,28 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
                 window.resized = false
             }
 
+            // Drain GPU upload queue with adaptive budget
+            val gpuBudgetNanos = if (isInitialLoading) {
+                12_000_000L // 12ms during loading screen (no scene rendering competing)
+            } else {
+                // Adaptive: more budget when frames are fast, less when tight
+                when {
+                    deltaTime < 0.010f -> 6_000_000L   // <10ms frame: 6ms budget
+                    deltaTime < 0.014f -> 4_000_000L   // 10-14ms: 4ms budget
+                    else -> 2_000_000L                  // >14ms: 2ms budget
+                }
+            }
+            onDrainGpuUploads(gpuBudgetNanos)
+
             handleInput()
             onUpdate(deltaTime)
 
             renderSystem.clear()
-            onRender()
+            if (isInitialLoading) {
+                onRenderLoadingScreen()
+            } else {
+                onRender()
+            }
 
             if (logFrame) {
                 println("[ENGINE] Frame $loopFrameCount: onRender() returned, calling window.update()")
@@ -133,6 +152,8 @@ abstract class Engine(config: WindowConfig = WindowConfig()) {
     protected open fun onInit() {}
     protected open fun onUpdate(deltaTime: Float) {}
     protected open fun onRender() {}
+    protected open fun onRenderLoadingScreen() {}
+    protected open fun onDrainGpuUploads(budgetNanos: Long) {}
     protected open fun onInput() {}
     protected open fun onCleanup() {}
 
