@@ -255,6 +255,7 @@ class MapViewer(
         scene.camera.pitch = -45f
         scene.camera.yaw = -90f
         scene.camera.moveSpeed = 20f
+        scene.camera.nearPlane = 1.0f
         scene.camera.farPlane = 4000f
 
         // Enable depth testing and multisampling
@@ -736,8 +737,8 @@ class MapViewer(
             }
 
             // Draw 2: Alpha terrain (with GL alpha blending state)
+            // Depth func is already GL_LEQUAL globally, no need to switch.
             if (alphaAtlasMesh != null) {
-                glDepthFunc(GL_LEQUAL)
                 glDepthMask(false)
                 glEnable(GL_BLEND)
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -751,7 +752,6 @@ class MapViewer(
 
                 glDisable(GL_BLEND)
                 glDepthMask(true)
-                glDepthFunc(GL_LESS)
             }
 
             // Unbind atlas texture
@@ -795,7 +795,7 @@ class MapViewer(
                 TextureLoader.unbindTexture()
 
                 // Pass 3: Alpha terrain (multi-pass alpha blending)
-                glDepthFunc(GL_LEQUAL)
+                // Depth func is already GL_LEQUAL globally, no need to switch.
                 glDepthMask(false)
                 glEnable(GL_BLEND)
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -817,7 +817,6 @@ class MapViewer(
                 TextureLoader.unbindTexture()
                 glDisable(GL_BLEND)
                 glDepthMask(true)
-                glDepthFunc(GL_LESS)
 
                 renderSystem.enableCullFace()
             }
@@ -961,6 +960,13 @@ class MapViewer(
         // IMPORTANT: Disable face culling for RS models which often have two-sided faces
         renderSystem.disableCullFace()
 
+        // Enable polygon offset to prevent z-fighting between objects and terrain.
+        // Many scenery objects (ground decorations, walls, floor decals) have geometry
+        // that sits exactly coplanar with terrain surfaces. The small depth bias nudges
+        // object fragments slightly closer to the camera so they consistently win the
+        // depth test against terrain fragments at the same depth.
+        renderSystem.enablePolygonOffset(-1.0f, -1.0f)
+
         if (useIndirect) {
             // === Multi-Draw Indirect rendering: 1-2 draw calls for ALL center objects ===
             val indColorShader = indirectColorShader!!
@@ -1024,6 +1030,9 @@ class MapViewer(
 
         // Render static batched context region objects
         renderStaticBatchedObjects()
+
+        // Disable polygon offset after all object rendering is complete
+        renderSystem.disablePolygonOffset()
 
         if (logFrame) {
             println("[RENDER] Frame $frameNumber:     static batched objects done")
@@ -2390,6 +2399,7 @@ class MapViewer(
         scene.camera.setPosition(worldCenterX, 50f, worldCenterZ + 80f)
         scene.camera.pitch = -35f
         scene.camera.yaw = 0f
+        scene.camera.nearPlane = 1.0f
         scene.camera.farPlane = 4000f
     }
 
