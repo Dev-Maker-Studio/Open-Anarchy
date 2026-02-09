@@ -68,6 +68,31 @@ class RenderSystem(private val window: Window) {
         glDisable(GL_CULL_FACE)
     }
 
+    /**
+     * Enable polygon offset to prevent z-fighting between coplanar geometry.
+     * Applies a depth bias so that subsequently drawn geometry is nudged slightly
+     * closer to the camera, preventing it from fighting with previously drawn
+     * geometry at the same depth.
+     *
+     * Typical usage: enable before rendering objects that sit on terrain (ground
+     * decorations, walls on floors, decals), disable after.
+     *
+     * @param factor Scales the maximum depth slope of the polygon (use -1.0f)
+     * @param units Adds a constant depth offset (use -1.0f)
+     */
+    fun enablePolygonOffset(factor: Float = -1.0f, units: Float = -1.0f) {
+        glEnable(GL_POLYGON_OFFSET_FILL)
+        glPolygonOffset(factor, units)
+    }
+
+    /**
+     * Disable polygon offset and reset bias to zero.
+     */
+    fun disablePolygonOffset() {
+        glDisable(GL_POLYGON_OFFSET_FILL)
+        glPolygonOffset(0f, 0f)
+    }
+
     fun setWireframe(enabled: Boolean) {
         wireframeMode = enabled
         glPolygonMode(GL_FRONT_AND_BACK, if (enabled) GL_LINE else GL_FILL)

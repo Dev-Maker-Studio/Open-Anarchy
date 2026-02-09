@@ -18,7 +18,7 @@ class Camera(
     private val worldUp = Vector3f(0f, 1f, 0f)
 
     var fov: Float = 45f
-    var nearPlane: Float = 0.1f
+    var nearPlane: Float = 1.0f
     var farPlane: Float = 1000f
     var moveSpeed: Float = 5.0f
     var mouseSensitivity: Float = 0.1f

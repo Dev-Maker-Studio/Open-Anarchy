@@ -90,6 +90,12 @@ class Window(private val config: WindowConfig = WindowConfig()) {
         GL.createCapabilities()
 
         glEnable(GL_DEPTH_TEST)
+        // Use GL_LEQUAL to reduce z-fighting between coplanar geometry.
+        // GL_LEQUAL allows fragments at equal depth to pass, which is needed for
+        // scenery objects that sit exactly on terrain surfaces (ground decorations,
+        // walls on floors). With GL_LESS, these fragments fight because floating
+        // point imprecision causes near-equal depths to alternate winning.
+        glDepthFunc(GL_LEQUAL)
         // Culling disabled - RS models have inconsistent winding
         // glEnable(GL_CULL_FACE)
         // glCullFace(GL_BACK)
