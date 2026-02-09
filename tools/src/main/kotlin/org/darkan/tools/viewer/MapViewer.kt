@@ -14,6 +14,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.darkan.core.map.RegionLoader
 import org.darkan.core.model.ObjectShape
+import world.gregs.voidps.cache.definition.data.MapObject
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
 import org.darkan.tools.cache.map.ObjectInstance
 import org.darkan.tools.cache.map.ObjectRenderer
@@ -211,6 +212,15 @@ class MapViewer(
         val originalY: Int
     )
     private var movingObject: MovingObject? = null
+    private var moveOriginMesh: Mesh? = null
+
+    // Placed objects (user-placed via Object Place tool)
+    private val placedObjects = mutableListOf<ObjectInstance>()
+
+    // Brush preview state
+    private var brushPreviewMesh: Mesh? = null
+    private var lastBrushCenter: Pair<Int, Int>? = null
+    private lateinit var brushPreviewShader: ShaderProgram
 
     override fun onInit() {
         // Initialize texture loader
@@ -246,6 +256,14 @@ class MapViewer(
         asyncRegionManager.terrainAtlas = terrainAtlas
 
         loadingScreen = LoadingScreen()
+
+        // Load brush preview shader (RGBA vertex colors for semi-transparent overlay)
+        val brushVertSrc = loadShaderSource("/shaders/brush_preview.vert")
+        val brushFragSrc = loadShaderSource("/shaders/brush_preview.frag")
+        brushPreviewShader = ShaderProgram.createWithUniforms(
+            brushVertSrc, brushFragSrc,
+            "model", "view", "projection"
+        )
 
         // Setup the scene camera (will be repositioned when region loads)
         scene.camera.setPosition(0f, 50f, 50f)
@@ -448,110 +466,149 @@ class MapViewer(
     }
 
     override fun onInput() {
-        if (imGui.wantCaptureKeyboard() || imGui.wantCaptureMouse()) {
-            return
-        }
+        // Section 1: Keyboard input -- only gated by wantCaptureKeyboard
+        // Camera movement, toggles, plane nav, and escape-to-cancel still work
+        // even when the mouse is hovering over an ImGui panel.
+        if (!imGui.wantCaptureKeyboard()) {
+            val cam = scene.camera
 
-        val cam = scene.camera
+            // Speed multiplier
+            val speedMult = if (input.keyboard.isKeyDown(GLFW_KEY_LEFT_CONTROL)) 4f else 1f
+            cam.moveSpeed = 20f * speedMult
 
-        // Speed multiplier
-        val speedMult = if (input.keyboard.isKeyDown(GLFW_KEY_LEFT_CONTROL)) 4f else 1f
-        cam.moveSpeed = 20f * speedMult
+            // Camera movement
+            if (input.keyboard.isKeyDown(GLFW_KEY_W)) cam.moveForward(deltaTime)
+            if (input.keyboard.isKeyDown(GLFW_KEY_S)) cam.moveBackward(deltaTime)
+            if (input.keyboard.isKeyDown(GLFW_KEY_A)) cam.moveLeft(deltaTime)
+            if (input.keyboard.isKeyDown(GLFW_KEY_D)) cam.moveRight(deltaTime)
+            if (input.keyboard.isKeyDown(GLFW_KEY_SPACE)) cam.moveUp(deltaTime)
+            if (input.keyboard.isKeyDown(GLFW_KEY_LEFT_SHIFT)) cam.moveDown(deltaTime)
 
-        // Camera movement
-        if (input.keyboard.isKeyDown(GLFW_KEY_W)) cam.moveForward(deltaTime)
-        if (input.keyboard.isKeyDown(GLFW_KEY_S)) cam.moveBackward(deltaTime)
-        if (input.keyboard.isKeyDown(GLFW_KEY_A)) cam.moveLeft(deltaTime)
-        if (input.keyboard.isKeyDown(GLFW_KEY_D)) cam.moveRight(deltaTime)
-        if (input.keyboard.isKeyDown(GLFW_KEY_SPACE)) cam.moveUp(deltaTime)
-        if (input.keyboard.isKeyDown(GLFW_KEY_LEFT_SHIFT)) cam.moveDown(deltaTime)
+            // Toggle keys
+            if (input.keyboard.isKeyPressed(GLFW_KEY_F1)) debugPanel.toggleVisibility()
+            if (input.keyboard.isKeyPressed(GLFW_KEY_F3)) renderSystem.toggleWireframe()
+            if (input.keyboard.isKeyPressed(GLFW_KEY_T)) showTerrain = !showTerrain
+            if (input.keyboard.isKeyPressed(GLFW_KEY_R)) {
+                showRoofs = !showRoofs
+                asyncRegionManager.showRoofs = showRoofs
+                reloadRegion()
+            }
 
-        // Camera rotation
-        if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) {
-            cam.rotate(input.mouse.deltaX.toFloat(), input.mouse.deltaY.toFloat())
-        }
+            // Plane selection (1-4 keys)
+            if (input.keyboard.isKeyPressed(GLFW_KEY_1)) setPlane(0)
+            if (input.keyboard.isKeyPressed(GLFW_KEY_2)) setPlane(1)
+            if (input.keyboard.isKeyPressed(GLFW_KEY_3)) setPlane(2)
+            if (input.keyboard.isKeyPressed(GLFW_KEY_4)) setPlane(3)
 
-        // Scroll zoom
-        if (input.mouse.scrollY != 0.0) {
-            cam.zoom(input.mouse.scrollY.toFloat())
-        }
+            // Region navigation (arrow keys)
+            if (input.keyboard.isKeyPressed(GLFW_KEY_LEFT)) navigateRegion(-1, 0)
+            if (input.keyboard.isKeyPressed(GLFW_KEY_RIGHT)) navigateRegion(1, 0)
+            if (input.keyboard.isKeyPressed(GLFW_KEY_UP)) navigateRegion(0, 1)
+            if (input.keyboard.isKeyPressed(GLFW_KEY_DOWN)) navigateRegion(0, -1)
 
-        // Toggle keys
-        if (input.keyboard.isKeyPressed(GLFW_KEY_F1)) debugPanel.toggleVisibility()
-        if (input.keyboard.isKeyPressed(GLFW_KEY_F3)) renderSystem.toggleWireframe()
-        if (input.keyboard.isKeyPressed(GLFW_KEY_T)) showTerrain = !showTerrain
-        if (input.keyboard.isKeyPressed(GLFW_KEY_R)) {
-            showRoofs = !showRoofs
-            asyncRegionManager.showRoofs = showRoofs
-            reloadRegion()
-        }
+            // Plane navigation (PgUp/PgDn)
+            if (input.keyboard.isKeyPressed(GLFW_KEY_PAGE_UP)) {
+                if (currentPlane < 3) setPlane(currentPlane + 1)
+            }
+            if (input.keyboard.isKeyPressed(GLFW_KEY_PAGE_DOWN)) {
+                if (currentPlane > 0) setPlane(currentPlane - 1)
+            }
 
-        // Plane selection (1-4 keys)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_1)) setPlane(0)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_2)) setPlane(1)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_3)) setPlane(2)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_4)) setPlane(3)
+            // Toggle map editor panel (F5)
+            if (input.keyboard.isKeyPressed(GLFW_KEY_F5)) {
+                showEditorPanel = !showEditorPanel
+                if (showEditorPanel) {
+                    editorPanelFirstFrame = true
+                }
+            }
 
-        // Region navigation (arrow keys)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_LEFT)) navigateRegion(-1, 0)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_RIGHT)) navigateRegion(1, 0)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_UP)) navigateRegion(0, 1)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_DOWN)) navigateRegion(0, -1)
-
-        // Plane navigation (PgUp/PgDn)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_PAGE_UP)) {
-            if (currentPlane < 3) setPlane(currentPlane + 1)
-        }
-        if (input.keyboard.isKeyPressed(GLFW_KEY_PAGE_DOWN)) {
-            if (currentPlane > 0) setPlane(currentPlane - 1)
-        }
-
-        // Toggle map editor panel (F5)
-        if (input.keyboard.isKeyPressed(GLFW_KEY_F5)) {
-            showEditorPanel = !showEditorPanel
-            if (showEditorPanel) {
-                editorPanelFirstFrame = true
+            // Escape to cancel object move
+            if (input.keyboard.isKeyPressed(GLFW_KEY_ESCAPE) && movingObject != null) {
+                val moving = movingObject!!
+                // Restore original world position
+                val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+                val origWorldX = currentRegionX * 64 + moving.originalX
+                val origWorldY = currentRegionY * 64 + moving.originalY
+                val def = moving.instance.definition
+                val mo = moving.instance.mapObject
+                val sizeX: Int
+                val sizeY: Int
+                if (mo.rotation == 1 || mo.rotation == 3) {
+                    sizeX = def.sizeY
+                    sizeY = def.sizeX
+                } else {
+                    sizeX = def.sizeX
+                    sizeY = def.sizeY
+                }
+                val basePosX = origWorldX * tileSize
+                val basePosZ = -origWorldY * tileSize
+                val posOffsetX = sizeX * tileSize * 0.5f
+                val posOffsetZ = -sizeY * tileSize * 0.5f
+                moving.instance.worldPosition.x = basePosX + posOffsetX
+                moving.instance.worldPosition.z = basePosZ + posOffsetZ
+                // Restore Y from terrain heights
+                recalcObjectHeight(moving.instance)
+                movingObject = null
+                moveOriginMesh?.cleanup()
+                moveOriginMesh = null
             }
         }
 
-        // Tool-based left-click dispatch
-        when (currentEditorTool) {
-            EditorTool.SELECT -> {
-                if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-                    handleTilePick()
-                }
+        // Section 2: Camera mouse input -- gated by wantCaptureMouse
+        if (!imGui.wantCaptureMouse()) {
+            val cam = scene.camera
+
+            // Camera rotation
+            if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_RIGHT)) {
+                cam.rotate(input.mouse.deltaX.toFloat(), input.mouse.deltaY.toFloat())
             }
-            EditorTool.TERRAIN_PAINT -> {
-                if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {
-                    handleTerrainPaint()
-                }
-                if (input.mouse.isButtonReleased(GLFW_MOUSE_BUTTON_LEFT)) {
-                    editedTilesThisDrag.clear()
-                }
+
+            // Scroll zoom
+            if (input.mouse.scrollY != 0.0) {
+                cam.zoom(input.mouse.scrollY.toFloat())
             }
-            EditorTool.HEIGHT_EDIT -> {
-                if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {
-                    handleHeightEdit()
+        }
+
+        // Section 3: Tool left-click dispatch -- gated by wantCaptureMouse
+        if (!imGui.wantCaptureMouse()) {
+            when (currentEditorTool) {
+                EditorTool.SELECT -> {
+                    if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+                        handleTilePick()
+                    }
                 }
-            }
-            EditorTool.FLAG_EDIT -> {
-                if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-                    handleTilePick()
+                EditorTool.TERRAIN_PAINT -> {
+                    if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {
+                        handleTerrainPaint()
+                    }
+                    if (input.mouse.isButtonReleased(GLFW_MOUSE_BUTTON_LEFT)) {
+                        editedTilesThisDrag.clear()
+                    }
                 }
-            }
-            EditorTool.OBJECT_PLACE -> {
-                if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-                    handleObjectPlace()
+                EditorTool.HEIGHT_EDIT -> {
+                    if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_LEFT)) {
+                        handleHeightEdit()
+                    }
                 }
-            }
-            EditorTool.OBJECT_MOVE -> {
-                if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT) && movingObject == null) {
-                    handleObjectMoveStart()
-                } else if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_LEFT) && movingObject != null) {
-                    handleObjectMoveDrag()
+                EditorTool.FLAG_EDIT -> {
+                    if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+                        handleTilePick()
+                    }
                 }
-                if (input.mouse.isButtonReleased(GLFW_MOUSE_BUTTON_LEFT) && movingObject != null) {
-                    handleObjectMoveEnd()
+                EditorTool.OBJECT_PLACE -> {
+                    if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
+                        handleObjectPlace()
+                    }
+                }
+                EditorTool.OBJECT_MOVE -> {
+                    if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT) && movingObject == null) {
+                        handleObjectMoveStart()
+                    } else if (input.mouse.isButtonDown(GLFW_MOUSE_BUTTON_LEFT) && movingObject != null) {
+                        handleObjectMoveDrag()
+                    }
+                    if (input.mouse.isButtonReleased(GLFW_MOUSE_BUTTON_LEFT) && movingObject != null) {
+                        handleObjectMoveEnd()
+                    }
                 }
             }
         }
@@ -852,7 +909,153 @@ class MapViewer(
     }
 
     /**
+     * Compute world-space position for an object at a given local tile coordinate.
+     * Follows the same algorithm as ObjectRenderer.createInstances() for consistent positioning.
+     *
+     * @return Triple of (worldPosition, sizeX, sizeY) where sizes account for rotation
+     */
+    private fun computeObjectWorldPosition(
+        localX: Int,
+        localY: Int,
+        def: ObjectDefinition,
+        rotation: Int
+    ): Triple<Vector3f, Int, Int> {
+        val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+        val heightScale = TerrainLoader.getHeightScale()
+        val em = editManager
+
+        val sizeX: Int
+        val sizeY: Int
+        if (rotation == 1 || rotation == 3) {
+            sizeX = def.sizeY
+            sizeY = def.sizeX
+        } else {
+            sizeX = def.sizeX
+            sizeY = def.sizeY
+        }
+
+        // Height sampling from 4 center tiles (matching ObjectRenderer)
+        val xA: Int
+        val xB: Int
+        if (localX + sizeX <= 64) {
+            xA = localX + (sizeX shr 1)
+            xB = localX + ((sizeX + 1) shr 1)
+        } else {
+            xA = localX
+            xB = localX + 1
+        }
+        val yA: Int
+        val yB: Int
+        if (localY + sizeY <= 64) {
+            yA = localY + (sizeY shr 1)
+            yB = localY + ((sizeY + 1) shr 1)
+        } else {
+            yA = localY
+            yB = localY + 1
+        }
+        val x0 = xA.coerceIn(0, 63)
+        val x1 = xB.coerceIn(0, 63)
+        val y0 = yA.coerceIn(0, 63)
+        val y1 = yB.coerceIn(0, 63)
+
+        val terrainHeight = if (em != null) {
+            val h00 = em.mutableData.tiles[currentPlane][x0][y0].height * heightScale
+            val h10 = em.mutableData.tiles[currentPlane][x1][y0].height * heightScale
+            val h01 = em.mutableData.tiles[currentPlane][x0][y1].height * heightScale
+            val h11 = em.mutableData.tiles[currentPlane][x1][y1].height * heightScale
+            (h00 + h10 + h01 + h11) / 4f
+        } else 0f
+
+        val worldTileX = currentRegionX * 64 + localX
+        val worldTileY = currentRegionY * 64 + localY
+        val basePosX = worldTileX * tileSize
+        val basePosZ = -worldTileY * tileSize
+        val posOffsetX = sizeX * tileSize * 0.5f
+        val posOffsetZ = -sizeY * tileSize * 0.5f
+
+        return Triple(
+            Vector3f(basePosX + posOffsetX, terrainHeight, basePosZ + posOffsetZ),
+            sizeX,
+            sizeY
+        )
+    }
+
+    /**
+     * Recalculate the Y (height) position for a single ObjectInstance
+     * using current mutable tile data.
+     */
+    private fun recalcObjectHeight(obj: ObjectInstance) {
+        val em = editManager ?: return
+        val heightScale = TerrainLoader.getHeightScale()
+        val baseWorldX = currentRegionX * 64
+        val baseWorldY = currentRegionY * 64
+        val mo = obj.mapObject
+        val def = obj.definition
+
+        val localTileX = mo.x - baseWorldX
+        val localTileY = mo.y - baseWorldY
+        if (localTileX < 0 || localTileX >= 64 || localTileY < 0 || localTileY >= 64) return
+
+        val sizeX: Int
+        val sizeY: Int
+        if (mo.rotation == 1 || mo.rotation == 3) {
+            sizeX = def.sizeY
+            sizeY = def.sizeX
+        } else {
+            sizeX = def.sizeX
+            sizeY = def.sizeY
+        }
+
+        val xA = if (localTileX + sizeX <= 64) localTileX + (sizeX shr 1) else localTileX
+        val xB = if (localTileX + sizeX <= 64) localTileX + ((sizeX + 1) shr 1) else localTileX + 1
+        val yA = if (localTileY + sizeY <= 64) localTileY + (sizeY shr 1) else localTileY
+        val yB = if (localTileY + sizeY <= 64) localTileY + ((sizeY + 1) shr 1) else localTileY + 1
+
+        val x0 = xA.coerceIn(0, 63)
+        val x1 = xB.coerceIn(0, 63)
+        val y0 = yA.coerceIn(0, 63)
+        val y1 = yB.coerceIn(0, 63)
+
+        val plane = mo.level
+        val h00 = em.mutableData.tiles[plane][x0][y0].height * heightScale
+        val h10 = em.mutableData.tiles[plane][x1][y0].height * heightScale
+        val h01 = em.mutableData.tiles[plane][x0][y1].height * heightScale
+        val h11 = em.mutableData.tiles[plane][x1][y1].height * heightScale
+        obj.worldPosition.y = (h00 + h10 + h01 + h11) / 4f
+    }
+
+    /**
+     * Ensure the model for an object definition is registered with the InstanceManager.
+     * Returns the combined model ID, or -1 if registration failed.
+     */
+    private fun ensureModelRegistered(def: ObjectDefinition, shape: Int): Int {
+        val im = asyncRegionManager.instanceManager ?: return -1
+        val modelIds = ObjectRenderer.getModelIds(def, shape)
+        if (modelIds.isEmpty()) return -1
+
+        val modifications = ObjectRenderer.getModifications(def)
+        val combinedId = ModelLoader.getCombinedModelIdWithModifications(modelIds, modifications)
+
+        if (!im.isModelRegistered(combinedId)) {
+            val meshDataList = if (modifications.hasModifications()) {
+                ModelLoader.createCombinedMeshDataListWithModifications(cache, modelIds, modifications)
+            } else {
+                ModelLoader.createCombinedMeshDataList(cache, modelIds)
+            }
+            if (meshDataList != null && meshDataList.isNotEmpty()) {
+                im.registerModel(combinedId, meshDataList)
+            } else {
+                return -1
+            }
+        }
+
+        return combinedId
+    }
+
+    /**
      * Handle object placement at the clicked tile.
+     * Creates an ObjectInstance and adds it to the placedObjects list so it
+     * renders in the scene alongside loaded map objects.
      */
     private fun handleObjectPlace() {
         if (selectedObjectId < 0) return
@@ -862,29 +1065,62 @@ class MapViewer(
         val shape = editorObjectShape[0]
         val rotation = editorObjectRotation[0]
 
+        // Ensure model is registered with InstanceManager
+        val combinedId = ensureModelRegistered(def, shape)
+        if (combinedId == -1) return
+
+        val (worldPos, sizeX, sizeY) = computeObjectWorldPosition(tile.first, tile.second, def, rotation)
+
         val worldX = currentRegionX * 64 + tile.first
         val worldY = currentRegionY * 64 + tile.second
+        val modelIds = ObjectRenderer.getModelIds(def, shape)
+        val modifications = ObjectRenderer.getModifications(def)
+
+        // Create a synthetic MapObject for the placed object
+        val mapObject = MapObject(selectedObjectId, worldX, worldY, currentPlane, shape, rotation)
+
+        val scaleX = def.resizeX / 128f
+        val scaleY = def.resizeY / 128f
+        val scaleZ = def.resizeZ / 128f
+        val defOffsetX = def.offsetX * CoordinateUtil.DEFAULT_SCALE
+        val defOffsetY = def.offsetY * CoordinateUtil.DEFAULT_SCALE
+        val defOffsetZ = def.offsetZ * CoordinateUtil.DEFAULT_SCALE
+
+        val instance = ObjectInstance(
+            mapObject = mapObject,
+            definition = def,
+            modelIds = modelIds,
+            worldPosition = worldPos,
+            rotation = ObjectRenderer.rotationToRadians(rotation),
+            scale = Vector3f(scaleX, scaleY, scaleZ),
+            offset = Vector3f(defOffsetX, -defOffsetY, -defOffsetZ),
+            mirrored = def.mirrored,
+            modifications = modifications,
+            cachedCombinedModelId = combinedId
+        )
+
+        placedObjects.add(instance)
 
         println("[MapEditor] Placed object '${def.name}' (id=$selectedObjectId) at ($worldX, $worldY) plane=$currentPlane shape=$shape rot=$rotation")
-
-        // TODO: Register object model with InstanceManager and add to scene
-        // For now, just update tile details to show it in the inspector
-        handleTilePick()
     }
 
     /**
-     * Start moving an object. Find the object at the clicked tile.
+     * Start moving an object. Find the ObjectInstance at the clicked tile
+     * from centerObjects, and store it along with its original local coordinates.
      */
     private fun handleObjectMoveStart() {
         val tile = getTileUnderCursor() ?: return
-        val objects = asyncRegionManager.centerMapObjects
+        val instances = asyncRegionManager.centerObjects
 
         val worldX = currentRegionX * 64 + tile.first
         val worldY = currentRegionY * 64 + tile.second
 
-        // Find an object at this tile
-        for (obj in objects) {
-            val def = ObjectRenderer.getDefinition(obj.id) ?: continue
+        // Find the ObjectInstance at this tile by matching through mapObject coordinates
+        for (instance in instances) {
+            val obj = instance.mapObject
+            val def = instance.definition
+            if (obj.level != currentPlane) continue
+
             val sizeX: Int
             val sizeY: Int
             if (obj.rotation == 1 || obj.rotation == 3) {
@@ -896,11 +1132,44 @@ class MapViewer(
             }
 
             if (worldX in obj.x until (obj.x + sizeX) &&
-                worldY in obj.y until (obj.y + sizeY) &&
-                obj.level == currentPlane) {
-                // For now, just select the tile and print info
-                println("[MapEditor] Selected object '${def.name}' (id=${obj.id}) at (${obj.x}, ${obj.y}) for moving")
-                handleTilePick()
+                worldY in obj.y until (obj.y + sizeY)) {
+                val origLocalX = obj.x - currentRegionX * 64
+                val origLocalY = obj.y - currentRegionY * 64
+                movingObject = MovingObject(instance, origLocalX, origLocalY)
+
+                // Build a tile outline mesh at the original position for reference
+                moveOriginMesh?.cleanup()
+                moveOriginMesh = buildTileOutlineMesh(origLocalX, origLocalY, sizeX, sizeY)
+
+                println("[MapEditor] Grabbed object '${def.name}' (id=${obj.id}) at (${obj.x}, ${obj.y}) for moving")
+                return
+            }
+        }
+
+        // Also check placedObjects
+        for (instance in placedObjects) {
+            val obj = instance.mapObject
+            val def = instance.definition
+            if (obj.level != currentPlane) continue
+
+            val sizeX: Int
+            val sizeY: Int
+            if (obj.rotation == 1 || obj.rotation == 3) {
+                sizeX = def.sizeY
+                sizeY = def.sizeX
+            } else {
+                sizeX = def.sizeX
+                sizeY = def.sizeY
+            }
+
+            if (worldX in obj.x until (obj.x + sizeX) &&
+                worldY in obj.y until (obj.y + sizeY)) {
+                val origLocalX = obj.x - currentRegionX * 64
+                val origLocalY = obj.y - currentRegionY * 64
+                movingObject = MovingObject(instance, origLocalX, origLocalY)
+                moveOriginMesh?.cleanup()
+                moveOriginMesh = buildTileOutlineMesh(origLocalX, origLocalY, sizeX, sizeY)
+                println("[MapEditor] Grabbed placed object '${def.name}' (id=${obj.id}) for moving")
                 return
             }
         }
@@ -908,16 +1177,81 @@ class MapViewer(
 
     /**
      * Drag the moving object to a new tile position.
+     * Updates the object's worldPosition so it renders at the cursor location.
      */
     private fun handleObjectMoveDrag() {
-        // TODO: Update object position in real-time as cursor moves
+        val moving = movingObject ?: return
+        val tile = getTileUnderCursor() ?: return
+
+        val def = moving.instance.definition
+        val rotation = moving.instance.mapObject.rotation
+
+        val (newPos, _, _) = computeObjectWorldPosition(tile.first, tile.second, def, rotation)
+        moving.instance.worldPosition.set(newPos)
     }
 
     /**
-     * Finalize the object move.
+     * Finalize the object move. Clears the drag state and origin marker.
      */
     private fun handleObjectMoveEnd() {
         movingObject = null
+        moveOriginMesh?.cleanup()
+        moveOriginMesh = null
+    }
+
+    /**
+     * Build a bright wireframe outline mesh marking a tile footprint.
+     * Used to show where a dragged object originated from.
+     */
+    private fun buildTileOutlineMesh(localX: Int, localY: Int, sizeX: Int, sizeY: Int): Mesh {
+        val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+        val heightScale = TerrainLoader.getHeightScale()
+        val em = editManager
+        val worldOriginX = currentRegionX * 64 * tileSize
+        val worldOriginZ = -currentRegionY * 64 * tileSize
+        val yOffset = 0.2f
+
+        // Get height at origin tile
+        val h = if (em != null) {
+            em.mutableData.tiles[currentPlane][localX.coerceIn(0, 63)][localY.coerceIn(0, 63)].height * heightScale
+        } else 0f
+
+        val x0 = worldOriginX + localX * tileSize
+        val x1 = worldOriginX + (localX + sizeX) * tileSize
+        val z0 = worldOriginZ + (-localY * tileSize)
+        val z1 = worldOriginZ + (-(localY + sizeY) * tileSize)
+
+        val positions = floatArrayOf(
+            x0, h + yOffset, z0,
+            x1, h + yOffset, z0,
+            x1, h + yOffset, z0,
+            x1, h + yOffset, z1,
+            x1, h + yOffset, z1,
+            x0, h + yOffset, z1,
+            x0, h + yOffset, z1,
+            x0, h + yOffset, z0
+        )
+
+        // Orange color for move origin marker
+        val colors = FloatArray(8 * 3) { i ->
+            when (i % 3) {
+                0 -> 1f   // R
+                1 -> 0.5f // G
+                2 -> 0f   // B
+                else -> 1f
+            }
+        }
+
+        val indices = IntArray(8) { it }
+
+        return Mesh(
+            positions = positions,
+            colors = colors,
+            textureCoords = null,
+            normals = null,
+            indices = indices,
+            colorComponents = 3
+        )
     }
 
     /**
@@ -991,6 +1325,155 @@ class MapViewer(
         )
     }
 
+    /**
+     * Update the brush preview mesh for terrain paint / height edit tools.
+     * Builds a semi-transparent filled quad mesh covering the brush area
+     * conforming to the terrain surface. Only rebuilt when the center tile changes.
+     */
+    private fun updateBrushPreview() {
+        // Only show brush preview for paint and height tools, and only when mouse is not over ImGui
+        val isBrushTool = currentEditorTool == EditorTool.TERRAIN_PAINT || currentEditorTool == EditorTool.HEIGHT_EDIT
+        if (!isBrushTool || imGui.wantCaptureMouse()) {
+            if (brushPreviewMesh != null) {
+                brushPreviewMesh?.cleanup()
+                brushPreviewMesh = null
+                lastBrushCenter = null
+            }
+            return
+        }
+
+        val center = getTileUnderCursor()
+        if (center == null) {
+            if (brushPreviewMesh != null) {
+                brushPreviewMesh?.cleanup()
+                brushPreviewMesh = null
+                lastBrushCenter = null
+            }
+            return
+        }
+
+        // Skip rebuild if same tile
+        if (center == lastBrushCenter) return
+        lastBrushCenter = center
+
+        brushPreviewMesh?.cleanup()
+
+        val em = editManager ?: return
+
+        val radius = when (currentEditorTool) {
+            EditorTool.TERRAIN_PAINT -> editorBrushSize[0] - 1
+            EditorTool.HEIGHT_EDIT -> editorHeightBrushRadius[0]
+            else -> 0
+        }
+
+        // Determine brush color based on tool/mode
+        val brushColor = when (currentEditorTool) {
+            EditorTool.TERRAIN_PAINT -> floatArrayOf(0.2f, 0.8f, 0.2f, 0.25f)  // Green
+            EditorTool.HEIGHT_EDIT -> when (editorHeightMode) {
+                0 -> floatArrayOf(0.2f, 0.4f, 0.9f, 0.25f)     // Blue for raise
+                1 -> floatArrayOf(0.9f, 0.2f, 0.2f, 0.25f)     // Red for lower
+                2 -> floatArrayOf(0.9f, 0.9f, 0.2f, 0.25f)     // Yellow for smooth
+                else -> floatArrayOf(0.5f, 0.5f, 0.5f, 0.25f)
+            }
+            else -> floatArrayOf(0.5f, 0.5f, 0.5f, 0.25f)
+        }
+
+        val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+        val heightScale = TerrainLoader.getHeightScale()
+        val worldOriginX = currentRegionX * 64 * tileSize
+        val worldOriginZ = -currentRegionY * 64 * tileSize
+        val yOffset = 0.15f
+
+        val positions = mutableListOf<Float>()
+        val colors = mutableListOf<Float>()
+        val indices = mutableListOf<Int>()
+        var vertexIndex = 0
+
+        for (dx in -radius..radius) {
+            for (dy in -radius..radius) {
+                val tx = center.first + dx
+                val ty = center.second + dy
+                if (tx < 0 || tx > 63 || ty < 0 || ty > 63) continue
+                val nextX = (tx + 1).coerceAtMost(63)
+                val nextY = (ty + 1).coerceAtMost(63)
+
+                val h00 = em.mutableData.tiles[currentPlane][tx][ty].height * heightScale
+                val h10 = em.mutableData.tiles[currentPlane][nextX][ty].height * heightScale
+                val h01 = em.mutableData.tiles[currentPlane][tx][nextY].height * heightScale
+                val h11 = em.mutableData.tiles[currentPlane][nextX][nextY].height * heightScale
+
+                val x0 = worldOriginX + tx * tileSize
+                val x1 = worldOriginX + (tx + 1) * tileSize
+                val z0 = worldOriginZ + (-ty * tileSize)
+                val z1 = worldOriginZ + (-(ty + 1) * tileSize)
+
+                // 4 corner vertices per tile quad (2 triangles)
+                // SW corner
+                positions.add(x0); positions.add(h00 + yOffset); positions.add(z0)
+                // SE corner
+                positions.add(x1); positions.add(h10 + yOffset); positions.add(z0)
+                // NW corner
+                positions.add(x0); positions.add(h01 + yOffset); positions.add(z1)
+                // NE corner
+                positions.add(x1); positions.add(h11 + yOffset); positions.add(z1)
+
+                // RGBA color for all 4 vertices
+                for (v in 0 until 4) {
+                    colors.add(brushColor[0])
+                    colors.add(brushColor[1])
+                    colors.add(brushColor[2])
+                    colors.add(brushColor[3])
+                }
+
+                // Two triangles: SW-SE-NW and SE-NE-NW
+                indices.add(vertexIndex)
+                indices.add(vertexIndex + 1)
+                indices.add(vertexIndex + 2)
+                indices.add(vertexIndex + 1)
+                indices.add(vertexIndex + 3)
+                indices.add(vertexIndex + 2)
+
+                vertexIndex += 4
+            }
+        }
+
+        if (positions.isNotEmpty()) {
+            brushPreviewMesh = Mesh(
+                positions = positions.toFloatArray(),
+                colors = colors.toFloatArray(),
+                textureCoords = null,
+                normals = null,
+                indices = indices.toIntArray(),
+                colorComponents = 4
+            )
+        }
+    }
+
+    /**
+     * Render the brush preview overlay.
+     * Uses alpha blending with depth test on but depth write off so the preview
+     * sits on top of terrain without occluding objects.
+     */
+    private fun renderBrushPreview() {
+        val mesh = brushPreviewMesh ?: return
+
+        brushPreviewShader.bind()
+        brushPreviewShader.setUniform("model", Matrix4f().identity())
+        brushPreviewShader.setUniform("view", scene.camera.getViewMatrix())
+        brushPreviewShader.setUniform("projection", scene.camera.getProjectionMatrix(getAspectRatio()))
+
+        // Enable blending, keep depth test, disable depth write
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glDepthMask(false)
+
+        mesh.render()
+
+        // Restore state
+        glDepthMask(true)
+        glDisable(GL_BLEND)
+    }
+
     override fun onDrainGpuUploads(budgetNanos: Long) {
         val drainStart = RenderMetrics.startTiming()
         val previousReady = asyncRegionManager.getLoadProgress().regionsReady
@@ -1048,6 +1531,9 @@ class MapViewer(
         if (editResult.heightsChanged) {
             updateObjectHeights()
         }
+
+        // Update brush preview every frame for terrain paint / height edit tools
+        updateBrushPreview()
     }
 
     // Frame counter for debug logging (only logs first few frames to avoid spam)
@@ -1276,6 +1762,9 @@ class MapViewer(
         // Render tile highlight (if any selected tile)
         renderTileHighlight()
 
+        // Render brush preview overlay (terrain paint / height edit tools)
+        renderBrushPreview()
+
         if (logFrame) {
             println("[RENDER] Frame $frameNumber:   terrain done, starting renderObjects()")
             System.out.flush()
@@ -1295,10 +1784,14 @@ class MapViewer(
     }
 
     /**
-     * Render the tile highlight outline for the selected tile.
+     * Render the tile highlight outline for the selected tile,
+     * and the move-origin marker if an object is being dragged.
      */
     private fun renderTileHighlight() {
-        val highlightMesh = tileHighlightMesh ?: return
+        val highlightMesh = tileHighlightMesh
+        val originMesh = moveOriginMesh
+
+        if (highlightMesh == null && originMesh == null) return
 
         // Use simple shader for the highlight (no lighting)
         simpleShader.bind()
@@ -1312,8 +1805,11 @@ class MapViewer(
         // Set line width (if supported)
         glLineWidth(3f)
 
-        // Render as lines
-        highlightMesh.renderLines()
+        // Render tile selection highlight
+        highlightMesh?.renderLines()
+
+        // Render move origin marker (orange outline showing where the object was)
+        originMesh?.renderLines()
 
         // Restore state
         glLineWidth(1f)
@@ -1334,7 +1830,7 @@ class MapViewer(
         val im = asyncRegionManager.instanceManager ?: return
         val logFrame = frameNumber < 5
 
-        val allObjects = asyncRegionManager.centerObjects
+        val allObjects = asyncRegionManager.centerObjects + placedObjects
 
         if (logFrame) {
             println("[RENDER] Frame $frameNumber:     renderObjects: ${allObjects.size} center objects")
@@ -2263,10 +2759,20 @@ class MapViewer(
      * OBJECT_PLACE tool content: Object browser for searching and placing objects.
      */
     private fun renderEditorObjectPlaceTool() {
-        if (ImGui.collapsingHeader("Object Browser", ImGuiTreeNodeFlags.DefaultOpen)) {
-            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Search objects to place")
+        // Show selected object prominently at the top
+        if (selectedObjectId >= 0) {
+            val selDef = ObjectRenderer.getDefinition(selectedObjectId)
+            if (selDef != null) {
+                ImGui.textColored(0.3f, 0.9f, 0.3f, 1f, "Selected: %s (ID: %d)".format(selDef.name, selDef.id))
+                ImGui.textColored(0.3f, 0.9f, 0.3f, 1f, "Left-click terrain to place")
+            }
             ImGui.spacing()
+        } else {
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Search and select an object below to place it")
+            ImGui.spacing()
+        }
 
+        if (ImGui.collapsingHeader("Object Browser", ImGuiTreeNodeFlags.DefaultOpen)) {
             ImGui.setNextItemWidth(-1f)
             if (ImGui.inputText("##obj_search", editorObjectSearchQuery)) {
                 val query = editorObjectSearchQuery.get().trim()
@@ -2307,37 +2813,62 @@ class MapViewer(
                 ImGui.spacing()
                 ImGui.separator()
                 ImGui.spacing()
-                val selDef = ObjectRenderer.getDefinition(selectedObjectId)
-                if (selDef != null) {
-                    ImGui.text("Selected: %s (ID: %d)".format(selDef.name, selDef.id))
-                }
                 ImGui.setNextItemWidth(120f)
                 ImGui.sliderInt("Shape##obj", editorObjectShape, 0, 22)
                 ImGui.setNextItemWidth(120f)
                 ImGui.sliderInt("Rotation##obj", editorObjectRotation, 0, 3)
-                ImGui.spacing()
-                ImGui.textColored(0.3f, 0.9f, 0.3f, 1f, "Left-click terrain to place")
+
+                // Show count of placed objects
+                if (placedObjects.isNotEmpty()) {
+                    ImGui.spacing()
+                    ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Placed objects: %d".format(placedObjects.size))
+                }
             }
         }
     }
 
     /**
-     * OBJECT_MOVE tool content: click an object to identify it, drag to move (WIP).
+     * OBJECT_MOVE tool content: click an object to grab it, drag to reposition, release to place.
      */
     private fun renderEditorObjectMoveTool() {
-        ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click an object to select it, then drag to move.")
-        ImGui.spacing()
-
         val moving = movingObject
         if (moving != null) {
-            ImGui.textColored(0.3f, 0.9f, 0.3f, 1f, "Moving: ${moving.instance}")
+            val def = moving.instance.definition
+            ImGui.textColored(0.3f, 0.9f, 0.3f, 1f, "Dragging: %s (ID: %d)".format(def.name, def.id))
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Release mouse to drop. Escape to cancel.")
+            ImGui.spacing()
+            ImGui.text("Original: (%d, %d)".format(
+                currentRegionX * 64 + moving.originalX,
+                currentRegionY * 64 + moving.originalY
+            ))
             ImGui.spacing()
             if (ImGui.button("Cancel Move")) {
+                // Restore original position
+                val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
+                val origWorldX = currentRegionX * 64 + moving.originalX
+                val origWorldY = currentRegionY * 64 + moving.originalY
+                val sizeX: Int
+                val sizeY: Int
+                val mo = moving.instance.mapObject
+                if (mo.rotation == 1 || mo.rotation == 3) {
+                    sizeX = def.sizeY
+                    sizeY = def.sizeX
+                } else {
+                    sizeX = def.sizeX
+                    sizeY = def.sizeY
+                }
+                val basePosX = origWorldX * tileSize
+                val basePosZ = -origWorldY * tileSize
+                moving.instance.worldPosition.x = basePosX + sizeX * tileSize * 0.5f
+                moving.instance.worldPosition.z = basePosZ + -sizeY * tileSize * 0.5f
+                recalcObjectHeight(moving.instance)
                 movingObject = null
+                moveOriginMesh?.cleanup()
+                moveOriginMesh = null
             }
         } else {
-            ImGui.textColored(1f, 0.8f, 0.3f, 1f, "Object dragging is a work in progress.")
-            ImGui.textColored(1f, 0.8f, 0.3f, 1f, "Click an object to identify it.")
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Click an object to grab it")
+            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Drag to reposition, release to place")
         }
     }
 
@@ -2564,7 +3095,7 @@ class MapViewer(
                 } else {
                     ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
                 }
-                if (meshDataList != null && meshDataList.isNotEmpty()) {
+                if (!meshDataList.isNullOrEmpty()) {
                     ir.registerModel(combinedId, meshDataList)
                 }
             }
@@ -2633,6 +3164,13 @@ class MapViewer(
         tilePicker.clearSelection()
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
+        placedObjects.clear()
+        movingObject = null
+        moveOriginMesh?.cleanup()
+        moveOriginMesh = null
+        brushPreviewMesh?.cleanup()
+        brushPreviewMesh = null
+        lastBrushCenter = null
     }
 
 
@@ -2685,6 +3223,11 @@ class MapViewer(
         staticTexturedShader.cleanup()
         terrainAtlasShader?.cleanup()
         terrainAtlasAlphaShader?.cleanup()
+        brushPreviewShader.cleanup()
+        brushPreviewMesh?.cleanup()
+        brushPreviewMesh = null
+        moveOriginMesh?.cleanup()
+        moveOriginMesh = null
         terrainAtlas?.cleanup()
         terrainAtlas = null
         objectAtlas?.cleanup()
