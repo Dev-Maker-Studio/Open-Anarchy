@@ -93,6 +93,25 @@ object RenderMetrics {
     var objectAtlasUtilization = 0f
 
     // ====================================================================
+    // Async loading counters (per frame)
+    // ====================================================================
+
+    /** Time spent draining the GPU upload queue this frame (ms). */
+    var gpuUploadDrainTimeMs = 0.0
+
+    /** Number of GPU upload tasks processed this frame. */
+    var gpuUploadTasksProcessed = 0
+
+    /** Number of pending GPU upload tasks (snapshot). */
+    var pendingGpuTasks = 0
+
+    /** Number of regions currently loading in background. */
+    var regionsLoading = 0
+
+    /** Number of regions fully loaded and ready for rendering. */
+    var regionsReady = 0
+
+    // ====================================================================
     // Methods
     // ====================================================================
 
@@ -111,6 +130,8 @@ object RenderMetrics {
         transformTimeMs = 0.0
         uploadTimeMs = 0.0
         renderTimeMs = 0.0
+        gpuUploadDrainTimeMs = 0.0
+        gpuUploadTasksProcessed = 0
     }
 
     /**

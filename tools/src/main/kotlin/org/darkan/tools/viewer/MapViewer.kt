@@ -25,6 +25,7 @@ import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
 import org.darkan.tools.engine.Engine
 import org.darkan.tools.engine.input.TilePicker
+import org.darkan.tools.engine.region.AsyncRegionManager
 import org.darkan.tools.engine.region.RegionManager
 import org.darkan.tools.engine.render.BatchKey
 import org.darkan.tools.engine.render.IndirectRenderer
@@ -38,6 +39,7 @@ import org.darkan.tools.engine.render.UniformBuffers
 import org.darkan.tools.engine.window.WindowConfig
 import org.darkan.tools.ui.DebugPanel
 import org.darkan.tools.ui.ImGuiLayer
+import org.darkan.tools.ui.LoadingScreen
 import org.darkan.tools.util.CoordinateUtil
 import org.joml.Matrix4f
 import org.joml.Vector3f
@@ -99,9 +101,10 @@ class MapViewer(
     // Separate from the terrain atlas (different lifecycle and texture set).
     private var objectAtlas: TextureAtlas? = null
 
-    // Engine-level region manager: handles loading, object creation, displacement,
+    // Async region manager: handles loading, object creation, displacement,
     // static batching, and dynamic render distance for all regions.
-    private lateinit var regionManager: RegionManager
+    // Center region loads synchronously; context regions load in the background.
+    private lateinit var asyncRegionManager: AsyncRegionManager
 
     // Instanced shaders for object rendering (center region)
     private lateinit var instancedColorShader: ShaderProgram
@@ -128,6 +131,7 @@ class MapViewer(
     // UI
     private lateinit var imGui: ImGuiLayer
     private lateinit var debugPanel: DebugPanel
+    private lateinit var loadingScreen: LoadingScreen
 
     // Current state
     private var currentRegionX = 52
@@ -203,9 +207,9 @@ class MapViewer(
         // Load UBO shaders
         loadUBOShaders()
 
-        // Initialize region manager (loads definitions and XTEA keys)
-        regionManager = RegionManager(cache)
-        regionManager.initialize()
+        // Initialize async region manager (loads definitions and XTEA keys)
+        asyncRegionManager = AsyncRegionManager(cache)
+        asyncRegionManager.initialize()
 
         // Build terrain texture atlas from all overlay/underlay texture definitions
         buildTerrainAtlas()
@@ -216,9 +220,11 @@ class MapViewer(
         // To re-enable, this needs shader-side fract()+remap like the terrain atlas does.
         objectAtlas = null
 
-        // Wire region manager to atlas references
-        regionManager.objectAtlas = objectAtlas
-        regionManager.terrainAtlas = terrainAtlas
+        // Wire async region manager to atlas references
+        asyncRegionManager.objectAtlas = objectAtlas
+        asyncRegionManager.terrainAtlas = terrainAtlas
+
+        loadingScreen = LoadingScreen()
 
         // Setup the scene camera (will be repositioned when region loads)
         scene.camera.setPosition(0f, 50f, 50f)
@@ -232,7 +238,8 @@ class MapViewer(
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_MULTISAMPLE)
 
-        loadRegion(currentRegionX, currentRegionY, currentPlane)
+        isInitialLoading = true
+        loadRegionAsync(currentRegionX, currentRegionY, currentPlane)
     }
 
     /**
@@ -454,7 +461,7 @@ class MapViewer(
         if (input.keyboard.isKeyPressed(GLFW_KEY_T)) showTerrain = !showTerrain
         if (input.keyboard.isKeyPressed(GLFW_KEY_R)) {
             showRoofs = !showRoofs
-            regionManager.showRoofs = showRoofs
+            asyncRegionManager.showRoofs = showRoofs
             reloadRegion()
         }
 
@@ -496,7 +503,7 @@ class MapViewer(
      * Handle tile picking via left-click.
      */
     private fun handleTilePick() {
-        val td = regionManager.centerTerrainData ?: return
+        val td = asyncRegionManager.centerTerrainData ?: return
         val cam = scene.camera
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
 
@@ -528,7 +535,7 @@ class MapViewer(
             tilePicker.updateTileDetails(
                 td.tiles,
                 cache,
-                regionManager.centerMapObjects,
+                asyncRegionManager.centerMapObjects,
                 currentRegionX * 64,
                 currentRegionY * 64
             )
@@ -609,13 +616,57 @@ class MapViewer(
         )
     }
 
+    override fun onDrainGpuUploads(budgetNanos: Long) {
+        val drainStart = RenderMetrics.startTiming()
+        val previousReady = asyncRegionManager.getLoadProgress().regionsReady
+        asyncRegionManager.drainGpuUploads(budgetNanos)
+        val currentProgress = asyncRegionManager.getLoadProgress()
+        RenderMetrics.gpuUploadDrainTimeMs = RenderMetrics.endTiming(drainStart)
+
+        // Check if initial loading is complete
+        if (isInitialLoading && currentProgress.isComplete) {
+            isInitialLoading = false
+            if (terrainAtlas != null) {
+                asyncRegionManager.buildMergedAtlasTerrain()
+            }
+        } else if (!isInitialLoading && currentProgress.isComplete && currentProgress.regionsReady > previousReady) {
+            // Context regions finished loading, rebuild merged terrain
+            if (terrainAtlas != null) {
+                asyncRegionManager.buildMergedAtlasTerrain()
+            }
+        }
+    }
+
+    override fun onRenderLoadingScreen() {
+        // Still render the scene if we have any data (center region loads synchronously)
+        RenderMetrics.resetFrame()
+        glClearColor(clearColor.x, clearColor.y, clearColor.z, 1.0f)
+        glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
+
+        // Render whatever is loaded so far
+        val renderStart = RenderMetrics.startTiming()
+        renderScene()
+        RenderMetrics.renderTimeMs = RenderMetrics.endTiming(renderStart)
+
+        // Render loading overlay on top
+        imGui.beginFrame()
+        loadingScreen.render(asyncRegionManager.getLoadProgress(), window.width, window.height)
+        debugPanel.fps = fps
+        debugPanel.deltaTime = deltaTime
+        debugPanel.wireframeMode = renderSystem.wireframeMode
+        debugPanel.render(scene.camera, window.width, window.height) {
+            renderSystem.toggleWireframe()
+        }
+        imGui.endFrame()
+    }
+
     override fun onUpdate(deltaTime: Float) {
         // Process any pending terrain edits (dirty chunk rebuilds)
         val editResult = editManager?.processEdits() ?: EditResult.NONE
 
         // When terrain edits occur, the merged atlas terrain becomes stale.
-        if (editResult.hasChanges && regionManager.mergedOpaqueTerrain != null) {
-            regionManager.invalidateMergedTerrain()
+        if (editResult.hasChanges && asyncRegionManager.mergedOpaqueTerrain != null) {
+            asyncRegionManager.invalidateMergedTerrain()
         }
     }
 
@@ -673,8 +724,8 @@ class MapViewer(
         // Render terrain - use atlas path (2 draw calls) when available,
         // fall back to legacy multi-pass path otherwise
         val atlas = terrainAtlas
-        val opaqueAtlasMesh = regionManager.mergedOpaqueTerrain
-        val alphaAtlasMesh = regionManager.mergedAlphaTerrain
+        val opaqueAtlasMesh = asyncRegionManager.mergedOpaqueTerrain
+        val alphaAtlasMesh = asyncRegionManager.mergedAlphaTerrain
         val atlasShader = terrainAtlasShader
         val atlasAlphaShader = terrainAtlasAlphaShader
 
@@ -719,6 +770,63 @@ class MapViewer(
             glBindTexture(GL_TEXTURE_2D, 0)
 
             renderSystem.enableCullFace()
+
+            // Also render context regions' legacy terrain meshes
+            // (these stream in as each region becomes READY)
+            val readyContextRegions = asyncRegionManager.getReadyContextRegions()
+            if (readyContextRegions.isNotEmpty()) {
+                renderSystem.disableCullFace()
+
+                for (ctxRegion in readyContextRegions) {
+                    val terrainMeshes = ctxRegion.terrainMeshes ?: continue
+                    val regionModelMatrix = asyncRegionManager.getRegionModelMatrix(ctxRegion.key)
+
+                    // Color mesh
+                    terrainMeshes.colorMesh?.let { mesh ->
+                        uboColorShader.bind()
+                        uboColorShader.setUniform("model", regionModelMatrix)
+                        mesh.render()
+                        RenderMetrics.terrainOpaqueDrawCalls++
+                        RenderMetrics.trianglesSubmitted += mesh.vertexCount / 3
+                    }
+
+                    // Textured batches
+                    if (terrainMeshes.texturedBatches.isNotEmpty()) {
+                        uboTexturedShader.bind()
+                        uboTexturedShader.setUniform("textureSampler", 0)
+                        uboTexturedShader.setUniform("model", regionModelMatrix)
+                        for (batch in terrainMeshes.texturedBatches) {
+                            terrainTextureBinding(batch.textureId)
+                            batch.mesh.render()
+                            RenderMetrics.terrainOpaqueDrawCalls++
+                            RenderMetrics.trianglesSubmitted += batch.mesh.vertexCount / 3
+                        }
+                        TextureLoader.unbindTexture()
+                    }
+
+                    // Alpha batches
+                    if (terrainMeshes.alphaBatches.isNotEmpty()) {
+                        glDepthMask(false)
+                        glEnable(GL_BLEND)
+                        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+                        terrainAlphaShader.bind()
+                        terrainAlphaShader.setUniform("textureSampler", 0)
+                        terrainAlphaShader.setUniform("model", regionModelMatrix)
+                        for (batch in terrainMeshes.alphaBatches) {
+                            terrainTextureBinding(batch.textureId)
+                            batch.mesh.render()
+                            RenderMetrics.terrainAlphaDrawCalls++
+                            RenderMetrics.trianglesSubmitted += batch.mesh.vertexCount / 3
+                        }
+                        TextureLoader.unbindTexture()
+                        glDisable(GL_BLEND)
+                        glDepthMask(true)
+                    }
+                }
+
+                renderSystem.enableCullFace()
+            }
         } else {
             // ===== Legacy rendering path: multi-pass per-texture draws =====
             editManager?.let { em ->
@@ -726,12 +834,13 @@ class MapViewer(
 
                 // Pass 1: Color mesh (untextured tiles) with RGB colors
                 uboColorShader.bind()
-                em.renderColor(uboColorShader, regionManager.centerModelMatrix)
+                em.renderColor(uboColorShader, asyncRegionManager.centerModelMatrix)
                 RenderMetrics.terrainOpaqueDrawCalls++ // center color mesh
-                for (i in regionManager.contextRegions.indices) {
-                    val ctx = regionManager.contextRegions[i]
-                    uboColorShader.setUniform("model", regionManager.contextModelMatrices[i])
-                    ctx.terrainMeshes.colorMesh?.let { mesh ->
+                for (ctxRegion in asyncRegionManager.getReadyContextRegions()) {
+                    val regionModelMatrix = asyncRegionManager.getRegionModelMatrix(ctxRegion.key)
+                    val terrainMeshes = ctxRegion.terrainMeshes ?: continue
+                    uboColorShader.setUniform("model", regionModelMatrix)
+                    terrainMeshes.colorMesh?.let { mesh ->
                         mesh.render()
                         RenderMetrics.terrainOpaqueDrawCalls++
                         RenderMetrics.trianglesSubmitted += mesh.vertexCount / 3
@@ -741,11 +850,12 @@ class MapViewer(
                 // Pass 2: Textured terrain (single texture per triangle)
                 uboTexturedShader.bind()
                 uboTexturedShader.setUniform("textureSampler", 0)
-                em.renderTextured(uboTexturedShader, regionManager.centerModelMatrix, terrainTextureBinding)
-                for (i in regionManager.contextRegions.indices) {
-                    val ctx = regionManager.contextRegions[i]
-                    uboTexturedShader.setUniform("model", regionManager.contextModelMatrices[i])
-                    for (batch in ctx.terrainMeshes.texturedBatches) {
+                em.renderTextured(uboTexturedShader, asyncRegionManager.centerModelMatrix, terrainTextureBinding)
+                for (ctxRegion in asyncRegionManager.getReadyContextRegions()) {
+                    val regionModelMatrix = asyncRegionManager.getRegionModelMatrix(ctxRegion.key)
+                    val terrainMeshes = ctxRegion.terrainMeshes ?: continue
+                    uboTexturedShader.setUniform("model", regionModelMatrix)
+                    for (batch in terrainMeshes.texturedBatches) {
                         terrainTextureBinding(batch.textureId)
                         batch.mesh.render()
                         RenderMetrics.terrainOpaqueDrawCalls++
@@ -762,11 +872,12 @@ class MapViewer(
 
                 terrainAlphaShader.bind()
                 terrainAlphaShader.setUniform("textureSampler", 0)
-                em.renderAlpha(terrainAlphaShader, regionManager.centerModelMatrix, terrainTextureBinding)
-                for (i in regionManager.contextRegions.indices) {
-                    val ctx = regionManager.contextRegions[i]
-                    terrainAlphaShader.setUniform("model", regionManager.contextModelMatrices[i])
-                    for (batch in ctx.terrainMeshes.alphaBatches) {
+                em.renderAlpha(terrainAlphaShader, asyncRegionManager.centerModelMatrix, terrainTextureBinding)
+                for (ctxRegion in asyncRegionManager.getReadyContextRegions()) {
+                    val regionModelMatrix = asyncRegionManager.getRegionModelMatrix(ctxRegion.key)
+                    val terrainMeshes = ctxRegion.terrainMeshes ?: continue
+                    terrainAlphaShader.setUniform("model", regionModelMatrix)
+                    for (batch in terrainMeshes.alphaBatches) {
                         terrainTextureBinding(batch.textureId)
                         batch.mesh.render()
                         RenderMetrics.terrainAlphaDrawCalls++
@@ -840,22 +951,13 @@ class MapViewer(
     private val PARALLEL_CHUNK_SIZE = 512
 
     private fun renderObjects() {
-        val im = regionManager.instanceManager ?: return
+        val im = asyncRegionManager.instanceManager ?: return
         val logFrame = frameNumber < 5
 
-        // When debugContextInstanced is on, also instance context region objects
-        // (same rendering path as center) instead of using static batching.
-        val debugInstanced = regionManager.debugContextInstanced
-        val centerObjects = regionManager.centerObjects
-        val allObjects = if (debugInstanced) {
-            centerObjects + regionManager.contextObjectInstances
-        } else {
-            centerObjects
-        }
+        val allObjects = asyncRegionManager.centerObjects
 
         if (logFrame) {
-            val contextCount = if (debugInstanced) regionManager.contextObjectInstances.size else 0
-            println("[RENDER] Frame $frameNumber:     renderObjects: ${centerObjects.size} center + $contextCount context (debugInstanced=$debugInstanced)")
+            println("[RENDER] Frame $frameNumber:     renderObjects: ${allObjects.size} center objects")
             System.out.flush()
         }
 
@@ -994,11 +1096,8 @@ class MapViewer(
             System.out.flush()
         }
 
-        // Render static batched context region objects (skip when debugContextInstanced
-        // is on, since context objects are already included in the instanced pool above)
-        if (!debugInstanced) {
-            renderStaticBatchedObjects()
-        }
+        // Render static batched context region objects
+        renderStaticBatchedObjects()
 
         // Disable polygon offset after all object rendering is complete
         renderSystem.disablePolygonOffset()
@@ -1013,8 +1112,8 @@ class MapViewer(
 
     /**
      * Render context region objects from static batched meshes.
-     * These meshes have geometry pre-transformed to world space during region loading,
-     * so they render with an identity model matrix and no per-frame transform computation.
+     * Each async context region has its own set of batch meshes, keyed by [BatchKey].
+     * Geometry is pre-transformed to world space, so renders with an identity model matrix.
      *
      * Batches are keyed by [BatchKey]:
      * - UNTEXTURED: vertex colors only, drawn with [staticColorShader]
@@ -1023,62 +1122,52 @@ class MapViewer(
      *   individual texture bound via TextureLoader
      */
     private fun renderStaticBatchedObjects() {
-        val batcher = regionManager.contextObjectBatcher ?: return
-        val meshes = batcher.getAllMeshes()
-        if (meshes.isEmpty()) return
-
-        RenderMetrics.staticBatchMeshCount = meshes.size
-
         val identityModel = Matrix4f().identity()
         val atlas = objectAtlas
+        var totalMeshes = 0
 
-        // Render untextured batches
-        val untexturedMesh = meshes[BatchKey.UNTEXTURED]
-        if (untexturedMesh != null) {
-            staticColorShader.bind()
-            staticColorShader.setUniform("model", identityModel)
-            untexturedMesh.render()
-            RenderMetrics.staticBatchDrawCalls++
-            RenderMetrics.trianglesSubmitted += untexturedMesh.vertexCount / 3
-        }
+        for (ctxRegion in asyncRegionManager.getReadyContextRegions()) {
+            val meshes = ctxRegion.batchMeshes ?: continue
+            if (meshes.isEmpty()) continue
+            totalMeshes += meshes.size
 
-        // Render textured batches (atlas pages and fallback textures)
-        val texturedKeys = meshes.keys.filter { it != BatchKey.UNTEXTURED }
-        if (texturedKeys.isEmpty()) return
-
-        renderSystem.enableBlending()
-
-        staticTexturedShader.bind()
-        staticTexturedShader.setUniform("model", identityModel)
-        staticTexturedShader.setUniform("textureSampler", 0)
-
-        // Sort by atlas page index to minimize texture binds
-        val sortedKeys = texturedKeys.sortedBy { it.atlasPageIndex }
-
-        var lastBoundPage = -2  // -2 = nothing bound yet
-        for (key in sortedKeys) {
-            val mesh = meshes[key] ?: continue
-
-            if (key.atlasPageIndex >= 0 && atlas != null) {
-                // Atlas page batch: bind the atlas page
-                if (key.atlasPageIndex != lastBoundPage) {
-                    atlas.bindPage(key.atlasPageIndex, 0)
-                    lastBoundPage = key.atlasPageIndex
-                }
-            } else if (key.textureId >= 0) {
-                // Fallback texture batch: bind individual texture
-                val glTexId = TextureLoader.getTextureForMaterial(cache, key.textureId)
-                TextureLoader.bindTexture(glTexId)
-                lastBoundPage = -2
+            // Render untextured
+            val untexturedMesh = meshes[BatchKey.UNTEXTURED]
+            if (untexturedMesh != null) {
+                staticColorShader.bind()
+                staticColorShader.setUniform("model", identityModel)
+                untexturedMesh.render()
+                RenderMetrics.staticBatchDrawCalls++
+                RenderMetrics.trianglesSubmitted += untexturedMesh.vertexCount / 3
             }
 
-            mesh.render()
-            RenderMetrics.staticBatchDrawCalls++
-            RenderMetrics.trianglesSubmitted += mesh.vertexCount / 3
+            // Render textured
+            val texturedKeys = meshes.keys.filter { it != BatchKey.UNTEXTURED }
+            if (texturedKeys.isNotEmpty()) {
+                renderSystem.enableBlending()
+                staticTexturedShader.bind()
+                staticTexturedShader.setUniform("model", identityModel)
+                staticTexturedShader.setUniform("textureSampler", 0)
+
+                for (key in texturedKeys.sortedBy { it.atlasPageIndex }) {
+                    val mesh = meshes[key] ?: continue
+                    if (key.atlasPageIndex >= 0 && atlas != null) {
+                        atlas.bindPage(key.atlasPageIndex, 0)
+                    } else if (key.textureId >= 0) {
+                        val glTexId = TextureLoader.getTextureForMaterial(cache, key.textureId)
+                        TextureLoader.bindTexture(glTexId)
+                    }
+                    mesh.render()
+                    RenderMetrics.staticBatchDrawCalls++
+                    RenderMetrics.trianglesSubmitted += mesh.vertexCount / 3
+                }
+
+                TextureLoader.unbindTexture()
+                renderSystem.disableBlending()
+            }
         }
 
-        TextureLoader.unbindTexture()
-        renderSystem.disableBlending()
+        RenderMetrics.staticBatchMeshCount = totalMeshes
     }
 
     /**
@@ -1105,7 +1194,7 @@ class MapViewer(
         // For contourType 1 objects with displacement, use the displaced model ID
         // so the rendering path picks up the displaced geometry.
         // Fall back to the cached combined model ID for all other objects.
-        val combinedModelId = regionManager.getModelIdForInstance(obj)
+        val combinedModelId = asyncRegionManager.getModelIdForInstance(obj)
 
         // Build transform matrix matching client order:
         // RS client applies to model vertices: Rotate Y -> Terrain Tilt -> Scale -> Offset
@@ -1306,7 +1395,7 @@ class MapViewer(
         }
         ImGui.sameLine()
         if (ImGui.button("Apply##renderDist")) {
-            reloadRegion()
+            asyncRegionManager.setRenderDistanceAsync(renderDistanceInput[0])
         }
         if (ImGui.isItemHovered()) {
             val dist = renderDistanceInput[0]
@@ -1529,26 +1618,6 @@ class MapViewer(
             ImGui.unindent()
         }
 
-        ImGui.spacing()
-
-        // Debug: render context objects via instancing instead of static batching.
-        // This diagnostic toggle determines whether the "incorrect object models" bug
-        // in context regions is in the static batch pipeline or in data loading.
-        val debugCtxInstanced = ImBoolean(regionManager.debugContextInstanced)
-        if (ImGui.checkbox("Debug: Instance Context Objects", debugCtxInstanced)) {
-            regionManager.debugContextInstanced = debugCtxInstanced.get()
-            reloadRegion()
-        }
-        if (ImGui.isItemHovered()) {
-            ImGui.setTooltip(
-                "Render context region objects via GPU instancing\n" +
-                "(same path as center) instead of static batching.\n\n" +
-                "If context objects look CORRECT with this on:\n" +
-                "  -> Bug is in the static batch pipeline\n" +
-                "If context objects still look WRONG:\n" +
-                "  -> Bug is in data loading / model resolution"
-            )
-        }
     }
 
     // ========================================================================
@@ -1998,33 +2067,35 @@ class MapViewer(
     }
 
 
-    private fun loadRegion(regionX: Int, regionY: Int, plane: Int) {
-        // Clean up existing resources
-        cleanupRegion()
+    /** Redirect old loadRegion calls to the async version. */
+    private fun loadRegion(regionX: Int, regionY: Int, plane: Int) = loadRegionAsync(regionX, regionY, plane)
 
+    private fun loadRegionAsync(regionX: Int, regionY: Int, plane: Int) {
         // Clear tile picker selection when loading new region
         tilePicker.clearSelection()
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
 
-        // Time overall region loading (terrain + objects + context)
         val regionLoadStart = RenderMetrics.startTiming()
 
-        // Initialize chunked terrain via edit manager (replaces monolithic loadRegionMeshes)
-        editManager = TerrainEditManager(regionX, regionY, plane, cache).also { it.init() }
+        // Initialize chunked terrain via edit manager
+        editManager?.cleanup()
+        editManager = try {
+            TerrainEditManager(regionX, regionY, plane, cache).also { it.init() }
+        } catch (e: Exception) {
+            println("[MapViewer] TerrainEditManager init failed for ($regionX, $regionY): ${e.message}")
+            null
+        }
 
-        // Time object loading phase (instance creation + model registration)
-        val objectLoadStart = RenderMetrics.startTiming()
-
-        // Delegate all region loading to the engine-layer RegionManager.
-        // This handles: center region objects, model registration, displaced meshes,
-        // context region loading with vertex displacement, static batching, and
-        // merged atlas terrain.
-        regionManager.renderDistance = renderDistanceInput[0]
-        regionManager.loadRegion(regionX, regionY, plane)
+        // Navigate to the new region (reuses existing context regions when possible)
+        asyncRegionManager.renderDistance = renderDistanceInput[0]
+        asyncRegionManager.showRoofs = showRoofs
+        asyncRegionManager.navigateToRegion(regionX, regionY, plane)
 
         // Create IndirectRenderer if shaders are available and indirect rendering is enabled.
-        val im = regionManager.instanceManager
+        val im = asyncRegionManager.instanceManager
+        indirectRenderer?.cleanup()
+        indirectRenderer = null
         if (useIndirectRendering && im != null && indirectColorShader != null && indirectTexturedShader != null) {
             val atlas = objectAtlas
             val ir = IndirectRenderer(
@@ -2038,10 +2109,8 @@ class MapViewer(
             )
             ir.init()
 
-            // Register all models that RegionManager registered with InstanceManager
-            // IndirectRenderer needs its own copy of the model data for SSBO-based rendering
-            for (obj in regionManager.centerObjects) {
-                val combinedId = regionManager.getModelIdForInstance(obj)
+            for (obj in asyncRegionManager.centerObjects) {
+                val combinedId = asyncRegionManager.getModelIdForInstance(obj)
                 val meshDataList = if (obj.modifications.hasModifications()) {
                     ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
                 } else {
@@ -2063,18 +2132,9 @@ class MapViewer(
             }
         }
 
-        // Build merged atlas terrain meshes (2 draw calls for all regions)
-        if (terrainAtlas != null) {
-            regionManager.buildMergedAtlasTerrain()
-        }
-
-        // Record total region load time (terrain + objects + context + atlas build)
+        // Record total region load time
         RenderMetrics.terrainLoadTimeMs = RenderMetrics.endTiming(regionLoadStart)
 
-        // Record object load time (instance creation, model registration, context regions, atlas upload)
-        RenderMetrics.objectLoadTimeMs = RenderMetrics.endTiming(objectLoadStart)
-
-        // Populate atlas stats for the debug panel
         updateAtlasStats()
 
         // Center camera on the world-space center of this region
@@ -2118,10 +2178,6 @@ class MapViewer(
     }
 
     private fun cleanupRegion() {
-        // Delegate all region resource cleanup to RegionManager
-        regionManager.cleanup()
-
-        // Clean up viewer-specific resources
         editManager?.cleanup()
         editManager = null
         indirectRenderer?.cleanup()
@@ -2168,6 +2224,7 @@ class MapViewer(
 
     override fun onCleanup() {
         cleanupRegion()
+        asyncRegionManager.destroy()  // Cancel coroutine scope
         uniformBuffers.cleanup()
         uboColorShader.cleanup()
         uboTexturedShader.cleanup()

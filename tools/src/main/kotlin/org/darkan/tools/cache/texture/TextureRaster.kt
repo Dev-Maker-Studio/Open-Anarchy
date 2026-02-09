@@ -47,8 +47,12 @@ object TextureRaster {
     /** Wall-clock start time (nanos) for the current texture generation pass.
      *  Set before each top-level generation in TextureLoader.
      *  Checked in cache access (getPalette), row loops, and leaf operation loops;
-     *  if it exceeds [MAX_GENERATION_NANOS] a [TextureGenerationException] is thrown. */
-    var generationStartNanos: Long = 0L
+     *  if it exceeds [MAX_GENERATION_NANOS] a [TextureGenerationException] is thrown.
+     *  ThreadLocal so concurrent background threads each track their own timeout. */
+    private val generationStartNanosLocal: ThreadLocal<Long> = ThreadLocal.withInitial { 0L }
+    var generationStartNanos: Long
+        get() = generationStartNanosLocal.get()
+        set(value) { generationStartNanosLocal.set(value) }
     const val MAX_GENERATION_NANOS: Long = 5_000_000_000L // 5 seconds
 
     /**
