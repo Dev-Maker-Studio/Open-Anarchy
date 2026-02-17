@@ -20,7 +20,7 @@ object Accounts {
     private val collection by lazy {
         val col = database.getCollection<Account>("accounts")
         runBlocking {
-            col.createIndex(ascending(Account::email.name), IndexOptions().unique(true).sparse(true))
+            col.createIndex(ascending(Account::email.name), IndexOptions().unique(true))
             col.createIndex(ascending(Account::recoveryEmail.name), IndexOptions().sparse(true))
             col.createIndex(ascending(Account::displayName.name))
         }

@@ -16,9 +16,9 @@ class CommonUpdateBlocksBuilder {
 
     private val spotAnims: Array<SpotAnim?> = arrayOfNulls(4)
 
-    fun spotAnim(slot: Int, id: Int, settingsHash: Int, settings2Hash: Int) {
+    fun spotAnim(slot: Int, id: Int, height: Int = 0, speed: Int = 0, rotation: Int = 0, adjustReplayMode: Boolean = false) {
         require(slot in 0..3) { "spotAnim slot must be in 0..3 (got $slot)" }
-        spotAnims[slot] = SpotAnim(slot, id, settingsHash, settings2Hash)
+        spotAnims[slot] = SpotAnim(id, height, speed, rotation, adjustReplayMode)
     }
 
     fun build(): CommonUpdateBlocks =

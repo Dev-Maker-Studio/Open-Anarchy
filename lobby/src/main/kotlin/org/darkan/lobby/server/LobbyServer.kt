@@ -174,17 +174,20 @@ class LobbyServer(val js5: JS5Server) {
         if (!pendingLogins.add(username)) return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
         val account = Accounts.find(username) ?: return run {
             pendingLogins.remove(username)
+            logInfo("Account not found: $username")
             output.finish(ResponseOpcode.INVALID_CREDENTIALS)
         }
         if (!account.passwordHash.isEmpty()) {
             if (!Crypto.verifyPasswordArgon2(password, account.passwordHash))
                 return run {
+                    logInfo("Invalid argon password hash for found: $username")
                     pendingLogins.remove(username)
                     output.finish(ResponseOpcode.INVALID_CREDENTIALS)
                 }
         } else if (account.password != null) {
             if (!Crypto.legacyCompare(password, account.password!!.map { it.toByte() }.toByteArray()))
                 return run {
+                    logInfo("Invalid legacy password hash for found: $username")
                     pendingLogins.remove(username)
                     output.finish(ResponseOpcode.INVALID_CREDENTIALS)
                 }
@@ -194,6 +197,7 @@ class LobbyServer(val js5: JS5Server) {
         } else if (account.legacyPass != null) {
             if (!Crypto.gigaLegacyCompare(password, account.legacyPass!!))
                 return run {
+                    logInfo("Invalid giga legacy password hash for found: $username")
                     pendingLogins.remove(username)
                     output.finish(ResponseOpcode.INVALID_CREDENTIALS)
                 }

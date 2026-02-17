@@ -25,6 +25,7 @@ import org.darkan.core.net.prot.WorldLoginDetails
 import org.darkan.core.social.gateway.AnnouncementBroadcast
 import org.darkan.core.social.gateway.AnnouncementChannel
 import org.darkan.core.social.gateway.AnnouncementTarget
+import org.darkan.core.social.gateway.ServerPacketBatch
 import org.darkan.core.social.gateway.ServerPacketEnvelope
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import world.gregs.voidps.buffer.*
@@ -273,8 +274,14 @@ class WorldServer {
         when (msg) {
             is ServerPacketEnvelope -> {
                 val player = WorldPlayers.get(msg.username) ?: return
-                // Directly emit the decoded ServerProt onto the player's session.
                 player.session.send(msg.packet)
+            }
+
+            is ServerPacketBatch -> {
+                for (username in msg.usernames) {
+                    val player = WorldPlayers.get(username) ?: continue
+                    player.session.send(msg.packet)
+                }
             }
 
             is AnnouncementBroadcast -> {

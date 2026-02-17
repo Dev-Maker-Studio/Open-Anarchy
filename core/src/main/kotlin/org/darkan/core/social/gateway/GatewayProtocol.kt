@@ -29,6 +29,7 @@ object SocialGatewayWireJson {
             subclass(FcJoin::class, FcJoin.serializer())
             subclass(FcKick::class, FcKick.serializer())
             subclass(FcSetRank::class, FcSetRank.serializer())
+            subclass(ClanChannelKickUser::class, ClanChannelKickUser.serializer())
         }
         polymorphic(ServerProt::class) {
             subclass(FriendStatus::class, FriendStatus.serializer())
@@ -40,6 +41,11 @@ object SocialGatewayWireJson {
             subclass(MessageFriendsChat::class, MessageFriendsChat.serializer())
             subclass(GameMessage::class, GameMessage.serializer())
             subclass(ChatFilterSettingsPrivateChat::class, ChatFilterSettingsPrivateChat.serializer())
+            subclass(ClanChannelFull::class, ClanChannelFull.serializer())
+            subclass(ClanSettingsFull::class, ClanSettingsFull.serializer())
+            subclass(MessageClanChannel::class, MessageClanChannel.serializer())
+            subclass(VarclanEnable::class, VarclanEnable.serializer())
+            subclass(VarclanDisable::class, VarclanDisable.serializer())
         }
     }
 
@@ -166,4 +172,9 @@ data class ServerPacketEnvelope(
     @Polymorphic val packet: ServerProt,
 ) : SocialGatewayWireMessage
 
-
+@Serializable
+@SerialName("ServerPacketBatch")
+data class ServerPacketBatch(
+    val usernames: List<String>,
+    @Polymorphic val packet: ServerProt,
+) : SocialGatewayWireMessage

@@ -2,6 +2,7 @@ package org.darkan.core.net.prot
 
 import io.ktor.utils.io.*
 import kotlinx.io.Source
+import org.darkan.core.net.prot.update.UpdateProtocol
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.primaryConstructor
@@ -10,6 +11,7 @@ class Codec {
     val serverProts = mutableMapOf<KClass<out ServerProt>, ServerProtCodec>()
     val clientProtsByOpcode = mutableMapOf<Int, ClientProtCodec<*>>()
     private val opcodeToClassMap = mutableMapOf<Int, KClass<out ClientProt>>()
+    var updateProtocol: UpdateProtocol? = null
 
     data class ServerProtCodec(
         val opcode: Int,

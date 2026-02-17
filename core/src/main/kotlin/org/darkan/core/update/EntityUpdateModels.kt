@@ -11,16 +11,22 @@ package org.darkan.core.update
 /**
  * A single spot animation (gfx) update.
  *
- * @param slot Revision-defined logical slot (commonly 0..3). The revision encoder maps slot->mask + write order.
+ * The slot is determined by the array index in [CommonUpdateBlocks.spotAnims] (0..3),
+ * and does not need to be stored here. The revision encoder repacks these semantic
+ * fields into the wire format.
+ *
  * @param id SpotAnim id, or -1 to clear.
- * @param settingsHash Packed settings (commonly delay/height/etc) as used by the update protocol.
- * @param settings2Hash Packed rotation/slot/bool bits as used by the update protocol.
+ * @param height Vertical offset in client units (0 = ground level).
+ * @param speed Animation delay in client cycles before playing.
+ * @param rotation Rotation value (0..7).
+ * @param adjustReplayMode Whether to adjust replay mode on the client.
  */
 data class SpotAnim(
-    val slot: Int,
     val id: Int,
-    val settingsHash: Int,
-    val settings2Hash: Int,
+    val height: Int = 0,
+    val speed: Int = 0,
+    val rotation: Int = 0,
+    val adjustReplayMode: Boolean = false,
 )
 
 /**

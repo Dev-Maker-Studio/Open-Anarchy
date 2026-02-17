@@ -39,13 +39,8 @@ class LobbyPlayer(val session: Session, val account: Account) {
             vars.setVarBit(11162, 1)
             vars.syncVarsToClient()
 
-            SocialGateway.registerLobbyPlayerSession(
-                username = account.username,
-                displayName = account.displayName,
-                rightsCrown = account.rights.crown,
-                privateStatus = account.social.status.toInt(),
-                session = session,
-            )
+            SocialGateway.registerLobbyPlayerSession(account, session)
+            session.flush()
             session.readPackets(read)
         } finally {
             try {

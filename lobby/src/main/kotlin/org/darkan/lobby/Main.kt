@@ -3,7 +3,7 @@ package org.darkan.lobby
 import kotlinx.coroutines.runBlocking
 import org.darkan.core.Logger
 import org.darkan.core.Logger.logError
-import org.darkan.core.net.prot.revision.register727
+import org.darkan.core.net.prot.revision.rev727.register727
 import java.util.logging.Level
 import kotlin.system.exitProcess
 

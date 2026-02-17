@@ -400,9 +400,9 @@ suspend fun ByteReadChannel.readSmart(): Int {
 suspend fun ByteWriteChannel.writeName(displayName: String, responseName: String = displayName) {
     val different = displayName != responseName
     writeBoolean(different)
-    writeString(displayName)
+    writeRSString(displayName)
     if (different)
-        writeString(responseName)
+        writeRSString(responseName)
 }
 
 /**
