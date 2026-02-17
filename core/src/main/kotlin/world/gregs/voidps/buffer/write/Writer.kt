@@ -52,6 +52,14 @@ interface Writer {
         }
     }
 
+    fun writeBigSmart(value: Int) {
+        when {
+            value == -1 -> writeShort(32767)
+            value in 0..32766 -> writeShort(value)
+            else -> writeInt(value or 0x80000000.toInt())
+        }
+    }
+
     fun writeString(value: String?) {
         if (value != null) {
             for (char in value) {

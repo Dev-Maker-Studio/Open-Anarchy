@@ -141,7 +141,7 @@ data class QuickChatPrivate(val toUsername: String, val qcId: Int, val messageDa
 @Serializable data class FcSetRank(val username: String, val rank: Int) : ClientProt
 
 // Clan Chat
-data class ClanChannelKickUser(val guest: Boolean, val pid: Int, val username: String) : ClientProt
+@Serializable data class ClanChannelKickUser(val guest: Boolean, val pid: Int, val username: String) : ClientProt
 
 /**
  * ClientProt opcode 39 in the 727 client (`UNUSED_CLAN_OP` in `darkan-bot`).

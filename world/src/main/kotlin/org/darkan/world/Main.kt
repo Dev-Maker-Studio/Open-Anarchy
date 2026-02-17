@@ -5,7 +5,7 @@ import org.darkan.core.EnvVars
 import org.darkan.core.Logger
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.net.prot.handler.PacketHandlers
-import org.darkan.core.net.prot.revision.register727
+import org.darkan.core.net.prot.revision.rev727.register727
 import org.darkan.world.server.WorldServer
 import world.gregs.voidps.cache.Cache
 import java.util.logging.Level

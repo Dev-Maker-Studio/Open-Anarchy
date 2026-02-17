@@ -6,7 +6,7 @@ package org.darkan.core.net.prot.update
  * Revisions should not re-specify “is this mask present?”; that is derived from the packet/entity model.
  */
 
-fun buildPlayerMaskPresence(packet: PlayerUpdatePacket, player: PlayerUpdatePlayer, added: Boolean): BooleanArray {
+fun buildPlayerMaskPresence(state: PlayerUpdateTrackingState, player: PlayerUpdatePlayer, added: Boolean): BooleanArray {
     val p = BooleanArray(PlayerMaskKey.entries.size)
     val b = player.blocks
     val c = b.common
@@ -26,7 +26,7 @@ fun buildPlayerMaskPresence(packet: PlayerUpdatePacket, player: PlayerUpdatePlay
 
     val appearance = b.appearance
     p[PlayerMaskKey.APPEARANCE.ordinal] =
-        appearance != null && packet.needAppearanceUpdate(player.index, appearance.hash)
+        appearance != null && state.needAppearanceUpdate(player.index, appearance.hash)
 
     p[PlayerMaskKey.ANIMATION.ordinal] = b.movementAnimations != null
     p[PlayerMaskKey.FACE_ENTITY.ordinal] = c.faceEntity != null
