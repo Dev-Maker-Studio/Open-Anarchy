@@ -18,6 +18,8 @@ import org.darkan.core.mongo.collections.Clans
 import org.darkan.core.net.Session
 import org.darkan.core.net.prot.*
 import org.darkan.core.social.gateway.*
+import org.darkan.core.worldlist.World
+import org.darkan.lobby.Lobby
 import java.util.concurrent.ConcurrentHashMap
 
 object SocialGateway {
@@ -197,11 +199,12 @@ object SocialGateway {
         }.toTypedArray()
 
         val settings = clan.settings.map { (key, value) ->
+            val intKey = key.toInt()
             when (value) {
-                is Int -> ClanSettingsFull.ClanVarSetting(key = key, intValue = value)
-                is Long -> ClanSettingsFull.ClanVarSetting(key = key, longValue = value)
-                is String -> ClanSettingsFull.ClanVarSetting(key = key, stringValue = value)
-                else -> ClanSettingsFull.ClanVarSetting(key = key, intValue = 0)
+                is Int -> ClanSettingsFull.ClanVarSetting(key = intKey, intValue = value)
+                is Long -> ClanSettingsFull.ClanVarSetting(key = intKey, longValue = value)
+                is String -> ClanSettingsFull.ClanVarSetting(key = intKey, stringValue = value)
+                else -> ClanSettingsFull.ClanVarSetting(key = intKey, intValue = 0)
             }
         }.toTypedArray()
 
@@ -346,7 +349,7 @@ object SocialGateway {
 
         val clan = Clans.find(clanName) ?: return
         val fromAccount = Accounts.find(fromUsername) ?: return
-        if (fromAccount.isMuted()) return
+        if (fromAccount.checkMuted()) return
 
         val fromRank = getClanRank(clan, fromUsername)
         if (!clanRankAllowed(fromRank.iconId, clan.ccChatRank.iconId)) {
@@ -474,7 +477,7 @@ object SocialGateway {
 
     suspend fun updateClanSettings(clanName: String, updates: Map<Int, Any>) {
         val clan = Clans.find(clanName) ?: return
-        clan.settings.putAll(updates)
+        clan.settings.putAll(updates.mapKeys { it.key.toString() })
         Clans.save(clan)
         val room = ccRoomsByClanName[clanName]
         if (room != null) {
@@ -636,6 +639,7 @@ object SocialGateway {
                         worldsById[worldId] = session
                         worldSession = session
                         worldInfoById[worldId] = msg.world
+                        Lobby.worldList.put(World(msg.world.toWorldMetadata()))
 
                         logInfo("SocialGateway: world connected worldId=${worldId} name=${msg.world.worldName} host=${msg.world.publicHost}:${msg.world.port}")
                         val resp = WorldHelloAck(ok = true, message = null)
@@ -660,6 +664,7 @@ object SocialGateway {
                         )
                         presenceByUsername[username] = presence
                         usernameByDisplayLower[msg.displayName.lowercase()] = username
+                        Lobby.worldList.get(session.worldId)?.let { it.playersOnline++ }
                         launch {
                             try {
                                 val acc = Accounts.find(username) ?: return@launch
@@ -676,6 +681,7 @@ object SocialGateway {
                         val prior = presenceByUsername.remove(username)
                         if (prior != null) {
                             usernameByDisplayLower.remove(prior.displayName.lowercase(), username)
+                            Lobby.worldList.get(prior.worldId)?.let { if (it.playersOnline > 0) it.playersOnline-- }
                         }
                         launch {
                             val acc = Accounts.find(username)
@@ -708,6 +714,7 @@ object SocialGateway {
             val session = worldSession
             if (session != null) {
                 session.markClosed()
+                Lobby.worldList.remove(session.worldId)
                 worldsById.remove(session.worldId, session)
                 worldInfoById.remove(session.worldId)
 
@@ -945,7 +952,7 @@ object SocialGateway {
 
     private suspend fun handlePrivateMessage(fromUsername: String, toDisplayName: String, message: String) {
         val fromAccount = Accounts.find(fromUsername) ?: return
-        if (fromAccount.isMuted()) {
+        if (fromAccount.checkMuted()) {
             sendToUser(fromUsername, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "You are muted."))
             return
         }
@@ -990,7 +997,7 @@ object SocialGateway {
 
         val owner = Accounts.find(ownerUsername) ?: return
         val fromAccount = Accounts.find(fromUsername) ?: return
-        if (fromAccount.isMuted()) return
+        if (fromAccount.checkMuted()) return
 
         val fromRank = if (fromUsername == owner.username) FriendsChatRank.OWNER.id else owner.social.friendsChat.getRank(fromUsername).id
         val required = owner.social.friendsChat.rankToSpeak.id

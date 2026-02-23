@@ -28,7 +28,7 @@ open class ObjectDecoderFull(
                 this.modelIds = Array(length) { count ->
                     modelTypes!![count] = buffer.readByte().toByte()
                     val size = buffer.readUnsignedByte()
-                    IntArray(size) { buffer.readUnsignedShort() }
+                    IntArray(size) { buffer.readBigSmart() }
                 }
                 if (opcode == 5 && !lowDetail) {
                     skip(buffer)
@@ -51,9 +51,9 @@ open class ObjectDecoderFull(
             22 -> delayShading = true
             23 -> culling = 1
             24 -> {
-                val length = buffer.readShort()
-                if (length != 65535) {
-                    animations = intArrayOf(length)
+                val animation = buffer.readBigSmart()
+                if (animation != -1) {
+                    animations = intArrayOf(animation)
                 }
             }
             27 -> solid = 1
@@ -134,10 +134,7 @@ open class ObjectDecoderFull(
                 animations = IntArray(length)
                 percents = IntArray(length)
                 for (index in 0 until length) {
-                    animations!![index] = buffer.readShort()
-                    if (animations!![index] == 65535) {
-                        animations!![index] = -1
-                    }
+                    animations!![index] = buffer.readBigSmart()
                     percents!![index] = buffer.readUnsignedByte()
                     total += percents!![index]
                 }
@@ -180,7 +177,9 @@ open class ObjectDecoderFull(
             }
             177 -> aBoolean2992 = true
             178 -> anInt2975 = buffer.readUnsignedByte()
+            189 -> dynamicTint = true
             249 -> readParameters(buffer)
+            else -> error("Unhandled object definition opcode: $opcode for def $id")
         }
     }
 

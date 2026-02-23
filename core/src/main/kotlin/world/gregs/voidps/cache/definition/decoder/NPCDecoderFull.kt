@@ -19,10 +19,7 @@ class NPCDecoderFull(val members: Boolean = true) : DefinitionDecoder<NPCDefinit
                 val length = buffer.readUnsignedByte()
                 modelIds = IntArray(length)
                 for (count in 0 until length) {
-                    modelIds!![count] = buffer.readUnsignedShort()
-                    if (modelIds!![count] == 65535) {
-                        modelIds!![count] = -1
-                    }
+                    modelIds!![count] = buffer.readBigSmart()
                 }
             }
             2 -> name = buffer.readString()
@@ -31,23 +28,41 @@ class NPCDecoderFull(val members: Boolean = true) : DefinitionDecoder<NPCDefinit
             40 -> readColours(buffer)
             41 -> readTextures(buffer)
             42 -> readColourPalette(buffer)
-            60 -> dialogueModels = IntArray(buffer.readUnsignedByte()) { buffer.readUnsignedShort() }
+            60 -> dialogueModels = IntArray(buffer.readUnsignedByte()) { buffer.readBigSmart() }
             93 -> drawMinimapDot = false
-            95 -> combat = buffer.readShort()
-            97 -> scaleXY = buffer.readShort()
-            98 -> scaleZ = buffer.readShort()
+            95 -> combat = buffer.readUnsignedShort()
+            97 -> scaleXY = buffer.readUnsignedShort()
+            98 -> scaleZ = buffer.readUnsignedShort()
             99 -> priorityRender = true
             100 -> lightModifier = buffer.readByte()
             101 -> shadowModifier = 5 * buffer.readByte()
-            102 -> headIcon = buffer.readShort()
-            103 -> rotation = buffer.readShort()
-            106, 118 -> readTransforms(buffer, opcode == 118)
+            102 -> headIcon = buffer.readUnsignedShort()
+            103 -> rotation = buffer.readUnsignedShort()
+            // NPC transforms use unsigned short for IDs (not bigSmart like objects)
+            106, 118 -> {
+                varbit = buffer.readUnsignedShort()
+                if (varbit == 65535) varbit = -1
+                varp = buffer.readUnsignedShort()
+                if (varp == 65535) varp = -1
+                var last = -1
+                if (opcode == 118) {
+                    last = buffer.readUnsignedShort()
+                    if (last == 65535) last = -1
+                }
+                val length = buffer.readUnsignedByte()
+                transforms = IntArray(length + 2)
+                for (count in 0..length) {
+                    transforms!![count] = buffer.readUnsignedShort()
+                    if (transforms!![count] == 65535) transforms!![count] = -1
+                }
+                transforms!![length + 1] = last
+            }
             107 -> clickable = false
             109 -> slowWalk = false
             111 -> animateIdle = false
             113 -> {
-                primaryShadowColour = buffer.readShort().toShort()
-                secondaryShadowColour = buffer.readShort().toShort()
+                primaryShadowColour = buffer.readUnsignedShort().toShort()
+                secondaryShadowColour = buffer.readUnsignedShort().toShort()
             }
             114 -> {
                 primaryShadowModifier = buffer.readByte().toByte()
@@ -66,25 +81,26 @@ class NPCDecoderFull(val members: Boolean = true) : DefinitionDecoder<NPCDefinit
                     )
                 }
             }
-            122 -> hitbarSprite = buffer.readShort()
-            123 -> height = buffer.readShort()
+            122 -> hitbarSprite = buffer.readUnsignedShort()
+            123 -> height = buffer.readUnsignedShort()
             125 -> respawnDirection = buffer.readByte().toByte()
-            127 -> renderEmote = buffer.readShort()
+            127 -> renderEmote = buffer.readUnsignedShort()
             128 -> buffer.readUnsignedByte()
             134 -> {
-                idleSound = buffer.readShort()
-                if (idleSound == 65535) {
-                    idleSound = -1
-                }
-                crawlSound = buffer.readShort()
-                if (crawlSound == 65535) {
-                    crawlSound = -1
-                }
-                walkSound = buffer.readShort()
+                // Order per client: walk, crawl(teleport), idle, run
+                walkSound = buffer.readUnsignedShort()
                 if (walkSound == 65535) {
                     walkSound = -1
                 }
-                runSound = buffer.readShort()
+                crawlSound = buffer.readUnsignedShort()
+                if (crawlSound == 65535) {
+                    crawlSound = -1
+                }
+                idleSound = buffer.readUnsignedShort()
+                if (idleSound == 65535) {
+                    idleSound = -1
+                }
+                runSound = buffer.readUnsignedShort()
                 if (runSound == 65535) {
                     runSound = -1
                 }
@@ -92,18 +108,19 @@ class NPCDecoderFull(val members: Boolean = true) : DefinitionDecoder<NPCDefinit
             }
             135 -> {
                 primaryCursorOp = buffer.readUnsignedByte()
-                primaryCursor = buffer.readShort()
+                primaryCursor = buffer.readUnsignedShort()
             }
             136 -> {
                 secondaryCursorOp = buffer.readUnsignedByte()
-                secondaryCursor = buffer.readShort()
+                secondaryCursor = buffer.readUnsignedShort()
             }
-            137 -> attackCursor = buffer.readShort()
-            138 -> armyIcon = buffer.readShort()
-            139 -> spriteId = buffer.readShort()
+            137 -> attackCursor = buffer.readUnsignedShort()
+            // Opcode 138: overhead sprite (bigSmart for rev 727)
+            138 -> armyIcon = buffer.readBigSmart()
+            139 -> spriteId = buffer.readUnsignedShort()
             140 -> ambientSoundVolume = buffer.readUnsignedByte()
             141 -> visiblePriority = true
-            142 -> mapFunction = buffer.readShort()
+            142 -> mapFunction = buffer.readUnsignedShort()
             143 -> invisiblePriority = true
             in 150..154 -> {
                 options[opcode - 150] = buffer.readString()
@@ -121,17 +138,20 @@ class NPCDecoderFull(val members: Boolean = true) : DefinitionDecoder<NPCDefinit
             159 -> mainOptionIndex = 0.toByte()
             160 -> {
                 val length = buffer.readUnsignedByte()
-                campaigns = IntArray(length) { buffer.readShort() }
+                campaigns = IntArray(length) { buffer.readUnsignedShort() }
             }
             162 -> aBoolean2883 = true
             163 -> anInt2803 = buffer.readUnsignedByte()
             164 -> {
-                anInt2844 = buffer.readShort()
-                anInt2852 = buffer.readShort()
+                anInt2844 = buffer.readUnsignedShort()
+                anInt2852 = buffer.readUnsignedShort()
             }
             165 -> anInt2831 = buffer.readUnsignedByte()
             168 -> anInt2862 = buffer.readUnsignedByte()
+            // Opcode 169: hasTint = false (boolean flag, no data bytes)
+            169 -> { /* hasTint = false */ }
             249 -> readParameters(buffer)
+            else -> error("Unhandled NPC definition opcode: $opcode for def $id")
         }
     }
 

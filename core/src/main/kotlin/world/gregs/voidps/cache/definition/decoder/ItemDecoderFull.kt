@@ -15,63 +15,72 @@ class ItemDecoderFull : DefinitionDecoder<ItemDefinitionFull>(ITEMS) {
 
     override fun ItemDefinitionFull.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            1 -> modelId = buffer.readUnsignedShort()
+            // Opcode 1: model ID (bigSmart for rev 727)
+            1 -> modelId = buffer.readBigSmart()
             2 -> name = buffer.readString()
-            4 -> spriteScale = buffer.readShort()
-            5 -> spritePitch = buffer.readShort()
-            6 -> spriteCameraRoll = buffer.readShort()
+            4 -> spriteScale = buffer.readUnsignedShort()
+            5 -> spritePitch = buffer.readUnsignedShort()
+            6 -> spriteCameraRoll = buffer.readUnsignedShort()
             7 -> {
-                spriteTranslateX = buffer.readShort()
+                spriteTranslateX = buffer.readUnsignedShort()
                 if (spriteTranslateX > 32767) {
                     spriteTranslateX -= 65536
                 }
             }
             8 -> {
-                spriteTranslateY = buffer.readShort()
+                spriteTranslateY = buffer.readUnsignedShort()
                 if (spriteTranslateY > 32767) {
                     spriteTranslateY -= 65536
                 }
             }
             11 -> stackable = 1
             12 -> cost = buffer.readInt()
+            13 -> wearPos = buffer.readUnsignedByte()
+            14 -> wearPos2 = buffer.readUnsignedByte()
             16 -> members = true
-            18 -> multiStackSize = buffer.readShort()
-            23 -> primaryMaleModel = buffer.readUnsignedShort()
-            24 -> secondaryMaleModel = buffer.readUnsignedShort()
-            25 -> primaryFemaleModel = buffer.readUnsignedShort()
-            26 -> secondaryFemaleModel = buffer.readUnsignedShort()
+            18 -> multiStackSize = buffer.readUnsignedShort()
+            // Opcodes 23-26: equipment model IDs (bigSmart for rev 727)
+            23 -> primaryMaleModel = buffer.readBigSmart()
+            24 -> secondaryMaleModel = buffer.readBigSmart()
+            25 -> primaryFemaleModel = buffer.readBigSmart()
+            26 -> secondaryFemaleModel = buffer.readBigSmart()
+            27 -> wearPos3 = buffer.readUnsignedByte()
             in 30..34 -> floorOptions[opcode - 30] = buffer.readString()
             in 35..39 -> options[opcode - 35] = buffer.readString()
             40 -> readColours(buffer)
             41 -> readTextures(buffer)
             42 -> readColourPalette(buffer)
+            // Opcode 43: tooltip color (int + boolean flag) - skip data
+            43 -> buffer.readInt()
             65 -> exchangeable = true
-            78 -> tertiaryMaleModel = buffer.readShort()
-            79 -> tertiaryFemaleModel = buffer.readShort()
-            90 -> primaryMaleDialogueHead = buffer.readShort()
-            91 -> primaryFemaleDialogueHead = buffer.readShort()
-            92 -> secondaryMaleDialogueHead = buffer.readShort()
-            93 -> secondaryFemaleDialogueHead = buffer.readShort()
-            95 -> spriteCameraYaw = buffer.readShort()
+            // Opcodes 78-79: tertiary equipment model IDs (bigSmart for rev 727)
+            78 -> tertiaryMaleModel = buffer.readBigSmart()
+            79 -> tertiaryFemaleModel = buffer.readBigSmart()
+            // Opcodes 90-93: dialogue head model IDs (bigSmart for rev 727)
+            90 -> primaryMaleDialogueHead = buffer.readBigSmart()
+            91 -> primaryFemaleDialogueHead = buffer.readBigSmart()
+            92 -> secondaryMaleDialogueHead = buffer.readBigSmart()
+            93 -> secondaryFemaleDialogueHead = buffer.readBigSmart()
+            95 -> spriteCameraYaw = buffer.readUnsignedShort()
             96 -> dummyItem = buffer.readUnsignedByte()
-            97 -> noteId = buffer.readShort()
-            98 -> notedTemplateId = buffer.readShort()
+            97 -> noteId = buffer.readUnsignedShort()
+            98 -> notedTemplateId = buffer.readUnsignedShort()
             in 100..109 -> {
                 if (stackIds == null) {
                     stackAmounts = IntArray(10)
                     stackIds = IntArray(10)
                 }
-                stackIds!![opcode - 100] = buffer.readShort()
-                stackAmounts!![opcode - 100] = buffer.readShort()
+                stackIds!![opcode - 100] = buffer.readUnsignedShort()
+                stackAmounts!![opcode - 100] = buffer.readUnsignedShort()
             }
-            110 -> floorScaleX = buffer.readShort()
-            111 -> floorScaleZ = buffer.readShort()
-            112 -> floorScaleY = buffer.readShort()
+            110 -> floorScaleX = buffer.readUnsignedShort()
+            111 -> floorScaleZ = buffer.readUnsignedShort()
+            112 -> floorScaleY = buffer.readUnsignedShort()
             113 -> ambience = buffer.readByte()
             114 -> diffusion = buffer.readByte() * 5
             115 -> team = buffer.readUnsignedByte()
-            121 -> lendId = buffer.readShort()
-            122 -> lendTemplateId = buffer.readShort()
+            121 -> lendId = buffer.readUnsignedShort()
+            122 -> lendTemplateId = buffer.readUnsignedShort()
             125 -> {
                 maleWieldX = buffer.readByte() shl 2
                 maleWieldZ = buffer.readByte() shl 2
@@ -84,28 +93,29 @@ class ItemDecoderFull : DefinitionDecoder<ItemDefinitionFull>(ITEMS) {
             }
             127 -> {
                 primaryCursorOpcode = buffer.readUnsignedByte()
-                primaryCursor = buffer.readShort()
+                primaryCursor = buffer.readUnsignedShort()
             }
             128 -> {
                 secondaryCursorOpcode = buffer.readUnsignedByte()
-                secondaryCursor = buffer.readShort()
+                secondaryCursor = buffer.readUnsignedShort()
             }
             129 -> {
                 primaryInterfaceCursorOpcode = buffer.readUnsignedByte()
-                primaryInterfaceCursor = buffer.readShort()
+                primaryInterfaceCursor = buffer.readUnsignedShort()
             }
             130 -> {
                 secondaryInterfaceCursorOpcode = buffer.readUnsignedByte()
-                secondaryInterfaceCursor = buffer.readShort()
+                secondaryInterfaceCursor = buffer.readUnsignedShort()
             }
             132 -> {
                 val length = buffer.readUnsignedByte()
-                campaigns = IntArray(length) { buffer.readShort() }
+                campaigns = IntArray(length) { buffer.readUnsignedShort() }
             }
             134 -> pickSizeShift = buffer.readUnsignedByte()
-            139 -> singleNoteId = buffer.readShort()
-            140 -> singleNoteTemplateId = buffer.readShort()
+            139 -> singleNoteId = buffer.readUnsignedShort()
+            140 -> singleNoteTemplateId = buffer.readUnsignedShort()
             249 -> readParameters(buffer)
+            else -> error("Unhandled item definition opcode: $opcode for def $id")
         }
     }
 

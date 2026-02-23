@@ -11,7 +11,7 @@ data class WorldObject(
 ) {
     constructor(id: Int, rotation: Int, x: Int, y: Int, plane: Int) : this(
         id = id,
-        type = Cache.objects[id].shapes?.get(0) ?: ObjectShape.SCENERY_INTERACT,
+        type = Cache.objects[id].modelTypes?.let { ObjectShape.forId(it[0].toInt()) ?: ObjectShape.SCENERY_INTERACT } ?: ObjectShape.SCENERY_INTERACT,
         rotation = rotation,
         tile = Tile(x, y, plane)
     )

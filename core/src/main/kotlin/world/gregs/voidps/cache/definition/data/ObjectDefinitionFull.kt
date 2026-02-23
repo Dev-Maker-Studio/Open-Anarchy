@@ -80,6 +80,7 @@ data class ObjectDefinitionFull(
     var anInt3020: Int = 256,
     var aBoolean2992: Boolean = false,
     var anInt2975: Int = 0,
+    var dynamicTint: Boolean = false,
     override var params: Map<Int, Any>? = null,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null
@@ -226,6 +227,7 @@ data class ObjectDefinitionFull(
         if (anInt3020 != other.anInt3020) return false
         if (aBoolean2992 != other.aBoolean2992) return false
         if (anInt2975 != other.anInt2975) return false
+        if (dynamicTint != other.dynamicTint) return false
         if (params != other.params) return false
         if (stringId != other.stringId) return false
         if (extras != other.extras) return false
@@ -309,6 +311,7 @@ data class ObjectDefinitionFull(
         result = 31 * result + anInt3020
         result = 31 * result + aBoolean2992.hashCode()
         result = 31 * result + anInt2975
+        result = 31 * result + dynamicTint.hashCode()
         result = 31 * result + (params?.hashCode() ?: 0)
         result = 31 * result + stringId.hashCode()
         result = 31 * result + (extras?.hashCode() ?: 0)

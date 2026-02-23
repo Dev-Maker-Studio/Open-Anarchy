@@ -204,4 +204,7 @@ internal val playerMasks: MaskRegistry<PlayerMaskCtx, PlayerMaskKey> =
                 out.writeInt(settingsHash)
                 out.writeByteAdd(settings2Hash)
         }
+
+        // Note: BAS (render emote) is encoded inside the appearance block, not as a standalone mask.
+        // The rev 727 client has no player mask handler for 0x400.
     }.build()

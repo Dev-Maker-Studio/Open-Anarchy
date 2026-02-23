@@ -7,7 +7,6 @@ import io.ktor.utils.io.*
 import io.ktor.utils.io.CancellationException
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
-import kotlinx.io.EOFException
 import kotlinx.io.readByteArray
 import kotlinx.io.readUByte
 import kotlinx.io.readUShort
@@ -15,6 +14,7 @@ import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logTrace
+import org.darkan.core.net.Session
 import org.darkan.core.crypt.Crypto
 import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.generateRandom24ByteArray
@@ -107,8 +107,11 @@ class LobbyServer(val js5: JS5Server) {
                 socket.close()
             }
         } catch (e: Exception) {
-            if (e !is EOFException)
-                logError("Error handling client connection", e)
+            when {
+                e is CancellationException -> {}
+                Session.isExpectedDisconnect(e) -> logTrace("Lobby client disconnected: ${e::class.simpleName}")
+                else -> logError("Error handling client connection", e)
+            }
         } finally {
             socket.close()
         }

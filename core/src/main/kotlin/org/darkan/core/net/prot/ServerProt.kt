@@ -765,8 +765,8 @@ data class VarclanSetByte(val id: Int, val value: Int) : ServerProt
 data class VarclanSetInt(val id: Int, val value: Int) : ServerProt
 data class VarclanSetString(val id: Int, val value: String) : ServerProt
 
-@Serializable @JvmInline value class VarclanEnable(val dummy: Int = 0) : ServerProt
-@Serializable @JvmInline value class VarclanDisable(val dummy: Int = 0) : ServerProt
+@Serializable data class VarclanEnable(val dummy: Int = 0) : ServerProt
+@Serializable data class VarclanDisable(val dummy: Int = 0) : ServerProt
 @JvmInline value class ClearVarps(val dummy: Int = 0) : ServerProt
 
 /**
@@ -801,7 +801,7 @@ data class PlayerOption(val option: String, val slot: Int, val top: Boolean, val
     override fun hashCode(): Int = updates.contentHashCode()
 }
 
-@Serializable @JvmInline value class FriendlistLoaded(val dummy: Int = 0) : ServerProt
+@Serializable data class FriendlistLoaded(val dummy: Int = 0) : ServerProt
 
 data class AddIgnore(val username: String, val displayName: String, val temporary: Boolean = false, val editDisplayName: Boolean = false) : ServerProt
 
@@ -879,7 +879,7 @@ data class RequestFps(val key: Int, val flags: Int) : ServerProt
 
 data class ChatFilterSettings(val tradeFilter: Int, val publicFilter: Int) : ServerProt
 
-@Serializable @JvmInline value class ChatFilterSettingsPrivateChat(val privateFilter: Int) : ServerProt
+@Serializable data class ChatFilterSettingsPrivateChat(val privateFilter: Int) : ServerProt
 
 /**
  * Account related protocols
@@ -926,22 +926,9 @@ data class ReflectionRequest(val id: Int, val checks: Array<ReflectionCheck>) : 
     }
 }
 
-data class RunCs2Script(val signature: String, val trigger: Int, val args: Array<Any?>) : ServerProt {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as RunCs2Script
-        if (signature != other.signature) return false
-        if (trigger != other.trigger) return false
-        return args.contentEquals(other.args)
-    }
-
-    override fun hashCode(): Int {
-        var result = signature.hashCode()
-        result = 31 * result + trigger
-        result = 31 * result + args.contentHashCode()
-        return result
-    }
+data class RunScript(val scriptId: Int, val params: Array<Any>) : ServerProt {
+    override fun equals(other: Any?) = this === other
+    override fun hashCode() = System.identityHashCode(this)
 }
 
 data class SetCursor(val cursorId: Int = -1, val uptext: String? = null) : ServerProt

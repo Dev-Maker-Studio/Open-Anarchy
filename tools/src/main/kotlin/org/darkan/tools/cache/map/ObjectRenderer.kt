@@ -12,7 +12,7 @@ import org.joml.Matrix4f
 import org.joml.Vector3f
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.MapObject
-import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import world.gregs.voidps.cache.definition.data.ObjectDefinitionFull
 
 /**
  * Represents a renderable map object instance.
@@ -30,11 +30,11 @@ import world.gregs.voidps.cache.definition.data.ObjectDefinition
  * copies during region loading.
  *
  * Model modifications (retexturing/recoloring) are applied when loading the mesh data.
- * These come from ObjectDefinition.retextureSrc/Dst and recolorSrc/Dst arrays.
+ * These come from ObjectDefinitionFull.retextureSrc/Dst and recolorSrc/Dst arrays.
  */
 data class ObjectInstance(
     val mapObject: MapObject,
-    val definition: ObjectDefinition,
+    val definition: ObjectDefinitionFull,
     val modelIds: List<Int>,
     var worldPosition: Vector3f,
     val rotation: Float,  // Y-axis rotation in radians
@@ -43,8 +43,8 @@ data class ObjectInstance(
     var terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE,  // Terrain tilt (type 3 only)
     val mirrored: Boolean = false,  // Whether to mirror the model (negate Z)
     val modifications: ModelModifications = ModelModifications.NONE,  // Retexture/recolor modifications
-    val groundContourType: Int = 0,  // Ground contour type from ObjectDefinition (0-5)
-    val groundContourModifier: Int = -1,  // Ground contour modifier from ObjectDefinition
+    val groundContourType: Int = 0,  // Ground contour type from ObjectDefinitionFull (0-5)
+    val groundContourModifier: Int = -1,  // Ground contour modifier from ObjectDefinitionFull
     val rsSceneX: Int = 0,  // RS scene X position (baseX * 512 + sizeX * 256) for vertex displacement
     val rsSceneY: Int = 0,  // RS scene Y position (baseY * 512 + sizeY * 256) for vertex displacement
     var rsAverageHeight: Int = 0,  // Average terrain height in RS units for vertex displacement
@@ -124,7 +124,7 @@ object ObjectRenderer {
     /**
      * Get object definition by ID (raw, without transform resolution).
      */
-    fun getRawDefinition(objectId: Int): ObjectDefinition? {
+    fun getRawDefinition(objectId: Int): ObjectDefinitionFull? {
         val defs = Cache.objects
         return if (objectId in defs.indices) defs[objectId] else null
     }
@@ -136,9 +136,9 @@ object ObjectRenderer {
      * This method resolves the transform using the core engine's var system.
      *
      * @param objectId The object ID to look up
-     * @return The resolved ObjectDefinition, or null if the object should not be rendered
+     * @return The resolved ObjectDefinitionFull, or null if the object should not be rendered
      */
-    fun getDefinition(objectId: Int): ObjectDefinition? {
+    fun getDefinition(objectId: Int): ObjectDefinitionFull? {
         val def = getRawDefinition(objectId) ?: return null
         return resolveTransform(def)
     }
@@ -159,7 +159,7 @@ object ObjectRenderer {
      * @param def The object definition (may have transforms)
      * @return The resolved definition, or null if transform says don't render
      */
-    fun resolveTransform(def: ObjectDefinition): ObjectDefinition? {
+    fun resolveTransform(def: ObjectDefinitionFull): ObjectDefinitionFull? {
         val transforms = def.transforms
         // No transforms - return original definition
         if (transforms == null || transforms.isEmpty()) return def
@@ -191,32 +191,28 @@ object ObjectRenderer {
     /**
      * Get model IDs for an object based on its shape.
      *
-     * The shapes array in ObjectDefinition contains the ObjectShape for each model group.
+     * The shapes array in ObjectDefinitionFull contains the ObjectShape for each model group.
      * modelIds is an array of IntArrays where each sub-array contains model IDs for a shape.
      *
      * @param def The object definition
      * @param shape The object shape (0-22)
      * @return List of model IDs to render for this object
      */
-    fun getModelIds(def: ObjectDefinition, shape: Int): List<Int> {
+    fun getModelIds(def: ObjectDefinitionFull, shape: Int): List<Int> {
         val modelIds = def.modelIds ?: return emptyList()
-        val shapes = def.shapes
+        val modelTypes = def.modelTypes
 
-        // Matching client's getStationaryModel(): if shapes is null, no shape-specific
+        // Matching client's getStationaryModel(): if modelTypes is null, no shape-specific
         // models exist, so no model can be resolved for any shape.
-        // (In practice, shapes and modelIds are always decoded together from opcode 1/5,
-        // so shapes==null implies modelIds==null, but be safe.)
-        if (shapes == null) return emptyList()
+        // (In practice, modelTypes and modelIds are always decoded together from opcode 1/5,
+        // so modelTypes==null implies modelIds==null, but be safe.)
+        if (modelTypes == null) return emptyList()
 
         // Find model group matching this shape
-        val targetShape = try {
-            ObjectShape.forId(shape)
-        } catch (e: IllegalArgumentException) {
-            return emptyList()
-        }
+        val targetShapeId = shape.toByte()
 
-        for (i in shapes.indices) {
-            if (shapes[i] == targetShape && i < modelIds.size) {
+        for (i in modelTypes.indices) {
+            if (modelTypes[i] == targetShapeId && i < modelIds.size) {
                 return modelIds[i].toList()
             }
         }
@@ -224,8 +220,8 @@ object ObjectRenderer {
         // Fallback: shapes 10 and 11 are interchangeable in the client
         // (both handled as interactive objects in SceneGraph.addObject)
         if (shape == 10 || shape == 11) {
-            for (i in shapes.indices) {
-                if ((shapes[i] == ObjectShape.SCENERY_INTERACT || shapes[i] == ObjectShape.GROUND_INTERACT)
+            for (i in modelTypes.indices) {
+                if ((modelTypes[i] == ObjectShape.SCENERY_INTERACT.id.toByte() || modelTypes[i] == ObjectShape.GROUND_INTERACT.id.toByte())
                     && i < modelIds.size) {
                     return modelIds[i].toList()
                 }
@@ -345,14 +341,14 @@ object ObjectRenderer {
      * @param def The resolved object definition
      * @return true if the ground decoration should be rendered, false to skip it
      */
-    fun shouldRenderGroundDecoration(def: ObjectDefinition): Boolean {
+    fun shouldRenderGroundDecoration(def: ObjectDefinitionFull): Boolean {
         // Compute hasActions matching client ObjectType.postDecode()
         var hasActions = def.interactive
         if (hasActions == -1) {
             hasActions = 0
-            // Check if the object has exactly one shape and it's SCENERY_INTERACT (10)
-            val shapes = def.shapes
-            if (shapes != null && shapes.size == 1 && shapes[0] == ObjectShape.SCENERY_INTERACT) {
+            // Check if the object has exactly one model type and it's SCENERY_INTERACT (10)
+            val modelTypes = def.modelTypes
+            if (modelTypes != null && modelTypes.size == 1 && modelTypes[0] == ObjectShape.SCENERY_INTERACT.id.toByte()) {
                 hasActions = 1
             }
             // Check if the object has any non-null options (indices 0..4)
@@ -369,8 +365,8 @@ object ObjectRenderer {
             }
         }
 
-        // Client filter: render if hasActions != 0 OR blocksMovement == 1 OR forceDisplayDecoration
-        return hasActions != 0 || def.solid == 1 || def.forceDisplayDecoration
+        // Client filter: render if hasActions != 0 OR blocksMovement == 1 OR blocksLand
+        return hasActions != 0 || def.solid == 1 || def.blocksLand
     }
 
     /**
@@ -504,8 +500,8 @@ object ObjectRenderer {
             //   sceneY = (baseY << 9) + (locSizeY << 8)
             //   averageHeight = (h00 + h10 + h01 + h11) shr 2
             // The sceneX/Y are region-local (relative to region's scene origin).
-            val contourType = def.groundContourType.toInt()
-            val contourMod = def.groundContourModifier
+            val contourType = def.contouredGround.toInt()
+            val contourMod = def.anInt3023
             val rsSceneX: Int
             val rsSceneY: Int
             val rsAvgHeight: Int
@@ -544,18 +540,18 @@ object ObjectRenderer {
             val position = Vector3f(posX, posY, posZ)
 
             // Calculate scale from definition (default is 128 = 1.0 scale)
-            val scaleX = def.resizeX / 128f
-            val scaleY = def.resizeY / 128f
-            val scaleZ = def.resizeZ / 128f
+            val scaleX = def.modelSizeX / 128f
+            val scaleY = def.modelSizeZ / 128f
+            val scaleZ = def.modelSizeY / 128f
 
             // Definition offsets (already in RS units * 4, convert to OpenGL units)
             // Applied AFTER rotation in the client (in world space)
             val defOffsetX = def.offsetX * CoordinateUtil.DEFAULT_SCALE
-            val defOffsetY = def.offsetY * CoordinateUtil.DEFAULT_SCALE
-            val defOffsetZ = def.offsetZ * CoordinateUtil.DEFAULT_SCALE
+            val defOffsetY = def.offsetZ * CoordinateUtil.DEFAULT_SCALE
+            val defOffsetZ = def.offsetY * CoordinateUtil.DEFAULT_SCALE
 
             // Calculate wall decoration offset if applicable
-            val decorOffset = getWallDecorationOffset(obj.shape, obj.rotation, def.decorDisplacement)
+            val decorOffset = getWallDecorationOffset(obj.shape, obj.rotation, def.offsetMultiplier)
 
             // Calculate terrain alignment for objects with groundContourType 1, 2, or 3
             // Must pass the same averageHeight that the object is positioned at
@@ -565,8 +561,8 @@ object ObjectRenderer {
                     localTileY = localTileY,
                     sizeX = sizeX,
                     sizeY = sizeY,
-                    groundContourType = def.groundContourType.toInt(),
-                    groundContourModifier = def.groundContourModifier,
+                    groundContourType = def.contouredGround.toInt(),
+                    groundContourModifier = def.anInt3023,
                     averageHeight = terrainHeight,  // Pass the same height object is positioned at
                     heightSampler = { tx, ty ->
                         val clampedX = tx.coerceIn(0, 63)
@@ -770,8 +766,8 @@ object ObjectRenderer {
             }
 
             // Compute RS-unit scene position and average height for per-vertex displacement
-            val contourType = def.groundContourType.toInt()
-            val contourMod = def.groundContourModifier
+            val contourType = def.contouredGround.toInt()
+            val contourMod = def.anInt3023
             val rsSceneX: Int
             val rsSceneY: Int
             val rsAvgHeight: Int
@@ -809,18 +805,18 @@ object ObjectRenderer {
             val position = Vector3f(posX, posY, posZ)
 
             // Calculate scale from definition (default is 128 = 1.0 scale)
-            val scaleX = def.resizeX / 128f
-            val scaleY = def.resizeY / 128f
-            val scaleZ = def.resizeZ / 128f
+            val scaleX = def.modelSizeX / 128f
+            val scaleY = def.modelSizeZ / 128f
+            val scaleZ = def.modelSizeY / 128f
 
             // Definition offsets (already in RS units * 4, convert to OpenGL units)
             // Applied AFTER rotation in the client (in world space)
             val defOffsetX = def.offsetX * CoordinateUtil.DEFAULT_SCALE
-            val defOffsetY = def.offsetY * CoordinateUtil.DEFAULT_SCALE
-            val defOffsetZ = def.offsetZ * CoordinateUtil.DEFAULT_SCALE
+            val defOffsetY = def.offsetZ * CoordinateUtil.DEFAULT_SCALE
+            val defOffsetZ = def.offsetY * CoordinateUtil.DEFAULT_SCALE
 
             // Calculate wall decoration offset if applicable
-            val decorOffset = getWallDecorationOffset(obj.shape, obj.rotation, def.decorDisplacement)
+            val decorOffset = getWallDecorationOffset(obj.shape, obj.rotation, def.offsetMultiplier)
 
             // Calculate terrain alignment for objects with groundContourType 1, 2, or 3
             // Must pass the same averageHeight that the object is positioned at
@@ -830,8 +826,8 @@ object ObjectRenderer {
                     localTileY = localTileY,
                     sizeX = sizeX,
                     sizeY = sizeY,
-                    groundContourType = def.groundContourType.toInt(),
-                    groundContourModifier = def.groundContourModifier,
+                    groundContourType = def.contouredGround.toInt(),
+                    groundContourModifier = def.anInt3023,
                     averageHeight = terrainHeight,  // Pass the same height object is positioned at
                     heightSampler = { tx, ty ->
                         val clampedX = tx.coerceIn(0, 63)
@@ -1111,10 +1107,10 @@ object ObjectRenderer {
     }
 
     /**
-     * Create ModelModifications from an ObjectDefinition.
+     * Create ModelModifications from an ObjectDefinitionFull.
      * Extracts retextureSrc/Dst, recolorSrc/Dst arrays, and ambient lightness factor.
      *
-     * The ambient value matches the RS client's formula: adjustedAmbient = 64 + def.ambient.
+     * The ambient value matches the RS client's formula: adjustedAmbient = 64 + def.brightness.
      * The RS client always applies blendColorLightness(hsl, adjustedAmbient) to every face
      * color, which scales the lightness component by adjustedAmbient/128. With the default
      * ambient of 0, this halves the lightness (64/128 = 0.5).
@@ -1122,20 +1118,20 @@ object ObjectRenderer {
      * @param def The object definition
      * @return ModelModifications instance (may be NONE if no modifications)
      */
-    fun getModifications(def: ObjectDefinition): ModelModifications {
-        val hasRetexture = def.retextureSrc != null && def.retextureDst != null
-        val hasRecolor = def.recolorSrc != null && def.recolorDst != null
-        val adjustedAmbient = ModelModifications.DEFAULT_AMBIENT + def.ambient
+    fun getModifications(def: ObjectDefinitionFull): ModelModifications {
+        val hasRetexture = def.originalTextureColours != null && def.modifiedTextureColours != null
+        val hasRecolor = def.originalColours != null && def.modifiedColours != null
+        val adjustedAmbient = ModelModifications.DEFAULT_AMBIENT + def.brightness
 
         if (!hasRetexture && !hasRecolor && adjustedAmbient == ModelModifications.DEFAULT_AMBIENT) {
             return ModelModifications.NONE
         }
 
         return ModelModifications(
-            retextureSrc = def.retextureSrc,
-            retextureDst = def.retextureDst,
-            recolorSrc = def.recolorSrc,
-            recolorDst = def.recolorDst,
+            retextureSrc = def.originalTextureColours,
+            retextureDst = def.modifiedTextureColours,
+            recolorSrc = def.originalColours,
+            recolorDst = def.modifiedColours,
             ambient = adjustedAmbient
         )
     }

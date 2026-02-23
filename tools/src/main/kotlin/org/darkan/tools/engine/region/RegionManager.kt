@@ -574,11 +574,11 @@ class RegionManager(
                     regionBaseY = regionY * 64,
                     rsRotation = obj.mapObject.rotation,
                     mirrored = obj.mirrored,
-                    resizeX = obj.definition.resizeX,
-                    resizeY = obj.definition.resizeY,
-                    resizeZ = obj.definition.resizeZ,
+                    resizeX = obj.definition.modelSizeX,
+                    resizeY = obj.definition.modelSizeZ,
+                    resizeZ = obj.definition.modelSizeY,
                     rsOffsetX = obj.definition.offsetX,
-                    rsOffsetZ = obj.definition.offsetZ
+                    rsOffsetZ = obj.definition.offsetY
                 )
 
                 if (displaced != null) {
@@ -722,11 +722,11 @@ class RegionManager(
                                     regionBaseY = ry * 64,
                                     rsRotation = obj.mapObject.rotation,
                                     mirrored = obj.mirrored,
-                                    resizeX = obj.definition.resizeX,
-                                    resizeY = obj.definition.resizeY,
-                                    resizeZ = obj.definition.resizeZ,
+                                    resizeX = obj.definition.modelSizeX,
+                                    resizeY = obj.definition.modelSizeZ,
+                                    resizeZ = obj.definition.modelSizeY,
                                     rsOffsetX = obj.definition.offsetX,
-                                    rsOffsetZ = obj.definition.offsetZ
+                                    rsOffsetZ = obj.definition.offsetY
                                 )
 
                                 if (displacedMesh != null) {

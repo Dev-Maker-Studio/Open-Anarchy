@@ -15,7 +15,7 @@ import kotlinx.coroutines.runBlocking
 import org.darkan.core.map.RegionLoader
 import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.cache.definition.data.MapObject
-import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import world.gregs.voidps.cache.definition.data.ObjectDefinitionFull
 import org.darkan.tools.cache.map.ObjectInstance
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.map.TerrainAligner
@@ -200,7 +200,7 @@ class MapViewer(
     private val editedTilesThisDrag = mutableSetOf<Pair<Int, Int>>()
 
     // Object place tool state
-    private var objectSearchResults: List<ObjectDefinition> = emptyList()
+    private var objectSearchResults: List<ObjectDefinitionFull> = emptyList()
     private var selectedObjectId = -1
     private val editorObjectShape = intArrayOf(10)  // Default to CENTREPIECE_STRAIGHT
     private val editorObjectRotation = intArrayOf(0)
@@ -884,9 +884,9 @@ class MapViewer(
      * Search object definitions by name (case-insensitive substring) or exact ID.
      * Returns at most [limit] results.
      */
-    private fun searchObjectDefinitions(query: String, limit: Int = 50): List<ObjectDefinition> {
+    private fun searchObjectDefinitionFulls(query: String, limit: Int = 50): List<ObjectDefinitionFull> {
         val defs = Cache.objects
-        val results = mutableListOf<ObjectDefinition>()
+        val results = mutableListOf<ObjectDefinitionFull>()
 
         // Try exact ID match first
         val idMatch = query.toIntOrNull()
@@ -917,7 +917,7 @@ class MapViewer(
     private fun computeObjectWorldPosition(
         localX: Int,
         localY: Int,
-        def: ObjectDefinition,
+        def: ObjectDefinitionFull,
         rotation: Int
     ): Triple<Vector3f, Int, Int> {
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
@@ -1028,7 +1028,7 @@ class MapViewer(
      * Ensure the model for an object definition is registered with the InstanceManager.
      * Returns the combined model ID, or -1 if registration failed.
      */
-    private fun ensureModelRegistered(def: ObjectDefinition, shape: Int): Int {
+    private fun ensureModelRegistered(def: ObjectDefinitionFull, shape: Int): Int {
         val im = asyncRegionManager.instanceManager ?: return -1
         val modelIds = ObjectRenderer.getModelIds(def, shape)
         if (modelIds.isEmpty()) return -1
@@ -1079,12 +1079,12 @@ class MapViewer(
         // Create a synthetic MapObject for the placed object
         val mapObject = MapObject(selectedObjectId, worldX, worldY, currentPlane, shape, rotation)
 
-        val scaleX = def.resizeX / 128f
-        val scaleY = def.resizeY / 128f
-        val scaleZ = def.resizeZ / 128f
+        val scaleX = def.modelSizeX / 128f
+        val scaleY = def.modelSizeZ / 128f
+        val scaleZ = def.modelSizeY / 128f
         val defOffsetX = def.offsetX * CoordinateUtil.DEFAULT_SCALE
-        val defOffsetY = def.offsetY * CoordinateUtil.DEFAULT_SCALE
-        val defOffsetZ = def.offsetZ * CoordinateUtil.DEFAULT_SCALE
+        val defOffsetY = def.offsetZ * CoordinateUtil.DEFAULT_SCALE
+        val defOffsetZ = def.offsetY * CoordinateUtil.DEFAULT_SCALE
 
         val instance = ObjectInstance(
             mapObject = mapObject,
@@ -2552,7 +2552,7 @@ class MapViewer(
                         ImGui.text("Size:     %dx%d".format(def.sizeX, def.sizeY))
                         ImGui.text("Solid:    %d".format(def.solid))
 
-                        val blocksProjectile = (def.block and ObjectDefinition.PROJECTILE) != 0
+                        val blocksProjectile = (def.block and ObjectDefinitionFull.PROJECTILE) != 0
                         ImGui.text("Blocks Projectile: %s".format(if (blocksProjectile) "Yes" else "No"))
                         ImGui.unindent()
 
@@ -2725,17 +2725,17 @@ class MapViewer(
                             ))
 
                             // Object retexturing/recoloring if present
-                            if (def.retextureSrc != null && def.retextureDst != null) {
+                            if (def.originalTextureColours != null && def.modifiedTextureColours != null) {
                                 ImGui.textColored(0.5f, 1f, 0.5f, 1f, "  Has Retexturing")
-                                for (i in def.retextureSrc!!.indices) {
-                                    if (i < def.retextureDst!!.size) {
-                                        val src = def.retextureSrc!![i].toInt() and 0xffff
-                                        val dst = def.retextureDst!![i].toInt() and 0xffff
+                                for (i in def.originalTextureColours!!.indices) {
+                                    if (i < def.modifiedTextureColours!!.size) {
+                                        val src = def.originalTextureColours!![i].toInt() and 0xffff
+                                        val dst = def.modifiedTextureColours!![i].toInt() and 0xffff
                                         ImGui.text("    Tex %d -> %d".format(src, dst))
                                     }
                                 }
                             }
-                            if (def.recolorSrc != null && def.recolorDst != null) {
+                            if (def.originalColours != null && def.modifiedColours != null) {
                                 ImGui.textColored(0.5f, 0.5f, 1f, 1f, "  Has Recoloring")
                             }
 
@@ -2777,7 +2777,7 @@ class MapViewer(
             if (ImGui.inputText("##obj_search", editorObjectSearchQuery)) {
                 val query = editorObjectSearchQuery.get().trim()
                 objectSearchResults = if (query.length >= 2) {
-                    searchObjectDefinitions(query)
+                    searchObjectDefinitionFulls(query)
                 } else {
                     emptyList()
                 }

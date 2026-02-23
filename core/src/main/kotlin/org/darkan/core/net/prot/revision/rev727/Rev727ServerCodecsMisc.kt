@@ -50,9 +50,9 @@ internal fun Codec.registerRev727MiscPackets() {
         if (localPlayerPid != null && localPlayerBaseTileHash != null && otherPlayerRegionIds != null) {
             out.bitAccess {
                 writeBits(30, localPlayerBaseTileHash)
-                otherPlayerRegionIds.forEachIndexed { index, region ->
+                for (index in 1 until otherPlayerRegionIds.size) {
                     if (index != localPlayerPid)
-                        writeBits(18, region)
+                        writeBits(18, otherPlayerRegionIds[index])
                 }
             }
         }
@@ -69,9 +69,9 @@ internal fun Codec.registerRev727MiscPackets() {
         if (localPlayerPid != null && localPlayerBaseTileHash != null && otherPlayerRegionIds != null) {
             out.bitAccess {
                 writeBits(30, localPlayerBaseTileHash)
-                otherPlayerRegionIds.forEachIndexed { index, region ->
+                for (index in 1 until otherPlayerRegionIds.size) {
                     if (index != localPlayerPid)
-                        writeBits(18, region)
+                        writeBits(18, otherPlayerRegionIds[index])
                 }
             }
         }
@@ -168,7 +168,7 @@ internal fun Codec.registerRev727MiscPackets() {
                 if (world.metadata.quickchat) flags = flags or 0x2
                 if (world.metadata.pvp) flags = flags or 0x4
                 if (world.metadata.lootShare) flags = flags or 0x8
-                if (world.metadata.highlighted) flags = flags or 0x16
+                if (world.metadata.highlighted) flags = flags or 0x10
                 if (world.metadata.port != 43595) flags = flags or 0x40000000 // Custom port flag
 
                 out.writeInt(flags)
@@ -216,19 +216,24 @@ internal fun Codec.registerRev727MiscPackets() {
         out.writeRSString(command)
     }
 
-    serverProt<RunCs2Script>(opcode = 99, size = ProtSize.VarShort) { out ->
-        require(args.size == signature.length) { "RunCs2Script args must match signature length" }
-        out.writeRSString(signature)
-        for (i in signature.length - 1 downTo 0) {
-            val type = signature[i]
-            val arg = args[i]
-            if (type == 's') {
-                out.writeRSString(arg as? String ?: "")
-            } else {
-                out.writeInt(arg as? Int ?: 0)
+    serverProt<RunScript>(opcode = 99, size = ProtSize.VarShort) { out ->
+        val signature = buildString {
+            for (param in params) {
+                when (param) {
+                    is String -> append('s')
+                    is Int -> append('I')
+                    else -> error("RunScript params must be String or Int, got: ${param::class.simpleName}")
+                }
             }
         }
-        out.writeInt(trigger)
+        out.writeRSString(signature)
+        for (i in params.lastIndex downTo 0) {
+            when (val param = params[i]) {
+                is String -> out.writeRSString(param)
+                is Int -> out.writeInt(param)
+            }
+        }
+        out.writeInt(scriptId)
     }
 
     serverProt<SetCursor>(opcode = 153, size = ProtSize.VarByte) { out ->

@@ -36,6 +36,7 @@ fun buildPlayerMaskPresence(state: PlayerUpdateTrackingState, player: PlayerUpda
     p[PlayerMaskKey.SPOT_ANIM_4.ordinal] = c.spotAnims[3] != null
     p[PlayerMaskKey.FORCE_MOVEMENT.ordinal] = c.forceMovement != null
     p[PlayerMaskKey.SPOT_ANIM_1.ordinal] = c.spotAnims[0] != null
+    // Note: BAS is encoded inside the appearance block, not as a standalone player mask.
 
     // `added` is passed for revisions that want to force certain blocks-on-add.
     // Presence remains derived from model; revision encoders can ignore/override as needed.

@@ -15,7 +15,7 @@ class WorldList(val maxWorlds: Int) {
         get() = _revision
 
     fun get(number: Int): World? = synchronized(worlds) {
-        worlds[number] ?: worlds[number]
+        worlds[number]
     }
 
     fun remove(number: Int): World? = synchronized(worlds) {

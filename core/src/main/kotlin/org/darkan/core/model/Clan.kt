@@ -50,11 +50,11 @@ data class ClanMemberData(
 
 @Serializable
 class Clan(
-    val name: String,
-    var leaderUsername: String,
+    val name: String = "",
+    var leaderUsername: String = "",
     val members: MutableMap<String, ClanMemberData> = mutableMapOf(),
     val bannedUsers: MutableSet<String> = mutableSetOf(),
-    val settings: MutableMap<Int, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
+    val settings: MutableMap<String, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
     var ccChatRank: ClanRank = ClanRank.NONE,
     var ccKickRank: ClanRank = ClanRank.ADMIN,
 ) {
