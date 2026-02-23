@@ -28,7 +28,7 @@ open class ObjectDecoder(
 
                 // Read type and models for each entry sequentially (not all types first!)
                 repeat(count) { index ->
-                    shapes!![index] = ObjectShape.forId(buffer.readByte())
+                    shapes!![index] = ObjectShape.forId(buffer.readByte()) ?: ObjectShape.SCENERY_INTERACT
                     val modelCount = buffer.readUnsignedByte()
                     modelIds?.set(index, IntArray(modelCount) { buffer.readBigSmart() })
                 }
@@ -328,6 +328,7 @@ open class ObjectDecoder(
                 buffer.readSmart()
             }
             249 -> readParameters(buffer, parameters)
+            else -> error("Unhandled object definition opcode: $opcode for def $id")
         }
     }
 

@@ -17,10 +17,12 @@ object PacketHandlers {
             logInfo("Initializing packet handlers ($pack)...")
             val classes = getClasses(pack)
 
-            classes.forEach { clazz ->
-                @Suppress("UNCHECKED_CAST")
-                mapHandler(clazz.getConstructor().newInstance() as PacketHandler<*, out ClientProt>)
-            }
+            classes
+                .filter { PacketHandler::class.java.isAssignableFrom(it) }
+                .forEach { clazz ->
+                    @Suppress("UNCHECKED_CAST")
+                    mapHandler(clazz.getConstructor().newInstance() as PacketHandler<*, out ClientProt>)
+                }
             logInfo("Packet handlers loaded for ${PACKET_HANDLERS.size} packets...")
         } catch (e: Exception) {
             e.printStackTrace()

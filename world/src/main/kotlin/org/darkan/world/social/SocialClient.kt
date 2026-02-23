@@ -9,6 +9,7 @@ import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.net.prot.ClientProt
+import java.net.ConnectException
 import org.darkan.core.social.gateway.ClientPacketEnvelope
 import org.darkan.core.social.gateway.GatewayWorldInfo
 import org.darkan.core.social.gateway.PlayerOffline
@@ -115,7 +116,11 @@ class SocialClient(
             } catch (_: CancellationException) {
                 return
             } catch (e: Exception) {
-                logWarn("SocialClient connection error", e)
+                if (e is ConnectException) {
+                    logInfo("SocialClient connection refused (attempt $attempt, retrying...)")
+                } else {
+                    logWarn("SocialClient connection error: ${e::class.simpleName}: ${e.message}")
+                }
             } finally {
                 state.set(State.Stopped)
             }

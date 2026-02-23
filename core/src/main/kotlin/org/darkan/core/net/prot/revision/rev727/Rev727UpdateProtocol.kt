@@ -18,12 +18,16 @@ object Rev727UpdateProtocol : UpdateProtocol {
     override fun encodePlayerUpdate(snapshot: PlayerUpdateSnapshot, state: PlayerUpdateTrackingState): ByteArray {
         val local = snapshot.playersByIndex[snapshot.localIndex] ?: return ByteArray(0)
 
+        // Refresh localPlayers from the current tick snapshot so that each
+        // local index points to the latest PlayerUpdatePlayer data (or null
+        // if the player logged out, which needsRemove() will catch).
+        for (i in 0 until state.localIndexCount) {
+            val idx = state.localIndexes[i]
+            state.localPlayers[idx] = snapshot.playersByIndex[idx]
+        }
+
         val stream = BufferWriter(capacity = 16384)
         val updateBlocks = BufferWriter(capacity = 16384)
-
-        if (state.localIndexCount == 0 && state.outIndexCount == 0) {
-            writeInit(stream, snapshot, state, local)
-        }
 
         processLocalPlayers(stream, updateBlocks, snapshot, state, local, snapshot.largeSceneView, true)
         processLocalPlayers(stream, updateBlocks, snapshot, state, local, snapshot.largeSceneView, false)
@@ -47,25 +51,6 @@ object Rev727UpdateProtocol : UpdateProtocol {
         }
 
         return stream.toArray()
-    }
-
-    private fun writeInit(stream: BufferWriter, snapshot: PlayerUpdateSnapshot, state: PlayerUpdateTrackingState, local: PlayerUpdatePlayer) {
-        stream.startBitAccess()
-        stream.writeBits(30, snapshot.localTileHash30)
-
-        state.localPlayers[local.index] = local
-        state.localIndexes[state.localIndexCount++] = local.index
-
-        for (playerIndex in 1 until 2048) {
-            if (playerIndex == local.index) continue
-            val p = snapshot.playersByIndex[playerIndex]
-            val regionHash = p?.regionHash18 ?: 0
-            stream.writeBits(18, regionHash)
-            state.regionHashes[playerIndex] = regionHash
-            state.outIndexes[state.outIndexCount++] = playerIndex
-        }
-
-        stream.stopBitAccess()
     }
 
     private fun withinDistance(local: PlayerUpdatePlayer, other: PlayerUpdatePlayer, largeSceneView: Boolean): Boolean {

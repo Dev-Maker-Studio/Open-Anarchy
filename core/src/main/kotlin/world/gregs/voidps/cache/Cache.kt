@@ -1,9 +1,23 @@
 package world.gregs.voidps.cache
 
 import org.darkan.core.EnvVars
-import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import world.gregs.voidps.cache.definition.data.AnimationDefinitionFull
+import world.gregs.voidps.cache.definition.data.BASDefinition
+import world.gregs.voidps.cache.definition.data.EnumDefinition
+import world.gregs.voidps.cache.definition.data.GraphicDefinition
+import world.gregs.voidps.cache.definition.data.ItemDefinitionFull
+import world.gregs.voidps.cache.definition.data.NPCDefinitionFull
+import world.gregs.voidps.cache.definition.data.ObjectDefinitionFull
+import world.gregs.voidps.cache.definition.data.StructDefinition
 import world.gregs.voidps.cache.definition.data.VarBitDefinition
-import world.gregs.voidps.cache.definition.decoder.ObjectDecoder
+import world.gregs.voidps.cache.definition.decoder.AnimationDecoderFull
+import world.gregs.voidps.cache.definition.decoder.BASDecoder
+import world.gregs.voidps.cache.definition.decoder.EnumDecoder
+import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
+import world.gregs.voidps.cache.definition.decoder.ItemDecoderFull
+import world.gregs.voidps.cache.definition.decoder.NPCDecoderFull
+import world.gregs.voidps.cache.definition.decoder.ObjectDecoderFull
+import world.gregs.voidps.cache.definition.decoder.StructDecoder
 import world.gregs.voidps.cache.definition.decoder.VarBitDecoder
 import world.gregs.voidps.cache.secure.Huffman
 
@@ -60,8 +74,36 @@ interface Cache {
             VarBitDecoder().load(singleton)
         }
 
-        val objects: Array<ObjectDefinition> by lazy {
-            ObjectDecoder(EnvVars.members, false).load(singleton)
+        val objects: Array<ObjectDefinitionFull> by lazy {
+            ObjectDecoderFull(EnvVars.members).load(singleton)
+        }
+
+        val items: Array<ItemDefinitionFull> by lazy {
+            ItemDecoderFull().load(singleton)
+        }
+
+        val npcs: Array<NPCDefinitionFull> by lazy {
+            NPCDecoderFull(EnvVars.members).load(singleton)
+        }
+
+        val animations: Array<AnimationDefinitionFull> by lazy {
+            AnimationDecoderFull().load(singleton)
+        }
+
+        val enums: Array<EnumDefinition> by lazy {
+            EnumDecoder().load(singleton)
+        }
+
+        val structs: Array<StructDefinition> by lazy {
+            StructDecoder().load(singleton)
+        }
+
+        val graphics: Array<GraphicDefinition> by lazy {
+            GraphicDecoder().load(singleton)
+        }
+
+        val bas: Array<BASDefinition> by lazy {
+            BASDecoder().load(singleton)
         }
 
         fun get() = singleton

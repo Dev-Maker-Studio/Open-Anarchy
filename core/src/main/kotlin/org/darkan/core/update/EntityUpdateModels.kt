@@ -119,6 +119,8 @@ data class PlayerUpdateBlocks(
     val forceTalk: String? = null,
     val publicChat: PublicChat? = null,
     val sequences: SequencesUpdate? = null,
+    // Note: BAS (render animations) for players is encoded inside the appearance block,
+    // not as a standalone update mask. Use Appearance.setBAS() to change it.
 )
 
 data class NpcUpdateBlocks(

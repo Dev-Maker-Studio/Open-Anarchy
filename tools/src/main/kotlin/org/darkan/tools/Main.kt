@@ -403,20 +403,20 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
     println("Name: ${def.name}")
     println("Size: ${def.sizeX} x ${def.sizeY}")
     println("Options: ${def.options?.toList()}")
-    println("Shapes: ${def.shapes?.map { it.name + "(${it.id})" }}")
+    println("ModelTypes: ${def.modelTypes?.map { it.toInt() }}")
     println("ModelIds: ${def.modelIds?.contentDeepToString()}")
     println("Interactive: ${def.interactive}")
     println("Solid: ${def.solid}")
-    println("ForceDisplayDecoration: ${def.forceDisplayDecoration}")
-    println("Ambient: ${def.ambient}")
+    println("BlocksLand: ${def.blocksLand}")
+    println("Brightness: ${def.brightness}")
     println("Contrast: ${def.contrast}")
 
     // Check for retexturing
-    if (def.retextureSrc != null || def.retextureDst != null) {
-        println("RETEXTURING: src=${def.retextureSrc?.map { it.toInt() and 0xffff }}, dst=${def.retextureDst?.map { it.toInt() and 0xffff }}")
+    if (def.originalTextureColours != null || def.modifiedTextureColours != null) {
+        println("RETEXTURING: src=${def.originalTextureColours?.map { it.toInt() and 0xffff }}, dst=${def.modifiedTextureColours?.map { it.toInt() and 0xffff }}")
     }
-    if (def.recolorSrc != null || def.recolorDst != null) {
-        println("RECOLORING: src=${def.recolorSrc?.map { it.toInt() and 0xffff }}, dst=${def.recolorDst?.map { it.toInt() and 0xffff }}")
+    if (def.originalColours != null || def.modifiedColours != null) {
+        println("RECOLORING: src=${def.originalColours?.map { it.toInt() and 0xffff }}, dst=${def.modifiedColours?.map { it.toInt() and 0xffff }}")
     }
 
     // Get all model IDs for this object (all shapes combined)

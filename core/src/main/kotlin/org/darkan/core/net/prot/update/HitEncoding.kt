@@ -79,7 +79,7 @@ inline fun encodeHits(
         if (bar.timer != 32767) {
             out.writeSmart(bar.delay)
             out.writeByteSubtract(bar.fromPercentage)
-            if (bar.toPercentage != bar.fromPercentage) {
+            if (bar.timer > 0) {
                 out.writeByteAdd(bar.toPercentage)
             }
         }

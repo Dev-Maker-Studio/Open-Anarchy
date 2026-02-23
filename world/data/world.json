@@ -1,0 +1,17 @@
+{
+  "counters": {
+    "attribs": {
+      "IcowTrackerKills": 1.0,
+      "OpenguinHAS_LastReset": "2026-02-18T00:00:00Z",
+      "OpenguinHAS_Penguins": "[{\"npcId\":8110,\"name\":\"TOADSTOOL_2\",\"location\":{\"x\":2420,\"y\":4473,\"plane\":0},\"points\":1,\"spotters\":[]},{\"npcId\":8109,\"name\":\"ROCK_5\",\"location\":{\"x\":2524,\"y\":3625,\"plane\":0},\"points\":1,\"spotters\":[]},{\"npcId\":8108,\"name\":\"CRATE_1\",\"location\":{\"x\":3116,\"y\":3337,\"plane\":0},\"points\":1,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_3\",\"location\":{\"x\":2455,\"y\":3092,\"plane\":0},\"points\":1,\"spotters\":[]},{\"npcId\":8107,\"name\":\"CACTUS_1\",\"location\":{\"x\":3310,\"y\":3157,\"plane\":0},\"points\":1,\"spotters\":[]},{\"npcId\":8109,\"name\":\"ROCK_9\",\"location\":{\"x\":2340,\"y\":3064,\"plane\":0},\"points\":2,\"spotters\":[]},{\"npcId\":8108,\"name\":\"CRATE_5\",\"location\":{\"x\":2322,\"y\":3658,\"plane\":0},\"points\":2,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_15\",\"location\":{\"x\":2802,\"y\":2806,\"plane\":0},\"points\":2,\"spotters\":[]},{\"npcId\":8109,\"name\":\"ROCK_21\",\"location\":{\"x\":3169,\"y\":3650,\"plane\":0},\"points\":2,\"spotters\":[]},{\"npcId\":8107,\"name\":\"CACTUS_6\",\"location\":{\"x\":3438,\"y\":2958,\"plane\":0},\"points\":2,\"spotters\":[]}]",
+      "OpenguinHAS_PolarBear": "{\"location\":\"RELLEKKA\",\"points\":1,\"previousLocations\":[\"RIMMINGTON\",\"FALADOR\",\"ARDOUGNE\",\"RELLEKKA\"],\"spotters\":[]}",
+      "OshootingStarDiscoveries": {
+        "2950572000": "Not discovered yet...",
+        "2940084001": "Not discovered yet...",
+        "2923182000": "Not discovered yet...",
+        "2923050000": "Not discovered yet...",
+        "2922882000": "Not discovered yet..."
+      }
+    }
+  }
+}

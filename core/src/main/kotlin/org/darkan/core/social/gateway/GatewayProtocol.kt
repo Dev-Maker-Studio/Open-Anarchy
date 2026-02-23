@@ -8,6 +8,8 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import org.darkan.core.EnvVars
 import org.darkan.core.net.prot.*
+import org.darkan.core.worldlist.Country
+import org.darkan.core.worldlist.WorldMetadata
 
 /**
  * SocialGateway WebSocket wire protocol.
@@ -112,7 +114,22 @@ data class GatewayWorldInfo(
     val quickChat: Boolean = false,
     val pvp: Boolean = false,
     val lootShare: Boolean = true,
+    val country: String = "USA",
+    val highlighted: Boolean = false,
 ) {
+    fun toWorldMetadata(): WorldMetadata = WorldMetadata(
+        number = worldId,
+        ipAddress = publicHost,
+        port = port,
+        activity = activity.ifEmpty { worldName },
+        country = Country.valueOf(country),
+        quickchat = quickChat,
+        lootShare = lootShare,
+        members = members,
+        pvp = pvp,
+        highlighted = highlighted,
+    )
+
     companion object {
         fun fromEnv(): GatewayWorldInfo = GatewayWorldInfo(
             worldId = EnvVars.worldId,
@@ -125,6 +142,8 @@ data class GatewayWorldInfo(
             quickChat = EnvVars.worldQuickChat,
             pvp = EnvVars.worldPvp,
             lootShare = EnvVars.worldLootShare,
+            country = EnvVars.worldCountry,
+            highlighted = EnvVars.worldHighlighted,
         )
     }
 }

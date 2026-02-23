@@ -18,6 +18,9 @@ data class ItemDefinitionFull(
     var stackable: Int = 0,
     var cost: Int = 1,
     var members: Boolean = false,
+    var wearPos: Int = -1,       // Primary equipment slot (-1 = not equippable)
+    var wearPos2: Int = -1,      // Secondary equipment slot
+    var wearPos3: Int = -1,      // Tertiary equipment slot
     var multiStackSize: Int = -1,
     var primaryMaleModel: Int = -1,
     var secondaryMaleModel: Int = -1,
@@ -100,6 +103,9 @@ data class ItemDefinitionFull(
         if (stackable != other.stackable) return false
         if (cost != other.cost) return false
         if (members != other.members) return false
+        if (wearPos != other.wearPos) return false
+        if (wearPos2 != other.wearPos2) return false
+        if (wearPos3 != other.wearPos3) return false
         if (multiStackSize != other.multiStackSize) return false
         if (primaryMaleModel != other.primaryMaleModel) return false
         if (secondaryMaleModel != other.secondaryMaleModel) return false
@@ -194,6 +200,9 @@ data class ItemDefinitionFull(
         result = 31 * result + stackable
         result = 31 * result + cost
         result = 31 * result + members.hashCode()
+        result = 31 * result + wearPos
+        result = 31 * result + wearPos2
+        result = 31 * result + wearPos3
         result = 31 * result + multiStackSize
         result = 31 * result + primaryMaleModel
         result = 31 * result + secondaryMaleModel
@@ -262,6 +271,9 @@ data class ItemDefinitionFull(
         team = item.team
         params = item.params
         members = item.members
+        wearPos = item.wearPos
+        wearPos2 = item.wearPos2
+        wearPos3 = item.wearPos3
         modifiedTextureColours = item.modifiedTextureColours
         maleWieldZ = item.maleWieldZ
         secondaryFemaleModel = item.secondaryFemaleModel
@@ -324,6 +336,9 @@ data class ItemDefinitionFull(
         tertiaryMaleModel = item.tertiaryMaleModel
         stackable = item.stackable
         members = item.members
+        wearPos = item.wearPos
+        wearPos2 = item.wearPos2
+        wearPos3 = item.wearPos3
         recolourPalette = item.recolourPalette
         spriteTranslateY = template.spriteTranslateY
         team = item.team

@@ -7,6 +7,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.io.Source
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logSevere
+import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.net.prot.ClientProt
 import org.darkan.core.net.prot.Codec
@@ -16,6 +17,10 @@ import world.gregs.voidps.buffer.readUByte
 import world.gregs.voidps.buffer.readUShort
 import world.gregs.voidps.buffer.writeByte
 import world.gregs.voidps.buffer.writeSmart
+import java.io.EOFException
+import java.io.IOException
+import java.net.SocketException
+import java.nio.channels.ClosedChannelException
 
 open class Session(
     private val write: ByteWriteChannel,
@@ -70,27 +75,41 @@ open class Session(
     }
 
     suspend fun readPackets(input: ByteReadChannel) {
-        while (!disconnected) {
-            val cipher = isaacIn.nextInt()
-            val opcode = (input.readUByte() - cipher) and 0xff
-            val clientProt = codec.clientProtsByOpcode[opcode]
-            if (clientProt == null) {
-                logSevere("Missing ClientProt with opcode $opcode")
-                return
-            }
-            val size = when (clientProt.size) {
-                is ProtSize.Fixed -> clientProt.size.length
-                ProtSize.VarByte -> input.readUByte()
-                ProtSize.VarShort -> input.readUShort()
-            }
-            val packet = input.readPacket(size)
+        try {
+            while (!disconnected) {
+                val cipher = isaacIn.nextInt()
+                val opcode = (input.readUByte() - cipher) and 0xff
+                val clientProt = codec.clientProtsByOpcode[opcode]
+                if (clientProt == null) {
+                    logSevere("Missing ClientProt with opcode $opcode")
+                    return
+                }
+                val size = when (clientProt.size) {
+                    is ProtSize.Fixed -> clientProt.size.length
+                    ProtSize.VarByte -> input.readUByte()
+                    ProtSize.VarShort -> input.readUShort()
+                }
+                val packet = input.readPacket(size)
 
-            val packetData = clientProt.decoder?.invoke(packet, opcode) ?: codec.createInstanceForOpcode<ClientProt>(opcode)
-            if (packetData == null) {
-                logSevere("Failed to create packet instance for opcode $opcode")
-                continue
+                val packetData = clientProt.decoder?.invoke(packet, opcode) ?: codec.createInstanceForOpcode<ClientProt>(opcode)
+                if (packetData == null) {
+                    logSevere("Failed to create packet instance for opcode $opcode")
+                    continue
+                }
+                readChannel.send(packetData)
             }
-            readChannel.send(packetData)
+        } catch (e: Exception) {
+            if (isExpectedDisconnect(e)) {
+                logTrace("Session read ended: ${e::class.simpleName}: ${e.message}")
+            } else {
+                throw e
+            }
+        } finally {
+            if (!disconnected) {
+                disconnected = true
+                state = State.LOST_CONNECTION
+                disconnecting?.invoke()
+            }
         }
     }
 
@@ -162,5 +181,24 @@ open class Session(
         val packet = ByteReadPacket(ByteArray(availableForRead).also { readFully(it) })
         close()
         return packet
+    }
+
+    companion object {
+        /**
+         * Returns true if the exception represents an expected client disconnect
+         * (connection reset, EOF, closed channel) rather than a real error.
+         */
+        fun isExpectedDisconnect(e: Throwable): Boolean {
+            return e is ClosedByteChannelException
+                || e is EOFException
+                || e is SocketException
+                || e is ClosedChannelException
+                || (e is IOException && e.message?.let {
+                    it.contains("reset", ignoreCase = true)
+                    || it.contains("broken pipe", ignoreCase = true)
+                    || it.contains("closed", ignoreCase = true)
+                } == true)
+                || (e.cause != null && isExpectedDisconnect(e.cause!!))
+        }
     }
 }

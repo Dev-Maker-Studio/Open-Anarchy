@@ -203,7 +203,7 @@ internal fun Codec.registerRev727ClientProts() {
     clientProt(opcodes = ifButtonOpcodes, size = 8) { opcode ->
         val interfaceHash = readUIntLittle()
         IfButton(
-            opNum = ifButtonOpcodes.indexOf(opcode),
+            opNum = ifButtonOpcodes.indexOf(opcode) + 1,
             interfaceId = interfaceHash shr 16,
             componentId = interfaceHash and 0xFFFF,
             slotId = readUShort().toInt(),

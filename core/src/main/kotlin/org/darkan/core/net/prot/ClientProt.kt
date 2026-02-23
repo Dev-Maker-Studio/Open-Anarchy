@@ -89,7 +89,7 @@ data class CloseInterface(val dummy: Int = 0) : ClientProt
 // Communication
 @Serializable data class Chat(val type: Int = -1, val color: Int, val effect: Int, val message: String) : ClientProt
 @Serializable data class PrivateMessage(val toDisplayName: String, val message: String) : ClientProt
-@Serializable @JvmInline value class ChatType(val type: Int) : ClientProt
+@Serializable data class ChatType(val type: Int) : ClientProt
 @Serializable data class ChatSetFilter(val publicFilter: Int, val privateFilter: Int, val tradeFilter: Int) : ClientProt
 data class QuickChatPublic(val chatType: Int, val qcId: Int, val messageData: ByteArray?) : ClientProt {
     override fun equals(other: Any?): Boolean {
@@ -130,14 +130,14 @@ data class QuickChatPrivate(val toUsername: String, val qcId: Int, val messageDa
 }
 
 // Friends/Ignore List
-@Serializable @JvmInline value class AddFriend(val name: String) : ClientProt
-@Serializable @JvmInline value class RemoveFriend(val name: String) : ClientProt
+@Serializable data class AddFriend(val name: String) : ClientProt
+@Serializable data class RemoveFriend(val name: String) : ClientProt
 @Serializable data class AddIgnoreReq(val username: String, val temporary: Boolean) : ClientProt
-@Serializable @JvmInline value class RemoveIgnore(val name: String) : ClientProt
+@Serializable data class RemoveIgnore(val name: String) : ClientProt
 
 // Friend Chat
-@Serializable @JvmInline value class FcJoin(val fcName: String?) : ClientProt
-@Serializable @JvmInline value class FcKick(val username: String) : ClientProt
+@Serializable data class FcJoin(val fcName: String?) : ClientProt
+@Serializable data class FcKick(val username: String) : ClientProt
 @Serializable data class FcSetRank(val username: String, val rank: Int) : ClientProt
 
 // Clan Chat
