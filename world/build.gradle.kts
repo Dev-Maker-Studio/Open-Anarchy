@@ -5,7 +5,7 @@ plugins {
 
 application {
     mainClass.set("org.darkan.world.MainKt")
-    tasks.run.get().workingDir = projectDir
+    tasks.run.get().workingDir = rootDir
 }
 
 sourceSets {

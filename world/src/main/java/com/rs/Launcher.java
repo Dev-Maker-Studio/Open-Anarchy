@@ -102,7 +102,7 @@ public final class Launcher {
 		Logger.info(Launcher.class, "main", Settings.getConfig().getWorldInfo());
 		new WorldAPI().start();
 		LobbyCommunicator.post(Boolean.class, Settings.getConfig().getWorldInfo(), "addworld", success -> {
-			if (success)
+			if (success != null && success)
 				Logger.info(Launcher.class, "main", "Registered world with lobby server...");
 			else
 				Logger.warn(Launcher.class, "main", "Failed to register world with lobby server... You can still login locally but social features will not work properly.");

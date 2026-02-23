@@ -46,8 +46,7 @@ import com.rs.lib.net.packets.encoders.zonespecific.SpotAnimSpecific;
 import com.rs.lib.util.MapUtils;
 import com.rs.lib.util.MapUtils.Structure;
 import com.rs.lib.util.Utils;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
+import com.rs.lib.net.Session.ChannelFuture;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 import java.util.Arrays;
@@ -491,7 +490,7 @@ public class WorldEncoder extends Encoder {
 		ChannelFuture future = player.getSession().flush();
 		if (player.hasFinished())
 			if (future != null)
-				future.addListener(ChannelFutureListener.CLOSE);
+				future.addListener(Session.CHANNEL_FUTURE_LISTENER_CLOSE);
 			else
 				player.getSession().getChannel().close();
 	}
