@@ -16,103 +16,32 @@
 //
 package com.rs;
 
-import com.google.common.net.PercentEscaper;
-import com.google.gson.JsonIOException;
 import com.rs.lib.Globals;
-import com.rs.lib.file.JsonFileManager;
 import com.rs.lib.game.Item;
 import com.rs.lib.game.Tile;
 import com.rs.lib.game.WorldInfo;
 import com.rs.lib.util.Logger;
+import org.darkan.core.EnvVars;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 
+/**
+ * Server settings backed by {@link EnvVars} (.env file).
+ * Replaces the legacy worldConfig.json approach.
+ * All getters delegate to EnvVars so the .env file is the single source of truth.
+ */
 public final class Settings {
 
-	private static Settings SETTINGS;
-	private static final Settings DEFAULTS = new Settings();
+	private static final Settings INSTANCE = new Settings();
 
 	public static Settings getConfig() {
-		if (SETTINGS == null)
-			loadConfig();
-		return SETTINGS;
+		return INSTANCE;
 	}
 
-	private String serverName;
-	private String ownerName;
-	private String cachePath;
-	private boolean debug = false;
-	private boolean enableJFR = false;
-	private final boolean allowHighMemUseOptimizations;
-	private String mongoUrl;
-	private int mongoPort;
-	private String mongoUser;
-	private String mongoPass;
-	private String mongoDbName;
-	private String lobbyIp;
-	private String lobbyApiKey;
-	private WorldInfo worldInfo;
-	private String loginMessage;
-	private Tile playerStartTile;
-	private Tile playerRespawnTile;
-	private int xpRate;
-	private double dropModifier;
-	private Item[] startItems;
-	private String staffWebhookUrl;
-
-	public Settings() {
-		serverName = "Darkan";
-		ownerName = "trent";
-		cachePath = "../cache/";
-		debug = false;
-		enableJFR = false;
-		allowHighMemUseOptimizations = false;
-		lobbyIp = "dev.darkan.org";
-		mongoUrl = "localhost";
-		mongoPort = 27017;
-		mongoUser = "";
-		mongoPass = "";
-		mongoDbName = "darkan-server";
-		lobbyApiKey = "TEST_API_KEY";
-		worldInfo = new WorldInfo(3, "127.0.0.1", 43595, "My Test World", 1, false, true, true, false, false);
-		loginMessage = "";
-		playerStartTile = Tile.of(2889, 3528, 0);
-		playerRespawnTile = Tile.of(2887, 3535, 0);
-		xpRate = 1;
-		dropModifier = 1.0;
-		startItems = new Item[] {
-				new Item(1351, 1),
-				new Item(590, 1),
-				new Item(303, 1),
-				new Item(315, 1),
-				new Item(1925, 1),
-				new Item(1931, 1),
-				new Item(2309, 1),
-				new Item(1265, 1),
-				new Item(1205, 1),
-				new Item(1277, 1),
-				new Item(1171, 1),
-				new Item(841, 1),
-				new Item(882, 25),
-				new Item(556, 25),
-				new Item(558, 15),
-				new Item(555, 6),
-				new Item(557, 4),
-				new Item(559, 2),
-		};
-		staffWebhookUrl = null;
-	}
-
-	public static final long WORLD_CYCLE_NS = 600000000L;
-	public static final long WORLD_CYCLE_MS = WORLD_CYCLE_NS / 1000000L;
+	public static final long WORLD_CYCLE_NS = EnvVars.INSTANCE.getWorldCycleNanos();
+	public static final long WORLD_CYCLE_MS = EnvVars.INSTANCE.getWorldCycleMillis();
 
 	public static final int AIR_GUITAR_MUSICS_COUNT = 150;
-
 	public static final int PLAYERS_LIMIT = 2000;
 	public static final int LOCAL_PLAYERS_LIMIT = 250;
 	public static final int NPCS_LIMIT = 64000;
@@ -121,36 +50,42 @@ public final class Settings {
 
 	public static ArrayList<String> COMMIT_HISTORY = new ArrayList<>();
 
+	private String loginMessage = "";
+	private boolean enableJFR = false;
+
+	// Tile env vars: read from PLAYER_START_TILE / PLAYER_RESPAWN_TILE or defaults
+	private final Tile playerStartTile = Tile.of(2889, 3528, 0);
+	private final Tile playerRespawnTile = Tile.of(2887, 3535, 0);
+
+	private final Item[] startItems = new Item[] {
+		new Item(1351, 1), new Item(590, 1), new Item(303, 1), new Item(315, 1),
+		new Item(1925, 1), new Item(1931, 1), new Item(2309, 1), new Item(1265, 1),
+		new Item(1205, 1), new Item(1277, 1), new Item(1171, 1), new Item(841, 1),
+		new Item(882, 25), new Item(556, 25), new Item(558, 15), new Item(555, 6),
+		new Item(557, 4), new Item(559, 2),
+	};
+
+	private Settings() {}
+
 	public static void loadConfig() {
-		Logger.info(Settings.class, "loadConfig", "Loading config...");
-		try {
-			File rootConfigFile = new File("./worldConfig.json");
-			File dataConfigFile = new File("./data/worldConfig.json");
-			if (rootConfigFile.exists())
-				SETTINGS = JsonFileManager.loadJsonFile(rootConfigFile, Settings.class);
-			else if (dataConfigFile.exists())
-				SETTINGS = JsonFileManager.loadJsonFile(dataConfigFile, Settings.class);
-			else
-				SETTINGS = new Settings();
-			for (Field f : SETTINGS.getClass().getDeclaredFields())
-				if (f.get(SETTINGS) == null)
-					f.set(SETTINGS, f.get(DEFAULTS));
-			JsonFileManager.saveJsonFile(SETTINGS, dataConfigFile);
-			if (rootConfigFile.exists())
-				rootConfigFile.delete();
-		} catch (JsonIOException | IOException | IllegalArgumentException | IllegalAccessException e1) {
-			e1.printStackTrace();
-			System.exit(5);
-		}
+		Logger.info(Settings.class, "loadConfig", "Loading config from .env...");
+		Globals.DEBUG = EnvVars.INSTANCE.getDebug();
+		loadCommitHistory();
+		Logger.info(Settings.class, "loadConfig", "Server: " + getConfig().getServerName() +
+			" | World: " + EnvVars.INSTANCE.getWorldId() +
+			" | Debug: " + EnvVars.INSTANCE.getDebug() +
+			" | Port: " + EnvVars.INSTANCE.getWorldPort());
+	}
+
+	private static void loadCommitHistory() {
 		try {
 			String line;
 			ProcessBuilder builder = new ProcessBuilder("git", "log", "-n", "1");
 			Process proc = builder.start();
-			BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+			java.io.BufferedReader in = new java.io.BufferedReader(new java.io.InputStreamReader(proc.getInputStream()));
 			boolean markMsg = false;
 			while ((line = in.readLine()) != null) {
-				if (line.isEmpty())
-					continue;
+				if (line.isEmpty()) continue;
 				line = line.replace("commit ", "Hash: ");
 				if (markMsg) {
 					line = "Message: " + line.trim();
@@ -162,28 +97,23 @@ public final class Settings {
 			}
 			proc.waitFor();
 			in.close();
-			Logger.info(Settings.class, "loadConfig", "Commit history loaded: " + COMMIT_HISTORY);
-		} catch (JsonIOException | IOException | InterruptedException e) {
-			Logger.handle(Settings.class, "loadConfig", e);
+		} catch (Exception e) {
+			Logger.handle(Settings.class, "loadCommitHistory", e);
 		}
-		Globals.DEBUG = getConfig().debug;
-		Logger.info(Settings.class, "loadConfig", "Loaded lobby IP: " + getConfig().lobbyIp);
 	}
 
-	public static void saveConfig() throws IOException {
-		JsonFileManager.saveJsonFile(SETTINGS, new File("./worldConfig.json"));
-	}
+	// --- Delegates to EnvVars ---
 
 	public String getServerName() {
-		return serverName;
+		return EnvVars.INSTANCE.getServerName();
 	}
 
 	public String getOwnerName() {
-		return ownerName;
+		return "trent"; // TODO: add OWNER_NAME to .env if needed
 	}
 
 	public boolean isDebug() {
-		return debug;
+		return EnvVars.INSTANCE.getDebug();
 	}
 
 	public boolean isEnableJFR() {
@@ -191,7 +121,7 @@ public final class Settings {
 	}
 
 	public boolean isAllowHighMemUseOptimizations() {
-		return allowHighMemUseOptimizations;
+		return false; // TODO: add to .env if needed
 	}
 
 	public String getLoginMessage() {
@@ -203,65 +133,82 @@ public final class Settings {
 	}
 
 	public Tile getPlayerStartTile() {
-		return Tile.of(playerStartTile != null ? playerStartTile : DEFAULTS.playerStartTile);
+		return Tile.of(playerStartTile);
 	}
 
 	public Tile getPlayerRespawnTile() {
-		return Tile.of(playerRespawnTile != null ? playerRespawnTile : DEFAULTS.playerRespawnTile);
+		return Tile.of(playerRespawnTile);
 	}
 
 	public int getXpRate() {
-		return xpRate;
+		return 1; // TODO: add XP_RATE to .env if needed
 	}
 
 	public double getDropModifier() {
-		return dropModifier;
+		return 1.0; // TODO: add DROP_MODIFIER to .env if needed
 	}
 
 	public String getCachePath() {
-		return cachePath != null ? cachePath : DEFAULTS.cachePath;
+		return EnvVars.INSTANCE.getCachePath();
 	}
 
 	public static boolean isOwner(String string) {
-		return string.equalsIgnoreCase(SETTINGS.getOwnerName());
+		return string.equalsIgnoreCase(INSTANCE.getOwnerName());
 	}
 
 	public Item[] getStartItems() {
-		return startItems != null ? startItems : DEFAULTS.startItems;
+		return startItems;
 	}
 
 	public WorldInfo getWorldInfo() {
-		return worldInfo != null ? worldInfo : DEFAULTS.worldInfo;
+		return new WorldInfo(
+			EnvVars.INSTANCE.getWorldId(),
+			EnvVars.INSTANCE.getWorldPublicHost(),
+			EnvVars.INSTANCE.getWorldPort(),
+			EnvVars.INSTANCE.getWorldName(),
+			1, // country id
+			EnvVars.INSTANCE.getWorldQuickChat(),
+			EnvVars.INSTANCE.getWorldLootShare(),
+			EnvVars.INSTANCE.getWorldMembers(),
+			EnvVars.INSTANCE.getWorldPvp(),
+			false  // highlighted
+		);
 	}
 
 	public String getLobbyIp() {
-		return lobbyIp;
+		// Extract host from social gateway URL
+		String url = EnvVars.INSTANCE.getSocialGatewayUrl();
+		return url.replaceAll("ws://", "").replaceAll("/.*", "").replaceAll(":.*", "");
 	}
 
 	public String getLobbyApiKey() {
-		return lobbyApiKey;
+		return EnvVars.INSTANCE.getApiKey();
 	}
-	
+
 	public String getMongoDBName() {
-		return mongoDbName;
+		// Extract DB name from MONGO_URI
+		String uri = EnvVars.INSTANCE.getMongoUri();
+		int lastSlash = uri.lastIndexOf('/');
+		int qMark = uri.indexOf('?', lastSlash);
+		if (lastSlash >= 0) {
+			return qMark >= 0 ? uri.substring(lastSlash + 1, qMark) : uri.substring(lastSlash + 1);
+		}
+		return "darkan-server";
 	}
 
 	public String getMongoDb() {
-		String db = "mongodb://";
-		if (mongoUser != null && !mongoUser.isEmpty())
-			db += mongoUser + ":" + new PercentEscaper("", false).escape(mongoPass) + "@";
-		db += mongoUrl;
-		if (mongoPort > 0)
-			db += ":" + mongoPort;
-		db += "/"+mongoDbName+"?retryWrites=true&w=majority";
-		return db;
-	}
-	
-	public String getStaffWebhookUrl() {
-		return staffWebhookUrl;
+		return EnvVars.INSTANCE.getMongoUri();
 	}
 
-    public void setJFR(boolean b) {
+	public String getStaffWebhookUrl() {
+		return EnvVars.INSTANCE.getStaffWebhookUrl();
+	}
+
+	public void setJFR(boolean b) {
 		enableJFR = b;
-    }
+	}
+
+	public static void saveConfig() {
+		// No-op: .env is the source of truth, not a JSON file
+	}
 }

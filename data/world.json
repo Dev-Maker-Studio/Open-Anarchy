@@ -1,0 +1,9 @@
+{
+  "counters": {
+    "attribs": {
+      "OpenguinHAS_LastReset": "2026-02-18T00:00:00Z",
+      "OpenguinHAS_Penguins": "[{\"npcId\":8109,\"name\":\"ROCK_7\",\"location\":{\"x\":2869,\"y\":3515,\"plane\":0},\"points\":1,\"spotters\":[]},{\"npcId\":8104,\"name\":\"BARREL_1\",\"location\":{\"x\":2810,\"y\":3383,\"plane\":0},\"points\":1,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_9\",\"location\":{\"x\":2949,\"y\":3509,\"plane\":0},\"points\":1,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_11\",\"location\":{\"x\":2632,\"y\":3501,\"plane\":0},\"points\":1,\"spotters\":[]},{\"npcId\":8107,\"name\":\"CACTUS_2\",\"location\":{\"x\":3257,\"y\":3055,\"plane\":0},\"points\":1,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_15\",\"location\":{\"x\":2802,\"y\":2806,\"plane\":0},\"points\":2,\"spotters\":[]},{\"npcId\":8109,\"name\":\"ROCK_18\",\"location\":{\"x\":3019,\"y\":3866,\"plane\":0},\"points\":2,\"spotters\":[]},{\"npcId\":8107,\"name\":\"CACTUS_5\",\"location\":{\"x\":3282,\"y\":2755,\"plane\":0},\"points\":2,\"spotters\":[]},{\"npcId\":8110,\"name\":\"TOADSTOOL_6\",\"location\":{\"x\":2181,\"y\":3172,\"plane\":0},\"points\":2,\"spotters\":[]},{\"npcId\":8107,\"name\":\"CACTUS_7\",\"location\":{\"x\":3285,\"y\":2911,\"plane\":0},\"points\":2,\"spotters\":[]}]",
+      "OpenguinHAS_PolarBear": "{\"location\":\"RIMMINGTON\",\"points\":1,\"previousLocations\":[\"RIMMINGTON\"],\"spotters\":[]}"
+    }
+  }
+}
