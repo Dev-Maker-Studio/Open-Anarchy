@@ -18,8 +18,7 @@ package com.rs.plugin.events;
 
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.plugin.handlers.PluginHandler;
 
@@ -34,18 +33,18 @@ public class ObjectClickEvent implements PluginEvent {
 
 	private final Player player;
 	private final GameObject obj;
-	private final ClientPacket opNum;
+	private final int opNum;
 	private final String option;
 	private final boolean atObject;
 	private final int objectId;
 
-	public ObjectClickEvent(Player player, GameObject object, ClientPacket opNum, boolean atObject) {
+	public ObjectClickEvent(Player player, GameObject object, int opNum, boolean atObject) {
 		this.player = player;
 		this.obj = object;
 		this.opNum = opNum;
 		this.atObject = atObject;
 		objectId = object.getId();
-		option = object.getDefinitions(player).getOption(opNum);
+		option = com.rs.utils.KtExtensionsKt.getOption(object.getDefinitions(player), getOpIndex(opNum));
 	}
 
 	public String getOption() {
@@ -60,7 +59,7 @@ public class ObjectClickEvent implements PluginEvent {
 		return obj;
 	}
 
-	public ClientPacket getOpNum() {
+	public int getOpNum() {
 		return opNum;
 	}
 
@@ -90,7 +89,7 @@ public class ObjectClickEvent implements PluginEvent {
 			return null;
 		List<ObjectClickHandler> methods = methodMapping.get(getObj().getTile().getTileHash());
 		if (methods == null)
-			methods = methodMapping.get(-getObj().getType().id);
+			methods = methodMapping.get(-getObj().getType().getId());
 		if (methods == null)
 			methods = methodMapping.get(0);
 		if (methods == null)
@@ -114,11 +113,11 @@ public class ObjectClickEvent implements PluginEvent {
 				methods.add(handler);
 				locMap.put(0, methods);
 			} else if (handler.getType() != null) {
-				List<ObjectClickHandler> methods = locMap.get(-handler.getType().id);
+				List<ObjectClickHandler> methods = locMap.get(-handler.getType().getId());
 				if (methods == null)
 					methods = new ArrayList<>();
 				methods.add(handler);
-				locMap.put(-handler.getType().id, methods);
+				locMap.put(-handler.getType().getId(), methods);
 			} else
 				for (Tile tile : handler.getTiles()) {
 					List<ObjectClickHandler> methods = locMap.get(tile.getTileHash());
@@ -140,5 +139,16 @@ public class ObjectClickEvent implements PluginEvent {
 
 	public String component3() {
 		return option;
+	}
+
+	private static int getOpIndex(int op) {
+		return switch (op) {
+			case 1 -> 0;
+			case 2 -> 1;
+			case 3 -> 2;
+			case 4 -> 3;
+			case 5 -> 4;
+			default -> -1;
+		};
 	}
 }

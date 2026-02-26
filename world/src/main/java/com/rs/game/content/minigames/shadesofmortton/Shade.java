@@ -16,12 +16,12 @@
 //
 package com.rs.game.content.minigames.shadesofmortton;
 
-import com.rs.engine.pathfinder.collision.CollisionStrategyType;
+import org.darkan.core.map.pathfinder.collision.CollisionStrategyType;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCInstanceHandler;
 

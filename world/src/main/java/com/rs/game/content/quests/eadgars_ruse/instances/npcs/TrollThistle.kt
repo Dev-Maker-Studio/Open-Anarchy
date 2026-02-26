@@ -1,10 +1,10 @@
 package com.rs.game.content.quests.eadgars_ruse.instances.npcs
 
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.content.quests.eadgars_ruse.utils.THISTLE
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 class TrollThistle(id: Int, tile: Tile) : NPC(id, tile) {
 

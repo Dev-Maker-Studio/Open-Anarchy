@@ -22,9 +22,9 @@ import com.rs.game.content.minigames.herblorehabitat.JadinkoType.Companion.check
 import com.rs.game.content.skills.magic.Magic
 import com.rs.game.content.skills.magic.TeleType
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.game.Tile
+import org.darkan.core.Constants
+import org.darkan.core.model.SpotAnim
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onItemClick

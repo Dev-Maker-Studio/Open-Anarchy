@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.rooms.PuzzleRoom;
 import com.rs.game.model.entity.Hit;
@@ -24,7 +24,7 @@ import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -46,7 +46,7 @@ public class FlipTilesRoom extends PuzzleRoom {
 		tiles = new GameObject[5][5];
 		outer: for (int x = 0; x < 15; x++)
 			for (int y = 0; y < 15; y++) {
-				GameObject object = manager.getObjectWithType(reference, ObjectType.GROUND_DECORATION, x, y);
+				GameObject object = manager.getObjectWithType(reference, ObjectShape.GROUND_DECORATION, x, y);
 				if (object != null && object.getId() == BASE_TILE) {
 					xOffset = x;
 					yOffset = y;
@@ -56,7 +56,7 @@ public class FlipTilesRoom extends PuzzleRoom {
 		for (int x = 0; x < 5; x++)
 			for (int y = 0; y < 5; y++) {
 				//Apparently not every configuration is solveable but eh, thats what the force option is for!
-				tiles[x][y] = new GameObject(Math.random() > 0.5 ? GREEN : YELLOW, ObjectType.GROUND_DECORATION, 0, manager.getTile(reference, x + xOffset, y + yOffset));
+				tiles[x][y] = new GameObject(Math.random() > 0.5 ? GREEN : YELLOW, ObjectShape.GROUND_DECORATION, 0, manager.getTile(reference, x + xOffset, y + yOffset));
 				World.spawnObject(tiles[x][y]);
 			}
 	}
@@ -100,7 +100,7 @@ public class FlipTilesRoom extends PuzzleRoom {
 		for (Player team : manager.getParty().getTeam())
 			team.getPackets().sendObjectAnimation(tile, new Animation(id == GREEN ? GREEN_TO_YELLOW : YELLOW_TO_GREEN));
 		WorldTasks.scheduleTimer(1, (ticks) -> {
-			World.spawnObject(new GameObject(id == GREEN ? YELLOW : GREEN, ObjectType.GROUND_DECORATION, 0, tile.getTile()));
+			World.spawnObject(new GameObject(id == GREEN ? YELLOW : GREEN, ObjectShape.GROUND_DECORATION, 0, tile.getTile()));
 			return false;
 		});
 	}

@@ -25,9 +25,9 @@ import com.rs.game.content.skills.dungeoneering.npcs.bosses.DungeonBoss;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 import java.util.ArrayList;
 
@@ -50,7 +50,7 @@ public class DungeonNPC extends NPC {
 	}
 
 	protected int getTier() {
-		int tier = getDefinitions().combatLevel / 11;
+		int tier = getDefinitions().getCombatLevel() / 11;
 		if (tier > 10)
 			tier = 11;
 		else if (tier < 1)

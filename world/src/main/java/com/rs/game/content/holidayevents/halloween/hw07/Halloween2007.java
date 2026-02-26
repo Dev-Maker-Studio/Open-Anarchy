@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.holidayevents.halloween.hw07;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.World;
@@ -26,9 +26,9 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -542,8 +542,8 @@ public class Halloween2007 {
 
 	public static void handleDenyGargoyleEntry(Player player, GameObject object, Runnable postDeath) {
 		boolean xOff = object.getRotation() % 2 == 0;
-		World.sendObjectAnimation(World.getObject(object.getTile().transform(xOff ? -1 : 0, xOff ? 0 : -1, 0), ObjectType.GROUND_DECORATION), GARGOYLE_ANIM);
-		World.sendObjectAnimation(World.getObject(object.getTile().transform(xOff ? 1 : 0, xOff ? 0 : 1, 0), ObjectType.GROUND_DECORATION), GARGOYLE_ANIM);
+		World.sendObjectAnimation(World.getObject(object.getTile().transform(xOff ? -1 : 0, xOff ? 0 : -1, 0), ObjectShape.GROUND_DECORATION), GARGOYLE_ANIM);
+		World.sendObjectAnimation(World.getObject(object.getTile().transform(xOff ? 1 : 0, xOff ? 0 : 1, 0), ObjectShape.GROUND_DECORATION), GARGOYLE_ANIM);
 		if (postDeath == null)
 			player.startConversation(new Dialogue()
 					.addNPC(6389, HeadE.CAT_CALM_TALK2, "Who said you could come in here? See the Grim Reaper if you don't know where to go.")
@@ -572,7 +572,7 @@ public class Halloween2007 {
                         }
                         default -> y;
                     };
-					GameObject lightning = new GameObject(27277, ObjectType.SCENERY_INTERACT, object.getRotation(), object.getTile().transform(x, y, 0));
+					GameObject lightning = new GameObject(27277, ObjectShape.SCENERY_INTERACT, object.getRotation(), object.getTile().transform(x, y, 0));
 					World.spawnObjectTemporary(lightning, Ticks.fromSeconds(3));
 				} else if (stage == 3) {
 					player.setNextAnimation(new Animation(3170));

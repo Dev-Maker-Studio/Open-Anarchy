@@ -3,8 +3,8 @@ package com.rs.game.content.minigames.herblorehabitat
 
 import com.rs.game.content.skills.farming.StorableItem
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.net.ClientPacket
-import com.rs.lib.util.Logger
+
+import org.darkan.core.Logger
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 
@@ -70,30 +70,30 @@ fun openPotionStorage(player: Player) {
 @ServerStartupEvent
 fun mapHabitatPotionInterface() {
     onButtonClick(74) { e ->
-        Logger.info(HabitatStorableItem::class.java, "mapHabitatPotionInterface", "onButtonClick(74) ${e.packet} ${e.slotId2} ${e.slotId} ${e.componentId} ${e.interfaceId}")
+        Logger.info(HabitatStorableItem::class.java, "mapHabitatPotionInterface", "onButtonClick(74) ${e.opNum} ${e.slotId2} ${e.slotId} ${e.componentId} ${e.interfaceId}")
         val item = HabitatStorableItem.forId(e.slotId2) ?: return@onButtonClick
-        when (e.packet) {
-            ClientPacket.IF_OP1 -> e.player.storeHabitatItem(item, 1)
-            ClientPacket.IF_OP2 -> e.player.storeHabitatItem(item, 5)
-            ClientPacket.IF_OP3 -> e.player.storeHabitatItem(item, Int.MAX_VALUE)
-            ClientPacket.IF_OP4 -> e.player.sendInputInteger("How many would you like to store?") {
+        when (e.opNum) {
+            1 -> e.player.storeHabitatItem(item, 1)
+            2 -> e.player.storeHabitatItem(item, 5)
+            3 -> e.player.storeHabitatItem(item, Int.MAX_VALUE)
+            4 -> e.player.sendInputInteger("How many would you like to store?") {
                 e.player.storeHabitatItem(item, it)
             }
-            else -> Logger.info(HabitatStorableItem::class.java, "mapHabitatPotionInterface", "Unhandled packet: ${e.packet}")
+            else -> Logger.info(HabitatStorableItem::class.java, "mapHabitatPotionInterface", "Unhandled packet: ${e.opNum}")
         }
     }
 
     onButtonClick(513) { e ->
-        Logger.info(HabitatStorableItem::class.java, "mapHabitatPotionInterface", "onButtonClick(93) ${e.packet} ${e.slotId2} ${e.slotId} ${e.componentId} ${e.interfaceId}")
+        Logger.info(HabitatStorableItem::class.java, "mapHabitatPotionInterface", "onButtonClick(93) ${e.opNum} ${e.slotId2} ${e.slotId} ${e.componentId} ${e.interfaceId}")
         val item = HabitatStorableItem.forId(e.slotId2) ?: return@onButtonClick
-        when (e.packet) {
-            ClientPacket.IF_OP1 -> e.player.takeHabitatItem(item, 1)
-            ClientPacket.IF_OP2 -> e.player.takeHabitatItem(item, 5)
-            ClientPacket.IF_OP3 -> e.player.takeHabitatItem(item, Int.MAX_VALUE)
-            ClientPacket.IF_OP4 -> e.player.sendInputInteger("How many would you like to take?") {
+        when (e.opNum) {
+            1 -> e.player.takeHabitatItem(item, 1)
+            2 -> e.player.takeHabitatItem(item, 5)
+            3 -> e.player.takeHabitatItem(item, Int.MAX_VALUE)
+            4 -> e.player.sendInputInteger("How many would you like to take?") {
                 e.player.takeHabitatItem(item, it)
             }
-            else -> Logger.info(HabitatStorableItem::class.java, "mapHabitatPotionInterface", "Unhandled packet: ${e.packet}")
+            else -> Logger.info(HabitatStorableItem::class.java, "mapHabitatPotionInterface", "Unhandled packet: ${e.opNum}")
         }
     }
 }

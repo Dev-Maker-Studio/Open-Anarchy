@@ -16,15 +16,15 @@
 //
 package com.rs.engine.quest.data;
 
-import com.rs.cache.ArchiveType;
-import com.rs.cache.Cache;
-import com.rs.cache.IndexType;
+import world.gregs.voidps.cache.Cache;
+import world.gregs.voidps.cache.Config;
+import world.gregs.voidps.cache.Index;
 import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.io.InputStream;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.buffer.read.BufferReader;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -76,7 +76,7 @@ public class QuestDefinitions {
 
 	public static void main(String[] args) throws IOException {
 		//		Cache.init();
-		//		for (int i = 0;i < Cache.STORE.getIndex(IndexType.CONFIG).getValidFilesCount(ArchiveType.QUESTS.getId());i++) {
+		//		for (int i = 0;i < Cache.Companion.get().fileCount(Index.CONFIGS, Config.QUESTS);i++) {
 		//			QuestDefinitions def = new QuestDefinitions(i);
 		//			//Logger.debug(def.name.toUpperCase().replace(" ", "_").replaceAll("[^A-Za-z0-9_]", "") + "(" + i + "),");
 		//			if (i == 0)
@@ -90,13 +90,15 @@ public class QuestDefinitions {
 
 	public QuestDefinitions(int id) {
 		this.id = id;
-		decode(new InputStream(Cache.STORE.getIndex(IndexType.CONFIG).getFile(ArchiveType.QUESTS.getId(), id)));
+		byte[] data = Cache.Companion.get().data(Index.CONFIGS, Config.QUESTS, id, null);
+		if (data != null)
+			decode(new BufferReader(data));
 	}
 
 	public static void init() {
 		QUESTS.clear();
 		QUESTS_NAME.clear();
-		for (int i = 0;i < Cache.STORE.getIndex(IndexType.CONFIG).getValidFilesCount(ArchiveType.QUESTS.getId());i++) {
+		for (int i = 0;i < Cache.Companion.get().fileCount(Index.CONFIGS, Config.QUESTS);i++) {
 			QuestDefinitions def = new QuestDefinitions(i);
 			if (def != null) {
 				QUESTS.put(i, def);
@@ -392,15 +394,20 @@ public class QuestDefinitions {
 				player.getVars().setVarBit(varbitValue[0], varbitValue[2]);
 	}
 
-	public void decode(InputStream buffer) {
-		while (buffer.getRemaining() > 0) {
+	private static String readJagString(BufferReader buffer) {
+		buffer.skip(1);
+		return buffer.readString();
+	}
+
+	public void decode(BufferReader buffer) {
+		while (buffer.readableBytes() > 0) {
 			int opcode = buffer.readUnsignedByte();
 			if (opcode == 0)
 				break;
 			if (1 == opcode)
-				name = buffer.readJagString();
+				name = readJagString(buffer);
 			else if (2 == opcode)
-				sortName = buffer.readJagString();
+				sortName = readJagString(buffer);
 			else if (3 == opcode) {
 				int i_3_ = buffer.readUnsignedByte();
 				varValues = new int[i_3_][3];
@@ -487,7 +494,7 @@ public class QuestDefinitions {
 					params = new HashMap<>(count);
 				for (int index = 0; index < count; index++) {
 					boolean stringVal = (buffer.readUnsignedByte()) == 1;
-					int key = buffer.read24BitInt();
+					int key = buffer.readUnsignedMedium();
 					Object value;
 					if (stringVal)
 						value = buffer.readString();

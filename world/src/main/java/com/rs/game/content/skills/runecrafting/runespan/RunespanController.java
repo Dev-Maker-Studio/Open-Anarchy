@@ -16,9 +16,10 @@
 //
 package com.rs.game.content.skills.runecrafting.runespan;
 
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.StructDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.StructDefinitions;
+import world.gregs.voidps.cache.definition.data.StructDefinition;
+import org.darkan.core.model.IFEvents;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.World;
 import com.rs.game.content.skills.magic.Magic;
@@ -30,10 +31,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.ItemOnNPCHandler;
@@ -371,23 +372,23 @@ public class RunespanController extends Controller {
 			e.getPlayer().closeInterfaces();
 			break;
 		case 14:
-			switch(e.getPacket()) {
-			case IF_OP1:
+			switch(e.getOpNum()) {
+			case 1:
 				e.getPlayer().getVars().setVarBit(11106, 1);
 				break;
-			case IF_OP2:
+			case 2:
 				e.getPlayer().getVars().setVarBit(11106, 2);
 				break;
-			case IF_OP3:
+			case 3:
 				e.getPlayer().getVars().setVarBit(11106, 5);
 				break;
-			case IF_OP4:
+			case 4:
 				e.getPlayer().getVars().setVarBit(11106, 10);
 				break;
 			default:
 				break;
 			}
-			StructDefinitions reward = StructDefinitions.getStruct(EnumDefinitions.getEnum(5838).getIntValue(e.getSlotId()));
+			StructDefinition reward = StructDefinitions.getStruct(EnumDefinitions.getEnum(5838).getIntValue(e.getSlotId()));
 			if (reward != null) {
 				e.getPlayer().getVars().setVarBit(11105, e.getSlotId()+1);
 				e.getPlayer().getVars().setVarBit(11104, 0);

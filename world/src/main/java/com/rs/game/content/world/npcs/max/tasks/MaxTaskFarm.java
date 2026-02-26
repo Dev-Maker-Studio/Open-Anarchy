@@ -1,13 +1,13 @@
 package com.rs.game.content.world.npcs.max.tasks;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.engine.pathfinder.RouteEvent;
 import com.rs.game.World;
 import com.rs.game.content.skills.farming.FarmPatch;
 import com.rs.game.content.skills.magic.Magic;
 import com.rs.game.content.world.npcs.max.Max;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class MaxTaskFarm implements Task {
 	
@@ -17,7 +17,7 @@ public class MaxTaskFarm implements Task {
 	
 	@Override
 	public int tick(Max max) {
-		patch = World.getObject(Tile.of(3228, 3458, 0), ObjectType.SCENERY_INTERACT);
+		patch = World.getObject(Tile.of(3228, 3458, 0), ObjectShape.SCENERY_INTERACT);
 		if (patch == null)
 			return 0;
 		if (!started) {

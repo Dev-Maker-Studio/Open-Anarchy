@@ -21,8 +21,8 @@ import com.rs.game.content.world.Rest;
 import com.rs.game.model.entity.player.managers.InterfaceManager;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
 import com.rs.game.model.entity.player.managers.PriceChecker;
-import com.rs.lib.game.Animation;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.model.Animation;
+
 import com.rs.net.LobbyCommunicator;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
@@ -36,19 +36,19 @@ public class GameFrame {
 
 	public static ButtonClickHandler handlePrayerOrb = new ButtonClickHandler(749, e -> {
 		if (e.getComponentId() == 4)
-			if (e.getPacket() == ClientPacket.IF_OP1) // activate
+			if (e.getOpNum() == 1) // activate
 				e.getPlayer().getPrayer().switchQuickPrayers();
-			else if (e.getPacket() == ClientPacket.IF_OP2) // switch
+			else if (e.getOpNum() == 2) // switch
 				e.getPlayer().getPrayer().switchSettingQuickPrayer();
 	});
 
 	public static ButtonClickHandler handleRunOrb = new ButtonClickHandler(750, e -> {
 		if (e.getComponentId() == 4)
-			if (e.getPacket() == ClientPacket.IF_OP1) {
+			if (e.getOpNum() == 1) {
 				e.getPlayer().toggleRun(!e.getPlayer().isResting());
 				if (e.getPlayer().isResting())
 					e.getPlayer().stopAll();
-			} else if (e.getPacket() == ClientPacket.IF_OP2) {
+			} else if (e.getOpNum() == 2) {
 				if (e.getPlayer().isResting()) {
 					e.getPlayer().stopAll();
 					return;
@@ -112,43 +112,43 @@ public class GameFrame {
 		if (e.getComponentId() == 14)
 			ReportsManager.report(e.getPlayer());
 		if (e.getComponentId() == 23) {
-			if (e.getPacket() == ClientPacket.IF_OP2)
+			if (e.getOpNum() == 2)
 				e.getPlayer().setClanStatus(0);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				e.getPlayer().setClanStatus(1);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				e.getPlayer().setClanStatus(2);
 		} else if (e.getComponentId() == 32) {
-			if (e.getPacket() == ClientPacket.IF_OP2)
+			if (e.getOpNum() == 2)
 				e.getPlayer().setFilterGame(false);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				e.getPlayer().setFilterGame(true);
 		} else if (e.getComponentId() == 0) {
-			if (e.getPacket() == ClientPacket.IF_OP2) {
-				e.getPlayer().getSocial().setFcStatus(0);
+			if (e.getOpNum() == 2) {
+				e.getPlayer().getSocial().setFcStatus((byte) 0);
 				LobbyCommunicator.updateSocial(e.getPlayer());
-			} else if (e.getPacket() == ClientPacket.IF_OP3) {
-				e.getPlayer().getSocial().setFcStatus(1);
+			} else if (e.getOpNum() == 3) {
+				e.getPlayer().getSocial().setFcStatus((byte) 1);
 				LobbyCommunicator.updateSocial(e.getPlayer());
-			} else if (e.getPacket() == ClientPacket.IF_OP4) {
-				e.getPlayer().getSocial().setFcStatus(2);
+			} else if (e.getOpNum() == 4) {
+				e.getPlayer().getSocial().setFcStatus((byte) 2);
 				LobbyCommunicator.updateSocial(e.getPlayer());
 			}
 		} else if (e.getComponentId() == 23) {
-			if (e.getPacket() == ClientPacket.IF_OP2)
+			if (e.getOpNum() == 2)
 				e.getPlayer().setClanStatus(0);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				e.getPlayer().setClanStatus(1);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				e.getPlayer().setClanStatus(2);
 		} else if (e.getComponentId() == 17)
-			if (e.getPacket() == ClientPacket.IF_OP2)
+			if (e.getOpNum() == 2)
 				e.getPlayer().setAssistStatus(0);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				e.getPlayer().setAssistStatus(1);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				e.getPlayer().setAssistStatus(2);
-			else if (e.getPacket() == ClientPacket.IF_OP6) {
+			else if (e.getOpNum() == 6) {
 				// ASSIST XP Earned/Time
 			}
 	});
@@ -168,17 +168,17 @@ public class GameFrame {
 		if ((e.getInterfaceId() == 548 && e.getComponentId() == 167) || (e.getInterfaceId() == 746 && e.getComponentId() == 208)) {
 			if (e.getPlayer().getControllerManager().isIn(DungeonController.class))
 				return;
-			switch(e.getPacket()) {
-			case IF_OP1 -> e.getPlayer().getPackets().sendRunScript(5557, 1);
-			case IF_OP2 -> {
+			switch(e.getOpNum()) {
+			case 1 -> e.getPlayer().getPackets().sendRunScript(5557, 1);
+			case 2 -> {
 				if (e.getPlayer().getInterfaceManager().containsScreenInter() || e.getPlayer().inCombat(10000) || e.getPlayer().hasBeenHit(10000)) {
 					e.getPlayer().sendMessage("Please finish what you're doing before withdrawing coins.");
 					return;
 				}
 				e.getPlayer().sendInputInteger("How much would you like to withdraw?", num -> e.getPlayer().getInventory().coinPouchToInventory(num));
 			}
-			case IF_OP3 -> e.getPlayer().sendMessage("Your pouch contains " + NumberFormat.getNumberInstance(Locale.US).format(e.getPlayer().getInventory().getCoins()) + " coins.");
-			case IF_OP4 -> {
+			case 3 -> e.getPlayer().sendMessage("Your pouch contains " + NumberFormat.getNumberInstance(Locale.US).format(e.getPlayer().getInventory().getCoins()) + " coins.");
+			case 4 -> {
 				if (e.getPlayer().getInterfaceManager().containsScreenInter() || e.getPlayer().inCombat(10000) || e.getPlayer().hasBeenHit(10000)) {
 					e.getPlayer().sendMessage("Please finish what you're doing before opening the price checker.");
 					return;
@@ -192,7 +192,7 @@ public class GameFrame {
 			return;
 		}
 		if ((e.getInterfaceId() == 548 && e.getComponentId() == 157) || (e.getInterfaceId() == 746 && e.getComponentId() == 200)) {
-			if (e.getPacket() == ClientPacket.IF_OP2) {
+			if (e.getOpNum() == 2) {
 				e.getPlayer().getHintIconsManager().removeAll();
 				e.getPlayer().getVars().setVar(1159, 1);
 				return;
@@ -207,11 +207,11 @@ public class GameFrame {
 			e.getPlayer().getPackets().sendVarc(622, posHash); // map open center pos
 			e.getPlayer().getPackets().sendVarc(674, posHash); // player position
 		} else if ((e.getInterfaceId() == 548 && e.getComponentId() == 35) || (e.getInterfaceId() == 746 && e.getComponentId() == 55)) {
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				e.getPlayer().getSkills().switchXPDisplay();
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				e.getPlayer().getSkills().switchXPPopup();
-			else if (e.getPacket() == ClientPacket.IF_OP3) {
+			else if (e.getOpNum() == 3) {
 				if (e.getPlayer().getInterfaceManager().containsScreenInter() || e.getPlayer().getInterfaceManager().containsInventoryInter() || e.getPlayer().inCombat(10000)) {
 					e.getPlayer().sendMessage("Please finish what you're doing before opening the XP counter customizer.");
 					return;
@@ -219,7 +219,7 @@ public class GameFrame {
 				e.getPlayer().getSkills().setupXPCounter();
 			}
 		} else if ((e.getInterfaceId() == 746 && e.getComponentId() == 207) || (e.getInterfaceId() == 548 && e.getComponentId() == 159))
-			if (e.getPacket() == ClientPacket.IF_OP4) {
+			if (e.getOpNum() == 4) {
 				if (e.getPlayer().getInterfaceManager().containsScreenInter()) {
 					e.getPlayer().sendMessage("Please finish what you're doing before opening the price checker.");
 					return;

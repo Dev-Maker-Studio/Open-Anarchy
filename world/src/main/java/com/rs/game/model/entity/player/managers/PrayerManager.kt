@@ -16,7 +16,7 @@
 //
 package com.rs.game.model.entity.player.managers
 
-import com.rs.cache.loaders.Bonus
+import org.darkan.core.model.Bonus
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.skills.prayer.Leech
@@ -27,8 +27,8 @@ import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.interactions.PlayerCombatInteraction
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import java.util.concurrent.CopyOnWriteArraySet

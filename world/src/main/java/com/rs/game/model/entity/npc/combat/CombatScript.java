@@ -17,7 +17,7 @@
 package com.rs.game.model.entity.npc.combat;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.Bonus;
+import org.darkan.core.model.Bonus;
 import com.rs.game.content.combat.AttackType;
 import com.rs.game.content.combat.CombatFormulaKt;
 import com.rs.game.content.combat.CombatStyle;
@@ -29,9 +29,9 @@ import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.entity.interactions.PlayerCombatInteraction;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.Utils;
 
 import javax.annotation.Nonnull;
 

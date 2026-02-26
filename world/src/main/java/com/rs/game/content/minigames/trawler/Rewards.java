@@ -2,8 +2,8 @@ package com.rs.game.content.minigames.trawler;
 
 import com.rs.game.content.skills.fishing.Fish;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 import com.rs.utils.drop.DropList;
 import com.rs.utils.drop.DropTable;
 

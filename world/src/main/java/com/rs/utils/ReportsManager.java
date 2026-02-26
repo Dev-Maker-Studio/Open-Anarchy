@@ -18,8 +18,8 @@ package com.rs.utils;
 
 import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Rights;
-import com.rs.lib.util.Logger;
+import org.darkan.core.model.Rights;
+import org.darkan.core.Logger;
 import com.rs.net.LobbyCommunicator;
 
 import java.util.HashMap;

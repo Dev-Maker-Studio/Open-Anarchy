@@ -2,8 +2,8 @@ package com.rs.game.content.commands.development
 
 import com.rs.engine.command.Commands
 import com.rs.game.map.ChunkManager
-import com.rs.lib.game.Rights
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Rights
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 
 @ServerStartupEvent
@@ -13,7 +13,7 @@ fun loadCameraCommands() {
         var tile = Tile.of(chunk.baseX + args[0].toInt(), chunk.baseY + args[1].toInt(), p.plane)
 
         if (p.instancedArea != null) {
-            tile = Tile.of(p.instancedArea.getLocalTile(args[0].toInt(), args[1].toInt(), p.plane))
+            tile = p.instancedArea.getLocalTile(args[0].toInt(), args[1].toInt(), p.plane)
         }
 
         when (args.size) {
@@ -27,7 +27,7 @@ fun loadCameraCommands() {
         var tile = Tile.of(chunk.baseX + args[0].toInt(), chunk.baseY + args[1].toInt(), p.plane)
 
         if (p.instancedArea != null) {
-            tile = Tile.of(p.instancedArea.getLocalTile(args[0].toInt(), args[1].toInt(), p.plane))
+            tile = p.instancedArea.getLocalTile(args[0].toInt(), args[1].toInt(), p.plane)
         }
 
         when (args.size) {

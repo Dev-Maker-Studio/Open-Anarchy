@@ -22,10 +22,10 @@ import com.rs.game.model.WorldProjectile;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -61,7 +61,7 @@ public class CombatScriptsHandler {
 
 	@ServerStartupEvent(Priority.FILE_IO)
 	public static void loadScripts() {
-		List<Class<?>> classes;
+		List<Class<CombatScript>> classes;
 		try {
 			classes = Utils.getSubClasses("com.rs", CombatScript.class);
 			for (Class<?> c : classes) {

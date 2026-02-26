@@ -17,7 +17,7 @@
 package com.rs.engine.cutscene.actions;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.model.SpotAnim;
 
 import java.util.Map;
 

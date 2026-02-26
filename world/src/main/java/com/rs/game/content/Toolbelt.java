@@ -17,7 +17,7 @@
 package com.rs.game.content;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.net.decoders.handlers.InventoryOptionsHandler;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;

@@ -17,15 +17,16 @@
 package com.rs.engine.quest;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.StructDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.StructDefinitions;
+import world.gregs.voidps.cache.definition.data.StructDefinition;
+import org.darkan.core.model.IFEvents;
 import com.rs.engine.quest.data.QuestDefinitions;
 import com.rs.engine.quest.data.QuestInformation;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 
 import java.io.IOException;
@@ -323,7 +324,7 @@ public enum Quest {
 		return EnumDefinitions.getEnum(2252).getIntValue(slotId);
 	}
 
-	public StructDefinitions getStruct() {
+	public StructDefinition getStruct() {
 		return StructDefinitions.getStruct(getStructId());
 	}
 

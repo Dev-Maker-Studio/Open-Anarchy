@@ -5,8 +5,8 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.model.Item;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -40,7 +40,7 @@ public class Beekeeper extends Conversation {
     }
 
     public static ObjectClickHandler handleBeehives = new ObjectClickHandler(new Object[] { 68 }, e -> {
-        if (e.getOpNum() == ClientPacket.OBJECT_OP2) {
+        if (e.getOpNum() == 2) {
             Player player = e.getPlayer();
             if (player.getInventory().hasFreeSlots()) {
                 player.anim(833);

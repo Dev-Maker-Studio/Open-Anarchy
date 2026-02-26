@@ -17,11 +17,11 @@
 package com.rs.game.model.entity.player;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.Bonus;
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.model.Bonus;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.cache.loaders.LoyaltyRewardDefinitions.Reward;
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.db.WorldDB;
 import com.rs.engine.book.Book;
 import com.rs.engine.cutscene.Cutscene;
@@ -33,7 +33,7 @@ import com.rs.engine.dialogue.Options;
 import com.rs.engine.dialogue.statements.SimpleStatement;
 import com.rs.engine.miniquest.Miniquest;
 import com.rs.engine.miniquest.MiniquestManager;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.engine.quest.Quest;
 import com.rs.engine.quest.QuestManager;
 import com.rs.game.World;
@@ -95,27 +95,37 @@ import com.rs.game.model.item.ItemsContainer;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.*;
-import com.rs.lib.model.Account;
-import com.rs.lib.model.Social;
-import com.rs.lib.model.clan.Clan;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.net.ServerPacket;
-import com.rs.lib.net.Session;
-import com.rs.lib.net.packets.Packet;
-import com.rs.lib.net.packets.PacketHandler;
-import com.rs.lib.net.packets.encoders.ReflectionCheckRequest;
-import com.rs.lib.net.packets.encoders.Sound;
-import com.rs.lib.net.packets.encoders.Sound.SoundType;
-import com.rs.lib.net.packets.encoders.social.MessageGame.MessageType;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.MapUtils;
-import com.rs.lib.util.MapUtils.Structure;
-import com.rs.lib.util.Utils;
-import com.rs.lib.web.dto.FCData;
+import org.darkan.core.Constants;
+import world.gregs.voidps.type.Tile;
+import com.rs.game.TileHelper;
+import com.rs.utils.KtExtensionsKt;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.GroundItem;
+import com.rs.game.GroundItemHelper;
+import org.darkan.core.model.WorldObject;
+// Hit class from com.rs.game.model.entity.Hit (not core module)
+import org.darkan.core.model.HintIcon;
+import org.darkan.core.model.Projectile;
+import org.darkan.core.model.Account;
+import org.darkan.core.model.Social;
+import org.darkan.core.model.Clan;
+import org.darkan.core.social.ChatMessage;
+import org.darkan.core.social.PublicChatMessage;
+import org.darkan.core.net.Session;
+import org.darkan.core.net.prot.ClientProt;
+import org.darkan.core.net.prot.handler.PacketHandlers;
+import org.darkan.core.model.Sound;
+import org.darkan.core.model.SoundType;
+import org.darkan.core.model.ChatMessageType;
+import org.darkan.core.Logger;
+import org.darkan.core.util.MapUtils;
+import org.darkan.core.util.Structure;
+import org.darkan.core.Utils;
+import com.rs.web.dto.FCData;
 import com.rs.net.LobbyCommunicator;
-import com.rs.net.decoders.handlers.PacketHandlers;
 import com.rs.net.encoders.WorldEncoder;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.events.*;
@@ -127,6 +137,7 @@ import com.rs.utils.reflect.ReflectionAnalysis;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import kotlin.Pair;
+import org.darkan.core.model.Vars;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
@@ -224,6 +235,7 @@ public class Player extends Entity {
 
 	// transient stuff
 	private transient Session session;
+	private transient WorldEncoder worldEncoder;
 	private transient long clientLoadedMapRegion;
 	private transient Set<Integer> mapChunksNeedInit;
 	private transient ScreenMode screenMode;
@@ -237,7 +249,7 @@ public class Player extends Entity {
 	private transient Trade trade;
 	private transient DuelRules lastDuelRules;
 	private transient Pet pet;
-	private VarManager varManager;
+	private Vars varManager;
 
 	private int lsp;
 
@@ -542,7 +554,7 @@ public class Player extends Entity {
 
 	// creates Player and saved classes
 	public Player(Account account) {
-		super(Tile.of(Settings.getConfig().getPlayerStartTile()));
+		super(TileHelper.of(Settings.getConfig().getPlayerStartTile()));
 		this.account = account;
 		username = account.getUsername();
 		setHitpoints(100);
@@ -591,8 +603,9 @@ public class Player extends Entity {
 		if (mapChunksNeedInit == null)
 			mapChunksNeedInit = IntSets.synchronize(new IntOpenHashSet());
 		if (getTile() == null)
-			setTile(Tile.of(Settings.getConfig().getPlayerStartTile()));
+			setTile(TileHelper.of(Settings.getConfig().getPlayerStartTile()));
 		this.session = session;
+		this.worldEncoder = new WorldEncoder(this, session);
 		this.account = account;
 		uuid = getUsername().hashCode();
 		this.screenMode = ScreenMode.forId(screenMode);
@@ -620,7 +633,7 @@ public class Player extends Entity {
 		localPlayerUpdate = new LocalPlayerUpdate(this);
 		localNPCUpdate = new LocalNPCUpdate(this);
 		if (varManager == null)
-			varManager = new VarManager();
+			varManager = new Vars();
 		varManager.setSession(session);
 		sounds = new HashSet<>();
 		cutsceneManager = new CutsceneManager(this);
@@ -886,7 +899,7 @@ public class Player extends Entity {
 	}
 
 	public void abortDialogue() {
-		getSession().writeToQueue(ServerPacket.TRIGGER_ONDIALOGABORT);
+		// TODO: getSession().queuePacket(TriggerOnDialogAbort); // ServerProt not yet defined
 	}
 
 	public void setClientHasntLoadedMapRegion() {
@@ -921,7 +934,7 @@ public class Player extends Entity {
 	@Override
 	public void processEntity() {
 		try {
-			if (getSession().isClosed())
+			if (getSession().getDisconnected())
 				finish(0);
 			processPackets();
 			cutsceneManager.process();
@@ -1030,7 +1043,7 @@ public class Player extends Entity {
 									getInventory().addItem(4207, 1);
 									sendMessage("<col=FF0000>Your " + ItemDefinitions.getDefs(deg.getItemId()).getName() + " has reverted to a crystal seed!");
 								} else {
-									World.addGroundItem(new Item(4207), Tile.of(getX(), getY(), getPlane()));
+									World.addGroundItem(new Item(4207), TileHelper.of(getX(), getY(), getPlane()));
 									sendMessage("<col=FF0000>Your " + ItemDefinitions.getDefs(deg.getItemId()).getName() + " has reverted to a crystal seed and fallen to the floor!");
 								}
 								break;
@@ -1140,7 +1153,7 @@ public class Player extends Entity {
 		sendRunButtonConfig();
 	}
 
-	public VarManager getVars() {
+	public Vars getVars() {
 		return varManager;
 	}
 
@@ -1180,8 +1193,8 @@ public class Player extends Entity {
 		int updateTimer = (int) World.getTicksTillUpdate();
 		if (updateTimer != -1)
 			getPackets().sendSystemUpdate(updateTimer);
-		addIP(getSession().getIP());
-		lastIP = getSession().getIP();
+		addIP(getSession().getIp());
+		lastIP = getSession().getIp();
 		interfaceManager.sendInterfaces();
 		getPackets().sendRunEnergy(runEnergy);
 		refreshAllowChatEffects();
@@ -1533,20 +1546,10 @@ public class Player extends Entity {
 		setPlayerOption(option, slot, false);
 	}
 
-	public String getPlayerOption(ClientPacket packet) {
-        return switch (packet) {
-            case PLAYER_OP1 -> playerOptions[0];
-            case PLAYER_OP2 -> playerOptions[1];
-            case PLAYER_OP3 -> playerOptions[2];
-            case PLAYER_OP4 -> playerOptions[3];
-            case PLAYER_OP5 -> playerOptions[4];
-            case PLAYER_OP6 -> playerOptions[5];
-            case PLAYER_OP7 -> playerOptions[6];
-            case PLAYER_OP8 -> playerOptions[7];
-            case PLAYER_OP9 -> playerOptions[8];
-            case PLAYER_OP10 -> playerOptions[9];
-            default -> "null";
-        };
+	public String getPlayerOption(int opNum) {
+        if (opNum >= 1 && opNum <= 10)
+            return playerOptions[opNum - 1];
+        return "null";
 	}
 
 	@Override
@@ -1653,8 +1656,8 @@ public class Player extends Entity {
 			pet.finish();
 		lastLoggedIn = System.currentTimeMillis();
 		setFinished(true);
-		AccountLimiter.remove(getSession().getIP());
-		session.setDecoder(null);
+		AccountLimiter.remove(getSession().getIp());
+		// session.setDecoder(null); // TODO: Modern session doesn't support decoders
 		WorldDB.getPlayers().save(this, () -> {
 			LobbyCommunicator.removeWorldPlayer(this);
 			World.removePlayer(this);
@@ -1728,36 +1731,31 @@ public class Player extends Entity {
 	}
 
 	public WorldEncoder getPackets() {
-		try {
-			return session.getEncoder(WorldEncoder.class);
-		} catch(Throwable e) {
-			System.err.println("Error casting player's encoder to world encoder.");
-			return null;
-		}
+		return worldEncoder;
 	}
 
 	public void visualizeChunk(int chunkId) {
 		int[] oldChunk = MapUtils.decode(Structure.CHUNK, chunkId);
 		for (int i = 0;i < 8;i++)
-			getPackets().sendGroundItem(new GroundItem(new Item(14486, 1), Tile.of((oldChunk[0] << 3) + i, (oldChunk[1] << 3), getPlane())));
+			getPackets().sendGroundItem(GroundItemHelper.of(new Item(14486, 1), TileHelper.of((oldChunk[0] << 3) + i, (oldChunk[1] << 3), getPlane())));
 		for (int i = 0;i < 8;i++)
-			getPackets().sendGroundItem(new GroundItem(new Item(14486, 1), Tile.of((oldChunk[0] << 3), (oldChunk[1] << 3) + i, getPlane())));
+			getPackets().sendGroundItem(GroundItemHelper.of(new Item(14486, 1), TileHelper.of((oldChunk[0] << 3), (oldChunk[1] << 3) + i, getPlane())));
 		for (int i = 0;i < 8;i++)
-			getPackets().sendGroundItem(new GroundItem(new Item(14486, 1), Tile.of((oldChunk[0] << 3) + i, (oldChunk[1] << 3) + 7, getPlane())));
+			getPackets().sendGroundItem(GroundItemHelper.of(new Item(14486, 1), TileHelper.of((oldChunk[0] << 3) + i, (oldChunk[1] << 3) + 7, getPlane())));
 		for (int i = 0;i < 8;i++)
-			getPackets().sendGroundItem(new GroundItem(new Item(14486, 1), Tile.of((oldChunk[0] << 3) + 7, (oldChunk[1] << 3) + i, getPlane())));
+			getPackets().sendGroundItem(GroundItemHelper.of(new Item(14486, 1), TileHelper.of((oldChunk[0] << 3) + 7, (oldChunk[1] << 3) + i, getPlane())));
 	}
 
 	public void devisualizeChunk(int chunkId) {
 		int[] oldChunk = MapUtils.decode(Structure.CHUNK, chunkId);
 		for (int i = 0;i < 8;i++)
-			getPackets().removeGroundItem(new GroundItem(new Item(14486, 1), Tile.of((oldChunk[0] << 3) + i, (oldChunk[1] << 3), getPlane())));
+			getPackets().removeGroundItem(GroundItemHelper.of(new Item(14486, 1), TileHelper.of((oldChunk[0] << 3) + i, (oldChunk[1] << 3), getPlane())));
 		for (int i = 0;i < 8;i++)
-			getPackets().removeGroundItem(new GroundItem(new Item(14486, 1), Tile.of((oldChunk[0] << 3), (oldChunk[1] << 3) + i, getPlane())));
+			getPackets().removeGroundItem(GroundItemHelper.of(new Item(14486, 1), TileHelper.of((oldChunk[0] << 3), (oldChunk[1] << 3) + i, getPlane())));
 		for (int i = 0;i < 8;i++)
-			getPackets().removeGroundItem(new GroundItem(new Item(14486, 1), Tile.of((oldChunk[0] << 3) + i, (oldChunk[1] << 3) + 7, getPlane())));
+			getPackets().removeGroundItem(GroundItemHelper.of(new Item(14486, 1), TileHelper.of((oldChunk[0] << 3) + i, (oldChunk[1] << 3) + 7, getPlane())));
 		for (int i = 0;i < 8;i++)
-			getPackets().removeGroundItem(new GroundItem(new Item(14486, 1), Tile.of((oldChunk[0] << 3) + 7, (oldChunk[1] << 3) + i, getPlane())));
+			getPackets().removeGroundItem(GroundItemHelper.of(new Item(14486, 1), TileHelper.of((oldChunk[0] << 3) + 7, (oldChunk[1] << 3) + i, getPlane())));
 	}
 
 	public void sendOptionDialogue(Consumer<Options> options) {
@@ -2168,7 +2166,7 @@ public class Player extends Entity {
 		stopAll();
 		if (summFamiliar != null)
 			summFamiliar.sendDeath(this);
-		Tile lastTile = Tile.of(getTile());
+		Tile lastTile = TileHelper.of(getTile());
 		if (isHasNearbyInstancedChunks())
 			lastTile = getRandomGraveyardTile();
 		final Tile deathTile = lastTile;
@@ -2205,7 +2203,7 @@ public class Player extends Entity {
 	public void retribution(Entity source) {
 		setNextSpotAnim(new SpotAnim(437));
 		for (Direction dir : Direction.values())
-			World.sendSpotAnim(Tile.of(getX() - dir.dx, getY() - dir.dy, getPlane()), new SpotAnim(438, 20, 10, dir.id));
+			World.sendSpotAnim(TileHelper.of(getX() - dir.dx, getY() - dir.dy, getPlane()), new SpotAnim(438, 20, 10, dir.id));
 		if (isAtMultiArea()) {
 			for (Player player : queryNearbyPlayersByTileRange(1, player -> !player.isDead() && player.isCanPvp() && player.withinDistance(getTile(), 1) || getControllerManager().canHit(player)))
 				player.applyHit(new Hit(this, Utils.getRandomInclusive((int) (skills.getLevelForXp(Constants.PRAYER) * 2.5)), HitLook.TRUE_DAMAGE));
@@ -2223,7 +2221,7 @@ public class Player extends Entity {
 
 	public void wrath(Entity source) {
 		for (Direction dir : Direction.values())
-			World.sendProjectile(this, Tile.of(getX() + (dir.dx *2), getY() + (dir.dy *2), getPlane()), 2261, new Pair<>(0, 0), 15, 10, 35, 0,
+			World.sendProjectile(this, TileHelper.of(getX() + (dir.dx *2), getY() + (dir.dy *2), getPlane()), 2261, new Pair<>(0, 0), 15, 10, 35, 0,
 					proj -> World.sendSpotAnim(proj.getDestination(), new SpotAnim(2260)));
 		setNextSpotAnim(new SpotAnim(2259));
 		WorldTasks.schedule(() -> {
@@ -2238,12 +2236,12 @@ public class Player extends Entity {
 	}
 
 	public Tile getRandomGraveyardTile() {
-		return Tile.of(Tile.of(2900, 3537, 0), 4);
+		return TileHelper.of(TileHelper.of(2900, 3537, 0), 4);
 	}
 
 	public void sendPVEItemsOnDeath(Player killer, boolean dropItems) {
 		Integer[][] slots = GraveStone.getItemSlotsKeptOnDeath(this, true, dropItems, prayer.isProtectingItem());
-		sendPVEItemsOnDeath(killer, Tile.of(getTile()), true, slots);
+		sendPVEItemsOnDeath(killer, TileHelper.of(getTile()), true, slots);
 	}
 
 	public void sendPVEItemsOnDeath(Player killer, Tile deathTile, boolean noGravestone, Integer[][] slots) {
@@ -2273,7 +2271,7 @@ public class Player extends Entity {
 					item.setId(deg.getBrokenId());
 					item.deleteMetaData();
 				} else {
-					item.setAmount(ItemDefinitions.getDefs(item.getId()).getValue());
+					item.setAmount(ItemDefinitions.getDefs(item.getId()).getCost());
 					item.setId(995);
 					item.deleteMetaData();
 				}
@@ -2308,8 +2306,8 @@ public class Player extends Entity {
 		Item lastItem = new Item(1, 1);
 		for (int i = 0; i < keptAmount; i++) {
 			for (Item item : containedItems) {
-				int price = item.getDefinitions().getValue();
-				if (price >= lastItem.getDefinitions().getValue())
+				int price = item.getDefinitions().getCost();
+				if (price >= lastItem.getDefinitions().getCost())
 					lastItem = item;
 			}
 			keptItems.add(lastItem);
@@ -2339,9 +2337,9 @@ public class Player extends Entity {
 				}
 				if (deg != null && deg.getBrokenId() != -1) {
 					Item broken = new Item(deg.getBrokenId(), item.getAmount());
-					droppedItems.add((!ItemConstants.isTradeable(broken) && (killer != null && killer != this)) ? new Item(995, item.getDefinitions().getValue()) : broken);
+					droppedItems.add((!ItemConstants.isTradeable(broken) && (killer != null && killer != this)) ? new Item(995, item.getDefinitions().getCost()) : broken);
 				} else
-					droppedItems.add(new Item(995, item.getDefinitions().getValue()));
+					droppedItems.add(new Item(995, item.getDefinitions().getCost()));
 			}
 		}
 		if (killer == null) {
@@ -2366,14 +2364,14 @@ public class Player extends Entity {
 
 	public void increaseKillCount(Player killed) {
 		killed.deathCount++;
-		if (killed.getSession().getIP().equals(getSession().getIP()))
+		if (killed.getSession().getIp().equals(getSession().getIp()))
 			return;
 		killCount++;
 		sendMessage("<col=ff0000>You have killed " + killed.getDisplayName() + ", you have now " + killCount + " kills.");
 	}
 
 	public void increaseKillCountSafe(Player killed) {
-		if (killed.getSession().getIP().equals(getSession().getIP()))
+		if (killed.getSession().getIp().equals(getSession().getIp()))
 			return;
 		killCount++;
 		sendMessage("<col=ff0000>You have killed " + killed.getDisplayName() + ", you have now " + killCount + " kills.");
@@ -2435,15 +2433,15 @@ public class Player extends Entity {
 	}
 
 	public void handleOneWayDoor(GameObject object, int xOff, int yOff) {
-		handleOneWayDoor(object, new GameObject(object.getId(), object.getType(), object.getRotation() + 1, object.getX(), object.getY(), object.getPlane()), xOff, yOff);
+		handleOneWayDoor(object, new GameObject(object.getId(), object.getType(), object.getRotation() + 1, object.getX(), object.getY(), object.getLevel()), xOff, yOff);
 	}
 
 	public void handleOneWayDoor(GameObject object, int replaceId) {
-		handleOneWayDoor(object, new GameObject(replaceId, object.getType(), object.getRotation(), object.getX(), object.getY(), object.getPlane()));
+		handleOneWayDoor(object, new GameObject(replaceId, object.getType(), object.getRotation(), object.getX(), object.getY(), object.getLevel()));
 	}
 
 	public void handleOneWayDoor(GameObject object) {
-		handleOneWayDoor(object, new GameObject(object.getId(), object.getType(), object.getRotation() + 1, object.getX(), object.getY(), object.getPlane()));
+		handleOneWayDoor(object, new GameObject(object.getId(), object.getType(), object.getRotation() + 1, object.getX(), object.getY(), object.getLevel()));
 	}
 
 	public void handleOneWayDoor(GameObject object, GameObject opened, int rotation1, int rotation2) { //TODO so broken
@@ -2721,8 +2719,8 @@ public class Player extends Entity {
 		return cutsceneManager;
 	}
 
-	public void sendPublicChatMessage(PublicChatMessage message) {
-		for (Player p : queryNearbyPlayersByTileRange(16, p -> p.getLocalPlayerUpdate().getLocalPlayers()[getIndex()] != null))
+	public void sendPublicChatMessage(ChatMessage message) {
+		for (Player p : queryNearbyPlayersByTileRange(16, p -> p.getLocalPlayerUpdate().localPlayers[getIndex()] != null))
 			p.getPackets().sendPublicMessage(this, message);
 	}
 
@@ -3098,29 +3096,29 @@ public class Player extends Entity {
 	}
 
 	public void sendGodwarsKill(NPC npc) {
-		boolean dropKey = Utils.getRandomInclusive(500) <= 10 && npc.getDefinitions().combatLevel <= 134;
+		boolean dropKey = Utils.getRandomInclusive(500) <= 10 && npc.getDefinitions().getCombat() <= 134;
         if (npc.getId() >= 6247 && npc.getId() <= 6259) {
 			((GodwarsController) getControllerManager().getController()).sendKill(GodFaction.SARADOMIN);
 			if (dropKey)
-				World.addGroundItem(new Item(20124, 1), Tile.of(npc.getCoordFaceX(npc.getSize()), npc.getCoordFaceY(npc.getSize()), npc.getPlane()), this, false, 60);
+				World.addGroundItem(new Item(20124, 1), TileHelper.of(npc.getCoordFaceX(npc.getSize()), npc.getCoordFaceY(npc.getSize()), npc.getPlane()), this, false, 60);
 			return;
 		}
 		if (npc.getId() >= 6260 && npc.getId() <= 6283) {
 			((GodwarsController) getControllerManager().getController()).sendKill(GodFaction.BANDOS);
 			if (dropKey)
-				World.addGroundItem(new Item(20122, 1), Tile.of(npc.getCoordFaceX(npc.getSize()), npc.getCoordFaceY(npc.getSize()), npc.getPlane()), this, false, 60);
+				World.addGroundItem(new Item(20122, 1), TileHelper.of(npc.getCoordFaceX(npc.getSize()), npc.getCoordFaceY(npc.getSize()), npc.getPlane()), this, false, 60);
 			return;
 		}
 		if (npc.getId() >= 6222 && npc.getId() <= 6246) {
 			((GodwarsController) getControllerManager().getController()).sendKill(GodFaction.ARMADYL);
 			if (dropKey)
-				World.addGroundItem(new Item(20121, 1), Tile.of(npc.getCoordFaceX(npc.getSize()), npc.getCoordFaceY(npc.getSize()), npc.getPlane()), this, false, 60);
+				World.addGroundItem(new Item(20121, 1), TileHelper.of(npc.getCoordFaceX(npc.getSize()), npc.getCoordFaceY(npc.getSize()), npc.getPlane()), this, false, 60);
 			return;
 		}
 		if (npc.getId() >= 6203 && npc.getId() <= 6221) {
 			((GodwarsController) getControllerManager().getController()).sendKill(GodFaction.ZAMORAK);
 			if (dropKey)
-				World.addGroundItem(new Item(20123, 1), Tile.of(npc.getCoordFaceX(npc.getSize()), npc.getCoordFaceY(npc.getSize()), npc.getPlane()), this, false, 60);
+				World.addGroundItem(new Item(20123, 1), TileHelper.of(npc.getCoordFaceX(npc.getSize()), npc.getCoordFaceY(npc.getSize()), npc.getPlane()), this, false, 60);
 			return;
 		}
 		if (npc.getId() >= 13447 && npc.getId() <= 13459) {
@@ -3157,7 +3155,7 @@ public class Player extends Entity {
 		sendMessage(mes, false);
 	}
 
-	public void sendMessage(MessageType type, String message) {
+	public void sendMessage(ChatMessageType type, String message) {
 		getPackets().sendMessage(type, message, null);
 	}
 
@@ -3482,7 +3480,7 @@ public class Player extends Entity {
 		if (title == null && appearence.getTitle() == 0)
 			return null;
 		if (title == null)
-			return EnumDefinitions.getEnum(appearence.isMale() ? 1093 : 3872).getStringValue(appearence.getTitle());
+			return EnumDefinitions.getEnum(appearence.isMale() ? 1093 : 3872).getString(appearence.getTitle());
 		String formTitle = title;
 		if (getTitleShading() != null)
 			formTitle = "<shad=" + getTitleShading() + ">" + formTitle;
@@ -3503,7 +3501,7 @@ public class Player extends Entity {
 		return false;
 	}
 
-	public void startConversation(com.rs.engine.dialogue.Dialogue dialogue) {
+	public void startConversation(Dialogue dialogue) {
 		startConversation(new Conversation(dialogue.finish()));
 	}
 
@@ -3552,14 +3550,14 @@ public class Player extends Entity {
 					return false;
 				tilesAvailable--;
 				tilesUnlocked.add(tileHash);
-				markTile(Tile.of(tileHash));
+				markTile(TileHelper.ofId(tileHash));
 			}
 		}
 		return true;
 	}
 
 	public void markTile(Tile tile) {
-		getPackets().sendAddObject(new GameObject(21777, ObjectType.GROUND_DECORATION, 0, tile));
+		getPackets().sendAddObject(new GameObject(21777, ObjectShape.GROUND_DECORATION, 0, tile));
 		//model 4162 = orange square
 		//model 2636 = white dot?
 
@@ -3567,7 +3565,7 @@ public class Player extends Entity {
 
 	public void updateTilemanTiles() {
 		for (int i : tilesUnlocked) {
-			Tile tile = Tile.of(i);
+			Tile tile = TileHelper.ofId(i);
 			if (Utils.getDistance(getTile(), tile) < 64)
 				markTile(tile);
 		}
@@ -3601,7 +3599,7 @@ public class Player extends Entity {
 		if (!reflectionCheck.isBuilt())
 			throw new RuntimeException("Cannot queue an unbuilt reflection analysis.");
 		reflectionAnalyses.put(reflectionCheck.getId(), reflectionCheck);
-		getSession().writeToQueue(new ReflectionCheckRequest(reflectionCheck.getChecks()));
+		// TODO: getSession().queuePacket(ReflectionCheckRequest(reflectionCheck.getChecks())); // ServerProt not yet defined
 	}
 
 	public void unlockWickedHoodRune(WickedHoodRune rune) {
@@ -3649,14 +3647,15 @@ public class Player extends Entity {
 	}
 
 	public void processPackets() {
-		Packet packet;
-		while ((packet = session.getPacketQueue().poll()) != null) {
-			//Logger.trace(Player.class, "processPackets", "Packet processed: " + packet.getOpcode());
-			if (hasStarted() && packet.getOpcode() != ClientPacket.IF_CONTINUE && packet.getOpcode() != ClientPacket.IF_OP1 && !isChosenAccountType())
-				continue;
-			PacketHandler<Player, Packet> handler = PacketHandlers.getHandler(packet.getOpcode());
-			if (handler != null)
-				handler.handle(this, packet);
+		if (session == null) return;
+		for (int i = 0; i < 50; i++) {
+			ClientProt packet = session.pollPacket();
+			if (packet == null) break;
+			try {
+				PacketHandlers.INSTANCE.handleBlocking(this, packet);
+			} catch (Throwable e) {
+				Logger.handle(Player.class, "processPackets:" + packet.getClass().getSimpleName(), e);
+			}
 		}
 	}
 
@@ -3690,7 +3689,7 @@ public class Player extends Entity {
 			return false;
 		}
 		toolbelt.put(tool, tool.getValue(itemId));
-		sendMessage("You add the " + ItemDefinitions.getDefs(itemId).name + " to your toolbelt.");
+		sendMessage("You add the " + ItemDefinitions.getDefs(itemId).getName() + " to your toolbelt.");
 		return true;
 	}
 
@@ -3965,7 +3964,7 @@ public class Player extends Entity {
 	}
 
 	public void simpleDialogue(String message) {
-		startConversation(new com.rs.engine.dialogue.Dialogue(new SimpleStatement(message)));
+		startConversation(new Dialogue(new SimpleStatement(message)));
 	}
 
 	public void setUsername(String username) {

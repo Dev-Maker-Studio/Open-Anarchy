@@ -16,9 +16,9 @@
 //
 package com.rs.game.model.entity;
 
-import com.rs.engine.pathfinder.Direction;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.map.pathfinder.Direction;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 
 public class ForceMovement {

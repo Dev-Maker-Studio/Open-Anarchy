@@ -17,8 +17,9 @@
 package com.rs.engine.command;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.NPCDefinitions;
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.cache.NPCDefinitions;
+import world.gregs.voidps.cache.definition.data.NPCDefinition;
+import org.darkan.core.model.ObjectShape;
 import com.rs.db.WorldDB;
 import com.rs.game.World;
 import com.rs.game.content.pets.Pet;
@@ -27,13 +28,13 @@ import com.rs.game.model.entity.BodyGlow;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.GroundItem.GroundItemType;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.GroundItemType;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -115,12 +116,13 @@ public final class Commands {
 		case "companim":
 			if (Integer.valueOf(args[1]) > Utils.getNPCDefinitionsSize())
 				return true;
-			NPCDefinitions defs = NPCDefinitions.getDefs(Integer.valueOf(args[1]));
+			NPCDefinition defs = NPCDefinitions.getDefs(Integer.valueOf(args[1]));
 			if (defs == null)
 				return true;
-			p.getPackets().sendDevConsoleMessage(Integer.valueOf(args[1]) + ": " + defs.getCompatibleAnimations().toString());
-			p.sendMessage(Integer.valueOf(args[1]) + ": " + defs.getCompatibleAnimations().toString());
-			Logger.debug(Commands.class, "REFACTOR.compAnim", defs.getCompatibleAnimations().toString());
+			// TODO: getCompatibleAnimations() not yet available on NPCDefinition
+			p.getPackets().sendDevConsoleMessage(Integer.valueOf(args[1]) + ": renderEmote=" + defs.getRenderEmote());
+			p.sendMessage(Integer.valueOf(args[1]) + ": renderEmote=" + defs.getRenderEmote());
+			Logger.debug(Commands.class, "REFACTOR.compAnim", "renderEmote=" + defs.getRenderEmote());
 			return true;
 
 		case "trenttitle":
@@ -149,16 +151,16 @@ public final class Commands {
 		case "snow":
 			for (int x = 0; x < 5; x++)
 				for (int y = 0; y < 5; y++)
-					World.spawnObject(new GameObject(3701, ObjectType.SCENERY_INTERACT, 1, p.getX() + (x * 10), p.getY() + (y * 10), 3));
+					World.spawnObject(new GameObject(3701, ObjectShape.SCENERY_INTERACT, 1, p.getX() + (x * 10), p.getY() + (y * 10), 3));
 			for (int x = 0; x < 5; x++)
 				for (int y = 0; y < 5; y++)
-					World.spawnObject(new GameObject(3701, ObjectType.SCENERY_INTERACT, 1, p.getX() - (x * 10), p.getY() - (y * 10), 3));
+					World.spawnObject(new GameObject(3701, ObjectShape.SCENERY_INTERACT, 1, p.getX() - (x * 10), p.getY() - (y * 10), 3));
 			for (int x = 0; x < 5; x++)
 				for (int y = 0; y < 5; y++)
-					World.spawnObject(new GameObject(3701, ObjectType.SCENERY_INTERACT, 1, p.getX() + (x * 10), p.getY() - (y * 10), 3));
+					World.spawnObject(new GameObject(3701, ObjectShape.SCENERY_INTERACT, 1, p.getX() + (x * 10), p.getY() - (y * 10), 3));
 			for (int x = 0; x < 5; x++)
 				for (int y = 0; y < 5; y++)
-					World.spawnObject(new GameObject(3701, ObjectType.SCENERY_INTERACT, 1, p.getX() - (x * 10), p.getY() + (y * 10), 3));
+					World.spawnObject(new GameObject(3701, ObjectShape.SCENERY_INTERACT, 1, p.getX() - (x * 10), p.getY() + (y * 10), 3));
 			return true;
 
 		case "glowme":
@@ -264,7 +266,7 @@ public final class Commands {
 	}
 
 	public static void sendYell(Player player, String message, boolean staffYell) {
-		if (player.getAccount().isMuted()) {
+		if (player.getAccount().checkMuted()) {
 			player.sendMessage("You are muted. The mute will be lifted at " + player.getAccount().getUnmuteDate());
 			return;
 		}

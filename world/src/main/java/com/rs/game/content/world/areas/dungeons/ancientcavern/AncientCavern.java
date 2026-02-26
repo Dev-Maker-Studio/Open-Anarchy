@@ -16,9 +16,9 @@
 //
 package com.rs.game.content.world.areas.dungeons.ancientcavern;
 
-import com.rs.engine.pathfinder.Direction;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.map.pathfinder.Direction;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.WorldUtil;

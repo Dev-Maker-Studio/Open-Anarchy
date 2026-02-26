@@ -16,13 +16,13 @@
 //
 package com.rs.game.content.skills.construction.playerOwnedHouse
 
-import com.rs.cache.loaders.ItemDefinitions
-import com.rs.cache.loaders.ObjectDefinitions
+import org.darkan.core.cache.ItemDefinitions
+import org.darkan.core.cache.ObjectDefinitions
 import com.rs.engine.dialogue.Dialogue
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.Options
 import com.rs.engine.dialogue.statements.MakeXStatement
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.game.content.PlayerLook
 import com.rs.game.content.dnds.shootingstar.ShootingStars
@@ -41,12 +41,13 @@ import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.Task
-import com.rs.lib.Constants
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.net.ClientPacket
+import org.darkan.core.Constants
+import org.darkan.core.model.Animation
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+
 import com.rs.plugin.events.InputIntegerEvent
+import com.rs.utils.getOption
 
 class HouseController(@field:Transient val house: House?) : Controller() {
     override fun start() {
@@ -272,14 +273,14 @@ class HouseController(@field:Transient val house: House?) : Controller() {
         player.forceMove(target, 741, 1, 35)
     }
 
-    override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, packet: ClientPacket): Boolean {
+    override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, packet: Int): Boolean {
         if (interfaceId == 400)
             when (packet) {
-                ClientPacket.IF_OP1 -> TabletMaking.handleTabletCreation(player, componentId, 1)
-                ClientPacket.IF_OP2 -> TabletMaking.handleTabletCreation(player, componentId, 5)
-                ClientPacket.IF_OP3 -> TabletMaking.handleTabletCreation(player, componentId, 10)
-                ClientPacket.IF_OP4 -> player.sendInputInteger("How many would you like to make?", InputIntegerEvent { amount: Int -> TabletMaking.handleTabletCreation(player, componentId, amount) })
-                ClientPacket.IF_OP5 -> TabletMaking.handleTabletCreation(player, componentId, player.inventory.getAmountOf(1761))
+                1 -> TabletMaking.handleTabletCreation(player, componentId, 1)
+                2 -> TabletMaking.handleTabletCreation(player, componentId, 5)
+                3 -> TabletMaking.handleTabletCreation(player, componentId, 10)
+                4 -> player.sendInputInteger("How many would you like to make?", InputIntegerEvent { amount: Int -> TabletMaking.handleTabletCreation(player, componentId, amount) })
+                5 -> TabletMaking.handleTabletCreation(player, componentId, player.inventory.getAmountOf(1761))
                 else -> return false
             }
         return true
@@ -347,7 +348,7 @@ class HouseController(@field:Transient val house: House?) : Controller() {
             player.anim(3658)
             player.skills.addXp(Constants.FIREMAKING, 40.0)
             val objectR: GameObject = GameObject(`object`)
-            objectR.setId(`object`.id + 1)
+            objectR.changeId(`object`.id + 1)
             for (player in house!!.getPlayers()!!) 
                 player?.packets?.sendRemoveObject(objectR)
             return false
@@ -452,7 +453,7 @@ class HouseController(@field:Transient val house: House?) : Controller() {
 
     fun sendTakeItemsDialogue(vararg itemIds: Int) {
         player.sendOptionDialogue("What would you like to take?") { ops: Options ->
-            for (itemId in itemIds) ops.add(ItemDefinitions.getDefs(itemId).getName()) { player.inventory.addItem(itemId, 1) }
+            for (itemId in itemIds) ops.add(ItemDefinitions.getDefs(itemId).name) { player.inventory.addItem(itemId, 1) }
             ops.add("Nevermind.")
         }
     }

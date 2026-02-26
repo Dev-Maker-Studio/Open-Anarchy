@@ -1,11 +1,11 @@
 package com.rs.plugin.kts
 
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.model.ObjectShape
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.npc.combat.CombatScriptsHandler
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.events.*
 import com.rs.plugin.handlers.*
 import com.rs.utils.TriFunction
@@ -34,7 +34,7 @@ fun onObjectClick(vararg objectNamesOrIds: Any, tiles: Array<Tile>? = null, chec
     ObjectClickEvent.registerMethod(ObjectClickEvent::class.java, ObjectClickHandler(checkDistance, objectNamesOrIds, tiles) { eventHandler(it) })
 }
 
-fun onObjectClick(vararg objectNamesOrIds: Any, type: ObjectType, eventHandler: (ObjectClickEvent) -> Unit) {
+fun onObjectClick(vararg objectNamesOrIds: Any, type: ObjectShape, eventHandler: (ObjectClickEvent) -> Unit) {
     objectNamesOrIds.forEach { require(it is String || it is Int) { "objectNamesOrIds must contain only String or Int types" } }
     ObjectClickEvent.registerMethod(ObjectClickEvent::class.java, ObjectClickHandler(objectNamesOrIds, type) { eventHandler(it) })
 }
@@ -165,7 +165,7 @@ fun onPickupItem(vararg itemNamesOrIds: Any, tiles: Array<Tile>? = null, eventHa
     PickupItemEvent.registerMethod(PickupItemEvent::class.java, PickupItemHandler(itemNamesOrIds, tiles) { eventHandler(it) })
 }
 
-fun onPlayerStep(vararg tiles: Tile, eventHandler: (PlayerStepEvent) -> Unit) {
+fun onPlayerStep(tiles: Array<Tile>, eventHandler: (PlayerStepEvent) -> Unit) {
     PlayerStepEvent.registerMethod(PlayerStepEvent::class.java, PlayerStepHandler(tiles) { eventHandler(it) })
 }
 

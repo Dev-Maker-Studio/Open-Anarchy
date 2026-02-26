@@ -20,8 +20,8 @@ import com.rs.game.content.skills.agility.Agility;
 import com.rs.game.content.skills.woodcutting.Hatchet;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 

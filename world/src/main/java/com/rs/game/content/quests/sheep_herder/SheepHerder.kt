@@ -1,8 +1,9 @@
 package com.rs.game.content.quests.sheep_herder
+import org.darkan.core.Utils.strikeThroughIf
 
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.engine.quest.QuestHandler
 import com.rs.engine.quest.QuestOutline
@@ -11,9 +12,10 @@ import com.rs.game.content.quests.sheep_herder.utils.*
 import com.rs.game.content.world.doors.Doors.handleGate
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
+import com.rs.utils.withinArea
 
 @QuestHandler(
     quest = Quest.SHEEP_HERDER,

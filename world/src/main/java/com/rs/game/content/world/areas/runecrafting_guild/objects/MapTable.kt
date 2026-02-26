@@ -1,9 +1,9 @@
 package com.rs.game.content.world.areas.runecrafting_guild.objects
 
-import com.rs.cache.loaders.EnumDefinitions
+import org.darkan.core.cache.EnumDefinitions
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onObjectClick
@@ -41,23 +41,23 @@ class MapTable(val player: Player, val item: Item?) {
     }
 
     private fun hideAllRuneAltarMapLocations() {
-        val enumValues = EnumDefinitions.getEnum(1681).values.values
-        for (ifComp in enumValues) {
-            val ifCompInt = ifComp as Int
+        val enumMap = EnumDefinitions.getEnum(1681).map ?: return
+        for ((_, ifComp) in enumMap) {
+            val ifCompInt = ifComp as? Int ?: continue
             player.packets.setIFHidden(Utils.interfaceIdFromHash(ifCompInt), Utils.componentIdFromHash(ifCompInt), true)
         }
     }
 
     private fun showRuneAltarLocationForItem(itemId: Int) {
-        val enumValues: Map<Int, Any> = EnumDefinitions.getEnum(1681).values.entries.associate { it.key.toInt() to it.value }
-        val component = enumValues[itemId]
+        val enumMap = EnumDefinitions.getEnum(1681).map ?: return
+        val component = enumMap[itemId]
 
         if (component != null && component is Int)
             player.packets.setIFHidden(780, Utils.componentIdFromHash(component), false)
         else {
             if (itemId == Talismans.ELEMENTAL.talismanId) {
                 // Show Air, Earth, Fire, and Water sprites for Elemental talisman
-                val componentsToShow = listOf(Talismans.AIR, Talismans.EARTH, Talismans.FIRE, Talismans.WATER).mapNotNull { talisman -> enumValues[talisman.talismanId] as? Int }
+                val componentsToShow = listOf(Talismans.AIR, Talismans.EARTH, Talismans.FIRE, Talismans.WATER).mapNotNull { talisman -> enumMap[talisman.talismanId] as? Int }
                 componentsToShow.forEach { componentId ->
                     player.packets.setIFHidden(780, Utils.componentIdFromHash(componentId), false)
                 }
@@ -68,8 +68,8 @@ class MapTable(val player: Player, val item: Item?) {
     private fun updateAltarLocationText() {
         if (item != null) {
             val itemId = item.id
-            val enumValues: Map<Int, Any> = EnumDefinitions.getEnum(1682).values.entries.associate { it.key.toInt() to it.value }
-            val location = enumValues[itemId]
+            val enumMap = EnumDefinitions.getEnum(1682).map ?: return
+            val location = enumMap[itemId]
             player.packets.setIFText(780, 79, location.toString())
         } else {
             player.packets.setIFText(780, 79, "Use a talisman to display the altar location.")

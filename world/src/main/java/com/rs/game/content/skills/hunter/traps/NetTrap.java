@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.hunter.traps;
 
-import com.rs.engine.pathfinder.WorldCollision;
+import org.darkan.core.map.WorldCollision;
 import com.rs.game.World;
 import com.rs.game.content.skills.hunter.BoxHunterNPC;
 import com.rs.game.content.skills.hunter.BoxHunterType;
@@ -25,9 +25,9 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.model.gameobject.OwnedObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -104,7 +104,7 @@ public class NetTrap extends BoxStyleTrap {
 	public void expire(Player player) {
 		Tile tile = Tile.of(this.getTile());
 		if (tree == null)
-			tile = tile.transform(rotation == 1 ? 1 : rotation == 3 ? -1 : 0, rotation == 0 ? 1 : rotation == 2 ? -1 : 0, 0);
+			tile = tile.transform(getRotation() == 1 ? 1 : getRotation() == 3 ? -1 : 0, getRotation() == 0 ? 1 : getRotation() == 2 ? -1 : 0, 0);
 		World.addGroundItem(new Item(954, 1), tile, player, true, 60);
 		World.addGroundItem(new Item(303, 1), tile, player, true, 60);
 	}
@@ -115,7 +115,7 @@ public class NetTrap extends BoxStyleTrap {
 		if (npcType == null)
 			return;
 		destroy();
-		NetTrap compTrap = new NetTrap(getOwner(), tree.getTile().transform(rotation == 3 ? -1 : 0, rotation == 2 ? -1 : 0, 0), treeType, success ? treeType.catching : treeType.failing);
+		NetTrap compTrap = new NetTrap(getOwner(), tree.getTile().transform(getRotation() == 3 ? -1 : 0, getRotation() == 2 ? -1 : 0, 0), treeType, success ? treeType.catching : treeType.failing);
 		compTrap.setRouteType(RouteType.NORMAL);
 		compTrap.setRotation(tree.getRotation());
 		compTrap.createReplace();
@@ -125,7 +125,7 @@ public class NetTrap extends BoxStyleTrap {
 		}
 		WorldTasks.schedule(0, () -> {
 			compTrap.setNpcTrapped(npcType);
-			compTrap.setId(success ? treeType.caught : treeType.failed);
+			compTrap.changeId(success ? treeType.caught : treeType.failed);
 			compTrap.setStatus(success ? Status.SUCCESS : Status.FAIL);
 		});
 	}

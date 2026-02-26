@@ -1,7 +1,7 @@
 package com.rs.game.content.skills.farming;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.ItemOnItemHandler;

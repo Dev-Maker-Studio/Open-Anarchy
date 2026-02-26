@@ -1,6 +1,6 @@
 package com.rs.utils.bench;
 
-import com.rs.cache.Cache;
+import world.gregs.voidps.cache.Cache;
 
 import java.io.IOException;
 import java.util.ArrayList;

@@ -3,7 +3,7 @@ package com.rs.game.content.randomevents
 import com.rs.game.World
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.utils.Ticks
 
 abstract class RandomEventNPC(

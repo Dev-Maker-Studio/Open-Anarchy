@@ -1,6 +1,6 @@
 package com.rs.game.content.world.npcs.max.tasks;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.engine.pathfinder.RouteEvent;
 import com.rs.game.World;
 import com.rs.game.content.skills.firemaking.Firemaking;
@@ -8,8 +8,8 @@ import com.rs.game.content.skills.firemaking.Firemaking.Fire;
 import com.rs.game.content.skills.magic.Magic;
 import com.rs.game.content.world.npcs.max.Max;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 public class MaxTaskFM implements Task {
 		
@@ -32,7 +32,7 @@ public class MaxTaskFM implements Task {
 			max.nextTask();
 			return 10;
 		}
-		currentBonfire = World.getClosestObjectByTypeAndObjectId(ObjectType.SCENERY_INTERACT, Fire.MAGIC.getFireId(), max.getTile());
+		currentBonfire = World.getClosestObjectByTypeAndObjectId(ObjectShape.SCENERY_INTERACT, Fire.MAGIC.getFireId(), max.getTile());
 		if (currentBonfire == null) {
 			if (Firemaking.canLightFire(max, null))
 				max.getActionManager().setAction(new Firemaking(Fire.MAGIC));

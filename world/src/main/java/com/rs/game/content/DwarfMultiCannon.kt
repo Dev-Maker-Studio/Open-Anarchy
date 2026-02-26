@@ -16,9 +16,9 @@
 //
 package com.rs.game.content
 
-import com.rs.cache.loaders.ObjectType
-import com.rs.engine.pathfinder.Direction
-import com.rs.engine.pathfinder.Direction.Companion.forDelta
+import org.darkan.core.model.ObjectShape
+import org.darkan.core.map.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction.Companion.forDelta
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.combat.CombatStyle
@@ -31,10 +31,10 @@ import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.OwnedObject
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.Constants
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Vec2
+import org.darkan.core.Constants
+import org.darkan.core.model.Animation
+import world.gregs.voidps.type.Tile
+import org.darkan.core.model.Vec2
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onObjectClick
@@ -64,7 +64,7 @@ fun mapCannon() {
     onItemClick(6, 20494, 20498, options = arrayOf("Set-up")) { e -> setUp(e.player, if (e.item.id == 6) 0 else if (e.item.id == 20494) 1 else 2) }
 }
 
-class DwarfMultiCannon(player: Player, tile: Tile, private val cannonType: Int) : OwnedObject(player, CANNON_OBJECTS[cannonType][0], ObjectType.SCENERY_INTERACT, 0, tile) {
+class DwarfMultiCannon(player: Player, tile: Tile, private val cannonType: Int) : OwnedObject(player, CANNON_OBJECTS[cannonType][0], ObjectShape.SCENERY_INTERACT, 0, tile) {
     private var balls = 0
     private var decay = 0
     private var spinRot = Direction.NORTH
@@ -164,14 +164,14 @@ class DwarfMultiCannon(player: Player, tile: Tile, private val cannonType: Int) 
         else Direction.entries[spinRot.ordinal + 1]
         World.sendObjectAnimation(this, Animation(CANNON_EMOTES[spinRot.ordinal]))
         val cannonTile: Tile = this.tile.transform(1, 1, 0)
-        for (npc in World.getNPCsInChunkRange(cannonTile.chunkId, 2)) {
+        for (npc in World.getNPCsInChunkRange(cannonTile.getChunkId(), 2)) {
             if (npc === owner.familiar || npc.isDead || !npc.definitions.hasAttackOption() || !owner.controllerManager.canHit(npc)) continue
             if (!npc.lineOfSightTo(cannonTile, false) || (!owner.isAtMultiArea && owner.inCombat() && owner.attackedBy !== npc)) continue
             if (!owner.isAtMultiArea && npc.attackedBy !== owner && npc.inCombat()) continue
 
             if (npc.withinDistance(cannonTile, 10) && getDirectionTo(npc) == spinRot) {
                 val hit = calculateHit(owner, npc, 0, 300, if (isRanging(owner)) CombatStyle.RANGE else CombatStyle.MELEE, true, 1.0)
-                val proj = World.sendProjectile(Tile.of(x + 1, y + 1, plane), npc, 53, 38 to 38, 10, 2, 0)
+                val proj = World.sendProjectile(Tile.of(x + 1, y + 1, level), npc, 53, 38 to 38, 10, 2, 0)
                 WorldTasks.schedule(proj.taskDelay) { npc.applyHit(Hit(owner, hit.damage, Hit.HitLook.CANNON_DAMAGE)) }
                 owner.skills.addXp(Constants.RANGE, hit.damage.toDouble() / 5.0)
                 balls--
@@ -185,9 +185,8 @@ class DwarfMultiCannon(player: Player, tile: Tile, private val cannonType: Int) 
     fun getDirectionTo(entity: Entity): Direction? {
         val to = entity.middleTileAsVector
         val from = Vec2(tile.transform(1, 1, 0))
-        val sub = to.sub(from)
-        sub.norm()
-        val delta: Tile = sub.toTile()
+        val norm = to.sub(from).norm()
+        val delta = norm.toTile()
         return forDelta(delta.x, delta.y)
     }
 }
@@ -248,7 +247,7 @@ private fun setUp(player: Player, cannonType: Int) {
         player.sendMessage("You can't place your cannon here.")
         return
     }
-    val area = BannedArea.MAP[player.regionId]
+    val area = BannedArea.MAP[player.getRegionId()]
     if (area != null) {
         player.sendMessage(area.message)
         return
@@ -263,7 +262,7 @@ private fun setUp(player: Player, cannonType: Int) {
         return
     }
     val pos = player.transform(-2, -3, 0)
-    if (!World.floorAndWallsFree(pos, 3) || World.getObject(pos, ObjectType.SCENERY_INTERACT) != null) {
+    if (!World.floorAndWallsFree(pos, 3) || World.getObject(pos, ObjectShape.SCENERY_INTERACT) != null) {
         player.sendMessage("There isn't enough space to set up here.")
         return
     }
@@ -277,15 +276,15 @@ private fun setUp(player: Player, cannonType: Int) {
         player.inventory.deleteItem(CANNON_PIECES[cannonType][0], 1)
         wait(2)
         player.sendMessage("You add the stand.")
-        cannon.setId(CANNON_OBJECTS[cannonType][1])
+        cannon.changeId(CANNON_OBJECTS[cannonType][1])
         player.inventory.deleteItem(CANNON_PIECES[cannonType][1], 1)
         wait(2)
         player.sendMessage("You add the barrels.")
-        cannon.setId(CANNON_OBJECTS[cannonType][2])
+        cannon.changeId(CANNON_OBJECTS[cannonType][2])
         player.inventory.deleteItem(CANNON_PIECES[cannonType][2], 1)
         wait(2)
         player.sendMessage("You add the furnace.")
-        cannon.setId(CANNON_OBJECTS[cannonType][3])
+        cannon.changeId(CANNON_OBJECTS[cannonType][3])
         player.inventory.deleteItem(CANNON_PIECES[cannonType][3], 1)
         player.placedCannon = cannonType + 1
         wait(2)

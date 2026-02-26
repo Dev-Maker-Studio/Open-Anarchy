@@ -18,8 +18,8 @@ package com.rs.game.content.skills.dungeoneering.npcs;
 
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 import kotlin.Pair;
 
 public class YkLagorMage extends DungeonNPC {

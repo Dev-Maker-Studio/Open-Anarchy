@@ -66,4 +66,5 @@ object EnvVars {
     val worldLootShare: Boolean = dotenv.get("WORLD_LOOTSHARE", "true").toBooleanStrict()
     val worldCountry: String = dotenv.get("WORLD_COUNTRY", "USA")
     val worldHighlighted: Boolean = dotenv.get("WORLD_HIGHLIGHTED", "false").toBooleanStrict()
+    val worldToken: String = dotenv.get("WORLD_TOKEN", loginServerToken)
 }

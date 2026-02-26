@@ -21,9 +21,9 @@ import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
 
 public class TzTok_Jad extends FightCavesNPC {
 
@@ -59,7 +59,7 @@ public class TzTok_Jad extends FightCavesNPC {
 				reset();
 				finish();
 				if (source instanceof Player p)
-					p.sendNPCKill(getDefinitions().getName(p.getVars()));
+					p.sendNPCKill(getDefinitions().getName());
 				controller.win();
 				return false;
 			}

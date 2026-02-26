@@ -5,7 +5,7 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.Hit.HitLook
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.Ticks
@@ -41,10 +41,10 @@ fun mapPickables() {
             23628, 23629, -> player.inventory.addItem(1951, 1)
         }
         player.anim(2280)
-        obj.setId(obj.id + 1)
+        obj.changeId(obj.id + 1)
         obj.tasks.scheduleTimer("regrow", Ticks.fromSeconds(15), Ticks.fromSeconds(15)) {
             if (obj.id > obj.originalId)
-                obj.setId(obj.id - 1)
+                obj.changeId(obj.id - 1)
             else
                 return@scheduleTimer false
             return@scheduleTimer true

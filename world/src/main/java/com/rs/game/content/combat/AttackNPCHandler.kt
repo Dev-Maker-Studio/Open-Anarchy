@@ -3,7 +3,7 @@ package com.rs.game.content.combat
 import com.rs.game.content.world.npcs.DoorSupport
 import com.rs.game.model.entity.interactions.PlayerCombatInteraction
 import com.rs.game.model.entity.interactions.StandardEntityInteraction
-import com.rs.lib.Constants
+import org.darkan.core.Constants
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 

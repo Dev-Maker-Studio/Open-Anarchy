@@ -16,14 +16,14 @@
 //
 package com.rs.game.content.skills.smithing
 
-import com.rs.cache.loaders.ItemDefinitions
-import com.rs.cache.loaders.interfaces.IComponentDefinitions
+import org.darkan.core.cache.ItemDefinitions
+import org.darkan.core.cache.IComponentDefinitions
 import com.rs.engine.quest.Quest
 import com.rs.game.content.skills.smithing.ForgingInterface.Slot
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.Constants
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import java.util.*
@@ -57,7 +57,7 @@ const val SMITHING_INTERFACE = 300
 private fun getStrings(player: Player, item: Smithing.Smithable): Array<String> {
     val barName = StringBuilder()
     val levelString = StringBuilder()
-    val name: String = item.product.definitions.getName().lowercase(Locale.getDefault())
+    val name: String = item.product.definitions.name.lowercase(Locale.getDefault())
     val barVariableName: String = item.toString().lowercase(Locale.getDefault())
     if (player.inventory.items.getNumberOf(item.bar.id) >= item.bar.amount) barName.append("<col=00FF00>")
     barName.append(item.bar.amount).append(" ").append(if (item.bar.amount > 1) "bars" else "bar")
@@ -78,7 +78,7 @@ fun sendSmithingInterface(player: Player, obj: GameObject, barId: Int) {
     val items: Map<Slot, Smithing.Smithable> = Smithing.Smithable.forBar(barId) ?: return
     for (slot in Slot.entries) {
         val item = items[slot]
-        val componentDef = IComponentDefinitions.getInterface(300)[slot.componentId]
+        val componentDef = IComponentDefinitions.getInterface(300)?.getOrNull(slot.componentId) ?: continue
 
         if (item == null || componentDef.hidden) {
             player.packets.setIFHidden(SMITHING_INTERFACE, slot.componentId - 1, true)

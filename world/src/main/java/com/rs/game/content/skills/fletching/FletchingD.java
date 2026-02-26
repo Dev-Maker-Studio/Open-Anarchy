@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.fletching;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.statements.MakeXStatement;
@@ -32,7 +32,7 @@ public class FletchingD extends Conversation {
 		boolean maxQuantityTen = Fletching.maxMakeQuantityTen(items) && items.getProduct()[0] != 52;
 		String[] replaced = new String[items.getProduct().length];
 		for (int i = 0;i < items.getProduct().length;i++)
-			replaced[i] = ItemDefinitions.getDefs(items.getProduct()[i]).name.replace(" (u)", "");
+			replaced[i] = ItemDefinitions.getDefs(items.getProduct()[i]).getName().replace(" (u)", "");
 		
 		Dialogue makeX = addNext(new MakeXStatement(maxQuantityTen ? MakeXType.MAKE_SET : MakeXType.MAKE, maxQuantityTen ? 10 : 28, "Choose how many you wish to make,<br>then click on the item to begin.", items.getProduct(), maxQuantityTen ? null : replaced));
 		

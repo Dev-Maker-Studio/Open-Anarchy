@@ -3,8 +3,8 @@ package com.rs.game.content.world.areas.dungeons.polypore
 import com.rs.game.World
 import com.rs.game.content.skills.slayer.npcs.PolyporeNPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onObjectClick
@@ -72,7 +72,7 @@ fun mapPolypore() {
 	onObjectClick("Neem drupes") { e ->
 		if (e.option == "Pick") {
 			e.player.inventory.addItemDrop(22445, 1)
-            val vb = e.obj.definitions.varpBit
+            val vb = e.obj.definitions.varbit
             e.player.vars.setVarBit(vb, e.player.vars.getVarBit(vb) + 1)
             e.player.tasks.schedule("neemRespawn$vb", Ticks.fromSeconds(10)) { e.player.vars.setVarBit(vb, 0) }
 		}
@@ -99,7 +99,7 @@ fun mapPolypore() {
 	onItemClick(22444, options = arrayOf("Sprinkle", "Check")) { e ->
 		when(e.option) {
 			"Sprinkle" -> {
-				val polypores = World.getNPCsInChunkRange(e.player.chunkId, 1)
+				val polypores = World.getNPCsInChunkRange(e.player.getChunkId(), 1)
 					.filter { !it.isDead && !it.hasFinished() && Utils.getDistance(it.tile, e.player.tile) <= 5 && it is PolyporeNPC && it.canInfect() }
 					.map { it as PolyporeNPC }
 				if (polypores.isEmpty()) {

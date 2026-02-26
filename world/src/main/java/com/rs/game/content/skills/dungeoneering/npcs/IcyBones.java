@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.npcs;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
 import com.rs.game.content.skills.dungeoneering.DungeonUtils;
@@ -28,8 +28,8 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +79,7 @@ public final class IcyBones extends DungeonBoss {
 				RoomReference current = getManager().getCurrentRoomReference(tile);
 				if (current.getRoomX() != getReference().getRoomX() || current.getRoomY() != getReference().getRoomY() || !World.floorFree(tile.getPlane(), tile.getX(), tile.getY()))
 					continue;
-				GameObject object = new GameObject(52285 + Utils.random(3), ObjectType.SCENERY_INTERACT, Utils.random(4), tile.getX(), tile.getY(), tile.getPlane());
+				GameObject object = new GameObject(52285 + Utils.random(3), ObjectShape.SCENERY_INTERACT, Utils.random(4), tile.getX(), tile.getY(), tile.getPlane());
 				spikes.add(object);
 				World.spawnObject(object);
 				for (Player player : getManager().getParty().getTeam())

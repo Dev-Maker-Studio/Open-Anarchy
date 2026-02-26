@@ -18,7 +18,7 @@ package com.rs.game.content.world.areas.karamja;
 
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.engine.pathfinder.RouteEvent;
 import com.rs.engine.quest.Quest;
 import com.rs.game.World;
@@ -30,11 +30,11 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.game.WorldObject;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.WorldObject;
+
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 
@@ -133,7 +133,7 @@ public class Karamja  {
 	});
 
 	public static ObjectClickHandler handleRareTreeDoors = new ObjectClickHandler(new Object[] { 9038, 9039 }, e -> {
-		if (e.getOpNum() == ClientPacket.OBJECT_OP2) {
+		if (e.getOpNum() == 2) {
 			if (e.getPlayer().getX() >= e.getObj().getX())
 				Doors.handleDoubleDoor(e.getPlayer(), e.getObj());
 			else if (e.getPlayer().getInventory().containsItem(6306, 100)) {
@@ -141,7 +141,7 @@ public class Karamja  {
 				e.getPlayer().getInventory().deleteItem(6306, 100);
 			} else
 				e.getPlayer().sendMessage("You need 100 trading sticks to use this door.");
-		} else if (e.getOpNum() == ClientPacket.OBJECT_OP1)
+		} else if (e.getOpNum() == 1)
 			if (e.getPlayer().getX() >= e.getObj().getX())
 				Doors.handleDoubleDoor(e.getPlayer(), e.getObj());
 			else
@@ -284,7 +284,7 @@ public class Karamja  {
 				return;
 			}
 			GameObject newObject = new GameObject(object);
-			newObject.setId(e.getObjectId() + 1);
+			newObject.changeId(e.getObjectId() + 1);
 			World.spawnObjectTemporary(newObject, 8);
 			player.addWalkSteps(object.getX(), object.getY(), 0, false);
 		});

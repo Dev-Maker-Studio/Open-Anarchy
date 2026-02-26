@@ -24,9 +24,9 @@ import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.OwnedObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
-import com.rs.lib.web.APIUtil;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
+// TODO: APIUtil
 import com.rs.utils.Timer;
 import com.rs.utils.WorldUtil;
 import com.rs.web.Telemetry;
@@ -201,7 +201,11 @@ public final class WorldThread extends Thread {
 				for (Player player : World.getPlayers()) {
 					if (player == null || !player.hasStarted() || player.hasFinished())
 						continue;
-					player.getSession().flush();
+					try {
+						player.getSession().flushBlocking();
+					} catch (Throwable e) {
+						Logger.handle(WorldThread.class, "flushPlayerPackets", e);
+					}
 				}
 				Logger.trace(WorldThread.class, "tick", "flushPlayerPackets() - " + timerFlushPackets.stop());
 
@@ -288,10 +292,11 @@ public final class WorldThread extends Thread {
 						}
 						builder.addFormDataPart("file", "tickRecord.jfr", RequestBody.create(baos.toByteArray(), MediaType.parse("application/octet-stream")));
 					}
-					APIUtil.request(Boolean.class, new Request.Builder()
-							.url(Settings.getConfig().getStaffWebhookUrl())
-							.post(builder.build())
-							.build(), null);
+					// TODO: APIUtil.request() not available - webhook sending needs migration
+					// APIUtil.request(Boolean.class, new Request.Builder()
+					//		.url(Settings.getConfig().getStaffWebhookUrl())
+					//		.post(builder.build())
+					//		.build(), null);
 					//APIUtil.post(Boolean.class, JsonFileManager.getGson().fromJson(jsonPayload, Object.class), Settings.getConfig().getStaffWebhookUrl(), "", null);
 				}
 			} catch (Throwable e) {

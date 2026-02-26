@@ -1,6 +1,7 @@
 package com.rs.game.content.world.npcs.max;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import com.rs.utils.KtExtensionsKt;
 import com.rs.db.WorldDB;
 import com.rs.game.content.world.npcs.max.tasks.*;
 import com.rs.game.model.entity.actions.EntityFollow;
@@ -8,9 +9,9 @@ import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.NPCBodyMeshModifier;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import com.rs.plugin.handlers.NPCInstanceHandler;
@@ -113,7 +114,7 @@ public class Max extends NPC {
 		this.left = shield;
 		setBodyMeshModifier(new NPCBodyMeshModifier(getDefinitions())
 						 //head   body   legs   boots  gloves
-				.addModels(65291, 62746, 62743, 53327, 2301, weapon == -1 ? -1 : ItemDefinitions.getDefs(weapon).maleEquip1, 65300, shield == -1 ? -1 : ItemDefinitions.getDefs(shield).maleEquip1, 252));
+				.addModels(65291, 62746, 62743, 53327, 2301, weapon == -1 ? -1 : KtExtensionsKt.getMaleEquip1(ItemDefinitions.getDefs(weapon)), 65300, shield == -1 ? -1 : KtExtensionsKt.getMaleEquip1(ItemDefinitions.getDefs(shield)), 252));
 	}
 
 	public String getCurrName() {
@@ -123,7 +124,7 @@ public class Max extends NPC {
 	public void itemAnim(Animation anim, int delay) {
 		int prevRight = right;
 		int prevLeft = left;
-		wearItems(anim.getDefs().rightHandItem, anim.getDefs().leftHandItem);
+		wearItems(KtExtensionsKt.getDefs(anim).getRightHandItem(), KtExtensionsKt.getDefs(anim).getLeftHandItem());
 		setNextAnimation(anim);
 		WorldTasks.delay(delay, () -> wearItems(prevRight, prevLeft));
 	}

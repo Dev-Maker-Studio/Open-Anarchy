@@ -1,6 +1,6 @@
 package com.rs.cache.loaders.map;
 
-import com.rs.lib.game.WorldObject;
+import org.darkan.core.model.WorldObject;
 
 import java.util.ArrayList;
 import java.util.List;

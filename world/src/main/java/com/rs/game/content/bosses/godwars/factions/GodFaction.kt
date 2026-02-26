@@ -15,7 +15,7 @@ enum class GodFaction(val kcVarbit: Int, private val itemIdentifiers: Set<ItemId
 
         return player.equipment.itemsCopy.filterNotNull()
             .any { item ->
-                val name = item.definitions.getName().lowercase(Locale.getDefault())
+                val name = item.definitions.name.lowercase(Locale.getDefault())
                 itemIdentifiers.any { it.matches(name, item.id) }
             }
     }

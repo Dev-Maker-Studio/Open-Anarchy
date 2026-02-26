@@ -8,8 +8,8 @@ import com.rs.game.content.skills.thieving.PickPocketAction
 import com.rs.game.content.skills.thieving.PickPocketableNPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.util.Logger
-import com.rs.lib.util.Utils
+import org.darkan.core.Logger
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onXpDrop

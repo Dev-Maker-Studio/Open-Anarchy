@@ -4,16 +4,37 @@ import com.rs.game.World
 import com.rs.game.World.getPlayerByUsername
 import com.rs.game.model.entity.async.AsyncTaskScheduler
 import com.rs.game.model.entity.async.ScheduledTask
-import com.rs.lib.game.GroundItem
+import org.darkan.core.model.GroundItem
 import kotlinx.coroutines.CoroutineScope
 
-class TaskedGroundItem(item: GroundItem) : GroundItem(item, item.tile, item.creatorUsername, item.type) {
+/**
+ * A GroundItem wrapper that supports async task scheduling.
+ * Uses composition since GroundItem is a data class and cannot be subclassed.
+ */
+class TaskedGroundItem(val groundItem: GroundItem) {
     val asyncTasks = AsyncTaskScheduler()
 
-    override fun tick() {
-        super.tick()
+    // Delegate common GroundItem properties
+    val id get() = groundItem.id
+    val amount get() = groundItem.amount
+    val item get() = groundItem.item
+    val tile get() = groundItem.tile
+    val ownerUsername get() = groundItem.ownerUsername
+    val type get() = groundItem.type
+    val definitions get() = groundItem.definitions
+    val metaData get() = groundItem.metaData
+
+    fun tick() {
+        groundItem.tick()
         asyncTasks.tick()
     }
+
+    fun getMetaData(key: String): Any? = groundItem.getMetaData(key)
+    fun getMetaDataI(key: String, default: Int = 0) = groundItem.getMetaDataI(key, default)
+    fun addMetaData(key: String, value: Any) = groundItem.addMetaData(key, value)
+
+    /** Allow TaskedGroundItem to be used where GroundItem is expected */
+    fun asGroundItem(): GroundItem = groundItem
 }
 
 fun TaskedGroundItem.schedule(mapping: String, task: suspend ScheduledTask.(CoroutineScope) -> Unit) {
@@ -28,4 +49,4 @@ fun TaskedGroundItem.cancel(mapping: String) {
     this.asyncTasks.cancel(mapping)
 }
 
-fun GroundItem.getOwner() = getPlayerByUsername(creatorUsername)
+fun GroundItem.getOwner() = ownerUsername?.let { getPlayerByUsername(it) }

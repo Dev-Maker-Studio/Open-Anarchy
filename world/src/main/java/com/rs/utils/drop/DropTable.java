@@ -16,14 +16,14 @@
 //
 package com.rs.utils.drop;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.model.IFEvents;
 import com.rs.engine.thread.AsyncTaskExecutor;
 import com.rs.game.model.entity.player.Bank;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 import com.rs.utils.DropSets;
 
 import java.util.List;
@@ -211,7 +211,7 @@ public class DropTable {
 		if (drops == null)
 			return s + "Nothing";
 		for (Drop d : drops)
-			s.append("(").append(d.getId()).append("(").append(ItemDefinitions.getDefs(d.getId()).name).append("),").append(d.getMin()).append(",").append(d.getMax()).append(") ]");
+			s.append("(").append(d.getId()).append("(").append(ItemDefinitions.getDefs(d.getId()).getName()).append("),").append(d.getMin()).append(",").append(d.getMax()).append(") ]");
 		return s.toString();
 	}
 }

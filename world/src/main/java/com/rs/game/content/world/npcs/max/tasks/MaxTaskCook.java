@@ -1,16 +1,16 @@
 package com.rs.game.content.world.npcs.max.tasks;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.engine.pathfinder.RouteEvent;
 import com.rs.game.content.skills.magic.Magic;
 import com.rs.game.content.world.npcs.max.Max;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 public class MaxTaskCook implements Task {
 	
-	private static final GameObject RANGE = new GameObject(114, ObjectType.SCENERY_INTERACT, 2, Tile.of(3212, 3215, 0));
+	private static final GameObject RANGE = new GameObject(114, ObjectShape.SCENERY_INTERACT, 2, Tile.of(3212, 3215, 0));
 		
 	private boolean started = false;
 	private int itemsCooked = Utils.random(85, 150);

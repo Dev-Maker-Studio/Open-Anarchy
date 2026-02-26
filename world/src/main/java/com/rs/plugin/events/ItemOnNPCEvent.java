@@ -18,7 +18,7 @@ package com.rs.plugin.events;
 
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.handlers.ItemOnNPCHandler;
 import com.rs.plugin.handlers.PluginHandler;
 
@@ -73,7 +73,7 @@ public class ItemOnNPCEvent implements PluginEvent {
 	public PluginHandler<? extends PluginEvent> getMethod() {
 		ItemOnNPCHandler method = HANDLERS.get(getNPC().getId());
 		if (method == null)
-			method = HANDLERS.get(getNPC().getDefinitions().getName(getPlayer().getVars()));
+			method = HANDLERS.get(getNPC().getDefinitions().getName());
 		if ((method == null) || (!isAtNPC() && method.isCheckDistance()))
 			return null;
 		return method;

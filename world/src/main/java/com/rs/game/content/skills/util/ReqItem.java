@@ -17,8 +17,8 @@
 package com.rs.game.content.skills.util;
 
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
 
 import java.util.ArrayList;
 import java.util.HashMap;

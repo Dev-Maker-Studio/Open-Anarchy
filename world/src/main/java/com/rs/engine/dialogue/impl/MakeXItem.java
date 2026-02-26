@@ -20,7 +20,7 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.statements.MakeXStatement;
 import com.rs.game.content.skills.util.CreateAction;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 public class MakeXItem extends Dialogue {
 

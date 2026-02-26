@@ -1,6 +1,6 @@
 package com.rs.game.content.skills.construction.playerOwnedHouse
 
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 enum class EntranceLocations(val objectId: Int, val tile: Tile, val levelRequired: Int, val cost: Int) {
     RIMMINGTON(15478, Tile.of(2953, 3224, 0), 1, 5000),

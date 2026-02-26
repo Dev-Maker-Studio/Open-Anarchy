@@ -1,11 +1,11 @@
 package com.rs.game.content.dnds.eviltree
 
 import com.google.common.collect.Iterators
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.model.ObjectShape
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.Options
 import com.rs.engine.dialogue.startConversation
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World
 import com.rs.game.content.Effect
 import com.rs.game.content.skills.woodcutting.Hatchet
@@ -17,10 +17,10 @@ import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.actions.PlayerAction
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
-import com.rs.lib.util.Vec2
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
+import org.darkan.core.model.Vec2
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.onLogin
@@ -208,24 +208,24 @@ fun mapEvilTrees() {
     onLogin { (player) -> player.vars.setVarBit(1542, if (player.getDailyI("evilTreeChippings") >= 200) 0 else 1) }
 }
 
-class EvilTree(val treeType: Type, val location: Location, val centerTile: Tile) : GameObject(11391, ObjectType.SCENERY_INTERACT, 0, centerTile) {
+class EvilTree(val treeType: Type, val location: Location, val centerTile: Tile) : GameObject(11391, ObjectShape.SCENERY_INTERACT, 0, centerTile) {
     private var stage = STAGE_NEW
     private var stageProgress = 0
     private var leprechaun: NPC? = null
     private val roots: MutableMap<Direction, Root> = EnumMap(Direction::class.java)
     private var removed = false
     private val fires = mapOf(
-        Direction.WEST to GameObject(14887, ObjectType.STRAIGHT_INSIDE_WALL_DEC, 2, tile.transform(-2, 0, 0)),
-        Direction.NORTH to GameObject(15253, ObjectType.STRAIGHT_INSIDE_WALL_DEC, 3, tile.transform(0, 2, 0)),
-        Direction.EAST to GameObject(14888, ObjectType.STRAIGHT_INSIDE_WALL_DEC, 0, tile.transform(2, 0, 0)),
-        Direction.SOUTH to GameObject(15254, ObjectType.STRAIGHT_INSIDE_WALL_DEC, 1, tile.transform(0, -2, 0)),
-        Direction.NORTHWEST to GameObject(14889, ObjectType.DIAGONAL_INSIDE_WALL_DEC, 0, tile.transform(-1, 1, 0)),
-        Direction.SOUTHEAST to GameObject(15255, ObjectType.DIAGONAL_INSIDE_WALL_DEC, 2, tile.transform(1, -1, 0)),
-        Direction.NORTHEAST to GameObject(14890, ObjectType.DIAGONAL_INSIDE_WALL_DEC, 1, tile.transform(1, 1, 0)),
-        Direction.SOUTHWEST to GameObject(15491, ObjectType.DIAGONAL_INSIDE_WALL_DEC, 3, tile.transform(-1, -1, 0)),
+        Direction.WEST to GameObject(14887, ObjectShape.STRAIGHT_INSIDE_WALL_DEC, 2, tile.transform(-2, 0, 0)),
+        Direction.NORTH to GameObject(15253, ObjectShape.STRAIGHT_INSIDE_WALL_DEC, 3, tile.transform(0, 2, 0)),
+        Direction.EAST to GameObject(14888, ObjectShape.STRAIGHT_INSIDE_WALL_DEC, 0, tile.transform(2, 0, 0)),
+        Direction.SOUTH to GameObject(15254, ObjectShape.STRAIGHT_INSIDE_WALL_DEC, 1, tile.transform(0, -2, 0)),
+        Direction.NORTHWEST to GameObject(14889, ObjectShape.DIAGONAL_INSIDE_WALL_DEC, 0, tile.transform(-1, 1, 0)),
+        Direction.SOUTHEAST to GameObject(15255, ObjectShape.DIAGONAL_INSIDE_WALL_DEC, 2, tile.transform(1, -1, 0)),
+        Direction.NORTHEAST to GameObject(14890, ObjectShape.DIAGONAL_INSIDE_WALL_DEC, 1, tile.transform(1, 1, 0)),
+        Direction.SOUTHWEST to GameObject(15491, ObjectShape.DIAGONAL_INSIDE_WALL_DEC, 3, tile.transform(-1, -1, 0)),
     )
 
-    class Root(val tree: EvilTree, val dir: Direction, var life: Int = Utils.random(3, 8)) : GameObject(11427, ObjectType.SCENERY_INTERACT, 0, tree.centerTile.transform(dir.dx*2, dir.dy*2)) {
+    class Root(val tree: EvilTree, val dir: Direction, var life: Int = Utils.random(3, 8)) : GameObject(11427, ObjectShape.SCENERY_INTERACT, 0, tree.centerTile.transform(dir.dx*2, dir.dy*2)) {
         var killed = false
 
         fun chopLife() {
@@ -249,7 +249,7 @@ class EvilTree(val treeType: Type, val location: Location, val centerTile: Tile)
         if (removed)
             return false
         if (World.getServerTicks() % 10 == 0L)
-            World.getPlayersInChunkRange(tile.chunkId, 4)
+            World.getPlayersInChunkRange(tile.getChunkId(), 4)
                 .filter { !it.tempAttribs.getB("notified$treeType") }
                 .forEach {
                     World.sendSpotAnim(it.tile, 314)
@@ -257,7 +257,7 @@ class EvilTree(val treeType: Type, val location: Location, val centerTile: Tile)
                     it.tempAttribs.setB("notified$treeType", true)
                 }
         if (World.getServerTicks() % 2 == 0L)
-            World.getPlayersInChunkRange(tile.chunkId, 1)
+            World.getPlayersInChunkRange(tile.getChunkId(), 1)
                 .filter { player -> player.withinDistance(centerTile, 2) && roots.values.any { player.withinDistance(it.tile, 1) } }
                 .forEach { knockAway(it) }
 
@@ -291,9 +291,9 @@ class EvilTree(val treeType: Type, val location: Location, val centerTile: Tile)
         val root = Root(this, dir)
         World.spawnObject(root)
         roots[dir] = root
-        WorldTasks.schedule(2) { root.setId(11428) }
+        WorldTasks.schedule(2) { root.changeId(11428) }
         root.flagForProcess()
-        World.getPlayersInChunkRange(tile.chunkId, 1)
+        World.getPlayersInChunkRange(tile.getChunkId(), 1)
             .filter { it.withinDistance(centerTile, 2) && it.withinDistance(root.tile, 1) }
             .forEach { knockAway(it) }
     }
@@ -323,7 +323,7 @@ class EvilTree(val treeType: Type, val location: Location, val centerTile: Tile)
         }
     }
 
-    val ceilNegs: (Float) -> Float = { if (it < 0) ceil(it) - 1 else ceil(it) }
+    val ceilNegs: (Double) -> Double = { if (it < 0) ceil(it) - 1 else ceil(it) }
 
     fun lightFire(player: Player) {
         if (player.skills.getLevel(Skills.FIREMAKING) < treeType.fmReq) {
@@ -339,20 +339,19 @@ class EvilTree(val treeType: Type, val location: Location, val centerTile: Tile)
             player.sendMessage("You can't light a fire here.")
             return
         }
-        if (player.vars.getVarBit(fire.definitions.varpBit) != 0) {
+        if (player.vars.getVarBit(fire.definitions.varbit) != 0) {
             player.sendMessage("You've already lit a fire here.")
             return
         }
         player.anim(16700)
         player.skills.addXp(Skills.FIREMAKING, treeType.fmXp)
         player.inventory.deleteItem(KINDLING, 1)
-        player.vars.setVarBit(fire.definitions.varpBit, 1)
+        player.vars.setVarBit(fire.definitions.varbit, 1)
     }
 
     private fun getDirectionFromTree(player: Player): Direction {
-        val sub = player.getMiddleTileAsVector().sub(Vec2(centerTile))
-        sub.norm()
-        return Direction.forDelta(ceilNegs(sub.x).toInt(), ceilNegs(sub.y).toInt()) ?: Direction.WEST
+        val norm = player.getMiddleTileAsVector().sub(Vec2(centerTile)).norm()
+        return Direction.forDelta(ceilNegs(norm.x).toInt(), ceilNegs(norm.y).toInt()) ?: Direction.WEST
     }
 
     private fun knockAway(player: Player) {
@@ -464,32 +463,32 @@ class EvilTree(val treeType: Type, val location: Location, val centerTile: Tile)
             id += 1
             tile = tile.transform(-1, -1)
             World.spawnObject(this)
-            World.getPlayersInChunkRange(tile.chunkId, 1)
+            World.getPlayersInChunkRange(tile.getChunkId(), 1)
                 .filter { it.withinDistance(centerTile, 1) }
                 .forEach { knockAway(it) }
             return
         }
         if (stage == STAGE_DEAD) {
             leprechaun?.transformIntoNPC(418)
-            val varbits = fires.values.map { it.definitions.varpBit }
+            val varbits = fires.values.map { it.definitions.varbit }
             fires.values.forEach { World.removeObject(it) }
             roots.values.forEach { it.kill() }
-            World.getPlayersInChunkRange(tile.chunkId, 1)
+            World.getPlayersInChunkRange(tile.getChunkId(), 1)
                 .forEach { player ->
                     varbits.forEach { varbit ->
                         player.vars.setVarBit(varbit, 0)
                     }
                 }
-            WorldTasks.schedule(10) { setId(treeType.deadObj) }
+            WorldTasks.schedule(10) { changeId(treeType.deadObj) }
         }
         if (stage == STAGE_FULLY_GROWN) {
             leprechaun?.transformIntoNPC(419)
             Direction.entries.forEach { spawnRoot(it) }
         }
         if (stage <= STAGE_LAST_NURTURE)
-            setId(id + 1)
+            changeId(id + 1)
         else
-            setId(when(stage) {
+            changeId(when(stage) {
                 STAGE_FULLY_GROWN -> treeType.healthyObj
                 STAGE_CHOPPED_UP_1 -> treeType.deg1Obj
                 STAGE_CHOPPED_UP_2 -> treeType.deg2Obj

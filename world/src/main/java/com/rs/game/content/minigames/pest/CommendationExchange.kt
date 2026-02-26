@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.minigames.pest
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.dialogue.sendOptionsDialogue
 import com.rs.engine.quest.Quest
 import com.rs.game.content.combat.CombatMod
@@ -24,9 +24,9 @@ import com.rs.game.content.combat.CombatStyle
 import com.rs.game.content.combat.onCombatFormulaAdjust
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.Constants
-import com.rs.lib.game.Rights
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.model.Rights
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onItemOnNpc

@@ -16,9 +16,9 @@
 //
 package com.rs.tools;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.util.Utils;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.Utils;
 import com.rs.tools.old.WebPage;
 import com.rs.utils.drop.DropSet;
 import com.rs.utils.drop.DropTable;
@@ -38,7 +38,7 @@ public class NPCDropDumper {
 		//Cache.init();
 		dumpNPC("Chaos druid");
 		//			for (int npcId = 0;npcId < Utils.getNPCDefinitionsSize();npcId++) {
-		//				NPCDefinitions defs = NPCDefinitions.getDefs(npcId);
+		//				NPCDefinition defs = NPCDefinitions.getDefs(npcId);
 		//				if (!DUMPED.contains(defs.getName()) && defs.hasAttackOption()) {
 		//					DUMPED.add(defs.getName());
 		//					if (dumpNPC(defs.getName().replace(" ", " ")))

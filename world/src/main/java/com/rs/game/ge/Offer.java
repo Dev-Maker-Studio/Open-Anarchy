@@ -16,12 +16,12 @@
 //
 package com.rs.game.ge;
 
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.model.IFEvents;
 import com.rs.db.WorldDB;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Logger;
+import org.darkan.core.model.Item;
+import org.darkan.core.Logger;
 
 public class Offer {
 	private final String owner;

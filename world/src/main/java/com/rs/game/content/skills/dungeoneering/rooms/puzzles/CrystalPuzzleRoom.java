@@ -16,15 +16,15 @@
 //
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.rooms.PuzzleRoom;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import world.gregs.voidps.type.Tile;
 
 public class CrystalPuzzleRoom extends PuzzleRoom {
 
@@ -74,9 +74,9 @@ public class CrystalPuzzleRoom extends PuzzleRoom {
 		for (int color = 0; color < 4; color++)
 			if (Math.random() > 0.66 && activeCount++ != 3) {
 				resetPosition(color);
-				World.spawnObject(new GameObject(LODESTONE_ACTIVE[color][type.ordinal()], ObjectType.SCENERY_INTERACT, 0, manager.getTile(reference, POS_BASE_LODESTONE[0] + color, POS_BASE_LODESTONE[1] + color)));
+				World.spawnObject(new GameObject(LODESTONE_ACTIVE[color][type.ordinal()], ObjectShape.SCENERY_INTERACT, 0, manager.getTile(reference, POS_BASE_LODESTONE[0] + color, POS_BASE_LODESTONE[1] + color)));
 			} else
-				World.spawnObject(new GameObject(LODESTONE_INACTIVE[color][type.ordinal()], ObjectType.SCENERY_INTERACT, 0, manager.getTile(reference, POS_BASE_LODESTONE[0] + color, POS_BASE_LODESTONE[1] + color)));
+				World.spawnObject(new GameObject(LODESTONE_INACTIVE[color][type.ordinal()], ObjectShape.SCENERY_INTERACT, 0, manager.getTile(reference, POS_BASE_LODESTONE[0] + color, POS_BASE_LODESTONE[1] + color)));
 		task = new TileTask();
 		WorldTasks.scheduleLooping(task, 0, 0);
 	}
@@ -93,7 +93,7 @@ public class CrystalPuzzleRoom extends PuzzleRoom {
 				p.anim(ANIM_CHARGE_LODESTONE);
 				p.lock(1);
 				resetPosition(color);
-				World.spawnObject(new GameObject(LODESTONE_ACTIVE[color][type.ordinal()], ObjectType.SCENERY_INTERACT, 0, manager.getTile(reference, POS_BASE_LODESTONE[0] + color, POS_BASE_LODESTONE[1] + color)));
+				World.spawnObject(new GameObject(LODESTONE_ACTIVE[color][type.ordinal()], ObjectShape.SCENERY_INTERACT, 0, manager.getTile(reference, POS_BASE_LODESTONE[0] + color, POS_BASE_LODESTONE[1] + color)));
 				p.sendMessage("You reach out and find the lodestone's power source. You spark it into life.");
 				return false;
 			}
@@ -104,7 +104,7 @@ public class CrystalPuzzleRoom extends PuzzleRoom {
 		active[color] = true;
 		energyTile[color][0] = POS_PLATE[color][0] + POS_DELTA[color][0];
 		energyTile[color][1] = POS_PLATE[color][1] + POS_DELTA[color][1];
-		World.spawnObject(new GameObject(TILE_ACTIVE[color][type.ordinal()], ObjectType.GROUND_DECORATION, 0, manager.getTile(reference, energyTile[color][0], energyTile[color][1])));
+		World.spawnObject(new GameObject(TILE_ACTIVE[color][type.ordinal()], ObjectShape.GROUND_DECORATION, 0, manager.getTile(reference, energyTile[color][0], energyTile[color][1])));
 	}
 
 	@Override
@@ -137,7 +137,7 @@ public class CrystalPuzzleRoom extends PuzzleRoom {
 					}
 
 					// Remove current tile
-					World.spawnObject(new GameObject(TILE_INACTIVE[type.ordinal()], ObjectType.GROUND_DECORATION, 0, manager.getTile(reference, energyTile[color][0], energyTile[color][1])));
+					World.spawnObject(new GameObject(TILE_INACTIVE[type.ordinal()], ObjectShape.GROUND_DECORATION, 0, manager.getTile(reference, energyTile[color][0], energyTile[color][1])));
 
 					// Rewind position if it's in the center
 					if (energyTile[color][0] == POS_CENTER[0] && energyTile[color][1] == POS_CENTER[1])
@@ -146,7 +146,7 @@ public class CrystalPuzzleRoom extends PuzzleRoom {
 						// Actually move it
 						energyTile[color][0] += POS_DELTA[color][0];
 						energyTile[color][1] += POS_DELTA[color][1];
-						World.spawnObject(new GameObject(TILE_ACTIVE[color][type.ordinal()], ObjectType.GROUND_DECORATION, 0, manager.getTile(reference, energyTile[color][0], energyTile[color][1])));
+						World.spawnObject(new GameObject(TILE_ACTIVE[color][type.ordinal()], ObjectShape.GROUND_DECORATION, 0, manager.getTile(reference, energyTile[color][0], energyTile[color][1])));
 					}
 				}
 
@@ -160,14 +160,14 @@ public class CrystalPuzzleRoom extends PuzzleRoom {
 						any = true;
 
 				if (complete) {
-					World.spawnObject(new GameObject(LARGE_CRYSTAL_ON[type.ordinal()], ObjectType.SCENERY_INTERACT, 0, manager.getTile(reference, POS_CENTER[0], POS_CENTER[1])));
+					World.spawnObject(new GameObject(LARGE_CRYSTAL_ON[type.ordinal()], ObjectShape.SCENERY_INTERACT, 0, manager.getTile(reference, POS_CENTER[0], POS_CENTER[1])));
 					setComplete();
 					stop();
 					task = null;
 				} else if (any)
-					World.spawnObject(new GameObject(LARGE_CRYSTAL_FLASH[type.ordinal()], ObjectType.SCENERY_INTERACT, 0, manager.getTile(reference, POS_CENTER[0], POS_CENTER[1])));
+					World.spawnObject(new GameObject(LARGE_CRYSTAL_FLASH[type.ordinal()], ObjectShape.SCENERY_INTERACT, 0, manager.getTile(reference, POS_CENTER[0], POS_CENTER[1])));
 				else
-					World.spawnObject(new GameObject(LARGE_CRYSTAL_OFF[type.ordinal()], ObjectType.SCENERY_INTERACT, 0, manager.getTile(reference, POS_CENTER[0], POS_CENTER[1])));
+					World.spawnObject(new GameObject(LARGE_CRYSTAL_OFF[type.ordinal()], ObjectShape.SCENERY_INTERACT, 0, manager.getTile(reference, POS_CENTER[0], POS_CENTER[1])));
 			}
 		}
 

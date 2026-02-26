@@ -16,16 +16,16 @@
 //
 package com.rs.game.content.minigames.domtower;
 
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.World;
 import com.rs.game.map.instance.Instance;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -468,7 +468,7 @@ public final class DominionTower {
 	public int getBossesTotalLevel() {
 		int level = 0;
 		for (int id : BOSSES[getNextBossIndex()].ids)
-			level = +NPCDefinitions.getDefs(id).combatLevel;
+			level = +NPCDefinitions.getDefs(id).getCombatLevel();
 		return level;
 	}
 

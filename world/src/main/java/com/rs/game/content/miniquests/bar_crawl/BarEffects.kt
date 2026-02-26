@@ -14,8 +14,8 @@ import com.rs.game.content.miniquests.bar_crawl.BarCrawl.BarCrawlBars.setBarVisi
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.async.schedule
-import com.rs.lib.Constants
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.Utils
 import com.rs.utils.Ticks
 
 class BlueMoonInnEffect : BarCrawl.Effects {

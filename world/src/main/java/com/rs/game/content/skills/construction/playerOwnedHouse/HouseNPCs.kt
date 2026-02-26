@@ -3,8 +3,8 @@ package com.rs.game.content.skills.construction.playerOwnedHouse
 import com.rs.game.World
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import java.util.concurrent.CopyOnWriteArrayList
 
 class HouseNPCs(private val house: House) {
@@ -96,7 +96,7 @@ class HouseNPCs(private val house: House) {
     }
 
     fun spawnNPC(npcId: Int, obj: GameObject?) {
-        val tile = obj?.let { Tile.of(it.x, it.y, it.plane) } ?: return
+        val tile = obj?.let { Tile.of(it.x, it.y, it.level) } ?: return
         val npc = NPC(npcId, tile)
         npcs.add(npc)
         npc.setRandomWalk(false)

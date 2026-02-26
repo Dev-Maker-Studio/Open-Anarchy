@@ -15,9 +15,10 @@
 //  This file is part of project: Darkan
 //
 package com.rs.game.content.world.areas.trollheim
+import com.rs.utils.isAt
 
 import com.rs.engine.cutscenekt.cutscene
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.pathfinder.RouteEvent
 import com.rs.engine.quest.Quest
 import com.rs.game.World
@@ -31,8 +32,8 @@ import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Tile
-import com.rs.lib.net.ClientPacket
+import world.gregs.voidps.type.Tile
+
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.ObjectClickEvent
 import com.rs.plugin.kts.onObjectClick
@@ -51,7 +52,7 @@ fun mapTrollheim() {
 
     onObjectClick(35390) { e ->
         if (e.player.isQuestComplete(Quest.DEATH_PLATEAU) && e.player.isQuestStarted(Quest.TROLL_STRONGHOLD)) {
-            val lift = e.opNum == ClientPacket.OBJECT_OP1
+            val lift = e.opNum == 1
             if (e.player.skills.getLevel(if (lift) Skills.STRENGTH else Skills.AGILITY) < 60) {
                 e.player.sendMessage("You need a " + (if (lift) "Strength" else "Agility") + " of 60 in order to " + (if (lift) "lift" else "squeeze past") + " this boulder.")
                 return@onObjectClick
@@ -293,7 +294,7 @@ fun handleObstacleInteractions (e: ObjectClickEvent) {
 fun climbCliff(player: Player, start: Tile, end: Tile, up: Boolean) {
     player.walkToAndExecute(start) {
         player.lock()
-        if (!up) player.addWalkSteps(end.x().toInt(), end.y().toInt(), 1, false)
+        if (!up) player.addWalkSteps(end.x, end.y, 1, false)
         player.schedule {
             wait(1)
             player.faceTile(end)

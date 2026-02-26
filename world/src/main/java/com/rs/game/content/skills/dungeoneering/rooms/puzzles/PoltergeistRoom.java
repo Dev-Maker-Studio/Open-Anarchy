@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants;
@@ -29,10 +29,10 @@ import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 public class PoltergeistRoom extends PuzzleRoom {
 
@@ -126,7 +126,7 @@ public class PoltergeistRoom extends PuzzleRoom {
 			player.startConversation(new Dialogue().addOptions(ops -> {
 				for (int i = 0;i < HERBS.length;i++) {
 					final int index = i;
-					ops.add(ItemDefinitions.getDefs(HERBS[i]).name, () -> takeHerb(player, object, index));
+					ops.add(ItemDefinitions.getDefs(HERBS[i]).getName(), () -> takeHerb(player, object, index));
 				}
 			}));
 			return false;

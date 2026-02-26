@@ -1,6 +1,6 @@
 package com.rs.game.content.skills.crafting
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.dialogue.statements.MakeXStatement

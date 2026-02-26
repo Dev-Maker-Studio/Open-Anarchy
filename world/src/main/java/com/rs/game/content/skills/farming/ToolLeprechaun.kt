@@ -15,11 +15,12 @@
 //  This file is part of project: Darkan
 //
 package com.rs.game.content.skills.farming
+import com.rs.utils.isAt
 
 import com.rs.engine.dialogue.*
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.net.ClientPacket
+import org.darkan.core.model.Item
+
 import com.rs.plugin.annotations.PluginEventHandler
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.ButtonClickEvent
@@ -133,7 +134,7 @@ fun mapToolLeprechauns() {
             return@onItemOnNpc
         }
         val produceType = ProduceType.forProduce(itemId)
-        if ((produceType == null || e.item.definitions.getCertId() == -1) && !noteableHerbs.contains(itemId)) {
+        if ((produceType == null || e.item.definitions.noteId == -1) && !noteableHerbs.contains(itemId)) {
             e.player.npcDialogue(e.npc.id, HeadE.SAD_MILD_LOOK_DOWN,
                 when (e.npc.id) {
                     2861 -> "Sorry, I can't turn that into a banknote."
@@ -143,7 +144,7 @@ fun mapToolLeprechauns() {
         }
         val num = e.player.inventory.getNumberOf(itemId)
         e.player.inventory.deleteItem(itemId, num)
-        e.player.inventory.addItem(Item(e.item.definitions.getCertId(), num))
+        e.player.inventory.addItem(Item(e.item.definitions.noteId, num))
         e.player.sendMessage(
             when (e.npc.id) {
                 2861 -> "The elf exchanges your items for banknotes."
@@ -153,21 +154,21 @@ fun mapToolLeprechauns() {
     }
 
     onButtonClick(125) { e ->
-        when (e.packet) {
-            ClientPacket.IF_OP1 -> takeTool(e.player, e.slotId2, 1)
-            ClientPacket.IF_OP2 -> takeTool(e.player, e.slotId2, 5)
-            ClientPacket.IF_OP3 -> takeTool(e.player, e.slotId2, Int.MAX_VALUE)
-            ClientPacket.IF_OP4 -> e.player.sendInputInteger("How many would you like to take?") { num: Int -> takeTool(e.player, e.slotId2, num) }
+        when (e.opNum) {
+            1 -> takeTool(e.player, e.slotId2, 1)
+            2 -> takeTool(e.player, e.slotId2, 5)
+            3 -> takeTool(e.player, e.slotId2, Int.MAX_VALUE)
+            4 -> e.player.sendInputInteger("How many would you like to take?") { num: Int -> takeTool(e.player, e.slotId2, num) }
             else -> {}
         }
     }
 
     onButtonClick(126) { e ->
-        when (e.packet) {
-            ClientPacket.IF_OP1 -> storeTool(e.player, e.slotId2, 1)
-            ClientPacket.IF_OP2 -> storeTool(e.player, e.slotId2, 5)
-            ClientPacket.IF_OP3 -> storeTool(e.player, e.slotId2, Int.MAX_VALUE)
-            ClientPacket.IF_OP4 -> e.player.sendInputInteger("How many would you like to store?") { num: Int -> storeTool(e.player, e.slotId2, num) }
+        when (e.opNum) {
+            1 -> storeTool(e.player, e.slotId2, 1)
+            2 -> storeTool(e.player, e.slotId2, 5)
+            3 -> storeTool(e.player, e.slotId2, Int.MAX_VALUE)
+            4 -> e.player.sendInputInteger("How many would you like to store?") { num: Int -> storeTool(e.player, e.slotId2, num) }
             else -> {}
         }
     }
@@ -188,7 +189,7 @@ fun Player.storeLeprechaunItem(item: StorableItem, itemId: Int, amount: Int) {
         if (curr == null)
             leprechaunStorage[item] = Item(itemId, amount)
         else
-            curr.setAmount(curr.amount + amount)
+            curr.amount = curr.amount + amount
         inventory.deleteItem(itemId, amount)
         item.updateVars(this)
     }
@@ -201,7 +202,7 @@ fun Player.takeLeprechaunItem(item: StorableItem, amount: Int) {
     amount = minOf(amount, curr.amount, inventory.freeSlots).coerceAtLeast(0)
 
     if (amount > 0) {
-        curr.setAmount(curr.amount - amount)
+        curr.amount = curr.amount - amount
         inventory.addItem(curr.id, amount)
         if (curr.amount == 0) leprechaunStorage.remove(item)
         item.updateVars(this)

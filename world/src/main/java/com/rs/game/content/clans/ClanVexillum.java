@@ -1,16 +1,17 @@
 package com.rs.game.content.clans;
 
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.World;
+import com.rs.utils.WorldUtil;
 import com.rs.game.content.skills.magic.Magic;
 import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.OwnedNPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Rights;
-import com.rs.lib.game.Tile;
-import com.rs.lib.model.clan.Clan;
+import org.darkan.core.model.Rights;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Clan;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
@@ -132,7 +133,7 @@ public class ClanVexillum extends OwnedNPC {
 	
 	public void display() {
 		setHidden(false);
-		Direction faceDir = Direction.getDirectionTo(getOwner(), getTile());
+		Direction faceDir = WorldUtil.getDirectionTo(getOwner(), getTile());
 		if (faceDir == null)
 			faceDir = getOwner().getDirection();
 		if (faceDir != null)

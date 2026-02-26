@@ -1,7 +1,284 @@
 package com.rs.utils
 
 import com.rs.game.model.entity.Entity
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils.getDistance
+import org.darkan.core.cache.AnimationDefinitions
+import org.darkan.core.model.Animation
+import org.darkan.core.model.ObjectShape
+import world.gregs.voidps.cache.definition.data.AnimationDefinition
+import world.gregs.voidps.cache.definition.data.EnumDefinition
+import world.gregs.voidps.cache.definition.data.ItemDefinition
+import world.gregs.voidps.cache.definition.data.BASDefinition
+import world.gregs.voidps.cache.definition.data.NPCDefinition
+import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import world.gregs.voidps.cache.definition.data.StructDefinition
+import world.gregs.voidps.type.Tile
+import org.darkan.core.model.Bonus
+import org.darkan.core.model.Item
+import org.darkan.core.Utils.getDistance
+import com.rs.game.model.entity.npc.combat.MovementType
 
 fun Set<Entity>.closestOrNull(tile: Tile): Entity? = this.minByOrNull { entity -> getDistance(entity.tile, tile) }
+
+/**
+ * Checks if this tile is at the given x,y coordinates (ignoring plane).
+ */
+fun Tile.isAt(x: Int, y: Int): Boolean = this.x == x && this.y == y
+
+/**
+ * Checks if this tile is at the given x,y,plane coordinates.
+ */
+fun Tile.isAt(x: Int, y: Int, plane: Int): Boolean = this.x == x && this.y == y && this.plane == plane
+
+/**
+ * Checks if this tile is within the rectangular area defined by two corners (x1,y1) to (x2,y2).
+ */
+fun Tile.withinArea(x1: Int, y1: Int, x2: Int, y2: Int): Boolean =
+    this.x >= x1 && this.x <= x2 && this.y >= y1 && this.y <= y2
+
+/**
+ * Gets the chunk X coordinate (x / 8).
+ */
+val Tile.chunkX: Int get() = x shr 3
+
+/**
+ * Gets the chunk Y coordinate (y / 8).
+ */
+val Tile.chunkY: Int get() = y shr 3
+
+/**
+ * Gets the local hash within the chunk (encodes localX, localY, and plane).
+ * Format: localX | (localY << 4) | (plane << 8)
+ */
+val Tile.chunkLocalHash: Int get() = (x and 7) or ((y and 7) shl 4) or (plane shl 8)
+
+/**
+ * Gets the X coordinate relative to the scene base.
+ * The sceneBaseChunkId encodes (chunkX, chunkY, plane) via CHUNK structure.
+ */
+fun Tile.getXInScene(sceneBaseChunkId: Int): Int = x - ((sceneBaseChunkId shr 11) and 2047) * 8
+
+/**
+ * Gets the Y coordinate relative to the scene base.
+ * The sceneBaseChunkId encodes (chunkX, chunkY, plane) via CHUNK structure.
+ */
+fun Tile.getYInScene(sceneBaseChunkId: Int): Int = y - (sceneBaseChunkId and 2047) * 8
+
+// hasAttackOption() and hasOption() are now member functions on NPCDefinition
+
+/**
+ * Gets the option at the given index (1-based) from the object definition.
+ * Returns null if the index is out of bounds or options are null.
+ */
+fun ObjectDefinition.getOption(index: Int): String? = options?.getOrNull(index)
+
+/**
+ * Gets the clip type (solid field) of the object definition.
+ * 0 = no clip, 1 = blocks walk, 2 = blocks walk + projectiles.
+ * Accessible as both property (clipType) and function (getClipType()) from Java.
+ */
+val ObjectDefinition.clipType: Int get() = solid
+
+/**
+ * Whether this object blocks projectiles (solid type 2).
+ */
+fun ObjectDefinition.blocks(): Boolean = solid == 2
+
+/**
+ * Whether this object should be ignored by the pathfinder.
+ */
+val ObjectDefinition.ignoresPathfinder: Boolean get() = ignoreOnRoute
+
+/**
+ * Gets the object shape types from the model types as an array of ObjectShape.
+ * Legacy compatibility for the old `types` property.
+ */
+val ObjectDefinition.types: Array<ObjectShape> get() =
+    modelTypes?.map { ObjectShape.forId(it.toInt()) ?: ObjectShape.SCENERY_INTERACT }?.toTypedArray()
+        ?: arrayOf(ObjectShape.SCENERY_INTERACT)
+
+/**
+ * Gets the AnimationDefinition for this Animation's primary ID.
+ */
+val Animation.defs: AnimationDefinition get() = AnimationDefinitions.getDefs(primaryId)
+
+/**
+ * Calculates the total emote duration in game ticks from the frame durations.
+ * Each duration unit is one client frame (30ms), and one game tick is 600ms (20 client frames).
+ */
+val AnimationDefinition.emoteGameTicks: Int get() {
+    val totalDuration = durations?.sum() ?: 0
+    return (totalDuration + 19) / 20 // ceil division: round up to nearest tick
+}
+
+/**
+ * Gets the total emote time in client frames (sum of frame durations).
+ * Each duration unit is one client frame (30ms).
+ * Legacy compat: callable from Java as AnimationDefinition.getEmoteTime()
+ */
+fun AnimationDefinition.getEmoteTime(): Int = durations?.sum() ?: 0
+
+// Most ItemDefinition extensions have been migrated to member functions on the class.
+// Remaining ones that are only needed from Kotlin:
+
+/**
+ * Legacy alias for wearPos - the equipment slot this item occupies.
+ */
+val ItemDefinition.equipSlot: Int get() = wearPos
+
+/**
+ * Legacy alias for primaryMaleModel - the primary male equipped model.
+ */
+val ItemDefinition.maleEquip1: Int get() = primaryMaleModel
+
+/**
+ * Legacy alias for secondaryMaleModel - the secondary male equipped model.
+ */
+val ItemDefinition.maleEquip2: Int get() = secondaryMaleModel
+
+/**
+ * Gets a parameter value as Int from the params map.
+ * Legacy replacement for getParamVal(key).
+ */
+fun ItemDefinition.getParamVal(key: Int): Int = params?.get(key) as? Int ?: 0
+
+// --- NPCDefinition extensions ---
+
+// combatLevel is now a member property on NPCDefinition
+
+/**
+ * Gets compatible animations for this NPC definition by looking up its BAS (renderEmote).
+ * Returns the BASDefinition associated with the NPC's render emote, or null if none.
+ */
+val NPCDefinition.compatibleAnimations: BASDefinition? get() =
+    if (renderEmote != -1) org.darkan.core.cache.BASDefinitions.getDefs(renderEmote) else null
+
+/**
+ * Gets the modified colors (recolored) of the NPC definition.
+ * Legacy alias for modifiedColours.
+ */
+val NPCDefinition.modifiedColors: ShortArray? get() = modifiedColours
+
+/**
+ * Gets the modified textures of the NPC definition.
+ * Legacy alias for modifiedTextureColours.
+ */
+val NPCDefinition.modifiedTextures: ShortArray? get() = modifiedTextureColours
+
+/**
+ * Whether this NPC is classified as undead (param 1352 == 1).
+ */
+val NPCDefinition.isUndead: Boolean get() = (params?.get(1352) as? Int) == 1
+
+// --- EnumDefinition extensions ---
+
+/**
+ * Legacy alias for `map` property - the key-value map in enum definitions.
+ */
+val EnumDefinition.values: Map<Int, Any> get() = map ?: emptyMap()
+
+// getStringValue() and getIntValue() are now member functions on EnumDefinition
+
+// getStringValue() and getIntValue() are now member functions on StructDefinition
+
+// isDestroyItem, canExchange, getWearingSkillRequiriments, getWieldQuestReq, value/getValue
+// are now member functions on ItemDefinition
+
+/**
+ * Legacy alias for `cost` - the item's value/price. Kotlin-only extension.
+ */
+val ItemDefinition.value: Int get() = cost
+
+// --- NPCDefinition extensions (additional) ---
+
+// getBonus() is now a member function on NPCDefinition
+
+// isEquipType, containsOption, isWearItem, getEquipmentOption, getSellPrice, getHighAlchPrice
+// are now member functions on ItemDefinition
+
+// getInventoryOption is now a member function on ItemDefinition
+
+
+// --- Additional NPCDefinition extensions for Appearance compat ---
+
+/**
+ * Legacy field: whether NPC visually walks half-speed. Maps to `slowWalk`.
+ */
+val NPCDefinition.aBool4872: Boolean get() = slowWalk
+
+/**
+ * Legacy field: NPC walking animation. Maps to renderEmote lookup via BAS.
+ */
+val NPCDefinition.walkingAnimation: Int get() {
+    val bas = compatibleAnimations ?: return -1
+    return bas.walkAnimation
+}
+
+/**
+ * Legacy field: NPC rotate 180 animation. Maps to renderEmote lookup via BAS.
+ */
+val NPCDefinition.rotate180Animation: Int get() {
+    val bas = compatibleAnimations ?: return -1
+    return bas.walkDir1
+}
+
+/**
+ * Legacy field: NPC rotate 90 right animation. Maps to renderEmote lookup via BAS.
+ */
+val NPCDefinition.rotate90RightAnimation: Int get() {
+    val bas = compatibleAnimations ?: return -1
+    return bas.walkDir2
+}
+
+/**
+ * Legacy field: NPC rotate 90 left animation. Maps to renderEmote lookup via BAS.
+ */
+val NPCDefinition.rotate90LeftAnimation: Int get() {
+    val bas = compatibleAnimations ?: return -1
+    return bas.walkDir3
+}
+
+/**
+ * Legacy field: special byte for transformed NPC appearance. Maps to size.
+ */
+val NPCDefinition.specialByte: Int get() = size
+
+/**
+ * Legacy field: NPC BAS ID. Maps to renderEmote.
+ */
+val NPCDefinition.basId: Int get() = renderEmote
+
+/**
+ * Gets the NPC's name with var-based transformation support.
+ * Legacy overload that accepts a VarManager/vars parameter.
+ */
+fun NPCDefinition.getName(vars: Any?): String = name
+
+/**
+ * Gets the NPC's attack delay from params (param 14).
+ */
+fun NPCDefinition.getAttackDelay(): Int {
+    return params?.get(14) as? Int ?: 4
+}
+
+/**
+ * Gets the NPC's movement type.
+ * Maps slowWalk=true to HALF_WALK, otherwise NORMAL.
+ */
+val NPCDefinition.movementType: MovementType get() =
+    if (slowWalk) MovementType.HALF_WALK else MovementType.NORMAL
+
+// getSize(), getKeyForValue(), getValues() are now member functions on EnumDefinition
+
+// getIntValue(key, default) is now a member function on StructDefinition
+
+// --- Item utilities for Java interop ---
+
+/**
+ * Creates a shallow copy of this Item (copies id, amount, and metadata).
+ * Callable from Java as KtExtensionsKt.copyItem(item).
+ */
+fun Item.copyItem(): Item {
+    val copy = Item(id, amount, metadata.toMutableMap())
+    copy.slot = slot
+    return copy
+}

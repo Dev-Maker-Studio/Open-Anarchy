@@ -1,6 +1,6 @@
 package com.rs.game.content.world.areas.kethsi
 
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.content.combat.AmmoType
 import com.rs.game.content.combat.CombatMod
 import com.rs.game.content.combat.CombatStyle

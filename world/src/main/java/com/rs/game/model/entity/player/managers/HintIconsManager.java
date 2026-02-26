@@ -19,8 +19,8 @@ package com.rs.game.model.entity.player.managers;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.HintIcon;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.HintIcon;
+import world.gregs.voidps.type.Tile;
 
 public class HintIconsManager {
 

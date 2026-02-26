@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.minigames.duel;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.World;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.content.Potion;
@@ -26,19 +26,19 @@ import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.ForceTalk;
 import com.rs.game.model.entity.Teleport;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 
@@ -547,7 +547,7 @@ public class DuelArenaController extends Controller {
 	}
 
 	@Override
-	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, ClientPacket packet) {
+	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packet) {
 		synchronized (this) {
 			synchronized (target.getControllerManager().getController()) {
 				DuelRules rules = player.getLastDuelRules();
@@ -658,25 +658,25 @@ public class DuelArenaController extends Controller {
 						return false;
 					case 47:
 						switch (packet) {
-						case IF_OP1:
+						case 1:
 							removeItem(slotId, 1);
 							return false;
-						case IF_OP2:
+						case 2:
 							removeItem(slotId, 5);
 							return false;
-						case IF_OP3:
+						case 3:
 							removeItem(slotId, 10);
 							return false;
-						case IF_OP4:
+						case 4:
 							Item item = player.getInventory().getItems().get(slotId);
 							if (item == null)
 								return false;
 							removeItem(slotId, player.getLastDuelRules().getStake().getNumberOf(item));
 							return false;
-						case IF_OP5:
+						case 5:
 							player.getInventory().sendExamine(slotId);
 							return false;
-						case IF_OP7:
+						case 7:
 							player.getInventory().sendExamine(slotId);
 							return false;
 						default:
@@ -686,26 +686,26 @@ public class DuelArenaController extends Controller {
 					}
 				case 628:
 					switch (packet) {
-					case IF_OP1:
+					case 1:
 						// addItem(slotId, 1);
 						return false;
-					case IF_OP2:
+					case 2:
 						// addItem(slotId, 5);
 						return false;
-					case IF_OP3:
+					case 3:
 						// addItem(slotId, 10);
 						return false;
-					case IF_OP4:
+					case 4:
 						Item item = player.getInventory().getItems().get(slotId);
 						if (item == null)
 							return false;
 						// addItem(slotId,
 						// player.getInventory().getItems().getNumberOf(item));
 						return false;
-					case IF_OP5:
+					case 5:
 						player.getInventory().sendExamine(slotId);
 						return false;
-					case IF_OP7:
+					case 7:
 						player.getInventory().sendExamine(slotId);
 						return false;
 					default:

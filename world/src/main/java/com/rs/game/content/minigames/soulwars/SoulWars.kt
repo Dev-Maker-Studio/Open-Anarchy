@@ -1,6 +1,6 @@
 package com.rs.game.content.minigames.soulwars
 
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.model.ObjectShape
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.World
@@ -16,12 +16,14 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.MapUtils
-import com.rs.lib.util.MapUtils.Area
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.util.MapUtils
+import org.darkan.core.util.Area
+import org.darkan.core.util.Structure
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.utils.equipSlot
 import com.rs.plugin.kts.*
 import com.rs.utils.Ticks
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
@@ -71,19 +73,19 @@ const val TICKS_BETWEEN_GAMES = 300
 val RED_AVATAR_DANGER_CHUNKS = setOf(504215, 502167, 502166, 504214, 504213, 502165)
 val BLUE_AVATAR_DANGER_CHUNKS = setOf(463248, 461200, 461201, 463249, 463250, 461202)
 
-val BLUE_EXIT_AREA = Area(MapUtils.Structure.TILE, 1885, 3166, 3, 7)
-val RED_EXIT_AREA = Area(MapUtils.Structure.TILE, 1893, 3166, 3, 7)
+val BLUE_EXIT_AREA = Area(Structure.TILE, 1885, 3166, 3, 7)
+val RED_EXIT_AREA = Area(Structure.TILE, 1893, 3166, 3, 7)
 
-val BLUE_RESPAWN_AREA = Area(MapUtils.Structure.TILE, 1817, 3222, 5, 6)
-val RED_RESPAWN_AREA = Area(MapUtils.Structure.TILE, 1952, 3236, 5, 6)
-val EAST_RESPAWN_AREA = Area(MapUtils.Structure.TILE, 1932, 3244, 2, 1)
-val WEST_RESPAWN_AREA = Area(MapUtils.Structure.TILE, 1841, 3218, 2, 1)
+val BLUE_RESPAWN_AREA = Area(Structure.TILE, 1817, 3222, 5, 6)
+val RED_RESPAWN_AREA = Area(Structure.TILE, 1952, 3236, 5, 6)
+val EAST_RESPAWN_AREA = Area(Structure.TILE, 1932, 3244, 2, 1)
+val WEST_RESPAWN_AREA = Area(Structure.TILE, 1841, 3218, 2, 1)
 
-val MID_CAP_ZONE = Area(MapUtils.Structure.TILE, 1879, 3224, 15, 15)
+val MID_CAP_ZONE = Area(Structure.TILE, 1879, 3224, 15, 15)
 val MID_CAP_CHUNKS = intArrayOf(481684, 479636, 479635, 481683, 483731, 483732)
-val EAST_GRAVEYARD_CAP_ZONE = Area(MapUtils.Structure.TILE, 1928, 3240, 10, 10)
+val EAST_GRAVEYARD_CAP_ZONE = Area(Structure.TILE, 1928, 3240, 10, 10)
 val EAST_CAP_CHUNKS = intArrayOf(493973, 493974, 496022, 496021)
-val WEST_GRAVEYARD_CAP_ZONE = Area(MapUtils.Structure.TILE, 1837, 3213, 10, 10)
+val WEST_GRAVEYARD_CAP_ZONE = Area(Structure.TILE, 1837, 3213, 10, 10)
 val WEST_CAP_CHUNKS = intArrayOf(471442, 469394, 469393, 471441)
 
 val LOBBY_PLAYERS: ObjectSet<Player> = ObjectSets.synchronize(ObjectOpenHashSet())
@@ -207,11 +209,11 @@ fun updateIngameVars(player: Player) {
     updateLobbyVars(player)
     player.packets.apply {
         sendVarc(RED_AVATAR_HEALTH_VARC, ACTIVE_GAME?.redAvatar?.getHealthVarc() ?: 0)
-        sendVarc(RED_AVATAR_LEVEL_VARC, ACTIVE_GAME?.redAvatar?.level ?: 0)
+        sendVarc(RED_AVATAR_LEVEL_VARC, ACTIVE_GAME?.redAvatar?.plane ?: 0)
         sendVarc(RED_AVATAR_DEATH_VARC, ACTIVE_GAME?.redDeaths ?: 0)
 
         sendVarc(BLUE_AVATAR_HEALTH_VARC, ACTIVE_GAME?.blueAvatar?.getHealthVarc() ?: 0)
-        sendVarc(BLUE_AVATAR_LEVEL_VARC, ACTIVE_GAME?.blueAvatar?.level ?: 0)
+        sendVarc(BLUE_AVATAR_LEVEL_VARC, ACTIVE_GAME?.blueAvatar?.plane ?: 0)
         sendVarc(BLUE_AVATAR_DEATH_VARC, ACTIVE_GAME?.blueDeaths ?: 0)
 
         sendVarc(MID_CLAIM_VARC, ACTIVE_GAME?.midCapVal ?: 15)
@@ -257,9 +259,9 @@ class SoulAvatar(private val redTeam: Boolean, val game: SoulWars, var level: In
 
     override fun getPossibleTargets(): MutableList<Entity> {
         return if (redTeam)
-            game.blueTeam.filter { RED_AVATAR_DANGER_CHUNKS.contains(it.chunkId) }.toMutableList()
+            game.blueTeam.filter { RED_AVATAR_DANGER_CHUNKS.contains(it.getChunkId()) }.toMutableList()
         else
-            game.redTeam.filter { BLUE_AVATAR_DANGER_CHUNKS.contains(it.chunkId) }.toMutableList()
+            game.redTeam.filter { BLUE_AVATAR_DANGER_CHUNKS.contains(it.getChunkId()) }.toMutableList()
     }
 
     fun getHealthVarc(): Int {
@@ -302,24 +304,24 @@ class SoulWars {
     }
 
     private fun getObelisk(): GameObject? {
-        return World.getObjectWithType(Tile.of(1886, 3231, 0), ObjectType.SCENERY_INTERACT)
+        return World.getObjectWithType(Tile.of(1886, 3231, 0), ObjectShape.SCENERY_INTERACT)
     }
 
     private fun getEastBarrier(): GameObject? {
-        return World.getObjectWithType(Tile.of(1933, 3243, 0), ObjectType.WALL_STRAIGHT)
+        return World.getObjectWithType(Tile.of(1933, 3243, 0), ObjectShape.WALL_STRAIGHT)
     }
 
     private fun getWestBarrier(): GameObject? {
-        return World.getObjectWithType(Tile.of(1842, 3220, 0), ObjectType.WALL_STRAIGHT)
+        return World.getObjectWithType(Tile.of(1842, 3220, 0), ObjectShape.WALL_STRAIGHT)
     }
 
     fun closestRespawnPoint(redTeam: Boolean, tile: Tile): Tile {
         val possibleTiles = ArrayList<Tile>()
-        possibleTiles.add(if (redTeam) RED_RESPAWN_AREA.randomTile else BLUE_RESPAWN_AREA.randomTile)
+        possibleTiles.add(if (redTeam) RED_RESPAWN_AREA.getRandomTile() else BLUE_RESPAWN_AREA.getRandomTile())
         if (if (redTeam) eastCapVal >= 25 else eastCapVal <= 5)
-            possibleTiles.add(EAST_RESPAWN_AREA.randomTile)
+            possibleTiles.add(EAST_RESPAWN_AREA.getRandomTile())
         if (if (redTeam) westCapVal >= 25 else westCapVal <= 5)
-            possibleTiles.add(WEST_RESPAWN_AREA.randomTile)
+            possibleTiles.add(WEST_RESPAWN_AREA.getRandomTile())
         return possibleTiles.minByOrNull { Utils.getDistance(it, tile) }!!
     }
 
@@ -367,7 +369,7 @@ class SoulWars {
             else -> neutralId
         }
         if (obj.id != newId) {
-            obj.setId(newId)
+            obj.changeId(newId)
             return if (newId == redId) "<col=A31818>red</col>" else "<col=3232D1>blue</col>"
         }
         return null
@@ -392,7 +394,7 @@ class SoulWars {
         }
         arrayOf(redTeam to RED_EXIT_AREA, blueTeam to BLUE_EXIT_AREA).forEach { (team, exitArea) ->
             team.forEach { player ->
-                player.tele(exitArea.randomTile)
+                player.tele(exitArea.getRandomTile())
                 player.controllerManager.forceStop()
                 val zeal = if (winningTeam == team) 3 else 1
                 player.soulWarsZeal += zeal
@@ -472,7 +474,7 @@ class SoulWarsGameController(val redTeam: Boolean, @Transient val game: SoulWars
                 return false
             }
 
-            val avatarLevel = (if (redTeam) game?.blueAvatar else game?.redAvatar)?.level ?: -1
+            val avatarLevel = (if (redTeam) game?.blueAvatar else game?.redAvatar)?.plane ?: -1
             val numToUse = min(item.amount, avatarLevel)
 
             if (numToUse <= 0) {
@@ -504,10 +506,10 @@ class SoulWarsGameController(val redTeam: Boolean, @Transient val game: SoulWars
                     }
                     val soulFrags = player.inventory.getItemById(SOUL_FRAGMENT)
                     if (soulFrags != null) {
-                        World.addGroundItem(soulFrags, Tile.of(player.tile))
+                        World.addGroundItem(soulFrags, player.tile)
                         player.inventory.deleteItem(soulFrags)
                     }
-                    World.addGroundItem(Item(BONES, 1), Tile.of(player.tile))
+                    World.addGroundItem(Item(BONES, 1), player.tile)
                     player.reset()
                     player.tele(game?.closestRespawnPoint(redTeam, player.tile) ?: player.tile)
                     player.isCanPvp = false
@@ -531,7 +533,7 @@ class SoulWarsGameController(val redTeam: Boolean, @Transient val game: SoulWars
             activity -= 2
         player.vars.setVar(PLAYER_ACTIVITY_BAR_VAR, activity)
         if (activity <= 0) {
-            player.tele(RED_EXIT_AREA.randomTile)
+            player.tele(RED_EXIT_AREA.getRandomTile())
             player.controllerManager.forceStop()
         }
     }
@@ -540,7 +542,7 @@ class SoulWarsGameController(val redTeam: Boolean, @Transient val game: SoulWars
         player.interfaceManager.sendOverlay(INGAME_OVERLAY)
         INGAME_PLAYERS.add(player)
         updateIngameVars(player)
-        player.tele(if (redTeam) RED_RESPAWN_AREA.randomTile else BLUE_RESPAWN_AREA.randomTile)
+        player.tele(if (redTeam) RED_RESPAWN_AREA.getRandomTile() else BLUE_RESPAWN_AREA.getRandomTile())
         player.equipment.setNoPluginTrigger(Equipment.CAPE, Item(if (redTeam) RED_CAPE else BLUE_CAPE, 1))
         player.equipment.refresh(Equipment.CAPE)
         player.appearance.generateAppearanceData()
@@ -613,8 +615,8 @@ fun clearMinigameValues(player: Player) {
 
 fun getQuickchatVar(varId: Int): Int {
     return when(varId) {
-        850 -> ACTIVE_GAME?.blueAvatar?.level ?: 0
-        851 -> ACTIVE_GAME?.redAvatar?.level ?: 0
+        850 -> ACTIVE_GAME?.blueAvatar?.plane ?: 0
+        851 -> ACTIVE_GAME?.redAvatar?.plane ?: 0
         866 -> ACTIVE_GAME?.blueAvatar?.getHealthVarc() ?: 0
         867 -> ACTIVE_GAME?.redAvatar?.getHealthVarc() ?: 0
         else -> 0

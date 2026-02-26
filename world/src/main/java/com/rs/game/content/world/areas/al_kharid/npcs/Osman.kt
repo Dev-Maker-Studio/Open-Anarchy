@@ -6,7 +6,7 @@ import com.rs.engine.quest.Quest
 import com.rs.game.content.quests.princealirescue.osmanPrinceAliRescueDialogue
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
-import com.rs.lib.Constants
+import org.darkan.core.Constants
 
 @ServerStartupEvent
 fun handleOsman() {

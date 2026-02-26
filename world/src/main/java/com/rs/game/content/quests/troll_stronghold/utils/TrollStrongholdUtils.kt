@@ -2,7 +2,7 @@ package com.rs.game.content.quests.troll_stronghold.utils
 
 import com.rs.engine.cutscenekt.cutscene
 import com.rs.engine.dialogue.HeadE.*
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.world.doors.Doors
@@ -10,15 +10,15 @@ import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 class TrollStrongholdUtils(val player: Player) {
 
     val stage = player.questManager.getStage(Quest.TROLL_STRONGHOLD)
 
     fun handleArenaDoors(obj: GameObject) {
-        val dad: NPC? = World.getNPCsInChunkRange(player.chunkId, 2).firstOrNull { it.id == DAD }
-        val spectators = World.getNPCsInChunkRange(player.chunkId, 2).filter { it.id in SPECTATORS }
+        val dad: NPC? = World.getNPCsInChunkRange(player.getChunkId(), 2).firstOrNull { it.id == DAD }
+        val spectators = World.getNPCsInChunkRange(player.getChunkId(), 2).filter { it.id in SPECTATORS }
 
         if (player.x == 2912) {
 
@@ -143,7 +143,7 @@ class TrollStrongholdUtils(val player: Player) {
     }
 
     private fun handleCellDoor(obj: GameObject) {
-        val door = World.getObjectWithId(Tile.of(obj.tile), obj.id)
+        val door = World.getObjectWithId(obj.tile, obj.id)
         if (door != null) {
             World.spawnObjectTemporary(GameObject(door, 83), 2, true)
             World.spawnObjectTemporary(GameObject(door.id + 1, door.type, door.getRotation(1), door.tile.transform(-1, 0, 0)), 2, true)
@@ -174,18 +174,18 @@ class TrollStrongholdUtils(val player: Player) {
     fun handleUnlockGodricDoor(obj: GameObject) {
         if (!player.questManager.getAttribs(Quest.TROLL_STRONGHOLD).getB(UNLOCKED_GODRIC_CELL)) {
             if (player.inventory.containsOneItem(CELL_KEY_GODRIC)) {
-                val godric: NPC? = World.getNPCsInChunkRange(player.chunkId, 2).firstOrNull { it.id == GODRIC }
+                val godric: NPC? = World.getNPCsInChunkRange(player.getChunkId(), 2).firstOrNull { it.id == GODRIC }
                 if (godric != null && isInCell(godric.tile)) {
                     player.schedule {
-                        player.walkToAndExecute(Tile.of(GODRIC_UNLOCK_CELL_TILE)) {
+                        player.walkToAndExecute(GODRIC_UNLOCK_CELL_TILE) {
                             player.faceDir(Direction.WEST)
                             if (!godric.isForceWalking) {
                                 player.lock()
                                 player.sendMessage("You unlock the cell door.")
                                 player.inventory.deleteItem(CELL_KEY_GODRIC, 1)
                                 godric.setRandomWalk(false)
-                                godric.setForceWalk(Tile.of(GODRIC_UNLOCK_CELL_TILE.transform(-2, 0)))
-                                godric.walkToAndExecute(Tile.of(GODRIC_UNLOCK_CELL_TILE.transform(-2, 0))) {
+                                godric.setForceWalk(GODRIC_UNLOCK_CELL_TILE.transform(-2, 0))
+                                godric.walkToAndExecute(GODRIC_UNLOCK_CELL_TILE.transform(-2, 0)) {
                                     handleCellDoor(obj)
                                     godric.addWalkSteps(GODRIC_UNLOCK_CELL_TILE.x - 1, GODRIC_UNLOCK_CELL_TILE.y, 3, false, true)
                                     player.cutscene {
@@ -230,18 +230,18 @@ class TrollStrongholdUtils(val player: Player) {
     fun handleUnlockEadgarDoor(obj: GameObject) {
         if (!player.questManager.getAttribs(Quest.TROLL_STRONGHOLD).getB(UNLOCKED_EADGAR_CELL)) {
             if (player.inventory.containsOneItem(CELL_KEY_EADGAR)) {
-                val eadgar: NPC? = World.getNPCsInChunkRange(player.chunkId, 2).firstOrNull { it.id == EADGAR }
+                val eadgar: NPC? = World.getNPCsInChunkRange(player.getChunkId(), 2).firstOrNull { it.id == EADGAR }
                 if (eadgar != null && isInCell(eadgar.tile)) {
                     player.schedule {
-                        player.walkToAndExecute(Tile.of(EADGAR_UNLOCK_CELL_TILE)) {
+                        player.walkToAndExecute(EADGAR_UNLOCK_CELL_TILE) {
                             player.faceDir(Direction.WEST)
                             if (!eadgar.isForceWalking) {
                                 player.lock()
                                 player.sendMessage("You unlock the cell door.")
                                 player.inventory.deleteItem(CELL_KEY_EADGAR, 1)
                                 eadgar.setRandomWalk(false)
-                                eadgar.setForceWalk(Tile.of(EADGAR_UNLOCK_CELL_TILE.transform(-2, 0)))
-                                eadgar.walkToAndExecute(Tile.of(EADGAR_UNLOCK_CELL_TILE.transform(-2, 0))) {
+                                eadgar.setForceWalk(EADGAR_UNLOCK_CELL_TILE.transform(-2, 0))
+                                eadgar.walkToAndExecute(EADGAR_UNLOCK_CELL_TILE.transform(-2, 0)) {
                                     handleCellDoor(obj)
                                     eadgar.addWalkSteps(EADGAR_UNLOCK_CELL_TILE.x - 1, EADGAR_UNLOCK_CELL_TILE.y, 3, false, true)
                                     player.cutscene {
@@ -291,7 +291,7 @@ class TrollStrongholdUtils(val player: Player) {
     }
 
     fun isInCell(tile: Tile): Boolean {
-        for (range in EADGAR_AND_GODRIC_CELL_CHECK) if (tile.x() >= range[0] && tile.x() <= range[1] && tile.y() >= range[2] && tile.y() <= range[3]) return true
+        for (range in EADGAR_AND_GODRIC_CELL_CHECK) if (tile.x >= range[0] && tile.x <= range[1] && tile.y >= range[2] && tile.y <= range[3]) return true
         return false
     }
 

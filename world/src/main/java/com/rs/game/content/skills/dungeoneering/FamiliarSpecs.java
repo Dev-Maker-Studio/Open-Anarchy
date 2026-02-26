@@ -9,7 +9,7 @@ import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.model.SpotAnim;
 import com.rs.utils.Ticks;
 import kotlin.Pair;
 

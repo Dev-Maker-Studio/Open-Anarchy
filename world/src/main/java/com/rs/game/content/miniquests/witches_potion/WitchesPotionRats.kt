@@ -2,8 +2,8 @@ package com.rs.game.content.miniquests.witches_potion
 
 import com.rs.engine.miniquest.Miniquest
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 

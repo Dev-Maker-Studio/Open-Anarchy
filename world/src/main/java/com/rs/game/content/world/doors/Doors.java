@@ -16,16 +16,18 @@
 //
 package com.rs.game.content.world.doors;
 
-import com.rs.cache.loaders.ObjectDefinitions;
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.cache.ObjectDefinitions;
+import world.gregs.voidps.cache.definition.data.ObjectDefinition;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
+import com.rs.utils.KtExtensionsKt;
 
 import java.util.*;
 import java.util.function.BiFunction;
@@ -37,7 +39,7 @@ public class Doors {
 
 	public static ObjectClickHandler handleLeftHandedDoors = new ObjectClickHandler(new Object[] { 22921 }, e -> handleLeftHandedDoor(e.getPlayer(), e.getObj()));
 
-	public static ObjectClickHandler handleInvertedDoors = new ObjectClickHandler(new Object[] { 1531 }, ObjectType.WALL_INTERACT, e -> handleDoor(e.getPlayer(), e.getObj(), 1));
+	public static ObjectClickHandler handleInvertedDoors = new ObjectClickHandler(new Object[] { 1531 }, ObjectShape.WALL_INTERACT, e -> handleDoor(e.getPlayer(), e.getObj(), 1));
 
 	public static ObjectClickHandler handleDoubleDoors = new ObjectClickHandler(new Object[] { 704, 707, 708, 709, 1516, 1517, 1519, 1520, 1542, 1543, 1544, 1545, 1560, 1561, 1596, 1597, 2199, 2200, 2259, 2260, 2546, 2547, 2548, 2549, 2552, 2553, 2896, 2897, 2391, 2392, 2912, 2913, 2922, 2923, 3020, 3021, 3022, 3023, 2673, 2674, 2786, 2787, 2788, 2789, 3506, 3507, 4423, 4424, 4425, 4426, 4427, 4428, 4429, 4430, 4487, 4491, 4490, 4492, 4629, 4630, 4631, 4632, 4633, 4634, 4963, 4964, 5183, 5186, 5187, 5188,
 			2416, 2417, 26207, 5667, 6238, 6240, 6451, 6452, 6871, 6872, 10262, 10263, 10264, 10265, 10423, 10425, 10427, 10429, 10527, 10528, 10529, 10530, 11620, 11621, 11624, 11625, 11716, 11717, 11718, 11719, 11720, 11721, 11722, 11723, 12045, 12047, 12172, 14443, 14444, 14445, 12349, 12350, 12446, 12447, 12448, 12449, 12467, 12468, 13094, 13095, 13096, 13097, 14233, 14234, 14235, 14236, 15604, 15605, 15641, 15644, 15658, 15660, 17091, 17092, 17093, 17094, 18698, 18699, 18700, 18701, 18971, 18973, 20195, 20196, 20197, 20198, 20391, 21403, 21404, 21405, 21406, 21505, 21506, 21507, 21508, 22435, 22437, 24369, 24370,
@@ -69,10 +71,10 @@ public class Doors {
 
 	public static ObjectClickHandler handleWasteMyTimeDoor2 = new ObjectClickHandler(new Object[] { 21401 }, e -> e.getPlayer().sendMessage("The door won't budge."));
 
-	public static boolean isTempMove(ObjectDefinitions defs) {
-        return switch (defs.id) {
+	public static boolean isTempMove(ObjectDefinition defs) {
+        return switch (defs.getId()) {
             case 39, 2267, 2559, 3437, 34836, 34839, 45856, 45857, 45858, 45859, 24815 -> true;
-            default -> !((defs.containsOption("Open") || defs.containsOption("Close")) && defs.interactable != 0);
+            default -> !((defs.containsOption("Open") || defs.containsOption("Close")) && defs.getInteractive() != 0);
         };
     }
 
@@ -107,7 +109,7 @@ public class Doors {
 	}
 
 	public static void handleInPlaceSingleDoor(Player player, GameObject object) {
-		ObjectDefinitions openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
+		ObjectDefinition openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
 		boolean tempMove = isTempMove(openedDef);
 		if (tempMove) {
 			World.spawnObjectTemporary(new GameObject(DoorPair.getOpposingDoor(player, object), object.getType(), object.getRotation(), object.getTile()), 2, true);
@@ -125,7 +127,7 @@ public class Doors {
 	}
 
 	public static void handleInPlaceDoubleDoor(Player player, GameObject object) {
-		ObjectDefinitions openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
+		ObjectDefinition openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
 		boolean tempMove = isTempMove(openedDef);
 		GameObject[] doors = getNearby(player, object, (t1, t2) -> t1.getY() > t2.getY(), object.getTile().transform(0, 1, 0), object.getTile().transform(0, -1, 0));
 		if (doors == null)
@@ -273,7 +275,7 @@ public class Doors {
 
 	public static void handleDoubleDoor(Player player, GameObject object, boolean invert) {
 		boolean open = object.getDefinitions(player).containsOption("Open");
-		ObjectDefinitions openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
+		ObjectDefinition openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
 		boolean tempMove = isTempMove(openedDef);
 		GameObject[] doors = new GameObject[2];
 		if (object instanceof Door door && door.getPair() != null) {
@@ -380,8 +382,8 @@ public class Doors {
 	public static void handleGate(Player player, GameObject object) {
 		boolean open = object.getDefinitions(player).containsOption("Open");
 		int rotation = object.getRotation(open ? 0 : 1);
-		ObjectDefinitions openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
-		boolean tempMove = !((openedDef.containsOption("Open") || openedDef.containsOption("Close")) && openedDef.interactable != 0);
+		ObjectDefinition openedDef = ObjectDefinitions.getDefs(DoorPair.getOpposingDoor(player, object));
+		boolean tempMove = !((openedDef.containsOption("Open") || openedDef.containsOption("Close")) && openedDef.getInteractive() != 0);
 		GameObject[] gates;
 		switch (rotation) {
 			case 0:
@@ -478,9 +480,9 @@ public class Doors {
 	private static GameObject[] getNearby(Player player, GameObject object, BiFunction<Tile, Tile, Boolean> sort, Tile... toCheck) {
 		GameObject[] g = new GameObject[2];
 		for (Tile t : toCheck)
-			if (g[0] == null || g[0].getDefinitions().interactable == 0 || !g[0].getDefinitions().getName().equals(object.getDefinitions().getName()))
+			if (g[0] == null || g[0].getDefinitions().getInteractive() == 0 || !g[0].getDefinitions().getName().equals(object.getDefinitions().getName()))
 				g[0] = World.getObject(t, object.getType());
-		if (g[0] == null || g[0].getDefinitions().interactable == 0 || !g[0].getDefinitions().getName().equals(object.getDefinitions().getName()))
+		if (g[0] == null || g[0].getDefinitions().getInteractive() == 0 || !g[0].getDefinitions().getName().equals(object.getDefinitions().getName()))
 			return null;
 		if (sort.apply(g[0].getTile(), object.getTile())) {
 			g[1] = g[0];
@@ -498,9 +500,9 @@ public class Doors {
 		for (int i = 0; i < Utils.getObjectDefinitionsSize(); i++) {
 			if (i != SEARCH_FOR)
 				continue;
-			ObjectDefinitions defs = ObjectDefinitions.getDefs(i);
+			ObjectDefinition defs = ObjectDefinitions.getDefs(i);
 
-			if (defs.varp != -1 || defs.varpBit != -1)
+			if (defs.getVarp() != -1 || defs.getVarbit() != -1)
 				continue;
 			if (defs.getName().toLowerCase().contains("door") || defs.getName().toLowerCase().contains("gate") || defs.getName().toLowerCase().contains("fence") || defs.getName().toLowerCase().contains("wall"))
 				if (defs.containsOptionIgnoreCase("open")) {
@@ -508,9 +510,9 @@ public class Doors {
 					for (int op = 0; op < Utils.getObjectDefinitionsSize(); op++) {
 						if (op == i || op < 0 || op > Utils.getObjectDefinitionsSize())
 							continue;
-						ObjectDefinitions openedDef = ObjectDefinitions.getDefs(op);
-						if (!openedDef.containsOptionIgnoreCase("open") && openedDef.modelIds != null && defs.modelIds[0][0] == openedDef.modelIds[0][0])
-							if (Arrays.equals(defs.modifiedColors, openedDef.modifiedColors) && Arrays.equals(defs.originalColors, openedDef.originalColors))
+						ObjectDefinition openedDef = ObjectDefinitions.getDefs(op);
+						if (!openedDef.containsOptionIgnoreCase("open") && openedDef.getModelIds() != null && defs.getModelIds()[0][0] == openedDef.getModelIds()[0][0])
+							if (Arrays.equals(defs.getModifiedColours(), openedDef.getModifiedColours()) && Arrays.equals(defs.getOriginalColours(), openedDef.getOriginalColours()))
 								opened.add(op);
 					}
 					doors.put(i, opened);
@@ -524,12 +526,12 @@ public class Doors {
 			List<Integer> openedList = doors.get(closed);
 			if (openedList.isEmpty())
 				continue;
-			ObjectDefinitions closedDef = ObjectDefinitions.getDefs(closed);
-			Logger.debug(Doors.class, "searchDoors", closedDef.id + " - " + closedDef.getName() + " - " + closedDef.modelIds[0][0] + " - " + Arrays.toString(closedDef.types) + " {");
+			ObjectDefinition closedDef = ObjectDefinitions.getDefs(closed);
+			Logger.debug(Doors.class, "searchDoors", closedDef.getId() + " - " + closedDef.getName() + " - " + closedDef.getModelIds()[0][0] + " - " + Arrays.toString(KtExtensionsKt.getTypes(closedDef)) + " {");
 			for (int open : openedList) {
-				ObjectDefinitions openedDef = ObjectDefinitions.getDefs(open);
-				Logger.debug(Doors.class, "searchDoors", "\t" + openedDef.id + " - " + openedDef.getName() + " - " + openedDef.modelIds[0][0] + " - " + Arrays.toString(openedDef.types) + " - " + Arrays.toString(openedDef.options));
-				Logger.debug(Doors.class, "searchDoors", "\tap(" + search + ", " + openedDef.id + ");");
+				ObjectDefinition openedDef = ObjectDefinitions.getDefs(open);
+				Logger.debug(Doors.class, "searchDoors", "\t" + openedDef.getId() + " - " + openedDef.getName() + " - " + openedDef.getModelIds()[0][0] + " - " + Arrays.toString(KtExtensionsKt.getTypes(openedDef)) + " - " + Arrays.toString(openedDef.getOptions()));
+				Logger.debug(Doors.class, "searchDoors", "\tap(" + search + ", " + openedDef.getId() + ");");
 			}
 			Logger.debug(Doors.class, "searchDoors", "}");
 		}
@@ -539,7 +541,7 @@ public class Doors {
 		private final GameObject original;
 		private Door pair;
 
-		public Door(int id, ObjectType type, int rotation, Tile location, GameObject original) {
+		public Door(int id, ObjectShape type, int rotation, Tile location, GameObject original) {
 			super(id, type, rotation, location);
 			this.original = new GameObject(original);
 		}

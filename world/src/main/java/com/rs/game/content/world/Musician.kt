@@ -10,7 +10,7 @@ import com.rs.plugin.kts.onNpcClick
 val MUSICIANS = arrayOf(29, 30, 3463, 3509, 3611, 5442, 5439, 8698, 8699, 8700, 8701, 8702, 8703, 8704, 8705, 8706, 8707, 8708, 8709, 8712, 8713, 8715, 8716, 8717, 8718, 8719, 8720, 8721, 8722, 8723, 14628, 14629, 14640)
 
 fun isNearby(p: Player): Boolean {
-    val nearbyNPCs = World.getNPCsInChunkRange(p.chunkId, 1)
+    val nearbyNPCs = World.getNPCsInChunkRange(p.getChunkId(), 1)
     for (nearbyNPC in nearbyNPCs) {
         for (musicianId in MUSICIANS)
             if (nearbyNPC.id == musicianId && p.withinDistance(nearbyNPC.middleTile, 2))

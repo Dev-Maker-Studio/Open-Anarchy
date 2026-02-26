@@ -18,7 +18,7 @@ package com.rs.game.content.bosses.pestqueen.attack;
 
 import com.rs.game.content.bosses.pestqueen.PestQueen;
 import com.rs.game.model.entity.Entity;
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 
 public interface Attack {
 

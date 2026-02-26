@@ -2,7 +2,7 @@ package com.rs.game.content.world.areas.dig_site.npcs
 
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.onNpcClick

@@ -6,7 +6,7 @@ import org.darkan.core.model.ObjectShape
 import org.darkan.core.model.WorldObject
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.MapDefinition
-import world.gregs.voidps.cache.definition.data.ObjectDefinitionFull
+import world.gregs.voidps.cache.definition.data.ObjectDefinition
 import world.gregs.voidps.type.Tile
 
 /**
@@ -120,7 +120,7 @@ object MapLoader {
         data: RegionData,
         regionX: Int,
         regionY: Int,
-        objectDefs: Array<ObjectDefinitionFull>
+        objectDefs: Array<ObjectDefinition>
     ): Int {
         var count = 0
         val baseX = regionX shl 6
@@ -163,8 +163,8 @@ object MapLoader {
                 shape = shape,
                 rotation = rotation,
                 clipType = def.solid,
-                blocksProjectiles = (def.block and ObjectDefinitionFull.PROJECTILE) != 0,
-                ignoresPathfinder = (def.block and ObjectDefinitionFull.ROUTE) == 0,
+                blocksProjectiles = (def.block and ObjectDefinition.PROJECTILE) != 0,
+                ignoresPathfinder = (def.block and ObjectDefinition.ROUTE) == 0,
                 sizeX = def.sizeX,
                 sizeY = def.sizeY
             )

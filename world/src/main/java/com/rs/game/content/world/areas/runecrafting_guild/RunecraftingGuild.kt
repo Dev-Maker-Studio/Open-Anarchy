@@ -1,6 +1,6 @@
 package com.rs.game.content.world.areas.gu_tanoth
 
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 

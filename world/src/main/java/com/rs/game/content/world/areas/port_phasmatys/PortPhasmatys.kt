@@ -28,7 +28,7 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onNpcClick
@@ -47,7 +47,7 @@ fun mapPortPhasmatys() {
     onNpcClick(3157) { e ->
         if (!e.player.isQuestComplete(Quest.CABIN_FEVER, "to travel to Mos' Le Harmless.")) return@onNpcClick
         e.player.sendOptionDialogue { ops ->
-            if (e.player.regionId == 14638) {
+            if (e.player.getRegionId() == 14638) {
                 ops.add("Travel to Port Phasmatys.") {
                     e.player.tele(Tile.of(3713, 3497, 1))
                 }
@@ -80,7 +80,7 @@ fun mapPortPhasmatys() {
                     e.obj.rotation + 3,
                     e.obj.x,
                     e.obj.y,
-                    e.obj.plane
+                    e.obj.level
                 )
                 World.spawnObjectTemporary(door, 2)
                 e.player.addWalkSteps(if (e.player.x >= e.obj.x) e.obj.x - 1 else e.obj.x + 1, 3514)
@@ -110,7 +110,7 @@ fun mapPortPhasmatys() {
                     e.`object`.rotation + 3,
                     e.`object`.x,
                     e.`object`.y,
-                    e.`object`.plane
+                    e.`object`.level
                 )
                 World.spawnObjectTemporary(door, 2)
                 e.player.addWalkSteps(if (e.player.x >= e.`object`.x) e.`object`.x - 1 else e.`object`.x + 1, 3514)

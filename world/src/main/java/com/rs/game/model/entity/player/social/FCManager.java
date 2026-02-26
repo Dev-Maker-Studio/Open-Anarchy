@@ -17,10 +17,8 @@
 package com.rs.game.model.entity.player.social;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.model.FriendsChat.Rank;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.net.packets.decoders.fc.FCJoin;
-import com.rs.lib.web.dto.FCData;
+import org.darkan.core.model.FriendsChatRank;
+
 import com.rs.net.LobbyCommunicator;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
@@ -34,13 +32,13 @@ public class FCManager {
 	private static final int FC_SETUP_INTER = 1108;
 	private static final int FC_TAB = 1109;
 
-	private static final Map<String, FCData> FRIEND_CHATS = new ConcurrentHashMap<>();
+	private static final Map<String, com.rs.web.dto.FCData> FRIEND_CHATS = new ConcurrentHashMap<>();
 
 	public static ButtonClickHandler handleInterface = new ButtonClickHandler(FC_SETUP_INTER, e -> {
 		switch (e.getComponentId()) {
 		case 1 -> {
-			switch (e.getPacket()) {
-			case IF_OP1 -> e.getPlayer().sendInputName("Enter chat prefix:", str -> {
+			switch (e.getOpNum()) {
+			case 1 -> e.getPlayer().sendInputName("Enter chat prefix:", str -> {
 				e.getPlayer().getSocial().getFriendsChat().setName(str);
 				LobbyCommunicator.updateFC(e.getPlayer(), res -> {
 					if (res == null)
@@ -49,17 +47,17 @@ public class FCManager {
 						refreshFC(e.getPlayer());
 				});
 			});
-			case IF_OP2 -> e.getPlayer().getSocial().getFriendsChat().setName(null); // TODO when fc block update is
+			case 2 -> e.getPlayer().getSocial().getFriendsChat().setName(null); // TODO when fc block update is
 			// sent, check if name was
 			// set to null and destroy
 			// chat
 			default -> e.getPlayer().sendMessage("Unexpected FC interface packet...");
 			}
 		}
-		case 2 -> e.getPlayer().getSocial().getFriendsChat().setRankToEnter(getRankFromPacket(e.getPacket()));
-		case 3 -> e.getPlayer().getSocial().getFriendsChat().setRankToSpeak(getRankFromPacket(e.getPacket()));
-		case 4 -> e.getPlayer().getSocial().getFriendsChat().setRankToKick(getRankFromPacket(e.getPacket()));
-		case 5 -> e.getPlayer().getSocial().getFriendsChat().setRankToLS(getRankFromPacket(e.getPacket()));
+		case 2 -> e.getPlayer().getSocial().getFriendsChat().setRankToEnter(getRankFromPacket(e.getOpNum()));
+		case 3 -> e.getPlayer().getSocial().getFriendsChat().setRankToSpeak(getRankFromPacket(e.getOpNum()));
+		case 4 -> e.getPlayer().getSocial().getFriendsChat().setRankToKick(getRankFromPacket(e.getOpNum()));
+		case 5 -> e.getPlayer().getSocial().getFriendsChat().setRankToLS(getRankFromPacket(e.getOpNum()));
 		}
 		LobbyCommunicator.updateFC(e.getPlayer(), res -> {
 			if (res == null)
@@ -72,8 +70,10 @@ public class FCManager {
 	public static ButtonClickHandler handleTab = new ButtonClickHandler(FC_TAB, e -> {
 		switch (e.getComponentId()) {
 		case 26 -> {
-			if (e.getPlayer().getSocial().getCurrentFriendsChat() != null) //TODO make sure to force leave the player from existing if they try to join new FC without leaving old
-				LobbyCommunicator.forwardPackets(e.getPlayer(), new FCJoin().setOpcode(ClientPacket.FC_JOIN));
+			//TODO make sure to force leave the player from existing if they try to join new FC without leaving old
+			//TODO: FCJoin removed in networking rewrite - needs re-implementation
+			//if (e.getPlayer().getSocial().getCurrentFriendsChat() != null)
+			//	LobbyCommunicator.forwardPackets(e.getPlayer(), new FCJoin().setOpcode(FC_JOIN));
 		}
 		case 31 -> {
 			if (e.getPlayer().getInterfaceManager().containsScreenInter()) {
@@ -104,7 +104,7 @@ public class FCManager {
 		sendRankRequirement(player, player.getSocial().getFriendsChat().getRankToLS(), 5);
 	}
 
-	public static void sendRankRequirement(Player player, Rank rank, int component) {
+	public static void sendRankRequirement(Player player, FriendsChatRank rank, int component) {
 		switch (rank) {
 		case UNRANKED -> player.getPackets().setIFText(FC_SETUP_INTER, component, "Anyone");
 		case FRIEND -> player.getPackets().setIFText(FC_SETUP_INTER, component, "Any friends");
@@ -119,28 +119,28 @@ public class FCManager {
 		}
 	}
 
-	public static Rank getRankFromPacket(ClientPacket packet) {
-		return switch (packet) {
-		case IF_OP1 -> Rank.UNRANKED;
-		case IF_OP2 -> Rank.FRIEND;
-		case IF_OP3 -> Rank.RECRUIT;
-		case IF_OP4 -> Rank.CORPORAL;
-		case IF_OP5 -> Rank.SERGEANT;
-		case IF_OP6 -> Rank.LIEUTENANT;
-		case IF_OP7 -> Rank.CAPTAIN;
-		case IF_OP8 -> Rank.GENERAL;
-		case IF_OP9 -> Rank.OWNER;
-		default -> Rank.UNRANKED;
+	public static FriendsChatRank getRankFromPacket(int opNum) {
+		return switch (opNum) {
+		case 1 -> FriendsChatRank.UNRANKED;
+		case 2 -> FriendsChatRank.FRIEND;
+		case 3 -> FriendsChatRank.RECRUIT;
+		case 4 -> FriendsChatRank.CORPORAL;
+		case 5 -> FriendsChatRank.SERGEANT;
+		case 6 -> FriendsChatRank.LIEUTENANT;
+		case 7 -> FriendsChatRank.CAPTAIN;
+		case 8 -> FriendsChatRank.GENERAL;
+		case 9 -> FriendsChatRank.OWNER;
+		default -> FriendsChatRank.UNRANKED;
 		};
 	}
 
-	public static FCData getFCData(String username) {
+	public static com.rs.web.dto.FCData getFCData(String username) {
 		if (username == null)
 			return null;
 		return FRIEND_CHATS.get(username);
 	}
 
-	public static void updateFCData(FCData fc) {
+	public static void updateFCData(com.rs.web.dto.FCData fc) {
 		FRIEND_CHATS.put(fc.getOwnerDisplayName(), fc);
 	}
 }

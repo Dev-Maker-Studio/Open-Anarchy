@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.npcs.combat;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.combat.CombatStyle;
 import com.rs.game.content.skills.dungeoneering.npcs.DungeonNPC;
@@ -31,10 +31,10 @@ import com.rs.game.model.entity.npc.combat.CombatScript;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 import kotlin.Pair;
 
@@ -98,7 +98,7 @@ public class LexicusRunewrightCombat extends CombatScript {
 		final List<GameObject> cases = new ArrayList<>();
 		for (int x = 0; x < 16; x++)
 			for (int y = 0; y < 16; y++) {
-				GameObject o = npc.getManager().getObjectWithType(npc.getReference(), ObjectType.SCENERY_INTERACT, x, y);
+				GameObject o = npc.getManager().getObjectWithType(npc.getReference(), ObjectShape.SCENERY_INTERACT, x, y);
 				if (o != null && o.getId() >= 49280 && o.getId() <= 49282)
 					cases.add(o);
 			}

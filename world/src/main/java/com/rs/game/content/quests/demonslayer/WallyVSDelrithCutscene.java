@@ -5,8 +5,8 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 
 //TODO: Check Fight Arena, Dragon Slayer, Vampire Slayer, wally vs delrith cutscene, and the rest of the cutscenes
 public class WallyVSDelrithCutscene extends Cutscene {

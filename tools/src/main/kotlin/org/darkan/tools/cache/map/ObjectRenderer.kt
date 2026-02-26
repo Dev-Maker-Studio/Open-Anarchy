@@ -12,7 +12,7 @@ import org.joml.Matrix4f
 import org.joml.Vector3f
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.MapObject
-import world.gregs.voidps.cache.definition.data.ObjectDefinitionFull
+import world.gregs.voidps.cache.definition.data.ObjectDefinition
 
 /**
  * Represents a renderable map object instance.
@@ -30,11 +30,11 @@ import world.gregs.voidps.cache.definition.data.ObjectDefinitionFull
  * copies during region loading.
  *
  * Model modifications (retexturing/recoloring) are applied when loading the mesh data.
- * These come from ObjectDefinitionFull.retextureSrc/Dst and recolorSrc/Dst arrays.
+ * These come from ObjectDefinition.retextureSrc/Dst and recolorSrc/Dst arrays.
  */
 data class ObjectInstance(
     val mapObject: MapObject,
-    val definition: ObjectDefinitionFull,
+    val definition: ObjectDefinition,
     val modelIds: List<Int>,
     var worldPosition: Vector3f,
     val rotation: Float,  // Y-axis rotation in radians
@@ -43,8 +43,8 @@ data class ObjectInstance(
     var terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE,  // Terrain tilt (type 3 only)
     val mirrored: Boolean = false,  // Whether to mirror the model (negate Z)
     val modifications: ModelModifications = ModelModifications.NONE,  // Retexture/recolor modifications
-    val groundContourType: Int = 0,  // Ground contour type from ObjectDefinitionFull (0-5)
-    val groundContourModifier: Int = -1,  // Ground contour modifier from ObjectDefinitionFull
+    val groundContourType: Int = 0,  // Ground contour type from ObjectDefinition (0-5)
+    val groundContourModifier: Int = -1,  // Ground contour modifier from ObjectDefinition
     val rsSceneX: Int = 0,  // RS scene X position (baseX * 512 + sizeX * 256) for vertex displacement
     val rsSceneY: Int = 0,  // RS scene Y position (baseY * 512 + sizeY * 256) for vertex displacement
     var rsAverageHeight: Int = 0,  // Average terrain height in RS units for vertex displacement
@@ -124,7 +124,7 @@ object ObjectRenderer {
     /**
      * Get object definition by ID (raw, without transform resolution).
      */
-    fun getRawDefinition(objectId: Int): ObjectDefinitionFull? {
+    fun getRawDefinition(objectId: Int): ObjectDefinition? {
         val defs = Cache.objects
         return if (objectId in defs.indices) defs[objectId] else null
     }
@@ -136,9 +136,9 @@ object ObjectRenderer {
      * This method resolves the transform using the core engine's var system.
      *
      * @param objectId The object ID to look up
-     * @return The resolved ObjectDefinitionFull, or null if the object should not be rendered
+     * @return The resolved ObjectDefinition, or null if the object should not be rendered
      */
-    fun getDefinition(objectId: Int): ObjectDefinitionFull? {
+    fun getDefinition(objectId: Int): ObjectDefinition? {
         val def = getRawDefinition(objectId) ?: return null
         return resolveTransform(def)
     }
@@ -159,7 +159,7 @@ object ObjectRenderer {
      * @param def The object definition (may have transforms)
      * @return The resolved definition, or null if transform says don't render
      */
-    fun resolveTransform(def: ObjectDefinitionFull): ObjectDefinitionFull? {
+    fun resolveTransform(def: ObjectDefinition): ObjectDefinition? {
         val transforms = def.transforms
         // No transforms - return original definition
         if (transforms == null || transforms.isEmpty()) return def
@@ -191,14 +191,14 @@ object ObjectRenderer {
     /**
      * Get model IDs for an object based on its shape.
      *
-     * The shapes array in ObjectDefinitionFull contains the ObjectShape for each model group.
+     * The shapes array in ObjectDefinition contains the ObjectShape for each model group.
      * modelIds is an array of IntArrays where each sub-array contains model IDs for a shape.
      *
      * @param def The object definition
      * @param shape The object shape (0-22)
      * @return List of model IDs to render for this object
      */
-    fun getModelIds(def: ObjectDefinitionFull, shape: Int): List<Int> {
+    fun getModelIds(def: ObjectDefinition, shape: Int): List<Int> {
         val modelIds = def.modelIds ?: return emptyList()
         val modelTypes = def.modelTypes
 
@@ -341,7 +341,7 @@ object ObjectRenderer {
      * @param def The resolved object definition
      * @return true if the ground decoration should be rendered, false to skip it
      */
-    fun shouldRenderGroundDecoration(def: ObjectDefinitionFull): Boolean {
+    fun shouldRenderGroundDecoration(def: ObjectDefinition): Boolean {
         // Compute hasActions matching client ObjectType.postDecode()
         var hasActions = def.interactive
         if (hasActions == -1) {
@@ -1107,7 +1107,7 @@ object ObjectRenderer {
     }
 
     /**
-     * Create ModelModifications from an ObjectDefinitionFull.
+     * Create ModelModifications from an ObjectDefinition.
      * Extracts retextureSrc/Dst, recolorSrc/Dst arrays, and ambient lightness factor.
      *
      * The ambient value matches the RS client's formula: adjustedAmbient = 64 + def.brightness.
@@ -1118,7 +1118,7 @@ object ObjectRenderer {
      * @param def The object definition
      * @return ModelModifications instance (may be NONE if no modifications)
      */
-    fun getModifications(def: ObjectDefinitionFull): ModelModifications {
+    fun getModifications(def: ObjectDefinition): ModelModifications {
         val hasRetexture = def.originalTextureColours != null && def.modifiedTextureColours != null
         val hasRecolor = def.originalColours != null && def.modifiedColours != null
         val adjustedAmbient = ModelModifications.DEFAULT_AMBIENT + def.brightness

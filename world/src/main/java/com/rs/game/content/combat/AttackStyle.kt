@@ -16,7 +16,8 @@
 //
 package com.rs.game.content.combat
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
+import com.rs.utils.getParamVal
 
 data class AttackStyle(@JvmField val index: Int, @JvmField val name: String, @JvmField val xpType: XPType, @JvmField val attackType: AttackType) {
     companion object {

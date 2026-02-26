@@ -14,8 +14,8 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 
@@ -281,7 +281,7 @@ fun mapWorkshop1() {
             player.sendMessage("You need a Mining level of at least 20 to mine elemental ore.")
             return@onNpcClick
         }
-        val npcs: List<NPC> = World.getNPCsInChunkRange(npc.chunkId, 1)
+        val npcs: List<NPC> = World.getNPCsInChunkRange(npc.getChunkId(), 1)
         npcs.forEach {
             if (it.id == NPC_EARTH_ELEMENTAL_ROCK && (it.combatTarget == player && it.lineOfSightTo(player, false))) {
                 it.forceTalk("I told you... Ge'roff us!")

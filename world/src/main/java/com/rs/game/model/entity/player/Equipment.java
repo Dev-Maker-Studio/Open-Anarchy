@@ -17,10 +17,10 @@
 package com.rs.game.model.entity.player;
 
 import com.rs.Launcher;
-import com.rs.cache.loaders.Bonus;
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
-import com.rs.cache.loaders.interfaces.IFEvents.UseFlag;
+import org.darkan.core.model.Bonus;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.model.IFEvents;
+import org.darkan.core.model.UseFlag;
 import com.rs.game.content.Effect;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.content.combat.special_attacks.SpecialAttacksKt;
@@ -30,11 +30,11 @@ import com.rs.game.content.transportation.ItemTeleports;
 import com.rs.game.model.entity.player.managers.PriceChecker;
 import com.rs.game.model.item.ItemsContainer;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.events.ItemClickEvent;
@@ -42,6 +42,7 @@ import com.rs.plugin.events.ItemEquipEvent;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.InterfaceOnInterfaceHandler;
 import com.rs.utils.ItemConfig;
+import com.rs.utils.KtExtensionsKt;
 
 import java.util.Arrays;
 import java.util.List;
@@ -570,8 +571,8 @@ public final class Equipment {
 		p.getPackets().sendVarcString(321, "Comparison");
 		StringBuilder categories = new StringBuilder();
 		StringBuilder subCategories = new StringBuilder();
-		StringBuilder item1Desc = new StringBuilder(item1.getDefinitions().name);
-		StringBuilder item2Desc = new StringBuilder(item2.getDefinitions().name);
+		StringBuilder item1Desc = new StringBuilder(item1.getDefinitions().getName());
+		StringBuilder item2Desc = new StringBuilder(item2.getDefinitions().getName());
 		for (Bonus b : Bonus.values()) {
 			if (Equipment.getBonus(p, item1, b) != 0 || Equipment.getBonus(p, item2, b) != 0) {
 				if (!categories.toString().contains("Attack Bonuses") && b.ordinal() >= Bonus.STAB_ATT.ordinal() && b.ordinal() <= Bonus.RANGE_ATT.ordinal()) {
@@ -622,11 +623,11 @@ public final class Equipment {
 				Item item = e.getPlayer().getEquipment().getItem(e.getSlotId());
 				if (item == null)
 					return;
-				if (e.getPacket() == ClientPacket.IF_OP10) {
+				if (e.getOpNum() == 10) {
 					e.getPlayer().sendMessage(ItemConfig.get(item.getId()).getExamine(item));
 					if (item.getMetaData("combatCharges") != null)
 						e.getPlayer().sendMessage("<col=FF0000>It looks like it will last another " + Utils.ticksToTime(item.getMetaDataI("combatCharges")));
-				} else if (e.getPacket() == ClientPacket.IF_OP1) {
+				} else if (e.getOpNum() == 1) {
 					remove(e.getPlayer(), e.getSlotId());
 					Equipment.refreshEquipBonuses(e.getPlayer());
 				}
@@ -639,12 +640,12 @@ public final class Equipment {
 				Item item = e.getPlayer().getInventory().getItem(e.getSlotId());
 				if (item == null)
 					return;
-				if (e.getPacket() == ClientPacket.IF_OP1) {
+				if (e.getOpNum() == 1) {
 					if (e.getPlayer().isEquipDisabled())
 						return;
 					if (sendWear(e.getPlayer(), e.getSlotId(), item.getId()))
 						Equipment.refreshEquipBonuses(e.getPlayer());
-				} else if (e.getPacket() == ClientPacket.IF_OP4)
+				} else if (e.getOpNum() == 4)
 					e.getPlayer().getInventory().sendExamine(e.getSlotId());
 			}
 	});
@@ -679,37 +680,37 @@ public final class Equipment {
 			return;
 		}
 		Item item = e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2()));
-		if ((item == null) || PluginManager.handle(new ItemClickEvent(e.getPlayer(), item, Equipment.getItemSlot(e.getSlotId2()), item.getDefinitions().getEquipmentOption(getOptionForPacket(e.getPacket())), true)))
+		if ((item == null) || PluginManager.handle(new ItemClickEvent(e.getPlayer(), item, Equipment.getItemSlot(e.getSlotId2()), item.getDefinitions().getEquipmentOption(getOptionForPacket(e.getOpNum())), true)))
 			return;
-		if (e.getPacket() == ClientPacket.IF_OP10) {
+		if (e.getOpNum() == 10) {
 			e.getPlayer().getEquipment().sendExamine(Equipment.getItemSlot(e.getSlotId2()));
 			return;
 		}
-		if (e.getPacket() == ClientPacket.IF_OP1 && PluginManager.handle(new ItemClickEvent(e.getPlayer(), item, e.getSlotId(), "Remove", true)))
+		if (e.getOpNum() == 1 && PluginManager.handle(new ItemClickEvent(e.getPlayer(), item, e.getSlotId(), "Remove", true)))
 			return;
 		if (e.getComponentId() == 12) {
-			if (e.getPacket() == ClientPacket.IF_OP2)
+			if (e.getOpNum() == 2)
 				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 0, true);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 1, true);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 2, true);
-			else if (e.getPacket() == ClientPacket.IF_OP5)
+			else if (e.getOpNum() == 5)
 				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 3, true);
 		} else if (e.getComponentId() == 15) {
-			if (e.getPacket() == ClientPacket.IF_OP2) {
+			if (e.getOpNum() == 2) {
 				int weaponId = e.getPlayer().getEquipment().getWeaponId();
 				if (weaponId == 15484)
 					e.getPlayer().getInterfaceManager().gazeOrbOfOculus();
 			}
 		} else if (e.getComponentId() == 33)
-			if (e.getPacket() == ClientPacket.IF_OP2)
+			if (e.getOpNum() == 2)
 				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 0, true);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 1, true);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 2, true);
-			else if (e.getPacket() == ClientPacket.IF_OP5)
+			else if (e.getOpNum() == 5)
 				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 3, true);
 	});
 
@@ -804,10 +805,10 @@ public final class Equipment {
 
 		if (player.getEquipment().getItem(targetSlot) != null && (itemId != player.getEquipment().getItem(targetSlot).getId() || !item.getDefinitions().isStackable())) {
 			if (player.getInventory().getItems().get(slotId) == null && !item.getDefinitions().isStackable()) {
-				player.getInventory().getItems().set(slotId, new Item(player.getEquipment().getItem(targetSlot)));
+				player.getInventory().getItems().set(slotId, KtExtensionsKt.copyItem(player.getEquipment().getItem(targetSlot)));
 				player.getInventory().refresh(slotId);
 			} else
-				player.getInventory().addItem(new Item(player.getEquipment().getItem(targetSlot)));
+				player.getInventory().addItem(KtExtensionsKt.copyItem(player.getEquipment().getItem(targetSlot)));
 			player.getEquipment().setNoPluginTrigger(targetSlot, null);
 		}
 		int oldAmt = 0;
@@ -831,17 +832,17 @@ public final class Equipment {
         return !wear.isCancelled();
     }
 
-	private static int getOptionForPacket(ClientPacket packet) {
-        return switch (packet) {
-            case IF_OP2 -> 0;
-            case IF_OP3 -> 1;
-            case IF_OP4 -> 2;
-            case IF_OP5 -> 3;
-            case IF_OP6 -> 4;
-            case IF_OP7 -> 5;
-            case IF_OP8 -> 6;
-            case IF_OP9 -> 7;
-            case IF_OP10 -> 8;
+	private static int getOptionForPacket(int opNum) {
+        return switch (opNum) {
+            case 2 -> 0;
+            case 3 -> 1;
+            case 4 -> 2;
+            case 5 -> 3;
+            case 6 -> 4;
+            case 7 -> 5;
+            case 8 -> 6;
+            case 9 -> 7;
+            case 10 -> 8;
             default -> -1;
         };
 	}

@@ -16,9 +16,10 @@
 //
 package com.rs.utils;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.game.model.entity.player.Equipment;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -61,8 +62,8 @@ public class DumpItemConfigs {
 			BufferedWriter writer = new BufferedWriter(new FileWriter(file));
 			writer.flush();
 			for (int id = 0; id < 7956; id++) {
-				ItemDefinitions def = ItemDefinitions.getDefs(id);
-				if (def.isWearItem())
+				ItemDefinition def = ItemDefinitions.getDefs(id);
+				if (def.isWearItem(true))
 					//writer.append(id + " " + def.getEquipType() + " " + def.getEquipSlot());
 					writer.newLine();
 				writer.flush();
@@ -73,7 +74,7 @@ public class DumpItemConfigs {
 		}
 	}
 
-	public static boolean hasCombatRequirements(ItemDefinitions def) {
+	public static boolean hasCombatRequirements(ItemDefinition def) {
 		if ((def.getWearingSkillRequiriments() == null) || def.getWearingSkillRequiriments().isEmpty())
 			return false;
 		for (int skillId : def.getWearingSkillRequiriments().keySet()) {
@@ -96,8 +97,8 @@ public class DumpItemConfigs {
 			BufferedWriter writer = new BufferedWriter(new FileWriter(file));
 			writer.flush();
 			for (int id = 0; id < 7956; id++) {
-				ItemDefinitions def = ItemDefinitions.getDefs(id);
-				if (def.isWearItem())
+				ItemDefinition def = ItemDefinitions.getDefs(id);
+				if (def.isWearItem(true))
 					if (hasCombatRequirements(def)) {
 						writer.append(String.valueOf(id)).append(" ");
 						for (int skillId : def.getWearingSkillRequiriments().keySet()) {

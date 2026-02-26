@@ -6,16 +6,28 @@ import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.secure.CRC
 
 internal fun Codec.registerRev727UpdatePackets() {
-    serverProt<PlayerUpdate>(opcode = 43, size = ProtSize.VarShort) { out ->
-        out.writeBytes(Rev727UpdateProtocol.encodePlayerUpdate(snapshot, state))
+    // Modern snapshot-based update packets (not yet in use)
+    // serverProt<PlayerUpdate>(opcode = 43, size = ProtSize.VarShort) { out ->
+    //     out.writeBytes(Rev727UpdateProtocol.encodePlayerUpdate(snapshot, state))
+    // }
+    // serverProt<NpcUpdateLarge>(opcode = 47, size = ProtSize.VarShort) { out ->
+    //     out.writeBytes(Rev727UpdateProtocol.encodeNpcUpdate(snapshot, state))
+    // }
+    // serverProt<NpcUpdate>(opcode = 6, size = ProtSize.VarShort) { out ->
+    //     out.writeBytes(Rev727UpdateProtocol.encodeNpcUpdate(snapshot, state))
+    // }
+
+    // Raw byte wrappers for legacy OutputStream-based update packets
+    serverProt<PlayerUpdateRaw>(opcode = 43, size = ProtSize.VarShort) { out ->
+        out.writeBytes(data)
     }
 
-    serverProt<NpcUpdateLarge>(opcode = 47, size = ProtSize.VarShort) { out ->
-        out.writeBytes(Rev727UpdateProtocol.encodeNpcUpdate(snapshot, state))
+    serverProt<NpcUpdateLargeRaw>(opcode = 47, size = ProtSize.VarShort) { out ->
+        out.writeBytes(data)
     }
 
-    serverProt<NpcUpdate>(opcode = 6, size = ProtSize.VarShort) { out ->
-        out.writeBytes(Rev727UpdateProtocol.encodeNpcUpdate(snapshot, state))
+    serverProt<NpcUpdateRaw>(opcode = 6, size = ProtSize.VarShort) { out ->
+        out.writeBytes(data)
     }
 
     serverProt<UpdateInvPartial>(opcode = 4, size = ProtSize.VarShort) { out ->
@@ -170,6 +182,13 @@ internal fun Codec.registerRev727UpdatePackets() {
                     }
                 }
             }
+        }
+    }
+
+    serverProt<ClanSettingsFullRaw>(opcode = 137, size = ProtSize.VarShort) { out ->
+        out.writeByte(if (main) 1 else 0)
+        if (data != null) {
+            out.writeBytes(data)
         }
     }
 

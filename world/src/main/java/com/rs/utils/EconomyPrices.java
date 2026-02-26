@@ -16,14 +16,15 @@
 //
 package com.rs.utils;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.game.content.ItemConstants;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 public final class EconomyPrices {
 
 	public static int getPrice(int itemId) {
-		ItemDefinitions defs = ItemDefinitions.getDefs(itemId);
+		ItemDefinition defs = ItemDefinitions.getDefs(itemId);
 		if (defs.isNoted())
 			itemId = defs.getCertId();
 		else if (defs.isLended())

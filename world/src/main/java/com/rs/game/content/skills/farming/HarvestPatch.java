@@ -16,15 +16,15 @@
 //
 package com.rs.game.content.skills.farming;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.content.Effect;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
 import com.rs.game.model.entity.player.managers.AuraManager.Aura;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.Utils;
 
 public class HarvestPatch extends PlayerAction {
 
@@ -78,7 +78,7 @@ public class HarvestPatch extends PlayerAction {
 		if (patch.lives <= 0)
 			return false;
 		if (tool != -1 && !player.getInventory().containsItem(tool)) {
-			player.sendMessage("You need " + Utils.addArticle(ItemDefinitions.getDefs(tool).name.toLowerCase()) + " to harvest this patch.");
+			player.sendMessage("You need " + Utils.addArticle(ItemDefinitions.getDefs(tool).getName().toLowerCase()) + " to harvest this patch.");
 			return false;
 		}
 		return true;

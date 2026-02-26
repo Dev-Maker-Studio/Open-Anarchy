@@ -21,9 +21,9 @@ import com.rs.engine.dialogue.HeadE;
 import com.rs.game.content.skills.magic.Magic;
 import com.rs.game.map.instance.Instance;
 import com.rs.game.model.entity.Entity;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.InstancedController;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
 

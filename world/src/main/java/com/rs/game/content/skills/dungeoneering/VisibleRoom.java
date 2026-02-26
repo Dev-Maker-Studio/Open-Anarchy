@@ -22,8 +22,8 @@ import com.rs.game.content.skills.dungeoneering.rooms.StartRoom;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 
 import java.util.ArrayList;
 

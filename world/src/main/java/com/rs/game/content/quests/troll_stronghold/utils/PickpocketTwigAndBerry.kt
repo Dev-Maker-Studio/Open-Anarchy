@@ -6,8 +6,8 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.actions.PlayerAction
-import com.rs.lib.Constants
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.Utils
 
 class PickpocketTwigAndBerry(private val npc: NPC, private val keyToLoot: Int) : PlayerAction() {
     private var success = false

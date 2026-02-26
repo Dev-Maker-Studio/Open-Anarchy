@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.construction.playerOwnedHouse;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
@@ -96,7 +96,7 @@ public class ServantHouseD extends Conversation {
 					if (servant.getLastBankRetrieve() != null)
 						bank.option("Fetch another " + servant.getLastBankRetrieve().getAmount() + " " + servant.getLastBankRetrieve().getName().toLowerCase() + ".", () -> player.getHouse().getServantInstance().requestType(servant.getLastBankRetrieve().getId(), servant.getLastBankRetrieve().getAmount(), RequestType.WITHDRAW));
 					for (int itemId : HouseConstants.BANKABLE_ITEMS) {
-						bank.option(ItemDefinitions.getDefs(itemId).name, () -> player.sendInputInteger("How many would you like?", amount -> {
+						bank.option(ItemDefinitions.getDefs(itemId).getName(), () -> player.sendInputInteger("How many would you like?", amount -> {
                             if (!player.getHouse().isLoaded() || !player.getHouse().getPlayers().contains(player))
                                 return;
                             player.getHouse().getServantInstance().requestType(itemId, amount, RequestType.WITHDRAW);

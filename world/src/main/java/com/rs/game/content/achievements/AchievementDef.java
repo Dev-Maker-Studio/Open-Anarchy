@@ -16,13 +16,15 @@
 //
 package com.rs.game.content.achievements;
 
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.StructDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.StructDefinitions;
+import world.gregs.voidps.cache.definition.data.EnumDefinition;
+import world.gregs.voidps.cache.definition.data.StructDefinition;
 import com.rs.engine.quest.Quest;
 import com.rs.engine.quest.data.QuestDefinitions;
 import com.rs.engine.quest.data.QuestInformationParser;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
+import org.darkan.core.Constants;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -102,7 +104,7 @@ public class AchievementDef {
 	private static final int REQUIREMENTS_START = 1294;
 	private static final int REQUIREMENTS_END = 1312;
 
-	public AchievementDef(int id, StructDefinitions struct) {
+	public AchievementDef(int id, StructDefinition struct) {
 		this.id = struct.getIntValue(ID);
 		next = struct.getIntValue(NEXT_ID);
 		name = struct.getStringValue(NAME);
@@ -150,9 +152,9 @@ public class AchievementDef {
 	public static void init() {
 		QuestDefinitions.init();
 		QuestInformationParser.init();
-		EnumDefinitions list = EnumDefinitions.getEnum(3483);
-		for (long id : list.getValues().keySet()) {
-			StructDefinitions details = StructDefinitions.getStruct((int) list.getValue(id));
+		EnumDefinition list = EnumDefinitions.getEnum(3483);
+		for (int id : list.getValues().keySet()) {
+			StructDefinition details = StructDefinitions.getStruct(list.getIntValue(id));
 			AchievementDef cheevo = new AchievementDef((int) id, details);
 			CACHE.put(cheevo.id, cheevo);
 			if (cheevo.difficulty != Difficulty.NONE && cheevo.taskSet != Area.ELSEWHERE && cheevo.taskSet != Area.LODESTONES) {

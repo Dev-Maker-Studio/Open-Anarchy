@@ -19,9 +19,9 @@ package com.rs.game.content.skills.construction.playerOwnedHouse;
 import com.rs.game.content.pets.Pets;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 
@@ -41,17 +41,17 @@ public class PetHouse {
 
 	public static ButtonClickHandler handleInvInterface = new ButtonClickHandler(INV_INTERFACE_ID, e -> {
 		if (e.getComponentId() == 0)
-			if (e.getPacket() == ClientPacket.IF_OP1) {
+			if (e.getOpNum() == 1) {
                 assert e.getPlayer().getHouse().petHouse != null;
                 e.getPlayer().getHouse().petHouse.addItem(e.getSlotId());
             }
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				e.getPlayer().getInventory().sendExamine(e.getSlotId());
 	});
 
 	public static ButtonClickHandler handleInterfaceButtons = new ButtonClickHandler(INTERFACE_ID, e -> {
 		if (e.getComponentId() == 13)
-			if (e.getPacket() == ClientPacket.IF_OP1) {
+			if (e.getOpNum() == 1) {
                 assert e.getPlayer().getHouse().petHouse != null;
                 e.getPlayer().getHouse().petHouse.removeItem(e.getSlotId());
             }

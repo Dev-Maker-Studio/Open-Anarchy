@@ -22,10 +22,10 @@ import com.rs.game.content.skills.smithing.ForgingInterface.Slot;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -315,7 +315,7 @@ public class Smithing extends PlayerAction {
 				amount--;
 
 		player.getInventory().deleteItem(item.bar.getId(), amount);
-		player.getInventory().addItemDrop(new Item(item.product));
+		player.getInventory().addItemDrop(item.product.clone());
 		player.incrementCount(item.product.getName() + " smithed", item.product.getAmount());
 		player.getSkills().addXp(Constants.SMITHING, item.xp);
 		World.sendSpotAnim(anvil.getTile(), 2123);

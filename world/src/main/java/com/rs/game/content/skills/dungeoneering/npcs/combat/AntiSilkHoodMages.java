@@ -22,8 +22,8 @@ import com.rs.game.model.entity.npc.combat.CombatScript;
 import com.rs.game.model.entity.npc.combat.CombatScriptsHandler;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
 import com.rs.utils.Ticks;
 
 import java.util.ArrayList;

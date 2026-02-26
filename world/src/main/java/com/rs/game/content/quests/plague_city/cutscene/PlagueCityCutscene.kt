@@ -1,24 +1,27 @@
 package com.rs.game.content.quests.plague_city.cutscene
 
-import com.rs.cache.loaders.ObjectDefinitions
+import org.darkan.core.cache.ObjectDefinitions
 import com.rs.engine.cutscenekt.cutscene
 import com.rs.engine.dialogue.HeadE.*
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.quests.plague_city.utils.*
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.InterfaceManager
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Animation
+import world.gregs.voidps.type.Tile
+import com.rs.utils.defs
+import com.rs.utils.emoteGameTicks
+import com.rs.utils.types
 
 class PlagueCityCutscene (player: Player) {
     init {
         player.cutscene {
             fadeInAndWait()
             hideMinimap()
-            endTile = Tile.of(CUTSCENE_END_TILE)
+            endTile = CUTSCENE_END_TILE
             player.interfaceManager.removeSubs(*InterfaceManager.Sub.ALL_GAME_TABS)
             dynamicRegion(player.tile, 312, 1216, 8, 8)
             val edmond = npcCreate(EDMOND_BELOW_GROUND, 18, 13, 0)
@@ -71,7 +74,7 @@ class PlagueCityCutscene (player: Player) {
             fadeOut()
 
             player.lock()
-            player.faceTile(Tile.of(EDMOND_SEWER_SPAWN_LOC))
+            player.faceTile(EDMOND_SEWER_SPAWN_LOC)
             dialogue {
                 npc(EDMOND_BELOW_GROUND, CALM_TALK, "Once you're in the city look for my old friend, Jethick. I expect he'll help you. Send him my regards; I haven't seen him since before Elena was born.")
                 player(CALM_TALK, "Thanks, I will.")

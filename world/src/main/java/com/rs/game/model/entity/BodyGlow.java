@@ -16,7 +16,7 @@
 //
 package com.rs.game.model.entity;
 
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 
 public class BodyGlow {
 

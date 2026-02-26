@@ -16,7 +16,7 @@
 //
 package com.rs.engine.dialogue.statements;
 
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.model.entity.player.Player;
 

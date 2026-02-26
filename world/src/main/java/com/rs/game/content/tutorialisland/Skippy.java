@@ -29,7 +29,7 @@ import com.rs.game.content.achievements.Achievement;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class Skippy extends Conversation {
 

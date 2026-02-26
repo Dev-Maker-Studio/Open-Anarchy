@@ -18,7 +18,7 @@ package com.rs.game.content.minigames.treasuretrails;
 
 import com.rs.game.model.entity.npc.OwnedNPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class ClueNPC extends OwnedNPC {
 

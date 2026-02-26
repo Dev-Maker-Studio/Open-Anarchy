@@ -1,6 +1,6 @@
 package com.rs.game.content.quests.monksfriend.dialogues;
 
-import com.rs.cache.loaders.map.ClipFlag;
+import org.darkan.core.map.ClipFlag;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
@@ -12,10 +12,10 @@ import com.rs.game.content.minigames.partyroom.PartyRoom;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.utils.Ticks;
 

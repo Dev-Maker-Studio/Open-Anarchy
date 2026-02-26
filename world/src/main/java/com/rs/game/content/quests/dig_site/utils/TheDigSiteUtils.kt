@@ -13,12 +13,14 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Animation
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import com.rs.utils.DropSets
 import com.rs.utils.Ticks
 import com.rs.utils.drop.DropTable
+import com.rs.utils.defs
+import com.rs.utils.emoteGameTicks
 
 class TheDigSiteUtils(val player: Player) {
 
@@ -141,7 +143,7 @@ class TheDigSiteUtils(val player: Player) {
             SPECIMEN_JAR_CUPBOARD[1] -> {
                 if (option == "Close") {
                     player.anim(SEARCH_ANIM)
-                    obj.setId(SPECIMEN_JAR_CUPBOARD[0])
+                    obj.changeId(SPECIMEN_JAR_CUPBOARD[0])
                 }
                 if (option == "Search") {
                     player.schedule {
@@ -172,7 +174,7 @@ class TheDigSiteUtils(val player: Player) {
             ROCK_PICK_CUPBOARD[1] -> {
                 if (option == "Close") {
                     player.anim(SEARCH_ANIM)
-                    obj.setId(ROCK_PICK_CUPBOARD[0])
+                    obj.changeId(ROCK_PICK_CUPBOARD[0])
                 }
                 if (option == "Search") {
                     player.schedule {
@@ -331,7 +333,7 @@ class TheDigSiteUtils(val player: Player) {
 
     private fun isInDig(tile: Tile, ranges: Array<IntArray>): Boolean {
         for (range in ranges) {
-            if (tile.x() >= range[0] && tile.x() <= range[1] && tile.y() >= range[2] && tile.y() <= range[3]) {
+            if (tile.x >= range[0] && tile.x <= range[1] && tile.y >= range[2] && tile.y <= range[3]) {
                 return true
             }
         }
@@ -414,7 +416,7 @@ class TheDigSiteUtils(val player: Player) {
             CHEST[0] -> {
                 if (option == "Close") {
                     player.anim(SEARCH_ANIM)
-                    obj.setId(CHEST[1])
+                    obj.changeId(CHEST[1])
                 }
                 if (option == "Search") {
                     player.schedule {

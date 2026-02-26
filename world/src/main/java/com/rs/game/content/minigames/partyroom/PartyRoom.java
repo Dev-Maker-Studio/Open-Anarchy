@@ -16,8 +16,8 @@
 //
 package com.rs.game.content.minigames.partyroom;
 
-import com.rs.cache.loaders.ObjectType;
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.model.ObjectShape;
+import org.darkan.core.model.IFEvents;
 import com.rs.game.World;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.model.entity.ForceTalk;
@@ -28,13 +28,13 @@ import com.rs.game.model.item.ItemsContainer;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.handlers.ButtonClickHandler;
@@ -189,7 +189,7 @@ ops.add("No action.");
 			e.getPlayer().setNextAnimation(new Animation(794));
 			e.getPlayer().lock();
 			World.removeObject(e.getObj());
-			final GameObject poppedBalloon = new GameObject(e.getObj().getId() + 8, ObjectType.SCENERY_INTERACT, e.getObj().getRotation(), e.getObj().getX(), e.getObj().getY(), e.getObj().getPlane());
+			final GameObject poppedBalloon = new GameObject(e.getObj().getId() + 8, ObjectShape.SCENERY_INTERACT, e.getObj().getRotation(), e.getObj().getX(), e.getObj().getY(), e.getObj().getPlane());
 			World.spawnObject(poppedBalloon);
 			WorldTasks.schedule(new Task() {
 				@Override
@@ -300,7 +300,7 @@ ops.add("No action.");
 				Item item = e.getPlayer().partyDeposit.get(e.getSlotId());
 				if (item == null)
 					return;
-				if (e.getPacket() == ClientPacket.IF_OP1)
+				if (e.getOpNum() == 1)
 					removeDeposit(e.getPlayer(), e.getSlotId());
 				else
 					e.getPlayer().sendMessage(ItemConfig.get(item.getId()).getExamine(item));
@@ -310,7 +310,7 @@ ops.add("No action.");
 				Item item = World.getData().getPartyRoomStorage().get(e.getSlotId());
 				if (item == null)
 					return;
-				if (e.getPacket() == ClientPacket.IF_OP1)
+				if (e.getOpNum() == 1)
 					e.getPlayer().sendMessage("Item valued at: " + item.getDefinitions().getValue());
 				else
 					e.getPlayer().sendMessage(ItemConfig.get(item.getId()).getExamine(item));
@@ -319,23 +319,23 @@ ops.add("No action.");
 			final Item item = e.getPlayer().getInventory().getItem(e.getSlotId());
 			if (item == null)
 				return;
-			switch (e.getPacket()) {
-			case IF_OP1:
+			switch (e.getOpNum()) {
+			case 1:
 				addDeposit(e.getPlayer(), item, 1);
 				break;
-			case IF_OP2:
+			case 2:
 				addDeposit(e.getPlayer(), item, 5);
 				break;
-			case IF_OP3:
+			case 3:
 				addDeposit(e.getPlayer(), item, 10);
 				break;
-			case IF_OP4:
+			case 4:
 				addDeposit(e.getPlayer(), item, e.getPlayer().getInventory().getAmountOf(item.getId()));
 				break;
-			case IF_OP5:
+			case 5:
 				e.getPlayer().sendInputInteger("How many would you like to deposit?", amount -> addDeposit(e.getPlayer(), item, amount));
 				break;
-			case IF_OP10:
+			case 10:
 				e.getPlayer().sendMessage(ItemConfig.get(item.getId()).getExamine(item));
 				break;
 			default:

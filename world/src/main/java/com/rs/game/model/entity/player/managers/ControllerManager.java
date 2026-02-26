@@ -16,7 +16,7 @@
 //
 package com.rs.game.model.entity.player.managers;
 
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.content.Potion;
 import com.rs.game.content.skills.cooking.Foods.Food;
 import com.rs.game.content.skills.magic.TeleType;
@@ -27,9 +27,8 @@ import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.Item;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 
 import java.util.Set;
@@ -294,10 +293,10 @@ public final class ControllerManager {
 		return controller.processObjectClick1(object);
 	}
 
-	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, ClientPacket packet) {
+	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int opNum) {
 		if (controller == null || !inited)
 			return true;
-		return controller.processButtonClick(interfaceId, componentId, slotId, slotId2, packet);
+		return controller.processButtonClick(interfaceId, componentId, slotId, slotId2, opNum);
 	}
 
 	public boolean processNPCClick1(NPC npc) {

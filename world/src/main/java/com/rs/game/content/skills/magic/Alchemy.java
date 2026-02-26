@@ -16,7 +16,8 @@
 //
 package com.rs.game.content.skills.magic;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.game.World;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.content.skills.smithing.Smelting.SmeltingBar;
@@ -24,10 +25,10 @@ import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Inventory;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.SpotAnim;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.InterfaceOnInterfaceHandler;
 
@@ -109,10 +110,10 @@ public class Alchemy {
 		} else if (!Magic.checkMagicAndRunes(player, 55, true, useRunes ? new RuneSet(Rune.NATURE, 1, Rune.FIRE, 5) : null))
 			return false;
 		player.stopAll(false, false, true);
-		ItemDefinitions def = ItemDefinitions.getDefs(item.getId());
+		ItemDefinition def = ItemDefinitions.getDefs(item.getId());
 		if (def == null)
 			return false;
-		ItemDefinitions wDef = null;
+		ItemDefinition wDef = null;
 		if (player.getEquipment().getItem(Equipment.WEAPON) != null)
 			wDef = ItemDefinitions.getDefs(player.getEquipment().getWeaponId());
 		player.incrementCount("Items alched");

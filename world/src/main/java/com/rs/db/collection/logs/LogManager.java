@@ -23,10 +23,10 @@ import com.rs.game.content.death.GraveStone;
 import com.rs.game.ge.Offer;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Trade;
-import com.rs.lib.db.DBItemManager;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Item;
+import com.rs.db.DBItemManager;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.Item;
 import com.rs.utils.ReportsManager;
 import org.bson.Document;
 

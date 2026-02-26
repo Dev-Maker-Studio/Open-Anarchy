@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.bosses.godwars.factions.zaros.attack;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.bosses.godwars.factions.zaros.Nex;
 import com.rs.game.model.entity.Entity;
@@ -26,10 +26,10 @@ import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -48,7 +48,7 @@ public class ShadowTraps implements NexAttack {
 			String key = t.getX() + "_" + t.getY();
 			if (!tiles.containsKey(t.getX() + "_" + t.getY())) {
 				tiles.put(key, new int[] { t.getX(), t.getY() });
-				World.spawnObjectTemporary(new GameObject(57261, ObjectType.SCENERY_INTERACT, 0, t.getX(), t.getY(), 0), 4);
+				World.spawnObjectTemporary(new GameObject(57261, ObjectShape.SCENERY_INTERACT, 0, t.getX(), t.getY(), 0), 4);
 			}
 		}
 		WorldTasks.scheduleLooping(new Task() {

@@ -7,7 +7,7 @@ import com.rs.game.content.minigames.lividfarm.producePoints
 import com.rs.game.content.skills.magic.Rune
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.Constants
+import org.darkan.core.Constants
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 import com.rs.utils.Ticks

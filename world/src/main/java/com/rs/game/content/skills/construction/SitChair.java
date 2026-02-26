@@ -16,13 +16,13 @@
 //
 package com.rs.game.content.skills.construction;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.content.skills.construction.playerOwnedHouse.HouseConstants;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 
 public class SitChair extends PlayerAction {
 
@@ -36,7 +36,7 @@ public class SitChair extends PlayerAction {
 		originalTile = Tile.of(player.getTile());
 		chairTile = object.getTile();
 		Tile face = Tile.of(player.getTile());
-		if (object.getType() == ObjectType.SCENERY_INTERACT) {
+		if (object.getType() == ObjectShape.SCENERY_INTERACT) {
 			if (object.getRotation() == 0)
 				face = face.transform(0, -1, 0);
 			else if (object.getRotation() == 2)
@@ -45,7 +45,7 @@ public class SitChair extends PlayerAction {
 				face = face.transform(1, 0, 0);
 			else if (object.getRotation() == 1)
 				face = face.transform(-1, 0, 0);
-		} else if (object.getType() == ObjectType.GROUND_INTERACT)
+		} else if (object.getType() == ObjectShape.GROUND_INTERACT)
 			if (object.getRotation() == 1)
 				face = face.transform(-1, 1, 0);
 			else if (object.getRotation() == 2)

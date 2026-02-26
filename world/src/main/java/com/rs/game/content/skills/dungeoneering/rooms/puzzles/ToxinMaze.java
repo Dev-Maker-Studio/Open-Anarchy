@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants;
 import com.rs.game.content.skills.dungeoneering.rooms.PuzzleRoom;
@@ -26,9 +26,9 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 import java.util.*;
 
@@ -285,7 +285,7 @@ public class ToxinMaze extends PuzzleRoom {
 
 		for (Connector connector : connectors)
 			if (connector.blocked)
-				World.spawnObject(new GameObject(OBSTACLES[type.ordinal()][Utils.random(5)], ObjectType.SCENERY_INTERACT, 0, manager.getTile(reference, connector.x, connector.y)));
+				World.spawnObject(new GameObject(OBSTACLES[type.ordinal()][Utils.random(5)], ObjectShape.SCENERY_INTERACT, 0, manager.getTile(reference, connector.x, connector.y)));
 
 	}
 

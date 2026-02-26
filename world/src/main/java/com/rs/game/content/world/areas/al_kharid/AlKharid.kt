@@ -1,11 +1,11 @@
 package com.rs.game.content.world.areas.al_kharid
 
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.content.skills.agility.Agility
 import com.rs.game.content.world.areas.global.AgilityShortcuts
 import com.rs.game.content.world.doors.Doors
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPlayerStep
@@ -14,12 +14,12 @@ import com.rs.plugin.kts.onPlayerStep
 fun handleAlKharidArea() {
 
 	// shantayPass
-	onPlayerStep(
+	onPlayerStep(arrayOf(
 			Tile.of(3303, 3116, 0),
 			Tile.of(3303, 3117, 0),
 			Tile.of(3305, 3116, 0),
 			Tile.of(3305, 3117, 0)
-	) { (player, step) ->
+	)) { (player, step) ->
 		if (step.y == 3116 && step.dir == Direction.SOUTH) {
 			if (!player.inventory.containsItem(1854, 1)) {
 				player.sendMessage("You should check with Shantay for a pass.")

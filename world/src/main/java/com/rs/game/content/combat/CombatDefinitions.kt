@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.combat
 
-import com.rs.cache.loaders.Bonus
+import org.darkan.core.model.Bonus
 import com.rs.engine.quest.Quest
 import com.rs.game.content.minigames.disableMinigameRunes
 import com.rs.game.content.minigames.enableMinigameRunes
@@ -24,7 +24,7 @@ import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.AuraManager
 import com.rs.game.model.entity.player.managers.InterfaceManager
-import com.rs.lib.util.Logger
+import org.darkan.core.Logger
 
 class CombatDefinitions {
     enum class Spellbook(@JvmField val interfaceId: Int) {

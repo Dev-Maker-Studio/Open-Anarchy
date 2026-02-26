@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.farming;
 
-import com.rs.cache.loaders.ObjectDefinitions;
+import org.darkan.core.cache.ObjectDefinitions;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -114,7 +114,7 @@ public enum PatchLocation {
 
 	private PatchLocation(int objectId, PatchType type) {
 		this.objectId = objectId;
-		varBit = ObjectDefinitions.getDefs(objectId).varpBit;
+		varBit = ObjectDefinitions.getDefs(objectId).getVarbit();
 		this.type = type;
 	}
 }

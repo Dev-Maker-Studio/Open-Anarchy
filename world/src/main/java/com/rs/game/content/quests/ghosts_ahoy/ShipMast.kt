@@ -5,9 +5,9 @@ import com.rs.game.content.skills.magic.TeleType
 import com.rs.game.model.entity.Teleport
 import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Rights
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Rights
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 
@@ -25,15 +25,15 @@ fun mapPirateShipLaddersGA() {
         if(obj.x == 3615)
             player.controllerManager.startController(ShipMastController())
         if (player.y < obj.y)
-            player.useLadder(Tile.of(obj.x + 1, obj.y, obj.plane + 1))
+            player.useLadder(Tile.of(obj.x + 1, obj.y, obj.level + 1))
         else
-            player.useLadder(Tile.of(obj.x + 1, obj.y, obj.plane + 1))
+            player.useLadder(Tile.of(obj.x + 1, obj.y, obj.level + 1))
     }
     onObjectClick(5266) { (player, obj) ->
         if (player.y < obj.y)
-            player.useLadder(Tile.of(obj.x + 1, obj.y , obj.plane - 1))
+            player.useLadder(Tile.of(obj.x + 1, obj.y , obj.level - 1))
         else
-            player.useLadder(Tile.of(obj.x -1, obj.y, obj.plane - 1))
+            player.useLadder(Tile.of(obj.x -1, obj.y, obj.level - 1))
     }
 
 }

@@ -1,4 +1,5 @@
 package com.rs.game.content.quests.dig_site
+import org.darkan.core.Utils.strikeThroughIf
 
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
@@ -13,8 +14,8 @@ import com.rs.game.content.skills.mining.Pickaxe
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 
@@ -291,7 +292,7 @@ fun mapTheDigSiteInteractions() {
             BRICK -> TheDigSiteUtils(player).searchBrick()
             STONE_TABLET_OBJ -> TheDigSiteUtils(player).takeStoneTablet()
             in MUSEUM_GUARD_GATE -> {
-                val museumGuard: NPC? = World.getNPCsInChunkRange(player.chunkId, 2).firstOrNull { it.id == MUSEUM_GUARD }
+                val museumGuard: NPC? = World.getNPCsInChunkRange(player.getChunkId(), 2).firstOrNull { it.id == MUSEUM_GUARD }
                 player.faceEntityTile(museumGuard)
                 museumGuard?.forceTalk("Sorry - workman's gate only.")
                 player.npcDialogue(museumGuard, CALM_TALK, "Hello there! Sorry, I can't stop to talk. I'm guarding this workman's gate. I'm afraid you can't come through here - you'll need to find another way around.")

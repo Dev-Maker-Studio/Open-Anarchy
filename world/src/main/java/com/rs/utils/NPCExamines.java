@@ -21,8 +21,8 @@ import com.google.gson.reflect.TypeToken;
 import com.rs.Settings;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.util.Utils;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -48,7 +48,7 @@ public class NPCExamines {
 	public static String getExamine(NPC npc, Player player) {
 		if(Settings.getConfig().isDebug())
 			player.sendMessage(npc.getId() + ", X: " + npc.getX() + ", Y: " + npc.getY() + ", Plane: " + npc.getPlane() + ". Transforms with varbit "
-					+ npc.getDefinitions().varpBit + " and var " + npc.getDefinitions().varp);
+					+ npc.getDefinitions().getVarbit() + " and var " + npc.getDefinitions().getVarp());
 		String examine = EXAMINES.get(npc.getId());
 		if (examine != null)
 			return examine;

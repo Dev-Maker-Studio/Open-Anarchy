@@ -17,12 +17,12 @@
 package com.rs.utils.spawns;
 
 import com.google.gson.JsonIOException;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.World;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -55,7 +55,7 @@ public final class ItemSpawns {
 			World.addGroundItemForever(new Item(id, amount), tile, respawnTicks);
 			try {
 				JsonFileManager.saveJsonFile(ADDED_SPAWNS, file);
-			} catch (IOException e) {
+			} catch (Exception e) {
 				return false;
 			}
 			return true;

@@ -1,11 +1,11 @@
 package com.rs.game.content.commands.development
 
-import com.rs.cache.ArchiveType
-import com.rs.cache.Cache
-import com.rs.cache.IndexType
+// TODO: import ArchiveType
+import world.gregs.voidps.cache.Cache
+// TODO: import IndexType
 import com.rs.engine.command.Commands
-import com.rs.lib.game.Rights
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Rights
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 
 @ServerStartupEvent
@@ -19,9 +19,7 @@ fun loadVarCommands() {
         val endId = args[1].toInt()
 
         for (i in startId until endId) {
-            if (i >= Cache.STORE.getIndex(IndexType.CONFIG).getValidFilesCount(ArchiveType.VARC_STRING.id)) {
-                break
-            }
+            // TODO: legacy Cache.STORE/IndexType/ArchiveType removed - need cache size lookup
             p.packets.sendVarcString(i, "str$i")
         }
     }
@@ -36,9 +34,7 @@ fun loadVarCommands() {
         val value = args[2].toInt()
 
         for (i in startId until endId) {
-            if (i >= Cache.STORE.getIndex(IndexType.CONFIG).getValidFilesCount(ArchiveType.VARC.id)) {
-                break
-            }
+            // TODO: legacy Cache.STORE/IndexType/ArchiveType removed - need cache size lookup
             p.packets.sendVarc(i, value)
         }
     }
@@ -58,9 +54,7 @@ fun loadVarCommands() {
         val value = args[2].toInt()
 
         for (i in startId until endId) {
-            if (i >= Cache.STORE.getIndex(IndexType.CONFIG).getValidFilesCount(ArchiveType.VARS.id)) {
-                break
-            }
+            // TODO: legacy Cache.STORE/IndexType/ArchiveType removed - need cache size lookup
             p.vars.setVar(i, value)
         }
     }

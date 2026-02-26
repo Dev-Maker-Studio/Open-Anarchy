@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.npcs;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
 import com.rs.game.content.skills.dungeoneering.DungeonUtils;
@@ -30,10 +30,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.utils.Ticks;
 import com.rs.utils.WorldUtil;
 
@@ -180,7 +180,7 @@ public class Gravecreeper extends DungeonBoss {
 		GameObject p = null;
 		for (int x = 0; x < plinths.length; x++)
 			for (int y = 0; y < plinths[x].length; y++) {
-				GameObject plinth = getManager().getObjectWithType(getReference(), ObjectType.GROUND_DECORATION, 3 + x * 3, 3 + y * 3);
+				GameObject plinth = getManager().getObjectWithType(getReference(), ObjectShape.GROUND_DECORATION, 3 + x * 3, 3 + y * 3);
 				if (plinth == null)
 					continue;
 				int d = (int) Utils.getDistance(getTile(), plinth.getTile());
@@ -244,11 +244,11 @@ public class Gravecreeper extends DungeonBoss {
 			for (int y = 0; y < plinths[x].length; y++) {
 				if (plinths[x][y] == null)
 					continue;
-				GameObject altar = getManager().getObjectWithType(getReference(), ObjectType.SCENERY_INTERACT, TOMB_LOC_POS_2[y][x][0], TOMB_LOC_POS_2[y][x][1]);
+				GameObject altar = getManager().getObjectWithType(getReference(), ObjectShape.SCENERY_INTERACT, TOMB_LOC_POS_2[y][x][0], TOMB_LOC_POS_2[y][x][1]);
 				if (altar == null)
 					continue;
 				GameObject activeAltar = new GameObject(altar);
-				activeAltar.setId(altar.getId() + 1);
+				activeAltar.changeId(altar.getId() + 1);
 				World.spawnObjectTemporary(activeAltar, Ticks.fromSeconds(7));
 				World.sendSpotAnim(activeAltar.getTile(), new SpotAnim(2752));
 			}
@@ -259,7 +259,7 @@ public class Gravecreeper extends DungeonBoss {
 			for (int y = 0; y < plinths[x].length; y++) {
 				if (plinths[x][y] != null)
 					continue;
-				GameObject plinth = getManager().getObjectWithType(getReference(), ObjectType.GROUND_DECORATION, 3 + x * 3, 3 + y * 3);
+				GameObject plinth = getManager().getObjectWithType(getReference(), ObjectShape.GROUND_DECORATION, 3 + x * 3, 3 + y * 3);
 				if (plinth == null)
 					continue;
 				if (plinths[x][y] == null && Utils.random(15) < getManager().getParty().getTeam().size() * 3) {

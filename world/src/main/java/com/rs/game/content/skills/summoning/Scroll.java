@@ -16,8 +16,8 @@
 //
 package com.rs.game.content.skills.summoning;
 
-import com.rs.cache.loaders.Bonus;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.model.Bonus;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.World;
 import com.rs.game.content.Effect;
 import com.rs.game.content.combat.CombatStyle;
@@ -46,12 +46,12 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.utils.DropSets;
 import com.rs.utils.Ticks;
 import com.rs.utils.drop.DropTable;
@@ -839,7 +839,7 @@ public enum Scroll {
 				owner.sendMessage("You can only cast this on a trunk.");
 				return false;
 			}
-			object.setId(object.getAttribs().getI("originalTrunkId", -1));
+			object.changeId(object.getAttribs().getI("originalTrunkId", -1));
 			familiar.stopFaceEntity();
 			familiar.lock(2);
 			familiar.faceObject(object);
@@ -1287,7 +1287,7 @@ public enum Scroll {
 	private List<Pouch> fromPouches;
 
 	private Scroll(int scrollId, ScrollTarget target, String description, double xp, int pointCost) {
-		this.name = Utils.formatPlayerNameForDisplay(ItemDefinitions.getDefs(scrollId).name.replace(" scroll", ""));
+		this.name = Utils.formatPlayerNameForDisplay(ItemDefinitions.getDefs(scrollId).getName().replace(" scroll", ""));
 		this.description = description;
 		this.target = target;
 		this.id = scrollId;

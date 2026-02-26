@@ -16,11 +16,11 @@
 //
 package com.rs.game.content.achievements;
 
-import com.rs.lib.game.VarManager;
+import org.darkan.core.model.Vars;
 
 public class AchievementReqsMisc {
 
-	public static String script_3223(VarManager player, int achivementId, int reqIndex) {
+	public static String script_3223(Vars player, int achivementId, int reqIndex) {
 		//		int int2;
 		String str0;
 		str0 = "";

@@ -1,12 +1,13 @@
 package org.darkan.core.map.pathfinder.flag
 
-object DirectionFlag {
-    const val NORTH: Int = 0x1
-    const val EAST: Int = 0x2
-    const val SOUTH: Int = 0x4
-    const val WEST: Int = 0x8
-    const val SOUTH_WEST: Int = WEST or SOUTH
-    const val NORTH_WEST: Int = WEST or NORTH
-    const val SOUTH_EAST: Int = EAST or SOUTH
-    const val NORTH_EAST: Int = EAST or NORTH
+public object DirectionFlag {
+
+    public const val NORTH: Int = 0x1
+    public const val EAST: Int = 0x2
+    public const val SOUTH: Int = 0x4
+    public const val WEST: Int = 0x8
+    public const val SOUTH_WEST: Int = WEST or SOUTH
+    public const val NORTH_WEST: Int = WEST or NORTH
+    public const val SOUTH_EAST: Int = EAST or SOUTH
+    public const val NORTH_EAST: Int = EAST or NORTH
 }

@@ -26,10 +26,10 @@ import com.rs.engine.quest.QuestOutline;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
@@ -149,7 +149,7 @@ public class DwarfCannon extends QuestOutline {
 	public static ItemOnObjectHandler handleItemOnRailings = new ItemOnObjectHandler(new Object[] { 15590, 15591, 15592, 15593, 15594, 15595 }, new Object[] { 14 }, e -> {
 		if (e.getPlayer().getQuestManager().getStage(Quest.DWARF_CANNON) != 1)
 			return;
-		int varbit = e.getObject().getDefinitions().varpBit;
+		int varbit = e.getObject().getDefinitions().getVarbit();
 		if ((varbit != -1) && (e.getPlayer().getVars().getVarBit(varbit) == 0)) {
 			e.getPlayer().setNextAnimation(new Animation(4190));
 			if (Utils.random(4) == 0) {
@@ -167,14 +167,14 @@ public class DwarfCannon extends QuestOutline {
 
 	public static ObjectClickHandler handleRailingClick = new ObjectClickHandler(new Object[] { 15590, 15591, 15592, 15593, 15594, 15595 }, e -> {
 		if (e.getOption().equals("Inspect"))
-			if (e.getPlayer().getVars().getVarBit(e.getObj().getDefinitions().varpBit) == 1)
+			if (e.getPlayer().getVars().getVarBit(e.getObj().getDefinitions().getVarbit()) == 1)
 				e.getPlayer().startConversation(new Dialogue(new SimpleStatement("That railing does not need to be replaced.")));
 			else {
 				e.getPlayer().startConversation(new Dialogue(new SimpleStatement("This railing is broken and needs to be replaced.")));
 				if (e.getPlayer().getInventory().containsItem(14)) {
 					e.getPlayer().setNextAnimation(new Animation(4190));
 					if (Utils.random(4) == 0) {
-						e.getPlayer().getVars().saveVarBit(e.getObj().getDefinitions().varpBit, 1);
+						e.getPlayer().getVars().saveVarBit(e.getObj().getDefinitions().getVarbit(), 1);
 						e.getPlayer().getInventory().deleteItem(14, 1);
 						if (checkRemainingRepairs(e.getPlayer()) == 0)
 							e.getPlayer().getQuestManager().setStage(Quest.DWARF_CANNON, 2);

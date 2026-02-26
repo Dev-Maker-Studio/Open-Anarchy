@@ -16,13 +16,13 @@
 //
 package com.rs.game.model.entity.npc.combat;
 
-import com.rs.cache.loaders.Bonus;
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.model.Bonus;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.game.content.combat.CombatStyle;
 import com.rs.game.content.skills.summoning.Summoning;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -142,8 +142,8 @@ public class NPCCombatDefinitions {
 		if (defs == null)
 			defs = DEFAULT_DEF;
 		if (defs.combatLevels == null) {
-			if (NPCDefinitions.getDefs(npcId).combatLevel > 0) {
-				defs.combatLevels = generateLevels(NPCDefinitions.getDefs(npcId).combatLevel, (int) (defs.hitpoints / 10.0));
+			if (NPCDefinitions.getDefs(npcId).getCombatLevel() > 0) {
+				defs.combatLevels = generateLevels(NPCDefinitions.getDefs(npcId).getCombatLevel(), (int) (defs.hitpoints / 10.0));
 			}
 			defs.realStats = false;
 		} else

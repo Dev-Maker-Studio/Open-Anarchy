@@ -2,13 +2,13 @@ package com.rs.game.content.dnds.penguins
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World
 import com.rs.game.content.dnds.penguins.PenguinServices.penguinSpawnService
 import com.rs.game.map.ChunkManager
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Logger
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Logger
 import com.rs.utils.spawns.NPCSpawn
 import java.time.Month
 
@@ -27,7 +27,7 @@ class PenguinSpawnService () {
             penguins.forEach { penguin ->
                 val spawn = NPCSpawn(penguin.npcId, penguin.location, "")
                 allSpawns[spawn] = penguin.location
-                regionIds.add(penguin.location.regionId)
+                regionIds.add(penguin.location.getRegionId())
             }
             Logger.debug(PenguinSpawnService::class.java, "loadSpawns", "Loaded ${allSpawns.size} spawns from penguin data.")
         } else {
@@ -38,7 +38,7 @@ class PenguinSpawnService () {
     fun addSpawn(id: Int, tile: Tile, comment: String): NPCSpawn {
         val spawn = NPCSpawn(id, tile, comment)
         allSpawns[spawn] = tile
-        regionIds.add(tile.regionId)
+        regionIds.add(tile.getRegionId())
         return spawn
     }
 
@@ -120,8 +120,8 @@ class PenguinSpawnService () {
     }
 
     fun spawnPenguins(spawn: NPCSpawn) {
-        if (!regionIds.contains(spawn.tile.regionId))
-            regionIds.add(spawn.tile.regionId)
+        if (!regionIds.contains(spawn.tile.getRegionId()))
+            regionIds.add(spawn.tile.getRegionId())
         ChunkManager.permanentlyPreloadRegions(penguinSpawnService.regionIds)
         val npc = spawn.spawnAtCoords(spawn.tile, Direction.random())
         npc.setLoadsUpdateZones()

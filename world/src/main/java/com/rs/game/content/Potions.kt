@@ -16,7 +16,7 @@
 //
 package com.rs.game.content
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.game.World.getServerTicks
 import com.rs.game.content.world.areas.wilderness.WildernessController
 import com.rs.game.model.entity.Hit
@@ -25,8 +25,8 @@ import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.Skills.*
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnItem

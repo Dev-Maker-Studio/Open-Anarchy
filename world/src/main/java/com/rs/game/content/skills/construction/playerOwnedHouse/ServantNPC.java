@@ -16,7 +16,8 @@
 //
 package com.rs.game.content.skills.construction.playerOwnedHouse;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.World;
 import com.rs.game.content.skills.construction.SawmillOperator;
@@ -27,10 +28,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 import com.rs.utils.WorldUtil;
 
 public class ServantNPC extends NPC {
@@ -156,7 +157,7 @@ public class ServantNPC extends NPC {
 	
 	public void requestType(int item, int quantity, final RequestType type) {
 		final Bank bank = owner.getBank();
-		final ItemDefinitions defs = ItemDefinitions.getDefs(item);
+		final ItemDefinition defs = ItemDefinitions.getDefs(item);
 		int inventorySize = houseServants.getInventorySize();
 		if (!bank.containsItem(defs.isNoted() ? defs.getCertId() : item, 1) && type == RequestType.WITHDRAW) {
 			owner.npcDialogue(getId(), houseServants == HouseServants.DEMON_BUTLER ? HeadE.CAT_CALM_TALK2 : HeadE.CALM_TALK, "It appears you do not have this item in your bank.");

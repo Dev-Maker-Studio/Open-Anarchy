@@ -18,7 +18,7 @@ package com.rs.engine.cutscene.actions;
 
 import com.rs.engine.cutscene.Cutscene;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 import java.util.Map;
 

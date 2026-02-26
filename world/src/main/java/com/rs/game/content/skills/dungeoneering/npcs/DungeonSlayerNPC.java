@@ -21,9 +21,9 @@ import com.rs.game.content.skills.dungeoneering.DungeonConstants;
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
 import com.rs.game.content.skills.dungeoneering.DungeonPartyManager;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 import com.rs.utils.drop.DropSet;
 import com.rs.utils.drop.DropTable;
 

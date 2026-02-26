@@ -19,7 +19,7 @@ package com.rs.game.content.world.unorganized_dialogue;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.statements.DestroyItemStatement;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.events.DestroyItemEvent;
 

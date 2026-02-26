@@ -12,7 +12,7 @@ import com.rs.game.content.utils.BartenderUtils.sellBeerGlass
 import com.rs.game.content.world.areas.port_phasmatys.RuneDrawInvite
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.getInteractionDistance
 import com.rs.plugin.kts.onNpcClick

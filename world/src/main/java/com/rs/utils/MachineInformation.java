@@ -17,7 +17,6 @@
 package com.rs.utils;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.io.InputStream;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -49,32 +48,24 @@ public class MachineInformation {
 	public int dxDriverMonth;
 	public int dxDriverYear;
 
-	public static MachineInformation parse(InputStream stream) {
+	public static MachineInformation from(org.darkan.core.model.MachineInformation core) {
 		MachineInformation info = new MachineInformation();
-		info.operatingSystem = stream.readUnsignedByte();
-		info.x64os = stream.readUnsignedByte() == 1;
-		info.osVendor = stream.readUnsignedByte();
-		info.javaVersion = stream.readUnsignedByte();
-		info.javaBuild = stream.readUnsignedByte();
-		info.javaSubBuild = stream.readUnsignedByte();
-		info.javaUpdate = stream.readUnsignedByte();
-		info.idk = stream.readUnsignedByte() == 1;
-		info.maxMem = stream.readUnsignedShort();
-		info.processors = stream.readUnsignedByte();
-		info.ram = stream.read24BitInt();
-		info.cpuClock = stream.readUnsignedShort();
-		info.aString8157 = stream.readJagString();
-		info.aString8160 = stream.readJagString();
-		info.aString8159 = stream.readJagString();
-		info.aString8153 = stream.readJagString();
-		info.dxDriverMonth = stream.readUnsignedByte();
-		info.dxDriverYear = stream.readUnsignedShort();
-		info.cpuType = stream.readJagString();
-		info.cpuData = stream.readJagString();
-		info.cpuCores = stream.readUnsignedByte();
-		for (int i = 0;i < info.rawCPUInformationData.length;i++)
-			info.rawCPUInformationData[i] = stream.readInt();
-		info.rawCPUInformation2 = stream.readInt();
+		info.operatingSystem = core.getOperatingSystem();
+		info.x64os = core.getX64os();
+		info.osVendor = core.getOsVendor();
+		info.ram = core.getRam();
+		info.aString8157 = core.getGpuModel();
+		info.aString8159 = core.getDwDirectXVersion();
+		info.maxMem = core.getMaxMem();
+		info.processors = core.getProcessors();
+		info.cpuCores = core.getCpuCores();
+		info.cpuClock = core.getCpuClock();
+		info.cpuType = core.getCpuType();
+		info.cpuData = core.getCpuData();
+		info.rawCPUInformationData = core.getCpuFeatureFlags().clone();
+		info.rawCPUInformation2 = core.getCpuModelInfo();
+		info.dxDriverMonth = core.getDxDriverMonth();
+		info.dxDriverYear = core.getDxDriverYear();
 		return info;
 	}
 

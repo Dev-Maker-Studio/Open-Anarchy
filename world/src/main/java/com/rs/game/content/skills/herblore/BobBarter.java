@@ -16,11 +16,12 @@
 //
 package com.rs.game.content.skills.herblore;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.content.Potion;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 
@@ -57,7 +58,7 @@ public class BobBarter {
 			potion = null;
 			if (i == null)
 				continue;
-			ItemDefinitions itemdefs = ItemDefinitions.getDefs(i.getId());
+			ItemDefinition itemdefs = ItemDefinitions.getDefs(i.getId());
 
 			if (checkedPotions.contains(i.getId()) && !itemdefs.isNoted()) {
 				p.getInventory().deleteItem(i);
@@ -110,13 +111,13 @@ public class BobBarter {
 				//				Logger.debug("Total doses available: " + totalDoses + ", converting to " + fullQty + " potions with a remaining " + partialDose + " dose");
 				//
 				//				Logger.debug("item id full: " + ((int)(pot.get(pot.size()-dose))+1));
-				ItemDefinitions fullDef = ItemDefinitions.getDefs(((pot.get(pot.size()-dose))));
-				if (fullDef.name.contains(name) && fullQty > 0)
+				ItemDefinition fullDef = ItemDefinitions.getDefs(((pot.get(pot.size()-dose))));
+				if (fullDef.getName().contains(name) && fullQty > 0)
 					p.getInventory().addItemDrop(fullDef.getCertId() == -1 ? fullDef.getId() : fullDef.getCertId(), fullQty);
 				if (partialDose > 0) {
 					//Logger.debug("item id partial: " + ((int)(pot.get(pot.size()-partialDose))));
-					ItemDefinitions partialDef = ItemDefinitions.getDefs((pot.get(pot.size()-partialDose)));
-					if (partialDef.name.contains(name))
+					ItemDefinition partialDef = ItemDefinitions.getDefs((pot.get(pot.size()-partialDose)));
+					if (partialDef.getName().contains(name))
 						p.getInventory().addItemDrop(partialDef.getCertId() == -1 ? partialDef.getId() : partialDef.getCertId(), 1);
 				}
 			}

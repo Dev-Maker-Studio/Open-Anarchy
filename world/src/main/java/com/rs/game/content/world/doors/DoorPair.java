@@ -19,13 +19,12 @@ package com.rs.game.content.world.doors;
 import com.google.gson.JsonIOException;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.file.JsonFileManager;
+import org.darkan.core.JsonFileManager;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,7 +43,7 @@ public class DoorPair {
 	public static void loadPairs() {
 		try {
 			DOOR_PAIRS = (DoorPair[]) JsonFileManager.loadJsonFile(new File(PATH), DoorPair[].class);
-		} catch (JsonIOException | IOException e) {
+		} catch (JsonIOException e) {
 			e.printStackTrace();
 		}
 		for (DoorPair pair : DOOR_PAIRS) {
@@ -54,7 +53,7 @@ public class DoorPair {
 	}
 
 	public static int getOpposingDoor(Player player, GameObject door) {
-		return PAIRING_MAP.get(door.getDefinitions(player).id) != null ? PAIRING_MAP.get(door.getDefinitions(player).id) : 1532;
+		return PAIRING_MAP.get(door.getDefinitions(player).getId()) != null ? PAIRING_MAP.get(door.getDefinitions(player).getId()) : 1532;
 	}
 
 	public DoorPair(int closed, int open) {

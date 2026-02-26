@@ -16,7 +16,7 @@
 //
 package com.rs.game.model.entity.interactions;
 
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.content.Effect;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;

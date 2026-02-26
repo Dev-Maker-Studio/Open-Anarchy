@@ -5,7 +5,7 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.miniquest.Miniquest
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 
 class HettyD(p: Player, npc: NPC) {
     init {

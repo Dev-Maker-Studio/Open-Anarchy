@@ -1,7 +1,5 @@
 package org.darkan.core.map.pathfinder.bound
 
-import org.darkan.core.map.pathfinder.bound.RectangleBoundaryUtils
-
 internal fun reachRectangle(
     flags: Array<IntArray?>,
     x: Int,

@@ -1,7 +1,7 @@
 package com.rs.game.content.combat.special_attacks
 
-import com.rs.cache.loaders.Bonus
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.model.Bonus
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World
 import com.rs.game.content.Effect
 import com.rs.game.content.achievements.AchievementDef
@@ -17,10 +17,10 @@ import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.Constants
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.model.SpotAnim
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.utils.ItemConfig
 import com.rs.utils.Ticks
@@ -45,9 +45,9 @@ fun mapSpecials() {
      */
     //Granite maul/Granite mace
     addSpec(intArrayOf(4153, 13445, 14681, 14679), SpecialAttack(50) { player ->
-        val target = player.interactionManager.interaction.let { interaction ->
-            if (interaction is PlayerCombatInteraction) interaction.action.target else player.tempAttribs.getO("last_target")
-        }
+        val target: Entity = player.interactionManager.interaction.let { interaction ->
+            if (interaction is PlayerCombatInteraction) interaction.action.target else player.tempAttribs.getO<Entity>("last_target")
+        } ?: return@SpecialAttack
 
         if (target.isInvalidMeleeTarget(player)) return@SpecialAttack
 
@@ -309,7 +309,7 @@ fun mapSpecials() {
     //Vine whip
     addSpec(intArrayOf(21371, 21372, 21373, 21374, 21375), SpecialAttack(SpecialAttack.Type.MELEE, 60) { player, target ->
         val attackStyle = player.combatDefinitions.getAttackStyle()
-        val tile = Tile.of(target.tile)
+        val tile = target.tile
         player.sync(11971, 476)
         player.schedule {
             repeat(11) {

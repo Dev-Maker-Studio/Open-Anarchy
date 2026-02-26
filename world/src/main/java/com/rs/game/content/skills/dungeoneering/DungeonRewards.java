@@ -16,17 +16,17 @@
 //
 package com.rs.game.content.skills.dungeoneering;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.model.IFEvents;
 import com.rs.game.content.skills.farming.FarmPatch;
 import com.rs.game.content.skills.farming.PatchType;
 import com.rs.game.content.skills.herblore.HerbCleaning.Herbs;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 
@@ -197,7 +197,7 @@ public class DungeonRewards {
 	});
 
 	public static ButtonClickHandler handleRewardsInter = new ButtonClickHandler(940, e -> {
-		if (e.getComponentId() == 64 && e.getPacket() == ClientPacket.IF_OP1) {
+		if (e.getComponentId() == 64 && e.getOpNum() == 1) {
 			if (e.getPlayer().getTempAttribs().getO("dungReward") != null) {
 				DungeonReward reward = e.getPlayer().getTempAttribs().getO("dungReward");
 				if (reward != null) {

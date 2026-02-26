@@ -1,7 +1,7 @@
 package com.rs.game.content.world.areas.sophanem
 
 import com.rs.engine.quest.Quest
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 

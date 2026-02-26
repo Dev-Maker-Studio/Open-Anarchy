@@ -19,8 +19,8 @@ package com.rs.game.content.bosses.glacor;
 import com.rs.game.World;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import kotlin.Pair;
 
 public class EnduringMinion extends NPC {

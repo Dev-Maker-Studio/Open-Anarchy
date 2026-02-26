@@ -16,7 +16,7 @@ class GuardGateD(player: Player, obj: GameObject) {
             when (player.questManager.getStage(Quest.BIOHAZARD)) {
 
                 in STAGE_RECEIVED_VIALS..STAGE_SPEAK_TO_KING -> {
-                    val guard = World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == VARROCK_GUARD }
+                    val guard = World.getNPCsInChunkRange(player.getChunkId(), 1).firstOrNull { it.id == VARROCK_GUARD }
                     if (guard != null) {
                         player.faceEntityTile(guard)
                         guard.faceEntityTile(player)

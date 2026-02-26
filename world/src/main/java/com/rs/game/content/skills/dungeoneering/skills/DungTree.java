@@ -17,8 +17,8 @@
 package com.rs.game.content.skills.dungeoneering.skills;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.Utils;
 
 public enum DungTree {
 	TANGLE_GUM_VINE(1, 35, 17682, 150, 255),

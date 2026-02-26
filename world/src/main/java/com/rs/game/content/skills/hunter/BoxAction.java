@@ -26,11 +26,11 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.model.gameobject.OwnedObject;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 
 public class BoxAction extends PlayerAction {
 

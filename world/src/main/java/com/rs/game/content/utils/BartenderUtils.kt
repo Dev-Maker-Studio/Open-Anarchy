@@ -6,8 +6,8 @@ import com.rs.game.content.miniquests.bar_crawl.BarCrawl.BarCrawlBars.Bars
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import org.darkan.core.Utils
 
 object BartenderUtils {
     fun buyDrinkOrIngredients(p: Player, npc: NPC, price: Int, item: Item, playerNoCoinsMessage: Boolean) {
@@ -26,7 +26,7 @@ object BartenderUtils {
             }
         } else {
             p.inventory.removeCoins(price)
-            p.inventory.addItem(Item(item))
+            p.inventory.addItem(Item(item.id, item.amount))
             p.startConversation {
                 npc(npc, HeadE.HAPPY_TALKING, "There you go.")
                 player(HeadE.HAPPY_TALKING, "Thanks, ${npc.name}!")

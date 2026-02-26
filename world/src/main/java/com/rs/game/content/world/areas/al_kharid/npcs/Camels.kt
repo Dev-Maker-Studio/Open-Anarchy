@@ -1,12 +1,12 @@
 package com.rs.game.content.world.areas.al_kharid.npcs
 
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.model.ObjectShape
 import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.World.spawnObjectTemporary
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onNpcClick
@@ -56,7 +56,7 @@ fun handleCamels() {
                         exec {
                             player.fadeScreen {
                                 player.sendMessage("You close your eyes...")
-                                spawnObjectTemporary(GameObject(6257, ObjectType.GROUND_INTERACT, 0, npc.tile), Ticks.fromMinutes(1), false)
+                                spawnObjectTemporary(GameObject(6257, ObjectShape.GROUND_INTERACT, 0, npc.tile), Ticks.fromMinutes(1), false)
                                 player.startConversation {
                                     npc(npc.id, HeadE.CAT_LAUGH, "I hope that's what you wanted!")
                                     player(HeadE.CHEERFUL, "Ohhh yes. Lovely.")

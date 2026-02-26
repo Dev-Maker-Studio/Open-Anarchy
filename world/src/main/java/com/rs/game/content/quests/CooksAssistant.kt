@@ -20,8 +20,8 @@ import com.rs.engine.quest.Quest
 import com.rs.engine.quest.QuestHandler
 import com.rs.engine.quest.QuestOutline
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
-import com.rs.lib.util.Utils.strikeThroughIf
+import org.darkan.core.Constants
+import org.darkan.core.Utils.strikeThroughIf
 import com.rs.plugin.annotations.PluginEventHandler
 
 @QuestHandler(

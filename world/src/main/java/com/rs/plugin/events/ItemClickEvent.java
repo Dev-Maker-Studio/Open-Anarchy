@@ -17,7 +17,7 @@
 package com.rs.plugin.events;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.PluginHandler;
 
@@ -40,7 +40,7 @@ public class ItemClickEvent implements PluginEvent {
 
 	public ItemClickEvent(Player player, Item item, int slotId, String option, boolean isEquipped) {
 		this.player = player;
-		this.item = item.setSlot(slotId);
+		this.item = item.withSlot(slotId);
 		this.option = option;
 		this.isEquipped = isEquipped;
 		this.slotId = slotId;

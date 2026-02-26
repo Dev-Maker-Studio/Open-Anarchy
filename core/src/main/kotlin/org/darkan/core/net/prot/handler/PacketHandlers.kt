@@ -38,4 +38,14 @@ object PacketHandlers {
 
     @Suppress("UNCHECKED_CAST")
     fun <T> getHandler(packet: Class<out ClientProt>) = PACKET_HANDLERS[packet] as? PacketHandler<T, ClientProt>
+
+    /**
+     * Blocking dispatch for Java callers (e.g. Player.processPackets on the world thread).
+     * Handlers that call only non-suspend legacy Java code complete synchronously.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun <T> handleBlocking(player: T, packet: ClientProt) {
+        val handler = PACKET_HANDLERS[packet::class.java] as? PacketHandler<T, ClientProt> ?: return
+        kotlinx.coroutines.runBlocking { handler.handle(player, packet) }
+    }
 }

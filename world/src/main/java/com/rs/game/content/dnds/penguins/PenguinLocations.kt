@@ -1,6 +1,6 @@
 package com.rs.game.content.dnds.penguins
 
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 enum class Penguins(val points: Int, val npcId: Int, val locationHint: String, val tile: Tile, val wikiLocation: String, val roamRange: IntRange) {
     CACTUS_1(1, 8107, "located around the Al Kharid region, north of Shantay Pass.", Tile(3310, 3157, 0), "Al Kharid - South-west of Ranael's Super Skirt Store", 7..35),

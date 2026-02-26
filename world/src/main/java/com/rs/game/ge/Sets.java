@@ -16,10 +16,10 @@
 //
 package com.rs.game.ge;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.model.Item;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 
@@ -205,7 +205,7 @@ public class Sets {
 		if (set != null) {
 			for (int itemId : set.getItems())
 				if (!player.getInventory().containsItem(itemId)) {
-					player.sendMessage("You need a " + ItemDefinitions.getDefs(itemId).name + " to exchange this set.");
+					player.sendMessage("You need a " + ItemDefinitions.getDefs(itemId).getName() + " to exchange this set.");
 					return;
 				}
 			for (int itemId : set.getItems())
@@ -219,13 +219,13 @@ public class Sets {
 		if (set != null) {
 			StringBuilder components = new StringBuilder();
 			for (int i = 0;i < set.getItems().length;i++)
-				components.append(ItemDefinitions.getDefs(set.getItems()[i]).name.toLowerCase()).append(i == set.getItems().length - 1 ? "" : ", ");
+				components.append(ItemDefinitions.getDefs(set.getItems()[i]).getName().toLowerCase()).append(i == set.getItems().length - 1 ? "" : ", ");
 			player.sendMessage("This set contains " + components + ".");
 		}
 	}
 
 	public static ButtonClickHandler processItemSets = new ButtonClickHandler(new Object[] { 644, 645 }, e -> {
-		if (e.getPacket() == ClientPacket.IF_OP1)
+		if (e.getOpNum() == 1)
 			printSet(e.getPlayer(), Set.forId(e.getSlotId2()));
 		else if (e.getComponentId() == 16)
 			packSet(e.getPlayer(), Set.forId(e.getSlotId2()));

@@ -1,4 +1,5 @@
 package com.rs.game.content.quests.naturespirit
+import com.rs.utils.isAt
 
 import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.Options
@@ -11,8 +12,8 @@ import com.rs.game.content.skills.magic.Magic
 import com.rs.game.content.world.areas.morytania.npcs.DREZEL
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.game.Tile
+import org.darkan.core.model.SpotAnim
+import world.gregs.voidps.type.Tile
 
 fun drezelNatureSpiritOptions(player: Player, npc: NPC, options: Options) {
     if (!Quest.NATURE_SPIRIT.meetsReqs(player))
@@ -352,8 +353,8 @@ fun fillimanDialogue(player: Player, npc: NPC) {
                     npc(FILLIMAN, CHEERFUL, "Oh really.. Have you placed all the items on the stones? Ok, well, lets try!<br>~ The druid attempts to cast a spell. ~")
                     exec {
                         npc.anim(811)
-                        val fungus = World.getAllGroundItemsInChunkRange(player.chunkId, 1).firstOrNull { it.id == 2970 && it.tile.isAt(3439, 3336, 0) }
-                        val spell = World.getAllGroundItemsInChunkRange(player.chunkId, 1).firstOrNull { it.id == 2969 && it.tile.isAt(3441, 3336, 0) }
+                        val fungus = World.getAllGroundItemsInChunkRange(player.getChunkId(), 1).firstOrNull { it.id == 2970 && it.tile.isAt(3439, 3336, 0) }
+                        val spell = World.getAllGroundItemsInChunkRange(player.getChunkId(), 1).firstOrNull { it.id == 2969 && it.tile.isAt(3441, 3336, 0) }
                         val success = player.tile.isAt(3440, 3335, 0) && (fungus != null || player.questManager.getAttribs(Quest.NATURE_SPIRIT).getB("placedFungus")) && (spell != null || player.questManager.getAttribs(Quest.NATURE_SPIRIT).getB("placedSpell"))
                         if (success) {
                             fungus?.let { World.removeGroundItem(it) }

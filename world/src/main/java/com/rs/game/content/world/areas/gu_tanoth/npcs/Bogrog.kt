@@ -11,9 +11,9 @@ import com.rs.game.content.world.areas.gu_tanoth.npcs.Bogrog.Companion.openSwapI
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Item
-import com.rs.lib.net.ClientPacket
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 import com.rs.utils.shop.ShopsHandler
@@ -105,13 +105,13 @@ class Bogrog() {
 
     companion object {
         @JvmStatic
-        fun handleBogrogActions(player: Player, item: Item, packet: ClientPacket) {
+        fun handleBogrogActions(player: Player, item: Item, packet: Int) {
             when (packet) {
-                ClientPacket.IF_OP1 -> getValue(player, item, 1)
-                ClientPacket.IF_OP2 -> doSwap(player, 1, item.id)
-                ClientPacket.IF_OP3 -> doSwap(player, 5, item.id)
-                ClientPacket.IF_OP4 -> doSwap(player, 10, item.id)
-                ClientPacket.IF_OP5 -> {
+                1 -> getValue(player, item, 1)
+                2 -> doSwap(player, 1, item.id)
+                3 -> doSwap(player, 5, item.id)
+                4 -> doSwap(player, 10, item.id)
+                5 -> {
                     if (getValue(player, item, 1))
                         player.sendInputInteger("How many would you like to swap?") { num: Int ->
                             if (num > 0) {
@@ -129,7 +129,7 @@ class Bogrog() {
                             }
                         }
                 }
-                ClientPacket.IF_OP6 -> player.inventory.sendExamine(item.slot)
+                6 -> player.inventory.sendExamine(item.slot)
                 else -> {}
             }
         }

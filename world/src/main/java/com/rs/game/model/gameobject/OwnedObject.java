@@ -16,11 +16,11 @@
 //
 package com.rs.game.model.gameobject;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
 
 import java.util.Collection;
 import java.util.Map;
@@ -43,7 +43,7 @@ public class OwnedObject extends GameObject {
 		this(player, newId, object.getType(), object.getRotation(), object.getTile());
 	}
 
-	public OwnedObject(Player player, int id, ObjectType type, int rotation, Tile tile) {
+	public OwnedObject(Player player, int id, ObjectShape type, int rotation, Tile tile) {
 		super(id, type, rotation, tile);
 		owner = player.getUsername();
 	}
@@ -82,41 +82,41 @@ public class OwnedObject extends GameObject {
 	}
 
 	public boolean overlapsExisting() {
-		return World.getObject(this.tile, getType()) != null;
+		return World.getObject(this.getTile(), getType()) != null;
 	}
 
 	public final boolean createNoReplace() {
-		if (World.getObject(this.tile, getType()) != null)
+		if (World.getObject(this.getTile(), getType()) != null)
 			return false;
 		World.spawnObject(this);
-		OBJECTS.put(tile.getTileHash(), this);
+		OBJECTS.put(getTile().getTileHash(), this);
 		onCreate();
 		Map<Integer, OwnedObject> ownedBy = OWNER_MAP.get(owner);
 		if (ownedBy == null)
 			ownedBy = new ConcurrentHashMap<>();
-		ownedBy.put(tile.getTileHash(), this);
+		ownedBy.put(getTile().getTileHash(), this);
 		OWNER_MAP.put(owner, ownedBy);
 		return true;
 	}
 
 	public final void createReplace() {
 		World.spawnObject(this);
-		OBJECTS.put(tile.getTileHash(), this);
+		OBJECTS.put(getTile().getTileHash(), this);
 		onCreate();
 		Map<Integer, OwnedObject> ownedBy = OWNER_MAP.get(owner);
 		if (ownedBy == null)
 			ownedBy = new ConcurrentHashMap<>();
-		ownedBy.put(tile.getTileHash(), this);
+		ownedBy.put(getTile().getTileHash(), this);
 		OWNER_MAP.put(owner, ownedBy);
 	}
 
 	public final void destroy() {
 		World.removeObject(this);
-		OBJECTS.remove(tile.getTileHash());
+		OBJECTS.remove(getTile().getTileHash());
 		onDestroy();
 		Map<Integer, OwnedObject> ownedBy = OWNER_MAP.get(owner);
 		if (ownedBy != null) {
-			ownedBy.remove(tile.getTileHash());
+			ownedBy.remove(getTile().getTileHash());
 			if (ownedBy.size() == 0)
 				OWNER_MAP.remove(owner);
 			destroyed = true;

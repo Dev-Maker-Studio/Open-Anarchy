@@ -16,8 +16,8 @@
 //
 package com.rs.game.content.skills.dungeoneering.npcs;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants;
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
@@ -31,8 +31,17 @@ import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.*;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.WorldObject;
+// Hit class from com.rs.game.model.entity.Hit (not core module)
+import org.darkan.core.model.HintIcon;
+import org.darkan.core.model.Projectile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.utils.Ticks;
@@ -88,7 +97,7 @@ public final class Stomp extends DungeonBoss {
 				if (count == IVULNERABLE_TIMER - 3) {
 					List<Entity> possibleTargets = getPossibleTargets();
 					for (int[] s : shadows) {
-						GameObject object = getManager().spawnObjectTemporary(getReference(), 49268, ObjectType.SCENERY_INTERACT, 0, s[0], s[1], Ticks.fromSeconds(30));
+						GameObject object = getManager().spawnObjectTemporary(getReference(), 49268, ObjectShape.SCENERY_INTERACT, 0, s[0], s[1], Ticks.fromSeconds(30));
 						for (Entity target : possibleTargets)
 							if (target.getX() == object.getX() && target.getY() == object.getY())
 								target.applyHit(new Hit(this, 1 + Utils.random((int) (target.getMaxHitpoints() * 0.8)), HitLook.TRUE_DAMAGE));
@@ -147,7 +156,7 @@ public final class Stomp extends DungeonBoss {
 
 		int id = count == IVULNERABLE_TIMER ? (49274 + lodeStoneType * 2 + index) : lodestones[index] ? lodeStoneType == 0 ? 51099 : lodeStoneType == 1 ? 51601 : 51647 : (49270 + index);
 
-		getManager().spawnObject(getReference(), id, ObjectType.SCENERY_INTERACT, 2, index == 1 ? 10 : 5, 10);
+		getManager().spawnObject(getReference(), id, ObjectShape.SCENERY_INTERACT, 2, index == 1 ? 10 : 5, 10);
 	}
 
 	public void chargeLodeStone(Player player, int index) {
@@ -187,7 +196,7 @@ public final class Stomp extends DungeonBoss {
 				if (containsShadow(x, y) || !getManager().isFloorFree(getReference(), x, y))
 					continue;
 				shadows.add(new int[] { x, y });
-				getManager().spawnObject(getReference(), 49269, ObjectType.SCENERY_INTERACT, 0, x, y);
+				getManager().spawnObject(getReference(), 49269, ObjectShape.SCENERY_INTERACT, 0, x, y);
 				break l;
 			}
 
@@ -207,7 +216,7 @@ public final class Stomp extends DungeonBoss {
 	 */
 	public void destroyExistingDebris() {
 		for (int[] s : shadows)
-			getManager().removeObject(getReference(), 49269, ObjectType.SCENERY_INTERACT, 0, s[0], s[1]);
+			getManager().removeObject(getReference(), 49269, ObjectShape.SCENERY_INTERACT, 0, s[0], s[1]);
 		shadows.clear();
 	}
 

@@ -16,9 +16,9 @@
 //
 package com.rs.game.content.skills.hunter.traps;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.NPCDefinitions;
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.GlobalNPCDropPluginsKt;
 import com.rs.game.content.minigames.herblorehabitat.JadinkoType;
@@ -29,10 +29,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.OwnedObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 
 import java.util.Arrays;
 
@@ -54,14 +54,14 @@ public class BoxStyleTrap extends OwnedObject {
 	private BoxHunterType npcTrapped;
 
 	public BoxStyleTrap(Player player, BoxTrapType type, Tile tile) {
-		super(player, type.getObjectId(), ObjectType.SCENERY_INTERACT, 0, tile);
+		super(player, type.getObjectId(), ObjectShape.SCENERY_INTERACT, 0, tile);
 		this.type = type;
 		if (type != BoxTrapType.DEAD_FALL)
 			routeType = RouteType.WALK_ONTO;
 	}
 
 	public BoxStyleTrap(Player player, BoxTrapType type, Tile tile, int setId, int setRotation) {
-		super(player, setId, ObjectType.SCENERY_INTERACT, setRotation, tile);
+		super(player, setId, ObjectShape.SCENERY_INTERACT, setRotation, tile);
 		this.type = type;
 		if (type != BoxTrapType.DEAD_FALL)
 			routeType = RouteType.WALK_ONTO;
@@ -178,7 +178,7 @@ public class BoxStyleTrap extends OwnedObject {
 		}
 		player.getInventory().deleteItem(bait, 1);
 		this.bait = bait;
-		player.sendMessage("You bait the trap with the " + ItemDefinitions.getDefs(bait).name.toLowerCase() + ".");
+		player.sendMessage("You bait the trap with the " + ItemDefinitions.getDefs(bait).getName().toLowerCase() + ".");
 		return true;
 	}
 

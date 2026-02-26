@@ -2,11 +2,11 @@ package com.rs.game.content.quests.death_plateau.objects
 
 import com.rs.engine.cutscenekt.cutscene
 import com.rs.engine.dialogue.HeadE.*
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.game.content.quests.death_plateau.utils.*
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 class SabbotCaveEnter(player: Player) {
     init {

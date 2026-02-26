@@ -5,9 +5,9 @@ import com.rs.game.World.sendObjectAnimation
 import com.rs.game.content.skills.agility.Agility
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.async.schedule
-import com.rs.lib.Constants
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Tile
+import org.darkan.core.Constants
+import org.darkan.core.model.Animation
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import kotlin.math.min
@@ -29,10 +29,10 @@ fun mapWildernessAgility() {
     onObjectClick(65365, 65367) { (player, obj) ->
         if (obj.id == 65365 && !Agility.hasLevel(player, 52)) return@onObjectClick
 
-        val targetTile = if (obj.id == 65365) Tile.of(obj.x, 3931, obj.plane) else Tile.of(obj.x + 1, 3915, obj.plane)
+        val targetTile = if (obj.id == 65365) Tile.of(obj.x, 3931, obj.level) else Tile.of(obj.x + 1, 3915, obj.level)
         val initialX = 2998
         val initialY = if (obj.id == 65365) 3916 else 3931
-        val initialTile = Tile.of(initialX, initialY, obj.plane)
+        val initialTile = Tile.of(initialX, initialY, obj.level)
         val westSide = Tile.of(2995, 3923, 0)
         val eastSide = Tile.of(3001, 3924, 0)
 
@@ -164,7 +164,7 @@ fun mapWildernessAgility() {
 
                 val fail = Agility.rollSuccess(player, 150, 250, Agility.WILDERNESS_COURSE, Obstacle.ROPE_SWING.ordinal)
 
-                val toTile = Tile.of(obj.x, if (fail) 3958 else 3955, obj.plane)
+                val toTile = Tile.of(obj.x, if (fail) 3958 else 3955, obj.level)
 
                 if (fail) {
                     player.forceMove(toTile, 30, 90)

@@ -16,11 +16,13 @@
 //
 package com.rs.game.content.skills.dungeoneering;
 
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
+import world.gregs.voidps.cache.definition.data.EnumDefinition;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 public class DungeonResourceShop {
 
@@ -48,7 +50,7 @@ public class DungeonResourceShop {
 			return;
 		int baseMap = CS2MAPS[complexity >= 5 ? 3 : complexity - 2];
 		int slot = (slotId - 2) / 5;
-		EnumDefinitions map = EnumDefinitions.getEnum(baseMap);
+		EnumDefinition map = EnumDefinitions.getEnum(baseMap);
 		if (slot >= map.getSize()) {
 			slot -= map.getSize();
 			map = EnumDefinitions.getEnum(baseMap + 1);
@@ -56,7 +58,7 @@ public class DungeonResourceShop {
 		int item = map.getIntValue(slot);
 		if (item == -1)
 			return;
-		ItemDefinitions def = ItemDefinitions.getDefs(item);
+		ItemDefinition def = ItemDefinitions.getDefs(item);
 		int value = (int) (def.getValue() * def.getDungShopValueMultiplier());
 		if (quantity == -1) {
 			player.sendMessage(def.getName() + ": currently costs " + value + " coins.");
@@ -82,11 +84,11 @@ public class DungeonResourceShop {
 		Item item = player.getInventory().getItem(slotId);
 		if (item == null || itemId != item.getId())
 			return;
-		if (item.getDefinitions().name.contains("key") || item.getDefinitions().name.contains("(b)") || item.getId() == DungeonConstants.RUSTY_COINS || item.getName().toLowerCase().contains("of kinship") || item.getName().toLowerCase().contains("gatestone")) {
+		if (item.getDefinitions().getName().contains("key") || item.getDefinitions().getName().contains("(b)") || item.getId() == DungeonConstants.RUSTY_COINS || item.getName().toLowerCase().contains("of kinship") || item.getName().toLowerCase().contains("gatestone")) {
 			player.sendMessage("You can't sell this item.");
 			return;
 		}
-		ItemDefinitions def = item.getDefinitions();
+		ItemDefinition def = item.getDefinitions();
 
 		int value = (int) ((def.getValue() * def.getDungShopValueMultiplier()) * 0.3D);
 		if (quantity == -1) {

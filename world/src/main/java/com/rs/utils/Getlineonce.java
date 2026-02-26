@@ -16,7 +16,7 @@
 //
 package com.rs.utils;
 
-import com.rs.lib.util.Logger;
+import org.darkan.core.Logger;
 
 import java.util.*;
 

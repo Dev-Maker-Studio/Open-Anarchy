@@ -1,13 +1,13 @@
 package com.rs.game.content.minigames.soulwars
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.content.ItemConstants
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.net.ClientPacket
-import com.rs.lib.util.Utils
+
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onItemOnNpc
@@ -67,7 +67,7 @@ fun mapRewardsPlugins() {
 
     onButtonClick(276) { (player, _, componentId, _, _, packet) ->
         when(packet) {
-            ClientPacket.IF_OP1 -> {
+            1 -> {
                 when (componentId) {
                     32, 33, 34, 35, 36, 37, 38, 39 -> COMP_TO_SKILL[componentId]?.let { player.sendMessage("You will receive ${Utils.formatNumber(getXpPerZeal(player.skills.getLevelForXp(it), it))} ${Skills.SKILL_NAME[it]} experience per Zeal exchanged.") }
                     24, 25, 26, 27 -> COMP_TO_CHARM[componentId]?.let { (charmId, cost) ->
@@ -79,7 +79,7 @@ fun mapRewardsPlugins() {
                 }
                 return@onButtonClick
             }
-            ClientPacket.IF_OP2, ClientPacket.IF_OP3, ClientPacket.IF_OP4 -> {
+            2, 3, 4 -> {
                 when (componentId) {
                     32, 33, 34, 35, 36, 37, 38, 39 -> COMP_TO_SKILL[componentId]?.let { buyXp(player, it, packet) }
                     24, 25, 26, 27 -> COMP_TO_CHARM[componentId]?.let { (charmId, cost) ->
@@ -161,10 +161,10 @@ fun mapRewardsPlugins() {
     }
 }
 
-fun buyXp(player: Player, skillId: Int, packet: ClientPacket) {
+fun buyXp(player: Player, skillId: Int, packet: Int) {
     val zealCost = when(packet) {
-        ClientPacket.IF_OP3 -> 10
-        ClientPacket.IF_OP4 -> 100
+        3 -> 10
+        4 -> 100
         else -> 1
     }
     if (player.soulWarsZeal < zealCost) {

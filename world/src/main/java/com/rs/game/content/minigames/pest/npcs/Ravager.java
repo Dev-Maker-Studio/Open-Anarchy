@@ -17,7 +17,7 @@
 package com.rs.game.content.minigames.pest.npcs;
 
 import com.rs.game.content.minigames.pest.PestControl;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class Ravager extends PestMonsters {
 

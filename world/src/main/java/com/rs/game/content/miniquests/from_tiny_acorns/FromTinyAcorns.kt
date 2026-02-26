@@ -13,6 +13,7 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
+import com.rs.utils.withinArea
 
 @ServerStartupEvent
 fun mapFromTinyAcorns() {

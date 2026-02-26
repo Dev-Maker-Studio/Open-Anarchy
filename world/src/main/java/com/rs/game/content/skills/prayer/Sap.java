@@ -21,7 +21,7 @@ import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.util.GenericAttribMap;
+import org.darkan.core.model.AttribMap;
 import java.util.*;
 
 
@@ -103,7 +103,7 @@ public class Sap {
 		String timerKey = SAP_TIMER_PREFIX + statId;
 		String procKey = SAP_PROC_PREFIX + statId;
 
-		GenericAttribMap attribs = target.getTempAttribs();
+		AttribMap attribs = target.getTempAttribs();
 		int attackerIndex = attacker.getIndex();
 
 		Map<Integer, Integer> drainMap = attribs.getO(drainKey);

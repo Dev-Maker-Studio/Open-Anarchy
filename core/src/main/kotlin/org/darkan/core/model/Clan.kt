@@ -44,8 +44,13 @@ object ClanSettingValueSerializer : KSerializer<Any> {
 
 @Serializable
 data class ClanMemberData(
-    var rank: ClanRank = ClanRank.RECRUIT,
+    var rank: ClanRank = ClanRank.NONE,
     val joinDate: Long = System.currentTimeMillis(),
+    var job: Int = 0,
+    var banFromKeep: Boolean = false,
+    var banFromCitadel: Boolean = false,
+    var banFromIsland: Boolean = false,
+    var firstWeek: Boolean = false,
 )
 
 @Serializable
@@ -55,11 +60,46 @@ class Clan(
     val members: MutableMap<String, ClanMemberData> = mutableMapOf(),
     val bannedUsers: MutableSet<String> = mutableSetOf(),
     val settings: MutableMap<String, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
+    val vars: MutableMap<Int, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
     var ccChatRank: ClanRank = ClanRank.NONE,
     var ccKickRank: ClanRank = ClanRank.ADMIN,
+    var motto: String = "",
+    @kotlinx.serialization.Transient var updateBlock: ByteArray? = null,
 ) {
     companion object {
         const val MAX_MEMBERS = 100
         const val MIN_FILLER_SLOTS = 5
+    }
+
+    fun getVar(id: Int): Any = vars.getOrDefault(id, 0)
+    fun setVar(id: Int, value: Any) { vars[id] = value }
+    fun setVar(clanVar: ClanVar, value: Any) { vars[clanVar.id] = value }
+
+    fun getSetting(setting: ClanSetting): Any = settings.getOrDefault(setting.name, setting.defaultValue)
+    fun setSetting(setting: ClanSetting, value: Any) { settings[setting.name] = value }
+
+    fun hasPermissions(username: String, minRank: ClanRank): Boolean {
+        val data = members[username] ?: return false
+        return data.rank.ordinal >= minRank.ordinal
+    }
+
+    fun getRank(username: String): ClanRank = members[username]?.rank ?: ClanRank.NONE
+
+    fun getMotifTopIcon(): Int = (getSetting(ClanSetting.MOTIF_TOP_ICON) as? Number)?.toInt() ?: 0
+    fun getMotifBottomIcon(): Int = (getSetting(ClanSetting.MOTIF_BOTTOM_ICON) as? Number)?.toInt() ?: 0
+    fun getMotifTextures(): IntArray = intArrayOf(getMotifTopIcon(), getMotifBottomIcon())
+    fun getMotifColors(): IntArray = intArrayOf(
+        (getSetting(ClanSetting.MOTIF_PRIMARY_COLOR) as? Number)?.toInt() ?: 0,
+        (getSetting(ClanSetting.MOTIF_SECONDARY_COLOR) as? Number)?.toInt() ?: 0,
+        (getSetting(ClanSetting.MOTIF_TOP_COLOR) as? Number)?.toInt() ?: 0,
+        (getSetting(ClanSetting.MOTIF_BOTTOM_COLOR) as? Number)?.toInt() ?: 0,
+    )
+    fun setMotifColor(index: Int, color: Int) {
+        when (index) {
+            0 -> setSetting(ClanSetting.MOTIF_PRIMARY_COLOR, color)
+            1 -> setSetting(ClanSetting.MOTIF_SECONDARY_COLOR, color)
+            2 -> setSetting(ClanSetting.MOTIF_TOP_COLOR, color)
+            3 -> setSetting(ClanSetting.MOTIF_BOTTOM_COLOR, color)
+        }
     }
 }

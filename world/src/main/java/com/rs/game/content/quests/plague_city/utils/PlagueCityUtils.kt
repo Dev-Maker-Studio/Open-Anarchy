@@ -2,7 +2,7 @@ package com.rs.game.content.quests.plague_city.utils
 
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.game.World.removeObject
 import com.rs.game.World.spawnObject
@@ -14,9 +14,11 @@ import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Animation
+import world.gregs.voidps.type.Tile
 import com.rs.utils.Ticks
+import com.rs.utils.defs
+import com.rs.utils.emoteGameTicks
 
 class PlagueCityUtils {
 
@@ -31,7 +33,7 @@ class PlagueCityUtils {
             GAS_MASK_WARDROBE[1] -> {
                 if (option == "Close") {
                     player.anim(OPEN_WARDROBE_ANIM)
-                    obj.setId(GAS_MASK_WARDROBE[0])
+                    obj.changeId(GAS_MASK_WARDROBE[0])
                 }
                 if (option == "Search") {
                     if (player.questManager.getStage(Quest.PLAGUE_CITY) >= STAGE_RECEIVED_GAS_MASK) {
@@ -106,7 +108,7 @@ class PlagueCityUtils {
     fun handleSewerGrill(player: Player, attachingRope: Boolean) {
         if (attachingRope) {
             if (player.questManager.getStage(Quest.PLAGUE_CITY) == STAGE_NEED_HELP_WITH_GRILL) {
-                player.walkToAndExecute(Tile.of(ROPE_ATTACH_TILE)) {
+                player.walkToAndExecute(ROPE_ATTACH_TILE) {
                     player.schedule {
                         player.lock()
                         player.faceDir(Direction.SOUTH)
@@ -156,7 +158,7 @@ class PlagueCityUtils {
             if (isWearingGasMask(player)) {
                 handleEnteringSewerPipe(player)
             } else {
-                player.faceTile(Tile.of(EDMOND_SEWER_SPAWN_LOC))
+                player.faceTile(EDMOND_SEWER_SPAWN_LOC)
                 player.npcDialogue(EDMOND_BELOW_GROUND, WORRIED, "I can't let you enter the city without your gasmask on.")
             }
         }
@@ -176,16 +178,16 @@ class PlagueCityUtils {
     }
 
     fun handleManhole(player: Player, obj: GameObject, option: String) {
-        val openedCover = GameObject(obj.id + 2, obj.type, obj.rotation, obj.x, obj.y - 1, obj.plane)
+        val openedCover = GameObject(obj.id + 2, obj.type, obj.rotation, obj.x, obj.y - 1, obj.level)
         when (option) {
 
             "Open" -> {
                 player.faceObject(obj)
-                obj.setId(obj.id + 1)
+                obj.changeId(obj.id + 1)
                 spawnObject(openedCover)
                 player.soundEffect(OPEN_MANHOLE_SOUND, false)
                 WorldTasks.schedule (Ticks.fromSeconds(30)) {
-                    obj.setId(obj.id - 1)
+                    obj.changeId(obj.id - 1)
                     removeObject(openedCover)
                 }
             }
@@ -277,12 +279,12 @@ class PlagueCityUtils {
     }
 
     fun isInWestArdougne(tile: Tile): Boolean {
-        for (range in WEST_ARDOUGNE_RANGES) if (tile.x() >= range[0] && tile.x() <= range[1] && tile.y() >= range[2] && tile.y() <= range[3]) return true
+        for (range in WEST_ARDOUGNE_RANGES) if (tile.x >= range[0] && tile.x <= range[1] && tile.y >= range[2] && tile.y <= range[3]) return true
         return false
     }
 
     fun isAtEastDoor(tile: Tile): Boolean {
-        for (range in SOUTH_EAST_HOUSE_EAST_DOOR) if (tile.x() >= range[0] && tile.x() <= range[1] && tile.y() >= range[2] && tile.y() <= range[3]) return true
+        for (range in SOUTH_EAST_HOUSE_EAST_DOOR) if (tile.x >= range[0] && tile.x <= range[1] && tile.y >= range[2] && tile.y <= range[3]) return true
         return false
     }
 

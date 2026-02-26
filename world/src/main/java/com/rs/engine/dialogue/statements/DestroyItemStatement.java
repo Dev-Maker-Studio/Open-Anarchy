@@ -17,7 +17,7 @@
 package com.rs.engine.dialogue.statements;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 public class DestroyItemStatement implements Statement {
 	

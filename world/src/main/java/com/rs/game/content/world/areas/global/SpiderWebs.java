@@ -1,11 +1,12 @@
 package com.rs.game.content.world.areas.global;
 
-import com.rs.cache.loaders.ObjectDefinitions;
+import org.darkan.core.cache.ObjectDefinitions;
+import world.gregs.voidps.cache.definition.data.ObjectDefinition;
 import com.rs.game.World;
 import com.rs.game.content.combat.PlayerCombatKt;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.Ticks;
@@ -15,7 +16,7 @@ public class SpiderWebs {
     public static ObjectClickHandler handleSpiderwebs = new ObjectClickHandler(new Object[] { "Spiderweb", "Web" }, e -> {
         Player player = e.getPlayer();
         GameObject object = e.getObj();
-        ObjectDefinitions objectDef = object.getDefinitions();
+        ObjectDefinition objectDef = object.getDefinitions();
 
         switch (e.getObj().getDefinitions().getName()) {
             case "Spiderweb" -> {

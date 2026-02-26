@@ -1,9 +1,9 @@
 package com.rs.db.collection.logs;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -19,9 +19,9 @@ public class PickupLog {
 	public PickupLog(Player player, GroundItem item) {
 		this.player = player.getUsername();
 		this.tile = item.getTile();
-		this.item = new Item(item);
+		this.item = com.rs.utils.KtExtensionsKt.copyItem(item.getItem());
 		this.itemName = item.getName();
-		this.owner = item.getCreatorUsername();
+		this.owner = item.getOwnerUsername();
 		this.uuid = UUID.randomUUID().toString();
 	}
 

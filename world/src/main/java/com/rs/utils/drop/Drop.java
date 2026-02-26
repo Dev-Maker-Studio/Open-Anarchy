@@ -16,8 +16,8 @@
 //
 package com.rs.utils.drop;
 
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 import com.rs.utils.DropSets;
 
 public class Drop {

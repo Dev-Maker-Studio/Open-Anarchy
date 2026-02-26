@@ -1,6 +1,6 @@
 package com.rs.db.collection.logs;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.ge.GE;
 import com.rs.game.ge.Offer;
 
@@ -21,7 +21,7 @@ public class GELog {
 		Offer buyOffer = offer2.getOfferType() == GE.OfferType.BUY ? offer2 : offer1;
 		from = sellOffer.getOwner();
 		to = buyOffer.getOwner();
-		item = ItemDefinitions.getDefs(sellOffer.getItemId()).name;
+		item = ItemDefinitions.getDefs(sellOffer.getItemId()).getName();
 		itemId = sellOffer.getItemId();
 		this.amount = amount;
 		this.price = price;

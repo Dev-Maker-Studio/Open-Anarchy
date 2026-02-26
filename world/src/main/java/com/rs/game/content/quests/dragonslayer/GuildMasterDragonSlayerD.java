@@ -6,8 +6,8 @@ import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.dialogue.Options;
 import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.GenericAttribMap;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.AttribMap;
 import com.rs.plugin.annotations.PluginEventHandler;
 
 import static com.rs.game.content.quests.dragonslayer.DragonSlayer.*;
@@ -155,7 +155,7 @@ public class GuildMasterDragonSlayerD extends Conversation {
 	}
 
 	private boolean isFinished(Player p) {
-		GenericAttribMap attr = p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER);
+		AttribMap attr = p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER);
 		return attr.getB(KNOWS_MAP_EXISTS_ATTR) && attr.getB(KNOWS_ABOUT_THALZAR_MAP_ATTR) && attr.getB(KNOWS_ABOUT_LOZAR_MAP_ATTR) && attr.getB(KNOWS_ABOUT_MELZAR_MAP_ATTR)
 				&& attr.getB(KNOWS_ABOUT_SHIP_ATTR) && attr.getB(KNOWS_ABOUT_DRAGON_BREATH_ATTR);
 	}

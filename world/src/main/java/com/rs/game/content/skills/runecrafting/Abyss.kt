@@ -9,8 +9,8 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils.random
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils.random
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 

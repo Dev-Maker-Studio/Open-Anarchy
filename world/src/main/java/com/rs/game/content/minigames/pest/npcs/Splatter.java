@@ -23,10 +23,10 @@ import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 public class Splatter extends PestMonsters {
 

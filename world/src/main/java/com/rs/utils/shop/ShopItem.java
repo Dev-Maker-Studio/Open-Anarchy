@@ -16,7 +16,7 @@
 //
 package com.rs.utils.shop;
 
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 public class ShopItem {
 	private Item item;

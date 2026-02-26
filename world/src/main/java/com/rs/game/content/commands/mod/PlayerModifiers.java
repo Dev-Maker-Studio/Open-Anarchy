@@ -19,8 +19,8 @@ package com.rs.game.content.commands.mod;
 import com.rs.engine.command.Commands;
 import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Rights;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Rights;
+import org.darkan.core.Utils;
 import com.rs.net.LobbyCommunicator;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
@@ -52,7 +52,7 @@ public class PlayerModifiers {
 				return;
 			}
 			p.sendMessage("Successfully kicked " + Utils.concat(args) + ".");
-			target.getSession().getChannel().close();
+			target.getSession().close();
 		});
 
 		Commands.add(Rights.MOD, "ban [player name]", "Bans a player for 2 days.", (p, args) -> World.forceGetPlayerByDisplay(Utils.concat(args), target -> {
@@ -61,7 +61,7 @@ public class PlayerModifiers {
                 p.sendMessage("You have banned " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + " for 2 days.");
                 LobbyCommunicator.updatePunishments(target);
                 if (target.hasStarted())
-                    target.getSession().getChannel().close();
+                    target.getSession().close();
             } else
                 p.sendMessage("Unable to find player.");
         }));

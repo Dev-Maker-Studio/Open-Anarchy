@@ -39,7 +39,7 @@ public class NPCClickEvent implements PluginEvent {
 		this.npc = npc;
 		this.opNum = opNum;
 		this.atNPC = atNPC;
-		option = npc.getDefinitions(player).getOption(opNum-1);
+		option = npc.getDefinitions(player).getOptions()[opNum-1];
 	}
 
 	public Player getPlayer() {
@@ -70,7 +70,7 @@ public class NPCClickEvent implements PluginEvent {
 	public PluginHandler<? extends PluginEvent> getMethod() {
 		Map<String, NPCClickHandler> options = HANDLERS.get(getNPC().getId());
 		if (options == null)
-			options = HANDLERS.get(getNPC().getDefinitions().getName(getPlayer().getVars()));
+			options = HANDLERS.get(getNPC().getDefinitions().getName());
 		if (options == null) {
 			options = HANDLERS.get(getOption());
 			if (options != null) {

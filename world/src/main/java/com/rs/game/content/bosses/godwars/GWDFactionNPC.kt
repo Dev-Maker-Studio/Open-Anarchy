@@ -5,7 +5,7 @@ import com.rs.game.content.combat.isMaging
 import com.rs.game.content.combat.isRanging
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 open class GWDFactionNPC(id: Int, tile: Tile, spawned: Boolean, val faction: GodFaction) : NPC(id, tile, spawned) {
     init {

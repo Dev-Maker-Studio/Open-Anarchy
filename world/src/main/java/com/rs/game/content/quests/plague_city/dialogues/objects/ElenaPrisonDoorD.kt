@@ -8,7 +8,7 @@ import com.rs.game.content.quests.plague_city.utils.*
 import com.rs.game.model.entity.player.Player
 
 class ElenaPrisonDoorD (player: Player) {
-    private val elena = World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == ELENA_PRISON }
+    private val elena = World.getNPCsInChunkRange(player.getChunkId(), 1).firstOrNull { it.id == ELENA_PRISON }
     init {
         if (player.questManager.getStage(Quest.PLAGUE_CITY) >= STAGE_GAVE_HANGOVER_CURE) {
             player.startConversation {

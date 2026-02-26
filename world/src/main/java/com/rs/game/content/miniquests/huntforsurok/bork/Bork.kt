@@ -1,6 +1,6 @@
 package com.rs.game.content.miniquests.huntforsurok.bork
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.miniquest.Miniquest
@@ -17,9 +17,9 @@ import com.rs.game.model.entity.npc.combat.CombatScript.*
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
@@ -34,7 +34,7 @@ class Bork(id: Int, tile: Tile, spawned: Boolean) : NPC(id, tile, spawned) {
 	override fun blocksOtherNpcs(): Boolean = false
 
 	override fun sendDeath(source: Entity?) {
-		World.getNPCsInChunkRange(source?.chunkId ?: return, 2)
+		World.getNPCsInChunkRange(source?.getChunkId() ?: return, 2)
             .filter { it.id == 7135 }
             .forEach { it.sendDeath(source) }
 		resetWalkSteps()

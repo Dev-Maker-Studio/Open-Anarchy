@@ -2,7 +2,7 @@ package com.rs.game.content.items
 
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
+import org.darkan.core.Constants
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemEquip

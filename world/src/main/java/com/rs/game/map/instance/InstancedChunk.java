@@ -16,17 +16,17 @@
 //
 package com.rs.game.map.instance;
 
-import com.rs.cache.loaders.map.ClipFlag;
-import com.rs.engine.pathfinder.Direction;
-import com.rs.engine.pathfinder.WorldCollision;
+import org.darkan.core.map.ClipFlag;
+import org.darkan.core.map.pathfinder.Direction;
+import org.darkan.core.map.WorldCollision;
 import com.rs.game.map.Chunk;
 import com.rs.game.map.ChunkManager;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
-import com.rs.lib.game.WorldObject;
-import com.rs.lib.util.MapUtils;
-import com.rs.lib.util.MapUtils.Structure;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.WorldObject;
+import org.darkan.core.util.MapUtils;
+import org.darkan.core.util.Structure;
 import com.rs.utils.Areas;
 import com.rs.utils.spawns.NPCSpawn;
 import com.rs.utils.spawns.NPCSpawns;
@@ -73,7 +73,7 @@ public class InstancedChunk extends Chunk {
 				Tile original = Tile.of(getOriginalBaseX()+x, getOriginalBaseY()+y, fromPlane);
 				int[] coords = transform(x, y, rotation);
 				Tile toTile = Tile.of(getBaseX()+coords[0], getBaseY()+coords[1], getPlane());
-				WorldCollision.addFlag(toTile, WorldCollision.getFlags(original) & (ClipFlag.PFBW_FLOOR.flag | ClipFlag.UNDER_ROOF.flag));
+				WorldCollision.addFlag(toTile, WorldCollision.getFlags(original) & (ClipFlag.PFBW_FLOOR.getFlag() | ClipFlag.UNDER_ROOF.getFlag()));
 			}
 		}
 		for (WorldObject orig : realChunk.getBaseObjects()) {
@@ -87,7 +87,7 @@ public class InstancedChunk extends Chunk {
 			List<NPCSpawn> npcSpawns = NPCSpawns.getSpawnsForChunk(getFromChunkId());
 			if (npcSpawns != null) {
 				for (NPCSpawn npcSpawn : npcSpawns) {
-					int[] coords = InstancedChunk.transform(npcSpawn.getTile().getXInChunk(), npcSpawn.getTile().getYInChunk(), rotation, npcSpawn.getDefs().size, npcSpawn.getDefs().size, 0);
+					int[] coords = InstancedChunk.transform(npcSpawn.getTile().getXInChunk(), npcSpawn.getTile().getYInChunk(), rotation, npcSpawn.getDefs().getSize(), npcSpawn.getDefs().getSize(), 0);
 					npcSpawn.spawnAtCoords(Tile.of(getBaseX() + coords[0], getBaseY() + coords[1], getPlane()), npcSpawn.getDir() == null ? null : Direction.rotateClockwise(npcSpawn.getDir(), rotation*2));
 				}
 			}

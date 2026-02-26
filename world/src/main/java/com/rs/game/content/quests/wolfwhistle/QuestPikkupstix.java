@@ -8,8 +8,8 @@ import com.rs.engine.quest.Quest;
 import com.rs.game.content.world.areas.taverley.npcs.Pikkupstix;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
 import com.rs.plugin.annotations.PluginEventHandler;
 
 import static com.rs.game.content.quests.wolfwhistle.WolfWhistle.*;

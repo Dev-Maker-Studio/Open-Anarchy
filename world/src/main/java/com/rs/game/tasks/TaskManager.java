@@ -1,6 +1,6 @@
 package com.rs.game.tasks;
 
-import com.rs.lib.util.Logger;
+import org.darkan.core.Logger;
 import com.rs.utils.Ticks;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;

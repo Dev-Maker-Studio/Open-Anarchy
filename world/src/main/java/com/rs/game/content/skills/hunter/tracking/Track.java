@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.hunter.tracking;
 
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public enum Track {
 	PISC_1(new Burrow(19439, Tile.of(2353, 3595, 0),

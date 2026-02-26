@@ -4,7 +4,7 @@ import com.rs.game.content.Effect
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.actions.PlayerAction
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.utils.Ticks
 
 class DreamAction(private val startTile: Tile) : PlayerAction() {

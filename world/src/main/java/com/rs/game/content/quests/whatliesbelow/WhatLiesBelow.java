@@ -11,7 +11,7 @@ import com.rs.game.World;
 import com.rs.game.content.world.areas.varrock.npcs.Zaff;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.ItemOnItemHandler;
@@ -125,10 +125,10 @@ public class WhatLiesBelow extends QuestOutline {
         Item folder = e.getUsedWith(11008);
         e.getPlayer().getInventory().deleteItem(11008, 1);
         if (folder.getId() == 11003) {
-            folder.setId(11006);
+            folder.changeId(11006);
             folder.addMetaData("wlbPapersAdded", 1);
         } else if (folder.incMetaDataI("wlbPapersAdded") >= 5) {
-            folder.setId(11007);
+            folder.changeId(11007);
             folder.deleteMetaData();
             e.getPlayer().simpleDialogue("You have added all the pages to the folder that Rat gave to you. You should take this folder back to Rat.");
         } else

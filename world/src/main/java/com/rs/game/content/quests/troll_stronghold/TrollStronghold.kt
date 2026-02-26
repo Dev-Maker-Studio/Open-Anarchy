@@ -1,4 +1,5 @@
 package com.rs.game.content.quests.troll_stronghold
+import org.darkan.core.Utils.strikeThroughIf
 
 import com.rs.engine.quest.Quest
 import com.rs.engine.quest.QuestHandler
@@ -10,7 +11,7 @@ import com.rs.game.content.quests.troll_stronghold.instances.npcs.*
 import com.rs.game.content.quests.troll_stronghold.utils.*
 import com.rs.game.content.world.areas.trollheim.npcs.Eadgar
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 

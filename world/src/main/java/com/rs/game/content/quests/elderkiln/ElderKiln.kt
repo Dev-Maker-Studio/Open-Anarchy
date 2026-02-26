@@ -5,7 +5,7 @@ import com.rs.engine.quest.QuestHandler
 import com.rs.engine.quest.QuestOutline
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onLogin
 
@@ -46,7 +46,7 @@ class ElderKiln : QuestOutline() {
     override fun complete(player: Player) {
         player.skills.addXpQuest(Skills.MAGIC, 50000.0)
         player.skills.addXpQuest(Skills.AGILITY, 30000.0)
-        player.inventory.addItemDrop(Item(23643, 1).addMetaData("tzhaarCharges", 4000))
+        player.inventory.addItemDrop(Item(23643, 1).apply { addMetaData("tzhaarCharges", 4000) })
         player.inventory.addItemDrop(23645, 1)
         sendQuestCompleteInterface(player, 23643)
     }

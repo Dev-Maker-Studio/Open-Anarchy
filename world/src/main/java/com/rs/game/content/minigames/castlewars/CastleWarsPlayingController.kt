@@ -1,6 +1,6 @@
 package com.rs.game.content.minigames.castlewars
 
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World.spawnObject
 import com.rs.game.content.skills.magic.TeleType
 import com.rs.game.model.entity.Entity
@@ -15,9 +15,9 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.net.ClientPacket
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+
 
 class CastleWarsPlayingController(private val team: Int) : Controller() {
 
@@ -42,7 +42,7 @@ class CastleWarsPlayingController(private val team: Int) : Controller() {
         return true
     }
 
-    override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, packet: ClientPacket?): Boolean {
+    override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, packet: Int): Boolean {
         when (interfaceId) {
             387 -> {
                 when (componentId) {
@@ -259,37 +259,37 @@ class CastleWarsPlayingController(private val team: Int) : Controller() {
             player.useStairs(828, Tile.of(2369, 3126, 0), 1, 2)
             return false
         } else if (id == 4415) {
-            if (obj.x == 2417 && obj.y == 3075 && obj.plane == 1) player.useStairs(-1, Tile.of(2417, 3078, 0), 0, 1)
-            else if (obj.x == 2419 && obj.y == 3080 && obj.plane == 1) player.useStairs(-1, Tile.of(2419, 3077, 0), 0, 1)
-            else if (obj.x == 2430 && obj.y == 3081 && obj.plane == 2) player.useStairs(-1, Tile.of(2427, 3081, 1), 0, 1)
-            else if (obj.x == 2425 && obj.y == 3074 && obj.plane == 3) player.useStairs(-1, Tile.of(2425, 3077, 2), 0, 1)
-            else if (obj.x == 2380 && obj.y == 3127 && obj.plane == 1) player.useStairs(-1, Tile.of(2380, 3130, 0), 0, 1)
-            else if (obj.x == 2382 && obj.y == 3132 && obj.plane == 1) player.useStairs(-1, Tile.of(2382, 3129, 0), 0, 1)
-            else if (obj.x == 2369 && obj.y == 3126 && obj.plane == 2) player.useStairs(-1, Tile.of(2372, 3126, 1), 0, 1)
-            else if (obj.x == 2374 && obj.y == 3133 && obj.plane == 3) player.useStairs(-1, Tile.of(2374, 3130, 2), 0, 1)
+            if (obj.x == 2417 && obj.y == 3075 && obj.level == 1) player.useStairs(-1, Tile.of(2417, 3078, 0), 0, 1)
+            else if (obj.x == 2419 && obj.y == 3080 && obj.level == 1) player.useStairs(-1, Tile.of(2419, 3077, 0), 0, 1)
+            else if (obj.x == 2430 && obj.y == 3081 && obj.level == 2) player.useStairs(-1, Tile.of(2427, 3081, 1), 0, 1)
+            else if (obj.x == 2425 && obj.y == 3074 && obj.level == 3) player.useStairs(-1, Tile.of(2425, 3077, 2), 0, 1)
+            else if (obj.x == 2380 && obj.y == 3127 && obj.level == 1) player.useStairs(-1, Tile.of(2380, 3130, 0), 0, 1)
+            else if (obj.x == 2382 && obj.y == 3132 && obj.level == 1) player.useStairs(-1, Tile.of(2382, 3129, 0), 0, 1)
+            else if (obj.x == 2369 && obj.y == 3126 && obj.level == 2) player.useStairs(-1, Tile.of(2372, 3126, 1), 0, 1)
+            else if (obj.x == 2374 && obj.y == 3133 && obj.level == 3) player.useStairs(-1, Tile.of(2374, 3130, 2), 0, 1)
             return false
         } else if (id == 36481) {
             player.useStairs(-1, Tile.of(2417, 3075, 0), 0, 1)
             return false
-        } else if (id == 36495 && obj.plane == 0) {
+        } else if (id == 36495 && obj.level == 0) {
             player.useStairs(-1, Tile.of(2420, 3080, 1), 0, 1)
             return false
-        } else if (id == 36480 && obj.plane == 1) {
+        } else if (id == 36480 && obj.level == 1) {
             player.useStairs(-1, Tile.of(2430, 3080, 2), 0, 1)
             return false
-        } else if (id == 36484 && obj.plane == 2) {
+        } else if (id == 36484 && obj.level == 2) {
             player.useStairs(-1, Tile.of(2426, 3074, 3), 0, 1)
             return false
-        } else if (id == 36532 && obj.plane == 0) {
+        } else if (id == 36532 && obj.level == 0) {
             player.useStairs(-1, Tile.of(2379, 3127, 1), 0, 1)
             return false
         } else if (id == 36540) {
             player.useStairs(-1, Tile.of(2383, 3132, 0), 0, 1)
             return false
-        } else if (id == 36521 && obj.plane == 1) {
+        } else if (id == 36521 && obj.level == 1) {
             player.useStairs(-1, Tile.of(2369, 3127, 2), 0, 1)
             return false
-        } else if (id == 36523 && obj.plane == 2) {
+        } else if (id == 36523 && obj.level == 2) {
             player.useStairs(-1, Tile.of(2373, 3133, 3), 0, 1)
             return false
         } else if (id == 36644) {
@@ -313,7 +313,7 @@ class CastleWarsPlayingController(private val team: Int) : Controller() {
                 for (player in players)
                     if (player.withinDistance(obj.tile, 1))
                         player.applyHit(Hit(player, player.hitpoints, HitLook.TRUE_DAMAGE))
-            spawnObject(GameObject(4437, obj.type, obj.rotation, obj.x, obj.y, obj.plane))
+            spawnObject(GameObject(4437, obj.type, obj.rotation, obj.x, obj.y, obj.level))
         }
         return true
     }

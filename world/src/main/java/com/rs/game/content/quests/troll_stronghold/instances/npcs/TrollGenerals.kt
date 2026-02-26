@@ -4,8 +4,8 @@ import com.rs.engine.quest.Quest
 import com.rs.game.content.quests.troll_stronghold.utils.*
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 
 class TrollGenerals(id: Int, tile: Tile) : NPC(id, tile) {
     override fun drop(killer: Player) {

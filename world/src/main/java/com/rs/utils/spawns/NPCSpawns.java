@@ -17,11 +17,11 @@
 package com.rs.utils.spawns;
 
 import com.google.gson.JsonIOException;
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.game.World;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
+import org.darkan.core.JsonFileManager;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -53,7 +53,7 @@ public final class NPCSpawns {
 			World.spawnNPC(id, tile);
 			try {
 				JsonFileManager.saveJsonFile(ADDED_SPAWNS, file);
-			} catch (IOException e) {
+			} catch (Exception e) {
 				return false;
 			}
 			return true;

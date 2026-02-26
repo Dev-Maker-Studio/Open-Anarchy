@@ -17,7 +17,7 @@
 package com.rs.plugin.events;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.handlers.PluginHandler;
 
 import java.util.HashMap;

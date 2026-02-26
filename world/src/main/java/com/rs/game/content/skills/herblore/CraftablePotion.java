@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.herblore;
 
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 import java.util.HashMap;
 import java.util.Map;

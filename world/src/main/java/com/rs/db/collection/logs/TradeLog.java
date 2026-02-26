@@ -1,7 +1,7 @@
 package com.rs.db.collection.logs;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 import java.util.List;
 import java.util.Objects;

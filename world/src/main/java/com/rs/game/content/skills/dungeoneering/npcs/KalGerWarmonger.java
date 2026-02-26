@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.npcs;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.combat.CombatStyle;
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
@@ -34,10 +34,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 import java.util.List;
 
@@ -189,7 +189,7 @@ public class KalGerWarmonger extends DungeonBoss {
 			int selectedWeapon = WEAPONS[type - 1];
 			outer: for (int x = 0; x < 16; x++)
 				for (int y = 0; y < 16; y++) {
-					GameObject next = getManager().getObjectWithType(getReference(), ObjectType.SCENERY_INTERACT, x, y);
+					GameObject next = getManager().getObjectWithType(getReference(), ObjectShape.SCENERY_INTERACT, x, y);
 					if (next != null && next.getId() == selectedWeapon) {
 						nextWeapon = next;
 						break outer;

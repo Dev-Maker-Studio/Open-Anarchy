@@ -2,7 +2,7 @@ package com.rs.game.content.bosses.godwars
 
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 open class GWDBoss(id: Int, tile: Tile, spawned: Boolean) : NPC(id, tile, spawned) {
     private var minions: List<GWDMinion>? = null

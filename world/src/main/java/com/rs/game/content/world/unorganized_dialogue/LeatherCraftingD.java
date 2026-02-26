@@ -16,16 +16,16 @@
 //
 package com.rs.game.content.world.unorganized_dialogue;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.statements.MakeXStatement;
 import com.rs.engine.dialogue.statements.MakeXStatement.MakeXType;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
 
 public class LeatherCraftingD extends Conversation {
 
@@ -91,9 +91,9 @@ public class LeatherCraftingD extends Conversation {
 		for (int i = 0; i < ids.length; i++) {
 			ids[i] = POTENTIAL_PRODUCTS[index][i].getId();
 			if (player.getSkills().getLevel(Constants.CRAFTING) < LEVELS[index][i])
-				names[i] = "<col=ff0000>" + ItemDefinitions.getDefs(ids[i]).name + "<br><col=ff0000>Level " + LEVELS[index][i];
+				names[i] = "<col=ff0000>" + ItemDefinitions.getDefs(ids[i]).getName() + "<br><col=ff0000>Level " + LEVELS[index][i];
 			else
-				names[i] = ItemDefinitions.getDefs(ids[i]).name;
+				names[i] = ItemDefinitions.getDefs(ids[i]).getName();
 		}
 		
 		Dialogue makeX = addNext(new MakeXStatement(MakeXType.MAKE, 28, "Choose how many you wish to make,<br>then click on the item to begin.", ids, names));

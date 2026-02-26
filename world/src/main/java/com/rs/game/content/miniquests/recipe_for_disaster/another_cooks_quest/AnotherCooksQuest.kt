@@ -10,8 +10,8 @@ import com.rs.engine.quest.QuestOutline
 import com.rs.game.content.miniquests.recipe_for_disaster.another_cooks_quest.cutscene.AnotherCooksQuestCutscene
 import com.rs.game.content.world.doors.Doors
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils.strikeThroughIf
+import org.darkan.core.model.Item
+import org.darkan.core.Utils.strikeThroughIf
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnItem
 import com.rs.plugin.kts.onObjectClick

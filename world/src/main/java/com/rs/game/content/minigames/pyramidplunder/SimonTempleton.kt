@@ -25,8 +25,8 @@ import com.rs.game.content.minigames.pyramidplunder.ArtefactTiers.TIER_JEWELED
 import com.rs.game.content.minigames.pyramidplunder.ArtefactTiers.TIER_POTTERY
 import com.rs.game.content.minigames.pyramidplunder.ArtefactTiers.TIER_STONE
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnNpc
 import com.rs.plugin.kts.onNpcClick

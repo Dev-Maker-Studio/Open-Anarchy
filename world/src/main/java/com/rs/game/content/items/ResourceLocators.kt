@@ -3,8 +3,8 @@ package com.rs.game.content.items
 import com.rs.game.content.skills.magic.Magic
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Inventory
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onItemClick

@@ -17,15 +17,16 @@
 package com.rs.game.content;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.engine.quest.Quest;
 import com.rs.game.content.achievements.SetReward;
 import com.rs.game.content.world.unorganized_dialogue.RepairStandD;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
@@ -354,12 +355,15 @@ public class ItemConstants {
 				player.sendMessage("You need to have completed all quests to be able to wear this.");
 				return false;
 			}
-		Quest quest = Quest.forSlot(item.getDefinitions().getWieldQuestReq());
-		if (quest != null) {
-			if (!player.isQuestComplete(quest, "to wear this."))
-				return false;
+		Map<Integer, Integer> questReqs = item.getDefinitions().getWieldQuestReq();
+		for (int questSlotId : questReqs.keySet()) {
+			Quest quest = Quest.forSlot(questSlotId);
+			if (quest != null) {
+				if (!player.isQuestComplete(quest, "to wear this."))
+					return false;
+			}
 		}
-		HashMap<Integer, Integer> requirements = item.getDefinitions().getWearingSkillRequiriments();
+		Map<Integer, Integer> requirements = item.getDefinitions().getWearingSkillRequiriments();
 		boolean hasRequirements = true;
 		if (requirements != null)
 			for (int skillId : requirements.keySet()) {
@@ -409,9 +413,9 @@ public class ItemConstants {
     }
 
 	public static int noteIfPossible(int originalId) {
-		ItemDefinitions def = ItemDefinitions.getDefs(originalId);
-		if (def.noted || def.certId == -1) return originalId;
-		return def.certId;
+		ItemDefinition def = ItemDefinitions.getDefs(originalId);
+		if (def.isNoted() || def.getNoteId() == -1) return originalId;
+		return def.getNoteId();
 	}
 
 	public static boolean isTradeable(Item item) {

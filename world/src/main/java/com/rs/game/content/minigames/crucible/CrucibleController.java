@@ -9,14 +9,15 @@ import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.MapUtils;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import com.rs.utils.MapUtils;
+import com.rs.utils.MapUtils.Area;
+import org.darkan.core.Utils;
 
 public class CrucibleController extends Controller {
-    private static final MapUtils.Area[] SAFE_ZONES = new MapUtils.Area[] {
+    private static final Area[] SAFE_ZONES = new Area[] {
             MapUtils.getArea(3314,6136,3322,6149),
             MapUtils.getArea(3258,6196,3269,6203),
             MapUtils.getArea(3204,6139,3212,6149),
@@ -206,7 +207,7 @@ public class CrucibleController extends Controller {
     }
 
     private boolean inSafeArea(Player player) {
-        for (MapUtils.Area area : SAFE_ZONES)
+        for (Area area : SAFE_ZONES)
             if (area.within(player.getTile()))
                 return true;
         return false;

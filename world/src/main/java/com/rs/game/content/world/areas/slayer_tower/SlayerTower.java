@@ -1,11 +1,11 @@
 package com.rs.game.content.world.areas.slayer_tower;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.world.doors.Doors;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.plugin.handlers.PlayerStepHandler;
@@ -18,8 +18,8 @@ public class SlayerTower {
         GameObject door = World.getObjectWithId(Tile.of(3428, 3535, 0), 4487);
         if (door != null)
             Doors.handleDoubleDoor(e.getPlayer(), door);
-        World.sendObjectAnimation(World.getObject(Tile.of(3426, 3534, 0), ObjectType.SCENERY_INTERACT), new Animation(1533));
-        World.sendObjectAnimation(World.getObject(Tile.of(3430, 3534, 0), ObjectType.SCENERY_INTERACT), new Animation(1533));
+        World.sendObjectAnimation(World.getObject(Tile.of(3426, 3534, 0), ObjectShape.SCENERY_INTERACT), new Animation(1533));
+        World.sendObjectAnimation(World.getObject(Tile.of(3430, 3534, 0), ObjectShape.SCENERY_INTERACT), new Animation(1533));
     });
 
     public static ObjectClickHandler slayerTowerStairs = new ObjectClickHandler(new Object[] { 4493, 4494, 4495, 4496 }, e -> {

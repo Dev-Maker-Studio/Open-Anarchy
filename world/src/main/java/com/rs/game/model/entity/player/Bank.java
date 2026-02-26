@@ -17,18 +17,19 @@
 package com.rs.game.model.entity.player;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
-import com.rs.cache.loaders.interfaces.IFEvents.UseFlag;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
+import org.darkan.core.model.IFEvents;
+import org.darkan.core.model.UseFlag;
 import com.rs.game.content.Potion;
 import com.rs.game.content.skills.cooking.Foods;
 import com.rs.game.content.skills.runecrafting.Runecrafting;
 import com.rs.game.content.skills.summoning.Familiar;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+
+import org.darkan.core.Utils;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.events.ItemAddedToBankEvent;
@@ -79,17 +80,17 @@ public class Bank {
 
 	public static ButtonClickHandler handleDepositBox = new ButtonClickHandler(11, e -> {
 		if (e.getComponentId() == 17) {
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				e.getPlayer().getBank().depositItem(e.getSlotId(), 1, false);
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				e.getPlayer().getBank().depositItem(e.getSlotId(), 5, false);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				e.getPlayer().getBank().depositItem(e.getSlotId(), 10, false);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				e.getPlayer().getBank().depositItem(e.getSlotId(), Integer.MAX_VALUE, false);
-			else if (e.getPacket() == ClientPacket.IF_OP5)
+			else if (e.getOpNum() == 5)
 				e.getPlayer().sendInputInteger("How many would you like to deposit?", (integer) -> e.getPlayer().getBank().depositItem(e.getSlotId(), integer, true));
-			else if (e.getPacket() == ClientPacket.IF_OP6)
+			else if (e.getOpNum() == 6)
 				e.getPlayer().getInventory().sendExamine(e.getSlotId());
 		} else if (e.getComponentId() == 18)
 			e.getPlayer().getBank().depositAllInventory(false);
@@ -133,20 +134,20 @@ public class Bank {
 			});
 		} else if (e.getComponentId() >= 46 && e.getComponentId() <= 64) {
 			int tabId = 9 - ((e.getComponentId() - 46) / 2);
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				e.getPlayer().getBank().setCurrentTab(tabId);
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				e.getPlayer().getBank().collapse(tabId);
 		} else if (e.getComponentId() == 95) {
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				e.getPlayer().getBank().withdrawItem(e.getSlotId(), 1);
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				e.getPlayer().getBank().withdrawItem(e.getSlotId(), 5);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				e.getPlayer().getBank().withdrawItem(e.getSlotId(), 10);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				e.getPlayer().getBank().withdrawLastAmount(e.getSlotId());
-			else if (e.getPacket() == ClientPacket.IF_OP5)
+			else if (e.getOpNum() == 5)
 				e.getPlayer().sendInputInteger("How many would you like to withdraw?", amount -> {
 					if (amount < 0)
 						return;
@@ -154,11 +155,11 @@ public class Bank {
 					e.getPlayer().getBank().refreshLastX();
 					e.getPlayer().getBank().withdrawItem(e.getSlotId(), amount);
 				});
-			else if (e.getPacket() == ClientPacket.IF_OP6)
+			else if (e.getOpNum() == 6)
 				e.getPlayer().getBank().withdrawItem(e.getSlotId(), Integer.MAX_VALUE);
-			else if (e.getPacket() == ClientPacket.IF_OP7)
+			else if (e.getOpNum() == 7)
 				e.getPlayer().getBank().withdrawItemButOne(e.getSlotId());
-			else if (e.getPacket() == ClientPacket.IF_OP10)
+			else if (e.getOpNum() == 10)
 				e.getPlayer().getBank().sendExamine(e.getSlotId());
 
 		} else if (e.getComponentId() == 119)
@@ -169,15 +170,15 @@ public class Bank {
 		if (e.getPlayer().getTempAttribs().getB("viewingOtherBank"))
 			return;
 		if (e.getComponentId() == 0)
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				e.getPlayer().getBank().depositItem(e.getSlotId(), 1, true);
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				e.getPlayer().getBank().depositItem(e.getSlotId(), 5, true);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				e.getPlayer().getBank().depositItem(e.getSlotId(), 10, true);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				e.getPlayer().getBank().depositLastAmount(e.getSlotId());
-			else if (e.getPacket() == ClientPacket.IF_OP5)
+			else if (e.getOpNum() == 5)
 				e.getPlayer().sendInputInteger("How many would you like to deposit?", amount -> {
 					if (amount < 0)
 						return;
@@ -185,9 +186,9 @@ public class Bank {
 					e.getPlayer().getBank().refreshLastX();
 					e.getPlayer().getBank().depositItem(e.getSlotId(), amount, !e.getPlayer().getInterfaceManager().topOpen(11));
 				});
-			else if (e.getPacket() == ClientPacket.IF_OP6)
+			else if (e.getOpNum() == 6)
 				e.getPlayer().getBank().depositItem(e.getSlotId(), Integer.MAX_VALUE, true);
-			else if (e.getPacket() == ClientPacket.IF_OP8) {
+			else if (e.getOpNum() == 8) {
 				Item item = e.getPlayer().getInventory().getItem(e.getSlotId());
 				if (item == null)
 					return;
@@ -198,10 +199,10 @@ public class Bank {
 					potion.drink(e.getPlayer(), item.getId(), e.getSlotId());
 				else
 					PluginManager.handle(new ItemClickEvent(e.getPlayer(), item, e.getSlotId(), item.getDefinitions().getInventoryOption(1)));
-			} else if (e.getPacket() == ClientPacket.IF_OP10)
+			} else if (e.getOpNum() == 10)
 				e.getPlayer().getInventory().sendExamine(e.getSlotId());
 			else
-				e.getPlayer().sendMessage(e.getPacket().toString());
+				e.getPlayer().sendMessage(String.valueOf(e.getOpNum()));
 	});
 
 	public void removeItem(int id) {
@@ -722,7 +723,7 @@ public class Bank {
 		else
 			item = new Item(item.getId(), quantity, item.getMetaData());
 		boolean noted = false;
-		ItemDefinitions defs = item.getDefinitions();
+		ItemDefinition defs = item.getDefinitions();
 		if (withdrawNotes)
 			if (!defs.isNoted() && defs.getCertId() != -1 && item.getMetaData() == null) {
 				item.setId(defs.getCertId());
@@ -806,7 +807,7 @@ public class Bank {
 	//	}
 
 	private static int unnote(Item item) {
-		ItemDefinitions defs = item.getDefinitions();
+		ItemDefinition defs = item.getDefinitions();
 		int originalId = item.getId();
 		if (defs.isNoted() && defs.getCertId() != -1)
 			item.setId(defs.getCertId());

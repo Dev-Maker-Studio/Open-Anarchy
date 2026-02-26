@@ -16,15 +16,16 @@
 //
 package com.rs.game.content.world;
 
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.EnumDefinition;
 import com.rs.cache.loaders.LoyaltyRewardDefinitions.Reward;
 import com.rs.cache.loaders.LoyaltyRewardDefinitions.Tab;
 import com.rs.cache.loaders.LoyaltyRewardDefinitions.Type;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.EmotesManager.Emote;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.LoginHandler;
@@ -40,7 +41,7 @@ public class LoyaltyShop {
 		refreshOwned(player);
 		refreshFavorite(player);
 		for (Tab tab : Tab.values()) {
-			EnumDefinitions map = EnumDefinitions.getEnum(tab.getCSMapId(player.getAppearance().isMale()));
+			EnumDefinition map = EnumDefinitions.getEnum(tab.getCSMapId(player.getAppearance().isMale()));
 			player.getPackets().setIFRightClickOps(1143, tab.getBuyComponent(), 0, map.getSize(), 0, 1);
 			player.getPackets().setIFRightClickOps(1143, tab.getFavoriteComponent(), 0, map.getSize(), 0, 1);
 		}
@@ -88,7 +89,7 @@ public class LoyaltyShop {
 		}
 		Tab tab = Tab.forId(e.getComponentId());
 		if (tab != null && tab.isBuyComponent(e.getComponentId())) {
-			EnumDefinitions map = EnumDefinitions.getEnum(tab.getCSMapId(e.getPlayer().getAppearance().isMale()));
+			EnumDefinition map = EnumDefinitions.getEnum(tab.getCSMapId(e.getPlayer().getAppearance().isMale()));
 			Reward reward = tab.getReward(e.getSlotId());
 			if (reward != null) {
 				e.getPlayer().getTempAttribs().setO("LoyaltyReward", reward);
@@ -130,7 +131,7 @@ public class LoyaltyShop {
 				} else
 					sendMessage(player, "Not Enough Points", "You need " + reward.getPrice() + " loyalty points to purchase this.");
 			} else
-				sendMessage(player, "Previous Reward Required", "You need to buy " + ItemDefinitions.getDefs(reward.getPreReq()).name + " before purchasing this.");
+				sendMessage(player, "Previous Reward Required", "You need to buy " + ItemDefinitions.getDefs(reward.getPreReq()).getName() + " before purchasing this.");
 			refresh(player);
 		}
 	}

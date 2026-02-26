@@ -16,20 +16,21 @@
 //
 package com.rs.game.model.gameobject;
 
-import com.rs.cache.loaders.ObjectDefinitions;
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.cache.ObjectDefinitions;
+import org.darkan.core.model.ObjectShape;
+import world.gregs.voidps.cache.definition.data.ObjectDefinition;
 import com.rs.game.World;
 import com.rs.game.map.Chunk;
 import com.rs.game.map.ChunkManager;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.TaskManager;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.game.WorldObject;
-import com.rs.lib.util.GenericAttribMap;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.WorldObject;
+import org.darkan.core.model.AttribMap;
 
 public class GameObject extends WorldObject {
-	protected transient GenericAttribMap attribs;
+	protected transient AttribMap attribs;
 
 	public enum RouteType {
 		NORMAL, WALK_ONTO
@@ -43,7 +44,7 @@ public class GameObject extends WorldObject {
 	private transient int idChangeTicks = -1;
 	private final int hashCode;
 
-	public GameObject(int id, ObjectType type, int rotation, Tile tile) {
+	public GameObject(int id, ObjectShape type, int rotation, Tile tile) {
 		super(id, type, rotation, tile);
 		this.originalId = id;
 		this.routeType = World.getRouteType(id);
@@ -57,7 +58,7 @@ public class GameObject extends WorldObject {
 		this.hashCode = genHashCode();
 	}
 
-	public GameObject(int id, ObjectType type, int rotation, int x, int y, int plane) {
+	public GameObject(int id, ObjectShape type, int rotation, int x, int y, int plane) {
 		super(id, type, rotation, x, y, plane);
 		this.originalId = id;
 		this.routeType = World.getRouteType(id);
@@ -66,21 +67,21 @@ public class GameObject extends WorldObject {
 
 	public GameObject(WorldObject object) {
 		super(object);
-		this.originalId = id;
-		this.routeType = World.getRouteType(id);
+		this.originalId = getId();
+		this.routeType = World.getRouteType(getId());
 		this.hashCode = genHashCode();
 	}
 
 	public GameObject(GameObject object) {
 		super(object);
-		this.originalId = id;
+		this.originalId = getId();
 		routeType = object.getRouteType();
 		this.hashCode = genHashCode();
 	}
 
 	public GameObject(WorldObject object, int newId) {
 		super(object);
-		this.id = newId;
+		setId(newId);
 		this.originalId = newId;
 		this.routeType = World.getRouteType(newId);
 		this.hashCode = genHashCode();
@@ -88,7 +89,7 @@ public class GameObject extends WorldObject {
 
 	public GameObject(GameObject object, int newId) {
 		super(object);
-		this.id = newId;
+		setId(newId);
 		this.originalId = newId;
 		this.routeType = object.getRouteType();
 		this.hashCode = genHashCode();
@@ -107,22 +108,22 @@ public class GameObject extends WorldObject {
 	}
 
 	public int genHashCode() {
-		int hash = tile.getTileHash();
-		hash = ((hash << 5) - hash) + id;
-		hash = ((hash << 5) - hash) + rotation;
-		hash = ((hash << 5) - hash) + type.id;
+		int hash = getTile().getTileHash();
+		hash = ((hash << 5) - hash) + getId();
+		hash = ((hash << 5) - hash) + getRotation();
+		hash = ((hash << 5) - hash) + getType().getId();
 		return hash;
 	}
 
 	public int positionHashCode() {
-		int hash = tile.getTileHash();
-		hash = ((hash << 5) - hash) + type.id;
+		int hash = getTile().getTileHash();
+		hash = ((hash << 5) - hash) + getType().getId();
 		return hash;
 	}
 
 	@Override
 	public String toString() {
-		return "[id:"+id+" loc:("+getX()+","+getY()+","+getPlane()+") type:"+type+" rot:"+rotation+" name:"+getDefinitions().getName()+"]";
+		return "[id:"+getId()+" loc:("+getX()+","+getY()+","+getPlane()+") type:"+getType()+" rot:"+getRotation()+" name:"+getDefinitions().getName()+"]";
 	}
 
 	public boolean process() {
@@ -138,7 +139,7 @@ public class GameObject extends WorldObject {
 			return true;
 		if (idChangeTicks > -1) {
 			if (idChangeTicks-- == 0)
-				setId(originalId);
+				changeId(originalId);
 			else
 				continueProcessing = true;
 		}
@@ -153,36 +154,35 @@ public class GameObject extends WorldObject {
 		return tasks;
 	}
 
-	public GameObject setId(int id) {
-		int lastId = this.id;
-		this.id = id;
-		if (lastId != id)
+	public void changeId(int newId) {
+		int lastId = getId();
+		setId(newId);
+		if (lastId != newId)
 			World.refreshObject(this);
-		if (id != originalId) {
+		if (newId != originalId) {
 			ChunkManager.getChunk(getTile().getChunkId(), true).flagForProcess(this);
 			idChangeTicks = -2;
 		} else {
 			ChunkManager.getChunk(getTile().getChunkId(), true).unflagForProcess(this);
 			idChangeTicks = -1;
 		}
-		return this;
 	}
-	
+
 	public ObjectMeshModifier modifyMesh() {
 		this.meshModifier = new ObjectMeshModifier(this);
 		return this.meshModifier;
 	}
-	
+
 	public void refresh() {
 		World.refreshObject(this);
 	}
 
-	public void setIdTemporary(int id, int ticks) {
-		if (this.id == id)
+	public void setIdTemporary(int newId, int ticks) {
+		if (getId() == newId)
 			return;
 		Chunk chunk = ChunkManager.getChunk(getTile().getChunkId(), true);
 		chunk.flagForProcess(this);
-		setId(id);
+		changeId(newId);
 		idChangeTicks = ticks;
 	}
 
@@ -192,7 +192,7 @@ public class GameObject extends WorldObject {
 	}
 
 	public boolean exists() {
-		return ChunkManager.getChunk(getTile().getChunkId()).objectExists(new GameObject(this, id));
+		return ChunkManager.getChunk(getTile().getChunkId()).objectExists(new GameObject(this, getId()));
 	}
 
 	public void flagForProcess() {
@@ -203,8 +203,8 @@ public class GameObject extends WorldObject {
 		ChunkManager.getChunk(getTile().getChunkId(), true).unflagForProcess(this);
 	}
 
-	public ObjectDefinitions getDefinitions(Player player) {
-		return ObjectDefinitions.getDefs(id, player.getVars());
+	public ObjectDefinition getDefinitions(Player player) {
+		return ObjectDefinitions.getDefs(getId(), player.getVars());
 	}
 
 	public void animate(Animation animation) {
@@ -219,9 +219,9 @@ public class GameObject extends WorldObject {
 		return routeType;
 	}
 
-	public GenericAttribMap getAttribs() {
+	public AttribMap getAttribs() {
 		if (attribs == null)
-			attribs = new GenericAttribMap();
+			attribs = new AttribMap();
 		return attribs;
 	}
 

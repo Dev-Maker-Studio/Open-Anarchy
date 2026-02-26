@@ -16,7 +16,7 @@
 //
 package com.rs.game.content;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.model.entity.player.Player;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
@@ -27,8 +27,8 @@ import java.util.Arrays;
 public class SkillCapeCustomizer {
 
 	public static void resetSkillCapes(Player player) {
-		player.setMaxedCapeCustomized(Arrays.copyOf(ItemDefinitions.getDefs(20767).originalModelColors, 4));
-		player.setCompletionistCapeCustomized(Arrays.copyOf(ItemDefinitions.getDefs(20769).originalModelColors, 4));
+		player.setMaxedCapeCustomized(Arrays.copyOf(ItemDefinitions.getDefs(20767).getOriginalModelColors(), 4));
+		player.setCompletionistCapeCustomized(Arrays.copyOf(ItemDefinitions.getDefs(20769).getOriginalModelColors(), 4));
 	}
 
 	public static void startCustomizing(Player player, int itemId) {
@@ -63,7 +63,7 @@ public class SkillCapeCustomizer {
 		}
 		switch(e.getComponentId()) {
 		case 58 -> {
-			int[] orig = Arrays.copyOf(ItemDefinitions.getDefs(20767).originalModelColors, 4);
+			int[] orig = Arrays.copyOf(ItemDefinitions.getDefs(20767).getOriginalModelColors(), 4);
             System.arraycopy(orig, 0, colors, 0, orig.length);
 			for (int i = 0; i < 4; i++)
 				e.getPlayer().getVars().setVarBit(9254 + i, colors[i]);

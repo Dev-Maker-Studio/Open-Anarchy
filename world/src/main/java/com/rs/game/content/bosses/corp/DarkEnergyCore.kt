@@ -24,12 +24,12 @@ import com.rs.game.model.entity.Hit.HitLook
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.utils.WorldUtil
 import java.util.function.Consumer
 
-class DarkEnergyCore(private val beast: CorporealBeast) : NPC(8127, Tile.of(beast.tile), true) {
+class DarkEnergyCore(private val beast: CorporealBeast) : NPC(8127, beast.tile, true) {
 
     init {
         setForceMultiArea(true)
@@ -58,7 +58,7 @@ class DarkEnergyCore(private val beast: CorporealBeast) : NPC(8127, Tile.of(beas
         lock()
         schedule {
             val start = this@DarkEnergyCore.tile
-            val destination = Tile.of(target.tile)
+            val destination = target.tile
             val distance = Utils.getDistance(start, destination)
             isHidden = true
             val speed = when {

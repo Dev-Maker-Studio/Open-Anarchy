@@ -1,6 +1,6 @@
 package com.rs.game.content.world.npcs
 
-import com.rs.cache.loaders.Bonus
+import org.darkan.core.model.Bonus
 import com.rs.game.content.Effect
 import com.rs.game.content.ItemConstants
 import com.rs.game.content.combat.*
@@ -17,12 +17,14 @@ import com.rs.game.model.entity.npc.combat.NPCCombatUtil.Companion.castSpellAtTa
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.item.ItemsContainer
-import com.rs.lib.game.GroundItem
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.GroundItem
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
+import com.rs.utils.maleEquip1
+import com.rs.utils.maleEquip2
 
 @ServerStartupEvent
 fun mapPKBotCombat() {
@@ -165,7 +167,7 @@ class PKBotNPC(tile: Tile): NPC(4336, tile) {
         killer?.let {
             equipment.array().forEach { item ->
                 if (item == null || !ItemConstants.isTradeable(item)) return@forEach
-                killer.packets.sendGroundItem(GroundItem(item, Tile.of(this.tile)))
+                killer.packets.sendGroundItem(GroundItem(item, this.tile))
             }
         }
     }
@@ -188,7 +190,7 @@ class PKBotNPC(tile: Tile): NPC(4336, tile) {
         if (showArms)
             models.add(151)
         models.padEnd(12, -1)
-        bas = equipment.get(Equipment.WEAPON)?.definitions?.renderAnimId ?: 1426
+        bas = equipment.get(Equipment.WEAPON)?.definitions?.getRenderAnimId() ?: 1426
         bodyMeshModifier = NPCBodyMeshModifier(definitions).addModels(*models.toIntArray())
     }
 

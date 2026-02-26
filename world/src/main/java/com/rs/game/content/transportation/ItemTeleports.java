@@ -23,8 +23,8 @@ import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.content.world.areas.burthorpe.HeroesGuild;
 import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 
 public class ItemTeleports {
 

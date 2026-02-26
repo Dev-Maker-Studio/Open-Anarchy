@@ -17,7 +17,7 @@
 package com.rs.engine.miniquest;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.util.GenericAttribMap;
+import org.darkan.core.model.AttribMap;
 import com.rs.plugin.annotations.PluginEventHandler;
 
 import java.util.HashMap;
@@ -28,7 +28,7 @@ public class MiniquestManager {
 	private transient Player player;
 
 	private final Map<Miniquest, Integer> questStages;
-	private final Map<Miniquest, GenericAttribMap> questAttribs;
+	private final Map<Miniquest, AttribMap> questAttribs;
 
 	public MiniquestManager() {
 		questStages = new HashMap<>();
@@ -75,8 +75,8 @@ public class MiniquestManager {
 		questAttribs.remove(quest);
 	}
 
-	public GenericAttribMap getAttribs(Miniquest quest) {
-        GenericAttribMap map = questAttribs.computeIfAbsent(quest, k -> new GenericAttribMap());
+	public AttribMap getAttribs(Miniquest quest) {
+        AttribMap map = questAttribs.computeIfAbsent(quest, k -> new AttribMap());
         return map;
 	}
 

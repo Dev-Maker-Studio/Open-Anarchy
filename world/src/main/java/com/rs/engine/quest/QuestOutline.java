@@ -17,7 +17,7 @@
 package com.rs.engine.quest;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 
 import java.util.List;
 

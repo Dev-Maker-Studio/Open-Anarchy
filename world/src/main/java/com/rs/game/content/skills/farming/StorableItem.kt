@@ -17,7 +17,7 @@
 package com.rs.game.content.skills.farming
 
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 
 enum class StorableItem(val maxAmount: Int, vararg val validIds: Int) {
     RAKE(1, 5341) {

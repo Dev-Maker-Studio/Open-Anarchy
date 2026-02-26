@@ -17,27 +17,20 @@
 package com.rs.utils;
 
 import com.google.gson.internal.LinkedTreeMap;
-import com.rs.cache.loaders.QCMesDefinitions;
-import com.rs.game.World;
-import com.rs.game.content.minigames.soulwars.SoulWarsKt;
 import com.rs.game.model.entity.Entity;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Player;
-import com.rs.game.model.entity.player.social.FCManager;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.game.WorldObject;
-import com.rs.lib.io.OutputStream;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Vec2;
-import com.rs.lib.web.dto.FCData;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.WorldObject;
+import org.darkan.core.Logger;
+import org.darkan.core.model.Vec2;
 import kotlin.Pair;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,64 +41,11 @@ public class WorldUtil {
 		return new Pair<>((regionId >> 8) * 8, (regionId & 0xFF) * 8);
 	}
 
+	// TODO: QCMesDefinitions has been removed. This method needs to be reimplemented
+	// using QuickChatPhraseDefinition from the modern cache system.
 	public static byte[] completeQuickMessage(Player player, int fileId, byte[] data) {
-		QCMesDefinitions defs = QCMesDefinitions.getDefs(fileId);
-		if (defs == null || defs.types == null)
-			return null;
-
-		OutputStream stream = new OutputStream();
-		System.out.println(Arrays.toString(defs.types));
-		System.out.println(defs);
-
-		for (int i = 0;i < defs.types.length;i++)
-			switch(defs.types[i]) {
-			case STAT_BASE -> stream.writeByte(player.getSkills().getLevelForXp(defs.configs[i][0]));
-			case TOSTRING_VARP -> stream.writeInt(player.getVars().getVar(defs.configs[i][0]));
-			case TOSTRING_VARBIT -> stream.writeInt(player.getVars().getVarBit(defs.configs[i][0]));
-			case ENUM_STRING -> stream.writeInt(player.getVars().getVar(defs.configs[i][1]-1));
-			case ENUM_STRING_STATBASE -> stream.writeByte(player.getSkills().getLevelForXp(defs.configs[i][1]));
-			case OBJTRADEDIALOG, OBJDIALOG, LISTDIALOG -> {
-				if (data != null && data.length >= 2)
-					return data;
-			}
-			case ACTIVECOMBATLEVEL -> stream.writeByte(player.getSkills().getCombatLevelWithSummoning());
-			case ACC_GETMEANCOMBATLEVEL -> {
-				FCData fc = FCManager.getFCData(player.getSocial().getCurrentFriendsChat());
-				if (fc == null)
-					stream.writeByte(0);
-				else {
-					int total = 0;
-					int count = 0;
-					for (String username : fc.getUsernames()) {
-						Player p = World.getPlayerByUsername(username);
-						if (p != null) {
-							count++;
-							total += p.getSkills().getCombatLevelWithSummoning();
-						}
-					}
-					stream.writeByte(count > 0 ? total / count : 0);
-				}
-			}
-			case ACC_GETCOUNT_WORLD -> {
-				FCData fc = FCManager.getFCData(player.getSocial().getCurrentFriendsChat());
-				if (fc == null)
-					stream.writeByte(0);
-				else {
-					int count = 0;
-					for (String username : fc.getUsernames()) {
-						Player p = World.getPlayerByUsername(username);
-						if (p != null)
-							count++;
-					}
-					stream.writeByte(count);
-				}
-			}
-			case TOSTRING_SHARED -> stream.writeInt(SoulWarsKt.getQuickchatVar(defs.configs[i][0]));
-			case COUNTDIALOG, ENUM_STRING_CLAN -> { /*TODO*/ }
-			default -> {}
-			}
-
-		return stream.toByteArray();
+		// Stub: return the raw data as-is until QC phrase completion is reimplemented
+		return data;
 	}
 
 	public static Tile targetToTile(Object object) {
@@ -122,9 +62,8 @@ public class WorldUtil {
 		Tile targTile = WorldUtil.targetToTile(target);
 		Vec2 from = entity.getMiddleTileAsVector();
 		Vec2 to = target instanceof Entity e ? e.getMiddleTileAsVector() : new Vec2(targTile);
-		Vec2 sub = to.sub(from);
-		sub.norm();
-		Tile delta = sub.toTile();
+		Vec2 norm = to.sub(from).norm();
+		Tile delta = norm.toTile();
 		return Direction.forDelta(delta.getX(), delta.getY());
 	}
 

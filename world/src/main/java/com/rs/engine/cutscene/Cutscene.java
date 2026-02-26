@@ -16,7 +16,7 @@
 //
 package com.rs.engine.cutscene;
 
-import com.rs.cache.loaders.ObjectDefinitions;
+import org.darkan.core.cache.ObjectDefinitions;
 import com.rs.engine.cutscene.actions.*;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.World;
@@ -24,14 +24,14 @@ import com.rs.game.map.instance.Instance;
 import com.rs.game.model.WorldProjectile;
 import com.rs.game.model.entity.Entity.MoveType;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.MapUtils;
-import com.rs.lib.util.MapUtils.Structure;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.util.MapUtils;
+import org.darkan.core.util.Structure;
 import kotlin.Pair;
 
 import java.util.ArrayList;
@@ -580,7 +580,7 @@ public abstract class Cutscene {
 	}
 	
 	public void spawnObj(int id, int rotation, int x, int y, int z) {
-		action(() -> World.spawnObject(new GameObject(id, ObjectDefinitions.getDefs(id).types[0], rotation, Tile.of(getX(x), getY(y), z))));
+		action(() -> World.spawnObject(new GameObject(id, com.rs.utils.KtExtensionsKt.getTypes(ObjectDefinitions.getDefs(id))[0], rotation, Tile.of(getX(x), getY(y), z))));
 	}
 
 	public void lowerAspectRatio() {

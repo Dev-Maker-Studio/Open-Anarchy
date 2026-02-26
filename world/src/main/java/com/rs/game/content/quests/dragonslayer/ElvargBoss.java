@@ -1,18 +1,18 @@
 package com.rs.game.content.quests.dragonslayer;
 
-import com.rs.cache.loaders.ObjectDefinitions;
+import org.darkan.core.cache.ObjectDefinitions;
 import com.rs.engine.quest.Quest;
 import com.rs.game.World;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCInstanceHandler;
 
@@ -81,7 +81,7 @@ public class ElvargBoss extends NPC {
 						elvarg.setCantInteract(false);
 						elvarg.setRespawnTask(200);
 
-						elvargObj = new GameObject(ELVARG_OBJ, ObjectDefinitions.getDefs(ELVARG_HEADLESS_OBJ).types[0], Direction.rotateClockwise(Direction.WEST, 4).id /2, 2854, 9638, 0);
+						elvargObj = new GameObject(ELVARG_OBJ, com.rs.utils.KtExtensionsKt.getTypes(ObjectDefinitions.getDefs(ELVARG_HEADLESS_OBJ))[0], Direction.rotateClockwise(Direction.WEST, 4).id /2, 2854, 9638, 0);
 						World.spawnObject(elvargObj);
 					}
 
@@ -98,7 +98,7 @@ public class ElvargBoss extends NPC {
 
 					if(tick == 11) {
 						World.removeObject(elvargObj);
-						elvargObj = new GameObject(ELVARG_HEADLESS_OBJ, ObjectDefinitions.getDefs(ELVARG_HEADLESS_OBJ).types[0], Direction.rotateClockwise(Direction.WEST, 4).id /2, 2854, 9638, 0);
+						elvargObj = new GameObject(ELVARG_HEADLESS_OBJ, com.rs.utils.KtExtensionsKt.getTypes(ObjectDefinitions.getDefs(ELVARG_HEADLESS_OBJ))[0], Direction.rotateClockwise(Direction.WEST, 4).id /2, 2854, 9638, 0);
 						World.spawnObjectTemporary(elvargObj, 150);
                         int dragonSlayerStage = p.getQuestManager().getStage(Quest.DRAGON_SLAYER);
 						if(dragonSlayerStage >= PREPARE_FOR_CRANDOR && dragonSlayerStage <= REPORT_TO_OZIACH && !hasHeadAlready(p)) {

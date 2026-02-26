@@ -16,11 +16,11 @@
 //
 package com.rs;
 
-import com.rs.lib.Globals;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.game.WorldInfo;
-import com.rs.lib.util.Logger;
+import org.darkan.core.Globals;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import com.rs.game.WorldInfo;
+import org.darkan.core.Logger;
 import org.darkan.core.EnvVars;
 
 import java.util.ArrayList;

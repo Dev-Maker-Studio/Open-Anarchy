@@ -16,9 +16,9 @@
 //
 package com.rs.utils.drop;
 
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.util.Rational;
-import com.rs.lib.util.Utils;
+import org.darkan.core.JsonFileManager;
+import com.rs.utils.Rational;
+import com.rs.utils.Utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -80,7 +80,7 @@ public class Fix {
 								last = rate;
 							}
 
-							//Rational frac = Utils.toRational(rate);
+							//Rational frac = Rational.toRational(rate);
 							//int[] meme = Utils.asFractionArr(frac.getNum(), frac.denom());
 							//							double num = 1.0;
 							//							double denom = Utils.round(((double) meme[1]) / ((double) meme[0]), 4);
@@ -88,7 +88,7 @@ public class Fix {
 							table.setChance(fracD[0], fracD[1]);
 						} catch (Exception e) {
 							double rate = table.getRate() / total;
-							Rational frac = Utils.toRational(rate);
+							Rational frac = Rational.toRational(rate);
 							int[] meme = Utils.asFractionArr(frac.getNum(), frac.denom());
 							table.setChance(meme[0], meme[1]);
 							//e.printStackTrace();

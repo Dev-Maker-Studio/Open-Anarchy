@@ -17,11 +17,11 @@
 package com.rs.utils.music;
 
 import com.google.gson.JsonIOException;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.game.Item;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -89,7 +89,7 @@ public class Music {
 				if(s.isAllowAmbient())
 					allowAmbientMusic.add(s.getId());
 
-		} catch (JsonIOException | IOException e) {
+		} catch (JsonIOException e) {
 			e.printStackTrace();
 		}
 	}

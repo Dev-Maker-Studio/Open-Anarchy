@@ -2,7 +2,7 @@ package com.rs.game.content.dnds.penguins
 
 import com.google.gson.Gson
 import com.rs.game.World
-import com.rs.lib.util.Logger
+import org.darkan.core.Logger
 
 enum class PolarBearLocation(val id: Int) { RELLEKKA(0), VARROCK(1), RIMMINGTON(2), MUSA_POINT(3), ARDOUGNE(4), FALADOR(5) }
 

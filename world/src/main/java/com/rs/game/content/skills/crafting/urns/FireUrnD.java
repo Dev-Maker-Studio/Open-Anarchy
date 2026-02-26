@@ -20,8 +20,8 @@ import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.impl.MakeXActionD;
 import com.rs.engine.dialogue.impl.MakeXItem;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
 
 public class FireUrnD extends Conversation {
 

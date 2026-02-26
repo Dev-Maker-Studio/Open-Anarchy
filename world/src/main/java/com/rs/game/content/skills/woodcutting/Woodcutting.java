@@ -16,8 +16,8 @@
 //
 package com.rs.game.content.skills.woodcutting;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.Effect;
 import com.rs.game.content.skills.summoning.Familiar;
@@ -29,11 +29,11 @@ import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.entity.player.managers.AuraManager;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.LoginHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -240,8 +240,8 @@ public class Woodcutting extends Action {
 		if (!World.isSpawnedObject(treeObj) && treeObj.getPlane() < 3 && type != TreeType.IVY) {
 			for (int x = -1;x <= 1;x++) {
 				for (int y = -1;y <= 1;y++) {
-					World.removeObjectTemporary(World.getObject(treeObj.getTile().transform(x, y, 1), ObjectType.SCENERY_INTERACT), type.getRespawnDelay());
-					World.removeObjectTemporary(World.getObject(treeObj.getTile().transform(x, y, 1), ObjectType.GROUND_INTERACT), type.getRespawnDelay());
+					World.removeObjectTemporary(World.getObject(treeObj.getTile().transform(x, y, 1), ObjectShape.SCENERY_INTERACT), type.getRespawnDelay());
+					World.removeObjectTemporary(World.getObject(treeObj.getTile().transform(x, y, 1), ObjectShape.GROUND_INTERACT), type.getRespawnDelay());
 				}
 			}
 		}

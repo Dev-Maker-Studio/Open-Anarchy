@@ -19,7 +19,7 @@ package com.rs.game.content.minigames.creations;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
+import org.darkan.core.Constants;
 import com.rs.utils.Ticks;
 
 import java.util.ArrayList;

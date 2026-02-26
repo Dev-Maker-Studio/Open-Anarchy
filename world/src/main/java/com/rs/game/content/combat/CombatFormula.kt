@@ -1,7 +1,7 @@
 package com.rs.game.content.combat
 
 import com.rs.Settings
-import com.rs.cache.loaders.Bonus
+import org.darkan.core.model.Bonus
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.Hit.HitLook
@@ -10,8 +10,8 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.managers.AuraManager.Aura
 import com.rs.game.model.entity.player.managers.CurseManager
-import com.rs.lib.Constants
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.Utils
 import kotlin.collections.mutableListOf
 import kotlin.math.floor
 

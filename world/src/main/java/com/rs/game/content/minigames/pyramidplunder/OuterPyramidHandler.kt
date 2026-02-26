@@ -1,12 +1,12 @@
 package com.rs.game.content.minigames.pyramidplunder
 
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World.getNPCsInChunkRange
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Player
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onChunkEnter
 import com.rs.plugin.kts.onObjectClick
@@ -45,10 +45,10 @@ fun mapOuterPyramid() {
 }
 
 private fun moveMummy(player: Player) {
-    for (npc in getNPCsInChunkRange(player.chunkId, 2))
+    for (npc in getNPCsInChunkRange(player.getChunkId(), 2))
         if (npc.id == 4476 && npc.withinDistance(MUMMY_LOCATIONS[currentMummyRoom], 5))
             return
-    for (npc in getNPCsInChunkRange(player.chunkId, 2))
+    for (npc in getNPCsInChunkRange(player.getChunkId(), 2))
         if (npc.id == 4476) npc.tele(MUMMY_LOCATIONS[currentMummyRoom])
 }
 

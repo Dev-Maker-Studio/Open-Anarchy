@@ -17,9 +17,9 @@
 package com.rs.utils;
 
 import com.google.gson.JsonIOException;
-import com.rs.cache.loaders.NPCDefinitions;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.util.Logger;
+import org.darkan.core.cache.NPCDefinitions;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.Logger;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;

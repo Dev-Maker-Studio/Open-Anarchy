@@ -17,7 +17,7 @@
 package com.rs.game.content.skills.mining;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
+import org.darkan.core.Constants;
 
 public enum Pickaxe {
 	BRONZE(1265, 1, 625, 8),

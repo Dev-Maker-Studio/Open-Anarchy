@@ -18,18 +18,18 @@ package com.rs.game
 
 import com.rs.Launcher
 import com.rs.Settings
-import com.rs.cache.loaders.ObjectType
-import com.rs.cache.loaders.map.ClipFlag
+import org.darkan.core.model.ObjectShape
+import org.darkan.core.map.ClipFlag
 import com.rs.db.WorldDB
-import com.rs.engine.pathfinder.DEFAULT_SEARCH_MAP_SIZE
-import com.rs.engine.pathfinder.Direction
-import com.rs.engine.pathfinder.Direction.Companion.forDelta
-import com.rs.engine.pathfinder.LineValidator
-import com.rs.engine.pathfinder.StepValidator
-import com.rs.engine.pathfinder.WorldCollision.allFlags
-import com.rs.engine.pathfinder.WorldCollision.getFlags
-import com.rs.engine.pathfinder.collision.CollisionStrategyType
-import com.rs.engine.pathfinder.reach.DefaultReachStrategy.reached
+import org.darkan.core.map.pathfinder.DEFAULT_SEARCH_MAP_SIZE
+import org.darkan.core.map.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction.Companion.forDelta
+import org.darkan.core.map.pathfinder.LineValidator
+import org.darkan.core.map.pathfinder.StepValidator
+import org.darkan.core.map.WorldCollision.allFlags
+import org.darkan.core.map.WorldCollision.getFlags
+import org.darkan.core.map.pathfinder.collision.CollisionStrategyType
+import org.darkan.core.map.pathfinder.reach.DefaultReachStrategy.reached
 import com.rs.engine.thread.AsyncTaskExecutor
 import com.rs.engine.thread.WorldThread
 import com.rs.game.content.ItemConstants
@@ -44,13 +44,25 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.*
-import com.rs.lib.net.packets.encoders.Sound
-import com.rs.lib.net.packets.encoders.updatezone.AddObject
-import com.rs.lib.net.packets.encoders.updatezone.CustomizeObject
-import com.rs.lib.util.Logger
-import com.rs.lib.util.MapUtils
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.model.Item
+import org.darkan.core.model.Animation
+import org.darkan.core.model.SpotAnim
+import org.darkan.core.model.Rights
+import org.darkan.core.model.GroundItem
+import org.darkan.core.model.GroundItemType
+import org.darkan.core.model.WorldObject
+import org.darkan.core.model.Hit
+import org.darkan.core.model.HintIcon
+import org.darkan.core.model.Projectile
+import org.darkan.core.model.Sound
+import org.darkan.core.model.SoundType
+// TODO: import org.darkan.core.net.prot.CreateObject - refreshObject needs migration to new update zone system
+// TODO: import org.darkan.core.net.prot.CustomizeObject
+import org.darkan.core.Logger
+import org.darkan.core.util.MapUtils
+import org.darkan.core.util.Structure
+import org.darkan.core.Utils
 import com.rs.plugin.PluginManager
 import com.rs.plugin.annotations.PluginEventHandler
 import com.rs.plugin.annotations.ServerStartupEvent
@@ -192,7 +204,7 @@ object World {
     @JvmStatic
     fun hasLineOfSight(src: Tile, srcSize: Int, dst: Tile, dstSize: Int): Boolean {
         if (src.plane != dst.plane) return false
-        return LineValidator(DEFAULT_SEARCH_MAP_SIZE, allFlags).hasLineOfSight(src.x().toInt(), src.y().toInt(), src.plane().toInt(), dst.x().toInt(), dst.y().toInt(), srcSize, dstSize, dstSize)
+        return LineValidator(DEFAULT_SEARCH_MAP_SIZE, allFlags).hasLineOfSight(src.x, src.y, src.plane, dst.x, dst.y, srcSize, dstSize, dstSize)
     }
 
     @JvmStatic
@@ -201,7 +213,7 @@ object World {
         var toTile: Tile = WorldUtil.targetToTile(to)
         (to as? Entity)?.let { toTile = it.lastTile ?: it.tile }
         if (fromTile.plane != toTile.plane) return false
-        return reached(allFlags, fromTile.x().toInt(), fromTile.y().toInt(), fromTile.plane().toInt(), toTile.x().toInt(), toTile.y().toInt(), toSize, toSize, fromSize, 0, -2, 0)
+        return reached(allFlags, fromTile.x, fromTile.y, fromTile.plane, toTile.x, toTile.y, toSize, toSize, fromSize, 0, -2, 0)
     }
 
     @JvmStatic
@@ -230,7 +242,7 @@ object World {
 
     @JvmStatic
 	fun getPlayerByDisplay(displayName: String?): Player? {
-        return PLAYER_MAP_DISPLAYNAME[Utils.formatPlayerNameForDisplay(displayName)]
+        return PLAYER_MAP_DISPLAYNAME[Utils.formatPlayerNameForDisplay(displayName ?: return null)]
     }
 
     @JvmStatic
@@ -283,22 +295,22 @@ object World {
 
     @JvmStatic
     fun isSpawnedObject(obj: GameObject): Boolean {
-        return ChunkManager.getChunk(obj.tile.chunkId).spawnedObjects.contains(obj)
+        return ChunkManager.getChunk(obj.tile.getChunkId()).spawnedObjects.contains(obj)
     }
 
     @JvmStatic
     fun spawnObject(obj: GameObject) {
-        ChunkManager.getChunk(obj.tile.chunkId).spawnObject(obj, true)
+        ChunkManager.getChunk(obj.tile.getChunkId()).spawnObject(obj, true)
     }
 
     @JvmStatic
     fun spawnObject(obj: GameObject, clip: Boolean) {
-        ChunkManager.getChunk(obj.tile.chunkId).spawnObject(obj, clip)
+        ChunkManager.getChunk(obj.tile.getChunkId()).spawnObject(obj, clip)
     }
 
     @JvmStatic
     fun removeObject(obj: GameObject) {
-        ChunkManager.getChunk(obj.tile.chunkId).removeObject(obj)
+        ChunkManager.getChunk(obj.tile.getChunkId()).removeObject(obj)
     }
 
     @JvmOverloads
@@ -414,7 +426,7 @@ object World {
     @JvmStatic
     fun mapRegionIdsToChunks(mapRegionsIds: Set<Int>, plane: Int? = null): Set<Int> {
         return mapRegionsIds.flatMap { regionId ->
-            val rCoords = MapUtils.decode(MapUtils.Structure.REGION, regionId)
+            val rCoords = MapUtils.decode(Structure.REGION, regionId)
             val cX = rCoords[0] shl 3
             val cY = rCoords[1] shl 3
             generateChunkIds(cX, cY, plane)
@@ -423,7 +435,7 @@ object World {
 
     @JvmStatic
     fun regionIdToChunkSet(regionId: Int): Set<Int> {
-        val rCoords = MapUtils.decode(MapUtils.Structure.REGION, regionId)
+        val rCoords = MapUtils.decode(Structure.REGION, regionId)
         val cX = rCoords[0] shl 3
         val cY = rCoords[1] shl 3
         return generateChunkIds(cX, cY, null)
@@ -435,7 +447,7 @@ object World {
         for (pl in planes) {
             for (x in 0..7) {
                 for (y in 0..7) {
-                    chunkIds.add(MapUtils.encode(MapUtils.Structure.CHUNK, cX + x, cY + y, pl))
+                    chunkIds.add(MapUtils.encode(Structure.CHUNK, cX + x, cY + y, pl))
                 }
             }
         }
@@ -444,29 +456,29 @@ object World {
 
     @JvmStatic
     fun refreshObject(obj: GameObject) {
-        ChunkManager.getChunk(obj.tile.chunkId).addChunkUpdate(AddObject(obj.tile.chunkLocalHash, obj))
-        if (obj.meshModifier != null)
-            ChunkManager.getChunk(obj.tile.chunkId).addChunkUpdate(CustomizeObject(obj.tile.chunkLocalHash, obj, obj.meshModifier.modelIds, obj.meshModifier.modifiedColors, obj.meshModifier.modifiedTextures))
+        // TODO: migrate to new update zone system (CreateObject/CustomizeObject ServerProt)
+        // Old code used: addChunkUpdate(AddObject(chunkLocalHash, obj)) and addChunkUpdate(CustomizeObject(chunkLocalHash, obj, ...))
+        ChunkManager.getChunk(obj.tile.getChunkId()).spawnObject(obj, false)
     }
 
     @JvmStatic
     fun getObject(tile: Tile): GameObject? {
-        return ChunkManager.getChunk(tile.chunkId).getObject(tile)
+        return ChunkManager.getChunk(tile.getChunkId()).getObject(tile)
     }
 
     @JvmStatic
     fun getBaseObjects(tile: Tile): Array<GameObject> {
-        return ChunkManager.getChunk(tile.chunkId).getBaseObjects(tile)
+        return ChunkManager.getChunk(tile.getChunkId()).getBaseObjects(tile)
     }
 
     @JvmStatic
     fun getSpawnedObject(tile: Tile): GameObject? {
-        return ChunkManager.getChunk(tile.chunkId).getSpawnedObject(tile)
+        return ChunkManager.getChunk(tile.getChunkId()).getSpawnedObject(tile)
     }
 
     @JvmStatic
-    fun getObject(tile: Tile, type: ObjectType?): GameObject? {
-        return ChunkManager.getChunk(tile.chunkId).getObject(tile, type)
+    fun getObject(tile: Tile, type: ObjectShape?): GameObject? {
+        return ChunkManager.getChunk(tile.getChunkId()).getObject(tile, type)
     }
 
     @JvmStatic
@@ -482,9 +494,9 @@ object World {
     @Deprecated("")
     @JvmStatic
     fun addGroundItemForever(item: Item?, tile: Tile, respawnTicks: Int) {
-        val groundItem: GroundItem = GroundItem(item, tile, GroundItem.GroundItemType.FOREVER).setRespawnTicks(respawnTicks)
+        val groundItem = GroundItem(item = item!!, tile = tile, type = GroundItemType.FOREVER, respawnTicks = respawnTicks)
         if (groundItem.id == -1) return
-        ChunkManager.getChunk(tile.chunkId).addGroundItem(groundItem)
+        ChunkManager.getChunk(tile.getChunkId()).addGroundItem(groundItem)
     }
 
     @JvmStatic
@@ -498,15 +510,15 @@ object World {
     fun addGroundItem(item: Item, tile: Tile, owner: Player? = null, invisible: Boolean = true, hiddenTime: Int = 60, type: DropMethod = DropMethod.NORMAL, deleteTime: Int = 150): GroundItem? {
         if ((item.id == -1) || (owner != null && owner.rights == Rights.ADMIN)) return null
         if (type != DropMethod.NORMAL) if (type == DropMethod.TURN_UNTRADEABLES_TO_COINS && !ItemConstants.isTradeable(item)) {
-            val price = item.definitions.getValue()
+            val price = item.definitions.cost
             if (price <= 0) return null
             item.id = 995
-            item.setAmount(price)
+            item.amount = price
         }
-        val floorItem = GroundItem(item, tile, owner?.username, if (invisible) GroundItem.GroundItemType.INVISIBLE else GroundItem.GroundItemType.NORMAL)
-        if (floorItem.amount > 1 && !item.definitions.isStackable && floorItem.metaData == null) for (i in 0 until floorItem.amount) {
+        val floorItem = GroundItem(item, tile, owner?.username, if (invisible) GroundItemType.INVISIBLE else GroundItemType.NORMAL)
+        if (floorItem.amount > 1 && !item.definitions.isStackable() && floorItem.metaData == null) for (i in 0 until floorItem.amount) {
             val oneItem = Item(item.id, 1)
-            val newItem = GroundItem(oneItem, tile, owner?.username, if (invisible) GroundItem.GroundItemType.INVISIBLE else GroundItem.GroundItemType.NORMAL)
+            val newItem = GroundItem(oneItem, tile, owner?.username, if (invisible) GroundItemType.INVISIBLE else GroundItemType.NORMAL)
             finalizeGroundItem(newItem, tile, owner, hiddenTime, deleteTime)
         }
         else finalizeGroundItem(floorItem, tile, owner, hiddenTime, deleteTime)
@@ -518,7 +530,7 @@ object World {
     fun addGroundItem(groundItem: GroundItem, owner: Player? = null, hiddenTime: Int = 60, deleteTime: Int = 150) {
         if (groundItem.id == -1 || (owner != null && owner.rights == Rights.ADMIN)) return
 
-        if (groundItem.amount > 1 && !groundItem.definitions.isStackable && groundItem.metaData == null) {
+        if (groundItem.amount > 1 && !groundItem.definitions.isStackable() && groundItem.metaData == null) {
             for (i in 0 until groundItem.amount) {
                 val oneItem = Item(groundItem.id, 1)
                 val newItem = GroundItem(oneItem, groundItem.tile, owner?.username, groundItem.type)
@@ -531,7 +543,7 @@ object World {
     @JvmStatic
     private fun finalizeGroundItem(item: GroundItem, tile: Tile, owner: Player?, hiddenSeconds: Int, lifeSeconds: Int) {
         if ((item.id == -1) || (owner != null && owner.rights == Rights.ADMIN)) return
-        if (ChunkManager.getChunk(tile.chunkId).addGroundItem(item)) {
+        if (ChunkManager.getChunk(tile.getChunkId()).addGroundItem(item)) {
             if (lifeSeconds != -1) item.deleteTime = Ticks.fromSeconds(lifeSeconds + hiddenSeconds)
             if (item.isInvisible) if (hiddenSeconds != -1) item.privateTime = Ticks.fromSeconds(hiddenSeconds)
         }
@@ -539,7 +551,7 @@ object World {
 
     @JvmStatic
     fun removeGroundItem(groundItem: GroundItem): Boolean {
-        return ChunkManager.getChunk(groundItem.tile.chunkId).deleteGroundItem(groundItem)
+        return ChunkManager.getChunk(groundItem.tile.getChunkId()).deleteGroundItem(groundItem)
     }
 
     @JvmStatic
@@ -550,26 +562,26 @@ object World {
     @JvmStatic
     fun removeGroundItem(player: Player, groundItem: GroundItem, add: Boolean): Boolean {
         if (groundItem.id == -1) return false
-        val chunk: Chunk = ChunkManager.getChunk(groundItem.tile.chunkId)
+        val chunk: Chunk = ChunkManager.getChunk(groundItem.tile.getChunkId())
         if (!chunk.itemExists(groundItem)) return false
-        if (player.isIronMan && groundItem.sourceId != 0 && groundItem.sourceId != player.uuid) {
+        if (player.isIronMan && groundItem.ownerUsername != null && groundItem.ownerUsername != player.username) {
             player.sendMessage("You may not pick up other players items as an ironman.")
             return false
         }
-        if (add && !player.inventory.hasRoomFor(groundItem)) {
+        if (add && !player.inventory.hasRoomFor(Item(groundItem.id, groundItem.amount, groundItem.metaData ?: mutableMapOf()))) {
             player.sendMessage("Not enough space in your inventory.")
             return false
         }
         if (chunk.deleteGroundItem(groundItem)) {
             if (add) {
                 if (!player.inventory.addItem(Item(groundItem.id, groundItem.amount, groundItem.metaData))) return false
-                if (groundItem.sourceId != 0 && groundItem.sourceId != player.uuid) WorldDB.getLogs().logPickup(player, groundItem)
+                if (groundItem.ownerUsername != null && groundItem.ownerUsername != player.username) WorldDB.getLogs().logPickup(player, groundItem)
                 player.soundEffect(2582, false)
             }
             if (groundItem.isRespawn) WorldTasks.schedule(groundItem.respawnTicks) {
                 try {
                     @Suppress("DEPRECATION")
-                    addGroundItemForever(groundItem, groundItem.tile, groundItem.respawnTicks)
+                    addGroundItemForever(groundItem.item, groundItem.tile, groundItem.respawnTicks)
                 } catch (e: Throwable) {
                     Logger.handle(World::class.java, "removeGroundItem", e)
                 }
@@ -582,7 +594,7 @@ object World {
     @JvmStatic
     fun sendObjectAnimation(obj: GameObject?, animation: Animation?) {
         if (obj == null) return
-        ChunkManager.getChunk(obj.tile.chunkId).addObjectAnim(obj, animation)
+        ChunkManager.getChunk(obj.tile.getChunkId()).addObjectAnim(obj, animation)
     }
 
     @JvmStatic
@@ -592,12 +604,12 @@ object World {
 
     @JvmStatic
     fun sendSpotAnim(tile: Tile, anim: SpotAnim?) {
-        ChunkManager.getChunk(tile.chunkId).addSpotAnim(tile, anim)
+        ChunkManager.getChunk(tile.getChunkId()).addSpotAnim(tile, anim)
     }
 
     @JvmStatic
     fun sendSpotAnim(tile: Tile, anim: Int) {
-        ChunkManager.getChunk(tile.chunkId).addSpotAnim(tile, SpotAnim(anim))
+        ChunkManager.getChunk(tile.getChunkId()).addSpotAnim(tile, SpotAnim(anim))
     }
 
     /**
@@ -705,7 +717,7 @@ object World {
         is Entity -> target.size to target.size
         is GameObject -> {
             val defs = target.definitions
-            defs.getSizeX() to defs.getSizeY()
+            defs.sizeX to defs.sizeY
         }
         else -> 0 to 0
     }
@@ -719,11 +731,11 @@ object World {
     }
 
     @JvmStatic
-    private fun getTargetChunkId(obj: Any): Int = getTargetTile(obj).chunkId
+    private fun getTargetChunkId(obj: Any): Int = getTargetTile(obj).getChunkId()
 
     @JvmStatic
     fun isMultiArea(tile: Tile): Boolean {
-        val chunkId = MapUtils.encode(MapUtils.Structure.CHUNK, tile.chunkX, tile.chunkY)
+        val chunkId = MapUtils.encode(Structure.CHUNK, tile.chunkX, tile.chunkY)
         return Areas.withinArea("multi", chunkId) || (ChunkManager.getChunk(chunkId)?.isMulticombat ?: false)
     }
 
@@ -734,46 +746,46 @@ object World {
 
     @JvmStatic
     fun jingle(source: Tile, jingleId: Int, delay: Int) {
-        sound(source, jingleId, delay, Sound.SoundType.JINGLE)
+        sound(source, jingleId, delay, SoundType.JINGLE)
     }
 
     @JvmStatic
     fun jingle(source: Tile, jingleId: Int) {
-        sound(source, jingleId, 0, Sound.SoundType.JINGLE)
+        sound(source, jingleId, 0, SoundType.JINGLE)
     }
 
     @JvmStatic
     fun musicTrack(source: Tile, trackId: Int, delay: Int, volume: Int) {
-        sound(source, trackId, delay, Sound.SoundType.MUSIC).volume(volume)
+        sound(source, trackId, delay, SoundType.MUSIC).volume(volume)
     }
 
     @JvmOverloads
     @JvmStatic
     fun musicTrack(source: Tile, trackId: Int, delay: Int = 100) {
-        sound(source, trackId, delay, Sound.SoundType.MUSIC)
+        sound(source, trackId, delay, SoundType.MUSIC)
     }
 
     @JvmStatic
     fun sound(tile: Tile, sound: Sound): Sound {
-        ChunkManager.getChunk(tile.chunkId).addSound(tile, sound)
+        ChunkManager.getChunk(tile.getChunkId()).addSound(tile, sound)
         return sound
     }
 
     @JvmStatic
-    fun sound(source: Tile, soundId: Int, delay: Int, type: Sound.SoundType?): Sound {
-        return sound(source, Sound(soundId, delay, type))
+    fun sound(source: Tile, soundId: Int, delay: Int, type: SoundType?): Sound {
+        return sound(source, Sound(soundId, delay, type ?: SoundType.EFFECT))
     }
 
     @JvmOverloads
     @JvmStatic
     fun soundEffect(source: Tile, soundId: Int, delay: Int = 0) {
-        sound(source, soundId, delay, Sound.SoundType.EFFECT).radius(10)
+        sound(source, soundId, delay, SoundType.EFFECT).radius(10)
     }
 
     @JvmOverloads
     @JvmStatic
     fun voiceEffect(source: Tile, voiceId: Int, delay: Int = 0) {
-        sound(source, voiceId, delay, Sound.SoundType.VOICE)
+        sound(source, voiceId, delay, SoundType.VOICE)
     }
 
     @JvmStatic
@@ -798,11 +810,11 @@ object World {
         getClosestObject(tile) { it.id == objectId }
 
     @JvmStatic
-    fun getClosestObjectByType(type: ObjectType, tile: Tile): GameObject? =
+    fun getClosestObjectByType(type: ObjectShape, tile: Tile): GameObject? =
         getClosestObject(tile) { it.type == type }
 
     @JvmStatic
-    fun getClosestObjectByTypeAndObjectId(type: ObjectType?, objectId: Int, tile: Tile): GameObject? =
+    fun getClosestObjectByTypeAndObjectId(type: ObjectShape?, objectId: Int, tile: Tile): GameObject? =
         getClosestObject(tile) { it.id == objectId && (type == null || it.type == type) }
 
     @JvmStatic
@@ -829,23 +841,23 @@ object World {
     }
 
     @JvmStatic
-    fun getObjectWithType(tile: Tile, type: ObjectType?): GameObject? {
-        return ChunkManager.getChunk(tile.chunkId).getObjectWithType(tile, type)
+    fun getObjectWithType(tile: Tile, type: ObjectShape?): GameObject? {
+        return ChunkManager.getChunk(tile.getChunkId()).getObjectWithType(tile, type)
     }
 
     @JvmStatic
     private fun getObjectWithSlot(tile: Tile, slot: Int): GameObject? {
-        return ChunkManager.getChunk(tile.chunkId).getObjectWithSlot(tile, slot)
+        return ChunkManager.getChunk(tile.getChunkId()).getObjectWithSlot(tile, slot)
     }
 
     @JvmStatic
     fun containsObjectWithId(tile: Tile, id: Int): Boolean {
-        return ChunkManager.getChunk(tile.chunkId).containsObjectWithId(tile, id)
+        return ChunkManager.getChunk(tile.getChunkId()).containsObjectWithId(tile, id)
     }
 
     @JvmStatic
     fun getObjectWithId(tile: Tile, id: Int): GameObject? {
-        return ChunkManager.getChunk(tile.chunkId).getObjectWithId(tile, id)
+        return ChunkManager.getChunk(tile.getChunkId()).getObjectWithId(tile, id)
     }
 
     @JvmStatic
@@ -862,7 +874,7 @@ object World {
         val unchecked = Direction.entries.filterNot { it in blacklistedDirections }.toMutableList()
         while (unchecked.isNotEmpty()) {
             val curr = unchecked.random()
-            if (step.canTravel(tile.plane().toInt(), tile.x().toInt(), tile.y().toInt(), curr.dx, curr.dy, 1, 0, CollisionStrategyType.NORMAL.strategy))
+            if (step.canTravel(tile.plane, tile.x, tile.y, curr.dx, curr.dy, 1, 0, CollisionStrategyType.NORMAL.strategy))
                 return tile.transform(curr.dx, curr.dy)
             unchecked.remove(curr)
         }
@@ -872,14 +884,14 @@ object World {
     @JvmStatic
     fun checkWalkStep(tile: Tile, dir: Direction, size: Int): Boolean {
         val step = StepValidator(allFlags)
-        return step.canTravel(tile.plane().toInt(), tile.x().toInt(), tile.y().toInt(), dir.dx, dir.dy, size, 0, CollisionStrategyType.NORMAL.strategy)
+        return step.canTravel(tile.plane, tile.x, tile.y, dir.dx, dir.dy, size, 0, CollisionStrategyType.NORMAL.strategy)
     }
 
     @JvmStatic
     fun checkWalkStep(tile: Tile, toTile: Tile, size: Int): Boolean {
-        val dir = forDelta(toTile.x() - tile.x(), toTile.y() - tile.y()) ?: return false
+        val dir = forDelta(toTile.x - tile.x, toTile.y - tile.y) ?: return false
         val step = StepValidator(allFlags)
-        return step.canTravel(tile.plane().toInt(), tile.x().toInt(), tile.y().toInt(), dir.dx, dir.dy, size, 0, CollisionStrategyType.NORMAL.strategy)
+        return step.canTravel(tile.plane, tile.x, tile.y, dir.dx, dir.dy, size, 0, CollisionStrategyType.NORMAL.strategy)
     }
 
     /**
@@ -900,8 +912,8 @@ object World {
             var failed = false
             for (i in 0 until size) {
                 for (row in 0 until size) {
-                    if (!stepValidator.canTravel(origin.plane().toInt(), origin.x, origin.y, currDir.dx, currDir.dy, size, 0, CollisionStrategyType.NORMAL.strategy) ||
-                        (row < size - 1 && !stepValidator.canTravel(origin.plane().toInt(), origin.x, origin.y, offsetDir.dx, offsetDir.dy, size, 0, CollisionStrategyType.NORMAL.strategy))) {
+                    if (!stepValidator.canTravel(origin.plane, origin.x, origin.y, currDir.dx, currDir.dy, size, 0, CollisionStrategyType.NORMAL.strategy) ||
+                        (row < size - 1 && !stepValidator.canTravel(origin.plane, origin.x, origin.y, offsetDir.dx, offsetDir.dy, size, 0, CollisionStrategyType.NORMAL.strategy))) {
                         failed = true
                         break
                     }
@@ -938,7 +950,7 @@ object World {
     @JvmStatic
     fun getSurroundingBaseObjects(base: GameObject, radius: Int): List<GameObject> {
         val objects: ArrayList<GameObject> = ArrayList<GameObject>()
-        for (obj in ChunkManager.getChunk(base.tile.chunkId).getBaseObjects()) {
+        for (obj in ChunkManager.getChunk(base.tile.getChunkId()).getBaseObjects()) {
             if (obj?.definitions == null) continue
             if (Utils.getDistance(base.tile, obj.tile) <= radius) objects.add(obj)
         }
@@ -965,6 +977,30 @@ object World {
         }
         return null
     }
+
+    // ── Java interop wrappers for methods with Tile parameters ─────
+    // Kotlin inline value class Tile has mangled JVM signatures.
+    // These wrappers accept boxed Tile (as Object from Java's view) and delegate.
+
+    @JvmStatic
+    @JvmName("hasLineOfSight")
+    fun hasLineOfSightBoxed(src: Any, srcSize: Int, dst: Any, dstSize: Int): Boolean =
+        hasLineOfSight(src as Tile, srcSize, dst as Tile, dstSize)
+
+    @JvmStatic
+    @JvmName("isMultiArea")
+    fun isMultiAreaBoxed(tile: Any): Boolean =
+        isMultiArea(tile as Tile)
+
+    @JvmStatic
+    @JvmName("findAdjacentFreeTile")
+    fun findAdjacentFreeTileBoxed(tile: Any, vararg blacklistedDirections: Direction): Tile? =
+        findAdjacentFreeTile(tile as Tile, *blacklistedDirections)
+
+    @JvmStatic
+    @JvmName("findAdjacentFreeSpace")
+    fun findAdjacentFreeSpaceBoxed(tile: Any, size: Int): Tile? =
+        findAdjacentFreeSpace(tile as Tile, size)
 
     enum class DropMethod {
         NORMAL, TURN_UNTRADEABLES_TO_COINS

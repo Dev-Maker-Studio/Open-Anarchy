@@ -20,7 +20,7 @@ import com.rs.game.content.skills.magic.Magic;
 import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 
 @PluginEventHandler

@@ -17,7 +17,7 @@
 package com.rs.game.content.bosses.kingblackdrag;
 
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCInstanceHandler;
 

@@ -18,8 +18,8 @@ package com.rs.game.content.world.areas.wilderness;
 
 import com.rs.game.World;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.drop.Drop;

@@ -1,7 +1,7 @@
 package com.rs.game.content.minigames.trawler;
 
-import com.rs.cache.loaders.ObjectType;
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.model.ObjectShape;
+import org.darkan.core.model.IFEvents;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.dialogue.statements.SimpleStatement;
@@ -17,14 +17,14 @@ import com.rs.game.model.item.ItemsContainer;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.MapUtils;
-import com.rs.lib.util.MapUtils.Area;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.Logger;
+import org.darkan.core.util.MapUtils;
+import org.darkan.core.util.Area;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.handlers.ButtonClickHandler;
@@ -278,7 +278,7 @@ public class FishingTrawler {
 			int rotation = tile.getY() == shipArea.getY()-1 || tile.getY() == shipArea.getY()-1 ? 3 : 1;
 			GameObject object = World.getSpawnedObject(tile);
 			if(object != null && object.getId() == LEAK) continue;
-			GameObject leak = new GameObject(LEAK, ObjectType.SCENERY_INTERACT, rotation, tile);
+			GameObject leak = new GameObject(LEAK, ObjectShape.SCENERY_INTERACT, rotation, tile);
 			World.spawnObject(leak);
 			leaks.add(leak);
 			break;
@@ -315,7 +315,7 @@ public class FishingTrawler {
 		leaks.clear();
 		for(Tile tile : tiles) {
 			int rotation = tile.getY() == WATER_SHIP.getY()-1 || tile.getY() == WATER_SHIP.getY()-1 ? 3 : 1;
-			GameObject leak = new GameObject(LEAK, ObjectType.SCENERY_INTERACT, rotation, tile);
+			GameObject leak = new GameObject(LEAK, ObjectShape.SCENERY_INTERACT, rotation, tile);
 			World.spawnObject(leak);
 			leaks.add(leak);
 		}
@@ -331,7 +331,7 @@ public class FishingTrawler {
 		leaks.remove(object);
 		World.removeObject(object);
 		int rotation = object.getY() == NO_WATER_SHIP.getY()-1 || object.getY() == WATER_SHIP.getY()-1 ? 3 : 1;
-		World.spawnObject(new GameObject(REPAIRED_LEAK, ObjectType.SCENERY_INTERACT, rotation, Tile.of(object.getTile())));
+		World.spawnObject(new GameObject(REPAIRED_LEAK, ObjectShape.SCENERY_INTERACT, rotation, Tile.of(object.getTile())));
 	}
 
 	public void spawnRepairedLeaks() {
@@ -344,7 +344,7 @@ public class FishingTrawler {
 			};
 			for(Tile tile : tiles) {
 				int rotation = tile.getY() == NO_WATER_SHIP.getY()-1 || tile.getY() == WATER_SHIP.getY()-1 ? 3 : 1;
-				World.spawnObject(new GameObject(REPAIRED_LEAK, ObjectType.SCENERY_INTERACT, rotation, tile));
+				World.spawnObject(new GameObject(REPAIRED_LEAK, ObjectShape.SCENERY_INTERACT, rotation, tile));
 			}
 		}
 	}
@@ -450,8 +450,8 @@ public class FishingTrawler {
 			Logger.error(FishingTrawler.class, "rewardsInterfaceHandler", "Trawler item "+item.getId()+" does not match "+e.getSlotId2());
 			return;
 		}
-		int amount = e.getPacket() == ClientPacket.IF_OP1 ? 1 : -1;
-		if(e.getPacket() == ClientPacket.IF_OP3) {
+		int amount = e.getOpNum() == 1 ? 1 : -1;
+		if(e.getOpNum() == 3) {
 			e.getPlayer().getTrawlerRewards().set(e.getSlotId(), null);
 			e.getPlayer().getPackets().sendItems(REWARDS_KEY, e.getPlayer().getTrawlerRewards().array());
 			return;

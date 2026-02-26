@@ -8,8 +8,8 @@ import imgui.type.ImInt
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL11.*
 import world.gregs.voidps.cache.Cache
-import world.gregs.voidps.cache.definition.data.InterfaceDefinitionFull
-import world.gregs.voidps.cache.definition.decoder.InterfaceDecoderFull
+import world.gregs.voidps.cache.definition.data.InterfaceDefinition
+import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
 
 /**
  * Interface/UI component viewer application.
@@ -21,7 +21,7 @@ class InterfaceViewer(
     private lateinit var imGui: ImGuiLayer
     private lateinit var debugPanel: DebugPanel
 
-    private var interfaceDefs: Array<InterfaceDefinitionFull>? = null
+    private var interfaceDefs: Array<InterfaceDefinition>? = null
     private var currentInterfaceId = 0
     private var selectedComponent = 0
     private val interfaceIdInput = ImInt(0)
@@ -47,7 +47,7 @@ class InterfaceViewer(
 
     private fun loadInterfaceDefinitions() {
         try {
-            interfaceDefs = InterfaceDecoderFull().load(cache)
+            interfaceDefs = InterfaceDecoder().load(cache)
         } catch (e: Exception) {
             System.err.println("Failed to load interface definitions: ${e.message}")
         }

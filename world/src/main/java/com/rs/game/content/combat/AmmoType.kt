@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.combat
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 
 enum class AmmoType(
     private val itemIds: IntArray,

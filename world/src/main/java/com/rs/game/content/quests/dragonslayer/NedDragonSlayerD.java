@@ -4,8 +4,8 @@ import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.GenericAttribMap;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.AttribMap;
 import com.rs.plugin.annotations.PluginEventHandler;
 
 import static com.rs.game.content.quests.dragonslayer.DragonSlayer.*;
@@ -17,7 +17,7 @@ public class NedDragonSlayerD extends Conversation {
 	 */
 	public NedDragonSlayerD(Player p) {
 		super(p);
-		GenericAttribMap attr = p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER);
+		AttribMap attr = p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER);
 
 		if(attr.getB(NED_IS_CAPTAIN_ATTR)) {
 			addPlayer(HeadE.HAPPY_TALKING, "Will you take me to Crandor now?");

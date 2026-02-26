@@ -18,7 +18,7 @@ package com.rs.game.content.miniquests.huntforsurok.bork
 
 import com.rs.engine.cutscenekt.cutscene
 import com.rs.engine.dialogue.HeadE
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World.spawnNPC
 import com.rs.game.content.miniquests.huntforsurok.PortalPair
 import com.rs.game.content.skills.magic.TeleType
@@ -26,7 +26,7 @@ import com.rs.game.map.instance.Instance
 import com.rs.game.model.entity.player.InstancedController
 import com.rs.game.model.entity.player.managers.EmotesManager
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 class BorkController(private val quest: Boolean) : InstancedController(Instance.of(PortalPair.BORK.tile1, 8, 8).setEntranceOffset(intArrayOf(43, 24, 0))) {
     override fun onBuildInstance() {

@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.thieving;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.world.doors.Doors;
 import com.rs.game.map.ChunkManager;
@@ -27,10 +27,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.Ticks;
@@ -158,7 +158,7 @@ public class Thieving {
 					player.sendMessage("You can't do this while you're under combat.");
 					return;
 				}
-				final GameObject emptyStall = new GameObject(stall.getReplaceObject(), ObjectType.SCENERY_INTERACT, object.getRotation(), object.getX(), object.getY(), object.getPlane());
+				final GameObject emptyStall = new GameObject(stall.getReplaceObject(), ObjectShape.SCENERY_INTERACT, object.getRotation(), object.getX(), object.getY(), object.getPlane());
 				if (player.getSkills().getLevel(Constants.THIEVING) < stall.getLevel()) {
 					player.sendMessage("You need a thieving level of " + stall.getLevel() + " to steal from this.", true);
 					return;

@@ -21,10 +21,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.handlers.*;
@@ -84,15 +84,15 @@ public class ShadesOfMortton {
 			GameObject altar = World.getObject(Tile.of(3506, 3316, 0));
 			if (REPAIR_STATE >= 99) {
 				if (altar != null && altar.getId() == 4092) {
-					altar.setId(4091);
+					altar.changeId(4091);
 					World.spawnObject(new GameObject(altar));
 					World.sendSpotAnim(altar.getTile(), new SpotAnim(1605));
 				} else if (altar != null && altar.getId() == 4090 && Utils.random(2) == 0) {
-					altar.setId(4091);
+					altar.changeId(4091);
 					World.sendSpotAnim(altar.getTile(), new SpotAnim(1605));
 				}
 			} else if (altar != null && altar.getId() != 4092) {
-				altar.setId(4092);
+				altar.changeId(4092);
 				World.spawnObject(new GameObject(altar));
 				World.sendSpotAnim(altar.getTile(), new SpotAnim(1605));
 			}
@@ -110,11 +110,11 @@ public class ShadesOfMortton {
 	protected static void updateVars(Player player) {
 		player.getVars().setVar(343, REPAIR_STATE);
 		player.getVars().setVar(344, player.getI("shadeResources", 0));
-		player.getVars().setVar(345, (int) Math.ceil(player.getTempAttribs().getD("shadeSanctity")));
+		player.getVars().setVar(345, (int) Math.ceil(player.getTempAttribs().getD("shadeSanctity", 0.0)));
 	}
 
 	public static void addSanctity(Player player, double amount) {
-		player.getTempAttribs().setD("shadeSanctity", Utils.clampD(player.getTempAttribs().getD("shadeSanctity") + amount, 0, 100));
+		player.getTempAttribs().setD("shadeSanctity", Utils.clampD(player.getTempAttribs().getD("shadeSanctity", 0.0) + amount, 0, 100));
 		updateVars(player);
 	}
 
@@ -124,7 +124,7 @@ public class ShadesOfMortton {
 	}
 
 	public static void removeSanctity(Player player, double amount) {
-		player.getTempAttribs().setD("shadeSanctity", Utils.clampD(player.getTempAttribs().getD("shadeSanctity") - amount, 0, 100));
+		player.getTempAttribs().setD("shadeSanctity", Utils.clampD(player.getTempAttribs().getD("shadeSanctity", 0.0) - amount, 0, 100));
 		updateVars(player);
 	}
 
@@ -157,7 +157,7 @@ public class ShadesOfMortton {
 	});
 
 	public static ItemOnObjectHandler handleOilOnAltar = new ItemOnObjectHandler(new Object[] { 4090 }, null, e -> {
-		if (e.getPlayer().getTempAttribs().getD("shadeSanctity") < 10) {
+		if (e.getPlayer().getTempAttribs().getD("shadeSanctity", 0.0) < 10) {
 			e.getPlayer().sendMessage("You need more sanctity to bless an item.");
 			return;
 		}
@@ -202,7 +202,7 @@ public class ShadesOfMortton {
 	});
 
 	public static ObjectClickHandler handleLightAltar = new ObjectClickHandler(new Object[] { 4091 }, e -> {
-		if (e.getPlayer().getTempAttribs().getD("shadeSanctity") < 10) {
+		if (e.getPlayer().getTempAttribs().getD("shadeSanctity", 0.0) < 10) {
 			e.getPlayer().sendMessage("You don't have enough sanctity to light the altar!");
 			return;
 		}
@@ -212,7 +212,7 @@ public class ShadesOfMortton {
 		}
 		GameObject altar = World.getObject(Tile.of(3506, 3316, 0));
 		if (altar.getId() == 4091) {
-			altar.setId(4090);
+			altar.changeId(4090);
 			e.getPlayer().anim(3687);
 			e.getPlayer().getSkills().addXp(Constants.FIREMAKING, 100);
 		}
@@ -308,13 +308,13 @@ public class ShadesOfMortton {
 		}
 		switch(e.getUsedWith(21489).getId()) {
 			case 14497:
-				e.getUsedWith(21489).setId(21477);
+				e.getUsedWith(21489).changeId(21477);
 				break;
 			case 14499:
-				e.getUsedWith(21489).setId(21478);
+				e.getUsedWith(21489).changeId(21478);
 				break;
 			case 14501:
-				e.getUsedWith(21489).setId(21479);
+				e.getUsedWith(21489).changeId(21479);
 				break;
 		}
 		e.getPlayer().getInventory().deleteItem(21489, 1);
@@ -355,25 +355,25 @@ public class ShadesOfMortton {
 		}
 		switch(e.getUsedWith(21488).getId()) {
 			case 1381: //Skeletal staff of air
-				e.getUsedWith(21488).setId(21490);
+				e.getUsedWith(21488).changeId(21490);
 				break;
 			case 1383: //Skeletal staff of water
-				e.getUsedWith(21488).setId(21491);
+				e.getUsedWith(21488).changeId(21491);
 				break;
 			case 1385: //Skeletal staff of earth
-				e.getUsedWith(21488).setId(21492);
+				e.getUsedWith(21488).changeId(21492);
 				break;
 			case 1387: //Skeletal staff of fire
-				e.getUsedWith(21488).setId(21493);
+				e.getUsedWith(21488).changeId(21493);
 				break;
 			case 1393: //Skeletal battlestaff of fire
-				e.getUsedWith(21488).setId(21494);
+				e.getUsedWith(21488).changeId(21494);
 				break;
 			case 1395: //Skeletal battlestaff of water
-				e.getUsedWith(21488).setId(21495);
+				e.getUsedWith(21488).changeId(21495);
 				break;
 			case 1397: //Skeletal battlestaff of air
-				e.getUsedWith(21488).setId(21496);
+				e.getUsedWith(21488).changeId(21496);
 				break;
 			case 1399: //Skeletal battlestaff of earth
 				e.getUsedWith(21488).setId(21497);

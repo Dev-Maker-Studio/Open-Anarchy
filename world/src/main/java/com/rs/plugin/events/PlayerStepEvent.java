@@ -16,9 +16,9 @@
 //
 package com.rs.plugin.events;
 
-import com.rs.engine.pathfinder.WalkStep;
+import org.darkan.core.map.pathfinder.WalkStep;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.handlers.PlayerStepHandler;
 import com.rs.plugin.handlers.PluginHandler;
 

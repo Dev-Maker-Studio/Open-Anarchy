@@ -16,9 +16,9 @@
 //
 package com.rs.game.content.skills.slayer;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.events.ItemOnItemEvent;
 import com.rs.plugin.handlers.ItemClickHandler;

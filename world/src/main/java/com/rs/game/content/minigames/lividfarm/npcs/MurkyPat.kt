@@ -7,7 +7,7 @@ import com.rs.game.content.minigames.lividfarm.producePoints
 import com.rs.game.content.skills.magic.Magic
 import com.rs.game.content.skills.magic.Rune
 import com.rs.game.content.skills.magic.RuneSet
-import com.rs.lib.game.SpotAnim
+import org.darkan.core.model.SpotAnim
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 

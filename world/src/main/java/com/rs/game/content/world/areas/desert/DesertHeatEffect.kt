@@ -7,9 +7,9 @@ import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.Constants
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.model.Item
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 import com.rs.utils.Areas
@@ -79,7 +79,7 @@ fun mapDesertHeatEffect() {
 
     // Apply short heat delay on login in desert area
     onLogin { e ->
-        if (Areas.withinArea(DESERT_HEAT_AREA, e.player.chunkId)) {
+        if (Areas.withinArea(DESERT_HEAT_AREA, e.player.getChunkId())) {
             e.player.tempAttribs.setI(DESERT_HEAT_EFFECT_DELAY_ATTR, Utils.randomInclusive(Ticks.fromSeconds(10), Ticks.fromSeconds(15)))
         }
     }
@@ -88,7 +88,7 @@ fun mapDesertHeatEffect() {
     onChunkEnter { (entity, _) ->
         val player = entity as? Player ?: return@onChunkEnter
 
-        if (Areas.withinArea(DESERT_HEAT_AREA, player.chunkId)) {
+        if (Areas.withinArea(DESERT_HEAT_AREA, player.getChunkId())) {
             if (!player.tasks.hasTask(DESERT_HEAT_TASK)) {
                 val currentDelay = player.tempAttribs.getI(DESERT_HEAT_EFFECT_DELAY_ATTR)
                 if (currentDelay <= 0) {
@@ -124,7 +124,7 @@ fun mapDesertHeatEffect() {
 
     // Increase/Decrease player's heatEffectDelay by Item's amount if equipped/unequipped
     onItemEquip(*equipmentIds) { e ->
-        if (Areas.withinArea(DESERT_HEAT_AREA, e.player.chunkId)) {
+        if (Areas.withinArea(DESERT_HEAT_AREA, e.player.getChunkId())) {
             var heatEffectDelay = e.player.tempAttribs.getI(DESERT_HEAT_EFFECT_DELAY_ATTR)
 
             // Apply equipment delay increments
@@ -260,5 +260,5 @@ private fun getDervishItemDelays(startId: Int, endId: Int, delay: Int): List<Pai
 }
 
 private fun hasCombatStats(item: Item?): Boolean {
-    return item?.definitions?.bonuses?.any { it > 0 } ?: false
+    return item?.definitions?.getBonuses()?.any { it > 0 } ?: false
 }

@@ -16,10 +16,10 @@
 //
 package com.rs.game.content.skills.smithing;
 
-import com.rs.cache.loaders.ObjectDefinitions;
+import org.darkan.core.cache.ObjectDefinitions;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.Options;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.ItemOnItemHandler;

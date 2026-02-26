@@ -16,8 +16,10 @@
 //
 package com.rs.game.content.skills.dungeoneering;
 
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import com.rs.utils.KtExtensionsKt;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.dialogues.*;
 import com.rs.game.content.skills.magic.Magic;
@@ -26,11 +28,11 @@ import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
@@ -199,7 +201,7 @@ public class DungManager {
 		case 137:
 		case 44:
 		case 86:
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				e.getPlayer().getDungManager().activeRingPerk = getPerk(e.getPlayer().getTempAttribs().getI("kinshipTab"), e.getComponentId() == 137 ? 0 : e.getComponentId() == 44 ? 1 : 2);
 			else
 				e.getPlayer().getDungManager().quickSwitch = getPerk(e.getPlayer().getTempAttribs().getI("kinshipTab"), e.getComponentId() == 137 ? 0 : e.getComponentId() == 44 ? 1 : 2);
@@ -350,7 +352,7 @@ public class DungManager {
 	}
 
 	public void bind(Item item, int slot) {
-		ItemDefinitions defs = item.getDefinitions();
+		ItemDefinition defs = item.getDefinitions();
 		int bindId = DungeonUtils.getBindedId(item);
 		if (bindId == -1)
 			return;
@@ -363,7 +365,7 @@ public class DungManager {
 			item.setId(bindId);
 			player.getInventory().addItem(item);
 			if (bindedAmmo == null)
-				bindedAmmo = new Item(item);
+				bindedAmmo = new Item(item.getId(), item.getAmount());
 			else
 				bindedAmmo.setAmount(bindedAmmo.getAmount() + item.getAmount());
 			if (bindedAmmo.getAmount() > 255)
@@ -375,7 +377,7 @@ public class DungManager {
 			}
 			item.setId(bindId);
 			player.getInventory().refresh(slot);
-			bindedItems.add(new Item(item));
+			bindedItems.add(new Item(item.getId(), item.getAmount()));
 		}
 		player.sendMessage("You bind the " + defs.getName() + " to you. Check in the smuggler to manage your bound items.");
 	}
@@ -502,7 +504,7 @@ public class DungManager {
 		if (e.getComponentId() >= 59 && e.getComponentId() <= 72) {
 			int playerIndex = (e.getComponentId() - 59) / 3;
 			if ((e.getComponentId() & 0x3) != 0 || e.getComponentId() == 68)
-				e.getPlayer().getDungManager().pressOption(playerIndex, e.getPacket() == ClientPacket.IF_OP1 ? 0 : e.getPacket() == ClientPacket.IF_OP2 ? 1 : 2);
+				e.getPlayer().getDungManager().pressOption(playerIndex, e.getOpNum() == 1 ? 0 : e.getOpNum() == 2 ? 1 : 2);
 			else
 				e.getPlayer().getDungManager().pressOption(playerIndex, 3);
 		} else if (e.getComponentId() == 45)

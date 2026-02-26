@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.prayer.cremation
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.game.World.addGroundItem
 import com.rs.game.World.getClosestObjectByObjectId
 import com.rs.game.World.sendSpotAnim
@@ -25,9 +25,9 @@ import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.model.gameobject.OwnedObject
-import com.rs.lib.Constants
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.Constants
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 
 class Pyre(player: Player?, obj: GameObject?, val log: PyreLog, private val isShadePyre: Boolean) : OwnedObject(player, GameObject(obj, if (isShadePyre) log.shadeNoCorpse else log.vyreNoCorpse)) {
     private var corpse: Corpse? = null
@@ -41,7 +41,7 @@ class Pyre(player: Player?, obj: GameObject?, val log: PyreLog, private val isSh
     fun setCorpse(corpse: Corpse): Boolean {
         if (!log.validCorpse(corpse) || (corpse == Corpse.VYRE && isShadePyre)) return false
         this.corpse = corpse
-        setId(if (isShadePyre) log.shadeCorpse else log.vyreCorpse)
+        changeId(if (isShadePyre) log.shadeCorpse else log.vyreCorpse)
         life = 50
         return true
     }

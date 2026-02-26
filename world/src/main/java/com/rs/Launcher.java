@@ -17,11 +17,7 @@
 package com.rs;
 
 import com.google.gson.GsonBuilder;
-import com.rs.cache.Cache;
-import com.rs.cache.Index;
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.NPCDefinitions;
-import com.rs.cache.loaders.ObjectDefinitions;
+import world.gregs.voidps.cache.Cache;
 import com.rs.db.WorldDB;
 import com.rs.engine.thread.AsyncTaskExecutor;
 import com.rs.engine.thread.WorldThread;
@@ -29,16 +25,12 @@ import com.rs.game.World;
 import com.rs.game.map.ChunkManager;
 import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.json.DateAdapter;
-import com.rs.lib.net.ServerChannelHandler;
-import com.rs.lib.net.decoders.GameDecoder;
-import com.rs.lib.net.packets.Packet;
-import com.rs.lib.net.packets.PacketEncoder;
-import com.rs.lib.util.*;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.Logger;
 import com.rs.net.LobbyCommunicator;
-import com.rs.net.decoders.BaseWorldDecoder;
 import com.rs.plugin.PluginManager;
+import org.darkan.core.net.prot.handler.PacketHandlers;
+import org.darkan.world.server.WorldServer;
 import com.rs.utils.Ticks;
 import com.rs.utils.WorldPersistentData;
 import com.rs.utils.WorldUtil;
@@ -49,7 +41,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
-import java.util.Date;
 import java.util.logging.Level;
 
 public final class Launcher {
@@ -59,10 +50,6 @@ public final class Launcher {
 		Logger.setLevel(Level.FINE); //FINER for traces
 		JsonFileManager.setGSON(new GsonBuilder()
 				.registerTypeAdapter(Controller.class, new ControllerAdapter())
-				.registerTypeAdapter(Date.class, new DateAdapter())
-				.registerTypeAdapter(PacketEncoder.class, new PacketEncoderAdapter())
-				.registerTypeAdapter(Packet.class, new PacketAdapter())
-				.registerTypeAdapterFactory(new RecordTypeAdapterFactory())
 				.disableHtmlEscaping()
 				.setPrettyPrinting()
 				.create());
@@ -75,22 +62,18 @@ public final class Launcher {
 
 		Cache.init(Settings.getConfig().getCachePath());
 
-		MapXTEAs.loadKeys();
-
         WorldDB DB = new WorldDB();
-		DB.init();
-
-		GameDecoder.loadPacketDecoders();
 
 		AsyncTaskExecutor.initExecutors();
 		PluginManager.loadPlugins();
 		PluginManager.executeStartupHooks();
 
 		try {
-			ServerChannelHandler.init(Settings.getConfig().getWorldInfo().port(), BaseWorldDecoder.class);
+			PacketHandlers.INSTANCE.loadHandlersFromPackage("org.darkan.world.server.packet");
+			WorldServer.INSTANCE.start(Settings.getConfig().getWorldInfo().port());
 		} catch (Throwable e) {
 			Logger.handle(Launcher.class, "main", e);
-			Logger.error(Launcher.class, "main", "Failed to initialize server channel handler. Shutting down...");
+			Logger.error(Launcher.class, "main", "Failed to initialize world server. Shutting down...");
 			System.exit(1);
 			return;
 		}
@@ -162,14 +145,9 @@ public final class Launcher {
 
 	public static void cleanMemory(boolean force) {
 		if (force) {
-			ItemDefinitions.clearItemsDefinitions();
-			NPCDefinitions.clearNPCDefinitions();
-			ObjectDefinitions.clearObjectDefinitions();
 			ChunkManager.clearUnusedMemory();
 			Logger.debug(Launcher.class, "cleanMemory", "Force cleaning cached data.");
 		}
-		for (Index index : Cache.STORE.getIndices())
-			index.resetCachedFiles();
 		System.gc(); System.gc();
 	}
 
@@ -182,7 +160,7 @@ public final class Launcher {
 	}
 
 	public static void closeServices() {
-		ServerChannelHandler.shutdown();
+		WorldServer.INSTANCE.stop();
 		AsyncTaskExecutor.shutdown();
 	}
 

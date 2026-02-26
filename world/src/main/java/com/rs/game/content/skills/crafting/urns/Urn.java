@@ -17,8 +17,8 @@
 package com.rs.game.content.skills.crafting.urns;
 
 import com.rs.game.content.skills.magic.Rune;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
 
 import java.util.HashMap;
 import java.util.Map;

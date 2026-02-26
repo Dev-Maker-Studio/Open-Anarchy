@@ -3,7 +3,7 @@ package com.rs.game.content.quests.whatliesbelow.books;
 import com.rs.engine.book.Book;
 import com.rs.engine.book.BookPage;
 import com.rs.engine.quest.Quest;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;

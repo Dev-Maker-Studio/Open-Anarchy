@@ -23,7 +23,7 @@ import com.rs.engine.dialogue.Options;
 import com.rs.game.content.skills.agility.Agility;
 import com.rs.game.content.transportation.FairyRings;
 import com.rs.game.content.world.areas.global.AgilityShortcuts;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 import com.rs.plugin.handlers.NPCClickHandler;

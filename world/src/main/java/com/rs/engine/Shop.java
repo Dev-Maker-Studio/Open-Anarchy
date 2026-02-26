@@ -16,16 +16,17 @@
 //
 package com.rs.engine;
 
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
-import com.rs.cache.loaders.interfaces.IFEvents.UseFlag;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.EnumDefinition;
+import org.darkan.core.model.IFEvents;
+import org.darkan.core.model.UseFlag;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.utils.ItemConfig;
@@ -81,13 +82,13 @@ public class Shop {
 				int slot = e.getPlayer().getTempAttribs().getI("ShopSelectedSlot");
 				if (slot == -1)
 					return;
-				if (e.getPacket() == ClientPacket.IF_OP1)
+				if (e.getOpNum() == 1)
 					shop.buy(e.getPlayer(), slot, 1);
-				else if (e.getPacket() == ClientPacket.IF_OP2)
+				else if (e.getOpNum() == 2)
 					shop.buy(e.getPlayer(), slot, 5);
-				else if (e.getPacket() == ClientPacket.IF_OP3)
+				else if (e.getOpNum() == 3)
 					shop.buy(e.getPlayer(), slot, 10);
-				else if (e.getPacket() == ClientPacket.IF_OP4)
+				else if (e.getOpNum() == 4)
 					shop.buy(e.getPlayer(), slot, 50);
 				shop.sendCustomPrices(e.getPlayer());
 			}
@@ -99,24 +100,24 @@ public class Shop {
 			boolean isBuying = e.getPlayer().getTempAttribs().getB("shop_buying");
 			if (e.getComponentId() == 20) {
 				e.getPlayer().getTempAttribs().setI("ShopSelectedSlot", e.getSlotId());
-				if (e.getPacket() == ClientPacket.IF_OP1)
+				if (e.getOpNum() == 1)
 					shop.sendInfo(e.getPlayer(), e.getSlotId(), isBuying);
-				else if (e.getPacket() == ClientPacket.IF_OP2)
+				else if (e.getOpNum() == 2)
 					shop.handleShop(e.getPlayer(), e.getSlotId(), 1);
-				else if (e.getPacket() == ClientPacket.IF_OP3)
+				else if (e.getOpNum() == 3)
 					shop.handleShop(e.getPlayer(), e.getSlotId(), 5);
-				else if (e.getPacket() == ClientPacket.IF_OP4)
+				else if (e.getOpNum() == 4)
 					shop.handleShop(e.getPlayer(), e.getSlotId(), 10);
-				else if (e.getPacket() == ClientPacket.IF_OP5)
+				else if (e.getOpNum() == 5)
 					shop.handleShop(e.getPlayer(), e.getSlotId(), 50);
-				else if (e.getPacket() == ClientPacket.IF_OP6)
+				else if (e.getOpNum() == 6)
 					shop.handleShop(e.getPlayer(), e.getSlotId(), 500);
-				else if (e.getPacket() == ClientPacket.IF_OP7)
+				else if (e.getOpNum() == 7)
 					e.getPlayer().sendOptionDialogue("Really buy out the shop? This could be absurdly expensive.", ops -> {
 						ops.add("Yes, I am sure.", () -> shop.handleShop(e.getPlayer(), e.getSlotId(), Integer.MAX_VALUE));
 						ops.add("Nevermind.");
 					});
-				else if (e.getPacket() == ClientPacket.IF_OP10)
+				else if (e.getOpNum() == 10)
 					shop.sendExamine(e.getPlayer(), e.getSlotId());
 			} else if (e.getComponentId() == 201) {
 				if (slot == -1)
@@ -162,41 +163,41 @@ public class Shop {
 			shop.sendCustomPrices(e.getPlayer());
 		} else if (e.getInterfaceId() == 1266) {
 			if (e.getComponentId() == 0)
-				if (e.getPacket() == ClientPacket.IF_OP6)
+				if (e.getOpNum() == 6)
 					e.getPlayer().getInventory().sendExamine(e.getSlotId());
 				else {
 					Shop shop = e.getPlayer().getTempAttribs().getO("Shop");
 					if (shop == null)
 						return;
 					e.getPlayer().getVars().setVar(2563, e.getSlotId());
-					if (e.getPacket() == ClientPacket.IF_OP1)
+					if (e.getOpNum() == 1)
 						shop.sendValue(e.getPlayer(), e.getSlotId());
-					else if (e.getPacket() == ClientPacket.IF_OP2)
+					else if (e.getOpNum() == 2)
 						shop.sell(e.getPlayer(), e.getSlotId(), 1);
-					else if (e.getPacket() == ClientPacket.IF_OP3)
+					else if (e.getOpNum() == 3)
 						shop.sell(e.getPlayer(), e.getSlotId(), 5);
-					else if (e.getPacket() == ClientPacket.IF_OP4)
+					else if (e.getOpNum() == 4)
 						shop.sell(e.getPlayer(), e.getSlotId(), 10);
-					else if (e.getPacket() == ClientPacket.IF_OP5)
+					else if (e.getOpNum() == 5)
 						shop.sell(e.getPlayer(), e.getSlotId(), 50);
 				}
 		} else if (e.getInterfaceId() == 621)
 			if (e.getComponentId() == 0)
-				if (e.getPacket() == ClientPacket.IF_OP6)
+				if (e.getOpNum() == 6)
 					e.getPlayer().getInventory().sendExamine(e.getSlotId());
 				else {
 					Shop shop = e.getPlayer().getTempAttribs().getO("Shop");
 					if (shop == null)
 						return;
-					if (e.getPacket() == ClientPacket.IF_OP1)
+					if (e.getOpNum() == 1)
 						shop.sendValue(e.getPlayer(), e.getSlotId());
-					else if (e.getPacket() == ClientPacket.IF_OP2)
+					else if (e.getOpNum() == 2)
 						shop.sell(e.getPlayer(), e.getSlotId(), 1);
-					else if (e.getPacket() == ClientPacket.IF_OP3)
+					else if (e.getOpNum() == 3)
 						shop.sell(e.getPlayer(), e.getSlotId(), 5);
-					else if (e.getPacket() == ClientPacket.IF_OP4)
+					else if (e.getOpNum() == 4)
 						shop.sell(e.getPlayer(), e.getSlotId(), 10);
-					else if (e.getPacket() == ClientPacket.IF_OP5)
+					else if (e.getOpNum() == 5)
 						shop.sell(e.getPlayer(), e.getSlotId(), 50);
 				}
 	});
@@ -280,7 +281,7 @@ public class Shop {
 		int buyQ = Math.min(item.getItem().getAmount(), quantity);
 		boolean enoughCoins = maxQuantity >= buyQ;
 		if (!enoughCoins) {
-			player.sendMessage("You don't have enough " + ItemDefinitions.getDefs(currency).name.toLowerCase() + ".");
+			player.sendMessage("You don't have enough " + ItemDefinitions.getDefs(currency).getName().toLowerCase() + ".");
 			buyQ = maxQuantity;
 		} else if (quantity > buyQ)
 			player.sendMessage("The shop has run out of stock.");
@@ -459,11 +460,11 @@ public class Shop {
 		if (price == 0)
 			price = 1;
 		if (currency == 6529) {
-			EnumDefinitions defs = EnumDefinitions.getEnum(732);
+			EnumDefinition defs = EnumDefinitions.getEnum(732);
 			if (defs.getIntValue(item.getId()) != -1)
 				return defs.getIntValue(item.getId());
 		} else if (currency == 995) {
-			EnumDefinitions defs = EnumDefinitions.getEnum(1441);
+			EnumDefinition defs = EnumDefinitions.getEnum(1441);
 			if (defs.getIntValue(item.getId()) != -1)
 				return defs.getIntValue(item.getId());
 		}
@@ -477,13 +478,13 @@ public class Shop {
 		if (price == 0)
 			price = 1;
 		if (currency == 6529) {
-			EnumDefinitions defs = EnumDefinitions.getEnum(731);
+			EnumDefinition defs = EnumDefinitions.getEnum(731);
 			if (defs.getIntValue(item.getItem().getId()) != -1)
 				return defs.getIntValue(item.getItem().getId());
 			return (int) (price * 3.0 / 2.0);
 		}
 		if (currency == 995) {
-			EnumDefinitions defs = EnumDefinitions.getEnum(733);
+			EnumDefinition defs = EnumDefinitions.getEnum(733);
 			if (defs.getIntValue(item.getItem().getId()) != -1)
 				return defs.getIntValue(item.getItem().getId());
 		}

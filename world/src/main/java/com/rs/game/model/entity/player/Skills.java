@@ -24,14 +24,15 @@ import com.rs.game.content.randomevents.RandomEvents;
 import com.rs.game.content.world.areas.wilderness.WildernessController;
 import com.rs.game.model.entity.player.managers.AuraManager.Aura;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.net.packets.encoders.Sound;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.model.Sound;
+import org.darkan.core.model.SoundType;
+import org.darkan.core.Utils;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.events.XPGainEvent;
@@ -316,7 +317,7 @@ public final class Skills {
 	public static ButtonClickHandler handleGuideButtons = new ButtonClickHandler(499, e -> e.getPlayer().getVars().setVarBit(3289, e.getComponentId()-9));
 
 	public static ButtonClickHandler handleSkillTabButtons = new ButtonClickHandler(320, e -> {
-		if (e.getPacket() == ClientPacket.IF_OP1) {
+		if (e.getOpNum() == 1) {
 			e.getPlayer().stopAll();
 			int targetId = Skills.getTargetIdByComponentId(e.getComponentId());
 			int skillId = Skills.getSkillIdByTargetId(targetId);
@@ -336,9 +337,9 @@ public final class Skills {
 
 			if (targetId != -1)
 				switchFlash(e.getPlayer(), skillId, false);
-		} else if (e.getPacket() == ClientPacket.IF_OP2 || e.getPacket() == ClientPacket.IF_OP3) {
+		} else if (e.getOpNum() == 2 || e.getOpNum() == 3) {
 			int skillId = Skills.getSkillIdByTargetId(Skills.getTargetIdByComponentId(e.getComponentId()));
-			final boolean usingLevel = e.getPacket() == ClientPacket.IF_OP2;
+			final boolean usingLevel = e.getOpNum() == 2;
 			e.getPlayer().sendInputInteger("Please enter target " + (usingLevel ? "level" : "xp") + " you want to set: ", integer -> {
 				if (!usingLevel) {
 					int xpTarget = integer;
@@ -360,7 +361,7 @@ public final class Skills {
 					e.getPlayer().getSkills().setSkillTarget(true, skillId, levelTarget);
 				}
 			});
-		} else if (e.getPacket() == ClientPacket.IF_OP4) {
+		} else if (e.getOpNum() == 4) {
 			int skillId = Skills.getSkillIdByTargetId(Skills.getTargetIdByComponentId(e.getComponentId()));
 			e.getPlayer().getSkills().setSkillTargetEnabled(skillId, false);
 			e.getPlayer().getSkills().setSkillTargetValue(skillId, 0);
@@ -877,7 +878,7 @@ public final class Skills {
 			player.setNextSpotAnim(new SpotAnim(2456, 0, 254));
 			player.setNextSpotAnim(new SpotAnim(2457, 25, 254));
 			player.setNextSpotAnim(new SpotAnim(2456, 50, 220));
-			player.getPackets().sendSound(new Sound(307, 0, Sound.SoundType.VORB_EFFECT));
+			player.getPackets().sendSound(new Sound(307, 0, SoundType.VORB_EFFECT));
 			if (newLevel == 99 || newLevel == 120)
 				World.sendSpotAnim(Tile.of(player.getTile()), new SpotAnim(1765));
 			if (skill == Constants.SUMMONING || (skill >= Constants.ATTACK && skill <= Constants.MAGIC)) {
@@ -933,7 +934,7 @@ public final class Skills {
 			player.setNextSpotAnim(new SpotAnim(2456, 0, 254));
 			player.setNextSpotAnim(new SpotAnim(2457, 25, 254));
 			player.setNextSpotAnim(new SpotAnim(2456, 50, 220));
-			player.getPackets().sendSound(new Sound(307, 0, Sound.SoundType.VORB_EFFECT));
+			player.getPackets().sendSound(new Sound(307, 0, SoundType.VORB_EFFECT));
 			if (newLevel == 99 || newLevel == 120)
 				player.setNextSpotAnim(new SpotAnim(1765));
 			if (skill == Constants.SUMMONING || (skill >= Constants.ATTACK && skill <= Constants.MAGIC)) {
@@ -1016,7 +1017,7 @@ public final class Skills {
 			player.setNextSpotAnim(new SpotAnim(2456, 0, 254));
 			player.setNextSpotAnim(new SpotAnim(2457, 25, 254));
 			player.setNextSpotAnim(new SpotAnim(2456, 50, 220));
-			player.getPackets().sendSound(new Sound(307, 0, Sound.SoundType.VORB_EFFECT));
+			player.getPackets().sendSound(new Sound(307, 0, SoundType.VORB_EFFECT));
 			if (newLevel == 99 || newLevel == 120)
 				player.setNextSpotAnim(new SpotAnim(1765));
 			if (skill == Constants.SUMMONING || (skill >= Constants.ATTACK && skill <= Constants.MAGIC)) {

@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.combat
 
-import com.rs.cache.loaders.Bonus
+import org.darkan.core.model.Bonus
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player

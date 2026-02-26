@@ -16,7 +16,7 @@
 //
 package com.rs.game.content;
 
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.model.IFEvents;
 import com.rs.game.model.entity.player.Player;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
@@ -46,29 +46,29 @@ public final class Notes {
 		}
 		case 3 -> e.getPlayer().sendInputLongText("Add note:", text -> e.getPlayer().getNotes().add(text));
 		case 9 -> {
-			switch (e.getPacket()) {
-			case IF_OP1 -> {
+			switch (e.getOpNum()) {
+			case 1 -> {
 				if (e.getPlayer().getNotes().getCurrentNote() == e.getSlotId())
 					e.getPlayer().getNotes().removeCurrentNote();
 				else
 					e.getPlayer().getNotes().setCurrentNote(e.getSlotId());
 			}
-			case IF_OP2 -> e.getPlayer().sendInputLongText("Edit note:", text -> {
+			case 2 -> e.getPlayer().sendInputLongText("Edit note:", text -> {
 				e.getPlayer().getNotes().setCurrentNote(e.getSlotId());
 				e.getPlayer().getNotes().edit(text);
 			});
-			case IF_OP3 -> {
+			case 3 -> {
 				e.getPlayer().getNotes().setCurrentNote(e.getSlotId());
 				e.getPlayer().getPackets().setIFHidden(34, 16, false);
 			}
-			case IF_OP4 -> e.getPlayer().getNotes().delete(e.getSlotId());
+			case 4 -> e.getPlayer().getNotes().delete(e.getSlotId());
 			default -> {}
 			}
 		}
 		case 11 -> {
-			switch (e.getPacket()) {
-			case IF_OP1 -> e.getPlayer().getNotes().delete();
-			case IF_OP2 -> e.getPlayer().getNotes().deleteAll();
+			switch (e.getOpNum()) {
+			case 1 -> e.getPlayer().getNotes().delete();
+			case 2 -> e.getPlayer().getNotes().deleteAll();
 			default -> {}
 			}
 			break;

@@ -16,16 +16,16 @@
 //
 package com.rs.game.content.skills.hunter;
 
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.model.IFEvents;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.Options;
 import com.rs.game.content.skills.hunter.traps.BoxStyleTrap;
 import com.rs.game.content.skills.hunter.traps.BoxStyleTrap.Status;
 import com.rs.game.content.skills.hunter.traps.NetTrap;
 import com.rs.game.model.gameobject.OwnedObject;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.*;
 
@@ -138,7 +138,7 @@ public final class Hunter {
 			e.getPlayer().sendMessage("This isn't your trap.");
 			return;
 		}
-		if (e.getOpNum() == ClientPacket.OBJECT_OP1)
+		if (e.getOpNum() == 1)
 			if (trap.getStatus() == Status.FAIL || trap.getStatus() == Status.IDLE)
 				trap.dismantle(e.getPlayer());
 			else if (trap.getStatus() == Status.SUCCESS)
@@ -160,7 +160,7 @@ public final class Hunter {
 	public static ObjectClickHandler handleDeadfalls = new ObjectClickHandler(new Object[]{"Boulder", "Deadfall"}, e -> {
 		if (e.getOption().equals("Set-trap"))
 			e.getPlayer().getActionManager().setAction(new BoxAction(BoxTrapType.DEAD_FALL, e.getObj()));
-		else if (e.getOpNum() == ClientPacket.OBJECT_OP1) {
+		else if (e.getOpNum() == 1) {
 			if (!(e.getObj() instanceof BoxStyleTrap trap))
 				return;
 			if (!trap.ownedBy(e.getPlayer())) {

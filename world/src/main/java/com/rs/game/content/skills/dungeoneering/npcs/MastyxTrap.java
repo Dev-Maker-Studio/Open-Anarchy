@@ -17,7 +17,7 @@
 package com.rs.game.content.skills.dungeoneering.npcs;
 
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class MastyxTrap extends NPC {
 

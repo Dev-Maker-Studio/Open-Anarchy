@@ -16,12 +16,15 @@
 //
 package com.rs.game.model.gameobject;
 
-import com.rs.lib.util.Logger;
+import com.rs.utils.KtExtensionsKt;
+import org.darkan.core.Logger;
+import org.darkan.core.model.ObjectShape;
+import world.gregs.voidps.cache.definition.data.ObjectDefinition;
 
 import java.util.Arrays;
 
 public class ObjectMeshModifier {
-	
+
 	public static final ObjectMeshModifier RESET = new ObjectMeshModifier();
 
 	private transient GameObject object;
@@ -29,16 +32,18 @@ public class ObjectMeshModifier {
 	private int[] modelIds;
 	private int[] modifiedColors;
 	private int[] modifiedTextures;
-	
+
 	private ObjectMeshModifier() {
 
 	}
 
 	public ObjectMeshModifier(GameObject object) {
 		this.object = object;
-		if (object.getDefinitions().types != null) {
-            for (int i = 0; i < object.getDefinitions().types.length; i++) {
-                if (object.getType() == object.getDefinitions().types[i]) {
+		ObjectDefinition defs = object.getDefinitions();
+		ObjectShape[] types = KtExtensionsKt.getTypes(defs);
+		if (types != null) {
+            for (int i = 0; i < types.length; i++) {
+                if (object.getType() == types[i]) {
                 	slot = i;
                     break;
                 }
@@ -47,55 +52,72 @@ public class ObjectMeshModifier {
 		if (slot == -1)
 			Logger.error(ObjectMeshModifier.class, "constructor()", "Object " + object + " has no slot type.");
 	}
-	
+
+	private int[][] getDefModelIds() {
+		ObjectDefinition defs = object.getDefinitions();
+		return defs.getModelIds();
+	}
+
+	private short[] getDefModifiedColours() {
+		return object.getDefinitions().getModifiedColours();
+	}
+
+	private short[] getDefModifiedTextureColours() {
+		return object.getDefinitions().getModifiedTextureColours();
+	}
+
 	public ObjectMeshModifier setModel(int index, int modelId) {
+		int[][] defModelIds = getDefModelIds();
 		if (modelIds == null) {
-			modelIds = new int[object.getDefinitions().modelIds[slot].length];
-			System.arraycopy(object.getDefinitions().modelIds[slot], 0, modelIds, 0, modelIds.length);
+			modelIds = new int[defModelIds[slot].length];
+			System.arraycopy(defModelIds[slot], 0, modelIds, 0, modelIds.length);
 		}
 		if (index < 0 || index >= modelIds.length)
-			throw new RuntimeException("Index " + index + " for models of [" + slot + "] " + object.getDefinitions().id + " is out of bounds.");
+			throw new RuntimeException("Index " + index + " for models of [" + slot + "] " + object.getDefinitions().getId() + " is out of bounds.");
 		if (modelId == -1)
-			modelIds[index] = object.getDefinitions().modelIds[slot][index];
+			modelIds[index] = defModelIds[slot][index];
 		else
 			modelIds[index] = modelId;
 		return this;
 	}
 
 	public ObjectMeshModifier addModels(int... models) {
-		if (Arrays.equals(models, object.getDefinitions().modelIds[slot]))
+		int[][] defModelIds = getDefModelIds();
+		if (Arrays.equals(models, defModelIds[slot]))
 			return this;
-		modelIds = new int[object.getDefinitions().modelIds[slot].length];
-		System.arraycopy(object.getDefinitions().modelIds[slot], 0, modelIds, 0, modelIds.length);
+		modelIds = new int[defModelIds[slot].length];
+		System.arraycopy(defModelIds[slot], 0, modelIds, 0, modelIds.length);
 
-		for (int i = 0;i < object.getDefinitions().modelIds[slot].length;i++) {
+		for (int i = 0;i < defModelIds[slot].length;i++) {
 			if (i >= models.length)
 				continue;
 			modelIds[i] = models[i];
 		}
 		return this;
 	}
-	
+
 	public ObjectMeshModifier setColor(int index, int color) {
-		if (modifiedColors == null && object.getDefinitions().modifiedColors != null) {
-			modifiedColors = new int[object.getDefinitions().modifiedColors.length];
+		short[] defColors = getDefModifiedColours();
+		if (modifiedColors == null && defColors != null) {
+			modifiedColors = new int[defColors.length];
 			for (int i = 0;i < modifiedColors.length;i++)
-				modifiedColors[i] = object.getDefinitions().modifiedColors[i];
+				modifiedColors[i] = defColors[i];
 		}
 		if (modifiedColors == null || index < 0 || index >= modifiedColors.length)
-			throw new RuntimeException("Index " + index + " for models of " + object.getDefinitions().id + " is out of bounds.");
+			throw new RuntimeException("Index " + index + " for models of " + object.getDefinitions().getId() + " is out of bounds.");
 		if (color == -1)
-			modifiedColors[index] = object.getDefinitions().modifiedColors[index];
+			modifiedColors[index] = defColors[index];
 		else
 			modifiedColors[index] = (short) color;
 		return this;
 	}
-	
+
 	public ObjectMeshModifier addColors(int... colors) {
-		if (object.getDefinitions().modifiedColors != null) {
-			modifiedColors = new int[object.getDefinitions().modifiedColors.length];
+		short[] defColors = getDefModifiedColours();
+		if (defColors != null) {
+			modifiedColors = new int[defColors.length];
 			for (int i = 0;i < modifiedColors.length;i++)
-				modifiedColors[i] = object.getDefinitions().modifiedColors[i];
+				modifiedColors[i] = defColors[i];
 		}
 		if (modifiedColors == null)
 			return this;
@@ -106,27 +128,29 @@ public class ObjectMeshModifier {
 		}
 		return this;
 	}
-	
+
 	public ObjectMeshModifier setTexture(int index, int texId) {
-		if (modifiedTextures == null && object.getDefinitions().modifiedTextures != null) {
-			modifiedTextures = new int[object.getDefinitions().modifiedTextures.length];
+		short[] defTextures = getDefModifiedTextureColours();
+		if (modifiedTextures == null && defTextures != null) {
+			modifiedTextures = new int[defTextures.length];
 			for (int i = 0;i < modifiedTextures.length;i++)
-				modifiedTextures[i] = object.getDefinitions().modifiedTextures[i];
+				modifiedTextures[i] = defTextures[i];
 		}
 		if (modifiedTextures == null || index < 0 || index >= modifiedTextures.length)
-			throw new RuntimeException("Index " + index + " for models of " + object.getDefinitions().id + " is out of bounds.");
+			throw new RuntimeException("Index " + index + " for models of " + object.getDefinitions().getId() + " is out of bounds.");
 		if (texId == -1)
-			modifiedTextures[index] = object.getDefinitions().modifiedTextures[index];
+			modifiedTextures[index] = defTextures[index];
 		else
 			modifiedTextures[index] = (short) texId;
 		return this;
 	}
 
 	public ObjectMeshModifier addTextures(int... textures) {
-		if (object.getDefinitions().modifiedTextures != null) {
-			modifiedTextures = new int[object.getDefinitions().modifiedTextures.length];
+		short[] defTextures = getDefModifiedTextureColours();
+		if (defTextures != null) {
+			modifiedTextures = new int[defTextures.length];
 			for (int i = 0;i < modifiedTextures.length;i++)
-				modifiedTextures[i] = object.getDefinitions().modifiedTextures[i];
+				modifiedTextures[i] = defTextures[i];
 		}
 		if (modifiedTextures == null)
 			return this;
@@ -137,11 +161,11 @@ public class ObjectMeshModifier {
 		}
 		return this;
 	}
-	
+
 	public GameObject getObject() {
 		return object;
 	}
-	
+
 	public int[] getModelIds() {
 		return modelIds;
 	}

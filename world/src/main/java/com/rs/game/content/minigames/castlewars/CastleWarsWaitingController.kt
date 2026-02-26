@@ -5,8 +5,8 @@ import com.rs.game.model.entity.Teleport
 import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Tile
-import com.rs.lib.net.ClientPacket
+import world.gregs.voidps.type.Tile
+
 
 class CastleWarsWaitingController(private val team: Int) : Controller() {
 
@@ -23,7 +23,7 @@ class CastleWarsWaitingController(private val team: Int) : Controller() {
         player.interfaceManager.sendOverlay(57)
     }
 
-    override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, packet: ClientPacket?): Boolean {
+    override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, packet: Int): Boolean {
         when (interfaceId) {
             387 -> {
                 if (componentId == 9 || componentId == 6)

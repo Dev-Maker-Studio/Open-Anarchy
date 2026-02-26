@@ -16,8 +16,8 @@
 //
 package com.rs.utils;
 
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 
 import java.io.IOException;
 
@@ -27,16 +27,16 @@ public class ToolbeltDump {
 	public static void main(String[] args) throws IOException {
 		//Cache.init();
 
-		EnumDefinitions general = EnumDefinitions.getEnum(5350);
-		EnumDefinitions fishing = EnumDefinitions.getEnum(5353);
-		EnumDefinitions crafting = EnumDefinitions.getEnum(5356);
-		EnumDefinitions farming = EnumDefinitions.getEnum(5359);
-		EnumDefinitions dung = EnumDefinitions.getEnum(5731);
+		var general = EnumDefinitions.getEnum(5350);
+		var fishing = EnumDefinitions.getEnum(5353);
+		var crafting = EnumDefinitions.getEnum(5356);
+		var farming = EnumDefinitions.getEnum(5359);
+		var dung = EnumDefinitions.getEnum(5731);
 
 		System.out.println(EnumDefinitions.getEnum(5732).getValues().values());
 
 		for (Object itemId : dung.getValues().values())
-			System.out.println(ItemDefinitions.getDefs((int) itemId).name.toUpperCase().replace(" ", "_") + "(0000, " + itemId + "),");
+			System.out.println(ItemDefinitions.getDefs((int) itemId).getName().toUpperCase().replace(" ", "_") + "(0000, " + itemId + "),");
 	}
 
 }

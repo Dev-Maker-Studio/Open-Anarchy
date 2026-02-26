@@ -17,9 +17,9 @@
 package com.rs.game.content.skills.farming;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 
 import java.util.HashMap;
 import java.util.Map;

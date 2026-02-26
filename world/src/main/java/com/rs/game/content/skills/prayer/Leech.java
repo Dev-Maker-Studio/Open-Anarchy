@@ -22,7 +22,7 @@ import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.entity.player.managers.PrayerManager;
-import com.rs.lib.util.GenericAttribMap;
+import org.darkan.core.model.AttribMap;
 
 import java.util.*;
 
@@ -99,7 +99,7 @@ public class Leech {
 
 	//called when attacker hits a target and leech applies
 	public static void handleLeechOnHit(Player attacker, Entity target, int statId) {
-		GenericAttribMap attribs = target.getTempAttribs();
+		AttribMap attribs = target.getTempAttribs();
 		int attackerIndex = attacker.getIndex();
 
 		String drainKey = LEECH_DRAIN_PREFIX + statId;
@@ -192,7 +192,7 @@ public class Leech {
 	}
 
 	private static void grantStatBoost(Player player, int statId, int stacks)  {
-		GenericAttribMap attribs = player.getTempAttribs();
+		AttribMap attribs = player.getTempAttribs();
 
 		String boostKey = LEECH_BOOST_PREFIX + statId;
 		String timerKey = LEECH_BOOST_TIMER_PREFIX + statId;

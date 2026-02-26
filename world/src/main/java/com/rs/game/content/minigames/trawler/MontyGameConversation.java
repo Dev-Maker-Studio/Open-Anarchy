@@ -8,7 +8,7 @@ import com.rs.engine.dialogue.statements.NPCStatement;
 import com.rs.engine.dialogue.statements.PlayerStatement;
 import com.rs.engine.dialogue.statements.SimpleStatement;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 
 public class MontyGameConversation extends Conversation {
 

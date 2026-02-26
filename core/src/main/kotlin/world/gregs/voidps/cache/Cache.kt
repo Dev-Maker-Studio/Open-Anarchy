@@ -1,22 +1,24 @@
 package world.gregs.voidps.cache
 
 import org.darkan.core.EnvVars
-import world.gregs.voidps.cache.definition.data.AnimationDefinitionFull
+import world.gregs.voidps.cache.definition.data.AnimationDefinition
 import world.gregs.voidps.cache.definition.data.BASDefinition
 import world.gregs.voidps.cache.definition.data.EnumDefinition
+import world.gregs.voidps.cache.definition.data.InterfaceDefinition
 import world.gregs.voidps.cache.definition.data.GraphicDefinition
-import world.gregs.voidps.cache.definition.data.ItemDefinitionFull
-import world.gregs.voidps.cache.definition.data.NPCDefinitionFull
-import world.gregs.voidps.cache.definition.data.ObjectDefinitionFull
+import world.gregs.voidps.cache.definition.data.ItemDefinition
+import world.gregs.voidps.cache.definition.data.NPCDefinition
+import world.gregs.voidps.cache.definition.data.ObjectDefinition
 import world.gregs.voidps.cache.definition.data.StructDefinition
 import world.gregs.voidps.cache.definition.data.VarBitDefinition
-import world.gregs.voidps.cache.definition.decoder.AnimationDecoderFull
+import world.gregs.voidps.cache.definition.decoder.AnimationDecoder
 import world.gregs.voidps.cache.definition.decoder.BASDecoder
 import world.gregs.voidps.cache.definition.decoder.EnumDecoder
 import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
-import world.gregs.voidps.cache.definition.decoder.ItemDecoderFull
-import world.gregs.voidps.cache.definition.decoder.NPCDecoderFull
-import world.gregs.voidps.cache.definition.decoder.ObjectDecoderFull
+import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
+import world.gregs.voidps.cache.definition.decoder.ItemDecoder
+import world.gregs.voidps.cache.definition.decoder.NPCDecoder
+import world.gregs.voidps.cache.definition.decoder.ObjectDecoder
 import world.gregs.voidps.cache.definition.decoder.StructDecoder
 import world.gregs.voidps.cache.definition.decoder.VarBitDecoder
 import world.gregs.voidps.cache.secure.Huffman
@@ -74,20 +76,20 @@ interface Cache {
             VarBitDecoder().load(singleton)
         }
 
-        val objects: Array<ObjectDefinitionFull> by lazy {
-            ObjectDecoderFull(EnvVars.members).load(singleton)
+        val objects: Array<ObjectDefinition> by lazy {
+            ObjectDecoder(EnvVars.members).load(singleton)
         }
 
-        val items: Array<ItemDefinitionFull> by lazy {
-            ItemDecoderFull().load(singleton)
+        val items: Array<ItemDefinition> by lazy {
+            ItemDecoder().load(singleton)
         }
 
-        val npcs: Array<NPCDefinitionFull> by lazy {
-            NPCDecoderFull(EnvVars.members).load(singleton)
+        val npcs: Array<NPCDefinition> by lazy {
+            NPCDecoder(EnvVars.members).load(singleton)
         }
 
-        val animations: Array<AnimationDefinitionFull> by lazy {
-            AnimationDecoderFull().load(singleton)
+        val animations: Array<AnimationDefinition> by lazy {
+            AnimationDecoder().load(singleton)
         }
 
         val enums: Array<EnumDefinition> by lazy {
@@ -106,7 +108,19 @@ interface Cache {
             BASDecoder().load(singleton)
         }
 
+        val interfaces: Array<InterfaceDefinition> by lazy {
+            InterfaceDecoder().load(singleton)
+        }
+
         fun get() = singleton
+
+        /** Legacy init method. Triggers lazy initialization of the cache. */
+        @JvmStatic
+        fun init(cachePath: String) {
+            // The cachePath is already set via EnvVars.cachePath
+            // Just trigger lazy initialization
+            singleton
+        }
 
         val huffman: Huffman get() = _huffman
     }

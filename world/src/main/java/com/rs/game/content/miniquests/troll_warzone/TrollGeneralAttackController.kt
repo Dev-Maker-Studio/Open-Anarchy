@@ -3,7 +3,7 @@ package com.rs.game.content.miniquests.troll_warzone
 import com.rs.engine.cutscenekt.cutscene
 import com.rs.engine.dialogue.*
 import com.rs.engine.miniquest.Miniquest
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World.addGroundItem
 import com.rs.game.World.getNPCsInChunkRange
 import com.rs.game.World.spawnNPC
@@ -11,8 +11,8 @@ import com.rs.game.map.instance.Instance
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.InstancedController
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 
 class TrollGeneralAttackController : InstancedController(Instance.of(OUTSIDE, 8, 8).persist().setEntranceOffset(intArrayOf(32, 12, 0))) {
     @Transient
@@ -119,7 +119,7 @@ class TrollGeneralAttackController : InstancedController(Instance.of(OUTSIDE, 8,
                                 babyTroll.finish()
                                 wait(23)
                                 stage = 4
-                                player.hintIconsManager.addHintIcon(instance.getLocalX(ozan.xInRegion), instance.getLocalY(ozan.yInRegion), 0, 50, 0, 0, -1, false)
+                                player.hintIconsManager.addHintIcon(instance.getLocalX(ozan.getXInRegion()), instance.getLocalY(ozan.getYInRegion()), 0, 50, 0, 0, -1, false)
                             }
                         }
                     }
@@ -203,8 +203,8 @@ class TrollGeneralAttackController : InstancedController(Instance.of(OUTSIDE, 8,
     }
 
     override fun canMove(dir: Direction): Boolean {
-        if (stage == 0 && player.tile.xInRegion >= 32 && player.tile.xInRegion <= 35 && player.tile.yInRegion >= 27 && dir.dy > 0) return false
-        if (stage == 1 && player.tile.yInRegion >= 49) {
+        if (stage == 0 && player.tile.getXInRegion() >= 32 && player.tile.getXInRegion() <= 35 && player.tile.getYInRegion() >= 27 && dir.dy > 0) return false
+        if (stage == 1 && player.tile.getYInRegion() >= 49) {
             player.stopAll()
             player.lock()
             player.cutscene {
@@ -217,7 +217,7 @@ class TrollGeneralAttackController : InstancedController(Instance.of(OUTSIDE, 8,
                 ozan.tele(Tile.of(instance.getLocalX(33), instance.getLocalY(51), 0))
                 keymans.tele(Tile.of(instance.getLocalX(35), instance.getLocalY(49), 0))
                 camPos(33, 45, 2000, 0, 5)
-                camLook(trollGeneral.xInRegion, trollGeneral.yInRegion, 10, 0, 5)
+                camLook(trollGeneral.getXInRegion(), trollGeneral.getYInRegion(), 10, 0, 5)
                 wait(5)
                 trollGeneral.faceTile(player.tile)
                 player.faceTile(trollGeneral.tile)
@@ -247,7 +247,7 @@ class TrollGeneralAttackController : InstancedController(Instance.of(OUTSIDE, 8,
 
     override fun processNPCDeath(npc: NPC) {
         if (npc.id == 14991 && stage == 2) {
-            for (n in getNPCsInChunkRange(player.chunkId, 3)) {
+            for (n in getNPCsInChunkRange(player.getChunkId(), 3)) {
                 if (n.id in 14980..14982) n.finish()
             }
             addGroundItem(Item(23042), npc.middleTile)
@@ -255,7 +255,7 @@ class TrollGeneralAttackController : InstancedController(Instance.of(OUTSIDE, 8,
             stage = 3
             player.hintIconsManager.removeAll()
             ozan?.let {
-                player.hintIconsManager.addHintIcon(instance.getLocalX(it.xInRegion), instance.getLocalY(it.yInRegion), 0, 50, 0, 0, -1, false)
+                player.hintIconsManager.addHintIcon(instance.getLocalX(it.getXInRegion()), instance.getLocalY(it.getYInRegion()), 0, 50, 0, 0, -1, false)
             }
         }
     }

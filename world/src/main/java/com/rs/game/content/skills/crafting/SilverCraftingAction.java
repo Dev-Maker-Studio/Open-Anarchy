@@ -16,12 +16,12 @@
 //
 package com.rs.game.content.skills.crafting;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.content.skills.crafting.Silver.SilverItems;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
 
 public class SilverCraftingAction extends PlayerAction {
 

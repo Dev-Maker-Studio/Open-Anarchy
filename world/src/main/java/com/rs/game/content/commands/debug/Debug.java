@@ -17,7 +17,7 @@
 package com.rs.game.content.commands.debug;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.db.WorldDB;
 import com.rs.engine.command.Commands;
 import com.rs.engine.miniquest.Miniquest;
@@ -44,12 +44,12 @@ import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.handlers.EnterChunkHandler;
@@ -325,7 +325,7 @@ public class Debug {
 				if (equip[i] == null)
 					continue;
 
-				p.getEquipment().setSlot(i, new Item(equip[i]));
+				p.getEquipment().setSlot(i, com.rs.utils.KtExtensionsKt.copyItem(equip[i]));
 				p.getEquipment().refresh(i);
 			}
 			Item[] inv = target.getInventory().getItems().getItemsCopy();
@@ -333,7 +333,7 @@ public class Debug {
 				if (inv[i] == null)
 					continue;
 
-				p.getInventory().getItems().set(i, new Item(inv[i]));
+				p.getInventory().getItems().set(i, com.rs.utils.KtExtensionsKt.copyItem(inv[i]));
 				p.getInventory().refresh(i);
 			}
 			for (int i = 0; i < p.getSkills().getLevels().length; i++) {

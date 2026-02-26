@@ -1,12 +1,12 @@
 package com.rs.game.content.items
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.game.content.ItemConstants
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.item.ItemsContainer
-import com.rs.lib.game.Item
-import com.rs.lib.net.ClientPacket
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.utils.ItemConfig
@@ -24,26 +24,26 @@ fun mapLootInterface() {
         when(e.componentId) {
             7 -> {
                 val item = container[e.slotId] ?: return@onButtonClick
-                when (e.packet) {
-                    ClientPacket.IF_OP1 -> {
-                        if (e.player.inventory.addItem(Item(item).setAmount(1))) {
+                when (e.opNum) {
+                    1 -> {
+                        if (e.player.inventory.addItem(Item(item.id, 1))) {
                             item.amount--
                             if (item.amount <= 0)
                                 container[e.slotId] = null
                             e.player.packets.sendUpdateItems(100, container, e.slotId)
                         }
                     }
-                    ClientPacket.IF_OP2 -> {
+                    2 -> {
                         if (e.player.bank.addItem(item, true)) {
                             container[e.slotId] = null
                             e.player.packets.sendUpdateItems(100, container, e.slotId)
                         }
                     }
-                    ClientPacket.IF_OP3 -> {
+                    3 -> {
                         container[e.slotId] = null
                         e.player.packets.sendUpdateItems(100, container, e.slotId)
                     }
-                    ClientPacket.IF_OP4 -> sendExamine(e.player, item)
+                    4 -> sendExamine(e.player, item)
                     else -> {}
                 }
             }
@@ -77,7 +77,7 @@ object LootInterface {
     @JvmStatic
     @JvmOverloads
     fun open(title: String?, player: Player, container: ItemsContainer<Item?>, autoLootOnClose: Boolean = true, onClose: Runnable? = null) {
-        player.packets.setIFText(1284, 28, title)
+        player.packets.setIFText(1284, 28, title ?: "")
         player.interfaceManager.sendInterface(1284)
         player.packets.sendInterSetItemsOptionsScript(1284, 7, 100, 7, 4, "Take-1", "Bank", "Discard", "Examine")
         player.packets.setIFRightClickOps(1284, 7, 0, 28, 0, 1, 2, 3)
@@ -91,8 +91,8 @@ object LootInterface {
                     if (player.inventory.hasRoomFor(item)) {
                         player.inventory.addItemDrop(item)
                     } else {
-                        if (item.definitions.isNoted)
-                            item.id = item.definitions.certId
+                        if (item.definitions.noted)
+                            item.id = item.definitions.noteId
                         if (!player.bank.addItem(item, true))
                             player.inventory.addItemDrop(item)
                     }
@@ -104,7 +104,7 @@ object LootInterface {
 
 private fun sendExamine(player: Player, item: Item) {
     val def = ItemDefinitions.getDefs(item.id)
-    player.sendMessage(ItemConfig.get(item.id).getExamine(item) + (if (ItemConstants.isTradeable(item)) (" General store: " + Utils.formatTypicalInteger(item.definitions.sellPrice) + " High Alchemy: " + Utils.formatTypicalInteger(def.highAlchPrice)) else ""))
+    player.sendMessage(ItemConfig.get(item.id).getExamine(item) + (if (ItemConstants.isTradeable(item)) (" General store: " + Utils.formatTypicalInteger(item.definitions.cost * 3 / 10) + " High Alchemy: " + Utils.formatTypicalInteger(item.definitions.cost * 6 / 10)) else ""))
     if (item.getMetaData("combatCharges") != null) player.sendMessage("<col=FF0000>It looks like it will last another " + Utils.ticksToTime(item.getMetaDataI("combatCharges").toDouble()))
     else if (item.getMetaData("brawlerCharges") != null) player.sendMessage("These gloves have " + item.getMetaDataI("brawlerCharges") + " charges left.")
 }

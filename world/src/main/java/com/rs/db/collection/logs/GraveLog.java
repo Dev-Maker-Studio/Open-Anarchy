@@ -1,9 +1,9 @@
 package com.rs.db.collection.logs;
 
 import com.rs.game.content.death.GraveStone;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +22,7 @@ public class GraveLog {
 		items = new ArrayList<>();
 		for (GroundItem item : grave.getItems())
 			if (item != null)
-				items.add(new Item(item));
+				items.add(com.rs.utils.KtExtensionsKt.copyItem(item.getItem()));
 		this.uuid = UUID.randomUUID().toString();
 	}
 

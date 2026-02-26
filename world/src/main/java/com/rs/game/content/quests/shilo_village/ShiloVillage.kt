@@ -18,7 +18,7 @@ package com.rs.game.content.quests.shilo_village
 
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.engine.quest.QuestHandler
 import com.rs.engine.quest.QuestOutline
@@ -35,9 +35,9 @@ import com.rs.game.map.ChunkManager
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.Constants
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.Constants
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.PluginManager
 import com.rs.plugin.annotations.PluginEventHandler
 import com.rs.plugin.annotations.ServerStartupEvent
@@ -337,7 +337,7 @@ fun mapShiloVillage() {
             }
             WorldTasks.schedule(6) {
                 player.lock()
-                val ghost = spawnNPC(501, Tile.of(player.tile), true, true)
+                val ghost = spawnNPC(501, player.tile, true, true)
                 ghost.setRandomWalk(false)
                 ghost.faceDir(Direction.SOUTH)
                 ghost.addWalkSteps(Tile.of(2975, 3084, 0), 2, false)
@@ -1174,7 +1174,7 @@ fun mapShiloVillage() {
                 }
             } else {
                 if (!player.inventory.containsItem(R_CORPSE_ID) && !player.bank.containsItem(R_CORPSE_ID)) {
-                    val chunk = ChunkManager.getChunk(player.chunkId)
+                    val chunk = ChunkManager.getChunk(player.getChunkId())
                     val groundItemsMap = chunk.getGroundItems()
                     var foundCorpse = false
                     for ((_, tileMap) in groundItemsMap) {
@@ -1182,7 +1182,7 @@ fun mapShiloVillage() {
                             val iterator = groundItemList.iterator()
                             while (iterator.hasNext()) {
                                 val groundItem = iterator.next()
-                                if (groundItem.id == R_CORPSE_ID && groundItem.tile == Tile.of(2892,9487,0) && groundItem.creatorUsername == player.username) {
+                                if (groundItem.id == R_CORPSE_ID && groundItem.tile == Tile.of(2892,9487,0) && groundItem.ownerUsername == player.username) {
                                     val e1 = PickupItemEvent(player, groundItem, false)
                                     PluginManager.handle(e1)
                                     foundCorpse = true;

@@ -46,12 +46,14 @@ enum class ClipFlag(val flag: Int) {
     UNDER_ROOF(1 shl 31);
 
     companion object {
+        @JvmStatic
         fun flagged(value: Int, vararg flags: ClipFlag): Boolean {
             var flag = 0
             for (f in flags) flag = flag or f.flag
             return (value and flag) != 0
         }
 
+        @JvmStatic
         fun or(vararg flags: ClipFlag): Int {
             var flag = 0
             for (f in flags) flag = flag or f.flag

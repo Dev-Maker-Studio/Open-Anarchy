@@ -1,19 +1,19 @@
 package com.rs.game.content.commands.development
 
 import com.rs.Settings
-import com.rs.cache.loaders.NPCDefinitions
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.cache.NPCDefinitions
+import org.darkan.core.model.ObjectShape
 import com.rs.engine.command.Commands
 import com.rs.game.World
 import com.rs.game.map.ChunkManager
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Rights
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Logger
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Animation
+import org.darkan.core.model.Rights
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Logger
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.utils.ObjAnimList
 
@@ -49,7 +49,7 @@ fun loadAnimationCommands() {
         if (npcId <= Utils.getNPCDefinitionsSize()) {
             val defs = NPCDefinitions.getDefs(npcId)
             if (defs != null) {
-                val compatAnims = defs.compatibleAnimations.toString()
+                val compatAnims = "renderEmote=${defs.renderEmote}"
                 p.packets.sendDevConsoleMessage("$npcId: $compatAnims")
                 p.sendMessage("$npcId: $compatAnims")
                 Logger.debug(Commands::class.java, "companim", compatAnims)
@@ -70,7 +70,7 @@ fun loadAnimationCommands() {
         val obj = if (args.size == 3) {
             World.getObject(Tile.of(x, y, p.plane))
         } else {
-            World.getObject(Tile.of(x, y, p.plane), ObjectType.forId(args[2].toInt()))
+            World.getObject(Tile.of(x, y, p.plane), ObjectShape.forId(args[2].toInt()))
         }
 
         if (obj == null) {
@@ -85,7 +85,7 @@ fun loadAnimationCommands() {
         val x = args[0].toInt()
         val y = args[1].toInt()
         val tile = Tile.of(x, y, p.plane)
-        val obj = ChunkManager.getChunk(tile.chunkId).getSpawnedObject(tile)
+        val obj = ChunkManager.getChunk(tile.getChunkId()).getSpawnedObject(tile)
 
         if (obj == null) {
             p.packets.sendDevConsoleMessage("Could not find object at [x=$x, y=$y, z=${p.plane}].")

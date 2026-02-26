@@ -16,17 +16,18 @@
 //
 package com.rs.game.content.skills.summoning;
 
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.NPCDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.EnumDefinition;
+import org.darkan.core.cache.NPCDefinitions;
+import org.darkan.core.model.IFEvents;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.content.skills.dungeoneering.DungeonController;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.*;
 
@@ -110,7 +111,7 @@ public class Summoning {
 			player.sendMessage("You need a summoning level of " + pouch.getLevel() + " in order to use this pouch.");
 			return;
 		}
-		Tile spawnTile = player.getNearestTeleTile(NPCDefinitions.getDefs(pouch.getBaseNpc(), player.getVars()).size);
+		Tile spawnTile = player.getNearestTeleTile(NPCDefinitions.getDefs(pouch.getBaseNpc(), player.getVars()).getSize());
 		if (spawnTile == null) {
 			player.sendMessage("Theres not enough space to summon your familiar here.");
 			return;
@@ -136,7 +137,7 @@ public class Summoning {
 
 	//1182 = real pouch list
 	public static int forSlotId(int slotId, boolean dung) {
-		EnumDefinitions realDef = EnumDefinitions.getEnum(1182);
+		EnumDefinition realDef = EnumDefinitions.getEnum(1182);
 		return realDef.getIntValue(((slotId-2)/5)+(dung ? 1100 : 1));
 	}
 
@@ -150,19 +151,19 @@ public class Summoning {
 					e.getPlayer().sendMessage("You need " + getMaterialListString(Pouch.forId(forSlotId(e.getSlotId(), false))) + " to create this pouch.");
 				return;
 			}
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				handlePouchInfusion(e.getPlayer(), pouch, 1);
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				handlePouchInfusion(e.getPlayer(), pouch, 5);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				handlePouchInfusion(e.getPlayer(), pouch, 10);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				handlePouchInfusion(e.getPlayer(), pouch, Integer.MAX_VALUE);
-			else if (e.getPacket() == ClientPacket.IF_OP5)
+			else if (e.getOpNum() == 5)
 				handlePouchInfusion(e.getPlayer(), pouch, 28);
-			else if (e.getPacket() == ClientPacket.IF_OP7)
+			else if (e.getOpNum() == 7)
 				e.getPlayer().sendMessage("You need " + getMaterialListString(pouch) + " to create this pouch.");
-		} else if (e.getComponentId() == 19 && e.getPacket() == ClientPacket.IF_OP1)
+		} else if (e.getComponentId() == 19 && e.getOpNum() == 1)
 			openScrollInfusionInterface(e.getPlayer(), e.getPlayer().getControllerManager().isIn(DungeonController.class));
 	});
 	
@@ -174,15 +175,15 @@ public class Summoning {
 
 	public static ButtonClickHandler handleScrollButtons = new ButtonClickHandler(666, e -> {
 		if (e.getComponentId() == 16) {
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				createScroll(e.getPlayer(), e.getSlotId2(), 1);
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				createScroll(e.getPlayer(), e.getSlotId2(), 5);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				createScroll(e.getPlayer(), e.getSlotId2(), 10);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				createScroll(e.getPlayer(), e.getSlotId2(), Integer.MAX_VALUE);
-		} else if (e.getComponentId() == 18 && e.getPacket() == ClientPacket.IF_OP1)
+		} else if (e.getComponentId() == 18 && e.getOpNum() == 1)
 			openInfusionInterface(e.getPlayer(), e.getPlayer().getControllerManager().isIn(DungeonController.class));
 	});
 
@@ -256,7 +257,7 @@ public class Summoning {
 		}
 		Item[] items = pouch.getMaterialList().get();
 		for (int i = 0;i < items.length;i++)
-			list.append(items[i].getAmount()).append(" ").append(items[i].getDefinitions().name.toLowerCase()).append((i == items.length - 1) ? "" : ", ");
+			list.append(items[i].getAmount()).append(" ").append(items[i].getDefinitions().getName().toLowerCase()).append((i == items.length - 1) ? "" : ", ");
 		return list.toString();
 	}
 }

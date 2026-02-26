@@ -1,6 +1,6 @@
 package com.rs.game.content.minigames.castlewars
 
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.model.ObjectShape
 import com.rs.game.World
 import com.rs.game.content.skills.cooking.Foods.Food
 import com.rs.game.model.entity.player.Equipment
@@ -8,8 +8,8 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.Ticks
@@ -89,7 +89,7 @@ class PlayingGame : Task() {
         }
         player.inventory.deleteItem(Item(4053, 1))
         barricadesCount[team]++
-        barricades.add(CastleWarsBarricadeNpc(team, Tile.of(player.tile)))
+        barricades.add(CastleWarsBarricadeNpc(team, player.tile))
     }
 
     fun removeBarricade(team: Int, npc: CastleWarsBarricadeNpc) {
@@ -109,7 +109,7 @@ class PlayingGame : Task() {
             return
         }
         if (!dropped) {
-            val flagStand = GameObject(if (flagTeam == CastleWars.SARADOMIN) 4377 else 4378, obj.type, obj.rotation, obj.x, obj.y, obj.plane)
+            val flagStand = GameObject(if (flagTeam == CastleWars.SARADOMIN) 4377 else 4378, obj.type, obj.rotation, obj.x, obj.y, obj.level)
             spawnedObjects.add(flagStand)
             World.spawnObject(flagStand)
         } else {
@@ -148,7 +148,7 @@ class PlayingGame : Task() {
 
     fun dropFlag(tile: Tile, flagTeam: Int) {
         CastleWars.removeHintIcon(flagTeam)
-        val flagDropped = GameObject(if (flagTeam == CastleWars.SARADOMIN) 4900 else 4901, ObjectType.SCENERY_INTERACT, 0,tile.x, tile.y, tile.plane)
+        val flagDropped = GameObject(if (flagTeam == CastleWars.SARADOMIN) 4900 else 4901, ObjectShape.SCENERY_INTERACT, 0,tile.x, tile.y, tile.plane)
         spawnedObjects.add(flagDropped)
         World.spawnObject(flagDropped)
         flagStatus[flagTeam] = DROPPED

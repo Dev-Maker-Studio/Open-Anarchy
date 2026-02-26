@@ -8,8 +8,8 @@ import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.npc.combat.CombatScript
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import kotlin.random.Random
@@ -81,7 +81,7 @@ class GoutweedPatrolGuards(id: Int, tile: Tile, private val tiles: Array<Tile>) 
     }
 
     private fun isInStoreroom(tile: Tile): Boolean {
-        for (range in storeroomTiles) if (tile.x() >= range[0] && tile.x() <= range[1] && tile.y() >= range[2] && tile.y() <= range[3]) return true
+        for (range in storeroomTiles) if (tile.x >= range[0] && tile.x <= range[1] && tile.y >= range[2] && tile.y <= range[3]) return true
         return false
     }
 

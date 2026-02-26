@@ -2,7 +2,7 @@ package com.rs.game.content.commands.development
 
 import com.rs.engine.command.Commands
 import com.rs.game.content.combat.CombatDefinitions
-import com.rs.lib.game.Rights
+import org.darkan.core.model.Rights
 import com.rs.plugin.annotations.ServerStartupEvent
 
 @ServerStartupEvent

@@ -24,6 +24,7 @@ class AttribMap {
 
     fun getB(name: String): Boolean = attribs["B$name"] as? Boolean ?: false
 
+    @JvmOverloads
     fun getI(name: String, def: Int = 0): Int {
         val v = attribs["I$name"] ?: return def
         return when (v) {
@@ -34,6 +35,7 @@ class AttribMap {
         }
     }
 
+    @JvmOverloads
     fun getD(name: String, def: Double = 0.0): Double = attribs["D$name"] as? Double ?: def
 
     fun getL(name: String): Long = attribs["L$name"] as? Long ?: 0L

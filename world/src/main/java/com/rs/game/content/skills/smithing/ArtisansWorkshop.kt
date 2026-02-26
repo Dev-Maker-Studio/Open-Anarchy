@@ -16,17 +16,17 @@
 //
 package com.rs.game.content.skills.smithing
 
-import com.rs.cache.loaders.interfaces.ComponentType
-import com.rs.cache.loaders.interfaces.IComponentDefinitions
+import org.darkan.core.cache.ComponentType
+import org.darkan.core.cache.IComponentDefinitions
 import com.rs.game.content.skills.util.Category
 import com.rs.game.content.skills.util.CreationAction
 import com.rs.game.content.skills.util.CreationActionD
 import com.rs.game.content.skills.util.ReqItem
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils.clampI
-import com.rs.lib.util.Utils.toInterfaceHash
+import org.darkan.core.model.Item
+import org.darkan.core.Utils.clampI
+import org.darkan.core.Utils.toInterfaceHash
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onChunkEnter
@@ -202,12 +202,18 @@ private enum class Reward(val componentId: Int, val price: Int, val desc: String
     ROYALE_CANNON(136, 100, "Allows turning the Dwarf multicannon to Royale version that can hold more cannonballs. Requires Golden Cannon.", { it.unlocked(GOLDEN_CANNON)});
 
     val defs = IComponentDefinitions.getInterfaceComponent(825, componentId) ?: error("Invalid artisans reward component id")
-    val spriteChild = defs.children.first { it.type == ComponentType.SPRITE } ?: error("Sprite not found")
-    val textChild = defs.children.first { it.type == ComponentType.TEXT && it.text.contains("%") } ?: error("Text not found")
+    val spriteChildId: Int by lazy {
+        val iface = IComponentDefinitions.getInterface(825) ?: error("Interface 825 not found")
+        iface.first { it.parent == componentId && it.type == ComponentType.SPRITE.id }.id
+    }
+    val textChildId: Int by lazy {
+        val iface = IComponentDefinitions.getInterface(825) ?: error("Interface 825 not found")
+        iface.first { it.parent == componentId && it.type == ComponentType.TEXT.id && it.text.contains("%") }.id
+    }
 
     fun select(player: Player) {
         player.selectedRewardIndex = ordinal+1
-        player.packets.sendRunScript(205, toInterfaceHash(825, spriteChild.componentId))
+        player.packets.sendRunScript(205, toInterfaceHash(825, spriteChildId))
         player.packets.setIFText(825, 66, name.split('_').joinToString(" ") { it.lowercase().replaceFirstChar { char -> char.uppercase() } })
         player.packets.setIFText(825, 67, desc)
         player.packets.setIFText(825, 69, if (player.unlocked(this)) "Earned" else "$price%")
@@ -215,8 +221,8 @@ private enum class Reward(val componentId: Int, val price: Int, val desc: String
     }
 
     fun markUnlocked(player: Player) {
-        player.packets.setIFGraphic(825, spriteChild.componentId, 5457)
-        player.packets.setIFText(825, textChild.componentId, "<col=00FF00>Earned")
+        player.packets.setIFGraphic(825, spriteChildId, 5457)
+        player.packets.setIFText(825, textChildId, "<col=00FF00>Earned")
         select(player)
     }
 
@@ -327,16 +333,16 @@ private fun Player.withdrawBars(ingot: ReqItem) {
     if (materials.isEmpty()) return
     for (mat in materials) {
         val metal = Metal.valueOf(mat.definitions.name.replace(" ore", " ").trim())
-        if (metal.amountStored(this) < mat.getAmount()) {
-            sendMessage("You need ${mat.getAmount()} ${mat.definitions.name} to make $quantity ${ingot.product.definitions.name}${if (quantity > 1) "s" else ""}.")
+        if (metal.amountStored(this) < mat.amount) {
+            sendMessage("You need ${mat.amount} ${mat.definitions.name} to make $quantity ${ingot.product.definitions.name}${if (quantity > 1) "s" else ""}.")
             return
         }
     }
     for (mat in materials) {
         val metal = Metal.valueOf(mat.definitions.name.replace(" ore", " ").trim())
-        metal.remove(this, mat.getAmount())
+        metal.remove(this, mat.amount)
     }
-    inventory.addItemDrop(Item(ingot.product.setAmount(quantity)))
+    inventory.addItemDrop(Item(ingot.product.id, quantity))
 }
 
 private fun Player.returnAllIngots() {
@@ -345,14 +351,14 @@ private fun Player.returnAllIngots() {
         val materials = defs.getMaterialsFor(inventory.getAmountOf(i))
         for (mat in materials) {
             val metal = Metal.valueOf(mat.definitions.name.replace(" ore", " ").trim())
-            if (mat.getAmount() + metal.amountStored(this) > metal.cap) {
+            if (mat.amount + metal.amountStored(this) > metal.cap) {
                 sendMessage("You already have " + metal.cap + " ${metal.name} stored in the furnace. You can't fit any more in.")
                 return
             }
         }
         for (mat in materials) {
             val metal = Metal.valueOf(mat.definitions.name.replace(" ore", " ").trim())
-            metal.add(this, mat.getAmount())
+            metal.add(this, mat.amount)
         }
         inventory.deleteItem(i, inventory.getAmountOf(i))
     }

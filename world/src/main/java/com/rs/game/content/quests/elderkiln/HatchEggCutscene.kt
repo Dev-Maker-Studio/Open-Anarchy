@@ -3,7 +3,7 @@ package com.rs.game.content.quests.elderkiln
 import com.rs.engine.cutscenekt.cutscene
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.sendOptionsDialogue
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.combat.CombatSpell
@@ -13,9 +13,9 @@ import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.InstancedController
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.InterfaceManager
-import com.rs.lib.game.Tile
-import com.rs.lib.net.ClientPacket
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+
+import org.darkan.core.Utils
 
 private const val GAAL = 15131
 
@@ -135,7 +135,7 @@ fun hatchEggCutscene(player: Player) {
 
         override fun onDestroyInstance() { }
 
-        override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, packet: ClientPacket): Boolean {
+        override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, packet: Int): Boolean {
             if (interfaceId != 1247)
                 return false
             when(componentId) {

@@ -1,6 +1,6 @@
 package com.rs.game.content.minigames.warriors_guild
 
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.model.ObjectShape
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.sendOptionsDialogue
 import com.rs.engine.dialogue.startConversation
@@ -32,13 +32,13 @@ import com.rs.game.model.entity.player.managers.AuraManager
 import com.rs.game.model.entity.player.managers.InterfaceManager
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.Constants
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Item
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.game.Tile
-import com.rs.lib.net.ClientPacket
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.model.Animation
+import org.darkan.core.model.Item
+import org.darkan.core.model.SpotAnim
+import world.gregs.voidps.type.Tile
+
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 import kotlin.random.Random
@@ -52,7 +52,7 @@ private val CATAPAULT_MINIGAME_INTERFACE = 411
 private val CATAPULT_TARGET = Tile.of(2842, 3541, 1)
 private val CATAPULT_PROJECTILE_BASE = Tile.of(2842, 3550, 1)
 private val DEFENSIVE_ANIMATIONS = intArrayOf(4169, 4168, 4171, 4170)
-private val CATAPULT = GameObject(15616, ObjectType.SCENERY_INTERACT, 0, 2840, 3548, 1)
+private val CATAPULT = GameObject(15616, ObjectShape.SCENERY_INTERACT, 0, 2840, 3548, 1)
 
 private val DUMMY_LOCATIONS = arrayOf(Tile.of(2860, 3549, 0), Tile.of(2860, 3547, 0), Tile.of(2859, 3545, 0), Tile.of(2857, 3545, 0), Tile.of(2855, 3546, 0), Tile.of(2855, 3548, 0), Tile.of(2856, 3550, 0), Tile.of(2858, 3550, 0))
 private val DUMMY_ROTATIONS = intArrayOf(1, 1, 2, 2, 3, 3, 0, 0)
@@ -134,7 +134,7 @@ fun mapWarriorsGuild() {
     onObjectClick(15653) { (player, obj) ->
         if (isSpawnedObject(obj) || !canEnter(player)) return@onObjectClick
         player.lock(2)
-        val opened = GameObject(obj.id, obj.type, obj.rotation - 1, obj.x, obj.y, obj.plane)
+        val opened = GameObject(obj.id, obj.type, obj.rotation - 1, obj.x, obj.y, obj.level)
         spawnObjectTemporary(opened, 1)
         player.addWalkSteps(2876, 3542, 2, false)
     }
@@ -243,7 +243,7 @@ class WarriorsGuildController: Controller() {
         return !(slot == Equipment.HEAD && kegCount >= 1)
     }
 
-    override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, packet: ClientPacket?): Boolean {
+    override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, packet: Int): Boolean {
         if (interfaceId == 387 && kegCount >= 1) {
             if (componentId == 6) {
                 player.sendMessage("You can't remove the kegs off your head.")
@@ -307,7 +307,7 @@ class WarriorsGuildController: Controller() {
             }
             player.addWalkSteps(obj.x, if (inLobby) obj.y + (if (obj.id == 15647) 1 else -1) else obj.y, 1, false)
             return false
-        } else if (obj.id == 15658 || obj.id == 15660 || obj.id == 15653 || obj.id == 66758 && obj.x == 2861 && obj.y == 3538 && obj.plane == 1) {
+        } else if (obj.id == 15658 || obj.id == 15660 || obj.id == 15653 || obj.id == 66758 && obj.x == 2861 && obj.y == 3538 && obj.level == 1) {
             if (isSpawnedObject(obj)) return false
             if (obj.id == 15653) player.controllerManager.forceStop()
             else if (obj.id == 66758 && player.x == obj.x) resetKegBalance(player, this)
@@ -449,7 +449,7 @@ private fun balanceKeg(player: Player, controller: WarriorsGuildController, obj:
             player.appearance.setBAS(2671)
         }
         controller.kegCount++
-        player.vars.setVarBit(obj.definitions.varpBit, 1)
+        player.vars.setVarBit(obj.definitions.varbit, 1)
         player.equipment.setSlot(Equipment.HEAD, Item(8859 + controller.kegCount))
         player.equipment.refresh(Equipment.HEAD)
         player.appearance.generateAppearanceData()
@@ -486,7 +486,7 @@ private fun resetKegBalance(player: Player, controller: WarriorsGuildController)
  */
 private fun tickDummies() {
     val index = Utils.random(DUMMY_LOCATIONS.size)
-    spawnObjectTemporary(GameObject(Utils.random(15624, 15630), ObjectType.SCENERY_INTERACT, DUMMY_ROTATIONS[index], DUMMY_LOCATIONS[index]), 10)
+    spawnObjectTemporary(GameObject(Utils.random(15624, 15630), ObjectShape.SCENERY_INTERACT, DUMMY_ROTATIONS[index], DUMMY_LOCATIONS[index]), 10)
     currentDummyTick = World.getServerTicks()
     sendObjectAnimation(CATAPULT, Animation(4164))
 }
@@ -530,7 +530,7 @@ private fun isProperHit(player: Player, obj: GameObject): Boolean {
 private fun tickDefenseMinigame() {
     projectileType = Utils.random(4)
     sendProjectile(CATAPULT_PROJECTILE_BASE, CATAPULT_TARGET, 679 + projectileType, 85 to 15, 15, 10, 15) { projectile ->
-        getPlayersInChunkRange(projectile.destination.chunkId, 1)
+        getPlayersInChunkRange(projectile.destination.getChunkId(), 1)
             .filter { inCatapultArea(it) && it.withinDistance(CATAPULT_TARGET, 0) }
             .forEach { player ->
                 val controller = player.controllerManager.controller as? WarriorsGuildController ?: return@forEach
@@ -661,9 +661,9 @@ private fun Player.modifyPoints(varbit: Int, points: Int): Int {
     vars.saveVarBit(varbit, newPoints)
     val actualDiff = newPoints - oldPoints
     if (actualDiff > 0)
-        packets.sendRunScript(4051, POINT_COMPS[varbit], 1)
+        packets.sendRunScript(4051, POINT_COMPS[varbit]!!, 1)
     else if (actualDiff < 0)
-        packets.sendRunScript(4051, POINT_COMPS[varbit], 0)
+        packets.sendRunScript(4051, POINT_COMPS[varbit]!!, 0)
     return newPoints
 }
 

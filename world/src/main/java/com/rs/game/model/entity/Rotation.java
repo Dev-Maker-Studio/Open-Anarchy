@@ -1,6 +1,6 @@
 package com.rs.game.model.entity;
 
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class Rotation {
 	private int data;

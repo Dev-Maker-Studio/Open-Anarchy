@@ -28,10 +28,10 @@ import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.GenericAttribMap;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.AttribMap;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.*;
 import com.rs.utils.Ticks;
@@ -236,7 +236,7 @@ public class ShieldOfArrav extends QuestOutline {
     }
 
     public static void saveStageToPlayerSave(Player p, int questStage) {
-        GenericAttribMap questAttr = p.getQuestManager().getAttribs(Quest.SHIELD_OF_ARRAV);
+        AttribMap questAttr = p.getQuestManager().getAttribs(Quest.SHIELD_OF_ARRAV);
         switch (questStage) {
             case NOT_STARTED_STAGE -> questAttr.setB("NOT_STARTED", true);
             case FIND_BOOK_STAGE -> {
@@ -258,7 +258,7 @@ public class ShieldOfArrav extends QuestOutline {
     }
 
     public static boolean isStageInPlayerSave(Player p, int questStage) {
-        GenericAttribMap questAttr = p.getQuestManager().getAttribs(Quest.SHIELD_OF_ARRAV);
+        AttribMap questAttr = p.getQuestManager().getAttribs(Quest.SHIELD_OF_ARRAV);
         switch (questStage) {
             case NOT_STARTED_STAGE -> {
                 return questAttr.getB("NOT_STARTED");

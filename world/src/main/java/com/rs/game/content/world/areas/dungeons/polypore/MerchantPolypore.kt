@@ -1,8 +1,8 @@
 package com.rs.game.content.world.areas.dungeons.polypore
 
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.net.ClientPacket
-import com.rs.lib.util.Logger
+
+import org.darkan.core.Logger
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onNpcClick
@@ -118,27 +118,27 @@ fun mapPolyporeStorageInterface() {
 
     onButtonClick(894) { e ->
         val item = PolyporeStorableItem.forId(e.slotId2) ?: return@onButtonClick
-        when (e.packet) {
-            ClientPacket.IF_OP1 -> e.player.store(item, 1)
-            ClientPacket.IF_OP2 -> e.player.store(item, 5)
-            ClientPacket.IF_OP3 -> e.player.store(item, Int.MAX_VALUE)
-            ClientPacket.IF_OP4 -> e.player.sendInputInteger("How many would you like to store?") {
+        when (e.opNum) {
+            1 -> e.player.store(item, 1)
+            2 -> e.player.store(item, 5)
+            3 -> e.player.store(item, Int.MAX_VALUE)
+            4 -> e.player.sendInputInteger("How many would you like to store?") {
                 e.player.store(item, it)
             }
-            else -> Logger.info(PolyporeStorableItem::class.java, "mapPolyporeStorageInterface", "Unhandled packet: ${e.packet}")
+            else -> Logger.info(PolyporeStorableItem::class.java, "mapPolyporeStorageInterface", "Unhandled packet: ${e.opNum}")
         }
     }
 
     onButtonClick(893) { e ->
         val item = PolyporeStorableItem.forId(e.slotId2) ?: return@onButtonClick
-        when (e.packet) {
-            ClientPacket.IF_OP1 -> e.player.take(item, 1)
-            ClientPacket.IF_OP2 -> e.player.take(item, 5)
-            ClientPacket.IF_OP3 -> e.player.take(item, Int.MAX_VALUE)
-            ClientPacket.IF_OP4 -> e.player.sendInputInteger("How many would you like to take?") {
+        when (e.opNum) {
+            1 -> e.player.take(item, 1)
+            2 -> e.player.take(item, 5)
+            3 -> e.player.take(item, Int.MAX_VALUE)
+            4 -> e.player.sendInputInteger("How many would you like to take?") {
                 e.player.take(item, it)
             }
-            else -> Logger.info(PolyporeStorableItem::class.java, "mapPolyporeStorageInterface", "Unhandled packet: ${e.packet}")
+            else -> Logger.info(PolyporeStorableItem::class.java, "mapPolyporeStorageInterface", "Unhandled packet: ${e.opNum}")
         }
     }
 }

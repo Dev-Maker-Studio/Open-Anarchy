@@ -1,7 +1,7 @@
 package com.rs.game.content.skills.summoning;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 import java.util.*;
 

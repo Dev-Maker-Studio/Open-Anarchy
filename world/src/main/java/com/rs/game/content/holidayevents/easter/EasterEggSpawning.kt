@@ -20,9 +20,9 @@ import com.rs.game.World
 import com.rs.game.map.Chunk
 import com.rs.game.map.ChunkManager
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import it.unimi.dsi.fastutil.ints.IntSet
 

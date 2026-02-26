@@ -24,9 +24,9 @@ import com.rs.game.World;
 import com.rs.game.content.quests.shieldofarrav.ShieldOfArrav;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Rights;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Rights;
+import org.darkan.core.Utils;
 import com.rs.net.LobbyCommunicator;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
@@ -104,7 +104,7 @@ public class PlayerModifiers {
                 p.sendMessage("You have banned " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + " for "+Integer.valueOf(args[1])+" days.");
                 LobbyCommunicator.updatePunishments(target);
                 if (target.hasStarted())
-                    target.getSession().getChannel().close();
+                    target.getSession().close();
             } else
                 p.sendMessage("Unable to find player.");
         }));

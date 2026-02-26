@@ -1,7 +1,8 @@
 package com.rs.game.map;
 
-import com.rs.cache.loaders.ObjectType;
-import com.rs.engine.pathfinder.WorldCollision;
+import org.darkan.core.model.ObjectShape;
+import com.rs.engine.pathfinder.GameObjectCollision;
+import org.darkan.core.map.WorldCollision;
 import com.rs.game.World;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.content.pets.Pet;
@@ -11,13 +12,35 @@ import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.model.item.TaskedGroundItem;
-import com.rs.lib.game.*;
-import com.rs.lib.net.packets.encoders.Sound;
-import com.rs.lib.net.packets.encoders.updatezone.*;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.MapUtils;
-import com.rs.lib.util.MapUtils.Structure;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.WorldObject;
+import org.darkan.core.model.Hit;
+import org.darkan.core.model.HintIcon;
+import org.darkan.core.model.Projectile;
+import org.darkan.core.model.Sound;
+import org.darkan.core.model.SoundType;
+import org.darkan.core.net.prot.CreateGroundItem;
+import org.darkan.core.net.prot.CreateObject;
+import org.darkan.core.net.prot.CustomizeObject;
+import org.darkan.core.net.prot.DestroyObject;
+import org.darkan.core.net.prot.GroundItemCount;
+import org.darkan.core.net.prot.GroundItemReveal;
+import org.darkan.core.net.prot.MapProjAnim;
+import org.darkan.core.net.prot.MapProjAnimHalfSq;
+import org.darkan.core.net.prot.ObjAnim;
+import org.darkan.core.net.prot.RemoveGroundItem;
+import org.darkan.core.net.prot.ServerProt;
+import org.darkan.core.net.prot.SoundEffectTile;
+import org.darkan.core.net.prot.UpdateZoneFullFollows;
+import org.darkan.core.Logger;
+import org.darkan.core.util.MapUtils;
+import org.darkan.core.util.Structure;
+import org.darkan.core.Utils;
 import com.rs.utils.music.Music;
 import com.rs.utils.spawns.ItemSpawns;
 import com.rs.utils.spawns.NPCSpawns;
@@ -45,7 +68,7 @@ public class Chunk {
     private final int y;
     private final int plane;
 
-    private final List<UpdateZonePacketEncoder> updates = ObjectLists.synchronize(new ObjectArrayList<>());
+    private final List<ServerProt> updates = ObjectLists.synchronize(new ObjectArrayList<>());
 
     protected Set<Integer> players = IntSets.synchronize(new IntOpenHashSet());
     protected Set<Integer> npcs = IntSets.synchronize(new IntOpenHashSet());
@@ -84,23 +107,63 @@ public class Chunk {
     }
 
     public void addProjectile(WorldProjectile projectile) {
-        addChunkUpdate(new ProjAnim(projectile.getSource().getChunkLocalHash(), projectile));
+        addChunkUpdate(new MapProjAnim(
+            projectile.getSource().getXInChunk(),
+            projectile.getSource().getYInChunk(),
+            projectile.getDestination().getX() - projectile.getSource().getX(),
+            projectile.getDestination().getY() - projectile.getSource().getY(),
+            projectile.getLockOnId(),
+            projectile.getSpotAnimId(),
+            projectile.getStartHeight(),
+            projectile.getEndHeight(),
+            projectile.getStartDelayClientCycles(),
+            projectile.getStartDelayClientCycles() + projectile.getInAirClientCycles(),
+            projectile.getAngle(),
+            projectile.getOffset(),
+            projectile.getUseTerrainHeight()
+        ));
     }
 
     public void addProjectileHalfSq(WorldProjectile projectile) {
-        addChunkUpdate(new ProjAnimHalfSq(projectile.getSource().getChunkLocalHash(), projectile));
+        addChunkUpdate(new MapProjAnimHalfSq(
+            projectile.getSource().getXInChunk() * 2 + projectile.getHalfSqStartOffsetX(),
+            projectile.getSource().getYInChunk() * 2 + projectile.getHalfSqStartOffsetY(),
+            (projectile.getDestination().getX() - projectile.getSource().getX()) * 2 + projectile.getHalfSqEndOffsetX(),
+            (projectile.getDestination().getY() - projectile.getSource().getY()) * 2 + projectile.getHalfSqEndOffsetY(),
+            projectile.getSourceId(),
+            projectile.getLockOnId(),
+            projectile.getSpotAnimId(),
+            projectile.getStartHeight(),
+            projectile.getEndHeight(),
+            projectile.getStartDelayClientCycles(),
+            projectile.getStartDelayClientCycles() + projectile.getInAirClientCycles(),
+            projectile.getAngle(),
+            projectile.getOffset(),
+            projectile.getBasFrameHeightAdjust(),
+            projectile.getUseTerrainHeight()
+        ));
     }
 
     public void addSpotAnim(Tile tile, SpotAnim spotAnim) {
-        addChunkUpdate(new TileSpotAnim(tile.getChunkLocalHash(), spotAnim));
+        addChunkUpdate(new org.darkan.core.net.prot.SpotAnim(
+            tile.getXInChunk(), tile.getYInChunk(),
+            spotAnim.getId(), spotAnim.getHeight(), spotAnim.getSpeed(), spotAnim.getRotation()
+        ));
     }
 
     public void addObjectAnim(WorldObject object, Animation anim) {
-        addChunkUpdate(new ObjectAnim(object.getTile().getChunkLocalHash(), object, anim));
+        addChunkUpdate(new ObjAnim(
+            object.getTile().getXInChunk(), object.getTile().getYInChunk(),
+            object.getType().getId(), object.getRotation(), anim.getIds()[0]
+        ));
     }
 
     public void addSound(Tile tile, Sound sound) {
-        addChunkUpdate(new TileSound(tile.getChunkLocalHash(), sound));
+        addChunkUpdate(new SoundEffectTile(
+            tile.getXInChunk(), tile.getYInChunk(),
+            sound.getId(), sound.getRadius(), sound.getRepeat(),
+            sound.getDelay(), sound.getVolume(), sound.getSampleRate()
+        ));
     }
 
     public List<GroundItem> getAllGroundItems() {
@@ -154,19 +217,30 @@ public class Chunk {
         if (groundItems.isEmpty())
             return;
         List<GroundItem> toRemove = new ArrayList<>();
+        List<GroundItem[]> toReveal = new ArrayList<>();
         for (GroundItem item : groundItemList) {
             item.tick();
             if (item.getDeleteTime() != -1 && item.getTicks() >= item.getDeleteTime())
                 toRemove.add(item);
             if (item.getPrivateTime() != -1 && item.getTicks() >= item.getPrivateTime() && item.isPrivate()) {
-                if (!item.isInvisible() || !ItemConstants.isTradeable(item))
+                if (!item.isInvisible() || !ItemConstants.isTradeable(item.getItem()))
                     continue;
                 removeItemFromOwnerMapping(item);
                 Player creator = item.getCreatorUsername() != null ? World.getPlayerByUsername(item.getCreatorUsername()) : null;
-                addChunkUpdate(new RevealGroundItem(item.getTile().getChunkLocalHash(), item, creator == null ? -1 : creator.getIndex()));
-                item.removeOwner();
-                addItemToOwnerMapping(item);
+                addChunkUpdate(new GroundItemReveal(
+                    creator == null ? -1 : creator.getIndex(),
+                    item.getTile().getXInChunk(), item.getTile().getYInChunk(),
+                    item.getId(), item.getAmount()
+                ));
+                // Create a public copy (no owner) to replace the private item in mappings
+                GroundItem publicItem = new GroundItem(item.getItem(), item.getTile(), null, item.getType(), item.getRespawnTicks(), item.getPrivateTime(), item.getDeleteTime());
+                toReveal.add(new GroundItem[] { item, publicItem });
             }
+        }
+        for (GroundItem[] pair : toReveal) {
+            groundItemList.remove(pair[0]);
+            groundItemList.add(pair[1]);
+            addItemToOwnerMapping(pair[1]);
         }
         for (GroundItem item : toRemove)
             deleteGroundItem(item);
@@ -202,13 +276,16 @@ public class Chunk {
         Map<Integer, List<GroundItem>> tileMap = groundItems.computeIfAbsent(item.getVisibleToId(), k -> Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>()));
         List<GroundItem> items = tileMap.computeIfAbsent(item.getTile().getTileHash(), k -> ObjectLists.synchronize(new ObjectArrayList<>()));
         GroundItem existing = getGroundItem(item.getId(), item.getTile(), item.getVisibleToId());
-        if (item.getDefinitions().isStackable() && !item.containsMetaData() && existing != null) {
+        if (item.getDefinitions().isStackable() && !item.getItem().containsMetaData() && existing != null) {
             int oldAmount = existing.getAmount();
-            existing.setAmount(existing.getAmount() + item.getAmount());
+            existing.getItem().setAmount(existing.getAmount() + item.getAmount());
             if (existing.getCreatorUsername() != null && World.getPlayerByUsername(existing.getCreatorUsername()) != null)
                 World.getPlayerByUsername(existing.getCreatorUsername()).getPackets().sendSetGroundItemAmount(existing, oldAmount);
             else
-                addChunkUpdate(new SetGroundItemAmount(existing.getTile().getChunkLocalHash(), existing, oldAmount));
+                addChunkUpdate(new GroundItemCount(
+                    existing.getTile().getXInChunk(), existing.getTile().getYInChunk(),
+                    existing.getId(), oldAmount, existing.getAmount()
+                ));
             return false;
         }
         groundItemList.add(item);
@@ -216,14 +293,18 @@ public class Chunk {
         if (item.isPrivate() && World.getPlayerByUsername(item.getCreatorUsername()) != null)
             World.getPlayerByUsername(item.getCreatorUsername()).getPackets().sendGroundItem(item);
         else
-            addChunkUpdate(new CreateGroundItem(item.getTile().getChunkLocalHash(), item));
+            addChunkUpdate(new CreateGroundItem(
+                item.getTile().getXInChunk(), item.getTile().getYInChunk(),
+                item.getId(), item.getAmount()
+            ));
         return true;
     }
 
     public boolean deleteGroundItem(GroundItem item) {
         ChunkManager.markChunkActive(id);
-        if (item instanceof TaskedGroundItem tasked)
-            tasked.getAsyncTasks().stopAll();
+        //TODO: TaskedGroundItem is composition-based, not subclass - need different check
+        //if (item instanceof TaskedGroundItem tasked)
+        //    tasked.getAsyncTasks().stopAll();
         int tileHash = item.getTile().getTileHash();
         Map<Integer, List<GroundItem>> tileMap = groundItems.get(item.getVisibleToId());
         if (tileMap == null)
@@ -240,7 +321,10 @@ public class Chunk {
             if (item.isPrivate() && World.getPlayerByUsername(item.getCreatorUsername()) != null)
                 World.getPlayerByUsername(item.getCreatorUsername()).getPackets().removeGroundItem(item);
             else
-                addChunkUpdate(new RemoveGroundItem(item.getTile().getChunkLocalHash(), item));
+                addChunkUpdate(new RemoveGroundItem(
+                    item.getTile().getXInChunk(), item.getTile().getYInChunk(),
+                    item.getId()
+                ));
             return true;
         }
         return false;
@@ -293,7 +377,7 @@ public class Chunk {
             addRemovedObject(obj);
             return;
         }
-        WorldCollision.clip(obj);
+        GameObjectCollision.clip(obj);
     }
 
     public void spawnObject(GameObject newObj, boolean clip) {
@@ -303,7 +387,7 @@ public class Chunk {
         if (spawnedObj != null) {
             spawnedObjects.remove(spawnedObj);
             if (clip)
-                WorldCollision.unclip(spawnedObj);
+                GameObjectCollision.unclip(spawnedObj);
         }
 
         if (newObj.equals(baseObj)) {
@@ -315,15 +399,18 @@ public class Chunk {
             ChunkManager.markChunkActive(id);
             spawnedObjects.add(newObj);
             if (clip && baseObj != null)
-                WorldCollision.unclip(baseObj);
+                GameObjectCollision.unclip(baseObj);
         } else if (spawnedObj == null) {
             Logger.info(Chunk.class, "spawnObject", "Requested object to spawn is already spawned. (Shouldnt happen) " + baseObj);
             return;
         }
 
         if (clip)
-            WorldCollision.clip(newObj);
-        addChunkUpdate(new AddObject(newObj.getTile().getChunkLocalHash(), newObj));
+            GameObjectCollision.clip(newObj);
+        addChunkUpdate(new CreateObject(
+            newObj.getTile().getXInChunk(), newObj.getTile().getYInChunk(),
+            newObj.getId(), newObj.getType().getId(), newObj.getRotation()
+        ));
     }
 
     public void removeObject(GameObject toRemove) {
@@ -332,28 +419,34 @@ public class Chunk {
         boolean replace = false;
         if (removedBaseObject != null) {
             deleteRemovedObject(baseObject);
-            WorldCollision.clip(baseObject);
+            GameObjectCollision.clip(baseObject);
             replace = true;
         }
         GameObject spawned = getSpawnedObjectWithSlot(toRemove.getTile(), toRemove.getSlot());
         if (spawned != null) {
             spawnedObjects.remove(toRemove);
             unflagForProcess(toRemove);
-            WorldCollision.unclip(toRemove);
+            GameObjectCollision.unclip(toRemove);
             if (baseObject != null)
-                WorldCollision.clip(baseObject);
+                GameObjectCollision.clip(baseObject);
             replace = true;
         } else if (toRemove.equals(baseObject)) {
             unflagForProcess(toRemove);
-            WorldCollision.unclip(toRemove);
+            GameObjectCollision.unclip(toRemove);
             addRemovedObject(baseObject);
             ChunkManager.markChunkActive(id);
         } else
             return;
         if (replace && baseObject != null)
-            addChunkUpdate(new AddObject(baseObject.getTile().getChunkLocalHash(), baseObject));
+            addChunkUpdate(new CreateObject(
+                baseObject.getTile().getXInChunk(), baseObject.getTile().getYInChunk(),
+                baseObject.getId(), baseObject.getType().getId(), baseObject.getRotation()
+            ));
         else
-            addChunkUpdate(new RemoveObject(toRemove.getTile().getChunkLocalHash(), toRemove));
+            addChunkUpdate(new DestroyObject(
+                toRemove.getTile().getXInChunk(), toRemove.getTile().getYInChunk(),
+                toRemove.getType().getId(), toRemove.getRotation()
+            ));
     }
 
     public void addRemovedObject(GameObject object) {
@@ -386,7 +479,7 @@ public class Chunk {
         return getSpawnedObject(tile);
     }
 
-    public GameObject getObject(Tile tile, ObjectType type) {
+    public GameObject getObject(Tile tile, ObjectShape type) {
         GameObject[] objects = getBaseObjects(tile);
         if (objects == null)
             return null;
@@ -435,7 +528,7 @@ public class Chunk {
         return null;
     }
 
-    public GameObject getSpawnedObject(Tile tile, ObjectType type) {
+    public GameObject getSpawnedObject(Tile tile, ObjectShape type) {
         if (spawnedObjects == null)
             return null;
         for (GameObject object : spawnedObjects)
@@ -477,8 +570,8 @@ public class Chunk {
         return list;
     }
 
-    public GameObject getObjectWithType(Tile tile, ObjectType type) {
-        GameObject object = getObjectWithSlot(tile, type.slot);
+    public GameObject getObjectWithType(Tile tile, ObjectShape type) {
+        GameObject object = getObjectWithSlot(tile, type.getSlot());
         return object != null && object.getType() == type ? object : null;
     }
 
@@ -588,12 +681,12 @@ public class Chunk {
         return npcs.remove(index);
     }
 
-    public void addChunkUpdate(UpdateZonePacketEncoder update) {
+    public void addChunkUpdate(ServerProt update) {
         ChunkManager.markChunkActive(id);
         updates.add(update);
     }
 
-    public List<UpdateZonePacketEncoder> getUpdates() {
+    public List<ServerProt> getUpdates() {
         return updates;
     }
 
@@ -662,27 +755,56 @@ public class Chunk {
     }
 
     public void init(Player player) {
-        List<UpdateZonePacketEncoder> initUpdates = new ObjectArrayList<>();
+        List<ServerProt> initUpdates = new ObjectArrayList<>();
         for (GroundItem item : getAllGroundItems()) {
             if (item.isPrivate() && item.getVisibleToId() != player.getUuid())
                 continue;
-            initUpdates.add(new CreateGroundItem(item.getTile().getChunkLocalHash(), item));
+            initUpdates.add(new CreateGroundItem(
+                item.getTile().getXInChunk(), item.getTile().getYInChunk(),
+                item.getId(), item.getAmount()
+            ));
         }
         for (GameObject object : new ArrayList<>(getRemovedObjects().values()))
-            initUpdates.add(new RemoveObject(object.getTile().getChunkLocalHash(), object));
+            initUpdates.add(new DestroyObject(
+                object.getTile().getXInChunk(), object.getTile().getYInChunk(),
+                object.getType().getId(), object.getRotation()
+            ));
         for (GameObject object : getSpawnedObjects())
-            initUpdates.add(new AddObject(object.getTile().getChunkLocalHash(), object));
+            initUpdates.add(new CreateObject(
+                object.getTile().getXInChunk(), object.getTile().getYInChunk(),
+                object.getId(), object.getType().getId(), object.getRotation()
+            ));
         for (GameObject object : flaggedObjectsForTickProcessing)
-            initUpdates.add(new AddObject(object.getTile().getChunkLocalHash(), object));
+            initUpdates.add(new CreateObject(
+                object.getTile().getXInChunk(), object.getTile().getYInChunk(),
+                object.getId(), object.getType().getId(), object.getRotation()
+            ));
         for (GameObject object : getAllObjects()) {
-            if (object.getMeshModifier() != null)
-                initUpdates.add(new CustomizeObject(object.getTile().getChunkLocalHash(), object.getMeshModifier().getObject(), object.getMeshModifier().getModelIds(), object.getMeshModifier().getModifiedColors(), object.getMeshModifier().getModifiedTextures()));
+            if (object.getMeshModifier() != null) {
+                var mod = object.getMeshModifier();
+                initUpdates.add(new CustomizeObject(
+                    mod.getObject().getTile().getXInChunk(), mod.getObject().getTile().getYInChunk(),
+                    mod.getObject().getId(), mod.getObject().getType().getId(), mod.getObject().getRotation(),
+                    false,
+                    mod.getModelIds(),
+                    mod.getModifiedColors() != null ? toShortArray(mod.getModifiedColors()) : null,
+                    mod.getModifiedTextures() != null ? toShortArray(mod.getModifiedTextures()) : null
+                ));
+            }
         }
         if (!initUpdates.isEmpty()) {
-            player.getSession().writeToQueue(new UpdateZoneFull(player.getSceneBaseChunkId(), getId()));
-            for (UpdateZonePacketEncoder packet : initUpdates)
-                player.getSession().writeToQueue(packet);
+            int[] base = MapUtils.decode(Structure.CHUNK, player.getSceneBaseChunkId());
+            player.getSession().queuePacket(new UpdateZoneFullFollows(getX() - base[0], getY() - base[1], getPlane()));
+            for (ServerProt packet : initUpdates)
+                player.getSession().queuePacket(packet);
         }
+    }
+
+    private static short[] toShortArray(int[] arr) {
+        short[] result = new short[arr.length];
+        for (int i = 0; i < arr.length; i++)
+            result[i] = (short) arr[i];
+        return result;
     }
 
     public void destroy() {

@@ -18,8 +18,8 @@ package com.rs.web;
 
 import com.rs.Settings;
 import com.rs.game.World;
-import com.rs.lib.web.APIUtil;
-import com.rs.lib.web.Route;
+import com.rs.web.APIUtil;
+import com.rs.web.Route;
 import io.undertow.server.RoutingHandler;
 import io.undertow.util.StatusCodes;
 

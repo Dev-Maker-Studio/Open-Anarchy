@@ -1,6 +1,6 @@
 package com.rs.game.content.transportation.canoes
 
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.model.ObjectShape
 import com.rs.game.World
 import com.rs.game.content.skills.woodcutting.Hatchet
 import com.rs.game.model.entity.async.schedule
@@ -11,14 +11,16 @@ import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub.ALL_GAME_TABS
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.model.gameobject.OwnedObject
-import com.rs.lib.Constants
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.model.Animation
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.ButtonClickEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onObjectClick
+import com.rs.utils.defs
+import com.rs.utils.emoteGameTicks
 import kotlin.math.abs
 
 enum class CanoeStationObjects(val objectId: Int, val varbitValue: Int) {
@@ -143,7 +145,7 @@ enum class CanoeStations(
 
         @JvmStatic
         fun getCanoeStationByTile(location: Tile): CanoeStations {
-            return stationRegionMap[location.regionId]!!
+            return stationRegionMap[location.getRegionId()]!!
         }
     }
 }
@@ -354,7 +356,7 @@ fun sendTravel(player: Player, interfaceAnimation: Animation, origin: CanoeStati
     val sinkingCanoe = OwnedObject(
         player,
         canoe.canoeSinking.objectId,
-        ObjectType.SCENERY_INTERACT,
+        ObjectShape.SCENERY_INTERACT,
         destination.canoeSinkRotation,
         destination.canoeSinkLocation
     )

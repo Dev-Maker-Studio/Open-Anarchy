@@ -1,13 +1,13 @@
 package com.rs.game.content.commands.development
 
 import com.rs.Settings
-import com.rs.cache.loaders.NPCDefinitions
+import org.darkan.core.cache.NPCDefinitions
 import com.rs.engine.command.Commands
 import com.rs.game.content.achievements.Achievement
 import com.rs.game.model.entity.player.managers.InterfaceManager
-import com.rs.lib.game.Rights
-import com.rs.lib.util.Utils
-import com.rs.lib.util.Utils.clampI
+import org.darkan.core.model.Rights
+import org.darkan.core.Utils
+import org.darkan.core.Utils.clampI
 import com.rs.plugin.annotations.ServerStartupEvent
 
 private val UNIDENTIFIED_ANIMS = intArrayOf(2057, 12549, 15461, 3024, 2202, 2205, 2200, 2212, 2207, 2211, 2208, 2197, 2195, 15719, 3145, 4122, 3874, 587, 10707, 1107, 2938, 2435, 2438, 2434, 2552, 2449, 2447, 14165, 2976, 2932, 3320, 3911, 5964, 3777, 3727, 2825, 2826, 16254, 16355, 16366, 16363, 16382, 16393, 10371, 1599, 3853, 3452, 3471, 3423, 3348, 2048, 3982, 2149, 6083, 2148, 2788, 11620, 2614, 15138, 12033, 3071, 13691, 2764, 12919, 1409, 6703, 15624, 2450, 1354, 15622, 2378, 9104, 16445, 654, 3032, 3670, 15147, 14175, 9021, 12913, 4471, 1852, 11146, 3266, 1633, 15128, 2343, 15203, 2010,
