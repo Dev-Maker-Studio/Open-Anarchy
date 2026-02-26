@@ -21,6 +21,7 @@ public class Voices {//set
 			return;
 		try {
 			Voice[] voices = JsonFileManager.loadJsonFile(new File("./developer-information/voice.json"), Voice[].class);
+			if (voices == null) return;
 			for(Voice voice : voices)
 				for(int voiceID : voice.getVoiceIDs())
 					voicesMarked.add(voiceID);
