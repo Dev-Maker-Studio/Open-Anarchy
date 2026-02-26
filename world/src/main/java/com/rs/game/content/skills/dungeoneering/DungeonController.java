@@ -17,8 +17,8 @@
 package com.rs.game.content.skills.dungeoneering;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.model.ObjectShape;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.World;
@@ -56,17 +56,26 @@ import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.entity.Teleport;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Inventory;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.*;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.WorldObject;
+// Hit class from com.rs.game.model.entity.Hit (not core module)
+import org.darkan.core.model.HintIcon;
+import org.darkan.core.model.Projectile;
+
+import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
@@ -165,7 +174,7 @@ public class DungeonController extends Controller {
 		Room room = dungeon.getRoom(dungeon.getCurrentRoomReference(player.getTile()));
 		if (room != null)
 			if (room.getRoom() == DungeonUtils.getBossRoomWithChunk(DungeonConstants.FloorType.Frozen, 26, 624)) {
-				if (!player.isCantWalk() && World.getObjectWithType(Tile.of(player.getX() + dir.dx, player.getY() + dir.dy, 0), ObjectType.GROUND_DECORATION) == null) {
+				if (!player.isCantWalk() && World.getObjectWithType(Tile.of(player.getX() + dir.dx, player.getY() + dir.dy, 0), ObjectShape.GROUND_DECORATION) == null) {
 					player.getAppearance().setBAS(1429);
 					player.setRun(true);
 					player.setCantWalk(true);
@@ -175,7 +184,7 @@ public class DungeonController extends Controller {
 					NPC boss = getNPC(player, "Plane-freezer Lakhrahnaz");
 					boolean collides = boss != null && WorldUtil.collides(nextStep.getX(), nextStep.getY(), player.getSize(), boss.getX(), boss.getY(), boss.getSize());
 					player.resetWalkSteps();
-					GameObject object = World.getObjectWithType(Tile.of(nextStep.getX(), nextStep.getY(), 0), ObjectType.GROUND_DECORATION);
+					GameObject object = World.getObjectWithType(Tile.of(nextStep.getX(), nextStep.getY(), 0), ObjectShape.GROUND_DECORATION);
 					if (collides || ((object != null && (object.getId() == 49331 || object.getId() == 49333)) || !player.addWalkSteps(nextStep.getX(), nextStep.getY(), 1))) {
 						player.setCantWalk(false);
 						player.getAppearance().setBAS(-1);
@@ -191,7 +200,7 @@ public class DungeonController extends Controller {
 
 	@Override
 	public void processIncomingHit(Hit hit) {
-		if (player.getDungManager().getActivePerk() == KinshipPerk.TANK && player.getEquipment().getShieldId() != -1 && ItemDefinitions.getDefs(player.getEquipment().getShieldId()).name.toLowerCase().contains("shield")) {
+		if (player.getDungManager().getActivePerk() == KinshipPerk.TANK && player.getEquipment().getShieldId() != -1 && ItemDefinitions.getDefs(player.getEquipment().getShieldId()).getName().toLowerCase().contains("shield")) {
 			double perc = 0.94 - (player.getDungManager().getKinshipTier(KinshipPerk.TANK) * 0.01);
 			hit.setDamage((int) (hit.getDamage() * perc));
 		}
@@ -704,7 +713,7 @@ public class DungeonController extends Controller {
 			player.setNextAnimation(new Animation(536));
 			player.lock(2);
 			GameObject openedChest = new GameObject(object);
-			openedChest.setId(DungeonConstants.THIEF_CHEST_OPEN[floorType.ordinal()]);
+			openedChest.changeId(DungeonConstants.THIEF_CHEST_OPEN[floorType.ordinal()]);
 			World.spawnObject(openedChest);
 			player.getInventory().addItemDrop(DungeonConstants.RUSTY_COINS, Utils.random((type + 1) * 10000) + 1);
 			if (Utils.random(2) == 0)
@@ -1080,14 +1089,14 @@ public class DungeonController extends Controller {
 	 * return process normaly
 	 */
 	@Override
-	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, ClientPacket packet) {
+	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packet) {
 		if (dungeon == null || !dungeon.hasStarted())
 			return false;
 
 		if (dungeon.isAtRewardsScreen()) {
 			if (interfaceId == 933)
 				if (componentId >= 318 && componentId <= 322)
-					if (packet == ClientPacket.IF_OP2)
+					if (packet == 2)
 						player.startConversation(new DungeonLeave(player, this));
 					else {
 						if (voteStage == 2)
@@ -1109,7 +1118,7 @@ public class DungeonController extends Controller {
 			Item item = player.getInventory().getItem(slotId);
 			if (item == null || item.getId() != slotId2)
 				return false;
-			if (packet == ClientPacket.IF_OP1) {
+			if (packet == 1) {
 				for (int index = 0; index < DungeoneeringTraps.ITEM_TRAPS.length; index++)
 					if (item.getId() == DungeoneeringTraps.ITEM_TRAPS[index]) {
 						DungeoneeringTraps.placeTrap(player, dungeon, index);
@@ -1134,13 +1143,13 @@ public class DungeonController extends Controller {
 		else if (interfaceId == DungeonResourceShop.RESOURCE_SHOP) {
 			if (componentId == 24) {
 				int quantity = -1;
-				if (packet == ClientPacket.IF_OP2)
+				if (packet == 2)
 					quantity = 1;
-				else if (packet == ClientPacket.IF_OP3)
+				else if (packet == 3)
 					quantity = 5;
-				else if (packet == ClientPacket.IF_OP4)
+				else if (packet == 4)
 					quantity = 10;
-				else if (packet == ClientPacket.IF_OP5)
+				else if (packet == 5)
 					quantity = 50;
 				DungeonResourceShop.handlePurchaseOptions(player, slotId, quantity);
 			}
@@ -1148,13 +1157,13 @@ public class DungeonController extends Controller {
 		} else if (interfaceId == DungeonResourceShop.RESOURCE_SHOP_INV) {
 			if (componentId == 0) {
 				int quantity = -1;
-				if (packet == ClientPacket.IF_OP2)
+				if (packet == 2)
 					quantity = 1;
-				else if (packet == ClientPacket.IF_OP3)
+				else if (packet == 3)
 					quantity = 5;
-				else if (packet == ClientPacket.IF_OP4)
+				else if (packet == 4)
 					quantity = 10;
-				else if (packet == ClientPacket.IF_OP5)
+				else if (packet == 5)
 					quantity = 50;
 				DungeonResourceShop.handleSellOptions(player, slotId, slotId2, quantity);
 			}
@@ -1188,7 +1197,7 @@ public class DungeonController extends Controller {
 					player.sendMessage("You don't have enough inventory space.");
 					return false;
 				}
-				if (packet == ClientPacket.IF_OP2) {
+				if (packet == 2) {
 					player.getInventory().deleteItem(DungeonConstants.GATESTONE, 1);
 					if (gatestone != null) {
 						GroundItem item = ChunkManager.getChunk(gatestone.getChunkId()).getGroundItem(DungeonConstants.GATESTONE, gatestone, player);
@@ -1250,7 +1259,7 @@ public class DungeonController extends Controller {
 			if (item == null)
 				return;
 			World.removeGroundItem(player, item);
-			player.getInventory().deleteItem(item);
+			player.getInventory().deleteItem(item.getItem());
 			setGatestone(null);
 		}
 		if (group && !Magic.checkRunes(player, true, new RuneSet(Rune.LAW, 3)))

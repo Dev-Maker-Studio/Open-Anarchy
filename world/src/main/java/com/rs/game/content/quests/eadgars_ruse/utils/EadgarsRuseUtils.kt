@@ -3,7 +3,7 @@ package com.rs.game.content.quests.eadgars_ruse.utils
 import com.rs.engine.cutscenekt.cutscene
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.quests.eadgars_ruse.instances.npcs.GoutweedCrateGuard
@@ -15,7 +15,7 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.npc.combat.CombatScript
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 import com.rs.utils.Ticks
 import kotlin.random.Random
 
@@ -32,7 +32,7 @@ class EadgarsRuseUtils(val player: Player) {
     }
 
     fun captureParrot() {
-        val parrotyPete: NPC? = World.getNPCsInChunkRange(player.chunkId, 2).firstOrNull { it.id == PARROTY_PETE }
+        val parrotyPete: NPC? = World.getNPCsInChunkRange(player.getChunkId(), 2).firstOrNull { it.id == PARROTY_PETE }
         player.faceDir(Direction.EAST)
         if (stage in STAGE_GET_PARROT..STAGE_NEED_TO_HIDE_PARROT && learntAboutParrot) {
             if (player.containsOneItem(DRUNK_PARROT) || player.bank.containsItem(DRUNK_PARROT)) {
@@ -134,7 +134,7 @@ class EadgarsRuseUtils(val player: Player) {
             KITCHEN_DRAWERS[1] -> {
                 if (option == "Close") {
                     player.anim(OPEN_DRAWERS_ANIM)
-                    obj.setId(KITCHEN_DRAWERS[0])
+                    obj.changeId(KITCHEN_DRAWERS[0])
                 }
                 if (option == "Search") {
                     player.cutscene {
@@ -177,7 +177,7 @@ class EadgarsRuseUtils(val player: Player) {
 
     fun handleGoutweedCrate() {
         if (player.getQuestStage(Quest.EADGARS_RUSE) >= STAGE_UNLOCKED_STOREROOM) {
-            val guard = World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == GOUTWEED_GUARD }
+            val guard = World.getNPCsInChunkRange(player.getChunkId(), 1).firstOrNull { it.id == GOUTWEED_GUARD }
             if (guard != null) {
                 if (player.inventory.hasFreeSlots()) {
                     player.cutscene {

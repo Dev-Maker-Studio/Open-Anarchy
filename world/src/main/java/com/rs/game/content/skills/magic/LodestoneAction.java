@@ -21,10 +21,10 @@ import com.rs.game.content.achievements.Achievement;
 import com.rs.game.model.entity.Teleport;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -97,7 +97,7 @@ public class LodestoneAction extends PlayerAction {
 	}
 
 	public static ObjectClickHandler handleUnlock = new ObjectClickHandler(new Object[] { 69827, 69828, 69829, 69830, 69831, 69832, 69833, 69834, 69835, 69836, 69837, 69838, 69839, 69840, 69841 }, e -> {
-		if (e.getOpNum() != ClientPacket.OBJECT_OP1)
+		if (e.getOpNum() != 1)
 			return;
 		Lodestone stone = Lodestone.forObject(e.getObj().getId());
 		if (stone != null)

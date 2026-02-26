@@ -17,9 +17,10 @@
 package com.rs.game.model.entity.player;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
-import com.rs.cache.loaders.interfaces.IFEvents.UseFlag;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
+import org.darkan.core.model.IFEvents;
+import org.darkan.core.model.UseFlag;
 import com.rs.game.World;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.content.pets.Pet;
@@ -28,11 +29,11 @@ import com.rs.game.content.skills.summoning.Familiar;
 import com.rs.game.content.skills.summoning.Pouch;
 import com.rs.game.model.entity.interactions.StandardEntityInteraction;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.net.decoders.handlers.InventoryOptionsHandler;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.annotations.PluginEventHandler;
@@ -74,21 +75,21 @@ public final class Inventory {
 				e.getPlayer().getInventory().refresh(e.getSlotId());
 				return;
 			}
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				InventoryOptionsHandler.handleItemOption1(e.getPlayer(), e.getSlotId(), e.getSlotId2(), item);
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				InventoryOptionsHandler.handleItemOption2(e.getPlayer(), e.getSlotId(), e.getSlotId2(), item);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				InventoryOptionsHandler.handleItemOption3(e.getPlayer(), e.getSlotId(), e.getSlotId2(), item);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				InventoryOptionsHandler.handleItemOption4(e.getPlayer(), e.getSlotId(), e.getSlotId2(), item);
-			else if (e.getPacket() == ClientPacket.IF_OP5)
+			else if (e.getOpNum() == 5)
 				InventoryOptionsHandler.handleItemOption5(e.getPlayer(), e.getSlotId(), e.getSlotId2(), item);
-			else if (e.getPacket() == ClientPacket.IF_OP7)
+			else if (e.getOpNum() == 7)
 				InventoryOptionsHandler.handleItemOption6(e.getPlayer(), e.getSlotId(), e.getSlotId2(), item);
-			else if (e.getPacket() == ClientPacket.IF_OP8)
+			else if (e.getOpNum() == 8)
 				InventoryOptionsHandler.handleItemOption7(e.getPlayer(), e.getSlotId(), e.getSlotId2(), item);
-			else if (e.getPacket() == ClientPacket.IF_OP10)
+			else if (e.getOpNum() == 10)
 				InventoryOptionsHandler.handleItemOption8(e.getPlayer(), e.getSlotId(), e.getSlotId2(), item);
 		}
 	});
@@ -133,7 +134,7 @@ public final class Inventory {
 		if (!e.getPlayer().getControllerManager().processItemOnNPC(e.getTarget(), item))
 			return;
 		e.getPlayer().stopAll(false);
-		if (PluginManager.handle(new ItemOnNPCEvent(e.getPlayer(), e.getTarget(), item.setSlot(e.getSlotId()), false)))
+		if (PluginManager.handle(new ItemOnNPCEvent(e.getPlayer(), e.getTarget(), item.withSlot(e.getSlotId()), false)))
 			return;
 		Object dist = PluginManager.getObj(new NPCInteractionDistanceEvent(e.getPlayer(), e.getTarget()));
 		int distance = 0;
@@ -493,7 +494,7 @@ public final class Inventory {
 			return;
 		if(Settings.getConfig().isDebug())
 			player.sendMessage("ID: " + item.getId());
-		ItemDefinitions def = ItemDefinitions.getDefs(item.getId());
+		ItemDefinition def = ItemDefinitions.getDefs(item.getId());
 		player.getPackets().sendInventoryMessage(0, slotId, ItemConfig.get(item.getId()).getExamine(item) + (ItemConstants.isTradeable(item) ? (" General store: " + Utils.formatTypicalInteger(item.getDefinitions().getSellPrice()) + " High Alchemy: " + Utils.formatTypicalInteger(def.getHighAlchPrice())) : ""));
 		if (item.getMetaData("combatCharges") != null)
 			player.sendMessage("<col=FF0000>It looks like it will last another " + Utils.ticksToTime(item.getMetaDataI("combatCharges")));
@@ -530,9 +531,9 @@ public final class Inventory {
 		int numberToDrop = 0;
 		if (!items.add(item)) {
 			numberToDrop = item.getAmount() - items.getFreeSlots();
-			items.add(new Item(item).setAmount(items.getFreeSlots()));
+			items.add(com.rs.utils.KtExtensionsKt.copyItem(item).withAmount(items.getFreeSlots()));
 			player.sendMessage("Not enough space in your inventory.");
-			World.addGroundItem(item.setAmount(numberToDrop), Tile.of(player.getTile()), player, true, 60);
+			World.addGroundItem(item.withAmount(numberToDrop), Tile.of(player.getTile()), player, true, 60);
 			refreshItems(itemsBefore);
 			return true;
 		}

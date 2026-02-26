@@ -19,7 +19,7 @@ package com.rs.game.content.world.areas.feldip_hills;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 

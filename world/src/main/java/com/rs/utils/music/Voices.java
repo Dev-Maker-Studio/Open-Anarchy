@@ -1,8 +1,8 @@
 package com.rs.utils.music;
 
 import com.rs.Settings;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.util.Logger;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.Logger;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;

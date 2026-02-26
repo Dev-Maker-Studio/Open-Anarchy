@@ -29,8 +29,17 @@ import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.*;
+import org.darkan.core.Constants;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.WorldObject;
+// Hit class from com.rs.game.model.entity.Hit (not core module)
+import org.darkan.core.model.HintIcon;
+import org.darkan.core.model.Projectile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.DropSets;
@@ -40,11 +49,11 @@ public class Wilderness {
 
 	public static ObjectClickHandler handleMagicAxeHutChests = new ObjectClickHandler(new Object[] { 2566 }, new Tile[] { Tile.of(3188, 3962, 0), Tile.of(3189, 3962, 0), Tile.of(3193, 3962, 0) }, e -> {
 		switch(e.getOpNum()) {
-		case OBJECT_OP1 -> {
+		case 1 -> {
 			e.getPlayer().sendMessage("You attempt to open the chest without disarming the traps.");
 			e.getPlayer().applyHit(new Hit((int) (e.getPlayer().getSkills().getLevel(Skills.HITPOINTS) + 20), Hit.HitLook.TRUE_DAMAGE));
 		}
-		case OBJECT_OP2 -> Thieving.checkTrapsChest(e.getPlayer(), e.getObj(), 2574, 32, 14, 7.5, DropSets.getDropSet("magic_axe_hut_chest"));
+		case 2 -> Thieving.checkTrapsChest(e.getPlayer(), e.getObj(), 2574, 32, 14, 7.5, DropSets.getDropSet("magic_axe_hut_chest"));
 		default -> e.getPlayer();
 		}
 	});

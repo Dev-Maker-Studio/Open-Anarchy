@@ -1,6 +1,6 @@
 package com.rs.game.content.quests.dig_site.utils
 
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 // Quest Stages
 const val STAGE_UNSTARTED = 0

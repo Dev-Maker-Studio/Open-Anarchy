@@ -20,9 +20,10 @@ import com.rs.game.map.ChunkManager;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.packets.encoders.Sound;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Sound;
+import org.darkan.core.model.SoundType;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 import com.rs.game.content.Effect;
@@ -258,7 +259,7 @@ public class Cooking extends PlayerAction {
 			}
 			player.sendMessage("You successfully cook " + (cookable == Cookables.RAW_SHRIMP || cookable == Cookables.RAW_ANCHOVIES ? "some" : "a") + " " + productName.toLowerCase() + ".", true);
 		}
-		player.getPackets().sendSound(new Sound(2577, 0, Sound.SoundType.EFFECT));
+		player.getPackets().sendSound(new Sound(2577, 0, SoundType.EFFECT));
 		if (quantity > 0) {
 			return 3;
 		}

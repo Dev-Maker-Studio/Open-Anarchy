@@ -17,7 +17,7 @@
 package com.rs.engine.cutscene.actions;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 
 import java.util.Map;
 

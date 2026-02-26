@@ -29,10 +29,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.utils.Ticks;
 
 public final class NightGazerKhighorahk extends DungeonBoss {
@@ -94,7 +94,7 @@ public final class NightGazerKhighorahk extends DungeonBoss {
 		}
 		player.setNextAnimation(new Animation(833));
 		final GameObject light = new GameObject(object);
-		light.setId(object.getId() + 1);
+		light.changeId(object.getId() + 1);
 
 		World.spawnObject(light);
 		lightCount++;

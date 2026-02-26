@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.herblore;
 
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnItemHandler;
 

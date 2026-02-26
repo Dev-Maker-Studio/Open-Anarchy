@@ -16,13 +16,14 @@
 //
 package com.rs.utils.spawns;
 
-import com.rs.cache.loaders.NPCDefinitions;
-import com.rs.engine.pathfinder.collision.CollisionStrategy;
-import com.rs.engine.pathfinder.collision.CollisionStrategyType;
+import org.darkan.core.cache.NPCDefinitions;
+import world.gregs.voidps.cache.definition.data.NPCDefinition;
+import org.darkan.core.map.pathfinder.collision.CollisionStrategy;
+import org.darkan.core.map.pathfinder.collision.CollisionStrategyType;
 import com.rs.game.World;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.engine.pathfinder.Direction;
-import com.rs.lib.game.Tile;
+import org.darkan.core.map.pathfinder.Direction;
+import world.gregs.voidps.type.Tile;
 
 public class NPCSpawn {
 
@@ -92,7 +93,7 @@ public class NPCSpawn {
 		return customName;
 	}
 
-	public NPCDefinitions getDefs() {
+	public NPCDefinition getDefs() {
 		return NPCDefinitions.getDefs(npcId);
 	}
 

@@ -24,7 +24,7 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 
 public class FightPitsController extends Controller {
 

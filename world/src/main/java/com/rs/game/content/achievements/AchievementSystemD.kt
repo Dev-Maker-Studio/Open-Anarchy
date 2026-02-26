@@ -1,10 +1,10 @@
 package com.rs.game.content.achievements
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 
 class AchievementSystemD(p: Player, npcId: Int, reward: SetReward) {
     init {

@@ -16,9 +16,9 @@
 //
 package com.rs.game.content.skills.summoning;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
-import com.rs.cache.loaders.interfaces.IFEvents.UseFlag;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.model.IFEvents;
+import org.darkan.core.model.UseFlag;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.World;
 import com.rs.game.content.ItemConstants;
@@ -35,11 +35,11 @@ import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
 import com.rs.game.model.item.ItemsContainer;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.GenericAttribMap;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.model.AttribMap;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.InterfaceOnInterfaceHandler;
@@ -64,7 +64,7 @@ public final class Familiar extends NPC {
 	public int autoScrollMod = 0;
 	private ItemsContainer<Item> inv;
 	private final Pouch pouch;
-	private final GenericAttribMap attribs = new GenericAttribMap();
+	private final AttribMap attribs = new AttribMap();
 
 	public Familiar(Player owner, Pouch pouch, Tile tile, int mapAreaNameHash, boolean canBeAttackFromOutOfArea) {
 		super(pouch.getBaseNpc(), tile, false);
@@ -97,17 +97,17 @@ public final class Familiar extends NPC {
 		if (e.getPlayer().getFamiliar() == null || e.getPlayer().getFamiliar().inv == null || e.getPlayer().getFamiliar().pouch.isForager())
 			return;
 		if (e.getComponentId() == 0)
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				e.getPlayer().getFamiliar().addItem(e.getSlotId(), 1);
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				e.getPlayer().getFamiliar().addItem(e.getSlotId(), 5);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				e.getPlayer().getFamiliar().addItem(e.getSlotId(), 10);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				e.getPlayer().getFamiliar().addItem(e.getSlotId(), Integer.MAX_VALUE);
-			else if (e.getPacket() == ClientPacket.IF_OP5)
+			else if (e.getOpNum() == 5)
 				e.getPlayer().sendInputInteger("Enter Amount:", num -> e.getPlayer().getFamiliar().addItem(e.getSlotId(), num));
-			else if (e.getPacket() == ClientPacket.IF_OP6)
+			else if (e.getOpNum() == 6)
 				e.getPlayer().getInventory().sendExamine(e.getSlotId());
 	});
 
@@ -115,15 +115,15 @@ public final class Familiar extends NPC {
 		if (e.getPlayer().getFamiliar() == null || e.getPlayer().getFamiliar().inv == null)
 			return;
 		if (e.getComponentId() == 27) {
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				e.getPlayer().getFamiliar().removeItem(e.getSlotId(), 1);
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				e.getPlayer().getFamiliar().removeItem(e.getSlotId(), 5);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				e.getPlayer().getFamiliar().removeItem(e.getSlotId(), 10);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				e.getPlayer().getFamiliar().removeItem(e.getSlotId(), Integer.MAX_VALUE);
-			else if (e.getPacket() == ClientPacket.IF_OP5)
+			else if (e.getOpNum() == 5)
 				e.getPlayer().sendInputInteger("Enter Amount:", num -> e.getPlayer().getFamiliar().removeItem(e.getSlotId(), num));
 		} else if (e.getComponentId() == 29)
 			e.getPlayer().getFamiliar().takeInventory();
@@ -797,7 +797,7 @@ public final class Familiar extends NPC {
         return finished;
 	}
 
-	public GenericAttribMap getAttribs() {
+	public AttribMap getAttribs() {
 		return attribs;
 	}
 

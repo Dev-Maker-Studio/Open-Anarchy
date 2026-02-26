@@ -5,8 +5,8 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.actions.PlayerAction
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.Constants
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.Utils
 
 class PickPocketUrist(private val npc: NPC) : PlayerAction() {
     private var success = false

@@ -16,16 +16,16 @@
 //
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
-import com.rs.cache.loaders.map.ClipFlag;
+import org.darkan.core.map.ClipFlag;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants;
 import com.rs.game.content.skills.dungeoneering.npcs.DungeonNPC;
 import com.rs.game.content.skills.dungeoneering.rooms.PuzzleRoom;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.engine.pathfinder.WorldCollision;
+import org.darkan.core.map.WorldCollision;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 public class SlidingStatuesRoom extends PuzzleRoom {
 
@@ -80,7 +80,7 @@ public class SlidingStatuesRoom extends PuzzleRoom {
 			}
 		}
 		for(NPC statue : statues) {
-			WorldCollision.addFlag(statue.getTile(), ClipFlag.PF_FULL);
+			WorldCollision.addFlag(statue.getTile(), ClipFlag.PF_FULL.getFlag());
 		}
 		manager.spawnRandomNPCS(reference);
 	}
@@ -121,10 +121,10 @@ public class SlidingStatuesRoom extends PuzzleRoom {
 			}
 			player.lock();
 			WorldTasks.schedule(0, () -> {
-				WorldCollision.removeFlag(getTile(), ClipFlag.PF_FULL);
+				WorldCollision.removeFlag(getTile(), ClipFlag.PF_FULL.getFlag());
 				addWalkSteps(getX() + dx, getY() + dy);
 				player.forceMove(pTarget, push ? 3065 : 3065, 0, 30, () -> {
-					WorldCollision.addFlag(getTile(), ClipFlag.PF_FULL);
+					WorldCollision.addFlag(getTile(), ClipFlag.PF_FULL.getFlag());
 					checkComplete();
 				});
 			});
@@ -170,7 +170,7 @@ public class SlidingStatuesRoom extends PuzzleRoom {
 	@Override
 	public void destroy() {
 		for(NPC statue : statues) {
-			WorldCollision.removeFlag(statue.getTile(), ClipFlag.PF_FULL);
+			WorldCollision.removeFlag(statue.getTile(), ClipFlag.PF_FULL.getFlag());
 		}
 	}
 }

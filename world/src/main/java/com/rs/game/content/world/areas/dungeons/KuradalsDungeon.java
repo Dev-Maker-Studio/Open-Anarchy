@@ -16,15 +16,15 @@
 //
 package com.rs.game.content.world.areas.dungeons;
 
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.content.skills.slayer.TaskMonster;
 import com.rs.game.content.world.areas.dungeons.ancientcavern.KuradalDungeonController;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 

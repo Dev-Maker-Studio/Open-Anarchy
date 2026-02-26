@@ -20,8 +20,8 @@ import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.VisibleRoom;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.Constants;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.Utils;
 
 public abstract class PuzzleRoom extends VisibleRoom {
 
@@ -54,7 +54,7 @@ public abstract class PuzzleRoom extends VisibleRoom {
 		if(object == null)
 			return;
 		GameObject newObject = new GameObject(object);
-		newObject.setId(newId);
+		newObject.changeId(newId);
 		World.spawnObject(newObject);
 	}
 

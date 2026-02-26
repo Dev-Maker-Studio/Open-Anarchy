@@ -1,6 +1,6 @@
 package com.rs.game.content.items;
 
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 

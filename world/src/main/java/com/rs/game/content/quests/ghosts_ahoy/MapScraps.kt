@@ -6,7 +6,7 @@ import com.rs.game.World.spawnObjectTemporary
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 import kotlin.math.abs
@@ -147,7 +147,7 @@ private fun openRewardChest(player: Player, obj: GameObject, mapFragment: Int) {
             obj.rotation,
             obj.x,
             obj.y,
-            obj.plane
+            obj.level
         )
         spawnObjectTemporary(openedChest, 100)
         player.inventory.addItem(mapFragment)
@@ -166,7 +166,7 @@ private fun openFakeChest(player: Player, obj: GameObject) {
             obj.rotation,
             obj.x,
             obj.y,
-            obj.plane
+            obj.level
         )
         spawnObjectTemporary(openedChest, 60)
         player.sendMessage("You search the chest and find nothing.")
@@ -184,7 +184,7 @@ private fun openSpawnerChest(player: Player, obj: GameObject) {
             obj.rotation,
             obj.x,
             obj.y,
-            obj.plane
+            obj.level
         )
         spawnObjectTemporary(openedChest, 30)
         player.unlock()

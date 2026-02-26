@@ -19,8 +19,8 @@ package com.rs.game.content.skills.magic;
 import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 

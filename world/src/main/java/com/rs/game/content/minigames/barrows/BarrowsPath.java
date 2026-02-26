@@ -19,7 +19,7 @@ package com.rs.game.content.minigames.barrows;
 import com.rs.game.content.minigames.barrows.BarrowsRoom.RoomType;
 import com.rs.game.content.minigames.barrows.Link.RoomStatus;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 import java.util.ArrayList;
 

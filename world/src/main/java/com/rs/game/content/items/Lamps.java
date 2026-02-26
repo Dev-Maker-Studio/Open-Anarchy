@@ -16,13 +16,14 @@
 //
 package com.rs.game.content.items;
 
-import com.rs.cache.loaders.EnumDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
+import world.gregs.voidps.cache.definition.data.EnumDefinition;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.statements.LampXPSelectStatement;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 
@@ -93,9 +94,9 @@ public class Lamps {
 		if (player.getTempAttribs().getO("lampInstance") == null)
 			return;
 		Lamp lamp = player.getTempAttribs().getO("lampInstance");
-		EnumDefinitions map = EnumDefinitions.getEnum(681);
-		if (lamp.getSelectedSkill() == map.getDefaultIntValue()) {
-			player.getPackets().sendVarc(1796, map.getDefaultIntValue());
+		EnumDefinition map = EnumDefinitions.getEnum(681);
+		if (lamp.getSelectedSkill() == map.getDefaultInt()) {
+			player.getPackets().sendVarc(1796, map.getDefaultInt());
 			return;
 		}
 

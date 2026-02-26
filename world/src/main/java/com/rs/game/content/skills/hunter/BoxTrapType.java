@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.hunter;
 
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 
 import java.util.HashMap;
 import java.util.Map;

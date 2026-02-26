@@ -19,7 +19,7 @@ package com.rs.game.model.entity.player.managers;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.utils.EconomyPrices;
@@ -34,7 +34,7 @@ public class PriceChecker {
 		ItemsContainer<Item> inv = player.getTempAttribs().getO("pcInvContainer");
 		for (int i = 0;i < player.getInventory().getItems().getItemsCopy().length;i++) {
 			Item[] items = player.getInventory().getItems().getItemsCopy();
-			inv.set(i, items[i] == null ? null : new Item(items[i]));
+			inv.set(i, items[i] == null ? null : com.rs.utils.KtExtensionsKt.copyItem(items[i]));
 		}
 		player.getInterfaceManager().sendInterface(206);
 		player.getInterfaceManager().sendInventoryInterface(207);
@@ -144,20 +144,20 @@ public class PriceChecker {
 	public static ButtonClickHandler handleButtons = new ButtonClickHandler(new Object[] { 206, 207 }, e -> {
 		if (e.getInterfaceId() == 206) {
 			if (e.getComponentId() == 15)
-				switch(e.getPacket()) {
-				case IF_OP1:
+				switch(e.getOpNum()) {
+				case 1:
 					removeItem(e.getPlayer(), e.getSlotId(), 1);
 					break;
-				case IF_OP2:
+				case 2:
 					removeItem(e.getPlayer(), e.getSlotId(), 5);
 					break;
-				case IF_OP3:
+				case 3:
 					removeItem(e.getPlayer(), e.getSlotId(), 10);
 					break;
-				case IF_OP4:
+				case 4:
 					removeItem(e.getPlayer(), e.getSlotId(), Integer.MAX_VALUE);
 					break;
-				case IF_OP5:
+				case 5:
 					e.getPlayer().sendInputInteger("Enter Amount:", amount -> removeItem(e.getPlayer(), e.getSlotId(), amount));
 					break;
 				default:
@@ -165,23 +165,23 @@ public class PriceChecker {
 				}
 		} else if (e.getInterfaceId() == 207)
 			if (e.getComponentId() == 0)
-				switch(e.getPacket()) {
-				case IF_OP1:
+				switch(e.getOpNum()) {
+				case 1:
 					addItem(e.getPlayer(), e.getSlotId(), 1);
 					break;
-				case IF_OP2:
+				case 2:
 					addItem(e.getPlayer(), e.getSlotId(), 5);
 					break;
-				case IF_OP3:
+				case 3:
 					addItem(e.getPlayer(), e.getSlotId(), 10);
 					break;
-				case IF_OP4:
+				case 4:
 					addItem(e.getPlayer(), e.getSlotId(), Integer.MAX_VALUE);
 					break;
-				case IF_OP5:
+				case 5:
 					e.getPlayer().sendInputInteger("Enter Amount:", amount -> addItem(e.getPlayer(), e.getSlotId(), amount));
 					break;
-				case IF_OP6:
+				case 6:
 					e.getPlayer().getInventory().sendExamine(e.getSlotId());
 					break;
 				default:

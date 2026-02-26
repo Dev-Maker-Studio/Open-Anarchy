@@ -56,7 +56,7 @@ public class WitchHavenPuzzleFamilyCrest {
 	public static ObjectClickHandler handleNorthNorthLever = new ObjectClickHandler(new Object[] { 2425, 2426 }, e -> {;
 		GameObject obj = e.getObj();
 		if(e.getObjectId() == 2426) {
-			obj.setId(2425);
+			obj.changeId(2425);
 			northNorthLeverUp = false;
 			e.getPlayer().sendMessage("The lever is now down.");
 			return;
@@ -75,7 +75,7 @@ public class WitchHavenPuzzleFamilyCrest {
 	public static ObjectClickHandler handleNorthLever = new ObjectClickHandler(new Object[] { 2421, 2422 }, e -> {
 		GameObject obj = e.getObj();
 		if(e.getObjectId() == 2422) {
-			obj.setId(2421);
+			obj.changeId(2421);
 			northLeverUp = false;
 			e.getPlayer().sendMessage("The lever is now down.");
 			return;
@@ -89,7 +89,7 @@ public class WitchHavenPuzzleFamilyCrest {
 	public static ObjectClickHandler handleSouthLever = new ObjectClickHandler(new Object[] { 2423, 2424 }, e -> {
 		GameObject obj = e.getObj();
 		if(e.getObjectId() == 2424) {
-			obj.setId(2423);
+			obj.changeId(2423);
 			southLeverUp = false;
 			e.getPlayer().sendMessage("The lever is now down.");
 			return;

@@ -18,7 +18,7 @@ package com.rs.game.content.bosses.nomad;
 
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class FakeNomad extends NPC {
 

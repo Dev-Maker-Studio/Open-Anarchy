@@ -1,104 +1,125 @@
 package world.gregs.voidps.cache.definition.data
 
-import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.cache.Definition
-import world.gregs.voidps.cache.definition.Extra
-import world.gregs.voidps.cache.definition.Transforms
+import world.gregs.voidps.cache.definition.*
 
 data class ObjectDefinition(
     override var id: Int = -1,
+    var modelIds: Array<IntArray>? = null,
+    var modelTypes: ByteArray? = null,
     var name: String = "null",
     var sizeX: Int = 1,
     var sizeY: Int = 1,
+    var blocksSky: Boolean = true,
     var solid: Int = 2,
     var interactive: Int = -1,
+    var contouredGround: Byte = 0,
+    var delayShading: Boolean = false,
+    var offsetMultiplier: Int = 64,
+    var brightness: Int = 0,
     var options: Array<String?>? = null,
+    var contrast: Int = 0,
+    override var originalColours: ShortArray? = null,
+    override var modifiedColours: ShortArray? = null,
+    override var originalTextureColours: ShortArray? = null,
+    override var modifiedTextureColours: ShortArray? = null,
+    override var recolourPalette: ByteArray? = null,
     var mirrored: Boolean = false,
+    var castsShadow: Boolean = true,
+    var modelSizeX: Int = 128,
+    var modelSizeZ: Int = 128,
+    var modelSizeY: Int = 128,
     var blockFlag: Int = 0,
+    var offsetX: Int = 0,
+    var offsetZ: Int = 0,
+    var offsetY: Int = 0,
+    var blocksLand: Boolean = false,
+    var ignoreOnRoute: Boolean = false,
+    var supportItems: Int = -1,
     override var varbit: Int = -1,
     override var varp: Int = -1,
     override var transforms: IntArray? = null,
-    override var stringId: String = "",
-    override var extras: Map<String, Any>? = null,
-
-    var shapes: Array<ObjectShape>? = null,
-    var modelIds: Array<IntArray>? = null,
-
-    var groundContourType: Byte = 0,
-    var groundContourModifier: Int = -1,
-    var delayShading: Boolean = false,
-    var occlusionMode: Int = -1,
-    var decorDisplacement: Int = 64,
-    var ambient: Int = 0,
-    var contrast: Int = 0,
-    var staticShadow: Boolean = true,
-    var dynamicShadow: Boolean = true,
-
-    var resizeX: Int = 128,
-    var resizeY: Int = 128,
-    var resizeZ: Int = 128,
-    var offsetX: Int = 0,
-    var offsetY: Int = 0,
-    var offsetZ: Int = 0,
-
-    var recolorSrc: ShortArray? = null,
-    var recolorDst: ShortArray? = null,
-    var retextureSrc: ShortArray? = null,
-    var retextureDst: ShortArray? = null,
-    var recolorDPalette: ByteArray? = null,
-    var tintHue: Byte = 0,
-    var tintSaturation: Byte = 0,
-    var tintLightness: Byte = 0,
-    var tintOpacity: Byte = 0,
-    var dynamicTint: Boolean = false,
-
+    var anInt3015: Int = -1,
+    var anInt3012: Int = 0,
+    var anInt2989: Int = 0,
+    var anInt2971: Int = 0,
+    var anIntArray3036: IntArray? = null,
+    var anInt3023: Int = -1,
+    var hideMinimap: Boolean = false,
+    var aBoolean2972: Boolean = true,
+    var animateImmediately: Boolean = true,
+    var isMembers: Boolean = false,
+    var aBoolean3056: Boolean = false,
+    var aBoolean2998: Boolean = false,
+    var anInt2987: Int = -1,
+    var anInt3008: Int = -1,
+    var anInt3038: Int = -1,
+    var anInt3013: Int = -1,
+    var anInt2958: Int = 0,
+    var mapscene: Int = -1,
+    var culling: Int = -1,
+    var anInt3024: Int = 255,
+    var invertMapScene: Boolean = false,
     var animations: IntArray? = null,
-    var animationOdds: IntArray? = null,
-    var hasAnimation: Boolean = false,
-    var replaySequence: Boolean = true,
+    var percents: IntArray? = null,
+    var mapDefinitionId: Int = -1,
+    var anIntArray2981: IntArray? = null,
+    var aByte2974: Byte = 0,
+    var aByte3045: Byte = 0,
+    var aByte3052: Byte = 0,
+    var aByte2960: Byte = 0,
+    var anInt2964: Int = 0,
+    var anInt2963: Int = 0,
+    var anInt3018: Int = 0,
+    var anInt2983: Int = 0,
+    var aBoolean2961: Boolean = false,
+    var aBoolean2993: Boolean = false,
+    var anInt3032: Int = 960,
+    var anInt2962: Int = 0,
+    var anInt3050: Int = 256,
+    var anInt3020: Int = 256,
+    var aBoolean2992: Boolean = false,
+    var anInt2975: Int = 0,
+    var dynamicTint: Boolean = false,
+    override var params: Map<Int, Any>? = null,
+    override var stringId: String = "",
+    override var extras: Map<String, Any>? = null
+) : Definition, Transforms, Recolourable, ColourPalette, Parameterized, Extra {
 
-    var soundId: Int = -1,
-    var soundRadius: Int = 0,
-    var soundMinInterval: Int = 0,
-    var soundMaxInterval: Int = 0,
-    var soundGroupIds: IntArray? = null,
-    var soundVolume: Int = 255,
-    var instrumentSoundEffect: Boolean = false,
-    var instrumentAmbientSound: Boolean = false,
-    var ambientSoundMaxDelay: Int = 256,
-    var ambientSoundMinDelay: Int = 256,
-    var ambientSoundMaxHearDistance: Int = 0,
-
-    var mapIconId: Int = -1,
-    var mapIconRotation: Int = 0,
-    var mapIconRotates: Boolean = false,
-    var mapIconFlipped: Boolean = false,
-    var mapCategoryId: Int = -1,
-
-    var primaryCursorActionIndex: Int = -1,
-    var primaryCursor: Int = -1,
-    var secondaryCursorActionIndex: Int = -1,
-    var secondaryCursor: Int = -1,
-
-    var shadowOffsetX: Int = 0,
-    var shadowOffsetY: Int = 0,
-    var shadowOffsetZ: Int = 0,
-
-    var forceDisplayDecoration: Boolean = false,
-    var supportsItems: Int = -1,
-    var requiresTextures: Boolean = false,
-    var members: Boolean = false,
-    var quests: IntArray? = null,
-    var groundDecorationHeight: Int = 0,
-    var cullY: Int = 960,
-    var cullXZ: Int = 0,
-    var transformsFlag: Boolean = false
-) : Definition, Transforms, Extra {
     var block: Int = PROJECTILE or ROUTE
 
-    fun optionsIndex(option: String) = if (options != null) options!!.indexOf(option) else -1
-    fun containsOption(option: String) = if (options != null) options!!.contains(option) else false
-    fun containsOption(index: Int, option: String) = if (options != null) options!![index] == option else false
+    fun optionsIndex(option: String): Int = if (options != null) {
+        options!!.indexOf(option)
+    } else {
+        -1
+    }
+
+    fun containsOption(option: String): Boolean = if (options != null) {
+        options!!.contains(option)
+    } else {
+        false
+    }
+
+    fun containsOption(index: Int, option: String): Boolean = if (options != null) {
+        options!![index] == option
+    } else {
+        false
+    }
+
+    fun containsOptionIgnoreCase(option: String): Boolean = if (options != null) {
+        options!!.any { it != null && it.equals(option, ignoreCase = true) }
+    } else {
+        false
+    }
+
+    /** Gets the option at the given index. */
+    fun getOption(index: Int): String? = options?.getOrNull(index)
+
+    /** Gets the first non-null option (index 0). */
+    fun getFirstOption(): String? = options?.getOrNull(0)
+
+    /** Legacy overload that accepts a vars parameter for transform support. Returns this definition's name. */
+    fun getName(vars: Any?): String = name
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -107,203 +128,208 @@ data class ObjectDefinition(
         other as ObjectDefinition
 
         if (id != other.id) return false
+        if (modelIds != null) {
+            if (other.modelIds == null) return false
+            if (!modelIds.contentDeepEquals(other.modelIds)) return false
+        } else if (other.modelIds != null) return false
+        if (modelTypes != null) {
+            if (other.modelTypes == null) return false
+            if (!modelTypes.contentEquals(other.modelTypes)) return false
+        } else if (other.modelTypes != null) return false
         if (name != other.name) return false
         if (sizeX != other.sizeX) return false
         if (sizeY != other.sizeY) return false
+        if (blocksSky != other.blocksSky) return false
         if (solid != other.solid) return false
         if (interactive != other.interactive) return false
+        if (contouredGround != other.contouredGround) return false
+        if (delayShading != other.delayShading) return false
+        if (offsetMultiplier != other.offsetMultiplier) return false
+        if (brightness != other.brightness) return false
         if (options != null) {
             if (other.options == null) return false
             if (!options.contentEquals(other.options)) return false
         } else if (other.options != null) return false
+        if (contrast != other.contrast) return false
+        if (originalColours != null) {
+            if (other.originalColours == null) return false
+            if (!originalColours.contentEquals(other.originalColours)) return false
+        } else if (other.originalColours != null) return false
+        if (modifiedColours != null) {
+            if (other.modifiedColours == null) return false
+            if (!modifiedColours.contentEquals(other.modifiedColours)) return false
+        } else if (other.modifiedColours != null) return false
+        if (originalTextureColours != null) {
+            if (other.originalTextureColours == null) return false
+            if (!originalTextureColours.contentEquals(other.originalTextureColours)) return false
+        } else if (other.originalTextureColours != null) return false
+        if (modifiedTextureColours != null) {
+            if (other.modifiedTextureColours == null) return false
+            if (!modifiedTextureColours.contentEquals(other.modifiedTextureColours)) return false
+        } else if (other.modifiedTextureColours != null) return false
+        if (recolourPalette != null) {
+            if (other.recolourPalette == null) return false
+            if (!recolourPalette.contentEquals(other.recolourPalette)) return false
+        } else if (other.recolourPalette != null) return false
         if (mirrored != other.mirrored) return false
+        if (castsShadow != other.castsShadow) return false
+        if (modelSizeX != other.modelSizeX) return false
+        if (modelSizeZ != other.modelSizeZ) return false
+        if (modelSizeY != other.modelSizeY) return false
         if (blockFlag != other.blockFlag) return false
+        if (offsetX != other.offsetX) return false
+        if (offsetZ != other.offsetZ) return false
+        if (offsetY != other.offsetY) return false
+        if (blocksLand != other.blocksLand) return false
+        if (ignoreOnRoute != other.ignoreOnRoute) return false
+        if (supportItems != other.supportItems) return false
         if (varbit != other.varbit) return false
         if (varp != other.varp) return false
         if (transforms != null) {
             if (other.transforms == null) return false
             if (!transforms.contentEquals(other.transforms)) return false
         } else if (other.transforms != null) return false
-        if (stringId != other.stringId) return false
-        if (extras != other.extras) return false
-        if (shapes != null) {
-            if (other.shapes == null) return false
-            if (!shapes.contentEquals(other.shapes)) return false
-        } else if (other.shapes != null) return false
-        if (modelIds != null) {
-            if (other.modelIds == null) return false
-            if (!modelIds.contentDeepEquals(other.modelIds)) return false
-        } else if (other.modelIds != null) return false
-        if (groundContourType != other.groundContourType) return false
-        if (groundContourModifier != other.groundContourModifier) return false
-        if (delayShading != other.delayShading) return false
-        if (occlusionMode != other.occlusionMode) return false
-        if (decorDisplacement != other.decorDisplacement) return false
-        if (ambient != other.ambient) return false
-        if (contrast != other.contrast) return false
-        if (staticShadow != other.staticShadow) return false
-        if (dynamicShadow != other.dynamicShadow) return false
-        if (resizeX != other.resizeX) return false
-        if (resizeY != other.resizeY) return false
-        if (resizeZ != other.resizeZ) return false
-        if (offsetX != other.offsetX) return false
-        if (offsetY != other.offsetY) return false
-        if (offsetZ != other.offsetZ) return false
-        if (recolorSrc != null) {
-            if (other.recolorSrc == null) return false
-            if (!recolorSrc.contentEquals(other.recolorSrc)) return false
-        } else if (other.recolorSrc != null) return false
-        if (recolorDst != null) {
-            if (other.recolorDst == null) return false
-            if (!recolorDst.contentEquals(other.recolorDst)) return false
-        } else if (other.recolorDst != null) return false
-        if (retextureSrc != null) {
-            if (other.retextureSrc == null) return false
-            if (!retextureSrc.contentEquals(other.retextureSrc)) return false
-        } else if (other.retextureSrc != null) return false
-        if (retextureDst != null) {
-            if (other.retextureDst == null) return false
-            if (!retextureDst.contentEquals(other.retextureDst)) return false
-        } else if (other.retextureDst != null) return false
-        if (recolorDPalette != null) {
-            if (other.recolorDPalette == null) return false
-            if (!recolorDPalette.contentEquals(other.recolorDPalette)) return false
-        } else if (other.recolorDPalette != null) return false
-        if (tintHue != other.tintHue) return false
-        if (tintSaturation != other.tintSaturation) return false
-        if (tintLightness != other.tintLightness) return false
-        if (tintOpacity != other.tintOpacity) return false
-        if (dynamicTint != other.dynamicTint) return false
+        if (anInt3015 != other.anInt3015) return false
+        if (anInt3012 != other.anInt3012) return false
+        if (anInt2989 != other.anInt2989) return false
+        if (anInt2971 != other.anInt2971) return false
+        if (anIntArray3036 != null) {
+            if (other.anIntArray3036 == null) return false
+            if (!anIntArray3036.contentEquals(other.anIntArray3036)) return false
+        } else if (other.anIntArray3036 != null) return false
+        if (anInt3023 != other.anInt3023) return false
+        if (hideMinimap != other.hideMinimap) return false
+        if (aBoolean2972 != other.aBoolean2972) return false
+        if (animateImmediately != other.animateImmediately) return false
+        if (isMembers != other.isMembers) return false
+        if (aBoolean3056 != other.aBoolean3056) return false
+        if (aBoolean2998 != other.aBoolean2998) return false
+        if (anInt2987 != other.anInt2987) return false
+        if (anInt3008 != other.anInt3008) return false
+        if (anInt3038 != other.anInt3038) return false
+        if (anInt3013 != other.anInt3013) return false
+        if (anInt2958 != other.anInt2958) return false
+        if (mapscene != other.mapscene) return false
+        if (culling != other.culling) return false
+        if (anInt3024 != other.anInt3024) return false
+        if (invertMapScene != other.invertMapScene) return false
         if (animations != null) {
             if (other.animations == null) return false
             if (!animations.contentEquals(other.animations)) return false
         } else if (other.animations != null) return false
-        if (animationOdds != null) {
-            if (other.animationOdds == null) return false
-            if (!animationOdds.contentEquals(other.animationOdds)) return false
-        } else if (other.animationOdds != null) return false
-        if (hasAnimation != other.hasAnimation) return false
-        if (replaySequence != other.replaySequence) return false
-        if (soundId != other.soundId) return false
-        if (soundRadius != other.soundRadius) return false
-        if (soundMinInterval != other.soundMinInterval) return false
-        if (soundMaxInterval != other.soundMaxInterval) return false
-        if (soundGroupIds != null) {
-            if (other.soundGroupIds == null) return false
-            if (!soundGroupIds.contentEquals(other.soundGroupIds)) return false
-        } else if (other.soundGroupIds != null) return false
-        if (soundVolume != other.soundVolume) return false
-        if (instrumentSoundEffect != other.instrumentSoundEffect) return false
-        if (instrumentAmbientSound != other.instrumentAmbientSound) return false
-        if (ambientSoundMaxDelay != other.ambientSoundMaxDelay) return false
-        if (ambientSoundMinDelay != other.ambientSoundMinDelay) return false
-        if (ambientSoundMaxHearDistance != other.ambientSoundMaxHearDistance) return false
-        if (mapIconId != other.mapIconId) return false
-        if (mapIconRotation != other.mapIconRotation) return false
-        if (mapIconRotates != other.mapIconRotates) return false
-        if (mapIconFlipped != other.mapIconFlipped) return false
-        if (mapCategoryId != other.mapCategoryId) return false
-        if (primaryCursorActionIndex != other.primaryCursorActionIndex) return false
-        if (primaryCursor != other.primaryCursor) return false
-        if (secondaryCursorActionIndex != other.secondaryCursorActionIndex) return false
-        if (secondaryCursor != other.secondaryCursor) return false
-        if (shadowOffsetX != other.shadowOffsetX) return false
-        if (shadowOffsetY != other.shadowOffsetY) return false
-        if (shadowOffsetZ != other.shadowOffsetZ) return false
-        if (forceDisplayDecoration != other.forceDisplayDecoration) return false
-        if (supportsItems != other.supportsItems) return false
-        if (requiresTextures != other.requiresTextures) return false
-        if (members != other.members) return false
-        if (quests != null) {
-            if (other.quests == null) return false
-            if (!quests.contentEquals(other.quests)) return false
-        } else if (other.quests != null) return false
-        if (groundDecorationHeight != other.groundDecorationHeight) return false
-        if (cullY != other.cullY) return false
-        if (cullXZ != other.cullXZ) return false
-        if (transformsFlag != other.transformsFlag) return false
-        return block == other.block
+        if (percents != null) {
+            if (other.percents == null) return false
+            if (!percents.contentEquals(other.percents)) return false
+        } else if (other.percents != null) return false
+        if (mapDefinitionId != other.mapDefinitionId) return false
+        if (anIntArray2981 != null) {
+            if (other.anIntArray2981 == null) return false
+            if (!anIntArray2981.contentEquals(other.anIntArray2981)) return false
+        } else if (other.anIntArray2981 != null) return false
+        if (aByte2974 != other.aByte2974) return false
+        if (aByte3045 != other.aByte3045) return false
+        if (aByte3052 != other.aByte3052) return false
+        if (aByte2960 != other.aByte2960) return false
+        if (anInt2964 != other.anInt2964) return false
+        if (anInt2963 != other.anInt2963) return false
+        if (anInt3018 != other.anInt3018) return false
+        if (anInt2983 != other.anInt2983) return false
+        if (aBoolean2961 != other.aBoolean2961) return false
+        if (aBoolean2993 != other.aBoolean2993) return false
+        if (anInt3032 != other.anInt3032) return false
+        if (anInt2962 != other.anInt2962) return false
+        if (anInt3050 != other.anInt3050) return false
+        if (anInt3020 != other.anInt3020) return false
+        if (aBoolean2992 != other.aBoolean2992) return false
+        if (anInt2975 != other.anInt2975) return false
+        if (dynamicTint != other.dynamicTint) return false
+        if (params != other.params) return false
+        if (stringId != other.stringId) return false
+        if (extras != other.extras) return false
+        return true
     }
 
     override fun hashCode(): Int {
         var result = id
+        result = 31 * result + (modelIds?.contentDeepHashCode() ?: 0)
+        result = 31 * result + (modelTypes?.contentHashCode() ?: 0)
         result = 31 * result + name.hashCode()
         result = 31 * result + sizeX
         result = 31 * result + sizeY
+        result = 31 * result + blocksSky.hashCode()
         result = 31 * result + solid
         result = 31 * result + interactive
+        result = 31 * result + contouredGround
+        result = 31 * result + delayShading.hashCode()
+        result = 31 * result + offsetMultiplier
+        result = 31 * result + brightness
         result = 31 * result + (options?.contentHashCode() ?: 0)
+        result = 31 * result + contrast
+        result = 31 * result + (originalColours?.contentHashCode() ?: 0)
+        result = 31 * result + (modifiedColours?.contentHashCode() ?: 0)
+        result = 31 * result + (originalTextureColours?.contentHashCode() ?: 0)
+        result = 31 * result + (modifiedTextureColours?.contentHashCode() ?: 0)
+        result = 31 * result + (recolourPalette?.contentHashCode() ?: 0)
         result = 31 * result + mirrored.hashCode()
+        result = 31 * result + castsShadow.hashCode()
+        result = 31 * result + modelSizeX
+        result = 31 * result + modelSizeZ
+        result = 31 * result + modelSizeY
         result = 31 * result + blockFlag
+        result = 31 * result + offsetX
+        result = 31 * result + offsetZ
+        result = 31 * result + offsetY
+        result = 31 * result + blocksLand.hashCode()
+        result = 31 * result + ignoreOnRoute.hashCode()
+        result = 31 * result + supportItems
         result = 31 * result + varbit
         result = 31 * result + varp
         result = 31 * result + (transforms?.contentHashCode() ?: 0)
+        result = 31 * result + anInt3015
+        result = 31 * result + anInt3012
+        result = 31 * result + anInt2989
+        result = 31 * result + anInt2971
+        result = 31 * result + (anIntArray3036?.contentHashCode() ?: 0)
+        result = 31 * result + anInt3023
+        result = 31 * result + hideMinimap.hashCode()
+        result = 31 * result + aBoolean2972.hashCode()
+        result = 31 * result + animateImmediately.hashCode()
+        result = 31 * result + isMembers.hashCode()
+        result = 31 * result + aBoolean3056.hashCode()
+        result = 31 * result + aBoolean2998.hashCode()
+        result = 31 * result + anInt2987
+        result = 31 * result + anInt3008
+        result = 31 * result + anInt3038
+        result = 31 * result + anInt3013
+        result = 31 * result + anInt2958
+        result = 31 * result + mapscene
+        result = 31 * result + culling
+        result = 31 * result + anInt3024
+        result = 31 * result + invertMapScene.hashCode()
+        result = 31 * result + (animations?.contentHashCode() ?: 0)
+        result = 31 * result + (percents?.contentHashCode() ?: 0)
+        result = 31 * result + mapDefinitionId
+        result = 31 * result + (anIntArray2981?.contentHashCode() ?: 0)
+        result = 31 * result + aByte2974
+        result = 31 * result + aByte3045
+        result = 31 * result + aByte3052
+        result = 31 * result + aByte2960
+        result = 31 * result + anInt2964
+        result = 31 * result + anInt2963
+        result = 31 * result + anInt3018
+        result = 31 * result + anInt2983
+        result = 31 * result + aBoolean2961.hashCode()
+        result = 31 * result + aBoolean2993.hashCode()
+        result = 31 * result + anInt3032
+        result = 31 * result + anInt2962
+        result = 31 * result + anInt3050
+        result = 31 * result + anInt3020
+        result = 31 * result + aBoolean2992.hashCode()
+        result = 31 * result + anInt2975
+        result = 31 * result + dynamicTint.hashCode()
+        result = 31 * result + (params?.hashCode() ?: 0)
         result = 31 * result + stringId.hashCode()
         result = 31 * result + (extras?.hashCode() ?: 0)
-        result = 31 * result + (shapes?.contentHashCode() ?: 0)
-        result = 31 * result + (modelIds?.contentDeepHashCode() ?: 0)
-        result = 31 * result + groundContourType
-        result = 31 * result + groundContourModifier
-        result = 31 * result + delayShading.hashCode()
-        result = 31 * result + occlusionMode
-        result = 31 * result + decorDisplacement
-        result = 31 * result + ambient
-        result = 31 * result + contrast
-        result = 31 * result + staticShadow.hashCode()
-        result = 31 * result + dynamicShadow.hashCode()
-        result = 31 * result + resizeX
-        result = 31 * result + resizeY
-        result = 31 * result + resizeZ
-        result = 31 * result + offsetX
-        result = 31 * result + offsetY
-        result = 31 * result + offsetZ
-        result = 31 * result + (recolorSrc?.contentHashCode() ?: 0)
-        result = 31 * result + (recolorDst?.contentHashCode() ?: 0)
-        result = 31 * result + (retextureSrc?.contentHashCode() ?: 0)
-        result = 31 * result + (retextureDst?.contentHashCode() ?: 0)
-        result = 31 * result + (recolorDPalette?.contentHashCode() ?: 0)
-        result = 31 * result + tintHue
-        result = 31 * result + tintSaturation
-        result = 31 * result + tintLightness
-        result = 31 * result + tintOpacity
-        result = 31 * result + dynamicTint.hashCode()
-        result = 31 * result + (animations?.contentHashCode() ?: 0)
-        result = 31 * result + (animationOdds?.contentHashCode() ?: 0)
-        result = 31 * result + hasAnimation.hashCode()
-        result = 31 * result + replaySequence.hashCode()
-        result = 31 * result + soundId
-        result = 31 * result + soundRadius
-        result = 31 * result + soundMinInterval
-        result = 31 * result + soundMaxInterval
-        result = 31 * result + (soundGroupIds?.contentHashCode() ?: 0)
-        result = 31 * result + soundVolume
-        result = 31 * result + instrumentSoundEffect.hashCode()
-        result = 31 * result + instrumentAmbientSound.hashCode()
-        result = 31 * result + ambientSoundMaxDelay
-        result = 31 * result + ambientSoundMinDelay
-        result = 31 * result + ambientSoundMaxHearDistance
-        result = 31 * result + mapIconId
-        result = 31 * result + mapIconRotation
-        result = 31 * result + mapIconRotates.hashCode()
-        result = 31 * result + mapIconFlipped.hashCode()
-        result = 31 * result + mapCategoryId
-        result = 31 * result + primaryCursorActionIndex
-        result = 31 * result + primaryCursor
-        result = 31 * result + secondaryCursorActionIndex
-        result = 31 * result + secondaryCursor
-        result = 31 * result + shadowOffsetX
-        result = 31 * result + shadowOffsetY
-        result = 31 * result + shadowOffsetZ
-        result = 31 * result + forceDisplayDecoration.hashCode()
-        result = 31 * result + supportsItems
-        result = 31 * result + requiresTextures.hashCode()
-        result = 31 * result + members.hashCode()
-        result = 31 * result + (quests?.contentHashCode() ?: 0)
-        result = 31 * result + groundDecorationHeight
-        result = 31 * result + cullY
-        result = 31 * result + cullXZ
-        result = 31 * result + transformsFlag.hashCode()
-        result = 31 * result + block
         return result
     }
 

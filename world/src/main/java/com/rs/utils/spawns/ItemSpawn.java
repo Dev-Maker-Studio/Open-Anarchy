@@ -17,8 +17,8 @@
 package com.rs.utils.spawns;
 
 import com.rs.game.World;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 
 public class ItemSpawn {
 

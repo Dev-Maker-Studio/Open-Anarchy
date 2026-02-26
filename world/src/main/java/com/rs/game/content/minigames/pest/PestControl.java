@@ -16,7 +16,8 @@
 //
 package com.rs.game.content.minigames.pest;
 
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
+import world.gregs.voidps.cache.definition.data.NPCDefinition;
 import com.rs.game.World;
 import com.rs.game.content.minigames.pest.npcs.*;
 import com.rs.game.map.instance.Instance;
@@ -24,9 +25,9 @@ import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -109,10 +110,10 @@ public class PestControl {
 		Tile baseTile = getTile(PORTAL_LOCATIONS[0][index], PORTAL_LOCATIONS[1][index]);
 		Tile teleTile = baseTile;
 		int npcId = index == 4 ? data.getShifters()[Utils.random(data.getShifters().length)] : data.getPests()[Utils.random(data.getPests().length)];
-		NPCDefinitions defs = NPCDefinitions.getDefs(npcId);
+		NPCDefinition defs = NPCDefinitions.getDefs(npcId);
 		for (int trycount = 0; trycount < 10; trycount++) {
 			teleTile = Tile.of(baseTile, 5);
-			if (World.floorAndWallsFree(teleTile, defs.size))
+			if (World.floorAndWallsFree(teleTile, defs.getSize()))
 				break;
 			teleTile = baseTile;
 		}

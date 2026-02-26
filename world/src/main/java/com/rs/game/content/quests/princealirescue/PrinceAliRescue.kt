@@ -9,10 +9,10 @@ import com.rs.game.World
 import com.rs.game.content.items.Dye
 import com.rs.game.content.world.doors.Doors.handleDoor
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Item
-import com.rs.lib.game.Rights
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Animation
+import org.darkan.core.model.Item
+import org.darkan.core.model.Rights
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnItem
 import com.rs.plugin.kts.onItemOnNpc
@@ -165,7 +165,7 @@ fun mapPrinceAliRescue() {
         }
 
         if (e.player.inventory.containsItem(PrinceAliRescue.BRONZE_KEY, 1)) {
-            for (npc in World.getNPCsInChunkRange(e.player.chunkId, 2)) {
+            for (npc in World.getNPCsInChunkRange(e.player.getChunkId(), 2)) {
                 if (npc.id == PrinceAliRescue.LADY_KELI) {
                     e.player.sendMessage("You'd better get rid of Lady Keli before trying to go through there.")
                     return@onObjectClick

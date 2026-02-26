@@ -8,8 +8,8 @@ import com.rs.game.content.world.areas.port_phasmatys.npcs.ghostInnkeeperPreQues
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnNpc
 import com.rs.plugin.kts.onNpcClick

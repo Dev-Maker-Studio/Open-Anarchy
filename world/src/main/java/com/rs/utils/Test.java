@@ -18,21 +18,22 @@ package com.rs.utils;
 
 import com.google.gson.GsonBuilder;
 import com.rs.Settings;
-import com.rs.cache.Cache;
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.VarBitDefinitions;
-import com.rs.cache.loaders.interfaces.IComponentDefinitions;
+import world.gregs.voidps.cache.Cache;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
+import org.darkan.core.cache.VarBitDefinitions;
+import org.darkan.core.cache.IComponentDefinitions;
 import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.game.Item;
-import com.rs.lib.json.DateAdapter;
-import com.rs.lib.net.packets.Packet;
-import com.rs.lib.net.packets.PacketEncoder;
-import com.rs.lib.util.PacketAdapter;
-import com.rs.lib.util.PacketEncoderAdapter;
-import com.rs.lib.util.RecordTypeAdapterFactory;
-import com.rs.lib.util.Utils;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.model.Item;
+// TODO: DateAdapter
+// TODO: net.packets.Packet
+// TODO: net.packets.PacketEncoder
+// TODO: PacketAdapter
+// TODO: PacketEncoderAdapter
+// TODO: RecordTypeAdapterFactory
+import org.darkan.core.Utils;
 import com.rs.utils.drop.Drop;
 import com.rs.utils.drop.DropSet;
 import com.rs.utils.drop.DropTable;
@@ -53,10 +54,7 @@ public class Test {
 	public static void main(String[] args) throws IOException {
 		JsonFileManager.setGSON(new GsonBuilder()
 				.registerTypeAdapter(Controller.class, new ControllerAdapter())
-				.registerTypeAdapter(Date.class, new DateAdapter())
-				.registerTypeAdapter(PacketEncoder.class, new PacketEncoderAdapter())
-				.registerTypeAdapter(Packet.class, new PacketAdapter())
-				.registerTypeAdapterFactory(new RecordTypeAdapterFactory())
+				// TODO: re-add legacy adapters when migrated
 				.disableHtmlEscaping()
 				.setPrettyPrinting()
 				.create());
@@ -72,20 +70,20 @@ public class Test {
 		BufferedWriter writer = new BufferedWriter(new FileWriter(file));
 		writer.flush();
 		for (int itemId = 0;itemId < Utils.getItemDefinitionsSize();itemId++) {
-			ItemDefinitions def = ItemDefinitions.getDefs(itemId);
-			boolean colors = def.originalModelColors != null && def.originalModelColors.length > 0 || def.modifiedModelColors != null && def.modifiedModelColors.length > 0;
-			boolean textures = def.originalTextureIds != null && def.originalTextureIds.length > 0 || def.modifiedTextureIds != null && def.modifiedTextureIds.length > 0;
+			ItemDefinition def = ItemDefinitions.getDefs(itemId);
+			boolean colors = def.getOriginalColours() != null && def.getOriginalColours().length > 0 || def.getModifiedColours() != null && def.getModifiedColours().length > 0;
+			boolean textures = def.getOriginalTextureColours() != null && def.getOriginalTextureColours().length > 0 || def.getModifiedTextureColours() != null && def.getModifiedTextureColours().length > 0;
 			if (def.getEquipSlot() != -1 && (colors || textures)) {
-				writer.write(itemId + " (" + def.name + "):");
+				writer.write(itemId + " (" + def.getName() + "):");
 				writer.newLine();
 				if (colors) {
-					writer.write("Original colors: " + Arrays.toString(def.originalModelColors));
-					writer.write("Modified colors: " + Arrays.toString(def.modifiedModelColors));
+					writer.write("Original colors: " + Arrays.toString(def.getOriginalColours()));
+					writer.write("Modified colors: " + Arrays.toString(def.getModifiedColours()));
 					writer.newLine();
 				}
 				if (textures) {
-					writer.write("Original textures: " + Arrays.toString(def.originalTextureIds));
-					writer.write("Modified textures: " + Arrays.toString(def.modifiedTextureIds));
+					writer.write("Original textures: " + Arrays.toString(def.getOriginalTextureColours()));
+					writer.write("Modified textures: " + Arrays.toString(def.getModifiedTextureColours()));
 					writer.newLine();
 				}
 			}

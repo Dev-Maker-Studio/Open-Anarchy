@@ -23,10 +23,10 @@ import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.combat.CombatScript;
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
-import com.rs.engine.pathfinder.Direction;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.util.Utils;
+import org.darkan.core.map.pathfinder.Direction;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 import kotlin.Pair;
 

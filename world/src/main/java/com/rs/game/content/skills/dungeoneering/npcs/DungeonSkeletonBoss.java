@@ -19,7 +19,7 @@ package com.rs.game.content.skills.dungeoneering.npcs;
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
 import com.rs.game.content.skills.dungeoneering.RoomReference;
 import com.rs.game.model.entity.Entity;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class DungeonSkeletonBoss extends DungeonNPC {
 

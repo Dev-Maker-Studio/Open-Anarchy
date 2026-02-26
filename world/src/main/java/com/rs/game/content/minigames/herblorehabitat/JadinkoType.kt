@@ -9,7 +9,7 @@ import com.rs.game.content.skills.farming.ProduceType
 import com.rs.game.content.skills.hunter.BoxHunterType
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 //null meaning any, requireEmptyXPatch = true meaning must be empty.
 enum class JadinkoType(
@@ -144,7 +144,7 @@ enum class JadinkoType(
 
 		@JvmStatic
 		private fun sendAttractionMessage(player: Player, type: JadinkoType, met: Int, allMet: Boolean) {
-			if (player in getPlayersInChunkRange(Tile.of(2959, 2915, 0).chunkId, 5)) {
+			if (player in getPlayersInChunkRange(Tile.of(2959, 2915, 0).getChunkId(), 5)) {
 				val jadinkoName = type.name.lowercase().replaceFirstChar { it.uppercase() }
 				if (type.isGodJadinko() && type.isJujuMet(player)) {
 					if (allMet) {

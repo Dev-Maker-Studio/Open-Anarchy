@@ -17,11 +17,11 @@
 package com.rs.utils.drop;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Rational;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import com.rs.utils.Rational;
+import org.darkan.core.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;

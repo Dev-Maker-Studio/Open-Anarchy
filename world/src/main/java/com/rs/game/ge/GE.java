@@ -16,18 +16,20 @@
 //
 package com.rs.game.ge;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.cache.ItemDefinitions;
+import com.rs.utils.KtExtensionsKt;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
+import org.darkan.core.model.IFEvents;
 import com.rs.db.WorldDB;
 import com.rs.game.World;
 import com.rs.game.content.interfacehandlers.ItemSelectInventory;
 import com.rs.game.content.skills.summoning.Familiar;
 import com.rs.game.ge.Offer.State;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
@@ -107,12 +109,12 @@ public class GE {
             case 102 -> openSell(e.getPlayer(), 4);
             case 121 -> openSell(e.getPlayer(), 5);
 
-            case 19 -> clickBox(e.getPlayer(), 0, e.getPacket() != ClientPacket.IF_OP1);
-            case 35 -> clickBox(e.getPlayer(), 1, e.getPacket() != ClientPacket.IF_OP1);
-            case 51 -> clickBox(e.getPlayer(), 2, e.getPacket() != ClientPacket.IF_OP1);
-            case 70 -> clickBox(e.getPlayer(), 3, e.getPacket() != ClientPacket.IF_OP1);
-            case 89 -> clickBox(e.getPlayer(), 4, e.getPacket() != ClientPacket.IF_OP1);
-            case 108 -> clickBox(e.getPlayer(), 5, e.getPacket() != ClientPacket.IF_OP1);
+            case 19 -> clickBox(e.getPlayer(), 0, e.getOpNum() != 1);
+            case 35 -> clickBox(e.getPlayer(), 1, e.getOpNum() != 1);
+            case 51 -> clickBox(e.getPlayer(), 2, e.getOpNum() != 1);
+            case 70 -> clickBox(e.getPlayer(), 3, e.getOpNum() != 1);
+            case 89 -> clickBox(e.getPlayer(), 4, e.getOpNum() != 1);
+            case 108 -> clickBox(e.getPlayer(), 5, e.getOpNum() != 1);
 
             case 200 -> {
                 clickBox(e.getPlayer(), e.getPlayer().getVars().getVar(VAR_CURR_BOX), true);
@@ -124,7 +126,7 @@ public class GE {
                 e.getPlayer().soundEffect(2266, false);
             }
 
-            case 206, 208 -> collectItems(e.getPlayer(), e.getPlayer().getVars().getVar(VAR_CURR_BOX), e.getComponentId() == 206 ? 0 : 1, e.getPacket() == ClientPacket.IF_OP1);
+            case 206, 208 -> collectItems(e.getPlayer(), e.getPlayer().getVars().getVar(VAR_CURR_BOX), e.getComponentId() == 206 ? 0 : 1, e.getOpNum() == 1);
 
             //Amount adjustments
             case 155 -> {
@@ -221,12 +223,12 @@ public class GE {
         if (e.getPlayer().getTempAttribs().getB("geLocked"))
             return;
         switch (e.getComponentId()) {
-            case 19 -> collectItems(e.getPlayer(), 0, e.getSlotId() / 2, e.getPacket() == ClientPacket.IF_OP1);
-            case 23 -> collectItems(e.getPlayer(), 1, e.getSlotId() / 2, e.getPacket() == ClientPacket.IF_OP1);
-            case 27 -> collectItems(e.getPlayer(), 2, e.getSlotId() / 2, e.getPacket() == ClientPacket.IF_OP1);
-            case 32 -> collectItems(e.getPlayer(), 3, e.getSlotId() / 2, e.getPacket() == ClientPacket.IF_OP1);
-            case 37 -> collectItems(e.getPlayer(), 4, e.getSlotId() / 2, e.getPacket() == ClientPacket.IF_OP1);
-            case 42 -> collectItems(e.getPlayer(), 5, e.getSlotId() / 2, e.getPacket() == ClientPacket.IF_OP1);
+            case 19 -> collectItems(e.getPlayer(), 0, e.getSlotId() / 2, e.getOpNum() == 1);
+            case 23 -> collectItems(e.getPlayer(), 1, e.getSlotId() / 2, e.getOpNum() == 1);
+            case 27 -> collectItems(e.getPlayer(), 2, e.getSlotId() / 2, e.getOpNum() == 1);
+            case 32 -> collectItems(e.getPlayer(), 3, e.getSlotId() / 2, e.getOpNum() == 1);
+            case 37 -> collectItems(e.getPlayer(), 4, e.getSlotId() / 2, e.getOpNum() == 1);
+            case 42 -> collectItems(e.getPlayer(), 5, e.getSlotId() / 2, e.getOpNum() == 1);
 
             default ->
                     Logger.debug(GE.class, "collBox", "Unhandled collection box button: " + e.getComponentId() + ", " + e.getSlotId());
@@ -255,11 +257,11 @@ public class GE {
         Item o = offer.getProcessedItems().get(slot);
         if (o == null)
             return;
-        Item orig = o.clone();
-        Item item = orig.clone();
+        Item orig = KtExtensionsKt.copyItem(o);
+        Item item = KtExtensionsKt.copyItem(orig);
         if (item == null)
             return;
-        ItemDefinitions defs = item.getDefinitions();
+        ItemDefinition defs = item.getDefinitions();
         if (noted) {
             if (item.getAmount() > 1 && !defs.isNoted() && defs.getCertId() != -1 && item.getMetaData() == null)
                 item.setId(defs.getCertId());
@@ -425,7 +427,7 @@ public class GE {
             return false;
         }
 
-        int notedId = ItemDefinitions.getDefs(offer.getItemId()).certId;
+        int notedId = ItemDefinitions.getDefs(offer.getItemId()).getCertId();
         int nonNotedAmt = player.getInventory().getAmountOf(offer.getItemId());
         int notedAmt = player.getInventory().getAmountOf(notedId);
 

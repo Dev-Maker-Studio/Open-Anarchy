@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.rooms.PuzzleRoom;
 import com.rs.game.content.skills.dungeoneering.rooms.puzzles.ReturnTheFlowRoom.FlowBuilder.FlowPiece;
@@ -24,8 +24,8 @@ import com.rs.game.content.skills.dungeoneering.skills.DungPickaxe;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
 
 public class ReturnTheFlowRoom extends PuzzleRoom {
 
@@ -64,7 +64,7 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
         int roomRotation = manager.getRoom(reference).getRotation();
 		for (int x = 5; x <= 10; x++)
 			for (int y = 5; y <= 10; y++) {
-				GameObject object = manager.getObjectWithType(reference, ObjectType.SCENERY_INTERACT, x, y);
+				GameObject object = manager.getObjectWithType(reference, ObjectShape.SCENERY_INTERACT, x, y);
 				if (object != null && object.getId() == RUBBLE_PIECE[type.ordinal()])
 					World.removeObject(object);
 			}
@@ -75,7 +75,7 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 		for (int i = 0; i < 4; i++) {
 			int pillarX = pillars[pillarPtr][0];
 			int pillarY = pillars[pillarPtr][1];
-			GameObject pillar = new GameObject(manager.getObjectWithType(reference, ObjectType.SCENERY_INTERACT, pillarX, pillarY));
+			GameObject pillar = new GameObject(manager.getObjectWithType(reference, ObjectShape.SCENERY_INTERACT, pillarX, pillarY));
 			if (counterClockwise)
 				pillar.setRotation(roomRotation + 1 + i);
 			else
@@ -107,14 +107,14 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 				}
 				node.rotation += i;
 				if (!broken && !node.blocked)
-					manager.spawnObject(reference, node.corner ? CORNER_PIECE_PATH_FLOW[type.ordinal()] : STRAIGHT_PIECE_PATH_FLOW[type.ordinal()], ObjectType.GROUND_DECORATION, node.rotation, 5 + node.x, 6 + node.y);
+					manager.spawnObject(reference, node.corner ? CORNER_PIECE_PATH_FLOW[type.ordinal()] : STRAIGHT_PIECE_PATH_FLOW[type.ordinal()], ObjectShape.GROUND_DECORATION, node.rotation, 5 + node.x, 6 + node.y);
 				else
-					manager.spawnObject(reference, node.corner ? CORNER_PIECE_PATH[type.ordinal()] : STRAIGHT_PIECE_PATH[type.ordinal()], ObjectType.GROUND_DECORATION, node.rotation, 5 + node.x, 6 + node.y);
+					manager.spawnObject(reference, node.corner ? CORNER_PIECE_PATH[type.ordinal()] : STRAIGHT_PIECE_PATH[type.ordinal()], ObjectShape.GROUND_DECORATION, node.rotation, 5 + node.x, 6 + node.y);
 				if (node.blocked) {
 					if (!broken)
-						manager.spawnObject(reference, RUBBLE_PIECE_FLOW[type.ordinal()], ObjectType.SCENERY_INTERACT, node.rotation, 5 + node.x, 6 + node.y);
+						manager.spawnObject(reference, RUBBLE_PIECE_FLOW[type.ordinal()], ObjectShape.SCENERY_INTERACT, node.rotation, 5 + node.x, 6 + node.y);
 					else
-						manager.spawnObject(reference, RUBBLE_PIECE[type.ordinal()], ObjectType.SCENERY_INTERACT, node.rotation, 5 + node.x, 6 + node.y);
+						manager.spawnObject(reference, RUBBLE_PIECE[type.ordinal()], ObjectShape.SCENERY_INTERACT, node.rotation, 5 + node.x, 6 + node.y);
 					broken = true;
 				}
 				node = node.next;
@@ -125,7 +125,7 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 		//very small chance to have it not generate anything at the start
 		if (tasks == 0) {
 			setComplete();
-			manager.spawnObject(reference, PEDESTAL_FLOW[type.ordinal()], ObjectType.SCENERY_INTERACT, 0, 7, 7);
+			manager.spawnObject(reference, PEDESTAL_FLOW[type.ordinal()], ObjectShape.SCENERY_INTERACT, 0, 7, 7);
 		}
 		manager.spawnRandomNPCS(reference);
 	}
@@ -151,7 +151,7 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 					giveXP(player, Constants.MINING);
 					player.setNextAnimation(new Animation(-1));
 					GameObject rubble = new GameObject(object);
-					rubble.setId(object.getId() == RUBBLE_PIECE[type.ordinal()] ? RUBBLE_PIECE_CLEARED[type.ordinal()] : RUBBLE_PIECE_CLEARED_FLOW[type.ordinal()]);
+					rubble.changeId(object.getId() == RUBBLE_PIECE[type.ordinal()] ? RUBBLE_PIECE_CLEARED[type.ordinal()] : RUBBLE_PIECE_CLEARED_FLOW[type.ordinal()]);
 					World.spawnObject(rubble);
 					node.blocked = false;
 					advance();
@@ -186,7 +186,7 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 	private void advance() {
 		if (--tasks == 0) {
 			setComplete();
-			manager.spawnObject(reference, PEDESTAL_FLOW[type.ordinal()], ObjectType.SCENERY_INTERACT, 0, 7, 7);
+			manager.spawnObject(reference, PEDESTAL_FLOW[type.ordinal()], ObjectShape.SCENERY_INTERACT, 0, 7, 7);
 		}
 
 	}
@@ -194,11 +194,11 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 	private void startFlow(FlowPiece node) {
 		while (node.next != null) {
 			if (node.corner)
-				manager.spawnObject(reference, CORNER_PIECE_PATH_FLOW[type.ordinal()], ObjectType.GROUND_DECORATION, node.rotation, 5 + node.x, 6 + node.y);
+				manager.spawnObject(reference, CORNER_PIECE_PATH_FLOW[type.ordinal()], ObjectShape.GROUND_DECORATION, node.rotation, 5 + node.x, 6 + node.y);
 			else if (!node.blocked)
-				manager.spawnObject(reference, STRAIGHT_PIECE_PATH_FLOW[type.ordinal()], ObjectType.GROUND_DECORATION, node.rotation, 5 + node.x, 6 + node.y);
+				manager.spawnObject(reference, STRAIGHT_PIECE_PATH_FLOW[type.ordinal()], ObjectShape.GROUND_DECORATION, node.rotation, 5 + node.x, 6 + node.y);
 			else {
-				manager.spawnObject(reference, RUBBLE_PIECE_FLOW[type.ordinal()], ObjectType.SCENERY_INTERACT, node.rotation, 5 + node.x, 6 + node.y);
+				manager.spawnObject(reference, RUBBLE_PIECE_FLOW[type.ordinal()], ObjectShape.SCENERY_INTERACT, node.rotation, 5 + node.x, 6 + node.y);
 				return;
 			}
 			node = node.next;
@@ -233,7 +233,7 @@ public class ReturnTheFlowRoom extends PuzzleRoom {
 		}
 
 		public GameObject getPillar() {
-			return manager.getObjectWithType(reference, ObjectType.SCENERY_INTERACT, pillarX, pillarY);
+			return manager.getObjectWithType(reference, ObjectShape.SCENERY_INTERACT, pillarX, pillarY);
 		}
 
 	}

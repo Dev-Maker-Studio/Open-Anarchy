@@ -16,16 +16,16 @@
 //
 package com.rs.game.content.commands.normal;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.db.WorldDB;
 import com.rs.engine.command.Command;
 import com.rs.engine.command.Commands;
 import com.rs.game.ge.Offer;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.Rights;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Rights;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.utils.drop.DropTable;
@@ -103,7 +103,7 @@ public class Normal {
             p.getPackets().sendDevConsoleMessage("Searching for npcs containing name: " + Utils.concat(args));
             for (int i = 0; i < Utils.getNPCDefinitionsSize(); i++)
                 if (NPCDefinitions.getDefs(i).getName().toLowerCase().contains(Utils.concat(args).toLowerCase()))
-                    p.getPackets().sendDevConsoleMessage("Result found: " + i + " - " + NPCDefinitions.getDefs(i).getName() + " (" + NPCDefinitions.getDefs(i).combatLevel + ")");
+                    p.getPackets().sendDevConsoleMessage("Result found: " + i + " - " + NPCDefinitions.getDefs(i).getName() + " (" + NPCDefinitions.getDefs(i).getCombatLevel() + ")");
         });
 
 //        Commands.add(Rights.PLAYER, "yell,shout [text]", "Will broadcast your message to the whole server.", (p, args) -> {

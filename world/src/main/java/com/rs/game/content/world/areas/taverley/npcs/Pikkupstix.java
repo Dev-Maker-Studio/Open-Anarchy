@@ -12,7 +12,7 @@ import com.rs.game.content.skills.summoning.EnchantedHeadwear;
 import com.rs.game.content.world.unorganized_dialogue.skillmasters.GenericSkillcapeOwnerD;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import com.rs.utils.shop.ShopsHandler;

@@ -18,7 +18,7 @@ package com.rs.game.content.minigames.duel;
 
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 public class DuelRules {
 

@@ -16,10 +16,10 @@
 //
 package com.rs.utils.spawns;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class ObjectSpawn {
 
@@ -62,6 +62,6 @@ public class ObjectSpawn {
 	}
 
 	public void spawn() {
-		World.spawnObject(new GameObject(objectId, ObjectType.forId(type), rotation, tile.getX(), tile.getY(), tile.getPlane()));
+		World.spawnObject(new GameObject(objectId, ObjectShape.forId(type), rotation, tile.getX(), tile.getY(), tile.getPlane()));
 	}
 }

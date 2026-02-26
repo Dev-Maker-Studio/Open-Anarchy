@@ -1,10 +1,10 @@
 package com.rs.game.content.quests.sheep_herder.utils
 
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 class SickSheepNPC(id: Int, tile: Tile, var officialRespawnTile: Tile, dir: Direction) : NPC(id, tile) {
 

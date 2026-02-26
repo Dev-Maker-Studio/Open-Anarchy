@@ -22,9 +22,9 @@ import com.rs.game.content.skills.magic.TeleType
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Rights
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Rights
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 
 const val PLUNDER_INTERFACE = 428
 
@@ -133,7 +133,7 @@ class PyramidPlunderController : Controller() {
     }
 
     fun updateObject(obj: GameObject, value: Int) {
-        varbits[obj.definitions.varpBit] = value
-        player.vars.setVarBit(obj.definitions.varpBit, value)
+        varbits[obj.definitions.varbit] = value
+        player.vars.setVarBit(obj.definitions.varbit, value)
     }
 }

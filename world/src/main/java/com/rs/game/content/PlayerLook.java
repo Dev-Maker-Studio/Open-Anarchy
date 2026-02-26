@@ -16,12 +16,13 @@
 //
 package com.rs.game.content;
 
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.StructDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
+import org.darkan.core.cache.StructDefinitions;
+import world.gregs.voidps.cache.definition.data.StructDefinition;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 
@@ -64,7 +65,7 @@ public final class PlayerLook {
 				int map1 = EnumDefinitions.getEnum(male ? 3304 : 3302).getIntValue(e.getSlotId());
 				if (map1 == 0)
 					return;
-				StructDefinitions map = StructDefinitions.getStruct(map1);
+				StructDefinition map = StructDefinitions.getStruct(map1);
 				e.getPlayer().getAppearance().setHairStyle(map.getIntValue(788));
 				if (!male)
 					e.getPlayer().getAppearance().setBeardStyle(e.getPlayer().getAppearance().getHairStyle());
@@ -125,7 +126,7 @@ public final class PlayerLook {
 		int map2Id = StructDefinitions.getStruct(map1).getIntValue((male ? 1169 : 1175) + index2);
 		if (map2Id == 0)
 			return;
-		StructDefinitions map = StructDefinitions.getStruct(map2Id);
+		StructDefinition map = StructDefinitions.getStruct(map2Id);
 		for (int i = 1182; i <= 1186; i++) {
 			int value = map.getIntValue(i);
 			if (value == -1)

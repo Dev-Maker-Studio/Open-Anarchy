@@ -8,7 +8,7 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnNpc
 import com.rs.plugin.kts.onNpcClick

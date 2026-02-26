@@ -7,9 +7,9 @@ import com.rs.game.World.getNPCsInChunkRange
 import com.rs.game.World.spawnNPC
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Logger
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Logger
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 
@@ -104,7 +104,7 @@ class PostiePeteWorldTalk {
 
         fun spawnPostiePete(location: PostiePeteLocation) {
             val spawnedPete = spawnNPC(postiePeteID, location.peteTile)
-            val targetNpc = getNPCsInChunkRange(spawnedPete.chunkId, 1).find { it.id == location.npcId }
+            val targetNpc = getNPCsInChunkRange(spawnedPete.getChunkId(), 1).find { it.id == location.npcId }
             if (targetNpc != null) {
                 spawnedPete.spotAnim(86)
                 spawnedPete.forceTalk("Anyone got post?")

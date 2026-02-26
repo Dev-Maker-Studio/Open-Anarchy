@@ -22,6 +22,36 @@ data class EnumDefinition(
 
     fun getString(id: Int) = map?.get(id) as? String ?: defaultString
 
+    /** Legacy alias for [getString]. */
+    fun getStringValue(id: Int) = getString(id)
+
+    /** Legacy alias for [getInt]. */
+    fun getIntValue(id: Int) = getInt(id)
+
+    /** Legacy alias for [getInt] - indexed by position. */
+    fun getIntValueAtIndex(id: Int) = getInt(id)
+
+    /** Gets the value at the given key. */
+    fun getValue(id: Any): Any? = map?.get(id as? Int ?: return null)
+
+    /** Legacy alias for [defaultInt]. */
+    fun getDefaultIntValue(): Int = defaultInt
+
+    /** Gets the values map, or empty map if null. */
+    fun getValues(): Map<Int, Any> = map ?: emptyMap()
+
+    /** Gets the number of entries in this enum. */
+    fun getSize(): Int = map?.size ?: 0
+
+    /** Gets the key for a given value, or -1 if not found. */
+    fun getKeyForValue(value: Any): Int {
+        val m = map ?: return -1
+        for ((k, v) in m) {
+            if (v == value) return k
+        }
+        return -1
+    }
+
     companion object {
         val EMPTY = EnumDefinition()
     }

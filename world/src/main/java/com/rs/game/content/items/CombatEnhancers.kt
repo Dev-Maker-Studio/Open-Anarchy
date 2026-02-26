@@ -1,6 +1,6 @@
 package com.rs.game.content.items
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.game.content.combat.AmmoType
 import com.rs.game.content.combat.AttackType
 import com.rs.game.content.combat.CombatMod
@@ -15,9 +15,10 @@ import com.rs.game.content.skills.slayer.Slayer
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.util.Utils.clampD
-import com.rs.lib.util.Utils.clampI
-import com.rs.lib.util.Utils.random
+import com.rs.utils.isUndead
+import org.darkan.core.Utils.clampD
+import org.darkan.core.Utils.clampI
+import org.darkan.core.Utils.random
 import com.rs.plugin.annotations.ServerStartupEvent
 import kotlin.math.floor
 import kotlin.math.pow
@@ -174,8 +175,8 @@ fun Player.fullVeracsEquipped(): Boolean {
     val legsId = equipment.legsId
     val weaponId = equipment.weaponId
     if (helmId == -1 || chestId == -1 || legsId == -1 || weaponId == -1) return false
-    return (ItemDefinitions.getDefs(helmId).getName().contains("Verac's") && ItemDefinitions.getDefs(chestId).getName().contains("Verac's") && ItemDefinitions.getDefs(legsId).getName().contains("Verac's")
-            && ItemDefinitions.getDefs(weaponId).getName().contains("Verac's"))
+    return (ItemDefinitions.getDefs(helmId).name.contains("Verac's") && ItemDefinitions.getDefs(chestId).name.contains("Verac's") && ItemDefinitions.getDefs(legsId).name.contains("Verac's")
+            && ItemDefinitions.getDefs(weaponId).name.contains("Verac's"))
 }
 
 private fun Player.fullDharokEquipped(): Boolean {
@@ -184,6 +185,6 @@ private fun Player.fullDharokEquipped(): Boolean {
     val legsId = equipment.legsId
     val weaponId = equipment.weaponId
     if (helmId == -1 || chestId == -1 || legsId == -1 || weaponId == -1) return false
-    return (ItemDefinitions.getDefs(helmId).getName().contains("Dharok's") && ItemDefinitions.getDefs(chestId).getName().contains("Dharok's") && ItemDefinitions.getDefs(legsId).getName().contains("Dharok's")
-            && ItemDefinitions.getDefs(weaponId).getName().contains("Dharok's"))
+    return (ItemDefinitions.getDefs(helmId).name.contains("Dharok's") && ItemDefinitions.getDefs(chestId).name.contains("Dharok's") && ItemDefinitions.getDefs(legsId).name.contains("Dharok's")
+            && ItemDefinitions.getDefs(weaponId).name.contains("Dharok's"))
 }

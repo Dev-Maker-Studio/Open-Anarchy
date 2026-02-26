@@ -1,11 +1,13 @@
 package com.rs.game.map;
 
 import com.google.common.base.Objects;
-import com.rs.cache.loaders.map.RegionSize;
+import org.darkan.core.model.RegionSize;
 import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.net.packets.encoders.updatezone.UpdateZonePartialEnclosed;
-import com.rs.lib.util.MapUtils;
+import org.darkan.core.net.prot.UpdateZonePartialEnclosed;
+import org.darkan.core.net.prot.ZonePacketEncoder;
+import org.darkan.core.util.MapUtils;
+import org.darkan.core.util.Structure;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -26,8 +28,8 @@ public class UpdateZone {
         this.baseChunkId = baseChunkId;
         this.size = size;
         for (int planeOff = 0;planeOff < 4 * Chunk.PLANE_INC;planeOff += Chunk.PLANE_INC) {
-            for (int chunkXOff = 0; chunkXOff <= (size.size / 8) * Chunk.X_INC; chunkXOff += Chunk.X_INC) {
-                for (int chunkYOff = 0; chunkYOff <= (size.size / 8); chunkYOff++) {
+            for (int chunkXOff = 0; chunkXOff <= (size.getSize() / 8) * Chunk.X_INC; chunkXOff += Chunk.X_INC) {
+                for (int chunkYOff = 0; chunkYOff <= (size.getSize() / 8); chunkYOff++) {
                     int chunkId = baseChunkId + chunkXOff + chunkYOff + planeOff;
                     chunkIds.add(chunkId);
                     regionIds.add(MapUtils.chunkToRegionId(chunkId));
@@ -41,10 +43,15 @@ public class UpdateZone {
     }
 
     public void rebuildUpdateZone() {
+       int[] base = MapUtils.decode(Structure.CHUNK, baseChunkId);
        for (int chunkId : chunkIds) {
            Chunk chunk = ChunkManager.getChunk(chunkId);
            if (!chunk.getUpdates().isEmpty()) {
-               chunkUpdates.add(new UpdateZonePartialEnclosed(baseChunkId, chunk.getId(), chunk.getUpdates()));
+               int[] local = MapUtils.decode(Structure.CHUNK, chunk.getId());
+               byte[] data = ZonePacketEncoder.INSTANCE.encodeZoneSubPackets(chunk.getUpdates());
+               chunkUpdates.add(new UpdateZonePartialEnclosed(
+                   local[0] - base[0], local[1] - base[1], local[2], data
+               ));
            }
        }
     }
@@ -53,7 +60,7 @@ public class UpdateZone {
         if (chunkUpdates.isEmpty() || player == null || player.hasFinished() || !player.hasStarted())
             return;
         for (UpdateZonePartialEnclosed packet : chunkUpdates)
-            player.getSession().writeToQueue(packet);
+            player.getSession().queuePacket(packet);
     }
 
     public void update() {

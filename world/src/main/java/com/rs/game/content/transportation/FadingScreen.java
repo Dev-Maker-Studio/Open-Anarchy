@@ -19,7 +19,7 @@ package com.rs.game.content.transportation;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.util.Logger;
+import org.darkan.core.Logger;
 
 public final class FadingScreen {
 

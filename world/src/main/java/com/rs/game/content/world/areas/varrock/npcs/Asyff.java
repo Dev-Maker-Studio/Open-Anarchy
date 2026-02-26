@@ -1,14 +1,13 @@
 package com.rs.game.content.world.areas.varrock.npcs;
 
-import com.rs.cache.loaders.InventoryDefinitions;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.dialogue.Options;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
@@ -27,7 +26,7 @@ public class Asyff extends Conversation {
             case "Talk-to" -> e.getPlayer().startConversation(new Asyff(e.getPlayer()));
             case "Trade" -> ShopsHandler.openShop(e.getPlayer(), "fancy_clothes_store");
             case "Fur-shop" -> {
-                e.getPlayer().getPackets().sendItems(482, Arrays.stream(InventoryDefinitions.getContainer(482).ids).mapToObj(id -> new Item(id, 1)).toArray(Item[]::new));
+                e.getPlayer().getPackets().sendItems(482, Arrays.stream(FurItem.values()).map(f -> new Item(f.id, 1)).toArray(Item[]::new));
                 e.getPlayer().getInterfaceManager().sendInterface(477);
                 e.getPlayer().getPackets().setIFRightClickOps(477, 26, 0, 20, 0, 1, 2, 3);
             }
@@ -52,7 +51,7 @@ public class Asyff extends Conversation {
                         .addPlayer(HeadE.HAPPY_TALKING, "Can you make clothing suitable for hunting in?")
                         .addNPC(npcId, HeadE.SKEPTICAL, "Certainly. Take a look at my range of made-to-order items. If you can supply the furs, I'll gladly make any of these for you.")
                         .addNext(() -> {
-                            player.getPackets().sendItems(482, Arrays.stream(InventoryDefinitions.getContainer(482).ids).mapToObj(id -> new Item(id, 1)).toArray(Item[]::new));
+                            player.getPackets().sendItems(482, Arrays.stream(FurItem.values()).map(f -> new Item(f.id, 1)).toArray(Item[]::new));
                             player.getInterfaceManager().sendInterface(477);
                             player.getPackets().setIFRightClickOps(477, 26, 0, 20, 0, 1, 2, 3);
                         }));
@@ -110,7 +109,7 @@ public class Asyff extends Conversation {
     }
 
     private static void buy(Player player, FurItem item, int amount) {
-        player.sendOptionDialogue("Are you sure you'd like to buy " + amount + " " + ItemDefinitions.getDefs(item.id).name + "?", ops -> {
+        player.sendOptionDialogue("Are you sure you'd like to buy " + amount + " " + ItemDefinitions.getDefs(item.id).getName() + "?", ops -> {
             ops.add("Yes, I am sure ("+ Utils.formatNumber(item.gpCost*amount) + " coins)", () -> {
                 if (item.furCost*amount > player.getInventory().getTotalNumberOf(item.furIds)) {
                     player.sendMessage("You don't have enough furs to exchange for that.");
@@ -136,12 +135,12 @@ public class Asyff extends Conversation {
         FurItem item = FurItem.forId(e.getSlotId2());
         if (item == null)
             return;
-        String name = ItemDefinitions.getDefs(e.getSlotId2()).name;
-        switch(e.getPacket()) {
-            case IF_OP1 -> e.getPlayer().sendMessage(name + " costs " + Utils.formatNumber(item.gpCost) + "gp and " + item.furCost + " " + ItemDefinitions.getDefs(item.furIds[0]).name.toLowerCase() + ".");
-            case IF_OP2 -> buy(e.getPlayer(), item, 1);
-            case IF_OP3 -> buy(e.getPlayer(), item, 5);
-            case IF_OP4 -> buy(e.getPlayer(), item, 10);
+        String name = ItemDefinitions.getDefs(e.getSlotId2()).getName();
+        switch(e.getOpNum()) {
+            case 1 -> e.getPlayer().sendMessage(name + " costs " + Utils.formatNumber(item.gpCost) + "gp and " + item.furCost + " " + ItemDefinitions.getDefs(item.furIds[0]).getName().toLowerCase() + ".");
+            case 2 -> buy(e.getPlayer(), item, 1);
+            case 3 -> buy(e.getPlayer(), item, 5);
+            case 4 -> buy(e.getPlayer(), item, 10);
             default -> {}
         }
     });

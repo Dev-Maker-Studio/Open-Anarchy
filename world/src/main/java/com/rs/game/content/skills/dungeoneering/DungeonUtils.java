@@ -16,15 +16,15 @@
 //
 package com.rs.game.content.skills.dungeoneering;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants.GuardianMonster;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants.SkillDoors;
 import com.rs.game.content.skills.dungeoneering.rooms.BossRoom;
 import com.rs.game.content.skills.dungeoneering.rooms.HandledRoom;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -68,10 +68,10 @@ public final class DungeonUtils {
 	public static int getBindedId(Item item) {
 		String name = item.getName();
 		for (int i = 15775; i <= 16272; i++)
-			if (ItemDefinitions.getDefs(i).name.replace(" (b)", "").equals(name))
+			if (ItemDefinitions.getDefs(i).getName().replace(" (b)", "").equals(name))
 				return i;
 		for (int i = 19865; i <= 19866; i++)
-			if (ItemDefinitions.getDefs(i).name.replace(" (b)", "").equals(name))
+			if (ItemDefinitions.getDefs(i).getName().replace(" (b)", "").equals(name))
 				return i;
 		return -1;
 	}
@@ -80,7 +80,7 @@ public final class DungeonUtils {
 		List<Integer> ids = Arrays.stream(npcIds).boxed().collect(Collectors.toList());
 		Collections.shuffle(ids);
 		return ids.stream()
-				.min(Comparator.comparingInt(i -> Math.abs(NPCDefinitions.getDefs(i).combatLevel - target)))
+				.min(Comparator.comparingInt(i -> Math.abs(NPCDefinitions.getDefs(i).getCombatLevel() - target)))
 				.orElseThrow(() -> new NoSuchElementException("No suitable combat level found"));
 	}
 
@@ -566,7 +566,7 @@ public final class DungeonUtils {
 		int atts = 0;
 		for (int i = 0;i < numMonsters;) {
 			int try1 = getClosestToCombatLevel(possible.get(Utils.random(possible.size())).getNPCIds(), combatLevels[i]);
-			if (atts++ > 15 || Utils.diff(NPCDefinitions.getDefs(try1).combatLevel, combatLevels[i]) < 15) {
+			if (atts++ > 15 || Utils.diff(NPCDefinitions.getDefs(try1).getCombatLevel(), combatLevels[i]) < 15) {
 				list.add(try1);
 				i++;
 				atts = 0;

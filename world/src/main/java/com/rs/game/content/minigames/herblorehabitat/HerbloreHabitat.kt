@@ -1,6 +1,6 @@
 package com.rs.game.content.minigames.herblorehabitat
 
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World.getPlayersInChunkRange
 import com.rs.game.content.minigames.herblorehabitat.JadinkoType.Companion.godJadinkos
 import com.rs.game.content.minigames.herblorehabitat.JadinkoType.Companion.updateGroup
@@ -12,9 +12,9 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.actions.PlayerAction
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Logger
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Logger
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
@@ -24,7 +24,7 @@ import com.rs.plugin.kts.onObjectClick
 fun initUpdateTask() {
     onLogin { (player) ->
         player.tasks.scheduleLooping(0, 10) {
-            if (player in getPlayersInChunkRange(Tile.of(2959, 2915, 0).chunkId, 5)) {
+            if (player in getPlayersInChunkRange(Tile.of(2959, 2915, 0).getChunkId(), 5)) {
                 if (player.hasStarted() && !player.hasFinished()) {
                     updateGroup(player, *JadinkoType.entries.toTypedArray())
                 }

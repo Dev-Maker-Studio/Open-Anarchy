@@ -3,7 +3,7 @@ package com.rs.game.content.skills.thieving;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import com.rs.utils.Ticks;

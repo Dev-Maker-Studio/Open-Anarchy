@@ -1,7 +1,7 @@
 package com.rs.game.content.world.areas.karamja.npcs
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnNpc
 

@@ -19,9 +19,9 @@ package com.rs.game.content.world.areas.wilderness.forinthry
 import com.rs.game.content.Effect
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.handlers.NPCInstanceHandler
 import com.rs.plugin.kts.instantiateNpc
@@ -148,7 +148,7 @@ private fun genDrop(killer: Player, name: String, combatLevel: Int): List<Item> 
 		Drop(13953, 15, 50), Drop(13957, 15, 50)
 	)
 
-	Utils.add(drops, DropTable.calculateDrops(killer, DropSet(
+	drops.addAll(DropTable.calculateDrops(killer, DropSet(
 		// 1/R chance for rare items
 		DropTable(1.0, r, Drop(14876)), DropTable(1.0, r, Drop(14877)),
 		DropTable(1.0, r, Drop(14878)), DropTable(1.0, r, Drop(14879)),

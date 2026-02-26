@@ -22,14 +22,14 @@ import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.combat.CombatScript;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import kotlin.Pair;
 
 public class ChaosElementalCombat extends CombatScript {

@@ -27,8 +27,8 @@ import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.Constants
-import com.rs.lib.game.Tile
+import org.darkan.core.Constants
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 
@@ -82,7 +82,7 @@ class GodwarsController : Controller() {
     }
 
     override fun processObjectClick1(obj: GameObject): Boolean {
-        if (obj.getId() == 26287 || obj.getId() == 26286 || obj.getId() == 26288 || obj.getId() == 26289) {
+        if (obj.id == 26287 || obj.id == 26286 || obj.id == 26288 || obj.id == 26289) {
             if (lastPrayerRecharge >= System.currentTimeMillis()) {
                 player.sendMessage("You must wait a total of 10 minutes before being able to recharge your prayer points.")
                 return false
@@ -96,19 +96,19 @@ class GodwarsController : Controller() {
             lastPrayerRecharge = 600000 + System.currentTimeMillis()
             return false
         }
-        if (obj.getId() == 26444) {
+        if (obj.id == 26444) {
             if (player.skills.getLevel(Constants.AGILITY) >= 70) player.useStairs(828, Tile.of(2914, 5300, 1), 1, 2)
             else player.sendMessage("You need an Agility level of 70 to maneuver this obstacle.")
             return false
         }
 
-        if (obj.getId() == 26445) {
+        if (obj.id == 26445) {
             if (player.skills.getLevel(Constants.AGILITY) >= 70) player.useStairs(828, Tile.of(2920, 5274, 0), 1, 2)
             else player.sendMessage("You need an Agility level of 70 to maneuver this obstacle.")
             return false
         }
 
-        if (obj.getId() == 26427 && player.x >= 2908) {
+        if (obj.id == 26427 && player.x >= 2908) {
             if (killcount[GodFaction.SARADOMIN.ordinal] >= 40) {
                 player.tele(Tile.of(2907, 5265, 0))
                 killcount[GodFaction.SARADOMIN.ordinal] -= 40
@@ -117,7 +117,7 @@ class GodwarsController : Controller() {
             return false
         }
 
-        if (obj.getId() == 26303) {
+        if (obj.id == 26303) {
             if (player.skills.getLevel(Skills.RANGE) >= 70) {
                 val withinArmadyl = player.y < 5276
                 val tile: Tile = Tile.of(2871, if (withinArmadyl) 5279 else 5269, 2)
@@ -129,10 +129,10 @@ class GodwarsController : Controller() {
                     wait(2)
                     player.anim(16635)
                     wait(1)
-                    player.appearance.setHidden(true)
-                    sendProjectile(Tile.of(player.tile), tile, 1185, 18 to 18, 30, 15, 30)
+                    player.appearance.isHidden = true
+                    sendProjectile(player.tile, tile, 1185, 18 to 18, 30, 15, 30)
                     player.forceMove(tile, 0, 180, false) {
-                        player.appearance.setHidden(false)
+                        player.appearance.isHidden = false
                         player.anim(16672)
                         player.unlock()
                         player.resetReceivedHits()
@@ -143,7 +143,7 @@ class GodwarsController : Controller() {
         }
 
 
-        if (obj.getId() == 26426 && player.y <= 5295) {
+        if (obj.id == 26426 && player.y <= 5295) {
             if (killcount[GodFaction.ARMADYL.ordinal] >= 40) {
                 player.tele(Tile.of(2839, 5296, 2))
                 killcount[GodFaction.ARMADYL.ordinal] -= 40
@@ -152,7 +152,7 @@ class GodwarsController : Controller() {
             return false
         }
 
-        if (obj.getId() == 26428 && player.y >= 5332) {
+        if (obj.id == 26428 && player.y >= 5332) {
             if (killcount[GodFaction.ZAMORAK.ordinal] >= 40) {
                 player.tele(Tile.of(2925, 5331, 2))
                 killcount[GodFaction.ZAMORAK.ordinal] -= 40
@@ -161,7 +161,7 @@ class GodwarsController : Controller() {
             return false
         }
 
-        if (obj.getId() == 26425 && player.x <= 2863) {
+        if (obj.id == 26425 && player.x <= 2863) {
             if (killcount[GodFaction.BANDOS.ordinal] >= 40) {
                 player.tele(Tile.of(2864, 5354, 2))
                 killcount[GodFaction.BANDOS.ordinal] -= 40
@@ -170,7 +170,7 @@ class GodwarsController : Controller() {
             return false
         }
 
-        if (obj.getId() == 26384) {
+        if (obj.id == 26384) {
             if (player.skills.getLevel(Constants.STRENGTH) >= 70) {
                 if (player.inventory.containsItem(2347, 1)) {
                     if (player.x == 2851) {
@@ -185,7 +185,7 @@ class GodwarsController : Controller() {
             return false
         }
 
-        if (obj.getId() == 57211) {
+        if (obj.id == 57211) {
             if (player.y == 5279) {
                 val key = player.inventory.getItemById(20120)
                 if (key != null && key.getMetaData("frozenKeyCharges") != null && key.getMetaDataI("frozenKeyCharges") > 1) {
@@ -198,23 +198,23 @@ class GodwarsController : Controller() {
             return false
         }
 
-        if (obj.getId() == 57260) {
+        if (obj.id == 57260) {
             player.useStairs(828, Tile.of(2886, 5274, 2), 1, 2)
             return false
         }
 
-        if (obj.getId() == 57254) {
+        if (obj.id == 57254) {
             player.useStairs(828, Tile.of(2855, 5221, 0), 1, 2)
             return false
         }
 
-        if (obj.getId() == 57234) {
+        if (obj.id == 57234) {
             if (player.x == 2859) player.tele(player.transform(3, 0, 0))
             else if (player.x == 2862) player.tele(player.transform(-3, 0, 0))
             return false
         }
 
-        if (obj.getId() == 57258) {
+        if (obj.id == 57258) {
             if (killcount[GodFaction.ZAROS.ordinal] >= 40 || player.equipment.wearingFullCeremonial()) {
                 if (player.equipment.wearingFullCeremonial()) player.sendMessage("The door somehow recognizes your relevance to the area and allows you to pass through.")
                 player.tele(Tile.of(2900, 5204, 0))
@@ -222,7 +222,7 @@ class GodwarsController : Controller() {
             return false
         }
 
-        if (obj.getId() == 57225) {
+        if (obj.id == 57225) {
             val globalInstance: NexArena = NexArena.getGlobalInstance()
             player.startConversation {
                 simple("The room beyond this point is a prison! There is no way out other than death or teleport. Only those who endure dangerous encounters should proceed.")
@@ -240,10 +240,10 @@ class GodwarsController : Controller() {
     }
 
     override fun processObjectClick2(obj: GameObject): Boolean {
-        if (obj.getId() == 26286) sendNormalTeleportNoType(player, Tile.of(2922, 5345, 2))
-        else if (obj.getId() == 26287) sendNormalTeleportNoType(player, Tile.of(2912, 5268, 0))
-        else if (obj.getId() == 26288) sendNormalTeleportNoType(player, Tile.of(2842, 5266, 2))
-        else if (obj.getId() == 26289) sendNormalTeleportNoType(player, Tile.of(2837, 5355, 2))
+        if (obj.id == 26286) sendNormalTeleportNoType(player, Tile.of(2922, 5345, 2))
+        else if (obj.id == 26287) sendNormalTeleportNoType(player, Tile.of(2912, 5268, 0))
+        else if (obj.id == 26288) sendNormalTeleportNoType(player, Tile.of(2842, 5266, 2))
+        else if (obj.id == 26289) sendNormalTeleportNoType(player, Tile.of(2837, 5355, 2))
         return true
     }
 
@@ -284,6 +284,6 @@ class GodwarsController : Controller() {
     companion object {
         val GWD_REGIONS = setOf(11345, 11346, 11347, 11601, 11602, 11603)
         @JvmStatic
-        fun isAtGodwars(teleTile: Tile) = GWD_REGIONS.contains(teleTile.regionId)
+        fun isAtGodwars(teleTile: Tile) = GWD_REGIONS.contains(teleTile.getRegionId())
     }
 }

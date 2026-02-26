@@ -1,11 +1,11 @@
 package com.rs.game.content.quests.sheep_herder.utils
 
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.utils.Ticks
 import kotlin.math.abs
 import kotlin.random.Random

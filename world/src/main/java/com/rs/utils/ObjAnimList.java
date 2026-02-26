@@ -16,12 +16,17 @@
 //
 package com.rs.utils;
 
-import com.rs.cache.loaders.BASDefinitions;
-import com.rs.cache.loaders.NPCDefinitions;
-import com.rs.cache.loaders.ObjectDefinitions;
-import com.rs.cache.loaders.SpotAnimDefinitions;
-import com.rs.cache.loaders.animations.AnimationDefinitions;
-import com.rs.lib.util.Utils;
+import org.darkan.core.cache.BASDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
+import org.darkan.core.cache.ObjectDefinitions;
+import org.darkan.core.cache.SpotAnimDefinitions;
+import org.darkan.core.cache.AnimationDefinitions;
+import world.gregs.voidps.cache.definition.data.NPCDefinition;
+import world.gregs.voidps.cache.definition.data.AnimationDefinition;
+import world.gregs.voidps.cache.definition.data.GraphicDefinition;
+import world.gregs.voidps.cache.definition.data.ObjectDefinition;
+import world.gregs.voidps.cache.definition.data.BASDefinition;
+import org.darkan.core.Utils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,31 +57,31 @@ public class ObjAnimList {
 
 	public static void init() {
 		for (int npcId = 0;npcId < Utils.getNPCDefinitionsSize();npcId++) {
-			NPCDefinitions npcDef = NPCDefinitions.getDefs(npcId);
-			if (npcDef.basId != -1)
-				if (BASDefinitions.getDefs(npcDef.basId).standAnimation != -1)
-					if (AnimationDefinitions.getDefs(BASDefinitions.getDefs(npcDef.basId).standAnimation).frameSetIds != null) {
-						int skeleton = AnimationDefinitions.getDefs(BASDefinitions.getDefs(npcDef.basId).standAnimation).frameSetIds[0];
+			NPCDefinition npcDef = NPCDefinitions.getDefs(npcId);
+			if (npcDef.getRenderEmote() != -1)
+				if (BASDefinitions.getDefs(npcDef.getRenderEmote()).getStandAnimation() != -1)
+					if (AnimationDefinitions.getDefs(BASDefinitions.getDefs(npcDef.getRenderEmote()).getStandAnimation()).getFrames() != null) {
+						int skeleton = AnimationDefinitions.getDefs(BASDefinitions.getDefs(npcDef.getRenderEmote()).getStandAnimation()).getFrames()[0];
 						for (int i = 0; i < Utils.getAnimationDefinitionsSize(); i++) {
-							AnimationDefinitions check = AnimationDefinitions.getDefs(i);
-							if ((check == null) || check.frameSetIds == null || check.frameSetIds[0] == -1)
+							AnimationDefinition check = AnimationDefinitions.getDefs(i);
+							if ((check == null) || check.getFrames() == null || check.getFrames()[0] == -1)
 								continue;
-							if (check.frameSetIds[0] == skeleton)
+							if (check.getFrames()[0] == skeleton)
 								USED.add(i);
 						}
 					}
 		}
 
 		for (int spotAnimId = 0;spotAnimId < Utils.getSpotAnimDefinitionsSize();spotAnimId++) {
-			SpotAnimDefinitions defs = SpotAnimDefinitions.getDefs(spotAnimId);
-			if (defs.animationId != -1)
-				USED.add(defs.animationId);
+			GraphicDefinition defs = SpotAnimDefinitions.getDefs(spotAnimId);
+			if (defs.getAnimationId() != -1)
+				USED.add(defs.getAnimationId());
 		}
 
 		for (int objectId = 0;objectId < Utils.getObjectDefinitionsSize();objectId++) {
-			ObjectDefinitions defs = ObjectDefinitions.getDefs(objectId);
-			if (defs.animations != null)
-				for (int animId : defs.animations)
+			ObjectDefinition defs = ObjectDefinitions.getDefs(objectId);
+			if (defs.getAnimations() != null)
+				for (int animId : defs.getAnimations())
 					USED.add(animId);
 		}
 

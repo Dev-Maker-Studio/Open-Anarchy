@@ -19,8 +19,8 @@ package com.rs.game.content.skills.cooking;
 import com.rs.game.content.world.areas.lumbridge.npcs.GrilleGoatsDialogue;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
 
 public class CowMilkingAction extends PlayerAction {
 

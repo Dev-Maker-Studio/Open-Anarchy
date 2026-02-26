@@ -17,7 +17,7 @@
 package com.rs.game.content.skills.construction;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.net.ClientPacket;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
@@ -47,15 +47,15 @@ public class SawmillOperator  {
 			final int log = logs[e.getComponentId()-12];
 			final int pricePer = prices[e.getComponentId()-12];
 			final int plank = planks[e.getComponentId()-12];
-			if (e.getPacket() == ClientPacket.IF_OP1)
+			if (e.getOpNum() == 1)
 				openAreYouSure(e.getPlayer(), log, 1, pricePer, plank);
-			else if (e.getPacket() == ClientPacket.IF_OP2)
+			else if (e.getOpNum() == 2)
 				openAreYouSure(e.getPlayer(), log, 5, pricePer, plank);
-			else if (e.getPacket() == ClientPacket.IF_OP3)
+			else if (e.getOpNum() == 3)
 				openAreYouSure(e.getPlayer(), log, 10, pricePer, plank);
-			else if (e.getPacket() == ClientPacket.IF_OP4)
+			else if (e.getOpNum() == 4)
 				e.getPlayer().sendInputInteger("How many planks would you like to make?", (number) -> openAreYouSure(e.getPlayer(), log, number, pricePer, plank));
-			else if (e.getPacket() == ClientPacket.IF_OP5)
+			else if (e.getOpNum() == 5)
 				openAreYouSure(e.getPlayer(), log, 28, pricePer, plank);
 		}
 	});

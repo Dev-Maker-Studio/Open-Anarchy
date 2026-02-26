@@ -1,6 +1,6 @@
 package com.rs.game.content.world.areas.fremennik_isles.jatizso.npcs
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.plugin.annotations.ServerStartupEvent

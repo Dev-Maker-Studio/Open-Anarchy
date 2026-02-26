@@ -1,14 +1,14 @@
 package com.rs.game.content.quests.troll_stronghold.instances.npcs
 
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.game.content.quests.troll_stronghold.utils.*
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 
 enum class NPCType(
     val guardTile: Tile,
@@ -16,8 +16,8 @@ enum class NPCType(
     val awakeState: Int,
     val keyToLoot: Int
 ) {
-    TWIG(Tile.of(TWIG_GUARD_TILE), TWIG_SLEEPING, TWIG_AWAKE, CELL_KEY_GODRIC),
-    BERRY(Tile.of(BERRY_GUARD_TILE), BERRY_SLEEPING, BERRY_AWAKE, CELL_KEY_EADGAR)
+    TWIG(TWIG_GUARD_TILE, TWIG_SLEEPING, TWIG_AWAKE, CELL_KEY_GODRIC),
+    BERRY(BERRY_GUARD_TILE, BERRY_SLEEPING, BERRY_AWAKE, CELL_KEY_EADGAR)
 }
 
 class TwigAndBerry(

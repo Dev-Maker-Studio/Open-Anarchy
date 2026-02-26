@@ -1,7 +1,7 @@
 package com.rs.utils.reflect;
 
-import com.rs.lib.util.reflect.ReflectionCheck;
-import com.rs.lib.util.reflect.ReflectionChecks;
+import com.rs.utils.reflect.ReflectionCheck;
+import com.rs.utils.reflect.ReflectionChecks;
 
 import java.util.ArrayList;
 import java.util.List;

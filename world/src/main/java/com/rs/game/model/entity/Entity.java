@@ -17,14 +17,21 @@
 package com.rs.game.model.entity;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.Bonus;
-import com.rs.cache.loaders.NPCDefinitions.MovementType;
-import com.rs.cache.loaders.ObjectType;
-import com.rs.cache.loaders.animations.AnimationDefinitions;
-import com.rs.cache.loaders.map.RegionSize;
-import com.rs.engine.pathfinder.*;
-import com.rs.engine.pathfinder.collision.CollisionStrategy;
-import com.rs.engine.pathfinder.collision.CollisionStrategyType;
+import org.darkan.core.model.Bonus;
+import com.rs.game.model.entity.npc.combat.MovementType;
+import org.darkan.core.model.ObjectShape;
+import org.darkan.core.cache.AnimationDefinitions;
+import org.darkan.core.model.RegionSize;
+import org.darkan.core.map.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Route;
+import org.darkan.core.map.pathfinder.StepValidator;
+import org.darkan.core.map.pathfinder.WalkStep;
+import org.darkan.core.map.WorldCollision;
+import com.rs.engine.pathfinder.DumbRouteFinder;
+import com.rs.engine.pathfinder.RouteEvent;
+import com.rs.engine.pathfinder.RouteFinderKt;
+import org.darkan.core.map.pathfinder.collision.CollisionStrategy;
+import org.darkan.core.map.pathfinder.collision.CollisionStrategyType;
 import com.rs.game.World;
 import com.rs.game.content.Effect;
 import com.rs.game.content.combat.PlayerCombatKt;
@@ -51,17 +58,19 @@ import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.TaskManager;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.packets.decoders.Walk;
-import com.rs.lib.net.packets.encoders.Sound;
-import com.rs.lib.util.GenericAttribMap;
-import com.rs.lib.util.MapUtils;
-import com.rs.lib.util.MapUtils.Structure;
-import com.rs.lib.util.Utils;
-import com.rs.lib.util.Vec2;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import com.rs.utils.KtExtensionsKt;
+import org.darkan.core.net.prot.Walk;
+import org.darkan.core.model.Sound;
+import org.darkan.core.model.SoundType;
+import org.darkan.core.model.AttribMap;
+import org.darkan.core.util.MapUtils;
+import org.darkan.core.util.Structure;
+import org.darkan.core.Utils;
+import org.darkan.core.model.Vec2;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.events.PlayerStepEvent;
 import com.rs.utils.TriFunction;
@@ -102,8 +111,8 @@ public abstract class Entity {
 	private transient boolean forceUpdateEntityRegion;
 	private transient boolean nextTickUnlock;
 	private transient Set<Integer> mapChunkIds;
-	protected transient GenericAttribMap temporaryAttributes;
-	protected transient GenericAttribMap nonsavingVars;
+	protected transient AttribMap temporaryAttributes;
+	protected transient AttribMap nonsavingVars;
 	private transient int faceAngle;
 	private transient Tile lastTile;
 	private transient Tile tileBehind;
@@ -164,7 +173,7 @@ public abstract class Entity {
 
 	// creates Entity and saved classes
 	public Entity(Tile tile) {
-		this.tile = Tile.of(tile);
+		this.tile = tile;
 		this.uuid = UUID.randomUUID().toString();
 		poison = new Poison();
 	}
@@ -311,8 +320,8 @@ public abstract class Entity {
 		walkSteps = new ConcurrentLinkedQueue<>();
 		receivedHits = new ConcurrentLinkedQueue<>();
 		receivedDamage = new ConcurrentHashMap<>();
-		temporaryAttributes = new GenericAttribMap();
-		nonsavingVars = new GenericAttribMap();
+		temporaryAttributes = new AttribMap();
+		nonsavingVars = new AttribMap();
 		nextHits = new ArrayList<>();
 		nextHitBars = new ArrayList<>();
 		actionManager = new ActionManager(this);
@@ -462,12 +471,12 @@ public abstract class Entity {
 		return sound;
 	}
 
-	public Sound sound(Entity playTo, int soundId, int delay, Sound.SoundType type, int radius, boolean alsoAmbient) {
+	public Sound sound(Entity playTo, int soundId, int delay, SoundType type, int radius, boolean alsoAmbient) {
 		return sound(playTo, new Sound(soundId, delay, type).radius(radius), alsoAmbient);
 	}
 
 	public Sound soundEffect(Entity playTo, int soundId, int delay, boolean alsoAmbient) {
-		return sound(playTo, soundId, delay, Sound.SoundType.EFFECT, 10, alsoAmbient);
+		return sound(playTo, soundId, delay, SoundType.EFFECT, 10, alsoAmbient);
 	}
 
 	public Sound soundEffect(Entity playTo, int soundId, boolean alsoAmbient) {
@@ -475,19 +484,19 @@ public abstract class Entity {
 	}
 
 	public Sound voiceEffect(Entity playTo, int voiceId, int delay, boolean alsoAmbient) {
-		return sound(playTo, voiceId, delay, Sound.SoundType.VOICE, 10, alsoAmbient);
+		return sound(playTo, voiceId, delay, SoundType.VOICE, 10, alsoAmbient);
 	}
 
 	public Sound voiceEffect(Entity playTo, int voiceId, boolean alsoAmbient) {
 		return voiceEffect(playTo, voiceId, 0, alsoAmbient);
 	}
 
-	public Sound sound(int soundId, int delay, Sound.SoundType type, boolean alsoAmbient) {
+	public Sound sound(int soundId, int delay, SoundType type, boolean alsoAmbient) {
 		return sound(null, new Sound(soundId, delay, type), alsoAmbient);
 	}
 
 	public Sound soundEffect(int soundId, int delay, boolean alsoAmbient) {
-		return sound(null, soundId, delay, Sound.SoundType.EFFECT, 10, alsoAmbient);
+		return sound(null, soundId, delay, SoundType.EFFECT, 10, alsoAmbient);
 	}
 
 	public Sound soundEffect(int soundId, boolean alsoAmbient) {
@@ -495,7 +504,7 @@ public abstract class Entity {
 	}
 
 	public Sound voiceEffect(int voiceId, int delay, boolean alsoAmbient) {
-		return sound(null, voiceId, delay, Sound.SoundType.VOICE, 10, alsoAmbient);
+		return sound(null, voiceId, delay, SoundType.VOICE, 10, alsoAmbient);
 	}
 
 	public Sound voiceEffect(int voiceId, boolean alsoAmbient) {
@@ -751,11 +760,11 @@ public abstract class Entity {
 		}
 
 		if (npc != null)
-			if (npc.getDefinitions().movementType == MovementType.HALF_WALK)
+			if (npc.getDefinitions().getSlowWalk())
 				if (npc.switchWalkStep())
 					return;
 
-		StepValidator step = new StepValidator(WorldCollision.INSTANCE.getAllFlags());
+		StepValidator step = new StepValidator(WorldCollision.allFlags);
 		for (int stepCount = 0; stepCount < (moveType == MoveType.RUN ? 2 : 1); stepCount++) {
 			WalkStep nextStep = getNextWalkStep();
 			if (nextStep == null)
@@ -810,7 +819,7 @@ public abstract class Entity {
 	public boolean needMapUpdate(Tile tile) {
 		int[] baseChunk = MapUtils.decode(Structure.CHUNK, sceneBaseChunkId);
 		// chunks length - offset. if within 16 tiles of border it updates map
-		int limit = getMapSize().size / 8 - 2;
+		int limit = getMapSize().getSize() / 8 - 2;
 
 		int offsetX = tile.getChunkX() - baseChunk[0];
 		int offsetY = tile.getChunkY() - baseChunk[1];
@@ -928,7 +937,7 @@ public abstract class Entity {
 	public boolean addWalkStep(int nextX, int nextY, int lastX, int lastY, boolean check, boolean force) {
 		//World.sendSpotAnim(Tile.of(nextX, nextY, getPlane()), new SpotAnim(2000));
 		Direction dir = Direction.forDelta(nextX - lastX, nextY - lastY);
-		StepValidator step = new StepValidator(WorldCollision.INSTANCE.getAllFlags());
+		StepValidator step = new StepValidator(WorldCollision.allFlags);
 		if (dir == null)
 			return false;
 		if (!force && check && !step.canTravel(getPlane(), lastX, lastY, dir.dx, dir.dy, getSize(), 0, getCollisionStrategy()) || (check && this instanceof NPC n && !n.checkNPCCollision(dir)))// double
@@ -1042,7 +1051,7 @@ public abstract class Entity {
 		hasNearbyInstancedChunks = false;
 		int currChunkX = getChunkX();
 		int currChunkY = getChunkY();
-		int sceneChunkRadius = getMapSize().size / 16;
+		int sceneChunkRadius = getMapSize().getSize() / 16;
 		int sceneBaseChunkX = (currChunkX - sceneChunkRadius);
 		int sceneBaseChunkY = (currChunkY - sceneChunkRadius);
 		if (sceneBaseChunkX < 0)
@@ -1110,7 +1119,7 @@ public abstract class Entity {
 	@Deprecated()
 	public void setNextAnimation(Animation nextAnimation) {
 		if (nextAnimation != null && nextAnimation.getIds()[0] >= 0)
-			lastAnimationEnd = World.getServerTicks() + AnimationDefinitions.getDefs(nextAnimation.getIds()[0]).getEmoteGameTicks();
+			lastAnimationEnd = World.getServerTicks() + KtExtensionsKt.getEmoteGameTicks(AnimationDefinitions.getDefs(nextAnimation.getIds()[0]));
 		this.nextAnimation = nextAnimation;
 	}
 
@@ -1445,7 +1454,7 @@ public abstract class Entity {
 	}
 
 	public void forceMove(Tile start, Tile destination, Direction faceDir, int animation, int startClientCycles, int speedClientCycles, boolean autoUnlock, Runnable afterComplete) {
-		ForceMovement movement = new ForceMovement(start, destination, startClientCycles, speedClientCycles, faceDir == null ? Utils.getAngleTo(start, destination) : faceDir.getAngle());
+		ForceMovement movement = new ForceMovement(start, destination, startClientCycles, speedClientCycles, faceDir == null ? Utils.getAngleTo(destination.getX() - start.getX(), destination.getY() - start.getY()) : faceDir.getAngle());
 		if (animation != -1)
 			anim(animation);
 		lock();
@@ -1545,7 +1554,7 @@ public abstract class Entity {
 
 	public void faceObject(GameObject object) {
 		int x = -1, y = -1;
-		if (object.getType() == ObjectType.WALL_STRAIGHT) { // wall
+		if (object.getType() == ObjectShape.WALL_STRAIGHT) { // wall
 			if (object.getRotation() == 0) { // west
 				x = object.getX() - 1;
 				y = object.getY();
@@ -1559,7 +1568,7 @@ public abstract class Entity {
 				x = object.getX();
 				y = object.getY() - 1;
 			}
-		} else if (object.getType() == ObjectType.WALL_DIAGONAL_CORNER || object.getType() == ObjectType.WALL_WHOLE_CORNER) { // corner and corner wall
+		} else if (object.getType() == ObjectShape.WALL_DIAGONAL_CORNER || object.getType() == ObjectShape.WALL_WHOLE_CORNER) { // corner and corner wall
 			if (object.getRotation() == 0) { // nw
 				x = object.getX() - 1;
 				y = object.getY() + 1;
@@ -1573,7 +1582,7 @@ public abstract class Entity {
 				x = object.getX() - 1;
 				y = object.getY() - 1;
 			}
-		} else if (object.getType() == ObjectType.WALL_STRAIGHT_CORNER) { // inverted corner
+		} else if (object.getType() == ObjectShape.WALL_STRAIGHT_CORNER) { // inverted corner
 			if (object.getRotation() == 0) { // se
 				x = object.getX() + 1;
 				y = object.getY() - 1;
@@ -1587,7 +1596,7 @@ public abstract class Entity {
 				x = object.getX() + 1;
 				y = object.getY() + 1;
 			}
-		} else if (object.getType().id < ObjectType.SCENERY_INTERACT.id) { // walldeco's
+		} else if (object.getType().getId() < ObjectShape.SCENERY_INTERACT.getId()) { // walldeco's
 			if (object.getRotation() == 0) { // west
 				x = object.getX() - 1;
 				y = object.getY();
@@ -1606,7 +1615,7 @@ public abstract class Entity {
 			x = object.getCoordFaceX();
 			y = object.getCoordFaceY();
 		}
-		setNextFaceTile(Tile.of(x, y, object.getPlane()));
+		setNextFaceTile(Tile.of(x, y, object.getLevel()));
 	}
 
 	public void faceTile(Tile tile) {
@@ -1617,7 +1626,7 @@ public abstract class Entity {
 		return lastAnimationEnd;
 	}
 
-	public GenericAttribMap getTempAttribs() {
+	public AttribMap getTempAttribs() {
 		return temporaryAttributes;
 	}
 
@@ -1649,7 +1658,7 @@ public abstract class Entity {
 		return queryNearbyNPCsByTileRange(tileRange, predicate).stream().map(e -> (Entity) e).collect(Collectors.toList());
 	}
 
-	public GenericAttribMap getNSV() {
+	public AttribMap getNSV() {
 		return nonsavingVars;
 	}
 
@@ -1719,7 +1728,7 @@ public abstract class Entity {
 	public Vec2 getMiddleTileAsVector() {
 		int size = getSize();
 		if (size == 1)
-			return new Vec2(this.getTile());
+			return new Vec2(getX(), getY());
 		return new Vec2(getX() + (size-1)/ 2.0f, getY() + (size-1)/ 2.0f);
 	}
 
@@ -1783,7 +1792,7 @@ public abstract class Entity {
 	}
 
 	public boolean isAt(int x, int y, int z) {
-		return tile.isAt(x, y, z);
+		return tile.getX() == x && tile.getY() == y && tile.getLevel() == z;
 	}
 
 	public int getX() {
@@ -1811,7 +1820,7 @@ public abstract class Entity {
 	}
 
 	public int getPlane() {
-		return tile.getPlane();
+		return tile.getLevel();
 	}
 
 	public int getChunkX() {
@@ -1915,7 +1924,7 @@ public abstract class Entity {
 	}
 
 	public boolean withinArea(int a, int b, int c, int d) {
-		return tile.withinArea(a, b, c, d);
+		return tile.getX() >= a && tile.getY() >= b && tile.getX() <= c && tile.getY() <= d;
 	}
 
 	public boolean canAttackMulti(Entity target) {

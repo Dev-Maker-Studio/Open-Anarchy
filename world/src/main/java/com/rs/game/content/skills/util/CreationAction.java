@@ -16,14 +16,14 @@
 //
 package com.rs.game.content.skills.util;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.animations.AnimationDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.cache.AnimationDefinitions;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.SpotAnim;
 
 public class CreationAction extends PlayerAction {
 
@@ -133,7 +133,7 @@ public class CreationAction extends PlayerAction {
 			return false;
 		}
 		if (nonRemReq != -1 && !player.getInventory().containsItem(nonRemReq, 1)) {
-			player.sendMessage("You require a " + ItemDefinitions.getDefs(nonRemReq).name.toLowerCase() + " to create this.");
+			player.sendMessage("You require a " + ItemDefinitions.getDefs(nonRemReq).getName().toLowerCase() + " to create this.");
 			return false;
 		}
 		return true;

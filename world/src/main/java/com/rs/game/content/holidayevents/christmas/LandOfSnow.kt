@@ -16,11 +16,11 @@
 //
 package com.rs.game.content.holidayevents.christmas
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.game.World.spawnNPC
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onXpDrop
@@ -92,7 +92,7 @@ fun initObjects() {
 fun mapLandOfSnowPlugins() {
     onXpDrop { e ->
         if (!ACTIVE) return@onXpDrop
-        if (Areas.withinArea("christmasevent", e.player.chunkId)) {
+        if (Areas.withinArea("christmasevent", e.player.getChunkId())) {
             if (e.player.bonusXpRate != 0.10) {
                 e.player.sendMessage("<shad=000000><col=ff0000>You've been granted a 10% experience boost for skilling within the Land of Snow!")
                 e.player.bonusXpRate = 0.10

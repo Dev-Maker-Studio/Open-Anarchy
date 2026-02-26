@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.bosses.godwars.factions.zaros.attack;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.bosses.godwars.factions.zaros.Nex;
 import com.rs.game.model.entity.Entity;
@@ -27,9 +27,9 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import kotlin.Pair;
 
 public class IcePrison implements NexAttack {
@@ -45,7 +45,7 @@ public class IcePrison implements NexAttack {
 		for (int x = -1; x <= 1; x++)
 			for (int y = -1; y <= 1; y++) {
 				final Tile tile = base.transform(x, y, target.getPlane());
-				final GameObject object = new GameObject(57263, ObjectType.SCENERY_INTERACT, 0, tile);
+				final GameObject object = new GameObject(57263, ObjectShape.SCENERY_INTERACT, 0, tile);
 				if (!tile.matches(base) && World.floorAndWallsFree(tile, (object.getDefinitions().getSizeX() + object.getDefinitions().getSizeY()) / 2))
 					World.spawnObject(object);
 				WorldTasks.scheduleLooping(new Task() {

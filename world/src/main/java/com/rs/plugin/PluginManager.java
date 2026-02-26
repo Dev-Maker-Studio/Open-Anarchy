@@ -17,8 +17,9 @@
 package com.rs.plugin;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
+import org.darkan.core.UtilsAndExtensionsKt;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.events.PluginEvent;
@@ -47,13 +48,13 @@ public class PluginManager {
 		try {
 			long start = System.currentTimeMillis();
 			Logger.info(PluginManager.class, "loadPlugins", "Loading plugins...");
-			List<Class<?>> eventTypes = Utils.getClasses("com.rs.plugin.events");
+			List<Class<?>> eventTypes = UtilsAndExtensionsKt.getClasses("com.rs.plugin.events");
 			List<Class<?>> classes = Utils.getClassesWithAnnotation("com.rs", PluginEventHandler.class);
 			Set<Field> visitedFields = new HashSet<>();
 			Logger.info(PluginManager.class, "loadPlugins", "Loading " + eventTypes.size() + " event types and " + classes.size() + " plugin enabled classes.");
 			int handlers = 0;
 
-			List<Method> startupMethods = Utils.getMethodsWithAnnotation("com.rs", ServerStartupEvent.class);
+			List<Method> startupMethods = UtilsAndExtensionsKt.getMethodsWithAnnotation("com.rs", ServerStartupEvent.class);
 			Set<Method> visitedMethods = new HashSet<>();
 			for (Method method : startupMethods) {
 				if (visitedMethods.contains(method))
@@ -79,7 +80,7 @@ public class PluginManager {
 			handlers += kotlinScripts;
 			Logger.info(PluginManager.class, "loadPlugins", "Loaded " + kotlinScripts + " kotlin script plugins in " + (System.currentTimeMillis()-start) + "ms.");
 			Logger.info(PluginManager.class, "loadPlugins", "Loaded " + handlers + " plugin event handlers in " + (System.currentTimeMillis()-start) + "ms.");
-		} catch (ClassNotFoundException | IOException | IllegalArgumentException | IllegalAccessException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

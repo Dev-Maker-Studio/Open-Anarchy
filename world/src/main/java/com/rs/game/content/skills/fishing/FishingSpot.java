@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.fishing;
 
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 
 import java.util.ArrayList;
 import java.util.Arrays;

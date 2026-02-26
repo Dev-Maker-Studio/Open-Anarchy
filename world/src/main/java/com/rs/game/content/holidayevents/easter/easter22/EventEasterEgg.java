@@ -1,15 +1,15 @@
 package com.rs.game.content.holidayevents.easter.easter22;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.World;
 import com.rs.game.content.holidayevents.easter.easter22.npcs.EasterChick;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import kotlin.Pair;
@@ -20,7 +20,7 @@ public class EventEasterEgg extends GameObject {
 	private boolean found = false;
 	private String hint;
 
-	public EventEasterEgg(int id, ObjectType type, int rotation, int x, int y, int plane) {
+	public EventEasterEgg(int id, ObjectShape type, int rotation, int x, int y, int plane) {
 		super(id, type, rotation, x, y, plane);
 	}
 	
@@ -68,11 +68,11 @@ public class EventEasterEgg extends GameObject {
     		WorldTasks.scheduleTimer(delay, (tick) -> {
             	switch (tick) {
             		case 0 -> { 
-            			e.getPlayer().getVars().saveVarBit(e.getObj().getDefinitions().varpBit, (attackStyle == 0 ? 2 : 1));
+            			e.getPlayer().getVars().saveVarBit(e.getObj().getDefinitions().getVarbit(), (attackStyle == 0 ? 2 : 1));
                         e.getPlayer().getPackets().sendObjectAnimation(e.getObj(), new Animation(16432));
             		}
             		case 2 -> {
-                        EasterChick npc = new EasterChick(e.getPlayer(), npcId, World.getFreeTile(Tile.of(e.getObj().getX(), e.getObj().getY(), e.getObj().getPlane()), 2), e.getObj().getDefinitions().varpBit);
+                        EasterChick npc = new EasterChick(e.getPlayer(), npcId, World.getFreeTile(Tile.of(e.getObj().getX(), e.getObj().getY(), e.getObj().getPlane()), 2), e.getObj().getDefinitions().getVarbit());
                         e.getPlayer().startConversation(new Dialogue().addItem(Easter2022.PERMANENT_EGGSTERMINATOR, "You shatter the egg with the Eggsterminator. A " + npc.getName().toLowerCase() + " appears."));
                         e.getPlayer().sendMessage("You shatter the egg with the Eggsterminator. A " + npc.getName().toLowerCase() + " appears.");
                         if (e.getPlayer().getI(Easter2022.STAGE_KEY+"CurrentHunt", 0) != EggHunt.getHunt())

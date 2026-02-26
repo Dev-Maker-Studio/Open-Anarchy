@@ -16,20 +16,20 @@
 //
 package com.rs.game.content.quests.vampireslayer;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.quest.Quest;
 import com.rs.game.World;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.OwnedNPC;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnNPCHandler;
 import com.rs.plugin.handlers.LoginHandler;
@@ -167,7 +167,7 @@ public class CountDraynorBoss extends OwnedNPC {
 
 		p.set("live_in_scene", true);
 		p.lock();
-		GameObject coffin = World.getObject(e.getObj().getTile(), ObjectType.forId(10));
+		GameObject coffin = World.getObject(e.getObj().getTile(), ObjectShape.forId(10));
 		p.getMusicsManager().playSongAndUnlock(COUNTING_ON_YOU);
 
         CountDraynorBoss countDraynor = new CountDraynorBoss(p, Tile.of(coffin.getX()+1, coffin.getY()+1, coffin.getPlane()));

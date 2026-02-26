@@ -3,7 +3,7 @@ package com.rs.game.content.quests.biohazard.instances.npcs
 import com.rs.engine.quest.Quest
 import com.rs.game.content.quests.biohazard.utils.*
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 class MournerWithKey(id: Int, tile: Tile) : NPC(id, tile) {
     override fun drop() {

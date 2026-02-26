@@ -23,7 +23,7 @@ import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.combat.CombatScript;
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 
 public class GorakCombat extends CombatScript {
 

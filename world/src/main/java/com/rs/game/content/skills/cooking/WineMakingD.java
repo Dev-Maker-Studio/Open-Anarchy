@@ -3,7 +3,7 @@ package com.rs.game.content.skills.cooking;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.statements.MakeXStatement;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
+import org.darkan.core.Constants;
 
 public class WineMakingD extends Conversation {
 

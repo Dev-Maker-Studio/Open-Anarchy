@@ -20,7 +20,7 @@ fun mapNecrovarusObjects() {
                 e.obj.rotation,
                 e.obj.x,
                 e.obj.y,
-                e.obj.plane
+                e.obj.level
             )
             World.spawnObjectTemporary(openCoffin, 20)
         }

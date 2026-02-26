@@ -19,8 +19,8 @@ package com.rs.plugin.events;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.item.TaskedGroundItem;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.Item;
 import com.rs.plugin.handlers.NPCDropHandler;
 import com.rs.plugin.handlers.PluginHandler;
 
@@ -63,7 +63,6 @@ public class NPCDropEvent implements PluginEvent {
 
 	public TaskedGroundItem enableTasks() {
 		TaskedGroundItem processable = new TaskedGroundItem(item);
-		this.item = processable;
 		return processable;
 	}
 

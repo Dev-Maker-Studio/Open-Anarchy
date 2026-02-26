@@ -16,16 +16,16 @@
 //
 package com.rs.game.content.transportation;
 
-import com.rs.cache.loaders.Bonus;
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.model.Bonus;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.content.skills.prayer.Prayer;
 import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
@@ -233,9 +233,9 @@ public class TravelMethods {
 				boolean hasItemsWithStats = playerItems
 						.filter(item -> !allowedEntranaItems.contains(item.getId()))
 						.anyMatch(item ->
-								IntStream.range(0, item.getDefinitions().bonuses.length)
+								IntStream.range(0, item.getDefinitions().getBonuses().length)
 										.filter(i -> i != Bonus.PRAYER.ordinal())
-										.anyMatch(i -> item.getDefinitions().bonuses[i] > 0)
+										.anyMatch(i -> item.getDefinitions().getBonuses()[i] > 0)
 						);
 				if (hasItemsWithStats) {
 					player.sendMessage("The monk refuses to let you board. Please bank all your equippable items.");

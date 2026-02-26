@@ -31,9 +31,9 @@ import com.rs.game.content.skills.magic.Magic;
 import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.content.world.areas.global.AgilityShortcuts;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.*;
 import com.rs.utils.shop.ShopsHandler;
@@ -87,7 +87,7 @@ public class Rellekka {
 		Item branch = e.getUsedWith(3694);
 		if (branch != null) {
 			e.getPlayer().getInventory().deleteItem(3694, 1);
-			branch.setId(3689);
+			branch.changeId(3689);
 			e.getPlayer().getInventory().refresh(branch.getSlot());
 		}
 	});
@@ -95,7 +95,7 @@ public class Rellekka {
 	public static ItemOnItemHandler handleCutLyre = new ItemOnItemHandler(946, new int[] { 3692 }, e -> {
 		Item branch = e.getUsedWith(946);
 		if (branch != null) {
-			branch.setId(3688);
+			branch.changeId(3688);
 			e.getPlayer().getInventory().refresh(branch.getSlot());
 			e.getPlayer().anim(6702);
 		}
@@ -111,14 +111,14 @@ public class Rellekka {
 		Item lyre = player.getItemWithPlayer(3689);
 		if (lyre != null) {
 			player.getInventory().deleteItem(383, 1);
-			lyre.setId(3690);
+			lyre.changeId(3690);
 			player.getInventory().refresh(lyre.getSlot());
 			player.startConversation(new Conversation(player).addNPC(1273, HeadE.CHEERFUL, "I offer you this enchantment for your worthy offering."));
 		} else {
 			lyre = player.getItemWithPlayer(3690);
 			if (lyre != null) {
 				player.getInventory().deleteItem(383, 1);
-				lyre.setId(6126);
+				lyre.changeId(6126);
 				player.getInventory().refresh(lyre.getSlot());
 				player.startConversation(new Conversation(player).addNPC(1273, HeadE.CHEERFUL, "I offer you this enchantment for your worthy offering."));
 			} else
@@ -146,7 +146,7 @@ public class Rellekka {
 				return;
 			}
 			if (lyre != null) {
-				lyre.setId(getLowerLyreId(lyre.getId()));
+				lyre.changeId(getLowerLyreId(lyre.getId()));
 				player.getInventory().refresh();
 			}
 		});

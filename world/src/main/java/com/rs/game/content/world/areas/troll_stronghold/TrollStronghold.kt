@@ -4,7 +4,7 @@ import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.quest.Quest
 import com.rs.game.content.quests.troll_stronghold.utils.STAGE_COMPLETE
 import com.rs.game.content.quests.troll_stronghold.utils.STAGE_UNLOCKED_BOTH_CELLS
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 
@@ -12,14 +12,14 @@ import com.rs.plugin.kts.onObjectClick
 fun mapTrollStronghold() {
 
     onObjectClick(3788) { (player, obj) ->
-        when (obj.plane) {
+        when (obj.level) {
             1 -> { player.useStairs(player.tile.transform(if (player.x < obj.x) 4 else -4, 0, 1)) }
             0 -> { player.useStairs(player.tile.transform(0, if (player.y < obj.y) 4 else -4, 1)) }
         }
     }
 
     onObjectClick(3789) { (player, obj) ->
-        when (obj.plane) {
+        when (obj.level) {
             2 -> { player.useStairs(player.tile.transform(if (player.x < obj.x) 4 else -4, 0, -1)) }
             1 -> { player.useStairs(player.tile.transform( 0, if (player.y < obj.y) 4 else -4, -1)) }
         }

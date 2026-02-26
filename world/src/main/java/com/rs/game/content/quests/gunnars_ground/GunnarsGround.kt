@@ -16,7 +16,7 @@ import com.rs.game.content.world.areas.varrock.npcs.REPLACEMENT_GUNNARS_GROUND_P
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 

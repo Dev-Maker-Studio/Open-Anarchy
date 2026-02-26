@@ -26,7 +26,7 @@ import com.rs.game.content.quests.piratestreasure.CustomsOfficerPiratesTreasureD
 import com.rs.game.content.quests.piratestreasure.PiratesTreasure;
 import com.rs.game.content.transportation.TravelMethods.Carrier;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 import static com.rs.game.content.quests.dragonslayer.DragonSlayer.KLARENSE;
 

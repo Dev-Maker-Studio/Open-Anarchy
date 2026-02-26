@@ -2,8 +2,8 @@ package com.rs.game.content.minigames.castlewars
 
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.npcCombat
 

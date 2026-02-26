@@ -2,7 +2,7 @@ package com.rs.game.content.quests.gunnars_ground.cutscene
 
 import com.rs.engine.cutscenekt.cutscene
 import com.rs.engine.dialogue.HeadE.*
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.quests.gunnars_ground.dialogues.GudrunD
@@ -183,7 +183,7 @@ class GunnarsGroundCutscenes (player: Player) {
             player.musicsManager.refreshListConfigs()
 
             player.lock()
-            World.getNPCsInChunkRange(player.chunkId, 3).firstOrNull { it.id == GUDRUN_POST_CUTSCENE }?.let {
+            World.getNPCsInChunkRange(player.getChunkId(), 3).firstOrNull { it.id == GUDRUN_POST_CUTSCENE }?.let {
                 player.interactionManager.setInteraction(StandardEntityInteraction(it, 0) {
                     player.faceEntity(it)
                     it.faceEntityTile(player)

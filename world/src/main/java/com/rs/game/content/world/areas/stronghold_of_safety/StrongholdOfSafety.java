@@ -1,10 +1,10 @@
 package com.rs.game.content.world.areas.stronghold_of_safety;
 
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.World;
 import com.rs.game.model.entity.player.managers.EmotesManager;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.Ticks;

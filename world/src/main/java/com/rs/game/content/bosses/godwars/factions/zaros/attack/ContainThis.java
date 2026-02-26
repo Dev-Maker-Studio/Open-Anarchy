@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.bosses.godwars.factions.zaros.attack;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.bosses.godwars.factions.zaros.Nex;
 import com.rs.game.model.entity.Entity;
@@ -27,9 +27,9 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.utils.Ticks;
 
 public class ContainThis implements NexAttack {
@@ -49,7 +49,7 @@ public class ContainThis implements NexAttack {
 						if (x == y)
 							continue;
 						final Tile tile = base.transform(x, y, 0);
-						final GameObject object = new GameObject(57262, ObjectType.SCENERY_INTERACT, 0, tile);
+						final GameObject object = new GameObject(57262, ObjectShape.SCENERY_INTERACT, 0, tile);
 						if (tile != base && World.floorAndWallsFree(tile, (object.getDefinitions().getSizeX() + object.getDefinitions().getSizeY()) / 2)) {
 							for (Player player : nex.getArena().getPlayers())
 								if (player.getX() == tile.getX() && player.getY() == tile.getY()) {

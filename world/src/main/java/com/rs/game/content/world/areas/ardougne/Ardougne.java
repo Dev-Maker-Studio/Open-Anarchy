@@ -20,7 +20,7 @@ import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.dialogue.Options;
-import com.rs.engine.pathfinder.Route;
+import org.darkan.core.map.pathfinder.Route;
 import com.rs.engine.pathfinder.RouteEvent;
 import com.rs.engine.pathfinder.RouteFinderKt;
 import com.rs.engine.quest.Quest;
@@ -36,11 +36,11 @@ import com.rs.game.content.world.doors.Doors;
 import com.rs.game.ge.GE;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
@@ -271,14 +271,14 @@ public class Ardougne  {
 	});
 
 	public static ObjectClickHandler handleHouseDoors = new ObjectClickHandler(new Object[] { 34812 }, e -> {
-		if (e.getOpNum() == ClientPacket.OBJECT_OP1)
+		if (e.getOpNum() == 1)
 			e.getPlayer().sendMessage("This door is securely locked.");
 		else
 			e.getPlayer().handleOneWayDoor(e.getObj(), 1, 3);
 	});
 
 	public static ObjectClickHandler handleChaosDruidTowerDoor = new ObjectClickHandler(new Object[] { 2554 }, e -> {
-		if (e.getOpNum() == ClientPacket.OBJECT_OP1)
+		if (e.getOpNum() == 1)
 			e.getPlayer().sendMessage("This door is securely locked.");
 		else
 			Doors.handleDoor(e.getPlayer(), e.getObj());
@@ -327,22 +327,22 @@ public class Ardougne  {
 	});
 
 	public static ObjectClickHandler handleNatureRuneChests = new ObjectClickHandler(new Object[] { 2567, 2568 }, e -> {
-		if (e.getOpNum() == ClientPacket.OBJECT_OP2)
+		if (e.getOpNum() == 2)
 			Thieving.checkTrapsChest(e.getPlayer(), e.getObj(), 2574, 28, 21, 25, new Item(995, 3), new Item(561, 1));
 	});
 
 	public static ObjectClickHandler handleBloodRuneChests = new ObjectClickHandler(new Object[] { 2569 }, e -> {
-		if (e.getOpNum() == ClientPacket.OBJECT_OP2)
+		if (e.getOpNum() == 2)
 			Thieving.checkTrapsChest(e.getPlayer(), e.getObj(), 2574, 59, 210, 250, new Item(995, 500), new Item(565, 2));
 	});
 
 	public static ObjectClickHandler handle50CoinChests = new ObjectClickHandler(new Object[] { 2566 }, e -> {
-		if (e.getOpNum() == ClientPacket.OBJECT_OP2)
+		if (e.getOpNum() == 2)
 			Thieving.checkTrapsChest(e.getPlayer(), e.getObj(), 2574, 43, 50, 125, new Item(995, 50));
 	});
 
 	public static ObjectClickHandler handleClosedRangeGuildChests = new ObjectClickHandler(new Object[] { 375 }, e -> {
-		if (e.getOpNum() == ClientPacket.OBJECT_OP1) {
+		if (e.getOpNum() == 1) {
 			GameObject openedChest = new GameObject(378, e.getObj().getType(), e.getObj().getRotation(), e.getObj().getX(), e.getObj().getY(), e.getObj().getPlane());
 			e.getPlayer().faceObject(openedChest);
 			e.getPlayer().setNextAnimation(new Animation(536));
@@ -352,10 +352,10 @@ public class Ardougne  {
 	});
 
 	public static ObjectClickHandler handleOpenRangeGuildChests = new ObjectClickHandler(new Object[] { 378 }, e -> {
-		if (e.getOpNum() == ClientPacket.OBJECT_OP2) {
+		if (e.getOpNum() == 2) {
 			e.getPlayer().sendMessage("You search the chest but find nothing.");
 			e.getPlayer().faceObject(e.getObj());
-		} else if (e.getOpNum() == ClientPacket.OBJECT_OP3) {
+		} else if (e.getOpNum() == 3) {
 			e.getPlayer().faceObject(e.getObj());
 			e.getPlayer().setNextAnimation(new Animation(536));
 			e.getPlayer().lock(2);

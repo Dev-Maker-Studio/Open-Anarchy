@@ -18,11 +18,11 @@ class PrisonHouseDoorsD (player: Player, obj: GameObject) {
 
     init {
         if (eastDoor) {
-            closestMourner = World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == MOURNER_EAST_PRISON_DOOR }
-            furthestMourner = World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == MOURNER_WEST_PRISON_DOOR }
+            closestMourner = World.getNPCsInChunkRange(player.getChunkId(), 1).firstOrNull { it.id == MOURNER_EAST_PRISON_DOOR }
+            furthestMourner = World.getNPCsInChunkRange(player.getChunkId(), 1).firstOrNull { it.id == MOURNER_WEST_PRISON_DOOR }
         } else {
-            closestMourner = World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == MOURNER_WEST_PRISON_DOOR }
-            furthestMourner = World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == MOURNER_EAST_PRISON_DOOR }
+            closestMourner = World.getNPCsInChunkRange(player.getChunkId(), 1).firstOrNull { it.id == MOURNER_WEST_PRISON_DOOR }
+            furthestMourner = World.getNPCsInChunkRange(player.getChunkId(), 1).firstOrNull { it.id == MOURNER_EAST_PRISON_DOOR }
         }
         player.startConversation {
             when (player.questManager.getStage(Quest.PLAGUE_CITY)) {
@@ -34,7 +34,7 @@ class PrisonHouseDoorsD (player: Player, obj: GameObject) {
                     if (player.y == 3273) {
                         simple("The door won't open.<br>You notice a black cross on the door.")
                         npc(NON_COMBAT_MOURNER, CALM_TALK, "I'd stand away from there. That black cross means that house has been touched by the plague.") {
-                            World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == MOURNER_EAST_PRISON_DOOR }?.let { player.faceTile(it.tile) }
+                            World.getNPCsInChunkRange(player.getChunkId(), 1).firstOrNull { it.id == MOURNER_EAST_PRISON_DOOR }?.let { player.faceTile(it.tile) }
                         }
                         label("initialOps")
                         options {

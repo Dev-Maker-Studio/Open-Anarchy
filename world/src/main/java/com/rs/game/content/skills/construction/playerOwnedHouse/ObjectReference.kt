@@ -1,7 +1,7 @@
 package com.rs.game.content.skills.construction.playerOwnedHouse
 
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.util.Logger
+import org.darkan.core.Logger
 
 class ObjectReference(val build: HouseBuilds, slot: Int) {
     var slot: Int
@@ -33,7 +33,7 @@ class ObjectReference(val build: HouseBuilds, slot: Int) {
 
     fun setSlot(slot: Int, `object`: GameObject) {
         this.slot = slot
-        `object`.setId(build.pieces[slot].getId())
+        `object`.changeId(build.pieces[slot].getId())
     }
 
     val ids: IntArray

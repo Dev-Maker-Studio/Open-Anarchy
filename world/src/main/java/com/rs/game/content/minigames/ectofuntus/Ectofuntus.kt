@@ -1,7 +1,7 @@
 package com.rs.game.content.minigames.ectofuntus
 
-import com.rs.cache.loaders.ItemDefinitions
-import com.rs.cache.loaders.ObjectDefinitions
+import org.darkan.core.cache.ItemDefinitions
+import org.darkan.core.cache.ObjectDefinitions
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.skills.agility.Agility
@@ -10,8 +10,8 @@ import com.rs.game.content.skills.magic.TeleType
 import com.rs.game.content.skills.prayer.Burying
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
-import com.rs.lib.game.Tile
+import org.darkan.core.Constants
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnObject

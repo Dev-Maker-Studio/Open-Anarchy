@@ -23,7 +23,7 @@ import com.rs.game.content.skills.summoning.combat.FamiliarCombatScript;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 import kotlin.Pair;
 
 public class IronTitan extends FamiliarCombatScript {

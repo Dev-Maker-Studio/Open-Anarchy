@@ -1,7 +1,7 @@
 package com.rs.game.content.world.areas.ardougne
 
 import com.rs.game.content.world.doors.Doors
-import com.rs.lib.Constants
+import org.darkan.core.Constants
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 

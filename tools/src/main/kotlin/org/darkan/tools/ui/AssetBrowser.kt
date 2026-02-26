@@ -7,12 +7,12 @@ import imgui.type.ImInt
 import imgui.type.ImString
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
-import world.gregs.voidps.cache.definition.data.ItemDefinitionFull
-import world.gregs.voidps.cache.definition.data.NPCDefinitionFull
-import world.gregs.voidps.cache.definition.data.ObjectDefinitionFull
-import world.gregs.voidps.cache.definition.decoder.ItemDecoderFull
-import world.gregs.voidps.cache.definition.decoder.NPCDecoderFull
-import world.gregs.voidps.cache.definition.decoder.ObjectDecoderFull
+import world.gregs.voidps.cache.definition.data.ItemDefinition
+import world.gregs.voidps.cache.definition.data.NPCDefinition
+import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import world.gregs.voidps.cache.definition.decoder.ItemDecoder
+import world.gregs.voidps.cache.definition.decoder.NPCDecoder
+import world.gregs.voidps.cache.definition.decoder.ObjectDecoder
 
 /**
  * Asset browser panel for searching and selecting models, items, NPCs, and objects.
@@ -28,18 +28,18 @@ class AssetBrowser(private val cache: Cache) {
     private var selectedTab = 0
     private val tabs = listOf("Models", "Items", "NPCs", "Objects", "Regions")
 
-    private var itemDefs: Array<ItemDefinitionFull>? = null
-    private var npcDefs: Array<NPCDefinitionFull>? = null
-    private var objectDefs: Array<ObjectDefinitionFull>? = null
+    private var itemDefs: Array<ItemDefinition>? = null
+    private var npcDefs: Array<NPCDefinition>? = null
+    private var objectDefs: Array<ObjectDefinition>? = null
 
     private var filteredItems: List<Pair<Int, String>> = emptyList()
     private var filteredNpcs: List<Pair<Int, String>> = emptyList()
     private var filteredObjects: List<Pair<Int, String>> = emptyList()
 
     private var onModelSelected: ((Int) -> Unit)? = null
-    private var onItemSelected: ((Int, ItemDefinitionFull) -> Unit)? = null
-    private var onNpcSelected: ((Int, NPCDefinitionFull) -> Unit)? = null
-    private var onObjectSelected: ((Int, ObjectDefinitionFull) -> Unit)? = null
+    private var onItemSelected: ((Int, ItemDefinition) -> Unit)? = null
+    private var onNpcSelected: ((Int, NPCDefinition) -> Unit)? = null
+    private var onObjectSelected: ((Int, ObjectDefinition) -> Unit)? = null
     private var onRegionSelected: ((Int, Int) -> Unit)? = null
 
     private var modelCount = 0
@@ -53,15 +53,15 @@ class AssetBrowser(private val cache: Cache) {
         onModelSelected = callback
     }
 
-    fun setOnItemSelected(callback: (Int, ItemDefinitionFull) -> Unit) {
+    fun setOnItemSelected(callback: (Int, ItemDefinition) -> Unit) {
         onItemSelected = callback
     }
 
-    fun setOnNpcSelected(callback: (Int, NPCDefinitionFull) -> Unit) {
+    fun setOnNpcSelected(callback: (Int, NPCDefinition) -> Unit) {
         onNpcSelected = callback
     }
 
-    fun setOnObjectSelected(callback: (Int, ObjectDefinitionFull) -> Unit) {
+    fun setOnObjectSelected(callback: (Int, ObjectDefinition) -> Unit) {
         onObjectSelected = callback
     }
 
@@ -133,7 +133,7 @@ class AssetBrowser(private val cache: Cache) {
     private fun renderItemTab() {
         if (itemDefs == null) {
             if (ImGui.button("Load Item Definitions")) {
-                itemDefs = ItemDecoderFull().load(cache)
+                itemDefs = ItemDecoder().load(cache)
                 updateFilteredItems()
             }
             return
@@ -162,7 +162,7 @@ class AssetBrowser(private val cache: Cache) {
     private fun renderNpcTab() {
         if (npcDefs == null) {
             if (ImGui.button("Load NPC Definitions")) {
-                npcDefs = NPCDecoderFull(true).load(cache)
+                npcDefs = NPCDecoder(true).load(cache)
                 updateFilteredNpcs()
             }
             return
@@ -191,7 +191,7 @@ class AssetBrowser(private val cache: Cache) {
     private fun renderObjectTab() {
         if (objectDefs == null) {
             if (ImGui.button("Load Object Definitions")) {
-                objectDefs = ObjectDecoderFull(true).load(cache)
+                objectDefs = ObjectDecoder(true).load(cache)
                 updateFilteredObjects()
             }
             return

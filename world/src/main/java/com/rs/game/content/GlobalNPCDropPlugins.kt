@@ -9,11 +9,12 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.item.getOwner
 import com.rs.game.model.item.schedule
-import com.rs.lib.Constants
-import com.rs.lib.game.GroundItem
-import com.rs.lib.game.Item
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.net.packets.encoders.Sound
+import org.darkan.core.Constants
+import org.darkan.core.model.GroundItem
+import org.darkan.core.model.Item
+import org.darkan.core.model.SpotAnim
+import org.darkan.core.model.Sound
+import org.darkan.core.model.SoundType
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcDrop
 import java.util.*
@@ -24,13 +25,13 @@ fun mapDrops() {
         if (yellDrop(e.item.id))
             broadcastLoot("${e.player.displayName} has just received a ${e.item.name} drop from ${e.npc.definitions.name}!")
         if (e.item.shouldLootbeam(e.player)) {
-            e.player.packets.sendSound(Sound(307, 0, Sound.SoundType.JINGLE))
+            e.player.packets.sendSound(Sound(307, 0, SoundType.JINGLE))
             e.enableTasks().schedule {
                 e.player.packets.sendGroundItemMessage(
                     50,
                     0xFF0000,
                     e.item,
-                    "<shad=000000><col=cc0033>You received: ${e.item.getAmount()} ${e.item.definitions.getName()}"
+                    "<shad=000000><col=cc0033>You received: ${e.item.amount} ${e.item.definitions.name}"
                 )
                 while(true) {
                     val owner = e.item.getOwner() ?: continue
@@ -43,19 +44,19 @@ fun mapDrops() {
 
     onNpcDrop(null, null) { e ->
         if (e.player.nsv.getB("sendingDropsToBank")) {
-            if (e.item.definitions.isNoted) e.item.id = e.item.definitions.certId
-            NPC.sendDropDirectlyToBank(e.player, Item(e.item))
+            if (e.item.definitions.noted) e.item.item.id = e.item.definitions.noteId
+            NPC.sendDropDirectlyToBank(e.player, e.item.item)
             e.deleteItem()
         }
     }
 
     onNpcDrop(null, Bone.entries.filter { bone -> !listOf(Bone.ACCURSED_ASHES, Bone.IMPIOUS_ASHES, Bone.INFERNAL_ASHES).contains(bone) }.map { it.id }.toTypedArray()) { e ->
-        if (bonecrush(e.player, e.item))
+        if (bonecrush(e.player, e.item.item))
             e.deleteItem()
     }
 
     onNpcDrop(null, HerbicideSetting.entries.map { it.herb.herbId }.toTypedArray()) { e ->
-        if (herbicide(e.player, e.item))
+        if (herbicide(e.player, e.item.item))
             return@onNpcDrop e.deleteItem()
         if (e.player.familiarPouch === Pouch.MACAW && e.player.familiar.inventory.freeSlot() > 0) {
             e.player.sendMessage("Your macaw picks up the " + e.item.name.lowercase(Locale.getDefault()) + " from the ground.", true)
@@ -65,8 +66,8 @@ fun mapDrops() {
     }
 
     onNpcDrop(null, arrayOf(12158, 12159, 12160, 12161, 12162, 12163, 12168)) { e ->
-        if ((e.player.equipment.containsOneItem(25350) || e.player.inventory.containsItem(25350, 1)) && e.player.inventory.hasRoomFor(e.item)) {
-            e.player.inventory.addItem(Item(e.item))
+        if ((e.player.equipment.containsOneItem(25350) || e.player.inventory.containsItem(25350, 1)) && e.player.inventory.hasRoomFor(e.item.item)) {
+            e.player.inventory.addItem(e.item.item)
             e.deleteItem()
         }
     }
@@ -103,7 +104,7 @@ fun bonecrush(player: Player, item: Item): Boolean {
 
 fun GroundItem.shouldLootbeam(player: Player) =
     player.getI("lootbeamAnim", -1) != -1 && (
-    definitions.getValue() * getAmount() > player.getI("lootbeamThreshold", 90000) ||
+    definitions.cost * amount > player.getI("lootbeamThreshold", 90000) ||
     definitions.name.contains("Scroll box") ||
     definitions.name.contains(" defender") ||
     yellDrop(id))

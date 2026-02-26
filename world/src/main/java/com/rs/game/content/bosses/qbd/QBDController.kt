@@ -4,7 +4,7 @@ import com.rs.game.content.skills.magic.TeleType
 import com.rs.game.map.instance.Instance
 import com.rs.game.model.entity.player.InstancedController
 import com.rs.game.model.entity.player.managers.InterfaceManager
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 class QBDController() : InstancedController(Instance.of(Tile.of(1199, 6499, 0), 8, 8, true).setEntranceOffset(intArrayOf(33, 28, 1))) {
     override fun onBuildInstance() {

@@ -1,12 +1,12 @@
 package world.gregs.voidps.cache.definition.decoder
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.INTERFACES
 import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
+import world.gregs.voidps.cache.definition.data.InterfaceComponentSetting
 import world.gregs.voidps.cache.definition.data.InterfaceDefinition
 
 class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
@@ -21,13 +21,10 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
         val packed = readId(reader)
         val id = InterfaceDefinition.id(packed)
         val definition = definitions[id]
-        val componentDefinition = InterfaceComponentDefinition(packed)
-        if (!componentDefinition.isEmpty(reader)) {
-            if (definition.components == null) {
-                definition.components = Int2ObjectOpenHashMap(2)
-            }
-            definition.components!![InterfaceDefinition.componentId(packed)] = componentDefinition
+        if (definition.components == null) {
+            definition.components = Array(InterfaceDefinition.componentId(packed) + 1) { InterfaceComponentDefinition(id = it + (id shl 16)) }
         }
+        definition.components!![InterfaceDefinition.componentId(packed)].read(reader)
     }
 
     override fun load(definitions: Array<InterfaceDefinition>, cache: Cache, id: Int) {
@@ -37,129 +34,197 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
             return
         }
         val definition = definitions[id]
-        val components = Int2ObjectOpenHashMap<InterfaceComponentDefinition>(2)
+        val components = Array(lastArchive + 1) { InterfaceComponentDefinition(id = it + (id shl 16)) }
         for (i in 0..lastArchive) {
             val data = cache.data(index, archiveId, i)
             if (data != null) {
-                val componentDefinition = InterfaceComponentDefinition(id = InterfaceDefinition.pack(id, i))
-                if (!componentDefinition.isEmpty(BufferReader(data))) {
-                    components[i] = componentDefinition
-                }
+                components[i].read(BufferReader(data))
             }
         }
-        if (components.isNotEmpty()) {
-            definition.components = components
-        }
+        definition.components = components
     }
 
-    private fun InterfaceComponentDefinition.isEmpty(buffer: Reader): Boolean {
-        var empty = true
+    fun InterfaceComponentDefinition.read(buffer: Reader) {
         buffer.readUnsignedByte()
-        var type = buffer.readUnsignedByte()
+        type = buffer.readUnsignedByte()
         if (type and 0x80 != 0) {
             type = type and 0x7f
-            buffer.readString()
+            unknown = buffer.readString()
         }
-        buffer.skip(10)
-        val horizontalSizeMode = buffer.readByte()
-        val verticalSizeMode = buffer.readByte()
-        buffer.skip(5)
+        contentType = buffer.readShort()
+        basePositionX = buffer.readUnsignedShort()
+        basePositionY = buffer.readUnsignedShort()
+        baseWidth = buffer.readShort()
+        baseHeight = buffer.readShort()
+        horizontalSizeMode = buffer.readByte().toByte()
+        verticalSizeMode = buffer.readByte().toByte()
+        horizontalPositionMode = buffer.readByte().toByte()
+        verticalPositionMode = buffer.readByte().toByte()
+        parent = buffer.readShort()
+        if (parent == 65535) {
+            parent = -1
+        }
+        val flag = buffer.readUnsignedByte()
+        hidden = 0x1 and flag != 0
         if (type == 0) {
-            buffer.readShort()
-            buffer.readShort()
-            buffer.skip(1)
+            scrollWidth = buffer.readShort()
+            scrollHeight = buffer.readShort()
+            disableHover = buffer.readUnsignedByte() == 1
         } else if (type == 3) {
-            buffer.skip(6)
+            colour = buffer.readInt()
+            filled = buffer.readUnsignedByte() == 1
+            alpha = buffer.readUnsignedByte()
         } else if (type == 4) {
-            buffer.skip(2)
-            buffer.readString()
-            buffer.skip(9)
+            fontId = buffer.readShort()
+            if (fontId == 65535) {
+                fontId = -1
+            }
+            text = buffer.readString()
+            lineHeight = buffer.readUnsignedByte()
+            horizontalTextAlign = buffer.readUnsignedByte()
+            verticalTextAlign = buffer.readUnsignedByte()
+            shaded = buffer.readUnsignedByte() == 1
+            colour = buffer.readInt()
+            alpha = buffer.readUnsignedByte()
         } else if (type == 5) {
-            buffer.skip(19)
+            defaultImage = buffer.readInt()
+            imageRotation = buffer.readShort()
+            val type = buffer.readUnsignedByte()
+            aBoolean4861 = type and 0x1 != 0
+            imageRepeat = type and 0x2 != 0
+            alpha = buffer.readUnsignedByte()
+            rotation = buffer.readUnsignedByte()
+            backgroundColour = buffer.readInt()
+            flipVertical = buffer.readUnsignedByte() == 1
+            flipHorizontal = buffer.readUnsignedByte() == 1
+            colour = buffer.readInt()
         } else if (type == 6) {
-            buffer.skip(2)
-            val data = buffer.readUnsignedByte()
-            val bool = 0x1 and data == 1
-            val centreType = data and 0x2 == 2
+            defaultMediaType = 1
+            defaultMediaId = buffer.readShort()
+            if (defaultMediaId == 65535) {
+                defaultMediaId = -1
+            }
+            val modelFlag = buffer.readUnsignedByte()
+            animated = 0x4 and modelFlag == 4
+            val bool = 0x1 and modelFlag == 1
+            centreType = modelFlag and 0x2 == 2
+            ignoreZBuffer = 0x8 and modelFlag == 8
             if (bool) {
-                buffer.skip(12)
+                viewportX = buffer.readUnsignedShort()
+                viewportY = buffer.readUnsignedShort()
+                spritePitch = buffer.readShort()
+                spriteRoll = buffer.readShort()
+                spriteYaw = buffer.readShort()
+                spriteScale = buffer.readShort()
             } else if (centreType) {
-                buffer.skip(14)
+                viewportX = buffer.readUnsignedShort()
+                viewportY = buffer.readUnsignedShort()
+                viewportZ = buffer.readUnsignedShort()
+                spritePitch = buffer.readShort()
+                spriteRoll = buffer.readShort()
+                spriteYaw = buffer.readShort()
+                spriteScale = buffer.readUnsignedShort()
             }
-            buffer.skip(2)
-            if (horizontalSizeMode != 0) {
-                buffer.skip(2)
+            animation = buffer.readShort()
+            if (animation == 65535) {
+                animation = -1
             }
-            if (verticalSizeMode != 0) {
-                buffer.skip(2)
+            if (horizontalSizeMode.toInt() != 0) {
+                viewportWidth = buffer.readShort()
+            }
+            if (verticalSizeMode.toInt() != 0) {
+                viewportHeight = buffer.readShort()
             }
         } else if (type == 9) {
-            buffer.skip(6)
+            lineWidth = buffer.readUnsignedByte()
+            colour = buffer.readInt()
+            lineMirrored = buffer.readUnsignedByte() == 1
         }
         val setting = buffer.readUnsignedMedium()
-        var code = buffer.readUnsignedByte()
-        if (code != 0) {
-            while (code != 0) {
-                buffer.skip(3)
-                code = buffer.readUnsignedByte()
-            }
-        }
-        buffer.readString()
-        val data = buffer.readUnsignedByte()
-        val optionCount = data and 0xf
-        if (optionCount > 0) {
-            options = Array(optionCount) {
-                val string = buffer.readString()
-                if (string.isBlank()) {
-                    null
-                } else {
-                    empty = false
-                    string
+        var mod = buffer.readUnsignedByte()
+        if (mod != 0) {
+            keyRepeats = ByteArray(11)
+            keyCodes = ByteArray(11)
+            keyModifiers = IntArray(11)
+            while (mod != 0) {
+                val index = (mod shr 4) - 1
+                mod = buffer.readUnsignedByte() or mod shl 8
+                mod = mod and 0xfff
+                val repeat = buffer.readByte().toByte()
+                if (repeat.toInt() != 0) {
+                    clickable = true
                 }
+                val code = buffer.readByte().toByte()
+                keyModifiers!![index] = mod
+                keyRepeats!![index] = repeat
+                keyCodes!![index] = code
+                mod = buffer.readUnsignedByte()
             }
         }
-        val iconCount = data shr 4
+        name = buffer.readString()
+        val mouseFlag = buffer.readUnsignedByte()
+        val optionCount = mouseFlag and 0xf
+        if (optionCount > 0) {
+            options = Array(optionCount) { buffer.readString() }
+        }
+        val iconCount = mouseFlag shr 4
         if (iconCount > 0) {
-            buffer.skip(3)
+            val size = buffer.readUnsignedByte()
+            mouseIcon = IntArray(size + 1) { if (size + 1 > it) -1 else 0 }
+            mouseIcon!![size] = buffer.readShort()
         }
         if (iconCount > 1) {
-            buffer.skip(3)
+            mouseIcon!![buffer.readUnsignedByte()] = buffer.readShort()
         }
-        buffer.readString()
-        buffer.skip(3)
-        buffer.readString()
+        optionOverride = buffer.readString()
+        if (optionOverride == "") {
+            optionOverride = null
+        }
+        anInt4708 = buffer.readUnsignedByte()
+        anInt4795 = buffer.readUnsignedByte()
+        anInt4860 = buffer.readUnsignedByte()
+        useOption = buffer.readString()
+        var settingData = -1
         if (setting and 0x3fda8 shr 11 != 0) {
-            buffer.skip(6)
+            settingData = buffer.readShort()
+            if (settingData == 65535) {
+                settingData = -1
+            }
+            anInt4698 = buffer.readShort()
+            if (anInt4698 == 65535) {
+                anInt4698 = -1
+            }
+            anInt4839 = buffer.readShort()
+            if (anInt4839 == 65535) {
+                anInt4839 = -1
+            }
         }
+        this.setting = InterfaceComponentSetting(setting, settingData)
         information = decodeScript(buffer)
-        if (information != null) {
-            empty = false
-        }
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        skipScript(buffer)
-        buffer.skip(buffer.readUnsignedByte() * 4)
-        buffer.skip(buffer.readUnsignedByte() * 4)
-        buffer.skip(buffer.readUnsignedByte() * 4)
-        buffer.skip(buffer.readUnsignedByte() * 4)
-        buffer.skip(buffer.readUnsignedByte() * 4)
-        return empty
+        mouseEnterHandler = decodeScript(buffer)
+        mouseExitHandler = decodeScript(buffer)
+        anObjectArray4771 = decodeScript(buffer)
+        anObjectArray4768 = decodeScript(buffer)
+        stateChangeHandler = decodeScript(buffer)
+        invUpdateHandler = decodeScript(buffer)
+        refreshHandler = decodeScript(buffer)
+        updateHandler = decodeScript(buffer)
+        anObjectArray4770 = decodeScript(buffer)
+        mouseMotionHandler = decodeScript(buffer)
+        mousePressedHandler = decodeScript(buffer)
+        mouseDraggedHandler = decodeScript(buffer)
+        mouseReleasedHandler = decodeScript(buffer)
+        mouseDragPassHandler = decodeScript(buffer)
+        anObjectArray4852 = decodeScript(buffer)
+        anObjectArray4711 = decodeScript(buffer)
+        anObjectArray4753 = decodeScript(buffer)
+        anObjectArray4688 = decodeScript(buffer)
+        anObjectArray4775 = decodeScript(buffer)
+        clientVarp = decodeIntArray(buffer)
+        inventories = decodeIntArray(buffer)
+        anIntArray4789 = decodeIntArray(buffer)
+        clientVarc = decodeIntArray(buffer)
+        anIntArray4805 = decodeIntArray(buffer)
     }
 
     override fun InterfaceDefinition.read(opcode: Int, buffer: Reader) {
@@ -167,23 +232,25 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
     }
 
     companion object {
-        private fun decodeScript(buffer: Reader): Array<Any>? {
+        private fun InterfaceComponentDefinition.decodeScript(buffer: Reader): Array<Any>? {
             val length = buffer.readUnsignedByte()
             if (length == 0) {
                 return null
             }
-            return Array(length) { if (buffer.readUnsignedBoolean()) buffer.readString() else buffer.readInt() }
+            val objects = Array<Any>(length) {
+                val string = buffer.readUnsignedBoolean()
+                if (string) buffer.readString() else buffer.readInt()
+            }
+            hasScript = true
+            return objects
         }
 
-        private fun skipScript(buffer: Reader) {
+        private fun decodeIntArray(buffer: Reader): IntArray? {
             val length = buffer.readUnsignedByte()
             if (length == 0) {
-                return
+                return null
             }
-            for (i in 0 until length) {
-                val string = buffer.readUnsignedBoolean()
-                if (string) buffer.readString() else buffer.skip(4)
-            }
+            return IntArray(length) { buffer.readInt() }
         }
     }
 }

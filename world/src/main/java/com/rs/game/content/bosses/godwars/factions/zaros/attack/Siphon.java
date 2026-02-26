@@ -16,15 +16,15 @@
 //
 package com.rs.game.content.bosses.godwars.factions.zaros.attack;
 
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.game.content.bosses.godwars.factions.zaros.Nex;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.ForceTalk;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
 
 public class Siphon implements NexAttack {
 
@@ -36,7 +36,7 @@ public class Siphon implements NexAttack {
 		nex.setNextAnimation(new Animation(6948));
 		nex.setNextSpotAnim(new SpotAnim(1201));
 		nex.getTempAttribs().setB("siphoning", true);
-		int reaverSize = NPCDefinitions.getDefs(13458).size;
+		int reaverSize = NPCDefinitions.getDefs(13458).getSize();
 		int respawnedBloodReaverCount = 0;
 		for (int i = 0; i < 2; i++) {
 			Tile tile = nex.getNearestTeleTile(reaverSize);

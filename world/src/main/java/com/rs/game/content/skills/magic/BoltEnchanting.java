@@ -18,9 +18,9 @@ package com.rs.game.content.skills.magic;
 
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 
@@ -151,16 +151,16 @@ public class BoltEnchanting  {
 	public static ButtonClickHandler handleInter = new ButtonClickHandler(432, e -> {
 		Bolt bolt = Bolt.forId(e.getComponentId());
 		if (bolt != null)
-			switch(e.getPacket()) {
-			case IF_OP1: //1
+			switch(e.getOpNum()) {
+			case 1: //1
 				e.getPlayer().stopAll();
 				e.getPlayer().getActionManager().setAction(new BoltEnchantingAction(bolt, 1));
 				break;
-			case IF_OP2: //5
+			case 2: //5
 				e.getPlayer().stopAll();
 				e.getPlayer().getActionManager().setAction(new BoltEnchantingAction(bolt, 5));
 				break;
-			case IF_OP3: //10
+			case 3: //10
 				e.getPlayer().stopAll();
 				e.getPlayer().getActionManager().setAction(new BoltEnchantingAction(bolt, 10));
 				break;

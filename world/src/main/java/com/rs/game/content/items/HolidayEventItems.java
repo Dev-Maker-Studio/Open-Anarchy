@@ -3,10 +3,10 @@ package com.rs.game.content.items;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.model.entity.ForceTalk;
 import com.rs.game.model.entity.player.Equipment;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 

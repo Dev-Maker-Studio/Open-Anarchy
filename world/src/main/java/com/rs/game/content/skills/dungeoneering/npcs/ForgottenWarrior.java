@@ -21,9 +21,9 @@ import com.rs.game.content.skills.dungeoneering.DungeonConstants.GuardianMonster
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
 import com.rs.game.content.skills.dungeoneering.DungeonUtils;
 import com.rs.game.content.skills.dungeoneering.RoomReference;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 import java.util.ArrayList;
 

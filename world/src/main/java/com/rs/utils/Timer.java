@@ -1,6 +1,6 @@
 package com.rs.utils;
 
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 
 import java.util.concurrent.TimeUnit;
 

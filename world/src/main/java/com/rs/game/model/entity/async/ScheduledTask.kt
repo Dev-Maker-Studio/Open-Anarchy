@@ -1,6 +1,6 @@
 package com.rs.game.model.entity.async
 
-import com.rs.lib.util.Logger
+import org.darkan.core.Logger
 import kotlin.coroutines.*
 
 class ScheduledTask(val mapping: String? = null, private val onStop: ((ScheduledTask).() -> Unit)? = null) : Continuation<Unit> {

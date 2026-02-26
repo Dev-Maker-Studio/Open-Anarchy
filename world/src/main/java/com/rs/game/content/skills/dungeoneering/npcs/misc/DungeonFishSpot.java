@@ -19,8 +19,8 @@ package com.rs.game.content.skills.dungeoneering.npcs.misc;
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
 import com.rs.game.content.skills.dungeoneering.npcs.DungeonNPC;
 import com.rs.game.content.skills.dungeoneering.skills.DungeoneeringFishing.Fish;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 public class DungeonFishSpot extends DungeonNPC {
 

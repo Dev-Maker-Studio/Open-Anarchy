@@ -1,11 +1,12 @@
 package com.rs.game.content.world.areas.desert
+import com.rs.utils.isAt
 
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
 import com.rs.game.content.skills.agility.agilitypyramid.AgilityPyramidController
 import com.rs.game.content.world.areas.dungeons.UndergroundDungeonController
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 import com.rs.utils.shop.ShopsHandler

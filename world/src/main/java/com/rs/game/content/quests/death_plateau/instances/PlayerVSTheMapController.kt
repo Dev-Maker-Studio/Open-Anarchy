@@ -12,8 +12,8 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.InstancedController
 import com.rs.game.model.entity.player.managers.InterfaceManager
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 
 class PlayerVSTheMapController : InstancedController(Instance.of(INSIDE_CAVE, 11, 9).setEntranceOffset(intArrayOf(46, 49, 0))) {
 

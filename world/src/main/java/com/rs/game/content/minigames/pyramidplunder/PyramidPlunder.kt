@@ -1,10 +1,10 @@
 package com.rs.game.content.minigames.pyramidplunder
 
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.model.ObjectShape
 import com.rs.engine.dialogue.sendOptionsDialogue
-import com.rs.engine.pathfinder.Direction
-import com.rs.engine.pathfinder.Direction.Companion.rotateClockwise
-import com.rs.engine.pathfinder.WalkStep
+import org.darkan.core.map.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction.Companion.rotateClockwise
+import org.darkan.core.map.pathfinder.WalkStep
 import com.rs.game.World.broadcastLoot
 import com.rs.game.World.getObject
 import com.rs.game.map.ChunkManager
@@ -14,11 +14,11 @@ import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.Constants
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.model.Animation
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPlayerStep
@@ -49,7 +49,7 @@ fun mapPyramidPlunder() {
     onObjectClick(16518, 16519, 16520, 16521, 16522, 16523, 16524, 16525, 16526, 16527, 16528, 16529, 16530, 16531, 16532) { (player, urnObject, option) ->
         val ctrl = player.kickOrGetController() ?: return@onObjectClick
         player.lock()
-        val urnState = player.vars.getVarBit(urnObject.definitions.varpBit)
+        val urnState = player.vars.getVarBit(urnObject.definitions.varbit)
         if (urnState == STATE_EMPTY) {
             player.unlock()
             player.sendMessage("The urn is empty.")
@@ -97,7 +97,7 @@ fun mapPyramidPlunder() {
     onObjectClick(16537) { (player, obj) ->
         val ctrl = player.kickOrGetController() ?: return@onObjectClick
         if (Utils.randomInclusive(0, 4) == 1)
-            OwnedNPC(player, 2001, Tile.of(player.tile), false).combatTarget = player
+            OwnedNPC(player, 2001, player.tile, false).combatTarget = player
         ctrl.updateObject(obj, 1)
         player.skills.addXp(Constants.THIEVING, getRoomBaseXP(ctrl.currentRoom) * 2.0)
         player.loot("pp_sarcophagus", ctrl.currentRoom)
@@ -122,7 +122,7 @@ fun mapPyramidPlunder() {
             wait(3)
             if (success) {
                 if (Utils.randomInclusive(0, 4) == 1)
-                    OwnedNPC(player, 2015, Tile.of(player.tile), false).combatTarget = player
+                    OwnedNPC(player, 2015, player.tile, false).combatTarget = player
                 player.skills.addXp(Constants.STRENGTH, getRoomBaseXP(ctrl.currentRoom))
                 ctrl.updateObject(obj, 2)
                 player.loot("pp_sarcophagus", ctrl.currentRoom)
@@ -141,7 +141,7 @@ fun mapPyramidPlunder() {
             "Search" -> player.sendMessage("The sarcophagus has already been looted.")
             "Open" -> {
                 if (Utils.randomInclusive(0, 4) == 1)
-                    OwnedNPC(player, 2015, Tile.of(player.tile), false).combatTarget = player
+                    OwnedNPC(player, 2015, player.tile, false).combatTarget = player
                 ctrl.updateObject(obj, 1)
                 player.skills.addXp(Skills.RUNECRAFTING, getRoomBaseXP(ctrl.currentRoom))
                 player.loot("pp_sarcophagus_engraved", ctrl.currentRoom)
@@ -215,10 +215,10 @@ fun mapPyramidPlunder() {
         Tile.of(1974, 4423, 0), Tile.of(1975, 4423, 0)
     )
 
-    onPlayerStep(*rightHandSpearTraps) { (player, step, tile) ->
+    onPlayerStep(rightHandSpearTraps) { (player, step, tile) ->
         player.triggerWallTrap(step, tile, 2) } //90 degree turn
 
-    onPlayerStep(*leftHandSpearTraps) { (player, step, tile) ->
+    onPlayerStep(leftHandSpearTraps) { (player, step, tile) ->
         player.triggerWallTrap(step, tile, 6) } //270 degree turn
 }
 
@@ -261,7 +261,7 @@ private fun Player.loot(lootTable: String, room: Int): Boolean {
     }
     if (!containsItem(SCEPTRE_OF_THE_GODS) && lootTable.contains("engraved")) {
         if (Utils.random(650 * (if (equipment.wearingRingOfWealth()) 0.97 else 1.0)).toInt() == 0) {
-            inventory.addItemDrop(Item(SCEPTRE_OF_THE_GODS).addMetaData("teleCharges", 10))
+            inventory.addItemDrop(Item(SCEPTRE_OF_THE_GODS).apply { addMetaData("teleCharges", 10) })
             broadcastLoot("$displayName has just received a Sceptre of the Gods from Pyramid Plunder!")
             return true
         }
@@ -318,7 +318,7 @@ private fun rollSarcophagusSuccess(player: Player, room: Int): Boolean {
 }
 
 private fun activateTrap(trapTile: Tile, trapDir: Direction) {
-    for (obj in ChunkManager.getChunk(trapTile.chunkId).getBaseObjects()) if (obj.id == 16517) {
+    for (obj in ChunkManager.getChunk(trapTile.getChunkId()).getBaseObjects()) if (obj.id == 16517) {
         if (trapTile.matches(obj.tile) || (obj.x - trapDir.dx == trapTile.x && obj.y - trapDir.dy == trapTile.y)) {
             obj.animate(Animation(463))
             break
@@ -357,7 +357,7 @@ private fun Player.passTrap(obj: GameObject) {
     val farTiles = arrayOf(transform(0, 3), transform(3, 0), transform(0, -3), transform(-3, 0))
     var tileIdx = 0
     for (nearbyTile in nearbyTiles) {
-        val obj2: GameObject? = getObject(nearbyTile, ObjectType.SCENERY_INTERACT)
+        val obj2: GameObject? = getObject(nearbyTile, ObjectShape.SCENERY_INTERACT)
         if (obj2 != null && obj2.id == 16517) break
         tileIdx++
     }

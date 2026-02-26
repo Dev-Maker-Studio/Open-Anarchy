@@ -16,16 +16,16 @@
 //
 package com.rs.game.content.minigames.partyroom;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.World.DropMethod;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 
 public class Balloon extends GameObject {
 
@@ -33,7 +33,7 @@ public class Balloon extends GameObject {
 	private boolean popped = false;
 
 	public Balloon(int id, int rotation, int x, int y, int plane) {
-		super(id, ObjectType.SCENERY_INTERACT, rotation, x, y, plane);
+		super(id, ObjectShape.SCENERY_INTERACT, rotation, x, y, plane);
 	}
 
 	public Item getItem() {
@@ -51,7 +51,7 @@ public class Balloon extends GameObject {
 			popped = true;
 			player.lock();
 			World.removeObject(this);
-			final GameObject poppedBalloon = new GameObject(getId() + 8, ObjectType.SCENERY_INTERACT, this.getRotation(), getX(), getY(), getPlane());
+			final GameObject poppedBalloon = new GameObject(getId() + 8, ObjectShape.SCENERY_INTERACT, this.getRotation(), getX(), getY(), getPlane());
 			World.spawnObject(poppedBalloon);
 			player.incrementCount("Party balloons popped");
 			WorldTasks.schedule(new Task() {

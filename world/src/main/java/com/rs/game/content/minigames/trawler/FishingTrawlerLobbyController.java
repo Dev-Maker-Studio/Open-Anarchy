@@ -2,7 +2,7 @@ package com.rs.game.content.minigames.trawler;
 
 import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.model.entity.player.Controller;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class FishingTrawlerLobbyController extends Controller {
 

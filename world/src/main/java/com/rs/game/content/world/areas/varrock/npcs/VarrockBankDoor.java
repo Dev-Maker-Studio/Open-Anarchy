@@ -5,8 +5,8 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.dialogue.Options;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
+import world.gregs.voidps.type.Tile;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 
@@ -16,7 +16,7 @@ public class VarrockBankDoor extends Conversation {
     private final int npcId = 2759;
 
     public static ObjectClickHandler VarrockBankDoor = new ObjectClickHandler(new Object[]{24389}, new Tile[]{Tile.of(3190, 3445, 0)}, e -> {
-        if (e.getOpNum() == ClientPacket.OBJECT_OP1) {
+        if (e.getOpNum() == 1) {
             e.getPlayer().startConversation(new VarrockBankDoor(e.getPlayer()));
         }
     });

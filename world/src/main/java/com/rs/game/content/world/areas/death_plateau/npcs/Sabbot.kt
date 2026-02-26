@@ -2,12 +2,12 @@ package com.rs.game.content.world.areas.death_plateau.npcs
 
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.content.quests.death_plateau.dialogue.npcs.burthorpe.SabbotD
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.onNpcClick

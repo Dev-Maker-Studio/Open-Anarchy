@@ -5,7 +5,7 @@ import com.rs.engine.dialogue.HeadE;
 import com.rs.game.content.skills.thieving.thievesGuild.HankyPoints;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 

@@ -17,14 +17,14 @@
 package com.rs.game.content.skills.dungeoneering;
 
 import com.rs.Settings;
-import com.rs.cache.Cache;
-import com.rs.cache.loaders.ItemDefinitions;
+import world.gregs.voidps.cache.Cache;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants.KeyDoors;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants.SkillDoors;
 import com.rs.game.content.skills.dungeoneering.rooms.BossRoom;
-import com.rs.lib.Constants;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 
 import javax.swing.*;
 import java.awt.*;
@@ -142,7 +142,7 @@ public final class Dungeon {
 					if (key != -1) {
 						g.setFont(new Font("Arial", Font.BOLD, 5));
 						g.setColor(Color.white);
-						g.drawString(formatName(ItemDefinitions.getDefs(key).name), x * 20 + 36, (7 - y) * 20 + 48);
+						g.drawString(formatName(ItemDefinitions.getDefs(key).getName()), x * 20 + 36, (7 - y) * 20 + 48);
 					}
 
 					g.setFont(new Font("Arial", Font.BOLD, 7));
@@ -157,19 +157,19 @@ public final class Dungeon {
 							if (rotation == DungeonConstants.NORTH_DOOR) {
 								g.setFont(new Font("Arial", Font.BOLD, 5));
 								g.setColor(Color.LIGHT_GRAY);
-								g.drawString(formatName(ItemDefinitions.getDefs(KeyDoors.values()[lock0].getKeyId()).name), x * 20 + 27, (7 - y) * 20 + 48);
+								g.drawString(formatName(ItemDefinitions.getDefs(KeyDoors.values()[lock0].getKeyId()).getName()), x * 20 + 27, (7 - y) * 20 + 48);
 							} else if (rotation == DungeonConstants.EAST_DOOR) {
 								g.setFont(new Font("Arial", Font.BOLD, 5));
 								g.setColor(Color.LIGHT_GRAY);
-								g.drawString(formatName(ItemDefinitions.getDefs(KeyDoors.values()[lock0].getKeyId()).name), x * 20 + 31, (7 - y) * 20 + 52);
+								g.drawString(formatName(ItemDefinitions.getDefs(KeyDoors.values()[lock0].getKeyId()).getName()), x * 20 + 31, (7 - y) * 20 + 52);
 							} else if (rotation == DungeonConstants.SOUTH_DOOR) {
 								g.setFont(new Font("Arial", Font.BOLD, 5));
 								g.setColor(Color.LIGHT_GRAY);
-								g.drawString(formatName(ItemDefinitions.getDefs(KeyDoors.values()[lock0].getKeyId()).name), x * 20 + 27, (7 - y) * 20 + 55);
+								g.drawString(formatName(ItemDefinitions.getDefs(KeyDoors.values()[lock0].getKeyId()).getName()), x * 20 + 27, (7 - y) * 20 + 55);
 							} else if (rotation == DungeonConstants.WEST_DOOR) {
 								g.setFont(new Font("Arial", Font.BOLD, 5));
 								g.setColor(Color.LIGHT_GRAY);
-								g.drawString(formatName(ItemDefinitions.getDefs(KeyDoors.values()[lock0].getKeyId()).name), x * 20 + 24, (7 - y) * 20 + 52);
+								g.drawString(formatName(ItemDefinitions.getDefs(KeyDoors.values()[lock0].getKeyId()).getName()), x * 20 + 24, (7 - y) * 20 + 52);
 							}
 
 					}

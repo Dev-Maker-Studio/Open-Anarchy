@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.firemaking;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.minigames.duel.DuelArenaController;
 import com.rs.game.content.minigames.duel.DuelController;
@@ -29,10 +29,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 import com.rs.net.decoders.handlers.InventoryOptionsHandler;
 
 public class Firemaking extends Action {
@@ -213,7 +213,7 @@ public class Firemaking extends Action {
 					if ((item == null) || !World.removeGroundItem(player, item, false))
 						return;
 				}
-				World.spawnTempGroundObject(new GameObject(fire.getFireId(), ObjectType.SCENERY_INTERACT, 0, tile.getX(), tile.getY(), tile.getPlane()), 592, fire.getLife());
+				World.spawnTempGroundObject(new GameObject(fire.getFireId(), ObjectShape.SCENERY_INTERACT, 0, tile.getX(), tile.getY(), tile.getPlane()), 592, fire.getLife());
 				if (player != null)
 					player.getSkills().addXp(Constants.FIREMAKING, increasedExperience(player, fire.getExperience(), false));
 				entity.setNextFaceTile(tile);

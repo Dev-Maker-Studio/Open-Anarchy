@@ -16,7 +16,7 @@
 //
 package com.rs.plugin.handlers;
 
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.events.PickupItemEvent;
 
 import java.util.function.Consumer;

@@ -1,11 +1,11 @@
 package com.rs.game.content.commands.debug
 
-import com.rs.cache.loaders.ObjectDefinitions
-import com.rs.cache.loaders.ObjectType
-import com.rs.cache.loaders.map.ClipFlag
+import org.darkan.core.cache.ObjectDefinitions
+import org.darkan.core.model.ObjectShape
+import org.darkan.core.map.ClipFlag
 import com.rs.engine.command.Commands
-import com.rs.engine.pathfinder.Direction
-import com.rs.engine.pathfinder.WorldCollision
+import org.darkan.core.map.pathfinder.Direction
+import org.darkan.core.map.WorldCollision
 import com.rs.engine.pathfinder.routeEntityToTile
 import com.rs.game.World
 import com.rs.game.content.world.doors.Doors
@@ -13,12 +13,13 @@ import com.rs.game.map.ChunkManager
 import com.rs.game.map.instance.InstancedChunk
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Rights
-import com.rs.lib.game.Tile
-import com.rs.lib.net.packets.encoders.HintTrail
-import com.rs.lib.util.Logger
-import com.rs.lib.util.Utils.clampI
+import org.darkan.core.model.Rights
+import world.gregs.voidps.type.Tile
+// TODO: net.packets.encoders.HintTrail
+import org.darkan.core.Logger
+import org.darkan.core.Utils.clampI
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.utils.types
 
 @ServerStartupEvent
 fun loadDebugCommands() {
@@ -45,7 +46,7 @@ fun loadDebugCommands() {
 
         objects.forEach { obj ->
             Logger.debug(Commands::class.java, "areaobj", obj.toString())
-            Logger.debug(Commands::class.java, "areaobj", "vb: ${obj.definitions.varpBit}")
+            Logger.debug(Commands::class.java, "areaobj", "vb: ${obj.definitions.varbit}")
         }
     }
 
@@ -69,11 +70,11 @@ fun loadDebugCommands() {
     }
 
     Commands.add(Rights.DEVELOPER, "reloadlocalmap", "Forces your local map to reload") { p, _ ->
-        ChunkManager.getChunk(p.chunkId).getAllBaseObjects(true).forEach { obj ->
+        ChunkManager.getChunk(p.getChunkId()).getAllBaseObjects(true).forEach { obj ->
             p.sendMessage(obj.toString())
         }
 
-        val chunk = ChunkManager.getChunk(p.chunkId)
+        val chunk = ChunkManager.getChunk(p.getChunkId())
         if (chunk is InstancedChunk) {
             p.sendMessage("${chunk.originalBaseX}, ${chunk.originalBaseY} - ${chunk.rotation}")
         }
@@ -119,7 +120,7 @@ fun loadDebugCommands() {
         val objectId = args[0].toInt()
         val rotation = if (args.size > 2) args[2].toInt() else 0
         val type = if (args.size > 1) {
-            ObjectType.forId(args[1].toInt()) ?: ObjectDefinitions.getDefs(objectId).types[0]
+            ObjectShape.forId(args[1].toInt()) ?: ObjectDefinitions.getDefs(objectId).types[0]
         } else {
             ObjectDefinitions.getDefs(objectId).types[0]
         }
@@ -131,7 +132,7 @@ fun loadDebugCommands() {
         val objectId = args[0].toInt()
         val rotation = if (args.size > 2) args[2].toInt() else 0
         val type = if (args.size > 1) {
-            ObjectType.forId(args[1].toInt()) ?: ObjectDefinitions.getDefs(objectId).types[0]
+            ObjectShape.forId(args[1].toInt()) ?: ObjectDefinitions.getDefs(objectId).types[0]
         } else {
             ObjectDefinitions.getDefs(objectId).types[0]
         }
@@ -165,23 +166,9 @@ fun loadDebugCommands() {
     }
 
     Commands.add(Rights.DEVELOPER, "tileflags", "Get the tile flags for the tile you're standing on.") { p, _ ->
-        p.sendMessage("${ClipFlag.getFlags(WorldCollision.getFlags(p.tile))}")
+        p.sendMessage("Clip flags: 0x${Integer.toHexString(WorldCollision.getFlags(p.tile))}")
     }
 
-    Commands.add(Rights.DEVELOPER, "hinttrail [x y modelId]", "Sets a hint trail from the player to the specified location.") { p, args ->
-        val x = args[0].toInt()
-        val y = args[1].toInt()
-        val modelId = args[2].toInt()
-
-        val route = routeEntityToTile(p, Tile.of(x, y, p.plane), 25)
-        val bufferX = IntArray(route.size)
-        val bufferY = IntArray(route.size)
-
-        route.coords.forEachIndexed { i, tile ->
-            bufferX[i] = tile.packed and 0xFFFF
-            bufferY[i] = (tile.packed shr 16) and 0xFFFF
-        }
-
-        p.session.writeToQueue(HintTrail(Tile.of(p.tile), modelId, bufferX, bufferY, route.size))
-    }
+    // TODO: migrate to modern HintTrail packet (signature changed in core)
+    // Commands.add(Rights.DEVELOPER, "hinttrail [x y modelId]", "Sets a hint trail from the player to the specified location.") { ... }
 }

@@ -19,8 +19,8 @@ package com.rs.game.content.skills.herblore;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
 
 import java.util.LinkedList;
 import java.util.List;

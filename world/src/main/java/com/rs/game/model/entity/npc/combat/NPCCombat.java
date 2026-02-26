@@ -16,7 +16,7 @@
 //
 package com.rs.game.model.entity.npc.combat;
 
-import com.rs.engine.pathfinder.PathFinder;
+import org.darkan.core.map.pathfinder.PathFinder;
 import com.rs.game.content.Effect;
 import com.rs.game.content.combat.CombatStyle;
 import com.rs.game.content.combat.PlayerCombatKt;
@@ -25,8 +25,8 @@ import com.rs.game.content.skills.summoning.Summoning.ScrollTarget;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Animation;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 
 public final class NPCCombat {

@@ -16,14 +16,14 @@
 //
 package com.rs.game.content.skills.farming;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.dialogue.Options;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 
@@ -154,9 +154,9 @@ public enum Gardener {
 
 	private static Dialogue buyItem(Player player, int npcId, int itemId, int cost) {
 		return new Dialogue()
-				.addPlayer(HeadE.CHEERFUL, "I'd like to buy a " + ItemDefinitions.getDefs(itemId).name.toLowerCase() + " please.")
+				.addPlayer(HeadE.CHEERFUL, "I'd like to buy a " + ItemDefinitions.getDefs(itemId).getName().toLowerCase() + " please.")
 				.addNPC(npcId, HeadE.CHEERFUL, "Alright, I can sell you one of those for " + cost + " gold.")
-				.addOption("Buy a " + ItemDefinitions.getDefs(itemId).name.toLowerCase() + " for " + cost + " gold?", "Yes, please.", "No thanks, that's too much.")
+				.addOption("Buy a " + ItemDefinitions.getDefs(itemId).getName().toLowerCase() + " for " + cost + " gold?", "Yes, please.", "No thanks, that's too much.")
 				.addNext(() -> {
 					if (!player.getInventory().hasFreeSlots()) {
 						player.sendMessage("You don't have enough inventory space.");

@@ -25,7 +25,7 @@ import com.rs.engine.quest.QuestHandler;
 import com.rs.engine.quest.QuestOutline;
 import com.rs.game.content.skills.smithing.ForgingInterfaceKt;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
+import org.darkan.core.Constants;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;

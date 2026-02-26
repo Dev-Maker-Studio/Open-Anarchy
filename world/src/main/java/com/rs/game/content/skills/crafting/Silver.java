@@ -17,9 +17,9 @@
 package com.rs.game.content.skills.crafting;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 
@@ -96,30 +96,30 @@ public class Silver {
 	public static ButtonClickHandler handleButtons = new ButtonClickHandler(438, e -> {
 		e.getPlayer().closeInterfaces();
 		SilverItems silver = SilverItems.forId(e.getComponentId());
-		int numberToMake = getNumberToMake(e.getPacket());
+		int numberToMake = getNumberToMake(e.getOpNum());
 		if (numberToMake == -5)
 			e.getPlayer().sendInputInteger("How many would you like to make?", number -> {
 				if (silver != null)
 					e.getPlayer().getActionManager().setAction(new SilverCraftingAction(silver, number));
 				else if (e.getPlayer().hasRights(Rights.DEVELOPER))
-					e.getPlayer().sendMessage("SILVER: component: " + e.getComponentId() + " packetId: " + e.getPacket());
+					e.getPlayer().sendMessage("SILVER: component: " + e.getComponentId() + " packetId: " + e.getOpNum());
 				else
 					e.getPlayer().sendMessage("You are unable to craft this item at the moment.");
 			});
 		else if (silver != null)
 			e.getPlayer().getActionManager().setAction(new SilverCraftingAction(silver, numberToMake));
 		else if (e.getPlayer().hasRights(Rights.DEVELOPER))
-			e.getPlayer().sendMessage("SILVER: component: " + e.getComponentId() + " packetId: " + e.getPacket());
+			e.getPlayer().sendMessage("SILVER: component: " + e.getComponentId() + " packetId: " + e.getOpNum());
 		else
 			e.getPlayer().sendMessage("You are unable to craft this item at the moment.");
 	});
 
-	public static int getNumberToMake(ClientPacket packetId) {
+	public static int getNumberToMake(int packetId) {
         return switch (packetId) {
-            case IF_OP1 -> 1;
-            case IF_OP2 -> 5;
-            case IF_OP3 -> 28;
-            case IF_OP4 -> -5;
+            case 1 -> 1;
+            case 2 -> 5;
+            case 3 -> 28;
+            case 4 -> -5;
             default -> 1;
         };
 	}

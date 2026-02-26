@@ -3,8 +3,8 @@ package com.rs.game.content.quests.ghosts_ahoy
 import com.rs.game.content.skills.agility.Agility
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
-import com.rs.lib.game.Tile
+import org.darkan.core.Constants
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.ObjectClickEvent
 import com.rs.plugin.kts.onObjectClick

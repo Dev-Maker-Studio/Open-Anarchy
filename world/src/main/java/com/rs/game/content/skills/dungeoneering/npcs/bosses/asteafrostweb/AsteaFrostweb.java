@@ -25,8 +25,8 @@ import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.utils.Ticks;
 
 public final class AsteaFrostweb extends DungeonBoss {

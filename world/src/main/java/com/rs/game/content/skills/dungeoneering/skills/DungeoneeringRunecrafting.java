@@ -19,10 +19,10 @@ package com.rs.game.content.skills.dungeoneering.skills;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.SpotAnim;
 
 public class DungeoneeringRunecrafting extends PlayerAction {
 

@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.bosses.corp
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.game.World
 import com.rs.game.World.floorAndWallsFree
 import com.rs.game.World.sendSpotAnim
@@ -29,10 +29,10 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.npc.combat.CombatScript.delayHit
 import com.rs.game.model.entity.npc.combat.CombatScript.getMaxHit
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.model.SpotAnim
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
@@ -113,7 +113,7 @@ private fun attackMagicDrain(npc: NPC, target: Entity) {
 
 fun attackMagicSplash(npc: NPC, target: Entity) {
     npc.anim(10410)
-    val initialTile = Tile.of(target.tile)
+    val initialTile = target.tile
     npc.schedule {
         wait(World.sendProjectile(npc, initialTile, 1824, heights = 41 to 5, delay = 0, speed = 15, angle = 15).taskDelay)
         repeat(6) {
@@ -160,7 +160,7 @@ class CorporealBeast(id: Int, tile: Tile?, spawned: Boolean) : NPC(id, tile, spa
         }
         (hit.source as? Player)?.let { player ->
             if ((hit.look == HitLook.MELEE_DAMAGE || hit.look == HitLook.RANGE_DAMAGE) &&
-                player.equipment.getWeaponId() != -1 && !ItemDefinitions.getDefs(player.equipment.getWeaponId()).getName().contains("spear"))
+                player.equipment.getWeaponId() != -1 && !ItemDefinitions.getDefs(player.equipment.getWeaponId()).name.contains("spear"))
                     hit.setDamage(hit.damage / 2)
 
         }

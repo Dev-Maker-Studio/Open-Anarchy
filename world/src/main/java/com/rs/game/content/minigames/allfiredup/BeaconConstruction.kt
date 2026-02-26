@@ -1,9 +1,9 @@
 package com.rs.game.content.minigames.allfiredup
 
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.content.skills.agility.Agility
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.LoginEvent
 import com.rs.plugin.kts.onLogin

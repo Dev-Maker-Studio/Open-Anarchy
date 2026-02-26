@@ -9,8 +9,8 @@ import com.rs.game.World
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.Constants
-import com.rs.lib.game.Tile
+import org.darkan.core.Constants
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 import com.rs.utils.Ticks
@@ -77,7 +77,7 @@ fun mapNatureSpirit() {
             }
 
             "Enter" -> if (player.getQuestStage(Quest.NATURE_SPIRIT) in STAGE_FIND_FILLIMAN..STAGE_PUZZLING_IT_OUT)
-                    fillimanDialogue(player, World.getNPCsInChunkRange(player.chunkId, 1).first { it.id == FILLIMAN })
+                    fillimanDialogue(player, World.getNPCsInChunkRange(player.getChunkId(), 1).first { it.id == FILLIMAN })
                 else if (player.getQuestStage(Quest.NATURE_SPIRIT) >= STAGE_MEET_IN_GROTTO)
                     player.useLadder(Tile.of(2271, 5334, if (player.isQuestComplete(Quest.NATURE_SPIRIT)) 1 else 0))
                 else
@@ -179,7 +179,7 @@ class Filliman(id: Int, tile: Tile) : NPC(id, tile) {
         if (stage in STAGE_FIND_FILLIMAN..STAGE_PUZZLING_IT_OUT)
             return super.withinDistance(player, distance)
         if (stage == STAGE_MEET_IN_GROTTO)
-            return super.withinDistance(player, distance) && setOf(580251, 580250, 582298, 582299).contains(player.chunkId)
+            return super.withinDistance(player, distance) && setOf(580251, 580250, 582298, 582299).contains(player.getChunkId())
         return false
     }
 }

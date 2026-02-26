@@ -1,6 +1,6 @@
 package com.rs.game.content.skills.firemaking
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.game.content.Effect
 import com.rs.game.content.skills.firemaking.Bonfire.Companion.addLog
 import com.rs.game.content.skills.firemaking.Bonfire.Companion.addLogs
@@ -11,9 +11,9 @@ import com.rs.game.model.entity.player.actions.PlayerAction
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.Constants
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.model.Item
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onObjectClick
@@ -39,7 +39,7 @@ class Bonfire(private val log: Log, private val obj: GameObject) : PlayerAction(
     }
 
     private fun checkAll(player: Player): Boolean {
-        if (!ChunkManager.getChunk(obj.tile.chunkId).objectExists(obj) || !player.inventory.containsItem(log.logId, 1)) {
+        if (!ChunkManager.getChunk(obj.tile.getChunkId()).objectExists(obj) || !player.inventory.containsItem(log.logId, 1)) {
             return false
         }
         if (player.skills.getLevel(Constants.FIREMAKING) < log.level) {
@@ -52,8 +52,8 @@ class Bonfire(private val log: Log, private val obj: GameObject) : PlayerAction(
     override fun start(player: Player): Boolean {
         return if (checkAll(player)) {
             val participants: MutableSet<String> = synchronized(obj) {
-                obj.attribs.getO("bonfire_participants_set") as? MutableSet<String>
-                    ?: mutableSetOf<String>().also { obj.attribs.setO("bonfire_participants_set", it) }
+                obj.attribs.getO<MutableSet<String>>("bonfire_participants_set")
+                    ?: mutableSetOf<String>().also { obj.attribs.setO<Any>("bonfire_participants_set", it) }
             }
             synchronized(participants) {
                 if (participants.add(player.username)) {

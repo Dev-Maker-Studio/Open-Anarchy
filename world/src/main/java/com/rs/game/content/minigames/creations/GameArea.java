@@ -16,13 +16,13 @@
 //
 package com.rs.game.content.minigames.creations;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.map.instance.Instance;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 import java.util.Arrays;
@@ -197,15 +197,15 @@ public class GameArea {
 				}
 			}
 			CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenRun(() -> {
-				World.spawnObject(new GameObject(Helper.BLUE_DOOR_1, ObjectType.WALL_STRAIGHT, 1, getMinX() + Helper.BLUE_DOOR_P1[0], getMinY() + Helper.BLUE_DOOR_P1[1], 0));
-				World.spawnObject(new GameObject(Helper.BLUE_DOOR_2, ObjectType.WALL_STRAIGHT, 1, getMinX() + Helper.BLUE_DOOR_P2[0], getMinY() + Helper.BLUE_DOOR_P2[1], 0));
-				World.spawnObject(new GameObject(Helper.BLUE_DOOR_1, ObjectType.WALL_STRAIGHT, 2, getMinX() + Helper.BLUE_DOOR_P3[0], getMinY() + Helper.BLUE_DOOR_P3[1], 0));
-				World.spawnObject(new GameObject(Helper.BLUE_DOOR_2, ObjectType.WALL_STRAIGHT, 2, getMinX() + Helper.BLUE_DOOR_P4[0], getMinY() + Helper.BLUE_DOOR_P4[1], 0));
+				World.spawnObject(new GameObject(Helper.BLUE_DOOR_1, ObjectShape.WALL_STRAIGHT, 1, getMinX() + Helper.BLUE_DOOR_P1[0], getMinY() + Helper.BLUE_DOOR_P1[1], 0));
+				World.spawnObject(new GameObject(Helper.BLUE_DOOR_2, ObjectShape.WALL_STRAIGHT, 1, getMinX() + Helper.BLUE_DOOR_P2[0], getMinY() + Helper.BLUE_DOOR_P2[1], 0));
+				World.spawnObject(new GameObject(Helper.BLUE_DOOR_1, ObjectShape.WALL_STRAIGHT, 2, getMinX() + Helper.BLUE_DOOR_P3[0], getMinY() + Helper.BLUE_DOOR_P3[1], 0));
+				World.spawnObject(new GameObject(Helper.BLUE_DOOR_2, ObjectShape.WALL_STRAIGHT, 2, getMinX() + Helper.BLUE_DOOR_P4[0], getMinY() + Helper.BLUE_DOOR_P4[1], 0));
 
-				World.spawnObject(new GameObject(Helper.RED_DOOR_1, ObjectType.WALL_STRAIGHT, 3, getMinX() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P1[0], getMinY() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P1[1], 0));
-				World.spawnObject(new GameObject(Helper.RED_DOOR_2, ObjectType.WALL_STRAIGHT, 3, getMinX() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P2[0], getMinY() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P2[1], 0));
-				World.spawnObject(new GameObject(Helper.RED_DOOR_1, ObjectType.WALL_STRAIGHT, 0, getMinX() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P3[0], getMinY() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P3[1], 0));
-				World.spawnObject(new GameObject(Helper.RED_DOOR_2, ObjectType.WALL_STRAIGHT, 0, getMinX() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P4[0], getMinY() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P4[1], 0));
+				World.spawnObject(new GameObject(Helper.RED_DOOR_1, ObjectShape.WALL_STRAIGHT, 3, getMinX() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P1[0], getMinY() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P1[1], 0));
+				World.spawnObject(new GameObject(Helper.RED_DOOR_2, ObjectShape.WALL_STRAIGHT, 3, getMinX() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P2[0], getMinY() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P2[1], 0));
+				World.spawnObject(new GameObject(Helper.RED_DOOR_1, ObjectShape.WALL_STRAIGHT, 0, getMinX() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P3[0], getMinY() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P3[1], 0));
+				World.spawnObject(new GameObject(Helper.RED_DOOR_2, ObjectShape.WALL_STRAIGHT, 0, getMinX() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P4[0], getMinY() + ((flags.length - 1) * 8) + Helper.RED_DOOR_P4[1], 0));
 
 				int managerBlue = Helper.MANAGER_NPCS[Utils.random(Helper.MANAGER_NPCS.length)];
 				int managerRed = Helper.MANAGER_NPCS[Utils.random(Helper.MANAGER_NPCS.length)];

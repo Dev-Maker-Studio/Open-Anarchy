@@ -16,7 +16,8 @@
 //
 package com.rs.utils;
 
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
+import world.gregs.voidps.cache.definition.data.NPCDefinition;
 import com.rs.game.content.minigames.treasuretrails.TreasureTrailsManager;
 import com.rs.utils.drop.ClueDrop;
 import com.rs.utils.drop.Drop;
@@ -199,20 +200,20 @@ public class NPCClueDrops {
 
 	public static DropSet rollClues(int npcId) {
 		List<DropTable> tables = new ArrayList<>();
-		NPCDefinitions defs = NPCDefinitions.getDefs(npcId);
+		NPCDefinition defs = NPCDefinitions.getDefs(npcId);
 		String name = defs.getName().toLowerCase();
 		ClueDrop drop;
 		drop = EASY.get(name);
-		if (drop != null && drop.validCombatLevel(defs.combatLevel))
+		if (drop != null && drop.validCombatLevel(defs.getCombatLevel()))
 			tables.add(new DropTable(1.0, drop.getWeight(), new Drop(TreasureTrailsManager.SCROLL_BOXES[0])));
 		drop = MEDIUM.get(name);
-		if (drop != null && drop.validCombatLevel(defs.combatLevel))
+		if (drop != null && drop.validCombatLevel(defs.getCombatLevel()))
 			tables.add(new DropTable(1.0, drop.getWeight(), new Drop(TreasureTrailsManager.SCROLL_BOXES[1])));
 		drop = HARD.get(name);
-		if (drop != null && drop.validCombatLevel(defs.combatLevel))
+		if (drop != null && drop.validCombatLevel(defs.getCombatLevel()))
 			tables.add(new DropTable(1.0, drop.getWeight(), new Drop(TreasureTrailsManager.SCROLL_BOXES[2])));
 		drop = ELITE.get(name);
-		if (drop != null && drop.validCombatLevel(defs.combatLevel))
+		if (drop != null && drop.validCombatLevel(defs.getCombatLevel()))
 			tables.add(new DropTable(1.0, drop.getWeight(), new Drop(TreasureTrailsManager.SCROLL_BOXES[3])));
 		return new DropSet(tables);
 	}

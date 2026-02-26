@@ -1,6 +1,6 @@
 package com.rs.utils.bench
 
-import com.rs.cache.Cache
+import world.gregs.voidps.cache.Cache
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -21,7 +21,7 @@ fun main() {
 }
 
 fun runCoroutineTest() {
-    Cache.init("../cache/")
+    Cache.get() // Initialize cache
     runBlocking {
         (0 until 1000).map { _ ->
             launch {

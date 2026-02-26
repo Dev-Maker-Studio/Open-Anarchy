@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.runecrafting;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.quest.Quest;
 import com.rs.game.content.combat.CombatDefinitions;
@@ -24,13 +24,13 @@ import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.ItemEquipHandler;
@@ -602,7 +602,7 @@ public class Runecrafting {
 			default -> null;
 		};
 
-		if (e.getObjectId() == 17010 && e.getOpNum() == ClientPacket.OBJECT_OP2) {
+		if (e.getObjectId() == 17010 && e.getOpNum() == 2) {
 			e.getPlayer().startConversation(new Dialogue().addOptions("Change spellbooks?", ops -> {
 				ops.add("Yes, replace my spellbook.", () -> {
 					if (e.getPlayer().getCombatDefinitions().getSpellbook() != CombatDefinitions.Spellbook.LUNAR) {

@@ -1,6 +1,6 @@
 package com.rs.engine.cutscenekt
 
-import com.rs.cache.loaders.ObjectDefinitions
+import org.darkan.core.cache.ObjectDefinitions
 import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.World.sendProjectile
@@ -17,8 +17,9 @@ import com.rs.game.model.entity.async.WaitCondition
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Logger
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Logger
+import com.rs.utils.types
 import kotlin.coroutines.*
 
 class Cutscene(val player: Player) : Continuation<Unit> {
@@ -33,7 +34,7 @@ class Cutscene(val player: Player) : Continuation<Unit> {
     var mapHidden = false
     var constructingRegion = false
     private var instance: Instance? = null
-    var endTile: Tile = Tile.of(player.tile)
+    var endTile: Tile = player.tile
 
     init {
         createObjectMap()
@@ -93,7 +94,7 @@ class Cutscene(val player: Player) : Continuation<Unit> {
     }
 
     fun createObjectMap() {
-        endTile = Tile.of(player.tile)
+        endTile = player.tile
     }
 
     fun deleteObjects() {
@@ -246,7 +247,7 @@ class Cutscene(val player: Player) : Continuation<Unit> {
     suspend fun dynamicRegion(returnTile: Tile, baseChunkX: Int, baseChunkY: Int, widthChunks: Int, heightChunks: Int, copyNpcs: Boolean = false) {
         constructingRegion = true
         val old = instance
-        val instance = Instance.of(Tile.of(returnTile), widthChunks, heightChunks, copyNpcs)
+        val instance = Instance.of(returnTile, widthChunks, heightChunks, copyNpcs)
         instance.copyMapAllPlanes(baseChunkX, baseChunkY).thenAccept {
             instance.teleportTo(player)
             constructingRegion = false

@@ -16,9 +16,9 @@
 //
 package com.rs.game.content.holidayevents.christmas.christ20;
 
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;

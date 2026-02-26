@@ -10,7 +10,7 @@ import org.darkan.core.map.pathfinder.reach.DefaultReachStrategy
 import org.darkan.core.map.pathfinder.reach.ReachStrategy
 
 private const val DEFAULT_RESET_ON_SEARCH = true
-internal const val DEFAULT_SEARCH_MAP_SIZE = 128
+const val DEFAULT_SEARCH_MAP_SIZE = 128
 private const val DEFAULT_RING_BUFFER_SIZE = 4096
 private const val DEFAULT_DISTANCE_VALUE = 999 // Default is 99_999_999 but it is unnecessary and we bitpack
 private const val DEFAULT_SRC_DIRECTION_VALUE = 99

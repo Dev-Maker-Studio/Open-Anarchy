@@ -1,13 +1,13 @@
 package com.rs.game.content.dnds.shootingstar;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.map.Chunk;
 import com.rs.game.map.ChunkManager;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 public class Star extends GameObject {
     public NPC sprite;
@@ -18,7 +18,7 @@ public class Star extends GameObject {
     public boolean minedThisTick = false;
 
     public Star(int tier, ShootingStars.Location location) {
-        super(38668-tier, ObjectType.SCENERY_INTERACT, 0, location.tile);
+        super(38668-tier, ObjectShape.SCENERY_INTERACT, 0, location.tile);
         this.location = location;
         this.landingTime = World.getServerTicks();
         //World.sendWorldMessage("<col=FF0000><shad=000000>A shooting star has crashed near " + location.description + "!", false);
@@ -30,16 +30,16 @@ public class Star extends GameObject {
     }
 
     public int getTier() {
-        return 10-(id-38659);
+        return 10-(getId()-38659);
     }
 
     public void degrade() {
-        if (id >= 38668) {
+        if (getId() >= 38668) {
             spawnSprite();
             setId(38670);
             return;
         }
-        setId(id+1);
+        setId(getId()+1);
         life = getMaxLife();
     }
 
@@ -64,7 +64,7 @@ public class Star extends GameObject {
     }
 
     private void spawnSprite() {
-        sprite = new NPC(8091, Tile.of(tile));
+        sprite = new NPC(8091, Tile.of(getTile()));
     }
 
     public void destroy() {

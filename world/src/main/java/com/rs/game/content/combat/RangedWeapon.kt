@@ -20,7 +20,7 @@ import com.rs.game.World
 import com.rs.game.model.WorldProjectile
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.SpotAnim
+import org.darkan.core.model.SpotAnim
 import java.util.*
 
 enum class RangedWeapon {

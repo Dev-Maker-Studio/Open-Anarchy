@@ -1,16 +1,13 @@
 package world.gregs.voidps.cache.definition.decoder
 
-import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.OBJECTS
-import world.gregs.voidps.cache.definition.Parameters
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
 
 open class ObjectDecoder(
-    val member: Boolean,
-    val lowDetail: Boolean,
-    private val parameters: Parameters = Parameters.EMPTY
+    val members: Boolean = true,
+    val lowDetail: Boolean = false
 ) : DefinitionDecoder<ObjectDefinition>(OBJECTS) {
 
     override fun create(size: Int) = Array(size) { ObjectDefinition(it) }
@@ -22,42 +19,36 @@ open class ObjectDecoder(
     override fun ObjectDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
             1, 5 -> {
-                val count = buffer.readUnsignedByte()
-                shapes = arrayOfNulls<ObjectShape>(count) as Array<ObjectShape>
-                modelIds = Array(count) { IntArray(0) }
-
-                // Read type and models for each entry sequentially (not all types first!)
-                repeat(count) { index ->
-                    shapes!![index] = ObjectShape.forId(buffer.readByte()) ?: ObjectShape.SCENERY_INTERACT
-                    val modelCount = buffer.readUnsignedByte()
-                    modelIds?.set(index, IntArray(modelCount) { buffer.readBigSmart() })
+                if (opcode == 5 && lowDetail) {
+                    skip(buffer)
                 }
-
-                // Opcode 5 has an additional set of model IDs that we skip
-                if (opcode == 5) {
-                    skipReadModelIds(buffer)
+                val length = buffer.readUnsignedByte()
+                modelTypes = ByteArray(length)
+                this.modelIds = Array(length) { count ->
+                    modelTypes!![count] = buffer.readByte().toByte()
+                    val size = buffer.readUnsignedByte()
+                    IntArray(size) { buffer.readBigSmart() }
+                }
+                if (opcode == 5 && !lowDetail) {
+                    skip(buffer)
                 }
             }
             2 -> name = buffer.readString()
             14 -> sizeX = buffer.readUnsignedByte()
             15 -> sizeY = buffer.readUnsignedByte()
             17 -> {
+                blocksSky = false
                 solid = 0
                 block = block and ObjectDefinition.PROJECTILE.inv()
             }
             18 -> {
+                blocksSky = false
                 block = block and ObjectDefinition.PROJECTILE.inv()
             }
             19 -> interactive = buffer.readUnsignedByte()
-            21 -> {
-                groundContourType = 1
-            }
-            22 -> {
-                delayShading = true
-            }
-            23 -> {
-                occlusionMode = 1
-            }
+            21 -> contouredGround = 1
+            22 -> delayShading = true
+            23 -> culling = 1
             24 -> {
                 val animation = buffer.readBigSmart()
                 if (animation != -1) {
@@ -65,281 +56,129 @@ open class ObjectDecoder(
                 }
             }
             27 -> solid = 1
-            28 -> {
-                decorDisplacement = buffer.readUnsignedByte() shl 2
-            }
-            29 -> {
-                ambient = buffer.readByte()
-            }
-            39 -> {
-                contrast = buffer.readByte() * 5
-            }
+            28 -> offsetMultiplier = buffer.readUnsignedByte() shl 2
+            29 -> brightness = buffer.readByte()
             in 30..34 -> {
-                if (options == null)
+                if (options == null) {
                     options = arrayOf(null, null, null, null, null, "Examine")
+                }
                 options!![opcode - 30] = buffer.readString()
             }
-            40 -> {
-                val count = buffer.readUnsignedByte()
-                recolorSrc = ShortArray(count)
-                recolorDst = ShortArray(count)
-
-                for (index in 0 until count) {
-                    recolorSrc!![index] = buffer.readUnsignedShort().toShort()
-                    recolorDst!![index] = buffer.readUnsignedShort().toShort()
-                }
-            }
-            41 -> {
-                val count = buffer.readUnsignedByte()
-                retextureSrc = ShortArray(count)
-                retextureDst = ShortArray(count)
-
-                for (index in 0 until count) {
-                    retextureSrc!![index] = buffer.readUnsignedShort().toShort()
-                    retextureDst!![index] = buffer.readUnsignedShort().toShort()
-                }
-            }
-            42 -> {
-                val count = buffer.readUnsignedByte()
-                recolorDPalette = ByteArray(count)
-
-                for (index in 0 until count)
-                    recolorDPalette!![index] = buffer.readByte().toByte()
-            }
-            44, 45 -> {
-                // Unknown - just skip the short
-                buffer.readUnsignedShort()
-            }
+            39 -> contrast = buffer.readByte() * 5
+            40 -> readColours(buffer)
+            41 -> readTextures(buffer)
+            42 -> readColourPalette(buffer)
             62 -> mirrored = true
-            64 -> {
-                staticShadow = false
-            }
-            65 -> {
-                resizeX = buffer.readUnsignedShort()
-            }
-            66 -> {
-                resizeY = buffer.readUnsignedShort()
-            }
-            67 -> {
-                resizeZ = buffer.readUnsignedShort()
-            }
-            69 -> {
-                buffer.readUnsignedByte()
-            }
-            70 -> {
-                offsetX = buffer.readShort() shl 2
-            }
-            71 -> {
-                offsetY = buffer.readShort() shl 2
-            }
-            72 -> {
-                offsetZ = buffer.readShort() shl 2
-            }
-            73 -> {
-                forceDisplayDecoration = true
-            }
+            64 -> castsShadow = false
+            65 -> modelSizeX = buffer.readShort()
+            66 -> modelSizeZ = buffer.readShort()
+            67 -> modelSizeY = buffer.readShort()
+            69 -> blockFlag = buffer.readUnsignedByte()
+            70 -> offsetX = buffer.readUnsignedShort() shl 2
+            71 -> offsetZ = buffer.readUnsignedShort() shl 2
+            72 -> offsetY = buffer.readUnsignedShort() shl 2
+            73 -> blocksLand = true
             74 -> {
+                ignoreOnRoute = true
                 block = block and ObjectDefinition.ROUTE.inv()
             }
-            75 -> {
-                supportsItems = buffer.readUnsignedByte()
-            }
+            75 -> supportItems = buffer.readUnsignedByte()
             77, 92 -> readTransforms(buffer, opcode == 92)
             78 -> {
-                soundId = buffer.readUnsignedShort()
-                soundRadius = buffer.readUnsignedByte()
+                anInt3015 = buffer.readShort()
+                anInt3012 = buffer.readUnsignedByte()
             }
             79 -> {
-                soundMinInterval = buffer.readUnsignedShort()
-                soundMaxInterval = buffer.readUnsignedShort()
-                soundRadius = buffer.readUnsignedByte()
-
-                val count = buffer.readUnsignedByte()
-                soundGroupIds = IntArray(count)
-
-                for (index in 0 until count) {
-                    soundGroupIds!![index] = buffer.readUnsignedShort()
-                }
+                anInt2989 = buffer.readShort()
+                anInt2971 = buffer.readShort()
+                anInt3012 = buffer.readUnsignedByte()
+                val length = buffer.readUnsignedByte()
+                anIntArray3036 = IntArray(length) { buffer.readShort() }
             }
             81 -> {
-                groundContourType = 2
-                groundContourModifier = buffer.readUnsignedByte() * 256
+                contouredGround = 2.toByte()
+                anInt3023 = buffer.readUnsignedByte() * 256
             }
-            82 -> {
-                requiresTextures = true
-            }
-            88 -> {
-                dynamicShadow = false
-            }
-            89 -> {
-                replaySequence = false
-            }
-            91 -> {
-                members = true
-            }
+            82 -> hideMinimap = true
+            88 -> aBoolean2972 = false
+            89 -> animateImmediately = false
+            91 -> isMembers = true
             93 -> {
-                groundContourType = 3
-                groundContourModifier = buffer.readUnsignedShort()
+                contouredGround = 3
+                anInt3023 = buffer.readShort()
             }
-            94 -> {
-                groundContourType = 4
-            }
+            94 -> contouredGround = 4
             95 -> {
-                groundContourType = 5
-                groundContourModifier = buffer.readShort()
+                contouredGround = 5
+                anInt3023 = buffer.readUnsignedShort()
             }
-            97 -> {
-                mapIconRotates = true
-            }
-            98 -> {
-                hasAnimation = true
-            }
+            97 -> aBoolean3056 = true
+            98 -> aBoolean2998 = true
             99 -> {
-                primaryCursorActionIndex = buffer.readUnsignedByte()
-                primaryCursor = buffer.readUnsignedShort()
+                anInt2987 = buffer.readUnsignedByte()
+                anInt3008 = buffer.readShort()
             }
             100 -> {
-                secondaryCursorActionIndex = buffer.readUnsignedByte()
-                secondaryCursor = buffer.readUnsignedShort()
+                anInt3038 = buffer.readUnsignedByte()
+                anInt3013 = buffer.readShort()
             }
-            101 -> {
-                mapIconRotation = buffer.readUnsignedByte()
-            }
-            102 -> {
-                mapIconId = buffer.readUnsignedShort()
-            }
-            103 -> {
-                occlusionMode = 0
-            }
-            104 -> {
-                soundVolume = buffer.readUnsignedByte()
-            }
-            105 -> {
-                mapIconFlipped = true
-            }
+            101 -> anInt2958 = buffer.readUnsignedByte()
+            102 -> mapscene = buffer.readShort()
+            103 -> culling = 0
+            104 -> anInt3024 = buffer.readUnsignedByte()
+            105 -> invertMapScene = true
             106 -> {
-                val numAnimations = buffer.readUnsignedByte()
-                var sum = 0
-
-                animations = IntArray(numAnimations)
-                animationOdds = IntArray(numAnimations)
-
-                for (index in 0 until numAnimations) {
+                val length = buffer.readUnsignedByte()
+                var total = 0
+                animations = IntArray(length)
+                percents = IntArray(length)
+                for (index in 0 until length) {
                     animations!![index] = buffer.readBigSmart()
-                    sum += buffer.readUnsignedByte().also { animationOdds!![index] = it }
+                    percents!![index] = buffer.readUnsignedByte()
+                    total += percents!![index]
                 }
-
-                for (index in 0 until numAnimations) {
-                    animationOdds!![index] = animationOdds!![index] * 65535 / sum
+                for (count in 0 until length) {
+                    percents!![count] = 65535 * percents!![count] / total
                 }
             }
-            107 -> {
-                mapCategoryId = buffer.readUnsignedShort()
-            }
+            107 -> mapDefinitionId = buffer.readShort()
             in 150..154 -> {
                 if (options == null) {
                     options = arrayOf(null, null, null, null, null, "Examine")
                 }
                 options!![opcode - 150] = buffer.readString()
-                if (!member) {
+                if (!members) {
                     options!![opcode - 150] = null
                 }
             }
-            160 -> {
-                val count = buffer.readUnsignedByte()
-                quests = IntArray(count)
-
-                for (index in 0 until count) {
-                    quests!![index] = buffer.readUnsignedShort()
-                }
-            }
+            160 -> anIntArray2981 = IntArray(buffer.readUnsignedByte()) { buffer.readShort() }
             162 -> {
-                groundContourType = 3
-                groundContourModifier = buffer.readInt()
+                contouredGround = 3
+                anInt3023 = buffer.readInt()
             }
             163 -> {
-                tintHue = buffer.readByte().toByte()
-                tintSaturation = buffer.readByte().toByte()
-                tintLightness = buffer.readByte().toByte()
-                tintOpacity = buffer.readByte().toByte()
+                aByte2974 = buffer.readByte().toByte()
+                aByte3045 = buffer.readByte().toByte()
+                aByte3052 = buffer.readByte().toByte()
+                aByte2960 = buffer.readByte().toByte()
             }
-            164 -> {
-                shadowOffsetX = buffer.readShort()
-            }
-            165 -> {
-                shadowOffsetY = buffer.readShort()
-            }
-            166 -> {
-                shadowOffsetZ = buffer.readShort()
-            }
-            167 -> {
-                groundDecorationHeight = buffer.readUnsignedShort()
-            }
-            168 -> {
-                instrumentSoundEffect = true
-            }
-            169 -> {
-                instrumentAmbientSound = true
-            }
-            170 -> {
-                cullY = buffer.readSmart()
-            }
-            171 -> {
-                cullXZ = buffer.readSmart()
-            }
+            164 -> anInt2964 = buffer.readUnsignedShort()
+            165 -> anInt2963 = buffer.readUnsignedShort()
+            166 -> anInt3018 = buffer.readUnsignedShort()
+            167 -> anInt2983 = buffer.readShort()
+            168 -> aBoolean2961 = true
+            169 -> aBoolean2993 = true
+            170 -> anInt3032 = buffer.readSmart()
+            171 -> anInt2962 = buffer.readSmart()
             173 -> {
-                ambientSoundMaxDelay = buffer.readUnsignedShort()
-                ambientSoundMinDelay = buffer.readUnsignedShort()
+                anInt3050 = buffer.readShort()
+                anInt3020 = buffer.readShort()
             }
-            177 -> {
-                transformsFlag = true
-            }
-            178 -> {
-                ambientSoundMaxHearDistance = buffer.readUnsignedByte()
-            }
-            186 -> {
-                // Unknown opcode - skip byte
-                buffer.readUnsignedByte()
-            }
-            188 -> {
-                // Empty/flag opcode - nothing to read
-            }
-            189 -> {
-                dynamicTint = true
-            }
-            in 190..195 -> {
-                // Unknown opcodes - just skip the short
-                buffer.readUnsignedShort()
-            }
-            196, 197 -> {
-                // Unknown opcodes - just skip the byte
-                buffer.readUnsignedByte()
-            }
-            198, 199 -> {
-                // Empty/flag opcodes - nothing to read
-            }
-            201 -> {
-                // Unknown opcode - skip 6 smarts
-                buffer.readSmart()
-                buffer.readSmart()
-                buffer.readSmart()
-                buffer.readSmart()
-                buffer.readSmart()
-                buffer.readSmart()
-            }
-            249 -> readParameters(buffer, parameters)
+            177 -> aBoolean2992 = true
+            178 -> anInt2975 = buffer.readUnsignedByte()
+            189 -> dynamicTint = true
+            249 -> readParameters(buffer)
             else -> error("Unhandled object definition opcode: $opcode for def $id")
-        }
-    }
-
-    private fun skipReadModelIds(buffer: Reader) {
-        val length = buffer.readUnsignedByte()
-        for (i in 0 until length) {
-            buffer.skip(1)  // Skip type
-            val modelCount = buffer.readUnsignedByte()
-            for (j in 0 until modelCount) {
-                buffer.readBigSmart()  // Skip model ID
-            }
         }
     }
 
@@ -348,7 +187,8 @@ open class ObjectDecoder(
             val length = buffer.readUnsignedByte()
             for (i in 0 until length) {
                 buffer.skip(1)
-                buffer.skip(buffer.readUnsignedByte() * 2)
+                val amount = buffer.readUnsignedByte()
+                buffer.skip(amount * 2)
             }
         }
     }

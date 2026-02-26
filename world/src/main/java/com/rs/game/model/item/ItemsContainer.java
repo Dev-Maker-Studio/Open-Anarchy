@@ -16,7 +16,7 @@
 //
 package com.rs.game.model.item;
 
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 import java.util.ArrayList;
 import java.util.Arrays;

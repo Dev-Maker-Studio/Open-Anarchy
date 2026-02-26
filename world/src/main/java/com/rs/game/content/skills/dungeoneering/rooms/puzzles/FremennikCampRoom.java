@@ -25,9 +25,9 @@ import com.rs.game.content.skills.smithing.Smithing;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
 
 public class FremennikCampRoom extends PuzzleRoom {
 

@@ -5,7 +5,7 @@ import com.rs.game.World
 import com.rs.game.content.dnds.penguins.PenguinServices
 import com.rs.game.content.dnds.penguins.Penguins
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.game.Rights
+import org.darkan.core.model.Rights
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.utils.Ticks
 import java.text.SimpleDateFormat

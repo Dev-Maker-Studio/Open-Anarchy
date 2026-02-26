@@ -29,7 +29,7 @@ import com.rs.game.content.quests.RuneMysteries;
 import com.rs.game.content.quests.dragonslayer.DragonSlayer;
 import com.rs.game.content.world.areas.dungeons.UndergroundDungeonController;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.*;
 import com.rs.utils.shop.ShopsHandler;
@@ -144,13 +144,13 @@ public class Lumbridge {
 
 	public static ObjectClickHandler handleRFDChest = new ObjectClickHandler(new Object[] { 12308 }, e -> {
 		switch (e.getOpNum()) {
-			case OBJECT_OP1:
+			case 1:
 				e.getPlayer().getBank().open();
 				break;
-			case OBJECT_OP2:
+			case 2:
 				ShopsHandler.openShop(e.getPlayer(), "culinaromancer_food_10");
 				break;
-			case OBJECT_OP3:
+			case 3:
 				ShopsHandler.openShop(e.getPlayer(), "culinaromancer_equipment_10");
 				break;
 			default:

@@ -17,18 +17,18 @@
 package com.rs.game.model.entity.player.managers;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.game.World;
 import com.rs.game.model.entity.ForceTalk;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Rights;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import kotlin.Pair;
@@ -596,7 +596,7 @@ public final class EmotesManager {
 						player.sendMessage("Dont annoy other players!");
 						return;
 					}
-					int size = NPCDefinitions.getDefs(1224).size;
+					int size = NPCDefinitions.getDefs(1224).getSize();
 					Tile spawnTile = Tile.of(Tile.of(player.getX() + 1, player.getY(), player.getPlane()));
 					if (!World.floorAndWallsFree(spawnTile, size))
 						spawnTile = player.getNearestTeleTile(size);

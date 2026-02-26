@@ -16,8 +16,8 @@
 //
 package com.rs.plugin.events;
 
-import com.rs.cache.loaders.NPCDefinitions;
-import com.rs.lib.game.Tile;
+import org.darkan.core.cache.NPCDefinitions;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.handlers.NPCInstanceHandler;
 import com.rs.plugin.handlers.PluginHandler;
 

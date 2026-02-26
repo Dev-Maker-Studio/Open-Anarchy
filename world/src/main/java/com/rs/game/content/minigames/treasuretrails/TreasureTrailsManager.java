@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.minigames.treasuretrails;
 
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.World;
@@ -28,10 +28,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.EmotesManager.Emote;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.utils.DropSets;
@@ -486,7 +486,7 @@ public class TreasureTrailsManager {
 				player.getInventory().addItemDrop(item);
 			else {
 				if (item.getDefinitions().isNoted())
-					item.setId(item.getDefinitions().certId);
+					item.setId(item.getDefinitions().getCertId());
 				player.getBank().addItem(item, true);
 				banked = true;
 			}

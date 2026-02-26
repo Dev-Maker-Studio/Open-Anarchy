@@ -27,9 +27,18 @@ import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.*;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.Constants;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.WorldObject;
+import org.darkan.core.model.Hit;
+import org.darkan.core.model.HintIcon;
+import org.darkan.core.model.Projectile;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.InterfaceOnNPCHandler;
@@ -109,7 +118,7 @@ public class Magic {
 		else if (e.getComponentId() >= 15 & e.getComponentId() <= 17)
 			e.getPlayer().getCombatDefinitions().setSortSpellBook(e.getComponentId() - 15);
 		else
-			Magic.processNormalSpell(e.getPlayer(), e.getComponentId(), e.getPacket());
+			Magic.processNormalSpell(e.getPlayer(), e.getComponentId(), e.getOpNum());
 	});
 
 	public static ButtonClickHandler handleAncientSpellbookButtons = new ButtonClickHandler(193, e -> {
@@ -122,7 +131,7 @@ public class Magic {
 		else if (e.getComponentId() == 18)
 			e.getPlayer().getCombatDefinitions().switchDefensiveCasting();
 		else
-			Magic.processAncientSpell(e.getPlayer(), e.getComponentId(), e.getPacket());
+			Magic.processAncientSpell(e.getPlayer(), e.getComponentId(), e.getOpNum());
 	});
 
 	public static void setCombatSpell(Player player, CombatSpell spell) {
@@ -132,7 +141,7 @@ public class Magic {
 			checkCombatSpell(player, spell, 0, false);
 	}
 
-	public static void processAncientSpell(Player player, int componentId, ClientPacket packetId) {
+	public static void processAncientSpell(Player player, int componentId, int packetId) {
 		player.stopAll(false);
 		CombatSpell combatSpell = CombatSpell.forId(193, componentId);
 		if (combatSpell != null) {
@@ -170,7 +179,7 @@ public class Magic {
 		}
 	}
 
-	public static void processNormalSpell(Player player, int componentId, ClientPacket packetId) {
+	public static void processNormalSpell(Player player, int componentId, int packetId) {
 		player.stopAll(false);
 		CombatSpell combatSpell = CombatSpell.forId(192, componentId);
 		if (combatSpell != null) {
@@ -249,10 +258,10 @@ public class Magic {
 		}
 	}
 
-	public static void processDungSpell(Player player, int componentId, ClientPacket packetId) {
+	public static void processDungSpell(Player player, int componentId, int packetId) {
 		if (player.hasRights(Rights.DEVELOPER))
 			player.sendMessage("Dungeoneering spell: " + componentId + ", " + packetId);
-		if (packetId == ClientPacket.IF_OP6) {
+		if (packetId == 6) {
 			CombatSpell combatSpell = CombatSpell.forId(950, componentId);
 			if (combatSpell != null)
 				setCombatSpell(player, combatSpell);

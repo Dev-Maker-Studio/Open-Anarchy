@@ -16,8 +16,8 @@
 //
 package com.rs.game.content.skills.agility;
 
-import com.rs.engine.pathfinder.Direction;
-import com.rs.lib.game.Tile;
+import org.darkan.core.map.pathfinder.Direction;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 

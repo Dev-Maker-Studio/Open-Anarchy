@@ -1,12 +1,12 @@
 package com.rs.game.content.quests.naturespirit
 
-import com.rs.cache.loaders.ItemDefinitions
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.cache.ItemDefinitions
+import org.darkan.core.model.ObjectShape
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.util.Utils
+import org.darkan.core.model.SpotAnim
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onObjectClick
@@ -55,7 +55,7 @@ fun mapBlooming() {
 
     onObjectClick(*BloomResource.entries.flatMap { it.objectIds.values.toList() }.toTypedArray()) { e ->
         val product = BloomResource.forPickableObject(e.objectId)!!
-        val productName = ItemDefinitions.getDefs(product.itemId).getName().lowercase(Locale.getDefault())
+        val productName = ItemDefinitions.getDefs(product.itemId).name.lowercase(Locale.getDefault())
 
         e.player.anim(3659)
         e.player.lock(1)
@@ -63,7 +63,7 @@ fun mapBlooming() {
             if (e.player.inventory.addItemDrop(product.itemId, 1)) {
                 e.player.sendMessage("You pick a $productName.")
                 e.player.incrementCount("$productName bloomed", 1)
-                e.getObj().setId(e.getObj().originalId)
+                e.getObj().changeId(e.getObj().originalId)
             }
         }
     }
@@ -92,7 +92,7 @@ fun castBloom(player: Player, sickle: Boolean) {
     for (x in -1..1) for (y in -1..1) {
         if (x == 0 && y == 0) continue
         World.sendSpotAnim(player.transform(x, y), SpotAnim(263))
-        val obj = World.getObject(player.transform(x, y), ObjectType.SCENERY_INTERACT) ?: continue
+        val obj = World.getObject(player.transform(x, y), ObjectShape.SCENERY_INTERACT) ?: continue
         val resource = BloomResource.forEmptyObject(obj.id) ?: continue
         if (!sickle && resource != BloomResource.FUNGI_ON_LOG) continue
         resource.objectIds[obj.id]?.let { obj.setIdTemporary(it, Ticks.fromSeconds(30)) }

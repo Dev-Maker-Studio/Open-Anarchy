@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.World.DropMethod;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants;
@@ -34,9 +34,18 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.*;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.WorldObject;
+import org.darkan.core.model.Hit;
+import org.darkan.core.model.HintIcon;
+import org.darkan.core.model.Projectile;
+import org.darkan.core.Utils;
 import kotlin.Pair;
 
 import java.util.LinkedList;
@@ -84,7 +93,7 @@ public class FishingFerretRoom extends PuzzleRoom {
 					addWalkSteps(tile.getX(), tile.getY(), -1, false);
 				}
 			} else {// Should be fine won't be checked often anyways
-				GameObject o = World.getObjectWithType(getTile(), ObjectType.GROUND_DECORATION);
+				GameObject o = World.getObjectWithType(getTile(), ObjectShape.GROUND_DECORATION);
 				if (o != null && o.getDefinitions().getName().equals("Hole")) {
 					setNextAnimation(new Animation(13797));
 					WorldTasks.schedule(new Task() {
@@ -118,7 +127,7 @@ public class FishingFerretRoom extends PuzzleRoom {
 		int[][] possibleCorners = null;
 		outer: for (int x = 0; x < 15; x++)
 			for (int y = 0; y < 15; y++) {
-				GameObject object = manager.getObjectWithType(reference, ObjectType.GROUND_DECORATION, x, y);
+				GameObject object = manager.getObjectWithType(reference, ObjectShape.GROUND_DECORATION, x, y);
 				if (object != null && (object.getDefinitions().getName().equals("Tile") || object.getDefinitions().getName().equals("Hole"))) {
 					possibleCorners = new int[][]
 							{
@@ -135,8 +144,8 @@ public class FishingFerretRoom extends PuzzleRoom {
 		Ferret puzzleNPC = new Ferret(FERRET_ID, manager.getRotatedTile(reference, cornerChunks[invertChunks ? 0 : 2], cornerChunks[invertChunks ? 1 : 3]), manager);
 		psuedoFishingSpot = new DungeonFishSpot(1957, manager.getRotatedTile(reference, 7, 13), manager, Fish.VILE_FISH);
 		DungeonConstants.FloorType floorType = manager.getParty().getFloorType();
-		World.spawnObject(new GameObject(PRESSURE_PLATE[floorType.ordinal()], ObjectType.GROUND_DECORATION, 0, pressurePlate));
-		World.spawnObject(new GameObject(EMPTY_PLATE[floorType.ordinal()], ObjectType.GROUND_DECORATION, 0, puzzleNPC.getTile()));
+		World.spawnObject(new GameObject(PRESSURE_PLATE[floorType.ordinal()], ObjectShape.GROUND_DECORATION, 0, pressurePlate));
+		World.spawnObject(new GameObject(EMPTY_PLATE[floorType.ordinal()], ObjectShape.GROUND_DECORATION, 0, puzzleNPC.getTile()));
 	}
 
 	@Override

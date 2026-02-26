@@ -1,7 +1,7 @@
 package com.rs.game.content.world.areas.waterbirth_island;
 
 import com.rs.game.World;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.Ticks;

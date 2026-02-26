@@ -18,9 +18,9 @@ package com.rs.game.content.skills.thieving;
 
 import com.rs.game.content.items.GlovesOfSilenceKt;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.Utils;
 import com.rs.utils.DropSets;
 import com.rs.utils.drop.DropSet;
 import com.rs.utils.drop.DropTable;

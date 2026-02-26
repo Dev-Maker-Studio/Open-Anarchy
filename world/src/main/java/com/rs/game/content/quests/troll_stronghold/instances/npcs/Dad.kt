@@ -14,8 +14,8 @@ import com.rs.game.model.entity.npc.combat.CombatScript
 import com.rs.game.model.entity.npc.combat.CombatScriptsHandler
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.npcCombat
 import kotlin.math.sign
@@ -70,7 +70,7 @@ class Dad(id: Int, tile: Tile) : NPC(id, tile) {
                             combat.target = target
                             target.setForceMultiArea(true)
                             setForceMultiArea(true)
-                            val spectators = World.getNPCsInChunkRange(target.chunkId, 2).filter { it.id in SPECTATORS }
+                            val spectators = World.getNPCsInChunkRange(target.getChunkId(), 2).filter { it.id in SPECTATORS }
                             spectators.forEach { spectator ->
                                 spectator.combatTarget = target
                                 spectator.setForceMultiArea(true)

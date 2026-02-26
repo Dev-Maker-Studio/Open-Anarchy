@@ -6,7 +6,7 @@ import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.dialogue.Options;
 import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
+import org.darkan.core.Constants;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 

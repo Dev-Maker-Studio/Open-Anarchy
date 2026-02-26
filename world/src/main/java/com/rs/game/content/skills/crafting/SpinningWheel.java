@@ -17,9 +17,9 @@
 package com.rs.game.content.skills.crafting;
 
 import com.rs.game.content.skills.util.CreateActionD;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -34,7 +34,7 @@ public class SpinningWheel {
 	private static final int[] anims = { 883, 883, 883, 883, 883 };
 
 	public static ObjectClickHandler onClick = new ObjectClickHandler(new Object[] { "Spinning wheel" }, e -> {
-		if (e.getOpNum() == ClientPacket.OBJECT_OP2)
+		if (e.getOpNum() == 2)
 			e.getPlayer().startConversation(new CreateActionD(e.getPlayer(), materials, products, xp, anims, reqs, Constants.CRAFTING, 2));
 	});
 

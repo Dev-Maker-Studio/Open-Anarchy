@@ -18,7 +18,7 @@ package com.rs.game.content.minigames.fightpits;
 
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class FightPitsViewingOrb extends PlayerAction {
 

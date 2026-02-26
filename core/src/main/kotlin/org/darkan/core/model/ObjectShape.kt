@@ -31,6 +31,7 @@ enum class ObjectShape(val id: Int, val slot: Int) {
     companion object {
         private val map = entries.associateBy { it.id }
 
+        @JvmStatic
         fun forId(type: Int): ObjectShape? = map[type]
     }
 }

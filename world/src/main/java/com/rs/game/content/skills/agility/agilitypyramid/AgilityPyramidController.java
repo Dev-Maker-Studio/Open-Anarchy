@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.agility.agilitypyramid;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
@@ -33,10 +33,10 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 
 public class AgilityPyramidController extends Controller {
@@ -242,9 +242,9 @@ public class AgilityPyramidController extends Controller {
 		else if (object.getDefinitions(player).getFirstOption().equals("Cross") && object.getDefinitions(player).getName().equals("Ledge"))
 			shimmySideways(object);
 		else if (object.getDefinitions(player).getFirstOption().equals("Cross") && object.getDefinitions(player).getName().equals("Gap")) {
-			if (object.getType() == ObjectType.STRAIGHT_INSIDE_WALL_DEC) {
+			if (object.getType() == ObjectShape.STRAIGHT_INSIDE_WALL_DEC) {
 				for (GameObject surr : World.getSurroundingBaseObjects(object, 2))
-					if (surr.getDefinitions(player).getFirstOption() != null && surr.getDefinitions(player).getFirstOption().equals("Cross") && surr.getDefinitions(player).getName().equals("Gap") && surr.getType() == ObjectType.SCENERY_INTERACT)
+					if (surr.getDefinitions(player).getFirstOption() != null && surr.getDefinitions(player).getFirstOption().equals("Cross") && surr.getDefinitions(player).getName().equals("Gap") && surr.getType() == ObjectShape.SCENERY_INTERACT)
 						shimmyHandholds(new GameObject(surr.getId(), surr.getType(), surr.getRotation(), surr.getX(), surr.getY(), surr.getPlane()));
 			} else
 				shimmyHandholds(object);

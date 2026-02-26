@@ -18,8 +18,8 @@ package com.rs.plugin.events;
 
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 import com.rs.plugin.handlers.PluginHandler;
 
@@ -103,7 +103,7 @@ public class ItemOnObjectEvent implements PluginEvent {
 			return null;
 		List<ItemOnObjectHandler> methods = tileMaps.get(getObject().getTile().getTileHash());
 		if (methods == null)
-			methods = tileMaps.get(-getObject().getType().id);
+			methods = tileMaps.get(-getObject().getType().getId());
 		if (methods == null)
 			methods = tileMaps.get(0);
 		for (ItemOnObjectHandler method : methods) {

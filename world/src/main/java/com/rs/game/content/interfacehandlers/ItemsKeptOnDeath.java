@@ -16,12 +16,12 @@
 //
 package com.rs.game.content.interfacehandlers;
 
-import com.rs.cache.loaders.EnumDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
 import com.rs.game.content.death.DeathOfficeController;
 import com.rs.game.content.death.GraveStone;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 

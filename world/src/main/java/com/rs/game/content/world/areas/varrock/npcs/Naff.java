@@ -1,7 +1,7 @@
 package com.rs.game.content.world.areas.varrock.npcs;
 
 import com.rs.game.content.achievements.AchievementDef;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 

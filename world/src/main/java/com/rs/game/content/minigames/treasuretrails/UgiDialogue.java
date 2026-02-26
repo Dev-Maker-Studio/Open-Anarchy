@@ -19,7 +19,7 @@ package com.rs.game.content.minigames.treasuretrails;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 

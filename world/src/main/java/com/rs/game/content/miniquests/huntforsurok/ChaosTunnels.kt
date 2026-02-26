@@ -13,7 +13,7 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 import com.rs.plugin.kts.onObjectClick
@@ -271,7 +271,7 @@ enum class PortalPair(val tile1: Tile, val tile2: Tile, private val surokLocked:
                 endTile = Tile.of(3262, 5552, 0)
                 fadeInAndWait()
                 player.setMiniquestStage(Miniquest.HUNT_FOR_SUROK, 3)
-                dynamicRegion(if (tile1.tileHash == fromPortal.tile.tileHash) tile2 else tile1, 405, 690, 5, 5)
+                dynamicRegion(if (tile1.getTileHash() == fromPortal.tile.getTileHash()) tile2 else tile1, 405, 690, 5, 5)
                 val surok = npcCreate(7002, 13, 16, 0)
                 val fireGiant1 = npcCreate(110, 10, 16, 0)
                 val fireGiant2 = npcCreate(110, 15, 17, 0)
@@ -318,7 +318,7 @@ enum class PortalPair(val tile1: Tile, val tile2: Tile, private val surokLocked:
                 endTile = Tile.of(3191, 5495, 0)
                 fadeInAndWait()
                 player.setMiniquestStage(Miniquest.HUNT_FOR_SUROK, 4)
-                dynamicRegion(if (tile1.tileHash == fromPortal.tile.tileHash) tile2 else tile1, 396, 684, 5, 5)
+                dynamicRegion(if (tile1.getTileHash() == fromPortal.tile.getTileHash()) tile2 else tile1, 396, 684, 5, 5)
                 val surok = npcCreate(7002, 15, 20, 0)
                 entityTeleTo(player, 23, 23)
                 surok.faceTile(tileFromLocal(19, 22))
@@ -365,7 +365,7 @@ enum class PortalPair(val tile1: Tile, val tile2: Tile, private val surokLocked:
                 player.sendMessage("You have already killed Bork today.")
                 return
             }
-            val entering = tile1.tileHash == fromPortal.tile.tileHash
+            val entering = tile1.getTileHash() == fromPortal.tile.getTileHash()
             if (entering) player.controllerManager.startController(BorkController(player.getMiniquestStage(Miniquest.HUNT_FOR_SUROK) == 4))
             return
         }
@@ -378,7 +378,7 @@ enum class PortalPair(val tile1: Tile, val tile2: Tile, private val surokLocked:
             return
         }
         player.spotAnim(110, 10, 96)
-        player.useStairs(-1, if (tile1.tileHash == fromPortal.tile.tileHash) tile2 else tile1, 2, 3)
+        player.useStairs(-1, if (tile1.getTileHash() == fromPortal.tile.getTileHash()) tile2 else tile1, 2, 3)
     }
 
     companion object {
@@ -386,13 +386,13 @@ enum class PortalPair(val tile1: Tile, val tile2: Tile, private val surokLocked:
 
         init {
             for (p in entries) {
-                MAPPING[p.tile1.tileHash] = p
-                MAPPING[p.tile2.tileHash] = p
+                MAPPING[p.tile1.getTileHash()] = p
+                MAPPING[p.tile2.getTileHash()] = p
             }
         }
 
         fun forTile(tile: Tile): PortalPair? {
-            return MAPPING[tile.tileHash]
+            return MAPPING[tile.getTileHash()]
         }
     }
 }

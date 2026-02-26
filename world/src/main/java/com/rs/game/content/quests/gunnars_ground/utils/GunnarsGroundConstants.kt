@@ -1,6 +1,6 @@
 package com.rs.game.content.quests.gunnars_ground.utils
 
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 
 // Quest Stages
 const val STAGE_UNSTARTED = 0

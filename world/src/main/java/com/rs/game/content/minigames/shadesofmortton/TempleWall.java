@@ -18,7 +18,7 @@ package com.rs.game.content.minigames.shadesofmortton;
 
 import com.rs.game.World;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 
 public class TempleWall extends GameObject {
 
@@ -27,7 +27,7 @@ public class TempleWall extends GameObject {
 
 	public TempleWall(GameObject object) {
 		super(object);
-		baseId = id;
+		baseId = getId();
 		buildProgress = 5;
 		ShadesOfMortton.addWall(this);
 	}

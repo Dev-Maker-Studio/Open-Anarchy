@@ -21,9 +21,9 @@ import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.OwnedNPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 import java.util.ArrayList;
 import java.util.List;

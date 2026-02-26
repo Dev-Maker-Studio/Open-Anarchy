@@ -9,8 +9,8 @@ import com.rs.game.content.skills.herblore.HerbCleaning.Herbs
 import com.rs.game.content.skills.magic.Rune
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.utils.Ticks
@@ -148,7 +148,7 @@ fun letItRainSeeds(player: Player) {
         ProduceType.Curry.seedId,
         ProduceType.Orange.seedId
     )
-    val baseTile = Tile.of(player.tile)
+    val baseTile = player.tile
     val tilesAround = (-2..2).flatMap { dx ->
         (-2..2).map { dy -> baseTile.transform(dx, dy) }
     }
@@ -232,7 +232,7 @@ fun letItRainAwesomeSeeds(player: Player) {
         SeedDrop(ProduceType.Papaya.seedId, 2),
         SeedDrop(ProduceType.Willow.seedId, 4)
     )
-    val baseTile = Tile.of(player.tile)
+    val baseTile = player.tile
     val tilesAround = (-2..2).flatMap { dx ->
         (-2..2).map { dy -> baseTile.transform(dx, dy) }
     }

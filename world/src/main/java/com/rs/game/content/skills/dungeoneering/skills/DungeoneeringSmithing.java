@@ -19,11 +19,11 @@ package com.rs.game.content.skills.dungeoneering.skills;
 import com.rs.game.content.skills.util.CreateActionD;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+
+import org.darkan.core.Utils;
 
 public class DungeoneeringSmithing extends PlayerAction {
 
@@ -64,7 +64,7 @@ public class DungeoneeringSmithing extends PlayerAction {
 		return -1;
 	}
 
-	public static void handleButtons(Player player, ClientPacket packetId, int componentId) {
+	public static void handleButtons(Player player, int packetId, int componentId) {
 		if (player.getTempAttribs().getI("dungBar") == -1) {
 			player.closeInterfaces();
 			return;
@@ -77,11 +77,11 @@ public class DungeoneeringSmithing extends PlayerAction {
 		int index = getIndex(componentId);
 		if (index == -1 || index >= prods.length || prods[index] == null)
 			return;
-		if (packetId == ClientPacket.IF_OP1)
+		if (packetId == 1)
 			player.getActionManager().setAction(new DungeoneeringSmithing(prods[index], 1));
-		else if (packetId == ClientPacket.IF_OP2)
+		else if (packetId == 2)
 			player.getActionManager().setAction(new DungeoneeringSmithing(prods[index], 5));
-		else if (packetId == ClientPacket.IF_OP3) {
+		else if (packetId == 3) {
 			player.sendInputInteger("How many would you like to make?", number -> player.getActionManager().setAction(new DungeoneeringSmithing(prods[index], number)));
 		} else
 			player.getActionManager().setAction(new DungeoneeringSmithing(prods[index], 28));

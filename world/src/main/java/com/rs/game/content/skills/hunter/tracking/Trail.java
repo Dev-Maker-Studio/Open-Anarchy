@@ -17,7 +17,7 @@
 
 package com.rs.game.content.skills.hunter.tracking;
 
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 import java.util.ArrayList;
 import java.util.List;

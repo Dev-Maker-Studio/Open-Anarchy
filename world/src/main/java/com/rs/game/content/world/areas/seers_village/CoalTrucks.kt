@@ -4,7 +4,7 @@ import com.rs.game.content.achievements.AchievementDef
 import com.rs.game.content.achievements.SetReward
 import com.rs.game.content.world.areas.seers_village.npcs.StankersD
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onLogin

@@ -17,8 +17,8 @@
 package com.rs.plugin.events;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.GroundItem;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.handlers.PickupItemHandler;
 import com.rs.plugin.handlers.PluginHandler;
 

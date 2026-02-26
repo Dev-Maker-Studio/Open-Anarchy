@@ -9,7 +9,7 @@ import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.joml.Vector4f
 import world.gregs.voidps.cache.definition.data.MapObject
-import world.gregs.voidps.cache.definition.data.ObjectDefinitionFull
+import world.gregs.voidps.cache.definition.data.ObjectDefinition
 
 /**
  * Handles tile selection via raycasting from mouse position to terrain.
@@ -38,7 +38,7 @@ class TilePicker {
      */
     data class TileObject(
         val mapObject: MapObject,
-        val definition: ObjectDefinitionFull,
+        val definition: ObjectDefinition,
         val modelIds: List<Int>,
         val textureIds: Set<Int>  // Unique texture IDs used by all models
     )

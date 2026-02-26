@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.prayer;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.World;
 import com.rs.game.content.combat.CombatDefinitions;
@@ -24,9 +24,9 @@ import com.rs.game.content.skills.prayer.Burying.Bone;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;

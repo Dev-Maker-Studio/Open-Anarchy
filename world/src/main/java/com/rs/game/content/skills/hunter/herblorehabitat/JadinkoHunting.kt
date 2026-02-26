@@ -6,9 +6,9 @@ import com.rs.game.content.minigames.herblorehabitat.JadinkoType.Companion.getAl
 import com.rs.game.content.minigames.herblorehabitat.JadinkoType.Companion.isTrackerJadinko
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Tile
-import com.rs.lib.net.packets.encoders.HintTrail
+import org.darkan.core.model.Animation
+import world.gregs.voidps.type.Tile
+// TODO: net.packets.encoders.HintTrail
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import java.util.*
@@ -67,13 +67,15 @@ fun handleJadinkoClicks() {
                 player.sendMessage("You find fresh tracks leading onward...")
             } else {
                 player.sendMessage("You have successfully tracked the Jadinko! Check the bushes nearby.")
-                player.session.writeToQueue(HintTrail(null, -1, null, null, -1))
+                // TODO: migrate to modern HintTrail packet (signature changed in core)
+                // player.session.writeToQueue(HintTrail(null, -1, null, null, -1))
                 player.tempAttribs.setB("bushReady", true)
             }
             return@onObjectClick
         }
         if (current == null) {
-            player.session.writeToQueue(HintTrail(null, -1, null, null, -1))
+            // TODO: migrate to modern HintTrail packet (signature changed in core)
+            // player.session.writeToQueue(HintTrail(null, -1, null, null, -1))
             player.tempAttribs.removeO<Any>("currentTrail")
             player.tempAttribs.removeO<Tile>("lastAdvancedTrack")
             player.tempAttribs.removeO<Tile>("lastCheckedTrack")
@@ -131,7 +133,8 @@ fun handleJadinkoClicks() {
                 }
                 player.skills.addXp(Skills.HUNTER, xp)
                 player.captureJadinko(type)
-                player.session.writeToQueue(HintTrail(null, -1, null, null, -1))
+                // TODO: migrate to modern HintTrail packet (signature changed in core)
+                // player.session.writeToQueue(HintTrail(null, -1, null, null, -1))
                 player.tempAttribs.removeO<Any>("currentTrail")
             }
         }
@@ -147,14 +150,7 @@ fun startTrackingTrail(player: Player, burrow: JadinkoBurrow) {
     player.tempAttribs.removeB("bushReady")
     val next = burrow.getNextTargetObject() ?: return
     val nextTile = next.tile
-    player.session.writeToQueue(
-        HintTrail(
-            player.tile,
-            HUNTER_TRAIL_MARKER,
-            intArrayOf(nextTile.x().toInt()),
-            intArrayOf(nextTile.y().toInt()),
-            1
-        )
-    )
+    // TODO: migrate to modern HintTrail packet (signature changed in core)
+    // player.session.writeToQueue(HintTrail(player.tile, HUNTER_TRAIL_MARKER, intArrayOf(nextTile.x), intArrayOf(nextTile.y), 1))
 }
 

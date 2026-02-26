@@ -21,7 +21,7 @@ import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.combat.CombatScript;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 
 import java.util.Random;
 

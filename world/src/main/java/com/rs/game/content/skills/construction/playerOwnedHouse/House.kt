@@ -1,8 +1,8 @@
 package com.rs.game.content.skills.construction.playerOwnedHouse
 
-import com.rs.cache.loaders.ObjectDefinitions
-import com.rs.cache.loaders.ObjectType
-import com.rs.cache.loaders.interfaces.IFEvents
+import org.darkan.core.cache.ObjectDefinitions
+import org.darkan.core.model.ObjectShape
+import org.darkan.core.model.IFEvents
 import com.rs.engine.dialogue.Dialogue
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.dialogue.statements.Statement
@@ -18,17 +18,20 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.Constants
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Item
-import com.rs.lib.game.Rights
-import com.rs.lib.game.Tile
-import com.rs.lib.util.MapUtils
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.model.Animation
+import org.darkan.core.model.Item
+import org.darkan.core.model.Rights
+import world.gregs.voidps.type.Tile
+import org.darkan.core.util.MapUtils
+import org.darkan.core.util.Structure
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.PluginEventHandler
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
+import com.rs.utils.chunkX
+import com.rs.utils.chunkY
 import kotlin.math.pow
 
 @PluginEventHandler
@@ -135,7 +138,7 @@ class House {
     fun getRoomFromObject(`object`: GameObject): RoomReference? {
         val roomX = `object`.tile.chunkX - instance!!.baseChunkX
         val roomY = `object`.tile.chunkY - instance!!.baseChunkY
-        return getRoom(roomX, roomY, `object`.plane)
+        return getRoom(roomX, roomY, `object`.level)
     }
 
     /**
@@ -264,7 +267,7 @@ class House {
         val realChunkY = reference.room.chunkY
         val chunk: Chunk = ChunkManager.getChunk(
             MapUtils.encode(
-                MapUtils.Structure.CHUNK,
+                Structure.CHUNK,
                 reference.room.chunkX,
                 reference.room.chunkY,
                 look.toInt() and 0x3
@@ -275,7 +278,7 @@ class House {
                 (0..7).forEach { y ->
                     val objectR = GameObject(
                         -1,
-                        ObjectType.SCENERY_INTERACT,
+                        ObjectShape.SCENERY_INTERACT,
                         reference.rotation.toInt(),
                         boundX + x,
                         boundY + y,
@@ -292,7 +295,7 @@ class House {
                 if (objects != null) for (`object` in objects) {
                     @Suppress("SENSELESS_COMPARISON")
                     if (`object` == null) continue
-                    val defs: ObjectDefinitions = `object`.definitions
+                    val defs = `object`.definitions
                     if (reference.plane.toInt() == 0 || defs.containsOption(4, "Build")) {
                         val objectR = GameObject(`object`)
                         val coords: IntArray = InstancedChunk.transform(
@@ -556,10 +559,10 @@ class House {
                                 if (houseObject != null && isRelevantForDynamicId(houseObject)) {
                                     val dynamicId = oref.finalId
                                     val actualId = if (dynamicId > 0 && dynamicId != targetId) dynamicId else targetId
-                                    objectR.setId(actualId)
+                                    objectR.changeId(actualId)
                                 }
                                 else {
-                                    objectR.setId(oref.getId(slot))
+                                    objectR.changeId(oref.getId(slot))
                                 }
                                 World.spawnObject(objectR)
                             }
@@ -576,8 +579,8 @@ class House {
     fun openRoomCreationMenu(door: GameObject) {
         var roomX = player?.chunkX?.minus(instance!!.baseChunkX) // current room
         var roomY = player?.chunkY?.minus(instance!!.baseChunkY) // current room
-        val xInChunk = player?.xInChunk
-        val yInChunk = player?.yInChunk
+        val xInChunk = player?.getXInChunk()
+        val yInChunk = player?.getYInChunk()
         if (roomX != null) {
             if (xInChunk == 7) roomX += 1
             else if (xInChunk == 0) roomX -= 1
@@ -588,7 +591,7 @@ class House {
         }
         if (roomX != null) {
             if (roomY != null) {
-                openRoomCreationMenu(roomX, roomY, door.plane)
+                openRoomCreationMenu(roomX, roomY, door.level)
             }
         }
     }
@@ -688,7 +691,7 @@ class House {
         val ref = room.getObject(`object`, player)
         if (ref != null) {
             if (ref.build.name.contains("STAIRCASE", ignoreCase = true)) {
-                if (`object`.plane != 1) {
+                if (`object`.level != 1) {
                     val above = getRoom(room.x(), room.y(), 2)
                     val below = getRoom(room.x(), room.y(), 0)
                     if ((above != null && above.staircaseSlot != -1) || (below != null && below.staircaseSlot != -1)) {
@@ -1216,7 +1219,7 @@ class House {
 
         } else if (obj.id == HouseConstants.WINDOW_SPACE_ID) {
             val windowObj = GameObject(obj)
-            windowObj.setId(HouseConstants.WINDOW_IDS[look.toInt()])
+            windowObj.changeId(HouseConstants.WINDOW_IDS[look.toInt()])
             World.spawnObject(windowObj)
 
         } else if (isDoorSpace(obj)) {
@@ -1228,12 +1231,12 @@ class House {
      * Processes door objects, replacing them with wall objects if necessary.
      ****/
     private fun handleDoorObject(obj: GameObject) {
-        if (!buildMode && obj.plane == 2) {
+        if (!buildMode && obj.level == 2) {
             val room = getRoomFromObject(obj) ?: return
             @Suppress("SENSELESS_COMPARISON")
             if (room == null) {
                 val objectR = GameObject(obj)
-                objectR.setId(HouseConstants.WALL_IDS[look.toInt()])
+                objectR.changeId(HouseConstants.WALL_IDS[look.toInt()])
                 World.spawnObject(objectR)
             }
         }
@@ -1253,9 +1256,9 @@ class House {
             } else {
                 if (isRelevantForDynamicId(houseObject)) {
                     val dynamicId = getDynamicObjectId(player, houseObject)
-                    objectR.setId(dynamicId)
+                    objectR.changeId(dynamicId)
                 } else {
-                    objectR.setId(o.getId(slot))
+                    objectR.changeId(o.getId(slot))
                 }
                 World.spawnObject(objectR)
                 if (houseNPCs?.spawnGuardNPCs(slot, o, obj) == true) {
@@ -1400,7 +1403,7 @@ class House {
     private fun getLocalRoomReference(`object`: GameObject): RoomReference? {
         val localX = `object`.tile.chunkX - (instance?.baseChunkX ?: return null)
         val localY = `object`.tile.chunkY - (instance?.baseChunkY ?: return null)
-        return getRoom(localX, localY, `object`.plane)
+        return getRoom(localX, localY, `object`.level)
     }
     private fun hasWaterCan(): Boolean {
         for (id in 5333..5340) if (player?.inventory!!.containsOneItem(id)) return true
@@ -1679,12 +1682,12 @@ class House {
     private fun releasePlayers(roomX: Int, roomY: Int, vararg trapIds: Int) {
         val x = instance!!.getLocalX(roomX, 3)
         val y = instance!!.getLocalY(roomY, 3)
-        World.removeObject(GameObject(trapIds[0], ObjectType.SCENERY_INTERACT, 1,
+        World.removeObject(GameObject(trapIds[0], ObjectShape.SCENERY_INTERACT, 1,
             player?.plane?.let { Tile.of(x, y, it) }))
         if (trapIds.size > 1) World.removeObject(
             GameObject(
                 trapIds[1],
-                ObjectType.SCENERY_INTERACT,
+                ObjectShape.SCENERY_INTERACT,
                 0,
                 player?.plane?.let { Tile.of(x + 1, y, it) }
             )
@@ -1692,7 +1695,7 @@ class House {
         if (trapIds.size > 2) World.removeObject(
             GameObject(
                 trapIds[2],
-                ObjectType.SCENERY_INTERACT,
+                ObjectShape.SCENERY_INTERACT,
                 2,
                 player?.plane?.let { Tile.of(x, y + 1, it) }
             )
@@ -1700,41 +1703,41 @@ class House {
         if (trapIds.size > 3) World.removeObject(
             GameObject(
                 trapIds[3],
-                ObjectType.SCENERY_INTERACT,
+                ObjectShape.SCENERY_INTERACT,
                 3,
                 player?.plane?.let { Tile.of(x + 1, y + 1, it) }
             )
         )
         player?.plane?.let { Tile.of(x - 1, y + 1, it) }?.let { it ->
-            World.getObjectWithType(it, ObjectType.WALL_STRAIGHT)
+            World.getObjectWithType(it, ObjectShape.WALL_STRAIGHT)
                 ?.let { World.removeObject(it) }
         }
         player?.plane?.let { Tile.of(x - 1, y, it) }?.let { it ->
-            World.getObjectWithType(it, ObjectType.WALL_STRAIGHT)
+            World.getObjectWithType(it, ObjectShape.WALL_STRAIGHT)
                 ?.let { World.removeObject(it) }
         }
         player?.plane?.let { Tile.of(x, y + 2, it) }?.let { it ->
-            World.getObjectWithType(it, ObjectType.WALL_STRAIGHT)
+            World.getObjectWithType(it, ObjectShape.WALL_STRAIGHT)
                 ?.let { World.removeObject(it) }
         }
         player?.plane?.let { Tile.of(x + 1, y + 2, it) }?.let { it ->
-            World.getObjectWithType(it, ObjectType.WALL_STRAIGHT)
+            World.getObjectWithType(it, ObjectShape.WALL_STRAIGHT)
                 ?.let { World.removeObject(it) }
         }
         player?.plane?.let { Tile.of(x, y - 1, it) }?.let { it ->
-            World.getObjectWithType(it, ObjectType.WALL_STRAIGHT)
+            World.getObjectWithType(it, ObjectShape.WALL_STRAIGHT)
                 ?.let { World.removeObject(it) }
         }
         player?.plane?.let { Tile.of(x + 1, y - 1, it) }?.let { it ->
-            World.getObjectWithType(it, ObjectType.WALL_STRAIGHT)
+            World.getObjectWithType(it, ObjectShape.WALL_STRAIGHT)
                 ?.let { World.removeObject(it) }
         }
         player?.plane?.let { Tile.of(x + 2, y, it) }?.let { it ->
-            World.getObjectWithType(it, ObjectType.WALL_STRAIGHT)
+            World.getObjectWithType(it, ObjectShape.WALL_STRAIGHT)
                 ?.let { World.removeObject(it) }
         }
         player?.plane?.let { Tile.of(x + 2, y + 1, it) }?.let { it ->
-            World.getObjectWithType(it, ObjectType.WALL_STRAIGHT)
+            World.getObjectWithType(it, ObjectShape.WALL_STRAIGHT)
                 ?.let { World.removeObject(it) }
         }
         for (p in getTrappedPlayers(x, y)) p.resetWalkSteps()
@@ -1743,12 +1746,12 @@ class House {
     private fun trapPlayers(roomX: Int, roomY: Int, vararg trapIds: Int) {
         val x = instance!!.getLocalX(roomX, 3)
         val y = instance!!.getLocalY(roomY, 3)
-        World.spawnObject(GameObject(trapIds[0], ObjectType.SCENERY_INTERACT, 1,
+        World.spawnObject(GameObject(trapIds[0], ObjectShape.SCENERY_INTERACT, 1,
             player?.plane?.let { Tile.of(x, y, it) }))
         if (trapIds.size > 1) World.spawnObject(
             GameObject(
                 trapIds[1],
-                ObjectType.SCENERY_INTERACT,
+                ObjectShape.SCENERY_INTERACT,
                 0,
                 player?.plane?.let { Tile.of(x + 1, y, it) }
             )
@@ -1756,7 +1759,7 @@ class House {
         if (trapIds.size > 2) World.spawnObject(
             GameObject(
                 trapIds[2],
-                ObjectType.SCENERY_INTERACT,
+                ObjectShape.SCENERY_INTERACT,
                 2,
                 player?.plane?.let { Tile.of(x, y + 1, it) }
             )
@@ -1764,19 +1767,19 @@ class House {
         if (trapIds.size > 3) World.spawnObject(
             GameObject(
                 trapIds[3],
-                ObjectType.SCENERY_INTERACT,
+                ObjectShape.SCENERY_INTERACT,
                 3,
                 player?.plane?.let { Tile.of(x + 1, y + 1, it) }
             )
         )
-        World.spawnObject(GameObject(13150, ObjectType.WALL_STRAIGHT, 2, player?.plane?.let { Tile.of(x - 1, y + 1, it) }))
-        World.spawnObject(GameObject(13150, ObjectType.WALL_STRAIGHT, 2, player?.plane?.let { Tile.of(x - 1, y, it) }))
-        World.spawnObject(GameObject(13150, ObjectType.WALL_STRAIGHT, 3, player?.plane?.let { Tile.of(x, y + 2, it) }))
-        World.spawnObject(GameObject(13150, ObjectType.WALL_STRAIGHT, 3, player?.plane?.let { Tile.of(x + 1, y + 2, it) }))
-        World.spawnObject(GameObject(13150, ObjectType.WALL_STRAIGHT, 1, player?.plane?.let { Tile.of(x, y - 1, it) }))
-        World.spawnObject(GameObject(13150, ObjectType.WALL_STRAIGHT, 1, player?.plane?.let { Tile.of(x + 1, y - 1, it) }))
-        World.spawnObject(GameObject(13150, ObjectType.WALL_STRAIGHT, 0, player?.plane?.let { Tile.of(x + 2, y, it) }))
-        World.spawnObject(GameObject(13150, ObjectType.WALL_STRAIGHT, 0, player?.plane?.let { Tile.of(x + 2, y + 1, it) }))
+        World.spawnObject(GameObject(13150, ObjectShape.WALL_STRAIGHT, 2, player?.plane?.let { Tile.of(x - 1, y + 1, it) }))
+        World.spawnObject(GameObject(13150, ObjectShape.WALL_STRAIGHT, 2, player?.plane?.let { Tile.of(x - 1, y, it) }))
+        World.spawnObject(GameObject(13150, ObjectShape.WALL_STRAIGHT, 3, player?.plane?.let { Tile.of(x, y + 2, it) }))
+        World.spawnObject(GameObject(13150, ObjectShape.WALL_STRAIGHT, 3, player?.plane?.let { Tile.of(x + 1, y + 2, it) }))
+        World.spawnObject(GameObject(13150, ObjectShape.WALL_STRAIGHT, 1, player?.plane?.let { Tile.of(x, y - 1, it) }))
+        World.spawnObject(GameObject(13150, ObjectShape.WALL_STRAIGHT, 1, player?.plane?.let { Tile.of(x + 1, y - 1, it) }))
+        World.spawnObject(GameObject(13150, ObjectShape.WALL_STRAIGHT, 0, player?.plane?.let { Tile.of(x + 2, y, it) }))
+        World.spawnObject(GameObject(13150, ObjectShape.WALL_STRAIGHT, 0, player?.plane?.let { Tile.of(x + 2, y + 1, it) }))
         for (p in getTrappedPlayers(x, y)) p.resetWalkSteps()
     }
 

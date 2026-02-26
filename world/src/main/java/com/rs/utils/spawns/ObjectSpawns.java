@@ -17,8 +17,8 @@
 package com.rs.utils.spawns;
 
 import com.google.gson.JsonIOException;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.util.Logger;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.Logger;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -45,6 +45,10 @@ public final class ObjectSpawns {
 	public static void init() throws JsonIOException, IOException {
 		Logger.info(ObjectSpawns.class, "init", "Loading map object spawns...");
 		File[] spawnFiles = new File(PATH).listFiles();
+		if (spawnFiles == null) {
+			Logger.info(ObjectSpawns.class, "init", "No object spawn directory found at " + PATH);
+			return;
+		}
 		for (File f : spawnFiles) {
 			ObjectSpawn[] spawns = (ObjectSpawn[]) JsonFileManager.loadJsonFile(f, ObjectSpawn[].class);
 			if (spawns != null)

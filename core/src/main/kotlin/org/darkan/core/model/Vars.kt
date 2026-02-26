@@ -49,6 +49,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
         return this
     }
 
+    @JvmOverloads
     fun setVar(id: Int, value: Int, forceSend: Boolean = false, save: Boolean = false) {
         if (forceSend)
             modified.add(id)
@@ -62,6 +63,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     fun saveVar(id: Int, value: Int) = setVar(id, value, forceSend = false, save = true)
 
+    @JvmOverloads
     fun setVarBit(id: Int, value: Int, forceSend: Boolean = false, save: Boolean = false) {
         val defs = Cache.varbits[id]
         val bitLength = defs.endBit - defs.startBit
@@ -87,9 +89,9 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     fun bitFlagged(id: Int, bit: Int) = (varpValues[id] and (1 shl bit)) != 0
 
-    suspend fun syncVarsToClient() {
+    fun syncVarsToClient() {
         modified.forEach { id ->
-            session.send(setVarpPacket(id, varpValues[id]))
+            session.queuePacket(setVarpPacket(id, varpValues[id]))
         }
         modified.clear()
     }

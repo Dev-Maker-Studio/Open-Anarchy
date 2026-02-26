@@ -8,8 +8,8 @@ import com.rs.game.World
 import com.rs.game.content.world.doors.Doors.handleDoubleDoor
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import com.rs.utils.Ticks
 
 class BiohazardUtils(val player: Player) {
@@ -28,7 +28,7 @@ class BiohazardUtils(val player: Player) {
             JERICO_CUPBOARD[1] -> {
                 if (option == "Close") {
                     player.anim(OPEN_CUPBOARD_ANIM)
-                    obj.setId(JERICO_CUPBOARD[0])
+                    obj.changeId(JERICO_CUPBOARD[0])
                 }
                 if (option == "Search") {
                     if (stage >= STAGE_SPEAK_TO_OMART) {
@@ -173,7 +173,7 @@ class BiohazardUtils(val player: Player) {
             DOCTORS_GOWN_BOX[1] -> {
                 if (option == "Close") {
                     player.anim(OPEN_CUPBOARD_ANIM)
-                    obj.setId(DOCTORS_GOWN_BOX[0])
+                    obj.changeId(DOCTORS_GOWN_BOX[0])
                 }
                 if (option == "Search") {
                     player.startConversation {
@@ -321,11 +321,11 @@ class BiohazardUtils(val player: Player) {
     }
 
     fun isInMournerHQ(tile: Tile): Boolean {
-        for (range in MOURNER_HQ) if (tile.x() >= range[0] && tile.x() <= range[1] && tile.y() >= range[2] && tile.y() <= range[3]) return true
+        for (range in MOURNER_HQ) if (tile.x >= range[0] && tile.x <= range[1] && tile.y >= range[2] && tile.y <= range[3]) return true
         return false
     }
     fun isInMournerHQGarden(tile: Tile): Boolean {
-        for (range in MOURNER_HQ_GARDEN) if (tile.x() >= range[0] && tile.x() <= range[1] && tile.y() >= range[2] && tile.y() <= range[3]) return true
+        for (range in MOURNER_HQ_GARDEN) if (tile.x >= range[0] && tile.x <= range[1] && tile.y >= range[2] && tile.y <= range[3]) return true
         return false
     }
 

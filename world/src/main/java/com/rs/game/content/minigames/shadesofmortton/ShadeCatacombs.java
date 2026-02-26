@@ -17,8 +17,8 @@
 package com.rs.game.content.minigames.shadesofmortton;
 
 import com.rs.game.content.world.doors.Doors;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;

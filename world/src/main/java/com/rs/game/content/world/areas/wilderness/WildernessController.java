@@ -29,9 +29,9 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 public class WildernessController extends Controller {
 
@@ -245,7 +245,7 @@ public class WildernessController extends Controller {
 
 	public static boolean isAtWild(Tile tile) {
 		for (int[] range : RANGES)
-			if (tile.x() >= range[0] && tile.x() <= range[1] && tile.y() >= range[2] && tile.y() <= range[3])
+			if (tile.getX() >= range[0] && tile.getX() <= range[1] && tile.getY() >= range[2] && tile.getY() <= range[3])
 				return true;
 		return false;
 	}

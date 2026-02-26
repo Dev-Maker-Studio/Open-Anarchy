@@ -225,6 +225,22 @@ data class NpcUpdate(
     val state: org.darkan.core.net.prot.update.NpcUpdateTrackingState,
 ) : ServerProt
 
+/**
+ * Raw byte wrapper for legacy player update. Used during migration while LocalPlayerUpdate
+ * still produces raw bytes via legacy OutputStream.
+ */
+@JvmInline value class PlayerUpdateRaw(val data: ByteArray) : ServerProt
+
+/**
+ * Raw byte wrapper for legacy NPC update (small scene).
+ */
+@JvmInline value class NpcUpdateRaw(val data: ByteArray) : ServerProt
+
+/**
+ * Raw byte wrapper for legacy NPC update (large scene).
+ */
+@JvmInline value class NpcUpdateLargeRaw(val data: ByteArray) : ServerProt
+
 data class UpdateZoneFullFollows(val chunkX: Int, val chunkY: Int, val plane: Int) : ServerProt
 
 data class UpdateFriendchatChannelSingleUser(
@@ -306,6 +322,18 @@ data class ClanChannelDelta(val main: Boolean, val data: ByteArray) : ServerProt
         result = 31 * result + (chatters?.contentHashCode() ?: 0)
         return result
     }
+}
+
+data class ClanSettingsFullRaw(val main: Boolean, val data: ByteArray?) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as ClanSettingsFullRaw
+        if (main != other.main) return false
+        return data.contentEquals(other.data)
+    }
+
+    override fun hashCode(): Int = 31 * main.hashCode() + (data?.contentHashCode() ?: 0)
 }
 
 data class ClanSettingsDelta(val main: Boolean, val data: ByteArray) : ServerProt {

@@ -7,9 +7,9 @@ import com.rs.game.content.skills.summoning.Pouch
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Rights
-import com.rs.lib.net.ServerPacket
-import com.rs.lib.util.Logger
+import org.darkan.core.model.Rights
+import org.darkan.core.net.prot.ResetSounds
+import org.darkan.core.Logger
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.utils.music.Music
 import com.rs.utils.music.Voices
@@ -32,7 +32,7 @@ fun loadAudioCommands() {
     }
 
     Commands.add(Rights.DEVELOPER, "voice, v [id]", "Plays voices.") { p, args ->
-        p.session.write(ServerPacket.RESET_SOUNDS)
+        p.session.queuePacket(ResetSounds())
         p.voiceEffect(args[0].toInt(), true)
     }
 

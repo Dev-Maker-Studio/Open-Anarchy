@@ -21,8 +21,8 @@ import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.combat.CombatScript;
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
 
 public class YtMejKotCombat extends CombatScript {
 

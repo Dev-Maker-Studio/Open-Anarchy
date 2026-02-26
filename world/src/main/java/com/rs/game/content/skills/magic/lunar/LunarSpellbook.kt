@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.magic.lunar
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.dialogue.statements.MakeXStatement
 import com.rs.engine.quest.Quest
@@ -44,13 +44,13 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.managers.InterfaceManager
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.Constants
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Item
-import com.rs.lib.game.Rights
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.Constants
+import org.darkan.core.model.Animation
+import org.darkan.core.model.Item
+import org.darkan.core.model.Rights
+import org.darkan.core.model.SpotAnim
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 import com.rs.utils.Ticks

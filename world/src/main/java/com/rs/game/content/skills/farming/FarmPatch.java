@@ -30,12 +30,12 @@ import com.rs.game.content.skills.woodcutting.Woodcutting;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -83,7 +83,7 @@ public class FarmPatch {
 		weeds = 3;
 	}
 
-	private void handleClick(Player player, GameObject object, String option, ClientPacket opNum) {
+	private void handleClick(Player player, GameObject object, String option, int opNum) {
 		if (location.type == PatchType.COMPOST) {
 			if (seed == null) {
 				if (lives <= -15) {
@@ -144,7 +144,7 @@ public class FarmPatch {
 				return;
 		}
 		switch(opNum) {
-			case OBJECT_OP1:
+			case 1:
 				if (option.contains("Pick") || option.contains("Harvest"))
 					player.getActionManager().setAction(new HarvestPatch(this));
 				else if (option.contains("Chop")) {

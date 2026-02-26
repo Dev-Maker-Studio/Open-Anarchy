@@ -26,8 +26,8 @@ import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.combat.CombatScript;
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Animation;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.Utils;
 import com.rs.utils.Ticks;
 import kotlin.Pair;
 

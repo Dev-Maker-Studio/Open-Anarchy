@@ -16,8 +16,8 @@
 //
 package com.rs.net.decoders.handlers;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.items.Lamps;
 import com.rs.game.content.minigames.fightkiln.FightKilnController;
@@ -55,10 +55,19 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.*;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.WorldObject;
+import org.darkan.core.model.Hit;
+import org.darkan.core.model.HintIcon;
+import org.darkan.core.model.Projectile;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.events.DropItemEvent;
 import com.rs.plugin.events.ItemClickEvent;
@@ -222,7 +231,7 @@ public class InventoryOptionsHandler {
 			GemTipCutting.cut(player, GemTips.DRAGONSTONE);
 		else if (contains(1755, Gem.ONYX.getCut(), used, usedWith))
 			GemTipCutting.cut(player, GemTips.ONYX);
-		else if (PluginManager.handle(new ItemOnItemEvent(player, used.setSlot(fromSlot), usedWith.setSlot(toSlot))))
+		else if (PluginManager.handle(new ItemOnItemEvent(player, used.withSlot(fromSlot), usedWith.withSlot(toSlot))))
 			return true;
 		Logger.debug(InventoryOptionsHandler.class, "handleItemOnItem", "ItemOnItem " + used.getId() + " -> " + usedWith.getId());
 		return false;
@@ -310,7 +319,7 @@ public class InventoryOptionsHandler {
 		if (itemId == 299) {
 			if (player.isLocked())
 				return;
-			if (World.getObject(Tile.of(player.getTile()), ObjectType.SCENERY_INTERACT) != null) {
+			if (World.getObject(Tile.of(player.getTile()), ObjectShape.SCENERY_INTERACT) != null) {
 				player.sendMessage("You cannot plant flowers here..");
 				return;
 			}
@@ -324,7 +333,7 @@ public class InventoryOptionsHandler {
 					if (!player.addWalkSteps(player.getX(), player.getY() + 1, 1))
 						player.addWalkSteps(player.getX(), player.getY() - 1, 1);
 			player.getInventory().deleteItem(299, 1);
-			final GameObject flowerObject = new GameObject(2987, ObjectType.SCENERY_INTERACT, Utils.getRandomInclusive(4), tile.getX(), tile.getY(), tile.getPlane());
+			final GameObject flowerObject = new GameObject(2987, ObjectShape.SCENERY_INTERACT, Utils.getRandomInclusive(4), tile.getX(), tile.getY(), tile.getPlane());
 			final int flowerId = flower;
 			World.spawnObjectTemporary(flowerObject, Ticks.fromSeconds(45));
 			player.lock();
@@ -432,7 +441,8 @@ public class InventoryOptionsHandler {
 		if (player.isLocked() || player.getEmotesManager().isAnimating() || PluginManager.handle(new ItemClickEvent(player, item, slotId, item.getDefinitions().getInventoryOption(2))))
 			return;
 		player.stopAll(false);
-		if (item.getDefinitions().isBindItem())
+		// TODO: isBindItem() not available on ItemDefinition - needs dungeoneering param check
+		if (false)
 			player.getDungManager().bind(item, slotId);
 		else if (item.getDefinitions().containsOption("Teleport") && ItemTeleports.transportationDialogue(player, item))
 			return;
@@ -460,7 +470,7 @@ public class InventoryOptionsHandler {
 			if (player.getInventory().containsItem(946)) {
 				player.startConversation(new FruitCuttingD(player, fruit));
 			} else {
-				player.sendMessage("You need a knife to cut the " + item.getDefinitions().name.toLowerCase() + ".");
+				player.sendMessage("You need a knife to cut the " + item.getDefinitions().getName().toLowerCase() + ".");
 			}
 		}
 

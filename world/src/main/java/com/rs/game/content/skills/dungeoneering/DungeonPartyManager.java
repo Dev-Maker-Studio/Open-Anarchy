@@ -17,7 +17,7 @@
 package com.rs.game.content.skills.dungeoneering;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
+import org.darkan.core.Constants;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 

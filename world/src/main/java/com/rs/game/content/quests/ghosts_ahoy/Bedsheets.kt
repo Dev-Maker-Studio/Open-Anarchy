@@ -3,7 +3,7 @@ package com.rs.game.content.quests.ghosts_ahoy
 import com.rs.game.content.world.areas.desert.HEAD_SLOT
 import com.rs.game.content.world.areas.port_phasmatys.PortPhasmatys
 import com.rs.game.model.entity.player.Equipment
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemAddedToInventory
 import com.rs.plugin.kts.onItemClick

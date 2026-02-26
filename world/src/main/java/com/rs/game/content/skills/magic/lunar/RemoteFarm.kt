@@ -4,9 +4,9 @@ import com.rs.game.content.AchievementTitles
 import com.rs.game.content.skills.farming.PatchLocation
 import com.rs.game.content.skills.magic.Magic
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.net.ClientPacket
+import org.darkan.core.Constants
+import org.darkan.core.model.SpotAnim
+
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import java.util.*
@@ -22,7 +22,7 @@ private val COMPONENT_IDS: IntArray = intArrayOf(
 @ServerStartupEvent
 fun registerRemoteFarmButtons() {
     onButtonClick(REMOTE_FARM_INTERFACE) { e ->
-        if (e.packet != ClientPacket.IF_OP1) return@onButtonClick
+        if (e.opNum != 1) return@onButtonClick
 
         val player = e.player
         if (!player.tempAttribs.getB("RemoteFarm")) {

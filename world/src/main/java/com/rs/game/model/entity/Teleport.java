@@ -5,7 +5,7 @@ import com.rs.game.content.skills.dungeoneering.DamonheimController;
 import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.content.world.areas.wilderness.WildernessController;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 import java.util.function.Supplier;
 

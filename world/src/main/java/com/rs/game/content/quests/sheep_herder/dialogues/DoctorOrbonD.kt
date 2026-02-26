@@ -7,7 +7,7 @@ import com.rs.game.content.quests.sheep_herder.utils.*
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 
 class DoctorOrbonD (player: Player, npc: NPC) {
     init {

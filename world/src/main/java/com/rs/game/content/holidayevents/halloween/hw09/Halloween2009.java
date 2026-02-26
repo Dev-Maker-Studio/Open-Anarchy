@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.holidayevents.halloween.hw09;
 
-import com.rs.cache.loaders.ObjectDefinitions;
+import org.darkan.core.cache.ObjectDefinitions;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.World;
@@ -25,11 +25,11 @@ import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.game.WorldObject;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.WorldObject;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -296,7 +296,7 @@ public class Halloween2009 {
 		if (ctrl == null || ctrl.getWebbedUp() == null)
 			return;
 		for (int i = 46861;i <= 46924;i++)
-			player.getVars().setVarBit(ObjectDefinitions.getDefs(i).varpBit, ctrl.getWebbedUp().contains(i) || player.getI(Halloween2009.STAGE_KEY) > 8 ? 2 : showWebOp ? 1 : 0);
+			player.getVars().setVarBit(ObjectDefinitions.getDefs(i).getVarbit(), ctrl.getWebbedUp().contains(i) || player.getI(Halloween2009.STAGE_KEY) > 8 ? 2 : showWebOp ? 1 : 0);
 
 	}
 

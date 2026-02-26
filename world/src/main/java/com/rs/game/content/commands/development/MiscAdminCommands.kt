@@ -1,7 +1,7 @@
 package com.rs.game.content.commands.admin
 
 import com.rs.Settings
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.command.Commands
 import com.rs.game.World
 import com.rs.game.content.dnds.eviltree.spawnTree
@@ -9,11 +9,12 @@ import com.rs.game.content.dnds.shootingstar.ShootingStars
 import com.rs.game.content.minigames.treasuretrails.TreasureTrailsManager
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Item
-import com.rs.lib.game.Rights
-import com.rs.lib.game.Tile
-import com.rs.lib.util.MapUtils
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import org.darkan.core.model.Rights
+import world.gregs.voidps.type.Tile
+import org.darkan.core.util.MapUtils
+import org.darkan.core.util.Structure
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 
 @ServerStartupEvent
@@ -133,11 +134,11 @@ fun loadAdminCommands() {
         for (i in 0 until Utils.getItemDefinitionsSize()) {
             val itemDef = ItemDefinitions.getDefs(i)
             val matches = args.all { arg ->
-                itemDef.name.contains(arg, ignoreCase = true) && !itemDef.isLended
+                itemDef.name.contains(arg, ignoreCase = true) && !itemDef.lent
             }
             if (matches) {
-                val noted = if (itemDef.isNoted) "(noted)" else ""
-                val lent = if (itemDef.isLended) "(lent)" else ""
+                val noted = if (itemDef.noted) "(noted)" else ""
+                val lent = if (itemDef.lent) "(lent)" else ""
                 p.packets.sendDevConsoleMessage("Result found: $i - ${itemDef.name} $noted$lent")
             }
         }
@@ -213,7 +214,7 @@ fun loadAdminCommands() {
     }
 
     Commands.add(Rights.ADMIN, "telec,tpc [chunkId]", "Teleports the player to chunk coordinates.") { p, args ->
-        val coords = MapUtils.decode(MapUtils.Structure.CHUNK, args[0].toInt())
+        val coords = MapUtils.decode(Structure.CHUNK, args[0].toInt())
         p.resetWalkSteps()
         p.tele(Tile.of(coords[0] * 8 + 4, coords[1] * 8 + 4, coords[2]))
     }
@@ -278,7 +279,7 @@ fun loadAdminCommands() {
         val equip = target.equipment.itemsCopy
         equip.forEachIndexed { i, item ->
             if (item != null) {
-                p.equipment.setSlot(i, Item(item))
+                p.equipment.setSlot(i, item.copy())
             }
         }
 
@@ -286,7 +287,7 @@ fun loadAdminCommands() {
         val inv = target.inventory.items.itemsCopy
         inv.forEachIndexed { i, item ->
             if (item != null) {
-                p.inventory.items.set(i, Item(item))
+                p.inventory.items.set(i, item.copy())
                 p.inventory.refresh(i)
             }
         }

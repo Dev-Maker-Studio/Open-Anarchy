@@ -22,9 +22,10 @@ import com.rs.game.map.ChunkManager
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.GroundItem
-import com.rs.lib.game.Tile
-import com.rs.lib.net.packets.encoders.MinimapFlag
+import org.darkan.core.map.pathfinder.Route
+import org.darkan.core.model.GroundItem
+import world.gregs.voidps.type.Tile
+import org.darkan.core.net.prot.MinimapFlag
 import com.rs.utils.WorldUtil
 
 class RouteEvent(private val target: Any, private val onReachedEvent: Runnable, private val onNearestEvent: (() -> Boolean)?) {
@@ -44,7 +45,7 @@ class RouteEvent(private val target: Any, private val onReachedEvent: Runnable, 
                 return true
             }
             if (route.size <= 0) {
-                (entity as? Player)?.session?.writeToQueue(MinimapFlag())
+                (entity as? Player)?.session?.queuePacket(MinimapFlag(255, 255))
                 if (route.alternative) {
                     return onNearestEvent?.invoke() ?: run {
                         cantReachThat(entity as? Player)
@@ -67,8 +68,8 @@ class RouteEvent(private val target: Any, private val onReachedEvent: Runnable, 
     private fun simpleCheck(entity: Entity): Boolean {
         return when(target) {
             is Entity -> entity.plane == target.plane && !target.hasFinished()
-            is GameObject -> entity.plane == target.plane && World.getObject(target.tile, target.type) != null
-            is GroundItem -> entity.plane == target.tile.plane && ChunkManager.getChunk(target.tile.chunkId).itemExists(target)
+            is GameObject -> entity.plane == target.level && World.getObject(target.tile, target.type) != null
+            is GroundItem -> entity.plane == target.tile.plane && ChunkManager.getChunk(target.tile.getChunkId()).itemExists(target)
             is Tile -> entity.plane == target.plane
             else -> throw RuntimeException("$target is not instanceof any reachable entity.")
         }
@@ -77,7 +78,7 @@ class RouteEvent(private val target: Any, private val onReachedEvent: Runnable, 
     val cantReachThat = { player: Player? ->
         player?.let {
             it.sendMessage("You can't reach that.")
-            it.session.writeToQueue(MinimapFlag())
+            it.session.queuePacket(MinimapFlag(255, 255))
         }
     }
 }

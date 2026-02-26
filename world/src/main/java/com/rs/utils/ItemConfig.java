@@ -4,16 +4,15 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.reflect.TypeToken;
 import com.rs.Settings;
-import com.rs.cache.Cache;
-import com.rs.cache.loaders.ItemDefinitions;
+import world.gregs.voidps.cache.Cache;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Equipment;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.game.Item;
-import com.rs.lib.json.DateAdapter;
-import com.rs.lib.net.packets.Packet;
-import com.rs.lib.net.packets.PacketEncoder;
-import com.rs.lib.util.*;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.Logger;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -61,10 +60,7 @@ public class ItemConfig {
 	public static void main(String[] args) throws IOException {
 		JsonFileManager.setGSON(new GsonBuilder()
 				.registerTypeAdapter(Controller.class, new ControllerAdapter())
-				.registerTypeAdapter(Date.class, new DateAdapter())
-				.registerTypeAdapter(PacketEncoder.class, new PacketEncoderAdapter())
-				.registerTypeAdapter(Packet.class, new PacketAdapter())
-				.registerTypeAdapterFactory(new RecordTypeAdapterFactory())
+				// TODO: re-add legacy adapters when migrated
 				.disableHtmlEscaping()
 				.setPrettyPrinting()
 				.create());
@@ -74,7 +70,7 @@ public class ItemConfig {
 
 		for (int i = 0;i < Utils.getItemDefinitionsSize();i++) {
 			ItemConfig config = get(i);
-			ItemDefinitions def = ItemDefinitions.getDefs(i);
+			ItemDefinition def = ItemDefinitions.getDefs(i);
 			if (def.getEquipSlot() == Equipment.WEAPON) {
 				String weaponName = def.getName().toLowerCase();
 				if (config.getAttackAnim(0) == -1)

@@ -2,7 +2,7 @@ package com.rs.game.content.world.areas.fremennik_isles.jatizso.npcs
 
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 import com.rs.game.model.entity.npc.NPC

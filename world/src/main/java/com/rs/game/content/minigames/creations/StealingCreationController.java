@@ -24,7 +24,7 @@ import com.rs.game.content.skills.summoning.Familiar;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.Teleport;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.engine.pathfinder.RouteEvent;
 import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Equipment;
@@ -34,10 +34,19 @@ import com.rs.game.model.entity.player.actions.PlayerAction;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.*;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import org.darkan.core.model.Rights;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.WorldObject;
+import org.darkan.core.model.Hit;
+import org.darkan.core.model.HintIcon;
+import org.darkan.core.model.Projectile;
+
+import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 
 public class StealingCreationController extends Controller {
@@ -365,7 +374,7 @@ public class StealingCreationController extends Controller {
 	}
 
 	@Override
-	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, ClientPacket packet) {
+	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packet) {
 		if (interfaceId == 813) {
 			if (componentId >= 37 && componentId <= 71)
 				processKilnExchange(componentId, packet);
@@ -379,7 +388,7 @@ public class StealingCreationController extends Controller {
 			return true;
 		}
 		if (interfaceId == 387) {
-			if (packet == ClientPacket.IF_OP1 && componentId == 9) {
+			if (packet == 1 && componentId == 9) {
 				player.sendMessage("You can't remove your team's colours.");
 				return false;
 			}
@@ -863,19 +872,19 @@ public class StealingCreationController extends Controller {
 		return false;
 	}
 
-	public void processKilnExchange(int componentId, ClientPacket packet) {
+	public void processKilnExchange(int componentId, int packet) {
 		int quality = player.getTempAttribs().getI("sc_kiln_quality", 0);
 		int clayId = Helper.SACRED_CLAY[quality];
 		int amount = 0;
-		if (packet == ClientPacket.IF_OP1)
+		if (packet == 1)
 			amount = 1;
-		else if (packet == ClientPacket.IF_OP2)
+		else if (packet == 2)
 			amount = 5;
-		else if (packet == ClientPacket.IF_OP3) {
+		else if (packet == 3) {
 			player.getTempAttribs().setI("sc_component", componentId);
 			player.getTempAttribs().setB("kilnX", true);
 			player.getPackets().sendRunScriptReverse(108, "Enter Amount:");
-		} else if (packet == ClientPacket.IF_OP4)
+		} else if (packet == 4)
 			amount = player.getInventory().getAmountOf(clayId);
 		else
 			amount = player.getTempAttribs().getI("sc_amount_making");

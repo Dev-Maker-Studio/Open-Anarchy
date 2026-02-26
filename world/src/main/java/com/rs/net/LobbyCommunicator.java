@@ -18,15 +18,13 @@ package com.rs.net;
 
 import com.rs.Settings;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.model.Account;
-import com.rs.lib.model.FriendsChat;
-import com.rs.lib.model.clan.Clan;
-import com.rs.lib.net.packets.Packet;
-import com.rs.lib.web.APIUtil;
-import com.rs.lib.web.dto.LoginRequest;
-import com.rs.lib.web.dto.PacketDto;
-import com.rs.lib.web.dto.UpdateFC;
-import com.rs.lib.web.dto.WorldPlayerAction;
+import org.darkan.core.model.Account;
+import org.darkan.core.model.FriendsChat;
+import org.darkan.core.model.Clan;
+import com.rs.web.APIUtil;
+import com.rs.web.dto.LoginRequest;
+import com.rs.web.dto.UpdateFC;
+import com.rs.web.dto.WorldPlayerAction;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
@@ -84,17 +82,6 @@ public class LobbyCommunicator {
 
 	public static void updateFC(Player player, Consumer<FriendsChat> cb) {
 		post(FriendsChat.class, new UpdateFC(player.getDisplayName(), player.getSocial().getFriendsChat()), "updatefc", cb);
-	}
-
-	public static void forwardPackets(Player player, Packet... packets) {
-		post(Boolean.class, new PacketDto(player.getUsername(), packets), "forwardpackets", res -> {
-			if (res != null && !res)
-				player.sendMessage("Error forwarding packet to lobby.");
-		});
-	}
-
-	public static void forwardPacket(Player player, Packet packet, Consumer<Boolean> cb) {
-		post(Boolean.class, new PacketDto(player.getUsername(), packet), "forwardpackets", cb);
 	}
 
 	public static void getClan(String clan, Consumer<Clan> cb) {

@@ -16,11 +16,16 @@
 //
 package com.rs.game.model.entity.npc;
 
-import com.rs.cache.loaders.Bonus;
-import com.rs.cache.loaders.NPCDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
-import com.rs.engine.pathfinder.*;
-import com.rs.engine.pathfinder.collision.CollisionStrategyType;
+import org.darkan.core.model.Bonus;
+import org.darkan.core.cache.NPCDefinitions;
+import world.gregs.voidps.cache.definition.data.NPCDefinition;
+import org.darkan.core.model.IFEvents;
+import org.darkan.core.map.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Route;
+import com.rs.engine.pathfinder.DumbRouteFinder;
+import com.rs.engine.pathfinder.NpcCollision;
+import com.rs.engine.pathfinder.RouteFinderKt;
+import org.darkan.core.map.pathfinder.collision.CollisionStrategyType;
 import com.rs.engine.thread.AsyncTaskExecutor;
 import com.rs.game.World;
 import com.rs.game.content.Effect;
@@ -50,14 +55,16 @@ import com.rs.game.model.entity.player.managers.AuraManager;
 import com.rs.game.model.item.ItemsContainer;
 import com.rs.game.tasks.TaskInformation;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.packets.encoders.Sound;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.GroundItemType;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Sound;
+import org.darkan.core.model.SoundType;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.events.NPCDeathEvent;
 import com.rs.plugin.events.NPCDropEvent;
@@ -72,8 +79,6 @@ import com.rs.utils.drop.DropTable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static com.rs.game.World.sendSpotAnim;
 
 public class NPC extends Entity {
 
@@ -132,9 +137,9 @@ public class NPC extends Entity {
 		combatLevel = -1;
 		setHitpoints(getMaxHitpoints());
 		setFaceAngle(direction == null ? getRespawnDirection() : direction.getAngle());
-		setRandomWalk((getDefinitions().walkMask & 0x2) != 0 || forceRandomWalk(id));
-		setCollisionStrategyType((getDefinitions().walkMask & 0x4) != 0 ? CollisionStrategyType.WATER : CollisionStrategyType.NORMAL);
-		size = getDefinitions().size;
+		setRandomWalk((getDefinitions().getWalkMask() & 0x2) != 0 || forceRandomWalk(id));
+		setCollisionStrategyType((getDefinitions().getWalkMask() & 0x4) != 0 ? CollisionStrategyType.WATER : CollisionStrategyType.NORMAL);
+		size = getDefinitions().getSize();
 		if (getDefinitions().hasAttackOption())
 			setRandomWalk(true);
 		if (getDefinitions().getName().toLowerCase().contains("glac"))
@@ -144,7 +149,7 @@ public class NPC extends Entity {
 		BoxHunterType npc = BoxHunterType.forId(id);
 		if (npc != null)
 			setRandomWalk(true);
-		if (getDefinitions().combatLevel >= 200)
+		if (getDefinitions().getCombatLevel() >= 200)
 			setIgnoreDocile(true);
 		combatLevels = getCombatDefinitions().getLevels();
 		attackRange = getCombatDefinitions().getAttackRange();
@@ -170,7 +175,7 @@ public class NPC extends Entity {
 	}
 
 	public boolean walksOnWater() {
-		return (getDefinitions().walkMask & 0x4) != 0;
+		return (getDefinitions().getWalkMask() & 0x4) != 0;
 	}
 
 	@Override
@@ -193,7 +198,7 @@ public class NPC extends Entity {
 
 	public void setNPC(int id) {
 		this.id = id;
-		size = getDefinitions().size;
+		size = getDefinitions().getSize();
 		combatLevels = getCombatDefinitions().getLevels();
 		attackRange = getCombatDefinitions().getAttackRange();
 	}
@@ -219,11 +224,11 @@ public class NPC extends Entity {
 			setBasNoReset(-1);
 	}
 
-	public NPCDefinitions getDefinitions(Player player) {
+	public NPCDefinition getDefinitions(Player player) {
 		return NPCDefinitions.getDefs(id, player.getVars());
 	}
 
-	public NPCDefinitions getDefinitions() {
+	public NPCDefinition getDefinitions() {
 		return NPCDefinitions.getDefs(id);
 	}
 
@@ -251,7 +256,7 @@ public class NPC extends Entity {
 	public boolean checkNPCCollision(Direction dir) {
 		if (isIgnoreNPCClipping() || isIntelligentRouteFinder() || isForceWalking())
 			return true;
-		return WorldCollision.checkNPCClip(this, dir);
+		return NpcCollision.checkNPCClip(this, dir);
 	}
 	
 	private void restoreTick() {
@@ -321,7 +326,7 @@ public class NPC extends Entity {
 	}
 
 	public int getRespawnDirection() {
-		return Direction.getById(getDefinitions().respawnDirection).getAngle();
+		return Direction.getById(getDefinitions().getRespawnDirection()).getAngle();
 	}
 
 	private static boolean forceRandomWalk(int npcId) {
@@ -402,7 +407,7 @@ public class NPC extends Entity {
 			return;
 		setFinished(true);
 		ChunkManager.updateChunks(this);
-		WorldCollision.fillNPCClip(getTile(), getSize(), false);
+		NpcCollision.fillNPCClip(getTile(), getSize(), false);
 		World.removeNPC(this);
 	}
 
@@ -571,7 +576,7 @@ public class NPC extends Entity {
 			for (Item item : drops)
 				sendDrop(killer, item);
 
-			if (DropSets.getDropSet(id) != null && DropSets.getDropSet(id) != DropSets.DEFAULT_DROPSET && EffigyDrop.dropEffigy(getDefinitions().combatLevel))
+			if (DropSets.getDropSet(id) != null && DropSets.getDropSet(id) != DropSets.DEFAULT_DROPSET && EffigyDrop.dropEffigy(getDefinitions().getCombatLevel()))
 				sendDrop(killer, new Item(18778, 1));
 
 			Item[] clues = DropTable.calculateDrops(killer, NPCClueDrops.rollClues(id));
@@ -617,7 +622,7 @@ public class NPC extends Entity {
 
 		final int size = getSize();
 
-		GroundItem gItem = new GroundItem(item, Tile.of(getCoordFaceX(size), getCoordFaceY(size), getPlane()), dropTo.getUsername(), GroundItem.GroundItemType.INVISIBLE);
+		GroundItem gItem = new GroundItem(item, Tile.of(getCoordFaceX(size), getCoordFaceY(size), getPlane()), dropTo.getUsername(), GroundItemType.INVISIBLE);
 
 		NPCDropEvent event = new NPCDropEvent(dropTo, this, gItem);
 		PluginManager.handle(event);
@@ -643,7 +648,7 @@ public class NPC extends Entity {
 			List<Item> clues = NPCClueDrops.rollClues(npcId).getDropList().genDrop(modifier);
 			for (Item item : clues)
 				dropCollection.add(item);
-			if (EffigyDrop.dropEffigy(NPCDefinitions.getDefs(npcId).combatLevel))
+			if (EffigyDrop.dropEffigy(NPCDefinitions.getDefs(npcId).getCombatLevel()))
 				dropCollection.add(new Item(18778, 1));
 			DropTable charm = CharmDrop.getCharmDrop(NPCDefinitions.getDefs(npcId).getName().toLowerCase());
 			if (charm != null)
@@ -1053,7 +1058,7 @@ public class NPC extends Entity {
 	}
 
 	public int getCombatLevel() {
-		return combatLevel >= 0 ? combatLevel : getDefinitions().combatLevel;
+		return combatLevel >= 0 ? combatLevel : getDefinitions().getCombatLevel();
 	}
 
 	public String getName() {
@@ -1061,11 +1066,11 @@ public class NPC extends Entity {
 	}
 
 	public String getName(Player player) {
-		return name != null ? name : getDefinitions().getName(player.getVars());
+		return name != null ? name : getDefinitions().getName();
 	}
 
 	public void setCombatLevel(int level) {
-		combatLevel = getDefinitions().combatLevel == level ? -1 : level;
+		combatLevel = getDefinitions().getCombatLevel() == level ? -1 : level;
 		changedCombatLevel = true;
 	}
 
@@ -1111,7 +1116,7 @@ public class NPC extends Entity {
 	}
 
 	public int getAttackSpeed() {
-		return NPCDefinitions.getDefs(id).getAttackDelay()+1;
+		return com.rs.utils.KtExtensionsKt.getAttackDelay(NPCDefinitions.getDefs(id))+1;
 	}
 
 	public boolean isIgnoreDocile() {

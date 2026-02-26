@@ -16,12 +16,12 @@
 //
 package com.rs.game.content.skills.dungeoneering;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.content.skills.dungeoneering.rooms.*;
 import com.rs.game.content.skills.dungeoneering.rooms.puzzles.*;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
@@ -841,9 +841,9 @@ public class DungeonConstants {
 			// Gluttonous behemoth
 			new BossRoom((dungeon, reference) -> {
 				dungeon.spawnNPC(reference, 9948, 5, 10, false, DungeonConstants.BOSS_NPC);
-				dungeon.spawnObject(reference, 49283, ObjectType.SCENERY_INTERACT, 3, 0, 11);
+				dungeon.spawnObject(reference, 49283, ObjectShape.SCENERY_INTERACT, 3, 0, 11);
 				if (dungeon.getParty().getTeam().size() >= 2)
-					dungeon.spawnObject(reference, 49283, ObjectType.SCENERY_INTERACT, 0, 11, 11);
+					dungeon.spawnObject(reference, 49283, ObjectShape.SCENERY_INTERACT, 0, 11, 11);
 			}, 817, 1, 28, 624),
 
 			// Astea Frostweb

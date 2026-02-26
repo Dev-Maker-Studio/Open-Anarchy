@@ -8,7 +8,7 @@ import com.rs.game.content.skills.thieving.thievesGuild.PickPocketDummy;
 import com.rs.game.content.skills.thieving.thievesGuild.PickPocketDummyMK2;
 import com.rs.game.ge.GE;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.*;
 import com.rs.utils.shop.ShopsHandler;

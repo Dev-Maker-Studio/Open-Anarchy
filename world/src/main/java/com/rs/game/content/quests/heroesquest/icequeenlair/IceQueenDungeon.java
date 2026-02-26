@@ -4,9 +4,9 @@ import com.rs.game.content.skills.mining.Pickaxe;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCInstanceHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -35,11 +35,11 @@ public class IceQueenDungeon {
 					if (i == 2)
 						e.getPlayer().setNextAnimation(new Animation(625));
 					if (i == 5)
-						obj.setId(472);
+						obj.changeId(472);
 					if (i == 9)
-						obj.setId(473);
+						obj.changeId(473);
 					if (i == 12)
-						obj.setId(474);
+						obj.changeId(474);
 					if (i == 15) {
 						e.getPlayer().setRun(false);
 						if (e.getPlayer().getX() < obj.getX())
@@ -48,14 +48,14 @@ public class IceQueenDungeon {
 							e.getPlayer().addWalkSteps(Tile.of(2837, e.getPlayer().getY() + 1, 0), 4, false);
 					}
 					if (i == 19) {
-						obj.setId(473);
+						obj.changeId(473);
 						e.getPlayer().setRun(hasRun);
 						e.getPlayer().unlock();
 					}
 					if (i == 20)
-						obj.setId(472);
+						obj.changeId(472);
 					if (i == 21) {
-						obj.setId(id);
+						obj.changeId(id);
 						return false;
 					}
 					return true;

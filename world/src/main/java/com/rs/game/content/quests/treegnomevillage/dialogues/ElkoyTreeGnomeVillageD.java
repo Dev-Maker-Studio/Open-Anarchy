@@ -7,7 +7,7 @@ import com.rs.engine.dialogue.Options;
 import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 
 import static com.rs.game.content.quests.treegnomevillage.TreeGnomeVillage.*;

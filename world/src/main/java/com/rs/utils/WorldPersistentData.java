@@ -1,9 +1,9 @@
 package com.rs.utils;
 
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.GenericAttribMap;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.AttribMap;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -38,24 +38,24 @@ public class WorldPersistentData {
 			if (ATTRIBUTES == null)
 				ATTRIBUTES = new WorldPersistentData();
 			JsonFileManager.saveJsonFile(ATTRIBUTES, dataFile);
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
-	private final GenericAttribMap counters;
+	private final AttribMap counters;
 	private ItemsContainer<Item> partyRoomStorage;
 	private ItemsContainer<Item> partyRoomDrop;
 	
 	public WorldPersistentData() {
-		counters = new GenericAttribMap();
+		counters = new AttribMap();
 	}
 
 	public static WorldPersistentData get() {
 		return ATTRIBUTES;
 	}
 
-	public GenericAttribMap getAttribs() {
+	public AttribMap getAttribs() {
 		return counters;
 	}
 

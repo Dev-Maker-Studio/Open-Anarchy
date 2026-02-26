@@ -17,9 +17,10 @@
 package com.rs.utils;
 
 import com.google.gson.JsonIOException;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.MapUtils;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.Logger;
+import org.darkan.core.util.MapUtils;
+import org.darkan.core.util.Structure;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
@@ -99,10 +100,10 @@ public class Areas {
 		int chunkX = oldChunkId >> 14 & 2047;
 		int chunkY = oldChunkId >> 3 & 2047;
 		return new int[] {
-				MapUtils.encode(MapUtils.Structure.CHUNK, chunkX, chunkY, 0),
-				MapUtils.encode(MapUtils.Structure.CHUNK, chunkX, chunkY, 1),
-				MapUtils.encode(MapUtils.Structure.CHUNK, chunkX, chunkY, 2),
-				MapUtils.encode(MapUtils.Structure.CHUNK, chunkX, chunkY, 3)
+				MapUtils.encode(Structure.CHUNK, chunkX, chunkY, 0),
+				MapUtils.encode(Structure.CHUNK, chunkX, chunkY, 1),
+				MapUtils.encode(Structure.CHUNK, chunkX, chunkY, 2),
+				MapUtils.encode(Structure.CHUNK, chunkX, chunkY, 3)
 		};
 	}
 }

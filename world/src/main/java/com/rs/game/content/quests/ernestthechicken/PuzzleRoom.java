@@ -21,8 +21,8 @@ import com.rs.game.content.world.doors.Doors.Door;
 import com.rs.engine.pathfinder.RouteEvent;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
-import com.rs.lib.game.VarManager;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.Vars;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.LoginHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -70,7 +70,7 @@ public class PuzzleRoom {
 
 	public static ObjectClickHandler handleLevers = new ObjectClickHandler(new Object[] { LEVER_A, LEVER_B, LEVER_C, LEVER_D, LEVER_E, LEVER_F }, e -> {
 		GameObject obj = e.getObj();
-		VarManager vars = e.getPlayer().getVars();
+		Vars vars = e.getPlayer().getVars();
 		int id = obj.getId();
 
 		//step 1/5, https://runescape.salmoneus.net/runescape-2007/quests/ernest-the-chicken.html

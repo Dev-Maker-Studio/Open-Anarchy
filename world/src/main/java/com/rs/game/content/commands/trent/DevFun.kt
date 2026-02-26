@@ -1,14 +1,15 @@
 package com.rs.game.content.commands.trent
 
 import com.rs.engine.command.Commands
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
+import com.rs.engine.pathfinder.getFaceDirection
 import com.rs.game.World
 import com.rs.game.content.bosses.qbd.rollQbdKillAndAddToChest
 import com.rs.game.model.entity.Hit
-import com.rs.lib.game.Rights
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Rights
+import org.darkan.core.model.SpotAnim
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 
 @ServerStartupEvent
@@ -31,7 +32,7 @@ fun addTrentCommands() {
     }
 
     Commands.add(Rights.OWNER, "delayprojtest", "Precise timing projectile/spotanim") { p, _ ->
-        val startTile = Tile.of(p.tile)
+        val startTile = p.tile
         var delay = 0
 
         val tiles = (-5..5).flatMap { x -> (-5..5)

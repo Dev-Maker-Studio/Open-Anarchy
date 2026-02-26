@@ -18,7 +18,7 @@ package com.rs.game.content.bosses.godwars.factions.zaros;
 
 import com.rs.engine.cutscene.Cutscene;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class NexCutScene extends Cutscene {
 	

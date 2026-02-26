@@ -1,11 +1,12 @@
 package com.rs.game.content.bosses.qbd
+import com.rs.utils.isAt
 
 import com.rs.Settings
-import com.rs.cache.loaders.Bonus
-import com.rs.cache.loaders.ObjectType
+import org.darkan.core.model.Bonus
+import org.darkan.core.model.ObjectShape
 import com.rs.engine.dialogue.sendOptionsDialogue
 import com.rs.engine.dialogue.startConversation
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World
 import com.rs.game.content.combat.CombatStyle
 import com.rs.game.content.combat.getAntifireLevel
@@ -22,13 +23,12 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.InterfaceManager
 import com.rs.game.model.item.ItemsContainer
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.Constants
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils.add
-import com.rs.lib.util.Utils.addArticle
-import com.rs.lib.util.Utils.clampI
-import com.rs.lib.util.Utils.random
+import org.darkan.core.Constants
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils.addArticle
+import org.darkan.core.Utils.clampI
+import org.darkan.core.Utils.random
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
@@ -135,7 +135,7 @@ fun mapQbdFeatures() {
     }
 }
 
-class Artefact(id: Int, tile: Tile, val qbd: QBD) : GameObject(id, ObjectType.SCENERY_INTERACT, 0, tile)
+class Artefact(id: Int, tile: Tile, val qbd: QBD) : GameObject(id, ObjectShape.SCENERY_INTERACT, 0, tile)
 
 class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
     var woke = false
@@ -219,8 +219,8 @@ class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
 
     fun unguardArtefact() {
         transformIntoNPC(15454)
-        World.spawnObject(GameObject(70822, ObjectType.SCENERY_INTERACT, 0, middleTile.transform(-12, -3, -1)))
-        World.spawnObject(GameObject(70818, ObjectType.SCENERY_INTERACT, 0, middleTile.transform(6, -3, -1)))
+        World.spawnObject(GameObject(70822, ObjectShape.SCENERY_INTERACT, 0, middleTile.transform(-12, -3, -1)))
+        World.spawnObject(GameObject(70818, ObjectShape.SCENERY_INTERACT, 0, middleTile.transform(6, -3, -1)))
         capDamage = 1000
         isCantInteract = true
         val newArtefact = when(phase) {
@@ -232,19 +232,19 @@ class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
             1 -> {
                 possibleTargets.filterIsInstance<Player>().filterNot { it.isDead }
                     .forEach { it.sendMessage("The Queen Black Dragon's concentration wavers; the second artefact is now unguarded.") }
-                World.spawnObject(GameObject(70844, ObjectType.SCENERY_INTERACT, 0, platformObjTile))
+                World.spawnObject(GameObject(70844, ObjectShape.SCENERY_INTERACT, 0, platformObjTile))
                 Artefact(70780, artefact2Tile, this)
             }
             2 -> {
                 possibleTargets.filterIsInstance<Player>().filterNot { it.isDead }
                     .forEach { it.sendMessage("The Queen Black Dragon's concentration wavers; the third artefact is now unguarded.") }
-                World.spawnObject(GameObject(70846, ObjectType.SCENERY_INTERACT, 0, platformObjTile))
+                World.spawnObject(GameObject(70846, ObjectShape.SCENERY_INTERACT, 0, platformObjTile))
                 Artefact(70783, artefact3Tile, this)
             }
             else -> {
                 possibleTargets.filterIsInstance<Player>().filterNot { it.isDead }
                     .forEach { it.sendMessage("The Queen Black Dragon's concentration wavers; the last artefact is now unguarded.") }
-                World.spawnObject(GameObject(70848, ObjectType.SCENERY_INTERACT, 0, platformObjTile))
+                World.spawnObject(GameObject(70848, ObjectShape.SCENERY_INTERACT, 0, platformObjTile))
                 Artefact(70786, artefact4Tile, this)
             }
         }
@@ -282,8 +282,8 @@ class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
     }
 
     fun phase() {
-        artefact?.let { World.spawnObject(GameObject(it.id+1, ObjectType.SCENERY_INTERACT, 0, Tile.of(it.tile))) }
-        World.getObject(platformObjTile)?.let { World.spawnObject(GameObject(it.id+1, ObjectType.SCENERY_INTERACT, 0, platformObjTile)) }
+        artefact?.let { World.spawnObject(GameObject(it.id+1, ObjectShape.SCENERY_INTERACT, 0, it.tile)) }
+        World.getObject(platformObjTile)?.let { World.spawnObject(GameObject(it.id+1, ObjectShape.SCENERY_INTERACT, 0, platformObjTile)) }
         artefact = null
         isCantInteract = false
         hitpoints = maxHitpoints
@@ -293,8 +293,8 @@ class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
             transformIntoNPC(15509)
             isCantInteract = false
             anim(16742)
-            World.spawnObject(GameObject(70790, ObjectType.SCENERY_INTERACT, 0, artefact1Tile))
-            World.spawnObject(GameObject(70775, ObjectType.SCENERY_INTERACT, 0, stairsUnderTile))
+            World.spawnObject(GameObject(70790, ObjectShape.SCENERY_INTERACT, 0, artefact1Tile))
+            World.spawnObject(GameObject(70775, ObjectShape.SCENERY_INTERACT, 0, stairsUnderTile))
             souls.forEach { it.finish() }
             souls.clear()
             queryNearbyNPCsByTileRange(20) { it.id == 15464 }.forEach { it.finish() }
@@ -315,10 +315,10 @@ class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
         phase = 0
         World.getObject(stairsUnderTile)?.let { World.removeObject(it) }
         World.getObject(platformObjTile)?.let { World.removeObject(it) }
-        World.spawnObject(GameObject(70776, ObjectType.SCENERY_INTERACT, 0, artefact1Tile))
-        World.spawnObject(GameObject(70779, ObjectType.SCENERY_INTERACT, 0, artefact2Tile))
-        World.spawnObject(GameObject(70782, ObjectType.SCENERY_INTERACT, 0, artefact3Tile))
-        World.spawnObject(GameObject(70785, ObjectType.SCENERY_INTERACT, 0, artefact4Tile))
+        World.spawnObject(GameObject(70776, ObjectShape.SCENERY_INTERACT, 0, artefact1Tile))
+        World.spawnObject(GameObject(70779, ObjectShape.SCENERY_INTERACT, 0, artefact2Tile))
+        World.spawnObject(GameObject(70782, ObjectShape.SCENERY_INTERACT, 0, artefact3Tile))
+        World.spawnObject(GameObject(70785, ObjectShape.SCENERY_INTERACT, 0, artefact4Tile))
         artefact?.let { World.removeObject(it) }
         clearPendingTasks()
         woke = false
@@ -349,7 +349,7 @@ class QBD(npcId: Int, tile: Tile) : NPC(npcId, tile, Direction.SOUTH, true) {
     }
 
     fun spawnSoul(target: Player) {
-        souls.add(TorturedSoul(this, target, Tile.of(tile)))
+        souls.add(TorturedSoul(this, target, tile))
     }
 }
 
@@ -372,7 +372,7 @@ fun rollQbdKillAndAddToChest(player: Player) {
     drops.forEach { item ->
         if (yellDrop(item.id))
             World.broadcastLoot("${player.displayName} has just received ${addArticle(item.name)} from the Queen Black Dragon!")
-        player.incrementCount(item.name + " drops earned", item.getAmount())
+        player.incrementCount(item.name + " drops earned", item.amount)
         if (!currentLoot.add(item))
             player.inventory.addItemDrop(item)
     }
@@ -381,10 +381,10 @@ fun rollQbdKillAndAddToChest(player: Player) {
 
 private fun genDrop(killer: Player): MutableList<Item> {
     val drops = mutableListOf<Item>()
-    add(drops, DropTable.calculateDrops(killer, DropSets.getDropSet("QBDMain")))
-    add(drops, DropTable.calculateDrops(killer, DropSets.getDropSet("QBDSupply")))
+    drops.addAll(DropTable.calculateDrops(killer, DropSets.getDropSet("QBDMain")))
+    drops.addAll(DropTable.calculateDrops(killer, DropSets.getDropSet("QBDSupply")))
     if (random(128) == 0)
-        repeat(2) { add(drops, DropTable.calculateDrops(killer, DropSets.getDropSet("rdt_standard"))) }
+        repeat(2) { drops.addAll(DropTable.calculateDrops(killer, DropSets.getDropSet("rdt_standard"))) }
     return drops
 }
 
@@ -600,22 +600,22 @@ enum class QBDAttack(val func: (QBD, Player) -> Int) {
             targets.forEach { it.sendMessage("<col=66FFFF>The Queen Black Dragon takes the consistency of crystal; she is more resistant to</col>") }
             targets.forEach { it.sendMessage("<col=66FFFF>magic, but weaker to physical damage.</col>") }
             qbd.transformIntoNPC(15506)
-            World.spawnObject(GameObject(70823, ObjectType.SCENERY_INTERACT, 0, qbd.middleTile.transform(-12, -3, -1)))
-            World.spawnObject(GameObject(70819, ObjectType.SCENERY_INTERACT, 0, qbd.middleTile.transform(6, -3, -1)))
+            World.spawnObject(GameObject(70823, ObjectShape.SCENERY_INTERACT, 0, qbd.middleTile.transform(-12, -3, -1)))
+            World.spawnObject(GameObject(70819, ObjectShape.SCENERY_INTERACT, 0, qbd.middleTile.transform(6, -3, -1)))
             qbd.capDamage = 1000
         } else {
             targets.forEach { it.sendMessage("<col=669900>The Queen Black Dragon hardens her carapace; she is more resistant to physical</col>") }
             targets.forEach { it.sendMessage("<col=669900>damage, but more vulnerable to magic.</col>") }
             qbd.transformIntoNPC(15507)
-            World.spawnObject(GameObject(70824, ObjectType.SCENERY_INTERACT, 0, qbd.middleTile.transform(-12, -3, -1)))
-            World.spawnObject(GameObject(70820, ObjectType.SCENERY_INTERACT, 0, qbd.middleTile.transform(6, -3, -1)))
+            World.spawnObject(GameObject(70824, ObjectShape.SCENERY_INTERACT, 0, qbd.middleTile.transform(-12, -3, -1)))
+            World.spawnObject(GameObject(70820, ObjectShape.SCENERY_INTERACT, 0, qbd.middleTile.transform(6, -3, -1)))
             qbd.capDamage = 1000
         }
         qbd.schedule {
             wait(40)
             qbd.transformIntoNPC(15454)
-            World.spawnObject(GameObject(70822, ObjectType.SCENERY_INTERACT, 0, qbd.middleTile.transform(-12, -3, -1)))
-            World.spawnObject(GameObject(70818, ObjectType.SCENERY_INTERACT, 0, qbd.middleTile.transform(6, -3, -1)))
+            World.spawnObject(GameObject(70822, ObjectShape.SCENERY_INTERACT, 0, qbd.middleTile.transform(-12, -3, -1)))
+            World.spawnObject(GameObject(70818, ObjectShape.SCENERY_INTERACT, 0, qbd.middleTile.transform(6, -3, -1)))
         }
         return@changeArmor 6
     }),

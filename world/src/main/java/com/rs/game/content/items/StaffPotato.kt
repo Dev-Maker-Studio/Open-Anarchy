@@ -11,7 +11,7 @@ import com.rs.game.content.skills.cooking.Foods
 import com.rs.game.content.skills.magic.Magic
 import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.utils.Ticks
@@ -76,7 +76,7 @@ fun mapStaffPotato() {
                         }
                     }
                 opExec("Save current location.") {
-                    e.player.nsv.setO<Any>("savedPotatoLoc", Tile.of(e.player.tile) to e.player.controllerManager.controller)
+                    e.player.nsv.setO<Any>("savedPotatoLoc", e.player.tile to e.player.controllerManager.controller)
                     e.player.sendMessage("Location saved.")
                 }
             }

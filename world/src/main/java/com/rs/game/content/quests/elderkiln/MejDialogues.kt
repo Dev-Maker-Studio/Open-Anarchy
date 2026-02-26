@@ -6,7 +6,7 @@ import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 
@@ -160,7 +160,7 @@ private fun mejJahDialoguePostQuest(player: Player, npc: NPC) {
                     item(TOKKUL_ZO_CHARGED, "TzHaar-Mej-Jeh hands you a ring. It is extremely hot.") {
                         if (!player.inventory.hasFreeSlots()) return@item player.sendMessage("You don't have enough inventory space.")
                         if (!recTZ) {
-                            player.inventory.addItem(Item(TOKKUL_ZO_CHARGED).addMetaData("tzhaarCharges", 4000))
+                            player.inventory.addItem(Item(TOKKUL_ZO_CHARGED).apply { addMetaData("tzhaarCharges", 4000) })
                             player.set("recTokkulZo", true)
                         } else player.inventory.addItem(TOKKUL_ZO_UNCHARGED)
                     }

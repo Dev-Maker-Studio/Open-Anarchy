@@ -21,10 +21,10 @@ import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.Sorts;
 import com.rs.db.model.Highscore;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.db.DBItemManager;
-import com.rs.lib.file.JsonFileManager;
-import com.rs.lib.game.Rights;
-import com.rs.lib.util.Logger;
+import com.rs.db.DBItemManager;
+import org.darkan.core.JsonFileManager;
+import org.darkan.core.model.Rights;
+import org.darkan.core.Logger;
 import org.bson.Document;
 
 import java.util.function.Consumer;

@@ -17,7 +17,7 @@
 package com.rs.game.content.world
 
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 

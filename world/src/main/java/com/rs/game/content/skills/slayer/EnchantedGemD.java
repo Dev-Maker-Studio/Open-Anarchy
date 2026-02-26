@@ -21,7 +21,7 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.dialogue.Options;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 
 public class EnchantedGemD extends Conversation {
 	public EnchantedGemD(Player player, Master master) {

@@ -23,7 +23,7 @@ import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 
 public class AbyssalTitan extends FamiliarCombatScript {
 

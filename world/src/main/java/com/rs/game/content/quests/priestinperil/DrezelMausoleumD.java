@@ -5,7 +5,7 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 
 import static com.rs.game.content.world.areas.morytania.npcs.DrezelKt.DREZEL;
 

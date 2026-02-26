@@ -3,8 +3,8 @@ package com.rs.game.content.randomevents
 import com.rs.game.World
 import com.rs.game.content.skills.dungeoneering.DamonheimController
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import java.util.ArrayList
 
 object RandomEvents {
@@ -43,7 +43,7 @@ object RandomEvents {
 
 		var spawnTile = player.getNearestTeleTile(1)
 		if (spawnTile == null)
-			spawnTile = Tile.of(player.tile)
+			spawnTile = player.tile
 		player.nsv.setL("lastRandom", World.getServerTicks())
 		val random = Utils.random(0, 100)
 

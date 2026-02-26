@@ -21,7 +21,7 @@ import com.rs.engine.quest.QuestHandler;
 import com.rs.engine.quest.QuestOutline;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.Constants;
+import org.darkan.core.Constants;
 import com.rs.plugin.annotations.PluginEventHandler;
 
 import java.util.ArrayList;

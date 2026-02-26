@@ -16,7 +16,8 @@
 //
 package com.rs.game.content.skills.construction.playerOwnedHouse;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.content.skills.construction.SawmillOperator;
@@ -37,7 +38,7 @@ public class ItemOnServantD extends Conversation {
 				break;
 			}
 		}
-		ItemDefinitions definition = ItemDefinitions.getDefs(item);
+		ItemDefinition definition = ItemDefinitions.getDefs(item);
 		final int[] plank = SawmillOperator.getPlankForLog(item);
 		if (plank != null || definition.isNoted())
 			proceed = true;

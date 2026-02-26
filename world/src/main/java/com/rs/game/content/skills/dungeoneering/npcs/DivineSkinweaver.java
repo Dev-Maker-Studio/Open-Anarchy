@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.npcs;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants;
@@ -31,10 +31,10 @@ import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -92,7 +92,7 @@ public final class DivineSkinweaver extends DungeonBoss {
 	private int[] getOpenHole() {
 		List<int[]> holes = new ArrayList<>();
 		for (int[] hole : HOLES) {
-			GameObject object = getManager().getObjectWithType(getReference(), 49289, ObjectType.WALL_STRAIGHT, hole[0], hole[1]);
+			GameObject object = getManager().getObjectWithType(getReference(), 49289, ObjectShape.WALL_STRAIGHT, hole[0], hole[1]);
 			if (object != null && object.getId() != 49289)
 				holes.add(new int[] { object.getX() + Utils.ROTATION_DIR_X[object.getRotation()], object.getY() + Utils.ROTATION_DIR_Y[object.getRotation()] });
 		}

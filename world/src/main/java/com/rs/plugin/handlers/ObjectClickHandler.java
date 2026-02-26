@@ -16,8 +16,8 @@
 //
 package com.rs.plugin.handlers;
 
-import com.rs.cache.loaders.ObjectType;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.ObjectShape;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.events.ObjectClickEvent;
 
 import java.util.function.Consumer;
@@ -25,7 +25,7 @@ import java.util.function.Consumer;
 public class ObjectClickHandler extends PluginHandler<ObjectClickEvent> {
 
 	private Tile[] tiles;
-	private ObjectType type;
+	private ObjectShape type;
 	private boolean checkDistance = true;
 
 	public ObjectClickHandler(boolean checkDistance, Object[] namesOrIds, Tile[] tiles, Consumer<ObjectClickEvent> handler) {
@@ -47,7 +47,7 @@ public class ObjectClickHandler extends PluginHandler<ObjectClickEvent> {
 		this(true, namesOrIds, new Tile[] { tile }, handler);
 	}
 
-	public ObjectClickHandler(Object[] namesOrIds, ObjectType type, Consumer<ObjectClickEvent> handler) {
+	public ObjectClickHandler(Object[] namesOrIds, ObjectShape type, Consumer<ObjectClickEvent> handler) {
 		this(true, namesOrIds, null, handler);
 		this.type = type;
 	}
@@ -56,7 +56,7 @@ public class ObjectClickHandler extends PluginHandler<ObjectClickEvent> {
 		this(true, namesOrIds, null, handler);
 	}
 
-	public ObjectType getType() {
+	public ObjectShape getType() {
 		return type;
 	}
 

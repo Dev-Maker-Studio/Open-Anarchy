@@ -27,11 +27,11 @@ import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.content.world.areas.rellekka.Rellekka;
 import com.rs.game.content.world.doors.Doors;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.*;
 
@@ -45,9 +45,9 @@ public class AchievementSetRewards {
 	
 	public static NPCDropHandler handleNotingDagBones = new NPCDropHandler(new Object[] { 2881, 2882, 2883 }, new Object[] { 6729 }, e -> {
 		if (e.getPlayer().getEquipment().getBootsId() == 19766)
-			e.getItem().setId(e.getItem().getDefinitions().getCertId());
+			e.getItem().getItem().setId(e.getItem().getDefinitions().getCertId());
 		else
-			if (GlobalNPCDropPluginsKt.bonecrush(e.getPlayer(), e.getItem()))
+			if (GlobalNPCDropPluginsKt.bonecrush(e.getPlayer(), e.getItem().getItem()))
 				e.deleteItem();
 	});
 

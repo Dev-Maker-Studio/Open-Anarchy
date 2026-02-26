@@ -16,12 +16,12 @@
 //
 package com.rs.game.content.world.areas.global;
 
-import com.rs.cache.loaders.animations.AnimationDefinitions;
+import org.darkan.core.cache.AnimationDefinitions;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class AgilityShortcuts {
 	public static void climbOver(Player player, Tile toTile) {
@@ -29,7 +29,7 @@ public class AgilityShortcuts {
 	}
 
 	public static void climbOver(Player player, Tile toTile, int animId) {
-		player.forceMove(toTile, animId, 33, AnimationDefinitions.getDefs(animId).getEmoteTime() / 20 - 5);
+		player.forceMove(toTile, animId, 33, com.rs.utils.KtExtensionsKt.getEmoteTime(AnimationDefinitions.getDefs(animId)) / 20 - 5);
 	}
 
 	public static void sidestep(final Player player, Tile toTile) {

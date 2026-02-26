@@ -2,36 +2,37 @@ package org.darkan.core.map.pathfinder.collision
 
 import org.darkan.core.map.pathfinder.flag.CollisionFlag
 
-interface CollisionStrategy {
-    fun canMove(tileFlag: Int, blockFlag: Int): Boolean
+public interface CollisionStrategy {
+    public fun canMove(tileFlag: Int, blockFlag: Int): Boolean
 }
 
-class NormalBlockFlagCollision : CollisionStrategy {
+public class NormalBlockFlagCollision : CollisionStrategy {
     override fun canMove(tileFlag: Int, blockFlag: Int): Boolean {
         return (tileFlag and blockFlag) == 0
     }
 }
 
-class IndoorsFlagCollision : CollisionStrategy {
+public class IndoorsFlagCollision : CollisionStrategy {
     override fun canMove(tileFlag: Int, blockFlag: Int): Boolean {
         return (tileFlag and blockFlag) == 0 && (tileFlag and CollisionFlag.ROOF) != 0
     }
 }
 
-class OutdoorsFlagCollision : CollisionStrategy {
+public class OutdoorsFlagCollision : CollisionStrategy {
+
     override fun canMove(tileFlag: Int, blockFlag: Int): Boolean {
         return (tileFlag and (blockFlag or CollisionFlag.ROOF)) == 0
     }
 }
 
-class BlockedFlagCollision : CollisionStrategy {
+public class BlockedFlagCollision() : CollisionStrategy {
     override fun canMove(tileFlag: Int, blockFlag: Int): Boolean {
         val flag = blockFlag and CollisionFlag.FLOOR.inv()
         return (tileFlag and flag) == 0 && (tileFlag and CollisionFlag.FLOOR) != 0
     }
 }
 
-class LineOfSightBlockFlagCollision : CollisionStrategy {
+public class LineOfSightBlockFlagCollision : CollisionStrategy {
     override fun canMove(tileFlag: Int, blockFlag: Int): Boolean {
         val movementFlags = (blockFlag and BLOCK_MOVEMENT) shl 9
         val routeFlags = (blockFlag and BLOCK_ROUTE) shr 13
@@ -60,12 +61,4 @@ class LineOfSightBlockFlagCollision : CollisionStrategy {
             CollisionFlag.WALL_WEST_ROUTE_BLOCKER or
             CollisionFlag.OBJECT_ROUTE_BLOCKER
     }
-}
-
-enum class CollisionStrategyType(val strategy: CollisionStrategy) {
-    NORMAL(NormalBlockFlagCollision()),
-    WATER(BlockedFlagCollision()),
-    FLY(LineOfSightBlockFlagCollision()),
-    INDOOR(IndoorsFlagCollision()),
-    OUTDOOR(OutdoorsFlagCollision())
 }

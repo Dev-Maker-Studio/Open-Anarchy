@@ -16,12 +16,12 @@
 //
 package com.rs.game.model.entity.actions;
 
-import com.rs.engine.pathfinder.Route;
+import org.darkan.core.map.pathfinder.Route;
 import com.rs.engine.pathfinder.RouteFinderKt;
 import com.rs.game.content.Effect;
 import com.rs.game.model.entity.Entity;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 
 public class EntityFollow extends Action {

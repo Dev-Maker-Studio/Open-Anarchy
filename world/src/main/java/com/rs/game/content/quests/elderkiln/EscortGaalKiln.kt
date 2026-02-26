@@ -3,7 +3,7 @@ package com.rs.game.content.quests.elderkiln
 import com.rs.engine.cutscenekt.cutscene
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest.ELDER_KILN
 import com.rs.game.content.minigames.fightkiln.FightKilnController
 import com.rs.game.map.instance.Instance
@@ -13,7 +13,7 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.InstancedController
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.WorldUtil.regionIdToChunkCoords
@@ -46,7 +46,7 @@ private fun enterQuestKiln(player: Player) {
             exec {
                 player.cutscene {
                     fadeInAndWait()
-                    dynamicRegion(Tile.of(player.tile), 592, 645, 2, 2, copyNpcs = true)
+                    dynamicRegion(player.tile, 592, 645, 2, 2, copyNpcs = true)
                     lowerAspectRatio()
                     entityTeleTo(player, 7, 12)
                     wait(1)

@@ -17,7 +17,7 @@
 package com.rs.engine.quest.data;
 
 import com.rs.engine.quest.Quest;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 import java.util.HashMap;
 import java.util.HashSet;

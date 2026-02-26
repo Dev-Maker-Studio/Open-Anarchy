@@ -19,8 +19,8 @@ package com.rs.game.content.skills.hunter;
 import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
 import com.rs.utils.DropSets;
 import com.rs.utils.drop.DropTable;
 

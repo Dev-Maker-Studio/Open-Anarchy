@@ -1,6 +1,6 @@
 package com.rs.game.content.quests.naturespirit
 
-import com.rs.engine.pathfinder.collision.CollisionStrategyType
+import org.darkan.core.map.pathfinder.collision.CollisionStrategyType
 import com.rs.game.World
 import com.rs.game.content.skills.cooking.Foods
 import com.rs.game.model.entity.Entity
@@ -9,8 +9,8 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.npc.combat.CombatScriptsHandler
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
@@ -34,7 +34,7 @@ class Ghast(id: Int, tile: Tile) : NPC(id, tile) {
 
     override fun getPossibleTargets(): MutableList<Entity> {
         //Can't attack in filliman's grotto zone
-        return super.getPossibleTargets().filter { !intArrayOf(879008, 881056, 881057, 879009).contains(it.chunkId) }.toMutableList()
+        return super.getPossibleTargets().filter { !intArrayOf(879008, 881056, 881057, 879009).contains(it.getChunkId()) }.toMutableList()
     }
 
     override fun sendDeath(source: Entity?) {

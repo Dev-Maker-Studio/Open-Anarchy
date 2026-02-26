@@ -17,9 +17,9 @@
 package com.rs.game.content.skills.crafting
 
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
-import com.rs.lib.game.Item
-import com.rs.lib.net.ClientPacket
+import org.darkan.core.Constants
+import org.darkan.core.model.Item
+
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 
@@ -85,12 +85,12 @@ enum class Bling(val levelRequired: Int, val experience: Double, private val ite
 
 @ServerStartupEvent
 fun mapJewelryCrafting() {
-    fun getNumberToMake(packetId: ClientPacket): Int {
+    fun getNumberToMake(packetId: Int): Int {
         return when(packetId) {
-            ClientPacket.IF_OP1 -> 1
-            ClientPacket.IF_OP2 -> 5
-            ClientPacket.IF_OP3 -> 28
-            ClientPacket.IF_OP4 -> -5
+            1 -> 1
+            2 -> 5
+            3 -> 28
+            4 -> -5
             else -> 1
         }
     }
@@ -101,7 +101,7 @@ fun mapJewelryCrafting() {
             e.player.sendMessage("You have not unlocked the ability to craft this. Purchase the ability from a slayer master.")
             return@onButtonClick
         }
-        when(val numberToMake = getNumberToMake(e.packet)) {
+        when(val numberToMake = getNumberToMake(e.opNum)) {
             -5 -> e.player.sendInputInteger("How many would you like to make?") { number ->
                 e.player.actionManager.setAction(JewelryAction(bling, number, e.player.tempAttribs.getB("immenseHeatCrafting")))
             }

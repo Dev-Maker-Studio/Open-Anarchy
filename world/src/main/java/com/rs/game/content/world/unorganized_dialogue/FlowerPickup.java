@@ -20,7 +20,7 @@ import com.rs.engine.dialogue.Conversation;
 import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Animation;
+import org.darkan.core.model.Animation;
 
 public class FlowerPickup extends Conversation {
 

@@ -16,13 +16,13 @@
 //
 package com.rs.game.model.entity.player;
 
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.model.IFEvents;
 import com.rs.db.WorldDB;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.model.item.ItemsContainer;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Rights;
-import com.rs.lib.net.ClientPacket;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.Rights;
+
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.utils.EconomyPrices;
@@ -63,43 +63,43 @@ public class Trade {
 			else if (e.getComponentId() == 20)
 				e.getPlayer().closeInterfaces();
 			else if (e.getComponentId() == 32) {
-				if (e.getPacket() == ClientPacket.IF_OP1)
+				if (e.getOpNum() == 1)
 					e.getPlayer().getTrade().removeItem(e.getSlotId(), 1);
-				else if (e.getPacket() == ClientPacket.IF_OP2)
+				else if (e.getOpNum() == 2)
 					e.getPlayer().getTrade().removeItem(e.getSlotId(), 5);
-				else if (e.getPacket() == ClientPacket.IF_OP3)
+				else if (e.getOpNum() == 3)
 					e.getPlayer().getTrade().removeItem(e.getSlotId(), 10);
-				else if (e.getPacket() == ClientPacket.IF_OP4)
+				else if (e.getOpNum() == 4)
 					e.getPlayer().getTrade().removeItem(e.getSlotId(), Integer.MAX_VALUE);
-				else if (e.getPacket() == ClientPacket.IF_OP5)
+				else if (e.getOpNum() == 5)
 					e.getPlayer().sendInputInteger("Enter Amount:", num -> e.getPlayer().getTrade().removeItem(e.getSlotId(), num));
-				else if (e.getPacket() == ClientPacket.IF_OP6)
+				else if (e.getOpNum() == 6)
 					e.getPlayer().getTrade().sendValue(e.getSlotId(), false);
-				else if (e.getPacket() == ClientPacket.IF_OP10)
+				else if (e.getOpNum() == 10)
 					e.getPlayer().getTrade().sendExamine(e.getSlotId(), false);
 			} else if (e.getComponentId() == 35) {
-				if (e.getPacket() == ClientPacket.IF_OP1)
+				if (e.getOpNum() == 1)
 					e.getPlayer().getTrade().sendValue(e.getSlotId(), true);
-				else if (e.getPacket() == ClientPacket.IF_OP10)
+				else if (e.getOpNum() == 10)
 					e.getPlayer().getTrade().sendExamine(e.getSlotId(), true);
 			} else if (e.getComponentId() == 53)
 				e.getPlayer().sendInputInteger("Enter Amount:", num -> e.getPlayer().getTrade().addCoinsFromPouch(num));
 			
 		} else if (e.getInterfaceId() == 336)
 			if (e.getComponentId() == 0)
-				if (e.getPacket() == ClientPacket.IF_OP1)
+				if (e.getOpNum() == 1)
 					e.getPlayer().getTrade().addItem(e.getSlotId(), 1);
-				else if (e.getPacket() == ClientPacket.IF_OP2)
+				else if (e.getOpNum() == 2)
 					e.getPlayer().getTrade().addItem(e.getSlotId(), 5);
-				else if (e.getPacket() == ClientPacket.IF_OP3)
+				else if (e.getOpNum() == 3)
 					e.getPlayer().getTrade().addItem(e.getSlotId(), 10);
-				else if (e.getPacket() == ClientPacket.IF_OP4)
+				else if (e.getOpNum() == 4)
 					e.getPlayer().getTrade().addItem(e.getSlotId(), Integer.MAX_VALUE);
-				else if (e.getPacket() == ClientPacket.IF_OP5)
+				else if (e.getOpNum() == 5)
 					e.getPlayer().sendInputInteger("Enter Amount:", num -> e.getPlayer().getTrade().addItem(e.getSlotId(), num));
-				else if (e.getPacket() == ClientPacket.IF_OP6)
+				else if (e.getOpNum() == 6)
 					e.getPlayer().getTrade().sendValue(e.getSlotId());
-				else if (e.getPacket() == ClientPacket.IF_OP10)
+				else if (e.getOpNum() == 10)
 					e.getPlayer().getInventory().sendExamine(e.getSlotId());
 	});
 

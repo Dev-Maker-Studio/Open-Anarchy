@@ -31,11 +31,11 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.utils.Ticks;
 
 public class FightCavesController extends Controller {
@@ -86,7 +86,7 @@ public class FightCavesController extends Controller {
 	}
 
 	@Override
-	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, ClientPacket packet) {
+	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packet) {
 		if (stage != Stages.RUNNING)
 			return false;
 		if (interfaceId == 182 && (componentId == 6 || componentId == 13)) {

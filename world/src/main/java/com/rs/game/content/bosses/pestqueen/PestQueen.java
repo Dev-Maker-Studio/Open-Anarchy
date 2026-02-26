@@ -19,7 +19,7 @@ package com.rs.game.content.bosses.pestqueen;
 import com.rs.game.content.bosses.pestqueen.attack.Attack;
 import com.rs.game.content.bosses.pestqueen.attack.impl.MeleeAttack;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 /**
  *

@@ -5,7 +5,7 @@ import com.rs.Settings
 import com.rs.engine.command.Commands
 import com.rs.engine.cutscene.ExampleCutscene
 import com.rs.engine.miniquest.Miniquest
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.minigames.barrows.BarrowsController
@@ -23,14 +23,14 @@ import com.rs.game.model.entity.Rotation
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.InstancedController
-import com.rs.lib.game.Item
-import com.rs.lib.game.Rights
-import com.rs.lib.game.SpotAnim
-import com.rs.lib.game.Tile
-import com.rs.lib.net.packets.decoders.ReflectionCheckResponse
-import com.rs.lib.util.RSColor
-import com.rs.lib.util.Utils
-import com.rs.lib.util.reflect.ReflectionCheck
+import org.darkan.core.model.Item
+import org.darkan.core.model.Rights
+import org.darkan.core.model.SpotAnim
+import world.gregs.voidps.type.Tile
+// TODO: net.packets.decoders.ReflectionCheckResponse
+// TODO: RSColor
+import org.darkan.core.Utils
+// TODO: ReflectionCheck
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.PluginScriptHost
 import com.rs.plugin.kts.PluginScriptHost.Companion.loadAndExecuteScripts
@@ -78,7 +78,7 @@ fun loadDeveloperCommands() {
             }
 
             override fun canMove(dir: Direction): Boolean {
-                player.sendMessage("${player.tile.xInRegion}, ${player.tile.yInRegion}")
+                player.sendMessage("${player.tile.getXInRegion()}, ${player.tile.getYInRegion()}")
                 return true
             }
 
@@ -125,7 +125,7 @@ fun loadDeveloperCommands() {
     }
 
     Commands.add(Rights.DEVELOPER, "spawnmax", "Spawns another max into the world on top of the player.") { p, _ ->
-        World.spawnNPC(3373, Tile.of(p.tile), true, true)
+        World.spawnNPC(3373, p.tile, true, true)
     }
 
     Commands.add(Rights.DEVELOPER, "playcs", "Plays a cutscene using new cutscene system") { p, _ ->
@@ -167,7 +167,7 @@ fun loadDeveloperCommands() {
     }
 
     Commands.add(Rights.DEVELOPER, "drcor [r, g, b]", "Set equipment color override") { p, args ->
-        val colorHsl = RSColor.RGB_to_HSL(args[0].toInt(), args[1].toInt(), args[2].toInt())
+        val colorHsl = Utils.getRSColor(args[0].toInt(), args[1].toInt(), args[2].toInt())
         listOf(Equipment.CHEST, Equipment.LEGS, Equipment.SHIELD, Equipment.HEAD).forEach { slot ->
             p.equipment.get(slot)?.addMetaData("drCOr", colorHsl)
         }
@@ -230,7 +230,7 @@ fun loadDeveloperCommands() {
     }
 
     Commands.add(Rights.DEVELOPER, "killnpcs", "Kills all npcs around the player.") { p, _ ->
-        World.getNPCsInChunkRange(p.chunkId, 3).forEach { npc ->
+        World.getNPCsInChunkRange(p.getChunkId(), 3).forEach { npc ->
             if (npc !is Familiar && npc !is Pet) {
                 if (Utils.getDistance(npc.tile, p.tile) < 9 && npc.plane == p.plane) {
                     repeat(100) {
@@ -252,7 +252,7 @@ fun loadDeveloperCommands() {
     }
 
     Commands.add(Rights.DEVELOPER, "spawntestnpc", "Spawns a combat test NPC.") { p, _ ->
-        val npc = World.spawnNPC(14256, Tile.of(p.tile), true, true)
+        val npc = World.spawnNPC(14256, p.tile, true, true)
         npc.setLoadsUpdateZones()
         npc.setPermName("Losercien (punching bag)")
         npc.hitpoints = Int.MAX_VALUE / 2
@@ -274,16 +274,16 @@ fun loadDeveloperCommands() {
     }
 
     Commands.add(Rights.DEVELOPER, "npc [npcId]", "Spawns an NPC with specified ID.") { p, args ->
-        World.spawnNPC(args[0].toInt(), Tile.of(p.tile), true, false)
+        World.spawnNPC(args[0].toInt(), p.tile, true, false)
     }
 
     Commands.add(Rights.DEVELOPER, "npcwithfunc [npcId]", "Spawns an NPC with specified ID with its custom functionality.") { p, args ->
-        World.spawnNPC(args[0].toInt(), Tile.of(p.tile), true, true)
+        World.spawnNPC(args[0].toInt(), p.tile, true, true)
     }
 
     Commands.add(Rights.DEVELOPER, "addnpc [npcId]", "Spawns an NPC permanently with specified ID.") { p, args ->
         if (Settings.getConfig().isDebug) {
-            if (NPCSpawns.addSpawn(p.username, args[0].toInt(), Tile.of(p.tile))) {
+            if (NPCSpawns.addSpawn(p.username, args[0].toInt(), p.tile)) {
                 p.sendMessage("Added spawn.")
             }
         }
@@ -295,7 +295,7 @@ fun loadDeveloperCommands() {
 
     Commands.add(Rights.DEVELOPER, "addgrounditem,addgitem [itemId respawnTicks]", "Spawns a ground item permanently with specified ID.") { p, args ->
         if (Settings.getConfig().isDebug) {
-            if (ItemSpawns.addSpawn(p.username, args[0].toInt(), 1, args[1].toInt(), Tile.of(p.tile))) {
+            if (ItemSpawns.addSpawn(p.username, args[0].toInt(), 1, args[1].toInt(), p.tile)) {
                 p.sendMessage("Added spawn.")
             }
         }
@@ -338,16 +338,16 @@ fun loadDeveloperCommands() {
     }
 
     Commands.add(Rights.DEVELOPER, "coords,getpos,mypos,pos,loc", "Gets the coordinates for the tile.") { p, _ ->
-        p.sendMessage("Coords: ${p.x},${p.y},${p.plane}, regionId: ${p.regionId}, chunkX: ${p.chunkX}, chunkY: ${p.chunkY}, hash: ${p.tileHash}")
-        p.sendMessage("ChunkId: ${p.chunkId}")
+        p.sendMessage("Coords: ${p.x},${p.y},${p.plane}, regionId: ${p.getRegionId()}, chunkX: ${p.chunkX}, chunkY: ${p.chunkY}, hash: ${p.getTileHash()}")
+        p.sendMessage("ChunkId: ${p.getChunkId()}")
 
-        val chunk = ChunkManager.getChunk(p.chunkId)
+        val chunk = ChunkManager.getChunk(p.getChunkId())
         if (chunk is InstancedChunk) {
             p.sendMessage("In instanced chunk copied from: ${chunk.originalBaseX}, ${chunk.originalBaseY} rotation: ${chunk.rotation}")
         }
 
-        p.sendMessage("JagCoords: ${p.plane},${p.regionX},${p.regionY},${p.xInRegion},${p.yInRegion}")
-        p.sendMessage("Local coords: ${p.xInRegion}, ${p.yInRegion}")
+        p.sendMessage("JagCoords: ${p.plane},${p.regionX},${p.regionY},${p.getXInRegion()},${p.getYInRegion()}")
+        p.sendMessage("Local coords: ${p.getXInRegion()}, ${p.getYInRegion()}")
         p.sendMessage("16x16: ${p.getXInScene(p.sceneBaseChunkId) % 16}, ${p.getYInScene(p.sceneBaseChunkId) % 16}")
     }
 
@@ -431,46 +431,11 @@ fun loadDeveloperCommands() {
         }
 
         val index = if (args.size == 1) 0 else args[1].toInt()
-        p.tele(Tile.of(npcs[index].tile))
+        p.tele(npcs[index].tile)
     }
 
-    Commands.add(Rights.DEVELOPER, "checkclient [player name]", "Verifies the user's client.") { p, args ->
-        val target = World.getPlayerByDisplay(args[0])
-        if (target == null) {
-            p.sendMessage("Couldn't find player.")
-            return@add
-        }
-
-        target.queueReflectionAnalysis(
-            ReflectionAnalysis()
-                .addTest(ReflectionTest("Client", "validates client class",
-                    ReflectionCheck("com.Loader", "MAJOR_BUILD")) { check ->
-                    check.response.code == ReflectionCheckResponse.ResponseCode.SUCCESS &&
-                            check.response.stringData == "public static final"
-                })
-                .addTest(ReflectionTest("Loader", "validates launcher class",
-                    ReflectionCheck("com.darkan.Loader", "DOWNLOAD_URL")) { check ->
-                    check.response.code == ReflectionCheckResponse.ResponseCode.SUCCESS &&
-                            check.response.stringData == "public static"
-                })
-                .addTest(ReflectionTest("Player rights", "validates player rights client sided",
-                    ReflectionCheck("com.jagex.client", "PLAYER_RIGHTS", true)) { check ->
-                    check.response.code == ReflectionCheckResponse.ResponseCode.SUCCESS &&
-                            check.response.data.toInt() == target.rights.crown
-                })
-                .addTest(ReflectionTest("Lobby port method", "validates getPort",
-                    ReflectionCheck("com.Loader", "I", "getPort", arrayOf(1115))) { check ->
-                    check.response.code == ReflectionCheckResponse.ResponseCode.NUMBER &&
-                            check.response.data.toInt() == 43594
-                })
-                .addTest(ReflectionTest("Local checksum method", "validates getLocalChecksum",
-                    ReflectionCheck("com.darkan.Download", "java.lang.String", "getLocalChecksum", arrayOf())) { check ->
-                    check.response.code == ReflectionCheckResponse.ResponseCode.STRING &&
-                            check.response.stringData == "e4d95327297ffca1698dff85eda6622d"
-                })
-                .build()
-        )
-    }
+    // TODO: migrate to modern ReflectionCheck system
+    // Commands.add(Rights.DEVELOPER, "checkclient [player name]", "Verifies the user's client.") { ... }
 
     Commands.add(Rights.DEVELOPER, "getip [player name]", "Gets the player's IP addresses.") { p, args ->
         val playerName = Utils.concat(args)

@@ -16,9 +16,9 @@
 //
 package com.rs.engine.book;
 
-import com.rs.cache.loaders.interfaces.IComponentDefinitions;
+import org.darkan.core.cache.IComponentDefinitions;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 
@@ -93,7 +93,7 @@ public abstract class Book {
 
 	private BookPage[] buildPages(String text) {
 		List<BookPage> pages = new ArrayList<>();
-		String[] lines = Utils.splitTextIntoLines(text, 497, IComponentDefinitions.getInterfaceComponent(INTERFACE, RIGHT_COMPONENTS[0]).baseWidth);
+		String[] lines = Utils.splitTextIntoLines(text, 497, IComponentDefinitions.getInterfaceComponent(INTERFACE, RIGHT_COMPONENTS[0]).getBaseWidth());
 		int i = 0;
 		while (i < lines.length) {
 			String[] leftPageLines = new String[LEFT_COMPONENTS.length];

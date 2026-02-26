@@ -21,8 +21,8 @@ import com.rs.game.model.entity.Teleport;
 import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.GroundItem;
+import world.gregs.voidps.type.Tile;
 
 public class StealingCreationLobbyController extends Controller {
 

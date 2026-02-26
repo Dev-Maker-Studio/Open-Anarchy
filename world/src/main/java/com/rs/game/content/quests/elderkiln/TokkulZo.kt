@@ -5,8 +5,8 @@ import com.rs.engine.quest.Quest
 import com.rs.game.content.skills.magic.Magic
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 

@@ -21,6 +21,7 @@ import java.io.EOFException
 import java.io.IOException
 import java.net.SocketException
 import java.nio.channels.ClosedChannelException
+import java.util.concurrent.ConcurrentLinkedQueue
 
 open class Session(
     private val write: ByteWriteChannel,
@@ -32,11 +33,32 @@ open class Session(
     enum class State { CONNECTED, LOST_CONNECTION, DISCONNECTED }
 
     val readChannel = Channel<ClientProt>(capacity = EnvVars.packetQueueCapacity)
+    private val pendingPackets = ConcurrentLinkedQueue<ServerProt>()
 
     var disconnected: Boolean = false
     private var disconnect: (() -> Unit)? = null
     private var disconnecting: (() -> Unit)? = null
     private var state: State = State.CONNECTED
+
+    // --- Java interop ---
+
+    /** Legacy alias for [ip] with capital IP naming. */
+    @JvmName("getIP")
+    fun getIPAddress(): String = ip
+
+    /** Legacy alias for checking if session is closed. */
+    fun isClosed(): Boolean = disconnected
+
+    /** No-op for legacy code that tried to set decoder. */
+    @Suppress("UNUSED_PARAMETER")
+    fun setDecoder(decoder: Any?) { /* no-op in new architecture */ }
+
+    /** Legacy close method - marks session as disconnected. */
+    fun close() {
+        disconnected = true
+        state = State.DISCONNECTED
+        disconnect?.invoke()
+    }
 
     fun onDisconnected(block: () -> Unit) {
         disconnect = block
@@ -69,10 +91,38 @@ open class Session(
         }
     }
 
+    /**
+     * Queues a packet to be sent on the next [flush]. Safe to call from non-suspend contexts.
+     */
+    fun queuePacket(packet: ServerProt) {
+        if (disconnected) return
+        pendingPackets.add(packet)
+    }
+
     open suspend fun flush() {
         if (disconnected) return
+        var packet = pendingPackets.poll()
+        while (packet != null) {
+            send(packet)
+            packet = pendingPackets.poll()
+        }
         write.flush()
     }
+
+    /**
+     * Blocking wrapper for [flush], safe to call from Java / non-suspend contexts
+     * such as the world thread's tick loop.
+     */
+    fun flushBlocking() {
+        if (disconnected) return
+        runBlocking { flush() }
+    }
+
+    /**
+     * Non-suspend poll for the next decoded packet.
+     * Returns null if channel is empty. Safe to call from Java.
+     */
+    fun pollPacket(): ClientProt? = readChannel.tryReceive().getOrNull()
 
     suspend fun readPackets(input: ByteReadChannel) {
         try {

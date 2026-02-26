@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.rooms.PuzzleRoom;
 import com.rs.game.content.skills.dungeoneering.skills.DungHatchet;
@@ -26,8 +26,8 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -101,7 +101,7 @@ public class FlowerRootsRoom extends PuzzleRoom {
 		plants = new Plant[16][16];
 		for (int x = 0; x < 16; x++)
 			for (int y = 0; y < 16; y++) {
-				GameObject object = manager.getObjectWithType(reference, ObjectType.SCENERY_INTERACT, x, y);
+				GameObject object = manager.getObjectWithType(reference, ObjectShape.SCENERY_INTERACT, x, y);
 				if (object != null)
 					for (int type = 0; type < 5; type++) {
 						if (object.getId() == DOOR_LEAVES[type]) {
@@ -168,7 +168,7 @@ public class FlowerRootsRoom extends PuzzleRoom {
 							giveXP(player, Constants.WOODCUTTING);
 							player.setNextAnimation(new Animation(-1));
 							plants[coords[0]][coords[1]] = null;
-							manager.spawnObject(reference, -1, ObjectType.SCENERY_INTERACT, 0, coords[0], coords[1]);
+							manager.spawnObject(reference, -1, ObjectShape.SCENERY_INTERACT, 0, coords[0], coords[1]);
 
 						}
 					}, 3);
@@ -189,9 +189,9 @@ public class FlowerRootsRoom extends PuzzleRoom {
 					if (p != null) {
 						p.locked = true;
 						if (p.type == 0)
-							team.getPackets().sendObjectAnimation(manager.getObjectWithType(reference, ObjectType.SCENERY_INTERACT, x, y), new Animation(BIG_FLOWER_DESPAWN));
+							team.getPackets().sendObjectAnimation(manager.getObjectWithType(reference, ObjectShape.SCENERY_INTERACT, x, y), new Animation(BIG_FLOWER_DESPAWN));
 						else
-							team.getPackets().sendObjectAnimation(manager.getObjectWithType(reference, ObjectType.SCENERY_INTERACT, x, y), new Animation(SMALL_FLOWER_DESPAWN));
+							team.getPackets().sendObjectAnimation(manager.getObjectWithType(reference, ObjectShape.SCENERY_INTERACT, x, y), new Animation(SMALL_FLOWER_DESPAWN));
 					}
 				}
 			for (GameObject leaf : leaves)
@@ -205,7 +205,7 @@ public class FlowerRootsRoom extends PuzzleRoom {
 						Plant p = plants[x][y];
 						if (p != null) {
 							plants[x][y] = null;
-							manager.spawnObject(reference, -1, ObjectType.SCENERY_INTERACT, 0, x, y);
+							manager.spawnObject(reference, -1, ObjectShape.SCENERY_INTERACT, 0, x, y);
 						}
 					}
 				for (GameObject leaf : leaves)
@@ -233,7 +233,7 @@ public class FlowerRootsRoom extends PuzzleRoom {
 						Plant p = plants[x][y];
 						if (p != null && !p.locked)
 							if (p.type == 0 || odd) {
-								replaceObject(manager.getObjectWithType(reference, ObjectType.SCENERY_INTERACT, x, y), PLANTS[p.type][p.currentColor][1]);
+								replaceObject(manager.getObjectWithType(reference, ObjectShape.SCENERY_INTERACT, x, y), PLANTS[p.type][p.currentColor][1]);
 								p.currentColor++;
 								p.currentColor &= 0x3;
 							}
@@ -260,7 +260,7 @@ public class FlowerRootsRoom extends PuzzleRoom {
 						Plant p = plants[x][y];
 						if (p != null && !p.locked)
 							if (p.type == 0 || odd)
-								replaceObject(manager.getObjectWithType(reference, ObjectType.SCENERY_INTERACT, x, y), PLANTS[p.type][p.currentColor][0]);
+								replaceObject(manager.getObjectWithType(reference, ObjectShape.SCENERY_INTERACT, x, y), PLANTS[p.type][p.currentColor][0]);
 					}
 			}
 			odd = !odd;

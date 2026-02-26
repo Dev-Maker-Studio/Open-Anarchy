@@ -32,9 +32,9 @@ import com.rs.game.content.transportation.TravelMethods.Carrier;
 import com.rs.game.model.entity.interactions.StandardEntityInteraction;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Rights;
-import com.rs.lib.util.Logger;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Rights;
+import org.darkan.core.Logger;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.events.NPCClickEvent;
 import com.rs.plugin.events.NPCInteractionDistanceEvent;
@@ -45,12 +45,9 @@ public class NPCHandler {
 
 	public static void handleExamine(final Player player, final NPC npc) {
 		if (player.hasRights(Rights.DEVELOPER)) {
-			player.sendMessage("NPC - [id=" + npc.getId() + ", loc=[" + npc.getX() + ", " + npc.getY() + ", " + npc.getPlane() + "]]. " + npc.getDefinitions().respawnDirection);
-			player.sendMessage("HP: " + npc.getMaxHitpoints() + " Crush Def: " + npc.getDefinitions().getCrushDef() + " Slash Def: " +
-					npc.getDefinitions().getSlashDef() + " Stab Def: " + npc.getDefinitions().getStabDef() + " Range Def: "+ npc.getDefinitions().getRangeDef() +
-					" Mage Def: " + npc.getDefinitions().getMagicDef());
-			if (npc.getDefinitions().transformTo != null)
-				player.sendMessage(npc.getDefinitions().getConfigInfoString());
+			player.sendMessage("NPC - [id=" + npc.getId() + ", loc=[" + npc.getX() + ", " + npc.getY() + ", " + npc.getPlane() + "]]. respawnDir=" + npc.getDefinitions().getRespawnDirection());
+			// TODO: NPC combat stat methods not yet available on NPCDefinition
+			player.sendMessage("HP: " + npc.getMaxHitpoints());
 			player.sendMessage("Spawn tile [" + npc.getRespawnTile().getX() + ", " + npc.getRespawnTile().getY() + ", " + npc.getRespawnTile().getPlane() + "]]. ");
 		}
 		player.getPackets().sendNPCMessage(0, 0xFFFFFF, npc, NPCExamines.getExamine(npc, player) + " ("+npc.getId()+")");

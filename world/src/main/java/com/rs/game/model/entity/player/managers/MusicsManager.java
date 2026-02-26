@@ -16,12 +16,12 @@
 //
 package com.rs.game.model.entity.player.managers;
 
-import com.rs.cache.loaders.EnumDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
 import com.rs.game.map.ChunkManager;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Rights;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Rights;
+
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.utils.music.Genre;
@@ -71,13 +71,13 @@ public final class MusicsManager {
 
     public static ButtonClickHandler handlePlaylistButtons = new ButtonClickHandler(187, e -> {
     	if (e.getComponentId() == 1) {
-            if (e.getPacket() == ClientPacket.IF_OP1)
+            if (e.getOpNum() == 1)
                 e.getPlayer().getMusicsManager().playAnotherMusic(e.getSlotId() / 2);
-            else if (e.getPacket() == ClientPacket.IF_OP2)
+            else if (e.getOpNum() == 2)
                 e.getPlayer().getMusicsManager().sendHint(e.getSlotId() / 2);
-            else if (e.getPacket() == ClientPacket.IF_OP3)
+            else if (e.getOpNum() == 3)
                 e.getPlayer().getMusicsManager().addToPlayList(e.getSlotId() / 2);
-            else if (e.getPacket() == ClientPacket.IF_OP4)
+            else if (e.getOpNum() == 4)
                 e.getPlayer().getMusicsManager().removeFromPlayList(e.getSlotId() / 2);
         } else if (e.getComponentId() == 4)
             e.getPlayer().getMusicsManager().addPlayingMusicToPlayList();

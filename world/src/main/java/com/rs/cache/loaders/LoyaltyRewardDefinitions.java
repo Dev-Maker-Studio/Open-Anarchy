@@ -2,7 +2,7 @@ package com.rs.cache.loaders;
 
 import java.util.HashMap;
 
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Item;
 
 /**
  * Stub LoyaltyRewardDefinitions. Contains full enum data (no cache dependency).

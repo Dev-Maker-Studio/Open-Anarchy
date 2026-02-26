@@ -20,8 +20,8 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.statements.MakeXStatement;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 

@@ -19,7 +19,7 @@ package com.rs.game.content.world.areas.keldagrim
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 import com.rs.plugin.kts.onObjectClick

@@ -19,8 +19,7 @@ package com.rs.engine.thread;
 import com.rs.Settings;
 import com.rs.game.map.instance.InstanceBuilder;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.thread.CatchExceptionRunnable;
-import com.rs.lib.util.Logger;
+import org.darkan.core.Logger;
 import com.rs.utils.Ticks;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 

@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.holidayevents.halloween.hw09;
 
-import com.rs.cache.loaders.ObjectDefinitions;
+import org.darkan.core.cache.ObjectDefinitions;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.model.entity.Teleport;
@@ -25,8 +25,8 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 
 import java.util.HashSet;
 import java.util.Set;

@@ -4,7 +4,7 @@ import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
+import org.darkan.core.Constants
 
 enum class Skillcapes(
     val untrimmed: Int,

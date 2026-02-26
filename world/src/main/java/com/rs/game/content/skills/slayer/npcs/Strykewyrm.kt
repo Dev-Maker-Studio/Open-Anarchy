@@ -31,12 +31,12 @@ import com.rs.game.model.entity.npc.combat.CombatScript
 import com.rs.game.model.entity.npc.combat.CombatScript.delayHit
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
-import com.rs.lib.util.Utils.getDistance
-import com.rs.lib.util.Utils.getRandomInclusive
-import com.rs.lib.util.Utils.random
+import org.darkan.core.model.Animation
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
+import org.darkan.core.Utils.getDistance
+import org.darkan.core.Utils.getRandomInclusive
+import org.darkan.core.Utils.random
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
@@ -210,7 +210,7 @@ class Strykewyrm(id: Int, tile: Tile?) : NPC(id, tile, false) {
     }
 
     fun performBurrowAttack(target: Entity) {
-        val tile = Tile.of(target.tile).transform(-1, -1, 0)
+        val tile = target.tile.transform(-1, -1, 0)
 
         anim(12796)
         setCantInteract(true)

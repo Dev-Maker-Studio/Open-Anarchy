@@ -18,8 +18,8 @@ package com.rs.game.content.minigames.fightcaves.npcs;
 
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
 
 import java.util.List;
 

@@ -17,8 +17,8 @@
 package com.rs.game.content.skills.woodcutting;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
 
 /*
  * 1351 - {-423442303=[6744], -1127713268=[17091], -812799196=[879], 212908826=[4077], 1728453613=[11594], -1191283983=[12282], -2008713161=[12329], -1226375116=[3324], -219949008=[15832], 1068619588=[9999], 249243873=[12345], 1917942796=[12322], -269793388=[10071]}

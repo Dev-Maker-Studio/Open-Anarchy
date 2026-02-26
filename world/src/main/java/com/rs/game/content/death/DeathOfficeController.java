@@ -27,12 +27,12 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.InterfaceManager;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -228,13 +228,13 @@ public class DeathOfficeController extends InstancedController {
 	}
 
 	@Override
-	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, ClientPacket packet) {
+	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packet) {
 		if (interfaceId == 18) {
 			if (componentId == 9) {
-				if (packet == ClientPacket.IF_OP1)
+				if (packet == 1)
 					unprotect(slotId);
 			} else if (componentId == 17) {
-				if (packet == ClientPacket.IF_OP1)
+				if (packet == 1)
 					protect(slotId2);
 			} else if (componentId == 45) {
 				int index = slotId-1;

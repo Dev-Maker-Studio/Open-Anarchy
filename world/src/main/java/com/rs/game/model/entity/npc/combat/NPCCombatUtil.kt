@@ -10,7 +10,7 @@ import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.npc.combat.CombatScript.getMaxHit
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import java.util.function.Consumer
 
 class NPCCombatUtil {

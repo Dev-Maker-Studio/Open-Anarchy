@@ -22,7 +22,7 @@ import com.rs.engine.dialogue.HeadE.CONFUSED
 import com.rs.engine.dialogue.HeadE.NERVOUS
 import com.rs.engine.dialogue.HeadE.SHAKING_HEAD
 import com.rs.engine.dialogue.startConversation
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.engine.quest.Quest
@@ -36,9 +36,9 @@ import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.Constants
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
+import org.darkan.core.Constants
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.PluginEventHandler
 import com.rs.plugin.kts.onItemOnItem
 import com.rs.plugin.kts.onItemOnObject

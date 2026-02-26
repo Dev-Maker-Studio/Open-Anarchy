@@ -3,7 +3,7 @@ package com.rs.game.content.minigames.herblorehabitat
 import com.rs.engine.command.Commands
 import com.rs.game.content.minigames.herblorehabitat.JadinkoType.Companion.captureJadinko
 import com.rs.game.content.minigames.herblorehabitat.JadinkoType.Companion.populateHerbloreHabitatDatabase
-import com.rs.lib.game.Rights
+import org.darkan.core.model.Rights
 import com.rs.plugin.annotations.ServerStartupEvent
 
 @ServerStartupEvent

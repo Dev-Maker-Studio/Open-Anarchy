@@ -12,10 +12,10 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.npc.combat.CombatScript.delayHit
 import com.rs.game.model.entity.npc.combat.CombatScript.getMaxHit
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.Constants
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils.getRandomInclusive
-import com.rs.lib.util.Utils.random
+import org.darkan.core.Constants
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils.getRandomInclusive
+import org.darkan.core.Utils.random
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
@@ -37,8 +37,8 @@ private val krilSpeech = arrayOf(
 @ServerStartupEvent
 fun mapZamorakGodwars() {
     onObjectClick(26439, checkDistance = false) { (player, obj) ->
-        player.setRouteEvent(RouteEvent(Tile.of(obj.getTile())) {
-            if (player.withinDistance(obj.getTile(), 3)) {
+        player.setRouteEvent(RouteEvent(obj.tile) {
+            if (player.withinDistance(obj.tile, 3)) {
                 if (player.y < 5334) {
                     if (player.skills.getLevel(Constants.HITPOINTS) >= 70) {
                         player.useStairs(6999, Tile.of(2885, 5347, 2), 1, 1)

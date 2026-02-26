@@ -19,7 +19,7 @@ package com.rs.engine.miniquest;
 import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;

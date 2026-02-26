@@ -17,7 +17,6 @@
 package com.rs.plugin.events;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.net.ClientPacket;
 import com.rs.plugin.handlers.PluginHandler;
 
 import java.util.HashMap;
@@ -32,15 +31,15 @@ public class ButtonClickEvent implements PluginEvent {
     private final int componentId;
     private final int slotId;
     private final int slotId2;
-	private final ClientPacket packet;
+	private final int opNum;
 
-	public ButtonClickEvent(Player player, int interfaceId, int componentId, int slotId, int slotId2, ClientPacket packet) {
+	public ButtonClickEvent(Player player, int interfaceId, int componentId, int slotId, int slotId2, int opNum) {
 		this.player = player;
 		this.interfaceId = interfaceId;
 		this.componentId = componentId;
 		this.slotId = slotId;
 		this.slotId2 = slotId2;
-		this.packet = packet;
+		this.opNum = opNum;
 	}
 
 	public Player getPlayer() {
@@ -63,8 +62,8 @@ public class ButtonClickEvent implements PluginEvent {
 		return slotId2;
 	}
 
-	public ClientPacket getPacket() {
-		return packet;
+	public int getOpNum() {
+		return opNum;
 	}
 
 	@Override
@@ -100,7 +99,7 @@ public class ButtonClickEvent implements PluginEvent {
 		return slotId2;
 	}
 
-	public ClientPacket component6() {
-		return packet;
+	public int component6() {
+		return opNum;
 	}
 }

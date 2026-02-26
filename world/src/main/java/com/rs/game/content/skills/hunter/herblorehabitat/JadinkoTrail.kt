@@ -1,6 +1,6 @@
 package com.rs.game.content.skills.hunter.herblorehabitat
 
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 data class JadinkoTrail(
     val objectId: Int,

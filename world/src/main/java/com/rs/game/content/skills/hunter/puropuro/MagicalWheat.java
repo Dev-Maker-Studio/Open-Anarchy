@@ -1,15 +1,15 @@
 package com.rs.game.content.skills.hunter.puropuro;
 
-import com.rs.cache.loaders.ObjectType;
+import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
 import com.rs.game.content.Effect;
 import com.rs.game.map.ChunkManager;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -90,14 +90,14 @@ public class MagicalWheat {
                 WorldTasks.scheduleTimer(tick -> {
                     if (tick == 0) {
                         if (growing) {
-                            World.spawnObject(new GameObject(GROWING_WHEAT, ObjectType.GROUND_DECORATION, rotation,
+                            World.spawnObject(new GameObject(GROWING_WHEAT, ObjectShape.GROUND_DECORATION, rotation,
                                     wheat.getTile1()));
-                            World.spawnObject(new GameObject(GROWING_WHEAT, ObjectType.GROUND_DECORATION, rotation+2,
+                            World.spawnObject(new GameObject(GROWING_WHEAT, ObjectShape.GROUND_DECORATION, rotation+2,
                                     wheat.getTile2()));
                         } else {
-                            World.spawnObject(new GameObject(WILTING_WHEAT, ObjectType.GROUND_DECORATION, rotation,
+                            World.spawnObject(new GameObject(WILTING_WHEAT, ObjectShape.GROUND_DECORATION, rotation,
                                     wheat.getTile1()));
-                            World.spawnObject(new GameObject(WILTING_WHEAT, ObjectType.GROUND_DECORATION, rotation+2,
+                            World.spawnObject(new GameObject(WILTING_WHEAT, ObjectShape.GROUND_DECORATION, rotation+2,
                                     wheat.getTile2()));
                         }
                     }
@@ -113,18 +113,18 @@ public class MagicalWheat {
                     }
 
                     if (tick == 6 && growing) {
-                        World.spawnObject(new GameObject(HAS_WHEAT, ObjectType.GROUND_DECORATION, rotation,
+                        World.spawnObject(new GameObject(HAS_WHEAT, ObjectShape.GROUND_DECORATION, rotation,
                                 wheat.getTile1()));
-                        World.spawnObject(new GameObject(HAS_WHEAT, ObjectType.GROUND_DECORATION, rotation,
+                        World.spawnObject(new GameObject(HAS_WHEAT, ObjectShape.GROUND_DECORATION, rotation,
                                 wheat.getTile2()));
                         return false;
                     }
 
                     if (tick == 10) {
                         World.spawnObject(
-                                new GameObject(NO_WHEAT, ObjectType.GROUND_DECORATION, rotation, wheat.getTile1()));
+                                new GameObject(NO_WHEAT, ObjectShape.GROUND_DECORATION, rotation, wheat.getTile1()));
                         World.spawnObject(
-                                new GameObject(NO_WHEAT, ObjectType.GROUND_DECORATION, rotation, wheat.getTile2()));
+                                new GameObject(NO_WHEAT, ObjectShape.GROUND_DECORATION, rotation, wheat.getTile2()));
                         return false;
                     }
                     return true;

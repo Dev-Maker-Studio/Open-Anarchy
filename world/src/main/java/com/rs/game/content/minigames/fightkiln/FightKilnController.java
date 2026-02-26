@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.minigames.fightkiln;
 
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
@@ -34,13 +34,13 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.net.ClientPacket;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.utils.Ticks;
 import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
@@ -185,7 +185,7 @@ public class FightKilnController extends Controller {
 	}
 
 	@Override
-	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, ClientPacket packet) {
+	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packet) {
 		if (stage != Stages.RUNNING)
 			return false;
 		if (interfaceId == 182 && (componentId == 6 || componentId == 13)) {
@@ -583,7 +583,7 @@ public class FightKilnController extends Controller {
 	}
 
 	public Tile getSpawnTile(int npcId, int waveIndex) {
-		return getTileOfSide(COMPASS[waveIndex % 4], NPCDefinitions.getDefs(npcId).size);
+		return getTileOfSide(COMPASS[waveIndex % 4], NPCDefinitions.getDefs(npcId).getSize());
 	}
 
 	@Override

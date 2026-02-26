@@ -18,7 +18,7 @@ package com.rs.game.content.bosses.glacor;
 
 import com.rs.game.World;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 import kotlin.Pair;
 
 public class SappingMinion extends NPC {

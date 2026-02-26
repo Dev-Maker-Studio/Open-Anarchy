@@ -1,6 +1,6 @@
 package com.rs.game.content.skills.hunter;
 
-import com.rs.engine.pathfinder.collision.CollisionStrategyType;
+import org.darkan.core.map.pathfinder.collision.CollisionStrategyType;
 import com.rs.game.content.skills.hunter.FlyingEntityHunter.FlyingEntities;
 import com.rs.game.content.skills.hunter.puropuro.ImpDefender;
 import com.rs.game.map.ChunkManager;
@@ -8,8 +8,8 @@ import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.ForceTalk;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.utils.Ticks;

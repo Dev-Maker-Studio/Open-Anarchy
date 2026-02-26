@@ -18,10 +18,10 @@ package com.rs.game.content.skills.fishing;
 
 import com.rs.game.content.Effect;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 
 import java.util.function.Consumer;
 import java.util.function.Predicate;

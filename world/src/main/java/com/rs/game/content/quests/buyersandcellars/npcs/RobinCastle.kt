@@ -5,13 +5,13 @@ import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 
 object RobinCastleKt {
     fun stage8(p: Player, npc: NPC) {
         p.startConversation {
             player(HAPPY_TALKING, "I stole Father Urhney's chalice!")
-            if (npc.tile == Tile.of(Tile(4664, 5904, 0))) npc(npc, CALM_TALK, "You should hand it over to Darren, then.")
+            if (npc.tile == Tile(4664, 5904, 0)) npc(npc, CALM_TALK, "You should hand it over to Darren, then.")
             else npc(npc, CALM_TALK, "You might want to deliver it to Darren, back at the guild, then.")
         }
     }

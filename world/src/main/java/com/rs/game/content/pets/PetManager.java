@@ -16,15 +16,15 @@
 //
 package com.rs.game.content.pets;
 
-import com.rs.cache.loaders.ItemDefinitions;
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.model.entity.ForceTalk;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -101,7 +101,7 @@ public final class PetManager {
 		}
 		int npcId = pets.getNpcId(details.getStage());
 		if (npcId > 0) {
-			Tile spawnTile = player.getNearestTeleTile(NPCDefinitions.getDefs(npcId, player.getVars()).size);
+			Tile spawnTile = player.getNearestTeleTile(NPCDefinitions.getDefs(npcId, player.getVars()).getSize());
 			if (spawnTile == null) {
 				player.sendMessage("There's no space to summon your pet.");
 				return true;

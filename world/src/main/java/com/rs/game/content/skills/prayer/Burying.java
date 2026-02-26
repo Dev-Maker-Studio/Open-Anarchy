@@ -16,14 +16,15 @@
 //
 package com.rs.game.content.skills.prayer;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
+import world.gregs.voidps.cache.definition.data.ItemDefinition;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.SpotAnim;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.model.SpotAnim;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -90,7 +91,7 @@ public class Burying {
 			if (item == null || Bone.forId(item.getId()) == null || !player.canBury())
 				return;
 			final Bone bone = Bone.forId(item.getId());
-			final ItemDefinitions itemDef = new ItemDefinitions(item.getId());
+			final ItemDefinition itemDef = ItemDefinitions.getDefs(item.getId());
 			player.lock();
 			player.soundEffect(2738, true);
 
@@ -122,7 +123,7 @@ public class Burying {
 	}
 
 	public static void handleNecklaces(Player player, int itemId) {
-		ItemDefinitions itemDef = ItemDefinitions.getDefs(itemId);
+		ItemDefinition itemDef = ItemDefinitions.getDefs(itemId);
 		int prayerGain = 0;
 		if (itemDef.getName().toLowerCase().contains("dragon") || itemDef.getName().toLowerCase().contains("ourg"))
 			switch (player.getEquipment().getAmuletId()) {

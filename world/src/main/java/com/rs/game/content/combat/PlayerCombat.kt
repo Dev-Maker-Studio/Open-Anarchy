@@ -16,9 +16,9 @@
 //
 package com.rs.game.content.combat
 
-import com.rs.cache.loaders.Bonus
-import com.rs.cache.loaders.ItemDefinitions
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.model.Bonus
+import org.darkan.core.cache.ItemDefinitions
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World
 import com.rs.game.content.Effect
 import com.rs.game.content.combat.special_attacks.SpecialAttack
@@ -34,12 +34,12 @@ import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.actions.PlayerAction
-import com.rs.lib.Constants
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
-import com.rs.lib.util.Utils.random
+import org.darkan.core.Constants
+import org.darkan.core.model.Animation
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
+import org.darkan.core.Utils.random
 import com.rs.utils.ItemConfig
 import com.rs.utils.Ticks
 import java.util.*
@@ -123,7 +123,7 @@ class PlayerCombat(@JvmField val target: Entity) : PlayerAction() {
 
             val manualCast = player.combatDefinitions.hasManualCastQueued()
             val gloves = player.equipment.getItem(Equipment.HANDS)
-            if (gloves != null && gloves.definitions.getName().contains("Spellcaster glove") && player.equipment.weaponId == -1 && Utils.random(20) == 0) player.tempAttribs.setO<Any>("spellcasterProc", spell)
+            if (gloves != null && gloves.definitions.name.contains("Spellcaster glove") && player.equipment.weaponId == -1 && Utils.random(20) == 0) player.tempAttribs.setO<Any>("spellcasterProc", spell)
             val delay = mageAttack(player, spell, !manualCast)
             if (player.nextAnimation != null && player.tempAttribs.getO<Any?>("spellcasterProc") != null) {
                 player.anim(14339)
@@ -416,7 +416,7 @@ class PlayerCombat(@JvmField val target: Entity) : PlayerAction() {
 
     private fun checkSwiftGlovesEffect(player: Player, hitDelay: Int, attackStyle: AttackStyle, weaponId: Int, hit: Hit, p: WorldProjectile) {
         val gloves = player.equipment.getItem(Equipment.HANDS)
-        if (gloves == null || !gloves.definitions.getName().contains("Swift glove")) return
+        if (gloves == null || !gloves.definitions.name.contains("Swift glove")) return
         if (hit.damage != 0 && hit.damage < ((hit.maxHit / 3) * 2) || Random().nextInt(3) != 0) return
         player.sendMessage("You fired an extra shot.")
         World.sendProjectileAbsoluteSpeed(player, target, p.spotAnimId, p.startHeight - 5 to p.endHeight - 5, p.startDelayClientCycles, p.inAirClientCycles, p.angle)
@@ -643,7 +643,7 @@ fun delayHit(target: Entity, delay: Int, weaponId: Int, attackStyle: AttackStyle
     var ammoId = -1
     if (weaponId != -1) {
         (source as? Player)?.let {
-            val weaponName = ItemDefinitions.getDefs(weaponId).getName().lowercase()
+            val weaponName = ItemDefinitions.getDefs(weaponId).name.lowercase()
             if (weaponName.contains("longbow") || weaponName.contains("shortbow") || weaponName.contains("crossbow"))
                 ammoId = source.equipment.ammoId
         }
@@ -689,7 +689,7 @@ fun calculatePoisonStartDamage(weaponId: Int, hit: Hit, poisonLevel: Int): Int {
 fun checkPoison(target: Entity, weaponId: Int, hit: Hit) {
     if (weaponId == -1) return
 
-    val name = ItemDefinitions.getDefs(weaponId).getName()
+    val name = ItemDefinitions.getDefs(weaponId).name
     val poisonLevel = when {
         name.contains("(p++)") -> 2
         name.contains("(p+)") -> 1
@@ -849,7 +849,7 @@ fun chargeDragonfireShield(target: Entity) {
         val shield = p.equipment.shieldId
         if (shield == 11283 || shield == 11284) {
             if (shield == 11284) {
-                p.equipment.replace(Equipment.SHIELD, Item(11283, 1).addMetaData("dfsCharges", 1))
+                p.equipment.replace(Equipment.SHIELD, Item(11283, 1).apply { addMetaData("dfsCharges", 1) })
                 p.appearance.generateAppearanceData()
                 p.equipment.refresh(Equipment.SHIELD)
             }

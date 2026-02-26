@@ -16,11 +16,11 @@
 //
 package com.rs.game.content.skills.summoning;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Item;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.ItemEquipHandler;
@@ -172,7 +172,7 @@ public class EnchantedHeadwear {
 		if (e.getOption().equals("Uncharge"))
 			removeScrolls(e.getPlayer(), e.getItem());
 		else if (e.getOption().equals("Commune"))
-			e.getPlayer().sendMessage("You have " + e.getItem().getMetaDataI("summScrollsStored") + " " + ItemDefinitions.getDefs(e.getItem().getMetaDataI("summScrollId")).name + " stored in this helmet.");
+			e.getPlayer().sendMessage("You have " + e.getItem().getMetaDataI("summScrollsStored") + " " + ItemDefinitions.getDefs(e.getItem().getMetaDataI("summScrollId")).getName() + " stored in this helmet.");
 	});
 	
 	public static void addScrolls(Player player, Item item, Scroll scroll, int num) {
@@ -180,7 +180,7 @@ public class EnchantedHeadwear {
 		if (headwear == null)
 			return;
 		if (item.getMetaDataI("summScrollId") != scroll.getId() && item.getMetaDataI("summScrollsStored") > 0) {
-			player.sendMessage("You already have " + item.getMetaDataI("summScrollsStored") + " " + ItemDefinitions.getDefs(item.getMetaDataI("summScrollId")).name + " stored in this helmet.");
+			player.sendMessage("You already have " + item.getMetaDataI("summScrollsStored") + " " + ItemDefinitions.getDefs(item.getMetaDataI("summScrollId")).getName() + " stored in this helmet.");
 			return;
 		}
 		if (!player.getInventory().containsItem(scroll.getId(), num))

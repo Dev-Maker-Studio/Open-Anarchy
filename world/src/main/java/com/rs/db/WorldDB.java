@@ -21,8 +21,7 @@ import com.rs.db.collection.GEManager;
 import com.rs.db.collection.HighscoresManager;
 import com.rs.db.collection.PlayerManager;
 import com.rs.db.collection.logs.LogManager;
-import com.rs.lib.db.DBConnection;
-import com.rs.lib.util.Logger;
+import org.darkan.core.Logger;
 
 public class WorldDB extends DBConnection {
 

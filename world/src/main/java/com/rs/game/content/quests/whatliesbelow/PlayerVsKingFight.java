@@ -9,13 +9,14 @@ import com.rs.game.content.world.areas.varrock.npcs.Zaff;
 import com.rs.game.map.instance.Instance;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.InstancedController;
+import com.rs.utils.WorldUtil;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.EmotesManager;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.SpotAnim;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.SpotAnim;
+import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import kotlin.Pair;
 
@@ -152,7 +153,7 @@ public class PlayerVsKingFight extends InstancedController {
             return;
         }
         player.playCutscene(cs -> {
-            cs.npcCreate("zaff", Zaff.ID, king.getNearestTeleTile(Direction.getDirectionTo(king, player)).localizeRegion());
+            cs.npcCreate("zaff", Zaff.ID, king.getNearestTeleTile(WorldUtil.getDirectionTo(king, player)).localizeRegion());
             cs.npcSpotAnim("zaff", new SpotAnim(110, 0, 96));
             cs.setEndTile(OUTSIDE);
             cs.action(() -> {

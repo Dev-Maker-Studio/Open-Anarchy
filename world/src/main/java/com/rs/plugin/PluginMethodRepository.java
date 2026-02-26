@@ -16,7 +16,7 @@
 //
 package com.rs.plugin;
 
-import com.rs.lib.util.Logger;
+import org.darkan.core.Logger;
 import com.rs.plugin.events.NPCDropEvent;
 import com.rs.plugin.events.PluginEvent;
 import com.rs.plugin.handlers.PluginHandler;

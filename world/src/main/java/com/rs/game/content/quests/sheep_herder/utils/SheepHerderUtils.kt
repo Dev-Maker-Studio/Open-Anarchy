@@ -8,9 +8,10 @@ import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
+import com.rs.utils.withinArea
 
 class SheepHerderUtils {
 
@@ -184,7 +185,7 @@ class SheepHerderUtils {
     }
 
     fun isInNoGoZone(tile: Tile): Boolean {
-        for (range in NO_GO_ZONES) if (tile.x() >= range[0] && tile.x() <= range[1] && tile.y() >= range[2] && tile.y() <= range[3]) return true
+        for (range in NO_GO_ZONES) if (tile.x >= range[0] && tile.x <= range[1] && tile.y >= range[2] && tile.y <= range[3]) return true
         return false
     }
 

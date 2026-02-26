@@ -16,17 +16,17 @@
 //
 package com.rs.game.content.death;
 
-import com.rs.cache.loaders.EnumDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
 import com.rs.db.WorldDB;
 import com.rs.game.World;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.GroundItem;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.GroundItem;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.Utils;
 import com.rs.utils.Ticks;
 
 import java.util.ArrayList;
@@ -97,12 +97,12 @@ public class GraveStone extends NPC {// 652 - gravestone selection interface
 	public void addLeftTime(boolean clean) {
 		if (clean)
 			for (GroundItem item : floorItems) {
-				item.setHiddenTime(Ticks.fromSeconds(60));
+				item.setPrivateTime(Ticks.fromSeconds(60));
 				item.setDeleteTime(Ticks.fromMinutes(3));
 			}
 		else
 			for (GroundItem item : floorItems) {
-				item.setHiddenTime(ticks + Ticks.fromSeconds(180));
+				item.setPrivateTime(ticks + Ticks.fromSeconds(180));
 				item.setDeleteTime(Ticks.fromMinutes(6));
 			}
 	}
@@ -238,7 +238,7 @@ public class GraveStone extends NPC {// 652 - gravestone selection interface
 		ArrayList<Item> droppedItems = new ArrayList<>();
 		ArrayList<Item> keptItems = new ArrayList<>();
 		for (int i : slots[0]) { // items kept on death
-			Item item = i >= 16 ? new Item(player.getInventory().getItem(i - 16)) : new Item(player.getEquipment().getItem(i - 1));
+			Item item = i >= 16 ? com.rs.utils.KtExtensionsKt.copyItem(player.getInventory().getItem(i - 16)) : com.rs.utils.KtExtensionsKt.copyItem(player.getEquipment().getItem(i - 1));
 			if (item.getAmount() > 1) {
 				droppedItems.add(new Item(item.getId(), item.getAmount() - 1));
 				item.setAmount(1);

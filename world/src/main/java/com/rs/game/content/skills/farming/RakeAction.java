@@ -18,8 +18,8 @@ package com.rs.game.content.skills.farming;
 
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
 
 public class RakeAction extends PlayerAction {
 

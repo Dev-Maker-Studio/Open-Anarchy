@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.world.areas.lighthouse.npcs;
 
-import com.rs.cache.loaders.ItemDefinitions;
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.content.skills.prayer.PrayerBooks;

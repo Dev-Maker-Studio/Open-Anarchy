@@ -1,4 +1,5 @@
 package com.rs.game.content.quests.plague_city
+import org.darkan.core.Utils.strikeThroughIf
 
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.quest.Quest
@@ -10,8 +11,8 @@ import com.rs.game.content.quests.plague_city.instances.npcs.PrisonHouseMourners
 import com.rs.game.content.quests.plague_city.utils.*
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.game.Item
-import com.rs.lib.util.Utils.*
+import org.darkan.core.model.Item
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 

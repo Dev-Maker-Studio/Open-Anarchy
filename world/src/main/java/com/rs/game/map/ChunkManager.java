@@ -2,18 +2,20 @@ package com.rs.game.map;
 
 import com.rs.Settings;
 import com.rs.cache.loaders.map.Region;
-import com.rs.cache.loaders.map.RegionSize;
-import com.rs.engine.pathfinder.WorldCollision;
+import org.darkan.core.map.RegionLoader;
+import org.darkan.core.model.RegionSize;
+import com.rs.engine.pathfinder.NpcCollision;
+import org.darkan.core.map.WorldCollision;
 import com.rs.game.map.instance.InstancedChunk;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Tile;
-import com.rs.lib.game.WorldObject;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.MapUtils;
-import com.rs.lib.util.MapUtils.Structure;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.WorldObject;
+import org.darkan.core.Logger;
+import org.darkan.core.util.MapUtils;
+import org.darkan.core.util.Structure;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
@@ -74,7 +76,7 @@ public final class ChunkManager {
 
     public static void updateChunks(Entity entity) {
         if (entity instanceof NPC)
-            WorldCollision.clipNPC((NPC) entity);
+            NpcCollision.clipNPC((NPC) entity);
         if (entity.hasFinished()) {
             if (entity instanceof Player) {
                 getChunk(entity.getLastChunkId()).removePlayerIndex(entity.getIndex());
@@ -86,7 +88,7 @@ public final class ChunkManager {
             }
             return;
         }
-        int chunkId = MapUtils.encode(MapUtils.Structure.CHUNK, entity.getChunkX(), entity.getChunkY(), entity.getPlane());
+        int chunkId = MapUtils.encode(Structure.CHUNK, entity.getChunkX(), entity.getChunkY(), entity.getPlane());
         if (entity.getLastChunkId() != chunkId || entity.isForceUpdateEntityRegion()) {
             if (!(entity instanceof Player player) || player.hasStarted())
                 PluginManager.handle(new EnterChunkEvent(entity, chunkId));

@@ -17,7 +17,7 @@ fun mapItemSelectInventoryButtonHandler() {
 
         when (mode) {
             Mode.GE_SELL -> GE.handleSellInv(player, e.slotId, e.componentId)
-            Mode.BOGROG -> Bogrog.handleBogrogActions(player, item, e.packet)
+            Mode.BOGROG -> Bogrog.handleBogrogActions(player, item, e.opNum)
         }
     }
 }

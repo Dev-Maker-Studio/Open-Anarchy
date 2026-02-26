@@ -48,7 +48,7 @@ public class NPCInteractionDistanceEvent implements PluginEvent {
 	public PluginHandler<? extends PluginEvent> getMethod() {
 		NPCInteractionDistanceHandler method = HANDLERS.get(npc.getId());
 		if (method == null)
-			method = HANDLERS.get(npc.getDefinitions().getName(player.getVars()));
+			method = HANDLERS.get(npc.getDefinitions().getName());
 		if (method == null)
 			return null;
 		return method;

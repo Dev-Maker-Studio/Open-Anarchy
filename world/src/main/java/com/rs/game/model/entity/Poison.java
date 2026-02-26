@@ -20,7 +20,7 @@ import com.rs.game.content.Effect;
 import com.rs.game.model.entity.Hit.HitLook;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.AuraManager.Aura;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Utils;
 
 public final class Poison {
 

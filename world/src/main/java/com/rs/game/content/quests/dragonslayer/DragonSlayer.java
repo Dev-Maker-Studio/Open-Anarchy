@@ -2,7 +2,7 @@ package com.rs.game.content.quests.dragonslayer;
 
 import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.HeadE;
-import com.rs.engine.pathfinder.Direction;
+import org.darkan.core.map.pathfinder.Direction;
 import com.rs.engine.quest.Quest;
 import com.rs.engine.quest.QuestHandler;
 import com.rs.engine.quest.QuestOutline;
@@ -11,11 +11,11 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
-import com.rs.lib.Constants;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.game.Tile;
-import com.rs.lib.util.GenericAttribMap;
+import org.darkan.core.Constants;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import world.gregs.voidps.type.Tile;
+import org.darkan.core.model.AttribMap;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.*;
 import com.rs.utils.Ticks;
@@ -267,7 +267,7 @@ public class DragonSlayer extends QuestOutline {
     public static ObjectClickHandler handleMagicDoor = new ObjectClickHandler(new Object[]{25115}, e -> {
         Player p = e.getPlayer();
         GameObject obj = e.getObj();
-        GenericAttribMap attr = p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER);
+        AttribMap attr = p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER);
 
         if (p.getX() > obj.getX()) {
             p.startConversation(new Conversation(e.getPlayer()) {
@@ -361,7 +361,7 @@ public class DragonSlayer extends QuestOutline {
 
     public static ItemOnObjectHandler itemOnMagicDoor = new ItemOnObjectHandler(new Object[]{25115}, new Object[]{SILK, BOMB, BOWL, CAGE, 301}, e -> {
         Player p = e.getPlayer();
-        GenericAttribMap attr = p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER);
+        AttribMap attr = p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER);
         if (e.getItem().getId() == SILK)
             if (attr.getB(DOOR_SILK_ATTR))
                 p.sendMessage("Silk seems to have been used on the door...");

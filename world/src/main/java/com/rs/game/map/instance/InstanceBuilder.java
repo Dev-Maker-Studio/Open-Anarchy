@@ -19,9 +19,9 @@ package com.rs.game.map.instance;
 import com.rs.engine.thread.AsyncTaskExecutor;
 import com.rs.game.map.Chunk;
 import com.rs.game.map.ChunkManager;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.MapUtils;
-import com.rs.lib.util.MapUtils.Structure;
+import org.darkan.core.Logger;
+import org.darkan.core.util.MapUtils;
+import org.darkan.core.util.Structure;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 import java.util.HashSet;

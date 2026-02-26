@@ -17,7 +17,7 @@
 package com.rs.game.content.pets;
 
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.Constants;
+import org.darkan.core.Constants;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 

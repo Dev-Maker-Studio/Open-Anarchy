@@ -18,9 +18,9 @@ package com.rs.game.content.minigames.shadesofmortton;
 
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Item;
-import com.rs.lib.util.Utils;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.Item;
+import org.darkan.core.Utils;
 import com.rs.utils.DropSets;
 
 import java.util.HashMap;

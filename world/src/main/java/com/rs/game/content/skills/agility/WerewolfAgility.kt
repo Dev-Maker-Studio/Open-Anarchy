@@ -2,7 +2,7 @@ package com.rs.game.content.skills.agility
 
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World
 import com.rs.game.World.addGroundItem
 import com.rs.game.World.sendProjectile
@@ -15,9 +15,9 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.game.Item
-import com.rs.lib.game.Tile
-import com.rs.lib.util.Utils
+import org.darkan.core.model.Item
+import world.gregs.voidps.type.Tile
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 import kotlin.math.abs
@@ -120,7 +120,7 @@ fun mapWerewolfAgility() {
         if (player.tile.y > obj.y) return@onObjectClick
         if (!Agility.hasLevel(player, 60)) return@onObjectClick
         player.lock(1)
-        val toTile = Tile.of(obj.x, obj.y + 4, obj.plane)
+        val toTile = Tile.of(obj.x, obj.y + 4, obj.level)
         player.forceMove(toTile, 10580, 10, 60) { player.skills.addXp(Skills.AGILITY, 15.0) }
     }
 
@@ -224,10 +224,10 @@ fun mapWerewolfAgility() {
                         }
                     }
                 }
-                val groundItems = World.getAllGroundItemsInChunkRange(player.chunkId, 30)
+                val groundItems = World.getAllGroundItemsInChunkRange(player.getChunkId(), 30)
 
                 for (item in groundItems) {
-                    if (item.id == STICK && item.creatorUsername != null && item.creatorUsername == player.username) {
+                    if (item.id == STICK && item.ownerUsername != null && item.ownerUsername == player.username) {
                         World.removeGroundItem(item)
                     }
                 }
@@ -261,11 +261,11 @@ private fun steppingStone(player: Player, obj: GameObject) {
 
 private fun throwStick(player: Player) {
     val agilityBoss: List<NPC> = player.queryNearbyNPCsByTileRange(8) { npc: NPC -> npc.id == 1661 }
-    val groundItemsInRange = World.getAllGroundItemsInChunkRange(player.chunkId, 10)
+    val groundItemsInRange = World.getAllGroundItemsInChunkRange(player.getChunkId(), 10)
     val playerHasStickInInventory = player.containsOneItem(STICK)
     var throwStickNeeded = true
     for (item in groundItemsInRange) {
-        if (item.id == STICK && item.creatorUsername == player.username) {
+        if (item.id == STICK && item.ownerUsername == player.username) {
             throwStickNeeded = false
             break
         }
@@ -292,7 +292,7 @@ private fun throwStickForPlayer(player: Player, agilityBoss: List<NPC>) {
 
 
 private fun isInWerewolfAgility(tile: Tile): Boolean {
-    for (range in WEREWOLF_AGILITY_CHECK) if (tile.x() >= range[0] && tile.x() <= range[1] && tile.y() >= range[2] && tile.y() <= range[3]) return true
+    for (range in WEREWOLF_AGILITY_CHECK) if (tile.x >= range[0] && tile.x <= range[1] && tile.y >= range[2] && tile.y <= range[3]) return true
     return false
 }
 
@@ -366,10 +366,10 @@ class WerewolfAgilityController : Controller() {
         if (player.inventory.containsOneItem(STICK)) {
             player.inventory.deleteItem(STICK, player.inventory.getAmountOf(STICK))
         }
-        val groundItems = World.getAllGroundItemsInChunkRange(player.chunkId, 30)
+        val groundItems = World.getAllGroundItemsInChunkRange(player.getChunkId(), 30)
 
         for (item in groundItems) {
-            if (item.id == STICK && item.creatorUsername != null && item.creatorUsername == player.username) {
+            if (item.id == STICK && item.ownerUsername != null && item.ownerUsername == player.username) {
                 World.removeGroundItem(item)
             }
         }
@@ -381,10 +381,10 @@ class WerewolfAgilityController : Controller() {
         if (player.inventory.containsOneItem(STICK)) {
             player.inventory.deleteItem(STICK, player.inventory.getAmountOf(STICK))
         }
-        val groundItems = World.getAllGroundItemsInChunkRange(player.chunkId, 30)
+        val groundItems = World.getAllGroundItemsInChunkRange(player.getChunkId(), 30)
 
         for (item in groundItems) {
-            if (item.id == STICK && item.creatorUsername != null && item.creatorUsername == player.username) {
+            if (item.id == STICK && item.ownerUsername != null && item.ownerUsername == player.username) {
                 World.removeGroundItem(item)
             }
         }

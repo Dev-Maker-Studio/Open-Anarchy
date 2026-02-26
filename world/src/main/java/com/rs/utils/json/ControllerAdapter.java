@@ -18,13 +18,12 @@ package com.rs.utils.json;
 
 import com.google.gson.*;
 import com.rs.game.model.entity.player.Controller;
-import com.rs.lib.util.Logger;
-import com.rs.lib.util.Utils;
+import org.darkan.core.Logger;
+import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
 
-import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
@@ -38,12 +37,12 @@ public class ControllerAdapter implements JsonSerializer<Controller>, JsonDeseri
 	@ServerStartupEvent(Priority.FILE_IO)
 	public static void init() {
 		try {
-			List<Class<?>> classes = Utils.getSubClasses("com.rs", Controller.class);
-			for (Class<?> clazz : classes) {
+			List<Class<Controller>> classes = Utils.getSubClasses("com.rs", Controller.class);
+			for (Class<Controller> clazz : classes) {
 				if (CONTROLLER_CLASSES.put(clazz.getSimpleName(), clazz) != null)
 					Logger.error(ControllerAdapter.class, "init", "Duplicate controller class: " + clazz.getName());
 			}
-		} catch (ClassNotFoundException | IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		Logger.info(ControllerAdapter.class, "init", "Loaded " + CONTROLLER_CLASSES.size() + " controllers...");

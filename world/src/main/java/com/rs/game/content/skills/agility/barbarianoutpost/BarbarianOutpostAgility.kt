@@ -16,8 +16,8 @@
 //
 package com.rs.game.content.skills.agility.barbarianoutpost
 
-import com.rs.cache.loaders.ObjectType
-import com.rs.engine.pathfinder.Direction
+import org.darkan.core.model.ObjectShape
+import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World
 import com.rs.game.model.entity.async.schedule
 import com.rs.engine.pathfinder.RouteEvent
@@ -26,9 +26,9 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.InterfaceManager
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
-import com.rs.lib.Constants
-import com.rs.lib.game.Animation
-import com.rs.lib.game.Tile
+import org.darkan.core.Constants
+import org.darkan.core.model.Animation
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 
@@ -51,7 +51,7 @@ fun mapBarbarianOutpostAgility() {
 
     onObjectClick(20210) { e ->
         if (!Agility.hasLevel(e.player, 35)) return@onObjectClick
-        e.player.forceMove(Tile.of(e.getObj().x, if (e.player.y >= 3561) 3558 else 3561, e.getObj().plane), 10580, 10, 60) {
+        e.player.forceMove(Tile.of(e.getObj().x, if (e.player.y >= 3561) 3558 else 3561, e.getObj().level), 10580, 10, 60) {
             e.player.skills.addXp(Constants.AGILITY, 1.0 / 20.0)
         }
     }
@@ -81,7 +81,7 @@ fun mapBarbarianOutpostAgility() {
         e.player.setRouteEvent(RouteEvent(Tile.of(2551, 3546, 0)) {
             if (!Agility.hasLevel(e.player, 35)) return@RouteEvent
             e.player.sendMessage("You walk carefully across the slippery log...", true)
-            e.player.forceMove(Tile.of(2541, e.getObj().y, e.getObj().plane), 9908, 20, 12 * 30) {
+            e.player.forceMove(Tile.of(2541, e.getObj().y, e.getObj().level), 9908, 20, 12 * 30) {
                 e.player.anim(-1)
                 e.player.skills.addXp(Constants.AGILITY, 20.7)
                 e.player.sendMessage("... and make it safely to the other side.", true)
@@ -102,7 +102,7 @@ fun mapBarbarianOutpostAgility() {
     onObjectClick(2302) { e ->
         Agility.initStagesIfNotAlready(e.player, Agility.BARBARIAN_OUTPOST_COURSE, NormalObstacle.entries.size)
         if (!Agility.hasLevel(e.player, 35)) return@onObjectClick
-        val toTile = Tile.of(2532, e.getObj().y, e.getObj().plane)
+        val toTile = Tile.of(2532, e.getObj().y, e.getObj().level)
         e.player.sendMessage("You put your foot on the ledge and try to edge across...", true)
         e.player.lock()
         e.player.schedule {
@@ -136,7 +136,7 @@ fun mapBarbarianOutpostAgility() {
         e.player.lock()
         e.player.sendMessage("You climb the low wall...", true)
         e.player.forceMove(Tile.of((e.getObj().x + 1), e.getObj().y,
-            e.getObj().plane
+            e.getObj().level
         ), 4853, 30, 60) {
             e.player.skills.addXp(Constants.AGILITY, 16.2)
             val wallOne = Agility.getStageProgress(e.player, Agility.BARBARIAN_OUTPOST_COURSE, NormalObstacle.WALL_ONE.ordinal)
@@ -200,7 +200,7 @@ fun mapBarbarianOutpostAgility() {
                 e.player.forceMove(Tile.of(2532, 3553, 3), 4189, 15, 90) {
                     e.player.skills.addXp(Constants.AGILITY, 15.0)
                     Agility.setStageProgress(e.player, Agility.BARBARIAN_OUTPOST_COURSE, AdvancedObstacle.SPRING_DEVICE.ordinal, true)
-                    World.sendObjectAnimation(World.getObject(Tile.of(2531, 3554, 3), ObjectType.SCENERY_INTERACT), Animation(7527))
+                    World.sendObjectAnimation(World.getObject(Tile.of(2531, 3554, 3), ObjectShape.SCENERY_INTERACT), Animation(7527))
                 }
             }
         })

@@ -1,7 +1,8 @@
 package com.rs.engine.dialogue.statements;
 
-import com.rs.cache.loaders.EnumDefinitions;
-import com.rs.cache.loaders.interfaces.IFEvents;
+import org.darkan.core.cache.EnumDefinitions;
+import world.gregs.voidps.cache.definition.data.EnumDefinition;
+import org.darkan.core.model.IFEvents;
 import com.rs.game.content.items.Lamp;
 import com.rs.game.model.entity.player.Player;
 
@@ -43,7 +44,7 @@ public class LampXPSelectStatement implements Statement {
         if (player.getTempAttribs().getO("lampInstance") == null)
             return;
         Lamp lamp = player.getTempAttribs().getO("lampInstance");
-        EnumDefinitions map = EnumDefinitions.getEnum(681);
+        EnumDefinition map = EnumDefinitions.getEnum(681);
         if (lamp.getSelectedSkill() == map.getDefaultIntValue()) {
             player.getPackets().sendVarc(1796, map.getDefaultIntValue());
             return;

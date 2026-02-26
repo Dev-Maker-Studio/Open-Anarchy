@@ -11,16 +11,20 @@ import world.gregs.voidps.type.Tile
  * The pathfinder reads from [allFlags] directly.
  */
 object WorldCollision {
+    @JvmField
     val allFlags: Array<IntArray?> = arrayOfNulls(2048 * 2048 * 4)
 
+    @JvmStatic
     fun getFlags(x: Int, y: Int, level: Int): Int {
         val zoneId = getZoneIndex(x, y, level)
         val zone = allFlags[zoneId] ?: return -1
         return zone[getIndexInZone(x, y)]
     }
 
+    @JvmStatic
     fun getFlags(tile: Tile): Int = getFlags(tile.x, tile.y, tile.level)
 
+    @JvmStatic
     fun addFlag(x: Int, y: Int, level: Int, flag: Int) {
         val zoneId = getZoneIndex(x, y, level)
         if (allFlags[zoneId] == null) allFlags[zoneId] = IntArray(64)
@@ -29,8 +33,10 @@ object WorldCollision {
         zone[idx] = zone[idx] or flag
     }
 
+    @JvmStatic
     fun addFlag(tile: Tile, flag: Int) = addFlag(tile.x, tile.y, tile.level, flag)
 
+    @JvmStatic
     fun removeFlag(x: Int, y: Int, level: Int, flag: Int) {
         val zoneId = getZoneIndex(x, y, level)
         val zone = allFlags[zoneId] ?: return
@@ -38,36 +44,57 @@ object WorldCollision {
         zone[idx] = zone[idx] and flag.inv()
     }
 
+    @JvmStatic
     fun removeFlag(tile: Tile, flag: Int) = removeFlag(tile.x, tile.y, tile.level, flag)
 
+    @JvmStatic
     fun setFlags(x: Int, y: Int, level: Int, flag: Int) {
         val zoneId = getZoneIndex(x, y, level)
         if (allFlags[zoneId] == null) allFlags[zoneId] = IntArray(64)
         allFlags[zoneId]!![getIndexInZone(x, y)] = flag
     }
 
+    @JvmStatic
     fun clearZone(zoneId: Int) {
         allFlags[zoneId] = null
     }
 
+    @JvmStatic
     fun initZone(zoneId: Int) {
         if (allFlags[zoneId] == null) allFlags[zoneId] = IntArray(64)
     }
 
+    /** Alias for [clearZone] used by legacy chunk-based callers. */
+    @JvmStatic
+    fun clearChunk(chunkId: Int) = clearZone(chunkId)
+
+    /** Alias for [initZone] used by legacy chunk-based callers. */
+    @JvmStatic
+    fun initChunk(chunkId: Int) = initZone(chunkId)
+
     // --- Convenience flag operations ---
 
+    @JvmStatic
     fun addBlockedTile(tile: Tile) = addFlag(tile, ClipFlag.PFBW_FLOOR.flag)
+    @JvmStatic
     fun removeBlockedTile(tile: Tile) = removeFlag(tile, ClipFlag.PFBW_FLOOR.flag)
 
+    @JvmStatic
     fun addBlockWalkAndProj(tile: Tile) = addFlag(tile, ClipFlag.PFBW_GROUND_DECO.flag)
+    @JvmStatic
     fun removeBlockWalkAndProj(tile: Tile) = removeFlag(tile, ClipFlag.PFBW_GROUND_DECO.flag)
 
+    @JvmStatic
     fun addClipNPC(tile: Tile) = addFlag(tile, ClipFlag.BW_NPC.flag)
+    @JvmStatic
     fun removeClipNPC(tile: Tile) = removeFlag(tile, ClipFlag.BW_NPC.flag)
 
+    @JvmStatic
     fun addClipPlayer(tile: Tile) = addFlag(tile, ClipFlag.BW_PLAYER.flag)
+    @JvmStatic
     fun removeClipPlayer(tile: Tile) = removeFlag(tile, ClipFlag.BW_PLAYER.flag)
 
+    @JvmStatic
     fun getClipNPC(tile: Tile): Boolean = ClipFlag.flagged(getFlags(tile), ClipFlag.BW_NPC)
 
     // --- Object clipping ---

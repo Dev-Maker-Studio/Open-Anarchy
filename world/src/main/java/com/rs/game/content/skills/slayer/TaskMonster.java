@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.slayer;
 
-import com.rs.cache.loaders.EnumDefinitions;
+import org.darkan.core.cache.EnumDefinitions;
 import com.rs.engine.quest.Quest;
 
 import java.util.HashMap;

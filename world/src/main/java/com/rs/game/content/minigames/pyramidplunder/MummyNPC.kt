@@ -1,9 +1,9 @@
 package com.rs.game.content.minigames.pyramidplunder
 
-import com.rs.cache.loaders.ItemDefinitions
+import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.dialogue.*
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Item
+import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnNpc
 import com.rs.plugin.kts.onNpcClick
@@ -105,11 +105,11 @@ private fun noteAllArtefacts(player: Player) {
         .filter { itemId -> !ItemDefinitions.getDefs(itemId).noted }
         .forEach { itemId ->
             val defs = ItemDefinitions.getDefs(itemId)
-            if (!defs.noted && defs.certId != -1 && player.inventory.containsItem(itemId)) {
+            if (!defs.noted && defs.noteId != -1 && player.inventory.containsItem(itemId)) {
                 val amount = player.inventory.getAmountOf(itemId)
                 if (amount > 0) {
                     player.inventory.deleteItem(itemId, amount)
-                    player.inventory.addItemDrop(defs.certId, amount)
+                    player.inventory.addItemDrop(defs.noteId, amount)
                 }
             }
         }

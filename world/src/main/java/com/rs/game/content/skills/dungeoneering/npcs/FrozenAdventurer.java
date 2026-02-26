@@ -19,7 +19,7 @@ package com.rs.game.content.skills.dungeoneering.npcs;
 import com.rs.game.content.skills.dungeoneering.npcs.combat.ToKashBloodChillerCombat;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
-import com.rs.lib.game.Tile;
+import world.gregs.voidps.type.Tile;
 
 public class FrozenAdventurer extends NPC {
 

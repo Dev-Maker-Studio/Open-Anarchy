@@ -16,7 +16,7 @@
 //
 package com.rs.game.content.skills.slayer;
 
-import com.rs.cache.loaders.NPCDefinitions;
+import org.darkan.core.cache.NPCDefinitions;
 
 import java.util.HashMap;
 import java.util.Map;

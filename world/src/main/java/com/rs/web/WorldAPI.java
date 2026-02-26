@@ -21,15 +21,12 @@ import com.rs.game.World;
 import com.rs.game.content.clans.ClansManager;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.social.FCManager;
-import com.rs.lib.model.Account;
-import com.rs.lib.model.clan.Clan;
-import com.rs.lib.net.packets.Packet;
-import com.rs.lib.web.APIUtil;
-import com.rs.lib.web.ErrorResponse;
-import com.rs.lib.web.WebAPI;
-import com.rs.lib.web.dto.FCData;
-import com.rs.lib.web.dto.PacketDto;
-import com.rs.lib.web.dto.PacketEncoderDto;
+import org.darkan.core.model.Account;
+import org.darkan.core.model.Clan;
+import com.rs.web.APIUtil;
+import com.rs.web.ErrorResponse;
+import com.rs.web.WebAPI;
+import com.rs.web.dto.FCData;
 import io.undertow.util.StatusCodes;
 
 public class WorldAPI extends WebAPI {
@@ -91,39 +88,6 @@ public class WorldAPI extends WebAPI {
             }
             APIUtil.readJSON(ex, FCData.class, fc -> {
                 FCManager.updateFCData(fc);
-                APIUtil.sendResponse(ex, StatusCodes.OK, true);
-            });
-        }));
-
-		routes.post("/sendpacket", ex -> ex.dispatch(() -> {
-            if (!APIUtil.authenticate(ex, Settings.getConfig().getLobbyApiKey())) {
-                APIUtil.sendResponse(ex, StatusCodes.UNAUTHORIZED, new ErrorResponse("Invalid authorization key."));
-                return;
-            }
-            APIUtil.readJSON(ex, PacketEncoderDto.class, request -> {
-                Player player = World.getPlayerByUsername(request.username());
-                if (player == null || player.getSession() == null) {
-                    APIUtil.sendResponse(ex, StatusCodes.OK, true);
-                    return;
-                }
-                player.getSession().writeToQueue(request.encoders());
-                APIUtil.sendResponse(ex, StatusCodes.OK, true);
-            });
-        }));
-
-		routes.post("/forwardpackets", ex -> ex.dispatch(() -> {
-            if (!APIUtil.authenticate(ex, Settings.getConfig().getLobbyApiKey())) {
-                APIUtil.sendResponse(ex, StatusCodes.UNAUTHORIZED, new ErrorResponse("Invalid authorization key."));
-                return;
-            }
-            APIUtil.readJSON(ex, PacketDto.class, packet -> {
-                Player player = World.getPlayerByUsername(packet.username());
-                if (player == null) {
-                    APIUtil.sendResponse(ex, StatusCodes.OK, true);
-                    return;
-                }
-                for (Packet p : packet.packets())
-                    player.getSession().queuePacket(p);
                 APIUtil.sendResponse(ex, StatusCodes.OK, true);
             });
         }));

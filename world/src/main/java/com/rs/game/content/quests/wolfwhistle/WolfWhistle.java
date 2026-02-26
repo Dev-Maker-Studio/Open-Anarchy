@@ -8,8 +8,8 @@ import com.rs.engine.quest.QuestOutline;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.gameobject.GameObject;
-import com.rs.lib.game.Animation;
-import com.rs.lib.net.packets.encoders.social.MessageGame.MessageType;
+import org.darkan.core.model.Animation;
+import org.darkan.core.model.ChatMessageType;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.LoginHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
@@ -76,9 +76,9 @@ public class WolfWhistle extends QuestOutline {
                     return;
                 }
             }
-            p.sendMessage(MessageType.GAME, "Despite searching, you cannot find anything.");
+            p.sendMessage(ChatMessageType.GAME, "Despite searching, you cannot find anything.");
         } else {
-            p.sendMessage(MessageType.GAME, "Despite searching, you cannot find anything.");
+            p.sendMessage(ChatMessageType.GAME, "Despite searching, you cannot find anything.");
         }
     });
     public static ObjectClickHandler handleStikklebrixDeadBody = new ObjectClickHandler(new Object[]{STIKKLEBRIX_BODY}, e -> {

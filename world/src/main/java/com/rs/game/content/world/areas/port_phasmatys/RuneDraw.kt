@@ -6,7 +6,7 @@ import com.rs.engine.quest.Quest
 import com.rs.game.content.quests.ghosts_ahoy.GhostsAhoy
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Rights
+import org.darkan.core.model.Rights
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import kotlin.random.Random

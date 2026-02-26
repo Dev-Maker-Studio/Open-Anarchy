@@ -18,8 +18,8 @@ package com.rs.game.content.minigames.fightkiln.npcs;
 
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
-import com.rs.lib.game.Animation;
-import com.rs.lib.game.Tile;
+import org.darkan.core.model.Animation;
+import world.gregs.voidps.type.Tile;
 
 import java.util.List;
 
