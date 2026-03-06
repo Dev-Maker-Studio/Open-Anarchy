@@ -1,6 +1,8 @@
 package org.darkan.core.net.prot.handler
 
+import kotlinx.coroutines.runBlocking
 import org.darkan.core.Logger.logInfo
+import org.darkan.core.Logger.logWarn
 import org.darkan.core.getClasses
 import org.darkan.core.net.prot.ClientProt
 import java.lang.reflect.ParameterizedType
@@ -33,6 +35,7 @@ object PacketHandlers {
         val type = handler.javaClass.genericInterfaces[0] as ParameterizedType
         @Suppress("UNCHECKED_CAST")
         val clazz = type.actualTypeArguments[1] as Class<ClientProt>
+        logInfo("  Mapped handler: ${handler.javaClass.simpleName} -> ${clazz.simpleName} (${clazz.name})")
         PACKET_HANDLERS[clazz] = handler
     }
 
@@ -45,7 +48,11 @@ object PacketHandlers {
      */
     @Suppress("UNCHECKED_CAST")
     fun <T> handleBlocking(player: T, packet: ClientProt) {
-        val handler = PACKET_HANDLERS[packet::class.java] as? PacketHandler<T, ClientProt> ?: return
-        kotlinx.coroutines.runBlocking { handler.handle(player, packet) }
+        val handler = PACKET_HANDLERS[packet::class.java] as? PacketHandler<T, ClientProt>
+        if (handler == null) {
+            logWarn("No handler found for packet: ${packet::class.java.simpleName} (${packet::class.java.name}), registered keys: ${PACKET_HANDLERS.keys.map { it.simpleName }}")
+            return
+        }
+        runBlocking { handler.handle(player, packet) }
     }
 }

@@ -9,7 +9,7 @@ import world.gregs.voidps.type.Tile
  * Represents an 8x8 tile chunk of the world.
  * Stores base objects (from cache), spawned objects (runtime), removed base objects, and entity indices.
  *
- * @param chunkId packed chunk ID: (chunkX) | (chunkY shl 11) | (level shl 22)
+ * @param chunkId packed chunk ID: (chunkY) | (chunkX shl 11) | (level shl 22)
  */
 class Chunk(val chunkId: Int) {
 
@@ -34,8 +34,8 @@ class Chunk(val chunkId: Int) {
     /** Whether this chunk's region data has been loaded from the cache. */
     @Volatile var loaded = false
 
-    val chunkX: Int get() = chunkId and 0x7FF
-    val chunkY: Int get() = (chunkId shr 11) and 0x7FF
+    val chunkX: Int get() = (chunkId shr 11) and 0x7FF
+    val chunkY: Int get() = chunkId and 0x7FF
     val level: Int get() = (chunkId shr 22) and 0x3
 
     val baseX: Int get() = chunkX shl 3
@@ -133,7 +133,7 @@ class Chunk(val chunkId: Int) {
          * Pack a chunk ID from world coordinates and level.
          */
         fun chunkId(x: Int, y: Int, level: Int): Int {
-            return (x shr 3) or ((y shr 3) shl 11) or (level shl 22)
+            return (y shr 3) or ((x shr 3) shl 11) or (level shl 22)
         }
 
         /**

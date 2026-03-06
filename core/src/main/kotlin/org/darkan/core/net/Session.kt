@@ -141,11 +141,17 @@ open class Session(
                 }
                 val packet = input.readPacket(size)
 
-                val packetData = clientProt.decoder?.invoke(packet, opcode) ?: codec.createInstanceForOpcode<ClientProt>(opcode)
+                val packetData = try {
+                    clientProt.decoder?.invoke(packet, opcode) ?: codec.createInstanceForOpcode<ClientProt>(opcode)
+                } catch (e: Exception) {
+                    logSevere("Decoder exception for opcode $opcode (${clientProt.protClass.simpleName}, size=$size): ${e::class.simpleName}: ${e.message}")
+                    continue
+                }
                 if (packetData == null) {
                     logSevere("Failed to create packet instance for opcode $opcode")
                     continue
                 }
+                //logTrace("Decoded packet: ${packetData::class.simpleName} from opcode $opcode")
                 readChannel.send(packetData)
             }
         } catch (e: Exception) {
@@ -173,15 +179,14 @@ open class Session(
                     if (EnvVars.packetValidateSizes && encoder.encoder != null) {
                         val dataChannel = ByteChannel()
                         encoder.encoder.invoke(serverProt, dataChannel)
-                        val packetData = dataChannel.toByteReadPacket()
-                        val packetLength = packetData.remaining.toInt()
+                        val packetBytes = dataChannel.toByteArray()
+                        val packetLength = packetBytes.size
                         val expectedLength = encoder.size.length
                         if (packetLength != expectedLength) {
-                            logWarn("Fixed packet size mismatch for ${serverProt::class}: expected=$expectedLength actual=$packetLength opcode=${encoder.opcode}")
+                            logWarn("Fixed packet size mismatch for ${serverProt::class.simpleName}: expected=$expectedLength actual=$packetLength opcode=${encoder.opcode}")
                         }
-
                         writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
-                        write.writePacket(packetData)
+                        write.writeFully(packetBytes)
                     } else {
                         writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
                         encoder.encoder?.invoke(serverProt, write)
@@ -224,6 +229,14 @@ open class Session(
                 write.writeByte(opcode + cipher.nextInt())
         } else
             write.writeSmart(opcode)
+    }
+
+    private suspend fun ByteChannel.toByteArray(): ByteArray {
+        flush()
+        val bytes = ByteArray(availableForRead)
+        readFully(bytes)
+        close()
+        return bytes
     }
 
     private suspend fun ByteChannel.toByteReadPacket(): Source {

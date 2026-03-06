@@ -2,6 +2,7 @@ package org.darkan.core.model
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.jvm.Transient as JvmTransient
 import org.darkan.core.net.Session
 import org.darkan.core.net.prot.ClearVarps
 import org.darkan.core.net.prot.setVarcPacket
@@ -24,10 +25,13 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
     }
 
     @Transient
+    @JvmTransient
     private var modified: MutableSet<Int> = HashSet()
     @Transient
+    @JvmTransient
     private lateinit var varpValues: IntArray
     @Transient
+    @JvmTransient
     private lateinit var session: Session
 
     fun setSession(session: Session): Vars {
@@ -91,6 +95,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     fun syncVarsToClient() {
         modified.forEach { id ->
+            if (id < 0 || id >= varpValues.size) return@forEach
             session.queuePacket(setVarpPacket(id, varpValues[id]))
         }
         modified.clear()

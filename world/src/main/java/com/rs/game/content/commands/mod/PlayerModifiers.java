@@ -21,7 +21,7 @@ import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
 import org.darkan.core.model.Rights;
 import org.darkan.core.Utils;
-import com.rs.net.LobbyCommunicator;
+import org.darkan.world.server.WorldServer;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.utils.record.Recorder;
@@ -59,7 +59,7 @@ public class PlayerModifiers {
             if (target != null) {
                 target.getAccount().banDays(2);
                 p.sendMessage("You have banned " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + " for 2 days.");
-                LobbyCommunicator.updatePunishments(target);
+                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
                 if (target.hasStarted())
                     target.getSession().close();
             } else
@@ -104,7 +104,7 @@ public class PlayerModifiers {
             if (target != null) {
                 target.getAccount().muteDays(2);
                 p.sendMessage("You have muted " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + " for 2 days.");
-                LobbyCommunicator.updatePunishments(target);
+                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
             } else
                 p.sendMessage("Unable to find player.");
         }));
