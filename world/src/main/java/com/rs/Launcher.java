@@ -27,21 +27,25 @@ import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Player;
 import org.darkan.core.JsonFileManager;
 import org.darkan.core.Logger;
-import com.rs.net.LobbyCommunicator;
 import com.rs.plugin.PluginManager;
 import org.darkan.core.net.prot.handler.PacketHandlers;
 import org.darkan.world.server.WorldServer;
+import com.rs.utils.MapXTEAs;
 import com.rs.utils.Ticks;
 import com.rs.utils.WorldPersistentData;
 import com.rs.utils.WorldUtil;
+import org.darkan.core.map.MapXteas;
 import com.rs.utils.json.ControllerAdapter;
-import com.rs.web.WorldAPI;
+import com.rs.utils.json.TileAdapter;
+import world.gregs.voidps.type.Tile;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.util.logging.Level;
+
+import static org.darkan.core.net.prot.revision.rev727.Rev727CodecKt.register727;
 
 public final class Launcher {
 
@@ -50,6 +54,7 @@ public final class Launcher {
 		Logger.setLevel(Level.FINE); //FINER for traces
 		JsonFileManager.setGSON(new GsonBuilder()
 				.registerTypeAdapter(Controller.class, new ControllerAdapter())
+				.registerTypeAdapter(Tile.class, new TileAdapter())
 				.disableHtmlEscaping()
 				.setPrettyPrinting()
 				.create());
@@ -61,8 +66,12 @@ public final class Launcher {
 		long currentTime = System.currentTimeMillis();
 
 		Cache.init(Settings.getConfig().getCachePath());
+		MapXTEAs.loadKeys();
+		MapXteas.INSTANCE.load("./data/map/xteaKeys.json");
 
         WorldDB DB = new WorldDB();
+
+		register727();
 
 		AsyncTaskExecutor.initExecutors();
 		PluginManager.loadPlugins();
@@ -81,15 +90,7 @@ public final class Launcher {
 		Logger.info(Launcher.class, "main", "Server launched in " + (System.currentTimeMillis() - currentTime) + " ms...");
 		Logger.info(Launcher.class, "main", "Server is listening at " + InetAddress.getLocalHost().getHostAddress() + ":" + Settings.getConfig().getWorldInfo().port() + "...");
 		Logger.info(Launcher.class, "main", "Player will be directed to "+Settings.getConfig().getWorldInfo()+"...");
-		Logger.info(Launcher.class, "main", "Registering world with lobby server...");
-		Logger.info(Launcher.class, "main", Settings.getConfig().getWorldInfo());
-		new WorldAPI().start();
-		LobbyCommunicator.post(Boolean.class, Settings.getConfig().getWorldInfo(), "addworld", success -> {
-			if (success != null && success)
-				Logger.info(Launcher.class, "main", "Registered world with lobby server...");
-			else
-				Logger.warn(Launcher.class, "main", "Failed to register world with lobby server... You can still login locally but social features will not work properly.");
-		});
+		Logger.info(Launcher.class, "main", "World registration handled by SocialClient via gateway.");
 		addCleanMemoryTask();
 //		Runtime.getRuntime().addShutdownHook(new Thread() {
 //			@Override

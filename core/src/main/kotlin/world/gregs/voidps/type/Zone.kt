@@ -41,9 +41,9 @@ value class Zone(val id: Int) : Coordinate3D<Zone> {
     }
 
     companion object {
-        fun id(x: Int, y: Int, level: Int) = (x and 0x7ff) + ((y and 0x7ff) shl 11) + ((level and 0x3) shl 22)
-        fun x(id: Int) = id and 0x7ff
-        fun y(id: Int) = id shr 11 and 0x7ff
+        fun id(x: Int, y: Int, level: Int) = (y and 0x7ff) + ((x and 0x7ff) shl 11) + ((level and 0x3) shl 22)
+        fun x(id: Int) = id shr 11 and 0x7ff
+        fun y(id: Int) = id and 0x7ff
         fun level(id: Int) = id shr 22 and 0x3
         val EMPTY = Zone(0, 0, 0)
 

@@ -29,14 +29,23 @@ import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.secure.RSA
 import world.gregs.voidps.cache.secure.decryptXtea
-import com.rs.net.LobbyCommunicator
+import org.darkan.core.Logger
 import org.darkan.core.model.Account
+import org.darkan.core.mongo.collections.Accounts
+import org.darkan.core.net.login.LoginToken
+import org.darkan.core.model.Clan
+import org.darkan.core.mongo.collections.Clans
 import org.darkan.core.net.prot.ClientProt
+import org.darkan.core.net.prot.ServerProt
+import org.darkan.core.social.gateway.AnnouncementBroadcast
+import org.darkan.core.social.gateway.ServerPacketBatch
+import org.darkan.core.social.gateway.ServerPacketEnvelope
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import org.darkan.world.social.SocialClient
 import java.math.BigInteger
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
+import java.util.function.Consumer
 
 object WorldServer {
     private lateinit var job: Job
@@ -104,7 +113,7 @@ object WorldServer {
             val output = socket.openWriteChannel(autoFlush = false)
             val ip = socket.remoteAddress.ipString()
 
-            try {
+            socket.use { socket ->
                 when (val reqOpcode = input.readByte().toInt()) {
                     RequestOpcode.CONNECT_LOGIN -> initWorldLogin(input, output, ip)
                     else -> {
@@ -112,8 +121,6 @@ object WorldServer {
                         output.finish(ResponseOpcode.INVALID_LOGIN_SERVER)
                     }
                 }
-            } finally {
-                socket.close()
             }
         } catch (e: Exception) {
             when {
@@ -143,9 +150,8 @@ object WorldServer {
         val packet = input.readPacket(size)
 
         val major = packet.readInt()
-        val codec = Codec.get(major) ?: return output.finish(ResponseOpcode.GAME_UPDATE)
-        if (packet.readInt() != 1) // CUSTOM_CLIENT_BUILD
-            return output.finish(ResponseOpcode.GAME_UPDATE)
+        val codec = Codec.get(major) ?: return output.finish(ResponseOpcode.GAME_UPDATE).also { logInfo("Invalid codec: $major") }
+        val minor = packet.readInt()
 
         val gameStateIsUnk10 = packet.readUByte().toInt() == 1
 
@@ -158,7 +164,7 @@ object WorldServer {
         if (sensitiveData.readLong().toInt() != 0)
             return output.finish(ResponseOpcode.BAD_SESSION_ID)
 
-        val password = sensitiveData.readRSString()
+        val lobbyAuthToken = sensitiveData.readRSString() // HMAC-signed LoginToken (lobby puts it in RSA block's password slot)
         sensitiveData.readLong()
         sensitiveData.readLong()
 
@@ -182,20 +188,20 @@ object WorldServer {
             logError("Failed to parse machine info for $username (success=$success)")
         val machineInfo = CoreMachineInformation.parse(xtea)
 
-        xtea.readInt()
-        xtea.readLong()
-        xtea.readRSString()
+        xtea.readInt() // varVerifyId
+        xtea.readLong() // machineUid
+        xtea.readRSString() // static loginToken (applet param 13, not the HMAC auth token)
         if (xtea.readUByte().toInt() == 1)
-            xtea.readRSString()
-        xtea.readUByte()
-        xtea.readUByte()
-        xtea.readUByte()
-        xtea.readByte()
-        xtea.readInt()
+            xtea.readRSString() // supplementaryLoginData
+        xtea.readUByte() // jagtheora
+        xtea.readUByte() // isApplet
+        xtea.readUByte() // signedTerms
+        xtea.readByte() // loginType
+        xtea.readInt() // sessionToken
 
-        val token = xtea.readRSString()
-        if (token != EnvVars.worldToken) {
-            logError("World token mismatch: expected=${EnvVars.worldToken}, got=$token from $username")
+        val js5AuthToken = xtea.readRSString()
+        if (js5AuthToken != EnvVars.worldToken) {
+            logError("World token mismatch: expected=${EnvVars.worldToken}, got=$js5AuthToken from $username")
         }
 
         xtea.readUByte() // unknown
@@ -220,15 +226,21 @@ object WorldServer {
         if (!pendingLogins.add(username))
             return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
 
+        val verified = LoginToken.verify(lobbyAuthToken, System.currentTimeMillis(), EnvVars.worldLoginTokenSecret)
+        if (verified == null || verified.username != username) {
+            logError("LoginToken verify failed for $username: verified=${verified?.username}")
+            pendingLogins.remove(username)
+            return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+        }
+
         val account = try {
-            LobbyCommunicator.authWorldLogin(username, password)
+            Accounts.find(username)
         } catch (e: Exception) {
-            logError("Error connecting to login server for $username", e)
+            logError("Error loading account for $username", e)
             pendingLogins.remove(username)
             return output.finish(ResponseOpcode.LOGIN_SERVER_OFFLINE)
         }
-
-        if (account == null || account.username.isNullOrEmpty()) {
+        if (account == null || account.username.isEmpty()) {
             pendingLogins.remove(username)
             return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
         }
@@ -275,6 +287,8 @@ object WorldServer {
             AccountLimiter.remove(ip)
         }
         player.start()
+        session.flush() // Flush WorldLoginDetails + all init packets before reading client input
+        player.setStarted() // Mark started AFTER flush so the world thread cannot interleave writes
         session.readPackets(input)
     }
 
@@ -282,8 +296,89 @@ object WorldServer {
         socialClient.sendClientPacket(username, packet)
     }
 
-    private suspend fun handleSocialMessage(msg: SocialGatewayWireMessage) {
-        // TODO: Handle lobby→world messages (friend updates, private messages, etc.)
+    private fun handleSocialMessage(msg: SocialGatewayWireMessage) {
+        when (msg) {
+            is ServerPacketEnvelope -> deliverToPlayer(msg.username, msg.packet)
+            is ServerPacketBatch -> msg.usernames.forEach { deliverToPlayer(it, msg.packet) }
+            is AnnouncementBroadcast -> logInfo("Received announcement: ${msg.message}")
+            else -> logTrace("Ignoring gateway message: ${msg::class.simpleName}")
+        }
+    }
+
+    private fun deliverToPlayer(username: String, packet: ServerProt) {
+        val player = World.getPlayerByUsername(username) ?: return
+        if (!player.hasStarted() || player.hasFinished()) return
+        player.session.queuePacket(packet)
+    }
+
+    fun notifyPlayerOnline(account: Account) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendPlayerOnline(
+                    username = account.username,
+                    displayName = account.displayName,
+                    rightsCrown = account.rights.crown,
+                    privateStatus = account.social.status.toInt()
+                )
+            } catch (e: Exception) {
+                logError("Failed to notify lobby of player online: ${account.username}", e)
+            }
+        }
+    }
+
+    fun notifyPlayerOffline(username: String) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendPlayerOffline(username)
+            } catch (e: Exception) {
+                logError("Failed to notify lobby of player offline: $username", e)
+            }
+        }
+    }
+
+    fun saveAccountAsync(account: Account) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                Accounts.save(account)
+            } catch (e: Exception) {
+                logError("Failed to save account ${account.username}", e)
+            }
+        }
+    }
+
+    fun getClanAsync(name: String, callback: Consumer<Clan?>) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                val clan = Clans.find(name)
+                callback.accept(clan)
+            } catch (e: Exception) {
+                logError("Failed to load clan $name", e)
+                callback.accept(null)
+            }
+        }
+    }
+
+    fun saveClanAsync(clan: Clan, callback: Consumer<Clan?>? = null) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                Clans.save(clan)
+                callback?.accept(clan)
+            } catch (e: Exception) {
+                logError("Failed to save clan ${clan.name}", e)
+                callback?.accept(null)
+            }
+        }
+    }
+
+    fun getAccountAsync(username: String, callback: Consumer<Account?>) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                callback.accept(Accounts.find(username))
+            } catch (e: Exception) {
+                logError("Failed to load account $username", e)
+                callback.accept(null)
+            }
+        }
     }
 
     private fun loadOrCreatePlayer(account: Account): Player {

@@ -72,47 +72,47 @@ interface Cache {
             Huffman().load(singleton.data(Index.HUFFMAN, 1)!!)
         }
 
-        val varbits: Array<VarBitDefinition> by lazy {
+        @JvmStatic val varbits: Array<VarBitDefinition> by lazy {
             VarBitDecoder().load(singleton)
         }
 
-        val objects: Array<ObjectDefinition> by lazy {
+        @JvmStatic val objects: Array<ObjectDefinition> by lazy {
             ObjectDecoder(EnvVars.members).load(singleton)
         }
 
-        val items: Array<ItemDefinition> by lazy {
+        @JvmStatic val items: Array<ItemDefinition> by lazy {
             ItemDecoder().load(singleton)
         }
 
-        val npcs: Array<NPCDefinition> by lazy {
+        @JvmStatic val npcs: Array<NPCDefinition> by lazy {
             NPCDecoder(EnvVars.members).load(singleton)
         }
 
-        val animations: Array<AnimationDefinition> by lazy {
+        @JvmStatic val animations: Array<AnimationDefinition> by lazy {
             AnimationDecoder().load(singleton)
         }
 
-        val enums: Array<EnumDefinition> by lazy {
+        @JvmStatic val enums: Array<EnumDefinition> by lazy {
             EnumDecoder().load(singleton)
         }
 
-        val structs: Array<StructDefinition> by lazy {
+        @JvmStatic val structs: Array<StructDefinition> by lazy {
             StructDecoder().load(singleton)
         }
 
-        val graphics: Array<GraphicDefinition> by lazy {
+        @JvmStatic val graphics: Array<GraphicDefinition> by lazy {
             GraphicDecoder().load(singleton)
         }
 
-        val bas: Array<BASDefinition> by lazy {
+        @JvmStatic val bas: Array<BASDefinition> by lazy {
             BASDecoder().load(singleton)
         }
 
-        val interfaces: Array<InterfaceDefinition> by lazy {
+        @JvmStatic val interfaces: Array<InterfaceDefinition> by lazy {
             InterfaceDecoder().load(singleton)
         }
 
-        fun get() = singleton
+        @JvmStatic fun get() = singleton
 
         /** Legacy init method. Triggers lazy initialization of the cache. */
         @JvmStatic
@@ -122,6 +122,6 @@ interface Cache {
             singleton
         }
 
-        val huffman: Huffman get() = _huffman
+        @JvmStatic val huffman: Huffman get() = _huffman
     }
 }

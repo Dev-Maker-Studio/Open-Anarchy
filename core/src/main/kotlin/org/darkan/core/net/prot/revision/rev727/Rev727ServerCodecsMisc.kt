@@ -218,17 +218,17 @@ internal fun Codec.registerRev727MiscPackets() {
 
     serverProt<RunScript>(opcode = 99, size = ProtSize.VarShort) { out ->
         val signature = buildString {
-            for (param in params) {
-                when (param) {
+            for (i in params.lastIndex downTo 0) {
+                when (params[i]) {
                     is String -> append('s')
-                    is Int -> append('I')
-                    else -> error("RunScript params must be String or Int, got: ${param::class.simpleName}")
+                    is Int -> append('i')
+                    else -> error("RunScript params must be String or Int, got: ${params[i]::class.simpleName}")
                 }
             }
         }
         out.writeRSString(signature)
-        for (i in params.lastIndex downTo 0) {
-            when (val param = params[i]) {
+        for (param in params) {
+            when (param) {
                 is String -> out.writeRSString(param)
                 is Int -> out.writeInt(param)
             }

@@ -2,13 +2,14 @@ package org.darkan.core.model
 
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import world.gregs.voidps.cache.Cache
 
 @Serializable
 data class Item @JvmOverloads constructor(var id: Int, var amount: Int = 1, val metadata: MutableMap<String, @Contextual Any> = mutableMapOf()) : Cloneable {
 
     /** Transient slot index, not serialized. Set by event dispatch to track inventory position. */
-    @kotlinx.serialization.Transient
+    @Transient
     var slot: Int = -1
 
     init {

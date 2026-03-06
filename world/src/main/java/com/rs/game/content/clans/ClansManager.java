@@ -43,7 +43,7 @@ import org.darkan.core.Logger;
 import com.rs.utils.RSColor;
 import org.darkan.core.Utils;
 import com.rs.utils.KtExtensionsKt;
-import com.rs.net.LobbyCommunicator;
+import org.darkan.world.server.WorldServer;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.InterfaceOnPlayerHandler;
@@ -63,29 +63,29 @@ public class ClansManager {
 			return null;
 		if (CACHED_CLANS.get(name) == null) {
 			try {
-				LobbyCommunicator.getClan(name, clan -> {
+				WorldServer.INSTANCE.getClanAsync(name, clan -> {
 					if (clan == null || clan.getName() == null) {
-						Logger.error(ClansManager.class, "getClan", "Clan returned from lobby server was null " + name);
+						Logger.error(ClansManager.class, "getClan", "Clan returned from database was null " + name);
 						return;
 					}
-					CACHED_CLANS.put(name, clan);	
+					CACHED_CLANS.put(name, clan);
 				});
 			} catch(Throwable e) {
-				Logger.error(ClansManager.class, "getClan", "Error communicating with clan service. " + name);
+				Logger.error(ClansManager.class, "getClan", "Error loading clan: " + name);
 			}
 			return null;
 		}
 		return CACHED_CLANS.get(name);
 	}
-	
+
 	public static void getClan(String name, Consumer<Clan> cb) {
 		if (name == null)
 			return;
 		if (CACHED_CLANS.get(name) == null) {
 			try {
-				LobbyCommunicator.getClan(name, clan -> {
+				WorldServer.INSTANCE.getClanAsync(name, clan -> {
 					if (clan == null || clan.getName() == null) {
-						Logger.error(ClansManager.class, "getClan", "Clan returned from lobby server was null " + name);
+						Logger.error(ClansManager.class, "getClan", "Clan returned from database was null " + name);
 						cb.accept(null);
 						return;
 					}
@@ -94,7 +94,7 @@ public class ClansManager {
 				});
 			} catch(Throwable e) {
 				cb.accept(null);
-				Logger.error(ClansManager.class, "getClan", "Error communicating with clan service: " + name);
+				Logger.error(ClansManager.class, "getClan", "Error loading clan: " + name);
 			}
 		} else
 			cb.accept(CACHED_CLANS.get(name));
@@ -111,8 +111,8 @@ public class ClansManager {
 			if (player == null || player.hasFinished() || !player.hasStarted())
 				continue;
 			player.getAppearance().generateAppearanceData();
-			for (int key : clan.getVars().keySet())
-				player.getPackets().setClanVar(key, clan.getVar(key));
+			for (String key : clan.getVars().keySet())
+				player.getPackets().setClanVar(Integer.parseInt(key), clan.getVar(Integer.parseInt(key)));
 			if (player.getInterfaceManager().topOpen(1096))
 				WorldTasks.delay(0, () -> player.getPackets().sendRunScript(4295));
 		}
@@ -123,13 +123,9 @@ public class ClansManager {
 	}
 	
 	public static void syncClanToLobby(Clan clan, Runnable done) {
-		LobbyCommunicator.updateClan(clan, res -> {
-			if (res == null) {
-				if (done != null)
-					done.run();
-				return;
-			}
-			CACHED_CLANS.put(res.getName(), res);
+		WorldServer.INSTANCE.saveClanAsync(clan, res -> {
+			if (res != null)
+				CACHED_CLANS.put(res.getName(), res);
 			if (done != null)
 				done.run();
 		});
@@ -430,7 +426,7 @@ public class ClansManager {
 		ClanMemberData member = player.getClan().getMembers().get(username);
 		if (member == null)
 			return;
-		LobbyCommunicator.getAccount(username, acc -> {
+		WorldServer.INSTANCE.getAccountAsync(username, acc -> {
 			if (acc == null) {
 				player.sendMessage("Error finding player profile for target character.");
 				return;

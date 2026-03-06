@@ -26,23 +26,12 @@ import com.rs.game.model.gameobject.OwnedObject;
 import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.Logger;
 import org.darkan.core.Utils;
-// TODO: APIUtil
 import com.rs.utils.Timer;
 import com.rs.utils.WorldUtil;
-import com.rs.web.Telemetry;
 import jdk.jfr.Configuration;
 import jdk.jfr.Recording;
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
-import okhttp3.Request;
-import okhttp3.RequestBody;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryUsage;
 import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.HashSet;
@@ -223,7 +212,6 @@ public final class WorldThread extends Thread {
 				long time = (System.currentTimeMillis() - startTime);
 				Logger.trace(WorldThread.class, "tick", "Tick finished - Mem: " + (Utils.formatDouble(WorldUtil.getMemUsedPerc())) + "% - " + time + "ms - Players online: " + World.getPlayers().size());
 
-				Telemetry.queueTelemetryTick(time);
 				if (time > HIGHEST_TICK)
 					HIGHEST_TICK = time;
 				if (time < LOWEST_TICK)
@@ -232,72 +220,10 @@ public final class WorldThread extends Thread {
 				TOTAL_TIME += time;
                 long AVERAGE_TICK = TOTAL_TIME / TICKS;
 
-				if (time > 300L && Settings.getConfig().getStaffWebhookUrl() != null) {
-					if (Settings.getConfig().isEnableJFR())
+				if (time > 300L) {
+					if (Settings.getConfig().isEnableJFR() && tickRecording != null)
 						tickRecording.stop();
-					StringBuilder content = new StringBuilder();
-					content.append("__**Tick concern**__\n");
-					content.append("__**World Data**__\n");
-					content.append("```\n");
-					content.append("World: ").append(Settings.getConfig().getServerName()).append("(").append(Settings.getConfig().getWorldInfo().number()).append("@").append(Settings.getConfig().getLobbyIp()).append(")\n");
-					content.append("Uptime: ").append(Utils.ticksToTime(WORLD_CYCLE - START_CYCLE)).append("\n");
-					content.append("Players loaded: ").append(Utils.formatNumber(World.getPlayers().size())).append("\n");
-					content.append("NPCs loaded: ").append(Utils.formatNumber(World.getNPCs().size())).append("\n");
-					content.append("Reserved dynamic regions: ").append(Utils.formatNumber(InstanceBuilder.getReservedRegionCount())).append("\n");
-					content.append("Active world task count: ").append(Utils.formatNumber(WorldTasks.getSize())).append("\n");
-					content.append("```\n");
-					content.append("__**Tick Time: ").append(time).append("ms (min: ").append(Utils.formatLong(LOWEST_TICK)).append("ms avg: ").append(Utils.formatLong(AVERAGE_TICK)).append("ms max: ").append(Utils.formatLong(HIGHEST_TICK)).append("ms)**__\n");
-					content.append("```\n");
-					content.append("Chunk: ").append(timerChunk.getFormattedTime()).append("\n");
-					content.append("Task: ").append(timerTask.getFormattedTime()).append("\n");
-					content.append("Update zone: ").append(timerUpdateZones.getFormattedTime()).append("\n");
-					content.append("Player proc: ").append(timerPlayerProc.getFormattedTime()).append("\n");
-					content.append("NPC proc: ").append(timerNpcProc.getFormattedTime()).append("\n");
-					content.append("Player move: ").append(timerPlayerMove.getFormattedTime()).append("\n");
-					content.append("NPC move: ").append(timerNpcMove.getFormattedTime()).append("\n");
-					content.append("Entity update: ").append(timerEntityUpdate.getFormattedTime()).append("\n");
-					content.append("Flush: ").append(timerFlushPackets.getFormattedTime()).append("\n");
-					content.append("```\n");
-					content.append("__**JVM Stats:**__\n");
-					content.append("```\n");
-					/**
-					 * Memory and CPU usage stats
-					 */
-					MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
-					MemoryUsage heapMemoryUsage = memoryMXBean.getHeapMemoryUsage();
-					MemoryUsage nonHeapMemoryUsage = memoryMXBean.getNonHeapMemoryUsage();
-
-					long jvmHeapUsed = heapMemoryUsage.getUsed() / 1048576L; // in MB
-					long jvmNonHeapUsed = nonHeapMemoryUsage.getUsed() / 1048576L; // in MB
-					long jvmTotalUsed = jvmHeapUsed + jvmNonHeapUsed;
-
-					long jvmMaxMemory = (heapMemoryUsage.getMax() + nonHeapMemoryUsage.getMax()) / 1048576L; // in MB
-					double jvmMemUsedPerc = ((double) jvmTotalUsed / jvmMaxMemory) * 100.0;
-					content.append("Total JVM memory usage: ").append(Utils.formatLong(jvmTotalUsed)).append("mb/").append(Utils.formatLong(jvmMaxMemory)).append("mb (").append(Utils.formatDouble(jvmMemUsedPerc)).append("%)\n");
-					content.append("```\n");
-					MultipartBody.Builder builder = new MultipartBody.Builder()
-							.setType(MultipartBody.FORM)
-							.addFormDataPart("content", content.toString());
-
-					if (Settings.getConfig().isEnableJFR()) {
-						ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                        assert tickRecording != null;
-                        try (InputStream is = tickRecording.getStream(null, null)) {
-							byte[] buffer = new byte[1024];
-							int len;
-							while ((len = is.read(buffer)) > -1) {
-								baos.write(buffer, 0, len);
-							}
-							baos.flush();
-						}
-						builder.addFormDataPart("file", "tickRecord.jfr", RequestBody.create(baos.toByteArray(), MediaType.parse("application/octet-stream")));
-					}
-					// TODO: APIUtil.request() not available - webhook sending needs migration
-					// APIUtil.request(Boolean.class, new Request.Builder()
-					//		.url(Settings.getConfig().getStaffWebhookUrl())
-					//		.post(builder.build())
-					//		.build(), null);
-					//APIUtil.post(Boolean.class, JsonFileManager.getGson().fromJson(jsonPayload, Object.class), Settings.getConfig().getStaffWebhookUrl(), "", null);
+					Logger.warn(WorldThread.class, "tick", "Tick took " + time + "ms (threshold: 300ms)");
 				}
 			} catch (Throwable e) {
 				Logger.handle(WorldThread.class, "tick", e);

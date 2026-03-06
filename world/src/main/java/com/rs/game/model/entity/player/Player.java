@@ -116,6 +116,8 @@ import org.darkan.core.social.ChatMessage;
 import org.darkan.core.social.PublicChatMessage;
 import org.darkan.core.net.Session;
 import org.darkan.core.net.prot.ClientProt;
+import org.darkan.core.net.prot.IfButton;
+import org.darkan.core.net.prot.IfContinue;
 import org.darkan.core.net.prot.handler.PacketHandlers;
 import org.darkan.core.model.Sound;
 import org.darkan.core.model.SoundType;
@@ -124,8 +126,7 @@ import org.darkan.core.Logger;
 import org.darkan.core.util.MapUtils;
 import org.darkan.core.util.Structure;
 import org.darkan.core.Utils;
-import com.rs.web.dto.FCData;
-import com.rs.net.LobbyCommunicator;
+import org.darkan.world.server.WorldServer;
 import com.rs.net.encoders.WorldEncoder;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.events.*;
@@ -816,15 +817,26 @@ public class Player extends Entity {
 			ChunkManager.getChunk(chunkId).init(this);
 	}
 
-	// now that we inited we can start showing game
+	/**
+	 * Loads map regions, queues all initial packets, and handles post-login
+	 * setup. Does NOT set {@code started} -- the caller must call
+	 * {@link #setStarted()} after flushing the session so the world thread
+	 * cannot interleave writes on the same channel.
+	 */
 	public void start() {
 		loadMapRegions();
 		getMapChunksNeedInit().addAll(getMapChunkIds());
-		started = true;
-		Logger.info(Player.class, "start", "Started player: " + account.getUsername());
 		run();
 		if (isDead())
 			sendDeath(null);
+	}
+
+	/**
+	 * Marks this player as started so the world thread begins processing it.
+	 * Must be called only after the session has been flushed.
+	 */
+	public void setStarted() {
+		started = true;
 	}
 
 	public void stopAll() {
@@ -1182,12 +1194,9 @@ public class Player extends Entity {
 	public void run() {
 		if (getAccount().getRights() == null) {
 			setRights(Rights.PLAYER);
-			LobbyCommunicator.updateRights(this);
+			WorldServer.INSTANCE.saveAccountAsync(account);
 		}
-		LobbyCommunicator.addWorldPlayer(account, response -> {
-			if (response == null || !response)
-				forceLogout();
-		});
+		WorldServer.INSTANCE.notifyPlayerOnline(account);
 		getClan(clan -> appearence.generateAppearanceData());
 		getGuestClan();
 		int updateTimer = (int) World.getTicksTillUpdate();
@@ -1659,7 +1668,7 @@ public class Player extends Entity {
 		AccountLimiter.remove(getSession().getIp());
 		// session.setDecoder(null); // TODO: Modern session doesn't support decoders
 		WorldDB.getPlayers().save(this, () -> {
-			LobbyCommunicator.removeWorldPlayer(this);
+			WorldServer.INSTANCE.notifyPlayerOffline(getUsername());
 			World.removePlayer(this);
 			ChunkManager.updateChunks(this);
 			WorldDB.getHighscores().save(this);
@@ -3407,16 +3416,16 @@ public class Player extends Entity {
 
 	public ArrayList<Player> getNearbyFCMembers(NPC npc) {
 		ArrayList<Player> eligible = new ArrayList<>();
-		FCData fc = FCManager.getFCData(getSocial().getCurrentFriendsChat());
-		if (fc == null) {
-			sendMessage("Error loading active friend's chat. Could not lootshare.");
+		String myFc = getSocial().getCurrentFriendsChat();
+		if (myFc == null || myFc.isEmpty()) {
 			eligible.add(this);
 			return eligible;
 		}
 		for (Player player : World.getPlayersInChunkRange(npc.getChunkId(), 4)) {
-			if (!player.isRunning() || !player.isLootSharing() || !fc.getUsernames().contains(player.getUsername()))
+			if (!player.isRunning() || !player.isLootSharing())
 				continue;
-			if (fc.getRank(player.getAccount()).ordinal() >= fc.getSettings().getRankToLS().ordinal()) //TODO friend rank may need to be coded differently?
+			String theirFc = player.getSocial().getCurrentFriendsChat();
+			if (myFc.equals(theirFc))
 				eligible.add(player);
 		}
 		return eligible;
@@ -3651,6 +3660,8 @@ public class Player extends Entity {
 		for (int i = 0; i < 50; i++) {
 			ClientProt packet = session.pollPacket();
 			if (packet == null) break;
+			if (hasStarted() && !isChosenAccountType() && !(packet instanceof IfContinue) && !(packet instanceof IfButton btn && btn.getOpNum() == 1))
+				continue;
 			try {
 				PacketHandlers.INSTANCE.handleBlocking(this, packet);
 			} catch (Throwable e) {
@@ -3811,7 +3822,7 @@ public class Player extends Entity {
 
 	public void setRights(Rights staffRights) {
 		getAccount().setRights(staffRights);
-		LobbyCommunicator.updateRights(this);
+		WorldServer.INSTANCE.saveAccountAsync(account);
 	}
 
 	public Map<PatchLocation, FarmPatch> getPatches() {

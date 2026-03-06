@@ -137,7 +137,7 @@ internal fun Codec.registerRev727ClientProts() {
     val playerOpOpcodes = intArrayOf(66, 6, 31, 89, 103, 1, 51, 94, 53, 70)
     clientProt(opcodes = playerOpOpcodes, size = 3) { opcode ->
         OpPlayer(
-            opNum = playerOpOpcodes.indexOf(opcode),
+            opNum = playerOpOpcodes.indexOf(opcode) + 1,
             playerIndex = readShort().toInt(),
             forceRun = readBooleanSubtract()
         )
@@ -146,7 +146,7 @@ internal fun Codec.registerRev727ClientProts() {
     val npcOpOpcodes = intArrayOf(65, 16, 50, 77, 95, 3)
     clientProt(opcodes = npcOpOpcodes, size = 3) { opcode ->
         OpNpc(
-            opNum = npcOpOpcodes.indexOf(opcode),
+            opNum = npcOpOpcodes.indexOf(opcode) + 1,
             npcIndex = readUShort().toInt(),
             forceRun = readBoolean()
         )
@@ -155,7 +155,7 @@ internal fun Codec.registerRev727ClientProts() {
     val objOpOpcodes = intArrayOf(75, 93, 38, 32, 48, 73)
     clientProt(opcodes = objOpOpcodes, size = 9) { opcode ->
         OpObj(
-            opNum = objOpOpcodes.indexOf(opcode),
+            opNum = objOpOpcodes.indexOf(opcode) + 1,
             y = readUShort().toInt(),
             x = readUShort().toInt(),
             objectId = readInt(),
@@ -166,7 +166,7 @@ internal fun Codec.registerRev727ClientProts() {
     val groundItemOpOpcodes = intArrayOf(24, 25, 54, 8, 43, 61)
     clientProt(opcodes = groundItemOpOpcodes, size = 7) { opcode ->
         OpGroundItem(
-            opNum = groundItemOpOpcodes.indexOf(opcode),
+            opNum = groundItemOpOpcodes.indexOf(opcode) + 1,
             itemId = readUShortAddLittle(),
             forceRun = readBooleanInverse(),
             y = readUShort().toInt(),

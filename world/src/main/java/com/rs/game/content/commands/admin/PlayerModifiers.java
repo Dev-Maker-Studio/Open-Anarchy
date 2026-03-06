@@ -27,7 +27,7 @@ import com.rs.game.model.entity.player.Skills;
 import org.darkan.core.Constants;
 import org.darkan.core.model.Rights;
 import org.darkan.core.Utils;
-import com.rs.net.LobbyCommunicator;
+import org.darkan.world.server.WorldServer;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 
@@ -102,7 +102,7 @@ public class PlayerModifiers {
             if (target != null) {
                 target.getAccount().banDays(Integer.valueOf(args[1]));
                 p.sendMessage("You have banned " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + " for "+Integer.valueOf(args[1])+" days.");
-                LobbyCommunicator.updatePunishments(target);
+                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
                 if (target.hasStarted())
                     target.getSession().close();
             } else
@@ -115,7 +115,7 @@ public class PlayerModifiers {
                 p.sendMessage("You have permanently banned " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + ".");
                 if (target.hasStarted())
                     target.forceLogout();
-                LobbyCommunicator.updatePunishments(target);
+                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
             } else
                 p.sendMessage("Unable to find player.");
         }));
@@ -124,7 +124,7 @@ public class PlayerModifiers {
             if (target != null) {
                 target.getAccount().muteDays(Integer.valueOf(args[1]));
                 p.sendMessage("You have muted " + Utils.formatPlayerNameForDisplay(args[0]) + " for "+Integer.valueOf(args[1])+" days.");
-                LobbyCommunicator.updatePunishments(target);
+                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
             } else
                 p.sendMessage("Unable to find player.");
         }));
@@ -133,7 +133,7 @@ public class PlayerModifiers {
             if (target != null) {
                 target.getAccount().mutePerm();
                 p.sendMessage("You have permanently muted " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + ".");
-                LobbyCommunicator.updatePunishments(target);
+                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
             } else
                 p.sendMessage("Unable to find player.");
         }));
@@ -149,7 +149,7 @@ public class PlayerModifiers {
             if (target != null) {
                 target.getAccount().unmute();
                 p.sendMessage("You have unmuted " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + ".");
-                LobbyCommunicator.updatePunishments(target);
+                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
             } else
                 p.sendMessage("Unable to find player.");
         }));

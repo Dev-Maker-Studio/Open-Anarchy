@@ -10,23 +10,23 @@ import java.io.ByteArrayOutputStream
  *   1. One byte: the ordinal of the zone packet type (from the UpdateZonePacket enum)
  *   2. The encoded body bytes matching exactly what the Rev727 codec produces
  *
- * Ordinal mapping:
+ * Ordinal mapping (must match client's UpdateZonePacket enum):
  * ```
- *  0 = CustomizeObject
- *  1 = RemoveGroundItem
- *  2 = CreateGroundItem
- *  3 = DestroyObject
- *  4 = CreateObject
- *  5 = MapProjAnim
- *  6 = MapProjAnimHalfSq
- *  7 = ObjectPrefetch
- *  8 = GroundItemReveal
- *  9 = GroundItemCount
- * 10 = SoundEffectTile
- * 11 = TileMessage
- * 12 = ObjAnim
- * 13 = MusicTrackTile
- * 14 = SpotAnim
+ *  0 = CustomizeObject     (CUSTOMIZE_OBJECT)
+ *  1 = RemoveGroundItem    (REMOVE_GROUND_ITEM)
+ *  2 = CreateGroundItem    (CREATE_GROUND_ITEM)
+ *  3 = DestroyObject       (DESTROY_OBJECT)
+ *  4 = CreateObject        (CREATE_OBJECT)
+ *  5 = MapProjAnim         (MAP_PROJANIM)
+ *  6 = MapProjAnimHalfSq   (MAP_PROJANIM_HALFSQ)
+ *  7 = ObjectPrefetch      (OBJECT_PREFETCH)
+ *  8 = GroundItemReveal    (GROUND_ITEM_REVEAL)
+ *  9 = GroundItemCount     (GROUND_ITEM_COUNT)
+ * 10 = SoundEffectTile     (MIDI_SONG_LOCATION, 8 bytes)
+ * 11 = TileMessage         (TILE_MESSAGE)
+ * 12 = ObjAnim             (OBJ_ANIM)
+ * 13 = (unused)            (SOUND_AREA, 9 bytes - not sent as zone sub-packet)
+ * 14 = SpotAnim            (SPOT_ANIM)
  * ```
  */
 object ZonePacketEncoder {
@@ -93,10 +93,8 @@ object ZonePacketEncoder {
                 out.write(12)
                 encodeObjAnim(out, packet)
             }
-            is MusicTrackTile -> {
-                out.write(13)
-                encodeMusicTrackTile(out, packet)
-            }
+            // MusicTrackTile is a standalone packet (opcode 93), not a zone sub-packet.
+            // Client ordinal 13 (SOUND_AREA) has a different 9-byte format.
             is SpotAnim -> {
                 out.write(14)
                 encodeSpotAnim(out, packet)
@@ -241,15 +239,6 @@ object ZonePacketEncoder {
         writeByteSubtract(out, (p.shape shl 2) or (p.rotation and 0x3))
         writeByteSubtract(out, (p.localX shl 4) or (p.localY and 0x7))
         writeIntLittle(out, p.animationId)
-    }
-
-    // opcode 93, size 11
-    private fun encodeMusicTrackTile(out: ByteArrayOutputStream, p: MusicTrackTile) {
-        writeByteSubtract(out, p.near)
-        writeByte(out, p.volume)
-        writeByteInverse(out, p.far)
-        writeInt(out, p.musicArchive)
-        writeIntMiddle(out, (p.plane shl 28) or (p.x shl 14) or (p.y and 0x3FFF))
     }
 
     // opcode 139, size 8

@@ -2,12 +2,14 @@ package org.darkan.core.model
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
+import org.bson.codecs.pojo.annotations.BsonIgnore
 
 /**
  * Serializer for clan setting values which can be Int, Long, or String.
@@ -46,11 +48,11 @@ object ClanSettingValueSerializer : KSerializer<Any> {
 data class ClanMemberData(
     var rank: ClanRank = ClanRank.NONE,
     val joinDate: Long = System.currentTimeMillis(),
-    var job: Int = 0,
-    var banFromKeep: Boolean = false,
-    var banFromCitadel: Boolean = false,
-    var banFromIsland: Boolean = false,
-    var firstWeek: Boolean = false,
+    var job: Int? = 0,
+    var banFromKeep: Boolean? = false,
+    var banFromCitadel: Boolean? = false,
+    var banFromIsland: Boolean? = false,
+    var firstWeek: Boolean? = false,
 )
 
 @Serializable
@@ -60,20 +62,23 @@ class Clan(
     val members: MutableMap<String, ClanMemberData> = mutableMapOf(),
     val bannedUsers: MutableSet<String> = mutableSetOf(),
     val settings: MutableMap<String, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
-    val vars: MutableMap<Int, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
+    val vars: MutableMap<String, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
     var ccChatRank: ClanRank = ClanRank.NONE,
     var ccKickRank: ClanRank = ClanRank.ADMIN,
     var motto: String = "",
-    @kotlinx.serialization.Transient var updateBlock: ByteArray? = null,
 ) {
+    @Transient
+    @BsonIgnore
+    var updateBlock: ByteArray? = null
+
     companion object {
         const val MAX_MEMBERS = 100
         const val MIN_FILLER_SLOTS = 5
     }
 
-    fun getVar(id: Int): Any = vars.getOrDefault(id, 0)
-    fun setVar(id: Int, value: Any) { vars[id] = value }
-    fun setVar(clanVar: ClanVar, value: Any) { vars[clanVar.id] = value }
+    fun getVar(id: Int): Any = vars.getOrDefault(id.toString(), 0)
+    fun setVar(id: Int, value: Any) { vars[id.toString()] = value }
+    fun setVar(clanVar: ClanVar, value: Any) { vars[clanVar.id.toString()] = value }
 
     fun getSetting(setting: ClanSetting): Any = settings.getOrDefault(setting.name, setting.defaultValue)
     fun setSetting(setting: ClanSetting, value: Any) { settings[setting.name] = value }

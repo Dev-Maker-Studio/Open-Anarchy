@@ -233,7 +233,7 @@ public final class ChunkManager {
     }
 
     public static Chunk getChunk(int id) {
-        return getChunk(id, false);
+        return getChunk(id, true);
     }
 
     public static Chunk putChunk(int id, Chunk chunk) {

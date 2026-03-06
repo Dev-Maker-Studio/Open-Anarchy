@@ -20,7 +20,7 @@ import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
 import org.darkan.core.model.Rights;
 import org.darkan.core.Logger;
-import com.rs.net.LobbyCommunicator;
+import org.darkan.world.server.WorldServer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,7 +55,7 @@ public class ReportsManager {
 		if (mute) {
 			reported.getAccount().muteDays(2);
 			reported.sendMessage("You've been muted for 2 days by " + player.getDisplayName() + ".");
-			LobbyCommunicator.updatePunishments(reported);
+			WorldServer.INSTANCE.saveAccountAsync(reported.getAccount());
 		}
 		player.sendMessage("Thank-you, your abuse report has been received.");
 		try {

@@ -23,7 +23,7 @@ import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
 import com.rs.game.model.entity.player.managers.PriceChecker;
 import org.darkan.core.model.Animation;
 
-import com.rs.net.LobbyCommunicator;
+import org.darkan.world.server.WorldServer;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.utils.ReportsManager;
@@ -126,13 +126,13 @@ public class GameFrame {
 		} else if (e.getComponentId() == 0) {
 			if (e.getOpNum() == 2) {
 				e.getPlayer().getSocial().setFcStatus((byte) 0);
-				LobbyCommunicator.updateSocial(e.getPlayer());
+				WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
 			} else if (e.getOpNum() == 3) {
 				e.getPlayer().getSocial().setFcStatus((byte) 1);
-				LobbyCommunicator.updateSocial(e.getPlayer());
+				WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
 			} else if (e.getOpNum() == 4) {
 				e.getPlayer().getSocial().setFcStatus((byte) 2);
-				LobbyCommunicator.updateSocial(e.getPlayer());
+				WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
 			}
 		} else if (e.getComponentId() == 23) {
 			if (e.getOpNum() == 2)

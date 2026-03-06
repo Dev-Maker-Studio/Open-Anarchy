@@ -19,12 +19,9 @@ package com.rs.game.model.entity.player.social;
 import com.rs.game.model.entity.player.Player;
 import org.darkan.core.model.FriendsChatRank;
 
-import com.rs.net.LobbyCommunicator;
+import org.darkan.world.server.WorldServer;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 @PluginEventHandler
 public class FCManager {
@@ -32,20 +29,14 @@ public class FCManager {
 	private static final int FC_SETUP_INTER = 1108;
 	private static final int FC_TAB = 1109;
 
-	private static final Map<String, com.rs.web.dto.FCData> FRIEND_CHATS = new ConcurrentHashMap<>();
-
 	public static ButtonClickHandler handleInterface = new ButtonClickHandler(FC_SETUP_INTER, e -> {
 		switch (e.getComponentId()) {
 		case 1 -> {
 			switch (e.getOpNum()) {
 			case 1 -> e.getPlayer().sendInputName("Enter chat prefix:", str -> {
 				e.getPlayer().getSocial().getFriendsChat().setName(str);
-				LobbyCommunicator.updateFC(e.getPlayer(), res -> {
-					if (res == null)
-						e.getPlayer().sendMessage("Error communicating with social service.");
-					else
-						refreshFC(e.getPlayer());
-				});
+				WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
+				refreshFC(e.getPlayer());
 			});
 			case 2 -> e.getPlayer().getSocial().getFriendsChat().setName(null); // TODO when fc block update is
 			// sent, check if name was
@@ -59,21 +50,14 @@ public class FCManager {
 		case 4 -> e.getPlayer().getSocial().getFriendsChat().setRankToKick(getRankFromPacket(e.getOpNum()));
 		case 5 -> e.getPlayer().getSocial().getFriendsChat().setRankToLS(getRankFromPacket(e.getOpNum()));
 		}
-		LobbyCommunicator.updateFC(e.getPlayer(), res -> {
-			if (res == null)
-				e.getPlayer().sendMessage("Error communicating with social service.");
-			else
-				refreshFC(e.getPlayer());
-		});
+		WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
+		refreshFC(e.getPlayer());
 	});
 
 	public static ButtonClickHandler handleTab = new ButtonClickHandler(FC_TAB, e -> {
 		switch (e.getComponentId()) {
 		case 26 -> {
-			//TODO make sure to force leave the player from existing if they try to join new FC without leaving old
-			//TODO: FCJoin removed in networking rewrite - needs re-implementation
-			//if (e.getPlayer().getSocial().getCurrentFriendsChat() != null)
-			//	LobbyCommunicator.forwardPackets(e.getPlayer(), new FCJoin().setOpcode(FC_JOIN));
+			//TODO: FC join via social gateway
 		}
 		case 31 -> {
 			if (e.getPlayer().getInterfaceManager().containsScreenInter()) {
@@ -134,13 +118,4 @@ public class FCManager {
 		};
 	}
 
-	public static com.rs.web.dto.FCData getFCData(String username) {
-		if (username == null)
-			return null;
-		return FRIEND_CHATS.get(username);
-	}
-
-	public static void updateFCData(com.rs.web.dto.FCData fc) {
-		FRIEND_CHATS.put(fc.getOwnerDisplayName(), fc);
-	}
 }

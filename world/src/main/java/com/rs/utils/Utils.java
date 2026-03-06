@@ -52,6 +52,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.darkan.core.model.Item;
+import world.gregs.voidps.cache.Cache;
+import world.gregs.voidps.cache.Index;
 import world.gregs.voidps.type.Tile;
 
 import io.github.classgraph.ClassGraph;
@@ -124,11 +126,6 @@ public final class Utils {
 		}
 
 		return newMap;
-	}
-
-	// TODO: wire to modern cache
-	public static Object CS2ValTranslate(Object valueType, Object o) {
-		return o;
 	}
 
 	public static int[] range(int min, int max) {
@@ -618,12 +615,12 @@ public final class Utils {
 		return string;
 	}
 
-	// TODO: wire to modern cache (FontMetrics)
+	// TODO: requires FontMetrics decoder to calculate text height from cache font data
 	public static int getIFStringHeightAbs(String startPointDesc, int fontId, int width) {
 		return 0;
 	}
 
-	// TODO: wire to modern cache (FontMetrics)
+	// TODO: requires FontMetrics decoder to split text using cache font data
 	public static String[] splitTextIntoLines(String startPointDesc, int fontId, int width) {
 		return new String[] { startPointDesc };
 	}
@@ -858,11 +855,6 @@ public final class Utils {
 		return Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
 	}
 
-	// TODO: wire to modern cache
-	public static final boolean isQCValid(int id) {
-		return false;
-	}
-
 	public static final int getAngleTo(Tile fromTile, Tile toTile) {
 		return getAngleTo(toTile.getX() - fromTile.getX(), toTile.getY() - fromTile.getY());
 	}
@@ -881,59 +873,44 @@ public final class Utils {
 		return new int[] { front[0] * -1, front[1] * -1 };
 	}
 
-	// TODO: wire to modern cache
 	public static final int getSpotAnimDefinitionsSize() {
-		return 0;
+		return Cache.getGraphics().length;
 	}
 
-	// TODO: wire to modern cache
 	public static final int getAnimationDefinitionsSize() {
-		return 0;
+		return Cache.getAnimations().length;
 	}
 
-	// TODO: wire to modern cache
 	public static final int getBASAnimDefSize() {
-		return 0;
+		return Cache.getBas().length;
 	}
 
-	// TODO: wire to modern cache
-	public static final int getConfigDefinitionsSize() {
-		return 0;
-	}
-
-	// TODO: wire to modern cache
 	public static final int getObjectDefinitionsSize() {
-		return 0;
+		return Cache.getObjects().length;
 	}
 
-	// TODO: wire to modern cache
 	public static final int getNPCDefinitionsSize() {
-		return 0;
+		return Cache.getNpcs().length;
 	}
 
-	// TODO: wire to modern cache
 	public static final int getItemDefinitionsSize() {
-		return 0;
+		return Cache.getItems().length;
 	}
 
-	// TODO: wire to modern cache
 	public static final int getVarbitDefinitionsSize() {
-		return 0;
+		return Cache.getVarbits().length;
 	}
 
-	// TODO: wire to modern cache
 	public static boolean itemExists(int id) {
-		return false;
+		return id >= 0 && id < Cache.getItems().length;
 	}
 
-	// TODO: wire to modern cache
 	public static final int getInterfaceDefinitionsSize() {
-		return 0;
+		return Cache.get().lastArchiveId(Index.INTERFACES);
 	}
 
-	// TODO: wire to modern cache
 	public static final int getInterfaceDefinitionsComponentsSize(int interfaceId) {
-		return 0;
+		return Cache.get().fileCount(Index.INTERFACES, interfaceId);
 	}
 
 	public static String formatPlayerNameForProtocol(String name) {

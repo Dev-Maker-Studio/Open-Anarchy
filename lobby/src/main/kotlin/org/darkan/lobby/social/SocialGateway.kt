@@ -549,12 +549,14 @@ object SocialGateway {
         val accountsByUsername = relatedAccounts.associateBy { it.username }
 
         // Build + send friend list
+        // FriendlistLoaded must come FIRST (sets client LOADED=1, "ready for data"),
+        // then FriendStatus populates the list and sets LOADED=2 ("fully loaded").
         val friendUpdates = account.social.friends.mapNotNull { friendUsername ->
             val friendAccount = accountsByUsername[friendUsername] ?: return@mapNotNull null
             friendStatusUpdateFor(account, friendAccount)
         }.toTypedArray()
-        sendToUser(username, FriendStatus(friendUpdates))
         sendToUser(username, FriendlistLoaded())
+        sendToUser(username, FriendStatus(friendUpdates))
 
         // Build + send ignore list
         val ignores = account.social.ignores.map { ign ->
