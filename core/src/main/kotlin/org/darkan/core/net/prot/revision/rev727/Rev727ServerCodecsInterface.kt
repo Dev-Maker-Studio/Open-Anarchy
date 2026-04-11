@@ -57,8 +57,8 @@ internal fun Codec.registerRev727IfPackets() {
     }
 
     serverProt<IfSetGraphic>(opcode = 35, size = 8) { out ->
-        out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
         out.writeIntInverseMiddle(spriteId)
+        out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
     }
 
     serverProt<IfSetTextAntiMacro>(opcode = 36, size = 5) { out ->
@@ -71,8 +71,8 @@ internal fun Codec.registerRev727IfPackets() {
         out.writeIntMiddle(xteas[3])
         out.writeShortAdd(interfaceId)
         out.writeByteSubtract(type)
-        out.writeInt(xteas[1])
-        out.writeInt(xteas[0])
+        out.writeIntLittle(xteas[1])
+        out.writeIntLittle(xteas[0])
     }
 
     serverProt<IfOpenSub>(opcode = 38, size = 23) { out ->
@@ -129,8 +129,8 @@ internal fun Codec.registerRev727IfPackets() {
     }
 
     serverProt<IfSetAnim>(opcode = 82, size = 8) { out ->
-        out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
-        out.writeInt(animationId)
+        out.writeIntInverseMiddle(animationId)
+        out.writeInt(toInterfaceHash(interfaceId, componentId))
     }
 
     serverProt<IfSetColor>(opcode = 105, size = 6) { out ->

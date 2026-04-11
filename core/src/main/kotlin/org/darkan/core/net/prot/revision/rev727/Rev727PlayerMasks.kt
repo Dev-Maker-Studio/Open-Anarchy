@@ -53,7 +53,7 @@ internal val playerMasks: MaskRegistry<PlayerMaskCtx, PlayerMaskKey> =
         mask(PlayerMaskKey.SPOT_ANIM_2, 0x200) { ctx, out ->
                 val s1 = ctx.player.blocks.common.spotAnims[1]!!
                 val settingsHash = (s1.height shl 16) or (s1.speed and 0xFFFF)
-                val settings2Hash = (if (s1.adjustReplayMode) 0x80 else 0) or (1 shl 3) or (s1.rotation and 0x7)
+                val settings2Hash = s1.rotation and 0x7
                 out.writeShort(if (s1.id == -1) 65535 else s1.id)
                 out.writeIntInverseMiddle(settingsHash)
                 out.writeByteSubtract(settings2Hash)
@@ -111,7 +111,7 @@ internal val playerMasks: MaskRegistry<PlayerMaskCtx, PlayerMaskKey> =
         mask(PlayerMaskKey.SPOT_ANIM_3, 0x40000) { ctx, out ->
                 val s2 = ctx.player.blocks.common.spotAnims[2]!!
                 val settingsHash = (s2.height shl 16) or (s2.speed and 0xFFFF)
-                val settings2Hash = (if (s2.adjustReplayMode) 0x80 else 0) or (2 shl 3) or (s2.rotation and 0x7)
+                val settings2Hash = s2.rotation and 0x7
                 out.writeShortAddLittle(if (s2.id == -1) 65535 else s2.id)
                 out.writeIntInverseMiddle(settingsHash)
                 out.writeByteAdd(settings2Hash)
@@ -177,7 +177,7 @@ internal val playerMasks: MaskRegistry<PlayerMaskCtx, PlayerMaskKey> =
         mask(PlayerMaskKey.SPOT_ANIM_4, 0x200000) { ctx, out ->
                 val s3 = ctx.player.blocks.common.spotAnims[3]!!
                 val settingsHash = (s3.height shl 16) or (s3.speed and 0xFFFF)
-                val settings2Hash = (if (s3.adjustReplayMode) 0x80 else 0) or (3 shl 3) or (s3.rotation and 0x7)
+                val settings2Hash = s3.rotation and 0x7
                 out.writeShortLittle(if (s3.id == -1) 65535 else s3.id)
                 out.writeIntLittle(settingsHash)
                 out.writeByteSubtract(settings2Hash)
@@ -199,7 +199,7 @@ internal val playerMasks: MaskRegistry<PlayerMaskCtx, PlayerMaskKey> =
         mask(PlayerMaskKey.SPOT_ANIM_1, 0x80) { ctx, out ->
                 val s0 = ctx.player.blocks.common.spotAnims[0]!!
                 val settingsHash = (s0.height shl 16) or (s0.speed and 0xFFFF)
-                val settings2Hash = (if (s0.adjustReplayMode) 0x80 else 0) or (0 shl 3) or (s0.rotation and 0x7)
+                val settings2Hash = s0.rotation and 0x7
                 out.writeShortLittle(if (s0.id == -1) 65535 else s0.id)
                 out.writeInt(settingsHash)
                 out.writeByteAdd(settings2Hash)

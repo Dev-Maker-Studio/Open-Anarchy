@@ -10,7 +10,7 @@ import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 
-import static com.rs.game.content.quests.familycrest.FamilyCrest.*;
+import static com.rs.game.content.quests.familycrest.FamilyCrestKt.*;
 
 @PluginEventHandler
 public class AvanFamilyCrestD extends Conversation {
@@ -83,7 +83,7 @@ public class AvanFamilyCrestD extends Conversation {
 			}
 		}
 		case TALK_TO_JOHNATHAN, KILL_CHRONOZON -> {
-			if(!player.getInventory().containsItem(AVAN_CREST, 1) && !player.getInventory().containsItem(FAMILY_CREST)) {
+			if(!player.getInventory().containsItem(AVAN_CREST, 1) && !player.getInventory().containsItem(FAMILY_CREST_ITEM)) {
 				if(player.getInventory().hasFreeSlots()) {
 					addNPC(NPC, HeadE.CALM_TALK, "You lost this.");
 					addSimple("Avan gives you back his crest...", () -> player.getInventory().addItem(AVAN_CREST, 1));

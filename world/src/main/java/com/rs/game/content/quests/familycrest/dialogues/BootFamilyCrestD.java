@@ -9,8 +9,8 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 
-import static com.rs.game.content.quests.familycrest.FamilyCrest.GIVE_AVAN_JEWLERY;
-import static com.rs.game.content.quests.familycrest.FamilyCrest.TALK_TO_BOOT;
+import static com.rs.game.content.quests.familycrest.FamilyCrestKt.GIVE_AVAN_JEWLERY;
+import static com.rs.game.content.quests.familycrest.FamilyCrestKt.TALK_TO_BOOT;
 
 @PluginEventHandler
 public class BootFamilyCrestD extends Conversation {

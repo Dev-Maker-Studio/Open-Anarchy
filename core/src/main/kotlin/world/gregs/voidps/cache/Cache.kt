@@ -4,6 +4,7 @@ import org.darkan.core.EnvVars
 import world.gregs.voidps.cache.definition.data.AnimationDefinition
 import world.gregs.voidps.cache.definition.data.BASDefinition
 import world.gregs.voidps.cache.definition.data.EnumDefinition
+import world.gregs.voidps.cache.definition.data.FontDefinition
 import world.gregs.voidps.cache.definition.data.InterfaceDefinition
 import world.gregs.voidps.cache.definition.data.GraphicDefinition
 import world.gregs.voidps.cache.definition.data.ItemDefinition
@@ -14,6 +15,7 @@ import world.gregs.voidps.cache.definition.data.VarBitDefinition
 import world.gregs.voidps.cache.definition.decoder.AnimationDecoder
 import world.gregs.voidps.cache.definition.decoder.BASDecoder
 import world.gregs.voidps.cache.definition.decoder.EnumDecoder
+import world.gregs.voidps.cache.definition.decoder.FontDecoder
 import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
 import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
 import world.gregs.voidps.cache.definition.decoder.ItemDecoder
@@ -110,6 +112,10 @@ interface Cache {
 
         @JvmStatic val interfaces: Array<InterfaceDefinition> by lazy {
             InterfaceDecoder().load(singleton)
+        }
+
+        @JvmStatic val fonts: Array<FontDefinition> by lazy {
+            FontDecoder().load(singleton)
         }
 
         @JvmStatic fun get() = singleton

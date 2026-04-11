@@ -215,31 +215,8 @@ data class UpdateInvFull(
     }
 }
 
-/**
- * NPC update (small scene view).
- *
- * The actual on-wire byte stream is revision-specific and is encoded via the revision [Codec]'s npcUpdate encoder.
- */
-data class NpcUpdate(
-    val snapshot: org.darkan.core.net.prot.update.NpcUpdateSnapshot,
-    val state: org.darkan.core.net.prot.update.NpcUpdateTrackingState,
-) : ServerProt
-
-/**
- * Raw byte wrapper for legacy player update. Used during migration while LocalPlayerUpdate
- * still produces raw bytes via legacy OutputStream.
- */
-@JvmInline value class PlayerUpdateRaw(val data: ByteArray) : ServerProt
-
-/**
- * Raw byte wrapper for legacy NPC update (small scene).
- */
-@JvmInline value class NpcUpdateRaw(val data: ByteArray) : ServerProt
-
-/**
- * Raw byte wrapper for legacy NPC update (large scene).
- */
-@JvmInline value class NpcUpdateLargeRaw(val data: ByteArray) : ServerProt
+/** NPC update (small scene view). Pre-encoded by the world-side snapshot factory + core protocol. */
+data class NpcUpdate(val data: ByteArray) : ServerProt
 
 data class UpdateZoneFullFollows(val chunkX: Int, val chunkY: Int, val plane: Int) : ServerProt
 
@@ -255,25 +232,11 @@ data class UpdateZonePartialFollows(val chunkX: Int, val chunkY: Int, val plane:
 
 data class UpdateInvStopTransmit(val containerId: Int, val negativeKey: Boolean) : ServerProt
 
-/**
- * Player update.
- *
- * The actual on-wire byte stream is revision-specific and is encoded via the revision [Codec]'s playerUpdate encoder.
- */
-data class PlayerUpdate(
-    val snapshot: org.darkan.core.net.prot.update.PlayerUpdateSnapshot,
-    val state: org.darkan.core.net.prot.update.PlayerUpdateTrackingState,
-) : ServerProt
+/** Player update. Pre-encoded by the world-side snapshot factory + core protocol. */
+data class PlayerUpdate(val data: ByteArray) : ServerProt
 
-/**
- * NPC update (large scene view).
- *
- * Same structured payload as [NpcUpdate], but different opcode for some revisions (e.g. 727).
- */
-data class NpcUpdateLarge(
-    val snapshot: org.darkan.core.net.prot.update.NpcUpdateSnapshot,
-    val state: org.darkan.core.net.prot.update.NpcUpdateTrackingState,
-) : ServerProt
+/** NPC update (large scene view). Pre-encoded by the world-side snapshot factory + core protocol. */
+data class NpcUpdateLarge(val data: ByteArray) : ServerProt
 
 data class ClanChannelDelta(val main: Boolean, val data: ByteArray) : ServerProt {
     override fun equals(other: Any?): Boolean {
@@ -753,14 +716,14 @@ data class CamForceAngle(val angleX: Int, val angleY: Int) : ServerProt
 @Serializable data class MessagePrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: String) : ServerProt
 @Serializable data class MessagePrivateEcho(val senderDisplayName: String, val message: String) : ServerProt
 
-data class MessageQuickChatPrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
-data class MessageQuickChatPrivateEcho(val senderDisplayName: String, val message: QuickChatMessage) : ServerProt
+@Serializable data class MessageQuickChatPrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
+@Serializable data class MessageQuickChatPrivateEcho(val senderDisplayName: String, val message: QuickChatMessage) : ServerProt
 
 @Serializable data class MessageFriendsChat(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val chatName: String, val message: String) : ServerProt
-data class MessageQuickChatFriendsChat(val chatName: String, val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
+@Serializable data class MessageQuickChatFriendsChat(val chatName: String, val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
 
 @Serializable data class MessageClanChannel(val guest: Boolean, val crown: Int, val displayName: String, val message: String) : ServerProt
-data class MessageQuickChatClanChannel(val guest: Boolean, val crown: Int, val displayName: String, val message: QuickChatMessage) : ServerProt
+@Serializable data class MessageQuickChatClanChannel(val guest: Boolean, val crown: Int, val displayName: String, val message: QuickChatMessage) : ServerProt
 
 data class MessagePlayerGroup(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: String) : ServerProt
 data class MessageQuickChatPlayerGroup(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt

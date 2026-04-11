@@ -1,5 +1,8 @@
 package com.rs.game.content.world
 
+import com.rs.game.content.quests.familycrest.PERFECT_BAR
+import com.rs.game.content.quests.familycrest.PERFECT_ORE
+import com.rs.game.content.quests.familycrest.familyCrestItemOnFurnace
 import com.rs.game.content.skills.crafting.GOLD_BAR
 import com.rs.game.content.skills.crafting.Silver
 import com.rs.game.content.skills.crafting.Silver.SILVER_BAR
@@ -17,6 +20,7 @@ import com.rs.plugin.kts.onObjectClick
 fun mapFurnaces() {
     onObjectClick("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666) { e -> use(e.player, e.obj) }
     onItemOnObject(arrayOf("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666), arrayOf(GOLD_BAR, SILVER_BAR)) { e -> useItem(e.player, e.`object`, e.item) }
+    onItemOnObject(arrayOf("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666), arrayOf(PERFECT_ORE, PERFECT_BAR)) { e -> familyCrestItemOnFurnace(e.player, e.item) }
 }
 
 private fun use(player: Player, furnace: GameObject?) {

@@ -32,6 +32,8 @@ object SocialGatewayWireJson {
             subclass(FcKick::class, FcKick.serializer())
             subclass(FcSetRank::class, FcSetRank.serializer())
             subclass(ClanChannelKickUser::class, ClanChannelKickUser.serializer())
+            subclass(QuickChatPublic::class, QuickChatPublic.serializer())
+            subclass(QuickChatPrivate::class, QuickChatPrivate.serializer())
         }
         polymorphic(ServerProt::class) {
             subclass(FriendStatus::class, FriendStatus.serializer())
@@ -48,6 +50,10 @@ object SocialGatewayWireJson {
             subclass(MessageClanChannel::class, MessageClanChannel.serializer())
             subclass(VarclanEnable::class, VarclanEnable.serializer())
             subclass(VarclanDisable::class, VarclanDisable.serializer())
+            subclass(MessageQuickChatPrivate::class, MessageQuickChatPrivate.serializer())
+            subclass(MessageQuickChatPrivateEcho::class, MessageQuickChatPrivateEcho.serializer())
+            subclass(MessageQuickChatFriendsChat::class, MessageQuickChatFriendsChat.serializer())
+            subclass(MessageQuickChatClanChannel::class, MessageQuickChatClanChannel.serializer())
         }
     }
 
@@ -197,3 +203,60 @@ data class ServerPacketBatch(
     val usernames: List<String>,
     @Polymorphic val packet: ServerProt,
 ) : SocialGatewayWireMessage
+
+// ─── FC Settings Update ─────────────────────────────────────────────
+
+@Serializable
+@SerialName("FcSettingsUpdate")
+data class FcSettingsUpdate(
+    val username: String,
+    val name: String?,
+    val rankToEnter: Int,
+    val rankToSpeak: Int,
+    val rankToKick: Int,
+    val rankToLS: Int,
+) : SocialGatewayWireMessage
+
+// ─── Clan Management Requests ────────────────────────────────────────
+
+@Serializable
+@SerialName("ClanCreateRequest")
+data class ClanCreateRequest(val username: String, val clanName: String) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("ClanCreateResponse")
+data class ClanCreateResponse(val username: String, val success: Boolean, val message: String?) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("ClanLeaveRequest")
+data class ClanLeaveRequest(val username: String) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("ClanAddMemberRequest")
+data class ClanAddMemberRequest(val inviterUsername: String, val targetUsername: String) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("ClanKickMemberRequest")
+data class ClanKickMemberRequest(val kickerUsername: String, val targetUsername: String) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("ClanSetRankRequest")
+data class ClanSetRankRequest(val username: String, val targetUsername: String, val rank: Int) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("ClanBanMemberRequest")
+data class ClanBanMemberRequest(val username: String, val targetUsername: String) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("ClanUnbanMemberRequest")
+data class ClanUnbanMemberRequest(val username: String, val targetUsername: String) : SocialGatewayWireMessage
+
+// ─── Guest Clan Chat ────────────────────────────────────────────────
+
+@Serializable
+@SerialName("ClanGuestJoinRequest")
+data class ClanGuestJoinRequest(val username: String, val clanName: String) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("ClanGuestLeaveRequest")
+data class ClanGuestLeaveRequest(val username: String) : SocialGatewayWireMessage

@@ -11,7 +11,7 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnNPCHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 
-import static com.rs.game.content.quests.familycrest.FamilyCrest.*;
+import static com.rs.game.content.quests.familycrest.FamilyCrestKt.*;
 
 @PluginEventHandler
 public class JohnathonFamilyCrestD extends Conversation {

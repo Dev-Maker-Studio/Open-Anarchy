@@ -10,8 +10,8 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import com.rs.utils.shop.ShopsHandler;
 
-import static com.rs.game.content.quests.familycrest.FamilyCrest.TALK_TO_AVAN;
-import static com.rs.game.content.quests.familycrest.FamilyCrest.TALK_TO_GEM_TRADER;
+import static com.rs.game.content.quests.familycrest.FamilyCrestKt.TALK_TO_AVAN;
+import static com.rs.game.content.quests.familycrest.FamilyCrestKt.TALK_TO_GEM_TRADER;
 
 @PluginEventHandler
 public class GemTraderFamilyCrestD extends Conversation {

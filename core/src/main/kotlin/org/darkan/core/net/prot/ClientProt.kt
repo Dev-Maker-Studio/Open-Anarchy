@@ -91,7 +91,7 @@ data class CloseInterface(val dummy: Int = 0) : ClientProt
 @Serializable data class PrivateMessage(val toDisplayName: String, val message: String) : ClientProt
 @Serializable data class ChatType(val type: Int) : ClientProt
 @Serializable data class ChatSetFilter(val publicFilter: Int, val privateFilter: Int, val tradeFilter: Int) : ClientProt
-data class QuickChatPublic(val chatType: Int, val qcId: Int, val messageData: ByteArray?) : ClientProt {
+@Serializable data class QuickChatPublic(val chatType: Int, val qcId: Int, val messageData: ByteArray?) : ClientProt {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -110,7 +110,7 @@ data class QuickChatPublic(val chatType: Int, val qcId: Int, val messageData: By
     }
 }
 
-data class QuickChatPrivate(val toUsername: String, val qcId: Int, val messageData: ByteArray?) : ClientProt {
+@Serializable data class QuickChatPrivate(val toUsername: String, val qcId: Int, val messageData: ByteArray?) : ClientProt {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

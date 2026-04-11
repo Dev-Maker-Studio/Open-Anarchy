@@ -9,10 +9,7 @@ import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logSevere
 import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
-import org.darkan.core.net.prot.ClientProt
-import org.darkan.core.net.prot.Codec
-import org.darkan.core.net.prot.ProtSize
-import org.darkan.core.net.prot.ServerProt
+import org.darkan.core.net.prot.*
 import world.gregs.voidps.buffer.readUByte
 import world.gregs.voidps.buffer.readUShort
 import world.gregs.voidps.buffer.writeByte
@@ -172,25 +169,19 @@ open class Session(
     open suspend fun send(serverProt: ServerProt, noIsaac: Boolean = false) {
         if (disconnected) return
         try {
-            val encoder = codec.serverProts[serverProt::class] ?: return logWarn("Missing ServerProt encoder: ${serverProt::class}")
+            val encoder = codec.serverProts[serverProt::class]
+            if (encoder == null) {
+                logWarn("Missing ServerProt encoder: ${serverProt::class}")
+                return
+            }
+            if (serverProt is FriendStatus || serverProt is FriendlistLoaded || serverProt is UpdateIgnoreList) {
+                logWarn("Session.send SOCIAL: ${serverProt::class.simpleName} opcode=${encoder.opcode} ip=$ip")
+            }
 
             when (encoder.size) {
                 is ProtSize.Fixed -> {
-                    if (EnvVars.packetValidateSizes && encoder.encoder != null) {
-                        val dataChannel = ByteChannel()
-                        encoder.encoder.invoke(serverProt, dataChannel)
-                        val packetBytes = dataChannel.toByteArray()
-                        val packetLength = packetBytes.size
-                        val expectedLength = encoder.size.length
-                        if (packetLength != expectedLength) {
-                            logWarn("Fixed packet size mismatch for ${serverProt::class.simpleName}: expected=$expectedLength actual=$packetLength opcode=${encoder.opcode}")
-                        }
-                        writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
-                        write.writeFully(packetBytes)
-                    } else {
-                        writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
-                        encoder.encoder?.invoke(serverProt, write)
-                    }
+                    writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
+                    encoder.encoder?.invoke(serverProt, write)
                 }
                 ProtSize.VarByte, ProtSize.VarShort -> {
                     val dataChannel = ByteChannel()
