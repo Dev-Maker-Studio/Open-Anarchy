@@ -10,7 +10,7 @@ import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 
-import static com.rs.game.content.quests.familycrest.FamilyCrest.*;
+import static com.rs.game.content.quests.familycrest.FamilyCrestKt.*;
 
 @PluginEventHandler
 public class CalebFamilyCrestD extends Conversation {
@@ -118,7 +118,7 @@ public class CalebFamilyCrestD extends Conversation {
 			});
 		}
 		case TALK_TO_GEM_TRADER -> {
-			if(!player.getInventory().containsItem(CALEB_CREST, 1) && !player.getInventory().containsItem(FAMILY_CREST)) {
+			if(!player.getInventory().containsItem(CALEB_CREST, 1) && !player.getInventory().containsItem(FAMILY_CREST_ITEM)) {
 				if(player.getInventory().hasFreeSlots()) {
 					addNPC(NPC, HeadE.CALM_TALK, "You lost this.");
 					addSimple("Caleb gives you back his crest...", () -> player.getInventory().addItem(CALEB_CREST, 1));

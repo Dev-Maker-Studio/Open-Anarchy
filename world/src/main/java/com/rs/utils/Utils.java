@@ -54,6 +54,7 @@ import java.util.regex.Pattern;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.cache.Cache;
 import world.gregs.voidps.cache.Index;
+import world.gregs.voidps.cache.definition.data.FontDefinition;
 import world.gregs.voidps.type.Tile;
 
 import io.github.classgraph.ClassGraph;
@@ -615,14 +616,17 @@ public final class Utils {
 		return string;
 	}
 
-	// TODO: requires FontMetrics decoder to calculate text height from cache font data
-	public static int getIFStringHeightAbs(String startPointDesc, int fontId, int width) {
-		return 0;
+	public static int getIFStringHeightAbs(String text, int fontId, int width) {
+		return (splitTextIntoLines(text, fontId, width).length * 15) + 3;
 	}
 
-	// TODO: requires FontMetrics decoder to split text using cache font data
-	public static String[] splitTextIntoLines(String startPointDesc, int fontId, int width) {
-		return new String[] { startPointDesc };
+	public static String[] splitTextIntoLines(String text, int fontId, int width) {
+		FontDefinition[] fonts = Cache.getFonts();
+		if (fontId < 0 || fontId >= fonts.length) {
+			return new String[] { text };
+		}
+		List<String> lines = fonts[fontId].splitLines(text, width, null);
+		return lines.toArray(new String[0]);
 	}
 
 	public static String wrap(final String str, final int wrapLength) {

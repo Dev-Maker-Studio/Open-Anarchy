@@ -36,12 +36,15 @@ public class FCManager {
 			case 1 -> e.getPlayer().sendInputName("Enter chat prefix:", str -> {
 				e.getPlayer().getSocial().getFriendsChat().setName(str);
 				WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
+				syncFcSettingsToGateway(e.getPlayer());
 				refreshFC(e.getPlayer());
 			});
-			case 2 -> e.getPlayer().getSocial().getFriendsChat().setName(null); // TODO when fc block update is
-			// sent, check if name was
-			// set to null and destroy
-			// chat
+			case 2 -> {
+				e.getPlayer().getSocial().getFriendsChat().setName(null);
+				WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
+				syncFcSettingsToGateway(e.getPlayer());
+				refreshFC(e.getPlayer());
+			}
 			default -> e.getPlayer().sendMessage("Unexpected FC interface packet...");
 			}
 		}
@@ -51,13 +54,22 @@ public class FCManager {
 		case 5 -> e.getPlayer().getSocial().getFriendsChat().setRankToLS(getRankFromPacket(e.getOpNum()));
 		}
 		WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
+		syncFcSettingsToGateway(e.getPlayer());
 		refreshFC(e.getPlayer());
 	});
 
 	public static ButtonClickHandler handleTab = new ButtonClickHandler(FC_TAB, e -> {
 		switch (e.getComponentId()) {
 		case 26 -> {
-			//TODO: FC join via social gateway
+			String currentFc = e.getPlayer().getSocial().getCurrentFriendsChat();
+			if (currentFc != null && !currentFc.isEmpty()) {
+				WorldServer.INSTANCE.forwardFcJoin(e.getPlayer().getUsername(), null);
+			} else {
+				e.getPlayer().sendInputName("Whose chat would you like to join?", name -> {
+					if (name != null && !name.isEmpty())
+						WorldServer.INSTANCE.forwardFcJoin(e.getPlayer().getUsername(), name);
+				});
+			}
 		}
 		case 31 -> {
 			if (e.getPlayer().getInterfaceManager().containsScreenInter()) {
@@ -70,6 +82,18 @@ public class FCManager {
 		case 19 -> e.getPlayer().toggleLootShare();
 		}
 	});
+
+	public static void syncFcSettingsToGateway(Player player) {
+		var fc = player.getSocial().getFriendsChat();
+		WorldServer.INSTANCE.syncFcSettings(
+			player.getUsername(),
+			fc.getName(),
+			fc.getRankToEnter().getId(),
+			fc.getRankToSpeak().getId(),
+			fc.getRankToKick().getId(),
+			fc.getRankToLS().getId()
+		);
+	}
 
 	public static void openFriendChatSetup(Player player) {
 		player.getInterfaceManager().sendInterface(FC_SETUP_INTER);

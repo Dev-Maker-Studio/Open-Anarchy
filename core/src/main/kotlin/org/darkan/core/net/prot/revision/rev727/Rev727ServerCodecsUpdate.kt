@@ -6,27 +6,15 @@ import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.secure.CRC
 
 internal fun Codec.registerRev727UpdatePackets() {
-    // Modern snapshot-based update packets (not yet in use)
-    // serverProt<PlayerUpdate>(opcode = 43, size = ProtSize.VarShort) { out ->
-    //     out.writeBytes(Rev727UpdateProtocol.encodePlayerUpdate(snapshot, state))
-    // }
-    // serverProt<NpcUpdateLarge>(opcode = 47, size = ProtSize.VarShort) { out ->
-    //     out.writeBytes(Rev727UpdateProtocol.encodeNpcUpdate(snapshot, state))
-    // }
-    // serverProt<NpcUpdate>(opcode = 6, size = ProtSize.VarShort) { out ->
-    //     out.writeBytes(Rev727UpdateProtocol.encodeNpcUpdate(snapshot, state))
-    // }
-
-    // Raw byte wrappers for legacy OutputStream-based update packets
-    serverProt<PlayerUpdateRaw>(opcode = 43, size = ProtSize.VarShort) { out ->
+    serverProt<PlayerUpdate>(opcode = 43, size = ProtSize.VarShort) { out ->
         out.writeBytes(data)
     }
 
-    serverProt<NpcUpdateLargeRaw>(opcode = 47, size = ProtSize.VarShort) { out ->
+    serverProt<NpcUpdateLarge>(opcode = 47, size = ProtSize.VarShort) { out ->
         out.writeBytes(data)
     }
 
-    serverProt<NpcUpdateRaw>(opcode = 6, size = ProtSize.VarShort) { out ->
+    serverProt<NpcUpdate>(opcode = 6, size = ProtSize.VarShort) { out ->
         out.writeBytes(data)
     }
 

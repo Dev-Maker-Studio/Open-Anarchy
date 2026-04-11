@@ -10,7 +10,8 @@ import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 
-import static com.rs.game.content.quests.familycrest.FamilyCrest.*;
+import static com.rs.game.content.quests.familycrest.FamilyCrest.meetsRequirements;
+import static com.rs.game.content.quests.familycrest.FamilyCrestKt.*;
 
 @PluginEventHandler
 public class DimintheisFamilyCrestD extends Conversation {
@@ -88,7 +89,7 @@ public class DimintheisFamilyCrestD extends Conversation {
 			addPlayer(HeadE.HAPPY_TALKING, "Okay.");
 		}
 		case KILL_CHRONOZON -> {
-			if(player.getInventory().containsItem(FAMILY_CREST, 1)) {
+			if(player.getInventory().containsItem(FAMILY_CREST_ITEM, 1)) {
 				addPlayer(HeadE.HAPPY_TALKING, "I have retrieved your crest.");
 				addNPC(NPC, HeadE.CALM_TALK, "Adventurer... I can only thank you for your kindness, although the words are insufficient to express the gratitude I feel!");
 				addNPC(NPC, HeadE.CALM_TALK, "You are truly a hero in every sense, and perhaps your efforts can begin to patch the wounds that have torn this family apart...");
@@ -96,7 +97,7 @@ public class DimintheisFamilyCrestD extends Conversation {
 				addNPC(NPC, HeadE.CALM_TALK, "I will pledge these to you, and if you should lose them return to me, and they will be here.");
 				addNPC(NPC, HeadE.CALM_TALK, "They can also be granted extra powers. Take them to one of my sons, they should be able to imbue them with a skill for you.");
 				addNext(()-> {
-					player.getInventory().removeItems(new Item(FAMILY_CREST,1));
+					player.getInventory().removeItems(new Item(FAMILY_CREST_ITEM,1));
 					player.getQuestManager().completeQuest(Quest.FAMILY_CREST);
 				});
 				return;

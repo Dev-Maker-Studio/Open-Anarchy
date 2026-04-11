@@ -13,8 +13,8 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCDeathHandler;
 import com.rs.plugin.handlers.NPCInstanceHandler;
 
-import static com.rs.game.content.quests.familycrest.FamilyCrest.JOHNATHAN_CREST;
-import static com.rs.game.content.quests.familycrest.FamilyCrest.KILL_CHRONOZON;
+import static com.rs.game.content.quests.familycrest.FamilyCrestKt.JOHNATHAN_CREST;
+import static com.rs.game.content.quests.familycrest.FamilyCrestKt.KILL_CHRONOZON;
 
 @PluginEventHandler
 public class ChronozonBoss extends NPC {

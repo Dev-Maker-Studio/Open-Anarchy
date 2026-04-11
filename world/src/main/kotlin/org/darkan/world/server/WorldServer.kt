@@ -37,7 +37,9 @@ import org.darkan.core.model.Clan
 import org.darkan.core.mongo.collections.Clans
 import org.darkan.core.net.prot.ClientProt
 import org.darkan.core.net.prot.ServerProt
+import org.darkan.core.net.prot.FcJoin
 import org.darkan.core.social.gateway.AnnouncementBroadcast
+import org.darkan.core.social.gateway.ClanCreateResponse
 import org.darkan.core.social.gateway.ServerPacketBatch
 import org.darkan.core.social.gateway.ServerPacketEnvelope
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
@@ -298,16 +300,45 @@ object WorldServer {
 
     private fun handleSocialMessage(msg: SocialGatewayWireMessage) {
         when (msg) {
-            is ServerPacketEnvelope -> deliverToPlayer(msg.username, msg.packet)
-            is ServerPacketBatch -> msg.usernames.forEach { deliverToPlayer(it, msg.packet) }
+            is ServerPacketEnvelope -> {
+                logInfo("handleSocialMessage: ServerPacketEnvelope username=${msg.username} packet=${msg.packet::class.simpleName}")
+                deliverToPlayer(msg.username, msg.packet)
+            }
+            is ServerPacketBatch -> {
+                logInfo("handleSocialMessage: ServerPacketBatch usernames=${msg.usernames} packet=${msg.packet::class.simpleName}")
+                msg.usernames.forEach { deliverToPlayer(it, msg.packet) }
+            }
+            is ClanCreateResponse -> {
+                val player = World.getPlayerByUsername(msg.username)
+                if (player != null && player.hasStarted() && !player.hasFinished()) {
+                    if (msg.success) {
+                        player.sendMessage("Your clan has been created!")
+                        player.appearance.generateAppearanceData()
+                    } else {
+                        player.sendMessage(msg.message ?: "Unable to create clan.")
+                    }
+                    player.tempAttribs.removeB("ccCreateLock")
+                }
+            }
             is AnnouncementBroadcast -> logInfo("Received announcement: ${msg.message}")
-            else -> logTrace("Ignoring gateway message: ${msg::class.simpleName}")
+            else -> logInfo("Ignoring gateway message: ${msg::class.simpleName}")
         }
     }
 
     private fun deliverToPlayer(username: String, packet: ServerProt) {
-        val player = World.getPlayerByUsername(username) ?: return
-        if (!player.hasStarted() || player.hasFinished()) return
+        val player = World.getPlayerByUsername(username)
+        if (player == null) {
+            logTrace("deliverToPlayer: player not found username=$username packet=${packet::class.simpleName}")
+            return
+        }
+        if (!player.hasStarted()) {
+            logTrace("deliverToPlayer: player not started username=$username packet=${packet::class.simpleName}")
+            return
+        }
+        if (player.hasFinished()) {
+            logTrace("deliverToPlayer: player finished username=$username packet=${packet::class.simpleName}")
+            return
+        }
         player.session.queuePacket(packet)
     }
 
@@ -332,6 +363,86 @@ object WorldServer {
                 socialClient.sendPlayerOffline(username)
             } catch (e: Exception) {
                 logError("Failed to notify lobby of player offline: $username", e)
+            }
+        }
+    }
+
+    fun syncFcSettings(username: String, name: String?, rankToEnter: Int, rankToSpeak: Int, rankToKick: Int, rankToLS: Int) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendFcSettingsUpdate(username, name, rankToEnter, rankToSpeak, rankToKick, rankToLS)
+            } catch (e: Exception) {
+                logError("Failed to sync FC settings for $username", e)
+            }
+        }
+    }
+
+    fun forwardFcJoin(username: String, fcName: String?) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                forwardToLobby(username, FcJoin(fcName))
+            } catch (e: Exception) {
+                logError("Failed to forward FC join for $username", e)
+            }
+        }
+    }
+
+    fun forwardClanCreate(username: String, clanName: String) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendClanCreate(username, clanName)
+            } catch (e: Exception) {
+                logError("Failed to forward clan create for $username", e)
+            }
+        }
+    }
+
+    fun forwardClanLeave(username: String) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendClanLeave(username)
+            } catch (e: Exception) {
+                logError("Failed to forward clan leave for $username", e)
+            }
+        }
+    }
+
+    fun forwardClanAddMember(inviterUsername: String, targetUsername: String) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendClanAddMember(inviterUsername, targetUsername)
+            } catch (e: Exception) {
+                logError("Failed to forward clan add member $targetUsername", e)
+            }
+        }
+    }
+
+    fun forwardClanKickMember(kickerUsername: String, targetUsername: String) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendClanKickMember(kickerUsername, targetUsername)
+            } catch (e: Exception) {
+                logError("Failed to forward clan kick $targetUsername", e)
+            }
+        }
+    }
+
+    fun forwardClanGuestJoin(username: String, clanName: String) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendClanGuestJoin(username, clanName)
+            } catch (e: Exception) {
+                logError("Failed to forward clan guest join for $username", e)
+            }
+        }
+    }
+
+    fun forwardClanGuestLeave(username: String) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendClanGuestLeave(username)
+            } catch (e: Exception) {
+                logError("Failed to forward clan guest leave for $username", e)
             }
         }
     }

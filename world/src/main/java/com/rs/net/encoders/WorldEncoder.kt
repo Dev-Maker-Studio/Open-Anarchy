@@ -25,6 +25,9 @@ import com.rs.game.model.WorldProjectile
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub
+import com.rs.net.update.EntitySnapshotFactory
+import org.darkan.core.net.prot.update.NpcUpdateTrackingState
+import org.darkan.core.net.prot.update.PlayerUpdateTrackingState
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.model.gameobject.ObjectMeshModifier
 import com.rs.game.model.item.ItemsContainer
@@ -92,12 +95,12 @@ import org.darkan.core.net.prot.MessageQuickChatClanChannel
 import org.darkan.core.net.prot.MessageQuickChatFriendsChat
 import org.darkan.core.net.prot.MessageQuickChatPrivate
 import org.darkan.core.net.prot.MessageQuickChatPrivateEcho
-import org.darkan.core.net.prot.NpcUpdateLargeRaw
-import org.darkan.core.net.prot.NpcUpdateRaw
+import org.darkan.core.net.prot.NpcUpdate
+import org.darkan.core.net.prot.NpcUpdateLarge
 import org.darkan.core.net.prot.ObjAnim
 import org.darkan.core.net.prot.OpenUrl
 import org.darkan.core.net.prot.PlayerOption
-import org.darkan.core.net.prot.PlayerUpdateRaw
+import org.darkan.core.net.prot.PlayerUpdate
 import org.darkan.core.net.prot.PlayerWeight
 import org.darkan.core.net.prot.RemoveGroundItem
 import org.darkan.core.net.prot.ResetSounds
@@ -131,6 +134,33 @@ import org.darkan.core.model.IFEvents as IFEventsModel
 import world.gregs.voidps.type.Tile
 
 class WorldEncoder(private val player: Player, @JvmField val session: Session) {
+
+    val playerTrackingState = PlayerUpdateTrackingState()
+    val npcTrackingState = NpcUpdateTrackingState()
+
+    fun resetNpcTrackingState() {
+        npcTrackingState.localCount = 0
+    }
+
+    fun initPlayerTrackingState() {
+        val state = playerTrackingState
+        state.localIndexCount = 0
+        state.outIndexCount = 0
+        state.localAddedPlayers = 0
+        state.totalRenderDataSentLength = 0
+
+        // Local player is always in the local list
+        state.localPlayers[player.index] = EntitySnapshotFactory.buildPlayerUpdatePlayer(player, player)
+        state.localIndexes[state.localIndexCount++] = player.index
+
+        // All other slots start as "outside" players with their current region hashes
+        for (playerIndex in 1 until 2048) {
+            if (playerIndex == player.index) continue
+            val p: Player? = World.players[playerIndex]
+            state.regionHashes[playerIndex] = p?.getRegionHash() ?: 0
+            state.outIndexes[state.outIndexCount++] = playerIndex
+        }
+    }
 
     // ======================== Interface packets ========================
 
@@ -555,7 +585,8 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         }
 
         if (sendLSWP) {
-            player.localPlayerUpdate.init(BufferWriter(40960)) // initializes internal state
+            player.localPlayerUpdate.init(BufferWriter(40960))
+            initPlayerTrackingState()
         }
 
         session.queuePacket(
@@ -585,7 +616,8 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         }
 
         if (sendLSWP) {
-            player.localPlayerUpdate.init(BufferWriter(40960)) // initializes internal state
+            player.localPlayerUpdate.init(BufferWriter(40960))
+            initPlayerTrackingState()
         }
 
         session.queuePacket(
@@ -634,18 +666,18 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     // ======================== Entity updates ========================
 
     fun sendLocalPlayersUpdate() {
-        val stream = BufferWriter(40960)
-        player.localPlayerUpdate.write(stream)
-        session.queuePacket(PlayerUpdateRaw(stream.toArray()))
+        val snapshot = EntitySnapshotFactory.buildPlayerSnapshot(player)
+        val bytes = session.codec.updateProtocol!!.encodePlayerUpdate(snapshot, playerTrackingState)
+        session.queuePacket(PlayerUpdate(bytes))
     }
 
     fun sendLocalNPCsUpdate() {
-        val stream = BufferWriter(8192)
-        player.localNPCUpdate.write(stream, player.hasLargeSceneView())
+        val snapshot = EntitySnapshotFactory.buildNpcSnapshot(player)
+        val bytes = session.codec.updateProtocol!!.encodeNpcUpdate(snapshot, npcTrackingState)
         if (player.hasLargeSceneView())
-            session.queuePacket(NpcUpdateLargeRaw(stream.toArray()))
+            session.queuePacket(NpcUpdateLarge(bytes))
         else
-            session.queuePacket(NpcUpdateRaw(stream.toArray()))
+            session.queuePacket(NpcUpdate(bytes))
     }
 
     // ======================== Spot anim ========================

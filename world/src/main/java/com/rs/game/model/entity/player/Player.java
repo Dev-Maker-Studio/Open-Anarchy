@@ -929,12 +929,16 @@ public class Player extends Entity {
 		setClientHasntLoadedMapRegion();
 		if (isHasNearbyInstancedChunks()) {
 			getPackets().sendDynamicMapRegion(!started);
-			if (!wasAtDynamicRegion)
+			if (!wasAtDynamicRegion) {
 				localNPCUpdate.reset();
+				getPackets().resetNpcTrackingState();
+			}
 		} else {
 			getPackets().sendMapRegion(!started);
-			if (wasAtDynamicRegion)
+			if (wasAtDynamicRegion) {
 				localNPCUpdate.reset();
+				getPackets().resetNpcTrackingState();
+			}
 			setInstancedArea(null);
 		}
 		forceNextMapLoadRefresh = false;
@@ -1864,6 +1868,7 @@ public class Player extends Entity {
 		return localNPCUpdate;
 	}
 
+
 	public ScreenMode getScreenMode() {
 		return screenMode;
 	}
@@ -2729,7 +2734,7 @@ public class Player extends Entity {
 	}
 
 	public void sendPublicChatMessage(ChatMessage message) {
-		for (Player p : queryNearbyPlayersByTileRange(16, p -> p.getLocalPlayerUpdate().localPlayers[getIndex()] != null))
+		for (Player p : queryNearbyPlayersByTileRange(16, p -> p.getPackets().getPlayerTrackingState().getLocalPlayers()[getIndex()] != null))
 			p.getPackets().sendPublicMessage(this, message);
 	}
 

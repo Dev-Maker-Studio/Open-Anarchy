@@ -10,7 +10,17 @@ import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.net.prot.ClientProt
 import java.net.ConnectException
+import org.darkan.core.social.gateway.ClanAddMemberRequest
+import org.darkan.core.social.gateway.ClanBanMemberRequest
+import org.darkan.core.social.gateway.ClanCreateRequest
+import org.darkan.core.social.gateway.ClanGuestJoinRequest
+import org.darkan.core.social.gateway.ClanGuestLeaveRequest
+import org.darkan.core.social.gateway.ClanKickMemberRequest
+import org.darkan.core.social.gateway.ClanLeaveRequest
+import org.darkan.core.social.gateway.ClanSetRankRequest
+import org.darkan.core.social.gateway.ClanUnbanMemberRequest
 import org.darkan.core.social.gateway.ClientPacketEnvelope
+import org.darkan.core.social.gateway.FcSettingsUpdate
 import org.darkan.core.social.gateway.GatewayWorldInfo
 import org.darkan.core.social.gateway.PlayerOffline
 import org.darkan.core.social.gateway.PlayerOnline
@@ -69,6 +79,46 @@ class SocialClient(
         send(PlayerOffline(username = username))
     }
 
+    suspend fun sendFcSettingsUpdate(username: String, name: String?, rankToEnter: Int, rankToSpeak: Int, rankToKick: Int, rankToLS: Int) {
+        send(FcSettingsUpdate(username = username, name = name, rankToEnter = rankToEnter, rankToSpeak = rankToSpeak, rankToKick = rankToKick, rankToLS = rankToLS))
+    }
+
+    suspend fun sendClanCreate(username: String, clanName: String) {
+        send(ClanCreateRequest(username = username, clanName = clanName))
+    }
+
+    suspend fun sendClanLeave(username: String) {
+        send(ClanLeaveRequest(username = username))
+    }
+
+    suspend fun sendClanAddMember(inviterUsername: String, targetUsername: String) {
+        send(ClanAddMemberRequest(inviterUsername = inviterUsername, targetUsername = targetUsername))
+    }
+
+    suspend fun sendClanKickMember(kickerUsername: String, targetUsername: String) {
+        send(ClanKickMemberRequest(kickerUsername = kickerUsername, targetUsername = targetUsername))
+    }
+
+    suspend fun sendClanSetRank(username: String, targetUsername: String, rank: Int) {
+        send(ClanSetRankRequest(username = username, targetUsername = targetUsername, rank = rank))
+    }
+
+    suspend fun sendClanBanMember(username: String, targetUsername: String) {
+        send(ClanBanMemberRequest(username = username, targetUsername = targetUsername))
+    }
+
+    suspend fun sendClanUnbanMember(username: String, targetUsername: String) {
+        send(ClanUnbanMemberRequest(username = username, targetUsername = targetUsername))
+    }
+
+    suspend fun sendClanGuestJoin(username: String, clanName: String) {
+        send(ClanGuestJoinRequest(username = username, clanName = clanName))
+    }
+
+    suspend fun sendClanGuestLeave(username: String) {
+        send(ClanGuestLeaveRequest(username = username))
+    }
+
     private suspend fun connectLoop() {
         var attempt = 0
         while (scope.isActive) {
@@ -107,9 +157,10 @@ class SocialClient(
                         val msg = try {
                             SocialGatewayWireJson.json.decodeFromString(SocialGatewayWireMessage.serializer(), txt)
                         } catch (e: Exception) {
-                            logWarn("SocialClient received invalid JSON", e)
+                            logWarn("SocialClient received invalid JSON: $txt", e)
                             continue
                         }
+                        logInfo("SocialClient received: ${msg::class.simpleName}")
                         onMessage(msg)
                     }
                 }

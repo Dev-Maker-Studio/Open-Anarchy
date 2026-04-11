@@ -17,6 +17,7 @@ import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.mongo.collections.Clans
 import org.darkan.core.net.Session
 import org.darkan.core.net.prot.*
+import org.darkan.core.social.QuickChatMessage
 import org.darkan.core.social.gateway.*
 import org.darkan.core.worldlist.World
 import org.darkan.lobby.Lobby
@@ -57,6 +58,7 @@ object SocialGateway {
     private data class FcRoom(
         val ownerUsername: String,
         val members: MutableSet<String>,
+        val tempBans: ConcurrentHashMap<String, Long> = ConcurrentHashMap(),
     )
 
     private val ccRoomsByClanName = ConcurrentHashMap<String, CcRoom>()
@@ -672,6 +674,11 @@ object SocialGateway {
                                 val acc = Accounts.find(username) ?: return@launch
                                 initializeSocial(acc)
                                 joinClanChat(username)
+                                // Auto-rejoin friends chat from saved state
+                                val savedFc = acc.social.currentFriendsChat
+                                if (savedFc.isNotBlank()) {
+                                    handleClientPacket(username, FcJoin(savedFc))
+                                }
                             } catch (e: Exception) {
                                 logWarn("SocialGateway: failed initial snapshots user=$username", e)
                             }
@@ -702,8 +709,85 @@ object SocialGateway {
                         broadcastAnnouncement(msg)
                     }
 
+                    is FcSettingsUpdate -> {
+                        launch { handleFcSettingsUpdate(msg) }
+                    }
+
+                    is ClanCreateRequest -> {
+                        launch {
+                            val success = createClan(msg.username, msg.clanName)
+                            val response = ClanCreateResponse(
+                                username = msg.username,
+                                success = success,
+                                message = if (success) null else "Unable to create clan.",
+                            )
+                            sendToWorld(worldSession?.worldId ?: return@launch, response)
+                        }
+                    }
+
+                    is ClanLeaveRequest -> {
+                        launch { leaveClan(msg.username) }
+                    }
+
+                    is ClanAddMemberRequest -> {
+                        launch {
+                            val account = Accounts.find(msg.inviterUsername) ?: return@launch
+                            val clanName = account.social.clanName ?: return@launch
+                            addClanMember(clanName, msg.targetUsername, msg.inviterUsername)
+                        }
+                    }
+
+                    is ClanKickMemberRequest -> {
+                        launch {
+                            val account = Accounts.find(msg.kickerUsername) ?: return@launch
+                            val clanName = account.social.clanName ?: return@launch
+                            removeClanMember(clanName, msg.targetUsername, msg.kickerUsername)
+                        }
+                    }
+
+                    is ClanSetRankRequest -> {
+                        launch {
+                            val account = Accounts.find(msg.username) ?: return@launch
+                            val clanName = account.social.clanName ?: return@launch
+                            setClanMemberRank(clanName, msg.targetUsername, msg.rank, msg.username)
+                        }
+                    }
+
+                    is ClanBanMemberRequest -> {
+                        launch {
+                            val account = Accounts.find(msg.username) ?: return@launch
+                            val clanName = account.social.clanName ?: return@launch
+                            banClanMember(clanName, msg.targetUsername, msg.username)
+                        }
+                    }
+
+                    is ClanUnbanMemberRequest -> {
+                        launch {
+                            val account = Accounts.find(msg.username) ?: return@launch
+                            val clanName = account.social.clanName ?: return@launch
+                            unbanClanMember(clanName, msg.targetUsername, msg.username)
+                        }
+                    }
+
+                    is ClanGuestJoinRequest -> {
+                        launch {
+                            val account = Accounts.find(msg.username) ?: return@launch
+                            account.social.guestedClanChat = msg.clanName
+                            Accounts.save(account)
+                            joinClanChatAsGuest(msg.username, msg.clanName)
+                        }
+                    }
+
+                    is ClanGuestLeaveRequest -> {
+                        launch {
+                            val account = Accounts.find(msg.username) ?: return@launch
+                            account.social.guestedClanChat = null
+                            Accounts.save(account)
+                            leaveClanChat(msg.username, notify = true)
+                        }
+                    }
+
                     else -> {
-                        // Not handled in Phase 1.
                         logTrace("SocialGateway ignoring message type=${msg::class.simpleName}")
                     }
                 }
@@ -728,6 +812,8 @@ object SocialGateway {
                     if (prior != null) {
                         usernameByDisplayLower.remove(prior.displayName.lowercase(), username)
                     }
+                    leaveFriendsChat(username, notify = false)
+                    leaveClanChat(username, notify = false)
                 }
 
                 logInfo("SocialGateway: world disconnected worldId=${session.worldId}")
@@ -868,9 +954,21 @@ object SocialGateway {
                     return
                 }
 
+                // FC not set up check
+                if (owner.social.friendsChat.name == null) {
+                    sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "The friends chat you are trying to join is not set up yet."))
+                    sendToUser(username, FriendsChatChannel(clear = true))
+                    return
+                }
+
                 val from = Accounts.find(username) ?: return
-                from.social.currentFriendsChat = owner.username
-                Accounts.save(from)
+
+                // Ignore check: owner has joiner on ignore list
+                if (owner.social.ignores.contains(from.username)) {
+                    sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "You are not allowed to join this user's friends chat channel."))
+                    sendToUser(username, FriendsChatChannel(clear = true))
+                    return
+                }
 
                 val fromRank = if (from.username == owner.username) FriendsChatRank.OWNER.id else owner.social.friendsChat.getRank(from.username).id
                 val required = owner.social.friendsChat.rankToEnter.id
@@ -880,12 +978,34 @@ object SocialGateway {
                     return
                 }
 
+                val room = getOrCreateRoom(owner.username)
+
+                // Capacity check
+                if (room.members.size >= 100) {
+                    sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "The channel you tried to join is currently full."))
+                    sendToUser(username, FriendsChatChannel(clear = true))
+                    return
+                }
+
+                // Temp ban check
+                val banExpiry = room.tempBans[username]
+                if (banExpiry != null) {
+                    if (System.currentTimeMillis() < banExpiry) {
+                        sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "You have been temporarily banned from this friends chat."))
+                        sendToUser(username, FriendsChatChannel(clear = true))
+                        return
+                    }
+                    room.tempBans.remove(username)
+                }
+
+                from.social.currentFriendsChat = owner.username
+                Accounts.save(from)
+
                 val existingOwner = fcOwnerByMember[username]
                 if (existingOwner != null && existingOwner != owner.username) {
                     leaveFriendsChat(username, notify = false)
                 }
 
-                val room = getOrCreateRoom(owner.username)
                 room.members.add(username)
                 fcOwnerByMember[username] = owner.username
                 broadcastFcChannel(owner, room)
@@ -894,6 +1014,13 @@ object SocialGateway {
             is FcKick -> {
                 val fromUsername = username
                 val targetUsername = packet.username.formatPlayerNameForProtocol()
+
+                // Self-kick check
+                if (targetUsername == fromUsername) {
+                    sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You can't kick yourself!"))
+                    return
+                }
+
                 val ownerUsername = fcOwnerByMember[fromUsername] ?: return
                 val room = fcRoomsByOwner[ownerUsername] ?: return
                 if (!room.members.contains(targetUsername)) return
@@ -903,6 +1030,12 @@ object SocialGateway {
                 val targetRank = if (targetUsername == owner.username) FriendsChatRank.OWNER.id else owner.social.friendsChat.getRank(targetUsername).id
                 val required = owner.social.friendsChat.rankToKick.id
 
+                // Owner kick check
+                if (targetRank >= FriendsChatRank.OWNER.id) {
+                    sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You cannot kick the owner of a channel."))
+                    return
+                }
+
                 if (!rankAllowed(fromRank, required)) {
                     sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You do not have permission to kick from this friends chat."))
                     return
@@ -911,6 +1044,9 @@ object SocialGateway {
                     sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You cannot kick that user."))
                     return
                 }
+
+                // Apply 1-hour temp ban
+                room.tempBans[targetUsername] = System.currentTimeMillis() + 3600000L
 
                 room.members.remove(targetUsername)
                 fcOwnerByMember.remove(targetUsername, ownerUsername)
@@ -944,6 +1080,19 @@ object SocialGateway {
 
             is ClanChannelKickUser -> {
                 handleCcKick(username, packet)
+            }
+
+            is QuickChatPrivate -> {
+                handleQuickChatPrivate(username, packet)
+            }
+
+            is QuickChatPublic -> {
+                val effectiveType = if (packet.chatType != 0) packet.chatType else (chatTypeByUsername[username] ?: 0)
+                when (effectiveType) {
+                    1 -> handleQuickChatFriendsChat(username, packet)
+                    2 -> handleQuickChatClanChat(username, packet)
+                    else -> { /* ignore */ }
+                }
             }
 
             else -> {
@@ -1021,6 +1170,184 @@ object SocialGateway {
                 message = message,
             )
         )
+    }
+
+    // ─── QuickChat Handlers ─────────────────────────────────────────────
+
+    private suspend fun handleQuickChatPrivate(fromUsername: String, packet: QuickChatPrivate) {
+        val fromAccount = Accounts.find(fromUsername) ?: return
+        if (fromAccount.checkMuted()) {
+            sendToUser(fromUsername, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "You are muted."))
+            return
+        }
+
+        val toAccount = Accounts.findByDisplayName(packet.toUsername)
+        if (toAccount == null) {
+            sendToUser(fromUsername, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "Unable to find ${packet.toUsername}."))
+            return
+        }
+
+        if (presenceByUsername[toAccount.username] == null && lobbyByUsername[toAccount.username] == null) {
+            sendToUser(fromUsername, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "${toAccount.displayName} is offline."))
+            return
+        }
+
+        if (!toAccount.onlineTo(fromAccount)) return
+        if (toAccount.social.ignores.contains(fromAccount.username)) return
+
+        val qcMessage = QuickChatMessage(message = "", fileId = packet.qcId, data = packet.messageData)
+        sendToUser(
+            toAccount.username,
+            MessageQuickChatPrivate(
+                crown = fromAccount.rights.crown,
+                displayName = fromAccount.displayName,
+                quickResponseName = fromAccount.username,
+                message = qcMessage,
+            )
+        )
+        sendToUser(
+            fromAccount.username,
+            MessageQuickChatPrivateEcho(
+                senderDisplayName = toAccount.displayName,
+                message = qcMessage,
+            )
+        )
+    }
+
+    private suspend fun handleQuickChatFriendsChat(fromUsername: String, packet: QuickChatPublic) {
+        val ownerUsername = fcOwnerByMember[fromUsername] ?: return
+        val room = fcRoomsByOwner[ownerUsername] ?: return
+        if (!room.members.contains(fromUsername)) return
+
+        val owner = Accounts.find(ownerUsername) ?: return
+        val fromAccount = Accounts.find(fromUsername) ?: return
+        if (fromAccount.checkMuted()) return
+
+        val fromRank = if (fromUsername == owner.username) FriendsChatRank.OWNER.id else owner.social.friendsChat.getRank(fromUsername).id
+        if (!rankAllowed(fromRank, owner.social.friendsChat.rankToSpeak.id)) {
+            sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You are not allowed to speak in that friends chat."))
+            return
+        }
+
+        val chatName = (owner.social.friendsChat.name ?: owner.username).formatPlayerNameForProtocol()
+        val qcMessage = QuickChatMessage(message = "", fileId = packet.qcId, data = packet.messageData)
+        sendBatchToUsers(
+            room.members,
+            MessageQuickChatFriendsChat(
+                chatName = chatName,
+                crown = fromAccount.rights.crown,
+                displayName = fromAccount.displayName,
+                quickResponseName = fromAccount.username,
+                message = qcMessage,
+            )
+        )
+    }
+
+    private suspend fun handleQuickChatClanChat(fromUsername: String, packet: QuickChatPublic) {
+        val clanName = ccClanByMember[fromUsername] ?: return
+        val room = ccRoomsByClanName[clanName] ?: return
+        if (!room.members.contains(fromUsername)) return
+
+        val clan = Clans.find(clanName) ?: return
+        val fromAccount = Accounts.find(fromUsername) ?: return
+        if (fromAccount.checkMuted()) return
+
+        val fromRank = getClanRank(clan, fromUsername)
+        if (!clanRankAllowed(fromRank.iconId, clan.ccChatRank.iconId)) {
+            sendToUser(fromUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You are not allowed to speak in that clan chat."))
+            return
+        }
+
+        val guest = !clan.members.containsKey(fromUsername)
+        val qcMessage = QuickChatMessage(message = "", fileId = packet.qcId, data = packet.messageData)
+        sendBatchToUsers(
+            room.members,
+            MessageQuickChatClanChannel(
+                guest = guest,
+                crown = fromAccount.rights.crown,
+                displayName = fromAccount.displayName,
+                message = qcMessage,
+            )
+        )
+    }
+
+    // ─── FC Settings Update Handler ─────────────────────────────────────
+
+    private suspend fun handleFcSettingsUpdate(msg: FcSettingsUpdate) {
+        val account = Accounts.find(msg.username) ?: return
+        account.social.friendsChat.name = msg.name
+        account.social.friendsChat.rankToEnter = FriendsChatRank.fromId(msg.rankToEnter)
+        account.social.friendsChat.rankToSpeak = FriendsChatRank.fromId(msg.rankToSpeak)
+        account.social.friendsChat.rankToKick = FriendsChatRank.fromId(msg.rankToKick)
+        account.social.friendsChat.rankToLS = FriendsChatRank.fromId(msg.rankToLS)
+        Accounts.save(account)
+
+        val room = fcRoomsByOwner[msg.username]
+        if (msg.name == null && room != null) {
+            // FC dissolved — kick all members
+            for (member in room.members.toList()) {
+                fcOwnerByMember.remove(member, msg.username)
+                sendToUser(member, FriendsChatChannel(clear = true))
+                sendToUser(member, GameMessage(ChatMessageType.FC_NOTIFICATION, "The channel has been disabled."))
+            }
+            room.members.clear()
+            fcRoomsByOwner.remove(msg.username, room)
+        } else if (room != null) {
+            broadcastFcChannel(account, room)
+        }
+    }
+
+    // ─── Clan Management via Gateway ─────────────────────────────────────
+
+    private suspend fun setClanMemberRank(clanName: String, targetUsername: String, rank: Int, setterUsername: String) {
+        val clan = Clans.find(clanName) ?: return
+        val setterRank = getClanRank(clan, setterUsername)
+        if (setterRank.iconId < ClanRank.ADMIN.iconId && setterUsername != clan.leaderUsername) {
+            sendToUser(setterUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to change ranks."))
+            return
+        }
+        val memberData = clan.members[targetUsername]
+        if (memberData == null) {
+            sendToUser(setterUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "That player is not a clan member."))
+            return
+        }
+        val newRank = ClanRank.fromIconId(rank)
+        memberData.rank = newRank
+        Clans.save(clan)
+        val room = ccRoomsByClanName[clanName]
+        if (room != null) {
+            broadcastCcSettings(clan, room)
+            broadcastCcChannel(clan, room)
+        }
+    }
+
+    private suspend fun banClanMember(clanName: String, targetUsername: String, bannerUsername: String) {
+        val clan = Clans.find(clanName) ?: return
+        val bannerRank = getClanRank(clan, bannerUsername)
+        if (bannerRank.iconId < clan.ccKickRank.iconId) {
+            sendToUser(bannerUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to ban users."))
+            return
+        }
+        if (clan.bannedUsers.contains(targetUsername)) return
+        clan.bannedUsers.add(targetUsername)
+        Clans.save(clan)
+        // Also kick from CC if online
+        leaveClanChat(targetUsername, notify = true)
+        val room = ccRoomsByClanName[clanName]
+        if (room != null) broadcastCcSettings(clan, room)
+    }
+
+    private suspend fun unbanClanMember(clanName: String, targetUsername: String, unbannerUsername: String) {
+        val clan = Clans.find(clanName) ?: return
+        val unbannerRank = getClanRank(clan, unbannerUsername)
+        if (unbannerRank.iconId < clan.ccKickRank.iconId) {
+            sendToUser(unbannerUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to unban users."))
+            return
+        }
+        if (!clan.bannedUsers.remove(targetUsername)) return
+        Clans.save(clan)
+        val room = ccRoomsByClanName[clanName]
+        if (room != null) broadcastCcSettings(clan, room)
     }
 }
 

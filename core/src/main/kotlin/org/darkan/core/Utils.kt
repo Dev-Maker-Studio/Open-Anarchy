@@ -1,5 +1,7 @@
 package org.darkan.core
 
+import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.Index
 import world.gregs.voidps.type.Tile
 import world.gregs.voidps.type.secureRandom
 import java.math.BigDecimal
@@ -552,9 +554,11 @@ object Utils {
 
     @JvmStatic fun getVarbitDefinitionsSize(): Int = 0
 
-    @JvmStatic fun getInterfaceDefinitionsSize(): Int = 0
+    @JvmStatic fun getInterfaceDefinitionsSize(): Int =
+        Cache.get().lastArchiveId(Index.INTERFACES)
 
-    @JvmStatic fun getInterfaceDefinitionsComponentsSize(interfaceId: Int): Int = 0
+    @JvmStatic fun getInterfaceDefinitionsComponentsSize(interfaceId: Int): Int =
+        Cache.get().fileCount(Index.INTERFACES, interfaceId)
 
     @JvmStatic fun itemExists(id: Int): Boolean = false
 

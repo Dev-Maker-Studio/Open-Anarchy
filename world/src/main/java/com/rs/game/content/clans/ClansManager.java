@@ -154,8 +154,8 @@ public class ClansManager {
 	public static void create(Player player, String name) {
 		player.sendOptionDialogue("The name " + name + " is available. Create the clan?", ops -> {
 			ops.add("Yes, create " + name + ".", () -> {
-				// TODO: Migrate to social gateway
-				player.sendMessage("Clan operations are temporarily unavailable.");
+				player.getTempAttribs().setB("ccCreateLock", true);
+				WorldServer.INSTANCE.forwardClanCreate(player.getUsername(), name);
 			});
 			ops.add("No, I want to pick another name.");
         });
@@ -167,10 +167,7 @@ public class ClansManager {
 				player.simpleDialogue("Your previous request to create a clan is still in progress... Please wait or relog.");
 				return;
 			}
-			player.getTempAttribs().setB("ccCreateLock", true);
-			// TODO: Migrate to social gateway
-			player.sendMessage("Clan operations are temporarily unavailable.");
-			player.getTempAttribs().removeB("ccCreateLock");
+			create(player, name);
 		});
 	}
 	
@@ -397,8 +394,7 @@ public class ClansManager {
 				return;
 			}
 			if (inviter.hasStarted() && !inviter.hasFinished()) {
-				// TODO: Migrate to social gateway
-				e.getPlayer().sendMessage("Clan operations are temporarily unavailable.");
+				WorldServer.INSTANCE.forwardClanAddMember(inviter.getUsername(), e.getPlayer().getUsername());
 			}
 			e.getPlayer().closeInterfaces();
 		}
@@ -552,8 +548,7 @@ public class ClansManager {
 		String editingUser = player.getTempAttribs().getO("editClanMate");
 		player.sendOptionDialogue("Are you sure you would like to kick this player from the clan?", ops -> {
 			ops.add("Yes, I am sure I want to kick them.", () -> {
-				// TODO: Migrate to social gateway
-				player.sendMessage("Clan operations are temporarily unavailable.");
+				WorldServer.INSTANCE.forwardClanKickMember(player.getUsername(), editingUser);
 			});
 			ops.add("Nevermind");
 		});
@@ -585,8 +580,9 @@ public class ClansManager {
 			return;
 		}
 		player.getTempAttribs().setB("ccJoinLock", true);
-		// TODO: Migrate to social gateway
-		player.sendMessage("Clan operations are temporarily unavailable.");
+		if (guestClanName != null) {
+			WorldServer.INSTANCE.forwardClanGuestJoin(player.getUsername(), guestClanName);
+		}
 		player.getTempAttribs().removeB("ccJoinLock");
 	}
 
@@ -602,8 +598,9 @@ public class ClansManager {
 			return;
 		}
 		player.getTempAttribs().setB("ccLeaveLock", true);
-		// TODO: Migrate to social gateway
-		player.sendMessage("Clan operations are temporarily unavailable.");
+		if (guest) {
+			WorldServer.INSTANCE.forwardClanGuestLeave(player.getUsername());
+		}
 		player.getTempAttribs().removeB("ccLeaveLock");
 	}
 
@@ -619,8 +616,7 @@ public class ClansManager {
 		player.sendOptionDialogue("Are you sure you want to leave your clan?", conf1 -> {
 			conf1.add("I am sure I want to leave the clan.").addOptions("Are you ABSOLUTELY sure you want to leave?", conf2 -> {
 				conf2.add("Yes, I am absolutely sure I want to leave my clan.", () -> {
-					// TODO: Migrate to social gateway
-					player.sendMessage("Clan operations are temporarily unavailable.");
+					WorldServer.INSTANCE.forwardClanLeave(player.getUsername());
 				});
 				conf2.add("No, I've changed my mind.");
 			});
