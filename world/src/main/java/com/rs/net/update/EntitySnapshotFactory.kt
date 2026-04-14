@@ -10,7 +10,7 @@ import com.rs.game.model.entity.npc.combat.MovementType
 import com.rs.game.model.entity.player.Player
 import com.rs.utils.movementType
 import org.darkan.core.Utils
-import org.darkan.core.net.prot.update.NpcMovementType
+import org.darkan.core.model.MoveType
 import org.darkan.core.net.prot.update.NpcUpdateNpc
 import org.darkan.core.net.prot.update.NpcUpdateSnapshot
 import org.darkan.core.net.prot.update.PlayerUpdatePlayer
@@ -88,9 +88,9 @@ object EntitySnapshotFactory {
             nextWalkDirection = n.nextWalkDirection?.id,
             nextRunDirection = n.nextRunDirection?.id,
             movementType = when {
-                n.nextRunDirection != null -> NpcMovementType.RUN
-                n.definitions.movementType == MovementType.HALF_WALK -> NpcMovementType.HALF_WALK
-                else -> NpcMovementType.WALK
+                n.nextRunDirection != null -> MoveType.RUN
+                n.definitions.movementType == MovementType.HALF_WALK -> MoveType.HALF_WALK
+                else -> MoveType.WALK
             },
             faceAngle = n.faceAngle,
             blocks = buildNpcBlocks(n, observer, added),
@@ -102,6 +102,10 @@ object EntitySnapshotFactory {
      *
      * The mask conditions here mirror the legacy `LocalNPCUpdate.appendUpdateBlock()` exactly,
      * translating each legacy field read into the corresponding semantic model field.
+     *
+     * The `added` parameter is no longer needed because the persistent add-only state
+     * (face entity, custom name, custom combat level) is captured in dedicated
+     * `persistent*` fields and selected by the protocol/encoder at encode time.
      */
     fun buildNpcBlocks(n: NPC, observer: Player, added: Boolean): NpcUpdateBlocks {
         val spotAnims = arrayOfNulls<CoreSpotAnim>(4)
@@ -110,14 +114,10 @@ object EntitySnapshotFactory {
         spotAnims[2] = convertSpotAnim(n.nextSpotAnim3)
         spotAnims[3] = convertSpotAnim(n.nextSpotAnim4)
 
-        // Face entity: triggered when nextFaceEntity != -2 or when newly added with a persisted face target.
-        // The written value follows the legacy pattern: use nextFaceEntity if it was explicitly set,
-        // otherwise fall back to lastFaceEntity (for newly-added NPCs that already face something).
-        val faceEntity: Int? = when {
-            n.nextFaceEntity != -2 -> n.nextFaceEntity
-            added && n.lastFaceEntity != -1 -> n.lastFaceEntity
-            else -> null
-        }
+        // Face entity: per-tick explicit set (`nextFaceEntity != -2`).
+        // Persistent face target (`lastFaceEntity`) is captured separately for the add path.
+        val faceEntity: Int? = if (n.nextFaceEntity != -2) n.nextFaceEntity else null
+        val persistentFaceEntity: Int? = if (n.lastFaceEntity != -1) n.lastFaceEntity else null
 
         // Face tile: triggered when fixedFaceTile is set, or nextFaceTile is set while not walking.
         // Store raw tile coordinates — the encoder applies the `(x shl 1) + 1` transform.
@@ -166,6 +166,7 @@ object EntitySnapshotFactory {
                 )
             },
             faceEntity = faceEntity,
+            persistentFaceEntity = persistentFaceEntity,
             faceTile = faceTile,
             hits = hits,
             modelOverrides = modelOverrides,
@@ -203,19 +204,15 @@ object EntitySnapshotFactory {
         // Transform NPC id
         val transformNpcId: Int? = n.nextTransformation?.toNPCId()
 
-        // Combat level (changed, or newly added with custom level)
-        val combatLevel: Int? = when {
-            n.hasChangedCombatLevel() -> n.combatLevel
-            added && n.customCombatLevel >= 0 -> n.combatLevel
-            else -> null
-        }
+        // Combat level: changed this tick is captured in [combatLevel];
+        // a non-default custom level is captured in [persistentCombatLevel] for the add path.
+        val combatLevel: Int? = if (n.hasChangedCombatLevel()) n.combatLevel else null
+        val persistentCombatLevel: Int? = if (n.customCombatLevel >= 0) n.combatLevel else null
 
-        // Name (changed, or newly added with custom name)
-        val name: String? = when {
-            n.hasChangedName() -> n.name
-            added && n.customName != null -> n.name
-            else -> null
-        }
+        // Name: changed this tick is captured in [name];
+        // a non-default custom name is captured in [persistentName] for the add path.
+        val name: String? = if (n.hasChangedName()) n.name else null
+        val persistentName: String? = if (n.customName != null) n.name else null
 
         // Force talk
         val say: String? = n.nextForceTalk?.text()
@@ -227,7 +224,9 @@ object EntitySnapshotFactory {
             basId = basId,
             transformNpcId = transformNpcId,
             combatLevel = combatLevel,
+            persistentCombatLevel = persistentCombatLevel,
             name = name,
+            persistentName = persistentName,
             say = say,
         )
     }
@@ -477,22 +476,21 @@ object EntitySnapshotFactory {
         spotAnims[2] = convertSpotAnim(p.nextSpotAnim3)
         spotAnims[3] = convertSpotAnim(p.nextSpotAnim4)
 
-        // Face entity: triggered when nextFaceEntity != -2 or when newly added with a persisted face target.
-        val faceEntity: Int? = when {
-            p.nextFaceEntity != -2 -> p.nextFaceEntity
-            added && p.lastFaceEntity != -1 -> p.lastFaceEntity
-            else -> null
-        }
+        // Face entity: per-tick explicit set (`nextFaceEntity != -2`).
+        // Persistent face target (`lastFaceEntity`) is captured separately for the add path.
+        val faceEntity: Int? = if (p.nextFaceEntity != -2) p.nextFaceEntity else null
+        val persistentFaceEntity: Int? = if (p.lastFaceEntity != -1) p.lastFaceEntity else null
 
-        // Face direction (angle): triggered when added, fixedFaceTile is set,
+        // Face direction (angle): explicit value when fixedFaceTile is set,
         // or nextFaceTile is set while not walking/running.
-        // Unlike NPCs which send computed tile coordinates, players send the raw face angle.
+        // The persistent angle is captured separately for the add path so newly-visible
+        // players are oriented correctly.
         val faceDirection: Int? = when {
-            added -> p.faceAngle
             p.fixedFaceTile != null -> p.faceAngle
             p.nextFaceTile != null && p.nextRunDirection == null && p.nextWalkDirection == null -> p.faceAngle
             else -> null
         }
+        val persistentFaceDirection: Int? = p.faceAngle
 
         // Body glow / tint
         val tint: Tint? = p.nextBodyGlow?.let { glow ->
@@ -527,6 +525,7 @@ object EntitySnapshotFactory {
                 )
             },
             faceEntity = faceEntity,
+            persistentFaceEntity = persistentFaceEntity,
             hits = hits,
             modelOverrides = modelOverrides,
         )
@@ -552,10 +551,12 @@ object EntitySnapshotFactory {
         // Force talk
         val forceTalk: String? = p.nextForceTalk?.text()
 
-        // Movement type: triggered when added or when movement type changed this tick
-        val movementTypeId: Int? = if (added || p.isUpdateMovementType) {
-            if (p.movementType == Entity.MoveType.RUN) 2 else 1
-        } else null
+        // Movement type: explicit change this tick is captured in [movementTypeId];
+        // the persistent value is always populated for the add path so newly-visible
+        // players have the correct walk/run state immediately.
+        val movementTypeIdValue = if (p.movementType == MoveType.RUN) 2 else 1
+        val movementTypeId: Int? = if (p.isUpdateMovementType) movementTypeIdValue else null
+        val persistentMovementTypeId: Int = movementTypeIdValue
 
         // Temporary move type
         val temporaryMoveTypeId: Int? = p.temporaryMoveType?.id
@@ -565,7 +566,9 @@ object EntitySnapshotFactory {
             appearance = appearance,
             movementAnimations = movementAnimations,
             faceDirection = faceDirection,
+            persistentFaceDirection = persistentFaceDirection,
             movementTypeId = movementTypeId,
+            persistentMovementTypeId = persistentMovementTypeId,
             temporaryMoveTypeId = temporaryMoveTypeId,
             forceTalk = forceTalk,
             publicChat = null, // Public chat is not sent via player update masks in the legacy system

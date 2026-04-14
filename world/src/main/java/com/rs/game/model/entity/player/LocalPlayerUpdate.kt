@@ -18,10 +18,10 @@ package com.rs.game.model.entity.player
 
 import com.rs.Settings
 import com.rs.game.World
-import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.HitBar
 import org.darkan.core.Constants
+import org.darkan.core.model.MoveType
 import org.darkan.core.Utils
 import world.gregs.voidps.buffer.write.BufferWriter
 import world.gregs.voidps.buffer.write.Writer
@@ -454,7 +454,7 @@ class LocalPlayerUpdate(private val player: Player) {
     }
 
     private fun applyMoveTypeMask(p: Player, data: Writer) {
-        data.writeByteSubtract(if (p.movementType == Entity.MoveType.RUN) 2 else 1)
+        data.writeByteSubtract(if (p.movementType == MoveType.RUN) 2 else 1)
     }
 
     private fun applyTemporaryMoveTypeMask(p: Player, data: Writer) {

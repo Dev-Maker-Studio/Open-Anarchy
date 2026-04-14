@@ -21,8 +21,8 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.quest.Quest;
 import com.rs.game.World;
-import com.rs.game.model.entity.Entity.MoveType;
 import org.darkan.core.map.pathfinder.Direction;
+import org.darkan.core.model.MoveType;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.model.Animation;
@@ -43,7 +43,7 @@ public class BoatCutscene extends Cutscene {
 		dynamicRegion(player.getTile(), 256, 688, 8, 8);
 		npcCreate("ned", 6084, 18, 13, 1);
 		npcCreate("jenkins", 6085, 15, 14, 1);
-		playerMove(18, 12, 1, MoveType.TELE);
+		playerMove(18, 12, 1, MoveType.TELEPORT);
 		music(350);
 		
 		action(7, () -> {

@@ -5,6 +5,7 @@ import world.gregs.voidps.buffer.write.BufferWriter
 
 internal data class NpcMaskCtx(
     val npc: NpcUpdateNpc,
+    val added: Boolean,
 )
 
 internal val npcHeader = MaskHeader(
@@ -81,7 +82,9 @@ internal val npcMasks: MaskRegistry<NpcMaskCtx, NpcMaskKey> =
 
         // 0x80 face entity
         mask(NpcMaskKey.FACE_ENTITY, 0x80) { ctx, out ->
-                val face = ctx.npc.blocks.common.faceEntity!!
+                // Prefer the explicit per-tick value, fall back to the persistent target on add.
+                val c = ctx.npc.blocks.common
+                val face = c.faceEntity ?: c.persistentFaceEntity!!
                 out.writeShortLittle(if (face == -1) 65535 else face)
         }
 
@@ -147,7 +150,11 @@ internal val npcMasks: MaskRegistry<NpcMaskCtx, NpcMaskKey> =
         }
 
         // 0x10000 combat level
-        mask(NpcMaskKey.CHANGE_COMBAT_LEVEL, 0x10000) { ctx, out -> out.writeShortAdd(ctx.npc.blocks.combatLevel!!) }
+        mask(NpcMaskKey.CHANGE_COMBAT_LEVEL, 0x10000) { ctx, out ->
+                val b = ctx.npc.blocks
+                val cb = b.combatLevel ?: b.persistentCombatLevel!!
+                out.writeShortAdd(cb)
+        }
 
         // 0x400000 clear varns
         mask(NpcMaskKey.VARN_CLEAR, 0x400000) { ctx, out ->
@@ -178,7 +185,10 @@ internal val npcMasks: MaskRegistry<NpcMaskCtx, NpcMaskKey> =
         }
 
         // 0x800000 name
-        mask(NpcMaskKey.NAME_CHANGE, 0x800000) { ctx, out -> out.writeString(ctx.npc.blocks.name!!) }
+        mask(NpcMaskKey.NAME_CHANGE, 0x800000) { ctx, out ->
+                val b = ctx.npc.blocks
+                out.writeString(b.name ?: b.persistentName!!)
+        }
 
         // 0x2 say text
         mask(NpcMaskKey.FORCE_TALK, 0x2) { ctx, out -> out.writeString(ctx.npc.blocks.say!!) }

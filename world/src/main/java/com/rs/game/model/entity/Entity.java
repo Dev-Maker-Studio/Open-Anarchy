@@ -60,6 +60,7 @@ import com.rs.game.tasks.TaskManager;
 import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.Constants;
 import org.darkan.core.model.Animation;
+import org.darkan.core.model.MoveType;
 import org.darkan.core.model.SpotAnim;
 import world.gregs.voidps.type.Tile;
 import com.rs.utils.KtExtensionsKt;
@@ -87,21 +88,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public abstract class Entity {
-	public enum MoveType {
-		WALK(1),
-		RUN(2),
-		TELE(127);
-
-		private final int id;
-
-		MoveType(int id) {
-			this.id = id;
-		}
-
-		public int getId() {
-			return id;
-		}
-	}
 
 	// transient stuff
 	private transient int index;
@@ -739,7 +725,7 @@ public abstract class Entity {
 			int deltaY = lastTile.getY() - this.getY();
 
 			if (player != null && player.getTemporaryMoveType() == null && !(deltaX <= 14 && deltaX >= -14 && deltaY <= 14 && deltaY >= -14))
-				player.setTemporaryMoveType(MoveType.TELE);
+				player.setTemporaryMoveType(MoveType.TELEPORT);
 			ChunkManager.updateChunks(this);
 			if (needMapUpdate())
 				loadMapRegions();
@@ -1164,7 +1150,7 @@ public abstract class Entity {
 
 	public void tele(Tile tile) {
 		if (this instanceof Player player)
-			player.setTemporaryMoveType(MoveType.TELE);
+			player.setTemporaryMoveType(MoveType.TELEPORT);
 		move(tile);
 	}
 

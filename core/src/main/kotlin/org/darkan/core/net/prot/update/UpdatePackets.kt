@@ -1,5 +1,6 @@
 package org.darkan.core.net.prot.update
 
+import org.darkan.core.model.MoveType
 import org.darkan.core.update.NpcUpdateBlocks
 import org.darkan.core.update.PlayerUpdateBlocks
 import java.security.MessageDigest
@@ -81,13 +82,7 @@ data class NpcUpdateNpc(
     val hasTeleported: Boolean,
     val nextWalkDirection: Int?,
     val nextRunDirection: Int?,
-    val movementType: NpcMovementType,
+    val movementType: MoveType,
     val faceAngle: Int,
     val blocks: NpcUpdateBlocks,
 )
-
-enum class NpcMovementType {
-    WALK,
-    HALF_WALK,
-    RUN,
-}

@@ -7,7 +7,7 @@ import org.darkan.core.map.pathfinder.Direction
 import com.rs.engine.quest.Quest.ELDER_KILN
 import com.rs.game.content.minigames.fightkiln.FightKilnController
 import com.rs.game.map.instance.Instance
-import com.rs.game.model.entity.Entity.MoveType
+import org.darkan.core.model.MoveType
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.InstancedController

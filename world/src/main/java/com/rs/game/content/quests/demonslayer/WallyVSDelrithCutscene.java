@@ -3,9 +3,9 @@ package com.rs.game.content.quests.demonslayer;
 import com.rs.engine.cutscene.Cutscene;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
-import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.player.Player;
 import org.darkan.core.model.Animation;
+import org.darkan.core.model.MoveType;
 import world.gregs.voidps.type.Tile;
 
 //TODO: Check Fight Arena, Dragon Slayer, Vampire Slayer, wally vs delrith cutscene, and the rest of the cutscenes
@@ -18,7 +18,7 @@ public class WallyVSDelrithCutscene extends Cutscene {
 		delay(4);
 		dynamicRegion(player.getTile(), 401, 419, 4, 4);
 		action(()-> player.getAppearance().setHidden(true));
-		playerMove(19, 17, 0, Entity.MoveType.TELE);
+		playerMove(19, 17, 0, MoveType.TELEPORT);
 		camShake(1, 0, 10, 5, 10);
 		camPos(19, 17, 1300);
 		camLook(19 + 4, 17 - 4, 50);
@@ -30,7 +30,7 @@ public class WallyVSDelrithCutscene extends Cutscene {
 		dialogue(new Dialogue()
 				.addNPC(882, HeadE.TALKING_ALOT, "Wally managed to arrive at the stone circle just as Delrith was summoned by a cult of chaos druids...")
 			, true);
-		npcMove("wally", Tile.of(19, 17 - 2, player.getPlane()), Entity.MoveType.RUN);
+		npcMove("wally", Tile.of(19, 17 - 2, player.getPlane()), MoveType.RUN);
 		dialogue(new Dialogue().addNPC(4664, HeadE.TALKING_ALOT, "Die foul demon!"));
 		camLook(19, 17 - 4, 0, 4, 4);
 		delay(1);

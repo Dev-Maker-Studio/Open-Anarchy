@@ -5,8 +5,8 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.quest.Quest;
 import com.rs.game.World;
-import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
+import org.darkan.core.model.MoveType;
 import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.WorldTasks;
@@ -80,7 +80,7 @@ public class WolfWhistleWellCutscene extends Cutscene {
         npcCreate("t12", TROLL_CLUB, 9, 19, 0);
         delay(1);
         playerFaceDir(Direction.NORTH);
-        playerMove(14, 8, 0, Entity.MoveType.TELE);
+        playerMove(14, 8, 0, MoveType.TELEPORT);
         npcFaceDir("scalectrix", Direction.NORTH);
         npcFaceDir("trollflinter", Direction.EAST);
         npcFaceNPC("giantwolpertinger", "wolfbones");
@@ -91,11 +91,11 @@ public class WolfWhistleWellCutscene extends Cutscene {
         delay(1);
         fadeOutBG(4);
 
-        playerMove(14, 14, Entity.MoveType.WALK);
-        npcMove("scalectrix", 14, 8, Entity.MoveType.WALK);
-        npcMove("scalectrix", 14, 13, Entity.MoveType.WALK);
-        npcMove("scalectrix", 13, 13, Entity.MoveType.WALK);
-        npcMove("scalectrix", 13, 14, Entity.MoveType.WALK);
+        playerMove(14, 14, MoveType.WALK);
+        npcMove("scalectrix", 14, 8, MoveType.WALK);
+        npcMove("scalectrix", 14, 13, MoveType.WALK);
+        npcMove("scalectrix", 13, 13, MoveType.WALK);
+        npcMove("scalectrix", 13, 14, MoveType.WALK);
         camPos(14, 30, 2000, 0, 20, 2);
         delay(5);
         dialogue(new Dialogue()
@@ -122,7 +122,7 @@ public class WolfWhistleWellCutscene extends Cutscene {
         playerAnim(new Animation(7660));
         npcSpotAnim("scalectrix", new SpotAnim(1300));
         npcAnim("scalectrix", new Animation(7660));
-        npcMove("giantwolpertinger", 13, 16, Entity.MoveType.TELE);
+        npcMove("giantwolpertinger", 13, 16, MoveType.TELEPORT);
         npcSpotAnim("giantwolpertinger", new SpotAnim(SUMMONING_SPAWN));
         npcAnim("giantwolpertinger", new Animation(WOLPERTINGER_SPAWN));
         delay(5);
@@ -158,7 +158,7 @@ public class WolfWhistleWellCutscene extends Cutscene {
             });
         });
         delay(2);
-        npcMove("t4", 8, 20, Entity.MoveType.WALK); // maybe run
+        npcMove("t4", 8, 20, MoveType.WALK); // maybe run
         {
             Animation cower = new Animation(TROLL_COWER);
             for (String key : TROLL_KEYS) {
@@ -210,8 +210,8 @@ public class WolfWhistleWellCutscene extends Cutscene {
         dialogue(new Dialogue()
                 .addPlayer(HeadE.HAPPY_TALKING, "Quick! Let's get Bowloftrix, before they regroup.")
             , true);
-        npcMove("wolfbones", 12, 21, Entity.MoveType.WALK);
-        npcMove("wolfmeat", 13, 21, Entity.MoveType.WALK);
+        npcMove("wolfbones", 12, 21, MoveType.WALK);
+        npcMove("wolfmeat", 13, 21, MoveType.WALK);
         dialogue(new Dialogue()
                 .addNPC(SCALECTRIX, HeadE.HAPPY_TALKING, "Yes, the wolpertinger won't last long.")
                 .addNPC(SCALECTRIX, HeadE.AMAZED_MILD, "In fact, there it goes...")
@@ -225,8 +225,8 @@ public class WolfWhistleWellCutscene extends Cutscene {
                 .addPlayer(HeadE.CALM_TALK, "Well let's get Bowloftrix and get out.")
                 .addNPC(SCALECTRIX, HeadE.CALM, "Oh dear...I hope he's all right.")
             , true);
-        playerMove(14, 19, Entity.MoveType.RUN);
-        npcMove("scalectrix", 13, 19, Entity.MoveType.RUN);
+        playerMove(14, 19, MoveType.RUN);
+        npcMove("scalectrix", 13, 19, MoveType.RUN);
         fadeInBG(0);
         delay(4);
         fadeOutBG(0);

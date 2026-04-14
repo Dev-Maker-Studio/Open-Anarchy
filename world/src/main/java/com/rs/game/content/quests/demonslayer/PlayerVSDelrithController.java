@@ -20,8 +20,8 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.content.skills.magic.Magic;
 import com.rs.game.map.instance.Instance;
-import com.rs.game.model.entity.Entity;
 import org.darkan.core.map.pathfinder.Direction;
+import org.darkan.core.model.MoveType;
 import com.rs.game.model.entity.player.InstancedController;
 import world.gregs.voidps.type.Tile;
 import com.rs.utils.music.Genre;
@@ -144,7 +144,7 @@ public class PlayerVSDelrithController extends InstancedController {
 					.addNPC(DENATH, HeadE.SCARED, "I've got to get out of here."), true);
             cs.npcFaceNPC("denath", null);
 			cs.npcWalk("denath", spawnX+13, spawnY-1);
-			cs.playerMove(endX, endY, Entity.MoveType.TELE);
+			cs.playerMove(endX, endY, MoveType.TELEPORT);
 			cs.delay(2);
             cs.playerFaceDir(Direction.SOUTHEAST);
             cs.delay(2);

@@ -1,5 +1,6 @@
 package org.darkan.core.net.prot.revision.rev727
 
+import org.darkan.core.model.MoveType
 import org.darkan.core.net.prot.update.*
 import world.gregs.voidps.buffer.write.BufferWriter
 import kotlin.math.abs
@@ -371,21 +372,25 @@ object Rev727UpdateProtocol : UpdateProtocol {
             stream.writeBits(1, if (needUpdate || walkUpdate) 1 else 0)
             if (walkUpdate) {
                 when (npc.movementType) {
-                    NpcMovementType.WALK -> {
+                    MoveType.WALK -> {
                         stream.writeBits(2, 1)
                         stream.writeBits(cfg.walkDirectionBits, npc.nextWalkDirection)
                     }
-                    NpcMovementType.HALF_WALK -> {
+                    MoveType.HALF_WALK -> {
                         stream.writeBits(2, 2)
                         stream.writeBits(1, 0)
                         stream.writeBits(cfg.walkDirectionBits, npc.nextWalkDirection)
                     }
-                    NpcMovementType.RUN -> {
+                    MoveType.RUN -> {
                         stream.writeBits(2, 2)
                         stream.writeBits(1, 1)
                         stream.writeBits(cfg.walkDirectionBits, npc.nextWalkDirection)
                         stream.writeBits(cfg.walkDirectionBits, npc.nextRunDirection ?: 0)
                     }
+                    // TELEPORT is filtered upstream via hasTeleported; NPCs that teleport
+                    // are removed from the local list and re-added with the 1-bit teleport flag,
+                    // so this branch should never execute in practice.
+                    MoveType.TELEPORT -> {}
                 }
                 stream.writeBits(1, if (needUpdate) 1 else 0)
             } else if (needUpdate) {
@@ -393,7 +398,7 @@ object Rev727UpdateProtocol : UpdateProtocol {
             }
 
             if (needUpdate) {
-                appendNpcMasks(maskOut, npc)
+                appendNpcMasks(maskOut, npc, added = false)
             }
 
             state.localIndexes[writeIndex++] = idx
@@ -416,7 +421,9 @@ object Rev727UpdateProtocol : UpdateProtocol {
             if (npc.finished || !within(snapshot.localTileHash30, npc, radius)) continue
 
             stream.writeBits(cfg.indexBits, npc.index)
-            val needUpdate = needsNpcUpdateBlock(npc)
+            // On add, we may also need to send persistent state masks (face entity, name,
+            // combat level) even if the NPC has no per-tick block changes.
+            val needUpdate = needsNpcUpdateBlock(npc) || hasNpcPersistentAddBlock(npc)
 
             val dx = npc.x - localX
             val dy = npc.y - localY
@@ -433,15 +440,15 @@ object Rev727UpdateProtocol : UpdateProtocol {
 
             state.localIndexes[state.localCount++] = npc.index
             if (needUpdate) {
-                appendNpcMasks(maskOut, npc)
+                appendNpcMasks(maskOut, npc, added = true)
             }
         }
     }
 
-    private fun appendNpcMasks(out: BufferWriter, npc: NpcUpdateNpc) {
+    private fun appendNpcMasks(out: BufferWriter, npc: NpcUpdateNpc, added: Boolean) {
         val block = BufferWriter(4096)
-        val ctx = NpcMaskCtx(npc = npc)
-        val present = buildNpcMaskPresence(npc)
+        val ctx = NpcMaskCtx(npc = npc, added = added)
+        val present = buildNpcMaskPresence(npc, added)
         npcMasks.encode(ctx, present, out, block)
         out.writeBytes(block.toArray())
     }
@@ -468,6 +475,19 @@ object Rev727UpdateProtocol : UpdateProtocol {
         if (c.hits != null) return true
         if (c.modelOverrides != null) return true
         for (s in c.spotAnims) if (s != null) return true
+        return false
+    }
+
+    /**
+     * Returns whether this NPC has any persistent state that should be sent only when
+     * the NPC is being newly added to a viewer's local list (face entity target, custom
+     * name, custom combat level).
+     */
+    private fun hasNpcPersistentAddBlock(npc: NpcUpdateNpc): Boolean {
+        val b = npc.blocks
+        if (b.common.persistentFaceEntity != null) return true
+        if (b.persistentName != null) return true
+        if (b.persistentCombatLevel != null) return true
         return false
     }
 }

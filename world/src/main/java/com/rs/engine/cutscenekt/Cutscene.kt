@@ -10,8 +10,8 @@ import com.rs.game.World.spawnObject
 import com.rs.game.map.instance.Instance
 import com.rs.game.model.WorldProjectile
 import com.rs.game.model.entity.Entity
-import com.rs.game.model.entity.Entity.MoveType
 import com.rs.game.model.entity.async.ConditionalWait
+import org.darkan.core.model.MoveType
 import com.rs.game.model.entity.async.TickWait
 import com.rs.game.model.entity.async.WaitCondition
 import com.rs.game.model.entity.npc.NPC
@@ -212,7 +212,7 @@ class Cutscene(val player: Player) : Continuation<Unit> {
     }
 
     fun entityMoveTo(entity: Entity, x: Int, y: Int, z: Int, moveType: MoveType) {
-        if (moveType == MoveType.TELE) {
+        if (moveType == MoveType.TELEPORT) {
             entity.tele(Tile.of(getX(x), getY(y), z))
             return
         }
@@ -229,7 +229,7 @@ class Cutscene(val player: Player) : Continuation<Unit> {
     }
 
     fun entityTeleTo(entity: Entity, x: Int, y: Int) {
-        entityMoveTo(entity, x, y, MoveType.TELE)
+        entityMoveTo(entity, x, y, MoveType.TELEPORT)
     }
 
     fun spotAnim(id: Int, x: Int, y: Int, z: Int = player.plane) {
