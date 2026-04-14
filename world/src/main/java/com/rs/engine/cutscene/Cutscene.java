@@ -22,7 +22,7 @@ import com.rs.engine.dialogue.Dialogue;
 import com.rs.game.World;
 import com.rs.game.map.instance.Instance;
 import com.rs.game.model.WorldProjectile;
-import com.rs.game.model.entity.Entity.MoveType;
+import org.darkan.core.model.MoveType;
 import com.rs.game.model.entity.npc.NPC;
 import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Player;

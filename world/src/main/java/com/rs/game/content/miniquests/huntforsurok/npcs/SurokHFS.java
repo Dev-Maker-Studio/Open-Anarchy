@@ -5,8 +5,8 @@ import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.miniquest.Miniquest;
 import com.rs.engine.quest.Quest;
 import com.rs.game.World;
-import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.player.managers.EmotesManager;
+import org.darkan.core.model.MoveType;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import kotlin.Pair;
@@ -33,7 +33,7 @@ public class SurokHFS {
                         cs.action(() -> e.getPlayer().setMiniquestStage(Miniquest.HUNT_FOR_SUROK, 1));
                         cs.dynamicRegion(e.getPlayer().getTile(), 408, 431, 5, 5, true);
                         cs.npcCreate("surok", 7002, 18, 18, 0);
-                        cs.playerMove(19, 16, Entity.MoveType.TELE);
+                        cs.playerMove(19, 16, MoveType.TELEPORT);
                         cs.npcFaceTile("surok", 19, 16);
                         cs.playerFaceTile(18, 18);
                         cs.camPos(19, 3, 8572);

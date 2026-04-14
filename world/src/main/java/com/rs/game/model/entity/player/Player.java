@@ -101,6 +101,7 @@ import com.rs.game.TileHelper;
 import com.rs.utils.KtExtensionsKt;
 import org.darkan.core.model.Item;
 import org.darkan.core.model.Animation;
+import org.darkan.core.model.MoveType;
 import org.darkan.core.model.SpotAnim;
 import org.darkan.core.model.Rights;
 import org.darkan.core.model.GroundItem;

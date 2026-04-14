@@ -61,7 +61,9 @@ internal val playerMasks: MaskRegistry<PlayerMaskCtx, PlayerMaskKey> =
 
         // 0x20 Face direction
         mask(PlayerMaskKey.FACE_DIRECTION, 0x20) { ctx, out ->
-                out.writeShortAdd(ctx.player.blocks.faceDirection!!)
+                val b = ctx.player.blocks
+                val angle = b.faceDirection ?: b.persistentFaceDirection!!
+                out.writeShortAdd(angle)
         }
 
         // 0x800000 Player configs clear+set
@@ -147,7 +149,9 @@ internal val playerMasks: MaskRegistry<PlayerMaskCtx, PlayerMaskKey> =
 
         // 0x2 Face entity
         mask(PlayerMaskKey.FACE_ENTITY, 0x2) { ctx, out ->
-                val face = ctx.player.blocks.common.faceEntity!!
+                // Prefer the explicit per-tick value, fall back to the persistent target on add.
+                val c = ctx.player.blocks.common
+                val face = c.faceEntity ?: c.persistentFaceEntity!!
                 val idx = if (face == -1) 65535 else face
                 out.writeShortAdd(idx)
         }
@@ -170,7 +174,9 @@ internal val playerMasks: MaskRegistry<PlayerMaskCtx, PlayerMaskKey> =
 
         // 0x4 Movement type
         mask(PlayerMaskKey.MOVE_TYPE, 0x4) { ctx, out ->
-                out.writeByteSubtract(ctx.player.blocks.movementTypeId!!)
+                val b = ctx.player.blocks
+                val id = b.movementTypeId ?: b.persistentMovementTypeId!!
+                out.writeByteSubtract(id)
         }
 
         // 0x200000 SpotAnim slot=3

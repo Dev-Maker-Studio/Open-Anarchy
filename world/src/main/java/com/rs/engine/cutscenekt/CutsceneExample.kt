@@ -2,7 +2,6 @@ package com.rs.engine.cutscenekt
 
 import com.rs.engine.command.Commands
 import com.rs.engine.dialogue.HeadE
-import com.rs.game.model.entity.Entity.MoveType
 import org.darkan.core.model.Rights
 import com.rs.plugin.annotations.ServerStartupEvent
 

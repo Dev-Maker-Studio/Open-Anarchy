@@ -10,6 +10,7 @@ class CommonUpdateBlocksBuilder {
     var tint: Tint? = null
     var forceMovement: ForceMovement? = null
     var faceEntity: Int? = null
+    var persistentFaceEntity: Int? = null
     var faceTile: FaceTile? = null
     var hits: HitsUpdate? = null
     var modelOverrides: ModelOverrides? = null
@@ -27,6 +28,7 @@ class CommonUpdateBlocksBuilder {
             spotAnims = spotAnims,
             forceMovement = forceMovement,
             faceEntity = faceEntity,
+            persistentFaceEntity = persistentFaceEntity,
             faceTile = faceTile,
             hits = hits,
             modelOverrides = modelOverrides,
@@ -39,7 +41,9 @@ class PlayerUpdateBlocksBuilder {
     var appearance: PlayerAppearance? = null
     var movementAnimations: MovementAnimations? = null
     var faceDirection: Int? = null
+    var persistentFaceDirection: Int? = null
     var movementTypeId: Int? = null
+    var persistentMovementTypeId: Int? = null
     var temporaryMoveTypeId: Int? = null
     var reduceAttackPriority: Boolean? = null
     var mapDot: Boolean? = null
@@ -59,7 +63,9 @@ class PlayerUpdateBlocksBuilder {
             appearance = appearance,
             movementAnimations = movementAnimations,
             faceDirection = faceDirection,
+            persistentFaceDirection = persistentFaceDirection,
             movementTypeId = movementTypeId,
+            persistentMovementTypeId = persistentMovementTypeId,
             temporaryMoveTypeId = temporaryMoveTypeId,
             reduceAttackPriority = reduceAttackPriority,
             mapDot = mapDot,
@@ -83,7 +89,9 @@ class NpcUpdateBlocksBuilder {
     var transformNpcId: Int? = null
     var updateStats: NpcStatsUpdate? = null
     var combatLevel: Int? = null
+    var persistentCombatLevel: Int? = null
     var name: String? = null
+    var persistentName: String? = null
     var say: String? = null
     var sequences: SequencesUpdate? = null
 
@@ -103,7 +111,9 @@ class NpcUpdateBlocksBuilder {
             transformNpcId = transformNpcId,
             updateStats = updateStats,
             combatLevel = combatLevel,
+            persistentCombatLevel = persistentCombatLevel,
             name = name,
+            persistentName = persistentName,
             say = say,
             sequences = sequences,
         )

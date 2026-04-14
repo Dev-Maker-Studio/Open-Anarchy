@@ -17,9 +17,9 @@
 package com.rs.engine.cutscene.actions;
 
 import com.rs.engine.cutscene.Cutscene;
-import com.rs.game.model.entity.Entity.MoveType;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
+import org.darkan.core.model.MoveType;
 import world.gregs.voidps.type.Tile;
 
 import java.util.Map;
@@ -47,7 +47,7 @@ public class MoveNPCAction extends CutsceneAction {
 	public void process(Player player, Map<String, Object> objects) {
 		NPC npc = (NPC) objects.get(getObjectKey());
 		Cutscene scene = (Cutscene) objects.get("cutscene");
-		if (movementType == MoveType.TELE) {
+		if (movementType == MoveType.TELEPORT) {
 			npc.tele(Tile.of(scene.getX(x), scene.getY(y), plane));
 			return;
 		}

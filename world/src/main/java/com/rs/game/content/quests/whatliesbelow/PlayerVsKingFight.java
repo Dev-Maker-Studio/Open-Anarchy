@@ -7,8 +7,8 @@ import com.rs.game.World;
 import com.rs.game.content.quests.whatliesbelow.npcs.SurokMagis;
 import com.rs.game.content.world.areas.varrock.npcs.Zaff;
 import com.rs.game.map.instance.Instance;
-import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
+import org.darkan.core.model.MoveType;
 import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.InstancedController;
 import com.rs.utils.WorldUtil;
@@ -185,7 +185,7 @@ public class PlayerVsKingFight extends InstancedController {
             cs.playerFaceEntity("zaff");
             cs.dialogue(new Dialogue().addNPC(Zaff.ID, HeadE.ANGRY, "You will not escape justice this time, Surok!"), true);
             cs.delay(2);
-            cs.playerMove(8, 14, Entity.MoveType.WALK);
+            cs.playerMove(8, 14, MoveType.WALK);
             cs.npcWalk("zaff", 10, 14);
             cs.delay(2);
             cs.camPos(player.getXInRegion(), player.getYInRegion() - 5, 3500, 0, 5);
