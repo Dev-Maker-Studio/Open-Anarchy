@@ -7,15 +7,18 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.io.Source
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logSevere
+import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
-import org.darkan.core.net.prot.ClientProt
-import org.darkan.core.net.prot.Codec
-import org.darkan.core.net.prot.ProtSize
-import org.darkan.core.net.prot.ServerProt
+import org.darkan.core.net.prot.*
 import world.gregs.voidps.buffer.readUByte
 import world.gregs.voidps.buffer.readUShort
 import world.gregs.voidps.buffer.writeByte
 import world.gregs.voidps.buffer.writeSmart
+import java.io.EOFException
+import java.io.IOException
+import java.net.SocketException
+import java.nio.channels.ClosedChannelException
+import java.util.concurrent.ConcurrentLinkedQueue
 
 open class Session(
     private val write: ByteWriteChannel,
@@ -27,11 +30,32 @@ open class Session(
     enum class State { CONNECTED, LOST_CONNECTION, DISCONNECTED }
 
     val readChannel = Channel<ClientProt>(capacity = EnvVars.packetQueueCapacity)
+    private val pendingPackets = ConcurrentLinkedQueue<ServerProt>()
 
     var disconnected: Boolean = false
     private var disconnect: (() -> Unit)? = null
     private var disconnecting: (() -> Unit)? = null
     private var state: State = State.CONNECTED
+
+    // --- Java interop ---
+
+    /** Legacy alias for [ip] with capital IP naming. */
+    @JvmName("getIP")
+    fun getIPAddress(): String = ip
+
+    /** Legacy alias for checking if session is closed. */
+    fun isClosed(): Boolean = disconnected
+
+    /** No-op for legacy code that tried to set decoder. */
+    @Suppress("UNUSED_PARAMETER")
+    fun setDecoder(decoder: Any?) { /* no-op in new architecture */ }
+
+    /** Legacy close method - marks session as disconnected. */
+    fun close() {
+        disconnected = true
+        state = State.DISCONNECTED
+        disconnect?.invoke()
+    }
 
     fun onDisconnected(block: () -> Unit) {
         disconnect = block
@@ -64,59 +88,100 @@ open class Session(
         }
     }
 
+    /**
+     * Queues a packet to be sent on the next [flush]. Safe to call from non-suspend contexts.
+     */
+    fun queuePacket(packet: ServerProt) {
+        if (disconnected) return
+        pendingPackets.add(packet)
+    }
+
     open suspend fun flush() {
         if (disconnected) return
+        var packet = pendingPackets.poll()
+        while (packet != null) {
+            send(packet)
+            packet = pendingPackets.poll()
+        }
         write.flush()
     }
 
-    suspend fun readPackets(input: ByteReadChannel) {
-        while (!disconnected) {
-            val cipher = isaacIn.nextInt()
-            val opcode = (input.readUByte() - cipher) and 0xff
-            val clientProt = codec.clientProtsByOpcode[opcode]
-            if (clientProt == null) {
-                logSevere("Missing ClientProt with opcode $opcode")
-                return
-            }
-            val size = when (clientProt.size) {
-                is ProtSize.Fixed -> clientProt.size.length
-                ProtSize.VarByte -> input.readUByte()
-                ProtSize.VarShort -> input.readUShort()
-            }
-            val packet = input.readPacket(size)
+    /**
+     * Blocking wrapper for [flush], safe to call from Java / non-suspend contexts
+     * such as the world thread's tick loop.
+     */
+    fun flushBlocking() {
+        if (disconnected) return
+        runBlocking { flush() }
+    }
 
-            val packetData = clientProt.decoder?.invoke(packet, opcode) ?: codec.createInstanceForOpcode<ClientProt>(opcode)
-            if (packetData == null) {
-                logSevere("Failed to create packet instance for opcode $opcode")
-                continue
+    /**
+     * Non-suspend poll for the next decoded packet.
+     * Returns null if channel is empty. Safe to call from Java.
+     */
+    fun pollPacket(): ClientProt? = readChannel.tryReceive().getOrNull()
+
+    suspend fun readPackets(input: ByteReadChannel) {
+        try {
+            while (!disconnected) {
+                val cipher = isaacIn.nextInt()
+                val opcode = (input.readUByte() - cipher) and 0xff
+                val clientProt = codec.clientProtsByOpcode[opcode]
+                if (clientProt == null) {
+                    logSevere("Missing ClientProt with opcode $opcode")
+                    return
+                }
+                val size = when (clientProt.size) {
+                    is ProtSize.Fixed -> clientProt.size.length
+                    ProtSize.VarByte -> input.readUByte()
+                    ProtSize.VarShort -> input.readUShort()
+                }
+                val packet = input.readPacket(size)
+
+                val packetData = try {
+                    clientProt.decoder?.invoke(packet, opcode) ?: codec.createInstanceForOpcode<ClientProt>(opcode)
+                } catch (e: Exception) {
+                    logSevere("Decoder exception for opcode $opcode (${clientProt.protClass.simpleName}, size=$size): ${e::class.simpleName}: ${e.message}")
+                    continue
+                }
+                if (packetData == null) {
+                    logSevere("Failed to create packet instance for opcode $opcode")
+                    continue
+                }
+                //logTrace("Decoded packet: ${packetData::class.simpleName} from opcode $opcode")
+                readChannel.send(packetData)
             }
-            readChannel.send(packetData)
+        } catch (e: Exception) {
+            if (isExpectedDisconnect(e)) {
+                logTrace("Session read ended: ${e::class.simpleName}: ${e.message}")
+            } else {
+                throw e
+            }
+        } finally {
+            if (!disconnected) {
+                disconnected = true
+                state = State.LOST_CONNECTION
+                disconnecting?.invoke()
+            }
         }
     }
 
     open suspend fun send(serverProt: ServerProt, noIsaac: Boolean = false) {
         if (disconnected) return
         try {
-            val encoder = codec.serverProts[serverProt::class] ?: return logWarn("Missing ServerProt encoder: ${serverProt::class}")
+            val encoder = codec.serverProts[serverProt::class]
+            if (encoder == null) {
+                logWarn("Missing ServerProt encoder: ${serverProt::class}")
+                return
+            }
+            if (serverProt is FriendStatus || serverProt is FriendlistLoaded || serverProt is UpdateIgnoreList) {
+                logWarn("Session.send SOCIAL: ${serverProt::class.simpleName} opcode=${encoder.opcode} ip=$ip")
+            }
 
             when (encoder.size) {
                 is ProtSize.Fixed -> {
-                    if (EnvVars.packetValidateSizes && encoder.encoder != null) {
-                        val dataChannel = ByteChannel()
-                        encoder.encoder.invoke(serverProt, dataChannel)
-                        val packetData = dataChannel.toByteReadPacket()
-                        val packetLength = packetData.remaining.toInt()
-                        val expectedLength = encoder.size.length
-                        if (packetLength != expectedLength) {
-                            logWarn("Fixed packet size mismatch for ${serverProt::class}: expected=$expectedLength actual=$packetLength opcode=${encoder.opcode}")
-                        }
-
-                        writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
-                        write.writePacket(packetData)
-                    } else {
-                        writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
-                        encoder.encoder?.invoke(serverProt, write)
-                    }
+                    writeOpcode(encoder.opcode, if (noIsaac) null else isaacOut)
+                    encoder.encoder?.invoke(serverProt, write)
                 }
                 ProtSize.VarByte, ProtSize.VarShort -> {
                     val dataChannel = ByteChannel()
@@ -157,10 +222,37 @@ open class Session(
             write.writeSmart(opcode)
     }
 
+    private suspend fun ByteChannel.toByteArray(): ByteArray {
+        flush()
+        val bytes = ByteArray(availableForRead)
+        readFully(bytes)
+        close()
+        return bytes
+    }
+
     private suspend fun ByteChannel.toByteReadPacket(): Source {
         flush()
         val packet = ByteReadPacket(ByteArray(availableForRead).also { readFully(it) })
         close()
         return packet
+    }
+
+    companion object {
+        /**
+         * Returns true if the exception represents an expected client disconnect
+         * (connection reset, EOF, closed channel) rather than a real error.
+         */
+        fun isExpectedDisconnect(e: Throwable): Boolean {
+            return e is ClosedByteChannelException
+                || e is EOFException
+                || e is SocketException
+                || e is ClosedChannelException
+                || (e is IOException && e.message?.let {
+                    it.contains("reset", ignoreCase = true)
+                    || it.contains("broken pipe", ignoreCase = true)
+                    || it.contains("closed", ignoreCase = true)
+                } == true)
+                || (e.cause != null && isExpectedDisconnect(e.cause!!))
+        }
     }
 }

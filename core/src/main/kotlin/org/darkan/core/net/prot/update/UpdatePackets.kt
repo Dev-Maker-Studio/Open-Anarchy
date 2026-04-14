@@ -1,21 +1,25 @@
 package org.darkan.core.net.prot.update
 
+import org.darkan.core.model.MoveType
 import org.darkan.core.update.NpcUpdateBlocks
 import org.darkan.core.update.PlayerUpdateBlocks
 import java.security.MessageDigest
 
 /**
- * Self-contained update packet models.
- *
- * These include the tracking state required for encoding the update stream (local/out lists, slot flags,
- * cached appearance hashes, etc). This removes the need for Session/Codec-level stateful encoders.
+ * Per-tick player update snapshot (semantic, created fresh each tick).
  */
-class PlayerUpdatePacket(
+class PlayerUpdateSnapshot(
     val localIndex: Int,
     val largeSceneView: Boolean,
     var localTileHash30: Int,
     val playersByIndex: Array<PlayerUpdatePlayer?>,
-) {
+)
+
+/**
+ * Player update tracking state (persists across ticks for a player session).
+ * Manages local/out player lists, slot flags, cached appearance hashes, etc.
+ */
+class PlayerUpdateTrackingState {
     val slotFlags: ByteArray = ByteArray(2048)
     val localPlayers: Array<PlayerUpdatePlayer?> = arrayOfNulls(2048)
     val localIndexes: IntArray = IntArray(2048)
@@ -50,11 +54,19 @@ data class PlayerUpdatePlayer(
     val blocks: PlayerUpdateBlocks,
 )
 
-class NpcUpdatePacket(
+/**
+ * Per-tick NPC update snapshot.
+ */
+class NpcUpdateSnapshot(
     val largeSceneView: Boolean,
     var localTileHash30: Int,
     val nearbyNpcs: List<NpcUpdateNpc>,
-) {
+)
+
+/**
+ * NPC update tracking state (persists across ticks).
+ */
+class NpcUpdateTrackingState {
     val localIndexes: IntArray = IntArray(1024)
     var localCount: Int = 0
 }
@@ -70,15 +82,7 @@ data class NpcUpdateNpc(
     val hasTeleported: Boolean,
     val nextWalkDirection: Int?,
     val nextRunDirection: Int?,
-    val movementType: NpcMovementType,
+    val movementType: MoveType,
     val faceAngle: Int,
     val blocks: NpcUpdateBlocks,
 )
-
-enum class NpcMovementType {
-    WALK,
-    HALF_WALK,
-    RUN,
-}
-
-

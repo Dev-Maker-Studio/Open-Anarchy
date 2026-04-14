@@ -12,13 +12,13 @@ class World(val metadata: WorldMetadata) {
     var playersOnline: Int = 0
         set(value) {
             if (offlineSince >= 0) {
-                if (playersOnline >= 0)
+                if (field >= 0)
                     offlineSince = -1
             } else {
-                if (playersOnline < 0)
-                    this.offlineSince = currentTimeMillis()
+                if (field < 0)
+                    offlineSince = currentTimeMillis()
             }
-            playersOnline = value
+            field = value
         }
 
     val timeOffline get() = if (offlineSince == -1L) 0 else currentTimeMillis() - offlineSince

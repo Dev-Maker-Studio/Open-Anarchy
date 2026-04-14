@@ -4,9 +4,11 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.requestvalidation.*
+import io.ktor.server.websocket.*
 import kotlinx.serialization.json.Json
 import org.darkan.core.net.web.installCoreValidators
 import org.darkan.core.net.web.installExceptions
+import kotlin.time.Duration.Companion.seconds
 
 fun Application.module() {
     install(ContentNegotiation) {
@@ -19,6 +21,13 @@ fun Application.module() {
             explicitNulls = false
             classDiscriminator = "type"
         })
+    }
+
+    install(WebSockets) {
+        pingPeriod = 15.seconds
+        timeout = 30.seconds
+        maxFrameSize = Long.MAX_VALUE
+        masking = false
     }
 
     installExceptions()

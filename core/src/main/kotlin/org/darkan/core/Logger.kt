@@ -11,12 +11,15 @@ object Logger {
         setupFormat()
     }
 
-    private fun setupFormat() {
+    @JvmStatic
+    fun setupFormat() {
         System.setProperty("java.util.logging.SimpleFormatter.format", "[%1\$tF %1\$tT %1\$tL] [%4$-7s] %5\$s %n")
+        DARKAN_ROOT_LOGGER.handlers.forEach { DARKAN_ROOT_LOGGER.removeHandler(it) }
         DARKAN_ROOT_LOGGER.addHandler(ConsoleHandler())
         DARKAN_ROOT_LOGGER.useParentHandlers = false
     }
 
+    @JvmStatic
     fun setLogLevel(level: Level) {
         DARKAN_ROOT_LOGGER.level = level
         DARKAN_ROOT_LOGGER.handlers.forEach { it.level = level }
@@ -81,5 +84,63 @@ object Logger {
     fun Any.logTrace(msg: Any) {
         val (className, methodName) = getCallerInfo()
         DARKAN_ROOT_LOGGER.log(Level.FINER, formatMessage(className, methodName, msg))
+    }
+
+    // --- Java-compatible @JvmStatic methods matching legacy Logger API ---
+
+    @JvmStatic
+    fun setLevel(level: Level) = setLogLevel(level)
+
+    @JvmStatic
+    fun setDebug(enabled: Boolean) {
+        if (enabled) setLogLevel(Level.FINE) else setLogLevel(Level.CONFIG)
+    }
+
+    @JvmStatic
+    fun handle(source: Class<*>, method: String, e: Throwable) {
+        DARKAN_ROOT_LOGGER.log(Level.SEVERE, formatMessage(source.simpleName, method, e.message ?: "Exception"), e)
+        if (EnvVars.debug) e.printStackTrace()
+    }
+
+    @JvmStatic
+    fun handle(source: Class<*>, method: String, message: String, e: Throwable) {
+        DARKAN_ROOT_LOGGER.log(Level.SEVERE, formatMessage(source.simpleName, method, message), e)
+        if (EnvVars.debug) e.printStackTrace()
+    }
+
+    @JvmStatic
+    fun handleNoRecord(source: Class<*>, method: String, message: String, e: Throwable) {
+        DARKAN_ROOT_LOGGER.log(Level.SEVERE, formatMessage(source.simpleName, method, message), e)
+        if (EnvVars.debug) e.printStackTrace()
+    }
+
+    @JvmStatic
+    fun error(source: Class<*>, method: String, msg: Any) {
+        DARKAN_ROOT_LOGGER.log(Level.SEVERE, formatMessage(source.simpleName, method, msg))
+    }
+
+    @JvmStatic
+    fun warn(source: Class<*>, method: String, msg: Any) {
+        DARKAN_ROOT_LOGGER.log(Level.WARNING, formatMessage(source.simpleName, method, msg))
+    }
+
+    @JvmStatic
+    fun info(source: Class<*>, method: String, msg: Any) {
+        DARKAN_ROOT_LOGGER.log(Level.CONFIG, formatMessage(source.simpleName, method, msg))
+    }
+
+    @JvmStatic
+    fun debug(source: Class<*>, method: String, msg: Any) {
+        DARKAN_ROOT_LOGGER.log(Level.FINE, formatMessage(source.simpleName, method, msg))
+    }
+
+    @JvmStatic
+    fun trace(source: Class<*>, method: String, msg: Any) {
+        DARKAN_ROOT_LOGGER.log(Level.FINER, formatMessage(source.simpleName, method, msg))
+    }
+
+    @JvmStatic
+    fun log(tag: String, message: Any) {
+        DARKAN_ROOT_LOGGER.log(Level.INFO, "[$tag] $message")
     }
 }

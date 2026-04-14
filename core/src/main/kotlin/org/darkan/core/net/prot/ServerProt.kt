@@ -1,5 +1,6 @@
 package org.darkan.core.net.prot
 
+import kotlinx.serialization.Serializable
 import org.darkan.core.clientwatch.ReflectionCheck
 import org.darkan.core.model.Account
 import org.darkan.core.model.ChatMessageType
@@ -214,14 +215,8 @@ data class UpdateInvFull(
     }
 }
 
-/**
- * NPC update (small scene view).
- *
- * The actual on-wire byte stream is revision-specific and is encoded via the revision [Codec]'s npcUpdate encoder.
- */
-data class NpcUpdate(
-    val packet: org.darkan.core.net.prot.update.NpcUpdatePacket,
-) : ServerProt
+/** NPC update (small scene view). Pre-encoded by the world-side snapshot factory + core protocol. */
+data class NpcUpdate(val data: ByteArray) : ServerProt
 
 data class UpdateZoneFullFollows(val chunkX: Int, val chunkY: Int, val plane: Int) : ServerProt
 
@@ -237,23 +232,11 @@ data class UpdateZonePartialFollows(val chunkX: Int, val chunkY: Int, val plane:
 
 data class UpdateInvStopTransmit(val containerId: Int, val negativeKey: Boolean) : ServerProt
 
-/**
- * Player update.
- *
- * The actual on-wire byte stream is revision-specific and is encoded via the revision [Codec]'s playerUpdate encoder.
- */
-data class PlayerUpdate(
-    val packet: org.darkan.core.net.prot.update.PlayerUpdatePacket,
-) : ServerProt
+/** Player update. Pre-encoded by the world-side snapshot factory + core protocol. */
+data class PlayerUpdate(val data: ByteArray) : ServerProt
 
-/**
- * NPC update (large scene view).
- *
- * Same structured payload as [NpcUpdate], but different opcode for some revisions (e.g. 727).
- */
-data class NpcUpdateLarge(
-    val packet: org.darkan.core.net.prot.update.NpcUpdatePacket,
-) : ServerProt
+/** NPC update (large scene view). Pre-encoded by the world-side snapshot factory + core protocol. */
+data class NpcUpdateLarge(val data: ByteArray) : ServerProt
 
 data class ClanChannelDelta(val main: Boolean, val data: ByteArray) : ServerProt {
     override fun equals(other: Any?): Boolean {
@@ -267,11 +250,48 @@ data class ClanChannelDelta(val main: Boolean, val data: ByteArray) : ServerProt
     override fun hashCode(): Int = 31 * main.hashCode() + data.contentHashCode()
 }
 
-data class ClanChannelFull(val main: Boolean, val data: ByteArray?) : ServerProt {
+@Serializable data class ClanChannelFull(
+    val main: Boolean,
+    val clanName: String? = null,
+    val updateNum: Long = 0,
+    val kickRank: Int = -1,
+    val talkRank: Int = -1,
+    val chatters: Array<ClanChannelChatter>? = null,
+) : ServerProt {
+    @Serializable data class ClanChannelChatter(
+        val displayName: String,
+        val rank: Int,
+        val worldId: Int,
+    )
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
         other as ClanChannelFull
+        if (main != other.main) return false
+        if (clanName != other.clanName) return false
+        if (updateNum != other.updateNum) return false
+        if (kickRank != other.kickRank) return false
+        if (talkRank != other.talkRank) return false
+        return chatters.contentEquals(other.chatters)
+    }
+
+    override fun hashCode(): Int {
+        var result = main.hashCode()
+        result = 31 * result + (clanName?.hashCode() ?: 0)
+        result = 31 * result + updateNum.hashCode()
+        result = 31 * result + kickRank
+        result = 31 * result + talkRank
+        result = 31 * result + (chatters?.contentHashCode() ?: 0)
+        return result
+    }
+}
+
+data class ClanSettingsFullRaw(val main: Boolean, val data: ByteArray?) : ServerProt {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as ClanSettingsFullRaw
         if (main != other.main) return false
         return data.contentEquals(other.data)
     }
@@ -291,16 +311,56 @@ data class ClanSettingsDelta(val main: Boolean, val data: ByteArray) : ServerPro
     override fun hashCode(): Int = 31 * main.hashCode() + data.contentHashCode()
 }
 
-data class ClanSettingsFull(val main: Boolean, val data: ByteArray?) : ServerProt {
+@Serializable data class ClanSettingsFull(
+    val main: Boolean,
+    val clanName: String? = null,
+    val updateCount: Int = 0,
+    val allowGuests: Boolean = false,
+    val talkRank: Int = -1,
+    val kickRank: Int = -1,
+    val members: Array<ClanSettingsMember>? = null,
+    val bannedUsers: Array<String>? = null,
+    val settings: Array<ClanVarSetting>? = null,
+) : ServerProt {
+    @Serializable data class ClanSettingsMember(
+        val displayName: String,
+        val rank: Int,
+        val flags: Int = 0,
+    )
+    @Serializable data class ClanVarSetting(
+        val key: Int,
+        val intValue: Int? = null,
+        val longValue: Long? = null,
+        val stringValue: String? = null,
+    )
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
         other as ClanSettingsFull
         if (main != other.main) return false
-        return data.contentEquals(other.data)
+        if (clanName != other.clanName) return false
+        if (updateCount != other.updateCount) return false
+        if (allowGuests != other.allowGuests) return false
+        if (talkRank != other.talkRank) return false
+        if (kickRank != other.kickRank) return false
+        if (!members.contentEquals(other.members)) return false
+        if (!bannedUsers.contentEquals(other.bannedUsers)) return false
+        return settings.contentEquals(other.settings)
     }
 
-    override fun hashCode(): Int = 31 * main.hashCode() + (data?.contentHashCode() ?: 0)
+    override fun hashCode(): Int {
+        var result = main.hashCode()
+        result = 31 * result + (clanName?.hashCode() ?: 0)
+        result = 31 * result + updateCount
+        result = 31 * result + allowGuests.hashCode()
+        result = 31 * result + talkRank
+        result = 31 * result + kickRank
+        result = 31 * result + (members?.contentHashCode() ?: 0)
+        result = 31 * result + (bannedUsers?.contentHashCode() ?: 0)
+        result = 31 * result + (settings?.contentHashCode() ?: 0)
+        return result
+    }
 }
 
 data class UpdateZonePartialEnclosed(val chunkX: Int, val chunkY: Int, val plane: Int, val data: ByteArray) : ServerProt {
@@ -336,8 +396,8 @@ data class UpdateGESlot(val slot: Int, val offer: Offer?) : ServerProt {
 
 @JvmInline value class UpdateUid192(val data: ByteArray) : ServerProt
 
-data class UpdateIgnoreList(val ignores: Array<IgnoreEntry>) : ServerProt {
-    data class IgnoreEntry(val username: String, val displayName: String)
+@Serializable data class UpdateIgnoreList(val ignores: Array<IgnoreEntry>) : ServerProt {
+    @Serializable data class IgnoreEntry(val username: String, val displayName: String)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -653,24 +713,24 @@ data class CamForceAngle(val angleX: Int, val angleY: Int) : ServerProt
 /**
  * Messaging protocols
  */
-data class MessagePrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: String) : ServerProt
-data class MessagePrivateEcho(val senderDisplayName: String, val message: String) : ServerProt
+@Serializable data class MessagePrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: String) : ServerProt
+@Serializable data class MessagePrivateEcho(val senderDisplayName: String, val message: String) : ServerProt
 
-data class MessageQuickChatPrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
-data class MessageQuickChatPrivateEcho(val senderDisplayName: String, val message: QuickChatMessage) : ServerProt
+@Serializable data class MessageQuickChatPrivate(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
+@Serializable data class MessageQuickChatPrivateEcho(val senderDisplayName: String, val message: QuickChatMessage) : ServerProt
 
-data class MessageFriendsChat(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val chatName: String, val message: String) : ServerProt
-data class MessageQuickChatFriendsChat(val chatName: String, val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
+@Serializable data class MessageFriendsChat(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val chatName: String, val message: String) : ServerProt
+@Serializable data class MessageQuickChatFriendsChat(val chatName: String, val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
 
-data class MessageClanChannel(val guest: Boolean, val crown: Int, val displayName: String, val message: String) : ServerProt
-data class MessageQuickChatClanChannel(val guest: Boolean, val crown: Int, val displayName: String, val message: QuickChatMessage) : ServerProt
+@Serializable data class MessageClanChannel(val guest: Boolean, val crown: Int, val displayName: String, val message: String) : ServerProt
+@Serializable data class MessageQuickChatClanChannel(val guest: Boolean, val crown: Int, val displayName: String, val message: QuickChatMessage) : ServerProt
 
 data class MessagePlayerGroup(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: String) : ServerProt
 data class MessageQuickChatPlayerGroup(val crown: Int, val displayName: String, val quickResponseName: String = displayName, val message: QuickChatMessage) : ServerProt
 
 data class MessagePublic(val pid: Int, val messageIcon: Int, val message: ChatMessage) : ServerProt
 
-data class GameMessage(val type: ChatMessageType, val message: String, val targetDisplayName: String? = null, val effectFlags: Int = 0) : ServerProt
+@Serializable data class GameMessage(val type: ChatMessageType, val message: String, val targetDisplayName: String? = null, val effectFlags: Int = 0) : ServerProt
 
 /**
  * Variable related protocols
@@ -696,8 +756,8 @@ data class VarclanSetByte(val id: Int, val value: Int) : ServerProt
 data class VarclanSetInt(val id: Int, val value: Int) : ServerProt
 data class VarclanSetString(val id: Int, val value: String) : ServerProt
 
-@JvmInline value class VarclanEnable(val dummy: Int = 0) : ServerProt
-@JvmInline value class VarclanDisable(val dummy: Int = 0) : ServerProt
+@Serializable data class VarclanEnable(val dummy: Int = 0) : ServerProt
+@Serializable data class VarclanDisable(val dummy: Int = 0) : ServerProt
 @JvmInline value class ClearVarps(val dummy: Int = 0) : ServerProt
 
 /**
@@ -709,8 +769,8 @@ data class PlayerOption(val option: String, val slot: Int, val top: Boolean, val
 
 @JvmInline value class RunEnergy(val energy: Int) : ServerProt
 
-data class FriendStatus(val updates: Array<FriendStatusUpdate>) : ServerProt {
-    data class FriendStatusUpdate(
+@Serializable data class FriendStatus(val updates: Array<FriendStatusUpdate>) : ServerProt {
+    @Serializable data class FriendStatusUpdate(
         val warnMessage: Boolean,
         val displayName: String,
         val previousDisplayName: String,
@@ -732,7 +792,7 @@ data class FriendStatus(val updates: Array<FriendStatusUpdate>) : ServerProt {
     override fun hashCode(): Int = updates.contentHashCode()
 }
 
-@JvmInline value class FriendlistLoaded(val dummy: Int = 0) : ServerProt
+@Serializable data class FriendlistLoaded(val dummy: Int = 0) : ServerProt
 
 data class AddIgnore(val username: String, val displayName: String, val temporary: Boolean = false, val editDisplayName: Boolean = false) : ServerProt
 
@@ -743,7 +803,7 @@ data class AddIgnore(val username: String, val displayName: String, val temporar
 /**
  * Friend and clan chat protocols
  */
-data class FriendsChatChannel(
+@Serializable data class FriendsChatChannel(
     val clear: Boolean = false,
     val ownerDisplayName: String? = null,
     val ownerUsername: String? = ownerDisplayName,
@@ -751,7 +811,7 @@ data class FriendsChatChannel(
     val minRankCanKick: Int = 0,
     val players: Array<FriendsChatPlayer>? = null,
 ) : ServerProt {
-    data class FriendsChatPlayer(
+    @Serializable data class FriendsChatPlayer(
         val displayName: String,
         val username: String = displayName,
         val worldId: Int,
@@ -810,7 +870,7 @@ data class RequestFps(val key: Int, val flags: Int) : ServerProt
 
 data class ChatFilterSettings(val tradeFilter: Int, val publicFilter: Int) : ServerProt
 
-@JvmInline value class ChatFilterSettingsPrivateChat(val privateFilter: Int) : ServerProt
+@Serializable data class ChatFilterSettingsPrivateChat(val privateFilter: Int) : ServerProt
 
 /**
  * Account related protocols
@@ -857,22 +917,9 @@ data class ReflectionRequest(val id: Int, val checks: Array<ReflectionCheck>) : 
     }
 }
 
-data class RunCs2Script(val signature: String, val trigger: Int, val args: Array<Any?>) : ServerProt {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-        other as RunCs2Script
-        if (signature != other.signature) return false
-        if (trigger != other.trigger) return false
-        return args.contentEquals(other.args)
-    }
-
-    override fun hashCode(): Int {
-        var result = signature.hashCode()
-        result = 31 * result + trigger
-        result = 31 * result + args.contentHashCode()
-        return result
-    }
+data class RunScript(val scriptId: Int, val params: Array<Any>) : ServerProt {
+    override fun equals(other: Any?) = this === other
+    override fun hashCode() = System.identityHashCode(this)
 }
 
 data class SetCursor(val cursorId: Int = -1, val uptext: String? = null) : ServerProt

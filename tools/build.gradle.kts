@@ -1,0 +1,51 @@
+plugins {
+    application
+    kotlin("plugin.serialization") version "2.3.0"
+}
+
+val lwjglVersion = "3.3.3"
+val lwjglNatives = Pair(
+    System.getProperty("os.name")!!,
+    System.getProperty("os.arch")!!
+).let { (name, arch) ->
+    when {
+        "Windows" in name -> "natives-windows"
+        "Mac" in name || "Darwin" in name -> if ("aarch64" in arch) "natives-macos-arm64" else "natives-macos"
+        else -> if ("aarch64" in arch || "arm" in arch) "natives-linux-arm64" else "natives-linux"
+    }
+}
+
+application {
+    mainClass.set("org.darkan.tools.MainKt")
+}
+
+tasks.named<JavaExec>("run") {
+    workingDir = rootProject.projectDir
+}
+
+dependencies {
+    implementation(project(":core"))
+
+    // LWJGL BOM
+    implementation(platform("org.lwjgl:lwjgl-bom:$lwjglVersion"))
+
+    // LWJGL modules
+    implementation("org.lwjgl:lwjgl")
+    implementation("org.lwjgl:lwjgl-glfw")
+    implementation("org.lwjgl:lwjgl-opengl")
+    implementation("org.lwjgl:lwjgl-stb")
+
+    // Native libraries
+    runtimeOnly("org.lwjgl:lwjgl::$lwjglNatives")
+    runtimeOnly("org.lwjgl:lwjgl-glfw::$lwjglNatives")
+    runtimeOnly("org.lwjgl:lwjgl-opengl::$lwjglNatives")
+    runtimeOnly("org.lwjgl:lwjgl-stb::$lwjglNatives")
+
+    // Math library
+    implementation("org.joml:joml:1.10.5")
+
+    // ImGui for debug UI
+    implementation("io.github.spair:imgui-java-binding:1.86.11")
+    implementation("io.github.spair:imgui-java-lwjgl3:1.86.11")
+    runtimeOnly("io.github.spair:imgui-java-natives-linux:1.86.11")
+}

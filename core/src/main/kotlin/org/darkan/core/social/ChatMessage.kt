@@ -1,5 +1,7 @@
 package org.darkan.core.social
 
+import kotlinx.serialization.Serializable
+
 interface ChatMessage {
     val effects: Int
     val message: String
@@ -10,6 +12,7 @@ data class PublicChatMessage(
     override val effects: Int = 0
 ) : ChatMessage
 
+@Serializable
 data class QuickChatMessage(
     override val message: String,
     val fileId: Int,

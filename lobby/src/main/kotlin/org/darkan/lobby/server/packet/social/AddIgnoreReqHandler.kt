@@ -1,0 +1,14 @@
+package org.darkan.lobby.server.packet.social
+
+import org.darkan.core.net.prot.AddIgnoreReq
+import org.darkan.core.net.prot.handler.PacketHandler
+import org.darkan.lobby.social.SocialGateway
+import org.darkan.lobby.web.model.LobbyPlayer
+
+class AddIgnoreReqHandler : PacketHandler<LobbyPlayer, AddIgnoreReq> {
+    override suspend fun handle(player: LobbyPlayer, packet: AddIgnoreReq) {
+        SocialGateway.handleClientPacket(player.account.username, packet)
+    }
+}
+
+

@@ -3,12 +3,21 @@ package world.gregs.voidps.cache.definition.decoder
 import world.gregs.voidps.cache.definition.data.MapDefinition
 
 /**
- * Decodes all objects in a map except bridges
+ * Decodes all objects in a map.
+ *
+ * Objects are loaded at their ORIGINAL plane as stored in the map data.
+ * The bridge tile flag (0x2 on plane 1) only affects collision plane calculation,
+ * NOT the object's stored plane. Rendering transformations like "linkBelow" that
+ * shift objects for display purposes happen separately after loading.
+ *
+ * Reference: darkan-bot SceneGraph.decodeLocMapClient - objects are always added
+ * at their original plane, with only the collision map reference adjusted for bridges.
  */
 abstract class MapObjectDecoder {
 
     /**
-     * Decodes object information and calls [add] for each using [settings] to skip bridge objects
+     * Decodes object information and calls [add] for each object.
+     * Objects are stored at their original plane from the map data.
      */
     fun decode(buffer: ByteArray, settings: ByteArray, regionTileX: Int, regionTileY: Int) {
         var position = 0
@@ -58,15 +67,10 @@ abstract class MapObjectDecoder {
                     else -> loc - 1
                 }
 
-                var level = tile shr 12
+                // Extract the original plane from the tile data - do NOT adjust for bridges here.
+                // Bridge adjustments only affect collision plane, not the object's stored plane.
+                val level = tile shr 12
 
-                // Decrease bridges
-                if (isBridge(settings, tile)) {
-                    if (--level == -1) {
-                        position++
-                        continue
-                    }
-                }
                 // Data
                 val data = buffer[position++].toInt()
                 val shape = data shr 2
@@ -74,20 +78,11 @@ abstract class MapObjectDecoder {
                 val localX = MapDefinition.localX(tile)
                 val localY = MapDefinition.localY(tile)
 
-                // Valid object
+                // Add object at its original plane
                 add(objectId, localX, localY, level, shape, rotation, regionTileX, regionTileY)
             }
         }
     }
 
     abstract fun add(objectId: Int, localX: Int, localY: Int, level: Int, shape: Int, rotation: Int, regionTileX: Int, regionTileY: Int)
-
-    companion object {
-        private const val BRIDGE_TILE = 0x2
-
-        private fun isBridge(settings: ByteArray, tile: Int): Boolean {
-            // Check level 1
-            return settings[0x1000 + (tile and 0xfff)].toInt() and BRIDGE_TILE == BRIDGE_TILE
-        }
-    }
 }

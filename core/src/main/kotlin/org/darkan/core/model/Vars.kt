@@ -2,6 +2,7 @@ package org.darkan.core.model
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlin.jvm.Transient as JvmTransient
 import org.darkan.core.net.Session
 import org.darkan.core.net.prot.ClearVarps
 import org.darkan.core.net.prot.setVarcPacket
@@ -24,10 +25,13 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
     }
 
     @Transient
+    @JvmTransient
     private var modified: MutableSet<Int> = HashSet()
     @Transient
+    @JvmTransient
     private lateinit var varpValues: IntArray
     @Transient
+    @JvmTransient
     private lateinit var session: Session
 
     fun setSession(session: Session): Vars {
@@ -38,6 +42,18 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
         return this
     }
 
+    /**
+     * Initialize vars without a session for offline/tool usage.
+     * This allows using getVar/setVar/getVarBit/setVarBit without network sync.
+     */
+    fun initWithoutSession(): Vars {
+        varpValues = IntArray(Cache.get().fileCount(Index.CONFIGS, Config.VARP)+1)
+        modified = HashSet()
+        vars.forEach { (varId, value) -> setVar(varId, value) }
+        return this
+    }
+
+    @JvmOverloads
     fun setVar(id: Int, value: Int, forceSend: Boolean = false, save: Boolean = false) {
         if (forceSend)
             modified.add(id)
@@ -51,6 +67,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     fun saveVar(id: Int, value: Int) = setVar(id, value, forceSend = false, save = true)
 
+    @JvmOverloads
     fun setVarBit(id: Int, value: Int, forceSend: Boolean = false, save: Boolean = false) {
         val defs = Cache.varbits[id]
         val bitLength = defs.endBit - defs.startBit
@@ -76,9 +93,10 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     fun bitFlagged(id: Int, bit: Int) = (varpValues[id] and (1 shl bit)) != 0
 
-    suspend fun syncVarsToClient() {
+    fun syncVarsToClient() {
         modified.forEach { id ->
-            session.send(setVarpPacket(id, varpValues[id]))
+            if (id < 0 || id >= varpValues.size) return@forEach
+            session.queuePacket(setVarpPacket(id, varpValues[id]))
         }
         modified.clear()
     }

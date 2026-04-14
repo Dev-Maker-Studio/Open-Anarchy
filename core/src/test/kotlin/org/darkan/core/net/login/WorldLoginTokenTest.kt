@@ -13,8 +13,6 @@ class WorldLoginTokenTest {
         val now = 1_000_000L
         val token = LoginToken.issue(
             username = "test_user",
-            displayName = "Test User",
-            rights = 2,
             nowMs = now,
             ttlMs = 60_000L,
             secret = secret,
@@ -23,8 +21,6 @@ class WorldLoginTokenTest {
         val verified = LoginToken.verify(token, nowMs = now + 1, secret = secret)
         assertNotNull(verified)
         assertTrue(verified.username == "test_user")
-        assertTrue(verified.displayName == "Test User")
-        assertTrue(verified.rights == 2)
         assertTrue(verified.expiresAtMs > now)
     }
 
@@ -34,14 +30,19 @@ class WorldLoginTokenTest {
         val now = 1_000_000L
         val token = LoginToken.issue(
             username = "test_user",
-            displayName = "Test User",
-            rights = 2,
             nowMs = now,
             ttlMs = 60_000L,
             secret = secret,
         )
 
-        val tampered = token.replace("test_user", "evil_user")
+        // Flip a character in the payload portion to simulate tampering
+        val dotIndex = token.indexOf('.')
+        val payload = token.substring(0, dotIndex)
+        val signature = token.substring(dotIndex)
+        val flipped = payload.mapIndexed { i, c ->
+            if (i == payload.lastIndex) (if (c == 'A') 'B' else 'A') else c
+        }.joinToString("")
+        val tampered = flipped + signature
         val verified = LoginToken.verify(tampered, nowMs = now + 1, secret = secret)
         assertNull(verified)
     }
@@ -52,8 +53,6 @@ class WorldLoginTokenTest {
         val now = 1_000_000L
         val token = LoginToken.issue(
             username = "test_user",
-            displayName = "Test User",
-            rights = 2,
             nowMs = now,
             ttlMs = 10L,
             secret = secret,
@@ -63,5 +62,3 @@ class WorldLoginTokenTest {
         assertNull(verified)
     }
 }
-
-

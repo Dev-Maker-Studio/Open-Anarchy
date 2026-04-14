@@ -22,7 +22,9 @@ class Huffman {
         val freq = IntArray(33)
         var key = 0
         // For each non-zero frequency
-        for ((index, size) in huffman.map { it.toInt() }.filter { it != 0 }.toIntArray().withIndex()) {
+        for (index in huffman.indices) {
+            val size = huffman[index].toInt()
+            if (size == 0) continue
             // Calculate maximum frequency
             val maximumFreq = 1 shl 32 - size
             // zero or the previous minimum
@@ -115,7 +117,7 @@ class Huffman {
 
                     val char = decryptedKeys[keyIndex]
                     if (char >= 0) {
-                        sb.append(char.toChar())
+                        sb.append(cp1252ToChar(char))
                         if (length <= ++charsDecoded) {
                             break@chars
                         }
@@ -135,7 +137,7 @@ class Huffman {
      * @param message The message to encode
      */
     fun compress(message: String): ByteArray {
-        val writer = BufferWriter(128)
+        val writer = BufferWriter(message.length * 2 + 2)
         try {
             // Format the message
             val messageData = formatMessage(message)
@@ -196,15 +198,60 @@ class Huffman {
      * @return message split by character
      */
     private fun formatMessage(message: String): ByteArray {
-        val array = ByteArray(message.length)
-        for ((index, c) in message.withIndex()) {
-            val char = c.code
-            array[index] = if (char <= 0 || (char in 128..159) || char > 255) {
-                63.toByte()
-            } else {
-                char.toByte()
+        val len = message.length
+        val bytes = ByteArray(len)
+        for (i in 0 until len) {
+            val ch = message[i]
+            if (ch.code > 0 && ch.code < 128 || ch.code >= 160 && ch.code <= 255) {
+                bytes[i] = ch.code.toByte()
+            } else when (ch.code) {
+                8364 -> bytes[i] = -128  // €
+                8218 -> bytes[i] = -126  // ‚
+                402 -> bytes[i] = -125   // ƒ
+                8222 -> bytes[i] = -124  // „
+                8230 -> bytes[i] = -123  // …
+                8224 -> bytes[i] = -122  // †
+                8225 -> bytes[i] = -121  // ‡
+                710 -> bytes[i] = -120   // ˆ
+                8240 -> bytes[i] = -119  // ‰
+                352 -> bytes[i] = -118   // Š
+                8249 -> bytes[i] = -117  // ‹
+                338 -> bytes[i] = -116   // Œ
+                381 -> bytes[i] = -114   // Ž
+                8216 -> bytes[i] = -111  // '
+                8217 -> bytes[i] = -110  // '
+                8220 -> bytes[i] = -109  // "
+                8221 -> bytes[i] = -108  // "
+                8226 -> bytes[i] = -107  // •
+                8211 -> bytes[i] = -106  // –
+                8212 -> bytes[i] = -105  // —
+                732 -> bytes[i] = -104   // ˜
+                8482 -> bytes[i] = -103  // ™
+                353 -> bytes[i] = -102   // š
+                8250 -> bytes[i] = -101  // ›
+                339 -> bytes[i] = -100   // œ
+                382 -> bytes[i] = -98    // ž
+                376 -> bytes[i] = -97    // Ÿ
+                else -> bytes[i] = 63    // ?
             }
         }
-        return array
+        return bytes
+    }
+
+    companion object {
+        private val UNICODE_TABLE = charArrayOf(
+            '\u20ac', '\u0000', '\u201a', '\u0192', '\u201e', '\u2026', '\u2020', '\u2021',
+            '\u02c6', '\u2030', '\u0160', '\u2039', '\u0152', '\u0000', '\u017d', '\u0000',
+            '\u0000', '\u2018', '\u2019', '\u201c', '\u201d', '\u2022', '\u2013', '\u2014',
+            '\u02dc', '\u2122', '\u0161', '\u203a', '\u0153', '\u0000', '\u017e', '\u0178'
+        )
+
+        fun cp1252ToChar(value: Int): Char {
+            if (value in 128..159) {
+                val mapped = UNICODE_TABLE[value - 128]
+                return if (mapped.code != 0) mapped else '?'
+            }
+            return value.toChar()
+        }
     }
 }

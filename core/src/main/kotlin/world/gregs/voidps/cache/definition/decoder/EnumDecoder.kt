@@ -21,7 +21,7 @@ class EnumDecoder : DefinitionDecoder<EnumDefinition>(ENUMS) {
             3 -> defaultString = buffer.readString()
             4 -> defaultInt = buffer.readInt()
             5, 6 -> {
-                length = buffer.readShort()
+                length = buffer.readUnsignedShort()
                 val hashtable = Int2ObjectOpenHashMap<Any>(length)
                 for (count in 0 until length) {
                     val id = buffer.readInt()
@@ -33,6 +33,22 @@ class EnumDecoder : DefinitionDecoder<EnumDefinition>(ENUMS) {
                 }
                 map = hashtable
             }
+            7, 8 -> {
+                // Indexed array variant: numValues is the array capacity, length is the entry count
+                val numValues = buffer.readUnsignedShort()
+                length = buffer.readUnsignedShort()
+                val hashtable = Int2ObjectOpenHashMap<Any>(length)
+                for (count in 0 until length) {
+                    val index = buffer.readUnsignedShort()
+                    hashtable[index] = if (opcode == 7) {
+                        buffer.readString()
+                    } else {
+                        buffer.readInt()
+                    }
+                }
+                map = hashtable
+            }
+            else -> error("Unhandled enum definition opcode: $opcode for def $id")
         }
     }
 }

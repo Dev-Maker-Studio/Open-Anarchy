@@ -31,6 +31,7 @@ enum class ObjectShape(val id: Int, val slot: Int) {
     companion object {
         private val map = entries.associateBy { it.id }
 
-        fun forId(type: Int): ObjectShape = map[type] ?: throw IllegalArgumentException("Unknown shape $type")
+        @JvmStatic
+        fun forId(type: Int): ObjectShape? = map[type]
     }
 }
