@@ -9,28 +9,26 @@ interface Transforms {
     var transforms: IntArray?
 
     fun readTransforms(buffer: Reader, isLast: Boolean) {
-        varbit = buffer.readShort()
+        varbit = buffer.readUnsignedShort()
         if (varbit == 65535) {
             varbit = -1
         }
-        varp = buffer.readShort()
+        varp = buffer.readUnsignedShort()
         if (varp == 65535) {
             varp = -1
         }
         var last = -1
         if (isLast) {
-            last = buffer.readUnsignedShort()
-            if (last == 65535) {
-                last = -1
-            }
+            // Legacy uses readBigSmart() for the "last" object ID
+            last = buffer.readBigSmart()
         }
+        // Legacy: newProtocol (>= 910) uses readSmart(), old uses readUnsignedByte()
+        // Revision 727 < 910, so use readUnsignedByte()
         val length = buffer.readUnsignedByte()
         transforms = IntArray(length + 2)
         for (count in 0..length) {
-            transforms!![count] = buffer.readUnsignedShort()
-            if (transforms!![count] == 65535) {
-                transforms!![count] = -1
-            }
+            // Legacy uses readBigSmart() for transform IDs
+            transforms!![count] = buffer.readBigSmart()
         }
         transforms!![length + 1] = last
     }

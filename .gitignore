@@ -65,5 +65,7 @@ fabric.properties
 
 serverConfig.json
 lobbyConfig.json
+worldConfig.json
+world/data/worldConfig.json
 mainlog.txt
 lobby-server.jar

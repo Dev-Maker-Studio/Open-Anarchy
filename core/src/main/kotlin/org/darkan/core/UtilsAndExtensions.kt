@@ -41,6 +41,51 @@ fun String.formatPlayerNameForDisplay(): String {
         }
 }
 
+/**
+ * Formats a chat message: capitalizes first letter, auto-capitalizes after sentence
+ * punctuation (.!?:;), preserves uppercase at start of words after spaces, and lowercases
+ * mid-word uppercase letters. Matches legacy Utils.fixChatMessage behavior.
+ */
+fun String.fixChatMessage(): String {
+    val sb = StringBuilder(length)
+    var space = false
+    var forcedCaps = true
+    for (ch in this) {
+        if (forcedCaps) {
+            if (ch == ' ' || ch == ':' || ch == ';') {
+                sb.append(ch)
+            } else {
+                sb.append(ch.uppercaseChar())
+                forcedCaps = false
+            }
+        } else {
+            when {
+                ch == '?' || ch == '!' || ch == '.' || ch == ':' || ch == ';' -> {
+                    forcedCaps = true
+                    sb.append(ch)
+                }
+                ch == ' ' -> {
+                    space = true
+                    sb.append(ch)
+                }
+                ch.isUpperCase() -> {
+                    if (space) {
+                        sb.append(ch)
+                        space = false
+                    } else {
+                        sb.append(ch.lowercaseChar())
+                    }
+                }
+                else -> {
+                    sb.append(ch)
+                    space = false
+                }
+            }
+        }
+    }
+    return sb.toString()
+}
+
 fun generateRandomString(length: Int = 50): String {
     val charPool = ('a'..'z') + ('A'..'Z') + ('0'..'9')
     return (1..length)

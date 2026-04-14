@@ -11,16 +11,22 @@ package org.darkan.core.update
 /**
  * A single spot animation (gfx) update.
  *
- * @param slot Revision-defined logical slot (commonly 0..3). The revision encoder maps slot->mask + write order.
+ * The slot is determined by the array index in [CommonUpdateBlocks.spotAnims] (0..3),
+ * and does not need to be stored here. The revision encoder repacks these semantic
+ * fields into the wire format.
+ *
  * @param id SpotAnim id, or -1 to clear.
- * @param settingsHash Packed settings (commonly delay/height/etc) as used by the update protocol.
- * @param settings2Hash Packed rotation/slot/bool bits as used by the update protocol.
+ * @param height Vertical offset in client units (0 = ground level).
+ * @param speed Animation delay in client cycles before playing.
+ * @param rotation Rotation value (0..7).
+ * @param adjustReplayMode Whether to adjust replay mode on the client.
  */
 data class SpotAnim(
-    val slot: Int,
     val id: Int,
-    val settingsHash: Int,
-    val settings2Hash: Int,
+    val height: Int = 0,
+    val speed: Int = 0,
+    val rotation: Int = 0,
+    val adjustReplayMode: Boolean = false,
 )
 
 /**
@@ -86,9 +92,26 @@ data class CommonUpdateBlocks(
     val spotAnims: Array<SpotAnim?> = arrayOfNulls(4),
     val forceMovement: ForceMovement? = null,
     /**
-     * Face entity index, or -1 to clear.
+     * Face entity index changed THIS TICK (legacy `nextFaceEntity != -2`).
+     *
+     * Set whenever the entity explicitly changed its face target this tick. May be
+     * a real client index, or -1 to indicate "stop facing". Null if no explicit
+     * change occurred this tick. The encoder normalises -1 to wire value 65535.
      */
     val faceEntity: Int? = null,
+    /**
+     * Persistent face target (legacy `lastFaceEntity`), or null if the entity is
+     * not currently facing anything.
+     *
+     * Unlike [faceEntity], this represents the entity's *ongoing* face state that
+     * survives across ticks. It is used by the protocol's "added" path: when an
+     * entity is newly added to a viewer's local list and already has a face target,
+     * the mask must be sent so the new viewer sees the correct facing immediately.
+     *
+     * Independent from [faceEntity]: both can be set on the same tick. If both are
+     * present, the encoder picks based on whether the entity is being added.
+     */
+    val persistentFaceEntity: Int? = null,
     val faceTile: FaceTile? = null,
     val hits: HitsUpdate? = null,
     val modelOverrides: ModelOverrides? = null,
@@ -99,12 +122,38 @@ data class PlayerUpdateBlocks(
     val appearance: PlayerAppearance? = null,
     val movementAnimations: MovementAnimations? = null,
     /**
-     * Player “face direction” (yaw/angle).
+     * Player face direction (yaw/angle), or null if no explicit face change this tick.
      *
      * On-wire in 727 this is `readUShortAdd`.
+     *
+     * The mask is fired when an explicit value is set this tick (e.g. fixedFaceTile,
+     * nextFaceTile while standing) OR when the player is being newly added to a
+     * viewer's local list — in the added case, the protocol falls back to
+     * [persistentFaceDirection] so the viewer sees the player facing the right way.
      */
     val faceDirection: Int? = null,
+    /**
+     * Persistent face direction (current `faceAngle`) used only on the "added" path.
+     *
+     * When a player is newly added to a viewer's local list, the legacy protocol
+     * always sends a face direction mask so the new viewer sees the correct yaw.
+     * The factory always populates this with the player's current angle; the
+     * presence builder only marks the mask present in the added path if
+     * [faceDirection] is null.
+     */
+    val persistentFaceDirection: Int? = null,
+    /**
+     * Movement type id (1=walk, 2=run) when it changed this tick (legacy
+     * `isUpdateMovementType`). Null if no change. The added path falls back to
+     * [persistentMovementTypeId].
+     */
     val movementTypeId: Int? = null,
+    /**
+     * Persistent movement type id used only on the "added" path. Always set to
+     * the player's current movement type so newly-visible players have the right
+     * walk/run state immediately.
+     */
+    val persistentMovementTypeId: Int? = null,
     val temporaryMoveTypeId: Int? = null,
     val reduceAttackPriority: Boolean? = null,
     val mapDot: Boolean? = null,
@@ -113,6 +162,8 @@ data class PlayerUpdateBlocks(
     val forceTalk: String? = null,
     val publicChat: PublicChat? = null,
     val sequences: SequencesUpdate? = null,
+    // Note: BAS (render animations) for players is encoded inside the appearance block,
+    // not as a standalone update mask. Use Appearance.setBAS() to change it.
 )
 
 data class NpcUpdateBlocks(
@@ -125,8 +176,27 @@ data class NpcUpdateBlocks(
     val varnsClear: KeyIntMapDelta? = null,
     val transformNpcId: Int? = null,
     val updateStats: NpcStatsUpdate? = null,
+    /**
+     * Combat level set this tick (legacy `hasChangedCombatLevel()`). Null if unchanged.
+     * The added path falls back to [persistentCombatLevel] when this is null.
+     */
     val combatLevel: Int? = null,
+    /**
+     * Persistent combat level for the "added" path — only sent when an NPC is
+     * newly added to a viewer and has a non-default combat level
+     * (`customCombatLevel >= 0`). Null otherwise.
+     */
+    val persistentCombatLevel: Int? = null,
+    /**
+     * Custom name set this tick (legacy `hasChangedName()`). Null if unchanged.
+     * The added path falls back to [persistentName] when this is null.
+     */
     val name: String? = null,
+    /**
+     * Persistent custom name for the "added" path — only set when an NPC has a
+     * non-default custom name. Null otherwise.
+     */
+    val persistentName: String? = null,
     val say: String? = null,
     val sequences: SequencesUpdate? = null,
 )

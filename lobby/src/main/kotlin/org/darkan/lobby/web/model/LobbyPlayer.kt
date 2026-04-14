@@ -13,13 +13,12 @@ import org.darkan.core.net.prot.Ping
 import org.darkan.core.net.prot.WorldListPacket
 import org.darkan.core.net.prot.handler.PacketHandlers
 import org.darkan.lobby.Lobby
+import org.darkan.lobby.social.SocialGateway
 
 class LobbyPlayer(val session: Session, val account: Account) {
     val vars = Vars().setSession(session)
     val worldLoginToken: String = LoginToken.issue(
         username = account.username,
-        displayName = account.displayName,
-        rights = account.rights.crown,
         nowMs = System.currentTimeMillis(),
         ttlMs = 5 * 60 * 1000L,
         secret = EnvVars.worldLoginTokenSecret,
@@ -39,8 +38,15 @@ class LobbyPlayer(val session: Session, val account: Account) {
             vars.setVarc(1919, 1) // set email to validated
             vars.setVarBit(11162, 1)
             vars.syncVarsToClient()
+
+            SocialGateway.registerLobbyPlayerSession(account, session)
+            session.flush()
             session.readPackets(read)
         } finally {
+            try {
+                SocialGateway.unregisterLobbyPlayerSession(account.username)
+            } catch (_: Throwable) {
+            }
             session.exit()
             session.disconnect()
         }

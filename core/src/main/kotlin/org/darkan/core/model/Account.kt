@@ -51,14 +51,14 @@ class Account {
         this.passwordHash = ""
     }
 
-    fun isMuted() = System.currentTimeMillis() < muted
+    fun checkMuted() = System.currentTimeMillis() < muted
     fun muteSpecific(ms: Long) { muted = System.currentTimeMillis() + ms }
     fun muteDays(days: Int) = muteSpecific(days * (24 * 60 * 60 * 1000L))
     fun mutePerm() { muted = Long.MAX_VALUE }
     fun unmute() { muted = 0 }
     fun getUnmuteDate() = SimpleDateFormat("dd MMM yyyy HH:mm:ss:SSS Z").format(Date(muted))
 
-    fun isBanned() = System.currentTimeMillis() < banned
+    fun checkBanned() = System.currentTimeMillis() < banned
     fun banSpecific(ms: Long) { banned = System.currentTimeMillis() + ms }
     fun banDays(days: Int) = banSpecific(days * (24 * 60 * 60 * 1000L))
     fun banPerm() { banned = Long.MAX_VALUE }

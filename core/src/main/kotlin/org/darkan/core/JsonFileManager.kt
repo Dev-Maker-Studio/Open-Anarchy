@@ -176,4 +176,61 @@ object JsonFileManager {
     fun fileExists(filePath: String) = File(filePath).exists()
 
     fun deleteFile(filePath: String) = File(filePath).delete()
+
+    // --- Gson backward-compatibility for legacy Java callers ---
+
+    private var gsonInstance: com.google.gson.Gson? = null
+
+    private val gson: com.google.gson.Gson get() = gsonInstance ?: com.google.gson.GsonBuilder()
+        .setPrettyPrinting()
+        .disableHtmlEscaping()
+        .create().also { gsonInstance = it }
+
+    @JvmStatic
+    fun setGSON(gson: com.google.gson.Gson) {
+        gsonInstance = gson
+    }
+
+    @JvmStatic
+    fun getGSON(): com.google.gson.Gson = gson
+
+    @JvmStatic
+    fun <T> loadJsonFile(file: File, clazz: Class<T>): T? {
+        if (!file.exists()) return null
+        return try {
+            file.reader().use { reader ->
+                gson.fromJson(reader, clazz)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @JvmStatic
+    fun <T> loadJsonFile(file: File, type: java.lang.reflect.Type): T? {
+        if (!file.exists()) return null
+        return try {
+            file.reader().use { reader ->
+                @Suppress("UNCHECKED_CAST")
+                gson.fromJson(reader, type) as? T
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @JvmStatic
+    fun saveJsonFile(data: Any, file: File) {
+        file.parentFile?.mkdirs()
+        file.writer().use { writer ->
+            gson.toJson(data, writer)
+        }
+    }
+
+    @JvmStatic
+    fun toJson(data: Any): String = gson.toJson(data)
+
+    @JvmStatic
+    @Throws(java.io.IOException::class)
+    fun <T> fromJSONString(jsonStr: String, clazz: Class<T>): T = gson.fromJson(jsonStr, clazz)
 }

@@ -1,0 +1,16 @@
+{
+  "counters": {
+    "attribs": {
+      "OpenguinHAS_LastReset": "2026-04-08T00:00:00Z",
+      "OpenguinHAS_Penguins": "[{\"npcId\":8110,\"name\":\"TOADSTOOL_1\",\"location\":{\"id\":52612180},\"points\":1,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_10\",\"location\":{\"id\":54889709},\"points\":1,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_4\",\"location\":{\"id\":46713844},\"points\":1,\"spotters\":[]},{\"npcId\":8107,\"name\":\"CACTUS_3\",\"location\":{\"id\":53250958},\"points\":1,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_13\",\"location\":{\"id\":39308579},\"points\":1,\"spotters\":[]},{\"npcId\":8109,\"name\":\"ROCK_16\",\"location\":{\"id\":36572358},\"points\":2,\"spotters\":[]},{\"npcId\":8104,\"name\":\"BARREL_6\",\"location\":{\"id\":59870627},\"points\":2,\"spotters\":[]},{\"npcId\":8109,\"name\":\"ROCK_20\",\"location\":{\"id\":49123061},\"points\":2,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_20\",\"location\":{\"id\":56888640},\"points\":2,\"spotters\":[]},{\"npcId\":8104,\"name\":\"BARREL_4\",\"location\":{\"id\":45075084},\"points\":2,\"spotters\":[]}]",
+      "OpenguinHAS_PolarBear": "{\"location\":\"MUSA_POINT\",\"points\":1,\"previousLocations\":[\"ARDOUGNE\",\"RIMMINGTON\",\"RELLEKKA\",\"MUSA_POINT\"],\"spotters\":[]}",
+      "OshootingStarDiscoveries": {
+        "2959926000": "Not discovered yet...",
+        "2959662002": "Not discovered yet...",
+        "2959650001": "Not discovered yet...",
+        "2959638000": "Not discovered yet...",
+        "2959626000": "Not discovered yet..."
+      }
+    }
+  }
+}

@@ -2,11 +2,11 @@ package world.gregs.voidps.cache.definition.encoder
 
 import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.DefinitionEncoder
-import world.gregs.voidps.cache.definition.data.NPCDefinitionFull
+import world.gregs.voidps.cache.definition.data.NPCDefinition
 
-class NPCEncoder : DefinitionEncoder<NPCDefinitionFull> {
+class NPCEncoder : DefinitionEncoder<NPCDefinition> {
 
-    override fun Writer.encode(definition: NPCDefinitionFull, members: NPCDefinitionFull) {
+    override fun Writer.encode(definition: NPCDefinition, members: NPCDefinition) {
         if (definition.id == -1) {
             return
         }

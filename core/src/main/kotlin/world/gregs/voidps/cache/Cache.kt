@@ -1,9 +1,27 @@
 package world.gregs.voidps.cache
 
 import org.darkan.core.EnvVars
+import world.gregs.voidps.cache.definition.data.AnimationDefinition
+import world.gregs.voidps.cache.definition.data.BASDefinition
+import world.gregs.voidps.cache.definition.data.EnumDefinition
+import world.gregs.voidps.cache.definition.data.FontDefinition
+import world.gregs.voidps.cache.definition.data.InterfaceDefinition
+import world.gregs.voidps.cache.definition.data.GraphicDefinition
+import world.gregs.voidps.cache.definition.data.ItemDefinition
+import world.gregs.voidps.cache.definition.data.NPCDefinition
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import world.gregs.voidps.cache.definition.data.StructDefinition
 import world.gregs.voidps.cache.definition.data.VarBitDefinition
+import world.gregs.voidps.cache.definition.decoder.AnimationDecoder
+import world.gregs.voidps.cache.definition.decoder.BASDecoder
+import world.gregs.voidps.cache.definition.decoder.EnumDecoder
+import world.gregs.voidps.cache.definition.decoder.FontDecoder
+import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
+import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
+import world.gregs.voidps.cache.definition.decoder.ItemDecoder
+import world.gregs.voidps.cache.definition.decoder.NPCDecoder
 import world.gregs.voidps.cache.definition.decoder.ObjectDecoder
+import world.gregs.voidps.cache.definition.decoder.StructDecoder
 import world.gregs.voidps.cache.definition.decoder.VarBitDecoder
 import world.gregs.voidps.cache.secure.Huffman
 
@@ -56,16 +74,60 @@ interface Cache {
             Huffman().load(singleton.data(Index.HUFFMAN, 1)!!)
         }
 
-        val varbits: Array<VarBitDefinition> by lazy {
+        @JvmStatic val varbits: Array<VarBitDefinition> by lazy {
             VarBitDecoder().load(singleton)
         }
 
-        val objects: Array<ObjectDefinition> by lazy {
-            ObjectDecoder(EnvVars.members, false).load(singleton)
+        @JvmStatic val objects: Array<ObjectDefinition> by lazy {
+            ObjectDecoder(EnvVars.members).load(singleton)
         }
 
-        fun get() = singleton
+        @JvmStatic val items: Array<ItemDefinition> by lazy {
+            ItemDecoder().load(singleton)
+        }
 
-        val huffman: Huffman get() = _huffman
+        @JvmStatic val npcs: Array<NPCDefinition> by lazy {
+            NPCDecoder(EnvVars.members).load(singleton)
+        }
+
+        @JvmStatic val animations: Array<AnimationDefinition> by lazy {
+            AnimationDecoder().load(singleton)
+        }
+
+        @JvmStatic val enums: Array<EnumDefinition> by lazy {
+            EnumDecoder().load(singleton)
+        }
+
+        @JvmStatic val structs: Array<StructDefinition> by lazy {
+            StructDecoder().load(singleton)
+        }
+
+        @JvmStatic val graphics: Array<GraphicDefinition> by lazy {
+            GraphicDecoder().load(singleton)
+        }
+
+        @JvmStatic val bas: Array<BASDefinition> by lazy {
+            BASDecoder().load(singleton)
+        }
+
+        @JvmStatic val interfaces: Array<InterfaceDefinition> by lazy {
+            InterfaceDecoder().load(singleton)
+        }
+
+        @JvmStatic val fonts: Array<FontDefinition> by lazy {
+            FontDecoder().load(singleton)
+        }
+
+        @JvmStatic fun get() = singleton
+
+        /** Legacy init method. Triggers lazy initialization of the cache. */
+        @JvmStatic
+        fun init(cachePath: String) {
+            // The cachePath is already set via EnvVars.cachePath
+            // Just trigger lazy initialization
+            singleton
+        }
+
+        @JvmStatic val huffman: Huffman get() = _huffman
     }
 }

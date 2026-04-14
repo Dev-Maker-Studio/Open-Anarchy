@@ -15,11 +15,13 @@ class GraphicDecoder : DefinitionDecoder<GraphicDefinition>(SPOTANIMS) {
 
     override fun GraphicDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            1 -> modelId = buffer.readShort()
-            2 -> animationId = buffer.readShort()
-            4 -> sizeXY = buffer.readShort()
-            5 -> sizeZ = buffer.readShort()
-            6 -> rotation = buffer.readShort()
+            // Opcode 1: model ID (bigSmart for rev 727)
+            1 -> modelId = buffer.readBigSmart()
+            // Opcode 2: animation/sequence ID (bigSmart for rev 727)
+            2 -> animationId = buffer.readBigSmart()
+            4 -> sizeXY = buffer.readUnsignedShort()
+            5 -> sizeZ = buffer.readUnsignedShort()
+            6 -> rotation = buffer.readUnsignedShort()
             7 -> ambience = buffer.readUnsignedByte()
             8 -> contrast = buffer.readUnsignedByte()
             9 -> {
@@ -36,7 +38,7 @@ class GraphicDecoder : DefinitionDecoder<GraphicDefinition>(SPOTANIMS) {
             }
             15 -> {
                 aByte2381 = 3
-                anInt2385 = buffer.readShort()
+                anInt2385 = buffer.readUnsignedShort()
             }
             16 -> {
                 aByte2381 = 3
@@ -44,6 +46,7 @@ class GraphicDecoder : DefinitionDecoder<GraphicDefinition>(SPOTANIMS) {
             }
             40 -> readColours(buffer)
             41 -> readTextures(buffer)
+            else -> error("Unhandled graphic definition opcode: $opcode for def $id")
         }
     }
 }

@@ -1,0 +1,13 @@
+package org.darkan.world.server.packet
+
+import com.rs.game.model.entity.player.Player
+import org.darkan.core.net.prot.QuickChatPrivate
+import org.darkan.core.net.prot.handler.PacketHandler
+import org.darkan.world.server.WorldServer
+
+class QCPrivateHandler : PacketHandler<Player, QuickChatPrivate> {
+    override suspend fun handle(player: Player, packet: QuickChatPrivate) {
+        if (!player.hasStarted()) return
+        WorldServer.forwardToLobby(player.username, packet)
+    }
+}
