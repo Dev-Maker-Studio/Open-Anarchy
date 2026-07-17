@@ -2,6 +2,7 @@ package org.darkan.tools
 
 import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionLoader
+import org.darkan.tools.cache.NameLookup
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.texture.*
@@ -63,6 +64,9 @@ fun main(args: Array<String>) {
         "faces", "facegeom" -> {
             val modelId = args.getOrNull(1)?.toIntOrNull() ?: 68750
             runFaceGeometryDiagnostic(cache, modelId)
+        }
+        "lookup", "name", "names", "hash" -> {
+            runNameLookup(cache, args)
         }
         "help", "-h", "--help" -> {
             printHelp()
@@ -1020,6 +1024,233 @@ private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
     println("\n=== DIAGNOSTIC COMPLETE ===")
 }
 
+/**
+ * Look up cache archives and files by named hash (or by id), and compute named hashes.
+ *
+ * Sub-commands:
+ *   lookup hash <name>                       - print the named hash for <name>
+ *   lookup scan                              - report name-hash support per index
+ *   lookup <index> <archiveNameOrId>         - resolve an archive and list its files
+ *   lookup <index> <archiveNameOrId> <fileNameOrId> - resolve a file and report its size
+ *
+ * For the index/archive/file args, numeric values are treated as ids and non-numeric
+ * values are resolved via the named hash. Hashes are reported in decimal and hex.
+ */
+private fun runNameLookup(cache: Cache, args: Array<String>) {
+    // Sub-command: hash a name without touching the cache.
+    if (args.getOrNull(1)?.lowercase() == "hash") {
+        val name = args.getOrNull(2)
+        if (name == null) {
+            println("Usage: lookup hash <name>")
+            return
+        }
+        val hash = NameLookup.nameHash(name)
+        println("\n=== NAME HASH ===")
+        println("  Name: \"$name\"")
+        println("  Hash (dec): $hash")
+        println("  Hash (hex): 0x${Integer.toHexString(hash)}")
+        println("\n=== LOOKUP COMPLETE ===")
+        return
+    }
+
+    // Sub-command: scan every index for name-hash support.
+    val sub = args.getOrNull(1)?.lowercase()
+    if (sub == "scan" || sub == "indices") {
+        runNameScan(cache)
+        return
+    }
+
+    val index = args.getOrNull(1)?.toIntOrNull()
+    if (index == null) {
+        println("Usage:")
+        println("  lookup hash <name>")
+        println("  lookup <index> <archiveNameOrId> [fileNameOrId]")
+        return
+    }
+
+    val archiveArg = args.getOrNull(2)
+    if (archiveArg == null) {
+        println("Usage: lookup <index> <archiveNameOrId> [fileNameOrId]")
+        return
+    }
+    val fileArg = args.getOrNull(3)
+
+    if (fileArg == null) {
+        runArchiveLookup(cache, index, archiveArg)
+    } else {
+        runFileLookup(cache, index, archiveArg, fileArg)
+    }
+}
+
+/**
+ * Resolve an archive (by id or by name) in [index] and print its file ids.
+ */
+private fun runArchiveLookup(cache: Cache, index: Int, archiveArg: String) {
+    println("\n=== ARCHIVE LOOKUP ===")
+    println("  Index: $index")
+
+    val numericArchive = archiveArg.toIntOrNull()
+    val archiveId: Int
+    if (numericArchive != null) {
+        // Treated as an id. The named hash is not reversible from an id, so we can't
+        // report a name for it - just confirm whether data exists.
+        archiveId = numericArchive
+        println("  Archive (id): $archiveId")
+        val data = NameLookup.archive(cache, index, archiveId)
+        println("  Data exists: ${data != null}${data?.let { " (${it.size} bytes)" } ?: ""}")
+        println("  (Note: a name cannot be recovered from a numeric id - the named hash is one-way.)")
+    } else {
+        // Treated as a name - resolve via the named hash.
+        val hash = NameLookup.nameHash(archiveArg)
+        println("  Archive (name): \"$archiveArg\"")
+        println("  Name hash: $hash (0x${Integer.toHexString(hash)})")
+        archiveId = NameLookup.archiveId(cache, index, archiveArg)
+        if (archiveId == -1) {
+            println("  Resolved archive id: not found")
+            println("\n=== LOOKUP COMPLETE ===")
+            return
+        }
+        println("  Resolved archive id: $archiveId")
+    }
+
+    val files = cache.files(index, archiveId)
+    println("  File count: ${files.size}")
+    println("  File ids: ${files.toList()}")
+    println("\n=== LOOKUP COMPLETE ===")
+}
+
+/**
+ * Resolve an archive then a file (each by id or name) and print the resulting data size.
+ */
+private fun runFileLookup(cache: Cache, index: Int, archiveArg: String, fileArg: String) {
+    println("\n=== FILE LOOKUP ===")
+    println("  Index: $index")
+
+    // Resolve archive id (by id or name).
+    val numericArchive = archiveArg.toIntOrNull()
+    val archiveId: Int
+    if (numericArchive != null) {
+        archiveId = numericArchive
+        println("  Archive (id): $archiveId")
+    } else {
+        val archiveHash = NameLookup.nameHash(archiveArg)
+        println("  Archive (name): \"$archiveArg\"")
+        println("  Archive name hash: $archiveHash (0x${Integer.toHexString(archiveHash)})")
+        archiveId = NameLookup.archiveId(cache, index, archiveArg)
+        if (archiveId == -1) {
+            println("  Resolved archive id: not found")
+            println("\n=== LOOKUP COMPLETE ===")
+            return
+        }
+    }
+    println("  Resolved archive id: $archiveId")
+
+    // Resolve file id (by id or name).
+    val numericFile = fileArg.toIntOrNull()
+    val fileId: Int
+    if (numericFile != null) {
+        fileId = numericFile
+        println("  File (id): $fileId")
+    } else {
+        val fileHash = NameLookup.nameHash(fileArg)
+        println("  File (name): \"$fileArg\"")
+        println("  File name hash: $fileHash (0x${Integer.toHexString(fileHash)})")
+        fileId = NameLookup.fileId(cache, index, archiveId, fileArg)
+        if (fileId == -1) {
+            println("  Resolved file id: not found")
+            println("\n=== LOOKUP COMPLETE ===")
+            return
+        }
+    }
+    println("  Resolved file id: $fileId")
+
+    val data = NameLookup.file(cache, index, archiveId, fileId)
+    if (data == null) {
+        println("  Data: not found (null)")
+    } else {
+        println("  Data size: ${data.size} bytes")
+    }
+    println("\n=== LOOKUP COMPLETE ===")
+}
+
+/**
+ * Scan every cache index and print a table of its name-hash support, followed by
+ * summary lines listing which indices carry archive names and which carry file names.
+ */
+private fun runNameScan(cache: Cache) {
+    println("\n=== INDEX NAME-HASH SCAN ===\n")
+
+    val report = NameLookup.scanNames(cache)
+
+    // Aligned table. Columns: idx, name, nameFlag, archiveNames(count), fileNames(count).
+    println("  %-4s %-22s %-9s %-15s %-15s".format("idx", "name", "nameFlag", "archiveNames", "fileNames"))
+    println("  %-4s %-22s %-9s %-15s %-15s".format("---", "----", "--------", "------------", "---------"))
+    for (entry in report) {
+        val archiveCol = "${entry.hasArchiveNames} (${entry.archiveNameCount})"
+        val fileCol = "${entry.hasFileNames} (${entry.fileNameCount})"
+        println(
+            "  %-4d %-22s %-9s %-15s %-15s".format(
+                entry.index,
+                indexLabel(entry.index),
+                entry.hasNameFlag.toString(),
+                archiveCol,
+                fileCol
+            )
+        )
+    }
+
+    val archiveIndices = report.filter { it.hasArchiveNames }.map { it.index }
+    val fileIndices = report.filter { it.hasFileNames }.map { it.index }
+    println("\n  Indices with archive names: $archiveIndices")
+    println("  Indices with file names:    $fileIndices")
+    println("\n=== SCAN COMPLETE ===")
+}
+
+/**
+ * Human-readable label for a cache [index] id, derived from the [Index] constants.
+ * Falls back to "?" for ids that have no named constant.
+ */
+private fun indexLabel(index: Int): String = when (index) {
+    Index.ANIMATION_FRAMES -> "animation_frames"
+    Index.ANIMATION_SKELETONS -> "animation_skeletons"
+    Index.CONFIGS -> "configs"
+    Index.INTERFACES -> "interfaces"
+    Index.SOUND_EFFECTS -> "sound_effects"
+    Index.MAPS -> "maps"
+    Index.MUSIC -> "music"
+    Index.MODELS -> "models"
+    Index.SPRITES -> "sprites"
+    Index.TEXTURES -> "textures"
+    Index.HUFFMAN -> "huffman"
+    Index.MUSIC_EFFECTS -> "music_effects"
+    Index.CLIENT_SCRIPTS -> "client_scripts"
+    Index.FONT_METRICS -> "font_metrics"
+    Index.MIDI_INSTRUMENTS -> "midi_instruments"
+    Index.SOUND_EFFECTS_MIDI -> "sound_effects_midi"
+    Index.OBJECTS -> "objects"
+    Index.ENUMS -> "enums"
+    Index.NPCS -> "npcs"
+    Index.ITEMS -> "items"
+    Index.ANIMATIONS -> "animations"
+    Index.SPOTANIMS -> "spotanims"
+    Index.VAR_BIT -> "var_bit"
+    Index.WORLD_MAP -> "world_map"
+    Index.QUICK_CHAT_MESSAGES -> "quick_chat_messages"
+    Index.QUICK_CHAT_MENUS -> "quick_chat_menus"
+    Index.TEXTURE_DEFINITIONS -> "texture_definitions"
+    Index.PARTICLES -> "particles"
+    Index.DEFAULTS -> "defaults"
+    Index.BILLBOARDS -> "billboards"
+    Index.NATIVE_LIBRARIES -> "native_libraries"
+    Index.SHADERS -> "shaders"
+    Index.LOADING_SPRITES -> "loading_sprites"
+    Index.GAME_TIPS -> "game_tips"
+    Index.LOADING_SPRITES_RAW -> "loading_sprites_raw"
+    Index.CUTSCENES -> "cutscenes"
+    Index.VORBIS -> "vorbis"
+    else -> "?"
+}
+
 private fun printHelp() {
     println("""
         Darkan Tools - Game Asset Viewer
@@ -1035,6 +1266,17 @@ private fun printHelp() {
                         Shows untextured face positions, normals, and
                         nearby textured faces for coplanarity analysis
                         Default model: 68750 (signpost)
+          lookup     - Look up archives/files by named hash (or id), and
+                        compute named hashes. Sub-commands:
+                          lookup hash <name>
+                          lookup scan
+                          lookup <index> <archiveNameOrId>
+                          lookup <index> <archiveNameOrId> <fileNameOrId>
+                        Numeric args are ids; non-numeric args resolve via
+                        the named hash. Reports resolved ids, hashes, and
+                        data sizes. "not found" / null are handled gracefully.
+                        'scan' (alias 'indices') reports, per index, whether
+                        it carries archive/file name hashes.
 
         Controls (Model Viewer):
           WASD        - Move camera
@@ -1069,5 +1311,10 @@ private fun printHelp() {
           ./gradlew :tools:run --args="model 12345"
           ./gradlew :tools:run --args="map"
           ./gradlew :tools:run --args="interface"
+          ./gradlew :tools:run --args="lookup hash water"
+          ./gradlew :tools:run --args="lookup scan"
+          ./gradlew :tools:run --args="lookup 9 725"
+          ./gradlew :tools:run --args="lookup 7 mymodel"
+          ./gradlew :tools:run --args="lookup 12 myscript myfile"
     """.trimIndent())
 }
