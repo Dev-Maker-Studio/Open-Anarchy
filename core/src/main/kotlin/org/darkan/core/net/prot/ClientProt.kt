@@ -57,7 +57,7 @@ data class MoveMouseData(val frameCount: Int, val frameSteps: Int, val steps: Ar
 }
 
 data class KeyPress(val keyCode: Int, val time: Int) : ClientProt
-data class ClientCheat(val client: Boolean, val command: String) : ClientProt
+data class ClientCheat(val client: Boolean, val save: Boolean, val command: String) : ClientProt
 
 // Entity Interactions
 data class OpPlayer(val opNum: Int, val playerIndex: Int, val forceRun: Boolean) : ClientProt

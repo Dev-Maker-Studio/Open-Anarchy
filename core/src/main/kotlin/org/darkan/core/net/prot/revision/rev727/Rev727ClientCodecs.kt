@@ -131,7 +131,13 @@ internal fun Codec.registerRev727ClientProts() {
 
     clientProt(opcode = 28, size = ProtSize.VarShort) { KeyPress(keyCode = readByte().toInt(), time = readMedium()) }
 
-    clientProt(opcode = 85, size = ProtSize.VarByte) { ClientCheat(client = readBoolean(), command = readRSString()) }
+    clientProt(opcode = 85, size = ProtSize.VarByte) {
+        ClientCheat(
+            client = readBoolean(),
+            save = readBoolean(),
+            command = readRSString()
+        )
+    }
 
     // Entity interactions
     val playerOpOpcodes = intArrayOf(66, 6, 31, 89, 103, 1, 51, 94, 53, 70)
@@ -199,6 +205,8 @@ internal fun Codec.registerRev727ClientProts() {
     }
 
     // Interface interactions
+    // Client writes: writeIntLittle(interfaceHash), writeShort(itemId), writeShortAdd(slotId)
+    // See darkan-bot PacketEncoder.writeInterfaceComponentData
     val ifButtonOpcodes = intArrayOf(96, 27, 68, 9, 72, 19, 23, 21, 22, 81)
     clientProt(opcodes = ifButtonOpcodes, size = 8) { opcode ->
         val interfaceHash = readUIntLittle()
@@ -206,8 +214,8 @@ internal fun Codec.registerRev727ClientProts() {
             opNum = ifButtonOpcodes.indexOf(opcode) + 1,
             interfaceId = interfaceHash shr 16,
             componentId = interfaceHash and 0xFFFF,
-            slotId = readUShort().toInt(),
-            itemId = readShortAdd()
+            itemId = readShort().toInt(),
+            slotId = readShortAdd()
         )
     }
 
