@@ -148,7 +148,7 @@ open class Session(
                     logSevere("Failed to create packet instance for opcode $opcode")
                     continue
                 }
-                //logTrace("Decoded packet: ${packetData::class.simpleName} from opcode $opcode")
+                logTrace("Decoded packet: ${packetData::class.simpleName} from opcode $opcode (size=$size)")
                 readChannel.send(packetData)
             }
         } catch (e: Exception) {
