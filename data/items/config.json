@@ -7409,6 +7409,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -8285,6 +8289,11 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
+
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -8300,6 +8309,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13617,6 +13630,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13643,6 +13660,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13669,6 +13690,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13695,6 +13720,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13721,6 +13750,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13747,6 +13780,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13799,6 +13836,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13825,6 +13866,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13851,6 +13896,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13877,6 +13926,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13903,6 +13956,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13929,6 +13986,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -13955,6 +14016,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -14007,6 +14072,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -14033,6 +14102,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -14437,6 +14510,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -14463,6 +14540,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -14489,6 +14570,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -14515,6 +14600,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -14541,6 +14630,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -14567,6 +14660,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -14593,6 +14690,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -14619,6 +14720,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -14645,6 +14750,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -14671,6 +14780,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -14697,6 +14810,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -14723,6 +14840,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -14749,6 +14870,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -14775,6 +14900,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -14801,6 +14930,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -14827,6 +14960,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -14853,6 +14990,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -14879,6 +15020,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -14905,6 +15050,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -14931,6 +15080,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -14957,6 +15110,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -14983,6 +15140,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -15011,6 +15173,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -15037,6 +15204,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -15065,6 +15237,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -15091,6 +15268,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -15119,6 +15301,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -15146,6 +15333,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -15172,6 +15364,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -15198,6 +15394,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -15224,6 +15424,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -15250,6 +15454,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -15276,6 +15484,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -15302,6 +15514,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -15328,6 +15544,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -15353,6 +15573,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -15378,6 +15601,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -15403,6 +15629,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -15428,6 +15657,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -15453,6 +15685,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -15478,6 +15713,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -15503,6 +15741,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -15529,6 +15770,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -15555,6 +15800,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -15581,6 +15830,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -15607,6 +15860,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -15633,6 +15890,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -15659,6 +15920,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -15685,6 +15950,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -15710,6 +15979,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -15735,6 +16007,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -15760,6 +16035,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -15785,6 +16063,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -15810,6 +16091,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -15835,6 +16119,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -15860,6 +16147,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -15885,6 +16175,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -16416,6 +16709,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -16442,6 +16739,10 @@
       "2": 400,
       "0": 401
     },
+      "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -16468,6 +16769,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -16494,6 +16799,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -16520,6 +16829,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -16546,6 +16859,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -16572,6 +16889,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -16598,6 +16919,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -27250,6 +27575,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -33316,6 +33645,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -45709,6 +46042,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -50555,6 +50892,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -50614,6 +50955,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -51502,6 +51847,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -56842,6 +57191,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -56856,6 +57208,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -63741,6 +64096,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -63767,6 +64126,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -63793,6 +64156,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -63819,6 +64186,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -63845,6 +64216,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -63871,6 +64246,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -63923,6 +64302,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -63949,6 +64332,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -63975,6 +64362,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -64001,6 +64392,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -64027,6 +64422,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -64053,6 +64452,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -64079,6 +64482,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -64105,6 +64512,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -64157,6 +64568,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -64183,6 +64598,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -73344,6 +73763,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -74042,6 +74464,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -74068,6 +74493,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -74094,6 +74523,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -74120,6 +74553,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -74146,6 +74583,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -74198,6 +74639,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -74249,6 +74694,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -74275,6 +74724,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -74302,6 +74755,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -74328,6 +74786,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -74353,6 +74815,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -75746,6 +76211,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -75820,6 +76289,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -75835,6 +76308,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -80387,6 +80864,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -87058,6 +87540,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -87590,6 +88076,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -87604,6 +88094,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -87619,6 +88112,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -98995,6 +99492,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -99340,6 +99841,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -99366,6 +99871,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -99392,6 +99901,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -99418,6 +99931,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -108554,6 +109071,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -117280,6 +117801,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -121321,6 +121846,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -123571,6 +124100,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -131118,6 +131651,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -148385,6 +148923,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -149936,6 +150478,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -150315,6 +150862,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -150423,6 +150975,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -150438,6 +150994,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -150452,6 +151012,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -150466,6 +151029,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -150480,6 +151046,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -150495,6 +151064,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -150510,6 +151083,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -150525,6 +151102,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -150540,6 +151121,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -150570,6 +151155,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -150585,6 +151174,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -153833,6 +154426,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -153848,6 +154445,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -153863,6 +154464,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -153878,6 +154483,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -154021,6 +154630,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -154036,6 +154649,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -154067,6 +154685,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -155401,6 +156023,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -155427,6 +156053,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -155441,6 +156071,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -155466,6 +156099,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -155689,6 +156325,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -155729,6 +156369,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -155754,6 +156397,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -156283,6 +156929,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -156308,6 +156957,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -156364,6 +157016,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -156390,6 +157046,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -156405,6 +157065,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -156431,6 +157095,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -156446,6 +157114,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -156472,6 +157144,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -157696,6 +158372,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -157722,6 +158402,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -157737,6 +158421,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -157821,6 +158509,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -157836,6 +158528,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -158003,6 +158699,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -158029,6 +158729,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -158055,6 +158759,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -158081,6 +158789,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -158107,6 +158819,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -158133,6 +158849,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -158159,6 +158879,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -158185,6 +158909,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -158211,6 +158939,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -158237,6 +158969,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -159873,6 +160609,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -159899,6 +160639,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -159925,6 +160669,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -159951,6 +160699,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -159977,6 +160729,10 @@
       "2": 15072,
       "0": 15071
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 15074,
     "defendSound": -1,
     "attackRange": 0,
@@ -160003,6 +160759,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -160029,6 +160789,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -160055,6 +160819,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -160081,6 +160849,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -160107,6 +160879,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -160132,6 +160908,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -160157,6 +160936,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -160182,6 +160964,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -160207,6 +160992,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -160232,6 +161020,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -163746,6 +164537,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -164264,8 +165059,11 @@
     "equipSound": 2246,
     "attackDelay": 4,
     "attackAnims": {
-      "0": 400
+      "0": 401
     },
+    "attackSounds": {
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -164291,6 +165089,9 @@
     "attackAnims": {
       "0": 400
     },
+    "attackSounds": {
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -170665,6 +171466,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -170691,6 +171496,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -171102,6 +171911,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -174418,6 +175231,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176166,6 +176983,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176191,6 +177011,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176216,6 +177039,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176241,6 +177067,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176266,6 +177095,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176291,6 +177123,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176316,6 +177151,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176341,6 +177179,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176366,6 +177207,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176391,6 +177235,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -176416,6 +177263,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -177069,6 +177919,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177084,6 +177938,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177325,6 +178183,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177340,6 +178202,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177355,6 +178221,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177370,6 +178240,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177385,6 +178259,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177400,6 +178278,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177415,6 +178297,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177430,6 +178316,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177445,6 +178335,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177460,6 +178354,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177475,6 +178373,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177490,6 +178392,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177505,6 +178411,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177520,6 +178430,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177535,6 +178449,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177550,6 +178468,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177565,6 +178487,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177580,6 +178506,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177595,6 +178525,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177610,6 +178544,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177625,6 +178563,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177640,6 +178582,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177655,6 +178601,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177670,6 +178620,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177685,6 +178639,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177700,6 +178658,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177715,6 +178677,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177730,6 +178696,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177745,6 +178715,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177760,6 +178734,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177775,6 +178753,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177790,6 +178772,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177805,6 +178791,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177820,6 +178810,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177835,6 +178829,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177850,6 +178848,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177865,6 +178867,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177880,6 +178886,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177895,6 +178905,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177910,6 +178924,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177925,6 +178943,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177940,6 +178962,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177955,6 +178981,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -177970,6 +179000,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -179140,6 +180174,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179155,6 +180193,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179170,6 +180212,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179185,6 +180231,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179200,6 +180250,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179215,6 +180269,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179230,6 +180288,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179245,6 +180307,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179260,6 +180326,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179275,6 +180345,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179290,6 +180364,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -179547,6 +180625,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -179562,6 +180644,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -179577,6 +180663,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -179592,6 +180682,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -179607,6 +180701,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -179622,6 +180720,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -179637,6 +180739,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -179652,6 +180758,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -179682,6 +180792,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -179697,6 +180811,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -180646,6 +181764,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180660,6 +181781,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180674,6 +181798,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180688,6 +181815,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180702,6 +181832,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180716,6 +181849,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180730,6 +181866,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180744,6 +181883,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180758,6 +181900,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180772,6 +181917,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180786,6 +181934,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -180801,6 +181952,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -180818,6 +181974,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -180833,6 +181994,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -180850,6 +182016,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -180865,6 +182036,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -180882,6 +182058,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -180897,6 +182078,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -180914,6 +182100,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -180929,6 +182120,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -180946,6 +182142,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -180961,6 +182162,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -181021,6 +182227,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181036,6 +182246,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181051,6 +182265,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181066,6 +182284,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181081,6 +182303,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181096,6 +182322,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181111,6 +182341,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181126,6 +182360,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181141,6 +182379,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181156,6 +182398,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181171,6 +182417,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -181875,6 +183125,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -181889,6 +183142,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -181903,6 +183159,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -181917,6 +183176,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -181931,6 +183193,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -181945,6 +183210,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -181959,6 +183227,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -181973,6 +183244,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -181987,6 +183261,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -182001,6 +183278,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -182015,6 +183295,9 @@
     "attackAnims": {
       "0": 395
     },
+    "attackSounds": {
+    "0": 2498
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -183097,6 +184380,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183123,6 +184410,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183149,6 +184440,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183175,6 +184470,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183201,6 +184500,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183227,6 +184530,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183253,6 +184560,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183279,6 +184590,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183305,6 +184620,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183331,6 +184650,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183357,6 +184680,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183933,6 +185260,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183959,6 +185290,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -183985,6 +185320,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -184011,6 +185350,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -184037,6 +185380,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -184063,6 +185410,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -184089,6 +185440,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -184115,6 +185470,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -184141,6 +185500,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -184167,6 +185530,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -184193,6 +185560,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -184219,6 +185590,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -184245,6 +185620,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -184271,6 +185650,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -184297,6 +185680,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -184323,6 +185710,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -184349,6 +185740,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -184375,6 +185770,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -184401,6 +185800,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -184427,6 +185830,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -184453,6 +185860,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -188410,6 +189821,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188436,6 +189851,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188462,6 +189881,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188488,6 +189911,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188514,6 +189941,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188540,6 +189971,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188566,6 +190001,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188592,6 +190031,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188618,6 +190061,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188644,6 +190091,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188670,6 +190121,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188696,6 +190151,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188722,6 +190181,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188748,6 +190211,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188774,6 +190241,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188800,6 +190271,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188826,6 +190301,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188852,6 +190331,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188878,6 +190361,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188904,6 +190391,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188930,6 +190421,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188956,6 +190451,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -188982,6 +190481,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189008,6 +190511,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189034,6 +190541,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189060,6 +190571,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189086,6 +190601,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189112,6 +190631,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189138,6 +190661,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189164,6 +190691,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189190,6 +190721,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189216,6 +190751,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189242,6 +190781,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189268,6 +190811,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189294,6 +190841,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189320,6 +190871,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189346,6 +190901,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189372,6 +190931,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189398,6 +190961,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189424,6 +190991,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189450,6 +191021,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189476,6 +191051,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189502,6 +191081,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -189528,6 +191111,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -190105,6 +191692,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -190131,6 +191723,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -190159,6 +191756,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -190185,6 +191787,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -190213,6 +191820,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -190239,6 +191851,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -190267,6 +191884,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -190293,6 +191915,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -190321,6 +191948,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -190348,6 +191980,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -190374,6 +192011,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -191003,6 +192645,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -191029,6 +192675,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -191152,6 +192802,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -191728,6 +193383,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -191753,6 +193411,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -191778,6 +193439,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -191803,6 +193467,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -191828,6 +193495,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -191853,6 +193523,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -191878,6 +193551,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -191903,6 +193579,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -191928,6 +193607,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -191953,6 +193635,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -191978,6 +193663,9 @@
     "attackAnims": {
       "0": 401
     },
+    "attackSounds": {
+    "0": 2504
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -194798,6 +196486,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -194824,6 +196516,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -206674,6 +208370,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -206689,6 +208389,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -206887,6 +208591,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -206902,6 +208610,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -206918,6 +208630,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": 7050,
     "defendSound": -1,
     "attackRange": 0,
@@ -206933,6 +208650,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -210650,6 +212372,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230837,6 +232563,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230852,6 +232582,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230867,6 +232601,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230882,6 +232620,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230897,6 +232639,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230912,6 +232658,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230927,6 +232677,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230942,6 +232696,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230957,6 +232715,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230972,6 +232734,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -230987,6 +232753,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231002,6 +232772,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231017,6 +232791,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231032,6 +232810,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231047,6 +232829,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231062,6 +232848,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231077,6 +232867,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231092,6 +232886,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231107,6 +232905,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231122,6 +232924,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231137,6 +232943,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231152,6 +232962,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231167,6 +232981,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231182,6 +233000,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -231197,6 +233019,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -233662,6 +235488,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -233677,6 +235507,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -233692,6 +235526,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -233707,6 +235545,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -233722,6 +235564,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -233737,6 +235583,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -233752,6 +235602,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -234142,6 +235996,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -234278,6 +236137,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -234546,6 +236409,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -234721,6 +236588,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -234747,6 +236618,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -239831,6 +241707,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -240625,6 +242505,10 @@
       "2": 401,
       "0": 395
     },
+    "attackSounds": {
+    "2": 2497,
+    "0": 2498
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -240640,6 +242524,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -244440,6 +246328,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -244466,6 +246358,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -244481,6 +246377,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -244496,6 +246396,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -244511,6 +246415,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -244526,6 +246434,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -251136,6 +253048,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -251791,6 +253708,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -251821,6 +253742,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -251836,6 +253761,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 397,
     "defendSound": -1,
     "attackRange": 0,
@@ -258837,6 +260766,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": -1,
     "defendSound": -1,
@@ -266015,6 +267949,11 @@
       "3": 7049,
       "0": 7041
     },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
+    },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -266094,6 +268033,11 @@
       "2": 7048,
       "3": 7049,
       "0": 7041
+    },
+    "attackSounds": {
+      "2": 2504,
+      "3": 2502,
+      "0": 2503
     },
     "defendAnim": 7050,
     "defendSound": -1,
@@ -271516,6 +273460,10 @@
       "2": 390,
       "0": 400
     },
+    "attackSounds": {
+    "2": 2548,
+    "0": 2549
+  },
     "defendAnim": 378,
     "defendSound": -1,
     "attackRange": 0,
@@ -271531,6 +273479,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -272736,6 +274688,10 @@
       "2": 400,
       "0": 401
     },
+    "attackSounds": {
+    "2": 2509,
+    "0": 2508
+  },
     "defendAnim": 403,
     "defendSound": -1,
     "attackRange": 0,
@@ -275848,6 +277804,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -275863,6 +277823,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -276720,6 +278684,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -276735,6 +278703,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -279973,6 +281945,10 @@
       "2": 12310,
       "0": 12311
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": 388,
     "defendSound": -1,
     "attackRange": 0,
@@ -283720,6 +285696,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -283735,6 +285715,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -283750,6 +285734,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
@@ -283765,6 +285753,10 @@
       "2": 12311,
       "0": 12310
     },
+    "attackSounds": {
+    "2": 2549,
+    "0": 2548
+  },
     "defendAnim": -1,
     "defendSound": -1,
     "attackRange": 0,
