@@ -17,6 +17,13 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
     val fileCounts: Array<IntArray?> = arrayOfNulls(indexCount)
     val files: Array<Array<IntArray?>?> = arrayOfNulls(indexCount)
     private val hashes: MutableMap<Int, Int> = Int2IntOpenHashMap(32767)
+    // [index][archive] -> (fileNameHash -> fileId). File name hashes are only unique within an archive.
+    private val fileHashes: Array<Array<Int2IntOpenHashMap?>?> = arrayOfNulls(indexCount)
+    // Per-index name introspection. NAME_FLAG governs both archive and file name sections at the format
+    // level, but actual hash values can be 0 for entries without a real name, so we count non-zero hashes.
+    private val nameFlags: BooleanArray = BooleanArray(indexCount)
+    private val archiveNameCounts: IntArray = IntArray(indexCount)
+    private val fileNameCounts: IntArray = IntArray(indexCount)
 
     override lateinit var versionTable: ByteArray
 
@@ -128,10 +135,15 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
             archiveId
         }
         archives[indexId] = archiveIds
+        nameFlags[indexId] = (flags and NAME_FLAG) != 0
         if (flags and NAME_FLAG != 0) {
             for (i in 0 until archiveCount) {
                 val archiveId = archiveIds[i]
-                hashes[reader.readInt()] = archiveId
+                val nameHash = reader.readInt()
+                hashes[nameHash] = archiveId
+                if (nameHash != 0) {
+                    archiveNameCounts[indexId]++
+                }
             }
         }
         reader.skip(archiveCount * 4)
@@ -163,11 +175,22 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
             }
         }
         if (flags and NAME_FLAG != 0) {
+            // File name hashes are stored in the same archive iteration order as the file-id deltas
+            // above, so the j-th hash corresponds to fileIds[archiveId][j].
+            val indexFileHashes = arrayOfNulls<Int2IntOpenHashMap>(highest + 1)
+            fileHashes[indexId] = indexFileHashes
             for (i in 0 until archiveCount) {
                 val archiveId = archiveIds[i]
                 val fileCount = archiveSizes[archiveId]
+                val archiveFileIds = fileIds[archiveId]
+                val archiveFileHashes = Int2IntOpenHashMap(fileCount)
+                indexFileHashes[archiveId] = archiveFileHashes
                 for (j in 0 until fileCount) {
-                    reader.readInt()
+                    val nameHash = reader.readInt()
+                    archiveFileHashes[nameHash] = archiveFileIds?.get(j) ?: j
+                    if (nameHash != 0) {
+                        fileNameCounts[indexId]++
+                    }
                 }
             }
         }
@@ -185,6 +208,17 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
     override fun lastArchiveId(indexId: Int) = archives.getOrNull(indexId)?.lastOrNull() ?: -1
 
     override fun archiveId(index: Int, hash: Int) = hashes[hash] ?: -1
+
+    override fun fileId(index: Int, archive: Int, hash: Int): Int {
+        val archiveFileHashes = fileHashes.getOrNull(index)?.getOrNull(archive) ?: return -1
+        return if (archiveFileHashes.containsKey(hash)) archiveFileHashes.get(hash) else -1
+    }
+
+    override fun hasNameFlag(index: Int) = nameFlags.getOrNull(index) ?: false
+
+    override fun archiveNameCount(index: Int) = archiveNameCounts.getOrNull(index) ?: 0
+
+    override fun fileNameCount(index: Int) = fileNameCounts.getOrNull(index) ?: 0
 
     override fun files(index: Int, archive: Int) = files.getOrNull(index)?.getOrNull(archive) ?: IntArray(0)
 

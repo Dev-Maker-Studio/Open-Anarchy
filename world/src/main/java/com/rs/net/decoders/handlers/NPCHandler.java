@@ -76,7 +76,7 @@ public class NPCHandler {
 				return;
 			npc.resetWalkSteps();
 			player.faceEntityTile(npc);
-			npc.faceEntityTile(player);
+			npc.setNextFaceEntity(player);
 
 			if (player.getTreasureTrailsManager().useNPC(npc))
 				return;
@@ -130,7 +130,7 @@ public class NPCHandler {
 			if (!player.getControllerManager().processNPCClick2(npc))
 				return;
 			player.faceEntityTile(npc);
-			npc.faceEntityTile(player);
+			npc.setNextFaceEntity(player);
 
 			if (player.getTreasureTrailsManager().useNPC(npc))
 				return;
@@ -189,7 +189,7 @@ public class NPCHandler {
 				return;
 			npc.resetWalkSteps();
 			player.faceEntityTile(npc);
-			npc.faceEntityTile(player);
+			npc.setNextFaceEntity(player);
 
 			if (npc instanceof GraveStone grave) {
 				grave.repair(player, true);
@@ -219,7 +219,7 @@ public class NPCHandler {
 				return;
 			npc.resetWalkSteps();
 			player.faceEntityTile(npc);
-			npc.faceEntityTile(player);
+			npc.setNextFaceEntity(player);
 
 			if (npc instanceof GraveStone grave) {
 				grave.demolish(player);
