@@ -20,7 +20,7 @@ import com.rs.Settings;
 import org.darkan.core.model.Bonus;
 import org.darkan.core.cache.EnumDefinitions;
 import org.darkan.core.cache.ItemDefinitions;
-import com.rs.cache.loaders.LoyaltyRewardDefinitions.Reward;
+import com.rs.game.content.loyalty.LoyaltyRewardDefinitions.Reward;
 import org.darkan.core.model.ObjectShape;
 import com.rs.db.WorldDB;
 import com.rs.engine.book.Book;

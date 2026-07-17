@@ -1,7 +1,7 @@
 package com.rs.game.map;
 
 import com.rs.Settings;
-import com.rs.cache.loaders.map.Region;
+import org.darkan.core.map.MapRegion;
 import org.darkan.core.map.RegionLoader;
 import org.darkan.core.model.RegionSize;
 import com.rs.engine.pathfinder.NpcCollision;
@@ -47,7 +47,7 @@ public final class ChunkManager {
             for (int regionId = 0; regionId < 0xFFFF; regionId++) {
                 if (regionId == 18754) //citadel map that gets partially decoded with xteas but fails to pass gzip format tests
                     continue;
-                Region region = new Region(regionId);
+                MapRegion region = new MapRegion(regionId);
                 region.loadRegionMap(false);
                 if (!region.hasData())
                     continue;
@@ -149,7 +149,7 @@ public final class ChunkManager {
                 return;
             }
             int regionId = MapUtils.chunkToRegionId(chunkId);
-            Region region = new Region(regionId);
+            MapRegion region = new MapRegion(regionId);
             verifyChunksInited(region);
             region.loadRegionMap(false);
             if (!region.hasData()) {
@@ -184,7 +184,7 @@ public final class ChunkManager {
         }
     }
 
-    private static void verifyChunksInited(Region region) {
+    private static void verifyChunksInited(MapRegion region) {
         int chunkBaseId = MapUtils.encode(Structure.CHUNK, region.getBaseX() >> 3, region.getBaseY() >> 3, 0);
         for (int planeOff = 0; planeOff < 4 * Chunk.PLANE_INC; planeOff += Chunk.PLANE_INC) {
             for (int chunkXOff = 0; chunkXOff < 8 * Chunk.X_INC; chunkXOff += Chunk.X_INC) {
@@ -201,7 +201,7 @@ public final class ChunkManager {
         }
     }
 
-    private static void markAllChunksInRegionLoaded(Region region) {
+    private static void markAllChunksInRegionLoaded(MapRegion region) {
         int chunkBaseId = MapUtils.encode(Structure.CHUNK, region.getBaseX() >> 3, region.getBaseY() >> 3, 0);
         for (int planeOff = 0; planeOff < 4 * Chunk.PLANE_INC; planeOff += Chunk.PLANE_INC) {
             for (int chunkXOff = 0; chunkXOff < 8 * Chunk.X_INC; chunkXOff += Chunk.X_INC) {

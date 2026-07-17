@@ -1,13 +1,11 @@
-package com.rs.cache.loaders.map
+package org.darkan.core.map
 
-import org.darkan.core.map.ClipFlag
-import org.darkan.core.map.RegionLoader
 import org.darkan.core.model.ObjectShape
 import org.darkan.core.model.WorldObject
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.MapDefinition
 
-class Region(@JvmField protected var regionId: Int) {
+class MapRegion(@JvmField protected var regionId: Int) {
 
     private var objects: MutableList<WorldObject> = mutableListOf()
     private var clipFlags: Array<Array<IntArray>>? = null

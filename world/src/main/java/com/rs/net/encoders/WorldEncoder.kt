@@ -16,8 +16,8 @@
 //
 package com.rs.net.encoders
 
-import com.rs.cache.loaders.ClanVarDefinitions
-import com.rs.cache.loaders.cs2.CS2Type
+import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.definition.cs2.CS2Type
 import com.rs.game.World
 import com.rs.game.map.Chunk
 import com.rs.game.map.ChunkManager
@@ -375,7 +375,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     }
 
     fun setClanVar(varId: Int, value: Any) {
-        val def = ClanVarDefinitions.getDefs(varId)
+        val def = Cache.clanVars[varId]
         when (def.type) {
             CS2Type.STRING -> session.queuePacket(VarclanSetString(varId, value as String))
             CS2Type.LONG -> session.queuePacket(VarclanSetLong(varId, (value as Number).toLong()))

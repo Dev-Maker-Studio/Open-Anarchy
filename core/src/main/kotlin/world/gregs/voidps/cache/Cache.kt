@@ -3,6 +3,7 @@ package world.gregs.voidps.cache
 import org.darkan.core.EnvVars
 import world.gregs.voidps.cache.definition.data.AnimationDefinition
 import world.gregs.voidps.cache.definition.data.BASDefinition
+import world.gregs.voidps.cache.definition.data.ClanVarDefinition
 import world.gregs.voidps.cache.definition.data.EnumDefinition
 import world.gregs.voidps.cache.definition.data.FontDefinition
 import world.gregs.voidps.cache.definition.data.InterfaceDefinition
@@ -14,6 +15,7 @@ import world.gregs.voidps.cache.definition.data.StructDefinition
 import world.gregs.voidps.cache.definition.data.VarBitDefinition
 import world.gregs.voidps.cache.definition.decoder.AnimationDecoder
 import world.gregs.voidps.cache.definition.decoder.BASDecoder
+import world.gregs.voidps.cache.definition.decoder.ClanVarDecoder
 import world.gregs.voidps.cache.definition.decoder.EnumDecoder
 import world.gregs.voidps.cache.definition.decoder.FontDecoder
 import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
@@ -47,6 +49,20 @@ interface Cache {
 
     fun archiveId(index: Int, name: String): Int = archiveId(index, name.hashCode())
 
+    fun fileId(index: Int, archive: Int, hash: Int): Int
+
+    fun fileId(index: Int, archive: Int, name: String): Int = fileId(index, archive, name.hashCode())
+
+    fun hasNameFlag(index: Int): Boolean = false
+
+    fun archiveNameCount(index: Int): Int = 0
+
+    fun fileNameCount(index: Int): Int = 0
+
+    fun hasArchiveNames(index: Int): Boolean = archiveNameCount(index) > 0
+
+    fun hasFileNames(index: Int): Boolean = fileNameCount(index) > 0
+
     fun files(index: Int, archive: Int): IntArray
 
     fun fileCount(indexId: Int, archiveId: Int): Int
@@ -56,6 +72,11 @@ interface Cache {
     fun data(index: Int, archive: Int, file: Int = 0, xtea: IntArray? = null): ByteArray?
 
     fun data(index: Int, name: String, xtea: IntArray? = null) = data(index, archiveId(index, name), xtea = xtea)
+
+    fun data(index: Int, archive: String, file: String, xtea: IntArray? = null): ByteArray? {
+        val archiveId = archiveId(index, archive)
+        return data(index, archiveId, fileId(index, archiveId, file), xtea)
+    }
 
     fun write(index: Int, archive: Int, file: Int, data: ByteArray, xteas: IntArray? = null)
 
@@ -108,6 +129,10 @@ interface Cache {
 
         @JvmStatic val bas: Array<BASDefinition> by lazy {
             BASDecoder().load(singleton)
+        }
+
+        @JvmStatic val clanVars: Array<ClanVarDefinition> by lazy {
+            ClanVarDecoder().load(singleton)
         }
 
         @JvmStatic val interfaces: Array<InterfaceDefinition> by lazy {
