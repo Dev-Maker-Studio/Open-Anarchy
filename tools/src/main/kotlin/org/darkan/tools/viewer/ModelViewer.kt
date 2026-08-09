@@ -437,10 +437,14 @@ class ModelViewer(
             node.mesh?.render()
         }
 
-        // Render untextured faces
+        // Render untextured faces. RS model geometry is single-sided (see
+        // RenderSystem.enableModelCullFace); the grid above is not, so cull only here.
         modelNode?.let { node ->
+            renderSystem.enableModelCullFace()
             colorShader.setUniform("model", node.getModelMatrix())
             node.mesh?.render()
+            renderSystem.disableCullFace()
+            renderSystem.resetFrontFace()
         }
 
         colorShader.unbind()
@@ -449,8 +453,8 @@ class ModelViewer(
         // Pass 1: Opaque materials (no blending, depth write ON)
         // Pass 2: Transparent materials (alpha blending, depth write OFF but depth test ON)
         if (texturedModelNodes.isNotEmpty() && currentTexturedModel != null) {
-            // Disable face culling - RS models often have two-sided faces
-            renderSystem.disableCullFace()
+            // RS models are single-sided; the client back-face culls them.
+            renderSystem.enableModelCullFace()
 
             texturedShader.bind()
             texturedShader.setUniform("view", viewMatrix)
@@ -497,6 +501,7 @@ class ModelViewer(
             renderSystem.disableBlending()
             TextureLoader.unbindTexture()
             texturedShader.unbind()
+            renderSystem.resetFrontFace()
             renderSystem.enableCullFace()
         }
 

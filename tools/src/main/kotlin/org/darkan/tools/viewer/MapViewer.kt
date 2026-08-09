@@ -134,9 +134,10 @@ class MapViewer(
     private lateinit var debugPanel: DebugPanel
     private lateinit var loadingScreen: LoadingScreen
 
-    // Current state
-    private var currentRegionX = 52
-    private var currentRegionY = 50
+    // Current state. -Ddarkan.region=<x>,<y> picks the region to open on, so a
+    // specific area can be brought up without driving the UI (e.g. Canifis = 54,54).
+    private var currentRegionX = regionProperty()?.first ?: 52
+    private var currentRegionY = regionProperty()?.second ?: 50
     private var currentPlane = 0
 
     // UI state
@@ -1901,8 +1902,11 @@ class MapViewer(
             System.out.flush()
         }
 
-        // IMPORTANT: Disable face culling for RS models which often have two-sided faces
-        renderSystem.disableCullFace()
+        // RS models are single-sided: the game client back-face culls them and never
+        // turns culling off for the scene. Drawing them two-sided exposes interior and
+        // underside faces the client discards -- e.g. the Canifis signpost's three
+        // full-footprint horizontal quads show up as flat green bars through the model.
+        renderSystem.enableModelCullFace()
 
         // Enable polygon offset to prevent z-fighting between objects and terrain.
         // Many scenery objects (ground decorations, walls, floor decals) have geometry
@@ -1983,6 +1987,7 @@ class MapViewer(
             System.out.flush()
         }
 
+        renderSystem.resetFrontFace()
         renderSystem.enableCullFace()
     }
 
@@ -3252,4 +3257,16 @@ class MapViewer(
         HEIGHT_EDIT("Edit Height", wip = false),
         FLAG_EDIT("Edit Flags", wip = false)
     }
+}
+
+/**
+ * Region to open the map editor on, from -Ddarkan.region=<x>,<y>.
+ * Lets a specific area be brought up for inspection without driving the UI.
+ */
+private fun regionProperty(): Pair<Int, Int>? {
+    val parts = System.getProperty("darkan.region")?.split(',') ?: return null
+    if (parts.size < 2) return null
+    val x = parts[0].trim().toIntOrNull() ?: return null
+    val y = parts[1].trim().toIntOrNull() ?: return null
+    return x to y
 }

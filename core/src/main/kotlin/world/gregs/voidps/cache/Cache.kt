@@ -11,6 +11,7 @@ import world.gregs.voidps.cache.definition.data.GraphicDefinition
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 import world.gregs.voidps.cache.definition.data.NPCDefinition
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import world.gregs.voidps.cache.definition.data.ParamDefinition
 import world.gregs.voidps.cache.definition.data.StructDefinition
 import world.gregs.voidps.cache.definition.data.VarBitDefinition
 import world.gregs.voidps.cache.definition.decoder.AnimationDecoder
@@ -23,6 +24,7 @@ import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
 import world.gregs.voidps.cache.definition.decoder.ItemDecoder
 import world.gregs.voidps.cache.definition.decoder.NPCDecoder
 import world.gregs.voidps.cache.definition.decoder.ObjectDecoder
+import world.gregs.voidps.cache.definition.decoder.ParamDecoder
 import world.gregs.voidps.cache.definition.decoder.StructDecoder
 import world.gregs.voidps.cache.definition.decoder.VarBitDecoder
 import world.gregs.voidps.cache.secure.Huffman
@@ -121,6 +123,10 @@ interface Cache {
 
         @JvmStatic val structs: Array<StructDefinition> by lazy {
             StructDecoder().load(singleton)
+        }
+
+        @JvmStatic val params: Array<ParamDefinition> by lazy {
+            ParamDecoder().load(singleton)
         }
 
         @JvmStatic val graphics: Array<GraphicDefinition> by lazy {
