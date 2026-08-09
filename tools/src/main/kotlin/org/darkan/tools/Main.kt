@@ -3,6 +3,7 @@ package org.darkan.tools
 import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionLoader
 import org.darkan.tools.cache.NameLookup
+import org.darkan.tools.cs2.runCs2
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.texture.*
@@ -37,8 +38,9 @@ fun main(args: Array<String>) {
             MapViewer(cache).run()
         }
         "interface", "interfaces", "ui" -> {
-            println("Starting Interface Viewer...")
-            InterfaceViewer(cache).run()
+            val interfaceId = args.getOrNull(1)?.toIntOrNull() ?: 0
+            println("Starting Interface Editor with interface $interfaceId...")
+            InterfaceViewer(cache, interfaceId).run()
         }
         "diagnose", "debug" -> {
             // Diagnostic mode: diagnose <regionX> <regionY> <localX> <localY> [plane]
@@ -67,6 +69,9 @@ fun main(args: Array<String>) {
         }
         "lookup", "name", "names", "hash" -> {
             runNameLookup(cache, args)
+        }
+        "cs2" -> {
+            runCs2(cache, args.drop(1))
         }
         "help", "-h", "--help" -> {
             printHelp()

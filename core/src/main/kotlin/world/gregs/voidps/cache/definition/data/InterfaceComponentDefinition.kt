@@ -74,37 +74,67 @@ data class InterfaceComponentDefinition(
     var anInt4839: Int = -1,// Unused
     var anInt4761: Int = -1,// Unused
     var setting: InterfaceComponentSetting = InterfaceComponentSetting(0, -1),
-    val params: HashMap<Long, Any>? = null,
-    var information: Array<Any>? = null,
-    var mouseEnterHandler: Array<Any>? = null,
-    var mouseExitHandler: Array<Any>? = null,
-    var anObjectArray4771: Array<Any>? = null,
-    var anObjectArray4768: Array<Any>? = null,
-    var stateChangeHandler: Array<Any>? = null,
-    var invUpdateHandler: Array<Any>? = null,
-    var refreshHandler: Array<Any>? = null,
-    var updateHandler: Array<Any>? = null,
-    var anObjectArray4770: Array<Any>? = null,
-    var anObjectArray4751: Array<Any>? = null,
-    var mouseMotionHandler: Array<Any>? = null,
-    var mousePressedHandler: Array<Any>? = null,
-    var mouseDraggedHandler: Array<Any>? = null,
-    var mouseReleasedHandler: Array<Any>? = null,
-    var mouseDragPassHandler: Array<Any>? = null,
-    var anObjectArray4852: Array<Any>? = null,
-    var anObjectArray4711: Array<Any>? = null,
-    var anObjectArray4753: Array<Any>? = null,
-    var anObjectArray4688: Array<Any>? = null,
-    var anObjectArray4775: Array<Any>? = null,
-    var clientVarp: IntArray? = null,
-    var inventories: IntArray? = null,
-    var anIntArray4789: IntArray? = null,
-    var clientVarc: IntArray? = null,
-    var anIntArray4805: IntArray? = null,
+    val clientParams: HashMap<Long, Any>? = null,
+    var onLoadScript: InterfaceComponentHook? = null,
+    var onMouseOver: InterfaceComponentHook? = null,
+    var onMouseLeaveScript: InterfaceComponentHook? = null,
+    var hookParams: InterfaceComponentHook? = null,
+    var onTargetEnter: InterfaceComponentHook? = null,
+    var onVarpTransmit: InterfaceComponentHook? = null,
+    var mouseLeaveScript: InterfaceComponentHook? = null,
+    var onStatTransmit: InterfaceComponentHook? = null,
+    var onTimer: InterfaceComponentHook? = null,
+    var params: InterfaceComponentHook? = null,
+    var onTargetLeave: InterfaceComponentHook? = null,// Component formats 0 and above only
+    var popupScript: InterfaceComponentHook? = null,
+    var onClick: InterfaceComponentHook? = null,
+    var onClickRepeat: InterfaceComponentHook? = null,
+    var onRelease: InterfaceComponentHook? = null,
+    var onHold: InterfaceComponentHook? = null,
+    var onDrag: InterfaceComponentHook? = null,
+    var onDragComplete: InterfaceComponentHook? = null,
+    var onMouseMove: InterfaceComponentHook? = null,
+    var onKey: InterfaceComponentHook? = null,
+    var onScrollWheel: InterfaceComponentHook? = null,
+    var varps: IntArray? = null,// onVarpTransmit filter
+    var mouseLeaveArrayParams: IntArray? = null,// mouseLeaveScript filter
+    var statTransmitFilter: IntArray? = null,// onStatTransmit filter
+    var keyPressArray: IntArray? = null,// onKey filter
+    var mouseWheelArray: IntArray? = null,// onScrollWheel filter
     var hasScript: Boolean = false,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null
 ) : Definition, Extra {
+
+    /**
+     * Every event hook set on this component, keyed by the name of the field it was decoded into.
+     */
+    fun hooks(): Map<String, InterfaceComponentHook> {
+        val hooks = LinkedHashMap<String, InterfaceComponentHook>()
+        onLoadScript?.let { hooks["onLoadScript"] = it }
+        onMouseOver?.let { hooks["onMouseOver"] = it }
+        onMouseLeaveScript?.let { hooks["onMouseLeaveScript"] = it }
+        hookParams?.let { hooks["hookParams"] = it }
+        onTargetEnter?.let { hooks["onTargetEnter"] = it }
+        onVarpTransmit?.let { hooks["onVarpTransmit"] = it }
+        mouseLeaveScript?.let { hooks["mouseLeaveScript"] = it }
+        onStatTransmit?.let { hooks["onStatTransmit"] = it }
+        onTimer?.let { hooks["onTimer"] = it }
+        params?.let { hooks["params"] = it }
+        onTargetLeave?.let { hooks["onTargetLeave"] = it }
+        popupScript?.let { hooks["popupScript"] = it }
+        onClick?.let { hooks["onClick"] = it }
+        onClickRepeat?.let { hooks["onClickRepeat"] = it }
+        onRelease?.let { hooks["onRelease"] = it }
+        onHold?.let { hooks["onHold"] = it }
+        onDrag?.let { hooks["onDrag"] = it }
+        onDragComplete?.let { hooks["onDragComplete"] = it }
+        onMouseMove?.let { hooks["onMouseMove"] = it }
+        onKey?.let { hooks["onKey"] = it }
+        onScrollWheel?.let { hooks["onScrollWheel"] = it }
+        return hooks
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -196,111 +226,48 @@ data class InterfaceComponentDefinition(
         if (anInt4839 != other.anInt4839) return false
         if (anInt4761 != other.anInt4761) return false
         if (setting != other.setting) return false
+        if (clientParams != other.clientParams) return false
+        if (onLoadScript != other.onLoadScript) return false
+        if (onMouseOver != other.onMouseOver) return false
+        if (onMouseLeaveScript != other.onMouseLeaveScript) return false
+        if (hookParams != other.hookParams) return false
+        if (onTargetEnter != other.onTargetEnter) return false
+        if (onVarpTransmit != other.onVarpTransmit) return false
+        if (mouseLeaveScript != other.mouseLeaveScript) return false
+        if (onStatTransmit != other.onStatTransmit) return false
+        if (onTimer != other.onTimer) return false
         if (params != other.params) return false
-        if (information != null) {
-            if (other.information == null) return false
-            if (!information.contentEquals(other.information)) return false
-        } else if (other.information != null) return false
-        if (mouseEnterHandler != null) {
-            if (other.mouseEnterHandler == null) return false
-            if (!mouseEnterHandler.contentEquals(other.mouseEnterHandler)) return false
-        } else if (other.mouseEnterHandler != null) return false
-        if (mouseExitHandler != null) {
-            if (other.mouseExitHandler == null) return false
-            if (!mouseExitHandler.contentEquals(other.mouseExitHandler)) return false
-        } else if (other.mouseExitHandler != null) return false
-        if (anObjectArray4771 != null) {
-            if (other.anObjectArray4771 == null) return false
-            if (!anObjectArray4771.contentEquals(other.anObjectArray4771)) return false
-        } else if (other.anObjectArray4771 != null) return false
-        if (anObjectArray4768 != null) {
-            if (other.anObjectArray4768 == null) return false
-            if (!anObjectArray4768.contentEquals(other.anObjectArray4768)) return false
-        } else if (other.anObjectArray4768 != null) return false
-        if (stateChangeHandler != null) {
-            if (other.stateChangeHandler == null) return false
-            if (!stateChangeHandler.contentEquals(other.stateChangeHandler)) return false
-        } else if (other.stateChangeHandler != null) return false
-        if (invUpdateHandler != null) {
-            if (other.invUpdateHandler == null) return false
-            if (!invUpdateHandler.contentEquals(other.invUpdateHandler)) return false
-        } else if (other.invUpdateHandler != null) return false
-        if (refreshHandler != null) {
-            if (other.refreshHandler == null) return false
-            if (!refreshHandler.contentEquals(other.refreshHandler)) return false
-        } else if (other.refreshHandler != null) return false
-        if (updateHandler != null) {
-            if (other.updateHandler == null) return false
-            if (!updateHandler.contentEquals(other.updateHandler)) return false
-        } else if (other.updateHandler != null) return false
-        if (anObjectArray4770 != null) {
-            if (other.anObjectArray4770 == null) return false
-            if (!anObjectArray4770.contentEquals(other.anObjectArray4770)) return false
-        } else if (other.anObjectArray4770 != null) return false
-        if (anObjectArray4751 != null) {
-            if (other.anObjectArray4751 == null) return false
-            if (!anObjectArray4751.contentEquals(other.anObjectArray4751)) return false
-        } else if (other.anObjectArray4751 != null) return false
-        if (mouseMotionHandler != null) {
-            if (other.mouseMotionHandler == null) return false
-            if (!mouseMotionHandler.contentEquals(other.mouseMotionHandler)) return false
-        } else if (other.mouseMotionHandler != null) return false
-        if (mousePressedHandler != null) {
-            if (other.mousePressedHandler == null) return false
-            if (!mousePressedHandler.contentEquals(other.mousePressedHandler)) return false
-        } else if (other.mousePressedHandler != null) return false
-        if (mouseDraggedHandler != null) {
-            if (other.mouseDraggedHandler == null) return false
-            if (!mouseDraggedHandler.contentEquals(other.mouseDraggedHandler)) return false
-        } else if (other.mouseDraggedHandler != null) return false
-        if (mouseReleasedHandler != null) {
-            if (other.mouseReleasedHandler == null) return false
-            if (!mouseReleasedHandler.contentEquals(other.mouseReleasedHandler)) return false
-        } else if (other.mouseReleasedHandler != null) return false
-        if (mouseDragPassHandler != null) {
-            if (other.mouseDragPassHandler == null) return false
-            if (!mouseDragPassHandler.contentEquals(other.mouseDragPassHandler)) return false
-        } else if (other.mouseDragPassHandler != null) return false
-        if (anObjectArray4852 != null) {
-            if (other.anObjectArray4852 == null) return false
-            if (!anObjectArray4852.contentEquals(other.anObjectArray4852)) return false
-        } else if (other.anObjectArray4852 != null) return false
-        if (anObjectArray4711 != null) {
-            if (other.anObjectArray4711 == null) return false
-            if (!anObjectArray4711.contentEquals(other.anObjectArray4711)) return false
-        } else if (other.anObjectArray4711 != null) return false
-        if (anObjectArray4753 != null) {
-            if (other.anObjectArray4753 == null) return false
-            if (!anObjectArray4753.contentEquals(other.anObjectArray4753)) return false
-        } else if (other.anObjectArray4753 != null) return false
-        if (anObjectArray4688 != null) {
-            if (other.anObjectArray4688 == null) return false
-            if (!anObjectArray4688.contentEquals(other.anObjectArray4688)) return false
-        } else if (other.anObjectArray4688 != null) return false
-        if (anObjectArray4775 != null) {
-            if (other.anObjectArray4775 == null) return false
-            if (!anObjectArray4775.contentEquals(other.anObjectArray4775)) return false
-        } else if (other.anObjectArray4775 != null) return false
-        if (clientVarp != null) {
-            if (other.clientVarp == null) return false
-            if (!clientVarp.contentEquals(other.clientVarp)) return false
-        } else if (other.clientVarp != null) return false
-        if (inventories != null) {
-            if (other.inventories == null) return false
-            if (!inventories.contentEquals(other.inventories)) return false
-        } else if (other.inventories != null) return false
-        if (anIntArray4789 != null) {
-            if (other.anIntArray4789 == null) return false
-            if (!anIntArray4789.contentEquals(other.anIntArray4789)) return false
-        } else if (other.anIntArray4789 != null) return false
-        if (clientVarc != null) {
-            if (other.clientVarc == null) return false
-            if (!clientVarc.contentEquals(other.clientVarc)) return false
-        } else if (other.clientVarc != null) return false
-        if (anIntArray4805 != null) {
-            if (other.anIntArray4805 == null) return false
-            if (!anIntArray4805.contentEquals(other.anIntArray4805)) return false
-        } else if (other.anIntArray4805 != null) return false
+        if (onTargetLeave != other.onTargetLeave) return false
+        if (popupScript != other.popupScript) return false
+        if (onClick != other.onClick) return false
+        if (onClickRepeat != other.onClickRepeat) return false
+        if (onRelease != other.onRelease) return false
+        if (onHold != other.onHold) return false
+        if (onDrag != other.onDrag) return false
+        if (onDragComplete != other.onDragComplete) return false
+        if (onMouseMove != other.onMouseMove) return false
+        if (onKey != other.onKey) return false
+        if (onScrollWheel != other.onScrollWheel) return false
+        if (varps != null) {
+            if (other.varps == null) return false
+            if (!varps.contentEquals(other.varps)) return false
+        } else if (other.varps != null) return false
+        if (mouseLeaveArrayParams != null) {
+            if (other.mouseLeaveArrayParams == null) return false
+            if (!mouseLeaveArrayParams.contentEquals(other.mouseLeaveArrayParams)) return false
+        } else if (other.mouseLeaveArrayParams != null) return false
+        if (statTransmitFilter != null) {
+            if (other.statTransmitFilter == null) return false
+            if (!statTransmitFilter.contentEquals(other.statTransmitFilter)) return false
+        } else if (other.statTransmitFilter != null) return false
+        if (keyPressArray != null) {
+            if (other.keyPressArray == null) return false
+            if (!keyPressArray.contentEquals(other.keyPressArray)) return false
+        } else if (other.keyPressArray != null) return false
+        if (mouseWheelArray != null) {
+            if (other.mouseWheelArray == null) return false
+            if (!mouseWheelArray.contentEquals(other.mouseWheelArray)) return false
+        } else if (other.mouseWheelArray != null) return false
         if (hasScript != other.hasScript) return false
         if (stringId != other.stringId) return false
         if (extras != other.extras) return false
@@ -379,33 +346,33 @@ data class InterfaceComponentDefinition(
         result = 31 * result + anInt4839
         result = 31 * result + anInt4761
         result = 31 * result + setting.hashCode()
+        result = 31 * result + (clientParams?.hashCode() ?: 0)
+        result = 31 * result + (onLoadScript?.hashCode() ?: 0)
+        result = 31 * result + (onMouseOver?.hashCode() ?: 0)
+        result = 31 * result + (onMouseLeaveScript?.hashCode() ?: 0)
+        result = 31 * result + (hookParams?.hashCode() ?: 0)
+        result = 31 * result + (onTargetEnter?.hashCode() ?: 0)
+        result = 31 * result + (onVarpTransmit?.hashCode() ?: 0)
+        result = 31 * result + (mouseLeaveScript?.hashCode() ?: 0)
+        result = 31 * result + (onStatTransmit?.hashCode() ?: 0)
+        result = 31 * result + (onTimer?.hashCode() ?: 0)
         result = 31 * result + (params?.hashCode() ?: 0)
-        result = 31 * result + (information?.contentHashCode() ?: 0)
-        result = 31 * result + (mouseEnterHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (mouseExitHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (anObjectArray4771?.contentHashCode() ?: 0)
-        result = 31 * result + (anObjectArray4768?.contentHashCode() ?: 0)
-        result = 31 * result + (stateChangeHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (invUpdateHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (refreshHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (updateHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (anObjectArray4770?.contentHashCode() ?: 0)
-        result = 31 * result + (anObjectArray4751?.contentHashCode() ?: 0)
-        result = 31 * result + (mouseMotionHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (mousePressedHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (mouseDraggedHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (mouseReleasedHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (mouseDragPassHandler?.contentHashCode() ?: 0)
-        result = 31 * result + (anObjectArray4852?.contentHashCode() ?: 0)
-        result = 31 * result + (anObjectArray4711?.contentHashCode() ?: 0)
-        result = 31 * result + (anObjectArray4753?.contentHashCode() ?: 0)
-        result = 31 * result + (anObjectArray4688?.contentHashCode() ?: 0)
-        result = 31 * result + (anObjectArray4775?.contentHashCode() ?: 0)
-        result = 31 * result + (clientVarp?.contentHashCode() ?: 0)
-        result = 31 * result + (inventories?.contentHashCode() ?: 0)
-        result = 31 * result + (anIntArray4789?.contentHashCode() ?: 0)
-        result = 31 * result + (clientVarc?.contentHashCode() ?: 0)
-        result = 31 * result + (anIntArray4805?.contentHashCode() ?: 0)
+        result = 31 * result + (onTargetLeave?.hashCode() ?: 0)
+        result = 31 * result + (popupScript?.hashCode() ?: 0)
+        result = 31 * result + (onClick?.hashCode() ?: 0)
+        result = 31 * result + (onClickRepeat?.hashCode() ?: 0)
+        result = 31 * result + (onRelease?.hashCode() ?: 0)
+        result = 31 * result + (onHold?.hashCode() ?: 0)
+        result = 31 * result + (onDrag?.hashCode() ?: 0)
+        result = 31 * result + (onDragComplete?.hashCode() ?: 0)
+        result = 31 * result + (onMouseMove?.hashCode() ?: 0)
+        result = 31 * result + (onKey?.hashCode() ?: 0)
+        result = 31 * result + (onScrollWheel?.hashCode() ?: 0)
+        result = 31 * result + (varps?.contentHashCode() ?: 0)
+        result = 31 * result + (mouseLeaveArrayParams?.contentHashCode() ?: 0)
+        result = 31 * result + (statTransmitFilter?.contentHashCode() ?: 0)
+        result = 31 * result + (keyPressArray?.contentHashCode() ?: 0)
+        result = 31 * result + (mouseWheelArray?.contentHashCode() ?: 0)
         result = 31 * result + hasScript.hashCode()
         result = 31 * result + stringId.hashCode()
         result = 31 * result + extras.hashCode()

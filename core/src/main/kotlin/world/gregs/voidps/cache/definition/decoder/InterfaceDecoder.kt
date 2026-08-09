@@ -6,6 +6,7 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.INTERFACES
 import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
+import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
 import world.gregs.voidps.cache.definition.data.InterfaceComponentSetting
 import world.gregs.voidps.cache.definition.data.InterfaceDefinition
 
@@ -45,17 +46,24 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
     }
 
     fun InterfaceComponentDefinition.read(buffer: Reader) {
-        buffer.readUnsignedByte()
+        // 255 marks the original if3 format, anything else is a later revision of it
+        var format = buffer.readUnsignedByte()
+        if (format == 255) {
+            format = -1
+        }
         type = buffer.readUnsignedByte()
         if (type and 0x80 != 0) {
             type = type and 0x7f
             unknown = buffer.readString()
         }
-        contentType = buffer.readShort()
-        basePositionX = buffer.readUnsignedShort()
-        basePositionY = buffer.readUnsignedShort()
-        baseWidth = buffer.readShort()
-        baseHeight = buffer.readShort()
+        contentType = buffer.readUnsignedShort()
+        // Base positions are signed; components are routinely offset by negative amounts from
+        // their anchor. Base sizes are unsigned. Reading these the other way around wraps
+        // negative offsets to ~65k and pushes the component off screen.
+        basePositionX = buffer.readShort()
+        basePositionY = buffer.readShort()
+        baseWidth = buffer.readUnsignedShort()
+        baseHeight = buffer.readUnsignedShort()
         horizontalSizeMode = buffer.readByte().toByte()
         verticalSizeMode = buffer.readByte().toByte()
         horizontalPositionMode = buffer.readByte().toByte()
@@ -75,10 +83,7 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
             filled = buffer.readUnsignedByte() == 1
             alpha = buffer.readUnsignedByte()
         } else if (type == 4) {
-            fontId = buffer.readShort()
-            if (fontId == 65535) {
-                fontId = -1
-            }
+            fontId = buffer.readBigSmart()
             text = buffer.readString()
             lineHeight = buffer.readUnsignedByte()
             horizontalTextAlign = buffer.readUnsignedByte()
@@ -100,10 +105,7 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
             colour = buffer.readInt()
         } else if (type == 6) {
             defaultMediaType = 1
-            defaultMediaId = buffer.readShort()
-            if (defaultMediaId == 65535) {
-                defaultMediaId = -1
-            }
+            defaultMediaId = buffer.readBigSmart()
             val modelFlag = buffer.readUnsignedByte()
             animated = 0x4 and modelFlag == 4
             val bool = 0x1 and modelFlag == 1
@@ -125,10 +127,7 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
                 spriteYaw = buffer.readShort()
                 spriteScale = buffer.readUnsignedShort()
             }
-            animation = buffer.readShort()
-            if (animation == 65535) {
-                animation = -1
-            }
+            animation = buffer.readBigSmart()
             if (horizontalSizeMode.toInt() != 0) {
                 viewportWidth = buffer.readShort()
             }
@@ -200,31 +199,34 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
             }
         }
         this.setting = InterfaceComponentSetting(setting, settingData)
-        information = decodeScript(buffer)
-        mouseEnterHandler = decodeScript(buffer)
-        mouseExitHandler = decodeScript(buffer)
-        anObjectArray4771 = decodeScript(buffer)
-        anObjectArray4768 = decodeScript(buffer)
-        stateChangeHandler = decodeScript(buffer)
-        invUpdateHandler = decodeScript(buffer)
-        refreshHandler = decodeScript(buffer)
-        updateHandler = decodeScript(buffer)
-        anObjectArray4770 = decodeScript(buffer)
-        mouseMotionHandler = decodeScript(buffer)
-        mousePressedHandler = decodeScript(buffer)
-        mouseDraggedHandler = decodeScript(buffer)
-        mouseReleasedHandler = decodeScript(buffer)
-        mouseDragPassHandler = decodeScript(buffer)
-        anObjectArray4852 = decodeScript(buffer)
-        anObjectArray4711 = decodeScript(buffer)
-        anObjectArray4753 = decodeScript(buffer)
-        anObjectArray4688 = decodeScript(buffer)
-        anObjectArray4775 = decodeScript(buffer)
-        clientVarp = decodeIntArray(buffer)
-        inventories = decodeIntArray(buffer)
-        anIntArray4789 = decodeIntArray(buffer)
-        clientVarc = decodeIntArray(buffer)
-        anIntArray4805 = decodeIntArray(buffer)
+        onLoadScript = decodeScript(buffer)
+        onMouseOver = decodeScript(buffer)
+        onMouseLeaveScript = decodeScript(buffer)
+        hookParams = decodeScript(buffer)
+        onTargetEnter = decodeScript(buffer)
+        onVarpTransmit = decodeScript(buffer)
+        mouseLeaveScript = decodeScript(buffer)
+        onStatTransmit = decodeScript(buffer)
+        onTimer = decodeScript(buffer)
+        params = decodeScript(buffer)
+        if (format >= 0) {
+            onTargetLeave = decodeScript(buffer)
+        }
+        popupScript = decodeScript(buffer)
+        onClick = decodeScript(buffer)
+        onClickRepeat = decodeScript(buffer)
+        onRelease = decodeScript(buffer)
+        onHold = decodeScript(buffer)
+        onDrag = decodeScript(buffer)
+        onDragComplete = decodeScript(buffer)
+        onMouseMove = decodeScript(buffer)
+        onKey = decodeScript(buffer)
+        onScrollWheel = decodeScript(buffer)
+        varps = decodeIntArray(buffer)
+        mouseLeaveArrayParams = decodeIntArray(buffer)
+        statTransmitFilter = decodeIntArray(buffer)
+        keyPressArray = decodeIntArray(buffer)
+        mouseWheelArray = decodeIntArray(buffer)
     }
 
     override fun InterfaceDefinition.read(opcode: Int, buffer: Reader) {
@@ -232,7 +234,10 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
     }
 
     companion object {
-        private fun InterfaceComponentDefinition.decodeScript(buffer: Reader): Array<Any>? {
+        /**
+         * Reads an event hook; the first value is the script to run, the rest are the arguments bound to it.
+         */
+        private fun InterfaceComponentDefinition.decodeScript(buffer: Reader): InterfaceComponentHook? {
             val length = buffer.readUnsignedByte()
             if (length == 0) {
                 return null
@@ -242,7 +247,7 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
                 if (string) buffer.readString() else buffer.readInt()
             }
             hasScript = true
-            return objects
+            return InterfaceComponentHook(objects[0] as? Int ?: -1, objects.copyOfRange(1, objects.size))
         }
 
         private fun decodeIntArray(buffer: Reader): IntArray? {

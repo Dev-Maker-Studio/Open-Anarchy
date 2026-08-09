@@ -3,6 +3,7 @@ package world.gregs.voidps.cache.definition.encoder
 import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.DefinitionEncoder
 import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
+import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
 
 class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
 
@@ -46,7 +47,7 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
                 writeByte(definition.alpha)
             }
             4 -> {
-                writeShort(definition.fontId)
+                writeBigSmart(definition.fontId)
                 writeString(definition.text)
                 writeByte(definition.lineHeight)
                 writeByte(definition.horizontalTextAlign)
@@ -74,7 +75,7 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
                 writeInt(definition.colour)
             }
             6 -> {
-                writeShort(definition.defaultMediaId)
+                writeBigSmart(definition.defaultMediaId)
                 var flag = 0
                 if (definition.animated) {
                     flag = flag or 0x4
@@ -105,7 +106,7 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
                     writeShort(definition.spriteYaw)
                     writeShort(definition.spriteScale)
                 }
-                writeShort(definition.animation)
+                writeBigSmart(definition.animation)
                 if (definition.horizontalSizeMode.toInt() != 0) {
                     writeShort(definition.viewportWidth)
                 }
@@ -185,37 +186,43 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
             writeShort(definition.anInt4839)
         }
 
-        encodeScript(definition.information)
-        encodeScript(definition.mouseEnterHandler)
-        encodeScript(definition.mouseExitHandler)
-        encodeScript(definition.anObjectArray4771)
-        encodeScript(definition.anObjectArray4768)
-        encodeScript(definition.stateChangeHandler)
-        encodeScript(definition.invUpdateHandler)
-        encodeScript(definition.refreshHandler)
-        encodeScript(definition.updateHandler)
-        encodeScript(definition.anObjectArray4770)
-        encodeScript(definition.mouseMotionHandler)
-        encodeScript(definition.mousePressedHandler)
-        encodeScript(definition.mouseDraggedHandler)
-        encodeScript(definition.mouseReleasedHandler)
-        encodeScript(definition.mouseDragPassHandler)
-        encodeScript(definition.anObjectArray4852)
-        encodeScript(definition.anObjectArray4711)
-        encodeScript(definition.anObjectArray4753)
-        encodeScript(definition.anObjectArray4688)
-        encodeScript(definition.anObjectArray4775)
-        encodeIntArray(definition.clientVarp)
-        encodeIntArray(definition.inventories)
-        encodeIntArray(definition.anIntArray4789)
-        encodeIntArray(definition.clientVarc)
-        encodeIntArray(definition.anIntArray4805)
+        encodeScript(definition.onLoadScript)
+        encodeScript(definition.onMouseOver)
+        encodeScript(definition.onMouseLeaveScript)
+        encodeScript(definition.hookParams)
+        encodeScript(definition.onTargetEnter)
+        encodeScript(definition.onVarpTransmit)
+        encodeScript(definition.mouseLeaveScript)
+        encodeScript(definition.onStatTransmit)
+        encodeScript(definition.onTimer)
+        encodeScript(definition.params)
+        // onTargetLeave is skipped, the format written above is the original if3
+        encodeScript(definition.popupScript)
+        encodeScript(definition.onClick)
+        encodeScript(definition.onClickRepeat)
+        encodeScript(definition.onRelease)
+        encodeScript(definition.onHold)
+        encodeScript(definition.onDrag)
+        encodeScript(definition.onDragComplete)
+        encodeScript(definition.onMouseMove)
+        encodeScript(definition.onKey)
+        encodeScript(definition.onScrollWheel)
+        encodeIntArray(definition.varps)
+        encodeIntArray(definition.mouseLeaveArrayParams)
+        encodeIntArray(definition.statTransmitFilter)
+        encodeIntArray(definition.keyPressArray)
+        encodeIntArray(definition.mouseWheelArray)
     }
 
-    private fun Writer.encodeScript(script: Array<Any>?) {
-        val size = script?.size ?: 0
-        writeByte(size)
-        script?.forEach {
+    private fun Writer.encodeScript(hook: InterfaceComponentHook?) {
+        if (hook == null) {
+            writeByte(0)
+            return
+        }
+        writeByte(hook.args.size + 1)
+        writeByte(false)
+        writeInt(hook.script)
+        hook.args.forEach {
             writeByte(it is String)
             if (it is String) {
                 writeString(it)
