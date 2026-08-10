@@ -1,5 +1,6 @@
 package org.darkan.tools.cs2
 
+import java.util.concurrent.ConcurrentHashMap
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.ParamDefinition
 
@@ -19,17 +20,56 @@ import world.gregs.voidps.cache.definition.data.ParamDefinition
 class Cs2Analyzer(cache: Cache) : Cs2Context {
 
     private val scripts = Cs2Cache(cache)
-    private val loaded = HashMap<Int, Cs2Script?>()
+
+    /**
+     * Decoded cache scripts, and the ids the cache has nothing usable for.
+     *
+     * Concurrent because hot reload compiles on a watcher thread while the
+     * virtual machine resolves `GOSUB` targets on the render thread. Everything
+     * is warm after [analyse], so in practice the only contended path is the
+     * one-off load of an id nothing referenced during analysis; two threads
+     * racing there simply decode the same bytes twice.
+     */
+    private val loaded = ConcurrentHashMap<Int, Cs2Script>()
+    private val missing = ConcurrentHashMap.newKeySet<Int>()
+
+    /**
+     * Scripts compiled from source that stand in for the cached ones; see
+     * [install]. Declared here rather than beside the rest of the hot reload
+     * support because [script] reads it, and property initialisers run in
+     * declaration order.
+     */
+    private val overrides = ConcurrentHashMap<Int, Cs2Script>()
+
     private val paramTypes = HashMap<Int, Boolean>()
 
     val ids: IntArray = scripts.scriptIds().sortedArray()
 
-    override fun script(id: Int): Cs2Script? = loaded.getOrPut(id) {
-        try {
+    override fun script(id: Int): Cs2Script? {
+        overrides[id]?.let { return it }
+        loaded[id]?.let { return it }
+        if (id in missing) return null
+        val decoded = try {
             scripts.load(id)
         } catch (e: Exception) {
             null
         }
+        if (decoded == null) {
+            missing.add(id)
+            return null
+        }
+        loaded[id] = decoded
+        return decoded
+    }
+
+    /**
+     * The cached script for [id], ignoring any hot-reloaded replacement, so a
+     * reverted edit can be compared against what the cache actually holds.
+     */
+    fun cachedScript(id: Int): Cs2Script? = loaded[id] ?: try {
+        scripts.load(id)
+    } catch (e: Exception) {
+        null
     }
 
     /**
@@ -339,6 +379,133 @@ class Cs2Analyzer(cache: Cache) : Cs2Context {
         val order = stacks.order()
         if (order.size >= total) callee.argumentOrder = order.takeLast(total)
     }
+
+    // ------------------------------------------------------------ hot reloading
+    //
+    // Replacements live in this analyzer rather than in a wrapping Cs2Context on
+    // purpose: the virtual machine, the code generator and the structurer all
+    // resolve calls through whichever context they were handed, and any of them
+    // holding the bare analyzer would keep running the stale bytecode. Overriding
+    // at the one place they all end up means a replacement cannot be missed.
+
+    /** Script ids currently served from source rather than from the cache. */
+    val overriddenIds: List<Int> get() = overrides.keys.sorted()
+
+    fun isOverridden(id: Int): Boolean = overrides.containsKey(id)
+
+    /**
+     * What [install] managed to work out about a replacement script.
+     *
+     * [failure] is the simulation error, if any; a script that does not balance
+     * is still installed, because refusing it would leave the developer running
+     * code they cannot see the effect of, but its return signature is then only
+     * the previous version's guess.
+     */
+    class Installed(
+        val scriptId: Int,
+        val returnSignature: ReturnSignature,
+        val previousReturnSignature: ReturnSignature?,
+        /** True when the argument counts in the header moved. */
+        val headerChanged: Boolean,
+        val failure: String?,
+    ) {
+        val signatureChanged: Boolean
+            get() = previousReturnSignature != null && previousReturnSignature != returnSignature
+    }
+
+    /**
+     * Replaces script [scriptId] with [script] and derives the analysis the code
+     * generator and decompiler need from it.
+     *
+     * The code generator fills in the header and the instructions but nothing
+     * interprocedural: `returnSignature`, `returnOrder` and `argumentOrder` are
+     * products of whole-cache analysis. Left null, a statement-position call to
+     * this script would discard the wrong number of results, so they are
+     * re-derived here:
+     *
+     *  - `returnSignature` and `returnOrder` come from simulating the new
+     *    instructions, exactly as [resolveReturnSignatures] does, bootstrapped
+     *    from `EMPTY` so a self-recursive script still terminates.
+     *  - `argumentOrder` is a property of the *callers* - it records the order
+     *    they push in - so it carries over untouched as long as the header's
+     *    argument counts did not move, and is dropped when they did.
+     *
+     * Callers already compiled into the cache are not adjusted, and cannot be:
+     * see [callersOf] and [revalidate].
+     */
+    fun install(scriptId: Int, script: Cs2Script): Installed {
+        val previous = script(scriptId)
+        val headerChanged = previous != null && (
+            previous.intArgsCount != script.intArgsCount ||
+                previous.stringArgsCount != script.stringArgsCount ||
+                previous.longArgsCount != script.longArgsCount
+            )
+        if (!headerChanged && script.argumentOrder.isEmpty()) {
+            script.argumentOrder = previous?.argumentOrder.orEmpty()
+        }
+
+        // Derive everything before publishing, so a script the render thread can
+        // already see is never half-analysed.
+        script.returnSignature = ReturnSignature.EMPTY
+        val walk = simulate(script)
+        if (walk.failure == null) {
+            script.returnSignature = walk.returns
+            // A script that returns values through a self-call needs the second
+            // walk to see its own signature; it also re-derives returnOrder
+            // against the settled one.
+            simulate(script)
+        } else {
+            script.returnSignature = previous?.returnSignature ?: ReturnSignature.EMPTY
+        }
+
+        overrides[scriptId] = script
+        return Installed(
+            scriptId = scriptId,
+            returnSignature = script.returnSignature ?: ReturnSignature.EMPTY,
+            previousReturnSignature = previous?.returnSignature,
+            headerChanged = headerChanged,
+            failure = walk.failure,
+        )
+    }
+
+    /** Drops the replacement for [scriptId], falling back to the cached bytecode. */
+    fun uninstall(scriptId: Int): Boolean = overrides.remove(scriptId) != null
+
+    /** Drops every replacement. Returns how many there were. */
+    fun uninstallAll(): Int {
+        val count = overrides.size
+        overrides.clear()
+        return count
+    }
+
+    /**
+     * Scripts that `GOSUB` into [scriptId].
+     *
+     * A call site is compiled against the callee's return signature - it discards
+     * exactly as many results as the callee was known to leave - so when an edit
+     * changes that signature, every caller's *existing* bytecode is wrong. They
+     * cannot be patched incrementally; they have to be recompiled from source, or
+     * the edit reverted. Scanned on demand because it is only needed when a
+     * signature actually moves.
+     */
+    fun callersOf(scriptId: Int): List<Int> {
+        val callers = ArrayList<Int>()
+        for (id in ids) {
+            val script = script(id) ?: continue
+            val calls = script.instructions.any {
+                it.op.kind == OpKind.GOSUB && it.intOperand == scriptId
+            }
+            if (calls) callers.add(id)
+        }
+        return callers
+    }
+
+    /** Re-simulates the given scripts against the installed overrides. */
+    fun revalidate(scriptIds: Collection<Int>): List<ScriptProblem> =
+        scriptIds.mapNotNull { id ->
+            val script = script(id) ?: return@mapNotNull null
+            validate(script)?.let { ScriptProblem(id, it) }
+        }
 
     private fun step(instruction: Cs2Instruction, stacks: SymbolicStacks) {
         val effect = effectiveSignature(instruction, this, stacks)

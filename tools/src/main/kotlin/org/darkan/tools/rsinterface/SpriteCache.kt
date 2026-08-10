@@ -35,6 +35,9 @@ class SpriteCache(private val cache: Cache) {
 
     private val textures = HashMap<Long, LoadedSprite?>()
 
+    /** One past the highest sprite group id in the cache, for id pickers to bound. */
+    val count: Int get() = definitions.size
+
     /** Decodes (once) and returns the raw sprite group for [id]. */
     fun definition(id: Int): SpriteDefinition? {
         if (id < 0 || id >= definitions.size) {

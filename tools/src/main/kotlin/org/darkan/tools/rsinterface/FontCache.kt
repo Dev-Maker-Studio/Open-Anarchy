@@ -23,6 +23,9 @@ class FontCache(
 
     private val fonts = HashMap<Int, RsFont?>()
 
+    /** One past the highest font id in the cache, for id pickers to bound. */
+    val count: Int get() = definitions.size
+
     /** Returns the built font for [id], or null when it is missing from the cache. */
     fun font(id: Int): RsFont? {
         if (id < 0 || id >= definitions.size) {

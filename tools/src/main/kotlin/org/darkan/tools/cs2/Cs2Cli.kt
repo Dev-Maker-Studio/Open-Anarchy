@@ -35,7 +35,13 @@ import org.darkan.tools.cs2.vm.Cs2Host
 import org.darkan.tools.cs2.vm.Cs2Values
 import org.darkan.tools.cs2.vm.Cs2Vm
 import org.darkan.tools.cs2.vm.NoOpCs2Host
+import org.darkan.tools.rsinterface.ComponentOption
+import org.darkan.tools.rsinterface.ComponentState
+import org.darkan.tools.rsinterface.ComponentType
 import org.darkan.tools.rsinterface.InterfaceCs2Host
+import org.darkan.tools.rsinterface.InterfaceInteraction
+import org.darkan.tools.rsinterface.OptionKind
+import org.darkan.tools.rsinterface.InterfaceEvent
 import org.darkan.tools.rsinterface.InterfaceInstance
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
@@ -62,15 +68,23 @@ fun runCs2(cache: Cache, args: List<String>) {
         "diff" -> cs2Diff(cache, args.getOrNull(1)?.toIntOrNull())
         "run" -> cs2Run(cache, args.getOrNull(1)?.toIntOrNull(), args.drop(2))
         "declarations" -> cs2Declarations(args.getOrNull(1))
-        "interface" -> cs2Interface(cache, args.getOrNull(1)?.toIntOrNull())
+        "interface" -> cs2Interface(cache, args.getOrNull(1)?.toIntOrNull(), args.drop(2))
         "interfaces" -> cs2InterfaceSweep(cache)
         "compile" -> cs2Compile(cache, args.getOrNull(1), args.getOrNull(2)?.toIntOrNull())
+        "export" -> cs2Export(cache, args.getOrNull(1), args.getOrNull(2)?.toIntOrNull())
+        "watch" -> cs2Watch(cache, args.getOrNull(1), args.getOrNull(2)?.toIntOrNull())
+        "sources", "verify-sources" -> cs2VerifySources(cache, args.getOrNull(1), args.getOrNull(2)?.toIntOrNull())
+        "hotswap" -> cs2Hotswap(cache, args.getOrNull(1), args.getOrNull(2)?.toIntOrNull(), args.drop(3))
         else -> println(
             """
             cs2 sub-commands:
-              verify        decode and re-encode every clientscript, checking byte identity
-              dump <id>     print the instruction listing for one script
-              info <id>     print one script's header
+              verify              decode and re-encode every clientscript, checking byte identity
+              dump <id>           print the instruction listing for one script
+              info <id>           print one script's header
+              export <dir> [id]   decompile one script into dir, or just the declarations
+              compile <dir> <id>  compile one edited script and compare it to the cache
+              sources <dir> [n]   compile every source file in dir, reporting the byte-exact rate
+              watch [dir] [secs]  hot-reload scripts as they are saved
             """.trimIndent(),
         )
     }
@@ -537,7 +551,7 @@ private fun cs2Run(cache: Cache, scriptId: Int?, args: List<String>) {
     }
 
     val ints = args.mapNotNull { it.toIntOrNull() }
-    val result = Cs2Vm(analyzer, host).execute(script, ints)
+    val result = Cs2Vm(analyzer, host).execute(script, ints, scriptId = scriptId)
     println("ran script $scriptId with ints=$ints")
     println("returned: ints=${result.ints} strings=${result.strings} longs=${result.longs}")
     println("host calls (${calls.size}):")
@@ -564,10 +578,24 @@ private fun faithfulMatches(raw: ByteArray, script: Cs2Script, id: Int, analyzer
  * Opens an interface headlessly, runs its components' load scripts through the
  * virtual machine, and reports what the scripts actually did. This is the same
  * path the editor takes, minus the rendering.
+ *
+ * [extra] optionally fires more hooks, in order, and dumps the resolved box model:
+ *
+ * ```
+ * cs2 interface 1102 tree                              boxes after loading
+ * cs2 interface 1102 mouse_press:47 tree               open the dropdown, then boxes
+ * cs2 interface 1102 mouse_press:47 mouse_enter:148    open it, then hover a row
+ * ```
+ *
+ * The tree is the only way to see what a widget built at runtime actually looks
+ * like without a window: it lists the components `CC_CREATE` made, which the
+ * cache knows nothing about, with the position and size the layout gave them.
+ * Chaining hooks is what makes a widget that only exists once the user has touched
+ * it reachable at all.
  */
-private fun cs2Interface(cache: Cache, interfaceId: Int?) {
+private fun cs2Interface(cache: Cache, interfaceId: Int?, extra: List<String> = emptyList()) {
     if (interfaceId == null) {
-        println("usage: cs2 interface <interfaceId>")
+        println("usage: cs2 interface <interfaceId> [<event> <componentIndex>] [tree]")
         return
     }
     val analyzer = Cs2Analyzer(cache)
@@ -595,10 +623,17 @@ private fun cs2Interface(cache: Cache, interfaceId: Int?) {
         params = { id -> Cache.params.getOrNull(id) },
     )
     val dispatcher = Cs2HookDispatcher(analyzer, host)
+    // Only used to answer "what would a click here do" for the `hit` request; it is
+    // never stepped, so its hover and press state stay empty.
+    val interaction = InterfaceInteraction({ current }, dispatcher, host)
 
     // Snapshot the fields scripts most often change, so the report can show
     // what running the interface actually did rather than just that it ran.
     val before = instance.components.map { Triple(it.hidden, it.text, it.spriteId) }
+
+    // The client only ever runs a load hook on an interface it has already drawn,
+    // so the box model has to exist before the scripts that read it do.
+    instance.layoutDeclared()
 
     var ran = 0
     for (component in instance.components) {
@@ -635,6 +670,208 @@ private fun cs2Interface(cache: Cache, interfaceId: Int?) {
         println("  script output:")
         host.log.take(10).forEach { println("    $it") }
     }
+
+    for (request in extra) {
+        if (request.equals("tree", ignoreCase = true)) {
+            continue
+        }
+        val parts = request.split(':')
+        if (parts[0].equals("hit", ignoreCase = true)) {
+            printHitChain(
+                instance,
+                host,
+                interaction,
+                parts.getOrNull(1)?.toIntOrNull() ?: -1,
+                parts.getOrNull(2)?.toIntOrNull() ?: -1,
+            )
+            continue
+        }
+        fireHook(
+            instance, host, dispatcher, parts[0],
+            parts.getOrNull(1)?.toIntOrNull(),
+            parts.getOrNull(2)?.toIntOrNull() ?: -1,
+        )
+    }
+    if (extra.any { it.equals("tree", ignoreCase = true) }) {
+        printResolvedTree(instance)
+    }
+}
+
+/**
+ * Fires one more hook after the load pass, so a widget that only builds itself
+ * when the user touches it can be inspected headlessly.
+ *
+ * The box model is resolved first. A real interaction always happens on a drawn
+ * frame, so every geometry opcode the hook calls would see a laid-out tree; skip
+ * it here and the hook reads zero heights that the editor never would, which
+ * makes the diagnostic lie in the one direction that matters.
+ */
+private fun fireHook(
+    instance: InterfaceInstance,
+    host: InterfaceCs2Host,
+    dispatcher: Cs2HookDispatcher,
+    eventName: String,
+    componentIndex: Int?,
+    /**
+     * The event's `mouseY`, which is also where the client smuggles a wheel notch
+     * count into a hook - `mouse_wheel:57:1` is one notch over component 57.
+     */
+    value: Int = -1,
+) {
+    val event = InterfaceEvent.entries.firstOrNull { it.name.equals(eventName, ignoreCase = true) }
+        ?: InterfaceEvent.entries.firstOrNull { it.boundKey.equals(eventName, ignoreCase = true) }
+    if (event == null) {
+        println()
+        println("Unknown event \"$eventName\". Known: ${InterfaceEvent.entries.joinToString(", ") { it.name }}")
+        return
+    }
+    instance.layoutDeclared()
+    val state = componentIndex?.let { instance.state(it) }
+    if (state == null) {
+        println()
+        println("No component $componentIndex to fire $eventName on.")
+        return
+    }
+    val bound = host.boundHooks[state.hash]?.get(event.boundKey)
+    val defined = event.definitionHook(state.definition)
+    println()
+    println("Firing ${event.name} on component ${state.index}: " + when {
+        bound != null -> "runtime hook, script ${bound.scriptId}"
+        defined != null -> "cache hook, script ${defined.script}"
+        else -> "no hook bound - nothing to run"
+    })
+    val logFrom = host.log.size
+    host.setActive(0, state)
+    // A runtime component reports the slot it was created in, which is what the
+    // client substitutes for `event_comsubid` and how a row hook identifies itself.
+    val data = Cs2Event(
+        mouseY = value,
+        source = state.hash,
+        sourceSlot = state.slotId,
+        clickedOption = 1,
+        optionName = state.opBase,
+    )
+    when {
+        bound != null -> dispatcher.dispatch(bound, data)
+        defined != null -> dispatcher.dispatch(defined, data)
+    }
+    if (host.log.size > logFrom) {
+        println("  script output:")
+        host.log.subList(logFrom, host.log.size).take(10).forEach { println("    $it") }
+    }
+}
+
+/**
+ * Prints every component's resolved box, cache and runtime alike, indented by
+ * depth. This is the headless equivalent of looking at the stage: rows that all
+ * report the same `y`, or a size of zero, show up here immediately.
+ */
+private fun printResolvedTree(instance: InterfaceInstance) {
+    instance.layoutDeclared()
+    println()
+    println("Resolved tree (idx parent slot type  x,y  wxh  @absX,absY):")
+    fun walk(parentIndex: Int, depth: Int, originX: Int, originY: Int) {
+        for (state in instance.children(parentIndex)) {
+            val absX = originX + state.x
+            val absY = originY + state.y
+            val slot = if (state.slotId < 0) "-" else "s${state.slotId}"
+            val label = buildList {
+                if (state.text.isNotEmpty()) add("text \"${state.text}\"")
+                if (state.spriteId != -1) add("sprite ${state.spriteId}")
+                if (state.hidden) add("hidden")
+                if (state.scrollHeight != 0) add("scrollH ${state.scrollHeight}")
+                if (state.scrollY != 0) add("scrollY ${state.scrollY}")
+                if (state.draggable) add("draggable")
+                if (state.scripted) add("scripted")
+                if (state.type == ComponentType.FIGURE) {
+                    add("col ${Integer.toHexString(state.colour)} ${if (state.filled) "filled" else "outline"} trans ${state.transparency}")
+                }
+            }.joinToString(", ")
+            println(
+                "  %s%-4d p%-4d %-4s %-9s %4d,%-4d %3dx%-3d @%4d,%-4d %s".format(
+                    "  ".repeat(depth), state.index, state.parent, slot,
+                    ComponentType.name(state.type), state.x, state.y,
+                    state.width, state.height, absX, absY, label,
+                )
+            )
+            // Only containers give their children a coordinate space, and they shift
+            // it by their scroll offset - the same rule the renderer walks.
+            if (state.type == ComponentType.CONTAINER) {
+                walk(state.index, depth + 1, absX - state.scrollX, absY - state.scrollY)
+            }
+        }
+    }
+    walk(-1, 0, 0, 0)
+}
+
+/**
+ * Prints what the pointer would hit at ([pointX], [pointY]) in stage coordinates,
+ * back to front, and which of those hits the interaction runtime would keep.
+ *
+ * This is the headless answer to "why does hovering that row do nothing". The
+ * three columns that matter are whether the component is in the raw hit list at
+ * all (it is clipped or hidden if not), whether it survived the click-through
+ * rule, and whether [org.darkan.tools.rsinterface.ComponentState.interactive]
+ * admits it - a component that fails the last one is drawn and nothing more.
+ */
+private fun printHitChain(
+    instance: InterfaceInstance,
+    host: InterfaceCs2Host,
+    interaction: InterfaceInteraction,
+    pointX: Int,
+    pointY: Int,
+) {
+    instance.layoutDeclared()
+    val width = InterfaceInstance.DEFAULT_VIEWPORT_WIDTH
+    val height = InterfaceInstance.DEFAULT_VIEWPORT_HEIGHT
+    val hits = instance.hitTest(0, 0, width, height, pointX, pointY)
+    val hover = instance.hoverChain(0, 0, width, height, pointX, pointY)
+    println()
+    println("Hit chain at $pointX,$pointY in a ${width}x$height stage (back to front):")
+    if (hits.isEmpty()) {
+        println("  nothing under the pointer")
+    }
+    for (state in hits) {
+        val flags = buildList {
+            if (hover.none { it === state }) add("click-through blocked")
+            if (!state.interactive) add("NOT interactive")
+            host.boundHooks[state.hash]?.keys?.takeIf { it.isNotEmpty() }
+                ?.let { add("bound ${it.joinToString("/")}") }
+            state.definition.hooks().keys.takeIf { it.isNotEmpty() }
+                ?.let { add("cache ${it.joinToString("/")}") }
+            if (state.events != 0) add("events ${Integer.toHexString(state.events)}")
+            if (state.contentType != 0) add("content ${state.contentType}")
+            if (state.noClickThrough) add("noClickThrough")
+            if (state.optionHook) add("op hook")
+            val options = (0 until ComponentState.OPTION_COUNT).mapNotNull { option ->
+                state.optionAt(option)?.let { "${option + 1}=$it" }
+            }
+            if (options.isNotEmpty()) add("ops ${options.joinToString(" ")}")
+            if (state.text.isNotEmpty()) add("text \"${state.text}\"")
+        }.joinToString(", ")
+        println(
+            "  %-4d p%-4d %-4s %-9s %s".format(
+                state.index, state.parent,
+                if (state.slotId < 0) "-" else "s${state.slotId}",
+                ComponentType.name(state.type), flags,
+            )
+        )
+    }
+    println("  interaction target: " + (
+        instance.interactiveAt(0, 0, width, height, pointX, pointY)?.index?.toString() ?: "none"
+        ))
+    // What a plain left click would run, resolved by the same rule the runtime uses.
+    val entries = ArrayList<ComponentOption>()
+    for (state in hover) {
+        entries.addAll(interaction.optionsFor(state, pointX, pointY).reversed())
+    }
+    val default = entries.lastOrNull { it.kind != OptionKind.OPTION || it.option <= InterfaceInteraction.LEFT_CLICK_OPTIONS }
+    println("  menu entries: " + (
+        if (entries.isEmpty()) "none" else entries.joinToString(", ") { "${it.component.index}:${it.option} ${it.label}" }
+        ))
+    println("  left click runs: " + (
+        if (default == null) "nothing" else "component ${default.component.index} option ${default.option} \"${default.label}\""
+        ))
 }
 
 /** Runs every interface's load scripts, checking the whole path holds up. */
@@ -652,6 +889,7 @@ private fun cs2InterfaceSweep(cache: Cache) {
     var componentsChanged = 0
     var hooksBound = 0
     val failures = ArrayList<Pair<Int, String>>()
+    val scriptErrors = ArrayList<Pair<Int, String>>()
     val started = System.currentTimeMillis()
 
     for (id in definitions.indices) {
@@ -676,6 +914,7 @@ private fun cs2InterfaceSweep(cache: Cache) {
             )
             val dispatcher = Cs2HookDispatcher(analyzer, host)
             val before = instance.components.map { Triple(it.hidden, it.text, it.spriteId) }
+            instance.layoutDeclared()
 
             for (component in instance.components) {
                 val hook = component.definition.onLoadScript ?: continue
@@ -688,6 +927,11 @@ private fun cs2InterfaceSweep(cache: Cache) {
                 state.hidden != hidden || state.text != text || state.spriteId != sprite
             }
             hooksBound += host.boundHooks.values.sumOf { it.size }
+            // An error the machine reports is not an exception - it logs and carries
+            // on - so a sweep that only counts exceptions calls a runaway script a
+            // success. These are what actually tell you an interface is broken.
+            host.log.filter { it.startsWith("error: ") }
+                .forEach { scriptErrors.add(id to it.removePrefix("error: ")) }
         } catch (e: Exception) {
             failures.add(id to "run: ${e.message ?: e::class.simpleName}")
         }
@@ -700,11 +944,22 @@ private fun cs2InterfaceSweep(cache: Cache) {
     println("components changed:   $componentsChanged")
     println("hooks bound at run:   $hooksBound")
     println("failures:             ${failures.size}")
+    println("script errors:        ${scriptErrors.size} across ${scriptErrors.distinctBy { it.first }.size} interfaces")
     println("elapsed:              ${System.currentTimeMillis() - started}ms")
     if (failures.isNotEmpty()) {
         failures.groupingBy { it.second.take(60) }.eachCount()
             .entries.sortedByDescending { it.value }.take(8)
             .forEach { (message, count) -> println("  %-62s %d".format(message, count)) }
+    }
+    if (scriptErrors.isNotEmpty()) {
+        println()
+        println("Script errors, most common first:")
+        scriptErrors.groupingBy { it.second.take(76) }.eachCount()
+            .entries.sortedByDescending { it.value }.take(12)
+            .forEach { (message, count) -> println("  %-78s %d".format(message, count)) }
+        println()
+        println("First few, with the interface they came from:")
+        scriptErrors.take(8).forEach { (id, message) -> println("  interface $id: $message") }
     }
 }
 
@@ -756,6 +1011,199 @@ private fun collectVariables(statements: List<Stmt>, into: MutableSet<VarRef>) {
             else -> Unit
         }
     }
+}
+
+/**
+ * Seeds a source folder: one script, or the ambient declarations it needs.
+ *
+ * A folder with no `cs2.d.ts` will not type-check in an editor even though it
+ * compiles here, so exporting nothing but a script is rarely what is wanted.
+ */
+private fun cs2Export(cache: Cache, directory: String?, scriptId: Int?) {
+    if (directory == null) {
+        println("usage: cs2 export <dir> [scriptId]")
+        return
+    }
+    val analyzer = Cs2Analyzer(cache)
+    analyzer.analyse()
+    val project = Cs2SourceProject(cache, analyzer, File(directory))
+
+    if (scriptId == null) {
+        println(project.exportDeclarations().message)
+        println("pass a script id to export one script, or use `cs2 decompile-all $directory` for the lot")
+        return
+    }
+    val result = project.exportSource(scriptId, overwrite = true)
+    println(result.message)
+    if (result.ok) println(project.verify(scriptId).summary)
+}
+
+/**
+ * Compiles every source file in a folder and reports how many still encode to
+ * exactly the cached bytes.
+ *
+ * This is the number that decides how much hot reload can be trusted: a script
+ * that does not round-trip untouched will not round-trip edited either, and the
+ * developer needs to know that before wondering why their change misbehaves.
+ */
+private fun cs2VerifySources(cache: Cache, directory: String?, limit: Int?) {
+    val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
+    if (!folder.isDirectory) {
+        println("no such folder: ${folder.absolutePath}")
+        return
+    }
+    println("Analysing the cache...")
+    val analyzer = Cs2Analyzer(cache)
+    analyzer.analyse()
+    val reload = Cs2HotReload(cache, analyzer, Cs2SourceProject(cache, analyzer, folder))
+
+    println("Compiling ${folder.absolutePath}...")
+    val started = System.currentTimeMillis()
+    val sweep = reload.sweepFolder(limit, installEdits = false) { done, total ->
+        if (done % 500 == 0) println("  $done / $total")
+    }
+
+    println()
+    println("compiled:        ${sweep.compiled}")
+    println("byte-identical:  ${sweep.identical}  (%.2f%%)".format(sweep.exactRate * 100))
+    println("differing:       ${sweep.differing}")
+    println("failed:          ${sweep.failed}")
+    println("elapsed:         ${System.currentTimeMillis() - started}ms")
+
+    if (sweep.failures.isNotEmpty()) {
+        println()
+        println("First failures:")
+        sweep.failures.take(10).forEach { println("  $it") }
+        println()
+        println("Grouped:")
+        sweep.failures.groupingBy { it.message.take(70) }.eachCount()
+            .entries.sortedByDescending { it.value }.take(12)
+            .forEach { (message, count) -> println("  %-72s %d".format(message, count)) }
+        println()
+        println("located: ${sweep.failures.count { it.located }} of ${sweep.failures.size} have a line")
+    }
+}
+
+/**
+ * Runs one script as the cache has it, then as the source folder has it.
+ *
+ * This is the whole hot reload path in one command - compile, install, dispatch
+ * through [Cs2HookDispatcher] against the overlay context - which is what proves
+ * an edit reaches the running virtual machine rather than merely compiling. The
+ * dispatcher is deliberately built *before* the reload, mirroring the editor,
+ * where it is constructed once when the interface opens.
+ */
+private fun cs2Hotswap(cache: Cache, directory: String?, scriptId: Int?, args: List<String>) {
+    if (scriptId == null) {
+        println("usage: cs2 hotswap <dir> <scriptId> [intArgs...]")
+        return
+    }
+    val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
+    val analyzer = Cs2Analyzer(cache)
+    analyzer.analyse()
+    val reload = Cs2HotReload(cache, analyzer, Cs2SourceProject(cache, analyzer, folder))
+
+    val calls = ArrayList<String>()
+    val host = object : NoOpCs2Host() {
+        override fun invoke(op: Cs2Op, operand: Int, values: Cs2Values): Cs2Values {
+            calls.add("${op.opName}(${(values.ints.map { it.toString() } + values.strings.map { "\"$it\"" }).joinToString(", ")})")
+            return Cs2Host.defaults(op)
+        }
+
+        override fun onError(message: String) = println("  error: $message")
+    }
+    val dispatcher = Cs2HookDispatcher(reload, host)
+    val hook = Cs2Hook(scriptId, Cs2Values(ints = args.mapNotNull { it.toIntOrNull() }))
+
+    fun run(label: String) {
+        calls.clear()
+        val result = dispatcher.dispatch(hook, Cs2Event())
+        println("$label:")
+        println("  returned: ints=${result?.ints} strings=${result?.strings} longs=${result?.longs}")
+        println("  host calls (${calls.size}):")
+        calls.take(20).forEach { println("    $it") }
+    }
+
+    run("cached")
+    println()
+    val event = reload.reload(scriptId)
+    println("reload: $event")
+    event.diagnostic?.let { println("  ${it.location}") }
+    println()
+    run("from source")
+}
+
+/**
+ * Runs the hot reload watcher without a window.
+ *
+ * Same pipeline the editor uses, so a reload that works here works there. With a
+ * duration it runs unattended, which is how it gets tested; without one it takes
+ * commands on stdin.
+ */
+private fun cs2Watch(cache: Cache, directory: String?, seconds: Int?) {
+    val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
+    println("Analysing the cache...")
+    val analyzer = Cs2Analyzer(cache)
+    analyzer.analyse()
+    val reload = Cs2HotReload(cache, analyzer, Cs2SourceProject(cache, analyzer, folder))
+
+    if (!reload.start()) {
+        println("cannot watch: ${reload.watcherError}")
+        return
+    }
+    println("watching ${reload.watchedFolder?.absolutePath}")
+    println("save a clientscript-<id>.ts to reload it. Commands: r <id>, v <id>, l, q")
+
+    val drained = ArrayList<Cs2HotReload.Event>()
+    val printer = Thread {
+        try {
+            while (true) {
+                reload.drainInto(drained)
+                drained.forEach { event ->
+                    println("  $event")
+                    val diagnostic = event.diagnostic
+                    if (diagnostic != null && diagnostic.located) println("    at ${diagnostic.location}")
+                    if (event.staleCallers.isNotEmpty()) {
+                        println("    stale callers: ${event.staleCallers.take(20)}")
+                    }
+                }
+                drained.clear()
+                Thread.sleep(100)
+            }
+        } catch (e: InterruptedException) {
+            // Shutting down.
+        }
+    }
+    printer.isDaemon = true
+    printer.start()
+
+    if (seconds != null) {
+        Thread.sleep(seconds * 1000L)
+    } else {
+        var interactive = false
+        while (true) {
+            val line = readlnOrNull()?.trim() ?: break
+            interactive = true
+            val parts = line.split(' ')
+            when (parts[0]) {
+                "q", "quit", "exit" -> break
+                "l", "list" -> println("  overridden: ${reload.overridden}")
+                "r" -> parts.getOrNull(1)?.toIntOrNull()?.let { println("  ${reload.reload(it)}") }
+                "v" -> parts.getOrNull(1)?.toIntOrNull()?.let { println("  ${reload.project.verify(it).summary}") }
+                "" -> Unit
+                else -> println("  commands: r <id>, v <id>, l, q")
+            }
+        }
+        // `gradle run` does not forward stdin, so an immediate EOF means there is
+        // no console rather than a developer asking to stop.
+        if (!interactive) {
+            println("no console input; watching until interrupted")
+            printer.join()
+        }
+    }
+    printer.interrupt()
+    reload.close()
+    println("stopped. ${reload.log.count { !it.ok }} failures in ${reload.log.size} events")
 }
 
 /**

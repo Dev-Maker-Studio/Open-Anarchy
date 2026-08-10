@@ -145,10 +145,12 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
             keyRepeats = ByteArray(11)
             keyCodes = ByteArray(11)
             keyModifiers = IntArray(11)
+            // Each binding is four bytes; the first packs the slot into the high nibble (stored as
+            // slot + 1, so a zero byte terminates the list) and the top nibble of a 12 bit repeat
+            // delay into the low nibble. The second byte holds the rest of the delay.
             while (mod != 0) {
                 val index = (mod shr 4) - 1
-                mod = buffer.readUnsignedByte() or mod shl 8
-                mod = mod and 0xfff
+                mod = ((mod shl 8) or buffer.readUnsignedByte()) and 0xfff
                 val repeat = buffer.readByte().toByte()
                 if (repeat.toInt() != 0) {
                     clickable = true
@@ -184,7 +186,7 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
         anInt4860 = buffer.readUnsignedByte()
         useOption = buffer.readString()
         var settingData = -1
-        if (setting and 0x3fda8 shr 11 != 0) {
+        if (InterfaceComponentSetting.useOptionFlags(setting) != 0) {
             settingData = buffer.readShort()
             if (settingData == 65535) {
                 settingData = -1
