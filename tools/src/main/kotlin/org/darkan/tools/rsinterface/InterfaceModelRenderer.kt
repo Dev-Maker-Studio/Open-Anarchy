@@ -55,6 +55,20 @@ class InterfaceModelRenderer(
     private val itemDefinitions: Array<ItemDefinition> = itemDecoder.create(itemDecoder.size(cache) + 1)
     private val itemDecoded = BooleanArray(itemDefinitions.size)
 
+    /**
+     * Size of the framebuffer being drawn into, which the viewport and scissor
+     * arithmetic below has to flip against. It defaults to the window, but the
+     * editor renders the interface into an off-screen target of its own size, and
+     * flipping a target-space coordinate against the window's height puts every
+     * model viewport somewhere else entirely. Set it to (0, 0) to track the window.
+     */
+    var targetWidth: Int = 0
+    var targetHeight: Int = 0
+
+    private val surfaceWidth: Int get() = if (targetWidth > 0) targetWidth else window.width
+
+    private val surfaceHeight: Int get() = if (targetHeight > 0) targetHeight else window.height
+
     private val modelMatrix = Matrix4f()
     private val viewMatrix = Matrix4f()
     private val projectionMatrix = Matrix4f()
@@ -97,9 +111,10 @@ class InterfaceModelRenderer(
         }
 
         // The 2D pass owns the scissor box; the viewport is ours for this draw.
-        glViewport(screenX, window.height - screenY - state.height, state.width, state.height)
+        val surface = surfaceHeight
+        glViewport(screenX, surface - screenY - state.height, state.width, state.height)
         glEnable(GL_SCISSOR_TEST)
-        glScissor(clipLeft, window.height - clipBottom, clipRight - clipLeft, clipBottom - clipTop)
+        glScissor(clipLeft, surface - clipBottom, clipRight - clipLeft, clipBottom - clipTop)
 
         // Each component owns its own depth range; without clearing, a model drawn
         // earlier in the frame would occlude one drawn later at the same depth.
@@ -161,7 +176,7 @@ class InterfaceModelRenderer(
         renderSystem.disableCullFace()
         renderSystem.resetFrontFace()
         renderSystem.disableDepthTest()
-        renderSystem.setViewport(0, 0, window.width, window.height)
+        renderSystem.setViewport(0, 0, surfaceWidth, surfaceHeight)
         return true
     }
 

@@ -15,6 +15,10 @@ class InputSystem(private val window: Window) {
             keyboard.onKeyEvent(key, scancode, action, mods)
         }
 
+        window.setCharCallback { codepoint ->
+            keyboard.onChar(codepoint)
+        }
+
         window.setMouseButtonCallback { button, action, mods ->
             mouse.onMouseButton(button, action, mods)
         }

@@ -39,7 +39,31 @@ class Cs2HookDispatcher(
     private val context: Cs2Context,
     private val host: Cs2Host,
 ) {
-    private val vm = Cs2Vm(context, host)
+    /**
+     * One machine per level of nesting.
+     *
+     * A hook can run while another is already running - a script writes a var, the
+     * host turns that into a transmit dispatch, and that script writes another -
+     * and [Cs2Vm.execute] clears its stacks and frames on entry, so sharing one
+     * machine would wipe the outer script's state mid-instruction. The client has
+     * exactly this arrangement: `getNextScriptExecutor` hands out `CS2Executor`s
+     * from a pool indexed by depth and grows it on demand, which also means each
+     * nesting level gets its own operand stacks *and* its own global arrays.
+     */
+    private val machines = ArrayList<Cs2Vm>(4)
+    private var depth = 0
+
+    private fun <T> withMachine(block: (Cs2Vm) -> T): T {
+        if (machines.size <= depth) {
+            machines.add(Cs2Vm(context, host))
+        }
+        val machine = machines[depth++]
+        try {
+            return block(machine)
+        } finally {
+            depth--
+        }
+    }
 
     /** Runs [hook], substituting event data for the sentinel arguments. */
     fun dispatch(hook: InterfaceComponentHook, event: Cs2Event): Cs2Values? {
@@ -58,7 +82,7 @@ class Cs2HookDispatcher(
                 is Long -> longs.add(argument)
             }
         }
-        return vm.execute(script, ints, strings, longs)
+        return withMachine { it.execute(script, ints, strings, longs, hook.script) }
     }
 
     /** Runs the same [hook] shape held directly by the virtual machine. */
@@ -67,12 +91,15 @@ class Cs2HookDispatcher(
             host.onError("Hook targets missing script ${hook.scriptId}")
             return null
         }
-        return vm.execute(
-            script,
-            hook.args.ints.map { substitute(it, event) },
-            hook.args.strings.map { if (it == OPTION_NAME) event.optionName else it },
-            hook.args.longs,
-        )
+        return withMachine {
+            it.execute(
+                script,
+                hook.args.ints.map { arg -> substitute(arg, event) },
+                hook.args.strings.map { arg -> if (arg == OPTION_NAME) event.optionName else arg },
+                hook.args.longs,
+                hook.scriptId,
+            )
+        }
     }
 
     private fun substitute(value: Int, event: Cs2Event) = when (value) {
