@@ -435,7 +435,28 @@ object TerrainAligner {
         val centerX = localTileX + sizeX * 0.5f
         val centerY = localTileY + sizeY * 0.5f
 
-        // Sample 4 corners with clamping to valid tile range
+        // Sample 4 corners, clamped into a single region's tile range.
+        //
+        // This clamp is the same defect that VertexDisplacer's height field had: an object
+        // whose footprint reaches tile 64 gets both of its opposing corners folded onto tile
+        // 63, and a footprint with two identical corners has no slope, so atan2 returns zero
+        // and the object stands level on a hillside. Note that it is *this* clamp that
+        // governs, not the ones at the call sites in ObjectRenderer -- those re-clamp an
+        // already-clamped coordinate, so removing them alone would change nothing.
+        //
+        // It is left in place deliberately, because it is unreachable. TiltProbe swept all
+        // 2,108 readable regions (5.1M objects, 2,794 of contour type 3) and found exactly
+        // one type 3 object seated on a region edge -- 73135 at (63,0) of region 50,96 --
+        // whose groundContourModifier of 8224 gives it a quarter-tile sampling extent, too
+        // small to cross the seam. Nothing in the cache trips this.
+        //
+        // What it would cost if something did is not small: `tiltprobe whatif 45 49` reports
+        // 17 of 64 tiles on that region's eastern seam losing up to 31.99 degrees of roll,
+        // every one of them rendering at exactly 0.000 degrees instead. So if object
+        // placement ever changes -- a map edit, a newer cache, a hand-placed ramp across a
+        // boundary -- re-run `tiltprobe scan`, and if it reports a non-zero count, route
+        // these samples through TerrainLoader.getExtendedTileHeightScaled the way the
+        // average-height corner sampling in ObjectRenderer already is.
         fun sampleHeight(offsetX: Float, offsetY: Float): Float {
             val tx = (centerX + offsetX).coerceIn(0f, 63f).toInt()
             val ty = (centerY + offsetY).coerceIn(0f, 63f).toInt()

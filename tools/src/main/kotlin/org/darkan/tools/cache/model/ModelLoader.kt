@@ -9,6 +9,7 @@ import org.joml.Vector3f
 import world.gregs.voidps.cache.Cache
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.abs
 import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -1454,7 +1455,7 @@ object ModelLoader {
 
             // Build tangent frame from the face normal.
             // Choose an arbitrary "up" vector that isn't parallel to the normal.
-            val up = if (kotlin.math.abs(normalGL.y) < 0.99f) {
+            val up = if (abs(normalGL.y) < 0.99f) {
                 Vector3f(0f, 1f, 0f)
             } else {
                 Vector3f(1f, 0f, 0f)

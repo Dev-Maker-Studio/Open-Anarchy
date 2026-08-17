@@ -4,8 +4,11 @@ import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionLoader
 import org.darkan.tools.cache.NameLookup
 import org.darkan.tools.cs2.runCs2
+import org.darkan.tools.cache.map.DisplaceProbe
 import org.darkan.tools.cache.map.ObjectRenderer
+import org.darkan.tools.cache.map.TiltProbe
 import org.darkan.tools.cache.map.environment.runEnvironmentDiagnostic
+import org.darkan.tools.cache.model.BillboardTypeLoader
 import org.darkan.tools.cache.model.ModelDecoder
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.model.ModelUnavailableReason
@@ -19,6 +22,8 @@ import org.darkan.tools.viewer.ModelViewer
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * Main entry point for Darkan Tools.
@@ -54,6 +59,34 @@ fun main(args: Array<String>) {
             val localY = args.getOrNull(4)?.toIntOrNull() ?: 25
             val plane = args.getOrNull(5)?.toIntOrNull() ?: 0
             runDiagnostic(cache, regionX, regionY, localX, localY, plane)
+        }
+        "displaceprobe" -> {
+            // Audit ground-contour-1 vertex displacement for a region, headlessly.
+            // displaceprobe <regionX> <regionY> [objectId]
+            val rx = args.getOrNull(1)?.toIntOrNull() ?: 52
+            val ry = args.getOrNull(2)?.toIntOrNull() ?: 50
+            val objectId = args.getOrNull(3)?.toIntOrNull()
+            DisplaceProbe.run(cache, rx, ry, objectId)
+        }
+        "displacejoint" -> {
+            // Compare a region's y=63 edge against the y=0 edge of the region above.
+            // displacejoint <regionX> <regionY> <objectId>
+            val rx = args.getOrNull(1)?.toIntOrNull() ?: 52
+            val ry = args.getOrNull(2)?.toIntOrNull() ?: 50
+            val objectId = args.getOrNull(3)?.toIntOrNull() ?: 3125
+            DisplaceProbe.runJoint(cache, rx, ry, objectId)
+        }
+        "tiltprobe" -> {
+            // Audit contour-type-3 tilt sampling at region edges, headlessly.
+            // tiltprobe scan [maxRegions] | tiltprobe whatif <regionX> <regionY>
+            when (args.getOrNull(1)?.lowercase() ?: "scan") {
+                "whatif" -> TiltProbe.whatIf(
+                    cache,
+                    args.getOrNull(2)?.toIntOrNull() ?: 52,
+                    args.getOrNull(3)?.toIntOrNull() ?: 50
+                )
+                else -> TiltProbe.scan(cache, args.getOrNull(2)?.toIntOrNull())
+            }
         }
         "roofscan" -> {
             val rx = args.getOrNull(1)?.toIntOrNull() ?: 54
@@ -282,7 +315,7 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
         val objLocalY = obj.y - baseWorldY
 
         // Check if object is within 3 tiles of our target
-        if (kotlin.math.abs(objLocalX - localX) <= 3 && kotlin.math.abs(objLocalY - localY) <= 3) {
+        if (abs(objLocalX - localX) <= 3 && abs(objLocalY - localY) <= 3) {
             val def = ObjectRenderer.getDefinition(obj.id) ?: continue
             val modelIds = ObjectRenderer.getModelIds(def, obj.shape)
 
@@ -640,7 +673,7 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
                 for ((bi, bb) in modelDef.billboards.withIndex()) {
                     println("    [$bi] id=${bb.billboardId}, face=${bb.appliesOnFace}, depth=${bb.depth}, distance=${bb.distance}")
                     // Load the BillboardType config
-                    val bbType = org.darkan.tools.cache.model.BillboardTypeLoader.get(cache, bb.billboardId)
+                    val bbType = BillboardTypeLoader.get(cache, bb.billboardId)
                     println("         type: materialId=${bbType.materialId}, size2d=${bbType.size2d}, size3d=${bbType.size3d}, shape=${bbType.shape}, blend=${bbType.blendType}, stationary=${bbType.stationary}, hasUid=${bbType.hasUid}")
                 }
             } else {
@@ -1077,7 +1110,7 @@ private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
         val nx = dy1 * dz2 - dz1 * dy2
         val ny = dz1 * dx2 - dx1 * dz2
         val nz = dx1 * dy2 - dy1 * dx2
-        val len = kotlin.math.sqrt(nx * nx + ny * ny + nz * nz)
+        val len = sqrt(nx * nx + ny * ny + nz * nz)
         if (len > 0) {
             println("    Normal: (${nx/len}, ${ny/len}, ${nz/len})")
         }

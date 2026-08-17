@@ -72,12 +72,12 @@ class DebugPanel {
             }
 
             ImGui.separator()
-            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "Controls:")
-            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "  WASD - Move")
-            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "  Space/Shift - Up/Down")
-            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "  Right Click - Look")
-            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "  Scroll - Zoom")
-            ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, "  ESC - Release Mouse")
+            ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "Controls:")
+            ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "  WASD - Move")
+            ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "  Space/Shift - Up/Down")
+            ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "  Right Click - Look")
+            ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "  Scroll - Zoom")
+            ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, "  ESC - Release Mouse")
         }
         ImGui.end()
     }

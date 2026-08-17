@@ -1,6 +1,7 @@
 package org.darkan.tools.engine.input
 
 import org.darkan.tools.cache.map.ObjectRenderer
+import org.darkan.tools.cache.model.ModelDefinition
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.engine.render.Camera
@@ -8,8 +9,12 @@ import org.darkan.tools.util.CoordinateUtil
 import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.joml.Vector4f
+import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.config.data.OverlayDefinition
+import world.gregs.voidps.cache.config.data.UnderlayDefinition
 import world.gregs.voidps.cache.definition.data.MapObject
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import kotlin.math.floor
 
 /**
  * Handles tile selection via raycasting from mouse position to terrain.
@@ -49,8 +54,8 @@ class TilePicker {
     data class TileDetails(
         val tile: SelectedTile,
         val tileData: TerrainLoader.TileData?,
-        val underlayDef: world.gregs.voidps.cache.config.data.UnderlayDefinition?,
-        val overlayDef: world.gregs.voidps.cache.config.data.OverlayDefinition?,
+        val underlayDef: UnderlayDefinition?,
+        val overlayDef: OverlayDefinition?,
         val cornerHeights: FloatArray,  // [SW, SE, NW, NE]
         val cornerUVsOverlay: Array<FloatArray>?,  // [[u, v], ...] for overlay
         val cornerUVsUnderlay: Array<FloatArray>?,  // [[u, v], ...] for underlay
@@ -73,11 +78,18 @@ class TilePicker {
     var selectedTileDetails: TileDetails? = null
         private set
 
-    // World offset for the region being picked.
-    // Ray coordinates are in world space; subtract these offsets to get local-tile-space
-    // coordinates for intersection testing against the local terrain grid.
-    var worldOffsetX: Float = 0f
-    var worldOffsetZ: Float = 0f
+    /**
+     * Supplies the tile grid of any region the ray may cross.
+     *
+     * The picker works in absolute world space and asks for whichever region a sample
+     * lands in, so a click is answered by the region actually under the cursor rather
+     * than by the one the camera happens to be centred on. Returning null means "that
+     * region is not loaded", which the picker treats exactly like empty space: the ray
+     * passes through and no hit is reported there.
+     */
+    fun interface TerrainProvider {
+        fun tiles(regionX: Int, regionY: Int): Array<Array<Array<TerrainLoader.TileData>>>?
+    }
 
     // Ray for debugging
     private val rayOrigin = Vector3f()
@@ -137,22 +149,20 @@ class TilePicker {
     }
 
     /**
-     * Pick a tile from the current ray using terrain data.
+     * Pick a tile from the current ray across every loaded region.
      *
-     * @param terrainTiles The terrain tile array from TerrainLoader.RegionData
-     * @param regionX The region X coordinate
-     * @param regionY The region Y coordinate
+     * The ray is marched in absolute world space and each sample is resolved to whichever
+     * region contains it, so the picker answers clicks anywhere the terrain is drawn - not
+     * only inside the region the editor is centred on. That matters because the camera
+     * normally sits outside its own region (a region is 256 world units across and the
+     * default framing pulls back further than that), which puts most of the lower half of
+     * the viewport over a neighbouring region.
+     *
+     * @param provider Supplies the tile grid for a region, or null when it is not loaded
      * @param plane The current plane
      * @return The selected tile, or null if no intersection
      */
-    fun pickTile(
-        terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>?,
-        regionX: Int,
-        regionY: Int,
-        plane: Int
-    ): SelectedTile? {
-        if (terrainTiles == null) return null
-
+    fun pickTile(provider: TerrainProvider, plane: Int): SelectedTile? {
         val tileSize = 512f * CoordinateUtil.DEFAULT_SCALE
         val heightScale = TerrainLoader.getHeightScale()
 
@@ -161,53 +171,53 @@ class TilePicker {
         val maxDistance = 4000f
         val stepSize = tileSize * 0.5f  // Half tile per step
 
-        var currentPoint = Vector3f(rayOrigin)
+        val currentPoint = Vector3f(rayOrigin)
         val step = Vector3f(rayDirection).mul(stepSize)
 
-        var lastAbove = true
-        var lastPoint = Vector3f(rayOrigin)
+        // A surface crossing is only real when BOTH ends of the step sit over loaded
+        // terrain. Seeding `lastAbove = true` and carrying it across samples that had no
+        // terrain under them reported a crossing on the first sample that did, and the
+        // bisection then bracketed across a gap and clamped to the grid edge - the "every
+        // click picks x=0" failure. `hasPrevSample` breaks the bracket whenever the ray
+        // leaves loaded ground, so a hit needs a genuine above->below transition with both
+        // samples over terrain that exists.
+        var hasPrevSample = false
+        var lastAbove = false
+        val lastPoint = Vector3f(rayOrigin)
 
         var distance = 0f
         while (distance < maxDistance) {
             currentPoint.add(step)
             distance += stepSize
 
-            // Convert world position to local tile coordinates by subtracting the region offset
-            val localX = ((currentPoint.x - worldOffsetX) / tileSize).toInt()
-            val localY = (-(currentPoint.z - worldOffsetZ) / tileSize).toInt()  // Z is negated in OpenGL
+            val terrainHeight = heightAt(
+                provider, plane, currentPoint.x, currentPoint.z, tileSize, heightScale
+            )
 
-            // Check if within region bounds
-            if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) {
+            if (terrainHeight == null) {
+                hasPrevSample = false
                 lastPoint.set(currentPoint)
                 continue
             }
 
-            // Get terrain height at this position (interpolate between corners)
-            // Pass LOCAL coordinates to height lookup (subtract world offset)
-            val terrainHeight = getInterpolatedHeight(
-                terrainTiles, localX, localY, plane,
-                currentPoint.x - worldOffsetX, currentPoint.z - worldOffsetZ, tileSize, heightScale
-            )
-
             val isAbove = currentPoint.y > terrainHeight
 
             // Check for intersection (ray crosses terrain surface)
-            if (!isAbove && lastAbove) {
+            if (hasPrevSample && lastAbove && !isAbove) {
                 // Binary search refinement
                 val intersection = binarySearchIntersection(
-                    lastPoint, currentPoint,
-                    terrainTiles, plane, tileSize, heightScale
+                    lastPoint, currentPoint, provider, plane, tileSize, heightScale
                 )
 
-                // Get final tile coordinates (in local space)
-                val finalLocalX = ((intersection.x - worldOffsetX) / tileSize).toInt().coerceIn(0, 63)
-                val finalLocalY = (-(intersection.z - worldOffsetZ) / tileSize).toInt().coerceIn(0, 63)
+                val globalX = floor(intersection.x / tileSize).toInt()
+                val globalY = floor(-intersection.z / tileSize).toInt()
+                if (globalX < 0 || globalY < 0) return null
 
                 selectedTile = SelectedTile(
-                    regionX = regionX,
-                    regionY = regionY,
-                    localX = finalLocalX,
-                    localY = finalLocalY,
+                    regionX = globalX / TILES_PER_REGION,
+                    regionY = globalY / TILES_PER_REGION,
+                    localX = globalX % TILES_PER_REGION,
+                    localY = globalY % TILES_PER_REGION,
                     plane = plane,
                     worldX = intersection.x,
                     worldY = intersection.y,
@@ -216,6 +226,7 @@ class TilePicker {
                 return selectedTile
             }
 
+            hasPrevSample = true
             lastAbove = isAbove
             lastPoint.set(currentPoint)
         }
@@ -224,36 +235,57 @@ class TilePicker {
     }
 
     /**
-     * Get interpolated terrain height at a world position.
+     * Height of one terrain vertex in absolute tile-grid coordinates, or null when the
+     * region owning it is not loaded.
+     *
+     * Vertex (gx, gy) is shared between regions: it is local (gx % 64, gy % 64) of region
+     * (gx / 64, gy / 64), and the vertex on a region's east edge is the same vertex as the
+     * one on its neighbour's west edge. Resolving corners this way is what keeps the
+     * interpolated surface continuous where two loaded regions meet.
      */
-    private fun getInterpolatedHeight(
-        tiles: Array<Array<Array<TerrainLoader.TileData>>>,
-        localX: Int,
-        localY: Int,
+    private fun vertexHeight(
+        provider: TerrainProvider,
+        plane: Int,
+        globalX: Int,
+        globalY: Int,
+        heightScale: Float
+    ): Float? {
+        if (globalX < 0 || globalY < 0) return null
+        val tiles = provider.tiles(globalX / TILES_PER_REGION, globalY / TILES_PER_REGION) ?: return null
+        if (plane < 0 || plane >= tiles.size) return null
+        return tiles[plane][globalX % TILES_PER_REGION][globalY % TILES_PER_REGION].height * heightScale
+    }
+
+    /**
+     * Bilinearly interpolated terrain height at a world position, or null when no loaded
+     * region covers it.
+     *
+     * Only the tile the sample falls in has to be loaded. Its three other corners are
+     * taken from the true neighbouring vertex when that region is loaded, and otherwise
+     * fall back to this region's clamped edge vertex - which reproduces the flat edge band
+     * the single-region picker produced, rather than punching an unpickable seam around
+     * whatever happens to be loaded.
+     */
+    private fun heightAt(
+        provider: TerrainProvider,
         plane: Int,
         worldX: Float,
         worldZ: Float,
         tileSize: Float,
         heightScale: Float
-    ): Float {
-        if (localX < 0 || localX >= 63 || localY < 0 || localY >= 63) {
-            val clampedX = localX.coerceIn(0, 63)
-            val clampedY = localY.coerceIn(0, 63)
-            return tiles[plane][clampedX][clampedY].height * heightScale
-        }
+    ): Float? {
+        val gridX = worldX / tileSize
+        val gridY = -worldZ / tileSize  // Z is negated in OpenGL
+        val globalX = floor(gridX).toInt()
+        val globalY = floor(gridY).toInt()
 
-        // Get corner heights
-        val h00 = tiles[plane][localX][localY].height * heightScale         // SW
-        val h10 = tiles[plane][localX + 1][localY].height * heightScale     // SE
-        val h01 = tiles[plane][localX][localY + 1].height * heightScale     // NW
-        val h11 = tiles[plane][localX + 1][localY + 1].height * heightScale // NE
+        val h00 = vertexHeight(provider, plane, globalX, globalY, heightScale) ?: return null
+        val h10 = vertexHeight(provider, plane, globalX + 1, globalY, heightScale) ?: h00
+        val h01 = vertexHeight(provider, plane, globalX, globalY + 1, heightScale) ?: h00
+        val h11 = vertexHeight(provider, plane, globalX + 1, globalY + 1, heightScale) ?: h10
 
-        // Bilinear interpolation
-        val tileStartX = localX * tileSize
-        val tileStartZ = -localY * tileSize
-
-        val fx = ((worldX - tileStartX) / tileSize).coerceIn(0f, 1f)
-        val fz = ((-worldZ - localY * tileSize) / tileSize).coerceIn(0f, 1f)
+        val fx = (gridX - globalX).coerceIn(0f, 1f)
+        val fz = (gridY - globalY).coerceIn(0f, 1f)
 
         val h0 = h00 + (h10 - h00) * fx  // South edge
         val h1 = h01 + (h11 - h01) * fx  // North edge
@@ -267,32 +299,24 @@ class TilePicker {
     private fun binarySearchIntersection(
         above: Vector3f,
         below: Vector3f,
-        tiles: Array<Array<Array<TerrainLoader.TileData>>>,
+        provider: TerrainProvider,
         plane: Int,
         tileSize: Float,
         heightScale: Float
     ): Vector3f {
         val mid = Vector3f()
-        var a = Vector3f(above)
-        var b = Vector3f(below)
+        val a = Vector3f(above)
+        val b = Vector3f(below)
 
         for (i in 0 until 10) {  // 10 iterations for good precision
             mid.set(a).add(b).mul(0.5f)
 
-            val localX = ((mid.x - worldOffsetX) / tileSize).toInt()
-            val localY = (-(mid.z - worldOffsetZ) / tileSize).toInt()
-
-            if (localX < 0 || localX >= 64 || localY < 0 || localY >= 64) {
-                // Out of bounds, move towards in-bounds point
-                if (localX < 0 || localX >= 64) b.set(mid)
-                else a.set(mid)
-                continue
-            }
-
-            val terrainHeight = getInterpolatedHeight(
-                tiles, localX, localY, plane,
-                mid.x - worldOffsetX, mid.z - worldOffsetZ, tileSize, heightScale
-            )
+            // Both endpoints sit over loaded terrain and the segment is half a tile long,
+            // so the midpoint does too; a null here would mean the bracket is meaningless,
+            // and keeping the above-end fixed simply ends the refinement where it is
+            // rather than letting a missing sample drag the result across the gap.
+            val terrainHeight = heightAt(provider, plane, mid.x, mid.z, tileSize, heightScale)
+                ?: return mid
 
             if (mid.y > terrainHeight) {
                 a.set(mid)
@@ -315,7 +339,7 @@ class TilePicker {
      */
     fun updateTileDetails(
         terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>?,
-        cache: world.gregs.voidps.cache.Cache,
+        cache: Cache,
         regionObjects: List<MapObject>? = null,
         baseWorldX: Int = 0,
         baseWorldY: Int = 0
@@ -407,7 +431,7 @@ class TilePicker {
      * Also includes objects that span multiple tiles (sizeX > 1 or sizeY > 1).
      */
     private fun collectObjectsAtTile(
-        cache: world.gregs.voidps.cache.Cache,
+        cache: Cache,
         regionObjects: List<MapObject>?,
         baseWorldX: Int,
         baseWorldY: Int,
@@ -470,7 +494,7 @@ class TilePicker {
     /**
      * Collect unique texture IDs from a model definition.
      */
-    private fun collectTextureIds(def: org.darkan.tools.cache.model.ModelDefinition, textureIds: MutableSet<Int>) {
+    private fun collectTextureIds(def: ModelDefinition, textureIds: MutableSet<Int>) {
         val faceTextures = def.faceTextures ?: return
         for (i in 0 until def.faceCount) {
             val textureIdSigned = faceTextures[i].toInt()
@@ -498,4 +522,8 @@ class TilePicker {
      * Get the current ray direction for debugging.
      */
     fun getRayDirection(): Vector3f = rayDirection
+
+    companion object {
+        private const val TILES_PER_REGION = 64
+    }
 }
