@@ -12,9 +12,21 @@ uniform vec3 lightDirection;
 uniform vec3 lightColor;
 
 void main() {
-    // Flip normal for back faces (two-sided lighting)
-    // For mirrored objects, the winding order is reversed, so gl_FrontFacing is inverted
-    // We need to account for this to get correct lighting
+    // Flip normal for back faces (two-sided lighting).
+    //
+    // The vMirrored branch below is the opposite case to the one deleted from
+    // indirect_*.frag and ubo_*.frag, which is why it stays here. Those shaders draw
+    // mirrored instances from geometry whose winding was already reversed on the CPU
+    // (RegionManager.registerMirroredVariants -> StaticBatcher.reverseWinding), so
+    // gl_FrontFacing is correct as it stands and inverting it again negated the normal
+    // on every visible mirrored surface. Here vMirrored means something different: the
+    // vertex stage sets it from determinant(mat3(model)) < 0, a reflection baked into the
+    // model matrix, which really does invert raster winding - so compensating is correct.
+    //
+    // In practice the branch is unreachable. Only ModelViewer and InterfaceViewer's
+    // InterfaceModelRenderer load this program, and both build `model` from translate,
+    // rotate and positive scale only, so the determinant is never negative and vMirrored
+    // is always 0. Leave it in place for whoever draws a reflected model matrix next.
     vec3 norm = normalize(vNormal);
     bool isFrontFace = gl_FrontFacing;
     if (vMirrored == 1) {

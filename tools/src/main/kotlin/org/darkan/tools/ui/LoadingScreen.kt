@@ -48,7 +48,7 @@ class LoadingScreen {
                 val gpuText = "${progress.pendingGpuTasks} GPU tasks pending"
                 val gpuWidth = ImGui.calcTextSize(gpuText).x
                 ImGui.setCursorPos(centerX - gpuWidth / 2, centerY + 30)
-                ImGui.textColored(0.7f, 0.7f, 0.7f, 1f, gpuText)
+                ImGuiText.coloured(0.7f, 0.7f, 0.7f, 1f, gpuText)
             }
         }
         ImGui.end()

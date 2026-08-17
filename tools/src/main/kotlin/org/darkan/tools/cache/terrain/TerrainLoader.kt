@@ -290,6 +290,70 @@ object TerrainLoader {
     }
 
     /**
+     * Raw (unscaled) tile height at coordinates that may lie outside this region's
+     * 0..63 range, read from the appropriate neighbour region when one is supplied.
+     *
+     * This is the integer counterpart of [getExtendedHeightRaw], exposed because the
+     * RS client's height array covers the *whole loaded scene* plus a guard row and
+     * column, not a single region. Anything reproducing client height arithmetic --
+     * [org.darkan.tools.cache.map.VertexDisplacer.HeightField] and the average-height
+     * corner sampling in [org.darkan.tools.cache.map.ObjectRenderer] -- must be able to
+     * read one tile past the region edge, or objects on the last row/column silently
+     * sample the wrong corner.
+     *
+     * Where the required neighbour is absent the region's own edge tile is used, which
+     * matches the fallback in [getExtendedHeight] and [getExtendedHeightRaw].
+     *
+     * @param tiles This region's `[plane][x][y]` tile array
+     * @param neighbors Neighbour data; null falls back to clamping into this region
+     * @param plane Plane level (clamped to 0..3)
+     * @param x Tile X, may be negative or > 63
+     * @param y Tile Y, may be negative or > 63
+     * @return Height in raw RS units
+     */
+    fun getExtendedTileHeight(
+        tiles: Array<Array<Array<TileData>>>,
+        neighbors: NeighborData?,
+        plane: Int,
+        x: Int,
+        y: Int
+    ): Int {
+        val p = plane.coerceIn(0, 3)
+        if (x in 0..63 && y in 0..63) {
+            return tiles[p][x][y].height
+        }
+        if (neighbors == null) {
+            return tiles[p][x.coerceIn(0, 63)][y.coerceIn(0, 63)].height
+        }
+        val neighborRegion: RegionData?
+        val nx: Int
+        val ny: Int
+        when {
+            x > 63 && y > 63 -> { neighborRegion = neighbors.northeast; nx = x - 64; ny = y - 64 }
+            x > 63 && y < 0  -> { neighborRegion = neighbors.southeast; nx = x - 64; ny = y + 64 }
+            x < 0  && y > 63 -> { neighborRegion = neighbors.northwest; nx = x + 64; ny = y - 64 }
+            x < 0  && y < 0  -> { neighborRegion = neighbors.southwest; nx = x + 64; ny = y + 64 }
+            x > 63           -> { neighborRegion = neighbors.east;      nx = x - 64; ny = y }
+            x < 0            -> { neighborRegion = neighbors.west;      nx = x + 64; ny = y }
+            y > 63           -> { neighborRegion = neighbors.north;     nx = x;      ny = y - 64 }
+            else             -> { neighborRegion = neighbors.south;     nx = x;      ny = y + 64 }
+        }
+        if (neighborRegion == null || nx !in 0..63 || ny !in 0..63) {
+            return tiles[p][x.coerceIn(0, 63)][y.coerceIn(0, 63)].height
+        }
+        return neighborRegion.tiles[p][nx][ny].height
+    }
+
+    /** [getExtendedTileHeight] converted to OpenGL world units. */
+    fun getExtendedTileHeightScaled(
+        tiles: Array<Array<Array<TileData>>>,
+        neighbors: NeighborData?,
+        plane: Int,
+        x: Int,
+        y: Int
+    ): Float = getExtendedTileHeight(tiles, neighbors, plane, x, y) * HEIGHT_SCALE
+
+    /**
      * Get underlay ID at extended coordinates using neighbor data.
      * Returns 0 (no underlay) if the neighbor region is not available.
      */
@@ -2717,22 +2781,22 @@ object TerrainLoader {
             edgeFaceCounts = null
         } else if (overlayBlends) {
             // Use overlay-supports-blending tables (shapes 0-12)
-            val safeShape = pathShape.coerceIn(0, OVERLAY_BLEND_A.size - 1)
-            triA = OVERLAY_BLEND_A[safeShape]
-            triB = OVERLAY_BLEND_B[safeShape]
-            triC = OVERLAY_BLEND_C[safeShape]
-            overlayFaces = if (overlayDef != null) OVERLAY_BLEND_OVERLAY_COUNT.getOrElse(safeShape) { 0 } else 0
-            underlayFaces = if (underlayDef != null) OVERLAY_BLEND_UNDERLAY_COUNT.getOrElse(safeShape) { 0 } else 0
-            edgeFaceCounts = OVERLAY_BLEND_FACE_COUNTS.getOrNull(safeShape)
+            checkBlendableShape(pathShape, OVERLAY_BLEND_A.size)
+            triA = OVERLAY_BLEND_A[pathShape]
+            triB = OVERLAY_BLEND_B[pathShape]
+            triC = OVERLAY_BLEND_C[pathShape]
+            overlayFaces = if (overlayDef != null) OVERLAY_BLEND_OVERLAY_COUNT.getOrElse(pathShape) { 0 } else 0
+            underlayFaces = if (underlayDef != null) OVERLAY_BLEND_UNDERLAY_COUNT.getOrElse(pathShape) { 0 } else 0
+            edgeFaceCounts = OVERLAY_BLEND_FACE_COUNTS.getOrNull(pathShape)
         } else {
             // Use neighbor-driven blending tables (shapes 0-12)
-            val safeShape = pathShape.coerceIn(0, NEIGHBOR_BLEND_A.size - 1)
-            triA = NEIGHBOR_BLEND_A[safeShape]
-            triB = NEIGHBOR_BLEND_B[safeShape]
-            triC = NEIGHBOR_BLEND_C[safeShape]
-            overlayFaces = if (overlayDef != null) NEIGHBOR_BLEND_OVERLAY_COUNT.getOrElse(safeShape) { 0 } else 0
-            underlayFaces = if (underlayDef != null) NEIGHBOR_BLEND_UNDERLAY_COUNT.getOrElse(safeShape) { 0 } else 0
-            edgeFaceCounts = NEIGHBOR_BLEND_FACE_COUNTS.getOrNull(safeShape)
+            checkBlendableShape(pathShape, NEIGHBOR_BLEND_A.size)
+            triA = NEIGHBOR_BLEND_A[pathShape]
+            triB = NEIGHBOR_BLEND_B[pathShape]
+            triC = NEIGHBOR_BLEND_C[pathShape]
+            overlayFaces = if (overlayDef != null) NEIGHBOR_BLEND_OVERLAY_COUNT.getOrElse(pathShape) { 0 } else 0
+            underlayFaces = if (underlayDef != null) NEIGHBOR_BLEND_UNDERLAY_COUNT.getOrElse(pathShape) { 0 } else 0
+            edgeFaceCounts = NEIGHBOR_BLEND_FACE_COUNTS.getOrNull(pathShape)
         }
 
         // Overlay color and texture
@@ -2770,6 +2834,34 @@ object TerrainLoader {
             edgeFaceCounts = edgeFaceCounts,
             overlayTotalFaces = 0
         )
+    }
+
+    /**
+     * Asserts the invariant that a blended tile's shape has a row in the blend tables.
+     *
+     * The two blending modes only have rows for shapes 0..12. Shapes 13 and 14 exist
+     * solely in the 15-entry `TRIANGLE_*` tables, and reaching a blend table with one
+     * is impossible by construction: 13/14 are produced only by the diagonal promotion
+     * in [analyzeTileBlending], which runs only when `!overlaySupportsBlending`, and
+     * each of its four branches requires exactly two `hasFacesOn` flags to be set and
+     * clears both - leaving all four false. `unblendable` is therefore necessarily
+     * true for such a tile and it takes the `TRIANGLE_*` branch instead.
+     *
+     * This used to be a `coerceIn` clamp, which would have silently re-tessellated a
+     * shape 13/14 tile as shape 12 - a completely different tile, and the same
+     * silent-wrong-geometry failure mode as the earlier bug that skipped shapes 4-11.
+     * The reference client relies on the identical invariant but indexes directly and
+     * would throw, so it fails loud where the clamp failed silent. Fail loud here too,
+     * so that any future change to the promotion or blending-mode order surfaces
+     * immediately rather than quietly emitting the wrong geometry.
+     */
+    private fun checkBlendableShape(pathShape: Int, tableSize: Int) {
+        check(pathShape in 0 until tableSize) {
+            "Tile shape $pathShape has no row in the blend tables (0..${tableSize - 1}). " +
+                "Shapes 13/14 must reach the unblendable TRIANGLE_* tables; the promotion " +
+                "in analyzeTileBlending clears every hasFacesOn flag it sets, so a blended " +
+                "tile can never carry them. Blending mode selection has diverged."
+        }
     }
 
     /**

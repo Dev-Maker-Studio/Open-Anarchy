@@ -21,6 +21,7 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.MapObject
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.math.floor
 
 /**
@@ -316,6 +317,19 @@ class AsyncRegionManager(
      */
     private val simulateBatchGranularity: Boolean =
         System.getProperty("darkan.cullProbe", "false").toBoolean()
+
+    /**
+     * `-Ddarkan.displaceAudit=true` logs, per region load, how many contour-type-1
+     * objects were considered, how many the flat pre-test resolved, and how many ran the
+     * per-vertex pass and moved *nothing*.
+     *
+     * That last figure is the direct signal for silently-dropped displacement. It is
+     * legitimately non-zero only when a model's every vertex sits exactly at its average
+     * height; a whole region's edge reporting it means the height field is not reaching
+     * far enough, which is how the Duel Arena ramp railings ended up flat.
+     */
+    private val displaceAudit: Boolean =
+        System.getProperty("darkan.displaceAudit", "false").toBoolean()
 
     /**
      * `-Ddarkan.batchCell=<tiles>`: edge of the spatial cell a static batch is subdivided
@@ -712,9 +726,15 @@ class AsyncRegionManager(
         // transition, so every pendingGpuTasks increment is visible before the region
         // can be observed as GPU_PENDING. A failure in either branch cancels the scope
         // and rethrows to the caller's catch.
+        // Shared by the terrain mesh and the object phase: object heights on the
+        // region's last row/column resolve into the neighbour exactly as the client's
+        // scene-wide height array does. Neighbour regions are cached by TerrainLoader,
+        // so hoisting this out of the terrain branch costs at most one decode that the
+        // object phase would have waited on anyway.
+        val neighbors = TerrainLoader.buildNeighborData(cache, key.regionX, key.regionY)
+
         coroutineScope {
             launch {
-                val neighbors = TerrainLoader.buildNeighborData(cache, key.regionX, key.regionY)
                 val terrainMeshData = TerrainLoader.computeTerrainMeshData(terrainData, plane, neighbors)
                 regionData.terrainMeshData = terrainMeshData
                 RegionLoadProfiler.record(RegionLoadProfiler.PHASE_TERRAIN, System.nanoTime() - terrainPhaseStart)
@@ -739,10 +759,10 @@ class AsyncRegionManager(
                 regionX = key.regionX,
                 regionY = key.regionY,
                 tileHeights = { localX, localY, p ->
-                    TerrainLoader.getTileHeightScaled(ctxTiles, localX, localY, p)
+                    TerrainLoader.getExtendedTileHeightScaled(ctxTiles, neighbors, p, localX, localY)
                 },
                 rsHeightSampler = { localX, localY, p ->
-                    TerrainLoader.getTileHeight(ctxTiles, localX, localY, p)
+                    TerrainLoader.getExtendedTileHeight(ctxTiles, neighbors, p, localX, localY)
                 }
             )
 
@@ -777,7 +797,7 @@ class AsyncRegionManager(
 
             // Phase 4: Compute vertex displacement (CPU, chunked over instances)
             val displacePhaseStart = System.nanoTime()
-            val displacedMeshData = computeDisplacedMeshData(instances, modelMeshData, ctxTiles)
+            val displacedMeshData = computeDisplacedMeshData(instances, modelMeshData, ctxTiles, neighbors, key.regionX, key.regionY)
             regionData.displacedMeshData = displacedMeshData
             RegionLoadProfiler.record(RegionLoadProfiler.PHASE_DISPLACE, System.nanoTime() - displacePhaseStart)
 
@@ -980,6 +1000,16 @@ class AsyncRegionManager(
         val center = centerKey ?: return emptyList()
         return regions.values.filter { it.state == RegionState.READY && it.key != center }
     }
+
+    /**
+     * A single region's data if it is loaded and being drawn, else null.
+     *
+     * Unlike [getReadyContextRegions] this includes the centre region and allocates
+     * nothing, which is what tile picking needs: it asks per ray sample whether a given
+     * region may answer a click, and a region that is not on screen must not.
+     */
+    fun getReadyRegion(regionX: Int, regionY: Int): AsyncRegionData? =
+        regions[RegionKey(regionX, regionY)]?.takeIf { it.state == RegionState.READY }
 
     /**
      * World-space bounds of a region's terrain, for culling its terrain draws.
@@ -1522,14 +1552,22 @@ class AsyncRegionManager(
     private suspend fun computeDisplacedMeshData(
         instances: List<ObjectInstance>,
         modelMeshData: Map<Int, List<MeshData>>,
-        tiles: Array<Array<Array<TerrainLoader.TileData>>>
+        tiles: Array<Array<Array<TerrainLoader.TileData>>>,
+        neighbors: TerrainLoader.NeighborData?,
+        regionX: Int,
+        regionY: Int
     ): Map<Int, List<MeshData>> {
         if (instances.isEmpty()) return emptyMap()
 
         // One flat height array per plane for the whole region, built once and read
         // concurrently by every worker. Replaces two array derefs plus a TileData field
-        // load with a single indexed read in the inner loop.
-        val field = VertexDisplacer.HeightField.from(tiles)
+        // load with a single indexed read in the inner loop. Padded with neighbour
+        // terrain so objects on the region's last row/column displace at all.
+        val field = VertexDisplacer.HeightField.from(tiles, neighbors)
+
+        val auditObjects = AtomicLong(0)
+        val auditFlatSkips = AtomicLong(0)
+        val auditZeroMoved = AtomicLong(0)
 
         val chunkResults = ParallelChunks.mapChunks(instances.size) { from, to ->
             val local = LinkedHashMap<Int, List<MeshData>>()
@@ -1537,6 +1575,7 @@ class AsyncRegionManager(
             var flatSkips = 0L
             var meshCalls = 0L
             var vertices = 0L
+            var zeroMoved = 0L
 
             for (objIndex in from until to) {
                 val obj = instances[objIndex]
@@ -1557,7 +1596,7 @@ class AsyncRegionManager(
                         averageHeight = obj.rsAverageHeight,
                         plane = obj.mapObject.level,
                         field = field,
-                        rsRotation = obj.mapObject.rotation,
+                        rsRotation = obj.rsRotation,
                         mirrored = obj.mirrored,
                         resizeX = definition.modelSizeX,
                         resizeY = definition.modelSizeZ,
@@ -1583,7 +1622,7 @@ class AsyncRegionManager(
                         averageHeight = obj.rsAverageHeight,
                         plane = obj.mapObject.level,
                         field = field,
-                        rsRotation = obj.mapObject.rotation,
+                        rsRotation = obj.rsRotation,
                         mirrored = obj.mirrored,
                         resizeX = definition.modelSizeX,
                         resizeY = definition.modelSizeZ,
@@ -1602,10 +1641,29 @@ class AsyncRegionManager(
 
                 if (anyDisplaced) {
                     local[objIndex] = displaced
+                } else {
+                    // Asked to displace, not resolved as flat, yet not one vertex moved.
+                    // Legitimate only when every vertex sits exactly at the object's
+                    // average height; otherwise the object is being silently skipped,
+                    // which is precisely how the unpadded HeightField dropped every
+                    // object on x == 63 / y == 63 without a trace.
+                    zeroMoved++
                 }
             }
-            RegionLoadProfiler.noteDisplace(objCount, flatSkips, meshCalls, vertices)
+            RegionLoadProfiler.noteDisplace(objCount, flatSkips, meshCalls, vertices, zeroMoved)
+            auditObjects.addAndGet(objCount)
+            auditFlatSkips.addAndGet(flatSkips)
+            auditZeroMoved.addAndGet(zeroMoved)
             local
+        }
+
+        // A displacement that runs and moves nothing is invisible in every other
+        // counter, and is what an under-sized height field looks like from the outside.
+        // Three atomic adds per worker chunk, so the accounting itself can stay on.
+        if (displaceAudit) {
+            val zero = auditZeroMoved.get()
+            println("[displace] region $regionX,$regionY considered=${auditObjects.get()} " +
+                    "flat-skipped=${auditFlatSkips.get()} moved-nothing=$zero")
         }
 
         if (chunkResults.size == 1) return chunkResults[0]

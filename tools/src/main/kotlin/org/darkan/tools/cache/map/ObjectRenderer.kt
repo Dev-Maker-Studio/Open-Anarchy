@@ -313,10 +313,10 @@ object ObjectRenderer {
      * @param decorDisplacement The displacement value from object definition (default 64) - currently unused
      * @return Vector3f offset (always zero - model handles its own positioning)
      */
-    fun getWallDecorationOffset(shape: Int, rotation: Int, decorDisplacement: Int): org.joml.Vector3f {
+    fun getWallDecorationOffset(shape: Int, rotation: Int, decorDisplacement: Int): Vector3f {
         // Wall decoration models are already positioned correctly relative to tile origin
         // No additional offset needed - the model geometry handles visual placement
-        return org.joml.Vector3f(0f, 0f, 0f)
+        return Vector3f(0f, 0f, 0f)
     }
 
     /**
@@ -416,8 +416,12 @@ object ObjectRenderer {
      * @param regionX Region X coordinate (for world position calculation)
      * @param regionY Region Y coordinate
      * @param tileHeights Optional height data callback (takes localX, localY, plane). Returns scaled height.
+     *                    Coordinates may be 64, one past the region edge: pass a
+     *                    neighbour-aware sampler (TerrainLoader.getExtendedTileHeightScaled)
+     *                    or edge objects sample the wrong corner.
      * @param rsHeightSampler Optional callback returning raw RS height (unscaled int) at (localX, localY, plane).
      *                        Used for per-vertex displacement (contourType 1) to match RS integer arithmetic exactly.
+     *                        Same 0..64 coordinate range as [tileHeights].
      * @return Map of plane -> list of ObjectInstance
      */
     fun createInstancesAllPlanes(
@@ -483,11 +487,17 @@ object ObjectRenderer {
                 yB = localTileY + 1
             }
 
-            // Clamp to valid tile range
-            val x0 = xA.coerceIn(0, 63)
-            val x1 = xB.coerceIn(0, 63)
-            val y0 = yA.coerceIn(0, 63)
-            val y1 = yB.coerceIn(0, 63)
+            // Deliberately NOT clamped to 0..63. For an object on the region's last row
+            // or column the far corner is tile 64, which the client resolves out of the
+            // *neighbouring* region: its height array spans the whole loaded scene plus a
+            // guard row and column. Clamping re-reads the near corner instead, so the
+            // averaged height -- and with it the object's Y position -- comes out wrong on
+            // any sloped region edge. The samplers handle the overhang; see
+            // TerrainLoader.getExtendedTileHeight.
+            val x0 = xA
+            val x1 = xB
+            val y0 = yA
+            val y1 = yB
 
             // Get average height of the 4 corners (matching client algorithm)
             val terrainHeight = if (tileHeights != null) {
@@ -567,6 +577,12 @@ object ObjectRenderer {
                     groundContourType = def.contouredGround.toInt(),
                     groundContourModifier = def.anInt3023,
                     averageHeight = terrainHeight,  // Pass the same height object is positioned at
+                    // Unlike the average-height sampling above, this clamp is not a bug worth
+                    // removing on its own: calculateObjectTilt clamps its own sample
+                    // coordinates before this lambda ever sees them, so this is dead weight
+                    // over a guard that is itself unreachable. See the note on sampleHeight in
+                    // TerrainAligner for the sweep that established that, and for what to do
+                    // if `tiltprobe scan` ever stops reporting zero.
                     heightSampler = { tx, ty ->
                         val clampedX = tx.coerceIn(0, 63)
                         val clampedY = ty.coerceIn(0, 63)
@@ -689,8 +705,11 @@ object ObjectRenderer {
      * @param regionY Region Y coordinate
      * @param plane The plane level
      * @param tileHeights Optional height data callback (takes localX, localY). Returns scaled height.
+     *                    Coordinates may be 64, one past the region edge; see
+     *                    [createInstancesAllPlanes].
      * @param rsHeightSampler Optional callback returning raw RS height (unscaled int) at (localX, localY).
      *                        Used for per-vertex displacement (contourType 1) to match RS integer arithmetic exactly.
+     *                        Same 0..64 coordinate range as [tileHeights].
      * @return List of ObjectInstance ready for rendering
      */
     fun createInstances(
@@ -757,11 +776,17 @@ object ObjectRenderer {
                 yB = localTileY + 1
             }
 
-            // Clamp to valid tile range
-            val x0 = xA.coerceIn(0, 63)
-            val x1 = xB.coerceIn(0, 63)
-            val y0 = yA.coerceIn(0, 63)
-            val y1 = yB.coerceIn(0, 63)
+            // Deliberately NOT clamped to 0..63. For an object on the region's last row
+            // or column the far corner is tile 64, which the client resolves out of the
+            // *neighbouring* region: its height array spans the whole loaded scene plus a
+            // guard row and column. Clamping re-reads the near corner instead, so the
+            // averaged height -- and with it the object's Y position -- comes out wrong on
+            // any sloped region edge. The samplers handle the overhang; see
+            // TerrainLoader.getExtendedTileHeight.
+            val x0 = xA
+            val x1 = xB
+            val y0 = yA
+            val y1 = yB
 
             // Get average height of the 4 corners (matching client algorithm)
             val terrainHeight = if (tileHeights != null) {
@@ -834,6 +859,8 @@ object ObjectRenderer {
                     groundContourType = def.contouredGround.toInt(),
                     groundContourModifier = def.anInt3023,
                     averageHeight = terrainHeight,  // Pass the same height object is positioned at
+                    // Redundant over calculateObjectTilt's own clamp, which is itself
+                    // unreachable; see the note on sampleHeight in TerrainAligner.
                     heightSampler = { tx, ty ->
                         val clampedX = tx.coerceIn(0, 63)
                         val clampedY = ty.coerceIn(0, 63)

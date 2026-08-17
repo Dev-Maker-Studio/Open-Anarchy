@@ -27,6 +27,7 @@ import org.lwjgl.opengl.GL42.GL_BUFFER_UPDATE_BARRIER_BIT
 import org.lwjgl.opengl.GL42.GL_COMMAND_BARRIER_BIT
 import org.lwjgl.opengl.GL42.glMemoryBarrier
 import org.lwjgl.opengl.GL43.GL_SHADER_STORAGE_BARRIER_BIT
+import org.lwjgl.opengl.GL43.glCopyImageSubData
 import org.lwjgl.opengl.GL43.GL_SHADER_STORAGE_BUFFER
 import org.lwjgl.opengl.GL43.glDispatchCompute
 import org.lwjgl.opengl.GL43.glMultiDrawElementsIndirect
@@ -223,6 +224,16 @@ class IndirectRenderer(
     private class ArrayTexture(val glId: Int, val size: Int, val layers: Int)
 
     private val arrayTextures = mutableListOf<ArrayTexture>()
+
+    /**
+     * Material id -> packed `(arrayIndex shl 16) or layer`, for every material that has been
+     * given an array-texture slot.
+     *
+     * Held for the renderer's lifetime rather than being a local of [buildTextureArrays],
+     * because [registerModelLate] has to be able to tell a material that already occupies a
+     * layer from one that still needs one.
+     */
+    private val materialSlots = HashMap<Int, Int>()
 
     /**
      * Whether every array texture fits in the shader's sampler set, letting the textured
@@ -618,6 +629,435 @@ class IndirectRenderer(
     }
 
     /**
+     * Register a model *after* [buildSharedGeometry] has already packed and uploaded the
+     * shared buffers, appending its geometry to them in place.
+     *
+     * The shared buffers are built once per region load from the set of models that region
+     * uses, which makes every model the editor introduces afterwards — a placed object, a
+     * variant of one — invisible: its instances reach [addStaticInstance] with no registered
+     * geometry behind them and are dropped, silently leaving a hole exactly where the user
+     * put something. This is the ingest that closes that gap.
+     *
+     * The geometry is appended rather than rebuilt. Each attribute VBO and the IBO are
+     * reallocated one size larger, the existing contents copied device-to-device with
+     * `glCopyBufferSubData`, and only the new tail uploaded from the CPU; the mesh entries
+     * already handed out keep their `firstIndex`/`baseVertex`, so nothing that references
+     * them has to be rebuilt. Materials the new geometry needs and the array textures do
+     * not already hold are appended as extra layers the same way.
+     *
+     * Before the first [buildSharedGeometry] this is just [registerModel] — the accumulate
+     * path is still open and the caller will upload everything at once.
+     *
+     * @return true when the model has registered geometry afterwards, whether it was
+     *         already registered or was ingested here.
+     */
+    fun registerModelLate(modelId: Int, meshDataList: List<MeshData>): Boolean {
+        if (modelRegistry.containsKey(modelId)) return true
+        if (!geometryBuilt) {
+            registerModel(modelId, meshDataList)
+            return modelRegistry.containsKey(modelId)
+        }
+
+        val start = System.nanoTime()
+        val firstNewEntry = meshEntries.size
+        val baseVertex = totalVertexCount
+        val baseIndex = totalIndexCount
+
+        registerModel(modelId, meshDataList)
+        if (!modelRegistry.containsKey(modelId)) {
+            // Nothing in the list carried both positions and indices. Leave the accumulators
+            // clean so the next late registration does not inherit a partial model.
+            clearGeometryAccumulators()
+            return false
+        }
+
+        appendSharedGeometry(baseVertex, baseIndex)
+        resolveLateMaterials(firstNewEntry)
+
+        // Once its geometry is here the id is no longer missing, so let it be reported again
+        // if it ever does go missing later rather than staying permanently on the list.
+        droppedModelIds.remove(modelId)
+
+        println(
+            "[IndirectRenderer] ingested model $modelId after the build: " +
+                    "${meshEntries.size - firstNewEntry} batch(es), " +
+                    "${totalVertexCount - baseVertex} vertices, " +
+                    "${totalIndexCount - baseIndex} indices in " +
+                    "%.1f ms".format((System.nanoTime() - start) / 1e6)
+        )
+        return true
+    }
+
+    /** Drop the CPU-side registration accumulators. */
+    private fun clearGeometryAccumulators() {
+        positionAccumulator.clear()
+        colorAccumulator.clear()
+        texCoordAccumulator.clear()
+        normalAccumulator.clear()
+        indexAccumulator.clear()
+    }
+
+    /**
+     * Append whatever the accumulators are currently holding to the live shared buffers.
+     *
+     * [baseVertex] and [baseIndex] are the totals as they stood before the accumulate, i.e.
+     * exactly the contents already resident on the GPU.
+     */
+    private fun appendSharedGeometry(baseVertex: Int, baseIndex: Int) {
+        val addedVertices = totalVertexCount - baseVertex
+        val addedIndices = totalIndexCount - baseIndex
+        if (addedVertices <= 0 || addedIndices <= 0 || vboIds.size < 4) {
+            clearGeometryAccumulators()
+            return
+        }
+
+        glBindVertexArray(sharedVaoId)
+
+        vboIds[0] = growFloatAttribute(vboIds[0], 0, 3, baseVertex, addedVertices) { buf ->
+            for (arr in positionAccumulator) buf.put(arr)
+        }
+        vboIds[1] = if (QUANTISE_COLORS) {
+            growColorAttribute(vboIds[1], 1, baseVertex, addedVertices)
+        } else {
+            growFloatAttribute(vboIds[1], 1, 3, baseVertex, addedVertices) { buf ->
+                for (arr in colorAccumulator) buf.put(arr)
+            }
+        }
+        vboIds[2] = growFloatAttribute(vboIds[2], 2, 2, baseVertex, addedVertices) { buf ->
+            for (i in texCoordAccumulator.indices) {
+                val tc = texCoordAccumulator[i]
+                if (tc != null) {
+                    buf.put(tc)
+                } else {
+                    repeat((positionAccumulator[i].size / 3) * 2) { buf.put(0f) }
+                }
+            }
+        }
+        vboIds[3] = growFloatAttribute(vboIds[3], 3, 3, baseVertex, addedVertices) { buf ->
+            for (arr in normalAccumulator) buf.put(arr)
+        }
+
+        growIndexBuffer(baseIndex, addedIndices)
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+
+        clearGeometryAccumulators()
+
+        val colorBytes = if (QUANTISE_COLORS) MeshBuffers.COLOR_BYTES else 3 * Float.SIZE_BYTES
+        val vertexBytes = (3 + 2 + 3) * Float.SIZE_BYTES + colorBytes
+        sharedGeometryBytes =
+            totalVertexCount.toLong() * vertexBytes + totalIndexCount.toLong() * Int.SIZE_BYTES
+    }
+
+    /**
+     * Replace the buffer behind a vertex attribute with a larger one holding the same data
+     * plus room for [addedVertices] more, and re-point the VAO at it.
+     *
+     * The existing contents never leave the device: `glCopyBufferSubData` moves them into
+     * the replacement, and only the tail is written from host memory. The shared VAO must
+     * be bound.
+     *
+     * @param uploadTail writes the new vertices at the given target and byte offset.
+     * @return the new buffer name.
+     */
+    private fun growVertexAttribute(
+        oldVbo: Int,
+        location: Int,
+        components: Int,
+        type: Int,
+        normalized: Boolean,
+        bytesPerVertex: Int,
+        existingVertices: Int,
+        addedVertices: Int,
+        uploadTail: (target: Int, offset: Long) -> Unit
+    ): Int {
+        val existingBytes = existingVertices.toLong() * bytesPerVertex
+        val totalBytes = existingBytes + addedVertices.toLong() * bytesPerVertex
+
+        val newVbo = glGenBuffers()
+        glBindBuffer(GL_COPY_WRITE_BUFFER, newVbo)
+        glBufferData(GL_COPY_WRITE_BUFFER, totalBytes, GL_STATIC_DRAW)
+        if (existingBytes > 0) {
+            glBindBuffer(GL_COPY_READ_BUFFER, oldVbo)
+            glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0L, 0L, existingBytes)
+            glBindBuffer(GL_COPY_READ_BUFFER, 0)
+        }
+        uploadTail(GL_COPY_WRITE_BUFFER, existingBytes)
+        glBindBuffer(GL_COPY_WRITE_BUFFER, 0)
+        glDeleteBuffers(oldVbo)
+
+        glBindBuffer(GL_ARRAY_BUFFER, newVbo)
+        glEnableVertexAttribArray(location)
+        glVertexAttribPointer(location, components, type, normalized, 0, 0)
+        glVertexAttribDivisor(location, 0)
+        return newVbo
+    }
+
+    /** [growVertexAttribute] for a float attribute, with the tail filled by [fill]. */
+    private fun growFloatAttribute(
+        oldVbo: Int,
+        location: Int,
+        components: Int,
+        existingVertices: Int,
+        addedVertices: Int,
+        fill: (FloatBuffer) -> Unit
+    ): Int {
+        val tail = MemoryUtil.memAllocFloat(addedVertices * components)
+        try {
+            fill(tail)
+            tail.flip()
+            return growVertexAttribute(
+                oldVbo, location, components, GL_FLOAT, false,
+                components * Float.SIZE_BYTES, existingVertices, addedVertices
+            ) { target, offset -> glBufferSubData(target, offset, tail) }
+        } finally {
+            MemoryUtil.memFree(tail)
+        }
+    }
+
+    /**
+     * [growVertexAttribute] for the RGBA8 colour attribute, packed by the same
+     * [MeshBuffers.writeColorBytes] the initial upload uses.
+     *
+     * The staging buffer is written through its raw address, so it is pinned to native byte
+     * order explicitly: the packing writes assembled 32-bit words, and a big-endian view
+     * would swap every component on the way to the GPU.
+     */
+    private fun growColorAttribute(
+        oldVbo: Int,
+        location: Int,
+        existingVertices: Int,
+        addedVertices: Int
+    ): Int {
+        val totalBytes = addedVertices * MeshBuffers.COLOR_BYTES
+        val tail = MemoryUtil.memAlloc(totalBytes).order(ByteOrder.nativeOrder())
+        try {
+            val baseAddress = MemoryUtil.memAddress(tail)
+            var vertexOffset = 0
+            for (arr in colorAccumulator) {
+                val vertices = arr.size / 3
+                MeshBuffers.writeColorBytes(
+                    baseAddress + vertexOffset.toLong() * MeshBuffers.COLOR_BYTES,
+                    arr, vertices, 3
+                )
+                vertexOffset += vertices
+            }
+            tail.position(0)
+            tail.limit(totalBytes)
+            return growVertexAttribute(
+                oldVbo, location, 4, GL_UNSIGNED_BYTE, true,
+                MeshBuffers.COLOR_BYTES, existingVertices, addedVertices
+            ) { target, offset -> glBufferSubData(target, offset, tail) }
+        } finally {
+            MemoryUtil.memFree(tail)
+        }
+    }
+
+    /**
+     * Grow the shared IBO by [addedIndices], preserving the [existingIndices] already there.
+     *
+     * The element array binding is VAO state, so the replacement is bound while the shared
+     * VAO is current — which the caller guarantees — and only then is the old buffer retired.
+     */
+    private fun growIndexBuffer(existingIndices: Int, addedIndices: Int) {
+        val existingBytes = existingIndices.toLong() * Int.SIZE_BYTES
+        val totalBytes = existingBytes + addedIndices.toLong() * Int.SIZE_BYTES
+
+        val newIbo = glGenBuffers()
+        glBindBuffer(GL_COPY_WRITE_BUFFER, newIbo)
+        glBufferData(GL_COPY_WRITE_BUFFER, totalBytes, GL_STATIC_DRAW)
+        if (existingBytes > 0) {
+            glBindBuffer(GL_COPY_READ_BUFFER, sharedIboId)
+            glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0L, 0L, existingBytes)
+            glBindBuffer(GL_COPY_READ_BUFFER, 0)
+        }
+        val tail = MemoryUtil.memAllocInt(addedIndices)
+        try {
+            for (arr in indexAccumulator) tail.put(arr)
+            tail.flip()
+            glBufferSubData(GL_COPY_WRITE_BUFFER, existingBytes, tail)
+        } finally {
+            MemoryUtil.memFree(tail)
+        }
+        glBindBuffer(GL_COPY_WRITE_BUFFER, 0)
+
+        val oldIbo = sharedIboId
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, newIbo)
+        sharedIboId = newIbo
+        if (oldIbo != 0) glDeleteBuffers(oldIbo)
+    }
+
+    /**
+     * Give every mesh entry from [fromEntry] onwards its (array texture, layer) pair,
+     * creating layers for materials that do not have one yet.
+     */
+    private fun resolveLateMaterials(fromEntry: Int) {
+        val provider = texturePixelProvider
+        val arraysBefore = arrayTextures.size
+
+        if (provider != null) {
+            val needed = LinkedHashSet<Int>()
+            for (i in fromEntry until meshEntries.size) {
+                val entry = meshEntries[i]
+                if (entry.textureId >= 0 && !materialSlots.containsKey(entry.textureId)) {
+                    needed.add(entry.textureId)
+                }
+            }
+            if (needed.isNotEmpty()) {
+                // Bucket by size exactly as the initial build does: every layer of an array
+                // texture has to share one edge length.
+                val bySize = LinkedHashMap<Int, MutableList<Pair<Int, IntArray>>>()
+                for (id in needed) {
+                    val pixelData = provider.getPixels(id)
+                    if (pixelData == null || pixelData.second != pixelData.third) {
+                        // Same placeholder the initial build falls back to.
+                        missingTextureCount++
+                        val size = arrayTextures.maxOfOrNull { it.size } ?: 64
+                        bySize.getOrPut(size) { mutableListOf() }.add(id to checkerPixels(size))
+                    } else {
+                        bySize.getOrPut(pixelData.second) { mutableListOf() }
+                            .add(id to pixelData.first)
+                    }
+                }
+                for ((size, materials) in bySize) appendMaterialLayers(size, materials)
+                println(
+                    "[IndirectRenderer] ingest added ${needed.size} material layer(s): " +
+                            bySize.entries.joinToString { "${it.value.size}x${it.key}px" }
+                )
+            }
+        }
+
+        assignMaterialSlots(fromEntry)
+
+        if (arrayTextures.size != arraysBefore) {
+            // The streaming path indexes its buckets by array texture, so the array has to
+            // keep pace with however many array textures now exist.
+            texturedBuckets = Array(arrayTextures.size) { TexturedBucket() }
+            println(
+                "[IndirectRenderer] array textures after ingest: " +
+                        arrayTextures.joinToString { "${it.size}px x${it.layers}" }
+            )
+        }
+    }
+
+    /** Copy the resolved (array, layer) pair into every mesh entry from [fromEntry] on. */
+    private fun assignMaterialSlots(fromEntry: Int) {
+        for (i in fromEntry until meshEntries.size) {
+            val entry = meshEntries[i]
+            if (entry.textureId < 0) continue
+            val packed = materialSlots[entry.textureId] ?: continue
+            entry.textureArrayIndex = (packed shr 16)
+            entry.textureLayer = packed and 0xFFFF
+        }
+    }
+
+    /**
+     * Place [materials] — all of edge length [size] — into array-texture layers.
+     *
+     * Prefers growing an existing array of the same size, which leaves every layer index
+     * already handed out untouched and keeps the textured pass a single draw. Falls back to
+     * a fresh array texture when no array of that size exists, when the one that does is
+     * full, or when the driver cannot copy image data between textures.
+     */
+    private fun appendMaterialLayers(size: Int, materials: List<Pair<Int, IntArray>>) {
+        val maxLayers = glGetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS).coerceAtLeast(1)
+        var remaining = materials
+        while (remaining.isNotEmpty()) {
+            val target =
+                if (canCopyImages()) arrayTextures.indexOfFirst { it.size == size && it.layers < maxLayers }
+                else -1
+
+            val chunk: List<Pair<Int, IntArray>>
+            if (target >= 0) {
+                chunk = remaining.take(maxLayers - arrayTextures[target].layers)
+                if (!growArrayTexture(target, chunk)) {
+                    // The copy failed, so the existing array is untouched and the new
+                    // materials still have nowhere to live. Give them their own array.
+                    addMaterialArray(size, chunk)
+                }
+            } else {
+                chunk = remaining.take(maxLayers)
+                addMaterialArray(size, chunk)
+            }
+            remaining = remaining.drop(chunk.size)
+        }
+    }
+
+    /** Put [materials] in a brand new array texture of edge length [size]. */
+    private fun addMaterialArray(size: Int, materials: List<Pair<Int, IntArray>>) {
+        val arrayIndex = arrayTextures.size
+        val glId = createArrayTexture(size, materials.map { it.second })
+        arrayTextures.add(ArrayTexture(glId, size, materials.size))
+        for ((layer, pair) in materials.withIndex()) {
+            materialSlots[pair.first] = (arrayIndex shl 16) or layer
+            IndirectReuseStats.recordMaterial(pair.first, size)
+        }
+    }
+
+    /**
+     * Rebuild array texture [index] with [materials] appended as extra layers.
+     *
+     * The existing layers are copied device-to-device, so the pixels are never read back and
+     * the materials already living there keep both their array index and their layer index —
+     * every mesh entry pointing at them stays correct without being revisited.
+     *
+     * The copy is checked rather than assumed. A `glCopyImageSubData` that is rejected does
+     * nothing at all and reports it only through `glGetError`, which leaves every existing
+     * layer of the replacement holding whatever `glTexImage3D` left there — in practice fully
+     * transparent, so the textured shader discards it and every object using those materials
+     * silently vanishes from the scene. That is precisely the failure this path must never
+     * introduce, so a failed copy retires the replacement and reports false, leaving the
+     * original array texture in place for the caller to work around.
+     *
+     * @return true when the grown texture is in place, false when nothing was changed.
+     */
+    private fun growArrayTexture(index: Int, materials: List<Pair<Int, IntArray>>): Boolean {
+        val existing = arrayTextures[index]
+        val size = existing.size
+        val texCpuStart = threadCpuNanos()
+
+        val texId = createEmptyArrayTexture(size, existing.layers + materials.size)
+        while (glGetError() != GL_NO_ERROR) { /* discard anything inherited from earlier */ }
+        glCopyImageSubData(
+            existing.glId, GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0,
+            texId, GL_TEXTURE_2D_ARRAY, 0, 0, 0, 0,
+            size, size, existing.layers
+        )
+        val copyError = glGetError()
+        if (copyError != GL_NO_ERROR) {
+            System.err.println(
+                "[IndirectRenderer] could not copy ${existing.layers} layer(s) of the ${size}px " +
+                        "array texture into its replacement (GL error 0x${copyError.toString(16)}); " +
+                        "giving the new materials an array of their own"
+            )
+            glBindTexture(GL_TEXTURE_2D_ARRAY, 0)
+            glDeleteTextures(texId)
+            return false
+        }
+
+        glBindTexture(GL_TEXTURE_2D_ARRAY, texId)
+        uploadArrayLayers(size, existing.layers, materials.map { it.second })
+        applyArrayTextureState()
+        glBindTexture(GL_TEXTURE_2D_ARRAY, 0)
+        texArrayCpuTimeMs += (threadCpuNanos() - texCpuStart) / 1e6
+
+        glDeleteTextures(existing.glId)
+        arrayTextures[index] = ArrayTexture(texId, size, existing.layers + materials.size)
+        for ((offset, pair) in materials.withIndex()) {
+            materialSlots[pair.first] = (index shl 16) or (existing.layers + offset)
+            IndirectReuseStats.recordMaterial(pair.first, size)
+        }
+        return true
+    }
+
+    /** Whether the driver can copy texel data straight between textures. */
+    private fun canCopyImages(): Boolean {
+        val caps = GL.getCapabilities()
+        return caps.OpenGL43 || caps.GL_ARB_copy_image
+    }
+
+    /**
      * CPU time of the calling thread, in nanoseconds, or 0 when the JVM will not report it.
      *
      * Wall time on this thread is not the same thing as work: the whole indirect build runs
@@ -790,11 +1230,7 @@ class IndirectRenderer(
         vboIds.addAll(listOf(posVbo, colorVbo, texVbo, normalVbo))
 
         // Clear CPU-side accumulators to free memory
-        positionAccumulator.clear()
-        colorAccumulator.clear()
-        texCoordAccumulator.clear()
-        normalAccumulator.clear()
-        indexAccumulator.clear()
+        clearGeometryAccumulators()
 
         val colorBytes =
             if (QUANTISE_COLORS) MeshBuffers.COLOR_BYTES else 3 * Float.SIZE_BYTES
@@ -997,7 +1433,6 @@ class IndirectRenderer(
         // bucket is split across as many arrays as it needs. Each array costs one draw call.
         val maxLayers = glGetInteger(GL_MAX_ARRAY_TEXTURE_LAYERS).coerceAtLeast(1)
 
-        val slots = HashMap<Int, Int>(materialIds.size * 2)
         for ((size, entries) in bySize) {
             for (chunk in entries.chunked(maxLayers)) {
                 val arrayIndex = arrayTextures.size
@@ -1005,7 +1440,7 @@ class IndirectRenderer(
                 arrayTextures.add(ArrayTexture(glId, size, chunk.size))
                 for ((layer, pair) in chunk.withIndex()) {
                     // Pack (arrayIndex, layer) into one int: layer counts stay well under 2^16.
-                    slots[pair.first] = (arrayIndex shl 16) or layer
+                    materialSlots[pair.first] = (arrayIndex shl 16) or layer
                     IndirectReuseStats.recordMaterial(pair.first, size)
                 }
             }
@@ -1015,15 +1450,10 @@ class IndirectRenderer(
                     arrayTextures.joinToString { "${it.size}px x${it.layers}" }
         )
 
-        for (entry in meshEntries) {
-            if (entry.textureId < 0) continue
-            val packed = slots[entry.textureId] ?: continue
-            entry.textureArrayIndex = (packed shr 16)
-            entry.textureLayer = packed and 0xFFFF
-        }
+        assignMaterialSlots(0)
 
         if (AUDIT) {
-            auditMaterials(slots)
+            auditMaterials(materialSlots)
             auditLayerAlpha(bySize)
         }
     }
@@ -1095,18 +1525,51 @@ class IndirectRenderer(
      * identically to the standalone 2D texture for the same material.
      */
     private fun createArrayTexture(size: Int, layers: List<IntArray>): Int {
-        val texId = glGenTextures()
         val texCpuStart = threadCpuNanos()
-        glBindTexture(GL_TEXTURE_2D_ARRAY, texId)
+        val texId = createEmptyArrayTexture(size, layers.size)
+        uploadArrayLayers(size, 0, layers)
+        applyArrayTextureState()
+        glBindTexture(GL_TEXTURE_2D_ARRAY, 0)
+        texArrayCpuTimeMs += (threadCpuNanos() - texCpuStart) / 1e6
+        return texId
+    }
 
-        var allocStart = System.nanoTime()
+    /**
+     * Allocate level 0 of a GL_TEXTURE_2D_ARRAY with [layerCount] uninitialised layers.
+     *
+     * Leaves the new texture bound so the caller can go straight on to filling it; the rest
+     * of the sampler state and the mip chain come later, from [applyArrayTextureState].
+     *
+     * The minification filter is set here, and not left at its default, because the default
+     * `GL_NEAREST_MIPMAP_LINEAR` makes a texture with only level 0 defined *mipmap
+     * incomplete* — and an incomplete texture cannot be the destination of
+     * `glCopyImageSubData`, which rejects the call with GL_INVALID_OPERATION and copies
+     * nothing. [growArrayTexture] would then hand back a texture whose existing layers were
+     * never written: every material already living in that array turns fully transparent,
+     * the textured shader discards it, and objects all over the scene disappear as if their
+     * geometry had gone missing. Asking for plain `GL_LINEAR` until the mips exist costs
+     * nothing and keeps the texture complete from the moment it is allocated.
+     */
+    private fun createEmptyArrayTexture(size: Int, layerCount: Int): Int {
+        val texId = glGenTextures()
+        glBindTexture(GL_TEXTURE_2D_ARRAY, texId)
+        val allocStart = System.nanoTime()
         glTexImage3D(
             GL_TEXTURE_2D_ARRAY, 0, GL_RGBA,
-            size, size, layers.size,
+            size, size, layerCount,
             0, GL_RGBA, GL_UNSIGNED_BYTE, null as ByteBuffer?
         )
         texArrayUploadMs += (System.nanoTime() - allocStart) / 1e6
+        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        return texId
+    }
 
+    /**
+     * Fill layers `[firstLayer, firstLayer + layers.size)` of the bound array texture from
+     * ARGB pixel data. The texture must already be bound to GL_TEXTURE_2D_ARRAY.
+     */
+    private fun uploadArrayLayers(size: Int, firstLayer: Int, layers: List<IntArray>) {
+        if (layers.isEmpty()) return
         val buffer = MemoryUtil.memAlloc(size * size * 4)
         try {
             for ((layerIndex, pixels) in layers.withIndex()) {
@@ -1128,7 +1591,7 @@ class IndirectRenderer(
                 val subStart = System.nanoTime()
                 glTexSubImage3D(
                     GL_TEXTURE_2D_ARRAY, 0,
-                    0, 0, layerIndex,
+                    0, 0, firstLayer + layerIndex,
                     size, size, 1,
                     GL_RGBA, GL_UNSIGNED_BYTE, buffer
                 )
@@ -1137,7 +1600,15 @@ class IndirectRenderer(
         } finally {
             MemoryUtil.memFree(buffer)
         }
+    }
 
+    /**
+     * Apply the sampler state and build the mip chain of the bound array texture.
+     *
+     * Mirrors `TextureLoader.createTextureFromArgb` (GL_REPEAT, trilinear, anisotropy) so a
+     * layer samples identically to the standalone 2D texture for the same material.
+     */
+    private fun applyArrayTextureState() {
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_REPEAT)
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_REPEAT)
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR)
@@ -1146,13 +1617,9 @@ class IndirectRenderer(
             val maxAnisotropy = glGetFloat(EXTTextureFilterAnisotropic.GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT)
             glTexParameterf(GL_TEXTURE_2D_ARRAY, EXTTextureFilterAnisotropic.GL_TEXTURE_MAX_ANISOTROPY_EXT, maxAnisotropy)
         }
-        allocStart = System.nanoTime()
+        val mipStart = System.nanoTime()
         glGenerateMipmap(GL_TEXTURE_2D_ARRAY)
-        texArrayMipmapMs += (System.nanoTime() - allocStart) / 1e6
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0)
-        texArrayCpuTimeMs += (threadCpuNanos() - texCpuStart) / 1e6
-
-        return texId
+        texArrayMipmapMs += (System.nanoTime() - mipStart) / 1e6
     }
 
     /** Grey checkerboard placeholder, matching `TextureLoader`'s missing-texture pattern. */
@@ -2279,6 +2746,7 @@ class IndirectRenderer(
 
         for (tex in arrayTextures) glDeleteTextures(tex.glId)
         arrayTextures.clear()
+        materialSlots.clear()
         texturedBuckets = emptyArray()
 
         meshEntries.clear()

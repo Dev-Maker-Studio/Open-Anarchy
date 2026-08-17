@@ -47,6 +47,19 @@ class TerrainEditManager(
     lateinit var mutableData: MutableRegionData
         private set
 
+    /**
+     * Immutable view of [mutableData], refreshed whenever an edit is committed.
+     *
+     * Tile picking marches a ray through a region's tile grid several times per frame and
+     * cannot afford [MutableRegionData.toTileArray], which allocates 16384 tiles per call.
+     * It also cannot read the cache copy, or a region whose heights have been sculpted would
+     * be picked against the surface it had before the first stroke - the cursor would drift
+     * off the terrain the longer the brush was used. The commit path already builds this
+     * array for its own recomputation, so publishing it costs nothing.
+     */
+    var tileSnapshot: Array<Array<Array<TerrainLoader.TileData>>> = emptyArray()
+        private set
+
     private lateinit var chunkedTerrain: ChunkedTerrain
 
     /** Neighbor data for seamless edge blending. Built once at init from cached regions. */
@@ -82,6 +95,7 @@ class TerrainEditManager(
         neighbors = TerrainLoader.buildNeighborData(cache, regionX, regionY)
 
         mutableData = MutableRegionData(regionData)
+        tileSnapshot = mutableData.toTileArray()
         chunkedTerrain = ChunkedTerrain(regionX, regionY, plane)
 
         // Compute initial blending and normals
@@ -127,6 +141,9 @@ class TerrainEditManager(
         useMergedMeshes = false
 
         val regionSnapshot = mutableData.toRegionData()
+        // Published before anything else reads it: the picker resolves the cursor against
+        // this every frame, and an edited region must be picked against its edited heights.
+        tileSnapshot = regionSnapshot.tiles
 
         // 1. Recompute blended underlay colors if underlay changed
         if (mutableData.blendingDirty) {
@@ -135,7 +152,7 @@ class TerrainEditManager(
 
         // 2. Recompute vertex normals if heights changed
         if (mutableData.heightsDirty) {
-            val (nx, ny, nz) = TerrainLoader.computeVertexNormals(mutableData.toTileArray(), plane, neighbors)
+            val (nx, ny, nz) = TerrainLoader.computeVertexNormals(regionSnapshot.tiles, plane, neighbors)
             normalsX = nx
             normalsY = ny
             normalsZ = nz

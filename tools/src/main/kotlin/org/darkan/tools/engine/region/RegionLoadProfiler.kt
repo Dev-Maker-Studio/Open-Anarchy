@@ -84,6 +84,18 @@ object RegionLoadProfiler {
     private val displaceMeshCalls = AtomicLong(0)
     private val displaceVertices = AtomicLong(0)
 
+    /**
+     * Objects that asked for displacement, were not resolved as flat, and still moved
+     * zero vertices.
+     *
+     * This is the one number that separates "was not asked to move" from "was asked and
+     * moved nothing". A non-trivial count means displacement is being silently dropped:
+     * the unpadded [org.darkan.tools.cache.map.VertexDisplacer.HeightField] rejected
+     * every object on a region's last row and column exactly this way, and nothing in
+     * the other four counters could show it.
+     */
+    private val displaceZeroMoved = AtomicLong(0)
+
     private var waveLabel: String = ""
 
     /**
@@ -139,6 +151,7 @@ object RegionLoadProfiler {
         displaceFlatSkips.set(0)
         displaceMeshCalls.set(0)
         displaceVertices.set(0)
+        displaceZeroMoved.set(0)
         cpuDoneNanos.set(0)
         cpuDoneCpuNanos.set(0)
         expectedRegions.set(regions)
@@ -189,13 +202,16 @@ object RegionLoadProfiler {
      * @param flatSkips objects the footprint pre-test resolved without touching a vertex
      * @param meshCalls per-mesh displacement calls actually made
      * @param vertices vertices walked by those calls
+     * @param zeroMoved objects that ran the per-vertex pass and moved nothing; see
+     *                  [displaceZeroMoved]
      */
-    fun noteDisplace(objects: Long, flatSkips: Long, meshCalls: Long, vertices: Long) {
+    fun noteDisplace(objects: Long, flatSkips: Long, meshCalls: Long, vertices: Long, zeroMoved: Long = 0) {
         if (!enabled || !waveActive.get()) return
         displaceObjects.addAndGet(objects)
         displaceFlatSkips.addAndGet(flatSkips)
         displaceMeshCalls.addAndGet(meshCalls)
         displaceVertices.addAndGet(vertices)
+        displaceZeroMoved.addAndGet(zeroMoved)
     }
 
     /** Called when one region has finished all of its CPU phases. */
@@ -280,9 +296,10 @@ object RegionLoadProfiler {
         val displaceObj = displaceObjects.get()
         if (displaceObj > 0) {
             val skips = displaceFlatSkips.get()
-            sb.append("[LOAD-PROF] displace: objects=%d flat-skipped=%d (%.1f%%)  mesh calls=%d  vertices walked=%d\n"
+            val zeroMoved = displaceZeroMoved.get()
+            sb.append("[LOAD-PROF] displace: objects=%d flat-skipped=%d (%.1f%%)  mesh calls=%d  vertices walked=%d  moved-nothing=%d\n"
                 .format(displaceObj, skips, 100.0 * skips / displaceObj,
-                    displaceMeshCalls.get(), displaceVertices.get()))
+                    displaceMeshCalls.get(), displaceVertices.get(), zeroMoved))
         }
         sb.append("[LOAD-PROF] ==================================================")
         println(sb)

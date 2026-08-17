@@ -26,6 +26,7 @@ import org.darkan.tools.engine.render.withReversedWinding
 import org.darkan.tools.util.CoordinateUtil
 import org.joml.Matrix4f
 import java.util.IdentityHashMap
+import java.util.concurrent.atomic.AtomicLong
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.definition.data.MapObject
@@ -153,6 +154,19 @@ class RegionManager(
     /** Set of registered model IDs (shared between center and context). */
     private val registeredModels = mutableSetOf<Int>()
 
+    /**
+     * `-Ddarkan.displaceAudit=true`: see [AsyncRegionManager]'s flag of the same name.
+     * Read here too so the centre region, which does not go through that path, reports
+     * the same three numbers.
+     */
+    private val displaceAudit: Boolean =
+        System.getProperty("darkan.displaceAudit", "false").toBoolean()
+
+    /** Per-load displacement accounting; drained by [displaceChunked]. */
+    private val auditConsidered = AtomicLong(0)
+    private val auditFlatSkips = AtomicLong(0)
+    private val auditZeroMoved = AtomicLong(0)
+
     /** Displaced model tracking for contourType 1 objects.
      *  Keyed by ObjectInstance reference (IdentityHashMap) to avoid
      *  System.identityHashCode() collisions that cause wrong mesh lookups. */
@@ -272,15 +286,19 @@ class RegionManager(
             // This guarantees absolute parity between center and surrounding regions.
             val instancesStart = System.nanoTime()
             val tiles = td.tiles
+            // The corner samples for an object on the last row/column land one tile past
+            // the region, where the client reads its neighbour. Neighbour regions are
+            // cached, so this is the same data the terrain mesh pass builds below.
+            val centerNeighbors = TerrainLoader.buildNeighborData(cache, regionX, regionY)
             val allPlaneInstances = ObjectRenderer.createInstancesAllPlanes(
                 objects = regionData.objects,
                 regionX = regionX,
                 regionY = regionY,
                 tileHeights = { localX, localY, p ->
-                    TerrainLoader.getTileHeightScaled(tiles, localX, localY, p)
+                    TerrainLoader.getExtendedTileHeightScaled(tiles, centerNeighbors, p, localX, localY)
                 },
                 rsHeightSampler = { localX, localY, p ->
-                    TerrainLoader.getTileHeight(tiles, localX, localY, p)
+                    TerrainLoader.getExtendedTileHeight(tiles, centerNeighbors, p, localX, localY)
                 }
             )
             centerObjects = allPlaneInstances.values.flatten().let { instances ->
@@ -300,7 +318,7 @@ class RegionManager(
             registerCenterModels(centerObjects, centerMeshData)
 
             // Register displaced meshes for contourType 1 objects
-            registerDisplacedModels(centerObjects, centerMeshData, td.tiles)
+            registerDisplacedModels(centerObjects, centerMeshData, td.tiles, centerNeighbors)
 
             // Register winding-reversed copies for mirrored objects
             registerMirroredVariants(centerObjects, centerMeshData)
@@ -700,17 +718,38 @@ class RegionManager(
     private suspend fun displaceChunked(
         objects: List<ObjectInstance>,
         meshDataById: Map<Int, List<MeshData>>,
-        terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>
+        terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>,
+        neighbors: TerrainLoader.NeighborData?
     ): List<LinkedHashMap<Int, List<MeshData>>> {
-        val field = VertexDisplacer.HeightField.from(terrainTiles)
-        return ParallelChunks.mapChunks(objects.size) { from, to ->
+        val field = VertexDisplacer.HeightField.from(terrainTiles, neighbors)
+        val result = ParallelChunks.mapChunks(objects.size) { from, to ->
             val local = LinkedHashMap<Int, List<MeshData>>()
+            // considered / flat-skipped / moved-nothing, per worker chunk.
+            val stats = LongArray(3)
             for (objIndex in from until to) {
-                val displaced = displaceObject(objects[objIndex], meshDataById, field)
+                val displaced = displaceObject(objects[objIndex], meshDataById, field, stats)
                 if (displaced != null) local[objIndex] = displaced
             }
+            RegionLoadProfiler.noteDisplace(stats[0], stats[1], 0, 0, stats[2])
+            auditConsidered.addAndGet(stats[0])
+            auditFlatSkips.addAndGet(stats[1])
+            auditZeroMoved.addAndGet(stats[2])
             local
         }
+        // The centre region loads through here rather than through AsyncRegionManager, so
+        // without this it would be the one region the displacement audit could not see --
+        // and the centre region is exactly where a user notices a flat railing.
+        if (displaceAudit) {
+            println("[displace] region $currentRegionX,$currentRegionY (centre) " +
+                    "considered=${auditConsidered.getAndSet(0)} " +
+                    "flat-skipped=${auditFlatSkips.getAndSet(0)} " +
+                    "moved-nothing=${auditZeroMoved.getAndSet(0)}")
+        } else {
+            auditConsidered.set(0)
+            auditFlatSkips.set(0)
+            auditZeroMoved.set(0)
+        }
+        return result
     }
 
     /**
@@ -721,10 +760,13 @@ class RegionManager(
     private fun displaceObject(
         obj: ObjectInstance,
         meshDataById: Map<Int, List<MeshData>>,
-        field: VertexDisplacer.HeightField
+        field: VertexDisplacer.HeightField,
+        /** Optional accounting: considered, flat-skipped, moved-nothing. See [displaceChunked]. */
+        stats: LongArray? = null
     ): List<MeshData>? {
         if (!VertexDisplacer.needsDisplacement(obj.groundContourType, obj.groundContourModifier)) return null
         val baseMeshDataList = meshDataById[obj.cachedCombinedModelId] ?: return null
+        stats?.let { it[0]++ }
 
         val definition = obj.definition
         val bounds = VertexDisplacer.modelBounds(obj.cachedCombinedModelId, baseMeshDataList) ?: return null
@@ -735,7 +777,7 @@ class RegionManager(
                 averageHeight = obj.rsAverageHeight,
                 plane = obj.mapObject.level,
                 field = field,
-                rsRotation = obj.mapObject.rotation,
+                rsRotation = obj.rsRotation,
                 mirrored = obj.mirrored,
                 resizeX = definition.modelSizeX,
                 resizeY = definition.modelSizeZ,
@@ -744,6 +786,7 @@ class RegionManager(
                 rsOffsetZ = definition.offsetY
             )
         ) {
+            stats?.let { it[1]++ }
             return null
         }
 
@@ -757,7 +800,7 @@ class RegionManager(
                 averageHeight = obj.rsAverageHeight,
                 plane = obj.mapObject.level,
                 field = field,
-                rsRotation = obj.mapObject.rotation,
+                rsRotation = obj.rsRotation,
                 mirrored = obj.mirrored,
                 resizeX = definition.modelSizeX,
                 resizeY = definition.modelSizeZ,
@@ -772,13 +815,21 @@ class RegionManager(
                 displaced.add(meshData)
             }
         }
-        return if (anyDisplaced) displaced else null
+        if (!anyDisplaced) {
+            // Asked to displace, not resolved as flat, moved nothing. Benign only when
+            // every vertex genuinely stands at the object's average height; a whole
+            // region's edge reporting it means the height field is too small.
+            stats?.let { it[2]++ }
+            return null
+        }
+        return displaced
     }
 
     private fun registerDisplacedModels(
         objects: List<ObjectInstance>,
         meshDataById: Map<Int, List<MeshData>>,
-        terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>
+        terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>,
+        neighbors: TerrainLoader.NeighborData?
     ) {
         val im = instanceManager ?: return
         if (objects.isEmpty()) return
@@ -789,7 +840,7 @@ class RegionManager(
         // map; merging in chunk order keeps object indices ascending, so the displaced
         // id assignment below matches the old serial loop exactly.
         val chunkResults = runBlocking {
-            displaceChunked(objects, meshDataById, terrainTiles)
+            displaceChunked(objects, meshDataById, terrainTiles, neighbors)
         }
         RegionLoadProfiler.record(RegionLoadProfiler.PHASE_CENTER_DISPLACE, System.nanoTime() - displaceStart)
 
@@ -867,10 +918,10 @@ class RegionManager(
                             regionX = rx,
                             regionY = ry,
                             tileHeights = { localX, localY, p ->
-                                TerrainLoader.getTileHeightScaled(ctxTiles, localX, localY, p)
+                                TerrainLoader.getExtendedTileHeightScaled(ctxTiles, ctxNeighbors, p, localX, localY)
                             },
                             rsHeightSampler = { localX, localY, p ->
-                                TerrainLoader.getTileHeight(ctxTiles, localX, localY, p)
+                                TerrainLoader.getExtendedTileHeight(ctxTiles, ctxNeighbors, p, localX, localY)
                             }
                         )
 
@@ -917,7 +968,7 @@ class RegionManager(
                         // Compute vertex displacement for contourType 1 objects.
                         // Key by list index (not identityHashCode) to avoid hash collisions
                         // that would cause wrong displaced meshes to be used.
-                        val ctxField = VertexDisplacer.HeightField.from(ctxTiles)
+                        val ctxField = VertexDisplacer.HeightField.from(ctxTiles, ctxNeighbors)
                         for ((objIndex, obj) in ctxObjectInstances.withIndex()) {
                             val displaced = displaceObject(obj, allModelMeshData, ctxField) ?: continue
                             displacedMeshData[objIndex] = displaced

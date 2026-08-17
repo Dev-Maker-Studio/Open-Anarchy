@@ -14,7 +14,15 @@ import imgui.flag.ImGuiCol
  * public static native void textDisabled(String text); //  ImGui::TextDisabled(text, NULL);
  * public static native void textWrapped(String text);  //  ImGui::TextWrapped(text, NULL);
  * public static native void textColored(int, String);  //  ImGui::TextColored(ImColor(col), text, NULL);
+ * public static native void bulletText(String text);   //  ImGui::BulletText(text, NULL);
+ * public static native void setTooltip(String text);   //  ImGui::SetTooltip(text, NULL);
+ * public static native boolean treeNode(String strId, String label);
+ *                                                      //  ImGui::TreeNode(strId, label, NULL);
  * ```
+ *
+ * Note that none of these have a varargs overload, so the usual C-side mitigation
+ * of passing a literal `"%s"` with the text as an argument is not available here:
+ * routing through these wrappers is the only fix.
  *
  * so a single `%` in the string makes the C runtime read a conversion argument
  * that was never pushed. In this editor that is not a theoretical hazard: the
@@ -65,14 +73,52 @@ object ImGuiText {
     }
 
     /**
+     * A bulleted line, safe for arbitrary content.
+     *
+     * `ImGui::Bullet()` already ends with `SameLine(0, FramePadding.x * 2)`, which
+     * is the same advance `BulletText` builds into its own item width, so this
+     * lays out identically to the printf version.
+     */
+    fun bullet(text: String) {
+        ImGui.bullet()
+        ImGui.text(text)
+    }
+
+    /**
+     * A tree node with an explicit id, safe for arbitrary content in [label].
+     *
+     * imgui-java has no unformatted `treeNode(strId, label)`, so the id is carried
+     * in the label using ImGui's `###` marker, which makes the node's id depend
+     * only on the text after the marker - the same decoupling the two-argument
+     * native call provides. Callers must still `treePop()` when this returns true.
+     */
+    fun treeNode(id: String, label: String): Boolean {
+        return ImGui.treeNode("$label###$id")
+    }
+
+    /**
      * A hover tooltip, safe for arbitrary content. `SetTooltip` is one of the
      * printf calls, and tooltips are where script errors and component names end
      * up, so it is the last place that should be formatting its argument.
      */
     fun tooltip(text: String) {
         ImGui.beginTooltip()
-        wrapped(text)
+        // NOT `wrapped`: a tooltip window is auto-fitting, and "wrap at the window's
+        // right edge" is resolved against a work rect that has no width yet, so every
+        // tooltip collapsed into a one-character-per-line column. Dear ImGui's own
+        // tooltip idiom is an explicit wrap width, which leaves short text on one line
+        // and still wraps genuinely long text such as a script error.
+        ImGui.pushTextWrapPos(ImGui.getCursorPosX() + ImGui.getFontSize() * 35f)
+        ImGui.text(text)
+        ImGui.popTextWrapPos()
         ImGui.endTooltip()
+    }
+
+    /** Coloured, word-wrapped text from normalised components. */
+    fun colouredWrapped(red: Float, green: Float, blue: Float, alpha: Float, text: String) {
+        ImGui.pushStyleColor(ImGuiCol.Text, red, green, blue, alpha)
+        wrapped(text)
+        ImGui.popStyleColor()
     }
 
     /** Greyed-out, word-wrapped text. */

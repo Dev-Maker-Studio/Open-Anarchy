@@ -85,9 +85,27 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     fun getVar(id: Int) = varpValues[id]
 
+    /**
+     * Reads a varbit, treating anything the cache cannot resolve as unset (0).
+     *
+     * This used to index straight through and throw. The cache genuinely contains
+     * dangling references: 40 objects name a varbit past the end of the varbit table
+     * (the table holds 2697 entries; object transforms reference ids as high as 2703).
+     * Since object transforms are resolved during region loading, one of those objects
+     * coming into view took the whole load path down with an
+     * `ArrayIndexOutOfBoundsException` -- a hard crash caused purely by data, on a path
+     * with no way to recover.
+     *
+     * 0 is the right answer rather than merely a safe one: it is what an unset var
+     * reads as, so an unresolvable varbit selects the transform's default.
+     */
     fun getVarBit(id: Int): Int {
-        val defs = Cache.varbits[id]
+        val varbits = Cache.varbits
+        if (id < 0 || id >= varbits.size) return 0
+        val defs = varbits[id] ?: return 0
+        if (defs.index < 0 || defs.index >= varpValues.size) return 0
         val bitLength = defs.endBit - defs.startBit
+        if (bitLength < 0 || bitLength >= BIT_MASKS.size) return 0
         return (varpValues[defs.index] shr defs.startBit) and BIT_MASKS[bitLength]
     }
 

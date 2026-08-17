@@ -74,40 +74,108 @@ object VertexDisplacer {
     private const val BOUNDS_CACHE_LIMIT = 65536
 
     /**
-     * Terrain heights for one region, flattened per plane.
+     * Terrain heights around one region, flattened per plane.
      *
-     * `heights[plane][x * depth + z]` is the corner height of tile (x, z). Built once
-     * per region load and shared, read-only, by every displacement worker.
+     * `heights[plane][x * depth + z]` is the corner height of *padded* tile (x, z),
+     * where padded tile `(t + PAD_TILES)` holds region tile `t`. Built once per region
+     * load and shared, read-only, by every displacement worker.
+     *
+     * ## Why the field is padded
+     *
+     * Bilinear interpolation at a vertex needs the `tile + 1` corners, so
+     * [displaceVertices] rejects any vertex whose tile is not in `[0, size - 2]`. The
+     * RS client applies an *identical* guard, but against a height array sized to the
+     * whole loaded scene plus one guard row and column (`MapLoader`:
+     * `Array(planes) { Array(sceneX + 1) { IntArray(sceneY + 1) } }`), so a
+     * region-internal tile 63 is nowhere near that array's edge.
+     *
+     * Built from a bare 64x64 region the same guard rejects the entire last row and
+     * column, and every object standing on `x == 63` or `y == 63` receives no
+     * displacement at all -- which is what made one rail of a Duel Arena ramp render as
+     * flat bars beside its fully-contoured twin. **The specification is the array
+     * extent, not the test**: the guard is correct once the array reaches past the
+     * region, so the padding is what gets fixed here.
+     *
+     * [PAD_TILES] tiles per side comfortably covers any real object's footprint plus
+     * model overhang, at ~102 KB per region across four planes.
      */
     class HeightField private constructor(
         val width: Int,
         val depth: Int,
+        /** Tiles of neighbour terrain carried on each side; see the class docs. */
+        val pad: Int,
         private val planes: Array<IntArray>
     ) {
-        /** Flat height array for [plane]; index a tile as `x * depth + z`. */
+        /**
+         * RS units to add to a region-local scene coordinate before indexing this field.
+         *
+         * Callers work in region-local scene units (tile 0 at 0); the field's origin sits
+         * [pad] tiles further out, so both consumers shift by this amount.
+         */
+        val rsOrigin: Int = pad * TILE_UNITS
+
+        /** Flat height array for [plane]; index a padded tile as `x * depth + z`. */
         fun heights(plane: Int): IntArray = planes[plane]
 
         companion object {
             private val EMPTY = IntArray(0)
 
-            /** Flatten a `[plane][x][z]` tile array into per-plane height arrays. */
-            fun from(tiles: Array<Array<Array<TerrainLoader.TileData>>>): HeightField {
-                val width = if (tiles.isEmpty()) 0 else tiles[0].size
-                val depth = if (width > 0) tiles[0][0].size else 0
+            /** Neighbour tiles carried on each side of the region. See [HeightField]. */
+            const val PAD_TILES = 8
+
+            /**
+             * Flatten a `[plane][x][z]` tile array into per-plane height arrays, extended
+             * by [PAD_TILES] on every side.
+             *
+             * The border is filled from [neighbors] via
+             * [TerrainLoader.getExtendedTileHeight], which falls back to this region's own
+             * edge tile wherever a neighbour is absent. Passing null neighbours therefore
+             * still produces a correctly *sized* field -- edge objects displace against a
+             * clamped skirt rather than against nothing, which is strictly better than the
+             * unpadded behaviour but worse than supplying neighbours.
+             */
+            fun from(
+                tiles: Array<Array<Array<TerrainLoader.TileData>>>,
+                neighbors: TerrainLoader.NeighborData? = null
+            ): HeightField {
+                val regionWidth = if (tiles.isEmpty()) 0 else tiles[0].size
+                val regionDepth = if (regionWidth > 0) tiles[0][0].size else 0
+                if (regionWidth <= 0 || regionDepth <= 0) {
+                    return HeightField(0, 0, 0, Array(tiles.size) { EMPTY })
+                }
+
+                val pad = PAD_TILES
+                val width = regionWidth + 2 * pad
+                val depth = regionDepth + 2 * pad
                 val planes = Array(tiles.size) { plane ->
                     val planeTiles = tiles[plane]
-                    if (planeTiles.size != width || width == 0 || depth == 0) return@Array EMPTY
+                    if (planeTiles.size != regionWidth) return@Array EMPTY
                     val out = IntArray(width * depth)
                     for (x in 0 until width) {
-                        val column = planeTiles[x]
+                        val tileX = x - pad
                         val base = x * depth
-                        for (z in 0 until depth) {
-                            out[base + z] = column[z].height
+                        if (tileX in 0 until regionWidth) {
+                            // Interior column: the region's own tiles in the middle, the
+                            // neighbour lookup only for the two padded end runs.
+                            val column = planeTiles[tileX]
+                            for (z in 0 until depth) {
+                                val tileZ = z - pad
+                                out[base + z] = if (tileZ in 0 until regionDepth) {
+                                    column[tileZ].height
+                                } else {
+                                    TerrainLoader.getExtendedTileHeight(tiles, neighbors, plane, tileX, tileZ)
+                                }
+                            }
+                        } else {
+                            for (z in 0 until depth) {
+                                out[base + z] =
+                                    TerrainLoader.getExtendedTileHeight(tiles, neighbors, plane, tileX, z - pad)
+                            }
                         }
                     }
                     out
                 }
-                return HeightField(width, depth, planes)
+                return HeightField(width, depth, pad, planes)
             }
         }
     }
@@ -232,12 +300,16 @@ object VertexDisplacer {
             else -> { loX = minX; hiX = maxX; loZ = minZ; hiZ = maxZ }
         }
 
-        val localLoX = ((resizeX * loX) shr 7) + rsOffsetX + sceneX
-        val localHiX = ((resizeX * hiX) shr 7) + rsOffsetX + sceneX
-        val localLoZ = ((resizeZ * loZ) shr 7) + rsOffsetZ + sceneY
-        val localHiZ = ((resizeZ * hiZ) shr 7) + rsOffsetZ + sceneY
+        // Scene coordinates are region-local; the field's origin sits `pad` tiles further
+        // out, so shift by the same amount [displaceVertices] does.
+        val padUnits = field.rsOrigin
+        val localLoX = ((resizeX * loX) shr 7) + rsOffsetX + sceneX + padUnits
+        val localHiX = ((resizeX * hiX) shr 7) + rsOffsetX + sceneX + padUnits
+        val localLoZ = ((resizeZ * loZ) shr 7) + rsOffsetZ + sceneY + padUnits
+        val localHiZ = ((resizeZ * hiZ) shr 7) + rsOffsetZ + sceneY + padUnits
 
-        // Corners read for a vertex in tile t are t and t + 1.
+        // Corners read for a vertex in tile t are t and t + 1, so this range is over
+        // corner indices and its far end may legitimately reach width - 1.
         var tx0 = localLoX shr TILE_SCALE
         var tx1 = (localHiX shr TILE_SCALE) + 1
         var tz0 = localLoZ shr TILE_SCALE
@@ -246,7 +318,8 @@ object VertexDisplacer {
         if (tz0 < 0) tz0 = 0
         if (tx1 > width - 1) tx1 = width - 1
         if (tz1 > depth - 1) tz1 = depth - 1
-        // Wholly outside the terrain: every vertex would be skipped, so nothing moves.
+        // Wholly outside the *padded* field, so [displaceVertices] would reject every
+        // vertex on the same bounds and return null: nothing moves either way.
         if (tx0 > tx1 || tz0 > tz1) return true
 
         for (tx in tx0..tx1) {
@@ -324,7 +397,8 @@ object VertexDisplacer {
         //
         // After applying mirror/rotate/scale/translate to model-local vertex coords
         // and adding to sceneX/sceneY, the result is region-local RS scene coords.
-        // Shifting right by tileScale (9) gives the local tile index (0-63).
+        // Adding the field's pad origin and shifting right by tileScale (9) gives the
+        // padded tile index, where region tile t lives at t + pad.
         //
         // Mirror, rotation and scale together are a per-object constant: each output
         // axis takes exactly one input axis, times a signed factor. Folding them into
@@ -343,8 +417,13 @@ object VertexDisplacer {
             3 -> { factorXX = 0; factorXZ = -resizeX * mirrorSign; factorZX = resizeZ; factorZZ = 0 }
             else -> { factorXX = resizeX; factorXZ = 0; factorZX = 0; factorZZ = resizeZ * mirrorSign }
         }
-        val baseX = rsOffsetX + sceneX
-        val baseZ = rsOffsetZ + sceneY
+        // Region-local scene units -> padded field units. The field carries
+        // [HeightField.pad] tiles of neighbour terrain on every side, so an object on
+        // the region's last row still has the `tile + 1` corners the guard below wants;
+        // see [HeightField] for why that padding is the whole point.
+        val padUnits = field.rsOrigin
+        val baseX = rsOffsetX + sceneX + padUnits
+        val baseZ = rsOffsetZ + sceneY + padUnits
         val maxTileX = width - 1
         val maxTileZ = depth - 1
         val resizeYf = resizeY.toFloat()
