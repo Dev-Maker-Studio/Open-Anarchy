@@ -6,6 +6,7 @@ layout(location = 3) in vec3 aNormal;
 
 out vec3 vColor;
 out vec3 vNormal;
+out float vViewDist;
 out vec3 vFragPos;
 
 uniform mat4 model;
@@ -23,5 +24,6 @@ void main() {
     vFragPos = worldPos.xyz;
     vNormal = aNormal;  // No transpose(inverse()) needed - model is translation only
     vColor = aColor;
+    vViewDist = distance(worldPos.xyz, cameraPos);
     gl_Position = viewProjection * worldPos;
 }

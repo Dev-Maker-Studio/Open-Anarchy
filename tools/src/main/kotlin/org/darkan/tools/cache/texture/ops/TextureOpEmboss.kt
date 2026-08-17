@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.cos
 import kotlin.math.sin
@@ -19,14 +18,14 @@ class TextureOpEmboss : TextureOperation(1, true) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            val scale = intensity * TextureRaster.widthScale shr 12
-            val prevRow = getChildMonochromeOutput(0, (y - 1) and TextureRaster.columnEnd)
+            val scale = intensity * widthScale shr 12
+            val prevRow = getChildMonochromeOutput(0, (y - 1) and columnEnd)
             val currentRow = getChildMonochromeOutput(0, y)
-            val nextRow = getChildMonochromeOutput(0, (y + 1) and TextureRaster.columnEnd)
+            val nextRow = getChildMonochromeOutput(0, (y + 1) and columnEnd)
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 val dY = (nextRow[x] - prevRow[x]) * scale shr 12
-                val dX = scale * (currentRow[(x - 1) and TextureRaster.rowEnd] - currentRow[(x + 1) and TextureRaster.rowEnd]) shr 12
+                val dX = scale * (currentRow[(x - 1) and rowEnd] - currentRow[(x + 1) and rowEnd]) shr 12
                 var absX = dX shr 4
                 var absY = dY shr 4
                 if (absX < 0) absX = -absX

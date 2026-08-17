@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import java.util.Random
 
@@ -31,7 +30,7 @@ class TextureOpBricks : TextureOperation(0, true) {
             var rowIndex = 0
 
             // Calculate vertical position with offset
-            var verticalPos = TextureRaster.verticalTable!![y] + verticalOffset
+            var verticalPos = verticalTable[y] + verticalOffset
             while (verticalPos < 0) verticalPos += 4096
             while (verticalPos > 4096) verticalPos -= 4096
 
@@ -47,12 +46,12 @@ class TextureOpBricks : TextureOperation(0, true) {
 
             // Check if we're in the mortar between rows
             if (verticalPos > rowBottom + halfMortarSize && verticalPos < rowTop - halfMortarSize) {
-                for (x in 0 until TextureRaster.currentWidth) {
+                for (x in 0 until currentWidth) {
                     var brickIndex = 0
                     val rowHorizontalOffset = if (isEvenRow) horizontalOffset else -horizontalOffset
 
                     // Calculate horizontal position with offset
-                    var horizontalPos = TextureRaster.horizontalTable!![x] + (rowHorizontalOffset * brickWidth shr 12)
+                    var horizontalPos = horizontalTable[x] + (rowHorizontalOffset * brickWidth shr 12)
                     while (horizontalPos < 0) horizontalPos += 4096
                     while (horizontalPos > 4096) horizontalPos -= 4096
 
@@ -74,7 +73,7 @@ class TextureOpBricks : TextureOperation(0, true) {
                 }
             } else {
                 // In the horizontal mortar - fill with 0
-                for (x in 0 until TextureRaster.currentWidth) {
+                for (x in 0 until currentWidth) {
                     output[x] = 0
                 }
             }

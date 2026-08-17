@@ -70,3 +70,8 @@ world/data/worldConfig.json
 mainlog.txt
 lobby-server.jar
 cs2-dump
+# Cache write-back backups from the map editor
+cache-backups/
+# ImGui writes its docking/window layout here at runtime (ImGuiLayer setIniFilename)
+darkan-tools-layout.ini
+__pycache__/

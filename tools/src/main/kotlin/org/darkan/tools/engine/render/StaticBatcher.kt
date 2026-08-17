@@ -1,5 +1,6 @@
 package org.darkan.tools.engine.render
 
+import org.darkan.tools.engine.spatial.AABB
 import org.joml.Matrix4f
 import org.joml.Vector3f
 
@@ -23,7 +24,19 @@ data class TransformedGeometry(
     val colors: FloatArray?,
     val textureCoords: FloatArray?,
     val normals: FloatArray?,     // Already transformed
-    val indices: IntArray
+    val indices: IntArray,
+    /**
+     * Spatial cell of the object this geometry came from.
+     *
+     * The merge concatenates a whole region's worth of one material into a single mesh,
+     * which is why the frustum can only accept or reject 64 tiles at a time. Carrying the
+     * cell through the merge lets consecutive geometry from the same cell be recorded as
+     * an index range, so the same mesh can be drawn a cell at a time — see
+     * [MergedGeometry.rangeFirst]. Zero when sub-region ranges are switched off.
+     */
+    val cellKey: Long = 0L,
+    /** World-space `minX, minY, minZ, maxX, maxY, maxZ` of this geometry, or null. */
+    val bounds: FloatArray? = null
 ) {
     val vertexCount: Int get() = positions.size / 3
     val triangleCount: Int get() = indices.size / 3
@@ -139,8 +152,28 @@ class GeometryTransformer {
             colors = colors?.copyOf(),
             textureCoords = textureCoords?.copyOf(),
             normals = transformedNormals,
-            indices = indices.copyOf()
+            // A mirrored object's transform reverses handedness, so baking it into the
+            // vertices reverses every triangle's winding too. Back-face culling then
+            // discards the whole object rather than shading it wrongly, which is what
+            // "missing squares" in Lumbridge's roofs actually were.
+            indices = if (modelMatrix.determinant3x3() < 0f) reverseWinding(indices) else indices.copyOf()
         )
+    }
+
+    /**
+     * Copy [indices] with each triangle's last two vertices swapped, flipping the
+     * winding order without touching the vertex data.
+     */
+    private fun reverseWinding(indices: IntArray): IntArray {
+        val out = indices.copyOf()
+        var t = 0
+        while (t + 2 < out.size) {
+            val tmp = out[t + 1]
+            out[t + 1] = out[t + 2]
+            out[t + 2] = tmp
+            t += 3
+        }
+        return out
     }
 }
 
@@ -214,6 +247,26 @@ class StaticBatcher {
      * Merge multiple geometries into a single mesh.
      */
     private fun mergeGeometry(geometries: List<TransformedGeometry>): Mesh {
+        val merged = mergeGeometryData(geometries)
+        return Mesh(merged.positions, merged.colors, merged.texCoords, merged.normals, merged.indices)
+    }
+
+    companion object {
+        /**
+         * Concatenate a batch's geometries into flat vertex/index arrays.
+         *
+         * Split out of [mergeGeometry] so the region loader can do this
+         * allocation-and-copy work on a background thread and leave the GL thread
+         * with nothing but the buffer upload. Touches no GL state and no shared
+         * mutable state, so it is safe to call from any thread.
+         *
+         * The target is deliberately a heap `FloatArray` rather than native memory.
+         * Concatenating into `MemoryUtil` buffers here was measured and is markedly
+         * slower — see [MeshBuffers] for the numbers. Packing stays on the consumer side,
+         * where the same block of native memory is allocated, filled, uploaded and freed
+         * over and over instead of hundreds of cold blocks being held at once.
+         */
+        fun mergeGeometryData(geometries: List<TransformedGeometry>): MergedGeometry {
         // Calculate total sizes
         var totalVertices = 0
         var totalIndices = 0
@@ -233,6 +286,23 @@ class StaticBatcher {
         val normals = if (hasNormals) FloatArray(totalVertices * 3) else null
         val indices = IntArray(totalIndices)
 
+        // Sub-region index ranges.
+        //
+        // Deliberately runs of the *existing* order rather than a regrouping: the batch is
+        // drawn with blending on, so reordering its triangles could change the image where
+        // two translucent surfaces overlap. A run is a maximal stretch of consecutive
+        // geometries sharing a cell, and glMultiDrawElements executes the ranges in the
+        // order given, so submitting every range is byte-for-byte the same draw as
+        // submitting the whole buffer. This is only worth anything because the geometries
+        // arrive in object order and the cache stores objects tile by tile, so consecutive
+        // objects are usually neighbours.
+        val rangeFirst = IntArray(geometries.size)
+        val rangeCount = IntArray(geometries.size)
+        val rangeBounds = FloatArray(geometries.size * 6)
+        var ranges = 0
+        var currentCell = 0L
+        var currentIsOpen = false
+
         // Merge
         var posOffset = 0
         var colorOffset = 0
@@ -242,6 +312,35 @@ class StaticBatcher {
         var vertexOffset = 0
 
         for (geo in geometries) {
+            if (!currentIsOpen || geo.cellKey != currentCell) {
+                currentCell = geo.cellKey
+                currentIsOpen = true
+                rangeFirst[ranges] = indexOffset
+                rangeCount[ranges] = 0
+                val o = ranges * 6
+                rangeBounds[o] = Float.POSITIVE_INFINITY
+                rangeBounds[o + 1] = Float.POSITIVE_INFINITY
+                rangeBounds[o + 2] = Float.POSITIVE_INFINITY
+                rangeBounds[o + 3] = Float.NEGATIVE_INFINITY
+                rangeBounds[o + 4] = Float.NEGATIVE_INFINITY
+                rangeBounds[o + 5] = Float.NEGATIVE_INFINITY
+                ranges++
+            }
+            rangeCount[ranges - 1] += geo.indices.size
+            val box = geo.bounds
+            if (box != null) {
+                val o = (ranges - 1) * 6
+                for (axis in 0..2) {
+                    if (box[axis] < rangeBounds[o + axis]) rangeBounds[o + axis] = box[axis]
+                    if (box[3 + axis] > rangeBounds[o + 3 + axis]) rangeBounds[o + 3 + axis] = box[3 + axis]
+                }
+            } else {
+                // No bounds means the range cannot be culled; make it unrejectable rather
+                // than letting an empty box delete real geometry from the scene.
+                val o = (ranges - 1) * 6
+                rangeBounds[o] = Float.NaN
+            }
+
             // Copy positions
             System.arraycopy(geo.positions, 0, positions, posOffset, geo.positions.size)
             posOffset += geo.positions.size
@@ -294,7 +393,13 @@ class StaticBatcher {
             vertexOffset += geo.vertexCount
         }
 
-        return Mesh(positions, colors, texCoords, normals, indices)
+        return MergedGeometry(
+            positions, colors, texCoords, normals, indices, AABB.fromPositions(positions),
+            rangeFirst = rangeFirst.copyOf(ranges),
+            rangeCount = rangeCount.copyOf(ranges),
+            rangeBounds = rangeBounds.copyOf(ranges * 6)
+        )
+        }
     }
 
     /**
@@ -345,6 +450,52 @@ class StaticBatcher {
      * Clean up GPU resources.
      */
     fun cleanup() = clear()
+}
+
+/**
+ * Flat vertex/index arrays for one merged batch, ready to hand to a [Mesh].
+ * Produced off the GL thread by [StaticBatcher.mergeGeometryData].
+ */
+class MergedGeometry(
+    val positions: FloatArray,
+    val colors: FloatArray?,
+    val texCoords: FloatArray?,
+    val normals: FloatArray?,
+    val indices: IntArray,
+    /**
+     * World-space bounds of the merged batch.
+     *
+     * Batch geometry is already baked into world space, so this is directly testable
+     * against the view frustum with no per-frame transform. Computed here, on the loader
+     * thread that already has the positions in cache, rather than on the GL thread.
+     */
+    val bounds: AABB,
+    /**
+     * Contiguous index ranges inside [indices], one per spatial cell, in draw order.
+     *
+     * A single range covering the whole buffer when sub-region ranges are switched off,
+     * which is exactly the draw the pass issued before they existed. See the run
+     * construction in [StaticBatcher.mergeGeometryData].
+     */
+    val rangeFirst: IntArray = intArrayOf(0),
+    val rangeCount: IntArray = intArrayOf(indices.size),
+    /**
+     * `minX, minY, minZ, maxX, maxY, maxZ` per range, in [rangeFirst] order.
+     *
+     * A range whose box is not finite and well ordered is drawn unconditionally, for the
+     * same reason [org.darkan.tools.engine.region.BatchDraw.cullable] exists: a NaN makes
+     * every plane test fail, which a frustum test reads as "outside".
+     */
+    val rangeBounds: FloatArray = FloatArray(6) { Float.NaN }
+) {
+    /** Copy into native memory, ready for [Mesh] to upload. */
+    fun pack(): MeshBuffers = MeshBuffers.pack(
+        positions = positions,
+        colors = colors,
+        texCoords = texCoords,
+        normals = normals,
+        indices = indices
+    )
 }
 
 data class BatcherStats(

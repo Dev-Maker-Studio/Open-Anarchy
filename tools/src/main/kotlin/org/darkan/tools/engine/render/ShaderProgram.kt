@@ -4,6 +4,7 @@ import org.joml.Matrix4f
 import org.joml.Vector3f
 import org.joml.Vector4f
 import org.lwjgl.opengl.GL20.*
+import org.lwjgl.opengl.GL30.glUniform1ui
 import org.lwjgl.system.MemoryStack
 
 class ShaderProgram {
@@ -63,6 +64,19 @@ class ShaderProgram {
         uniforms[name]?.let { glUniform4f(it, value.x, value.y, value.z, value.w) }
     }
 
+    /** Set an unsigned int uniform. Kotlin has no unsigned Int, so [value] is reinterpreted. */
+    fun setUniformUInt(name: String, value: Int) {
+        uniforms[name]?.let { glUniform1ui(it, value) }
+    }
+
+    /**
+     * Set an array-of-vec4 uniform from tightly packed floats.
+     * [values] must hold `4 * count` entries.
+     */
+    fun setUniformVec4Array(name: String, values: FloatArray) {
+        uniforms[name]?.let { glUniform4fv(it, values) }
+    }
+
     fun setUniform(name: String, value: Matrix4f) {
         val loc = uniforms[name] ?: return
         MemoryStack.stackPush().use { stack ->
@@ -102,6 +116,27 @@ class ShaderProgram {
             vertexShader.cleanup()
             fragmentShader.cleanup()
 
+            return program
+        }
+
+        /**
+         * Build a compute-only program from [computeSource] and resolve [uniformNames].
+         *
+         * The caller is responsible for having checked that compute shaders are available
+         * (`caps.OpenGL43 || caps.GL_ARB_compute_shader`) — the context version string is
+         * not a reliable proxy for that, since the window asks for a 3.3 core context and
+         * drivers routinely hand back one that still exposes 4.x features.
+         */
+        fun createCompute(computeSource: String, vararg uniformNames: String): ShaderProgram {
+            val program = ShaderProgram()
+            program.init()
+
+            val computeShader = Shader.compute(computeSource)
+            program.attachShader(computeShader)
+            program.link()
+            computeShader.cleanup()
+
+            uniformNames.forEach { program.createUniform(it) }
             return program
         }
 

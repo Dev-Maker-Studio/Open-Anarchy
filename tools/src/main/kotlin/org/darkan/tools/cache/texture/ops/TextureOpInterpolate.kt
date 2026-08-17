@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -16,7 +15,7 @@ class TextureOpInterpolate : TextureOperation(3, false) {
             val input1 = getChildMonochromeOutput(1, y)
             val blendFactor = getChildMonochromeOutput(2, y)
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 val blend = blendFactor[x]
                 output[x] = when {
                     blend == 4096 -> input0[x]
@@ -38,7 +37,7 @@ class TextureOpInterpolate : TextureOperation(3, false) {
             val outputGreen = output[1]
             val outputBlue = output[2]
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 val blend = blendFactor[x]
                 when {
                     blend == 4096 -> {

@@ -78,10 +78,24 @@ class RenderSystem(private val window: Window) {
      * side and turns every building inside out). Override with -Ddarkan.cullwind=cw.
      */
     fun enableModelCullFace() {
+        if (!modelCullEnabled) {
+            glDisable(GL_CULL_FACE)
+            return
+        }
         glEnable(GL_CULL_FACE)
         glCullFace(GL_BACK)
         glFrontFace(if (System.getProperty("darkan.cullwind") == "cw") GL_CW else GL_CCW)
     }
+
+    /**
+     * `-Ddarkan.modelCull=false` draws object geometry two-sided.
+     *
+     * Back-face culling and missing geometry look nothing alike as bugs but share a
+     * cause: anything that reverses a model's winding is erased rather than shaded
+     * wrongly. Being able to turn the test off separates "not submitted" from
+     * "submitted and culled" in one run.
+     */
+    private val modelCullEnabled = System.getProperty("darkan.modelCull", "true").toBoolean()
 
     /** Restores the default CCW winding (used by non-RS geometry: grid, gizmos, UI). */
     fun resetFrontFace() {

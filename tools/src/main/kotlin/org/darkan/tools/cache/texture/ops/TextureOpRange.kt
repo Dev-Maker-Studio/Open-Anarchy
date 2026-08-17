@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -24,7 +23,7 @@ class TextureOpRange : TextureOperation(1, false) {
             val greenOutput = output[1]
             val blueOutput = output[2]
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 redOutput[x] = (rangeMultiplier * redInput[x] shr 12) + rangeOffset
                 greenOutput[x] = (rangeMultiplier * greenInput[x] shr 12) + rangeOffset
                 blueOutput[x] = (rangeMultiplier * blueInput[x] shr 12) + rangeOffset
@@ -37,7 +36,7 @@ class TextureOpRange : TextureOperation(1, false) {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
             val childOutput = getChildMonochromeOutput(0, y)
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 output[x] = (rangeMultiplier * childOutput[x] shr 12) + rangeOffset
             }
         }

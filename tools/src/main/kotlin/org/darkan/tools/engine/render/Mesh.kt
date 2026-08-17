@@ -1,100 +1,85 @@
 package org.darkan.tools.engine.render
 
+import org.lwjgl.PointerBuffer
 import org.lwjgl.opengl.GL11.*
+import org.lwjgl.opengl.GL14.glMultiDrawElements
 import org.lwjgl.opengl.GL15.*
 import org.lwjgl.opengl.GL20.*
 import org.lwjgl.opengl.GL30.*
 import org.lwjgl.system.MemoryUtil
-import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
-class Mesh(
-    positions: FloatArray,
-    colors: FloatArray? = null,
-    textureCoords: FloatArray? = null,
-    normals: FloatArray? = null,
-    indices: IntArray,
-    /** Number of components per color vertex: 3 for RGB, 4 for RGBA */
-    colorComponents: Int = 3
-) {
+/**
+ * A VAO plus its buffer objects, built from vertex data packed into native memory.
+ *
+ * Construction is GL-only: generate two buffer objects, upload them, describe the
+ * attributes. The packing that feeds it lives in [MeshBuffers] and needs no GL context.
+ *
+ * Every vertex attribute shares **one** buffer object, each occupying its own contiguous
+ * run — see [MeshBuffers] for why. Attribute layout as the shaders see it is unchanged:
+ * each run is still tightly packed, so the stride stays 0 and only the base offset and the
+ * component type differ (colour arrives as normalized bytes, which the shaders read as the
+ * same floats a float attribute gave them).
+ *
+ * The [MeshBuffers] handed in is **consumed**: it is freed once uploaded, whether or not
+ * the upload throws. Do not reuse it afterwards.
+ */
+class Mesh(buffers: MeshBuffers) {
     var vaoId: Int = 0
         private set
     private val vboIds = mutableListOf<Int>()
-    val vertexCount: Int = indices.size
+    val vertexCount: Int = buffers.indexCount
+
+    /** Build from heap arrays, packing them inline. */
+    constructor(
+        positions: FloatArray,
+        colors: FloatArray? = null,
+        textureCoords: FloatArray? = null,
+        normals: FloatArray? = null,
+        indices: IntArray,
+        /** Number of components per color vertex: 3 for RGB, 4 for RGBA */
+        colorComponents: Int = 3
+    ) : this(
+        MeshBuffers.pack(
+            positions = positions,
+            colors = colors,
+            texCoords = textureCoords,
+            normals = normals,
+            indices = indices,
+            colorComponents = colorComponents
+        )
+    )
 
     init {
-        var posBuffer: FloatBuffer? = null
-        var colorBuffer: FloatBuffer? = null
-        var texBuffer: FloatBuffer? = null
-        var normalBuffer: FloatBuffer? = null
-        var indexBuffer: IntBuffer? = null
-
         try {
             vaoId = glGenVertexArrays()
             glBindVertexArray(vaoId)
 
-            // Position VBO
-            posBuffer = MemoryUtil.memAllocFloat(positions.size)
-            posBuffer.put(positions).flip()
-            val posVbo = glGenBuffers()
-            vboIds.add(posVbo)
-            glBindBuffer(GL_ARRAY_BUFFER, posVbo)
-            glBufferData(GL_ARRAY_BUFFER, posBuffer, GL_STATIC_DRAW)
-            glEnableVertexAttribArray(0)
-            glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0)
-
-            // Color VBO (supports 3 or 4 components for RGB or RGBA)
-            if (colors != null) {
-                colorBuffer = MemoryUtil.memAllocFloat(colors.size)
-                colorBuffer.put(colors).flip()
-                val colorVbo = glGenBuffers()
-                vboIds.add(colorVbo)
-                glBindBuffer(GL_ARRAY_BUFFER, colorVbo)
-                glBufferData(GL_ARRAY_BUFFER, colorBuffer, GL_STATIC_DRAW)
-                glEnableVertexAttribArray(1)
-                glVertexAttribPointer(1, colorComponents, GL_FLOAT, false, 0, 0)
+            val vertexVbo = glGenBuffers()
+            vboIds.add(vertexVbo)
+            glBindBuffer(GL_ARRAY_BUFFER, vertexVbo)
+            glBufferData(GL_ARRAY_BUFFER, buffers.vertexData, GL_STATIC_DRAW)
+            for (attribute in buffers.attributes) {
+                glEnableVertexAttribArray(attribute.location)
+                glVertexAttribPointer(
+                    attribute.location,
+                    attribute.components,
+                    attribute.type,
+                    attribute.normalized,
+                    0,
+                    attribute.byteOffset.toLong()
+                )
             }
 
-            // Texture coordinate VBO
-            if (textureCoords != null) {
-                texBuffer = MemoryUtil.memAllocFloat(textureCoords.size)
-                texBuffer.put(textureCoords).flip()
-                val texVbo = glGenBuffers()
-                vboIds.add(texVbo)
-                glBindBuffer(GL_ARRAY_BUFFER, texVbo)
-                glBufferData(GL_ARRAY_BUFFER, texBuffer, GL_STATIC_DRAW)
-                glEnableVertexAttribArray(2)
-                glVertexAttribPointer(2, 2, GL_FLOAT, false, 0, 0)
-            }
-
-            // Normal VBO
-            if (normals != null) {
-                normalBuffer = MemoryUtil.memAllocFloat(normals.size)
-                normalBuffer.put(normals).flip()
-                val normalVbo = glGenBuffers()
-                vboIds.add(normalVbo)
-                glBindBuffer(GL_ARRAY_BUFFER, normalVbo)
-                glBufferData(GL_ARRAY_BUFFER, normalBuffer, GL_STATIC_DRAW)
-                glEnableVertexAttribArray(3)
-                glVertexAttribPointer(3, 3, GL_FLOAT, false, 0, 0)
-            }
-
-            // Index VBO
-            indexBuffer = MemoryUtil.memAllocInt(indices.size)
-            indexBuffer.put(indices).flip()
             val indexVbo = glGenBuffers()
             vboIds.add(indexVbo)
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexVbo)
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW)
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, buffers.indices, GL_STATIC_DRAW)
 
             glBindBuffer(GL_ARRAY_BUFFER, 0)
             glBindVertexArray(0)
         } finally {
-            posBuffer?.let { MemoryUtil.memFree(it) }
-            colorBuffer?.let { MemoryUtil.memFree(it) }
-            texBuffer?.let { MemoryUtil.memFree(it) }
-            normalBuffer?.let { MemoryUtil.memFree(it) }
-            indexBuffer?.let { MemoryUtil.memFree(it) }
+            buffers.free()
         }
     }
 
@@ -104,6 +89,72 @@ class Mesh(
         glBindVertexArray(vaoId)
         glDrawElements(primitiveType, vertexCount, GL_UNSIGNED_INT, 0)
         glBindVertexArray(0)
+    }
+
+    // Scratch buffers for [renderRanges], grown on demand and freed in [cleanup].
+    // Only the handful of merged meshes ever call it, so a per-mesh pair costs nothing
+    // and avoids any cross-mesh sharing hazard.
+    private var multiDrawCounts: IntBuffer? = null
+    private var multiDrawOffsets: PointerBuffer? = null
+    private var multiDrawCapacity = 0
+
+    /**
+     * Draw a subset of this mesh's index buffer as a single `glMultiDrawElements` call.
+     *
+     * Used by the merged terrain meshes, which pack every loaded region's geometry into
+     * one buffer as contiguous per-region index ranges. Frustum culling then selects the
+     * ranges to submit while the driver still only sees one draw call, so the terrain
+     * draw count stays constant no matter how many regions are loaded.
+     *
+     * @param firstIndices Start of each range, in indices (not bytes)
+     * @param counts Index count of each range
+     * @param rangeCount How many entries of the two arrays to use
+     */
+    /**
+     * Draw one contiguous index range as a plain `glDrawElements`.
+     *
+     * The single-range case of [renderRanges]. Worth its own path because a multi-draw of
+     * one range costs the driver noticeably more than the equivalent draw call, and a
+     * partially visible batch very often comes down to one surviving span.
+     */
+    fun renderRange(firstIndex: Int, count: Int) {
+        if (count <= 0) return
+        glBindVertexArray(vaoId)
+        glDrawElements(primitiveType, count, GL_UNSIGNED_INT, firstIndex.toLong() * Int.SIZE_BYTES)
+        glBindVertexArray(0)
+    }
+
+    fun renderRanges(firstIndices: IntArray, counts: IntArray, rangeCount: Int) {
+        if (rangeCount <= 0) return
+        ensureMultiDrawCapacity(rangeCount)
+        val countBuffer = multiDrawCounts!!
+        val offsetBuffer = multiDrawOffsets!!
+        for (i in 0 until rangeCount) {
+            countBuffer.put(i, counts[i])
+            offsetBuffer.put(i, firstIndices[i].toLong() * Int.SIZE_BYTES)
+        }
+        countBuffer.position(0)
+        countBuffer.limit(rangeCount)
+        offsetBuffer.position(0)
+        offsetBuffer.limit(rangeCount)
+
+        glBindVertexArray(vaoId)
+        glMultiDrawElements(primitiveType, countBuffer, GL_UNSIGNED_INT, offsetBuffer)
+        glBindVertexArray(0)
+    }
+
+    private fun ensureMultiDrawCapacity(rangeCount: Int) {
+        if (multiDrawCapacity >= rangeCount && multiDrawCounts != null) {
+            multiDrawCounts!!.clear()
+            multiDrawOffsets!!.clear()
+            return
+        }
+        multiDrawCounts?.let { MemoryUtil.memFree(it) }
+        multiDrawOffsets?.let { MemoryUtil.memFree(it) }
+        val capacity = maxOf(rangeCount, 64)
+        multiDrawCounts = MemoryUtil.memAllocInt(capacity)
+        multiDrawOffsets = MemoryUtil.memAllocPointer(capacity)
+        multiDrawCapacity = capacity
     }
 
     fun renderWireframe() {
@@ -130,6 +181,11 @@ class Mesh(
         vboIds.forEach { glDeleteBuffers(it) }
         glBindVertexArray(0)
         glDeleteVertexArrays(vaoId)
+        multiDrawCounts?.let { MemoryUtil.memFree(it) }
+        multiDrawCounts = null
+        multiDrawOffsets?.let { MemoryUtil.memFree(it) }
+        multiDrawOffsets = null
+        multiDrawCapacity = 0
     }
 
     companion object {
@@ -153,31 +209,16 @@ class Mesh(
             normals: FloatArray,
             alphas: FloatArray,
             indices: IntArray
-        ): Mesh {
-            val mesh = Mesh(positions, colors, textureCoords, normals, indices, colorComponents = 3)
-
-            // Add per-vertex alpha VBO at location 4
-            glBindVertexArray(mesh.vaoId)
-
-            var alphaBuffer: FloatBuffer? = null
-            try {
-                alphaBuffer = MemoryUtil.memAllocFloat(alphas.size)
-                alphaBuffer.put(alphas).flip()
-                val alphaVbo = glGenBuffers()
-                mesh.vboIds.add(alphaVbo)
-                glBindBuffer(GL_ARRAY_BUFFER, alphaVbo)
-                glBufferData(GL_ARRAY_BUFFER, alphaBuffer, GL_STATIC_DRAW)
-                glEnableVertexAttribArray(4)
-                glVertexAttribPointer(4, 1, GL_FLOAT, false, 0, 0)
-            } finally {
-                alphaBuffer?.let { MemoryUtil.memFree(it) }
-            }
-
-            glBindBuffer(GL_ARRAY_BUFFER, 0)
-            glBindVertexArray(0)
-
-            return mesh
-        }
+        ): Mesh = Mesh(
+            MeshBuffers.pack(
+                positions = positions,
+                colors = colors,
+                texCoords = textureCoords,
+                normals = normals,
+                indices = indices,
+                alphas = alphas
+            )
+        )
 
         /**
          * Create a mesh with a per-vertex atlas transform attribute for atlased texture rendering.
@@ -198,31 +239,16 @@ class Mesh(
             normals: FloatArray,
             atlasTransforms: FloatArray,
             indices: IntArray
-        ): Mesh {
-            val mesh = Mesh(positions, colors, textureCoords, normals, indices, colorComponents = 3)
-
-            // Add per-vertex atlas transform VBO at location 5
-            glBindVertexArray(mesh.vaoId)
-
-            var atlasBuffer: FloatBuffer? = null
-            try {
-                atlasBuffer = MemoryUtil.memAllocFloat(atlasTransforms.size)
-                atlasBuffer.put(atlasTransforms).flip()
-                val atlasVbo = glGenBuffers()
-                mesh.vboIds.add(atlasVbo)
-                glBindBuffer(GL_ARRAY_BUFFER, atlasVbo)
-                glBufferData(GL_ARRAY_BUFFER, atlasBuffer, GL_STATIC_DRAW)
-                glEnableVertexAttribArray(5)
-                glVertexAttribPointer(5, 4, GL_FLOAT, false, 0, 0)
-            } finally {
-                atlasBuffer?.let { MemoryUtil.memFree(it) }
-            }
-
-            glBindBuffer(GL_ARRAY_BUFFER, 0)
-            glBindVertexArray(0)
-
-            return mesh
-        }
+        ): Mesh = Mesh(
+            MeshBuffers.pack(
+                positions = positions,
+                colors = colors,
+                texCoords = textureCoords,
+                normals = normals,
+                indices = indices,
+                atlasTransforms = atlasTransforms
+            )
+        )
 
         /**
          * Create a mesh with both per-vertex alpha and atlas transform attributes.
@@ -245,43 +271,17 @@ class Mesh(
             alphas: FloatArray,
             atlasTransforms: FloatArray,
             indices: IntArray
-        ): Mesh {
-            val mesh = Mesh(positions, colors, textureCoords, normals, indices, colorComponents = 3)
-
-            glBindVertexArray(mesh.vaoId)
-
-            var alphaBuffer: FloatBuffer? = null
-            var atlasBuffer: FloatBuffer? = null
-            try {
-                // Add per-vertex alpha VBO at location 4
-                alphaBuffer = MemoryUtil.memAllocFloat(alphas.size)
-                alphaBuffer.put(alphas).flip()
-                val alphaVbo = glGenBuffers()
-                mesh.vboIds.add(alphaVbo)
-                glBindBuffer(GL_ARRAY_BUFFER, alphaVbo)
-                glBufferData(GL_ARRAY_BUFFER, alphaBuffer, GL_STATIC_DRAW)
-                glEnableVertexAttribArray(4)
-                glVertexAttribPointer(4, 1, GL_FLOAT, false, 0, 0)
-
-                // Add per-vertex atlas transform VBO at location 5
-                atlasBuffer = MemoryUtil.memAllocFloat(atlasTransforms.size)
-                atlasBuffer.put(atlasTransforms).flip()
-                val atlasVbo = glGenBuffers()
-                mesh.vboIds.add(atlasVbo)
-                glBindBuffer(GL_ARRAY_BUFFER, atlasVbo)
-                glBufferData(GL_ARRAY_BUFFER, atlasBuffer, GL_STATIC_DRAW)
-                glEnableVertexAttribArray(5)
-                glVertexAttribPointer(5, 4, GL_FLOAT, false, 0, 0)
-            } finally {
-                alphaBuffer?.let { MemoryUtil.memFree(it) }
-                atlasBuffer?.let { MemoryUtil.memFree(it) }
-            }
-
-            glBindBuffer(GL_ARRAY_BUFFER, 0)
-            glBindVertexArray(0)
-
-            return mesh
-        }
+        ): Mesh = Mesh(
+            MeshBuffers.pack(
+                positions = positions,
+                colors = colors,
+                texCoords = textureCoords,
+                normals = normals,
+                indices = indices,
+                alphas = alphas,
+                atlasTransforms = atlasTransforms
+            )
+        )
 
         fun createTriangle(): Mesh {
             val positions = floatArrayOf(

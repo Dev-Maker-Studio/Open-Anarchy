@@ -565,8 +565,9 @@ class MapScene(
         regionY: Int,
         loadedRegion: LoadedRegion
     ) {
-        val regionBaseX = regionX * 64
-        val regionBaseY = regionY * 64
+        // Flattened once for the whole region; the per-vertex loop then reads a single
+        // IntArray instead of walking the [plane][x][z] TileData array.
+        val field = VertexDisplacer.HeightField.from(terrainData.tiles)
 
         for (obj in objects) {
             if (!VertexDisplacer.needsDisplacement(obj.groundContourType, obj.groundContourModifier)) {
@@ -592,9 +593,7 @@ class MapScene(
                     sceneY = obj.rsSceneY,
                     averageHeight = obj.rsAverageHeight,
                     plane = plane,
-                    tiles = terrainData.tiles,
-                    regionBaseX = regionBaseX,
-                    regionBaseY = regionBaseY,
+                    field = field,
                     rsRotation = obj.mapObject.rotation,
                     mirrored = obj.mirrored,
                     resizeX = obj.definition.modelSizeX,

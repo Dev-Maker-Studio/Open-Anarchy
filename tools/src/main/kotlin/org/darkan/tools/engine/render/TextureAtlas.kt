@@ -8,6 +8,7 @@ import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
 import org.lwjgl.opengl.GL30.glGenerateMipmap
 import org.lwjgl.system.MemoryUtil
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.sqrt
@@ -330,7 +331,17 @@ class TextureAtlas(
     private val border: Int = 8
 ) {
     private val pages = mutableListOf<AtlasPage>()
-    private val regions = mutableMapOf<Int, AtlasRegion>()
+
+    /**
+     * Texture id -> packed region.
+     *
+     * Concurrent because the region loading pipeline reads this from background
+     * worker threads (batch geometry needs the atlas UV rect) while the GL thread
+     * can still be packing new object textures into the atlas via [addTexture].
+     * A plain HashMap resized underneath those readers would drop or corrupt
+     * lookups. Only lookups happen off-thread; [addTexture] stays GL-thread only.
+     */
+    private val regions = ConcurrentHashMap<Int, AtlasRegion>()
 
     /** Size of each slot including border: textureSize + 2 * border */
     private val slotSize = textureSize + 2 * border
