@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -24,7 +23,7 @@ class TextureOpColorGradient : TextureOperation(1, false) {
             val outG = output[1]
             val outB = output[2]
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 var idx = input[x] shr 4
                 idx = idx.coerceIn(0, 256)
                 val color = gradientLut[idx]

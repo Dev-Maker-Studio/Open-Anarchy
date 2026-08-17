@@ -12,6 +12,7 @@ layout(location = 7) in vec4 instanceMatrix3;
 
 out vec3 vColor;
 out vec3 vNormal;
+out float vViewDist;
 out vec3 vFragPos;
 flat out int vMirrored;
 
@@ -31,6 +32,7 @@ void main() {
     mat3 normalMatrix = mat3(model);
     vNormal = normalMatrix * aNormal;
     vColor = aColor;
+    vViewDist = distance(vFragPos, cameraPos);
     gl_Position = viewProjection * vec4(vFragPos, 1.0);
 
     // Detect mirroring by checking if the determinant of the 3x3 rotation/scale matrix is negative

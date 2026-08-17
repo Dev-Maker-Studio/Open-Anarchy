@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import java.util.Random
 import kotlin.math.max
@@ -24,17 +23,17 @@ class TextureOpVoronoiNoise : TextureOperation(0, true) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            val verticalPos = TextureRaster.verticalTable!![y] * cellCountY + 2048
+            val verticalPos = verticalTable[y] * cellCountY + 2048
             val verticalCell = verticalPos shr 12
             val verticalCellNext = verticalCell + 1
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 var dist1 = Int.MAX_VALUE
                 var dist2 = Int.MAX_VALUE
                 var dist3 = Int.MAX_VALUE
                 var dist4 = Int.MAX_VALUE
 
-                val horizontalPos = TextureRaster.horizontalTable!![x] * cellCountX + 2048
+                val horizontalPos = horizontalTable[x] * cellCountX + 2048
                 val horizontalCell = horizontalPos shr 12
                 val horizontalCellNext = horizontalCell + 1
 

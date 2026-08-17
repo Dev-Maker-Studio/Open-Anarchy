@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -44,7 +43,7 @@ class TextureOpColorFill : TextureOperation(0, false) {
             val greens = palette[1]
             val blues = palette[2]
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 reds[x] = redComponent
                 greens[x] = greenComponent
                 blues[x] = blueComponent

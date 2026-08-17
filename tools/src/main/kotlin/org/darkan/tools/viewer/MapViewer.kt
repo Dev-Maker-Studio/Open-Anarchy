@@ -8,6 +8,8 @@ import imgui.flag.ImGuiWindowFlags
 import imgui.type.ImBoolean
 import imgui.type.ImInt
 import imgui.type.ImString
+import kotlin.math.sqrt
+import kotlin.math.tan
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -16,19 +18,35 @@ import org.darkan.core.map.RegionLoader
 import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.cache.definition.data.MapObject
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import org.darkan.tools.cache.map.NormalMerger
 import org.darkan.tools.cache.map.ObjectInstance
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.map.TerrainAligner
+import org.darkan.tools.cache.map.environment.BackgroundMode
+import org.darkan.tools.cache.map.environment.EnvironmentConfigs
+import org.darkan.tools.cache.map.environment.MapEnvironment
+import org.darkan.tools.cache.map.environment.EnvironmentEdit
+import org.darkan.tools.cache.map.environment.EnvironmentWritePlan
+import org.darkan.tools.cache.map.environment.MapEnvironmentLoader
+import org.darkan.tools.cache.map.environment.MapEnvironmentWriter
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.terrain.TerrainEditManager
 import org.darkan.tools.cache.terrain.EditResult
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
+import org.darkan.tools.cache.texture.TexturePixelStats
 import org.darkan.tools.engine.Engine
+import org.darkan.tools.engine.async.ParallelChunks
 import org.darkan.tools.engine.input.TilePicker
+import org.darkan.tools.engine.region.AsyncRegionData
 import org.darkan.tools.engine.region.AsyncRegionManager
+import org.darkan.tools.engine.region.BatchDraw
+import org.darkan.tools.engine.region.MergedTerrainRange
+import org.darkan.tools.engine.region.RegionLoadProfiler
 import org.darkan.tools.engine.region.RegionManager
 import org.darkan.tools.engine.render.BatchKey
+import org.darkan.tools.engine.render.EnvironmentSettings
+import org.darkan.tools.engine.render.GpuTimerPool
 import org.darkan.tools.engine.render.IndirectRenderer
 import org.darkan.tools.engine.render.InstanceManager
 import org.darkan.tools.engine.render.Mesh
@@ -37,9 +55,15 @@ import org.darkan.tools.engine.render.TexturePixelProvider
 import org.darkan.tools.engine.render.ShaderProgram
 import org.darkan.tools.engine.render.TextureAtlas
 import org.darkan.tools.engine.render.UniformBuffers
+import org.darkan.tools.engine.render.sky.SkyBackgroundMode
+import org.darkan.tools.engine.render.sky.SkyRenderer
+import org.darkan.tools.engine.render.sky.SkySettings
+import org.darkan.tools.engine.render.sky.SkyStateRestore
+import org.darkan.tools.engine.spatial.Frustum
 import org.darkan.tools.engine.window.WindowConfig
 import org.darkan.tools.ui.DebugPanel
 import org.darkan.tools.ui.ImGuiLayer
+import org.darkan.tools.ui.ImGuiText
 import org.darkan.tools.ui.LoadingScreen
 import org.darkan.tools.util.CoordinateUtil
 import org.joml.Matrix4f
@@ -115,15 +139,61 @@ class MapViewer(
     // When available, replaces per-mesh instanced draws with 1-3 MDI calls.
     // Falls back to InstanceManager if initialization fails.
     //
-    // DISABLED: The IndirectRenderer causes a render loop hang on first frame after loading.
-    // Suspected causes: persistent mapped buffer fence sync issues, glGetTexImage GPU readback
-    // stalls during buildTextureArray(), or massive SSBO allocation (~86MB for triple-buffered
-    // persistent mapping). The legacy InstanceManager path works correctly.
-    // Set useIndirectRendering = true to re-enable for debugging.
-    private val useIndirectRendering = false
+    // Multi-Draw Indirect path for center-region objects. Enabled by default; set
+    // -Ddarkan.indirect=false to force the legacy InstanceManager path. Also disabled
+    // automatically when the GL context is too old (see IndirectRenderer.isSupported)
+    // or when shader compilation / geometry build fails, in which case renderObjects()
+    // falls through to the InstanceManager path unchanged.
+    private var useIndirectRendering = System.getProperty("darkan.indirect", "true").toBoolean()
     private var indirectColorShader: ShaderProgram? = null
     private var indirectTexturedShader: ShaderProgram? = null
     private var indirectRenderer: IndirectRenderer? = null
+
+    // ---- Culling -------------------------------------------------------
+    //
+    // Center-region objects are culled on the GPU: their transforms and world bounding
+    // spheres are uploaded once per scene and a compute shader rebuilds the indirect draw
+    // commands every frame, so the CPU never decides what is visible and never reads the
+    // result back. Context regions and their static batches are culled on the CPU instead,
+    // where the granularity is a whole merged mesh and a handful of AABB tests replaces
+    // hundreds of draw calls.
+    //
+    // -Ddarkan.gpuCull=false draws everything, for A/B comparison against the culled image.
+    // -Ddarkan.staticInstances=false goes back to streaming instance transforms every
+    // frame (which cannot be culled), keeping the previous path exercisable.
+    private val useGpuCulling = System.getProperty("darkan.gpuCull", "true").toBoolean()
+    private val useStaticInstances = System.getProperty("darkan.staticInstances", "true").toBoolean()
+    private val useCpuBatchCulling = System.getProperty("darkan.batchCull", "true").toBoolean()
+
+    /**
+     * Whether context regions draw their terrain out of the merged atlas buffers.
+     *
+     * `-Ddarkan.mergeContextTerrain=false` restores the previous arrangement, where the
+     * merged meshes were submitted whole and every context region additionally drew its own
+     * per-texture terrain batches on top. Kept switchable because it is the only way to A/B
+     * the merged terrain against what it replaced from a single build.
+     */
+    private val mergeContextTerrain = System.getProperty("darkan.mergeContextTerrain", "true").toBoolean()
+
+    private val frustum = Frustum()
+    private val frustumViewProjection = Matrix4f()
+    private val frustumPlanes = FloatArray(24)
+
+    /** Every ready context region this frame. Refilled every frame. */
+    private val readyContextRegions = mutableListOf<AsyncRegionData>()
+
+    /** Context regions whose terrain survived the frustum test. Refilled every frame. */
+    private val visibleContextRegions = mutableListOf<AsyncRegionData>()
+
+    /** Set when the object set changes, so the static instance buffers are rebuilt. */
+    private var objectSceneDirty = true
+
+    /** Compute shader sources for the culling passes, loaded once. */
+    private var cullShaderSource: String? = null
+    private var cullResetShaderSource: String? = null
+
+    /** Per-pass GPU timers. Results lag by a few frames and never stall the pipeline. */
+    private val gpuTimers = GpuTimerPool(RenderMetrics.GPU_PASS_NAMES)
 
     // Non-instanced UBO shaders for static batched context objects
     private lateinit var staticColorShader: ShaderProgram
@@ -143,15 +213,26 @@ class MapViewer(
     // UI state
     private val regionXInput = ImInt(50)
     private val regionYInput = ImInt(50)
-    private var showTerrain = true
+    // Capture-harness isolation switches, same family as -Ddarkan.capture / -Ddarkan.hideUi:
+    // `-Ddarkan.objects=false` renders terrain alone and `-Ddarkan.terrain=false` renders
+    // objects alone, which is the only way to tell from a screenshot whether a given piece of
+    // geometry came from the ground mesh or from a placed model.
+    private var showTerrain = System.getProperty("darkan.terrain", "true").toBoolean()
+    private val showObjects = System.getProperty("darkan.objects", "true").toBoolean()
     private var showRoofs = true  // Toggle roof visibility (shapes 12-21)
     private val renderDistanceInput = intArrayOf(1)  // Dynamic render distance (0-5)
 
-    // Lighting - brighter values for better model visibility
-    private val ambientLight = Vector3f(0.6f, 0.6f, 0.6f)
-    private val lightDirection = Vector3f(-0.5f, -1f, -0.5f).normalize()
-    private val lightColor = Vector3f(0.8f, 0.8f, 0.8f)
-    private val clearColor = Vector3f(0.4f, 0.6f, 0.8f)
+    // Sun / fog / skybox for the region being viewed. Seeded from the map archive on every
+    // region change, then live-editable from the Environment section of the editor panel.
+    private val environment = EnvironmentSettings()
+
+    // Skybox pass. Drawn after the opaque scene so covered pixels are depth-rejected;
+    // with no skybox reference it degrades to a flat fill in the fog colour.
+    private var sky: SkyRenderer? = null
+
+    // Only ever seen for the single frame before the sky pass runs, so it tracks the fog
+    // colour rather than sitting on a hardcoded blue.
+    private val clearColor = Vector3f()
 
     // Known regions for quick navigation
     private val knownRegions = listOf(
@@ -218,6 +299,27 @@ class MapViewer(
     // Placed objects (user-placed via Object Place tool)
     private val placedObjects = mutableListOf<ObjectInstance>()
 
+    // Environment panel scratch buffers. Refreshed from [environment] every frame so a
+    // region change is picked up, and written back whenever a widget reports a change.
+    private val envSunColourInput = FloatArray(3)
+    private val envFogColourInput = FloatArray(3)
+    private val envSunPositionInput = FloatArray(3)
+    private val envSunAmbientInput = FloatArray(1)
+    private val envSunLightInput = FloatArray(1)
+    private val envSunBacklightInput = FloatArray(1)
+    private val envFogDepthInput = intArrayOf(0)
+    private val envViewRangeInput = FloatArray(1)
+    private val envSkyboxInput = ImInt(-1)
+
+    // Cache write-back state. A plan is only ever produced by pressing "Preview changes",
+    // and only ever applied by pressing the save button with the confirmation ticked -
+    // nothing here runs on a region change, on a panel edit or on shutdown.
+    private var envWritePlan: EnvironmentWritePlan? = null
+    private var envWritePlanRegion: Int = -1
+    private val envWriteConfirm = ImBoolean(false)
+    private var envWriteLog: List<String> = emptyList()
+    private var envWriteError: String? = null
+
     // Brush preview state
     private var brushPreviewMesh: Mesh? = null
     private var lastBrushCenter: Pair<Int, Int>? = null
@@ -238,6 +340,19 @@ class MapViewer(
 
         // Load UBO shaders
         loadUBOShaders()
+
+        // Skybox pass. One attribute-less triangle; the material texture (when a region
+        // references a skybox) is built lazily and cached inside the renderer.
+        sky = SkyRenderer(cache).also {
+            it.init()
+            // renderScene() always leaves the scene's steady state behind before the sky
+            // pass, so the renderer can skip its synchronous state readback.
+            it.stateRestore = SkyStateRestore.ASSUME_SCENE_DEFAULTS
+        }
+
+        // With dynamic sun lighting on, terrain meshes must be built *unlit* so the shader
+        // can light them. Has to be set before the first region build.
+        TerrainLoader.bakeSunLighting = !environment.dynamicSunLighting
 
         // Initialize async region manager (loads definitions and XTEA keys)
         asyncRegionManager = AsyncRegionManager(cache)
@@ -278,6 +393,32 @@ class MapViewer(
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_MULTISAMPLE)
 
+        // -Ddarkan.hideUi=true drops both panels. A capture taken for pixel-diffing has to
+        // contain nothing but the 3D scene: the panels report per-run counters, so leaving
+        // them in makes every comparison differ for reasons that have nothing to do with
+        // what was drawn.
+        if (System.getProperty("darkan.hideUi", "false").toBoolean()) {
+            debugPanel.visible = false
+            showEditorPanel = false
+        }
+
+        // `-Ddarkan.wireframe=true` starts in line mode. Missing geometry and geometry that
+        // is drawn but shaded to a dark colour look identical in a filled frame; in wireframe
+        // the first leaves a gap in the edge grid and the second does not, which decides
+        // between them from a single capture instead of by argument.
+        if (System.getProperty("darkan.wireframe", "false").toBoolean()) {
+            renderSystem.setWireframe(true)
+        }
+
+        // GPU pass timing. Harvested several frames after the fact so the queries never
+        // force a sync; without this every performance claim rests on CPU timings alone.
+        RenderMetrics.gpuTimingActive = gpuTimers.init()
+
+        // Opening render distance, so a measurement run does not have to drive the UI.
+        System.getProperty("darkan.renderDistance")?.toIntOrNull()?.let {
+            renderDistanceInput[0] = it.coerceIn(0, 5)
+        }
+
         isInitialLoading = true
         loadRegionAsync(currentRegionX, currentRegionY, currentPlane)
     }
@@ -294,6 +435,25 @@ class MapViewer(
      * produces per-vertex atlas UV transforms.
      */
     private fun buildTerrainAtlas() {
+        // -Ddarkan.terrainAtlas=false keeps every terrain batch on its own texture bind,
+        // the way the viewer drew terrain before the atlas existed. Slow, but it is the
+        // reference image: no atlas sampling, no merging, every layer composited once.
+        //
+        // It is a usable reference because it is the same geometry: the centre region's
+        // per-batch meshes come from TerrainEditManager and the merged atlas mesh from
+        // TerrainLoader.computeTerrainMeshData, and both tessellate through
+        // generateTileVertices with the same opaque/alpha split, so the two paths submit
+        // the same triangle count. Measured against a same-flags control pair (5e-05 to
+        // 1.2e-04 mean abs, 1280x720), atlas vs per-texture comes to 8e-04 (Sophanem
+        // 52,50), 3e-03 (Canifis 54,54), 1e-02 (Lumbridge 50,50) and 0.11 (Lumbridge with
+        // context regions) mean abs of 255 -- the residue of atlas sampling, not a
+        // different picture. Draw counts differ by design, pixels should not.
+        if (!System.getProperty("darkan.terrainAtlas", "true").toBoolean()) {
+            println("[MapViewer] Terrain atlas disabled by -Ddarkan.terrainAtlas=false")
+            TerrainLoader.atlasLookup = null
+            return
+        }
+
         val textureIds = TerrainLoader.getUniqueTextureIds()
         if (textureIds.isEmpty()) {
             println("[MapViewer] No terrain textures found in definitions, atlas disabled")
@@ -305,30 +465,65 @@ class MapViewer(
         val startTime = System.nanoTime()
         val atlas = TextureAtlas(atlasSize = 4096, textureSize = 128, border = 8)
 
+        val sortedIds = textureIds.sorted()
+
+        // Pixel generation is pure CPU: it decodes a material's operation DAG and rasterises
+        // it into an IntArray without touching GL state. It ran here one texture at a time on
+        // the GL thread, with the other fifteen cores idle, because TextureRaster kept its
+        // scratch state in shared statics and generating two materials at once corrupted
+        // both. That state now lives on the operation objects -- verified with 8 threads over
+        // 5 rounds of the same materials, no failures and zero pixel mismatches against a
+        // single-threaded baseline -- so the work can fan out.
+        //
+        // Packing stays serial and stays in sortedIds order. The atlas shelf allocator places
+        // each texture relative to the ones already in the page, so packing order decides the
+        // UV transform every terrain vertex is given. Generate in whatever order the workers
+        // finish; insert in exactly the order this loop always used.
+        val generated = arrayOfNulls<Triple<IntArray, Int, Int>>(sortedIds.size)
+        val errors = arrayOfNulls<String>(sortedIds.size)
+        val genStart = System.nanoTime()
+        val genStartCpu = RegionLoadProfiler.processCpuTimeNanos()
+        val genStatsBefore = TexturePixelStats.snapshot()
+        ParallelChunks.forEachIndexBlocking(sortedIds.size, ParallelChunks.TEXTURE_WORKER_COUNT) { i ->
+            try {
+                generated[i] = TextureLoader.getTexturePixelsForMaterial(cache, sortedIds[i])
+            } catch (e: Throwable) {
+                errors[i] = e.message ?: e.javaClass.simpleName
+            }
+        }
+        val genMs = (System.nanoTime() - genStart) / 1e6
+        println(TexturePixelStats.snapshot().since(genStatsBefore).describe("terrainAtlas"))
+        val genCpuMs = if (genStartCpu >= 0) {
+            (RegionLoadProfiler.processCpuTimeNanos() - genStartCpu) / 1e6
+        } else {
+            -1.0
+        }
+
         var loaded = 0
         var failed = 0
-        val sortedIds = textureIds.sorted()
         for ((index, texId) in sortedIds.withIndex()) {
-            print("[MapViewer]   Texture $texId (${index + 1}/${sortedIds.size})...")
-            System.out.flush()
-            try {
-                val result = TextureLoader.getTexturePixelsForMaterial(cache, texId)
-                if (result != null) {
-                    val (pixels, width, height) = result
-                    atlas.addTexture(texId, pixels, width, height)
-                    loaded++
-                    println(" OK")
-                } else {
-                    failed++
-                    println(" null")
-                }
-            } catch (e: Throwable) {
-                println(" FAILED: ${e.message}")
+            val error = errors[index]
+            if (error != null) {
+                println("[MapViewer]   Texture $texId FAILED: $error")
                 failed++
+                continue
             }
+            val result = generated[index]
+            if (result == null) {
+                failed++
+                continue
+            }
+            val (pixels, width, height) = result
+            atlas.addTexture(texId, pixels, width, height)
+            loaded++
         }
         val elapsed = (System.nanoTime() - startTime) / 1_000_000
         println("[MapViewer]   Texture generation completed in ${elapsed}ms: $loaded loaded, $failed failed")
+        println(
+            "[MapViewer]   texgen %.0f ms wall, %.0f ms CPU -> %.2f cores busy (workers=%d), pack %.0f ms"
+                .format(genMs, genCpuMs, if (genMs > 0) genCpuMs / genMs else 0.0,
+                    ParallelChunks.TEXTURE_WORKER_COUNT, elapsed - genMs)
+        )
 
         // Add sentinel white pixel texture for color-only tiles.
         // A 1x1 pure white pixel means texColor.rgb = (1,1,1), so
@@ -338,18 +533,54 @@ class MapViewer(
 
         // Upload to GPU
         atlas.upload()
-        terrainAtlas = atlas
 
         val stats = atlas.getStats()
         println("[MapViewer] Terrain atlas built: ${stats.textureCount} textures on ${stats.pageCount} page(s), " +
                 "$loaded loaded, $failed failed, utilization ${(stats.utilization * 100).toInt()}%")
 
+        // Overflow handling. The terrain shaders sample a single bound page, so only
+        // textures that landed on page 0 can be reached through an atlas transform.
+        //
+        // The sentinel white pixel is what untextured tiles sample, so if the atlas
+        // overflowed hard enough to push it off page 0 there is no atlas path at all and
+        // the whole thing is abandoned in favour of the per-texture renderer. Individual
+        // textures beyond page 0 are handled more gently: the lookup returns null for
+        // them, which keeps their batches on the per-texture path and out of the merged
+        // mesh. Either way the pixels stay right and the cost shows up as draw calls.
+        val sentinelRegion = atlas.getRegion(SENTINEL_TEXTURE_ID)
+        if (sentinelRegion == null || sentinelRegion.atlasPageIndex != 0) {
+            System.err.println("[MapViewer] Terrain atlas overflowed past its first page before the " +
+                    "white sentinel could be packed (${stats.pageCount} pages, ${stats.textureCount} " +
+                    "textures); disabling the atlas terrain path")
+            atlas.cleanup()
+            terrainAtlas = null
+            TerrainLoader.atlasLookup = null
+            return
+        }
+
+        val offPage = sortedIds.count { id ->
+            val region = atlas.getRegion(id)
+            region != null && region.atlasPageIndex != 0
+        }
+        if (offPage > 0) {
+            System.err.println("[MapViewer] Terrain atlas overflowed: $offPage of ${sortedIds.size} " +
+                    "textures landed beyond page 0 and will render with their own texture binds " +
+                    "instead of being merged")
+        }
+
+        terrainAtlas = atlas
+
         // Wire up TerrainLoader atlas lookup so computeTerrainMeshData produces
-        // per-vertex atlas transform arrays.
-        val sentinelRegion = atlas.getRegion(SENTINEL_TEXTURE_ID)!!
+        // per-vertex atlas transform arrays. A texture the atlas never managed to pack
+        // falls back to the sentinel exactly as before -- that is a texture generation
+        // failure, not an atlas capacity problem, and it has no pixels to show either way.
         TerrainLoader.atlasLookup = { textureId ->
-            val region = atlas.getRegion(textureId) ?: sentinelRegion
-            region.getTransformVec4()
+            val region = atlas.getRegion(textureId)
+            when {
+                region == null -> sentinelRegion.getTransformVec4()
+                region.atlasPageIndex != 0 -> null
+                else -> region.getTransformVec4()
+            }
         }
         TerrainLoader.sentinelAtlasTransform = sentinelRegion.getTransformVec4()
     }
@@ -402,6 +633,10 @@ class MapViewer(
         // Load Multi-Draw Indirect shaders (GL 4.3 SSBO-based).
         // These read instance matrices from an SSBO indexed by gl_BaseInstance + gl_InstanceID
         // instead of per-instance vertex attributes. Falls back gracefully if shaders fail.
+        if (useIndirectRendering && !IndirectRenderer.isSupported()) {
+            println("[MapViewer] GL context lacks 4.3 + gl_BaseInstance; using legacy instanced path")
+            useIndirectRendering = false
+        }
         if (useIndirectRendering) {
             try {
                 val indColorVert = loadShaderSource("/shaders/indirect_color.vert")
@@ -411,11 +646,20 @@ class MapViewer(
 
                 val indTexturedVert = loadShaderSource("/shaders/indirect_textured.vert")
                 val indTexturedFrag = loadShaderSource("/shaders/indirect_textured.frag")
+                // One sampler per array texture; IndirectRenderer binds each to the matching
+                // unit so a single draw can cover every material size at once.
                 indirectTexturedShader = ShaderProgram.createWithUniforms(
                     indTexturedVert, indTexturedFrag,
-                    "textureArray"
+                    *IndirectRenderer.textureArrayUniformNames()
                 )
                 uniformBuffers.bindToShader(indirectTexturedShader!!)
+
+                // Compute sources for the culling passes. Kept as strings because the
+                // IndirectRenderer is rebuilt on every region change and needs them again.
+                if (useGpuCulling) {
+                    cullShaderSource = loadShaderSource("/shaders/cull_instances.comp")
+                    cullResetShaderSource = loadShaderSource("/shaders/cull_reset.comp")
+                }
 
                 println("[MapViewer] Indirect draw shaders loaded successfully")
             } catch (e: Exception) {
@@ -424,6 +668,7 @@ class MapViewer(
                 indirectColorShader = null
                 indirectTexturedShader?.cleanup()
                 indirectTexturedShader = null
+                useIndirectRendering = false
             }
         } else {
             println("[MapViewer] Indirect rendering disabled, using legacy instanced path")
@@ -547,6 +792,7 @@ class MapViewer(
                 val posOffsetZ = -sizeY * tileSize * 0.5f
                 moving.instance.worldPosition.x = basePosX + posOffsetX
                 moving.instance.worldPosition.z = basePosZ + posOffsetZ
+                objectSceneDirty = true
                 // Restore Y from terrain heights
                 recalcObjectHeight(moving.instance)
                 movingObject = null
@@ -750,7 +996,7 @@ class MapViewer(
                         if (tx < 0 || tx > 63 || ty < 0 || ty > 63) continue
 
                         // Distance-based falloff
-                        val dist = kotlin.math.sqrt((dx * dx + dy * dy).toFloat())
+                        val dist = sqrt((dx * dx + dy * dy).toFloat())
                         val falloff = (1f - dist / (radius + 1)).coerceIn(0f, 1f)
                         val delta = (strength * falloff * sign).toInt()
 
@@ -860,6 +1106,7 @@ class MapViewer(
 
             // Update Y position (worldPosition is a mutable var Vector3f)
             obj.worldPosition.y = newHeight
+            objectSceneDirty = true
 
             // Recompute terrain alignment for type 3 objects (hillChange tilt)
             if (obj.groundContourType == 3) {
@@ -1023,6 +1270,7 @@ class MapViewer(
         val h01 = em.mutableData.tiles[plane][x0][y1].height * heightScale
         val h11 = em.mutableData.tiles[plane][x1][y1].height * heightScale
         obj.worldPosition.y = (h00 + h10 + h01 + h11) / 4f
+        objectSceneDirty = true
     }
 
     /**
@@ -1101,6 +1349,7 @@ class MapViewer(
         )
 
         placedObjects.add(instance)
+        objectSceneDirty = true
 
         println("[MapEditor] Placed object '${def.name}' (id=$selectedObjectId) at ($worldX, $worldY) plane=$currentPlane shape=$shape rot=$rotation")
     }
@@ -1189,6 +1438,7 @@ class MapViewer(
 
         val (newPos, _, _) = computeObjectWorldPosition(tile.first, tile.second, def, rotation)
         moving.instance.worldPosition.set(newPos)
+        objectSceneDirty = true
     }
 
     /**
@@ -1475,9 +1725,23 @@ class MapViewer(
         glDisable(GL_BLEND)
     }
 
+    /**
+     * Rebuilding the merged terrain re-concatenates and re-uploads every covered region's
+     * geometry, which measures around 150 ms of GL-thread work at render distance 3. Doing
+     * it as each region lands would spend most of a load wave inside that rebuild.
+     *
+     * A region that is not merged yet still draws through its own per-texture meshes, so
+     * waiting costs nothing but draw calls on frames nobody is measuring. The rebuild that
+     * matters is the one at the end of the wave, which is taken unconditionally; this
+     * interval only governs the intermediate ones, and is deliberately long enough that a
+     * normal wave takes one or two of them rather than a dozen.
+     */
+    private var lastMergedTerrainRebuildNanos = 0L
+
+    private val mergedTerrainRebuildIntervalNanos = 3_000_000_000L
+
     override fun onDrainGpuUploads(budgetNanos: Long) {
         val drainStart = RenderMetrics.startTiming()
-        val previousReady = asyncRegionManager.getLoadProgress().regionsReady
         asyncRegionManager.drainGpuUploads(budgetNanos)
         val currentProgress = asyncRegionManager.getLoadProgress()
         RenderMetrics.gpuUploadDrainTimeMs = RenderMetrics.endTiming(drainStart)
@@ -1485,13 +1749,16 @@ class MapViewer(
         // Check if initial loading is complete
         if (isInitialLoading && currentProgress.isComplete) {
             isInitialLoading = false
-            if (terrainAtlas != null) {
+        }
+
+        // Fold newly arrived regions into the merged terrain. Always rebuild immediately
+        // once the wave has finished so the steady state is never left short of coverage;
+        // rate-limit the intermediate rebuilds that happen while regions are still landing.
+        if (terrainAtlas != null && asyncRegionManager.mergedTerrainNeedsRebuild()) {
+            val now = System.nanoTime()
+            if (currentProgress.isComplete || now - lastMergedTerrainRebuildNanos >= mergedTerrainRebuildIntervalNanos) {
                 asyncRegionManager.buildMergedAtlasTerrain()
-            }
-        } else if (!isInitialLoading && currentProgress.isComplete && currentProgress.regionsReady > previousReady) {
-            // Context regions finished loading, rebuild merged terrain
-            if (terrainAtlas != null) {
-                asyncRegionManager.buildMergedAtlasTerrain()
+                lastMergedTerrainRebuildNanos = now
             }
         }
     }
@@ -1550,9 +1817,20 @@ class MapViewer(
         // Reset per-frame performance counters
         RenderMetrics.resetFrame()
 
+        // Reclaim the timer slot this frame will reuse, picking up the readings it took
+        // GpuTimerPool.DEPTH frames ago. Nothing here waits on the GPU.
+        gpuTimers.beginFrame()
+
         // Clear
         glClearColor(clearColor.x, clearColor.y, clearColor.z, 1.0f)
         glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
+
+        if (gpuSyncProbe) {
+            val waitStart = System.nanoTime()
+            glFinish()
+            gpuSyncWaitMs = (System.nanoTime() - waitStart) / 1_000_000.0
+            RenderMetrics.gpuSyncWaitMs = gpuSyncWaitMs
+        }
 
         val renderStart = RenderMetrics.startTiming()
         renderScene()
@@ -1564,91 +1842,423 @@ class MapViewer(
         }
 
         // Render UI
+        gpuTimers.begin(RenderMetrics.GPU_PASS_UI)
         renderUI()
+        gpuTimers.end()
+
+        gpuTimers.endFrame()
+        for (pass in RenderMetrics.GPU_PASS_NAMES.indices) {
+            RenderMetrics.gpuPassMs[pass] = gpuTimers.passMillis[pass]
+        }
 
         if (logFrame) {
             println("[RENDER] Frame $frameNumber: onRender() complete")
             System.out.flush()
         }
         frameNumber++
+
+        // Periodic metrics dump for measurement runs, see RenderMetrics.summary.
+        if (metricsEveryFrames > 0 && frameNumber % metricsEveryFrames == 0) {
+            print(RenderMetrics.summary(fps))
+            System.out.flush()
+        }
+
+        if (sweepAngles.isNotEmpty()) stepAngleSweep()
     }
+
+    // ========================================================================
+    // Scripted camera sweep
+    // ========================================================================
+
+    /**
+     * `-Ddarkan.sweep=<yaw>:<pitch>[,...]`: visit a fixed list of camera angles in one run,
+     * reporting a median over several frames at each.
+     *
+     * Every measurement this pass needs — how the visible fraction moves with viewing
+     * angle, whether a change holds across angles, whether two builds draw the same
+     * pixels — is a question about several viewpoints, and the honest way to answer it is
+     * from one process. Restarting the viewer per angle pays the region load again, spreads
+     * the samples across different driver states, and means the only thing a comparison can
+     * be sure of is that something differed.
+     *
+     * Medians, not means: the culling compute pass occasionally spikes on a stats-readback
+     * barrier, and one such frame drags a mean far enough to invent a result.
+     */
+    private class SweepAngle(val yaw: Float, val pitch: Float) {
+        val label: String get() = "yaw%+.0f_pitch%+.0f".format(yaw, pitch)
+    }
+
+    private val sweepAngles: List<SweepAngle> = parseSweepAngles()
+
+    /** Seconds to let regions finish loading before the first angle is sampled. */
+    private val sweepAfterSeconds: Float = System.getProperty("darkan.sweepAfter", "45").toFloat()
+
+    /** Frames discarded after each angle change, covering the GPU timer read-back lag. */
+    private val sweepWarmupFrames: Int = System.getProperty("darkan.sweepWarmup", "24").toIntOrNull() ?: 24
+
+    /** Frames sampled per angle once warmed up. */
+    private val sweepSampleFrames: Int = System.getProperty("darkan.sweepFrames", "60").toIntOrNull() ?: 60
+
+    /** `-Ddarkan.sweepShots=<dir>`: write one PNG per angle into this directory. */
+    private val sweepShotDirectory: String? = System.getProperty("darkan.sweepShots")
+
+    private var sweepElapsedSeconds = 0f
+    private var sweepIndex = -1
+    private var sweepFramesAtAngle = 0
+    private val sweepPassSamples = ArrayList<DoubleArray>()
+    private val sweepBatchTriangles = ArrayList<Int>()
+    private val sweepBatchDraws = ArrayList<Int>()
+    private val sweepBatchRanges = ArrayList<Int>()
+    private val sweepRangesConsidered = ArrayList<Int>()
+    private val sweepProbeVisibleTriangles = ArrayList<Long>()
+    private val sweepProbeTotalTriangles = ArrayList<Long>()
+    private val sweepProbeVisibleObjects = ArrayList<Int>()
+    private val sweepProbeTotalObjects = ArrayList<Int>()
+    private val sweepProbeCpuMs = ArrayList<Double>()
+    private val sweepCullCpuMs = ArrayList<Double>()
+    private val sweepGpuWaitMs = ArrayList<Double>()
+    private val sweepRenderCpuMs = ArrayList<Double>()
+    private val sweepSubmitCpuMs = ArrayList<Double>()
+    private val sweepPixelTriangles = LongArray(RenderMetrics.PROBE_PIXEL_EDGES.size)
+    private val sweepPixelObjects = IntArray(RenderMetrics.PROBE_PIXEL_EDGES.size)
+    private val sweepGridDraws = IntArray(8)
+    private val sweepGridTriangles = LongArray(8)
+    private val sweepGridBatches = IntArray(8)
+    private val sweepDistanceTriangles = LongArray(RenderMetrics.PROBE_DISTANCE_EDGES_TILES.size)
+    private val sweepSizeTriangles = LongArray(RenderMetrics.PROBE_SIZE_EDGES.size)
+    private val sweepSizeObjects = IntArray(RenderMetrics.PROBE_SIZE_EDGES.size)
+
+    private fun parseSweepAngles(): List<SweepAngle> {
+        val spec = System.getProperty("darkan.sweep") ?: return emptyList()
+        val angles = ArrayList<SweepAngle>()
+        for (entry in spec.split(',')) {
+            val parts = entry.trim().split(':')
+            if (parts.size != 2) continue
+            val yaw = parts[0].trim().toFloatOrNull() ?: continue
+            val pitch = parts[1].trim().toFloatOrNull() ?: continue
+            angles.add(SweepAngle(yaw, pitch))
+        }
+        return angles
+    }
+
+    private fun stepAngleSweep() {
+        sweepElapsedSeconds += deltaTime
+        if (sweepIndex < 0) {
+            if (sweepElapsedSeconds < sweepAfterSeconds) return
+            beginSweepAngle(0)
+            return
+        }
+
+        sweepFramesAtAngle++
+        if (sweepFramesAtAngle <= sweepWarmupFrames) return
+
+        sweepPassSamples.add(RenderMetrics.gpuPassMs.copyOf())
+        sweepBatchTriangles.add(RenderMetrics.staticBatchTriangles)
+        sweepBatchDraws.add(RenderMetrics.staticBatchDrawCalls)
+        sweepBatchRanges.add(RenderMetrics.staticBatchRanges)
+        sweepRangesConsidered.add(RenderMetrics.batchRangesConsidered)
+        sweepProbeVisibleTriangles.add(RenderMetrics.probeTrianglesVisible)
+        sweepProbeTotalTriangles.add(RenderMetrics.probeTrianglesTotal)
+        sweepProbeVisibleObjects.add(RenderMetrics.probeObjectsVisible)
+        sweepProbeTotalObjects.add(RenderMetrics.probeObjectsTotal)
+        sweepProbeCpuMs.add(RenderMetrics.probeCpuMs)
+        sweepCullCpuMs.add(RenderMetrics.cullCpuTimeMs)
+        sweepGpuWaitMs.add(RenderMetrics.gpuSyncWaitMs)
+        sweepRenderCpuMs.add(RenderMetrics.renderTimeMs)
+        sweepSubmitCpuMs.add(RenderMetrics.cpuPhaseMs[RenderMetrics.CPU_PHASE_STATIC_BATCH])
+        for (i in sweepDistanceTriangles.indices) {
+            sweepDistanceTriangles[i] = RenderMetrics.probeTrianglesByDistance[i]
+        }
+        for (i in sweepSizeTriangles.indices) {
+            sweepSizeTriangles[i] = RenderMetrics.probeTrianglesBySize[i]
+            sweepSizeObjects[i] = RenderMetrics.probeObjectsBySize[i]
+        }
+        for (i in sweepPixelTriangles.indices) {
+            sweepPixelTriangles[i] = RenderMetrics.probeTrianglesByPixels[i]
+            sweepPixelObjects[i] = RenderMetrics.probeObjectsByPixels[i]
+        }
+        for (i in probeGridDraws.indices) {
+            sweepGridDraws[i] = probeGridDraws[i]
+            sweepGridTriangles[i] = probeGridTriangles[i]
+            sweepGridBatches[i] = probeGridBatches[i]
+        }
+
+        if (sweepFramesAtAngle < sweepWarmupFrames + sweepSampleFrames) return
+
+        val shotDirectory = sweepShotDirectory
+        if (shotDirectory != null) {
+            captureBackBuffer("$shotDirectory/${sweepAngles[sweepIndex].label}.png")
+        }
+        reportSweepAngle()
+
+        if (sweepIndex + 1 < sweepAngles.size) {
+            beginSweepAngle(sweepIndex + 1)
+        } else {
+            println("[SWEEP] done")
+            System.out.flush()
+            window.requestClose()
+        }
+    }
+
+    private fun beginSweepAngle(index: Int) {
+        sweepIndex = index
+        sweepFramesAtAngle = 0
+        sweepPassSamples.clear()
+        sweepBatchTriangles.clear()
+        sweepBatchDraws.clear()
+        sweepBatchRanges.clear()
+        sweepRangesConsidered.clear()
+        sweepProbeVisibleTriangles.clear()
+        sweepProbeTotalTriangles.clear()
+        sweepProbeVisibleObjects.clear()
+        sweepProbeTotalObjects.clear()
+        sweepProbeCpuMs.clear()
+        sweepCullCpuMs.clear()
+        sweepGpuWaitMs.clear()
+        sweepRenderCpuMs.clear()
+        sweepSubmitCpuMs.clear()
+        val angle = sweepAngles[index]
+        scene.camera.yaw = angle.yaw
+        scene.camera.pitch = angle.pitch
+        scene.camera.rotate(0f, 0f)
+    }
+
+    private fun reportSweepAngle() {
+        val angle = sweepAngles[sweepIndex]
+        val passes = StringBuilder()
+        for (pass in RenderMetrics.GPU_PASS_NAMES.indices) {
+            val samples = DoubleArray(sweepPassSamples.size) { sweepPassSamples[it][pass] }
+            passes.append("%s=%.3f ".format(RenderMetrics.GPU_PASS_NAMES[pass], medianOf(samples)))
+        }
+        val batchTriangles = medianOfInts(sweepBatchTriangles)
+        val probeVisible = medianOfLongs(sweepProbeVisibleTriangles)
+        val probeTotal = medianOfLongs(sweepProbeTotalTriangles)
+        println(
+            "[SWEEP] angle=${angle.label} frames=${sweepPassSamples.size} " +
+                "gpu: $passes"
+        )
+        println(
+            "[SWEEP] angle=${angle.label} staticBatch: draws=${medianOfInts(sweepBatchDraws)} " +
+                "ranges=${medianOfInts(sweepBatchRanges)}/${medianOfInts(sweepRangesConsidered)} " +
+                "triangles=$batchTriangles " +
+                "cullCpu=%.3fms staticBatchCpu=%.3fms cpuRender=%.3fms gpuWait=%.3fms".format(
+                    medianOfDoubles(sweepCullCpuMs), medianOfDoubles(sweepSubmitCpuMs),
+                    medianOfDoubles(sweepRenderCpuMs), medianOfDoubles(sweepGpuWaitMs)
+                )
+        )
+        println(
+            "[SWEEP] angle=${angle.label} probe: objects=${medianOfInts(sweepProbeVisibleObjects)}" +
+                "/${medianOfInts(sweepProbeTotalObjects)} " +
+                "triangles=$probeVisible/$probeTotal " +
+                "visibleOfSubmitted=%.1f%% ".format(
+                    if (batchTriangles > 0) 100.0 * probeVisible / batchTriangles else 0.0
+                ) +
+                "probeCpu=%.3fms".format(medianOfDoubles(sweepProbeCpuMs))
+        )
+        val distance = StringBuilder()
+        for (i in sweepDistanceTriangles.indices) {
+            val edge = RenderMetrics.PROBE_DISTANCE_EDGES_TILES[i]
+            val name = if (edge == Int.MAX_VALUE) "inf" else edge.toString()
+            distance.append("<${name}t=${sweepDistanceTriangles[i]} ")
+        }
+        println("[SWEEP] angle=${angle.label} visibleTrianglesByDistance: $distance")
+        val size = StringBuilder()
+        for (i in sweepSizeTriangles.indices) {
+            val edge = RenderMetrics.PROBE_SIZE_EDGES[i]
+            val name = if (edge == Int.MAX_VALUE) "inf" else edge.toString()
+            size.append("<=${name}tri: objs=${sweepSizeObjects[i]} tris=${sweepSizeTriangles[i]}  ")
+        }
+        println("[SWEEP] angle=${angle.label} visibleBySize: $size")
+        val pixels = StringBuilder()
+        for (i in sweepPixelTriangles.indices) {
+            val edge = RenderMetrics.PROBE_PIXEL_EDGES[i]
+            val name = if (edge == Int.MAX_VALUE) "inf" else edge.toString()
+            pixels.append("<${name}px: objs=${sweepPixelObjects[i]} tris=${sweepPixelTriangles[i]}  ")
+        }
+        println("[SWEEP] angle=${angle.label} visibleByScreenSize: $pixels")
+        val gridSizes = readyContextRegions.firstOrNull { it.batchSimulations.isNotEmpty() }
+            ?.batchSimulations?.map { it.gridTiles } ?: emptyList()
+        for (i in gridSizes.indices) {
+            println(
+                "[SWEEP] angle=${angle.label} grid${gridSizes[i]}t: batches=${sweepGridBatches[i]} " +
+                    "draws=${sweepGridDraws[i]} triangles=${sweepGridTriangles[i]}"
+            )
+        }
+        System.out.flush()
+    }
+
+    private fun medianOf(values: DoubleArray): Double {
+        if (values.isEmpty()) return 0.0
+        val sorted = values.sortedArray()
+        return sorted[sorted.size / 2]
+    }
+
+    private fun medianOfDoubles(values: List<Double>): Double =
+        if (values.isEmpty()) 0.0 else values.sorted()[values.size / 2]
+
+    private fun medianOfInts(values: List<Int>): Int =
+        if (values.isEmpty()) 0 else values.sorted()[values.size / 2]
+
+    private fun medianOfLongs(values: List<Long>): Long =
+        if (values.isEmpty()) 0L else values.sorted()[values.size / 2]
+
+    /** `-Ddarkan.metricsEvery=<frames>`; 0 disables the periodic metrics dump. */
+    private val metricsEveryFrames = System.getProperty("darkan.metricsEvery", "0").toIntOrNull() ?: 0
+
+    /**
+     * `-Ddarkan.gpuSync=true` blocks the render thread on [glFinish] immediately after the
+     * frame's clear, before any of the frame's work is submitted.
+     *
+     * Off by default because it serialises CPU and GPU and costs throughput. It exists
+     * because the numbers in [RenderMetrics] are otherwise easy to misread: with V-Sync on,
+     * the driver does not necessarily park the wait for the previous frame's present inside
+     * `glfwSwapBuffers`. It parks it inside whichever GL call next needs the pipeline, which
+     * in this viewer is the merged terrain multi-draw — the first substantial draw of the
+     * frame. That makes `cpuRender` report several milliseconds of *waiting* as though it
+     * were several milliseconds of CPU *work*, and the figure barely moves when the work
+     * changes because it is really just the frame period minus everything else.
+     *
+     * Draining the pipeline up front moves the wait here, where it is labelled, and leaves
+     * `cpuRender` and the phase breakdown measuring nothing but submission cost. Any
+     * before/after comparison of CPU render cost should be made with this flag on.
+     */
+    private val gpuSyncProbe: Boolean = System.getProperty("darkan.gpuSync", "false").toBoolean()
+
+    /** `-Ddarkan.cullProbe=true`; runs [runCullProbe] each frame. Measurement only. */
+    private val cullProbe: Boolean = System.getProperty("darkan.cullProbe", "false").toBoolean()
+
+    /**
+     * `-Ddarkan.rangeFuseGap=<indices>`: how much culled geometry may be drawn anyway to
+     * avoid splitting a batch into another draw command. See [submitBatch].
+     */
+    private val rangeFuseGapIndices: Int =
+        System.getProperty("darkan.rangeFuseGap")?.toIntOrNull() ?: DEFAULT_RANGE_FUSE_GAP
+
+    /** World units per map tile, so probe distances can be reported in tiles. */
+    private val TILE_WORLD_SIZE = 512f * CoordinateUtil.DEFAULT_SCALE
+
+    /** Milliseconds the [gpuSyncProbe] blocked for, i.e. the present/pipeline wait. */
+    private var gpuSyncWaitMs = 0.0
 
     private fun renderScene() {
         val logFrame = frameNumber < 5
 
         // Update UBOs for lighting
-        uniformBuffers.updateCamera(
-            scene.camera.getViewMatrix(),
-            scene.camera.getProjectionMatrix(getAspectRatio()),
-            scene.camera.position
-        )
-        uniformBuffers.updateLighting(ambientLight, lightDirection, lightColor)
+        val uniformStart = RenderMetrics.startTiming()
+        val viewMatrix = scene.camera.getViewMatrix()
+        val projectionMatrix = scene.camera.getProjectionMatrix(getAspectRatio())
+        uniformBuffers.updateCamera(viewMatrix, projectionMatrix, scene.camera.position)
+        environment.nearClipDistance = scene.camera.nearPlane
+        uniformBuffers.updateEnvironment(environment)
+        RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_UNIFORMS, uniformStart)
+
+        // Frustum built from exactly the matrices the shaders are about to use, composed
+        // the same way UniformBuffers composes its viewProjection. Anything else risks the
+        // culler and the rasteriser disagreeing about where the screen edge is.
+        val cullStart = RenderMetrics.startTiming()
+        frustumViewProjection.set(projectionMatrix).mul(viewMatrix)
+        frustum.update(frustumViewProjection)
+        frustum.writePlanes(frustumPlanes)
+        updateVisibleContextRegions()
+        updateMergedTerrainVisibility()
+        RenderMetrics.cullCpuTimeMs = RenderMetrics.endTiming(cullStart)
+        RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_CULL, cullStart)
+
+        // Rebuild the static instance buffers if the object set changed, then let the GPU
+        // decide what is visible. Both must happen before any object draw is issued.
+        val objectSceneStart = RenderMetrics.startTiming()
+        updateObjectScene()
+        val ir = indirectRenderer
+        RenderMetrics.cullActive = ir != null && ir.cullingActive && ir.staticSceneBuilt
+        if (RenderMetrics.cullActive) {
+            gpuTimers.begin(RenderMetrics.GPU_PASS_CULL)
+            ir!!.cullFrame(frustumPlanes)
+            gpuTimers.end()
+        }
+        RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_OBJECT_SCENE, objectSceneStart)
 
         if (renderSystem.wireframeMode) {
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
         }
 
         // Render terrain - use atlas path (2 draw calls) when available,
-        // fall back to legacy multi-pass path otherwise
+        // fall back to legacy multi-pass path otherwise.
+        //
+        // `showTerrain` had a key binding and a checkbox but nothing in this function ever
+        // read it, so the toggle silently did nothing. Being able to hide the ground is what
+        // lets a screenshot answer "is this the ground mesh or a placed model?" -- which is
+        // exactly the question a terraced hillside raises. Starving the atlas branch of
+        // geometry is only half of it: doing so also fails its guard and routes the frame
+        // into the legacy branch, which draws the centre region from the edit manager, so
+        // that branch reads `showTerrain` for itself too.
         val atlas = terrainAtlas
-        val opaqueAtlasMesh = asyncRegionManager.mergedOpaqueTerrain
-        val alphaAtlasMesh = asyncRegionManager.mergedAlphaTerrain
+        val opaqueAtlasMesh = if (showTerrain) asyncRegionManager.mergedOpaqueTerrain else null
+        val alphaAtlasMesh = if (showTerrain) asyncRegionManager.mergedAlphaTerrain else null
+        val terrainRegions = if (showTerrain) visibleContextRegions else emptyList()
         val atlasShader = terrainAtlasShader
         val atlasAlphaShader = terrainAtlasAlphaShader
 
         if (atlas != null && atlasShader != null && atlasAlphaShader != null && (opaqueAtlasMesh != null || alphaAtlasMesh != null)) {
-            // ===== Atlas rendering path: 2 draw calls for ALL terrain =====
+            // ===== Atlas rendering path: one draw call per pass for every merged region ====
+            //
+            // The merged meshes hold the centre region and every context region that has
+            // finished loading, already offset into world space and already carrying atlas
+            // UV transforms, as one contiguous index range per region. Frustum culling picks
+            // the ranges and glMultiDrawElements submits them together, so the terrain draw
+            // count does not move when render distance does.
+            //
+            // Anything the merge does not cover still renders the old way: regions that
+            // arrived since the last rebuild, and individual batches whose texture the atlas
+            // could not serve. Those are the only per-region terrain draws left.
+            var mergedStart = RenderMetrics.startTiming()
             renderSystem.disableCullFace()
             val identityModel = Matrix4f().identity()
+            val mergedRegions =
+                if (mergeContextTerrain) asyncRegionManager.mergedTerrainRegions else emptySet()
+
+            gpuTimers.begin(RenderMetrics.GPU_PASS_TERRAIN_OPAQUE)
 
             // Bind atlas texture to GL_TEXTURE0
             atlas.bindPage(0, 0)
 
             // Draw 1: Opaque terrain (color + textured, merged with atlas)
             if (opaqueAtlasMesh != null) {
-                atlasShader.bind()
-                atlasShader.setUniform("model", identityModel)
-                atlasShader.setUniform("atlasTexture", 0)
-                opaqueAtlasMesh.render()
-                RenderMetrics.terrainOpaqueDrawCalls++
-                RenderMetrics.trianglesSubmitted += opaqueAtlasMesh.vertexCount / 3
-            }
-
-            // Draw 2: Alpha terrain (with GL alpha blending state)
-            // Depth func is already GL_LEQUAL globally, no need to switch.
-            if (alphaAtlasMesh != null) {
-                glDepthMask(false)
-                glEnable(GL_BLEND)
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-
-                atlasAlphaShader.bind()
-                atlasAlphaShader.setUniform("model", identityModel)
-                atlasAlphaShader.setUniform("atlasTexture", 0)
-                alphaAtlasMesh.render()
-                RenderMetrics.terrainAlphaDrawCalls++
-                RenderMetrics.trianglesSubmitted += alphaAtlasMesh.vertexCount / 3
-
-                glDisable(GL_BLEND)
-                glDepthMask(true)
+                val rangeCount = if (mergeContextTerrain) gatherMergedTerrainRanges(alpha = false) else 0
+                if (!mergeContextTerrain) {
+                    atlasShader.bind()
+                    atlasShader.setUniform("model", identityModel)
+                    atlasShader.setUniform("atlasTexture", 0)
+                    opaqueAtlasMesh.render()
+                    RenderMetrics.terrainOpaqueDrawCalls++
+                    RenderMetrics.trianglesSubmitted += opaqueAtlasMesh.vertexCount / 3
+                } else if (rangeCount > 0) {
+                    atlasShader.bind()
+                    atlasShader.setUniform("model", identityModel)
+                    atlasShader.setUniform("atlasTexture", 0)
+                    opaqueAtlasMesh.renderRanges(terrainRangeFirst, terrainRangeCounts, rangeCount)
+                    RenderMetrics.terrainOpaqueDrawCalls++
+                    for (i in 0 until rangeCount) {
+                        RenderMetrics.trianglesSubmitted += terrainRangeCounts[i] / 3
+                    }
+                }
             }
 
             // Unbind atlas texture
             glActiveTexture(GL_TEXTURE0)
             glBindTexture(GL_TEXTURE_2D, 0)
+            RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_TERRAIN_MERGED, mergedStart)
 
-            renderSystem.enableCullFace()
+            val regionTerrainStart = RenderMetrics.startTiming()
 
-            // Also render context regions' legacy terrain meshes
-            // (these stream in as each region becomes READY)
-            val readyContextRegions = asyncRegionManager.getReadyContextRegions()
-            if (readyContextRegions.isNotEmpty()) {
-                renderSystem.disableCullFace()
+            // Per-region terrain meshes for whatever the merge does not cover yet, opaque
+            // half. Regions outside the frustum were already dropped by
+            // updateVisibleContextRegions().
+            for (ctxRegion in terrainRegions) {
+                val terrainMeshes = ctxRegion.terrainMeshes ?: continue
+                val merged = ctxRegion.key in mergedRegions
+                val regionModelMatrix = asyncRegionManager.getRegionModelMatrix(ctxRegion.key)
 
-                for (ctxRegion in readyContextRegions) {
-                    val terrainMeshes = ctxRegion.terrainMeshes ?: continue
-                    val regionModelMatrix = asyncRegionManager.getRegionModelMatrix(ctxRegion.key)
-
-                    // Color mesh
+                if (!(merged && terrainMeshes.colorInAtlas)) {
                     terrainMeshes.colorMesh?.let { mesh ->
                         uboColorShader.bind()
                         uboColorShader.setUniform("model", regionModelMatrix)
@@ -1656,54 +2266,134 @@ class MapViewer(
                         RenderMetrics.terrainOpaqueDrawCalls++
                         RenderMetrics.trianglesSubmitted += mesh.vertexCount / 3
                     }
+                }
 
-                    // Textured batches
-                    if (terrainMeshes.texturedBatches.isNotEmpty()) {
+                var texturedBound = false
+                for (batch in terrainMeshes.texturedBatches) {
+                    if (merged && batch.inAtlas) continue
+                    if (!texturedBound) {
                         uboTexturedShader.bind()
                         uboTexturedShader.setUniform("textureSampler", 0)
                         uboTexturedShader.setUniform("model", regionModelMatrix)
-                        for (batch in terrainMeshes.texturedBatches) {
-                            terrainTextureBinding(batch.textureId)
-                            batch.mesh.render()
-                            RenderMetrics.terrainOpaqueDrawCalls++
-                            RenderMetrics.trianglesSubmitted += batch.mesh.vertexCount / 3
-                        }
-                        TextureLoader.unbindTexture()
+                        texturedBound = true
                     }
+                    terrainTextureBinding(batch.textureId)
+                    batch.mesh.render()
+                    RenderMetrics.terrainOpaqueDrawCalls++
+                    if (merged) RenderMetrics.terrainAtlasOverflowDrawCalls++
+                    RenderMetrics.trianglesSubmitted += batch.mesh.vertexCount / 3
+                }
+                if (texturedBound) TextureLoader.unbindTexture()
+            }
 
-                    // Alpha batches
-                    if (terrainMeshes.alphaBatches.isNotEmpty()) {
-                        glDepthMask(false)
-                        glEnable(GL_BLEND)
-                        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            gpuTimers.end()
+            RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_TERRAIN_REGIONS, regionTerrainStart)
 
-                        terrainAlphaShader.bind()
-                        terrainAlphaShader.setUniform("textureSampler", 0)
-                        terrainAlphaShader.setUniform("model", regionModelMatrix)
-                        for (batch in terrainMeshes.alphaBatches) {
-                            terrainTextureBinding(batch.textureId)
-                            batch.mesh.render()
-                            RenderMetrics.terrainAlphaDrawCalls++
-                            RenderMetrics.trianglesSubmitted += batch.mesh.vertexCount / 3
+            mergedStart = RenderMetrics.startTiming()
+
+            // Draw 2: Alpha terrain, merged first then anything left over, under one blend
+            // state. Depth func is already GL_LEQUAL globally, no need to switch.
+            //
+            // Merging does not disturb blend order: each region's alpha layers stay in their
+            // original sequence inside its own index range, and two regions never overlap in
+            // plan view, so the order between ranges cannot affect a pixel.
+            val hasContextAlpha = terrainRegions.any { region ->
+                val batches = region.terrainMeshes?.alphaBatches ?: return@any false
+                if (region.key in mergedRegions) batches.any { !it.inAtlas } else batches.isNotEmpty()
+            }
+            if (alphaAtlasMesh != null || hasContextAlpha) {
+                gpuTimers.begin(RenderMetrics.GPU_PASS_TERRAIN_ALPHA)
+                glDepthMask(false)
+                glEnable(GL_BLEND)
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+
+                if (alphaAtlasMesh != null) {
+                    val rangeCount = if (mergeContextTerrain) gatherMergedTerrainRanges(alpha = true) else 0
+                    if (!mergeContextTerrain) {
+                        atlas.bindPage(0, 0)
+                        atlasAlphaShader.bind()
+                        atlasAlphaShader.setUniform("model", identityModel)
+                        atlasAlphaShader.setUniform("atlasTexture", 0)
+                        alphaAtlasMesh.render()
+                        RenderMetrics.terrainAlphaDrawCalls++
+                        RenderMetrics.trianglesSubmitted += alphaAtlasMesh.vertexCount / 3
+                        glActiveTexture(GL_TEXTURE0)
+                        glBindTexture(GL_TEXTURE_2D, 0)
+                    } else if (rangeCount > 0) {
+                        atlas.bindPage(0, 0)
+                        atlasAlphaShader.bind()
+                        atlasAlphaShader.setUniform("model", identityModel)
+                        atlasAlphaShader.setUniform("atlasTexture", 0)
+                        alphaAtlasMesh.renderRanges(terrainRangeFirst, terrainRangeCounts, rangeCount)
+                        RenderMetrics.terrainAlphaDrawCalls++
+                        for (i in 0 until rangeCount) {
+                            RenderMetrics.trianglesSubmitted += terrainRangeCounts[i] / 3
                         }
-                        TextureLoader.unbindTexture()
-                        glDisable(GL_BLEND)
-                        glDepthMask(true)
+                        glActiveTexture(GL_TEXTURE0)
+                        glBindTexture(GL_TEXTURE_2D, 0)
                     }
                 }
 
-                renderSystem.enableCullFace()
+                RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_TERRAIN_MERGED, mergedStart)
+                val alphaRegionStart = RenderMetrics.startTiming()
+                if (hasContextAlpha) {
+                    terrainAlphaShader.bind()
+                    terrainAlphaShader.setUniform("textureSampler", 0)
+                    var anyDrawn = false
+                    for (ctxRegion in terrainRegions) {
+                        val terrainMeshes = ctxRegion.terrainMeshes ?: continue
+                        if (terrainMeshes.alphaBatches.isEmpty()) continue
+                        val merged = ctxRegion.key in mergedRegions
+                        var modelSet = false
+                        for (batch in terrainMeshes.alphaBatches) {
+                            if (merged && batch.inAtlas) continue
+                            if (!modelSet) {
+                                terrainAlphaShader.setUniform("model", asyncRegionManager.getRegionModelMatrix(ctxRegion.key))
+                                modelSet = true
+                            }
+                            terrainTextureBinding(batch.textureId)
+                            batch.mesh.render()
+                            RenderMetrics.terrainAlphaDrawCalls++
+                            if (merged) RenderMetrics.terrainAtlasOverflowDrawCalls++
+                            RenderMetrics.trianglesSubmitted += batch.mesh.vertexCount / 3
+                            anyDrawn = true
+                        }
+                    }
+                    if (anyDrawn) TextureLoader.unbindTexture()
+                }
+
+                glDisable(GL_BLEND)
+                glDepthMask(true)
+                gpuTimers.end()
+                RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_TERRAIN_REGIONS, alphaRegionStart)
             }
+
+            renderSystem.enableCullFace()
         } else {
             // ===== Legacy rendering path: multi-pass per-texture draws =====
-            editManager?.let { em ->
+            //
+            // The centre region comes from the edit manager here, not from the merged
+            // atlas meshes, and only the edit manager knows whether it is drawing its
+            // merged region meshes or its 64 per-chunk meshes. Each pass therefore
+            // reports what it submitted and the counts are charged to the frame below;
+            // counting a flat 1 for the centre made this path report `terrainAlpha=0`
+            // and look like it was skipping the alpha pass when it was not.
+            //
+            // `showTerrain` is honoured here as well as in the atlas branch. Starving the
+            // atlas branch of geometry is what routes an unwanted frame down here in the
+            // first place, so leaving this side ungated meant `-Ddarkan.terrain=false`
+            // drew the centre region's ground anyway.
+            val em = if (showTerrain) editManager else null
+            if (em != null) {
                 renderSystem.disableCullFace()
+                gpuTimers.begin(RenderMetrics.GPU_PASS_TERRAIN_OPAQUE)
 
                 // Pass 1: Color mesh (untextured tiles) with RGB colors
                 uboColorShader.bind()
-                em.renderColor(uboColorShader, asyncRegionManager.centerModelMatrix)
-                RenderMetrics.terrainOpaqueDrawCalls++ // center color mesh
-                for (ctxRegion in asyncRegionManager.getReadyContextRegions()) {
+                val centerColor = em.renderColor(uboColorShader, asyncRegionManager.centerModelMatrix)
+                RenderMetrics.terrainOpaqueDrawCalls += centerColor.drawCalls
+                RenderMetrics.trianglesSubmitted += centerColor.triangles
+                for (ctxRegion in terrainRegions) {
                     val regionModelMatrix = asyncRegionManager.getRegionModelMatrix(ctxRegion.key)
                     val terrainMeshes = ctxRegion.terrainMeshes ?: continue
                     uboColorShader.setUniform("model", regionModelMatrix)
@@ -1717,8 +2407,11 @@ class MapViewer(
                 // Pass 2: Textured terrain (single texture per triangle)
                 uboTexturedShader.bind()
                 uboTexturedShader.setUniform("textureSampler", 0)
-                em.renderTextured(uboTexturedShader, asyncRegionManager.centerModelMatrix, terrainTextureBinding)
-                for (ctxRegion in asyncRegionManager.getReadyContextRegions()) {
+                val centerTextured =
+                    em.renderTextured(uboTexturedShader, asyncRegionManager.centerModelMatrix, terrainTextureBinding)
+                RenderMetrics.terrainOpaqueDrawCalls += centerTextured.drawCalls
+                RenderMetrics.trianglesSubmitted += centerTextured.triangles
+                for (ctxRegion in terrainRegions) {
                     val regionModelMatrix = asyncRegionManager.getRegionModelMatrix(ctxRegion.key)
                     val terrainMeshes = ctxRegion.terrainMeshes ?: continue
                     uboTexturedShader.setUniform("model", regionModelMatrix)
@@ -1730,17 +2423,22 @@ class MapViewer(
                     }
                 }
                 TextureLoader.unbindTexture()
+                gpuTimers.end()
 
                 // Pass 3: Alpha terrain (multi-pass alpha blending)
                 // Depth func is already GL_LEQUAL globally, no need to switch.
+                gpuTimers.begin(RenderMetrics.GPU_PASS_TERRAIN_ALPHA)
                 glDepthMask(false)
                 glEnable(GL_BLEND)
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
                 terrainAlphaShader.bind()
                 terrainAlphaShader.setUniform("textureSampler", 0)
-                em.renderAlpha(terrainAlphaShader, asyncRegionManager.centerModelMatrix, terrainTextureBinding)
-                for (ctxRegion in asyncRegionManager.getReadyContextRegions()) {
+                val centerAlpha =
+                    em.renderAlpha(terrainAlphaShader, asyncRegionManager.centerModelMatrix, terrainTextureBinding)
+                RenderMetrics.terrainAlphaDrawCalls += centerAlpha.drawCalls
+                RenderMetrics.trianglesSubmitted += centerAlpha.triangles
+                for (ctxRegion in terrainRegions) {
                     val regionModelMatrix = asyncRegionManager.getRegionModelMatrix(ctxRegion.key)
                     val terrainMeshes = ctxRegion.terrainMeshes ?: continue
                     terrainAlphaShader.setUniform("model", regionModelMatrix)
@@ -1755,16 +2453,19 @@ class MapViewer(
                 TextureLoader.unbindTexture()
                 glDisable(GL_BLEND)
                 glDepthMask(true)
+                gpuTimers.end()
 
                 renderSystem.enableCullFace()
             }
         }
 
         // Render tile highlight (if any selected tile)
+        val overlayStart = RenderMetrics.startTiming()
         renderTileHighlight()
 
         // Render brush preview overlay (terrain paint / height edit tools)
         renderBrushPreview()
+        RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_OVERLAYS, overlayStart)
 
         if (logFrame) {
             println("[RENDER] Frame $frameNumber:   terrain done, starting renderObjects()")
@@ -1772,11 +2473,34 @@ class MapViewer(
         }
 
         // Render objects
+        val objectsStart = RenderMetrics.startTiming()
         renderObjects()
+        RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_OBJECTS, objectsStart)
+        // renderObjects() runs the static batch pass inside itself; report the two side by
+        // side rather than nested, so the phase columns sum to the frame.
+        RenderMetrics.cpuPhaseMs[RenderMetrics.CPU_PHASE_OBJECTS] -=
+            RenderMetrics.cpuPhaseMs[RenderMetrics.CPU_PHASE_STATIC_BATCH]
 
         if (logFrame) {
             println("[RENDER] Frame $frameNumber:   renderObjects() done")
             System.out.flush()
+        }
+
+        // Sky last: the full-screen triangle sits on the far plane with depth writes off,
+        // so every pixel the scene already covered is rejected by the depth test. One draw
+        // call regardless of what the region references.
+        val skyRenderer = sky
+        if (skyRenderer != null && !renderSystem.wireframeMode) {
+            val skyStart = RenderMetrics.startTiming()
+            gpuTimers.begin(RenderMetrics.GPU_PASS_SKY)
+            skyRenderer.render(scene.camera, window.width, window.height)
+            gpuTimers.end()
+            RenderMetrics.skyTimeMs = RenderMetrics.endTiming(skyStart)
+            RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_SKY, skyStart)
+            RenderMetrics.skyDrawCalls = 1
+        } else {
+            RenderMetrics.skyTimeMs = 0.0
+            RenderMetrics.skyDrawCalls = 0
         }
 
         if (renderSystem.wireframeMode) {
@@ -1827,79 +2551,167 @@ class MapViewer(
     /** Chunk size for parallel transform computation. */
     private val PARALLEL_CHUNK_SIZE = 512
 
+    /** Missing models named individually by [reportDroppedInstances] before it stops. */
+    private val DROPPED_MODEL_REPORT_LIMIT = 16
+
+    /**
+     * Compute the transform for every centre-region and user-placed object.
+     *
+     * Pure math, no GL calls, so the work fans out across [Dispatchers.Default]. Each
+     * coroutine keeps its own [Matrix4f] to stay off the allocator on the hot path.
+     */
+    private fun computeInstanceEntries(): List<InstanceEntry> {
+        val allObjects = asyncRegionManager.centerObjects + placedObjects
+        if (allObjects.size <= PARALLEL_CHUNK_SIZE) {
+            // Small object count: compute sequentially to avoid coroutine overhead
+            val tempMatrix = Matrix4f()
+            return allObjects.map { obj -> computeInstanceEntry(obj, tempMatrix) }
+        }
+        return runBlocking(Dispatchers.Default) {
+            allObjects.chunked(PARALLEL_CHUNK_SIZE).map { chunk ->
+                async {
+                    val tempMatrix = Matrix4f()  // Thread-local: one per coroutine
+                    chunk.map { obj -> computeInstanceEntry(obj, tempMatrix) }
+                }
+            }.awaitAll().flatten()
+        }
+    }
+
+    /**
+     * Rebuild the static object scene when the object set has changed.
+     *
+     * Map objects do not move: their transforms are the same every frame, and so are the
+     * world bounds derived from them. Uploading both once per scene rather than once per
+     * frame is what makes GPU culling worth having — the per-frame CPU cost of the object
+     * pass drops to nothing, and the only thing left to do each frame is dispatch the
+     * compute shader.
+     *
+     * [objectSceneDirty] is set by every path that can move, add or re-seat an object:
+     * region load, terrain height edits, object placement and object dragging.
+     */
+    private fun updateObjectScene() {
+        val ir = indirectRenderer ?: return
+        if (!useStaticInstances || !ir.isReady()) return
+
+        ir.resetFrameCounters()
+
+        if (objectSceneDirty) {
+            val start = RenderMetrics.startTiming()
+            val entries = computeInstanceEntries()
+            ir.beginStaticScene()
+            for (entry in entries) ir.addStaticInstance(entry.modelId, entry.matrixData)
+            ir.buildStaticScene()
+            objectSceneDirty = false
+            RenderMetrics.transformTimeMs = RenderMetrics.endTiming(start)
+            println(
+                "[MapViewer] object scene rebuilt in ${"%.1f".format(RenderMetrics.transformTimeMs)} ms: " +
+                        "${ir.getTotalInstances()} instances, ${ir.staticItemCount} draw items"
+            )
+            reportDroppedInstances(ir, entries.size)
+        }
+
+        RenderMetrics.droppedInstances = ir.droppedInstanceCount
+        RenderMetrics.droppedModelIds = ir.droppedModelIdCount
+        RenderMetrics.instanceCount = ir.getTotalInstances()
+        RenderMetrics.cullItemsTotal = ir.staticItemCount
+        RenderMetrics.cullVisibleItemsStale = ir.visibleInstancesStale
+        RenderMetrics.cullVisibleTrianglesStale = ir.visibleTrianglesStale
+        RenderMetrics.cullStatsAgeFrames = ir.statsAgeFrames
+    }
+
+    /**
+     * Say, loudly, that objects were left out of the scene, and say what is known about
+     * each missing model.
+     *
+     * The indirect renderer is fed from [AsyncRegionManager.centerModelMeshData]; the ids
+     * it is asked to draw come from [AsyncRegionManager.getModelIdForInstance]. When those
+     * two disagree the scene comes up with holes in it, so the report names which side of
+     * that pairing is missing the model rather than only that it went missing.
+     */
+    private fun reportDroppedInstances(ir: IndirectRenderer, submitted: Int) {
+        val dropped = ir.droppedInstanceCount
+        if (dropped == 0) return
+
+        val meshData = asyncRegionManager.centerModelMeshData
+        val unavailable = asyncRegionManager.unavailableModels
+        val droppedIds = ir.droppedModelIdList()
+        val unregistered = droppedIds.filter { it !in unavailable }
+
+        RenderMetrics.droppedModelsUnavailable = droppedIds.size - unregistered.size
+
+        System.err.println(
+            "[MapViewer] $dropped of $submitted object instances were dropped across " +
+                    "${droppedIds.size} model(s): ${RenderMetrics.droppedModelsUnavailable} carry no " +
+                    "geometry in the cache (data gap, not a renderer fault), " +
+                    "${unregistered.size} unregistered"
+        )
+        for (modelId in droppedIds.take(DROPPED_MODEL_REPORT_LIMIT)) {
+            val meshes = meshData[modelId]
+            val where = when {
+                // Not "missing from the cache": every model archive in rev727 is present and
+                // decompresses. These decode to zero vertices and zero faces, so there is
+                // nothing to draw and nothing for us to fix. See ModelUnavailableReason.
+                modelId in unavailable -> "the cache holds no geometry under this id — " +
+                        "run 'tools faces $modelId' for the reason; nothing can draw it"
+                meshes == null -> "absent from centerModelMeshData: never registered"
+                meshes.isEmpty() -> "registered with no meshes"
+                else -> "has ${meshes.size} mesh(es) but reached the renderer unregistered"
+            }
+            System.err.println("[MapViewer]   model $modelId: $where")
+        }
+    }
+
     private fun renderObjects() {
+        if (!showObjects) return
         val im = asyncRegionManager.instanceManager ?: return
         val logFrame = frameNumber < 5
 
-        val allObjects = asyncRegionManager.centerObjects + placedObjects
-
-        if (logFrame) {
-            println("[RENDER] Frame $frameNumber:     renderObjects: ${allObjects.size} center objects")
-            System.out.flush()
-        }
-
-        // --- Parallel phase: compute transforms on Dispatchers.Default ---
-        // Each coroutine gets its own thread-local Matrix4f to avoid allocation
-        // on the hot path. The transform computation is pure math with no GL calls.
-        val transformStart = RenderMetrics.startTiming()
-        val entries: List<InstanceEntry> = if (allObjects.size <= PARALLEL_CHUNK_SIZE) {
-            // Small object count: compute sequentially to avoid coroutine overhead
-            val tempMatrix = Matrix4f()
-            allObjects.map { obj ->
-                computeInstanceEntry(obj, tempMatrix)
-            }
-        } else {
-            runBlocking(Dispatchers.Default) {
-                allObjects.chunked(PARALLEL_CHUNK_SIZE).map { chunk ->
-                    async {
-                        val tempMatrix = Matrix4f()  // Thread-local: one per coroutine
-                        chunk.map { obj ->
-                            computeInstanceEntry(obj, tempMatrix)
-                        }
-                    }
-                }.awaitAll().flatten()
-            }
-        }
-        RenderMetrics.transformTimeMs = RenderMetrics.endTiming(transformStart)
-
-        if (logFrame) {
-            println("[RENDER] Frame $frameNumber:     transforms done in ${RenderMetrics.transformTimeMs}ms")
-            System.out.flush()
-        }
-
-        // --- Sequential phase: GL calls on main thread ---
         val ir = indirectRenderer
         val useIndirect = ir != null && ir.isReady()
+        // Static mode has already uploaded this frame's instance data (and had the GPU cull
+        // it) in updateObjectScene(); only the streaming and legacy paths still have
+        // per-frame transform and upload work to do here.
+        val staticMode = useIndirect && ir.staticSceneBuilt
 
-        val uploadStart = RenderMetrics.startTiming()
-        var addedCount = 0
+        if (!staticMode) {
+            val transformStart = RenderMetrics.startTiming()
+            val entries = computeInstanceEntries()
+            RenderMetrics.transformTimeMs = RenderMetrics.endTiming(transformStart)
 
-        if (useIndirect) {
-            // Multi-Draw Indirect path: feed instances into IndirectRenderer
-            ir.prepareFrame()
-            for (entry in entries) {
-                if (ir.addInstanceRaw(entry.modelId, entry.matrixData)) {
-                    addedCount++
-                }
+            if (logFrame) {
+                println("[RENDER] Frame $frameNumber:     transforms done in ${RenderMetrics.transformTimeMs}ms for ${entries.size} objects")
+                System.out.flush()
             }
-            ir.uploadAll()
-        } else {
-            // Legacy instanced path: feed instances into InstanceManager
-            im.prepareFrame()
-            for (entry in entries) {
-                if (im.addInstanceRaw(entry.modelId, entry.matrixData)) {
-                    addedCount++
+
+            val uploadStart = RenderMetrics.startTiming()
+            var addedCount = 0
+            if (useIndirect) {
+                // Multi-Draw Indirect path: stream instances into IndirectRenderer
+                ir.prepareFrame()
+                for (entry in entries) {
+                    if (ir.addInstanceRaw(entry.modelId, entry.matrixData)) addedCount++
                 }
+                ir.uploadAll()
+                RenderMetrics.droppedInstances = ir.droppedInstanceCount
+                RenderMetrics.droppedModelIds = ir.droppedModelIdCount
+                if (ir.droppedInstanceCount > 0 && frameNumber < 5) {
+                    reportDroppedInstances(ir, entries.size)
+                }
+            } else {
+                // Legacy instanced path: feed instances into InstanceManager
+                im.prepareFrame()
+                for (entry in entries) {
+                    if (im.addInstanceRaw(entry.modelId, entry.matrixData)) addedCount++
+                }
+                im.uploadAll()
             }
-            im.uploadAll()
-        }
+            RenderMetrics.uploadTimeMs = RenderMetrics.endTiming(uploadStart)
+            RenderMetrics.instanceCount = addedCount
 
-        RenderMetrics.uploadTimeMs = RenderMetrics.endTiming(uploadStart)
-        RenderMetrics.instanceCount = addedCount
-
-        if (logFrame) {
-            println("[RENDER] Frame $frameNumber:     upload done in ${RenderMetrics.uploadTimeMs}ms, $addedCount instances, indirect=$useIndirect")
-            System.out.flush()
+            if (logFrame) {
+                println("[RENDER] Frame $frameNumber:     upload done in ${RenderMetrics.uploadTimeMs}ms, $addedCount instances, indirect=$useIndirect")
+                System.out.flush()
+            }
         }
 
         // RS models are single-sided: the game client back-face culls them and never
@@ -1920,6 +2732,12 @@ class MapViewer(
             val indColorShader = indirectColorShader!!
             val indTexShader = indirectTexturedShader!!
 
+            gpuTimers.begin(RenderMetrics.GPU_PASS_OBJECTS)
+
+            // Only now make the culling results visible to the draws. Everything drawn
+            // between the dispatch and here overlapped with the compute pass.
+            ir.cullBarrier()
+
             // Render untextured objects (1 MDI call)
             ir.renderUntextured(indColorShader)
 
@@ -1927,16 +2745,21 @@ class MapViewer(
             renderSystem.enableBlending()
 
             indTexShader.bind()
-            indTexShader.setUniform("textureArray", 0)
             ir.renderTextured(indTexShader)
 
             renderSystem.disableBlending()
+            gpuTimers.end()
 
-            // Capture MDI draw call count
+            // Fence the streaming ring only now that every draw reading it has been issued.
+            // The static path owns immutable buffers and has no ring to fence.
+            if (!staticMode) ir.endFrame()
+
             RenderMetrics.indirectDrawCalls = ir.getDrawCallCount()
+            RenderMetrics.indirectCommands = ir.getCommandCount()
             RenderMetrics.trianglesSubmitted += ir.getTotalTrianglesSubmitted()
         } else {
             // === Legacy instanced rendering: per-mesh draw calls ===
+            gpuTimers.begin(RenderMetrics.GPU_PASS_OBJECTS)
 
             // Render instanced center region objects (untextured)
             im.renderUntextured(instancedColorShader)
@@ -1964,6 +2787,7 @@ class MapViewer(
 
             TextureLoader.unbindTexture()
             renderSystem.disableBlending()
+            gpuTimers.end()
 
             // Capture instanced draw call count from InstanceManager
             val instanceStats = im.getStats()
@@ -1977,7 +2801,13 @@ class MapViewer(
         }
 
         // Render static batched context region objects
+        val staticBatchStart = RenderMetrics.startTiming()
+        gpuTimers.begin(RenderMetrics.GPU_PASS_STATIC_BATCH)
         renderStaticBatchedObjects()
+        gpuTimers.end()
+        RenderMetrics.endPhase(RenderMetrics.CPU_PHASE_STATIC_BATCH, staticBatchStart)
+
+        if (cullProbe) runCullProbe()
 
         // Disable polygon offset after all object rendering is complete
         renderSystem.disablePolygonOffset()
@@ -1992,6 +2822,18 @@ class MapViewer(
     }
 
     /**
+     * The batches that survived this frame's cull, in the order they will be drawn.
+     *
+     * Kept as a field and cleared rather than rebuilt so the gather allocates nothing, and
+     * so the submit loop walks a dense list of survivors instead of re-testing every batch
+     * in the world a second time.
+     */
+    private val visibleBatchDraws = ArrayList<BatchDraw>(2048)
+
+    /** Model matrix for static batches, which are already baked into world space. */
+    private val staticBatchModel = Matrix4f().identity()
+
+    /**
      * Render context region objects from static batched meshes.
      * Each async context region has its own set of batch meshes, keyed by [BatchKey].
      * Geometry is pre-transformed to world space, so renders with an identity model matrix.
@@ -2001,54 +2843,458 @@ class MapViewer(
      * - Atlas page (atlasPageIndex >= 0): drawn with [staticTexturedShader], atlas page bound
      * - Fallback texture (textureId >= 0, atlasPageIndex == -1): drawn with [staticTexturedShader],
      *   individual texture bound via TextureLoader
+     *
+     * Runs as gather-then-submit. The gather decides what is drawn, the submit loop only
+     * draws, which keeps the frustum tests in one tight pass over the bounds and lets the
+     * GL state be tracked across the whole pass instead of being re-established per region.
+     *
+     * ## This pass is primitive-bound, not draw-call bound
+     * It is the most expensive GPU pass in the frame and it issues by far the most draw
+     * calls, which makes collapsing those draws onto an indirect or multi-draw path look
+     * like the obvious next optimisation. It is not: the draw calls are almost free and the
+     * triangles are not.
+     *
+     * Measured by re-issuing every surviving batch's draw with an index count of 3 — same
+     * draw calls, same VAO binds, same texture binds, no geometry — at render distance 3,
+     * medians of six post-load samples:
+     *
+     * ```
+     * region            draws   triangles   pass ms   issue ms   geometry ms   tri/s
+     * Lumbridge 50,50    1596   7,323,989     1.857      0.119         1.738   4.2 G
+     * Sophanem  52,50    1240   6,445,325     1.916      0.062         1.854   3.5 G
+     * Canifis   54,54     363   2,865,784     0.642      0.026         0.616   4.7 G
+     * ```
+     *
+     * Issuing is 3-6% of the pass, about 70 ns per draw. The other 94-97% is geometry
+     * running at 3.5-4.7 G triangles/s, which is the primitive setup rate of the GPU this
+     * was measured on — so it is a hardware ceiling, and no way of packaging the same
+     * triangles into fewer commands moves it. Collapsing all 1596 Lumbridge draws into one
+     * would save 0.119 ms, less than the run-to-run spread of the pass itself
+     * (1.605-2.376 ms across six samples of an unchanged build).
+     *
+     * The cost is [RenderMetrics.staticBatchTriangles], and the reason it is so large is
+     * granularity: a batch is one (region, texture) pair, so it spans a whole 64x64 region
+     * and the frustum test either keeps all of its objects or none. The centre region's
+     * per-object GPU cull, by contrast, takes 876,835 triangles down to 297,962 and costs
+     * 0.097 ms. Anything that wants this pass cheaper has to submit fewer triangles —
+     * finer culling granularity or distance LOD — not fewer commands.
      */
     private fun renderStaticBatchedObjects() {
-        val identityModel = Matrix4f().identity()
         val atlas = objectAtlas
         var totalMeshes = 0
+        var considered = 0
+        var culled = 0
 
-        for (ctxRegion in asyncRegionManager.getReadyContextRegions()) {
-            val meshes = ctxRegion.batchMeshes ?: continue
-            if (meshes.isEmpty()) continue
-            totalMeshes += meshes.size
+        val cullStart = RenderMetrics.startTiming()
 
-            // Render untextured
-            val untexturedMesh = meshes[BatchKey.UNTEXTURED]
-            if (untexturedMesh != null) {
-                staticColorShader.bind()
-                staticColorShader.setUniform("model", identityModel)
-                untexturedMesh.render()
-                RenderMetrics.staticBatchDrawCalls++
-                RenderMetrics.trianglesSubmitted += untexturedMesh.vertexCount / 3
+        // Gather. Every ready region is considered, not just the terrain-visible ones: a
+        // region's objects are not confined to its terrain footprint -- an overhanging roof
+        // or a tall tree at the border reaches past it -- so the region's terrain box is not
+        // a safe gate for its batches.
+        //
+        // What is safe is the union of the batches' own world-space bounds, which the
+        // region maintains as it uploads them. One test against that rejects every batch the
+        // region owns, so the per-batch tests are only paid for regions that are actually on
+        // screen. At render distance 5 that turns ~5800 box tests into ~120 plus the couple
+        // of thousand belonging to regions in view.
+        val visible = visibleBatchDraws
+        visible.clear()
+        val cullBatches = useCpuBatchCulling
+        var regionsConsidered = 0
+        var regionsCulled = 0
+        for (ctxRegion in readyContextRegions) {
+            val batches = ctxRegion.batches
+            val draws = batches.draws
+            if (draws.isEmpty()) continue
+            totalMeshes += draws.size
+            regionsConsidered++
+
+            if (cullBatches) {
+                // Null means the union could not be trusted (see RegionBatches.union), in
+                // which case the region falls through to per-batch testing as before.
+                val regionBounds = batches.union
+                if (regionBounds != null && !frustum.isAABBVisible(regionBounds)) {
+                    considered += draws.size
+                    culled += draws.size
+                    regionsCulled++
+                    continue
+                }
             }
 
-            // Render textured
-            val texturedKeys = meshes.keys.filter { it != BatchKey.UNTEXTURED }
-            if (texturedKeys.isNotEmpty()) {
-                renderSystem.enableBlending()
-                staticTexturedShader.bind()
-                staticTexturedShader.setUniform("model", identityModel)
-                staticTexturedShader.setUniform("textureSampler", 0)
-
-                for (key in texturedKeys.sortedBy { it.atlasPageIndex }) {
-                    val mesh = meshes[key] ?: continue
-                    if (key.atlasPageIndex >= 0 && atlas != null) {
-                        atlas.bindPage(key.atlasPageIndex, 0)
-                    } else if (key.textureId >= 0) {
-                        val glTexId = TextureLoader.getTextureForMaterial(cache, key.textureId)
-                        TextureLoader.bindTexture(glTexId)
-                    }
-                    mesh.render()
-                    RenderMetrics.staticBatchDrawCalls++
-                    RenderMetrics.trianglesSubmitted += mesh.vertexCount / 3
+            // Batch geometry is already in world space, so one AABB test per merged mesh
+            // is the whole cost of culling it -- far cheaper than the per-object test the
+            // centre region needs, and it removes a whole draw call when it hits.
+            val boundsData = batches.bounds
+            val cullable = batches.cullable
+            for (i in draws.indices) {
+                considered++
+                if (cullBatches && cullable[i] && !frustum.isAABBVisible(boundsData, i * 6)) {
+                    culled++
+                    continue
                 }
-
-                TextureLoader.unbindTexture()
-                renderSystem.disableBlending()
+                visible.add(draws[i])
             }
         }
 
         RenderMetrics.staticBatchMeshCount = totalMeshes
+        RenderMetrics.batchesConsidered = considered
+        RenderMetrics.batchesCulled = culled
+        RenderMetrics.batchRegionsConsidered = regionsConsidered
+        RenderMetrics.batchRegionsCulled = regionsCulled
+        RenderMetrics.cullCpuTimeMs += RenderMetrics.endTiming(cullStart)
+
+        if (visible.isEmpty()) return
+
+        // Submit. The draw order is exactly the gather order, which is exactly the order the
+        // old per-region loop used, so nothing about the resulting image depends on this
+        // being a separate pass. What changes is that the shader binds, the blend toggle and
+        // the texture binds are now tracked across the whole pass: the old loop re-bound
+        // staticColorShader and re-uploaded its model uniform for every untextured batch,
+        // and toggled blending and unbound the texture once per region.
+        val identityModel = staticBatchModel
+        var colorShaderBound = false
+        var texturedShaderBound = false
+        var blending = false
+        var boundAtlasPage = -1
+        var boundTextureId = -1
+
+        for (i in visible.indices) {
+            val draw = visible[i]
+            if (draw.key == BatchKey.UNTEXTURED) {
+                if (blending) {
+                    renderSystem.disableBlending()
+                    blending = false
+                }
+                if (!colorShaderBound) {
+                    staticColorShader.bind()
+                    staticColorShader.setUniform("model", identityModel)
+                    colorShaderBound = true
+                    texturedShaderBound = false
+                }
+                submitBatch(draw)
+            } else {
+                if (!blending) {
+                    renderSystem.enableBlending()
+                    blending = true
+                }
+                if (!texturedShaderBound) {
+                    staticTexturedShader.bind()
+                    staticTexturedShader.setUniform("model", identityModel)
+                    staticTexturedShader.setUniform("textureSampler", 0)
+                    texturedShaderBound = true
+                    colorShaderBound = false
+                }
+                if (draw.key.atlasPageIndex >= 0 && atlas != null) {
+                    if (draw.key.atlasPageIndex != boundAtlasPage) {
+                        atlas.bindPage(draw.key.atlasPageIndex, 0)
+                        boundAtlasPage = draw.key.atlasPageIndex
+                        boundTextureId = -1
+                    }
+                } else if (draw.key.textureId >= 0) {
+                    val glTextureId = TextureLoader.getTextureForMaterial(cache, draw.key.textureId)
+                    if (glTextureId != boundTextureId) {
+                        TextureLoader.bindTexture(glTextureId)
+                        boundTextureId = glTextureId
+                        boundAtlasPage = -1
+                    }
+                }
+                submitBatch(draw)
+            }
+        }
+
+        if (boundAtlasPage >= 0 || boundTextureId >= 0) TextureLoader.unbindTexture()
+        if (blending) renderSystem.disableBlending()
+    }
+
+    /**
+     * Draw one batch, leaving out the spatial cells the frustum rejects.
+     *
+     * A batch spans a whole region, which is far coarser than anything on screen: at
+     * render distance 3 roughly a third of the triangles it submits are off screen, and
+     * the pass is primitive-bound, so those triangles are the cost. The merge records the
+     * batch's geometry as contiguous per-cell index ranges *in buffer order*, so dropping
+     * a cell is nothing more than leaving its range out of the multi-draw — the triangles
+     * that remain are the same triangles, in the same order, with the same state.
+     *
+     * Falls back to the whole-mesh draw whenever the ranges cannot help: a single-range
+     * batch, a batch whose range boxes are untrustworthy, or the common case of every
+     * range being visible, where one `glDrawElements` beats a multi-draw of the same
+     * contiguous span.
+     */
+    private fun submitBatch(draw: BatchDraw) {
+        val mesh = draw.mesh
+        if (!useCpuBatchCulling || !draw.rangesCullable) {
+            mesh.render()
+            RenderMetrics.staticBatchDrawCalls++
+            RenderMetrics.staticBatchTriangles += mesh.vertexCount / 3
+            RenderMetrics.trianglesSubmitted += mesh.vertexCount / 3
+            return
+        }
+
+        val bounds = draw.rangeBounds
+        val first = draw.rangeFirst
+        val counts = draw.rangeCount
+        ensureRangeCapacity(first.size)
+        val outFirst = rangeSubmitFirst
+        val outCount = rangeSubmitCount
+        var kept = 0
+        var indices = 0
+        for (i in first.indices) {
+            RenderMetrics.batchRangesConsidered++
+            if (!frustum.isAABBVisible(bounds, i * 6)) continue
+            // Fuse this range into the previous one when the gap between them is small.
+            //
+            // A draw command costs the order of a microsecond of CPU; a triangle costs a
+            // quarter of a nanosecond of GPU. Splitting a batch to skip a few hundred
+            // triangles is therefore a straight loss, and only a gap worth thousands of
+            // triangles pays for the command it saves. [rangeFuseGapIndices] is that
+            // break-even point; zero fuses only touching ranges.
+            val previousEnd = if (kept > 0) outFirst[kept - 1] + outCount[kept - 1] else -1
+            val gap = if (kept > 0) first[i] - previousEnd else Int.MAX_VALUE
+            if (kept > 0 && gap <= rangeFuseGapIndices) {
+                outCount[kept - 1] = first[i] + counts[i] - outFirst[kept - 1]
+                indices += counts[i] + gap
+            } else {
+                outFirst[kept] = first[i]
+                outCount[kept] = counts[i]
+                kept++
+                indices += counts[i]
+            }
+        }
+
+        RenderMetrics.batchRangesCulled += first.size - kept
+        if (kept == 0) return
+
+        if (kept == 1) {
+            if (outFirst[0] == 0 && outCount[0] == mesh.vertexCount) mesh.render()
+            else mesh.renderRange(outFirst[0], outCount[0])
+        } else {
+            mesh.renderRanges(outFirst, outCount, kept)
+        }
+        RenderMetrics.staticBatchDrawCalls++
+        RenderMetrics.staticBatchRanges += kept
+        RenderMetrics.staticBatchTriangles += indices / 3
+        RenderMetrics.trianglesSubmitted += indices / 3
+    }
+
+    // Scratch for [submitBatch]: the ranges of one batch that survived, grown to fit and
+    // reused so submission allocates nothing.
+    private var rangeSubmitFirst = IntArray(64)
+    private var rangeSubmitCount = IntArray(64)
+
+    private fun ensureRangeCapacity(size: Int) {
+        if (rangeSubmitFirst.size >= size) return
+        rangeSubmitFirst = IntArray(size)
+        rangeSubmitCount = IntArray(size)
+    }
+
+    /**
+     * `-Ddarkan.cullProbe=true`: price a per-object cull of the context regions without
+     * building one.
+     *
+     * The static batch pass is primitive-bound (see [renderStaticBatchedObjects]), so the
+     * only lever left is submitting fewer triangles, and the two candidate levers — finer
+     * culling and distance LOD — cannot be told apart from a triangle total. This walks the
+     * per-object boxes the batch merge flattened away and answers both questions from the
+     * same pass: how many of the submitted triangles a per-object frustum test would keep,
+     * and how those survivors are spread over distance and object size.
+     *
+     * Measurement only. Nothing here changes what is drawn, and the cost is reported
+     * separately as [RenderMetrics.probeCpuMs] so it cannot be mistaken for frame time.
+     */
+    private fun runCullProbe() {
+        val probeStart = RenderMetrics.startTiming()
+        val camera = scene.camera.position
+        val distanceEdges = RenderMetrics.PROBE_DISTANCE_EDGES_TILES
+        val sizeEdges = RenderMetrics.PROBE_SIZE_EDGES
+        val pixelEdges = RenderMetrics.PROBE_PIXEL_EDGES
+        // Viewport height over the vertical field of view, i.e. pixels per unit of
+        // (size / distance). Matches the projection the frame is about to be drawn with.
+        val pixelsPerRadian = window.height /
+            tan(Math.toRadians(scene.camera.fov.toDouble() * 0.5).toFloat())
+
+        var objectsTotal = 0
+        var objectsVisible = 0
+        var trianglesTotal = 0L
+        var trianglesVisible = 0L
+
+        for (ctxRegion in readyContextRegions) {
+            val geometry = ctxRegion.objectGeometry ?: continue
+            val bounds = geometry.bounds
+            val triangles = geometry.triangles
+            for (i in triangles.indices) {
+                val triangleCount = triangles[i]
+                if (triangleCount == 0) continue
+                objectsTotal++
+                trianglesTotal += triangleCount
+
+                val offset = i * 6
+                if (!frustum.isAABBVisible(bounds, offset)) continue
+                objectsVisible++
+                trianglesVisible += triangleCount
+
+                // Distance to the box centre, in tiles, so the buckets read in the same
+                // units as render distance rather than in world units.
+                val dx = (bounds[offset] + bounds[offset + 3]) * 0.5f - camera.x
+                val dy = (bounds[offset + 1] + bounds[offset + 4]) * 0.5f - camera.y
+                val dz = (bounds[offset + 2] + bounds[offset + 5]) * 0.5f - camera.z
+                val distance = sqrt(dx * dx + dy * dy + dz * dz)
+
+                // Projected height of the box, in pixels: a sphere of radius r at distance
+                // d covers 2r / (2 d tan(fov/2)) of the viewport height. Conservative, since
+                // the box's half-diagonal bounds it in every orientation.
+                val radius = 0.5f * sqrt(
+                    (bounds[offset + 3] - bounds[offset]) * (bounds[offset + 3] - bounds[offset]) +
+                        (bounds[offset + 4] - bounds[offset + 1]) * (bounds[offset + 4] - bounds[offset + 1]) +
+                        (bounds[offset + 5] - bounds[offset + 2]) * (bounds[offset + 5] - bounds[offset + 2])
+                )
+                val pixels = (radius * pixelsPerRadian / distance.coerceAtLeast(1f)).toInt()
+                var pixelBucket = 0
+                while (pixelBucket < pixelEdges.size - 1 && pixels >= pixelEdges[pixelBucket]) pixelBucket++
+                RenderMetrics.probeTrianglesByPixels[pixelBucket] += triangleCount
+                RenderMetrics.probeObjectsByPixels[pixelBucket]++
+
+                val tiles = (distance / TILE_WORLD_SIZE).toInt()
+                var bucket = 0
+                while (bucket < distanceEdges.size - 1 && tiles >= distanceEdges[bucket]) bucket++
+                RenderMetrics.probeTrianglesByDistance[bucket] += triangleCount
+                RenderMetrics.probeObjectsByDistance[bucket]++
+
+                var sizeBucket = 0
+                while (sizeBucket < sizeEdges.size - 1 && triangleCount > sizeEdges[sizeBucket]) sizeBucket++
+                RenderMetrics.probeObjectsBySize[sizeBucket]++
+                RenderMetrics.probeTrianglesBySize[sizeBucket] += triangleCount
+            }
+        }
+
+        RenderMetrics.probeObjectsTotal = objectsTotal
+        RenderMetrics.probeObjectsVisible = objectsVisible
+        RenderMetrics.probeTrianglesTotal = trianglesTotal
+        RenderMetrics.probeTrianglesVisible = trianglesVisible
+
+        // Price the intermediate granularities: batches keyed by (cell, material) rather
+        // than (region, material). Same frustum, same test, so the draw and triangle
+        // counts here are what that grouping would really submit this frame.
+        probeGridDraws.fill(0)
+        probeGridTriangles.fill(0L)
+        probeGridBatches.fill(0)
+        for (ctxRegion in readyContextRegions) {
+            val simulations = ctxRegion.batchSimulations
+            for (s in simulations.indices) {
+                val simulation = simulations[s]
+                val bounds = simulation.bounds
+                val triangles = simulation.triangles
+                probeGridBatches[s] += triangles.size
+                for (i in triangles.indices) {
+                    if (!frustum.isAABBVisible(bounds, i * 6)) continue
+                    probeGridDraws[s]++
+                    probeGridTriangles[s] += triangles[i]
+                }
+            }
+        }
+
+        RenderMetrics.probeCpuMs = RenderMetrics.endTiming(probeStart)
+    }
+
+    /** Per grid size, in [AsyncRegionManager] simulation order: batches that survived. */
+    private val probeGridDraws = IntArray(8)
+    private val probeGridTriangles = LongArray(8)
+    private val probeGridBatches = IntArray(8)
+
+    /**
+     * Recompute, once per frame, which context regions have terrain inside the frustum.
+     *
+     * The test is the region's 64x64 tile terrain box, which is exact horizontally, so
+     * rejecting a region here drops all of its terrain draws. It is deliberately *not*
+     * used to gate the region's static batches: object geometry reaches past the terrain
+     * footprint, so batches are culled individually against their own bounds.
+     *
+     * Both lists are cached because several passes walk them, and the old code re-derived
+     * the ready-region list from scratch -- allocating a fresh filtered list -- three
+     * times per frame.
+     */
+    private fun updateVisibleContextRegions() {
+        readyContextRegions.clear()
+        visibleContextRegions.clear()
+        readyContextRegions.addAll(asyncRegionManager.getReadyContextRegions())
+        RenderMetrics.contextRegionsConsidered = readyContextRegions.size
+
+        if (!useCpuBatchCulling) {
+            visibleContextRegions.addAll(readyContextRegions)
+            RenderMetrics.contextRegionsCulled = 0
+            return
+        }
+
+        for (region in readyContextRegions) {
+            if (frustum.isAABBVisible(asyncRegionManager.getRegionBounds(region.key))) {
+                visibleContextRegions.add(region)
+            }
+        }
+        RenderMetrics.contextRegionsCulled = readyContextRegions.size - visibleContextRegions.size
+    }
+
+    // Per-frame working set for the merged terrain multi-draws: which of the merged
+    // regions the frustum kept, and the index ranges handed to GL. Grown to fit and
+    // reused, so a frame allocates nothing for terrain submission.
+    //
+    // [terrainRangeSnapshot] is the list the three arrays were sized and filled for.
+    // AsyncRegionManager replaces mergedTerrainRanges wholesale when it rebuilds, so
+    // re-reading it in the gather step could hand back a longer list than the arrays
+    // were sized for; pinning the list once per frame makes the indices provably in
+    // range instead of relying on when the rebuild happens to run.
+    private var terrainRangeSnapshot: List<MergedTerrainRange> = emptyList()
+    private var terrainRangeVisible = BooleanArray(0)
+    private var terrainRangeFirst = IntArray(0)
+    private var terrainRangeCounts = IntArray(0)
+
+    /**
+     * Pin this frame's merged terrain ranges and frustum-test every region in them.
+     *
+     * Done once per frame rather than once per pass so the opaque and alpha halves of a
+     * region can never disagree about whether it is on screen, which would show up as a
+     * region's alpha layers blending against terrain that was not drawn.
+     */
+    private fun updateMergedTerrainVisibility() {
+        val ranges = asyncRegionManager.mergedTerrainRanges
+        terrainRangeSnapshot = ranges
+        if (terrainRangeVisible.size < ranges.size) {
+            terrainRangeVisible = BooleanArray(ranges.size)
+            terrainRangeFirst = IntArray(ranges.size)
+            terrainRangeCounts = IntArray(ranges.size)
+        }
+        var visible = 0
+        for (i in ranges.indices) {
+            val onScreen = !useCpuBatchCulling || frustum.isAABBVisible(ranges[i].bounds)
+            terrainRangeVisible[i] = onScreen
+            if (onScreen) visible++
+        }
+        RenderMetrics.terrainMergedRegionsTotal = ranges.size
+        RenderMetrics.terrainMergedRegionsDrawn = visible
+    }
+
+    /**
+     * Pack the visible merged-terrain ranges of one pass into [terrainRangeFirst] and
+     * [terrainRangeCounts].
+     *
+     * Walks [terrainRangeSnapshot], not the manager's live list, so it can only ever see
+     * the ranges [updateMergedTerrainVisibility] sized the arrays for.
+     *
+     * @param alpha true for the alpha buffer's ranges, false for the opaque buffer's
+     * @return the number of leading entries of the two arrays that are valid
+     */
+    private fun gatherMergedTerrainRanges(alpha: Boolean): Int {
+        val ranges = terrainRangeSnapshot
+        var count = 0
+        for (i in ranges.indices) {
+            if (!terrainRangeVisible[i]) continue
+            val range = ranges[i]
+            val indexCount = if (alpha) range.alphaIndexCount else range.opaqueIndexCount
+            if (indexCount == 0) continue
+            terrainRangeFirst[count] = if (alpha) range.alphaFirstIndex else range.opaqueFirstIndex
+            terrainRangeCounts[count] = indexCount
+            count++
+        }
+        return count
     }
 
     /**
@@ -2182,6 +3428,11 @@ class MapViewer(
 
             // --- Tool-specific content ---
             renderCurrentToolContent()
+
+            ImGui.separator()
+
+            // --- Environment (collapsible) ---
+            renderEnvironmentSection()
 
             ImGui.separator()
 
@@ -2332,6 +3583,290 @@ class MapViewer(
     }
 
     /**
+     * Environment section: the decoded sun/fog/skybox record for the current region,
+     * live-editable.
+     *
+     * Every widget writes straight back into [environment], which the UBO picks up on the
+     * next frame - that is the whole point of moving the sun out of the baked vertex
+     * colours. Nothing here is written back to the cache.
+     */
+    private fun renderEnvironmentSection() {
+        if (!ImGui.collapsingHeader("Environment")) return
+
+        ImGuiText.disabled(
+            if (environment.fromCache) {
+                "Decoded from m${currentRegionX}_$currentRegionY"
+            } else {
+                "No environment block - client defaults"
+            }
+        )
+
+        // --- Sun ---
+        ImGui.text("Sun")
+
+        val dynamic = ImBoolean(environment.dynamicSunLighting)
+        if (ImGui.checkbox("Dynamic sun lighting", dynamic)) {
+            environment.dynamicSunLighting = dynamic.get()
+            // The terrain vertex colours are built either lit or unlit, so the meshes have
+            // to be rebuilt. Object colours are unlit in both modes and need no rebuild.
+            TerrainLoader.bakeSunLighting = !environment.dynamicSunLighting
+            reloadTerrain()
+        }
+        if (ImGui.isItemHovered()) {
+            ImGuiText.tooltip(
+                "On: meshes carry unlit colour and the shader applies the environment sun, " +
+                    "so the controls below take effect immediately.\n" +
+                    "Off: the legacy path bakes a fixed light direction into terrain vertex " +
+                    "colours at build time and the sun controls do nothing."
+            )
+        }
+
+        envSunColourInput[0] = EnvironmentSettings.red(environment.sunColour)
+        envSunColourInput[1] = EnvironmentSettings.green(environment.sunColour)
+        envSunColourInput[2] = EnvironmentSettings.blue(environment.sunColour)
+        if (ImGui.colorEdit3("Sun colour", envSunColourInput)) {
+            environment.sunColour = EnvironmentSettings.pack(
+                envSunColourInput[0], envSunColourInput[1], envSunColourInput[2]
+            )
+        }
+
+        envSunPositionInput[0] = environment.sunPositionX
+        envSunPositionInput[1] = environment.sunPositionY
+        envSunPositionInput[2] = environment.sunPositionZ
+        ImGui.setNextItemWidth(200f)
+        if (ImGui.dragFloat3("Sun position", envSunPositionInput, 1f, -512f, 512f)) {
+            environment.sunPositionX = envSunPositionInput[0]
+            environment.sunPositionY = envSunPositionInput[1]
+            environment.sunPositionZ = envSunPositionInput[2]
+        }
+        if (ImGui.isItemHovered()) {
+            ImGuiText.tooltip("RS scene space, exactly as the cache stores it: Y is negative-up.")
+        }
+
+        envSunAmbientInput[0] = environment.sunAmbient
+        ImGui.setNextItemWidth(150f)
+        if (ImGui.sliderFloat("Ambient", envSunAmbientInput, 0f, 4f)) {
+            environment.sunAmbient = envSunAmbientInput[0]
+        }
+
+        envSunLightInput[0] = environment.sunLight
+        ImGui.setNextItemWidth(150f)
+        if (ImGui.sliderFloat("Key light", envSunLightInput, 0f, 4f)) {
+            environment.sunLight = envSunLightInput[0]
+        }
+
+        envSunBacklightInput[0] = environment.sunBacklight
+        ImGui.setNextItemWidth(150f)
+        if (ImGui.sliderFloat("Backlight", envSunBacklightInput, 0f, 4f)) {
+            environment.sunBacklight = envSunBacklightInput[0]
+        }
+        if (ImGui.isItemHovered()) {
+            ImGuiText.tooltip("Negative diffuse: darkens surfaces facing away from the sun.")
+        }
+
+        val direction = environment.sunDirection(Vector3f())
+        ImGuiText.disabled(
+            "dir (%.2f, %.2f, %.2f)  ambient %.3f".format(
+                direction.x, direction.y, direction.z, environment.sunBrightness
+            )
+        )
+
+        ImGui.spacing()
+
+        // --- Fog ---
+        ImGui.text("Fog")
+
+        val fog = ImBoolean(environment.fogEnabled)
+        if (ImGui.checkbox("Fog enabled", fog)) {
+            environment.fogEnabled = fog.get()
+            // Fog also decides whether the flat background paints the cache fog colour or the
+            // editor's neutral sky, and that is only pushed to the sky pass from here.
+            applyEnvironmentToRenderers()
+        }
+        if (ImGui.isItemHovered()) {
+            ImGuiText.tooltip(
+                "Off by default in the editor so the map stays readable at distance. The cache " +
+                    "fog colour, depth and view range below are still the decoded values and " +
+                    "still apply the moment this is ticked."
+            )
+        }
+
+        envFogColourInput[0] = EnvironmentSettings.red(environment.fogColour)
+        envFogColourInput[1] = EnvironmentSettings.green(environment.fogColour)
+        envFogColourInput[2] = EnvironmentSettings.blue(environment.fogColour)
+        if (ImGui.colorEdit3("Fog colour", envFogColourInput)) {
+            environment.fogColour = EnvironmentSettings.pack(
+                envFogColourInput[0], envFogColourInput[1], envFogColourInput[2]
+            )
+            applyEnvironmentToRenderers()
+        }
+
+        envFogDepthInput[0] = environment.fogDepth
+        ImGui.setNextItemWidth(150f)
+        if (ImGui.sliderInt("Fog depth", envFogDepthInput, 0, 4095)) {
+            environment.fogDepth = envFogDepthInput[0]
+        }
+
+        envViewRangeInput[0] = environment.fogDistanceMultiplier
+        ImGui.setNextItemWidth(150f)
+        if (ImGui.sliderFloat("View range", envViewRangeInput, 1f, 24f)) {
+            environment.fogDistanceMultiplier = envViewRangeInput[0]
+        }
+        if (ImGui.isItemHovered()) {
+            ImGuiText.tooltip(
+                "The client's FOG_DISTANCE_MULTIPLIER. Fog always reaches full opacity at the " +
+                    "view range, so this decides how much of the scene it eats. 1 is Jagex stock " +
+                    "(~34 tiles, which fogs out everything but the foreground from up here); " +
+                    "10 matches the reference client in ../darkan-bot."
+            )
+        }
+
+        val tiles = 512f * EnvironmentSettings.RS_TO_ENGINE
+        ImGuiText.disabled(
+            "density %d rs  |  fog %.0f to %.0f units (%.0f - %.0f tiles)".format(
+                (environment.fogDepth + 256) shl 2,
+                environment.fogStartUnits, environment.fogEndUnits,
+                environment.fogStartUnits / tiles, environment.fogEndUnits / tiles
+            )
+        )
+
+        ImGui.spacing()
+
+        // --- Skybox ---
+        ImGui.text("Skybox")
+        envSkyboxInput.set(environment.skyboxId)
+        ImGui.setNextItemWidth(100f)
+        if (ImGui.inputInt("Skybox id", envSkyboxInput)) {
+            environment.skyboxId = envSkyboxInput.get().coerceAtLeast(-1)
+            applyEnvironmentToRenderers()
+        }
+        if (ImGui.isItemHovered()) {
+            ImGuiText.tooltip("-1 draws a flat fill in the fog colour, which is what every region in this cache does.")
+        }
+        ImGuiText.disabled(
+            if (environment.skyboxId < 0) {
+                "flat fog-colour background"
+            } else {
+                val type = runCatching { EnvironmentConfigs.skybox(cache, environment.skyboxId) }.getOrNull()
+                "material ${type?.materialId ?: -1}, mode ${type?.backgroundMode ?: "?"}"
+            }
+        )
+
+        ImGui.spacing()
+        if (ImGui.button("Reset to cache", 140f, 0f)) {
+            loadEnvironment(currentRegionX, currentRegionY)
+        }
+
+        ImGui.spacing()
+        ImGui.separator()
+        renderEnvironmentSaveSection()
+    }
+
+    /**
+     * Write-back controls for the Environment section.
+     *
+     * Saving mutates the user's real cache, so it is deliberately awkward: a preview has to
+     * be taken first, the region it targets is spelled out, and a confirmation has to be
+     * ticked before the button does anything. The preview is invalidated whenever the camera
+     * moves into a different region, so the button can never end up pointed somewhere else.
+     */
+    private fun renderEnvironmentSaveSection() {
+        ImGui.text("Save to cache")
+
+        val regionKey = (currentRegionX shl 8) or currentRegionY
+        if (envWritePlanRegion != regionKey) {
+            // Region changed under the panel - drop the stale plan rather than let it be applied.
+            envWritePlan = null
+            envWriteLog = emptyList()
+            envWriteError = null
+            envWriteConfirm.set(false)
+            envWritePlanRegion = regionKey
+        }
+
+        ImGuiText.disabledWrapped(
+            "Target: m${currentRegionX}_$currentRegionY in ${MapEnvironmentWriter.cacheDirectory().absolutePath}"
+        )
+
+        if (ImGui.button("Preview changes (dry run)", 220f, 0f)) {
+            envWriteLog = emptyList()
+            envWriteError = null
+            envWriteConfirm.set(false)
+            envWritePlan = try {
+                MapEnvironmentWriter.plan(cache, currentRegionX, currentRegionY, currentEnvironmentEdit())
+            } catch (exception: Exception) {
+                envWriteError = "Planning failed: ${exception.message}"
+                null
+            }
+        }
+        if (ImGui.isItemHovered()) {
+            ImGuiText.tooltip(
+                "Decodes the region's effects block, merges the edits above into it and reports " +
+                    "the byte-level difference. Writes nothing."
+            )
+        }
+
+        val plan = envWritePlan
+        if (plan != null) {
+            ImGuiText.disabledWrapped(plan.summary())
+            if (plan.blocked != null) {
+                ImGuiText.coloured(1f, 0.4f, 0.4f, 1f, "Blocked - cannot save this region.")
+            } else if (plan.changes.isEmpty()) {
+                ImGuiText.disabled("No field changes.")
+            } else {
+                for (change in plan.changes) ImGuiText.disabled("  $change")
+            }
+        }
+
+        val saveable = plan != null && plan.blocked == null && plan.hasChanges
+        if (saveable) {
+            ImGui.checkbox("Overwrite m${currentRegionX}_$currentRegionY in the cache", envWriteConfirm)
+        }
+        // Latch the disabled state: the button's own handler clears the confirmation, and
+        // re-evaluating the condition afterwards would skip endDisabled and unbalance the
+        // style stack for the rest of the frame.
+        val disabled = !saveable || !envWriteConfirm.get()
+        if (disabled) ImGui.beginDisabled()
+        if (ImGui.button("Save environment to cache", 220f, 0f) && !disabled) {
+            try {
+                val result = MapEnvironmentWriter.apply(plan!!)
+                envWriteLog = result.log
+                envWriteError = null
+                envWritePlan = null
+                envWriteConfirm.set(false)
+            } catch (exception: Exception) {
+                envWriteError = "Save failed: ${exception.message}"
+                System.err.println("[MapViewer] environment save failed: ${exception.message}")
+            }
+        }
+        if (disabled) ImGui.endDisabled()
+        if (ImGui.isItemHovered()) {
+            ImGuiText.tooltip(
+                "Backs the archive up to ${MapEnvironmentWriter.backupDirectory().absolutePath} " +
+                    "before the first write of the session, then rewrites the effects block and " +
+                    "the index 255 CRC. The tile records are copied through untouched."
+            )
+        }
+
+        envWriteError?.let { ImGuiText.coloured(1f, 0.4f, 0.4f, 1f, it) }
+        for (line in envWriteLog) ImGuiText.disabledWrapped("  $line")
+    }
+
+    /** The panel's current environment values, in the units the cache encoder expects. */
+    private fun currentEnvironmentEdit() = EnvironmentEdit(
+        sunColour = environment.sunColour,
+        sunPositionX = environment.sunPositionX,
+        sunPositionY = environment.sunPositionY,
+        sunPositionZ = environment.sunPositionZ,
+        sunAmbient = environment.sunAmbient,
+        sunLight = environment.sunLight,
+        sunBacklight = environment.sunBacklight,
+        fogColour = environment.fogColour,
+        fogDepth = environment.fogDepth,
+        skyboxId = environment.skyboxId,
+        skyboxRotation = environment.skyboxRotation,
+    )
+
+    /**
      * Rendering settings section: blending, overlays, noise, lighting parameters,
      * terrain alignment, and tilt debug.
      */
@@ -2372,9 +3907,17 @@ class MapViewer(
             ImGui.setTooltip("Applies RS-style per-vertex lighting based on\nterrain normals and sun direction")
         }
 
-        // Lighting parameters section (collapsible)
+        // Lighting parameters section (collapsible). These drive the *baked* terrain path
+        // only; with dynamic sun lighting on, the sun lives in the Environment section.
         if (TerrainLoader.enableLighting && ImGui.collapsingHeader("Lighting Parameters")) {
             ImGui.indent()
+            if (environment.dynamicSunLighting) {
+                ImGuiText.disabledWrapped(
+                    "Dynamic sun lighting is on, so these do nothing - edit the sun in the " +
+                        "Environment section instead."
+                )
+                ImGui.spacing()
+            }
 
             // Sun direction sliders
             ImGui.text("Light Direction")
@@ -2866,6 +4409,7 @@ class MapViewer(
                 val basePosZ = -origWorldY * tileSize
                 moving.instance.worldPosition.x = basePosX + sizeX * tileSize * 0.5f
                 moving.instance.worldPosition.z = basePosZ + -sizeY * tileSize * 0.5f
+                objectSceneDirty = true
                 recalcObjectHeight(moving.instance)
                 movingObject = null
                 moveOriginMesh?.cleanup()
@@ -3055,6 +4599,10 @@ class MapViewer(
     private fun loadRegion(regionX: Int, regionY: Int, plane: Int) = loadRegionAsync(regionX, regionY, plane)
 
     private fun loadRegionAsync(regionX: Int, regionY: Int, plane: Int) {
+        // Environment first: the sun/fog/skybox of the region we are moving into, plus the
+        // clear colour, are all read from the same map archive as the terrain.
+        loadEnvironment(regionX, regionY)
+
         // Clear tile picker selection when loading new region
         tilePicker.clearSelection()
         tileHighlightMesh?.cleanup()
@@ -3076,43 +4624,50 @@ class MapViewer(
         asyncRegionManager.showRoofs = showRoofs
         asyncRegionManager.navigateToRegion(regionX, regionY, plane)
 
-        // Create IndirectRenderer if shaders are available and indirect rendering is enabled.
+        // Build the multi-draw-indirect renderer for the center region. Any failure here just
+        // leaves indirectRenderer null, which sends renderObjects() down the InstanceManager path.
         val im = asyncRegionManager.instanceManager
         indirectRenderer?.cleanup()
         indirectRenderer = null
+        val centerMeshData = asyncRegionManager.centerModelMeshData
         if (useIndirectRendering && im != null && indirectColorShader != null && indirectTexturedShader != null) {
-            val atlas = objectAtlas
+            val buildStart = System.nanoTime()
             val ir = IndirectRenderer(
-                maxTotalInstances = 200000,
-                objectAtlas = atlas,
-                texturePixelProvider = if (atlas != null) {
-                    TexturePixelProvider { textureId ->
-                        TextureLoader.getTexturePixelsForMaterial(cache, textureId)
-                    }
-                } else null
+                texturePixelProvider = TexturePixelProvider { textureId ->
+                    TextureLoader.getTexturePixelsForMaterial(cache, textureId)
+                }
             )
-            ir.init()
-
-            for (obj in asyncRegionManager.centerObjects) {
-                val combinedId = asyncRegionManager.getModelIdForInstance(obj)
-                val meshDataList = if (obj.modifications.hasModifications()) {
-                    ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
-                } else {
-                    ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
-                }
-                if (!meshDataList.isNullOrEmpty()) {
-                    ir.registerModel(combinedId, meshDataList)
-                }
-            }
-
             try {
+                ir.init()
+                // The region loader already decoded these meshes to register them with the
+                // InstanceManager, so reuse them rather than paying for a second full decode
+                // of every model in the region (~1.4s at Canifis).
+                for ((modelId, meshDataList) in centerMeshData) {
+                    if (meshDataList.isNotEmpty()) ir.registerModel(modelId, meshDataList)
+                }
                 ir.buildSharedGeometry()
+                if (!ir.isReady()) throw IllegalStateException("no geometry registered")
+
+                // Culling has to be set up before the first buildStaticScene(): with it on
+                // the commands are left at zero instances for the compute pass to fill in,
+                // with it off the full counts are baked in instead.
+                val cullSrc = cullShaderSource
+                val resetSrc = cullResetShaderSource
+                if (useGpuCulling && useStaticInstances && cullSrc != null && resetSrc != null) {
+                    ir.initCulling(cullSrc, resetSrc)
+                }
+
                 indirectRenderer = ir
-                println("[MapViewer] IndirectRenderer: ${ir.getRegisteredModelCount()} models, " +
-                        "${ir.getMeshEntryCount()} mesh entries in shared geometry buffer")
+                objectSceneDirty = true
+                println(
+                    "[MapViewer] IndirectRenderer ready in ${"%.1f".format((System.nanoTime() - buildStart) / 1e6)} ms: " +
+                            "${ir.getRegisteredModelCount()} models, ${ir.getMeshEntryCount()} mesh entries, " +
+                            "${ir.getTextureLayerCount()} texture layers in ${ir.getTextureArrayCount()} array texture(s)"
+                )
             } catch (e: Exception) {
-                System.err.println("[MapViewer] IndirectRenderer build failed, falling back to instanced: ${e.message}")
+                System.err.println("[MapViewer] IndirectRenderer build failed, falling back to instanced: $e")
                 ir.cleanup()
+                indirectRenderer = null
             }
         }
 
@@ -3128,8 +4683,98 @@ class MapViewer(
         scene.camera.setPosition(worldCenterX, 50f, worldCenterZ + 80f)
         scene.camera.pitch = -35f
         scene.camera.yaw = 0f
+        // Assigning yaw/pitch only stores the angles; front/right/up are derived and stay
+        // at whatever they were until something rotates the camera. Without this the view
+        // starts on the identity basis (front = -Z, horizontal) while the debug panel and
+        // every log line report the -35 degree pitch that is not actually being applied.
+        scene.camera.rotate(0f, 0f)
         scene.camera.nearPlane = 1.0f
         scene.camera.farPlane = 4000f
+
+        applyCameraOverride(worldCenterX, worldCenterZ)
+    }
+
+    /**
+     * Apply `-Ddarkan.camera=<dx>,<y>,<dz>,<yaw>,<pitch>`, placing the camera relative to
+     * the region centre.
+     *
+     * A/B comparisons of culled against unculled frames are only meaningful from an
+     * identical viewpoint, and pixel-diffing two captures needs that viewpoint to be
+     * reproducible without touching the mouse.
+     */
+    private fun applyCameraOverride(worldCenterX: Float, worldCenterZ: Float) {
+        val parts = System.getProperty("darkan.camera")?.split(',') ?: return
+        if (parts.size < 5) {
+            System.err.println("[MapViewer] -Ddarkan.camera needs dx,y,dz,yaw,pitch")
+            return
+        }
+        val values = parts.map { it.trim().toFloatOrNull() }
+        if (values.any { it == null }) {
+            System.err.println("[MapViewer] -Ddarkan.camera has a non-numeric component")
+            return
+        }
+        scene.camera.setPosition(worldCenterX + values[0]!!, values[1]!!, worldCenterZ + values[2]!!)
+        scene.camera.yaw = values[3]!!
+        scene.camera.pitch = values[4]!!
+        scene.camera.rotate(0f, 0f)  // recompute the basis vectors from the new angles
+        println("[MapViewer] camera override: pos=(${scene.camera.position.x}, ${scene.camera.position.y}, ${scene.camera.position.z}) yaw=${scene.camera.yaw} pitch=${scene.camera.pitch}")
+    }
+
+    /**
+     * Seed [environment] from the centre region's map archive and push the result into the
+     * sky renderer and the clear colour.
+     *
+     * There is one environment block per 64x64 region, so the centre chunk's copy is the
+     * whole region's. Regions with no block fall back to the client's `Environment.reset()`
+     * defaults rather than keeping the previous region's sun.
+     */
+    private fun loadEnvironment(regionX: Int, regionY: Int) {
+        val decoded = try {
+            MapEnvironmentLoader.load(cache, regionX, regionY)?.environment(4, 4)
+        } catch (e: Exception) {
+            System.err.println("[MapViewer] Environment decode failed for ($regionX, $regionY): ${e.message}")
+            null
+        }
+        environment.applyFrom(decoded ?: MapEnvironment.DEFAULT, decoded != null)
+        applyEnvironmentToRenderers()
+    }
+
+    /**
+     * Push the current [environment] into the sky renderer and the clear colour.
+     * Called on region change and after every edit in the Environment panel, so edits show
+     * up on the next frame without a reload.
+     */
+    private fun applyEnvironmentToRenderers() {
+        var materialId = -1
+        var backgroundMode = SkyBackgroundMode.SINGLE_COLOR
+        if (environment.skyboxId >= 0) {
+            try {
+                val type = EnvironmentConfigs.skybox(cache, environment.skyboxId)
+                materialId = type.materialId
+                backgroundMode = if (type.backgroundMode == BackgroundMode.COLOUR_TRANSITION) {
+                    SkyBackgroundMode.COLOR_TRANSITION
+                } else {
+                    SkyBackgroundMode.SINGLE_COLOR
+                }
+            } catch (e: Exception) {
+                System.err.println("[MapViewer] Skybox ${environment.skyboxId} lookup failed: ${e.message}")
+            }
+        }
+
+        sky?.settings = SkySettings(
+            materialId = materialId,
+            backgroundMode = backgroundMode,
+            rotation = environment.skyboxRotation,
+            backgroundColor = environment.backgroundColour
+        )
+
+        // With no skybox the sky pass is a flat fill in the background colour, so the clear
+        // colour matching it keeps the one pre-sky frame from flashing a different background.
+        clearColor.set(
+            EnvironmentSettings.red(environment.backgroundColour),
+            EnvironmentSettings.green(environment.backgroundColour),
+            EnvironmentSettings.blue(environment.backgroundColour)
+        )
     }
 
     /**
@@ -3170,6 +4815,7 @@ class MapViewer(
         tileHighlightMesh?.cleanup()
         tileHighlightMesh = null
         placedObjects.clear()
+        objectSceneDirty = true
         movingObject = null
         moveOriginMesh?.cleanup()
         moveOriginMesh = null
@@ -3213,7 +4859,53 @@ class MapViewer(
         }
     }
 
+    /**
+     * Dump the numbers a headless capture would otherwise hide, so a screenshot can be checked
+     * against its draw-call and mesh-variant cost in the same log.
+     */
+    override fun onCapture() {
+        val merge = NormalMerger.stats()
+        println(
+            "[CAPTURE-STATS] terrain=${RenderMetrics.terrainOpaqueDrawCalls}+${RenderMetrics.terrainAlphaDrawCalls} " +
+                "objectsIndirect=${RenderMetrics.indirectDrawCalls} " +
+                "indirectCommands=${RenderMetrics.indirectCommands} " +
+                "staticBatch=${RenderMetrics.staticBatchDrawCalls} " +
+                "instanced=${RenderMetrics.instancedDrawCalls} " +
+                "sky=${RenderMetrics.skyDrawCalls} " +
+                "batchMeshes=${RenderMetrics.staticBatchMeshCount} " +
+                "triangles=${RenderMetrics.trianglesSubmitted}"
+        )
+        val objects = asyncRegionManager.centerObjects
+        println(
+            "[CAPTURE-STATS] droppedInstances=${RenderMetrics.droppedInstances} " +
+                "droppedModels=${RenderMetrics.droppedModelIds} " +
+                "unregistered=${RenderMetrics.droppedModelIds - RenderMetrics.droppedModelsUnavailable} " +
+                "centerObjects=${objects.size} mirrored=${objects.count { it.mirrored }}"
+        )
+        println(
+            "[CAPTURE-STATS] normalMerge enabled=${NormalMerger.enabled} " +
+                "eligible=${merge.eligibleInstances} merged=${merge.mergedInstances} " +
+                "signatures=${merge.distinctSignatures} " +
+                "cost=%.1fms".format(merge.totalMillis)
+        )
+        // Two captures are only comparable from the same viewpoint, and the yaw/pitch fields
+        // are not by themselves the viewpoint: the basis vectors are recomputed on rotation,
+        // so a frame can be drawn along a `front` that no longer matches the angles. Both are
+        // recorded so a mismatch between them is visible in the log rather than as an
+        // unexplained difference between two screenshots.
+        val cam = scene.camera
+        println(
+            "[CAPTURE-STATS] camera pos=(%.1f, %.1f, %.1f) yaw=%.1f pitch=%.1f front=(%.3f, %.3f, %.3f) fov=%.1f"
+                .format(
+                    cam.position.x, cam.position.y, cam.position.z, cam.yaw, cam.pitch,
+                    cam.front.x, cam.front.y, cam.front.z, cam.fov
+                )
+        )
+        System.out.flush()
+    }
+
     override fun onCleanup() {
+        gpuTimers.cleanup()
         cleanupRegion()
         asyncRegionManager.destroy()  // Cancel coroutine scope
         uniformBuffers.cleanup()
@@ -3229,6 +4921,8 @@ class MapViewer(
         terrainAtlasShader?.cleanup()
         terrainAtlasAlphaShader?.cleanup()
         brushPreviewShader.cleanup()
+        sky?.cleanup()
+        sky = null
         brushPreviewMesh?.cleanup()
         brushPreviewMesh = null
         moveOriginMesh?.cleanup()
@@ -3258,6 +4952,16 @@ class MapViewer(
         FLAG_EDIT("Edit Flags", wip = false)
     }
 }
+
+/**
+ * Default for `-Ddarkan.rangeFuseGap`, in indices.
+ *
+ * Set from the two measured rates it balances: a static batch draw command costs about a
+ * microsecond of CPU in this pass, and the GPU retires triangles at roughly 4 G/s, so a
+ * command is worth about four thousand triangles — twelve thousand indices. Splitting a
+ * batch to skip less than that spends more than it saves.
+ */
+private const val DEFAULT_RANGE_FUSE_GAP = 12000
 
 /**
  * Region to open the map editor on, from -Ddarkan.region=<x>,<y>.

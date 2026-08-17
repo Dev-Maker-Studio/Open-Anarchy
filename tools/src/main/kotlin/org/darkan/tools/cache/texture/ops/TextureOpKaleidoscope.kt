@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -17,7 +16,7 @@ class TextureOpKaleidoscope : TextureOperation(1, false) {
             val outputRed = output[0]
             val outputGreen = output[1]
             val outputBlue = output[2]
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 val (mirroredX, mirroredY) = calculateKaleidoscopeCoordinates(x, y)
                 val input = getChildColorOutput(0, mirroredY)
                 outputRed[x] = input[0][mirroredX]
@@ -31,7 +30,7 @@ class TextureOpKaleidoscope : TextureOperation(1, false) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 val (mirroredX, mirroredY) = calculateKaleidoscopeCoordinates(x, y)
                 val input = getChildMonochromeOutput(0, mirroredY)
                 output[x] = input[mirroredX]
@@ -41,8 +40,8 @@ class TextureOpKaleidoscope : TextureOperation(1, false) {
     }
 
     private fun calculateKaleidoscopeCoordinates(x: Int, y: Int): Pair<Int, Int> {
-        val horizontalPos = TextureRaster.horizontalTable!![x]
-        val verticalPos = TextureRaster.verticalTable!![y]
+        val horizontalPos = horizontalTable[x]
+        val verticalPos = verticalTable[y]
         val angle = atan2((horizontalPos - 2048).toDouble(), (verticalPos - 2048).toDouble()).toFloat()
 
         var mirroredX: Int
@@ -58,27 +57,27 @@ class TextureOpKaleidoscope : TextureOperation(1, false) {
                 mirroredY = x
             }
             angle <= -0.7853981633974483 && angle >= -1.5707963267948966 -> {
-                mirroredX = TextureRaster.currentWidth - y
+                mirroredX = currentWidth - y
                 mirroredY = x
             }
             angle <= 0.0f && angle >= -0.7853981633974483 -> {
                 mirroredX = x
-                mirroredY = TextureRaster.currentHeight - y
+                mirroredY = currentHeight - y
             }
             angle >= 0.0f && angle <= 0.7853981633974483 -> {
-                mirroredX = TextureRaster.currentWidth - x
-                mirroredY = TextureRaster.currentHeight - y
+                mirroredX = currentWidth - x
+                mirroredY = currentHeight - y
             }
             angle >= 0.7853981633974483 && angle <= 1.5707963267948966 -> {
-                mirroredX = TextureRaster.currentWidth - y
-                mirroredY = TextureRaster.currentHeight - x
+                mirroredX = currentWidth - y
+                mirroredY = currentHeight - x
             }
             angle >= 1.5707963267948966 && angle <= 2.356194490192345 -> {
                 mirroredX = y
-                mirroredY = TextureRaster.currentHeight - x
+                mirroredY = currentHeight - x
             }
             angle >= 2.356194490192345 && angle <= PI -> {
-                mirroredX = TextureRaster.currentWidth - x
+                mirroredX = currentWidth - x
                 mirroredY = y
             }
             else -> {
@@ -86,8 +85,8 @@ class TextureOpKaleidoscope : TextureOperation(1, false) {
                 mirroredY = y
             }
         }
-        mirroredX = mirroredX and TextureRaster.rowEnd
-        mirroredY = mirroredY and TextureRaster.columnEnd
+        mirroredX = mirroredX and rowEnd
+        mirroredY = mirroredY and columnEnd
         return Pair(mirroredX, mirroredY)
     }
 

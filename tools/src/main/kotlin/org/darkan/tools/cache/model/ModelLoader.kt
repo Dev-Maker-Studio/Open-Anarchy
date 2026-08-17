@@ -50,7 +50,11 @@ private data class FaceData(
     val n0: Vector3f, val n1: Vector3f, val n2: Vector3f,  // Per-vertex normals
     val u0: Float, val v0Uv: Float,
     val u1: Float, val v1Uv: Float,
-    val u2: Float, val v2Uv: Float
+    val u2: Float, val v2Uv: Float,
+    // Source model vertex behind each emitted slot's normal, or -1 when the slot does not carry a
+    // smoothed vertex normal (flat-shaded face, billboard quad). Lets a cross-object normal merge
+    // rewrite the normals of an already-decoded mesh instead of decoding it again.
+    val sv0: Int = -1, val sv1: Int = -1, val sv2: Int = -1
 )
 
 /**
@@ -61,13 +65,19 @@ private data class FaceData(
  * @param retextureDst Destination texture IDs (same length as retextureSrc)
  * @param recolorSrc Source HSL colors to replace
  * @param recolorDst Destination HSL colors (same length as recolorSrc)
+ * @param normalMerge Cross-object vertex normal contributions from adjacent scenery, or null
+ *   when this object merges with nothing. Unlike the other fields this one is per *instance*
+ *   rather than per definition; it rides along here so that it lands in the mesh cache key
+ *   ([cacheKeyComponent]) automatically and instances with identical neighbourhoods keep
+ *   sharing one mesh. See [NormalMerge].
  */
 data class ModelModifications(
     val retextureSrc: ShortArray? = null,
     val retextureDst: ShortArray? = null,
     val recolorSrc: ShortArray? = null,
     val recolorDst: ShortArray? = null,
-    val ambient: Int = DEFAULT_AMBIENT
+    val ambient: Int = DEFAULT_AMBIENT,
+    val normalMerge: NormalMerge? = null
 ) {
     /**
      * Check if any modifications are defined (beyond the default ambient).
@@ -75,7 +85,16 @@ data class ModelModifications(
     fun hasModifications(): Boolean {
         return (retextureSrc != null && retextureSrc.isNotEmpty()) ||
                (recolorSrc != null && recolorSrc.isNotEmpty()) ||
-               ambient != DEFAULT_AMBIENT
+               ambient != DEFAULT_AMBIENT ||
+               normalMerge != null
+    }
+
+    /**
+     * This modification set with [merge] attached, or unchanged when [merge] is null.
+     */
+    fun withNormalMerge(merge: NormalMerge?): ModelModifications {
+        if (merge == null) return this
+        return copy(normalMerge = merge)
     }
 
     /**
@@ -133,6 +152,9 @@ data class ModelModifications(
         if (ambient != DEFAULT_AMBIENT) {
             sb.append("_amb$ambient")
         }
+        if (normalMerge != null) {
+            sb.append("_nm").append(normalMerge.signature)
+        }
         return sb.toString()
     }
 
@@ -141,6 +163,7 @@ data class ModelModifications(
         if (javaClass != other?.javaClass) return false
         other as ModelModifications
         if (ambient != other.ambient) return false
+        if (normalMerge != other.normalMerge) return false
         if (retextureSrc != null) {
             if (other.retextureSrc == null) return false
             if (!retextureSrc.contentEquals(other.retextureSrc)) return false
@@ -166,6 +189,7 @@ data class ModelModifications(
         result = 31 * result + (recolorSrc?.contentHashCode() ?: 0)
         result = 31 * result + (recolorDst?.contentHashCode() ?: 0)
         result = 31 * result + ambient
+        result = 31 * result + (normalMerge?.hashCode() ?: 0)
         return result
     }
 
@@ -262,6 +286,205 @@ object ModelLoader {
         var y: Float = 0f
         var z: Float = 0f
         var magnitude: Int = 0
+    }
+
+    /**
+     * Sum the unit normal of every render-type-0 face into each of its three vertices,
+     * counting contributions in [VertexNormal.magnitude].
+     *
+     * This is the RS client's smoothing pass (`ModelGL.createModel`): the running sum and
+     * the contribution count are kept separately rather than being averaged eagerly, because
+     * the count is what makes two vertex normals *combinable*. Adding another model's sum and
+     * count at a coincident vertex and only then dividing gives the average over both models'
+     * faces, which is exactly what `ModelGL.applyShading` does across adjacent objects.
+     *
+     * Render type 1 (flat) faces deliberately contribute nothing: they are shaded from their
+     * own face normal. Render type 2 faces are not drawn at all.
+     *
+     * Values are in RS space (Y and Z inverted relative to OpenGL); callers flip when they
+     * emit the final normal.
+     */
+    private fun accumulateVertexNormals(def: ModelDefinition): Array<VertexNormal> {
+        val vertexNormals = Array(def.vertexCount) { VertexNormal() }
+
+        for (i in 0 until def.faceCount) {
+            val faceRenderType = def.faceRenderTypes?.get(i)?.toInt()?.and(0xff) ?: 0
+            if (faceRenderType != 0) continue  // Only type 0 accumulates vertex normals
+
+            val aIdx = def.faceA[i]
+            val bIdx = def.faceB[i]
+            val cIdx = def.faceC[i]
+
+            if (aIdx < 0 || aIdx >= def.vertexCount) continue
+            if (bIdx < 0 || bIdx >= def.vertexCount) continue
+            if (cIdx < 0 || cIdx >= def.vertexCount) continue
+
+            val ax = def.vertexX[aIdx]
+            val ay = def.vertexY[aIdx]
+            val az = def.vertexZ[aIdx]
+
+            val dx1 = def.vertexX[bIdx] - ax
+            val dy1 = def.vertexY[bIdx] - ay
+            val dz1 = def.vertexZ[bIdx] - az
+            val dx2 = def.vertexX[cIdx] - ax
+            val dy2 = def.vertexY[cIdx] - ay
+            val dz2 = def.vertexZ[cIdx] - az
+
+            var nx = (dy1 * dz2 - dz1 * dy2).toFloat()
+            var ny = (dz1 * dx2 - dx1 * dz2).toFloat()
+            var nz = (dx1 * dy2 - dy1 * dx2).toFloat()
+
+            var len = sqrt(nx * nx + ny * ny + nz * nz)
+            if (len > 0) {
+                len = 1f / len
+                nx *= len
+                ny *= len
+                nz *= len
+            }
+
+            vertexNormals[aIdx].x += nx
+            vertexNormals[aIdx].y += ny
+            vertexNormals[aIdx].z += nz
+            vertexNormals[aIdx].magnitude++
+
+            vertexNormals[bIdx].x += nx
+            vertexNormals[bIdx].y += ny
+            vertexNormals[bIdx].z += nz
+            vertexNormals[bIdx].magnitude++
+
+            vertexNormals[cIdx].x += nx
+            vertexNormals[cIdx].y += ny
+            vertexNormals[cIdx].z += nz
+            vertexNormals[cIdx].magnitude++
+        }
+
+        return vertexNormals
+    }
+
+    /**
+     * Per-vertex position and accumulated normal for a model, as the cross-object normal
+     * merge needs to see it.
+     *
+     * Positions stay in raw RS model units so the merge can locate coincident vertices with
+     * the client's exact integer arithmetic instead of comparing transformed floats.
+     */
+    class VertexNormalField(
+        val vertexX: IntArray,
+        val vertexY: IntArray,
+        val vertexZ: IntArray,
+        val normalX: FloatArray,
+        val normalY: FloatArray,
+        val normalZ: FloatArray,
+        val magnitude: IntArray
+    ) {
+        val vertexCount: Int get() = vertexX.size
+    }
+
+    private val vertexNormalFieldCache = ConcurrentHashMap<Int, CacheResult<VertexNormalField>>()
+
+    /**
+     * Vertex positions and accumulated (unaveraged) vertex normals for a model or model
+     * combination, keyed and cached by combined model id.
+     *
+     * Retexture/recolor modifications never move a vertex or change a face's winding, so this
+     * is a property of the model id set alone and is shared across every object that uses it.
+     */
+    fun vertexNormalField(cache: Cache, modelIds: List<Int>): VertexNormalField? {
+        if (modelIds.isEmpty()) return null
+        val combinedId = getCombinedModelId(modelIds)
+        vertexNormalFieldCache[combinedId]?.let { cached ->
+            return (cached as? CacheResult.Found)?.value
+        }
+        // See createMeshDataListFromDef: computed outside the map so a decode never holds a bin
+        // lock against another region's loader thread.
+        val result = run {
+            val def = loadCombinedDefinition(cache, modelIds)
+            if (def == null || def.vertexCount == 0) {
+                CacheResult.NotFound
+            } else {
+                val accumulated = accumulateVertexNormals(def)
+                val count = def.vertexCount
+                val normalX = FloatArray(count)
+                val normalY = FloatArray(count)
+                val normalZ = FloatArray(count)
+                val magnitude = IntArray(count)
+                for (i in 0 until count) {
+                    val vn = accumulated[i]
+                    normalX[i] = vn.x
+                    normalY[i] = vn.y
+                    normalZ[i] = vn.z
+                    magnitude[i] = vn.magnitude
+                }
+                CacheResult.Found(
+                    VertexNormalField(
+                        vertexX = def.vertexX.copyOf(count),
+                        vertexY = def.vertexY.copyOf(count),
+                        vertexZ = def.vertexZ.copyOf(count),
+                        normalX = normalX,
+                        normalY = normalY,
+                        normalZ = normalZ,
+                        magnitude = magnitude
+                    )
+                )
+            }
+        }
+        val stored = vertexNormalFieldCache.putIfAbsent(combinedId, result) ?: result
+        return when (stored) {
+            is CacheResult.Found -> stored.value
+            is CacheResult.NotFound -> null
+        }
+    }
+
+    /**
+     * Unit face normal for [face], in OpenGL space.
+     *
+     * This is the normal that flat-shaded faces (`faceRenderTypes[face] == 1`) must use on
+     * all three of their vertices. The RS client keeps flat faces off the smoothing pass
+     * entirely: `ModelGL.createModel` only accumulates a face's normal into its vertices
+     * when the render type is 0, and then re-reads the *face* normal for type 1
+     * (`connectNormal(..., faceNormal.x, faceNormal.y, faceNormal.z, magnitude = 0, ...)`).
+     * The reference client's modern GL builder states it outright:
+     * "faceRenderType 1: flat-shaded; uses the face normal for all three vertices"
+     * (`ModernModelBuilder.buildFromMesh`).
+     *
+     * Feeding a flat face the smoothed vertex normals of its neighbours bleeds shading across
+     * the crease the face was authored to break at: staircase treads and risers wash into one
+     * ramp, panelled and stepped geometry loses its edges. 4.48M of the 31.5M faces in the
+     * cache (14.2%, across 22,122 of 73,409 models) carry render type 1, so this is not a
+     * corner case.
+     *
+     * Cross product is taken in RS space as `(B - A) x (C - A)`, matching the smoothing pass,
+     * then mapped to OpenGL space with the same `(x, -y, -z)` axis flip. Flipping two axes is
+     * a 180-degree rotation about X, so it preserves handedness and the two normal sources
+     * stay consistent with each other.
+     */
+    private fun faceNormalGL(def: ModelDefinition, aIdx: Int, bIdx: Int, cIdx: Int): Vector3f {
+        val ax = def.vertexX[aIdx]
+        val ay = def.vertexY[aIdx]
+        val az = def.vertexZ[aIdx]
+        val dx1 = def.vertexX[bIdx] - ax
+        val dy1 = def.vertexY[bIdx] - ay
+        val dz1 = def.vertexZ[bIdx] - az
+        val dx2 = def.vertexX[cIdx] - ax
+        val dy2 = def.vertexY[cIdx] - ay
+        val dz2 = def.vertexZ[cIdx] - az
+
+        var nx = (dy1 * dz2 - dz1 * dy2).toFloat()
+        var ny = (dz1 * dx2 - dx1 * dz2).toFloat()
+        var nz = (dx1 * dy2 - dy1 * dx2).toFloat()
+
+        val len = sqrt(nx * nx + ny * ny + nz * nz)
+        if (len > 0f) {
+            val invLen = 1f / len
+            nx *= invLen
+            ny *= invLen
+            nz *= invLen
+        } else {
+            // Degenerate triangle: match the smoothing pass's +Y up fallback.
+            return Vector3f(0f, 1f, 0f)
+        }
+
+        return Vector3f(nx, -ny, -nz)
     }
 
     /** Cache of texture transform data per model */
@@ -987,70 +1210,7 @@ object ModelLoader {
         fun isValidIndex(idx: Int) = idx >= 0 && idx < def.vertexCount
 
         // Calculate per-vertex normals by accumulating face normals (smooth shading)
-        val vertexNormals = Array(def.vertexCount) { VertexNormal() }
-
-        // First pass: accumulate face normals at each vertex
-        // Only render type 0 faces contribute to smooth vertex normals (matching RS client).
-        // Render type 1 = flat shading (uses face normal, not vertex normals).
-        // Render type 2 = hidden face (excluded entirely from rendering and normals).
-        for (i in 0 until def.faceCount) {
-            val faceRenderType = def.faceRenderTypes?.get(i)?.toInt()?.and(0xff) ?: 0
-            if (faceRenderType != 0) continue  // Only type 0 accumulates vertex normals
-
-            val aIdx = def.faceA[i]
-            val bIdx = def.faceB[i]
-            val cIdx = def.faceC[i]
-
-            if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) continue
-
-            // Get positions in RS coordinate space for normal calculation
-            val ax = def.vertexX[aIdx]
-            val ay = def.vertexY[aIdx]
-            val az = def.vertexZ[aIdx]
-            val bx = def.vertexX[bIdx]
-            val by = def.vertexY[bIdx]
-            val bz = def.vertexZ[bIdx]
-            val cx = def.vertexX[cIdx]
-            val cy = def.vertexY[cIdx]
-            val cz = def.vertexZ[cIdx]
-
-            // Calculate face normal (cross product of edges)
-            val dx1 = bx - ax
-            val dy1 = by - ay
-            val dz1 = bz - az
-            val dx2 = cx - ax
-            val dy2 = cy - ay
-            val dz2 = cz - az
-
-            var nx = (dy1 * dz2 - dz1 * dy2).toFloat()
-            var ny = (dz1 * dx2 - dx1 * dz2).toFloat()
-            var nz = (dx1 * dy2 - dy1 * dx2).toFloat()
-
-            // Normalize the face normal
-            var len = sqrt(nx * nx + ny * ny + nz * nz)
-            if (len > 0) {
-                len = 1f / len
-                nx *= len
-                ny *= len
-                nz *= len
-            }
-
-            // Accumulate face normal at each vertex
-            vertexNormals[aIdx].x += nx
-            vertexNormals[aIdx].y += ny
-            vertexNormals[aIdx].z += nz
-            vertexNormals[aIdx].magnitude++
-
-            vertexNormals[bIdx].x += nx
-            vertexNormals[bIdx].y += ny
-            vertexNormals[bIdx].z += nz
-            vertexNormals[bIdx].magnitude++
-
-            vertexNormals[cIdx].x += nx
-            vertexNormals[cIdx].y += ny
-            vertexNormals[cIdx].z += nz
-            vertexNormals[cIdx].magnitude++
-        }
+        val vertexNormals = accumulateVertexNormals(def)
 
         // Function to get normalized vertex normal in OpenGL space
         fun getVertexNormal(idx: Int): Vector3f {
@@ -1168,10 +1328,13 @@ object ModelLoader {
                 floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
             }
 
-            // Get per-vertex normals for smooth shading
-            val norm0 = getVertexNormal(aIdx)
-            val norm1 = getVertexNormal(bIdx)
-            val norm2 = getVertexNormal(cIdx)
+            // Normals: render type 0 is Gouraud (smoothed across the faces meeting at each
+            // vertex), anything else is flat and takes this face's own normal on all three
+            // vertices. See faceNormalGL for why the distinction matters at hard creases.
+            val flatNormal = if (renderType == 0) null else faceNormalGL(def, aIdx, bIdx, cIdx)
+            val norm0 = flatNormal ?: getVertexNormal(aIdx)
+            val norm1 = flatNormal ?: getVertexNormal(bIdx)
+            val norm2 = flatNormal ?: getVertexNormal(cIdx)
 
             facesByTexture.getOrPut(textureId) { mutableListOf() }.add(
                 FaceData(pos0, pos1, pos2, color, norm0, norm1, norm2,
@@ -1484,88 +1647,138 @@ object ModelLoader {
      */
     @Suppress("UNUSED_PARAMETER")
     fun createMeshDataListFromDef(def: ModelDefinition, modifications: ModelModifications, debugModelId: Int = -1, cache: Cache? = null): List<MeshData>? {
+        val merge = modifications.normalMerge
+            ?: return buildBaseMesh(def, modifications, cache)?.meshes
+
+        // A cross-object normal merge changes nothing but the normals, so decoding the model again
+        // per neighbourhood would be pure waste — and there are ~2000 distinct neighbourhoods in a
+        // town. Decode once without the merge, then hand out copies whose normal arrays are
+        // rewritten and whose positions, colours, UVs and indices are shared with the base.
+        // This is the same shape as the client's own merge, which copies only the normal arrays.
+        val baseKey = "${def.id}|${modifications.copy(normalMerge = null).cacheKeyComponent()}|$hideUntexturedMarkerFaces"
+        // putIfAbsent rather than computeIfAbsent: every region loads on its own thread, and
+        // computeIfAbsent would hold a bin lock for the whole decode. A duplicate decode wastes a
+        // little work; a held lock stalls another region.
+        val existing = baseMeshCache[baseKey]
+        val result = existing ?: run {
+            val built = buildBaseMesh(def, modifications, cache)
+            val computed = if (built != null) CacheResult.Found(built) else CacheResult.NotFound
+            baseMeshCache.putIfAbsent(baseKey, computed) ?: computed
+        }
+        val base = (result as? CacheResult.Found)?.value ?: return null
+        return applyMergeToBase(def, base, merge)
+    }
+
+    /**
+     * A decoded mesh together with the map from each emitted vertex slot back to the model vertex
+     * whose smoothed normal it carries. Cached so that normal-merge variants of the same model can
+     * be produced by rewriting normals rather than by decoding again.
+     */
+    private class BaseMesh(
+        val meshes: List<MeshData>,
+        val slotVertex: Array<IntArray>
+    )
+
+    private val baseMeshCache = ConcurrentHashMap<String, CacheResult<BaseMesh>>()
+
+    /**
+     * Rebuild [base]'s normal arrays with [merge] folded in, sharing every other buffer.
+     *
+     * Slots that carry a flat face normal or belong to a billboard quad are left untouched: the
+     * client does not smooth those either, and their normal has no source vertex to merge at.
+     */
+    private fun applyMergeToBase(def: ModelDefinition, base: BaseMesh, merge: NormalMerge): List<MeshData> {
+        // Vertex -> slot in the merge's arrays. A dense array rather than a map: model vertex
+        // counts are in the tens to low hundreds, and this is walked once per emitted vertex slot
+        // of every mesh variant in the scene.
+        val slotOfVertex = IntArray(def.vertexCount) { -1 }
+        var touched = 0
+        for (i in merge.vertexIndex.indices) {
+            val idx = merge.vertexIndex[i]
+            if (idx < 0 || idx >= slotOfVertex.size) continue
+            slotOfVertex[idx] = i
+            touched++
+        }
+        if (touched == 0) return base.meshes
+
+        val out = ArrayList<MeshData>(base.meshes.size)
+        for (batchIdx in base.meshes.indices) {
+            val mesh = base.meshes[batchIdx]
+            val normals = mesh.normals
+            val slots = base.slotVertex.getOrNull(batchIdx)
+            if (normals == null || slots == null) {
+                out.add(mesh)
+                continue
+            }
+
+            var patched: FloatArray? = null
+            for (slot in slots.indices) {
+                val sourceVertex = slots[slot]
+                if (sourceVertex < 0 || sourceVertex >= slotOfVertex.size) continue
+                val mergeSlot = slotOfVertex[sourceVertex]
+                if (mergeSlot < 0) continue
+                val target = patched ?: normals.copyOf().also { patched = it }
+                val offset = slot * 3
+                if (offset + 2 >= target.size) break
+                target[offset] = merge.normalX[mergeSlot]
+                target[offset + 1] = merge.normalY[mergeSlot]
+                target[offset + 2] = merge.normalZ[mergeSlot]
+            }
+
+            out.add(
+                if (patched == null) {
+                    mesh
+                } else {
+                    MeshData(
+                        positions = mesh.positions,
+                        colors = mesh.colors,
+                        textureCoords = mesh.textureCoords,
+                        normals = patched,
+                        indices = mesh.indices,
+                        textureId = mesh.textureId
+                    )
+                }
+            )
+        }
+        return out
+    }
+
+    /**
+     * Averaged, normalised vertex normal in OpenGL space, written into [out].
+     *
+     * This is the form a mesh's normal array stores, including the Y/Z sign flip out of RS space.
+     * It is exposed so [org.darkan.tools.cache.map.NormalMerger] can hand back *finished* normals
+     * that agree bit for bit with the ones [buildBaseMesh] derives for unmerged vertices.
+     */
+    fun smoothedNormal(sumX: Float, sumY: Float, sumZ: Float, magnitude: Int, out: Vector3f): Vector3f {
+        if (magnitude == 0) return out.set(0f, 1f, 0f)
+
+        var nx = sumX / magnitude
+        var ny = sumY / magnitude
+        var nz = sumZ / magnitude
+
+        val len = sqrt(nx * nx + ny * ny + nz * nz)
+        if (len > 0) {
+            val invLen = 1f / len
+            nx *= invLen
+            ny *= invLen
+            nz *= invLen
+        }
+
+        return out.set(nx, -ny, -nz)
+    }
+
+    private fun buildBaseMesh(def: ModelDefinition, modifications: ModelModifications, cache: Cache?): BaseMesh? {
         if (def.faceCount == 0) return null
 
         fun isValidIndex(idx: Int) = idx >= 0 && idx < def.vertexCount
 
         // Calculate per-vertex normals by accumulating face normals (smooth shading)
-        val vertexNormals = Array(def.vertexCount) { VertexNormal() }
-
-        // First pass: accumulate face normals at each vertex
-        // Only render type 0 faces contribute to smooth vertex normals (matching RS client).
-        // Render type 1 = flat shading, render type 2 = hidden face.
-        for (i in 0 until def.faceCount) {
-            val faceRenderType = def.faceRenderTypes?.get(i)?.toInt()?.and(0xff) ?: 0
-            if (faceRenderType != 0) continue  // Only type 0 accumulates vertex normals
-
-            val aIdx = def.faceA[i]
-            val bIdx = def.faceB[i]
-            val cIdx = def.faceC[i]
-
-            if (!isValidIndex(aIdx) || !isValidIndex(bIdx) || !isValidIndex(cIdx)) continue
-
-            val ax = def.vertexX[aIdx]
-            val ay = def.vertexY[aIdx]
-            val az = def.vertexZ[aIdx]
-            val bx = def.vertexX[bIdx]
-            val by = def.vertexY[bIdx]
-            val bz = def.vertexZ[bIdx]
-            val cx = def.vertexX[cIdx]
-            val cy = def.vertexY[cIdx]
-            val cz = def.vertexZ[cIdx]
-
-            val dx1 = bx - ax
-            val dy1 = by - ay
-            val dz1 = bz - az
-            val dx2 = cx - ax
-            val dy2 = cy - ay
-            val dz2 = cz - az
-
-            var nx = (dy1 * dz2 - dz1 * dy2).toFloat()
-            var ny = (dz1 * dx2 - dx1 * dz2).toFloat()
-            var nz = (dx1 * dy2 - dy1 * dx2).toFloat()
-
-            var len = sqrt(nx * nx + ny * ny + nz * nz)
-            if (len > 0) {
-                len = 1f / len
-                nx *= len
-                ny *= len
-                nz *= len
-            }
-
-            vertexNormals[aIdx].x += nx
-            vertexNormals[aIdx].y += ny
-            vertexNormals[aIdx].z += nz
-            vertexNormals[aIdx].magnitude++
-
-            vertexNormals[bIdx].x += nx
-            vertexNormals[bIdx].y += ny
-            vertexNormals[bIdx].z += nz
-            vertexNormals[bIdx].magnitude++
-
-            vertexNormals[cIdx].x += nx
-            vertexNormals[cIdx].y += ny
-            vertexNormals[cIdx].z += nz
-            vertexNormals[cIdx].magnitude++
-        }
+        val vertexNormals = accumulateVertexNormals(def)
 
         fun getVertexNormal(idx: Int): Vector3f {
             val vn = vertexNormals[idx]
-            if (vn.magnitude == 0) return Vector3f(0f, 1f, 0f)
-
-            var nx = vn.x / vn.magnitude
-            var ny = vn.y / vn.magnitude
-            var nz = vn.z / vn.magnitude
-
-            val len = sqrt(nx * nx + ny * ny + nz * nz)
-            if (len > 0) {
-                val invLen = 1f / len
-                nx *= invLen
-                ny *= invLen
-                nz *= invLen
-            }
-
-            return Vector3f(nx, -ny, -nz)
+            return smoothedNormal(vn.x, vn.y, vn.z, vn.magnitude, Vector3f())
         }
 
         // Build set of face indices hidden by billboard hasUid.
@@ -1659,13 +1872,20 @@ object ModelLoader {
                 floatArrayOf(0f, 0f, 0f, 0f, 0f, 0f)
             }
 
-            val norm0 = getVertexNormal(aIdx)
-            val norm1 = getVertexNormal(bIdx)
-            val norm2 = getVertexNormal(cIdx)
+            // Render type 0 is Gouraud, anything else is flat-shaded and takes this face's
+            // own normal on all three vertices (see faceNormalGL).
+            val flatNormal = if (renderType == 0) null else faceNormalGL(def, aIdx, bIdx, cIdx)
+            val norm0 = flatNormal ?: getVertexNormal(aIdx)
+            val norm1 = flatNormal ?: getVertexNormal(bIdx)
+            val norm2 = flatNormal ?: getVertexNormal(cIdx)
 
             facesByTexture.getOrPut(textureId) { mutableListOf() }.add(
                 FaceData(pos0, pos1, pos2, color, norm0, norm1, norm2,
-                         uvs[0], uvs[1], uvs[2], uvs[3], uvs[4], uvs[5])
+                         uvs[0], uvs[1], uvs[2], uvs[3], uvs[4], uvs[5],
+                         // Flat faces take a face normal, so their slots have no vertex to track.
+                         if (flatNormal == null) aIdx else -1,
+                         if (flatNormal == null) bIdx else -1,
+                         if (flatNormal == null) cIdx else -1)
             )
         }
 
@@ -1676,15 +1896,29 @@ object ModelLoader {
 
         if (facesByTexture.isEmpty()) return null
 
-        val result = mutableListOf<MeshData>()
+        val meshes = ArrayList<MeshData>(facesByTexture.size)
+        val slotVertex = ArrayList<IntArray>(facesByTexture.size)
 
         // Build MeshData for each texture batch (including -1 for untextured)
         for ((textureId, faces) in facesByTexture) {
-            val meshData = buildMeshData(faces, textureId)
-            result.add(meshData)
+            meshes.add(buildMeshData(faces, textureId))
+            slotVertex.add(buildSlotVertexMap(faces))
         }
 
-        return result
+        return BaseMesh(meshes, slotVertex.toTypedArray())
+    }
+
+    /** Source model vertex for every emitted vertex slot of a batch; see [FaceData.sv0]. */
+    private fun buildSlotVertexMap(faces: List<FaceData>): IntArray {
+        val map = IntArray(faces.size * 3)
+        var slot = 0
+        for (face in faces) {
+            map[slot] = face.sv0
+            map[slot + 1] = face.sv1
+            map[slot + 2] = face.sv2
+            slot += 3
+        }
+        return map
     }
 
     private fun buildMeshData(faces: List<FaceData>, textureId: Int): MeshData {
@@ -1732,6 +1966,8 @@ object ModelLoader {
         definitionCache.clear()
         textureTransformCache.clear()
         combinedDefinitionCache.clear()
+        vertexNormalFieldCache.clear()
+        baseMeshCache.clear()
         syntheticIdMapping.clear()
         nextSyntheticId.set(-1)
         BillboardTypeLoader.clearCache()

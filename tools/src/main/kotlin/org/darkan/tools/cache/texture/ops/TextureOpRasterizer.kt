@@ -1,8 +1,8 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
+import kotlin.math.sqrt
 
 /**
  * Type 29: Shape rasterizer.
@@ -22,8 +22,8 @@ class TextureOpRasterizer : TextureOperation(0, true) {
     override fun getColorOutput(y: Int): Array<IntArray> {
         val output = colorImageCache.getPalette(y)
         if (colorImageCache.dirty) {
-            val width = TextureRaster.currentWidth
-            val height = TextureRaster.currentHeight
+            val width = currentWidth
+            val height = currentHeight
             val monoBuffer = Array(height) { IntArray(width) }
             rasterize(monoBuffer)
 
@@ -47,18 +47,18 @@ class TextureOpRasterizer : TextureOperation(0, true) {
 
     @Suppress("UNCHECKED_CAST")
     private fun rasterize(buffer: Array<out IntArray?>) {
-        val width = TextureRaster.currentWidth
-        val height = TextureRaster.currentHeight
+        val width = currentWidth
+        val height = currentHeight
 
-        pixelBuffer = buffer as Array<IntArray>
-        clipLeft = 0
-        clipRight = TextureRaster.rowEnd
-        clipTop = 0
-        clipBottom = TextureRaster.columnEnd
+        // The destination and its clip bounds used to be mutable statics on this class's
+        // companion, which every shape helper read directly. Two concurrent generations
+        // therefore drew into each other's row buffers. They are now a value passed down
+        // the call chain, so a shape can only ever touch the generation that invoked it.
+        val target = RasterTarget(buffer as Array<IntArray>, 0, rowEnd, 0, columnEnd)
 
         if (shapes != null) {
             for (shape in shapes!!) {
-                shape?.draw(width, height)
+                shape?.draw(target, width, height)
             }
         }
     }
@@ -82,15 +82,21 @@ class TextureOpRasterizer : TextureOperation(0, true) {
             1 -> monochrome = buffer.readUnsignedByte() == 1
         }
     }
-
-    companion object {
-        var pixelBuffer: Array<IntArray>? = null
-        var clipLeft: Int = 0
-        var clipRight: Int = 100
-        var clipTop: Int = 0
-        var clipBottom: Int = 100
-    }
 }
+
+/**
+ * Destination rows and clip bounds for one rasterisation pass.
+ *
+ * Immutable and created per pass, so it can be handed to the shape helpers without any of
+ * them being able to observe another generation's target.
+ */
+class RasterTarget(
+    @JvmField val pixels: Array<IntArray>,
+    @JvmField val clipLeft: Int,
+    @JvmField val clipRight: Int,
+    @JvmField val clipTop: Int,
+    @JvmField val clipBottom: Int
+)
 
 /**
  * Base class for rasterizer shapes.
@@ -110,19 +116,19 @@ sealed class RasterizerShape(
     val strokeColor: Int,
     val strokeWidth: Int
 ) {
-    abstract fun drawOutline(width: Int, height: Int)
-    abstract fun drawFilled(width: Int, height: Int)
-    abstract fun drawFilledWithBorder(width: Int, height: Int)
+    abstract fun drawOutline(target: RasterTarget, width: Int, height: Int)
+    abstract fun drawFilled(target: RasterTarget, width: Int, height: Int)
+    abstract fun drawFilledWithBorder(target: RasterTarget, width: Int, height: Int)
 
-    fun draw(width: Int, height: Int) {
+    fun draw(target: RasterTarget, width: Int, height: Int) {
         if (fillColor >= 0) {
             if (strokeColor >= 0) {
-                drawFilledWithBorder(width, height)
+                drawFilledWithBorder(target, width, height)
             } else {
-                drawFilled(width, height)
+                drawFilled(target, width, height)
             }
         } else if (strokeColor >= 0) {
-            drawOutline(width, height)
+            drawOutline(target, width, height)
         }
     }
 }
@@ -143,19 +149,19 @@ class RasterizerLine(
     color: Int,
     lineWidth: Int
 ) : RasterizerShape(-1, color, lineWidth) {
-    override fun drawOutline(width: Int, height: Int) {
+    override fun drawOutline(target: RasterTarget, width: Int, height: Int) {
         val sx1 = x1 * width shr 12
         val sy1 = y1 * height shr 12
         val sx2 = x2 * width shr 12
         val sy2 = y2 * height shr 12
-        drawLineClipped(sx1, sy1, sx2, sy2, strokeColor)
+        drawLineClipped(target, sx1, sy1, sx2, sy2, strokeColor)
     }
 
-    override fun drawFilled(width: Int, height: Int) {
+    override fun drawFilled(target: RasterTarget, width: Int, height: Int) {
         // Not called (fillColor is always -1)
     }
 
-    override fun drawFilledWithBorder(width: Int, height: Int) {
+    override fun drawFilledWithBorder(target: RasterTarget, width: Int, height: Int) {
         // Not called (fillColor is always -1)
     }
 
@@ -173,17 +179,17 @@ class RasterizerLine(
         /**
          * Clipped line drawing matching the client's method6159.
          */
-        fun drawLineClipped(x1: Int, y1: Int, x2: Int, y2: Int, color: Int) {
+        fun drawLineClipped(target: RasterTarget, x1: Int, y1: Int, x2: Int, y2: Int, color: Int) {
             val deltaX = x2 - x1
             val deltaY = y2 - y1
             if (deltaX == 0) {
                 if (deltaY != 0) {
-                    drawVerticalLineClipped(x1, y1, y2, color)
+                    drawVerticalLineClipped(target, x1, y1, y2, color)
                 }
                 return
             }
             if (deltaY == 0) {
-                drawHorizontalLine(x1, x2, y1, color)
+                drawHorizontalLine(target, x1, x2, y1, color)
                 return
             }
 
@@ -192,12 +198,12 @@ class RasterizerLine(
 
             val startX: Int
             val startY: Int
-            if (x1 < TextureOpRasterizer.clipLeft) {
-                startY = (slope * TextureOpRasterizer.clipLeft shr 12) + intercept
-                startX = TextureOpRasterizer.clipLeft
-            } else if (x1 > TextureOpRasterizer.clipRight) {
-                startY = (slope * TextureOpRasterizer.clipRight shr 12) + intercept
-                startX = TextureOpRasterizer.clipRight
+            if (x1 < target.clipLeft) {
+                startY = (slope * target.clipLeft shr 12) + intercept
+                startX = target.clipLeft
+            } else if (x1 > target.clipRight) {
+                startY = (slope * target.clipRight shr 12) + intercept
+                startX = target.clipRight
             } else {
                 startY = y1
                 startX = x1
@@ -205,12 +211,12 @@ class RasterizerLine(
 
             val endX: Int
             val endY: Int
-            if (x2 < TextureOpRasterizer.clipLeft) {
-                endY = (slope * TextureOpRasterizer.clipLeft shr 12) + intercept
-                endX = TextureOpRasterizer.clipLeft
-            } else if (x2 > TextureOpRasterizer.clipRight) {
-                endY = (slope * TextureOpRasterizer.clipRight shr 12) + intercept
-                endX = TextureOpRasterizer.clipRight
+            if (x2 < target.clipLeft) {
+                endY = (slope * target.clipLeft shr 12) + intercept
+                endX = target.clipLeft
+            } else if (x2 > target.clipRight) {
+                endY = (slope * target.clipRight shr 12) + intercept
+                endX = target.clipRight
             } else {
                 endY = y2
                 endX = x2
@@ -218,31 +224,31 @@ class RasterizerLine(
 
             var clampedStartX = startX
             var clampedStartY = startY
-            if (clampedStartY < TextureOpRasterizer.clipTop) {
-                clampedStartY = TextureOpRasterizer.clipTop
-                clampedStartX = (TextureOpRasterizer.clipTop - intercept shl 12) / slope
-            } else if (clampedStartY > TextureOpRasterizer.clipBottom) {
-                clampedStartY = TextureOpRasterizer.clipBottom
-                clampedStartX = (TextureOpRasterizer.clipBottom - intercept shl 12) / slope
+            if (clampedStartY < target.clipTop) {
+                clampedStartY = target.clipTop
+                clampedStartX = (target.clipTop - intercept shl 12) / slope
+            } else if (clampedStartY > target.clipBottom) {
+                clampedStartY = target.clipBottom
+                clampedStartX = (target.clipBottom - intercept shl 12) / slope
             }
 
             var clampedEndX = endX
             var clampedEndY = endY
-            if (clampedEndY < TextureOpRasterizer.clipTop) {
-                clampedEndY = TextureOpRasterizer.clipTop
-                clampedEndX = (TextureOpRasterizer.clipTop - intercept shl 12) / slope
-            } else if (clampedEndY > TextureOpRasterizer.clipBottom) {
-                clampedEndY = TextureOpRasterizer.clipBottom
-                clampedEndX = (TextureOpRasterizer.clipBottom - intercept shl 12) / slope
+            if (clampedEndY < target.clipTop) {
+                clampedEndY = target.clipTop
+                clampedEndX = (target.clipTop - intercept shl 12) / slope
+            } else if (clampedEndY > target.clipBottom) {
+                clampedEndY = target.clipBottom
+                clampedEndX = (target.clipBottom - intercept shl 12) / slope
             }
 
-            drawBresenhamLine(clampedStartX, clampedStartY, clampedEndX, clampedEndY, color)
+            drawBresenhamLine(target, clampedStartX, clampedStartY, clampedEndX, clampedEndY, color)
         }
 
         /**
          * Bresenham's line algorithm matching the client's Class149_Sub2.method11220.
          */
-        private fun drawBresenhamLine(x1: Int, y1: Int, x2: Int, y2: Int, color: Int) {
+        private fun drawBresenhamLine(target: RasterTarget, x1: Int, y1: Int, x2: Int, y2: Int, color: Int) {
             var ix1 = x1
             var iy1 = y1
             var ix2 = x2
@@ -253,12 +259,12 @@ class RasterizerLine(
 
             if (dx == 0) {
                 if (dy != 0) {
-                    drawVerticalLine(ix1, iy1, iy2, color)
+                    drawVerticalLine(target, ix1, iy1, iy2, color)
                 }
                 return
             }
             if (dy == 0) {
-                drawHorizontalLineUnchecked(ix1, ix2, iy1, color)
+                drawHorizontalLineUnchecked(target, ix1, ix2, iy1, color)
                 return
             }
 
@@ -285,7 +291,7 @@ class RasterizerLine(
 
             if (steep) {
                 for (x in ix1..ix2) {
-                    TextureOpRasterizer.pixelBuffer!![x][y] = color
+                    target.pixels[x][y] = color
                     err += yLen
                     if (err > 0) {
                         y += yStep
@@ -294,7 +300,7 @@ class RasterizerLine(
                 }
             } else {
                 for (x in ix1..ix2) {
-                    TextureOpRasterizer.pixelBuffer!![y][x] = color
+                    target.pixels[y][x] = color
                     err += yLen
                     if (err > 0) {
                         y += yStep
@@ -304,41 +310,41 @@ class RasterizerLine(
             }
         }
 
-        private fun drawVerticalLine(x: Int, y1: Int, y2: Int, color: Int) {
+        private fun drawVerticalLine(target: RasterTarget, x: Int, y1: Int, y2: Int, color: Int) {
             if (y1 > y2) {
                 var y = y2
                 while (y < y1) {
-                    TextureOpRasterizer.pixelBuffer!![y][x] = color
+                    target.pixels[y][x] = color
                     y++
                 }
             } else {
                 var y = y1
                 while (y < y2) {
-                    TextureOpRasterizer.pixelBuffer!![y][x] = color
+                    target.pixels[y][x] = color
                     y++
                 }
             }
         }
 
-        private fun drawVerticalLineClipped(x: Int, y1: Int, y2: Int, color: Int) {
-            if (x < TextureOpRasterizer.clipLeft || x > TextureOpRasterizer.clipRight) return
-            val clampedY1 = y1.coerceIn(TextureOpRasterizer.clipTop, TextureOpRasterizer.clipBottom)
-            val clampedY2 = y2.coerceIn(TextureOpRasterizer.clipTop, TextureOpRasterizer.clipBottom)
-            drawVerticalLine(x, clampedY1, clampedY2, color)
+        private fun drawVerticalLineClipped(target: RasterTarget, x: Int, y1: Int, y2: Int, color: Int) {
+            if (x < target.clipLeft || x > target.clipRight) return
+            val clampedY1 = y1.coerceIn(target.clipTop, target.clipBottom)
+            val clampedY2 = y2.coerceIn(target.clipTop, target.clipBottom)
+            drawVerticalLine(target, x, clampedY1, clampedY2, color)
         }
 
-        private fun drawHorizontalLine(x1: Int, x2: Int, y: Int, color: Int) {
-            if (y < TextureOpRasterizer.clipTop || y > TextureOpRasterizer.clipBottom) return
-            val startX = minOf(x1, x2).coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-            val endX = maxOf(x1, x2).coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-            val row = TextureOpRasterizer.pixelBuffer!![y]
+        private fun drawHorizontalLine(target: RasterTarget, x1: Int, x2: Int, y: Int, color: Int) {
+            if (y < target.clipTop || y > target.clipBottom) return
+            val startX = minOf(x1, x2).coerceIn(target.clipLeft, target.clipRight)
+            val endX = maxOf(x1, x2).coerceIn(target.clipLeft, target.clipRight)
+            val row = target.pixels[y]
             for (px in startX..endX) {
                 row[px] = color
             }
         }
 
-        private fun drawHorizontalLineUnchecked(x1: Int, x2: Int, y: Int, color: Int) {
-            val row = TextureOpRasterizer.pixelBuffer!![y]
+        private fun drawHorizontalLineUnchecked(target: RasterTarget, x1: Int, x2: Int, y: Int, color: Int) {
+            val row = target.pixels[y]
             if (x1 <= x2) {
                 for (px in x1..x2) row[px] = color
             } else {
@@ -364,7 +370,7 @@ class RasterizerBezier(
     color: Int,
     lineWidth: Int
 ) : RasterizerShape(-1, color, lineWidth) {
-    override fun drawOutline(width: Int, height: Int) {
+    override fun drawOutline(target: RasterTarget, width: Int, height: Int) {
         val sx1 = x1 * width shr 12
         val sy1 = y1 * height shr 12
         val scx1 = cx1 * width shr 12
@@ -373,14 +379,14 @@ class RasterizerBezier(
         val scy2 = cy2 * height shr 12
         val sx2 = x2 * width shr 12
         val sy2 = y2 * height shr 12
-        drawBezierCurve(sx1, sy1, scx1, scy1, scx2, scy2, sx2, sy2, strokeColor)
+        drawBezierCurve(target, sx1, sy1, scx1, scy1, scx2, scy2, sx2, sy2, strokeColor)
     }
 
-    override fun drawFilled(width: Int, height: Int) {
+    override fun drawFilled(target: RasterTarget, width: Int, height: Int) {
         // Not called (fillColor is always -1)
     }
 
-    override fun drawFilledWithBorder(width: Int, height: Int) {
+    override fun drawFilledWithBorder(target: RasterTarget, width: Int, height: Int) {
         // Not called (fillColor is always -1)
     }
 
@@ -403,13 +409,13 @@ class RasterizerBezier(
          * Draw a cubic bezier curve by subdividing into line segments.
          * Matches client's Class149_Sub2.method12399/method12117/method4779.
          */
-        private fun drawBezierCurve(
+        private fun drawBezierCurve(target: RasterTarget,
             x1: Int, y1: Int, cx1: Int, cy1: Int,
             cx2: Int, cy2: Int, x2: Int, y2: Int, color: Int
         ) {
             // If control points coincide with endpoints, draw a simple line
             if (x1 == cx1 && cy1 == y1 && cx2 == x2 && cy2 == y2) {
-                RasterizerLine.drawLineClipped(x1, y1, x2, y2, color)
+                RasterizerLine.drawLineClipped(target, x1, y1, x2, y2, color)
                 return
             }
 
@@ -434,7 +440,7 @@ class RasterizerBezier(
                 val t3 = t2 * t shr 12
                 val px = x1 + (dx * t3 + ex * t2 + fx * t shr 12)
                 val py = y1 + (dy * t3 + ey * t2 + fy * t shr 12)
-                RasterizerLine.drawLineClipped(prevX, prevY, px, py, color)
+                RasterizerLine.drawLineClipped(target, prevX, prevY, px, py, color)
                 prevX = px
                 prevY = py
                 t += 128
@@ -460,28 +466,28 @@ class RasterizerRectangle(
     stroke: Int,
     strokeW: Int
 ) : RasterizerShape(fill, stroke, strokeW) {
-    override fun drawOutline(width: Int, height: Int) {
+    override fun drawOutline(target: RasterTarget, width: Int, height: Int) {
         val sx1 = x1 * width shr 12
         val sx2 = x2 * width shr 12
         val sy1 = y1 * height shr 12
         val sy2 = y2 * height shr 12
-        drawRectOutline(sx1, sx2, sy1, sy2, strokeColor, strokeWidth)
+        drawRectOutline(target, sx1, sx2, sy1, sy2, strokeColor, strokeWidth)
     }
 
-    override fun drawFilled(width: Int, height: Int) {
+    override fun drawFilled(target: RasterTarget, width: Int, height: Int) {
         val sx1 = x1 * width shr 12
         val sx2 = x2 * width shr 12
         val sy1 = y1 * height shr 12
         val sy2 = y2 * height shr 12
-        drawFilledRect(sx1, sx2, sy1, sy2, fillColor)
+        drawFilledRect(target, sx1, sx2, sy1, sy2, fillColor)
     }
 
-    override fun drawFilledWithBorder(width: Int, height: Int) {
+    override fun drawFilledWithBorder(target: RasterTarget, width: Int, height: Int) {
         val sx1 = x1 * width shr 12
         val sx2 = x2 * width shr 12
         val sy1 = y1 * height shr 12
         val sy2 = y2 * height shr 12
-        drawFilledRectWithBorder(sx1, sx2, sy1, sy2, fillColor, strokeColor, strokeWidth)
+        drawFilledRectWithBorder(target, sx1, sx2, sy1, sy2, fillColor, strokeColor, strokeWidth)
     }
 
     companion object {
@@ -496,21 +502,21 @@ class RasterizerRectangle(
             return RasterizerRectangle(x1, y1, x2, y2, fill, stroke, strokeW)
         }
 
-        private fun drawRectOutline(x1: Int, x2: Int, y1: Int, y2: Int, color: Int, borderWidth: Int) {
-            if (x1 >= TextureOpRasterizer.clipLeft && x2 <= TextureOpRasterizer.clipRight &&
-                y1 >= TextureOpRasterizer.clipTop && y2 <= TextureOpRasterizer.clipBottom) {
+        private fun drawRectOutline(target: RasterTarget, x1: Int, x2: Int, y1: Int, y2: Int, color: Int, borderWidth: Int) {
+            if (x1 >= target.clipLeft && x2 <= target.clipRight &&
+                y1 >= target.clipTop && y2 <= target.clipBottom) {
                 if (borderWidth == 1) {
-                    drawRectOutlineNoClip(x1, x2, y1, y2, color)
+                    drawRectOutlineNoClip(target, x1, x2, y1, y2, color)
                 } else {
-                    drawThickBorder(x1, x2, y1, y2, color, borderWidth)
+                    drawThickBorder(target, x1, x2, y1, y2, color, borderWidth)
                 }
             } else if (borderWidth == 1) {
-                drawRectOutlineClipped(x1, x2, y1, y2, color)
+                drawRectOutlineClipped(target, x1, x2, y1, y2, color)
             }
         }
 
-        private fun drawRectOutlineNoClip(x1: Int, x2: Int, y1: Int, y2: Int, color: Int) {
-            val buf = TextureOpRasterizer.pixelBuffer!!
+        private fun drawRectOutlineNoClip(target: RasterTarget, x1: Int, x2: Int, y1: Int, y2: Int, color: Int) {
+            val buf = target.pixels
             // Top and bottom rows
             val topRow = buf[y1]
             val botRow = buf[y2]
@@ -525,30 +531,30 @@ class RasterizerRectangle(
             }
         }
 
-        private fun drawRectOutlineClipped(x1: Int, x2: Int, y1: Int, y2: Int, color: Int) {
-            val cX1 = x1.coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-            val cX2 = x2.coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-            val cY1 = y1.coerceIn(TextureOpRasterizer.clipTop, TextureOpRasterizer.clipBottom)
-            val cY2 = y2.coerceIn(TextureOpRasterizer.clipTop, TextureOpRasterizer.clipBottom)
-            val buf = TextureOpRasterizer.pixelBuffer!!
+        private fun drawRectOutlineClipped(target: RasterTarget, x1: Int, x2: Int, y1: Int, y2: Int, color: Int) {
+            val cX1 = x1.coerceIn(target.clipLeft, target.clipRight)
+            val cX2 = x2.coerceIn(target.clipLeft, target.clipRight)
+            val cY1 = y1.coerceIn(target.clipTop, target.clipBottom)
+            val cY2 = y2.coerceIn(target.clipTop, target.clipBottom)
+            val buf = target.pixels
             // Horizontal edges
-            if (y1 in TextureOpRasterizer.clipTop..TextureOpRasterizer.clipBottom) {
+            if (y1 in target.clipTop..target.clipBottom) {
                 for (x in cX1..cX2) buf[y1][x] = color
             }
-            if (y2 in TextureOpRasterizer.clipTop..TextureOpRasterizer.clipBottom) {
+            if (y2 in target.clipTop..target.clipBottom) {
                 for (x in cX1..cX2) buf[y2][x] = color
             }
             // Vertical edges
-            if (x1 in TextureOpRasterizer.clipLeft..TextureOpRasterizer.clipRight) {
+            if (x1 in target.clipLeft..target.clipRight) {
                 for (y in cY1..cY2) buf[y][x1] = color
             }
-            if (x2 in TextureOpRasterizer.clipLeft..TextureOpRasterizer.clipRight) {
+            if (x2 in target.clipLeft..target.clipRight) {
                 for (y in cY1..cY2) buf[y][x2] = color
             }
         }
 
-        private fun drawThickBorder(x1: Int, x2: Int, y1: Int, y2: Int, color: Int, borderWidth: Int) {
-            val buf = TextureOpRasterizer.pixelBuffer!!
+        private fun drawThickBorder(target: RasterTarget, x1: Int, x2: Int, y1: Int, y2: Int, color: Int, borderWidth: Int) {
+            val buf = target.pixels
             val bw = borderWidth
             // Top border rows
             for (y in y1 until (y1 + bw).coerceAtMost(y2 + 1)) {
@@ -565,31 +571,31 @@ class RasterizerRectangle(
             }
         }
 
-        private fun drawFilledRect(x1: Int, x2: Int, y1: Int, y2: Int, color: Int) {
-            val cX1 = x1.coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-            val cX2 = x2.coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-            val cY1 = y1.coerceIn(TextureOpRasterizer.clipTop, TextureOpRasterizer.clipBottom)
-            val cY2 = y2.coerceIn(TextureOpRasterizer.clipTop, TextureOpRasterizer.clipBottom)
-            val buf = TextureOpRasterizer.pixelBuffer!!
+        private fun drawFilledRect(target: RasterTarget, x1: Int, x2: Int, y1: Int, y2: Int, color: Int) {
+            val cX1 = x1.coerceIn(target.clipLeft, target.clipRight)
+            val cX2 = x2.coerceIn(target.clipLeft, target.clipRight)
+            val cY1 = y1.coerceIn(target.clipTop, target.clipBottom)
+            val cY2 = y2.coerceIn(target.clipTop, target.clipBottom)
+            val buf = target.pixels
             for (y in cY1..cY2) {
                 val row = buf[y]
                 for (x in cX1..cX2) row[x] = color
             }
         }
 
-        private fun drawFilledRectWithBorder(x1: Int, x2: Int, y1: Int, y2: Int, fillColor: Int, strokeColor: Int, borderWidth: Int) {
-            val cX1 = x1.coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-            val cX2 = x2.coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-            val cY1 = y1.coerceIn(TextureOpRasterizer.clipTop, TextureOpRasterizer.clipBottom)
-            val cY2 = y2.coerceIn(TextureOpRasterizer.clipTop, TextureOpRasterizer.clipBottom)
-            val buf = TextureOpRasterizer.pixelBuffer!!
+        private fun drawFilledRectWithBorder(target: RasterTarget, x1: Int, x2: Int, y1: Int, y2: Int, fillColor: Int, strokeColor: Int, borderWidth: Int) {
+            val cX1 = x1.coerceIn(target.clipLeft, target.clipRight)
+            val cX2 = x2.coerceIn(target.clipLeft, target.clipRight)
+            val cY1 = y1.coerceIn(target.clipTop, target.clipBottom)
+            val cY2 = y2.coerceIn(target.clipTop, target.clipBottom)
+            val buf = target.pixels
             // Fill entire rectangle with fill color, then draw border on top
             for (y in cY1..cY2) {
                 val row = buf[y]
                 for (x in cX1..cX2) row[x] = fillColor
             }
             // Draw border
-            drawThickBorder(cX1, cX2, cY1, cY2, strokeColor, borderWidth)
+            drawThickBorder(target, cX1, cX2, cY1, cY2, strokeColor, borderWidth)
         }
     }
 }
@@ -611,24 +617,24 @@ class RasterizerEllipse(
     stroke: Int,
     strokeW: Int
 ) : RasterizerShape(fill, stroke, strokeW) {
-    override fun drawOutline(width: Int, height: Int) {
+    override fun drawOutline(target: RasterTarget, width: Int, height: Int) {
         // Not called (method2561 is empty in client's Class149_Sub1)
     }
 
-    override fun drawFilled(width: Int, height: Int) {
+    override fun drawFilled(target: RasterTarget, width: Int, height: Int) {
         val sx1 = x1 * width shr 12
         val sy1 = y1 * height shr 12
         val sx2 = x2 * width shr 12
         val sy2 = y2 * height shr 12
-        fillEllipse(sx1, sy1, sx2, sy2, fillColor)
+        fillEllipse(target, sx1, sy1, sx2, sy2, fillColor)
     }
 
-    override fun drawFilledWithBorder(width: Int, height: Int) {
+    override fun drawFilledWithBorder(target: RasterTarget, width: Int, height: Int) {
         val sx1 = x1 * width shr 12
         val sy1 = y1 * height shr 12
         val sx2 = x2 * width shr 12
         val sy2 = y2 * height shr 12
-        fillEllipseWithBorder(sx1, sy1, sx2, sy2, fillColor, strokeColor, strokeWidth)
+        fillEllipseWithBorder(target, sx1, sy1, sx2, sy2, fillColor, strokeColor, strokeWidth)
     }
 
     companion object {
@@ -647,23 +653,23 @@ class RasterizerEllipse(
          * Fill an ellipse. Matches client's Class149_Sub1.method2556 which calls
          * ArrayUtils.method14584 (midpoint ellipse fill algorithm).
          */
-        private fun fillEllipse(cx: Int, cy: Int, rx: Int, ry: Int, color: Int) {
+        private fun fillEllipse(target: RasterTarget, cx: Int, cy: Int, rx: Int, ry: Int, color: Int) {
             if (rx <= 0 || ry <= 0) return
 
             val rxSq = rx * rx
             val rySq = ry * ry
-            val buf = TextureOpRasterizer.pixelBuffer!!
+            val buf = target.pixels
 
             for (dy in -ry..ry) {
                 val py = cy + dy
-                if (py < TextureOpRasterizer.clipTop || py > TextureOpRasterizer.clipBottom) continue
+                if (py < target.clipTop || py > target.clipBottom) continue
 
                 val row = buf[py]
                 val dySq = dy * dy
-                val xRange = kotlin.math.sqrt((1.0 - dySq.toDouble() / rySq) * rxSq).toInt()
+                val xRange = sqrt((1.0 - dySq.toDouble() / rySq) * rxSq).toInt()
 
-                val startX = (cx - xRange).coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-                val endX = (cx + xRange).coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
+                val startX = (cx - xRange).coerceIn(target.clipLeft, target.clipRight)
+                val endX = (cx + xRange).coerceIn(target.clipLeft, target.clipRight)
                 for (px in startX..endX) {
                     row[px] = color
                 }
@@ -674,35 +680,35 @@ class RasterizerEllipse(
          * Fill an ellipse with a border ring. Matches client's Class149_Sub1.method2557
          * which calls method5316 (double-ellipse with border width).
          */
-        private fun fillEllipseWithBorder(cx: Int, cy: Int, rx: Int, ry: Int, fillColor: Int, strokeColor: Int, borderWidth: Int) {
+        private fun fillEllipseWithBorder(target: RasterTarget, cx: Int, cy: Int, rx: Int, ry: Int, fillColor: Int, strokeColor: Int, borderWidth: Int) {
             if (rx <= 0 || ry <= 0) return
 
             val innerRx = rx - borderWidth
             val innerRy = ry - borderWidth
             val rxSq = rx * rx
             val rySq = ry * ry
-            val buf = TextureOpRasterizer.pixelBuffer!!
+            val buf = target.pixels
 
             for (dy in -ry..ry) {
                 val py = cy + dy
-                if (py < TextureOpRasterizer.clipTop || py > TextureOpRasterizer.clipBottom) continue
+                if (py < target.clipTop || py > target.clipBottom) continue
 
                 val row = buf[py]
                 val dySq = dy * dy
-                val outerXRange = kotlin.math.sqrt((1.0 - dySq.toDouble() / rySq) * rxSq).toInt()
+                val outerXRange = sqrt((1.0 - dySq.toDouble() / rySq) * rxSq).toInt()
 
                 val innerXRange = if (innerRx > 0 && innerRy > 0) {
                     val innerRxSq = innerRx * innerRx
                     val innerRySq = innerRy * innerRy
                     val ratio = 1.0 - dySq.toDouble() / innerRySq
-                    if (ratio > 0) kotlin.math.sqrt(ratio * innerRxSq).toInt() else 0
+                    if (ratio > 0) sqrt(ratio * innerRxSq).toInt() else 0
                 } else 0
 
                 // Outer ring (stroke)
-                val leftOuter = (cx - outerXRange).coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-                val leftInner = (cx - innerXRange).coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-                val rightInner = (cx + innerXRange).coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
-                val rightOuter = (cx + outerXRange).coerceIn(TextureOpRasterizer.clipLeft, TextureOpRasterizer.clipRight)
+                val leftOuter = (cx - outerXRange).coerceIn(target.clipLeft, target.clipRight)
+                val leftInner = (cx - innerXRange).coerceIn(target.clipLeft, target.clipRight)
+                val rightInner = (cx + innerXRange).coerceIn(target.clipLeft, target.clipRight)
+                val rightOuter = (cx + outerXRange).coerceIn(target.clipLeft, target.clipRight)
 
                 for (px in leftOuter until leftInner) row[px] = strokeColor
                 for (px in leftInner..rightInner) row[px] = fillColor

@@ -12,6 +12,7 @@ out vec2 vTexCoord;
 out float vAlpha;
 out vec3 vNormal;
 out vec3 vFragPos;
+out float vViewDist;
 out vec4 vAtlasTransform;
 
 uniform mat4 model;
@@ -32,5 +33,6 @@ void main() {
     vTexCoord = aTexCoord;
     vAlpha = aAlpha;
     vAtlasTransform = aAtlasTransform;
+    vViewDist = distance(worldPos.xyz, cameraPos);
     gl_Position = viewProjection * worldPos;
 }

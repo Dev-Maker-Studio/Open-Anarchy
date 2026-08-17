@@ -2,6 +2,7 @@ package org.darkan.tools.cache.map
 
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.engine.render.MeshData
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Implements per-vertex terrain displacement for ground contour type 1 objects.
@@ -35,6 +36,21 @@ import org.darkan.tools.engine.render.MeshData
  *
  * RS coordinate system: X = east, Y = height (positive DOWN), Z = north
  * RS tile: 512 units, tileScale = 9, tileMask = 511
+ *
+ * ## Cost structure
+ *
+ * The displacement loop runs once per *object instance*, not per unique model, so a
+ * region with 25k instances pays it 25k times even though only ~700 distinct models
+ * exist. Three things keep that affordable:
+ *
+ *  - [HeightField] flattens the `[plane][x][z]` array-of-`TileData` into one `IntArray`
+ *    per plane, built once per region load. The inner loop then does a single indexed
+ *    read instead of two array derefs plus an object field load.
+ *  - [modelBounds] caches each model's RS-space XZ extent, so [footprintIsFlat] can
+ *    decide in O(footprint tiles) whether an object stands on ground that is uniformly
+ *    at its average height. When it does, *every* vertex would displace by zero, so the
+ *    whole per-vertex pass is skipped. Most objects in a town sit on flat ground.
+ *  - The output array is only allocated once a vertex actually moves.
  */
 object VertexDisplacer {
 
@@ -51,6 +67,198 @@ object VertexDisplacer {
     private const val INV_SCALE = 128f  // 1 / DEFAULT_SCALE
 
     /**
+     * Upper bound on cached model bounds entries. Each entry is a 4-int array keyed by
+     * combined model id, so the cache is tiny, but a long session panning across the
+     * world would otherwise grow it without limit.
+     */
+    private const val BOUNDS_CACHE_LIMIT = 65536
+
+    /**
+     * Terrain heights for one region, flattened per plane.
+     *
+     * `heights[plane][x * depth + z]` is the corner height of tile (x, z). Built once
+     * per region load and shared, read-only, by every displacement worker.
+     */
+    class HeightField private constructor(
+        val width: Int,
+        val depth: Int,
+        private val planes: Array<IntArray>
+    ) {
+        /** Flat height array for [plane]; index a tile as `x * depth + z`. */
+        fun heights(plane: Int): IntArray = planes[plane]
+
+        companion object {
+            private val EMPTY = IntArray(0)
+
+            /** Flatten a `[plane][x][z]` tile array into per-plane height arrays. */
+            fun from(tiles: Array<Array<Array<TerrainLoader.TileData>>>): HeightField {
+                val width = if (tiles.isEmpty()) 0 else tiles[0].size
+                val depth = if (width > 0) tiles[0][0].size else 0
+                val planes = Array(tiles.size) { plane ->
+                    val planeTiles = tiles[plane]
+                    if (planeTiles.size != width || width == 0 || depth == 0) return@Array EMPTY
+                    val out = IntArray(width * depth)
+                    for (x in 0 until width) {
+                        val column = planeTiles[x]
+                        val base = x * depth
+                        for (z in 0 until depth) {
+                            out[base + z] = column[z].height
+                        }
+                    }
+                    out
+                }
+                return HeightField(width, depth, planes)
+            }
+        }
+    }
+
+    /**
+     * Cached RS-space XZ extent per combined model id, as `[minX, maxX, minZ, maxZ]`.
+     *
+     * The extent is a property of the decoded mesh alone, so it is shared across
+     * regions exactly like the decoded mesh cache it mirrors. Populated with
+     * `putIfAbsent` so a concurrent duplicate computation wastes a few microseconds
+     * rather than holding a bin lock.
+     */
+    private val boundsCache = ConcurrentHashMap<Int, IntArray>()
+
+    /** Drop the cached model bounds (e.g. when the cache backing the models changes). */
+    fun clearCaches() {
+        boundsCache.clear()
+    }
+
+    /**
+     * RS-space XZ extent of every mesh in [meshes] combined, as `[minX, maxX, minZ, maxZ]`.
+     *
+     * Returns null when the model has no vertices. Values are in the same RS model-local
+     * units the displacement loop derives per vertex, so transforming this box reproduces
+     * the exact tile span the loop would touch.
+     */
+    fun modelBounds(combinedModelId: Int, meshes: List<MeshData>): IntArray? {
+        boundsCache[combinedModelId]?.let { return if (it.isEmpty()) null else it }
+        val computed = computeBounds(meshes)
+        if (boundsCache.size < BOUNDS_CACHE_LIMIT) {
+            val stored = boundsCache.putIfAbsent(combinedModelId, computed ?: IntArray(0))
+            if (stored != null) return if (stored.isEmpty()) null else stored
+        }
+        return computed
+    }
+
+    private fun computeBounds(meshes: List<MeshData>): IntArray? {
+        var minX = Int.MAX_VALUE
+        var maxX = Int.MIN_VALUE
+        var minZ = Int.MAX_VALUE
+        var maxZ = Int.MIN_VALUE
+        for (mesh in meshes) {
+            val positions = mesh.positions
+            var idx = 0
+            while (idx < positions.size) {
+                val rsX = (positions[idx] * INV_SCALE).toInt()
+                val rsZ = (-positions[idx + 2] * INV_SCALE).toInt()
+                if (rsX < minX) minX = rsX
+                if (rsX > maxX) maxX = rsX
+                if (rsZ < minZ) minZ = rsZ
+                if (rsZ > maxZ) maxZ = rsZ
+                idx += 3
+            }
+        }
+        if (minX > maxX) return null
+        return intArrayOf(minX, maxX, minZ, maxZ)
+    }
+
+    /**
+     * Whether every terrain corner an object could sample sits at its average height.
+     *
+     * When true, the bilinear interpolation at every vertex resolves to exactly
+     * [averageHeight] (interpolating four equal integers is exact), so every
+     * displacement delta is zero and [displaceVertices] would return null for all of
+     * the object's meshes. The caller can skip the per-vertex pass entirely.
+     *
+     * The test is deliberately conservative: it checks a *superset* of the corners the
+     * vertex loop would read (the transformed bounding box, clamped to the terrain), so
+     * a false answer only ever costs a fallthrough to the exact path.
+     *
+     * @param bounds model extent from [modelBounds]
+     */
+    fun footprintIsFlat(
+        bounds: IntArray,
+        sceneX: Int,
+        sceneY: Int,
+        averageHeight: Int,
+        plane: Int,
+        field: HeightField,
+        rsRotation: Int,
+        mirrored: Boolean,
+        resizeX: Int,
+        resizeY: Int,
+        resizeZ: Int,
+        rsOffsetX: Int,
+        rsOffsetZ: Int
+    ): Boolean {
+        // Negative scales would invert the interval endpoints; no RS definition uses
+        // them, but fall back to the exact path rather than reasoning about it.
+        if (resizeX < 0 || resizeZ < 0) return false
+        // A zero Y scale makes the delta 0/0 = NaN rather than 0, which is a change.
+        // No real definition does this; take the exact path if one ever does.
+        if (resizeY == 0) return false
+
+        val width = field.width
+        val depth = field.depth
+        if (width <= 0 || depth <= 0) return false
+        val heights = field.heights(plane)
+        if (heights.isEmpty()) return false
+
+        var minZ = bounds[2]
+        var maxZ = bounds[3]
+        if (mirrored) {
+            val swapped = -maxZ
+            maxZ = -minZ
+            minZ = swapped
+        }
+        val minX = bounds[0]
+        val maxX = bounds[1]
+
+        // Rotation maps each output axis to one input axis with a sign; scaling by a
+        // non-negative factor followed by an arithmetic shift is monotone, so the
+        // extremes of the transformed box come from the extremes of the source box.
+        val loX: Int
+        val hiX: Int
+        val loZ: Int
+        val hiZ: Int
+        when (rsRotation and 3) {
+            1 -> { loX = minZ; hiX = maxZ; loZ = -maxX; hiZ = -minX }
+            2 -> { loX = -maxX; hiX = -minX; loZ = -maxZ; hiZ = -minZ }
+            3 -> { loX = -maxZ; hiX = -minZ; loZ = minX; hiZ = maxX }
+            else -> { loX = minX; hiX = maxX; loZ = minZ; hiZ = maxZ }
+        }
+
+        val localLoX = ((resizeX * loX) shr 7) + rsOffsetX + sceneX
+        val localHiX = ((resizeX * hiX) shr 7) + rsOffsetX + sceneX
+        val localLoZ = ((resizeZ * loZ) shr 7) + rsOffsetZ + sceneY
+        val localHiZ = ((resizeZ * hiZ) shr 7) + rsOffsetZ + sceneY
+
+        // Corners read for a vertex in tile t are t and t + 1.
+        var tx0 = localLoX shr TILE_SCALE
+        var tx1 = (localHiX shr TILE_SCALE) + 1
+        var tz0 = localLoZ shr TILE_SCALE
+        var tz1 = (localHiZ shr TILE_SCALE) + 1
+        if (tx0 < 0) tx0 = 0
+        if (tz0 < 0) tz0 = 0
+        if (tx1 > width - 1) tx1 = width - 1
+        if (tz1 > depth - 1) tz1 = depth - 1
+        // Wholly outside the terrain: every vertex would be skipped, so nothing moves.
+        if (tx0 > tx1 || tz0 > tz1) return true
+
+        for (tx in tx0..tx1) {
+            val base = tx * depth
+            for (tz in tz0..tz1) {
+                if (heights[base + tz] != averageHeight) return false
+            }
+        }
+        return true
+    }
+
+    /**
      * Create displaced MeshData for a contourType 1 object.
      *
      * Takes the original model MeshData (in OpenGL coordinates) and displaces
@@ -61,7 +269,7 @@ object VertexDisplacer {
      * scale, and offset to match the RS client's behavior where contourToGround
      * operates on fully-transformed vertex data.
      *
-     * The Y displacement delta is computed as (averageHeight - interpolatedHeight) / resizeY
+     * The Y displacement delta is computed as (interpolatedHeight - averageHeight) / resizeY
      * to account for the GPU scale factor that will be applied during rendering.
      *
      * @param meshData The original model mesh data (OpenGL coordinates, model-local space)
@@ -71,9 +279,7 @@ object VertexDisplacer {
      *               (localTileY * 512 + sizeY * 256)
      * @param averageHeight Average terrain height at object center in RS units
      * @param plane Terrain plane (0-3)
-     * @param tiles Terrain tile data array [plane][x][y] containing height values
-     * @param regionBaseX Unused, kept for API clarity (scene coords are already region-local)
-     * @param regionBaseY Unused, kept for API clarity (scene coords are already region-local)
+     * @param field Flattened terrain heights for the region, from [HeightField.from]
      * @param rsRotation Object rotation (0-3) matching RS client rotation values.
      *                   Applied as Y-axis rotation to vertex X/Z before terrain lookup.
      *                   Rotation 0=none, 1=90deg CCW, 2=180deg, 3=270deg CCW (in RS coords).
@@ -88,16 +294,13 @@ object VertexDisplacer {
      * @return New MeshData with displaced vertex Y positions, or null if displacement
      *         produces no change (flat terrain under object)
      */
-    @Suppress("UNUSED_PARAMETER")
     fun displaceVertices(
         meshData: MeshData,
         sceneX: Int,
         sceneY: Int,
         averageHeight: Int,
         plane: Int,
-        tiles: Array<Array<Array<TerrainLoader.TileData>>>,
-        regionBaseX: Int,
-        regionBaseY: Int,
+        field: HeightField,
         rsRotation: Int = 0,
         mirrored: Boolean = false,
         resizeX: Int = 128,
@@ -109,9 +312,11 @@ object VertexDisplacer {
         val positions = meshData.positions
         if (positions.isEmpty()) return null
 
-        val vertexCount = positions.size / 3
-        val newPositions = positions.copyOf()
-        var anyChanged = false
+        val width = field.width
+        val depth = field.depth
+        if (width <= 0 || depth <= 0) return null
+        val heights = field.heights(plane)
+        if (heights.isEmpty()) return null
 
         // The sceneX/sceneY parameters are region-local RS scene coordinates:
         //   sceneX = (localTileX << 9) + (sizeX << 8)
@@ -120,94 +325,96 @@ object VertexDisplacer {
         // After applying mirror/rotate/scale/translate to model-local vertex coords
         // and adding to sceneX/sceneY, the result is region-local RS scene coords.
         // Shifting right by tileScale (9) gives the local tile index (0-63).
+        //
+        // Mirror, rotation and scale together are a per-object constant: each output
+        // axis takes exactly one input axis, times a signed factor. Folding them into
+        // four coefficients hoists the whole `when (rot)` out of the vertex loop, and
+        // because one coefficient of each pair is always zero, summing the two products
+        // before the >> 7 is bit-identical to shifting the single non-zero term (which
+        // is what the RS client does).
+        val mirrorSign = if (mirrored) -1 else 1
+        val factorXX: Int
+        val factorXZ: Int
+        val factorZX: Int
+        val factorZZ: Int
+        when (rsRotation and 3) {
+            1 -> { factorXX = 0; factorXZ = resizeX * mirrorSign; factorZX = -resizeZ; factorZZ = 0 }
+            2 -> { factorXX = -resizeX; factorXZ = 0; factorZX = 0; factorZZ = -resizeZ * mirrorSign }
+            3 -> { factorXX = 0; factorXZ = -resizeX * mirrorSign; factorZX = resizeZ; factorZZ = 0 }
+            else -> { factorXX = resizeX; factorXZ = 0; factorZX = 0; factorZZ = resizeZ * mirrorSign }
+        }
+        val baseX = rsOffsetX + sceneX
+        val baseZ = rsOffsetZ + sceneY
+        val maxTileX = width - 1
+        val maxTileZ = depth - 1
+        val resizeYf = resizeY.toFloat()
+        // With resizeY == 0 an equal-height vertex divides 0 by 0, which is NaN and so
+        // *is* a change. Only short-circuit the equal case when the division is sane.
+        val zeroDeltaIsNoop = resizeY != 0
 
-        // Width of tile height array
-        val tileWidth = tiles[plane].size
-        val tileHeight = if (tileWidth > 0) tiles[plane][0].size else 0
+        // Only materialised once a vertex actually moves; a model standing on flat
+        // ground returns null without allocating anything.
+        var newPositions: FloatArray? = null
 
-        // Pre-compute rotation index (mask to 0-3)
-        val rot = rsRotation and 3
-
-        for (v in 0 until vertexCount) {
-            val idx = v * 3
-
-            // Current OpenGL vertex position (model-local space, before any transforms)
-            val oglX = newPositions[idx]      // OpenGL X = RS X * scale
-            val oglY = newPositions[idx + 1]  // OpenGL Y = -RS Y * scale
-            val oglZ = newPositions[idx + 2]  // OpenGL Z = -RS Z * scale
+        var idx = 0
+        val limit = positions.size
+        while (idx < limit) {
+            val oglX = positions[idx]
+            val oglZ = positions[idx + 2]
 
             // Convert OpenGL model-local coords back to RS model-local coords
             val rsX = (oglX * INV_SCALE).toInt()
-            var rsZ = (-oglZ * INV_SCALE).toInt()  // Negate to reverse the Z flip
+            val rsZ = (-oglZ * INV_SCALE).toInt()  // Negate to reverse the Z flip
 
-            // Apply the same transforms the RS client applies in getStationaryModel
-            // before calling contourToGround. Order: mirror -> rotate -> scale -> translate.
+            // mirror -> rotate -> scale -> translate, folded (see above), then offset
+            // into region-local scene space.
+            val localX = (((factorXX * rsX) + (factorXZ * rsZ)) shr 7) + baseX
+            val localZ = (((factorZX * rsX) + (factorZZ * rsZ)) shr 7) + baseZ
 
-            // 1. Mirror: negate Z if the model is inverted
-            // RS client: model.mirror() negates verticesZ
-            if (mirrored) {
-                rsZ = -rsZ
-            }
-
-            // 2. Rotate: apply Y-axis rotation to X/Z
-            // RS client rotate90DegWithNormals: newX = Z, newZ = -X
-            // RS client rotate180DegWithNormals: newX = -X, newZ = -Z
-            // RS client rotate270DegWithNormals: newX = -Z, newZ = X
-            val rotatedX: Int
-            val rotatedZ: Int
-            when (rot) {
-                1 -> { rotatedX = rsZ; rotatedZ = -rsX }
-                2 -> { rotatedX = -rsX; rotatedZ = -rsZ }
-                3 -> { rotatedX = -rsZ; rotatedZ = rsX }
-                else -> { rotatedX = rsX; rotatedZ = rsZ }
-            }
-
-            // 3. Scale: apply resizeX/Z (128 = 1.0, uses >> 7)
-            // RS client: verticesX[v] = resizeX * verticesX[v] >> 7
-            val scaledX = (resizeX * rotatedX) shr 7
-            val scaledZ = (resizeZ * rotatedZ) shr 7
-
-            // 4. Translate: add offset
-            // RS client: model.translate(offsetX, offsetY, offsetZ)
-            val transformedX = scaledX + rsOffsetX
-            val transformedZ = scaledZ + rsOffsetZ
-
-            // Compute region-local scene position of this vertex using transformed coords
-            // In RS client: x = sceneX + verticesX[v], z = sceneY + verticesZ[v]
-            // At this point verticesX/Z are already rotated, scaled, and translated
-            val localX = sceneX + transformedX
-            val localZ = sceneY + transformedZ
-
-            // Bounds check: skip vertices outside the terrain data range
-            // The client also does this check for vertices beyond maxDepth (line 3320)
+            // Bounds check: skip vertices outside the terrain data range.
+            // The client also does this check for vertices beyond maxDepth (line 3320).
             val tileX = localX shr TILE_SCALE
             val tileZ = localZ shr TILE_SCALE
-
-            if (tileX < 0 || tileX >= tileWidth - 1 || tileZ < 0 || tileZ >= tileHeight - 1) {
-                // Vertex is outside terrain data, skip displacement
+            if (tileX < 0 || tileX >= maxTileX || tileZ < 0 || tileZ >= maxTileZ) {
+                idx += 3
                 continue
             }
 
-            // Sub-tile remainders for interpolation
-            val remainderX = localX and TILE_MASK
-            val remainderZ = localZ and TILE_MASK
+            // Tile heights at the 4 surrounding corners (in RS height units)
+            val corner = tileX * depth + tileZ
+            val h00 = heights[corner]
+            val h01 = heights[corner + 1]
+            val h10 = heights[corner + depth]
+            val h11 = heights[corner + depth + 1]
 
-            // Get tile heights at the 4 surrounding tile corners (in RS height units)
-            val h00 = tiles[plane][tileX][tileZ].height
-            val h10 = tiles[plane][tileX + 1][tileZ].height
-            val h01 = tiles[plane][tileX][tileZ + 1].height
-            val h11 = tiles[plane][tileX + 1][tileZ + 1].height
+            val interpolatedHeight: Int
+            if (h00 == h01 && h00 == h10 && h00 == h11) {
+                // Interpolating four equal integers is exact, and skipping the six
+                // multiplies matters because most vertices of a contoured model still
+                // stand over locally level tiles.
+                interpolatedHeight = h00
+            } else {
+                // Sub-tile remainders for interpolation
+                val remainderX = localX and TILE_MASK
+                val remainderZ = localZ and TILE_MASK
 
-            // Bilinear interpolation matching RS client exactly:
-            // height1 = (h00 * (512 - remainderX) + remainderX * h10) >> 9
-            // height2 = ((512 - remainderX) * h01 + remainderX * h11) >> 9
-            // interpolated = (height1 * (512 - remainderZ) + height2 * remainderZ) >> 9
-            //
-            // Note: Kotlin shr/and are infix with lower precedence than +/-/*,
-            // so parentheses are used for clarity and correctness.
-            val height1 = (h00 * (TILE_UNITS - remainderX) + remainderX * h10) shr TILE_SCALE
-            val height2 = ((TILE_UNITS - remainderX) * h01 + remainderX * h11) shr TILE_SCALE
-            val interpolatedHeight = (height1 * (TILE_UNITS - remainderZ) + height2 * remainderZ) shr TILE_SCALE
+                // Bilinear interpolation matching RS client exactly:
+                // height1 = (h00 * (512 - remainderX) + remainderX * h10) >> 9
+                // height2 = ((512 - remainderX) * h01 + remainderX * h11) >> 9
+                // interpolated = (height1 * (512 - remainderZ) + height2 * remainderZ) >> 9
+                //
+                // Note: Kotlin shr/and are infix with lower precedence than +/-/*,
+                // so parentheses are used for clarity and correctness.
+                val height1 = (h00 * (TILE_UNITS - remainderX) + remainderX * h10) shr TILE_SCALE
+                val height2 = ((TILE_UNITS - remainderX) * h01 + remainderX * h11) shr TILE_SCALE
+                interpolatedHeight =
+                    (height1 * (TILE_UNITS - remainderZ) + height2 * remainderZ) shr TILE_SCALE
+            }
+
+            if (interpolatedHeight == averageHeight && zeroDeltaIsNoop) {
+                idx += 3
+                continue
+            }
 
             // Apply displacement delta to the OpenGL Y coordinate.
             //
@@ -220,20 +427,23 @@ object VertexDisplacer {
             //   delta_ogl = (interpolatedHeight - averageHeight) / resizeY
             //
             // The division by resizeY compensates for the GPU scaleY factor applied
-            // during rendering: rendered_Y = posY + scaleY * (oglY + delta)
-            val displacementDelta = (interpolatedHeight - averageHeight).toFloat() / resizeY.toFloat()
-            val newOglY = oglY + displacementDelta
+            // during rendering: rendered_Y = posY + scaleY * (oglY + delta).
+            // Kept as a division rather than a reciprocal multiply so the result is
+            // bit-identical to the original implementation.
+            val oglY = positions[idx + 1]
+            val newOglY = oglY + (interpolatedHeight - averageHeight).toFloat() / resizeYf
 
             if (newOglY != oglY) {
-                newPositions[idx + 1] = newOglY
-                anyChanged = true
+                val target = newPositions ?: positions.copyOf().also { newPositions = it }
+                target[idx + 1] = newOglY
             }
+            idx += 3
         }
 
-        if (!anyChanged) return null
+        val displaced = newPositions ?: return null
 
         return MeshData(
-            positions = newPositions,
+            positions = displaced,
             colors = meshData.colors,
             textureCoords = meshData.textureCoords,
             normals = meshData.normals,

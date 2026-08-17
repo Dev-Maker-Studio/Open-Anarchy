@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -16,7 +15,7 @@ class TextureOpBinary : TextureOperation(1, true) {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
             val input = getChildMonochromeOutput(0, y)
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 val value = input[x]
                 output[x] = if (value >= minThreshold && value <= maxThreshold) 4096 else 0
             }

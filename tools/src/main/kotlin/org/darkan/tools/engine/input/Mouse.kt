@@ -74,11 +74,32 @@ class Mouse {
         }
     }
 
+    /**
+     * Treat the next cursor position as a new origin rather than a movement.
+     *
+     * Called when the window takes focus or the cursor re-enters it. GLFW does not report
+     * where the pointer went while it was elsewhere, so [lastX]/[lastY] are stale and the
+     * first event back would otherwise produce a delta the size of however far the pointer
+     * travelled off-window — enough to swing the camera to a completely different framing
+     * on the frame focus arrives, and enough to make two runs of the same capture disagree.
+     */
+    fun resetDeltaReference() {
+        firstMove = true
+    }
+
     fun onCursorPos(xpos: Double, ypos: Double) {
         if (firstMove) {
             lastX = xpos
             lastY = ypos
             firstMove = false
+            // The reference has only just been established, so there is no movement to
+            // report yet; anything left over from before the gap is not this frame's.
+            deltaX = 0.0
+            deltaY = 0.0
+            x = xpos
+            y = ypos
+            moved = true
+            return
         }
 
         deltaX = xpos - lastX

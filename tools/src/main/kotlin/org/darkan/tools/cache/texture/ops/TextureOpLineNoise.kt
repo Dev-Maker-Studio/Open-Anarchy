@@ -35,10 +35,10 @@ class TextureOpLineNoise : TextureOperation(0, true) {
                 }
                 angle = (angle shr 4) and 0xff
 
-                val startX = nextUnbiasedRandom(random, TextureRaster.currentWidth)
-                val startY = nextUnbiasedRandom(random, TextureRaster.currentHeight)
-                val endX = startX + (TextureRaster.PALETTE_COS!![angle] * lineLength shr 12)
-                val endY = startY + (TextureRaster.PALETTE_SIN!![angle] * lineLength shr 12)
+                val startX = nextUnbiasedRandom(random, currentWidth)
+                val startY = nextUnbiasedRandom(random, currentHeight)
+                val endX = startX + (TextureRaster.PALETTE_COS[angle] * lineLength shr 12)
+                val endY = startY + (TextureRaster.PALETTE_SIN[angle] * lineLength shr 12)
 
                 val deltaX = endX - startX
                 val deltaY = endY - startY
@@ -85,8 +85,8 @@ class TextureOpLineNoise : TextureOperation(0, true) {
 
                     for (currentX in x0 until x1) {
                         val lineProgress = baseBrightness + brightness * (currentX - x0) + 1024
-                        val pixelX = currentX and TextureRaster.rowEnd
-                        val pixelY = currentY and TextureRaster.columnEnd
+                        val pixelX = currentX and rowEnd
+                        val pixelY = currentY and columnEnd
 
                         if (steep) {
                             allRows[pixelY]!![pixelX] = lineProgress

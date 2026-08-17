@@ -30,6 +30,10 @@ class InputSystem(private val window: Window) {
         window.setScrollCallback { xoffset, yoffset ->
             mouse.onScroll(xoffset, yoffset)
         }
+
+        window.setFocusCallback { focused ->
+            if (focused) mouse.resetDeltaReference()
+        }
     }
 
     fun update() {

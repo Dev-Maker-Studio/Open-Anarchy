@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 
 /**
  * Type 13: Simple hash-based noise generator.
@@ -11,9 +10,9 @@ class TextureOpNoise : TextureOperation(0, true) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            val verticalValue = TextureRaster.verticalTable!![y]
-            for (x in 0 until TextureRaster.currentWidth) {
-                output[x] = computeNoise(TextureRaster.horizontalTable!![x], verticalValue) % 4096
+            val verticalValue = verticalTable[y]
+            for (x in 0 until currentWidth) {
+                output[x] = computeNoise(horizontalTable[x], verticalValue) % 4096
             }
         }
         return output

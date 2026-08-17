@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.min
 
@@ -23,7 +22,7 @@ class TextureOpClamp : TextureOperation(1, false) {
             val outputGreen = output[1]
             val outputBlue = output[2]
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 outputRed[x] = if (inputRed[x] < minValue) minValue else min(inputRed[x], maxValue)
                 outputGreen[x] = if (inputGreen[x] < minValue) minValue else min(inputGreen[x], maxValue)
                 outputBlue[x] = if (inputBlue[x] < minValue) minValue else min(inputBlue[x], maxValue)
@@ -36,7 +35,7 @@ class TextureOpClamp : TextureOperation(1, false) {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
             val input = getChildMonochromeOutput(0, y)
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 output[x] = if (input[x] < minValue) minValue else min(input[x], maxValue)
             }
         }

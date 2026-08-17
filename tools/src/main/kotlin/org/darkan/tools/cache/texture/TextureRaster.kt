@@ -1,105 +1,97 @@
 package org.darkan.tools.cache.texture
 
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Utility singleton for texture rasterization.
- * Contains precomputed sine/cosine lookup tables and dimension tracking.
+ * Immutable, shareable rasterisation constants for one texture size.
+ *
+ * Everything here is derived purely from `width`/`height`, so an instance is safe to
+ * publish to any number of threads. [TextureRaster.context] interns one instance per
+ * size, which is why generating a 64x64 material on one thread can no longer disturb a
+ * 128x128 material on another: they simply hold different contexts.
+ *
+ * Operations copy these values into their own fields (see [TextureOperation.bindRaster])
+ * rather than dereferencing the context per pixel, so a lookup in a hot loop stays a
+ * single field read.
  */
-object TextureRaster {
-    /** Sine lookup table (256 entries, values scaled to 12-bit fixed point) */
-    var PALETTE_SIN: IntArray? = null
-        private set
-
-    /** Cosine lookup table (256 entries, values scaled to 12-bit fixed point) */
-    var PALETTE_COS: IntArray? = null
-        private set
-
+class RasterContext(
+    @JvmField val currentWidth: Int,
+    @JvmField val currentHeight: Int
+) {
     /** Precomputed horizontal texture coordinate mapping table */
-    var horizontalTable: IntArray? = null
-        private set
+    @JvmField
+    val horizontalTable: IntArray = IntArray(currentWidth) { (it shl 12) / currentWidth }
 
-    /** Precomputed vertical texture coordinate mapping table */
-    var verticalTable: IntArray? = null
-        private set
-
-    /** Current texture width */
-    var currentWidth: Int = 0
-        private set
-
-    /** Current texture height */
-    var currentHeight: Int = 0
-        private set
+    /** Precomputed vertical texture coordinate mapping table (shared for square textures) */
+    @JvmField
+    val verticalTable: IntArray = if (currentHeight == currentWidth) {
+        horizontalTable
+    } else {
+        IntArray(currentHeight) { (it shl 12) / currentHeight }
+    }
 
     /** Width - 1, used for wrapping */
-    var rowEnd: Int = 0
-        private set
+    @JvmField
+    val rowEnd: Int = currentWidth - 1
 
     /** Height - 1, used for wrapping */
-    var columnEnd: Int = 0
-        private set
+    @JvmField
+    val columnEnd: Int = currentHeight - 1
 
     /** Width * 32, used for emboss calculations */
-    var widthScale: Int = 0
-        private set
+    @JvmField
+    val widthScale: Int = currentWidth * 32
+}
 
-    /** Wall-clock start time (nanos) for the current texture generation pass.
-     *  Set before each top-level generation in TextureLoader.
-     *  Checked in cache access (getPalette), row loops, and leaf operation loops;
-     *  if it exceeds [MAX_GENERATION_NANOS] a [TextureGenerationException] is thrown.
-     *  ThreadLocal so concurrent background threads each track their own timeout. */
-    private val generationStartNanosLocal: ThreadLocal<Long> = ThreadLocal.withInitial { 0L }
-    var generationStartNanos: Long
-        get() = generationStartNanosLocal.get()
-        set(value) { generationStartNanosLocal.set(value) }
-    const val MAX_GENERATION_NANOS: Long = 5_000_000_000L // 5 seconds
+/**
+ * Process-wide, read-only tables for texture rasterization.
+ *
+ * This object holds only immutable state. The per-generation width/height and the
+ * coordinate tables derived from them used to live here as reassignable singleton
+ * fields, which meant two concurrent generations at different sizes reallocated the
+ * tables underneath each other. They now live in [RasterContext] instances that are
+ * bound to the (per-generation) operation DAG.
+ */
+object TextureRaster {
+    private const val TWO_PI = 6.283185307179586
+
+    /** Sine lookup table (256 entries, values scaled to 12-bit fixed point) */
+    @JvmField
+    val PALETTE_SIN: IntArray = IntArray(256) { (sin(TWO_PI * (it / 255.0)) * 4096.0).toInt() }
+
+    /** Cosine lookup table (256 entries, values scaled to 12-bit fixed point) */
+    @JvmField
+    val PALETTE_COS: IntArray = IntArray(256) { (cos(TWO_PI * (it / 255.0)) * 4096.0).toInt() }
+
+    /** Wall-clock budget for a single top-level texture generation, including its nested
+     *  materials. Callers turn this into an absolute deadline and pass it down; a value of
+     *  0 disables the check. */
+    const val MAX_GENERATION_NANOS: Long = 5_000_000_000L
+
+    /** Interned contexts keyed by (width, height). Contexts are immutable, so sharing one
+     *  across threads and generations is safe and keeps generation allocation-free. */
+    private val contexts = ConcurrentHashMap<Long, RasterContext>()
 
     /**
-     * Initialize the sine/cosine lookup tables.
-     * Call this once at startup before using texture operations.
+     * Get the shared [RasterContext] for a texture size, creating it on first use.
      */
-    fun calculateTable() {
-        if (PALETTE_SIN == null || PALETTE_COS == null) {
-            PALETTE_SIN = IntArray(256)
-            PALETTE_COS = IntArray(256)
-            for (i in 0 until 256) {
-                val angle = 6.283185307179586 * (i / 255.0)
-                PALETTE_SIN!![i] = (sin(angle) * 4096.0).toInt()
-                PALETTE_COS!![i] = (cos(angle) * 4096.0).toInt()
-            }
-        }
+    fun context(width: Int, height: Int): RasterContext {
+        val key = (width.toLong() shl 32) or (height.toLong() and 0xFFFFFFFFL)
+        contexts[key]?.let { return it }
+        // putIfAbsent rather than computeIfAbsent: a duplicate construction is cheap and
+        // the first publication wins, so every caller at a given size sees one instance.
+        val created = RasterContext(width, height)
+        return contexts.putIfAbsent(key, created) ?: created
     }
 
     /**
-     * Set the texture raster dimensions and compute coordinate mapping tables.
-     *
-     * @param width The texture width
-     * @param height The texture height
+     * Retained for callers that used to prime the sine/cosine tables. The tables are now
+     * built during object initialisation, which the JVM already makes thread-safe, so this
+     * only forces that initialisation to happen.
      */
-    fun setDimensions(width: Int, height: Int) {
-        if (width != currentWidth) {
-            horizontalTable = IntArray(width)
-            for (idx in 0 until width) {
-                horizontalTable!![idx] = (idx shl 12) / width
-            }
-            rowEnd = width - 1
-            currentWidth = width
-            widthScale = width * 32
-        }
-
-        if (currentHeight != height) {
-            if (currentWidth != height) {
-                verticalTable = IntArray(height)
-                for (idx in 0 until height) {
-                    verticalTable!![idx] = (idx shl 12) / height
-                }
-            } else {
-                // Optimization: reuse horizontal table for square textures
-                verticalTable = horizontalTable
-            }
-            columnEnd = height - 1
-            currentHeight = height
-        }
+    fun calculateTable() {
+        // PALETTE_SIN/PALETTE_COS are initialised with the object; nothing to do.
     }
 }

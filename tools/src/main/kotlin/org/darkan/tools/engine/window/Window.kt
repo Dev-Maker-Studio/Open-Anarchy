@@ -23,6 +23,7 @@ class Window(private val config: WindowConfig = WindowConfig()) {
     private var mouseButtonCallback: ((Int, Int, Int) -> Unit)? = null
     private var cursorPosCallback: ((Double, Double) -> Unit)? = null
     private var scrollCallback: ((Double, Double) -> Unit)? = null
+    private var focusCallback: ((Boolean) -> Unit)? = null
 
     /**
      * Standard cursors, created lazily and kept for the window's lifetime.
@@ -86,6 +87,16 @@ class Window(private val config: WindowConfig = WindowConfig()) {
             scrollCallback?.invoke(xoffset, yoffset)
         }
 
+        // Focus and cursor-enter both mean the pointer's last known position is stale, and
+        // the next cursor event would otherwise be reported as one enormous movement.
+        glfwSetWindowFocusCallback(handle) { _, focused ->
+            focusCallback?.invoke(focused)
+        }
+
+        glfwSetCursorEnterCallback(handle) { _, entered ->
+            if (entered) focusCallback?.invoke(true)
+        }
+
         MemoryStack.stackPush().use { stack ->
             val pWidth = stack.mallocInt(1)
             val pHeight = stack.mallocInt(1)
@@ -144,6 +155,11 @@ class Window(private val config: WindowConfig = WindowConfig()) {
         scrollCallback = callback
     }
 
+    /** Called with true when the window takes focus or the cursor enters it. */
+    fun setFocusCallback(callback: (focused: Boolean) -> Unit) {
+        focusCallback = callback
+    }
+
     fun setCursorMode(mode: Int) {
         glfwSetInputMode(handle, GLFW_CURSOR, mode)
     }
@@ -173,6 +189,11 @@ class Window(private val config: WindowConfig = WindowConfig()) {
     }
 
     fun shouldClose(): Boolean = glfwWindowShouldClose(handle)
+
+    /** Ask the render loop to exit after the current frame. */
+    fun requestClose() {
+        glfwSetWindowShouldClose(handle, true)
+    }
 
     fun update() {
         glfwSwapBuffers(handle)

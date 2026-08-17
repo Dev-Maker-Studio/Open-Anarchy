@@ -330,40 +330,55 @@ class TerrainEditManager(
         normalsZ = nz
     }
 
-    /** Render all non-empty color terrain (untextured). */
-    fun renderColor(shader: ShaderProgram, modelMatrix: Matrix4f) {
+    /**
+     * Render all non-empty color terrain (untextured).
+     *
+     * @return what this pass submitted, so the caller can charge it to the frame's
+     *         terrain draw-call and triangle counters. The centre region is drawn from
+     *         here rather than from the merged atlas meshes, so without this the frame
+     *         statistics under-report the whole region -- which is what made
+     *         `-Ddarkan.terrainAtlas=false` look like it was skipping passes.
+     */
+    fun renderColor(shader: ShaderProgram, modelMatrix: Matrix4f): TerrainRenderStats {
         shader.setUniform("model", modelMatrix)
-        if (useMergedMeshes) {
-            mergedColorMesh?.render()
-        } else {
-            chunkedTerrain.renderColor(shader)
-        }
+        if (!useMergedMeshes) return chunkedTerrain.renderColor(shader)
+        val mesh = mergedColorMesh ?: return TerrainRenderStats.NONE
+        mesh.render()
+        return TerrainRenderStats(1, mesh.vertexCount / 3)
     }
 
-    /** Render all non-empty textured terrain (opaque). */
-    fun renderTextured(shader: ShaderProgram, modelMatrix: Matrix4f, bindTexture: (Int) -> Unit) {
+    /**
+     * Render all non-empty textured terrain (opaque).
+     *
+     * @return what this pass submitted. See [renderColor].
+     */
+    fun renderTextured(shader: ShaderProgram, modelMatrix: Matrix4f, bindTexture: (Int) -> Unit): TerrainRenderStats {
         shader.setUniform("model", modelMatrix)
-        if (useMergedMeshes) {
-            for (batch in mergedTexturedBatches) {
-                bindTexture(batch.textureId)
-                batch.mesh.render()
-            }
-        } else {
-            chunkedTerrain.renderTextured(shader, bindTexture)
+        if (!useMergedMeshes) return chunkedTerrain.renderTextured(shader, bindTexture)
+        var triangles = 0
+        for (batch in mergedTexturedBatches) {
+            bindTexture(batch.textureId)
+            batch.mesh.render()
+            triangles += batch.mesh.vertexCount / 3
         }
+        return TerrainRenderStats(mergedTexturedBatches.size, triangles)
     }
 
-    /** Render all non-empty alpha terrain (semi-transparent). */
-    fun renderAlpha(shader: ShaderProgram, modelMatrix: Matrix4f, bindTexture: (Int) -> Unit) {
+    /**
+     * Render all non-empty alpha terrain (semi-transparent).
+     *
+     * @return what this pass submitted. See [renderColor].
+     */
+    fun renderAlpha(shader: ShaderProgram, modelMatrix: Matrix4f, bindTexture: (Int) -> Unit): TerrainRenderStats {
         shader.setUniform("model", modelMatrix)
-        if (useMergedMeshes) {
-            for (batch in mergedAlphaBatches) {
-                bindTexture(batch.textureId)
-                batch.mesh.render()
-            }
-        } else {
-            chunkedTerrain.renderAlpha(shader, bindTexture)
+        if (!useMergedMeshes) return chunkedTerrain.renderAlpha(shader, bindTexture)
+        var triangles = 0
+        for (batch in mergedAlphaBatches) {
+            bindTexture(batch.textureId)
+            batch.mesh.render()
+            triangles += batch.mesh.vertexCount / 3
         }
+        return TerrainRenderStats(mergedAlphaBatches.size, triangles)
     }
 
     /** Release all GPU resources held by chunk meshes and merged meshes. */
@@ -380,6 +395,24 @@ class TerrainEditManager(
         for (batch in mergedAlphaBatches) batch.mesh.cleanup()
         mergedAlphaBatches = emptyList()
         useMergedMeshes = false
+    }
+}
+
+/**
+ * What one [TerrainEditManager] or [ChunkedTerrain] render pass actually submitted.
+ *
+ * These passes decide internally whether to draw from the merged region meshes or from
+ * the 64 per-chunk meshes, and how many texture batches each of those comes to, so the
+ * caller cannot count the draws from the outside. Returning the counts keeps
+ * [org.darkan.tools.engine.render.RenderMetrics] honest about the frame it is describing.
+ */
+data class TerrainRenderStats(
+    val drawCalls: Int,
+    val triangles: Int
+) {
+    companion object {
+        /** Nothing was drawn. */
+        val NONE = TerrainRenderStats(0, 0)
     }
 }
 

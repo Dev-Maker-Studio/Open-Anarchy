@@ -24,10 +24,10 @@ class TextureOp37 : TextureOperation(0, true) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            val verticalPos = TextureRaster.verticalTable!![y] - 2048
+            val verticalPos = verticalTable[y] - 2048
 
-            for (x in 0 until TextureRaster.currentWidth) {
-                val horizontalPos = TextureRaster.horizontalTable!![x] - 2048
+            for (x in 0 until currentWidth) {
+                val horizontalPos = horizontalTable[x] - 2048
 
                 // First position with offset
                 var pos1X = horizontalPos + offsetX1
@@ -53,7 +53,7 @@ class TextureOp37 : TextureOperation(0, true) {
 
     private fun checkWave1(x: Int, y: Int): Boolean {
         val diagonalSum = (y - x) * frequency shr 12
-        var threshold = TextureRaster.PALETTE_COS!![((diagonalSum * 255) shr 12) and 0xff]
+        var threshold = TextureRaster.PALETTE_COS[((diagonalSum * 255) shr 12) and 0xff]
         threshold = (threshold shl 12) / frequency
         threshold = (threshold shl 12) / scale
         threshold = threshold * amplitude shr 12
@@ -62,7 +62,7 @@ class TextureOp37 : TextureOperation(0, true) {
 
     private fun checkWave2(x: Int, y: Int): Boolean {
         val diagonalDiff = (y + x) * frequency shr 12
-        var threshold = TextureRaster.PALETTE_COS!![((diagonalDiff * 255) shr 12) and 0xff]
+        var threshold = TextureRaster.PALETTE_COS[((diagonalDiff * 255) shr 12) and 0xff]
         threshold = (threshold shl 12) / frequency
         threshold = (threshold shl 12) / scale
         threshold = threshold * amplitude shr 12

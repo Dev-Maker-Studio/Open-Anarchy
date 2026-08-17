@@ -14,36 +14,40 @@ import org.lwjgl.system.MemoryUtil
  *
  * Uses std140 layout for cross-shader compatibility:
  * - CameraBlock (binding 0): view, projection, viewProjection matrices + camera position
- * - LightingBlock (binding 1): ambient, direction, color
+ * - EnvironmentBlock (binding 1): sun direction/colour/terms, fog colour and range
  *
  * Using UBOs reduces per-draw-call uniform updates significantly when many
- * objects share the same camera/lighting data.
+ * objects share the same camera/environment data.
  */
 class UniformBuffers {
     // UBO IDs
     private var cameraUBO: Int = 0
-    private var lightingUBO: Int = 0
+    private var environmentUBO: Int = 0
 
     // Buffer sizes (std140 aligned)
     // CameraBlock: 3 mat4 (192 bytes) + vec3 padded to vec4 (16 bytes) = 208 bytes, pad to 256 for alignment
     private val cameraBlockSize = 256
 
-    // LightingBlock: 3 vec3 padded to vec4 each (48 bytes), pad to 64 for alignment
-    private val lightingBlockSize = 64
+    // EnvironmentBlock: 5 vec4 = 80 bytes
+    private val environmentBlockSize = EnvironmentSettings.STD140_FLOATS * 4
 
     // Binding points
     private val cameraBinding = 0
-    private val lightingBinding = 1
+    private val environmentBinding = 1
 
     // Cached values to avoid redundant updates
     private val cachedView = Matrix4f()
     private val cachedProjection = Matrix4f()
     private val cachedCameraPos = Vector3f()
-    private val cachedAmbient = Vector3f()
-    private val cachedLightDir = Vector3f()
-    private val cachedLightColor = Vector3f()
     private var cameraDirty = true
-    private var lightingDirty = true
+
+    // Scratch + last-uploaded snapshot of the environment block. Comparing the packed
+    // floats is exact and costs nothing next to a buffer upload, so the environment can
+    // be handed in every frame and only reaches the GPU when something actually changed.
+    private val environmentScratch = FloatArray(EnvironmentSettings.STD140_FLOATS)
+    private val environmentUploaded = FloatArray(EnvironmentSettings.STD140_FLOATS)
+    private val environmentDirection = Vector3f()
+    private var environmentDirty = true
 
     /**
      * Initialize the UBOs.
@@ -55,22 +59,18 @@ class UniformBuffers {
         glBufferData(GL_UNIFORM_BUFFER, cameraBlockSize.toLong(), GL_DYNAMIC_DRAW)
         glBindBufferBase(GL_UNIFORM_BUFFER, cameraBinding, cameraUBO)
 
-        // Create Lighting UBO
-        lightingUBO = glGenBuffers()
-        glBindBuffer(GL_UNIFORM_BUFFER, lightingUBO)
-        glBufferData(GL_UNIFORM_BUFFER, lightingBlockSize.toLong(), GL_DYNAMIC_DRAW)
-        glBindBufferBase(GL_UNIFORM_BUFFER, lightingBinding, lightingUBO)
+        // Create Environment UBO
+        environmentUBO = glGenBuffers()
+        glBindBuffer(GL_UNIFORM_BUFFER, environmentUBO)
+        glBufferData(GL_UNIFORM_BUFFER, environmentBlockSize.toLong(), GL_DYNAMIC_DRAW)
+        glBindBufferBase(GL_UNIFORM_BUFFER, environmentBinding, environmentUBO)
 
         glBindBuffer(GL_UNIFORM_BUFFER, 0)
 
         // Initialize with default values to avoid black rendering on first frame
         cameraDirty = true
-        lightingDirty = true
-        updateLighting(
-            Vector3f(0.5f, 0.5f, 0.5f),           // ambient
-            Vector3f(-0.5f, -1f, -0.5f).normalize(), // direction
-            Vector3f(0.7f, 0.7f, 0.7f)            // color
-        )
+        environmentDirty = true
+        updateEnvironment(EnvironmentSettings())
         updateCamera(
             Matrix4f().identity(),
             Matrix4f().identity(),
@@ -136,48 +136,28 @@ class UniformBuffers {
     }
 
     /**
-     * Update lighting UBO data.
+     * Update the environment UBO from [settings].
+     *
+     * Safe to call every frame: the packed block is compared against the last upload and
+     * only pushed when it differs.
      */
-    fun updateLighting(ambient: Vector3f, direction: Vector3f, color: Vector3f) {
-        // Check if data actually changed
-        if (!lightingDirty &&
-            cachedAmbient.equals(ambient) &&
-            cachedLightDir.equals(direction) &&
-            cachedLightColor.equals(color)) {
+    fun updateEnvironment(settings: EnvironmentSettings) {
+        settings.writeStd140(environmentScratch, environmentDirection)
+
+        if (!environmentDirty && environmentScratch.contentEquals(environmentUploaded)) {
             return
         }
-
-        cachedAmbient.set(ambient)
-        cachedLightDir.set(direction)
-        cachedLightColor.set(color)
-        lightingDirty = false
+        System.arraycopy(environmentScratch, 0, environmentUploaded, 0, environmentScratch.size)
+        environmentDirty = false
 
         MemoryStack.stackPush().use { stack ->
-            val buffer = stack.malloc(lightingBlockSize)
-
-            // std140 layout: each vec3 is padded to vec4 (16 bytes)
-
-            // vec3 ambientLight
-            buffer.putFloat(ambient.x)
-            buffer.putFloat(ambient.y)
-            buffer.putFloat(ambient.z)
-            buffer.putFloat(0.0f) // padding
-
-            // vec3 lightDirection
-            buffer.putFloat(direction.x)
-            buffer.putFloat(direction.y)
-            buffer.putFloat(direction.z)
-            buffer.putFloat(0.0f) // padding
-
-            // vec3 lightColor
-            buffer.putFloat(color.x)
-            buffer.putFloat(color.y)
-            buffer.putFloat(color.z)
-            buffer.putFloat(0.0f) // padding
-
+            val buffer = stack.malloc(environmentBlockSize)
+            for (value in environmentScratch) {
+                buffer.putFloat(value)
+            }
             buffer.flip()
 
-            glBindBuffer(GL_UNIFORM_BUFFER, lightingUBO)
+            glBindBuffer(GL_UNIFORM_BUFFER, environmentUBO)
             glBufferSubData(GL_UNIFORM_BUFFER, 0, buffer)
             glBindBuffer(GL_UNIFORM_BUFFER, 0)
         }
@@ -196,12 +176,12 @@ class UniformBuffers {
     }
 
     /**
-     * Bind a shader's uniform block to the lighting UBO.
+     * Bind a shader's uniform block to the environment UBO.
      */
-    fun bindLightingBlock(shader: ShaderProgram, blockName: String = "LightingBlock") {
+    fun bindEnvironmentBlock(shader: ShaderProgram, blockName: String = "EnvironmentBlock") {
         val blockIndex = glGetUniformBlockIndex(shader.id, blockName)
         if (blockIndex != GL_INVALID_INDEX) {
-            glUniformBlockBinding(shader.id, blockIndex, lightingBinding)
+            glUniformBlockBinding(shader.id, blockIndex, environmentBinding)
         } else {
             System.err.println("UBO WARNING: $blockName not found in shader ${shader.id}")
         }
@@ -213,18 +193,18 @@ class UniformBuffers {
     fun bindToShader(
         shader: ShaderProgram,
         cameraBlockName: String = "CameraBlock",
-        lightingBlockName: String = "LightingBlock"
+        environmentBlockName: String = "EnvironmentBlock"
     ) {
         bindCameraBlock(shader, cameraBlockName)
-        bindLightingBlock(shader, lightingBlockName)
+        bindEnvironmentBlock(shader, environmentBlockName)
     }
 
     /**
-     * Force update on next call (use when camera/lighting changed externally).
+     * Force update on next call (use when camera/environment changed externally).
      */
     fun invalidate() {
         cameraDirty = true
-        lightingDirty = true
+        environmentDirty = true
     }
 
     /**
@@ -235,9 +215,9 @@ class UniformBuffers {
             glDeleteBuffers(cameraUBO)
             cameraUBO = 0
         }
-        if (lightingUBO != 0) {
-            glDeleteBuffers(lightingUBO)
-            lightingUBO = 0
+        if (environmentUBO != 0) {
+            glDeleteBuffers(environmentUBO)
+            environmentUBO = 0
         }
     }
 
@@ -255,13 +235,16 @@ class UniformBuffers {
         """.trimIndent()
 
         /**
-         * Get the GLSL code for the lighting uniform block.
+         * Get the GLSL code for the environment uniform block.
+         * Kept in sync with [EnvironmentSettings.writeStd140] and every scene shader.
          */
-        fun getLightingBlockGLSL(): String = """
-            layout(std140) uniform LightingBlock {
-                vec3 ambientLight;
-                vec3 lightDirection;
-                vec3 lightColor;
+        fun getEnvironmentBlockGLSL(): String = """
+            layout(std140) uniform EnvironmentBlock {
+                vec4 sunDirection;
+                vec4 sunColour;
+                vec4 sunTerms;
+                vec4 fogColour;
+                vec4 fogRange;
             };
         """.trimIndent()
     }
