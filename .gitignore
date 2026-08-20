@@ -75,3 +75,5 @@ cache-backups/
 # ImGui writes its docking/window layout here at runtime (ImGuiLayer setIniFilename)
 darkan-tools-layout.ini
 __pycache__/
+/tools/capture-headless.sh
+/tools/scripts/
