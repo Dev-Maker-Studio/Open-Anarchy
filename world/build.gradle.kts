@@ -39,13 +39,17 @@ publishing {
     val ciProjectId: String? = System.getenv("CI_PROJECT_ID")
     val ciJobToken: String? = System.getenv("CI_JOB_TOKEN")
     val ciPipelineId: String? = System.getenv("CI_PIPELINE_ID")
-    if (ciProjectId == null || ciJobToken == null || ciPipelineId == null) {
-        println("Failed to get project id, job token or pipeline id.")
+    val ciBranch: String? = System.getenv("CI_COMMIT_REF_SLUG")
+    val ciTag: String? = System.getenv("CI_COMMIT_TAG")
+    if (ciProjectId == null || ciJobToken == null || ciPipelineId == null || ciBranch == null) {
+        println("Failed to get project id, job token, pipeline id or branch.")
         return@publishing
     }
 
     publications.create<MavenPublication>("library") {
-        version = "${project.version}-${ciPipelineId}"
+        // A tag is a release and is published under its own name; a branch push is
+        // <version>-<branch>-<pipeline>, where the branch is the channel beta servers follow.
+        version = ciTag ?: "${project.version}-${ciBranch}-${ciPipelineId}"
         artifactId = "world-server"
         artifact(tasks.shadowJar)
     }

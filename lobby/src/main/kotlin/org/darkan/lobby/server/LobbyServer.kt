@@ -122,6 +122,7 @@ class LobbyServer(val js5: JS5Server) {
         output.respond(ResponseOpcode.JS5_SYNC)
         val opcode = input.readByte().toInt()
         if (opcode != RequestOpcode.LOBBY || pendingLogins.size > 20) return output.finish(ResponseOpcode.LOGIN_SERVER_REJECTED_SESSION)
+        if (Lobby.updatingSoon) return output.finish(ResponseOpcode.SERVER_BEING_UPDATED)
         val size = input.readShort().toInt()
         val packet = input.readPacket(size)
         val major = packet.readInt()
