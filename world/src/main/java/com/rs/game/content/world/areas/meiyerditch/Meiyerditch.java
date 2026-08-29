@@ -20,13 +20,15 @@ import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.LoginHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
+import static com.rs.engine.variables.VarBitPlayer.myq3_sea_boat_visible;
+import static com.rs.engine.variables.VarBitPlayer.myq3_wall_floorboards_down;
 
 @PluginEventHandler
 public class Meiyerditch {
 
 	public static LoginHandler unlockVars = new LoginHandler(e -> {
-		e.getPlayer().getVars().setVarBit(2587, 1); //boat
-		e.getPlayer().getVars().setVarBit(2589, 1); //kick down floor
+		e.getPlayer().getVars().setVarBit(myq3_sea_boat_visible, 1); //boat
+		e.getPlayer().getVars().setVarBit(myq3_wall_floorboards_down, 1); //kick down floor
 	});
 
 	public static ObjectClickHandler handleBoat = new ObjectClickHandler(false, new Object[] { 12945, 17955 }, e -> {

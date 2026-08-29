@@ -1,5 +1,6 @@
 package world.gregs.voidps.buffer.read
 
+import world.gregs.voidps.buffer.Cp1252
 import java.nio.ByteBuffer
 
 class BufferReader(
@@ -22,7 +23,7 @@ class BufferReader(
     }
 
     override fun readByteInverse(): Int {
-        return -readByte()
+        return (-readByte()).toByte().toInt()
     }
 
     override fun readByteSubtract(): Int {
@@ -33,28 +34,44 @@ class BufferReader(
         return readByte() and 0xff
     }
 
+    /**
+     * Signed 16-bit big-endian. [readByte] sign-extends the most significant byte,
+     * which is exactly the sign of the short, so no correction is needed.
+     */
     override fun readShort(): Int {
         return (readByte() shl 8) or readUnsignedByte()
     }
 
+    /**
+     * Signed 16-bit big-endian with the low byte offset by 128.
+     * Only the most significant byte may sign-extend; see [readUnsignedShortAdd]
+     * for the unsigned form.
+     */
     override fun readShortAdd(): Int {
         return (readByte() shl 8) or readUnsignedByteAdd()
     }
 
     override fun readUnsignedShortAdd(): Int {
-        return (readByte() shl 8) or ((readByte() - 128) and 0xff)
+        return (readUnsignedByte() shl 8) or ((readByte() - 128) and 0xff)
     }
 
+    /**
+     * Signed 16-bit little-endian; the sign-extended [readByte] is the most
+     * significant byte, so the sign lands in the right place.
+     */
     override fun readShortLittle(): Int {
         return readUnsignedByte() or (readByte() shl 8)
     }
 
+    /**
+     * Signed 16-bit little-endian with the low byte offset by 128.
+     */
     override fun readShortAddLittle(): Int {
         return readUnsignedByteAdd() or (readByte() shl 8)
     }
 
     override fun readUnsignedByteAdd(): Int {
-        return (readByte() - 128).toByte().toInt()
+        return (readByte() - 128) and 0xff
     }
 
     override fun readUnsignedShort(): Int {
@@ -65,8 +82,13 @@ class BufferReader(
         return readUnsignedByte() or (readUnsignedByte() shl 8)
     }
 
+    /**
+     * Signed 24-bit big-endian (-8388608..8388607). Only the most significant byte
+     * sign-extends; the middle and low bytes are masked. Use [readUnsignedMedium]
+     * for the unsigned form.
+     */
     override fun readMedium(): Int {
-        return (readByte() shl 16) or (readByte() shl 8) or readUnsignedByte()
+        return (readByte() shl 16) or (readUnsignedByte() shl 8) or readUnsignedByte()
     }
 
     override fun readUnsignedMedium(): Int {
@@ -77,12 +99,20 @@ class BufferReader(
         return (readUnsignedByte() shl 24) or (readUnsignedByte() shl 16) or (readUnsignedByte() shl 8) or readUnsignedByte()
     }
 
+    /**
+     * 32-bit inverse-middle byte order (bytes arrive 2, 3, 0, 1). Every byte is
+     * masked; a 32-bit read fills an [Int] completely, so signedness is inherent.
+     */
     override fun readIntInverseMiddle(): Int {
-        return (readByte() shl 16) or (readByte() shl 24) or readUnsignedByte() or (readByte() shl 8)
+        return (readUnsignedByte() shl 16) or (readUnsignedByte() shl 24) or readUnsignedByte() or (readUnsignedByte() shl 8)
     }
 
+    /**
+     * 32-bit little-endian. Every byte is masked; a 32-bit read fills an [Int]
+     * completely, so signedness is inherent.
+     */
     override fun readIntLittle(): Int {
-        return readUnsignedByte() or (readByte() shl 8) or (readByte() shl 16) or (readByte() shl 24)
+        return readUnsignedByte() or (readUnsignedByte() shl 8) or (readUnsignedByte() shl 16) or (readUnsignedByte() shl 24)
     }
 
     override fun readUnsignedIntMiddle(): Int {
@@ -132,7 +162,7 @@ class BufferReader(
             if (b == 0) {
                 break
             }
-            sb.append(b.toChar())
+            sb.append(Cp1252.decode(b))
         }
         return sb.toString()
     }

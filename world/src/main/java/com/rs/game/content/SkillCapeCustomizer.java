@@ -22,6 +22,7 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 
 import java.util.Arrays;
+import static com.rs.engine.variables.VarPlayer.skillcape_colour_interface;
 
 @PluginEventHandler
 public class SkillCapeCustomizer {
@@ -47,7 +48,7 @@ public class SkillCapeCustomizer {
 			return;
 		}
 		player.getInterfaceManager().sendInterface(19);
-		player.getVars().setVar(2174, colors[part]);
+		player.getVars().setVar(skillcape_colour_interface, colors[part]);
 		player.sendInputHSL(colorId -> {
 			colors[part] = colorId;
 			player.getVars().setVarBit(9254 + part, colorId);

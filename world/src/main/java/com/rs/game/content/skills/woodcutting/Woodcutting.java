@@ -40,6 +40,7 @@ import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.DropSets;
 import com.rs.utils.Ticks;
 import com.rs.utils.drop.DropTable;
+import static com.rs.engine.variables.VarBitPlayer.myq5_tree_health;
 
 @PluginEventHandler
 public class Woodcutting extends Action {
@@ -66,7 +67,7 @@ public class Woodcutting extends Action {
 		return this;
 	}
 
-	public static LoginHandler unlockBlisterwoodTree = new LoginHandler(e -> e.getPlayer().getVars().setVarBit(9776, 1));
+	public static LoginHandler unlockBlisterwoodTree = new LoginHandler(e -> e.getPlayer().getVars().setVarBit(myq5_tree_health, 1));
 
 	public static ObjectClickHandler handleTree = new ObjectClickHandler(new Object[] { "Tree", "Swamp tree", "Dead tree", "Evergreen", "Dying tree", "Jungle Tree" }, e -> {
 		if (e.getObj().getDefinitions().containsOption(0, "Chop down") || e.getObj().getDefinitions().containsOption(0, "Chop-down"))
@@ -143,11 +144,11 @@ public class Woodcutting extends Action {
 			e.getPlayer().getActionManager().setAction(new Woodcutting(e.getObj(), TreeType.BLISTERWOOD) {
 				@Override
 				public void fellTree() {
-					e.getPlayer().getVars().setVarBit(9776, 2);
+					e.getPlayer().getVars().setVarBit(myq5_tree_health, 2);
 					WorldTasks.schedule(Ticks.fromMinutes(2), () -> {
 						try {
 							if (e.getPlayer() != null && !e.getPlayer().hasFinished())
-								e.getPlayer().getVars().setVarBit(9776, 1);
+								e.getPlayer().getVars().setVarBit(myq5_tree_health, 1);
 						} catch (Throwable e1) {
 							Logger.handle(Woodcutting.class, "handleBlisterwood", e1);
 						}
@@ -156,7 +157,7 @@ public class Woodcutting extends Action {
 
 				@Override
 				public boolean checkTree() {
-					return e.getPlayer().getVars().getVarBit(9776) == 1;
+					return e.getPlayer().getVars().getVarBit(myq5_tree_health) == 1;
 				}
 			});
 	});

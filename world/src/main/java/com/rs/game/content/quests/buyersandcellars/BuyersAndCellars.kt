@@ -12,6 +12,8 @@ import org.darkan.core.Utils
 import com.rs.plugin.annotations.PluginEventHandler
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onXpDrop
+import com.rs.engine.variables.thigui_humble
+import com.rs.engine.variables.thigui_chaliceheld
 
 @QuestHandler(
     quest = Quest.BUYERS_AND_CELLARS,
@@ -103,18 +105,18 @@ class BuyersAndCellars : QuestOutline() {
     override fun updateStage(player: Player, stage: Int) {
         when (stage) {
             1, 2 -> {
-                player.vars.setVarBit(7820, 1)
-                player.vars.setVarBit(7793, 0)
+                player.vars.setVarBit(thigui_chaliceheld, 1)
+                player.vars.setVarBit(thigui_humble, 0)
             }
 
             3, 8 -> {
-                player.vars.setVarBit(7820, 1)
-                player.vars.setVarBit(7793, 25)
+                player.vars.setVarBit(thigui_chaliceheld, 1)
+                player.vars.setVarBit(thigui_humble, 25)
             }
 
             4, 5, 6, 7 -> {
-                player.vars.setVarBit(7820, 1)
-                player.vars.setVarBit(7793, 10)
+                player.vars.setVarBit(thigui_chaliceheld, 1)
+                player.vars.setVarBit(thigui_humble, 10)
             }
         }
     }

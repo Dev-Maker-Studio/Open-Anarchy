@@ -3,6 +3,8 @@ package org.darkan.world.server
 import com.rs.Settings
 import com.rs.db.WorldDB
 import com.rs.game.World
+import com.rs.game.tasks.WorldTasks
+import com.rs.game.content.clans.ClansManager
 import com.rs.game.model.entity.player.Player
 import com.rs.utils.AccountLimiter
 import com.rs.utils.MachineInformation
@@ -24,7 +26,7 @@ import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.model.MachineInformation as CoreMachineInformation
 import org.darkan.core.net.*
 import org.darkan.core.net.prot.Codec
-import org.darkan.core.net.prot.WorldLoginDetails
+import org.darkan.core.net.prot.packet.WorldLoginDetails
 import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.secure.RSA
@@ -37,8 +39,9 @@ import org.darkan.core.model.Clan
 import org.darkan.core.mongo.collections.Clans
 import org.darkan.core.net.prot.ClientProt
 import org.darkan.core.net.prot.ServerProt
-import org.darkan.core.net.prot.FcJoin
+import org.darkan.core.net.prot.packet.FcJoin
 import org.darkan.core.social.gateway.AnnouncementBroadcast
+import org.darkan.core.social.gateway.ClanCheckNameResponse
 import org.darkan.core.social.gateway.ClanCreateResponse
 import org.darkan.core.social.gateway.ServerPacketBatch
 import org.darkan.core.social.gateway.ServerPacketEnvelope
@@ -185,10 +188,10 @@ object WorldServer {
         for (i in 0 until prefSize)
             xtea.readUByte() // prefs
 
-        val success = xtea.readUByte().toInt()
-        if (success != 6)
-            logError("Failed to parse machine info for $username (success=$success)")
+        // parse() consumes the machine-info version byte itself; reading it here too shifted every field.
         val machineInfo = CoreMachineInformation.parse(xtea)
+        if (machineInfo.version != 6)
+            logError("Unexpected machine info version for $username (version=${machineInfo.version})")
 
         xtea.readInt() // varVerifyId
         xtea.readLong() // machineUid
@@ -255,47 +258,78 @@ object WorldServer {
             return output.finish(ResponseOpcode.ACCOUNT_ONLINE)
         }
 
-        // Load or create player
-        val player = loadOrCreatePlayer(account)
+        // Load or create player. A decode failure must not fall through to a fresh character -
+        // that would overwrite the real save on the next flush.
+        val loaded = WorldDB.getPlayers().loadForLogin(account.username)
+        if (loaded.loadError()) {
+            logError("Failed to decode player save for ${account.username}; refusing login")
+            pendingLogins.remove(username)
+            return output.finish(ResponseOpcode.COULD_NOT_COMPLETE_LOGIN)
+        }
+        val player = loaded.player() ?: Player(account)
         pendingLogins.remove(username)
 
         val session = initSession(output, isaacKeys, ip, codec)
 
-        // init() calls World.addPlayer() which assigns player.index
-        player.init(session, account, displayMode, screenWidth, screenHeight, MachineInformation.from(machineInfo))
+        // Anything that goes wrong while wiring up the player is a login failure, not a silent
+        // drop: tell the client so it can retry, and flag the player so the world tick unwinds
+        // whatever init() already registered.
+        try {
+            // init() calls World.addPlayer() which assigns player.index
+            player.init(session, account, displayMode, screenWidth, screenHeight, MachineInformation.from(machineInfo))
 
-        // Send WorldLoginDetails before ISAAC is active (noIsaac=true)
-        session.send(
-            WorldLoginDetails(
-                rights = if (Settings.getConfig().isDebug) 2 else player.rights.crown,
-                modLevel = 0,
-                quickChat = false,
-                verifiedEmail = false,
-                aBool7322 = false,
-                quickChatOnly = false,
-                playerIndex = player.index,
-                members = Settings.getConfig().worldInfo.members(),
-                dob = 0,
-                memberWorld = Settings.getConfig().worldInfo.members(),
-                worldName = Settings.getConfig().serverName
-            ),
-            noIsaac = true
-        )
+            // Send WorldLoginDetails before ISAAC is active (noIsaac=true)
+            session.send(
+                WorldLoginDetails(
+                    rights = if (Settings.getConfig().isDebug) 2 else player.rights.crown,
+                    modLevel = 0,
+                    quickChat = false,
+                    verifiedEmail = false,
+                    aBool7322 = false,
+                    quickChatOnly = false,
+                    playerIndex = player.index,
+                    members = Settings.getConfig().worldInfo.members(),
+                    dob = 0,
+                    memberWorld = Settings.getConfig().worldInfo.members(),
+                    worldName = Settings.getConfig().serverName
+                ),
+                noIsaac = true
+            )
 
-        session.onDisconnecting {
+            session.onDisconnecting {
+                player.disconnected = true
+            }
+            session.onDisconnected {
+                AccountLimiter.remove(ip)
+            }
+            player.start()
+            session.flush() // Flush WorldLoginDetails + all init packets before reading client input
+            player.setStarted() // Mark started AFTER flush so the world thread cannot interleave writes
+        } catch (e: CancellationException) {
             player.disconnected = true
+            throw e
+        } catch (e: Throwable) {
+            player.disconnected = true
+            if (Session.isExpectedDisconnect(e)) {
+                logTrace("World client disconnected during login for ${account.username}: ${e::class.simpleName}")
+                return
+            }
+            logError("Error completing login for ${account.username}", e)
+            return output.finish(ResponseOpcode.COULD_NOT_COMPLETE_LOGIN)
         }
-        session.onDisconnected {
-            AccountLimiter.remove(ip)
-        }
-        player.start()
-        session.flush() // Flush WorldLoginDetails + all init packets before reading client input
-        player.setStarted() // Mark started AFTER flush so the world thread cannot interleave writes
         session.readPackets(input)
     }
 
     suspend fun forwardToLobby(username: String, packet: ClientProt) {
         socialClient.sendClientPacket(username, packet)
+    }
+
+    /** Runs [block] against the named player on the next world tick, if they are still in game. */
+    private fun onWorldThread(username: String, block: (Player) -> Unit) {
+        WorldTasks.schedule(0) {
+            val player = World.getPlayerByUsername(username) ?: return@schedule
+            if (player.hasStarted() && !player.hasFinished()) block(player)
+        }
     }
 
     private fun handleSocialMessage(msg: SocialGatewayWireMessage) {
@@ -308,17 +342,22 @@ object WorldServer {
                 logInfo("handleSocialMessage: ServerPacketBatch usernames=${msg.usernames} packet=${msg.packet::class.simpleName}")
                 msg.usernames.forEach { deliverToPlayer(it, msg.packet) }
             }
-            is ClanCreateResponse -> {
-                val player = World.getPlayerByUsername(msg.username)
-                if (player != null && player.hasStarted() && !player.hasFinished()) {
-                    if (msg.success) {
-                        player.sendMessage("Your clan has been created!")
-                        player.appearance.generateAppearanceData()
-                    } else {
-                        player.sendMessage(msg.message ?: "Unable to create clan.")
-                    }
-                    player.tempAttribs.removeB("ccCreateLock")
+            // Gateway messages arrive on the social client's coroutine; anything that touches player
+            // state (appearance, dialogues, attribs) has to run on the world thread.
+            is ClanCreateResponse -> onWorldThread(msg.username) { player ->
+                if (msg.success) {
+                    player.sendMessage("Your clan has been created!")
+                    player.appearance.generateAppearanceData()
+                } else {
+                    player.sendMessage(msg.message ?: "Unable to create clan.")
                 }
+                player.tempAttribs.removeB("ccCreateLock")
+            }
+            is ClanCheckNameResponse -> onWorldThread(msg.username) { player ->
+                player.tempAttribs.removeB("ccCreateLock")
+                // The lobby has already told the player why the name was rejected, so a rejection
+                // just puts them back on the name prompt.
+                if (msg.approved) ClansManager.create(player, msg.clanName) else ClansManager.promptName(player)
             }
             is AnnouncementBroadcast -> logInfo("Received announcement: ${msg.message}")
             else -> logInfo("Ignoring gateway message: ${msg::class.simpleName}")
@@ -393,6 +432,20 @@ object WorldServer {
                 socialClient.sendClanCreate(username, clanName)
             } catch (e: Exception) {
                 logError("Failed to forward clan create for $username", e)
+                // Otherwise the player is locked out of clan creation until they relog.
+                World.getPlayerByUsername(username)?.tempAttribs?.setB("ccCreateLock", false)
+            }
+        }
+    }
+
+    fun forwardClanCheckName(username: String, clanName: String) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendClanCheckName(username, clanName)
+            } catch (e: Exception) {
+                logError("Failed to forward clan name check for $username", e)
+                // Otherwise the player is locked out of clan creation until they relog.
+                World.getPlayerByUsername(username)?.tempAttribs?.setB("ccCreateLock", false)
             }
         }
     }
@@ -413,6 +466,26 @@ object WorldServer {
                 socialClient.sendClanAddMember(inviterUsername, targetUsername)
             } catch (e: Exception) {
                 logError("Failed to forward clan add member $targetUsername", e)
+            }
+        }
+    }
+
+    fun forwardClanBanMember(username: String, targetUsername: String) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendClanBanMember(username, targetUsername)
+            } catch (e: Exception) {
+                logError("Failed to forward clan ban $targetUsername", e)
+            }
+        }
+    }
+
+    fun forwardClanUnbanMember(username: String, targetUsername: String) {
+        CoroutineScope(dispatcher).launch {
+            try {
+                socialClient.sendClanUnbanMember(username, targetUsername)
+            } catch (e: Exception) {
+                logError("Failed to forward clan unban $targetUsername", e)
             }
         }
     }
@@ -490,10 +563,6 @@ object WorldServer {
                 callback.accept(null)
             }
         }
-    }
-
-    private fun loadOrCreatePlayer(account: Account): Player {
-        return WorldDB.getPlayers().getSyncUsername(account.username) ?: Player(account)
     }
 
     private fun initSession(write: ByteWriteChannel, isaacKeys: IntArray, hostname: String, codec: Codec): Session {

@@ -7,7 +7,7 @@ import com.rs.net.decoders.handlers.ObjectHandler
 import com.rs.plugin.PluginManager
 import com.rs.plugin.events.InterfaceOnObjectEvent
 import org.darkan.core.model.Item
-import org.darkan.core.net.prot.IfOnObject
+import org.darkan.core.net.prot.packet.IfOnObject
 import org.darkan.core.net.prot.handler.PacketHandler
 import world.gregs.voidps.type.Tile
 

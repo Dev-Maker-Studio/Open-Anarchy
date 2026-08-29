@@ -32,6 +32,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import static com.rs.engine.variables.VarBitPlayer.ql4_perm_donefilter;
+import static com.rs.engine.variables.VarBitPlayer.ql4_perm_filter;
+import static com.rs.engine.variables.VarBitPlayer.ql4_perm_sort;
+import static com.rs.engine.variables.VarPlayer.qp;
 
 @PluginEventHandler
 public class QuestManager {
@@ -171,7 +175,7 @@ public class QuestManager {
     }
 
     public void sendQuestPoints() {
-        player.getVars().setVar(101, getQuestPoints());
+        player.getVars().setVar(qp, getQuestPoints());
         player.getVars().setVar(904, MAX_QUESTPOINTS);
     }
 
@@ -203,9 +207,9 @@ public class QuestManager {
 
     public void updateOptions() {
         //4538 = free/members toggle which is first?
-        player.getVars().setVarBit(4536, sort);
-        player.getVars().setVarBit(4537, filter ? 0 : 1);
-        player.getVars().setVarBit(7264, hideDone ? 0 : 1);
+        player.getVars().setVarBit(ql4_perm_sort, sort);
+        player.getVars().setVarBit(ql4_perm_filter, filter ? 0 : 1);
+        player.getVars().setVarBit(ql4_perm_donefilter, hideDone ? 0 : 1);
         player.getVars().syncVarsToClient();
         player.getPackets().sendRunScript(2160, 0);
     }

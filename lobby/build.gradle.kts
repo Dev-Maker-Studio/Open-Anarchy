@@ -37,6 +37,7 @@ publishing {
 
     publications.create<MavenPublication>("library") {
         version = "${project.version}-${ciPipelineId}"
+        artifactId = "lobby-server"
         artifact(tasks.shadowJar)
     }
 

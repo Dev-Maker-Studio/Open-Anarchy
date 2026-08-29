@@ -8,6 +8,7 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import org.darkan.core.EnvVars
 import org.darkan.core.net.prot.*
+import org.darkan.core.net.prot.packet.*
 import org.darkan.core.worldlist.Country
 import org.darkan.core.worldlist.WorldMetadata
 
@@ -226,6 +227,15 @@ data class ClanCreateRequest(val username: String, val clanName: String) : Socia
 @Serializable
 @SerialName("ClanCreateResponse")
 data class ClanCreateResponse(val username: String, val success: Boolean, val message: String?) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("ClanCheckNameRequest")
+data class ClanCheckNameRequest(val username: String, val clanName: String) : SocialGatewayWireMessage
+
+/** Answer to [ClanCheckNameRequest]; the lobby has already messaged the player about a rejection. */
+@Serializable
+@SerialName("ClanCheckNameResponse")
+data class ClanCheckNameResponse(val username: String, val clanName: String, val approved: Boolean) : SocialGatewayWireMessage
 
 @Serializable
 @SerialName("ClanLeaveRequest")

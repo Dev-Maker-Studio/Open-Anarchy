@@ -29,6 +29,7 @@ import com.rs.utils.Ticks;
 
 import java.util.ArrayList;
 import java.util.List;
+import static com.rs.engine.variables.VarBitPlayer.agilityarena_greenlight;
 
 public final class BrimhavenAgilityController extends Controller {
 
@@ -44,7 +45,7 @@ public final class BrimhavenAgilityController extends Controller {
 		}
 		player.getHintIconsManager().removeUnsavedHintIcon();
 		if (player.getTempAttribs().removeI("BrimhavenAgility") != -1)
-			player.getVars().setVarBit(4456, 0);
+			player.getVars().setVarBit(agilityarena_greenlight, 0);
 		player.getInterfaceManager().removeOverlay();
 	}
 
@@ -95,7 +96,7 @@ public final class BrimhavenAgilityController extends Controller {
 		private static void addIcon(Player player) {
 			if (player.getTempAttribs().getI("BrimhavenAgility") == -1) {
 				player.getTempAttribs().removeI("BrimhavenAgility");
-				player.getVars().setVarBit(4456, 0);
+				player.getVars().setVarBit(agilityarena_greenlight, 0);
 			} else
 				player.getTempAttribs().setI("BrimhavenAgility", -1);
 			if (taggedDispenser == null)
@@ -126,7 +127,7 @@ public final class BrimhavenAgilityController extends Controller {
 			int stage = player.getTempAttribs().getI("BrimhavenAgility");
 			if (stage == -1) {
 				player.getTempAttribs().setI("BrimhavenAgility", 0);
-				player.getVars().setVarBit(4456, 1);
+				player.getVars().setVarBit(agilityarena_greenlight, 1);
 				player.sendMessage("You get tickets by tagging more than one pillar in a row. Tag the next pillar!");
 			} else if (stage == 0)
 				player.sendMessage("You have already tagged this pillar, wait until the arrow moves again.");

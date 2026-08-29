@@ -2,6 +2,8 @@ package org.darkan.core.net.prot.revision.rev727
 
 import org.darkan.core.model.MoveType
 import org.darkan.core.net.prot.update.*
+import org.darkan.core.update.PlayerAppearance
+import org.darkan.core.update.PlayerAppearanceData
 import world.gregs.voidps.buffer.write.BufferWriter
 import kotlin.math.abs
 
@@ -35,6 +37,13 @@ object Rev727UpdateProtocol : UpdateProtocol {
         idBits = 15,
         planeBits = 2,
     )
+
+    // ----------------------------
+    // Appearance
+    // ----------------------------
+
+    override fun encodePlayerAppearance(data: PlayerAppearanceData): PlayerAppearance =
+        PlayerAppearance.of(Rev727AppearanceEncoder.encode(data))
 
     // ----------------------------
     // Player update

@@ -79,6 +79,7 @@ import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
+import static com.rs.engine.variables.VarBitPlayer.rand_deaths;
 
 public class DungeonController extends Controller {
 
@@ -330,7 +331,7 @@ public class DungeonController extends Controller {
 	}
 
 	private void refreshDeaths() {
-		player.getVars().setVarBit(7554, getDeaths());
+		player.getVars().setVarBit(rand_deaths, getDeaths());
 	}
 
 	private void increaseDeaths() {

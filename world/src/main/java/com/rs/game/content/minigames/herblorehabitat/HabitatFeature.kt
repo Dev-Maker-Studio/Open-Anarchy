@@ -30,6 +30,7 @@ import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
+import com.rs.engine.variables.ecosystem_other
 
 enum class HabitatFeature(val id: Int, val level: Int, val button: Int, val mamboCost: Int) {
     BONEYARD(7, 56, 75, 56000),
@@ -47,9 +48,9 @@ enum class HabitatFeature(val id: Int, val level: Int, val button: Int, val mamb
 }
 
 var Player.habitatFeature: HabitatFeature?
-    get() = HabitatFeature[vars.getVarBit(8354)]
+    get() = HabitatFeature[vars.getVarBit(ecosystem_other)]
     set(value) {
-        vars.saveVarBit(8354, value?.id ?: 0)
+        vars.saveVarBit(ecosystem_other, value?.id ?: 0)
         this.checkJadinkoAttraction()
     }
 private val BUTTON_MAP: Map<Int, HabitatFeature> = entries.associateBy { it.button }
@@ -60,7 +61,7 @@ fun forButton(buttonId: Int): HabitatFeature? = BUTTON_MAP[buttonId]
 @ServerStartupEvent
 fun handleFeatureClicks() {
     onLogin { e ->
-        val id = e.player.vars.getVarBit(8354)
+        val id = e.player.vars.getVarBit(ecosystem_other)
         val feature = HabitatFeature.entries.find { it.id == id }
         e.player.habitatFeature = feature
     }

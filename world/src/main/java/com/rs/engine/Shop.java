@@ -33,6 +33,12 @@ import com.rs.utils.ItemConfig;
 import com.rs.utils.shop.ShopItem;
 
 import java.util.concurrent.CopyOnWriteArrayList;
+import com.rs.engine.variables.VarPlayer;
+import static com.rs.engine.variables.VarPlayer.shop;
+import static com.rs.engine.variables.VarPlayer.shop_filter;
+import static com.rs.engine.variables.VarPlayer.shop_last_viewed_inventory;
+import static com.rs.engine.variables.VarPlayer.shop_last_viewed_slot;
+import static com.rs.engine.variables.VarPlayer.shopfreebie;
 
 @PluginEventHandler
 public class Shop {
@@ -126,8 +132,8 @@ public class Shop {
 					shop.buy(e.getPlayer(), slot, e.getPlayer().getTempAttribs().getI("shopAmt", 0));
 				else {
 					shop.sell(e.getPlayer(), slot, e.getPlayer().getTempAttribs().getI("shopAmt", 0));
-					e.getPlayer().getVars().setVar(2563, 0);
-					e.getPlayer().getVars().setVar(2565, 1); // this is to update the tab.
+					e.getPlayer().getVars().setVar(shop_last_viewed_slot, 0);
+					e.getPlayer().getVars().setVar(shop_filter, 1); // this is to update the tab.
 				}
 			} else if (e.getComponentId() == 208) {
 				e.getPlayer().getTempAttribs().setI("shopAmt", Utils.clampI(e.getPlayer().getTempAttribs().getI("shopAmt", 0) + 5, 1, 5000));
@@ -152,7 +158,7 @@ public class Shop {
 				e.getPlayer().getTempAttribs().setI("shopAmt", Utils.clampI(isBuying ? shop.getMainStock()[slot].getItem().getAmount() : e.getPlayer().getInventory().getItems().array()[slot].getAmount(), 1, 5000));
 				e.getPlayer().getPackets().setIFText(1265, 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
 			} else if (e.getComponentId() == 29) {
-				e.getPlayer().getVars().setVar(2561, 93);
+				e.getPlayer().getVars().setVar(shop_last_viewed_inventory, 93);
 				e.getPlayer().getTempAttribs().removeB("shop_buying");
 				e.getPlayer().getTempAttribs().setI("shopAmt", 1);
 			} else if (e.getComponentId() == 28) {
@@ -169,7 +175,7 @@ public class Shop {
 					Shop shop = e.getPlayer().getTempAttribs().getO("Shop");
 					if (shop == null)
 						return;
-					e.getPlayer().getVars().setVar(2563, e.getSlotId());
+					e.getPlayer().getVars().setVar(shop_last_viewed_slot, e.getSlotId());
 					if (e.getOpNum() == 1)
 						shop.sendValue(e.getPlayer(), e.getSlotId());
 					else if (e.getOpNum() == 2)
@@ -213,13 +219,13 @@ public class Shop {
 			viewingPlayers.remove(player);
 			player.getTempAttribs().removeO("Shop");
 		});
-		player.getVars().setVar(118, MAIN_STOCK_ITEMS_KEY);
-		player.getVars().setVar(1496, -1);
-		player.getVars().setVar(532, currency);
+		player.getVars().setVar(shop, MAIN_STOCK_ITEMS_KEY);
+		player.getVars().setVar(shopfreebie, -1);
+		player.getVars().setVar(VarPlayer.currency, currency);
 
-		player.getVars().setVar(2561, -1);
+		player.getVars().setVar(shop_last_viewed_inventory, -1);
 		player.getVars().setVar(2562, -1);
-		player.getVars().setVar(2563, -1);
+		player.getVars().setVar(shop_last_viewed_slot, -1);
 		//player.getVars().setVar(2565, 1); //changes to sell tab
 		player.getVars().syncVarsToClient();
 		sendStore(player);

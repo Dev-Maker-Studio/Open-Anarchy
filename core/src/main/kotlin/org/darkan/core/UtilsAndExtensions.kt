@@ -37,7 +37,7 @@ fun String.formatPlayerNameForDisplay(): String {
         .lowercase()
         .split(" ")
         .joinToString(" ") { word ->
-            replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+            word.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() }
         }
 }
 

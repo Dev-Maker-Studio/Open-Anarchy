@@ -18,6 +18,8 @@ package com.rs.net.encoders
 
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.cs2.CS2Type
+import com.rs.engine.variables.gimp_main
+import com.rs.game.Account
 import com.rs.game.World
 import com.rs.game.map.Chunk
 import com.rs.game.map.ChunkManager
@@ -31,7 +33,6 @@ import org.darkan.core.net.prot.update.PlayerUpdateTrackingState
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.model.gameobject.ObjectMeshModifier
 import com.rs.game.model.item.ItemsContainer
-import world.gregs.voidps.buffer.write.BufferWriter
 import com.rs.utils.MapXTEAs
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import org.darkan.core.Utils
@@ -44,87 +45,87 @@ import org.darkan.core.model.RegionSize
 import org.darkan.core.model.Sound
 import org.darkan.core.model.SpotAnim
 import org.darkan.core.net.Session
-import org.darkan.core.net.prot.BlockMinimapState
-import org.darkan.core.net.prot.BuildInstancedRegion
-import org.darkan.core.net.prot.BuildRegion
-import org.darkan.core.net.prot.CamLookAt
-import org.darkan.core.net.prot.CamMoveTo
-import org.darkan.core.net.prot.CamResetHard
-import org.darkan.core.net.prot.CamResetSmooth
-import org.darkan.core.net.prot.CamShake
-import org.darkan.core.net.prot.ChatFilterSettings
-import org.darkan.core.net.prot.ChatFilterSettingsPrivateChat
-import org.darkan.core.net.prot.ClearVarps
-import org.darkan.core.net.prot.CreateGroundItem
-import org.darkan.core.net.prot.CreateObject
-import org.darkan.core.net.prot.CustomizeObject
-import org.darkan.core.net.prot.Cutscene
-import org.darkan.core.net.prot.DestroyObject
-import org.darkan.core.net.prot.GameMessage
-import org.darkan.core.net.prot.GroundItemCount
-import org.darkan.core.net.prot.HintArrow
-import org.darkan.core.net.prot.IfCloseSub
-import org.darkan.core.net.prot.IfOpenSub
-import org.darkan.core.net.prot.IfOpenSubActiveGroundItem
-import org.darkan.core.net.prot.IfOpenSubActiveNpc
-import org.darkan.core.net.prot.IfOpenSubActiveObject
-import org.darkan.core.net.prot.IfOpenSubActivePlayer
-import org.darkan.core.net.prot.IfOpenTop
-import org.darkan.core.net.prot.IfSetAnim
-import org.darkan.core.net.prot.IfSetAngle
-import org.darkan.core.net.prot.IfSetEvents
-import org.darkan.core.net.prot.IfSetGraphic
-import org.darkan.core.net.prot.IfSetHide
-import org.darkan.core.net.prot.IfSetItem
-import org.darkan.core.net.prot.IfSetModel
-import org.darkan.core.net.prot.IfSetNpcHead
-import org.darkan.core.net.prot.IfSetPlayerHead
-import org.darkan.core.net.prot.IfSetPosition
-import org.darkan.core.net.prot.IfSetTargetParam
-import org.darkan.core.net.prot.IfSetText
-import org.darkan.core.net.prot.InstanceLoadType
-import org.darkan.core.net.prot.LogoutFull
-import org.darkan.core.net.prot.LogoutLobby
-import org.darkan.core.net.prot.MapProjAnim
-import org.darkan.core.net.prot.MessageClanChannel
-import org.darkan.core.net.prot.MessageFriendsChat
-import org.darkan.core.net.prot.MessagePrivate
-import org.darkan.core.net.prot.MessagePrivateEcho
-import org.darkan.core.net.prot.MessagePublic
-import org.darkan.core.net.prot.MessageQuickChatClanChannel
-import org.darkan.core.net.prot.MessageQuickChatFriendsChat
-import org.darkan.core.net.prot.MessageQuickChatPrivate
-import org.darkan.core.net.prot.MessageQuickChatPrivateEcho
-import org.darkan.core.net.prot.NpcUpdate
-import org.darkan.core.net.prot.NpcUpdateLarge
-import org.darkan.core.net.prot.ObjAnim
-import org.darkan.core.net.prot.OpenUrl
-import org.darkan.core.net.prot.PlayerOption
-import org.darkan.core.net.prot.PlayerUpdate
-import org.darkan.core.net.prot.PlayerWeight
-import org.darkan.core.net.prot.RemoveGroundItem
-import org.darkan.core.net.prot.ResetSounds
-import org.darkan.core.net.prot.RunEnergy
-import org.darkan.core.net.prot.RunScript
-import org.darkan.core.net.prot.SetCursor
-import org.darkan.core.net.prot.SetDrawOrder
-import org.darkan.core.net.prot.SpotAnimSpecific
-import org.darkan.core.net.prot.TileMessage
-import org.darkan.core.net.prot.UpdateGESlot
-import org.darkan.core.net.prot.UpdateInvFull
-import org.darkan.core.net.prot.UpdateInvPartial
-import org.darkan.core.net.prot.UpdateRebootTimer
-import org.darkan.core.net.prot.UpdateStat
-import org.darkan.core.net.prot.UpdateZonePartialFollows
-import org.darkan.core.net.prot.VarclanSetByte
-import org.darkan.core.net.prot.VarclanSetInt
-import org.darkan.core.net.prot.VarclanSetLong
-import org.darkan.core.net.prot.VarclanSetString
-import org.darkan.core.net.prot.VorbisSound
-import org.darkan.core.net.prot.setVarbitPacket
-import org.darkan.core.net.prot.setVarcPacket
-import org.darkan.core.net.prot.setVarcStrPacket
-import org.darkan.core.net.prot.setVarpPacket
+import org.darkan.core.net.prot.packet.BlockMinimapState
+import org.darkan.core.net.prot.packet.BuildInstancedRegion
+import org.darkan.core.net.prot.packet.BuildRegion
+import org.darkan.core.net.prot.packet.CamLookAt
+import org.darkan.core.net.prot.packet.CamMoveTo
+import org.darkan.core.net.prot.packet.CamResetHard
+import org.darkan.core.net.prot.packet.CamResetSmooth
+import org.darkan.core.net.prot.packet.CamShake
+import org.darkan.core.net.prot.packet.ChatFilterSettings
+import org.darkan.core.net.prot.packet.ChatFilterSettingsPrivateChat
+import org.darkan.core.net.prot.packet.ClearVarps
+import org.darkan.core.net.prot.packet.CreateGroundItem
+import org.darkan.core.net.prot.packet.CreateObject
+import org.darkan.core.net.prot.packet.CustomizeObject
+import org.darkan.core.net.prot.packet.Cutscene
+import org.darkan.core.net.prot.packet.DestroyObject
+import org.darkan.core.net.prot.packet.GameMessage
+import org.darkan.core.net.prot.packet.GroundItemCount
+import org.darkan.core.net.prot.packet.HintArrow
+import org.darkan.core.net.prot.packet.HintTrail
+import org.darkan.core.net.prot.packet.IfCloseSub
+import org.darkan.core.net.prot.packet.IfOpenSub
+import org.darkan.core.net.prot.packet.IfOpenSubActiveGroundItem
+import org.darkan.core.net.prot.packet.IfOpenSubActiveNpc
+import org.darkan.core.net.prot.packet.IfOpenSubActiveObject
+import org.darkan.core.net.prot.packet.IfOpenSubActivePlayer
+import org.darkan.core.net.prot.packet.IfOpenTop
+import org.darkan.core.net.prot.packet.IfSetAnim
+import org.darkan.core.net.prot.packet.IfSetAngle
+import org.darkan.core.net.prot.packet.IfSetEvents
+import org.darkan.core.net.prot.packet.IfSetGraphic
+import org.darkan.core.net.prot.packet.IfSetHide
+import org.darkan.core.net.prot.packet.IfSetItem
+import org.darkan.core.net.prot.packet.IfSetModel
+import org.darkan.core.net.prot.packet.IfSetNpcHead
+import org.darkan.core.net.prot.packet.IfSetPlayerHead
+import org.darkan.core.net.prot.packet.IfSetPosition
+import org.darkan.core.net.prot.packet.IfSetTargetParam
+import org.darkan.core.net.prot.packet.IfSetText
+import org.darkan.core.net.prot.packet.LogoutFull
+import org.darkan.core.net.prot.packet.LogoutLobby
+import org.darkan.core.net.prot.packet.MapProjAnim
+import org.darkan.core.net.prot.packet.MessageClanChannel
+import org.darkan.core.net.prot.packet.MessageFriendsChat
+import org.darkan.core.net.prot.packet.MessagePrivate
+import org.darkan.core.net.prot.packet.MessagePrivateEcho
+import org.darkan.core.net.prot.packet.MessagePublic
+import org.darkan.core.net.prot.packet.MessageQuickChatClanChannel
+import org.darkan.core.net.prot.packet.MessageQuickChatFriendsChat
+import org.darkan.core.net.prot.packet.MessageQuickChatPrivate
+import org.darkan.core.net.prot.packet.MessageQuickChatPrivateEcho
+import org.darkan.core.net.prot.packet.NpcUpdate
+import org.darkan.core.net.prot.packet.NpcUpdateLarge
+import org.darkan.core.net.prot.packet.ObjAnim
+import org.darkan.core.net.prot.packet.OpenUrl
+import org.darkan.core.net.prot.packet.PlayerOption
+import org.darkan.core.net.prot.packet.PlayerUpdate
+import org.darkan.core.net.prot.packet.PlayerWeight
+import org.darkan.core.net.prot.packet.RemoveGroundItem
+import org.darkan.core.net.prot.packet.ResetSounds
+import org.darkan.core.net.prot.packet.RunEnergy
+import org.darkan.core.net.prot.packet.RunScript
+import org.darkan.core.net.prot.packet.SetCursor
+import org.darkan.core.net.prot.packet.SetDrawOrder
+import org.darkan.core.net.prot.packet.SpotAnimSpecific
+import org.darkan.core.net.prot.packet.TileMessage
+import org.darkan.core.net.prot.packet.UpdateGESlot
+import org.darkan.core.net.prot.packet.UpdateInvFull
+import org.darkan.core.net.prot.packet.UpdateInvPartial
+import org.darkan.core.net.prot.packet.UpdateRebootTimer
+import org.darkan.core.net.prot.packet.UpdateStat
+import org.darkan.core.net.prot.packet.UpdateZonePartialFollows
+import org.darkan.core.net.prot.packet.VarclanSetByte
+import org.darkan.core.net.prot.packet.VarclanSetInt
+import org.darkan.core.net.prot.packet.VarclanSetLong
+import org.darkan.core.net.prot.packet.VarclanSetString
+import org.darkan.core.net.prot.packet.VorbisSound
+import org.darkan.core.net.prot.packet.setVarbitPacket
+import org.darkan.core.net.prot.packet.setVarcPacket
+import org.darkan.core.net.prot.packet.setVarcStrPacket
+import org.darkan.core.net.prot.packet.setVarpPacket
 import org.darkan.core.social.ChatMessage
 import org.darkan.core.social.PublicChatMessage
 import org.darkan.core.social.QuickChatMessage
@@ -132,6 +133,10 @@ import org.darkan.core.util.MapUtils
 import org.darkan.core.util.Structure
 import org.darkan.core.model.IFEvents as IFEventsModel
 import world.gregs.voidps.type.Tile
+import org.darkan.core.net.prot.dto.GrandExchangeOffer
+import org.darkan.core.net.prot.dto.InstanceLoadType
+import org.darkan.core.net.prot.dto.InvSlotUpdate
+import java.io.ByteArrayOutputStream
 
 class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
@@ -252,11 +257,53 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     // ======================== GE / Draw / Hint ========================
 
     fun updateGESlot(slot: Int, progress: Int, item: Int, price: Int, amount: Int, currAmount: Int, totalPrice: Int) {
-        session.queuePacket(UpdateGESlot(slot, UpdateGESlot.Offer(progress, item, price, amount, currAmount, totalPrice)))
+        session.queuePacket(UpdateGESlot(slot, GrandExchangeOffer(progress, item, price, amount, currAmount, totalPrice)))
     }
 
     fun sendDrawOrder(playerFirst: Boolean) {
         session.queuePacket(SetDrawOrder(playerFirst))
+    }
+
+    /**
+     * Draws hint trail [index] (0-8) from [start] along the first [size] entries of [stepsX]/[stepsY].
+     *
+     * The trail body is built here because the modern [HintTrail] packet carries it pre-encoded. The
+     * route finder hands its steps out destination-first, so they are written back-to-front, as signed
+     * byte offsets from [start]. A zero offset pair is written ahead of them - and the step count is
+     * padded by one to match - so the trail's first node is the player's own tile; the route finder
+     * doesn't include it.
+     */
+    @JvmOverloads
+    fun sendHintTrail(start: Tile, modelId: Int, stepsX: IntArray, stepsY: IntArray, size: Int, index: Int = 0) {
+        val body = ByteArrayOutputStream(7 + size * 2)
+        // The client reads this length with an offset "unsigned smart": byte - 64, or short - 49152.
+        val length = size + 1
+        if (length < 64) {
+            body.write(length + 64)
+        } else {
+            body.write((length + 49152) shr 8)
+            body.write(length + 49152)
+        }
+        body.write(start.x shr 8)
+        body.write(start.x)
+        body.write(start.y shr 8)
+        body.write(start.y)
+        body.write(0)
+        body.write(0)
+        for (i in size - 1 downTo 0) {
+            body.write(stepsX[i] - start.x)
+            body.write(stepsY[i] - start.y)
+        }
+        session.queuePacket(HintTrail(index, modelId, body.toByteArray()))
+    }
+
+    /**
+     * Clears hint trail [index]. A model id of -1 is the client's signal to drop the trail, and it stops
+     * reading before the body, so no body is sent.
+     */
+    @JvmOverloads
+    fun clearHintTrail(index: Int = 0) {
+        session.queuePacket(HintTrail(index, -1, ByteArray(0)))
     }
 
     fun sendHintIcon(icon: HintIcon) {
@@ -514,11 +561,11 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(MessagePrivate(player.account.rights.crown, player.displayName, player.displayName, message))
     }
 
-    fun receivePrivateMessage(account: com.rs.game.Account, message: String) {
+    fun receivePrivateMessage(account: Account, message: String) {
         session.queuePacket(MessagePrivateEcho(account.displayName, message))
     }
 
-    fun receivePrivateChatQuickMessage(account: com.rs.game.Account, message: QuickChatMessage) {
+    fun receivePrivateChatQuickMessage(account: Account, message: QuickChatMessage) {
         session.queuePacket(MessageQuickChatPrivateEcho(account.displayName, message))
     }
 
@@ -526,19 +573,19 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(MessageQuickChatPrivate(player.account.rights.crown, player.displayName, player.displayName, message))
     }
 
-    fun sendFriendsChatMessage(account: com.rs.game.Account, chatName: String, message: String) {
+    fun sendFriendsChatMessage(account: Account, chatName: String, message: String) {
         session.queuePacket(MessageFriendsChat(account.rights.crown, account.displayName, account.displayName, chatName, message))
     }
 
-    fun receiveFriendChatQuickMessage(account: com.rs.game.Account, chatName: String, message: QuickChatMessage) {
+    fun receiveFriendChatQuickMessage(account: Account, chatName: String, message: QuickChatMessage) {
         session.queuePacket(MessageQuickChatFriendsChat(chatName, account.rights.crown, account.displayName, account.displayName, message))
     }
 
-    fun receiveClanChatMessage(account: com.rs.game.Account, message: String, guest: Boolean) {
+    fun receiveClanChatMessage(account: Account, message: String, guest: Boolean) {
         session.queuePacket(MessageClanChannel(guest, account.rights.crown, account.displayName, message))
     }
 
-    fun receiveClanChatQuickMessage(account: com.rs.game.Account, message: QuickChatMessage, guest: Boolean) {
+    fun receiveClanChatQuickMessage(account: Account, message: QuickChatMessage, guest: Boolean) {
         session.queuePacket(MessageQuickChatClanChannel(guest, account.rights.crown, account.displayName, message))
     }
 
@@ -585,7 +632,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         }
 
         if (sendLSWP) {
-            player.localPlayerUpdate.init(BufferWriter(40960))
             initPlayerTrackingState()
         }
 
@@ -616,7 +662,6 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         }
 
         if (sendLSWP) {
-            player.localPlayerUpdate.init(BufferWriter(40960))
             initPlayerTrackingState()
         }
 
@@ -711,7 +756,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         val updates = Array(slots.size) { i ->
             val slot = slots[i]
             val item = if (slot in items.indices) items[slot] else null
-            UpdateInvPartial.InvSlotUpdate(slot, item?.id ?: -1, item?.amount ?: 0)
+            InvSlotUpdate(slot, item?.id ?: -1, item?.amount ?: 0)
         }
         session.queuePacket(UpdateInvPartial(key, negativeKey, updates))
     }
@@ -773,7 +818,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     fun sendGameBarStages() {
         sendVar(1054, player.clanStatus)
         sendVar(1055, player.assistStatus)
-        sendVar(1056, if (player.isFilterGame) 1 else 0)
+        sendVar(gimp_main, if (player.isFilterGame) 1 else 0)
         sendVar(2159, player.account.social.fcStatus.toInt())
         sendChatFilterSettings()
         sendChatFilterSettingsPrivateChat()

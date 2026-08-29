@@ -4,7 +4,7 @@ import com.rs.game.World
 import com.rs.game.content.clans.ClansManager
 import com.rs.game.model.entity.player.Player
 import com.rs.net.decoders.handlers.ObjectHandler
-import org.darkan.core.net.prot.OpObj
+import org.darkan.core.net.prot.packet.OpObj
 import org.darkan.core.net.prot.handler.PacketHandler
 import world.gregs.voidps.type.Tile
 

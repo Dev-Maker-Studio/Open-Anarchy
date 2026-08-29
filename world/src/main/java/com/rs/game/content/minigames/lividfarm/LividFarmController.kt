@@ -12,6 +12,7 @@ import org.darkan.core.Logger
 import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.utils.Ticks
+import com.rs.engine.variables.lunarfm_pauline_state
 
 object LividFarmController : Controller() {
 
@@ -314,7 +315,7 @@ object LividFarmController : Controller() {
         npc.combatTarget = LividFarm.pauline
         npc.attackedBy = LividFarm.pauline
         players.forEach {
-            it.vars.setVarBit(9063, 1);
+            it.vars.setVarBit(lunarfm_pauline_state, 1);
             it.vars.syncVarsToClient()
             it.tempAttribs.removeB("LividFarm.Suqah.Claimed")
         }
@@ -323,7 +324,7 @@ object LividFarmController : Controller() {
                 npc.anim(4389)
                 WorldTasks.delay(Ticks.fromSeconds(2)) {
                     players.forEach {
-                        it.vars.setVarBit(9063, 0);
+                        it.vars.setVarBit(lunarfm_pauline_state, 0);
                     }
                     npc.finish()
                     activeSuqah = null

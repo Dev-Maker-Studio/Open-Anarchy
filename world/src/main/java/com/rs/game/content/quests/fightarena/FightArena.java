@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.rs.game.content.world.doors.Doors.handleDoor;
+import static com.rs.engine.variables.VarBitPlayer.arena_servil_state;
+import static com.rs.engine.variables.VarBitPlayer.arena_suit_of_armour;
 
 @QuestHandler(
 		quest = Quest.FIGHT_ARENA,
@@ -111,11 +113,11 @@ public class FightArena extends QuestOutline {
 
 	public static LoginHandler onLoginVarbits = new LoginHandler(e -> {
 		if(e.getPlayer().getQuestManager().getStage(Quest.FIGHT_ARENA) > NOT_STARTED)
-			e.getPlayer().getVars().setVarBit(5626, 1);
+			e.getPlayer().getVars().setVarBit(arena_suit_of_armour, 1);
 		if(e.getPlayer().getQuestManager().getStage(Quest.FIGHT_ARENA) > GET_JAIL_KEYS);
-			e.getPlayer().getVars().setVarBit(6163, 2);
+			e.getPlayer().getVars().setVarBit(arena_servil_state, 2);
 		if(e.getPlayer().getQuestManager().getStage(Quest.FIGHT_ARENA) <= GET_JAIL_KEYS)
-			e.getPlayer().getVars().setVarBit(6163, 0);
+			e.getPlayer().getVars().setVarBit(arena_servil_state, 0);
 	});
 
 	public static ObjectClickHandler handleJailEntrance = new ObjectClickHandler(new Object[] { 81 }, e -> {

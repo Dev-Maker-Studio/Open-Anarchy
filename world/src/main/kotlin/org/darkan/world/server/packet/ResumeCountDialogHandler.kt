@@ -2,7 +2,7 @@ package org.darkan.world.server.packet
 
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.events.InputIntegerEvent
-import org.darkan.core.net.prot.ResumeCountDialog
+import org.darkan.core.net.prot.packet.ResumeCountDialog
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class ResumeCountDialogHandler : PacketHandler<Player, ResumeCountDialog> {

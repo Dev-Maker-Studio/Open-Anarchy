@@ -77,3 +77,7 @@ darkan-tools-layout.ini
 __pycache__/
 /tools/capture-headless.sh
 /tools/scripts/
+
+# run scripts
+world-server.jar
+*.jar.new

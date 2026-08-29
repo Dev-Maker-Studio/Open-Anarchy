@@ -31,15 +31,16 @@ import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
+import static com.rs.engine.variables.VarBitPlayer.clanwars_ffatype;
 
 @PluginEventHandler
 public final class FFAController extends Controller {
 	
 	public static ObjectClickHandler handleFFAPortals = new ObjectClickHandler(new Object[] { 38698, 38699 }, e -> WorldTasks.delay(0, () -> {
-        e.getPlayer().getVars().setVarBit(5279, e.getObjectId() == 38699 ? 1 : 0);
-        if (e.getPlayer().getVars().getVarBit(5294 + e.getPlayer().getVars().getVarBit(5279)) == 1) {
-            e.getPlayer().tele(Tile.of(e.getPlayer().getVars().getVarBit(5279) == 1 ? 3007 : 2815, 5511, 0));
-            e.getPlayer().getControllerManager().startController(new FFAController(e.getPlayer().getVars().getVarBit(5279) == 1));
+        e.getPlayer().getVars().setVarBit(clanwars_ffatype, e.getObjectId() == 38699 ? 1 : 0);
+        if (e.getPlayer().getVars().getVarBit(5294 + e.getPlayer().getVars().getVarBit(clanwars_ffatype)) == 1) {
+            e.getPlayer().tele(Tile.of(e.getPlayer().getVars().getVarBit(clanwars_ffatype) == 1 ? 3007 : 2815, 5511, 0));
+            e.getPlayer().getControllerManager().startController(new FFAController(e.getPlayer().getVars().getVarBit(clanwars_ffatype) == 1));
             return;
         }
         e.getPlayer().getInterfaceManager().sendInterface(793);
@@ -47,14 +48,14 @@ public final class FFAController extends Controller {
 	
 	public static ButtonClickHandler confirmOp = new ButtonClickHandler(793, e -> {
 		switch(e.getComponentId()) {
-		case 9 -> e.getPlayer().getVars().setVarBit(5294 + e.getPlayer().getVars().getVarBit(5279), e.getPlayer().getVars().getVarBit(5294 + e.getPlayer().getVars().getVarBit(5279)) == 1 ? 0 : 1);
+		case 9 -> e.getPlayer().getVars().setVarBit(5294 + e.getPlayer().getVars().getVarBit(clanwars_ffatype), e.getPlayer().getVars().getVarBit(5294 + e.getPlayer().getVars().getVarBit(clanwars_ffatype)) == 1 ? 0 : 1);
 		case 14 -> e.getPlayer().closeInterfaces();
 		case 15 -> {
-			if (e.getPlayer().getVars().getVarBit(5294 + e.getPlayer().getVars().getVarBit(5279)) == 1)
-				e.getPlayer().getVars().saveVarBit(5294 + e.getPlayer().getVars().getVarBit(5279), 1);
+			if (e.getPlayer().getVars().getVarBit(5294 + e.getPlayer().getVars().getVarBit(clanwars_ffatype)) == 1)
+				e.getPlayer().getVars().saveVarBit(5294 + e.getPlayer().getVars().getVarBit(clanwars_ffatype), 1);
 			e.getPlayer().closeInterfaces();
-			e.getPlayer().tele(Tile.of(e.getPlayer().getVars().getVarBit(5279) == 1 ? 3007 : 2815, 5511, 0));
-			e.getPlayer().getControllerManager().startController(new FFAController(e.getPlayer().getVars().getVarBit(5279) == 1));
+			e.getPlayer().tele(Tile.of(e.getPlayer().getVars().getVarBit(clanwars_ffatype) == 1 ? 3007 : 2815, 5511, 0));
+			e.getPlayer().getControllerManager().startController(new FFAController(e.getPlayer().getVars().getVarBit(clanwars_ffatype) == 1));
 		}
 		}
 	});

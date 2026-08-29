@@ -16,6 +16,8 @@ import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.Ticks
+import com.rs.engine.variables.lunarfm_produce_points
+import com.rs.engine.variables.lunarfm_spells_unlocked
 
 const val IDENTIFY_LIVID_INTERFACE = 1081
 
@@ -32,12 +34,12 @@ private const val lunarFencepost = 20703
 private const val MAX_PRODUCE_POINTS = 85000 // CS2 is Varbit/10
 
 var Player.producePoints: Int
-    get() = vars.getVarBit(9065)
-    set(value) = vars.saveVarBit(9065, clampI(value, 0, MAX_PRODUCE_POINTS))
+    get() = vars.getVarBit(lunarfm_produce_points)
+    set(value) = vars.saveVarBit(lunarfm_produce_points, clampI(value, 0, MAX_PRODUCE_POINTS))
 
 var Player.lividClaims: Int
-    get() = vars.getVarBit(9067)
-    set(value) = vars.saveVarBit(9067, value)
+    get() = vars.getVarBit(lunarfm_spells_unlocked)
+    set(value) = vars.saveVarBit(lunarfm_spells_unlocked, value)
 
 fun Player.isOnLividFarm(): Boolean {
     return tile.x in 2096..2120 && tile.y in 3941..3953
@@ -244,8 +246,8 @@ fun mapLividFarm() {
         e.player.soundEffect(3617, true)
     }
     onLogin { e ->
-        e.player.vars.setVarBit(9067, e.player.lividClaims)
-        e.player.vars.setVarBit(9065, e.player.producePoints)
+        e.player.vars.setVarBit(lunarfm_spells_unlocked, e.player.lividClaims)
+        e.player.vars.setVarBit(lunarfm_produce_points, e.player.producePoints)
         e.player.vars.syncVarsToClient()
     }
 }

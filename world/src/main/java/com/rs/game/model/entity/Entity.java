@@ -64,7 +64,7 @@ import org.darkan.core.model.MoveType;
 import org.darkan.core.model.SpotAnim;
 import world.gregs.voidps.type.Tile;
 import com.rs.utils.KtExtensionsKt;
-import org.darkan.core.net.prot.Walk;
+import org.darkan.core.net.prot.packet.Walk;
 import org.darkan.core.model.Sound;
 import org.darkan.core.model.SoundType;
 import org.darkan.core.model.AttribMap;

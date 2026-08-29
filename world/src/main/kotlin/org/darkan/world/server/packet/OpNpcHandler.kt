@@ -4,7 +4,7 @@ import com.rs.game.World
 import com.rs.game.content.clans.ClansManager
 import com.rs.game.model.entity.player.Player
 import com.rs.net.decoders.handlers.NPCHandler
-import org.darkan.core.net.prot.OpNpc
+import org.darkan.core.net.prot.packet.OpNpc
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class OpNpcHandler : PacketHandler<Player, OpNpc> {

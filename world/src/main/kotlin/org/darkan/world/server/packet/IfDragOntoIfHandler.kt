@@ -2,7 +2,7 @@ package org.darkan.world.server.packet
 
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.InterfaceManager
-import org.darkan.core.net.prot.IfDragOntoIf
+import org.darkan.core.net.prot.packet.IfDragOntoIf
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class IfDragOntoIfHandler : PacketHandler<Player, IfDragOntoIf> {

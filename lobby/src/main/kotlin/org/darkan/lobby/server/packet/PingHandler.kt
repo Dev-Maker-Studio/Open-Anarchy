@@ -1,7 +1,7 @@
 package org.darkan.lobby.server.packet
 
-import org.darkan.core.net.prot.Ping
-import org.darkan.core.net.prot.Pong
+import org.darkan.core.net.prot.packet.Ping
+import org.darkan.core.net.prot.packet.Pong
 import org.darkan.core.net.prot.handler.PacketHandler
 import org.darkan.lobby.web.model.LobbyPlayer
 

@@ -66,6 +66,46 @@ public class PlayerManager extends DBItemManager {
 		}
 	}
 
+	/**
+	 * Result of a player lookup for login. {@code loadError} is set when an existing player document
+	 * could not be read/decoded from Mongo (a corrupt or schema-drifted save). This must be kept
+	 * distinct from a null player - which legitimately means "no save yet, create a fresh player" -
+	 * so a decode failure never silently wipes a character.
+	 */
+	public record PlayerResult(Player player, boolean loadError) {
+		public static PlayerResult of(Player player) {
+			return new PlayerResult(player, false);
+		}
+
+		public static PlayerResult error() {
+			return new PlayerResult(null, true);
+		}
+	}
+
+	/**
+	 * Loads a player for login, reporting a decode failure separately from "not found" via
+	 * {@link PlayerResult}. Callers that only want a best-effort lookup should use the null-safe
+	 * {@link #getSyncUsername(String)}.
+	 */
+	public PlayerResult loadForLogin(String username) {
+		Player loggedIn = World.getPlayerByUsername(username);
+		if (loggedIn != null)
+			return PlayerResult.of(loggedIn);
+		Document accDoc = getDocs().find(eq("username", username)).first();
+		if (accDoc == null)
+			return PlayerResult.of(null);
+		try {
+			return PlayerResult.of(decode(accDoc));
+		} catch (Throwable e) {
+			Logger.handle(PlayerManager.class, "loadForLogin", "Failed to load player: " + username, e);
+			return PlayerResult.error();
+		}
+	}
+
+	private Player decode(Document accDoc) throws JsonIOException, IOException {
+		return JsonFileManager.fromJSONString(JsonFileManager.toJson(accDoc), Player.class);
+	}
+
 	public Player getSyncUsername(String username) {
 		Player loggedIn = World.getPlayerByUsername(username);
 		if (loggedIn != null)
@@ -74,9 +114,9 @@ public class PlayerManager extends DBItemManager {
 		if (accDoc == null)
 			return null;
 		try {
-			return JsonFileManager.fromJSONString(JsonFileManager.toJson(accDoc), Player.class);
-		} catch (JsonIOException | IOException e) {
-			Logger.handle(PlayerManager.class, "getSyncUsername", e);
+			return decode(accDoc);
+		} catch (Throwable e) {
+			Logger.handle(PlayerManager.class, "getSyncUsername", "Failed to load player: " + username, e);
 			return null;
 		}
 	}

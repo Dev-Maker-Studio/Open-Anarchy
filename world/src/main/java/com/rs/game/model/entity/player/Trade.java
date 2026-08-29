@@ -27,6 +27,8 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.utils.EconomyPrices;
 import com.rs.utils.ItemConfig;
+import static com.rs.engine.variables.VarPlayer.traderemoved;
+import static com.rs.engine.variables.VarPlayer.traderemoved_other;
 
 @PluginEventHandler
 public class Trade {
@@ -373,8 +375,8 @@ public class Trade {
 	}
 
 	public void sendTradeModified() {
-		player.getVars().setVar(1042, tradeModified ? 1 : 0);
-		target.getVars().setVar(1043, tradeModified ? 1 : 0);
+		player.getVars().setVar(traderemoved, tradeModified ? 1 : 0);
+		target.getVars().setVar(traderemoved_other, tradeModified ? 1 : 0);
 	}
 
 	public void refreshTradeWealth() {

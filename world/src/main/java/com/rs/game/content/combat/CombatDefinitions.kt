@@ -25,6 +25,26 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.AuraManager
 import com.rs.game.model.entity.player.managers.InterfaceManager
 import org.darkan.core.Logger
+import com.rs.engine.variables.magre_filter_ancient_combat
+import com.rs.engine.variables.magre_filter_ancient_tele
+import com.rs.engine.variables.magre_filter_dungeon_combat
+import com.rs.engine.variables.magre_filter_dungeon_misc
+import com.rs.engine.variables.magre_filter_dungeon_skill
+import com.rs.engine.variables.magre_filter_dungeon_tele
+import com.rs.engine.variables.magre_filter_lunar_combat
+import com.rs.engine.variables.magre_filter_lunar_misc
+import com.rs.engine.variables.magre_filter_lunar_tele
+import com.rs.engine.variables.magre_filter_modern_combat
+import com.rs.engine.variables.magre_filter_modern_misc
+import com.rs.engine.variables.magre_filter_modern_skill
+import com.rs.engine.variables.magre_filter_modern_tele
+import com.rs.engine.variables.magre_order_dungeon
+import com.rs.engine.variables.magre_order_lunar
+import com.rs.engine.variables.magre_order_modern
+import com.rs.engine.variables.magre_order_zaros
+import com.rs.engine.variables.autocast_defmode
+import com.rs.engine.variables.sa_attack
+import com.rs.engine.variables.zaros_spellbook
 
 class CombatDefinitions {
     enum class Spellbook(@JvmField val interfaceId: Int) {
@@ -240,30 +260,30 @@ class CombatDefinitions {
     }
 
     fun refreshSpellbookSettings() {
-        player.vars.setVarBit(357, spellbook.ordinal)
-        player.vars.setVarBit(5822, sortSpellBook.toInt())
-        player.vars.setVarBit(5823, sortSpellBook.toInt())
-        player.vars.setVarBit(5824, sortSpellBook.toInt())
-        player.vars.setVarBit(7347, sortSpellBook.toInt())
+        player.vars.setVarBit(zaros_spellbook, spellbook.ordinal)
+        player.vars.setVarBit(magre_order_modern, sortSpellBook.toInt())
+        player.vars.setVarBit(magre_order_zaros, sortSpellBook.toInt())
+        player.vars.setVarBit(magre_order_lunar, sortSpellBook.toInt())
+        player.vars.setVarBit(magre_order_dungeon, sortSpellBook.toInt())
 
-        player.vars.setVarBit(6459, if (showCombatSpells) 0 else 1)
-        player.vars.setVarBit(6466, if (showCombatSpells) 0 else 1)
-        player.vars.setVarBit(6463, if (showCombatSpells) 0 else 1)
-        player.vars.setVarBit(7348, if (showCombatSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_modern_combat, if (showCombatSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_ancient_combat, if (showCombatSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_lunar_combat, if (showCombatSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_dungeon_combat, if (showCombatSpells) 0 else 1)
 
-        player.vars.setVarBit(6460, if (showSkillSpells) 0 else 1)
-        player.vars.setVarBit(7349, if (showSkillSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_modern_skill, if (showSkillSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_dungeon_skill, if (showSkillSpells) 0 else 1)
 
-        player.vars.setVarBit(6461, if (showMiscSpells) 0 else 1)
-        player.vars.setVarBit(6464, if (showMiscSpells) 0 else 1)
-        player.vars.setVarBit(7350, if (showMiscSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_modern_misc, if (showMiscSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_lunar_misc, if (showMiscSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_dungeon_misc, if (showMiscSpells) 0 else 1)
 
-        player.vars.setVarBit(6462, if (showTeleportSpells) 0 else 1)
-        player.vars.setVarBit(6467, if (showTeleportSpells) 0 else 1)
-        player.vars.setVarBit(6465, if (showTeleportSpells) 0 else 1)
-        player.vars.setVarBit(7351, if (showTeleportSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_modern_tele, if (showTeleportSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_ancient_tele, if (showTeleportSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_lunar_tele, if (showTeleportSpells) 0 else 1)
+        player.vars.setVarBit(magre_filter_dungeon_tele, if (showTeleportSpells) 0 else 1)
 
-        player.vars.setVarBit(2668, if (isDefensiveCasting) 1 else 0)
+        player.vars.setVarBit(autocast_defmode, if (isDefensiveCasting) 1 else 0)
     }
 
     fun setPlayer(player: Player) {
@@ -399,7 +419,7 @@ class CombatDefinitions {
     }
 
     fun refreshUsingSpecialAttack() {
-        player.vars.setVar(301, if (isUsingSpecialAttack) 1 else 0)
+        player.vars.setVar(sa_attack, if (isUsingSpecialAttack) 1 else 0)
     }
 
     fun refreshSpecialAttackPercentage() {

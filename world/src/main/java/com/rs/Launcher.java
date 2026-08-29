@@ -16,14 +16,12 @@
 //
 package com.rs;
 
-import com.google.gson.GsonBuilder;
 import world.gregs.voidps.cache.Cache;
 import com.rs.db.WorldDB;
 import com.rs.engine.thread.AsyncTaskExecutor;
 import com.rs.engine.thread.WorldThread;
 import com.rs.game.World;
 import com.rs.game.map.ChunkManager;
-import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Player;
 import org.darkan.core.JsonFileManager;
 import org.darkan.core.Logger;
@@ -31,13 +29,11 @@ import com.rs.plugin.PluginManager;
 import org.darkan.core.net.prot.handler.PacketHandlers;
 import org.darkan.world.server.WorldServer;
 import com.rs.utils.MapXTEAs;
+import com.rs.utils.json.WorldGson;
 import com.rs.utils.Ticks;
 import com.rs.utils.WorldPersistentData;
 import com.rs.utils.WorldUtil;
 import org.darkan.core.map.MapXteas;
-import com.rs.utils.json.ControllerAdapter;
-import com.rs.utils.json.TileAdapter;
-import world.gregs.voidps.type.Tile;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -52,12 +48,7 @@ public final class Launcher {
     public static void main(String[] args) throws Exception {
 		Logger.setupFormat();
 		Logger.setLevel(Level.FINE); //FINER for traces
-		JsonFileManager.setGSON(new GsonBuilder()
-				.registerTypeAdapter(Controller.class, new ControllerAdapter())
-				.registerTypeAdapter(Tile.class, new TileAdapter())
-				.disableHtmlEscaping()
-				.setPrettyPrinting()
-				.create());
+		JsonFileManager.setGSON(WorldGson.create());
 
 		Settings.loadConfig();
 		if (!Settings.getConfig().isDebug())

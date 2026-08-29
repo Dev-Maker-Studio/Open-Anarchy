@@ -30,6 +30,7 @@ import world.gregs.voidps.type.Tile;
 
 import java.util.HashSet;
 import java.util.Set;
+import static com.rs.engine.variables.VarBitPlayer.hw09_event;
 
 
 public class Halloween2009Controller extends Controller {
@@ -127,9 +128,9 @@ public class Halloween2009Controller extends Controller {
 
 	private void refreshVars(Player player) {
 		if (player.getI(Halloween2009.STAGE_KEY) >= 10)
-			player.getVars().setVarBit(4883, 50);
+			player.getVars().setVarBit(hw09_event, 50);
 		else if (player.getI(Halloween2009.STAGE_KEY) >= 3)
-			player.getVars().setVarBit(4883, 20);
+			player.getVars().setVarBit(hw09_event, 20);
 	}
 
 	public Set<Integer> getPath() {

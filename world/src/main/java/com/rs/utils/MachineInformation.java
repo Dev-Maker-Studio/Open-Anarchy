@@ -53,6 +53,10 @@ public class MachineInformation {
 		info.operatingSystem = core.getOperatingSystem();
 		info.x64os = core.getX64os();
 		info.osVendor = core.getOsVendor();
+		info.javaVersion = core.getJavaVendor();
+		info.javaBuild = core.getJavaBuild();
+		info.javaSubBuild = core.getJavaSubBuild();
+		info.javaUpdate = core.getJavaUpdate();
 		info.ram = core.getRam();
 		info.aString8157 = core.getGpuModel();
 		info.aString8159 = core.getDwDirectXVersion();

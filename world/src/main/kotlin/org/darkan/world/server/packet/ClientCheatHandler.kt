@@ -4,7 +4,7 @@ import com.rs.engine.command.Commands
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
-import org.darkan.core.net.prot.ClientCheat
+import org.darkan.core.net.prot.packet.ClientCheat
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class ClientCheatHandler : PacketHandler<Player, ClientCheat> {

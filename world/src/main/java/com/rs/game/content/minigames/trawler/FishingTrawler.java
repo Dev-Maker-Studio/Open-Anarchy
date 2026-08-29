@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import static com.rs.engine.variables.VarPlayer.trawler_activity_base;
 
 @PluginEventHandler
 public class FishingTrawler {
@@ -293,7 +294,7 @@ public class FishingTrawler {
 	}
 
 	public void refreshInterface(Player player) {
-		player.getVars().setVar(1436, activity.get(player.getUsername()));
+		player.getVars().setVar(trawler_activity_base, activity.get(player.getUsername()));
 		player.getPackets().sendVarc(817, waterLevel);
 		player.getPackets().sendVarc(818, ripped ? 1 :0);
 		player.getPackets().sendVarc(819, totalCaught*2);

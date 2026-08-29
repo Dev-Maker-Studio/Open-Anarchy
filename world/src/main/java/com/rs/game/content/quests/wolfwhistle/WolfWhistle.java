@@ -16,6 +16,7 @@ import com.rs.plugin.handlers.ObjectClickHandler;
 
 import java.util.ArrayList;
 import java.util.List;
+import static com.rs.engine.variables.VarBitPlayer.wolf_stikklebrix_location;
 
 @QuestHandler(
         quest = Quest.WOLF_WHISTLE,
@@ -59,7 +60,7 @@ public class WolfWhistle extends QuestOutline {
         Player p = e.getPlayer();
 
         if (p.getQuestManager().getStage(Quest.WOLF_WHISTLE) == WolfWhistle.WOLPERTINGER_MATERIALS) {
-            p.getVars().setVarBit(10734, 1);
+            p.getVars().setVarBit(wolf_stikklebrix_location, 1);
         }
     });
     public static ObjectClickHandler handlePikkupstixUpstairs = new ObjectClickHandler(new Object[]{CLUTTERED_DRAWERS, CLUTTERED_SHELVES, UNTIDY_SHELVES, CROWDED_SHELVES, HEAPED_BOOKS, DISCARDED_BOOKS}, e -> {

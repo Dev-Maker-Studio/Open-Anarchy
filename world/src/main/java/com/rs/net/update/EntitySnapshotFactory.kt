@@ -36,8 +36,8 @@ import org.darkan.core.model.SpotAnim as LegacySpotAnim
  * [PlayerUpdatePlayer] / [PlayerUpdateBlocks]).
  *
  * This factory bridges the world module's [NPC] and [Player] entity types to the semantic update
- * types that the core's `Rev727UpdateProtocol` consumes. It replaces the raw byte writing that
- * `LocalNPCUpdate` and `LocalPlayerUpdate` currently do inline.
+ * types that the core's `Rev727UpdateProtocol` consumes. All wire encoding lives in core; this
+ * module only supplies semantic state.
  */
 object EntitySnapshotFactory {
 
@@ -100,8 +100,8 @@ object EntitySnapshotFactory {
     /**
      * Builds the [NpcUpdateBlocks] for an NPC, including all active mask data.
      *
-     * The mask conditions here mirror the legacy `LocalNPCUpdate.appendUpdateBlock()` exactly,
-     * translating each legacy field read into the corresponding semantic model field.
+     * Each legacy entity field read is translated into the corresponding semantic model field;
+     * the core mask registry decides presence and on-wire ordering.
      *
      * The `added` parameter is no longer needed because the persistent add-only state
      * (face entity, custom name, custom combat level) is captured in dedicated
@@ -181,20 +181,7 @@ object EntitySnapshotFactory {
         }
 
         // NPC body mesh customisation
-        // TODO: NPCBodyMeshModifier stores modelIds/modifiedColors/modifiedTextures as private fields
-        // and only exposes encode(Writer) + getModificationFlags(). To fully populate NpcCustomisation,
-        // either add public getters to NPCBodyMeshModifier or keep the legacy encode(Writer) path for
-        // this mask. For now, we capture the reset/clear state and flag presence but pass null arrays.
-        val customisation: NpcCustomisation? = n.bodyMeshModifier?.let { modifier ->
-            val flags = modifier.getModificationFlags()
-            val isReset = (flags and 0x1) != 0 && (flags and 0x2) == 0 && (flags and 0x4) == 0 && (flags and 0x8) == 0
-            NpcCustomisation(
-                clear = isReset,
-                models = null,
-                recolors = null,
-                retextures = null,
-            )
-        }
+        val customisation: NpcCustomisation? = n.bodyMeshModifier?.toCustomisation()
 
         // BAS id
         val basId: Int? = if (n.bas != -1) {
@@ -262,7 +249,7 @@ object EntitySnapshotFactory {
     /**
      * Resolves a single [Hit] into a [HitSplat] from the perspective of [observer].
      *
-     * The logic mirrors `LocalNPCUpdate.applyHitMask()` / `LocalPlayerUpdate.applyHitsMask()`:
+     * The visibility/soak rules are:
      * - Non-interacting misses with no text -> [HitSplat.Miss] (encoded as 32766)
      * - Soaking hits with text or large damage -> [HitSplat.CustomText] with soak text
      * - Soaking hits with small damage -> [HitSplat.Soak] with numeric soak
@@ -461,8 +448,8 @@ object EntitySnapshotFactory {
     /**
      * Builds the [PlayerUpdateBlocks] for a player, including all active mask data.
      *
-     * The mask conditions mirror the legacy `LocalPlayerUpdate.appendUpdateBlock()` exactly,
-     * translating each legacy field read into the corresponding semantic model field.
+     * Each legacy entity field read is translated into the corresponding semantic model field;
+     * the core mask registry decides presence and on-wire ordering.
      *
      * Note: The [added] flag affects face direction and movement type conditions.
      * The snapshot is initially built with `added = false`; the core protocol can

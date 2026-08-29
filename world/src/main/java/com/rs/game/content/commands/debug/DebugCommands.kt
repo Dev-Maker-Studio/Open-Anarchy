@@ -15,7 +15,6 @@ import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
 import org.darkan.core.model.Rights
 import world.gregs.voidps.type.Tile
-// TODO: net.packets.encoders.HintTrail
 import org.darkan.core.Logger
 import org.darkan.core.Utils.clampI
 import com.rs.plugin.annotations.ServerStartupEvent
@@ -169,6 +168,20 @@ fun loadDebugCommands() {
         p.sendMessage("Clip flags: 0x${Integer.toHexString(WorldCollision.getFlags(p.tile))}")
     }
 
-    // TODO: migrate to modern HintTrail packet (signature changed in core)
-    // Commands.add(Rights.DEVELOPER, "hinttrail [x y modelId]", "Sets a hint trail from the player to the specified location.") { ... }
+    Commands.add(Rights.DEVELOPER, "hinttrail [x y modelId]", "Sets a hint trail from the player to the specified location.") { p, args ->
+        val x = args[0].toInt()
+        val y = args[1].toInt()
+        val modelId = args[2].toInt()
+
+        val route = routeEntityToTile(p, Tile.of(x, y, p.plane), 25)
+        val bufferX = IntArray(route.size)
+        val bufferY = IntArray(route.size)
+
+        route.coords.forEachIndexed { i, tile ->
+            bufferX[i] = tile.x
+            bufferY[i] = tile.y
+        }
+
+        p.packets.sendHintTrail(Tile.of(p.tile), modelId, bufferX, bufferY, route.size)
+    }
 }
