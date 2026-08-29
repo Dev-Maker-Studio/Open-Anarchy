@@ -24,6 +24,8 @@ tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
     isZip64 = true
     mergeServiceFiles()
     archiveBaseName.set("lobby-server")
+    // Published and downloaded as <name>-<version>.jar; no "-all" classifier.
+    archiveClassifier.set("")
 }
 
 publishing {
