@@ -7,9 +7,8 @@ import kotlinx.coroutines.*
 import org.darkan.core.EnvVars
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration
+import kotlin.concurrent.thread
 import kotlin.system.exitProcess
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 import org.darkan.core.deploy.ArtifactWatcher
 import org.darkan.core.Logger
 import org.darkan.core.Logger.logInfo
@@ -69,10 +68,12 @@ object Lobby : CoroutineScope {
         if (updateAt != 0L) return
         updateAt = System.currentTimeMillis() + countdown.inWholeMilliseconds
         logInfo("Lobby restart scheduled in $countdown ($reason)")
-        launch {
-            delay(countdown)
+        // A plain thread, not a coroutine on this scope: stop() cancels and joins the scope, which
+        // would cancel the caller itself and never reach the exit. exitProcess runs the shutdown
+        // hook from Main, which performs the clean stop() on its own thread.
+        thread(name = "lobby-update", isDaemon = true) {
+            Thread.sleep(countdown.inWholeMilliseconds)
             logInfo("Restarting lobby for $reason")
-            stop()
             exitProcess(0)
         }
     }
