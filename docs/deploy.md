@@ -24,6 +24,13 @@ CI (`.gitlab-ci.yml`) - `dev` is the only branch; releases are tags cut from it:
 
 ## Layout of a server directory
 
+Each directory is a shallow checkout of `dev` (`git clone --depth 1 -b dev git@gitlab.com:darkanrs/server.git <name>`)
+plus the untracked `.env` and jar; the run script's `git pull origin dev` keeps scripts and `data/`
+current. The repository is private, so the `trent` user on the VM needs read access: a per-host
+read-only deploy key (`ssh-keygen -t ed25519` as `trent`, registered under the project's deploy
+keys) is what `darkan-worlds` uses.
+
+
 ```
 /home/trent/<name>/
   run-lobby-beta.sh | run-world-beta.sh   # from the repo root; -release variants follow tagged releases
