@@ -20,7 +20,7 @@ import com.rs.Settings;
 import org.darkan.core.model.Bonus;
 import org.darkan.core.cache.EnumDefinitions;
 import org.darkan.core.cache.ItemDefinitions;
-import com.rs.cache.loaders.LoyaltyRewardDefinitions.Reward;
+import com.rs.game.content.loyalty.LoyaltyRewardDefinitions.Reward;
 import org.darkan.core.model.ObjectShape;
 import com.rs.db.WorldDB;
 import com.rs.engine.book.Book;
@@ -117,8 +117,8 @@ import org.darkan.core.social.ChatMessage;
 import org.darkan.core.social.PublicChatMessage;
 import org.darkan.core.net.Session;
 import org.darkan.core.net.prot.ClientProt;
-import org.darkan.core.net.prot.IfButton;
-import org.darkan.core.net.prot.IfContinue;
+import org.darkan.core.net.prot.packet.IfButton;
+import org.darkan.core.net.prot.packet.IfContinue;
 import org.darkan.core.net.prot.handler.PacketHandlers;
 import org.darkan.core.model.Sound;
 import org.darkan.core.model.SoundType;
@@ -149,6 +149,18 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+import static com.rs.engine.variables.VarBitPlayer.afr_complete;
+import static com.rs.engine.variables.VarBitPlayer.loot_share_on;
+import static com.rs.engine.variables.VarBitPlayer.loot_waiting_on;
+import static com.rs.engine.variables.VarBitPlayer.lost_tribe_quest;
+import static com.rs.engine.variables.VarBitPlayer.ra3_quest;
+import static com.rs.engine.variables.VarPlayer.tutorial;
+import static com.rs.engine.variables.VarBitPlayer.lifepoints;
+import static com.rs.engine.variables.VarBitPlayer.lore_incubator_var_2;
+import static com.rs.engine.variables.VarPlayer._100intro;
+import static com.rs.engine.variables.VarPlayer.lore_incubators_var;
+import static com.rs.engine.variables.VarPlayer.option_mouse;
+import static com.rs.engine.variables.VarPlayer.option_run;
 
 public class Player extends Entity {
 
@@ -295,10 +307,6 @@ public class Player extends Entity {
 	public void addToAttackedBy(String name) {
 		attackedBy.add(name);
 	}
-
-	// used for update
-	private transient LocalPlayerUpdate localPlayerUpdate;
-	private transient LocalNPCUpdate localNPCUpdate;
 
 	private transient MoveType tempMoveType = moveType;
 	public transient boolean updateMovementType = true;
@@ -632,8 +640,6 @@ public class Player extends Entity {
 		attackedBy = new ArrayList<>();
 		interfaceManager = new InterfaceManager(this);
 		hintIconsManager = new HintIconsManager(this);
-		localPlayerUpdate = new LocalPlayerUpdate(this);
-		localNPCUpdate = new LocalNPCUpdate(this);
 		if (varManager == null)
 			varManager = new Vars();
 		varManager.setSession(session);
@@ -931,13 +937,11 @@ public class Player extends Entity {
 		if (isHasNearbyInstancedChunks()) {
 			getPackets().sendDynamicMapRegion(!started);
 			if (!wasAtDynamicRegion) {
-				localNPCUpdate.reset();
 				getPackets().resetNpcTrackingState();
 			}
 		} else {
 			getPackets().sendMapRegion(!started);
 			if (wasAtDynamicRegion) {
-				localNPCUpdate.reset();
 				getPackets().resetNpcTrackingState();
 			}
 			setInstancedArea(null);
@@ -1175,7 +1179,7 @@ public class Player extends Entity {
 	}
 
 	public void sendRunButtonConfig() {
-		getVars().setVar(173, resting ? 3 : getRun() ? 1 : 0);
+		getVars().setVar(option_run, resting ? 3 : getRun() ? 1 : 0);
 	}
 
 	public void restoreRunEnergy(double energy) {
@@ -1229,14 +1233,14 @@ public class Player extends Entity {
 		refreshHitPoints();
 		prayer.refreshPoints();
 		getPoison().refresh();
-		getVars().setVar(281, 1000); // unlock can't do this on tutorial
-		getVars().setVar(1160, -1); // unlock summoning orb
+		getVars().setVar(tutorial, 1000); // unlock can't do this on tutorial
+		getVars().setVar(lore_incubators_var, -1); // unlock summoning orb
 		getVars().setVar(1159, 1);
-		getVars().setVarBit(4221, 0); //unlock incubator
+		getVars().setVarBit(lore_incubator_var_2, 0); //unlock incubator
 		getVars().setVarBit(1766, 1); //unlock killerwatt portal
-		getVars().setVarBit(6471, 45); //chaos dwarf area
-		getVars().setVarBit(532, 4); //lumbridge underground
-		getVars().setVar(678, 3); //rfd chest
+		getVars().setVarBit(ra3_quest, 45); //chaos dwarf area
+		getVars().setVarBit(lost_tribe_quest, 4); //lumbridge underground
+		getVars().setVar(_100intro, 3); //rfd chest
 
 		updateSlayerTask();
 
@@ -1268,7 +1272,7 @@ public class Player extends Entity {
 		checkWasInDynamicRegion();
 		controllerManager.login(); // checks what to do on login after welcome
 		//unlock robust glass
-		getVars().setVarBit(4322, 1);
+		getVars().setVarBit(afr_complete, 1);
 		// screen
 		if (machineInformation != null)
 			machineInformation.sendSuggestions(this);
@@ -1710,7 +1714,7 @@ public class Player extends Entity {
 	}
 
 	public void refreshHitPoints() {
-		getVars().setVarBit(7198, Utils.clampI(getHitpoints(), 0, Short.MAX_VALUE));
+		getVars().setVarBit(lifepoints, Utils.clampI(getHitpoints(), 0, Short.MAX_VALUE));
 	}
 
 	@Override
@@ -1859,14 +1863,6 @@ public class Player extends Entity {
 
 	public void setTemporaryMoveType(MoveType temporaryMovementType) {
 		this.tempMoveType = temporaryMovementType;
-	}
-
-	public LocalPlayerUpdate getLocalPlayerUpdate() {
-		return localPlayerUpdate;
-	}
-
-	public LocalNPCUpdate getLocalNPCUpdate() {
-		return localNPCUpdate;
 	}
 
 
@@ -2529,7 +2525,7 @@ public class Player extends Entity {
 	}
 
 	public void refreshMouseButtons() {
-		getVars().setVar(170, mouseButtons ? 0 : 1);
+		getVars().setVar(option_mouse, mouseButtons ? 0 : 1);
 	}
 
 	public boolean isForceNextMapLoadRefresh() {
@@ -3443,10 +3439,10 @@ public class Player extends Entity {
 
 	public void refreshLootShare() {
 		if (isLootSharing())
-			getVars().setVarBit(4071, 1);
+			getVars().setVarBit(loot_share_on, 1);
 		else
-			getVars().setVarBit(4071, 0);
-		getVars().setVarBit(4072, 0);
+			getVars().setVarBit(loot_share_on, 0);
+		getVars().setVarBit(loot_waiting_on, 0);
 	}
 
 	public void toggleLootShare() {
@@ -3462,7 +3458,7 @@ public class Player extends Entity {
 			refreshLootShare();
 		} else {
 			sendMessage("You aren't currently in a friends chat.");
-			getVars().setVarBit(4072, 0);
+			getVars().setVarBit(loot_waiting_on, 0);
 		}
 	}
 
@@ -3614,7 +3610,12 @@ public class Player extends Entity {
 		if (!reflectionCheck.isBuilt())
 			throw new RuntimeException("Cannot queue an unbuilt reflection analysis.");
 		reflectionAnalyses.put(reflectionCheck.getId(), reflectionCheck);
-		// TODO: getSession().queuePacket(ReflectionCheckRequest(reflectionCheck.getChecks())); // ServerProt not yet defined
+		// TODO: send the request. org.darkan.core.net.prot.packet.ReflectionRequest (opcode 98) and its
+		// encoder now exist and are verified against the client, and ReflectionResponse (opcode 36) decodes,
+		// but the legacy com.rs.utils.reflect types still carry their own duplicate encode/decode. Wiring
+		// this up means mapping ReflectionAnalysis onto org.darkan.core.clientwatch.ReflectionCheck and
+		// correlating responses back by id in ReflectionResponseHandler; until the response side is handled
+		// there is no point sending requests.
 	}
 
 	public void unlockWickedHoodRune(WickedHoodRune rune) {

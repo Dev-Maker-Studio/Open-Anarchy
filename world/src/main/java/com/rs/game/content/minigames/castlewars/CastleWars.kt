@@ -13,6 +13,11 @@ import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.Ticks
+import com.rs.engine.variables.castlewars_saradomin_flag
+import com.rs.engine.variables.castlewars_saradomin_score
+import com.rs.engine.variables.castlewars_timer
+import com.rs.engine.variables.castlewars_zamorak_flag
+import com.rs.engine.variables.castlewars_zamorak_score
 
 @ServerStartupEvent
 fun mapCastleWarsCastle() {
@@ -157,10 +162,10 @@ class PlayingGame : Task() {
 
     fun refresh(player: Player) {
         player.apply {
-            vars.setVarBit(143, flagStatus[CastleWars.SARADOMIN])
-            vars.setVarBit(145, score[CastleWars.SARADOMIN])
-            vars.setVarBit(153, flagStatus[CastleWars.ZAMORAK])
-            vars.setVarBit(155, score[CastleWars.ZAMORAK])
+            vars.setVarBit(castlewars_saradomin_flag, flagStatus[CastleWars.SARADOMIN])
+            vars.setVarBit(castlewars_saradomin_score, score[CastleWars.SARADOMIN])
+            vars.setVarBit(castlewars_zamorak_flag, flagStatus[CastleWars.ZAMORAK])
+            vars.setVarBit(castlewars_zamorak_score, score[CastleWars.ZAMORAK])
         }
     }
 
@@ -351,7 +356,7 @@ class CastleWars {
         }
 
         fun refreshTimeLeft(player: Player) {
-            player.vars.setVar(380, if (playingGame == null) 0 else playingGame!!.minutesLeft - if (player.controllerManager.getController() is CastleWarsPlayingController) 5 else 0)
+            player.vars.setVar(castlewars_timer, if (playingGame == null) 0 else playingGame!!.minutesLeft - if (player.controllerManager.getController() is CastleWarsPlayingController) 5 else 0)
         }
 
         fun startGame() {

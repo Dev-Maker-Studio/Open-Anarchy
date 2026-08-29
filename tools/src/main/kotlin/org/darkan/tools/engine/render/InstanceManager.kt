@@ -27,7 +27,31 @@ data class MeshData(
         result = 31 * result + textureId
         return result
     }
+
+    /**
+     * This mesh with every triangle's last two vertices swapped.
+     *
+     * Instances whose model matrix mirrors an axis have a negative determinant, which
+     * reverses the winding of everything they draw. Back-face culling does not shade
+     * such an object incorrectly — it erases it — so the geometry those instances point
+     * at has to carry the compensating flip. Vertex data is shared with the original;
+     * only the index array is rebuilt.
+     */
+    fun withReversedWinding(): MeshData {
+        val flipped = indices.copyOf()
+        var t = 0
+        while (t + 2 < flipped.size) {
+            val tmp = flipped[t + 1]
+            flipped[t + 1] = flipped[t + 2]
+            flipped[t + 2] = tmp
+            t += 3
+        }
+        return copy(indices = flipped)
+    }
 }
+
+/** [MeshData.withReversedWinding] applied to every mesh of a model. */
+fun List<MeshData>.withReversedWinding(): List<MeshData> = map { it.withReversedWinding() }
 
 /**
  * Batch key for grouping instances by model and material.

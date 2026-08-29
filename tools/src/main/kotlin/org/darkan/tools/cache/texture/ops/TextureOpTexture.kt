@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -24,7 +23,7 @@ class TextureOpTexture : TextureOperation(0, false) {
 
             if (pixels == null || textureWidth == 0 || textureHeight == 0) {
                 // Return gray if texture not loaded
-                for (x in 0 until TextureRaster.currentWidth) {
+                for (x in 0 until currentWidth) {
                     red[x] = 2048
                     green[x] = 2048
                     blue[x] = 2048
@@ -32,23 +31,23 @@ class TextureOpTexture : TextureOperation(0, false) {
                 return output
             }
 
-            val adjustedY = (if (textureHeight != TextureRaster.currentHeight) {
-                textureHeight * y / TextureRaster.currentHeight
+            val adjustedY = (if (textureHeight != currentHeight) {
+                textureHeight * y / currentHeight
             } else {
                 y
             }) * textureWidth
 
-            if (textureWidth == TextureRaster.currentWidth) {
+            if (textureWidth == currentWidth) {
                 var offset = adjustedY
-                for (x in 0 until TextureRaster.currentWidth) {
+                for (x in 0 until currentWidth) {
                     val pixel = pixels[offset++]
                     blue[x] = (pixel and 0xff) shl 4
                     green[x] = (pixel and 0xff00) shr 4
                     red[x] = (pixel and 0xff0000) shr 12
                 }
             } else {
-                for (x in 0 until TextureRaster.currentWidth) {
-                    val adjustedX = x * textureWidth / TextureRaster.currentWidth
+                for (x in 0 until currentWidth) {
+                    val adjustedX = x * textureWidth / currentWidth
                     val pixel = pixels[adjustedY + adjustedX]
                     blue[x] = (pixel and 0xff) shl 4
                     green[x] = (pixel and 0xff00) shr 4

@@ -16,7 +16,9 @@
 //
 package com.rs.game.model.entity.player
 
-import world.gregs.voidps.buffer.write.Writer
+import org.darkan.core.update.BodyModelOverride
+import org.darkan.core.update.HeadModelOverride
+import org.darkan.core.update.ItemMeshOverride
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 
 class ItemMeshModifier(
@@ -98,86 +100,39 @@ class ItemMeshModifier(
         return this
     }
 
-    fun encode(stream: Writer): Int {
-        val flags = getModificationFlags()
-        if (flags == 0) return -1
+    /**
+     * Converts this modifier into the core [ItemMeshOverride] schema.
+     *
+     * Which model/colour/texture values apply is decided here; how they are framed on the wire is
+     * decided by the revision encoder in core.
+     */
+    fun toOverride(): ItemMeshOverride = ItemMeshOverride(
+        slot = slotFlag,
+        bodyModels = bodyModelOverride(),
+        headModels = headModelOverride(),
+        colours = modifiedColors,
+        textures = modifiedTextures,
+    )
 
-        stream.writeByte(flags)
-        if ((flags and BODY_MODEL_FLAG) != 0) encodeBodyModels(stream)
-        if ((flags and HEAD_MODEL_FLAG) != 0) encodeHeadModels(stream)
-        if ((flags and COLOR_FLAG) != 0) encodeColors(stream)
-        if ((flags and TEXTURE_FLAG) != 0) encodeTextures(stream)
-        return slotFlag
+    private fun bodyModelOverride(): BodyModelOverride? {
+        val male = maleBody ?: return null
+        val female = femaleBody ?: return null
+        return BodyModelOverride(
+            male = male,
+            female = female,
+            includeSecondary = defs.secondaryMaleModel != -1 || defs.secondaryFemaleModel != -1,
+            includeTertiary = defs.tertiaryMaleModel != -1 || defs.tertiaryFemaleModel != -1,
+        )
     }
 
-    fun encodeBodyModels(stream: Writer) {
-        stream.writeBigSmart(maleBody!![0])
-        stream.writeBigSmart(femaleBody!![0])
-        if (defs.secondaryMaleModel != -1 || defs.secondaryFemaleModel != -1) {
-            stream.writeBigSmart(maleBody!![1])
-            stream.writeBigSmart(femaleBody!![1])
-        }
-        if (defs.tertiaryMaleModel != -1 || defs.tertiaryFemaleModel != -1) {
-            stream.writeBigSmart(maleBody!![2])
-            stream.writeBigSmart(femaleBody!![2])
-        }
+    private fun headModelOverride(): HeadModelOverride? {
+        val male = maleHead ?: return null
+        val female = femaleHead ?: return null
+        return HeadModelOverride(
+            male = male,
+            female = female,
+            includeSecondary = defs.secondaryMaleDialogueHead != -1 || defs.secondaryFemaleDialogueHead != -1,
+        )
     }
 
-    fun encodeHeadModels(stream: Writer) {
-        stream.writeBigSmart(maleHead!![0])
-        stream.writeBigSmart(femaleHead!![0])
-        if (defs.secondaryMaleDialogueHead != -1 || defs.secondaryFemaleDialogueHead != -1) {
-            stream.writeBigSmart(maleHead!![1])
-            stream.writeBigSmart(femaleHead!![1])
-        }
-    }
-
-    fun encodeColors(stream: Writer) {
-        val colors = modifiedColors!!
-        var slots = 0
-        for (i in 1 until 4) {
-            slots = if (i < colors.size) {
-                slots or (i shl (i * 4))
-            } else {
-                slots or (EMPTY_VALUE shl (i * 4))
-            }
-        }
-        stream.writeShort(slots)
-        for (i in 0 until 4) {
-            if (i < colors.size) stream.writeShort(colors[i])
-        }
-    }
-
-    fun encodeTextures(stream: Writer) {
-        val textures = modifiedTextures!!
-        var slots = 0
-        for (i in 1 until 2) {
-            slots = if (i < textures.size) {
-                slots or (i shl (i * 4))
-            } else {
-                slots or (EMPTY_VALUE shl (i * 4))
-            }
-        }
-        stream.writeByte(slots)
-        for (i in 0 until 2) {
-            if (i < textures.size) stream.writeShort(textures[i])
-        }
-    }
-
-    fun getModificationFlags(): Int {
-        var flags = 0
-        if (maleBody != null || femaleBody != null) flags = flags or BODY_MODEL_FLAG
-        if (maleHead != null || femaleHead != null) flags = flags or HEAD_MODEL_FLAG
-        if (modifiedColors != null) flags = flags or COLOR_FLAG
-        if (modifiedTextures != null) flags = flags or TEXTURE_FLAG
-        return flags
-    }
-
-    companion object {
-        private const val BODY_MODEL_FLAG = 0x1
-        private const val HEAD_MODEL_FLAG = 0x2
-        private const val COLOR_FLAG = 0x4
-        private const val TEXTURE_FLAG = 0x8
-        private const val EMPTY_VALUE = 0xF
-    }
 }

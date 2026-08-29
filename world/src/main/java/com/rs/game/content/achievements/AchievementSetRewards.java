@@ -36,6 +36,7 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.*;
 
 import static com.rs.game.content.interfacehandlers.ItemSelectWindow.openItemSelectWindow;
+import static com.rs.engine.variables.VarBitPlayer.atjun_hard_reward;
 
 @PluginEventHandler
 public class AchievementSetRewards {
@@ -171,7 +172,7 @@ public class AchievementSetRewards {
 		}
 	}
 
-	public static ItemEquipHandler handleKaramjaGloveLadderUnlock = new ItemEquipHandler(new Object[] { 11140, 19754 }, e -> e.getPlayer().getVars().setVarBit(3610, e.equip() ? 1 : 0));
+	public static ItemEquipHandler handleKaramjaGloveLadderUnlock = new ItemEquipHandler(new Object[] { 11140, 19754 }, e -> e.getPlayer().getVars().setVarBit(atjun_hard_reward, e.equip() ? 1 : 0));
 
 	public static ObjectClickHandler handleUndergroundGem = new ObjectClickHandler(new Object[] { 23584, 23586 }, e -> {
 		if (e.getObjectId() == 23584)

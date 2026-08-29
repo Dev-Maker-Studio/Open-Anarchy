@@ -76,9 +76,13 @@ import com.rs.utils.NPCClueDrops;
 import com.rs.utils.WorldUtil;
 import com.rs.utils.drop.Drop;
 import com.rs.utils.drop.DropTable;
+import static com.rs.utils.KtExtensionsKt.getAttackDelay;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.rs.engine.variables.VarBitPlayer.bank_show_equipscreen;
+import static com.rs.engine.variables.VarBitPlayer.barrows_killed_count;
 
 public class NPC extends Entity {
 
@@ -133,6 +137,8 @@ public class NPC extends Entity {
 		super(tile);
 		this.id = id;
 		respawnTile = Tile.of(tile);
+		if (tile.getX() < 32 && tile.getY() < 32)
+			Logger.warn(NPC.class, "<init>", "NPC " + id + " spawned off the map at " + tile + " from " + Thread.currentThread().getStackTrace()[2]);
 		setSpawned(permaDeath);
 		combatLevel = -1;
 		setHitpoints(getMaxHitpoints());
@@ -568,7 +574,7 @@ public class NPC extends Entity {
 
 			if (BarrowsController.barrowsKCNPCs.contains(getId())) {
 				killer.setBarrowsKillCount(killer.getBarrowsKillCount() + 1);
-				killer.getVars().setVarBit(464, killer.getBarrowsKillCount() + killer.getKilledBarrowBrothersCount());
+				killer.getVars().setVarBit(barrows_killed_count, killer.getBarrowsKillCount() + killer.getKilledBarrowBrothersCount());
 			}
 
 			Item[] drops = DropTable.calculateDrops(killer, DropSets.getDropSet(id));
@@ -669,7 +675,7 @@ public class NPC extends Entity {
 			}
 			dropCollection.sortByItemId();
 			player.getTempAttribs().setB("viewingOtherBank", true);
-			player.getVars().setVarBit(8348, 0);
+			player.getVars().setVarBit(bank_show_equipscreen, 0);
 			player.getVars().syncVarsToClient();
 			player.getInterfaceManager().sendInterface(762);
 			player.getPackets().sendRunScript(2319);
@@ -1116,7 +1122,7 @@ public class NPC extends Entity {
 	}
 
 	public int getAttackSpeed() {
-		return com.rs.utils.KtExtensionsKt.getAttackDelay(NPCDefinitions.getDefs(id))+1;
+		return getAttackDelay(NPCDefinitions.getDefs(id))+1;
 	}
 
 	public boolean isIgnoreDocile() {

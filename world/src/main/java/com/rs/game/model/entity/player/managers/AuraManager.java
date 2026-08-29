@@ -17,7 +17,7 @@
 package com.rs.game.model.entity.player.managers;
 
 import org.darkan.core.cache.ItemDefinitions;
-import com.rs.cache.loaders.LoyaltyRewardDefinitions.Reward;
+import com.rs.game.content.loyalty.LoyaltyRewardDefinitions.Reward;
 import com.rs.game.content.world.LoyaltyShop;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.player.Equipment;

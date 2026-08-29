@@ -15,6 +15,8 @@ import com.rs.game.model.gameobject.GameObject
 import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
+import com.rs.engine.variables.thigui_humble
+import com.rs.engine.variables.thigui_quest
 
 @ServerStartupEvent
 fun mapDarrenLightfingerGeneric() {
@@ -127,8 +129,8 @@ class DarrenLightfingerGeneric(p: Player, npc: NPC) {
                         p.fadeScreen {
                             p.inventory.deleteItem(18648, 1)
                             p.tele(Tile.of(3223, 3269, 0))
-                            p.vars.saveVarBit(7792, 10)
-                            p.vars.setVarBit(7793, 0)
+                            p.vars.saveVarBit(thigui_quest, 10)
+                            p.vars.setVarBit(thigui_humble, 0)
                             p.questManager.completeQuest(Quest.BUYERS_AND_CELLARS)
                         }
                     }

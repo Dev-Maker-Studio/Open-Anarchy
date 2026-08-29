@@ -2,6 +2,7 @@ package org.darkan.core.net.prot.revision.rev727
 
 import io.ktor.utils.io.*
 import org.darkan.core.net.prot.*
+import org.darkan.core.net.prot.packet.*
 import world.gregs.voidps.buffer.*
 
 internal fun Codec.registerRev727VariablePackets() {

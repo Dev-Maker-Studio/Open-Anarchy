@@ -5,37 +5,62 @@ in vec3 vNormal;
 in vec3 vFragPos;
 flat in int vMirrored;
 
+in float vViewDist;
+
 out vec4 FragColor;
 
-// Lighting uniform block
-layout(std140) uniform LightingBlock {
-    vec3 ambientLight;
-    vec3 lightDirection;
-    vec3 lightColor;
+// Environment uniform block (binding 1). Layout mirrors EnvironmentSettings.writeStd140.
+//   sunDirection.xyz : unit vector pointing at the sun, in engine space
+//   sunColour.rgb    : sun colour, 0..1
+//   sunTerms         : x ambient (0.7 * sunAmbient), y sunLight, z sunBacklight,
+//                      w 1 when the mesh colour is unlit and the shader must light it
+//   fogColour        : rgb fog colour, w 1 when fog is enabled
+//   fogRange         : x start, y end, z 1 / (end - start)
+layout(std140) uniform EnvironmentBlock {
+    vec4 sunDirection;
+    vec4 sunColour;
+    vec4 sunTerms;
+    vec4 fogColour;
+    vec4 fogRange;
 };
 
-void main() {
-    // Flip normal for back faces (two-sided lighting)
-    // For mirrored objects, the winding order is reversed, so gl_FrontFacing is inverted
-    // We need to account for this to get correct lighting
-    vec3 norm = normalize(vNormal);
-    bool isFrontFace = gl_FrontFacing;
-    if (vMirrored == 1) {
-        // For mirrored objects, the notion of front/back is reversed
-        isFrontFace = !isFrontFace;
+// Ambient plus two directional lights, matching the reference client: the back
+// light carries a negative diffuse colour, so it darkens surfaces facing away
+// from the sun instead of lighting them. See docs/tools-environment-lighting.md.
+vec3 applySunLight(vec3 base, vec3 normal) {
+    if (sunTerms.w < 0.5) {
+        return base;
     }
-    if (!isFrontFace) {
+    float ndl = dot(normal, sunDirection.xyz);
+    vec3 lit = sunTerms.x * sunColour.rgb
+             + max(ndl, 0.0) * sunTerms.y * sunColour.rgb
+             - max(-ndl, 0.0) * sunTerms.z * sunColour.rgb;
+    return base * max(lit, vec3(0.0));
+}
+
+// Linear distance fog: factor = (end - distance) / (end - start), clamped.
+vec3 applyFog(vec3 colour, float viewDistance) {
+    if (fogColour.w < 0.5) {
+        return colour;
+    }
+    float factor = clamp((fogRange.y - viewDistance) * fogRange.z, 0.0, 1.0);
+    return mix(fogColour.rgb, colour, factor);
+}
+
+void main() {
+    // Flip normal for back faces (two-sided lighting).
+    //
+    // gl_FrontFacing is trusted as-is, including for mirrored instances -- they are drawn
+    // from a winding-reversed copy of the geometry, so their triangles already wind like
+    // everything else. See indirect_color.frag for the full note.
+    vec3 norm = normalize(vNormal);
+    if (!gl_FrontFacing) {
         norm = -norm;
     }
 
-    // Ambient
-    vec3 ambient = ambientLight * vColor;
-
-    // Diffuse
-    vec3 lightDir = normalize(-lightDirection);
-    float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor * vColor;
-
-    vec3 result = ambient + diffuse;
-    FragColor = vec4(result, 1.0);
+    // Model face colours already carry the definition's ambient lightness blend
+    // (the client's blendColorLightness with 64 + ObjectDefinition.ambient), which is
+    // a material property. The sun on top of it comes from the environment block.
+    vec3 result = applySunLight(vColor, norm);
+    FragColor = vec4(applyFog(result, vViewDist), 1.0);
 }

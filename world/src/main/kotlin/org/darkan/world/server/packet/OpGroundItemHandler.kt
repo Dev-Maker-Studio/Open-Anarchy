@@ -14,7 +14,7 @@ import com.rs.plugin.events.PickupItemEvent
 import com.rs.utils.ItemConfig
 import org.darkan.core.Utils
 import org.darkan.core.cache.ItemDefinitions
-import org.darkan.core.net.prot.OpGroundItem
+import org.darkan.core.net.prot.packet.OpGroundItem
 import org.darkan.core.net.prot.handler.PacketHandler
 import world.gregs.voidps.type.Tile
 

@@ -2,17 +2,28 @@ package org.darkan.tools
 
 import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionLoader
+import org.darkan.tools.cache.NameLookup
+import org.darkan.tools.cs2.runCs2
+import org.darkan.tools.cache.map.DisplaceProbe
 import org.darkan.tools.cache.map.ObjectRenderer
+import org.darkan.tools.cache.map.TiltProbe
+import org.darkan.tools.cache.map.environment.runEnvironmentDiagnostic
+import org.darkan.tools.cache.model.BillboardTypeLoader
+import org.darkan.tools.cache.model.ModelDecoder
 import org.darkan.tools.cache.model.ModelLoader
+import org.darkan.tools.cache.model.ModelUnavailableReason
 import org.darkan.tools.cache.texture.*
 import org.darkan.tools.cache.texture.ops.*
 import org.darkan.tools.cache.terrain.TerrainLoader
+import org.darkan.tools.util.runTileMapDump
 import org.darkan.tools.viewer.InterfaceViewer
 import org.darkan.tools.viewer.MapViewer
 import org.darkan.tools.viewer.ModelViewer
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * Main entry point for Darkan Tools.
@@ -36,8 +47,9 @@ fun main(args: Array<String>) {
             MapViewer(cache).run()
         }
         "interface", "interfaces", "ui" -> {
-            println("Starting Interface Viewer...")
-            InterfaceViewer(cache).run()
+            val interfaceId = args.getOrNull(1)?.toIntOrNull() ?: 0
+            println("Starting Interface Editor with interface $interfaceId...")
+            InterfaceViewer(cache, interfaceId).run()
         }
         "diagnose", "debug" -> {
             // Diagnostic mode: diagnose <regionX> <regionY> <localX> <localY> [plane]
@@ -47,6 +59,39 @@ fun main(args: Array<String>) {
             val localY = args.getOrNull(4)?.toIntOrNull() ?: 25
             val plane = args.getOrNull(5)?.toIntOrNull() ?: 0
             runDiagnostic(cache, regionX, regionY, localX, localY, plane)
+        }
+        "displaceprobe" -> {
+            // Audit ground-contour-1 vertex displacement for a region, headlessly.
+            // displaceprobe <regionX> <regionY> [objectId]
+            val rx = args.getOrNull(1)?.toIntOrNull() ?: 52
+            val ry = args.getOrNull(2)?.toIntOrNull() ?: 50
+            val objectId = args.getOrNull(3)?.toIntOrNull()
+            DisplaceProbe.run(cache, rx, ry, objectId)
+        }
+        "displacejoint" -> {
+            // Compare a region's y=63 edge against the y=0 edge of the region above.
+            // displacejoint <regionX> <regionY> <objectId>
+            val rx = args.getOrNull(1)?.toIntOrNull() ?: 52
+            val ry = args.getOrNull(2)?.toIntOrNull() ?: 50
+            val objectId = args.getOrNull(3)?.toIntOrNull() ?: 3125
+            DisplaceProbe.runJoint(cache, rx, ry, objectId)
+        }
+        "tiltprobe" -> {
+            // Audit contour-type-3 tilt sampling at region edges, headlessly.
+            // tiltprobe scan [maxRegions] | tiltprobe whatif <regionX> <regionY>
+            when (args.getOrNull(1)?.lowercase() ?: "scan") {
+                "whatif" -> TiltProbe.whatIf(
+                    cache,
+                    args.getOrNull(2)?.toIntOrNull() ?: 52,
+                    args.getOrNull(3)?.toIntOrNull() ?: 50
+                )
+                else -> TiltProbe.scan(cache, args.getOrNull(2)?.toIntOrNull())
+            }
+        }
+        "roofscan" -> {
+            val rx = args.getOrNull(1)?.toIntOrNull() ?: 54
+            val ry = args.getOrNull(2)?.toIntOrNull() ?: 54
+            runRoofScan(cache, rx, ry)
         }
         "object", "obj" -> {
             val objectId = args.getOrNull(1)?.toIntOrNull() ?: 45149
@@ -60,9 +105,30 @@ fun main(args: Array<String>) {
             val texId = args.getOrNull(1)?.toIntOrNull() ?: 725
             runTextureDiagnostic(cache, texId)
         }
+        "texdump" -> {
+            val texId = args.getOrNull(1)?.toIntOrNull() ?: 725
+            val outputPath = args.getOrNull(2) ?: "texture_$texId.png"
+            TextureLoader.initHeadless(cache)
+            TextureLoader.dumpTextureImage(cache, texId, outputPath)
+        }
         "faces", "facegeom" -> {
             val modelId = args.getOrNull(1)?.toIntOrNull() ?: 68750
             runFaceGeometryDiagnostic(cache, modelId)
+        }
+        "modelscan" -> {
+            runModelScan(cache)
+        }
+        "tilemap", "tiles" -> {
+            runTileMapDump(cache, args.drop(1))
+        }
+        "lookup", "name", "names", "hash" -> {
+            runNameLookup(cache, args)
+        }
+        "cs2" -> {
+            runCs2(cache, args.drop(1))
+        }
+        "env", "environment", "lighting" -> {
+            runEnvironmentDiagnostic(cache, args.drop(1))
         }
         "help", "-h", "--help" -> {
             printHelp()
@@ -249,7 +315,7 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
         val objLocalY = obj.y - baseWorldY
 
         // Check if object is within 3 tiles of our target
-        if (kotlin.math.abs(objLocalX - localX) <= 3 && kotlin.math.abs(objLocalY - localY) <= 3) {
+        if (abs(objLocalX - localX) <= 3 && abs(objLocalY - localY) <= 3) {
             val def = ObjectRenderer.getDefinition(obj.id) ?: continue
             val modelIds = ObjectRenderer.getModelIds(def, obj.shape)
 
@@ -359,7 +425,7 @@ private fun runUVDiagnostic(cache: Cache, modelId: Int) {
     // Load the model
     val meshDataList = ModelLoader.createMeshDataList(cache, modelId, debug = true)
     if (meshDataList == null) {
-        println("ERROR: Could not load model $modelId")
+        printModelUnavailable(cache, modelId)
         return
     }
 
@@ -410,6 +476,9 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
     println("BlocksLand: ${def.blocksLand}")
     println("Brightness: ${def.brightness}")
     println("Contrast: ${def.contrast}")
+    println("DelayShading (merge normals across objects): ${def.delayShading}")
+    println("ContouredGround: ${def.contouredGround} (modifier ${def.anInt3023})")
+    println("Mirrored: ${def.mirrored}")
 
     // Check for retexturing
     if (def.originalTextureColours != null || def.modifiedTextureColours != null) {
@@ -430,7 +499,7 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
         println("\nModel $modelId:")
         val modelDef = ModelLoader.loadDefinition(cache, modelId)
         if (modelDef == null) {
-            println("  ERROR: Could not load model")
+            printModelUnavailable(cache, modelId, indent = "  ")
             continue
         }
 
@@ -604,7 +673,7 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
                 for ((bi, bb) in modelDef.billboards.withIndex()) {
                     println("    [$bi] id=${bb.billboardId}, face=${bb.appliesOnFace}, depth=${bb.depth}, distance=${bb.distance}")
                     // Load the BillboardType config
-                    val bbType = org.darkan.tools.cache.model.BillboardTypeLoader.get(cache, bb.billboardId)
+                    val bbType = BillboardTypeLoader.get(cache, bb.billboardId)
                     println("         type: materialId=${bbType.materialId}, size2d=${bbType.size2d}, size3d=${bbType.size3d}, shape=${bbType.shape}, blend=${bbType.blendType}, stationary=${bbType.stationary}, hasUid=${bbType.hasUid}")
                 }
             } else {
@@ -875,11 +944,11 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
             println("  This confirms the bug. Checking intermediate operations...")
 
             // Re-run with per-operation tracing
+            val raster = TextureRaster.context(w, h)
             for (op in textureType.textureOperations) {
+                op.bindRaster(raster, 0L)
                 op.createImageCache(w, h)
             }
-            TextureType.setBrightness(0.7)
-            TextureRaster.setDimensions(w, h)
 
             // Check each operation's output for row 0
             for ((i, op) in textureType.textureOperations.withIndex()) {
@@ -920,6 +989,70 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
 }
 
 /**
+ * Print why [modelId] produced no definition, distinguishing a gap in the cache data from a
+ * failure in our decoder.
+ *
+ * A bare "could not load model" reads like a decoder bug and sent one investigation down the
+ * wrong path already: the ids it was reported for turned out to be empty placeholders that
+ * the reference client cannot draw either. Anything the decoder is genuinely responsible for
+ * is labelled BUG so it stands out from data that was never there.
+ */
+private fun printModelUnavailable(cache: Cache, modelId: Int, indent: String = "") {
+    val unavailable = ModelDecoder.describeUnavailable(cache, modelId)
+    if (unavailable == null) {
+        // describeUnavailable decodes it but the caller could not, so the two disagree.
+        println("${indent}ERROR: model $modelId decodes on its own but failed to load here")
+        return
+    }
+    val label = when (unavailable.reason) {
+        ModelUnavailableReason.DECODE_ERROR -> "BUG"
+        else -> "DATA GAP"
+    }
+    println("$indent$label [${unavailable.reason}]: model $modelId ${unavailable.message}")
+}
+
+/**
+ * Decode every model archive in the cache and report which ids yield no geometry, grouped by
+ * [ModelUnavailableReason].
+ *
+ * This exists to answer "is this a decoder gap or a data gap?" with a number instead of an
+ * assumption. If the decoder ever regresses on a format variant, DECODE_ERROR and TRUNCATED
+ * counts move; EMPTY_PLACEHOLDER is a property of the cache and should stay put.
+ */
+private fun runModelScan(cache: Cache) {
+    val total = ModelDecoder.getModelCount(cache)
+    println("\n=== MODEL SCAN: $total archives in index ${Index.MODELS} ===")
+
+    val byReason = LinkedHashMap<ModelUnavailableReason, MutableList<Int>>()
+    var decoded = 0
+    for (modelId in 0 until total) {
+        // Decode directly rather than via ModelLoader so the sweep does not fill the
+        // definition cache with every model in the game.
+        if (ModelDecoder.decode(cache, modelId) != null) {
+            decoded++
+            continue
+        }
+        val unavailable = ModelDecoder.describeUnavailable(cache, modelId) ?: continue
+        byReason.getOrPut(unavailable.reason) { mutableListOf() }.add(modelId)
+    }
+
+    println("Decoded with geometry: $decoded of $total")
+    if (byReason.isEmpty()) {
+        println("No models failed to produce geometry.")
+        return
+    }
+    for ((reason, ids) in byReason.entries.sortedBy { it.key.name }) {
+        val label = if (reason == ModelUnavailableReason.DECODE_ERROR) "BUG" else "DATA GAP"
+        println("\n$label [$reason]: ${ids.size} model(s)")
+        println("  ids: ${ids.take(MODEL_SCAN_ID_LIMIT)}${if (ids.size > MODEL_SCAN_ID_LIMIT) " ..." else ""}")
+        ModelDecoder.describeUnavailable(cache, ids.first())?.let { println("  example: ${it.message}") }
+    }
+}
+
+/** How many ids [runModelScan] names per reason before truncating. */
+private const val MODEL_SCAN_ID_LIMIT = 32
+
+/**
  * Diagnostic to investigate face geometry for coplanarity and render-order occlusion.
  * Prints vertex positions for untextured faces and their nearby textured neighbors
  * to determine if untextured faces are hidden by depth test ordering.
@@ -929,7 +1062,7 @@ private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
 
     val def = ModelLoader.loadDefinition(cache, modelId)
     if (def == null) {
-        println("ERROR: Could not load model $modelId")
+        printModelUnavailable(cache, modelId)
         return
     }
 
@@ -977,7 +1110,7 @@ private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
         val nx = dy1 * dz2 - dz1 * dy2
         val ny = dz1 * dx2 - dx1 * dz2
         val nz = dx1 * dy2 - dy1 * dx2
-        val len = kotlin.math.sqrt(nx * nx + ny * ny + nz * nz)
+        val len = sqrt(nx * nx + ny * ny + nz * nz)
         if (len > 0) {
             println("    Normal: (${nx/len}, ${ny/len}, ${nz/len})")
         }
@@ -1020,6 +1153,233 @@ private fun runFaceGeometryDiagnostic(cache: Cache, modelId: Int) {
     println("\n=== DIAGNOSTIC COMPLETE ===")
 }
 
+/**
+ * Look up cache archives and files by named hash (or by id), and compute named hashes.
+ *
+ * Sub-commands:
+ *   lookup hash <name>                       - print the named hash for <name>
+ *   lookup scan                              - report name-hash support per index
+ *   lookup <index> <archiveNameOrId>         - resolve an archive and list its files
+ *   lookup <index> <archiveNameOrId> <fileNameOrId> - resolve a file and report its size
+ *
+ * For the index/archive/file args, numeric values are treated as ids and non-numeric
+ * values are resolved via the named hash. Hashes are reported in decimal and hex.
+ */
+private fun runNameLookup(cache: Cache, args: Array<String>) {
+    // Sub-command: hash a name without touching the cache.
+    if (args.getOrNull(1)?.lowercase() == "hash") {
+        val name = args.getOrNull(2)
+        if (name == null) {
+            println("Usage: lookup hash <name>")
+            return
+        }
+        val hash = NameLookup.nameHash(name)
+        println("\n=== NAME HASH ===")
+        println("  Name: \"$name\"")
+        println("  Hash (dec): $hash")
+        println("  Hash (hex): 0x${Integer.toHexString(hash)}")
+        println("\n=== LOOKUP COMPLETE ===")
+        return
+    }
+
+    // Sub-command: scan every index for name-hash support.
+    val sub = args.getOrNull(1)?.lowercase()
+    if (sub == "scan" || sub == "indices") {
+        runNameScan(cache)
+        return
+    }
+
+    val index = args.getOrNull(1)?.toIntOrNull()
+    if (index == null) {
+        println("Usage:")
+        println("  lookup hash <name>")
+        println("  lookup <index> <archiveNameOrId> [fileNameOrId]")
+        return
+    }
+
+    val archiveArg = args.getOrNull(2)
+    if (archiveArg == null) {
+        println("Usage: lookup <index> <archiveNameOrId> [fileNameOrId]")
+        return
+    }
+    val fileArg = args.getOrNull(3)
+
+    if (fileArg == null) {
+        runArchiveLookup(cache, index, archiveArg)
+    } else {
+        runFileLookup(cache, index, archiveArg, fileArg)
+    }
+}
+
+/**
+ * Resolve an archive (by id or by name) in [index] and print its file ids.
+ */
+private fun runArchiveLookup(cache: Cache, index: Int, archiveArg: String) {
+    println("\n=== ARCHIVE LOOKUP ===")
+    println("  Index: $index")
+
+    val numericArchive = archiveArg.toIntOrNull()
+    val archiveId: Int
+    if (numericArchive != null) {
+        // Treated as an id. The named hash is not reversible from an id, so we can't
+        // report a name for it - just confirm whether data exists.
+        archiveId = numericArchive
+        println("  Archive (id): $archiveId")
+        val data = NameLookup.archive(cache, index, archiveId)
+        println("  Data exists: ${data != null}${data?.let { " (${it.size} bytes)" } ?: ""}")
+        println("  (Note: a name cannot be recovered from a numeric id - the named hash is one-way.)")
+    } else {
+        // Treated as a name - resolve via the named hash.
+        val hash = NameLookup.nameHash(archiveArg)
+        println("  Archive (name): \"$archiveArg\"")
+        println("  Name hash: $hash (0x${Integer.toHexString(hash)})")
+        archiveId = NameLookup.archiveId(cache, index, archiveArg)
+        if (archiveId == -1) {
+            println("  Resolved archive id: not found")
+            println("\n=== LOOKUP COMPLETE ===")
+            return
+        }
+        println("  Resolved archive id: $archiveId")
+    }
+
+    val files = cache.files(index, archiveId)
+    println("  File count: ${files.size}")
+    println("  File ids: ${files.toList()}")
+    println("\n=== LOOKUP COMPLETE ===")
+}
+
+/**
+ * Resolve an archive then a file (each by id or name) and print the resulting data size.
+ */
+private fun runFileLookup(cache: Cache, index: Int, archiveArg: String, fileArg: String) {
+    println("\n=== FILE LOOKUP ===")
+    println("  Index: $index")
+
+    // Resolve archive id (by id or name).
+    val numericArchive = archiveArg.toIntOrNull()
+    val archiveId: Int
+    if (numericArchive != null) {
+        archiveId = numericArchive
+        println("  Archive (id): $archiveId")
+    } else {
+        val archiveHash = NameLookup.nameHash(archiveArg)
+        println("  Archive (name): \"$archiveArg\"")
+        println("  Archive name hash: $archiveHash (0x${Integer.toHexString(archiveHash)})")
+        archiveId = NameLookup.archiveId(cache, index, archiveArg)
+        if (archiveId == -1) {
+            println("  Resolved archive id: not found")
+            println("\n=== LOOKUP COMPLETE ===")
+            return
+        }
+    }
+    println("  Resolved archive id: $archiveId")
+
+    // Resolve file id (by id or name).
+    val numericFile = fileArg.toIntOrNull()
+    val fileId: Int
+    if (numericFile != null) {
+        fileId = numericFile
+        println("  File (id): $fileId")
+    } else {
+        val fileHash = NameLookup.nameHash(fileArg)
+        println("  File (name): \"$fileArg\"")
+        println("  File name hash: $fileHash (0x${Integer.toHexString(fileHash)})")
+        fileId = NameLookup.fileId(cache, index, archiveId, fileArg)
+        if (fileId == -1) {
+            println("  Resolved file id: not found")
+            println("\n=== LOOKUP COMPLETE ===")
+            return
+        }
+    }
+    println("  Resolved file id: $fileId")
+
+    val data = NameLookup.file(cache, index, archiveId, fileId)
+    if (data == null) {
+        println("  Data: not found (null)")
+    } else {
+        println("  Data size: ${data.size} bytes")
+    }
+    println("\n=== LOOKUP COMPLETE ===")
+}
+
+/**
+ * Scan every cache index and print a table of its name-hash support, followed by
+ * summary lines listing which indices carry archive names and which carry file names.
+ */
+private fun runNameScan(cache: Cache) {
+    println("\n=== INDEX NAME-HASH SCAN ===\n")
+
+    val report = NameLookup.scanNames(cache)
+
+    // Aligned table. Columns: idx, name, nameFlag, archiveNames(count), fileNames(count).
+    println("  %-4s %-22s %-9s %-15s %-15s".format("idx", "name", "nameFlag", "archiveNames", "fileNames"))
+    println("  %-4s %-22s %-9s %-15s %-15s".format("---", "----", "--------", "------------", "---------"))
+    for (entry in report) {
+        val archiveCol = "${entry.hasArchiveNames} (${entry.archiveNameCount})"
+        val fileCol = "${entry.hasFileNames} (${entry.fileNameCount})"
+        println(
+            "  %-4d %-22s %-9s %-15s %-15s".format(
+                entry.index,
+                indexLabel(entry.index),
+                entry.hasNameFlag.toString(),
+                archiveCol,
+                fileCol
+            )
+        )
+    }
+
+    val archiveIndices = report.filter { it.hasArchiveNames }.map { it.index }
+    val fileIndices = report.filter { it.hasFileNames }.map { it.index }
+    println("\n  Indices with archive names: $archiveIndices")
+    println("  Indices with file names:    $fileIndices")
+    println("\n=== SCAN COMPLETE ===")
+}
+
+/**
+ * Human-readable label for a cache [index] id, derived from the [Index] constants.
+ * Falls back to "?" for ids that have no named constant.
+ */
+private fun indexLabel(index: Int): String = when (index) {
+    Index.ANIMATION_FRAMES -> "animation_frames"
+    Index.ANIMATION_SKELETONS -> "animation_skeletons"
+    Index.CONFIGS -> "configs"
+    Index.INTERFACES -> "interfaces"
+    Index.SOUND_EFFECTS -> "sound_effects"
+    Index.MAPS -> "maps"
+    Index.MUSIC -> "music"
+    Index.MODELS -> "models"
+    Index.SPRITES -> "sprites"
+    Index.TEXTURES -> "textures"
+    Index.HUFFMAN -> "huffman"
+    Index.MUSIC_EFFECTS -> "music_effects"
+    Index.CLIENT_SCRIPTS -> "client_scripts"
+    Index.FONT_METRICS -> "font_metrics"
+    Index.MIDI_INSTRUMENTS -> "midi_instruments"
+    Index.SOUND_EFFECTS_MIDI -> "sound_effects_midi"
+    Index.OBJECTS -> "objects"
+    Index.ENUMS -> "enums"
+    Index.NPCS -> "npcs"
+    Index.ITEMS -> "items"
+    Index.ANIMATIONS -> "animations"
+    Index.SPOTANIMS -> "spotanims"
+    Index.VAR_BIT -> "var_bit"
+    Index.WORLD_MAP -> "world_map"
+    Index.QUICK_CHAT_MESSAGES -> "quick_chat_messages"
+    Index.QUICK_CHAT_MENUS -> "quick_chat_menus"
+    Index.TEXTURE_DEFINITIONS -> "texture_definitions"
+    Index.PARTICLES -> "particles"
+    Index.DEFAULTS -> "defaults"
+    Index.BILLBOARDS -> "billboards"
+    Index.NATIVE_LIBRARIES -> "native_libraries"
+    Index.SHADERS -> "shaders"
+    Index.LOADING_SPRITES -> "loading_sprites"
+    Index.GAME_TIPS -> "game_tips"
+    Index.LOADING_SPRITES_RAW -> "loading_sprites_raw"
+    Index.CUTSCENES -> "cutscenes"
+    Index.VORBIS -> "vorbis"
+    else -> "?"
+}
+
 private fun printHelp() {
     println("""
         Darkan Tools - Game Asset Viewer
@@ -1035,6 +1395,28 @@ private fun printHelp() {
                         Shows untextured face positions, normals, and
                         nearby textured faces for coplanarity analysis
                         Default model: 68750 (signpost)
+          modelscan  - Decode every model archive and report the ids that yield
+                        no geometry, grouped by reason. Separates data gaps
+                        (empty placeholders in the cache) from decoder bugs.
+          roofscan   - List the roof-shaped objects in a region, grouped by id
+                        and plane, with each cluster's local tile extent and
+                        its delayShading (cross-object normal merge) flag.
+                        Usage: roofscan <regionX> <regionY>  (default 54 54)
+          texdump    - Generate a material's procedural texture and write it out
+                        as PNG for visual inspection. Writes <out>.png (colour)
+                        and <out>_alpha.png (alpha channel as greyscale).
+                        Usage: texdump <materialId> [outputPath]
+          lookup     - Look up archives/files by named hash (or id), and
+                        compute named hashes. Sub-commands:
+                          lookup hash <name>
+                          lookup scan
+                          lookup <index> <archiveNameOrId>
+                          lookup <index> <archiveNameOrId> <fileNameOrId>
+                        Numeric args are ids; non-numeric args resolve via
+                        the named hash. Reports resolved ids, hashes, and
+                        data sizes. "not found" / null are handled gracefully.
+                        'scan' (alias 'indices') reports, per index, whether
+                        it carries archive/file name hashes.
 
         Controls (Model Viewer):
           WASD        - Move camera
@@ -1069,5 +1451,39 @@ private fun printHelp() {
           ./gradlew :tools:run --args="model 12345"
           ./gradlew :tools:run --args="map"
           ./gradlew :tools:run --args="interface"
+          ./gradlew :tools:run --args="lookup hash water"
+          ./gradlew :tools:run --args="lookup scan"
+          ./gradlew :tools:run --args="lookup 9 725"
+          ./gradlew :tools:run --args="lookup 7 mymodel"
+          ./gradlew :tools:run --args="lookup 12 myscript myfile"
     """.trimIndent())
+}
+
+/**
+ * List the roof-shaped objects in a region, grouped by object id and plane, with the local
+ * tile extent of each cluster. Used to aim the capture camera at a roof field.
+ */
+private fun runRoofScan(cache: Cache, regionX: Int, regionY: Int) {
+    if (!MapXteas.isLoaded()) MapXteas.load()
+    val data = RegionLoader.loadRegion(cache, regionX, regionY)
+    if (data == null) {
+        println("Region $regionX,$regionY failed to load")
+        return
+    }
+    val roofs = data.objects.filter { it.shape in 12..21 }
+    println("Region $regionX,$regionY: ${data.objects.size} objects, ${roofs.size} roof-shaped")
+    roofs.groupBy { it.id to it.level }.entries
+        .sortedByDescending { it.value.size }
+        .take(8)
+        .forEach { (key, list) ->
+            val (id, level) = key
+            val xs = list.map { it.x - regionX * 64 }
+            val ys = list.map { it.y - regionY * 64 }
+            val def = ObjectRenderer.getRawDefinition(id)
+            println(
+                "  id=$id level=$level count=${list.size} " +
+                    "localX=${xs.min()}..${xs.max()} localY=${ys.min()}..${ys.max()} " +
+                    "delayShading=${def?.delayShading} shapes=${list.map { it.shape }.distinct().sorted()}"
+            )
+        }
 }

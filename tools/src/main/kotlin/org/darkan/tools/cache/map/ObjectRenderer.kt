@@ -31,6 +31,10 @@ import world.gregs.voidps.cache.definition.data.ObjectDefinition
  *
  * Model modifications (retexturing/recoloring) are applied when loading the mesh data.
  * These come from ObjectDefinition.retextureSrc/Dst and recolorSrc/Dst arrays.
+ *
+ * [modifications] and [cachedCombinedModelId] are mutable because [NormalMerger] rewrites them
+ * once, right after the whole region's instances exist, to fold in the normals an object receives
+ * from its neighbours. Nothing may read [cachedCombinedModelId] before that pass has run.
  */
 data class ObjectInstance(
     val mapObject: MapObject,
@@ -42,13 +46,15 @@ data class ObjectInstance(
     val offset: Vector3f = Vector3f(),  // Model offset applied after rotation
     var terrainAlignment: TerrainAligner.AlignmentResult = TerrainAligner.AlignmentResult.NONE,  // Terrain tilt (type 3 only)
     val mirrored: Boolean = false,  // Whether to mirror the model (negate Z)
-    val modifications: ModelModifications = ModelModifications.NONE,  // Retexture/recolor modifications
+    var modifications: ModelModifications = ModelModifications.NONE,  // Retexture/recolor/normal-merge modifications
     val groundContourType: Int = 0,  // Ground contour type from ObjectDefinition (0-5)
     val groundContourModifier: Int = -1,  // Ground contour modifier from ObjectDefinition
-    val rsSceneX: Int = 0,  // RS scene X position (baseX * 512 + sizeX * 256) for vertex displacement
-    val rsSceneY: Int = 0,  // RS scene Y position (baseY * 512 + sizeY * 256) for vertex displacement
-    var rsAverageHeight: Int = 0,  // Average terrain height in RS units for vertex displacement
-    val cachedCombinedModelId: Int = ModelLoader.getCombinedModelIdWithModifications(modelIds, modifications)
+    val rsSceneX: Int = 0,  // RS scene X position (baseX * 512 + sizeX * 256), region-local
+    val rsSceneY: Int = 0,  // RS scene Y position (baseY * 512 + sizeY * 256), region-local
+    var rsAverageHeight: Int = 0,  // Average terrain height in RS units at the object's centre
+    val rsRotation: Int = mapObject.rotation,  // RS rotation 0-3; differs from mapObject for the
+                                              // secondary segment of a WALL_WHOLE_CORNER
+    var cachedCombinedModelId: Int = ModelLoader.getCombinedModelIdWithModifications(modelIds, modifications)
 )
 
 /**
@@ -307,10 +313,10 @@ object ObjectRenderer {
      * @param decorDisplacement The displacement value from object definition (default 64) - currently unused
      * @return Vector3f offset (always zero - model handles its own positioning)
      */
-    fun getWallDecorationOffset(shape: Int, rotation: Int, decorDisplacement: Int): org.joml.Vector3f {
+    fun getWallDecorationOffset(shape: Int, rotation: Int, decorDisplacement: Int): Vector3f {
         // Wall decoration models are already positioned correctly relative to tile origin
         // No additional offset needed - the model geometry handles visual placement
-        return org.joml.Vector3f(0f, 0f, 0f)
+        return Vector3f(0f, 0f, 0f)
     }
 
     /**
@@ -410,8 +416,12 @@ object ObjectRenderer {
      * @param regionX Region X coordinate (for world position calculation)
      * @param regionY Region Y coordinate
      * @param tileHeights Optional height data callback (takes localX, localY, plane). Returns scaled height.
+     *                    Coordinates may be 64, one past the region edge: pass a
+     *                    neighbour-aware sampler (TerrainLoader.getExtendedTileHeightScaled)
+     *                    or edge objects sample the wrong corner.
      * @param rsHeightSampler Optional callback returning raw RS height (unscaled int) at (localX, localY, plane).
      *                        Used for per-vertex displacement (contourType 1) to match RS integer arithmetic exactly.
+     *                        Same 0..64 coordinate range as [tileHeights].
      * @return Map of plane -> list of ObjectInstance
      */
     fun createInstancesAllPlanes(
@@ -477,11 +487,17 @@ object ObjectRenderer {
                 yB = localTileY + 1
             }
 
-            // Clamp to valid tile range
-            val x0 = xA.coerceIn(0, 63)
-            val x1 = xB.coerceIn(0, 63)
-            val y0 = yA.coerceIn(0, 63)
-            val y1 = yB.coerceIn(0, 63)
+            // Deliberately NOT clamped to 0..63. For an object on the region's last row
+            // or column the far corner is tile 64, which the client resolves out of the
+            // *neighbouring* region: its height array spans the whole loaded scene plus a
+            // guard row and column. Clamping re-reads the near corner instead, so the
+            // averaged height -- and with it the object's Y position -- comes out wrong on
+            // any sloped region edge. The samplers handle the overhang; see
+            // TerrainLoader.getExtendedTileHeight.
+            val x0 = xA
+            val x1 = xB
+            val y0 = yA
+            val y1 = yB
 
             // Get average height of the 4 corners (matching client algorithm)
             val terrainHeight = if (tileHeights != null) {
@@ -500,22 +516,19 @@ object ObjectRenderer {
             //   sceneY = (baseY << 9) + (locSizeY << 8)
             //   averageHeight = (h00 + h10 + h01 + h11) shr 2
             // The sceneX/Y are region-local (relative to region's scene origin).
+            // Computed for every object, not just the displaced ones: NormalMerger needs the same
+            // integer scene placement to decide which vertices two neighbours share.
             val contourType = def.contouredGround.toInt()
             val contourMod = def.anInt3023
-            val rsSceneX: Int
-            val rsSceneY: Int
-            val rsAvgHeight: Int
-            if (VertexDisplacer.needsDisplacement(contourType, contourMod) && rsHeightSampler != null) {
-                rsSceneX = (localTileX shl 9) + (sizeX shl 8)
-                rsSceneY = (localTileY shl 9) + (sizeY shl 8)
-                rsAvgHeight = (rsHeightSampler.invoke(x0, y0, plane) +
+            val rsSceneX = (localTileX shl 9) + (sizeX shl 8)
+            val rsSceneY = (localTileY shl 9) + (sizeY shl 8)
+            val rsAvgHeight = if (rsHeightSampler != null) {
+                (rsHeightSampler.invoke(x0, y0, plane) +
                     rsHeightSampler.invoke(x1, y0, plane) +
                     rsHeightSampler.invoke(x0, y1, plane) +
                     rsHeightSampler.invoke(x1, y1, plane)) shr 2
             } else {
-                rsSceneX = 0
-                rsSceneY = 0
-                rsAvgHeight = 0
+                0
             }
 
             // Calculate WORLD position
@@ -564,6 +577,12 @@ object ObjectRenderer {
                     groundContourType = def.contouredGround.toInt(),
                     groundContourModifier = def.anInt3023,
                     averageHeight = terrainHeight,  // Pass the same height object is positioned at
+                    // Unlike the average-height sampling above, this clamp is not a bug worth
+                    // removing on its own: calculateObjectTilt clamps its own sample
+                    // coordinates before this lambda ever sees them, so this is dead weight
+                    // over a guard that is itself unreachable. See the note on sampleHeight in
+                    // TerrainAligner for the sweep that established that, and for what to do
+                    // if `tiltprobe scan` ever stops reporting zero.
                     heightSampler = { tx, ty ->
                         val clampedX = tx.coerceIn(0, 63)
                         val clampedY = ty.coerceIn(0, 63)
@@ -633,7 +652,8 @@ object ObjectRenderer {
                     groundContourModifier = contourMod,
                     rsSceneX = rsSceneX,
                     rsSceneY = rsSceneY,
-                    rsAverageHeight = rsAvgHeight
+                    rsAverageHeight = rsAvgHeight,
+                    rsRotation = secondaryRotation
                 )
                 instancesByPlane.getOrPut(plane) { mutableListOf() }.add(secondaryInstance)
             } else {
@@ -663,6 +683,11 @@ object ObjectRenderer {
             }
         }
 
+        // Merge vertex normals between adjacent objects before anyone reads the model ids the
+        // meshes are cached under -- the merge is part of that identity. Spans every plane, since
+        // an object and the one it shares a vertex with need not be on the same one.
+        NormalMerger.apply(gameCache, instancesByPlane.values.flatten())
+
         return instancesByPlane
     }
 
@@ -680,8 +705,11 @@ object ObjectRenderer {
      * @param regionY Region Y coordinate
      * @param plane The plane level
      * @param tileHeights Optional height data callback (takes localX, localY). Returns scaled height.
+     *                    Coordinates may be 64, one past the region edge; see
+     *                    [createInstancesAllPlanes].
      * @param rsHeightSampler Optional callback returning raw RS height (unscaled int) at (localX, localY).
      *                        Used for per-vertex displacement (contourType 1) to match RS integer arithmetic exactly.
+     *                        Same 0..64 coordinate range as [tileHeights].
      * @return List of ObjectInstance ready for rendering
      */
     fun createInstances(
@@ -748,11 +776,17 @@ object ObjectRenderer {
                 yB = localTileY + 1
             }
 
-            // Clamp to valid tile range
-            val x0 = xA.coerceIn(0, 63)
-            val x1 = xB.coerceIn(0, 63)
-            val y0 = yA.coerceIn(0, 63)
-            val y1 = yB.coerceIn(0, 63)
+            // Deliberately NOT clamped to 0..63. For an object on the region's last row
+            // or column the far corner is tile 64, which the client resolves out of the
+            // *neighbouring* region: its height array spans the whole loaded scene plus a
+            // guard row and column. Clamping re-reads the near corner instead, so the
+            // averaged height -- and with it the object's Y position -- comes out wrong on
+            // any sloped region edge. The samplers handle the overhang; see
+            // TerrainLoader.getExtendedTileHeight.
+            val x0 = xA
+            val x1 = xB
+            val y0 = yA
+            val y1 = yB
 
             // Get average height of the 4 corners (matching client algorithm)
             val terrainHeight = if (tileHeights != null) {
@@ -765,23 +799,19 @@ object ObjectRenderer {
                 0f
             }
 
-            // Compute RS-unit scene position and average height for per-vertex displacement
+            // Computed for every object, not just the displaced ones: NormalMerger needs the same
+            // integer scene placement to decide which vertices two neighbours share.
             val contourType = def.contouredGround.toInt()
             val contourMod = def.anInt3023
-            val rsSceneX: Int
-            val rsSceneY: Int
-            val rsAvgHeight: Int
-            if (VertexDisplacer.needsDisplacement(contourType, contourMod) && rsHeightSampler != null) {
-                rsSceneX = (localTileX shl 9) + (sizeX shl 8)
-                rsSceneY = (localTileY shl 9) + (sizeY shl 8)
-                rsAvgHeight = (rsHeightSampler.invoke(x0, y0) +
+            val rsSceneX = (localTileX shl 9) + (sizeX shl 8)
+            val rsSceneY = (localTileY shl 9) + (sizeY shl 8)
+            val rsAvgHeight = if (rsHeightSampler != null) {
+                (rsHeightSampler.invoke(x0, y0) +
                     rsHeightSampler.invoke(x1, y0) +
                     rsHeightSampler.invoke(x0, y1) +
                     rsHeightSampler.invoke(x1, y1)) shr 2
             } else {
-                rsSceneX = 0
-                rsSceneY = 0
-                rsAvgHeight = 0
+                0
             }
 
             // Calculate WORLD position
@@ -829,6 +859,8 @@ object ObjectRenderer {
                     groundContourType = def.contouredGround.toInt(),
                     groundContourModifier = def.anInt3023,
                     averageHeight = terrainHeight,  // Pass the same height object is positioned at
+                    // Redundant over calculateObjectTilt's own clamp, which is itself
+                    // unreachable; see the note on sampleHeight in TerrainAligner.
                     heightSampler = { tx, ty ->
                         val clampedX = tx.coerceIn(0, 63)
                         val clampedY = ty.coerceIn(0, 63)
@@ -896,7 +928,8 @@ object ObjectRenderer {
                     groundContourModifier = contourMod,
                     rsSceneX = rsSceneX,
                     rsSceneY = rsSceneY,
-                    rsAverageHeight = rsAvgHeight
+                    rsAverageHeight = rsAvgHeight,
+                    rsRotation = secondaryRotation
                 ))
             } else {
                 // Normal object - single instance
@@ -923,6 +956,9 @@ object ObjectRenderer {
                 ))
             }
         }
+
+        // See createInstancesAllPlanes: must run before the model ids are read.
+        NormalMerger.apply(gameCache, instances)
 
         return instances
     }

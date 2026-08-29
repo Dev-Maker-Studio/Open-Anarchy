@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.max
 import kotlin.math.min
@@ -36,33 +35,33 @@ class TextureOpCombine : TextureOperation(2, false) {
 
             when (blendMode) {
                 1 -> { // Add
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         output[x] = input0[x] + input1[x]
                     }
                 }
                 2 -> { // Subtract
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         output[x] = input0[x] - input1[x]
                     }
                 }
                 3 -> { // Multiply
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         output[x] = input0[x] * input1[x] shr 12
                     }
                 }
                 4 -> { // Divide
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val b = input1[x]
                         output[x] = if (b != 0) (input0[x] shl 12) / b else 4096
                     }
                 }
                 5 -> { // Screen
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         output[x] = 4096 - ((4096 - input0[x]) * (4096 - input1[x]) shr 12)
                     }
                 }
                 6 -> { // Soft Light
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val b = input1[x]
                         output[x] = if (b < 2048) {
                             b * input0[x] shr 11
@@ -72,36 +71,36 @@ class TextureOpCombine : TextureOperation(2, false) {
                     }
                 }
                 7 -> { // Dodge
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val a = input0[x]
                         output[x] = if (a == 4096) 4096 else (input1[x] shl 12) / (4096 - a)
                     }
                 }
                 8 -> { // Burn
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val a = input0[x]
                         output[x] = if (a == 0) 0 else 4096 - ((4096 - input1[x]) shl 12) / a
                     }
                 }
                 9 -> { // Min
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         output[x] = min(input0[x], input1[x])
                     }
                 }
                 10 -> { // Max
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         output[x] = max(input0[x], input1[x])
                     }
                 }
                 11 -> { // Difference
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val a = input0[x]
                         val b = input1[x]
                         output[x] = if (a > b) a - b else b - a
                     }
                 }
                 12 -> { // Exclusion
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val a = input0[x]
                         val b = input1[x]
                         output[x] = b + a - (a * b shr 11)
@@ -132,28 +131,28 @@ class TextureOpCombine : TextureOperation(2, false) {
 
             when (blendMode) {
                 1 -> { // Add
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         outR[x] = inR0[x] + inR1[x]
                         outG[x] = inG0[x] + inG1[x]
                         outB[x] = inB1[x] + inB0[x]
                     }
                 }
                 2 -> { // Subtract
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         outR[x] = inR0[x] - inR1[x]
                         outG[x] = inG0[x] - inG1[x]
                         outB[x] = inB0[x] - inB1[x]
                     }
                 }
                 3 -> { // Multiply
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         outR[x] = inR1[x] * inR0[x] shr 12
                         outG[x] = inG0[x] * inG1[x] shr 12
                         outB[x] = inB0[x] * inB1[x] shr 12
                     }
                 }
                 4 -> { // Divide
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val r1 = inR1[x]
                         val g1 = inG1[x]
                         val b1 = inB1[x]
@@ -163,14 +162,14 @@ class TextureOpCombine : TextureOperation(2, false) {
                     }
                 }
                 5 -> { // Screen
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         outR[x] = 4096 - ((4096 - inR1[x]) * (4096 - inR0[x]) shr 12)
                         outG[x] = 4096 - ((4096 - inG0[x]) * (4096 - inG1[x]) shr 12)
                         outB[x] = 4096 - ((4096 - inB0[x]) * (4096 - inB1[x]) shr 12)
                     }
                 }
                 6 -> { // Soft Light
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val r1 = inR1[x]
                         val g1 = inG1[x]
                         val b1 = inB1[x]
@@ -180,7 +179,7 @@ class TextureOpCombine : TextureOperation(2, false) {
                     }
                 }
                 7 -> { // Dodge
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val r0 = inR0[x]
                         val g0 = inG0[x]
                         val b0 = inB0[x]
@@ -190,7 +189,7 @@ class TextureOpCombine : TextureOperation(2, false) {
                     }
                 }
                 8 -> { // Burn
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val r0 = inR0[x]
                         val g0 = inG0[x]
                         val b0 = inB0[x]
@@ -200,21 +199,21 @@ class TextureOpCombine : TextureOperation(2, false) {
                     }
                 }
                 9 -> { // Min
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         outR[x] = min(inR0[x], inR1[x])
                         outG[x] = min(inG0[x], inG1[x])
                         outB[x] = min(inB0[x], inB1[x])
                     }
                 }
                 10 -> { // Max
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         outR[x] = max(inR0[x], inR1[x])
                         outG[x] = max(inG0[x], inG1[x])
                         outB[x] = max(inB0[x], inB1[x])
                     }
                 }
                 11 -> { // Difference
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val r0 = inR0[x]
                         val g0 = inG0[x]
                         val b0 = inB0[x]
@@ -227,7 +226,7 @@ class TextureOpCombine : TextureOperation(2, false) {
                     }
                 }
                 12 -> { // Exclusion
-                    for (x in 0 until TextureRaster.currentWidth) {
+                    for (x in 0 until currentWidth) {
                         val r0 = inR0[x]
                         val g0 = inG0[x]
                         val b0 = inB0[x]

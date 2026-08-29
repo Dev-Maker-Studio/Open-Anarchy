@@ -1,6 +1,7 @@
 package org.darkan.core.net.prot.handler
 
 import kotlinx.coroutines.runBlocking
+import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.getClasses
@@ -15,26 +16,41 @@ object PacketHandlers {
     private val PACKET_HANDLERS = mutableMapOf<Class<out ClientProt>, PacketHandler<*, out ClientProt>>()
 
     fun loadHandlersFromPackage(pack: String) {
-        try {
-            logInfo("Initializing packet handlers ($pack)...")
-            val classes = getClasses(pack)
-
-            classes
-                .filter { PacketHandler::class.java.isAssignableFrom(it) }
-                .forEach { clazz ->
-                    @Suppress("UNCHECKED_CAST")
-                    mapHandler(clazz.getConstructor().newInstance() as PacketHandler<*, out ClientProt>)
-                }
-            logInfo("Packet handlers loaded for ${PACKET_HANDLERS.size} packets...")
+        logInfo("Initializing packet handlers ($pack)...")
+        val classes = try {
+            getClasses(pack)
         } catch (e: Exception) {
-            e.printStackTrace()
+            logError("Failed to scan package $pack for packet handlers", e)
+            return
         }
+
+        val candidates = classes.filter { PacketHandler::class.java.isAssignableFrom(it) }
+        var succeeded = 0
+        var failed = 0
+        candidates.forEach { clazz ->
+            try {
+                @Suppress("UNCHECKED_CAST")
+                val instance = clazz.getConstructor().newInstance() as PacketHandler<*, out ClientProt>
+                mapHandler(instance)
+                succeeded++
+            } catch (e: Throwable) {
+                failed++
+                logError("Failed to register packet handler ${clazz.name}: ${e::class.simpleName}: ${e.message}", e)
+            }
+        }
+        logInfo("Packet handlers loaded: $succeeded succeeded, $failed failed, ${PACKET_HANDLERS.size} packet->handler mappings from ${candidates.size} candidate classes.")
     }
 
     fun mapHandler(handler: PacketHandler<*, out ClientProt>) {
-        val type = handler.javaClass.genericInterfaces[0] as ParameterizedType
+        val parameterized = handler.javaClass.genericInterfaces.firstOrNull { it is ParameterizedType } as? ParameterizedType
+            ?: error("Handler ${handler.javaClass.name} does not directly implement PacketHandler<T, K> with parameterized types (genericInterfaces=${handler.javaClass.genericInterfaces.joinToString()})")
         @Suppress("UNCHECKED_CAST")
-        val clazz = type.actualTypeArguments[1] as Class<ClientProt>
+        val clazz = parameterized.actualTypeArguments.getOrNull(1) as? Class<ClientProt>
+            ?: error("Handler ${handler.javaClass.name} has no ClientProt type argument in ${parameterized.typeName}")
+        val existing = PACKET_HANDLERS[clazz]
+        if (existing != null && existing.javaClass != handler.javaClass) {
+            logWarn("  Overwriting ${existing.javaClass.simpleName} with ${handler.javaClass.simpleName} for ${clazz.simpleName}")
+        }
         logInfo("  Mapped handler: ${handler.javaClass.simpleName} -> ${clazz.simpleName} (${clazz.name})")
         PACKET_HANDLERS[clazz] = handler
     }
@@ -53,6 +69,10 @@ object PacketHandlers {
             logWarn("No handler found for packet: ${packet::class.java.simpleName} (${packet::class.java.name}), registered keys: ${PACKET_HANDLERS.keys.map { it.simpleName }}")
             return
         }
-        runBlocking { handler.handle(player, packet) }
+        try {
+            runBlocking { handler.handle(player, packet) }
+        } catch (e: Throwable) {
+            logError("Handler ${handler.javaClass.simpleName} threw for ${packet::class.simpleName}", e)
+        }
     }
 }

@@ -18,11 +18,11 @@ class TextureOpWaveform : TextureOperation(0, true) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            val verticalValue = TextureRaster.verticalTable!![y]
+            val verticalValue = verticalTable[y]
             val verticalOffset = (verticalValue - 2048) shr 1
 
-            for (x in 0 until TextureRaster.currentWidth) {
-                val horizontalValue = TextureRaster.horizontalTable!![x]
+            for (x in 0 until currentWidth) {
+                val horizontalValue = horizontalTable[x]
                 val horizontalOffset = (horizontalValue - 2048) shr 1
                 var waveValue: Int
 
@@ -37,7 +37,7 @@ class TextureOpWaveform : TextureOperation(0, true) {
                 waveValue -= waveValue and -4096
 
                 when (waveShape) {
-                    0 -> waveValue = (TextureRaster.PALETTE_SIN!![waveValue shr 4 and 0xff] + 4096) shr 1
+                    0 -> waveValue = (TextureRaster.PALETTE_SIN[waveValue shr 4 and 0xff] + 4096) shr 1
                     2 -> {
                         waveValue -= 2048
                         if (waveValue < 0) waveValue = -waveValue

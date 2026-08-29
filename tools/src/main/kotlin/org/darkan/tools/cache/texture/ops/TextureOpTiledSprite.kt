@@ -1,6 +1,5 @@
 package org.darkan.tools.cache.texture.ops
 
-import org.darkan.tools.cache.texture.TextureRaster
 
 /**
  * Type 18: Tiled sprite rendering.
@@ -16,7 +15,7 @@ class TextureOpTiledSprite : TextureOpSprite() {
             val outputBlue = output[2]
             val tileY = y % spriteHeight * spriteHeight
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 val pixel = spritePixels!![x % spriteWidth + tileY]
                 outputBlue[x] = (pixel and 0xff) shl 4
                 outputGreen[x] = (pixel and 0xff00) shr 4

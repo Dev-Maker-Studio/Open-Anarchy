@@ -7,9 +7,11 @@ import org.darkan.core.isValidEmail
 import org.darkan.core.isValidPassword
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.Session
-import org.darkan.core.net.prot.*
+import org.darkan.core.net.prot.packet.*
+import org.darkan.core.net.prot.dto.*
 import world.gregs.voidps.buffer.readRSString
 import world.gregs.voidps.cache.secure.Xtea
+import org.darkan.core.net.prot.dto.CreateAccountReplyOpcode
 
 class AccountCreationSession(val session: Session) {
     suspend fun handleDecodedPackets() {
@@ -37,7 +39,7 @@ class AccountCreationSession(val session: Session) {
                             continue
                         }
                         if (!password.isValidPassword()) {
-                            session.send(CreateAccountReply(CreateAccountReplyOpcode.PASSWORD_TOO_EASY))
+                            session.send(CreateAccountReply(CreateAccountReplyOpcode.INVALID_PASSWORD))
                             println("Invalid password: $password")
                             continue
                         }
@@ -47,7 +49,7 @@ class AccountCreationSession(val session: Session) {
                             session.send(CreateAccountReply(CreateAccountReplyOpcode.EMAIL_ALREADY_IN_USE))
                             continue
                         }
-                        session.send(CreateAccountReply(CreateAccountReplyOpcode.LOGIN))
+                        session.send(CreateAccountReply(CreateAccountReplyOpcode.SUCCESS))
                     }
                     else -> println("Unhandled packet: $packet")
                 }

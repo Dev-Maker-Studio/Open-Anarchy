@@ -16,6 +16,7 @@ import com.rs.utils.DropSets
 import com.rs.utils.drop.DropTable
 import kotlin.math.floor
 import kotlin.math.min
+import com.rs.engine.variables.snp_zeal
 
 enum class Imbue(val itemId: Int, val imbuedItemId: Int, val zealCost: Int) {
     GOLD_RING(1635, 15009, 2),
@@ -62,7 +63,7 @@ val COMP_TO_SKILL = mapOf(
 fun mapRewardsPlugins() {
     onNpcClick(8527, 8525, options = arrayOf("Rewards")) { (player) ->
         player.interfaceManager.sendInterface(276)
-        player.vars.setVarBit(5827, player.soulWarsZeal)
+        player.vars.setVarBit(snp_zeal, player.soulWarsZeal)
     }
 
     onButtonClick(276) { (player, _, componentId, _, _, packet) ->
@@ -119,7 +120,7 @@ fun mapRewardsPlugins() {
             }
             else -> {}
         }
-        player.vars.setVarBit(5827, player.soulWarsZeal)
+        player.vars.setVarBit(snp_zeal, player.soulWarsZeal)
     }
 
     onItemOnNpc(8527, 8525) { e ->

@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -16,14 +15,14 @@ class TextureOpFlip : TextureOperation(1, false) {
         if (monochromeImageCache.dirty) {
             val mirroredRow = getChildMonochromeOutput(
                 0,
-                if (mirrorVertically) TextureRaster.columnEnd - y else y
+                if (mirrorVertically) columnEnd - y else y
             )
             if (mirrorHorizontally) {
-                for (x in 0 until TextureRaster.currentWidth) {
-                    output[x] = mirroredRow[TextureRaster.rowEnd - x]
+                for (x in 0 until currentWidth) {
+                    output[x] = mirroredRow[rowEnd - x]
                 }
             } else {
-                System.arraycopy(mirroredRow, 0, output, 0, TextureRaster.currentWidth)
+                System.arraycopy(mirroredRow, 0, output, 0, currentWidth)
             }
         }
         return output
@@ -34,7 +33,7 @@ class TextureOpFlip : TextureOperation(1, false) {
         if (colorImageCache.dirty) {
             val mirroredRow = getChildColorOutput(
                 0,
-                if (mirrorVertically) TextureRaster.columnEnd - y else y
+                if (mirrorVertically) columnEnd - y else y
             )
             val mirroredRed = mirroredRow[0]
             val mirroredGreen = mirroredRow[1]
@@ -44,14 +43,14 @@ class TextureOpFlip : TextureOperation(1, false) {
             val outputBlue = output[2]
 
             if (mirrorHorizontally) {
-                for (x in 0 until TextureRaster.currentWidth) {
-                    val srcX = TextureRaster.rowEnd - x
+                for (x in 0 until currentWidth) {
+                    val srcX = rowEnd - x
                     outputRed[x] = mirroredRed[srcX]
                     outputGreen[x] = mirroredGreen[srcX]
                     outputBlue[x] = mirroredBlue[srcX]
                 }
             } else {
-                for (x in 0 until TextureRaster.currentWidth) {
+                for (x in 0 until currentWidth) {
                     outputRed[x] = mirroredRed[x]
                     outputGreen[x] = mirroredGreen[x]
                     outputBlue[x] = mirroredBlue[x]

@@ -17,6 +17,7 @@
 package com.rs.game.content.skills.dungeoneering;
 
 import com.rs.game.model.entity.player.Player;
+import static com.rs.engine.variables.VarBitPlayer.ntk_trap_active;
 
 public class DungeonPartyPlayer {
 
@@ -32,7 +33,7 @@ public class DungeonPartyPlayer {
 	}
 
 	public void refreshDeaths() {
-		player.getVars().setVarBit(2365, deaths); //deaths
+		player.getVars().setVarBit(ntk_trap_active, deaths); //deaths
 	}
 
 	public void increaseDeaths() {

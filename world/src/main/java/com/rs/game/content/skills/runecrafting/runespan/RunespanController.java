@@ -41,6 +41,9 @@ import com.rs.plugin.handlers.ItemOnNPCHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import kotlin.Pair;
+import static com.rs.engine.variables.VarBitPlayer.rcsiphonxp_shop_amount;
+import static com.rs.engine.variables.VarBitPlayer.rcsiphonxp_shop_selected_item;
+import static com.rs.engine.variables.VarBitPlayer.rcsiphonxp_shop_tab;
 
 @PluginEventHandler
 public class RunespanController extends Controller {
@@ -374,24 +377,24 @@ public class RunespanController extends Controller {
 		case 14:
 			switch(e.getOpNum()) {
 			case 1:
-				e.getPlayer().getVars().setVarBit(11106, 1);
+				e.getPlayer().getVars().setVarBit(rcsiphonxp_shop_amount, 1);
 				break;
 			case 2:
-				e.getPlayer().getVars().setVarBit(11106, 2);
+				e.getPlayer().getVars().setVarBit(rcsiphonxp_shop_amount, 2);
 				break;
 			case 3:
-				e.getPlayer().getVars().setVarBit(11106, 5);
+				e.getPlayer().getVars().setVarBit(rcsiphonxp_shop_amount, 5);
 				break;
 			case 4:
-				e.getPlayer().getVars().setVarBit(11106, 10);
+				e.getPlayer().getVars().setVarBit(rcsiphonxp_shop_amount, 10);
 				break;
 			default:
 				break;
 			}
 			StructDefinition reward = StructDefinitions.getStruct(EnumDefinitions.getEnum(5838).getIntValue(e.getSlotId()));
 			if (reward != null) {
-				e.getPlayer().getVars().setVarBit(11105, e.getSlotId()+1);
-				e.getPlayer().getVars().setVarBit(11104, 0);
+				e.getPlayer().getVars().setVarBit(rcsiphonxp_shop_selected_item, e.getSlotId()+1);
+				e.getPlayer().getVars().setVarBit(rcsiphonxp_shop_tab, 0);
 				e.getPlayer().getTempAttribs().setI("rsShopRew", e.getSlotId());
 			}
 			break;
@@ -401,7 +404,7 @@ public class RunespanController extends Controller {
 				return;
 			reward = StructDefinitions.getStruct(selection);
 			if (reward != null) {
-				int amount = e.getPlayer().getVars().getVarBit(11106);
+				int amount = e.getPlayer().getVars().getVarBit(rcsiphonxp_shop_amount);
 				int totalPrice = (amount * reward.getIntValue(2379));
 				int lvlReq = reward.getIntValue(2393);
 				if (totalPrice > e.getPlayer().getRuneSpanPoints()) {
@@ -417,8 +420,8 @@ public class RunespanController extends Controller {
 					return;
 				}
 				e.getPlayer().getPackets().setIFHidden(1273, 37, false);
-				e.getPlayer().getPackets().setIFText(1273, 2, e.getPlayer().getVars().getVarBit(11106) + " x " + reward.getStringValue(2376) + " " + reward.getStringValue(2377));
-				e.getPlayer().getPackets().setIFText(1273, 4, (e.getPlayer().getVars().getVarBit(11106) * reward.getIntValue(2379)) + " Points");
+				e.getPlayer().getPackets().setIFText(1273, 2, e.getPlayer().getVars().getVarBit(rcsiphonxp_shop_amount) + " x " + reward.getStringValue(2376) + " " + reward.getStringValue(2377));
+				e.getPlayer().getPackets().setIFText(1273, 4, (e.getPlayer().getVars().getVarBit(rcsiphonxp_shop_amount) * reward.getIntValue(2379)) + " Points");
 			}
 			break;
 		case 7:
@@ -427,7 +430,7 @@ public class RunespanController extends Controller {
 				return;
 			reward = StructDefinitions.getStruct(selection);
 			if (reward != null) {
-				int amount = e.getPlayer().getVars().getVarBit(11106);
+				int amount = e.getPlayer().getVars().getVarBit(rcsiphonxp_shop_amount);
 				int totalPrice = (amount * reward.getIntValue(2379));
 				int lvlReq = reward.getIntValue(2393);
 				if (totalPrice > e.getPlayer().getRuneSpanPoints()) {

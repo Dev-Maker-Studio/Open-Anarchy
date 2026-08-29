@@ -4,7 +4,7 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.PluginManager
 import com.rs.plugin.events.IFOnIFEvent
 import org.darkan.core.Logger.logTrace
-import org.darkan.core.net.prot.IfOnIf
+import org.darkan.core.net.prot.packet.IfOnIf
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class IfOnIfHandler : PacketHandler<Player, IfOnIf> {

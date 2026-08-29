@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.max
 import kotlin.math.min
@@ -33,7 +32,7 @@ class TextureOpHslAdjust : TextureOperation(1, false) {
             val outG = output[1]
             val outB = output[2]
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 rgbToHsl(inputRed[x], inputGreen[x], inputBlue[x])
 
                 hue += hueAdjust

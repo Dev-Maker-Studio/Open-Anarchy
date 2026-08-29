@@ -14,6 +14,7 @@ import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.withinArea
+import com.rs.engine.variables.thigui_dragonheld
 
 @ServerStartupEvent
 fun mapFromTinyAcorns() {
@@ -21,7 +22,7 @@ fun mapFromTinyAcorns() {
         val hasDragon = player.bank.containsItem(18651, 1) || player.inventory.containsItem(18651)
         if (!player.miniquestManager.isComplete(Miniquest.FROM_TINY_ACORNS) && player.miniquestManager.getStage(Miniquest.FROM_TINY_ACORNS) >= 2 && !hasDragon) {
             player.miniquestManager.setStage(Miniquest.FROM_TINY_ACORNS, 1)
-            player.vars.setVarBit(7821, 1)
+            player.vars.setVarBit(thigui_dragonheld, 1)
         }
     }
     onItemClick(18649, options = arrayOf("Put-down")) { e ->
@@ -107,6 +108,6 @@ class FromTinyAcorns : MiniquestOutline() {
     }
 
     override fun updateStage(player: Player) {
-        player.vars.setVarBit(7821, if (player.miniquestManager.getStage(Miniquest.FROM_TINY_ACORNS) == 1) 1 else 0)
+        player.vars.setVarBit(thigui_dragonheld, if (player.miniquestManager.getStage(Miniquest.FROM_TINY_ACORNS) == 1) 1 else 0)
     }
 }

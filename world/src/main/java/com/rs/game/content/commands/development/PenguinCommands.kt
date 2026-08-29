@@ -12,6 +12,7 @@ import java.text.SimpleDateFormat
 import java.time.temporal.ChronoUnit
 import java.util.Date
 import kotlin.time.Duration
+import com.rs.engine.variables.peng_spy_week_peng
 
 @ServerStartupEvent
 fun loadPenguinCommands() {
@@ -97,7 +98,7 @@ fun loadPenguinCommands() {
                 if (penguinSpawnService.removeAllSpawns()) {
                     penguinSpawnService.prepareNew()
                     World.players.forEach { player ->
-                        player.vars.saveVarBit(5276, 0)
+                        player.vars.saveVarBit(peng_spy_week_peng, 0)
                     }
                 }
                 Commands.processCommand(p, "penguin_status", true, true)

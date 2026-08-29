@@ -2,7 +2,7 @@ package org.darkan.world.server.packet
 
 import com.rs.game.content.Effect
 import com.rs.game.model.entity.player.Player
-import org.darkan.core.net.prot.Walk
+import org.darkan.core.net.prot.packet.Walk
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class WalkHandler : PacketHandler<Player, Walk> {

@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -24,7 +23,7 @@ class TextureOpColorize : TextureOperation(1, false) {
             val outputGreen = output[1]
             val outputBlue = output[2]
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 val red = inputRed[x]
                 val green = inputGreen[x]
                 val blue = inputBlue[x]

@@ -12,16 +12,25 @@ import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.formatPlayerNameForDisplay
 import org.darkan.core.formatPlayerNameForProtocol
+import org.darkan.core.isValidAccountName
 import org.darkan.core.model.*
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.mongo.collections.Clans
 import org.darkan.core.net.Session
 import org.darkan.core.net.prot.*
+import org.darkan.core.net.prot.packet.*
+import org.darkan.core.net.prot.dto.*
 import org.darkan.core.social.QuickChatMessage
 import org.darkan.core.social.gateway.*
 import org.darkan.core.worldlist.World
 import org.darkan.lobby.Lobby
 import java.util.concurrent.ConcurrentHashMap
+import org.darkan.core.net.prot.dto.ClanChannelChatter
+import org.darkan.core.net.prot.dto.ClanSettingsMember
+import org.darkan.core.net.prot.dto.ClanVarSetting
+import org.darkan.core.net.prot.dto.FriendStatusUpdate
+import org.darkan.core.net.prot.dto.FriendsChatPlayer
+import org.darkan.core.net.prot.dto.IgnoreEntry
 
 object SocialGateway {
     private data class Presence(
@@ -106,7 +115,7 @@ object SocialGateway {
             val worldId = presence?.worldId ?: 0
             val worldName = presence?.worldName ?: ""
             val rank = if (memberUsername == owner.username) FriendsChatRank.OWNER.id else owner.social.friendsChat.getRank(memberUsername).id
-            FriendsChatChannel.FriendsChatPlayer(
+            FriendsChatPlayer(
                 displayName = acc.displayName,
                 username = acc.username,
                 worldId = worldId,
@@ -168,7 +177,7 @@ object SocialGateway {
             val presence = presenceByUsername[username]
             val worldId = presence?.worldId ?: 0
             val rank = getClanRank(clan, username)
-            ClanChannelFull.ClanChannelChatter(displayName = display, rank = rank.iconId, worldId = worldId)
+            ClanChannelChatter(displayName = display, rank = rank.iconId, worldId = worldId)
         }.toTypedArray()
 
         return ClanChannelFull(
@@ -193,20 +202,23 @@ object SocialGateway {
 
         val members = clan.members.entries.map { (username, data) ->
             val display = displayNames[username] ?: username
-            ClanSettingsFull.ClanSettingsMember(displayName = display, rank = data.rank.iconId)
+            ClanSettingsMember(displayName = display, rank = data.rank.iconId)
         }.toTypedArray()
 
         val banned = clan.bannedUsers.map { username ->
             displayNames[username] ?: username
         }.toTypedArray()
 
-        val settings = clan.settings.map { (key, value) ->
-            val intKey = key.toInt()
+        //Settings are stored keyed by enum name; the client wants its own var-setting ids, and
+        //anything it has no id for is not transmittable.
+        val settings = clan.settings.mapNotNull { (key, value) ->
+            val id = ClanSetting.forName(key)?.id ?: return@mapNotNull null
+            if (id == NO_CLIENT_ID) return@mapNotNull null
             when (value) {
-                is Int -> ClanSettingsFull.ClanVarSetting(key = intKey, intValue = value)
-                is Long -> ClanSettingsFull.ClanVarSetting(key = intKey, longValue = value)
-                is String -> ClanSettingsFull.ClanVarSetting(key = intKey, stringValue = value)
-                else -> ClanSettingsFull.ClanVarSetting(key = intKey, intValue = 0)
+                is Int -> ClanVarSetting(key = id, intValue = value)
+                is Long -> ClanVarSetting(key = id, longValue = value)
+                is String -> ClanVarSetting(key = id, stringValue = value)
+                else -> ClanVarSetting(key = id, intValue = 0)
             }
         }.toTypedArray()
 
@@ -263,6 +275,7 @@ object SocialGateway {
 
         sendCcSettingsFull(clan, username)
         sendToUser(username, VarclanEnable())
+        sendClanVars(clan, username)
         broadcastCcChannel(clan, room)
     }
 
@@ -291,6 +304,7 @@ object SocialGateway {
 
         sendCcSettingsFull(clan, username)
         sendToUser(username, VarclanEnable())
+        sendClanVars(clan, username)
         broadcastCcChannel(clan, room)
     }
 
@@ -387,6 +401,14 @@ object SocialGateway {
             name = clanName,
             leaderUsername = leaderUsername,
         )
+        // A fresh clan starts from the client's defaults (motif, recruiting, home world, guest CC)
+        // rather than an empty settings block the interface would render as all zeroes.
+        for (setting in ClanSetting.entries) {
+            if (setting.id == NO_CLIENT_ID) continue
+            val default = setting.defaultValue
+            if (default is String && default.isEmpty()) continue
+            clan.setSetting(setting, default)
+        }
         clan.members[leaderUsername] = ClanMemberData(rank = ClanRank.OWNER)
         Clans.save(clan)
 
@@ -477,9 +499,13 @@ object SocialGateway {
         return removeClanMember(clanName, username)
     }
 
+    /** [updates] is keyed by the client's var-setting id; unknown ids are ignored. */
     suspend fun updateClanSettings(clanName: String, updates: Map<Int, Any>) {
         val clan = Clans.find(clanName) ?: return
-        clan.settings.putAll(updates.mapKeys { it.key.toString() })
+        for ((id, value) in updates) {
+            val setting = ClanSetting.forId(id) ?: continue
+            clan.settings[setting.name] = value
+        }
         Clans.save(clan)
         val room = ccRoomsByClanName[clanName]
         if (room != null) {
@@ -487,15 +513,230 @@ object SocialGateway {
         }
     }
 
+    // ─── Lobby Screen Clan UI ────────────────────────────────────────
+
+    /** Chatbox "enter a name" prompt; `sendInputNameScript` in the legacy world server. */
+    private const val INPUT_NAME_SCRIPT = 109
+
+    /**
+     * The lobby opens the same clan interfaces the world server does, so the component ids below
+     * are the ones the in-world clan plugin already uses.
+     */
+    private const val CLAN_CHAT_INTERFACE = 1110
+    private const val CLAN_SETTINGS_INTERFACE = 1096
+
+    /** Which outstanding lobby prompt a player's next name entry answers. */
+    private enum class NameInput { CREATE_CLAN, JOIN_GUEST_CC, BAN, UNBAN }
+
+    private val pendingNameInput = ConcurrentHashMap<String, NameInput>()
+
+    private suspend fun handleLobbyButton(username: String, packet: IfButton) {
+        when (packet.interfaceId) {
+            CLAN_CHAT_INTERFACE -> when (packet.componentId) {
+                82 -> toggleClanChannel(username)
+                91 -> toggleGuestClanChannel(username)
+                95 -> promptName(username, NameInput.BAN, "Which player would you like to ban?")
+                99 -> promptName(username, NameInput.UNBAN, "Which player would you like to unban?")
+                109 -> leaveClan(username)
+                else -> logTrace("SocialGateway: unhandled clan chat button ${packet.componentId} from $username")
+            }
+
+            CLAN_SETTINGS_INTERFACE -> when (packet.componentId) {
+                94 -> toggleClanSetting(username, ClanSetting.GUESTS_CAN_ENTER_CC)
+                95 -> toggleClanSetting(username, ClanSetting.GUESTS_CAN_TALK_CC)
+                96 -> toggleClanSetting(username, ClanSetting.IS_RECRUITING)
+                else -> logTrace("SocialGateway: unhandled clan settings button ${packet.componentId} from $username")
+            }
+
+            else -> logTrace("SocialGateway: unhandled lobby button ${packet.interfaceId}:${packet.componentId} from $username")
+        }
+    }
+
+    private suspend fun promptName(username: String, purpose: NameInput, question: String) {
+        pendingNameInput[username] = purpose
+        sendToUser(username, RunScript(INPUT_NAME_SCRIPT, arrayOf(question)))
+    }
+
+    private suspend fun handleNameInput(username: String, input: String) {
+        when (pendingNameInput.remove(username) ?: return) {
+            NameInput.CREATE_CLAN -> createClanFromLobby(username, input)
+            NameInput.JOIN_GUEST_CC -> joinGuestClanChat(username, input)
+            NameInput.BAN -> banByDisplayName(username, input)
+            NameInput.UNBAN -> unbanByDisplayName(username, input)
+        }
+    }
+
+    /** Clan chat toggle. With no clan yet this starts the create-a-clan flow, as in-world does. */
+    private suspend fun toggleClanChannel(username: String) {
+        val account = Accounts.find(username) ?: return
+        val clanName = account.social.clanName
+        if (clanName == null) {
+            promptName(username, NameInput.CREATE_CLAN, "Which name would you like for your clan?")
+            return
+        }
+        if (ccClanByMember[username] == clanName) {
+            leaveClanChat(username, notify = true)
+            return
+        }
+        joinClanChat(username)
+    }
+
+    private suspend fun toggleGuestClanChannel(username: String) {
+        val account = Accounts.find(username) ?: return
+        if (account.social.guestedClanChat != null) {
+            account.social.guestedClanChat = null
+            Accounts.save(account)
+            leaveClanChat(username, notify = true)
+            return
+        }
+        promptName(username, NameInput.JOIN_GUEST_CC, "Which clan chat would you like to join?")
+    }
+
+    private suspend fun joinGuestClanChat(username: String, input: String) {
+        val clanName = input.formatPlayerNameForDisplay()
+        if (Clans.find(clanName) == null) {
+            sendToUser(username, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "The channel you tried to join does not exist."))
+            return
+        }
+        val account = Accounts.find(username) ?: return
+        account.social.guestedClanChat = clanName
+        Accounts.save(account)
+        joinClanChatAsGuest(username, clanName)
+    }
+
+    /**
+     * The in-world flow confirms the name in an option dialogue between the check and the create;
+     * the lobby screen has no dialogue system, so an approved name is created straight away.
+     */
+    private suspend fun createClanFromLobby(username: String, input: String) {
+        val name = input.formatPlayerNameForDisplay()
+        if (!checkClanName(username, name)) return
+        val created = createClan(username, name)
+        sendToUser(
+            username,
+            GameMessage(
+                ChatMessageType.UNFILTERABLE,
+                if (created) "The clan $name has been created!" else "Unable to create the clan $name.",
+            )
+        )
+    }
+
+    private suspend fun banByDisplayName(username: String, input: String) {
+        val clanName = Accounts.find(username)?.social?.clanName ?: return
+        val target = Accounts.findByDisplayName(input.formatPlayerNameForDisplay())
+        if (target == null) {
+            sendToUser(username, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "Player not found."))
+            return
+        }
+        banClanMember(clanName, target.username, username)
+    }
+
+    private suspend fun unbanByDisplayName(username: String, input: String) {
+        val clanName = Accounts.find(username)?.social?.clanName ?: return
+        val target = Accounts.findByDisplayName(input.formatPlayerNameForDisplay())
+        if (target == null) {
+            sendToUser(username, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "Player not found."))
+            return
+        }
+        unbanClanMember(clanName, target.username, username)
+    }
+
+    private suspend fun toggleClanSetting(username: String, setting: ClanSetting) {
+        val clanName = Accounts.find(username)?.social?.clanName ?: return
+        val clan = Clans.find(clanName) ?: return
+        if (!clan.hasPermissions(username, ClanRank.ADMIN)) {
+            sendToUser(username, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to change clan settings."))
+            return
+        }
+        val enabled = ((clan.getSetting(setting) as? Number)?.toInt() ?: 0) != 0
+        val value = if (enabled) 0 else 1
+        updateClanSettings(clanName, mapOf(setting.id to value))
+        if (setting == ClanSetting.IS_RECRUITING) {
+            setClanVar(clanName, ClanVar.RECRUITING, value, username)
+        }
+    }
+
+    // ─── Clan Name Checks ────────────────────────────────────────────
+
+    /**
+     * Validity and uniqueness check for a proposed clan name, messaging the player about why a
+     * name was rejected. Mirrors the legacy lobby's `ClansManager.checkName`.
+     */
+    suspend fun checkClanName(username: String, input: String): Boolean {
+        val name = input.formatPlayerNameForDisplay()
+        if (!name.formatPlayerNameForProtocol().isValidAccountName()) {
+            sendToUser(username, GameMessage(ChatMessageType.UNFILTERABLE, "Clan names must be 12 or fewer characters and be alphanumeric."))
+            return false
+        }
+        if (Clans.find(name) != null) {
+            sendToUser(username, GameMessage(ChatMessageType.UNFILTERABLE, "The name $name is already taken. Please choose another."))
+            return false
+        }
+        return true
+    }
+
+    // ─── Clan Vars ───────────────────────────────────────────────────
+
+    /**
+     * Picks the transmission form for a clan var by its value type. Int-typed vars use the
+     * client's byte variant whenever the value fits, matching the legacy `SetVarClan` encoder.
+     */
+    private fun clanVarPacket(id: Int, value: Any): ServerProt = when (value) {
+        is String -> VarclanSetString(id, value)
+        is Long -> VarclanSetLong(id, value)
+        is Number -> {
+            val int = value.toInt()
+            if (int < Byte.MIN_VALUE || int > Byte.MAX_VALUE) VarclanSetInt(id, int) else VarclanSetByte(id, int)
+        }
+        else -> VarclanSetInt(id, 0)
+    }
+
+    /**
+     * Clan vars only go to players sitting on the lobby screen. A player in-world receives them
+     * from the world server's own clan sync, and the var-clan packets are not on the gateway's
+     * wire allowlist.
+     */
+    private suspend fun sendClanVarToLobby(usernames: Collection<String>, id: Int, value: Any) {
+        val packet = clanVarPacket(id, value)
+        for (username in usernames) {
+            val lobby = lobbyByUsername[username] ?: continue
+            try {
+                lobby.session.send(packet)
+            } catch (e: Exception) {
+                logWarn("Failed sending clan var to lobby user=$username", e)
+            }
+        }
+    }
+
+    private suspend fun sendClanVars(clan: Clan, toUsername: String) {
+        for ((key, value) in clan.vars) {
+            val id = key.toIntOrNull() ?: continue
+            sendClanVarToLobby(listOf(toUsername), id, value)
+        }
+    }
+
+    /** Persists a clan var and pushes it to everyone currently in the clan's channel. */
+    suspend fun setClanVar(clanName: String, clanVar: ClanVar, value: Any, setterUsername: String) {
+        val clan = Clans.find(clanName) ?: return
+        if (!clan.hasPermissions(setterUsername, ClanRank.ADMIN)) {
+            sendToUser(setterUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to change clan settings."))
+            return
+        }
+        clan.setVar(clanVar, value)
+        Clans.save(clan)
+        val room = ccRoomsByClanName[clanName] ?: return
+        sendClanVarToLobby(room.members, clanVar.id, value)
+    }
+
     // ─── Friend Status ───────────────────────────────────────────────
 
-    private fun friendStatusUpdateFor(viewer: Account, friend: Account): FriendStatus.FriendStatusUpdate {
+    private fun friendStatusUpdateFor(viewer: Account, friend: Account): FriendStatusUpdate {
         val canSeeFriend = viewer.onlineTo(friend)
         val friendPresence = if (canSeeFriend) presenceByUsername[friend.username] else null
         val worldId = friendPresence?.worldId ?: 0
         val worldName = friendPresence?.worldName
         val rank = viewer.social.friendsChat.getRank(friend.username).id
-        return FriendStatus.FriendStatusUpdate(
+        return FriendStatusUpdate(
             warnMessage = false,
             displayName = friend.displayName,
             previousDisplayName = friend.prevDisplayName,
@@ -523,7 +764,7 @@ object SocialGateway {
         val ignoreAccounts = Accounts.findByUsernames(account.social.ignores)
         val ignoreMap = ignoreAccounts.associateBy { it.username }
         val ignores = account.social.ignores.map { ign ->
-            UpdateIgnoreList.IgnoreEntry(username = ign, displayName = ignoreDisplayName(ign, ignoreMap))
+            IgnoreEntry(username = ign, displayName = ignoreDisplayName(ign, ignoreMap))
         }.toTypedArray()
         sendToUser(account.username, UpdateIgnoreList(ignores))
     }
@@ -562,7 +803,7 @@ object SocialGateway {
 
         // Build + send ignore list
         val ignores = account.social.ignores.map { ign ->
-            UpdateIgnoreList.IgnoreEntry(
+            IgnoreEntry(
                 username = ign,
                 displayName = ignoreDisplayName(ign, accountsByUsername),
             )
@@ -596,6 +837,7 @@ object SocialGateway {
     }
 
     suspend fun unregisterLobbyPlayerSession(username: String) {
+        pendingNameInput.remove(username)
         val prior = lobbyByUsername.remove(username) ?: return
         usernameByDisplayLower.remove(prior.displayName.lowercase(), username)
         val acc = Accounts.find(username)
@@ -637,13 +879,22 @@ object SocialGateway {
                             return@coroutineScope
                         }
 
+                        val metadata = msg.world.toWorldMetadata()
+                        if (!metadata.isValid) {
+                            logWarn("SocialGateway: rejecting world registration worldId=${msg.world.worldId} host=${msg.world.publicHost}:${msg.world.port}")
+                            val resp = WorldHelloAck(ok = false, message = "Invalid world registration")
+                            socket.send(Frame.Text(SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), resp)))
+                            socket.close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Invalid world registration"))
+                            return@coroutineScope
+                        }
+
                         val worldId = msg.world.worldId
                         val session = WorldSession(worldId, msg.world.worldName, socket)
                         worldsById[worldId]?.markClosed()
                         worldsById[worldId] = session
                         worldSession = session
                         worldInfoById[worldId] = msg.world
-                        Lobby.worldList.put(World(msg.world.toWorldMetadata()))
+                        Lobby.worldList.put(World(metadata))
 
                         logInfo("SocialGateway: world connected worldId=${worldId} name=${msg.world.worldName} host=${msg.world.publicHost}:${msg.world.port}")
                         val resp = WorldHelloAck(ok = true, message = null)
@@ -720,6 +971,18 @@ object SocialGateway {
                                 username = msg.username,
                                 success = success,
                                 message = if (success) null else "Unable to create clan.",
+                            )
+                            sendToWorld(worldSession?.worldId ?: return@launch, response)
+                        }
+                    }
+
+                    is ClanCheckNameRequest -> {
+                        launch {
+                            val approved = checkClanName(msg.username, msg.clanName)
+                            val response = ClanCheckNameResponse(
+                                username = msg.username,
+                                clanName = msg.clanName,
+                                approved = approved,
                             )
                             sendToWorld(worldSession?.worldId ?: return@launch, response)
                         }
@@ -1080,6 +1343,18 @@ object SocialGateway {
 
             is ClanChannelKickUser -> {
                 handleCcKick(username, packet)
+            }
+
+            is IfButton -> {
+                handleLobbyButton(username, packet)
+            }
+
+            is ResumeNameDialog -> {
+                handleNameInput(username, packet.name)
+            }
+
+            is ResumeTextDialog -> {
+                handleNameInput(username, packet.text)
             }
 
             is QuickChatPrivate -> {

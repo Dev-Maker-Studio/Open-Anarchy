@@ -2,6 +2,7 @@ package org.darkan.core.net.prot.revision.rev727
 
 import io.ktor.utils.io.*
 import org.darkan.core.net.prot.*
+import org.darkan.core.net.prot.packet.*
 import world.gregs.voidps.buffer.*
 
 internal fun Codec.registerRev727ZonePackets() {
@@ -26,7 +27,7 @@ internal fun Codec.registerRev727ZonePackets() {
 
     serverProt<TileMessage>(opcode = 114, size = ProtSize.VarByte) { out ->
         out.writeByte(0) // Unused
-        out.writeByte((localX shl 4) or (localY and 0x7))
+        out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeShort(priority)
         out.writeByte(duration)
         out.writeMedium(color)
@@ -35,7 +36,7 @@ internal fun Codec.registerRev727ZonePackets() {
 
     // Ground item protocols
     serverProt<GroundItemCount>(opcode = 3, size = 7) { out ->
-        out.writeByte((localX shl 4) or (localY and 0x7))
+        out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeShort(itemId)
         out.writeShort(oldAmount)
         out.writeShort(newAmount)
@@ -44,30 +45,30 @@ internal fun Codec.registerRev727ZonePackets() {
     serverProt<CreateGroundItem>(opcode = 27, size = 5) { out ->
         out.writeShortAddLittle(amount)
         out.writeShortAdd(itemId)
-        out.writeByteInverse((localX shl 4) or (localY and 0x7))
+        out.writeByteInverse(((localX and 0x7) shl 4) or (localY and 0x7))
     }
 
     serverProt<GroundItemReveal>(opcode = 107, size = 7) { out ->
         out.writeShort(playerId)
-        out.writeByte((localX shl 4) or (localY and 0x7))
+        out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeShortAddLittle(amount)
         out.writeShortAddLittle(itemId)
     }
 
     serverProt<RemoveGroundItem>(opcode = 125, size = 3) { out ->
-        out.writeByteInverse((localX shl 4) or (localY and 0x7))
+        out.writeByteInverse(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeShortAddLittle(itemId)
     }
 
     // Object protocols
     serverProt<DestroyObject>(opcode = 69, size = 2) { out ->
         out.writeByteAdd((shape shl 2) or (rotation and 0x3))
-        out.writeByte((localX shl 4) or (localY and 0x7))
+        out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
     }
 
     serverProt<CreateObject>(opcode = 117, size = 6) { out ->
         out.writeInt(objectId)
-        out.writeByteSubtract((localX shl 4) or (localY and 0x7))
+        out.writeByteSubtract(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeByteSubtract((shape shl 2) or (rotation and 0x3))
     }
 
@@ -83,7 +84,7 @@ internal fun Codec.registerRev727ZonePackets() {
             if (retextures != null) flags = flags or 0x8
         }
         out.writeByte(flags)
-        out.writeByteAdd((localX shl 4) or (localY and 0x7))
+        out.writeByteAdd(((localX and 0x7) shl 4) or (localY and 0x7))
         if (!clear) {
             modelIds?.forEach { out.writeInt(it) }
             recolors?.forEach { out.writeShort(it.toInt() and 0xFFFF) }
@@ -98,7 +99,7 @@ internal fun Codec.registerRev727ZonePackets() {
 
     serverProt<ObjAnim>(opcode = 113, size = 6) { out ->
         out.writeByteSubtract((shape shl 2) or (rotation and 0x3))
-        out.writeByteSubtract((localX shl 4) or (localY and 0x7))
+        out.writeByteSubtract(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeIntLittle(animationId)
     }
 
@@ -110,7 +111,7 @@ internal fun Codec.registerRev727ZonePackets() {
 
     // Spot anim and projectile protocols
     serverProt<SpotAnim>(opcode = 139, size = 8) { out ->
-        out.writeByte((localX shl 4) or (localY and 0x7))
+        out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeShort(if (spotAnimId == -1) 65535 else spotAnimId)
         out.writeShort(height)
         out.writeShort(speed)
@@ -141,6 +142,10 @@ internal fun Codec.registerRev727ZonePackets() {
         out.writeShort(slope)
     }
 
+    // The client frames opcode 95 with ServerProt size 17 but decodes 19 bytes
+    // (its two size tables contradict each other), so a standalone send always
+    // desyncs the stream. Send this enclosed in UpdateZonePartialEnclosed, where
+    // the sub-packet stream is self-delimiting and 19 is correct.
     serverProt<MapProjAnimHalfSq>(opcode = 95, size = 19) { out ->
         val coords = ((localX and 0xF) shl 4) or (localY and 0xF)
         out.writeByte(coords)
@@ -178,12 +183,18 @@ internal fun Codec.registerRev727ZonePackets() {
         out.writeByteInverse(xDist)
         out.writeByteInverse(yDist)
         out.writeShortAdd(x)
-        out.writeByteInverse(startHeight)
+        // The client scales startHeight by 4 unless the BAS-offset flag (0x2) is
+        // set, in which case it reinterprets the byte as signed - same rule as
+        // MapProjAnimHalfSq, and it must match the `endHeight / 4` above.
+        out.writeByteInverse(if ((flags and 0x2) != 0) startHeight else startHeight / 4)
     }
 
     // Sound protocols (zone-specific)
+    // The client frames opcode 128 with ServerProt size 6 but decodes 8 bytes -
+    // same self-contradiction as opcode 95. Send this enclosed in
+    // UpdateZonePartialEnclosed rather than standalone.
     serverProt<SoundEffectTile>(opcode = 128, size = 8) { out ->
-        out.writeByte((localX shl 4) or (localY and 0x7))
+        out.writeByte(((localX and 0x7) shl 4) or (localY and 0x7))
         out.writeShort(if (soundId == -1) 65535 else soundId)
         out.writeByte(((range and 0xF) shl 4) or (mode and 0x7))
         out.writeByte(delay)
@@ -196,7 +207,7 @@ internal fun Codec.registerRev727ZonePackets() {
         out.writeByte(volume)
         out.writeByteInverse(far)
         out.writeInt(musicArchive)
-        out.writeIntMiddle((plane shl 28) or (x shl 14) or (y and 0x3FFF))
+        out.writeIntMiddle(((plane and 0x3) shl 28) or ((x and 0x3FFF) shl 14) or (y and 0x3FFF))
     }
 
     serverProt<AnimateNpc>(opcode = 145, size = 19) { out ->

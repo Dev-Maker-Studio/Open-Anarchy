@@ -65,6 +65,13 @@ interface Reader {
 
     fun readLong(): Long
 
+    /**
+     * Reads a 40-bit big-endian value, most significant byte first.
+     *
+     * Exact inverse of [world.gregs.voidps.buffer.write.Writer.write5].
+     */
+    fun read5(): Long = (readUnsignedByte().toLong() shl 32) or (readInt().toLong() and 0xffffffffL)
+
     fun readString(): String
 
     /**

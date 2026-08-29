@@ -8,12 +8,14 @@ import com.rs.game.model.entity.async.schedule
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
 import org.darkan.core.model.Rights
-import org.darkan.core.net.prot.ResetSounds
+import org.darkan.core.net.prot.packet.ResetSounds
 import org.darkan.core.Logger
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.utils.music.Music
 import com.rs.utils.music.Voices
 import kotlin.math.ceil
+import com.rs.engine.variables.follower_obj
+import com.rs.engine.variables.lore_interface_boolean
 
 @ServerStartupEvent
 fun loadAudioCommands() {
@@ -38,9 +40,9 @@ fun loadAudioCommands() {
 
     Commands.add(Rights.DEVELOPER, "familiarhead", "Tests familiar/pet chathead icons") { p, args ->
         val pouch = Pouch.valueOf(args[0])
-        p.vars.setVar(448, pouch.id) // configures familiar type
+        p.vars.setVar(follower_obj, pouch.id) // configures familiar type
         p.vars.setVar(1174, 0, true) // refresh familiar head
-        p.vars.setVarBit(4282, args[1].toInt()) // refresh familiar emote
+        p.vars.setVarBit(lore_interface_boolean, args[1].toInt()) // refresh familiar emote
     }
 
     Commands.add(Rights.DEVELOPER, "playthroughvoices [start finish tick_delay]", "Plays through voice range.") { p, args ->

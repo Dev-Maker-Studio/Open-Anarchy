@@ -13,6 +13,7 @@ private const val Fyre = 8042
 fun SquireFyreD(player: Player, npc: NPC) {
     if (!player.isQuestStarted(Quest.ALL_FIRED_UP) || player.questManager.isComplete(Quest.ALL_FIRED_UP)) {
         allFiredUpDialogue(player, npc, HeadE.HAPPY_TALKING)
+        return
     }
     when (player.questManager.getStage(Quest.ALL_FIRED_UP)) {
         2 -> stage2(player, npc)

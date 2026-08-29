@@ -41,6 +41,9 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import static com.rs.engine.variables.VarBitPlayer.bank_show_equipscreen;
+import static com.rs.engine.variables.VarBitPlayer.bankpin_counter;
+import static com.rs.engine.variables.VarPlayer.swansong_temp;
 
 @PluginEventHandler
 public class Bank {
@@ -554,9 +557,9 @@ public class Bank {
 		player.getInterfaceManager().sendInterface(13);
 		player.getInterfaceManager().sendSubSpecific(false, 13, 5, 759);
 		player.getPackets().sendVarc(98, bankPin == 0 ? 0 : 1);
-		player.getVars().setVarBit(1010, 1, true);
+		player.getVars().setVarBit(bankpin_counter, 1, true);
 		player.getVars().syncVarsToClient();
-		player.getVars().setVarBit(1010, player.getTempAttribs().getI("pinStage"), true);
+		player.getVars().setVarBit(bankpin_counter, player.getTempAttribs().getI("pinStage"), true);
 		player.getVars().syncVarsToClient();
 		player.getPackets().sendRunScriptBlank(1107);
 	}
@@ -604,7 +607,7 @@ public class Bank {
 				for (Object ifComp : EnumDefinitions.getEnum(3554).getValues().values())
 					e.getPlayer().getPackets().setIFHidden(Utils.interfaceIdFromHash((int) ifComp), Utils.componentIdFromHash((int) ifComp), false);
 			else if (e.getPlayer().getTempAttribs().getI("pinStage") == 4) {
-				e.getPlayer().getVars().setVarBit(1010, 4, true);
+				e.getPlayer().getVars().setVarBit(bankpin_counter, 4, true);
 				e.getPlayer().getVars().syncVarsToClient();
 				if (e.getPlayer().getBank().bankPin == 0) {
 					if (e.getPlayer().getTempAttribs().getI("prevPin", -1) == -1) {
@@ -614,7 +617,7 @@ public class Bank {
 						e.getPlayer().getTempAttribs().setI("prevPin", prev);
 						e.getPlayer().getTempAttribs().setI("enteredPin", 0);
 						e.getPlayer().getTempAttribs().setI("pinStage", 0);
-						e.getPlayer().getVars().setVarBit(1010, 0, true);
+						e.getPlayer().getVars().setVarBit(bankpin_counter, 0, true);
 						e.getPlayer().getVars().syncVarsToClient();
 					} else if (e.getPlayer().getTempAttribs().getI("prevPin") != e.getPlayer().getTempAttribs().getI("enteredPin")) {
 						e.getPlayer().sendMessage("The PIN you entered did not match the first one.");
@@ -643,8 +646,8 @@ public class Bank {
 		if (!checkPin())
 			return;
 		player.getTempAttribs().removeB("viewingOtherBank");
-		player.getVars().setVar(638, 0);
-		player.getVars().setVarBit(8348, 0);
+		player.getVars().setVar(swansong_temp, 0);
+		player.getVars().setVarBit(bank_show_equipscreen, 0);
 		refreshTabs();
 		refreshViewingTab();
 		refreshLastX();
@@ -666,7 +669,7 @@ public class Bank {
 	}
 
 	public void openBankOther(Player other) {
-		player.getVars().setVarBit(8348, 0);
+		player.getVars().setVarBit(bank_show_equipscreen, 0);
 		player.getVars().syncVarsToClient();
 		player.getInterfaceManager().sendInterface(762);
 		player.getPackets().sendRunScript(2319);

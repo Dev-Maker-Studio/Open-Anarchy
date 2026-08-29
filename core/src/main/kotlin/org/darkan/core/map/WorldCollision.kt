@@ -17,6 +17,7 @@ object WorldCollision {
     @JvmStatic
     fun getFlags(x: Int, y: Int, level: Int): Int {
         val zoneId = getZoneIndex(x, y, level)
+        if (zoneId < 0 || zoneId >= allFlags.size) return -1
         val zone = allFlags[zoneId] ?: return -1
         return zone[getIndexInZone(x, y)]
     }

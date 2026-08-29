@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -14,20 +13,20 @@ class TextureOpTile : TextureOperation(1, false) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            val tileWidth = TextureRaster.currentWidth / tilesX
-            val tileHeight = TextureRaster.currentHeight / tilesY
+            val tileWidth = currentWidth / tilesX
+            val tileHeight = currentHeight / tilesY
             val childOutput: IntArray
             if (tileHeight > 0) {
                 val index = y % tileHeight
-                childOutput = getChildMonochromeOutput(0, index * TextureRaster.currentHeight / tileHeight)
+                childOutput = getChildMonochromeOutput(0, index * currentHeight / tileHeight)
             } else {
                 childOutput = getChildMonochromeOutput(0, 0)
             }
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 if (tileWidth > 0) {
                     val tileX = x % tileWidth
-                    output[x] = childOutput[tileX * TextureRaster.currentWidth / tileWidth]
+                    output[x] = childOutput[tileX * currentWidth / tileWidth]
                 } else {
                     output[x] = childOutput[0]
                 }
@@ -39,12 +38,12 @@ class TextureOpTile : TextureOperation(1, false) {
     override fun getColorOutput(y: Int): Array<IntArray> {
         val output = colorImageCache.getPalette(y)
         if (colorImageCache.dirty) {
-            val tileWidth = TextureRaster.currentWidth / tilesX
-            val tileHeight = TextureRaster.currentHeight / tilesY
+            val tileWidth = currentWidth / tilesX
+            val tileHeight = currentHeight / tilesY
             val childOutput: Array<IntArray>
             if (tileHeight > 0) {
                 val tileY = y % tileHeight
-                childOutput = getChildColorOutput(0, tileY * TextureRaster.currentHeight / tileHeight)
+                childOutput = getChildColorOutput(0, tileY * currentHeight / tileHeight)
             } else {
                 childOutput = getChildColorOutput(0, 0)
             }
@@ -56,10 +55,10 @@ class TextureOpTile : TextureOperation(1, false) {
             val outputGreen = output[1]
             val outputBlue = output[2]
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 val sourceX: Int = if (tileWidth > 0) {
                     val tileX = x % tileWidth
-                    tileX * TextureRaster.currentWidth / tileWidth
+                    tileX * currentWidth / tileWidth
                 } else {
                     0
                 }

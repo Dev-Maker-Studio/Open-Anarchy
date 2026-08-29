@@ -13,6 +13,7 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onObjectClick
 import java.util.Locale
+import com.rs.engine.variables.mah5_statue_armed
 
 @ServerStartupEvent
 fun mapKethsiEffects() {
@@ -42,7 +43,7 @@ fun mapKethsiEffects() {
     }
 
     onObjectClick(6655) { (player) ->
-        if (player.vars.getVarBit(9833) == 1 || player.inventory.containsItem(21797)) {
+        if (player.vars.getVarBit(mah5_statue_armed) == 1 || player.inventory.containsItem(21797)) {
             player.simpleDialogue("You search the rubble, but find nothing of interest.")
             return@onObjectClick
         }
@@ -51,13 +52,13 @@ fun mapKethsiEffects() {
     }
 
     onItemOnObject(objectNamesOrIds = arrayOf(10466), itemNamesOrIds = arrayOf(21797)) { (player) ->
-        if (player.vars.getVarBit(9833) == 1) {
+        if (player.vars.getVarBit(mah5_statue_armed) == 1) {
             player.simpleDialogue("It doesn't look like the arm will fit.")
             return@onItemOnObject
         }
         player.simpleDialogue("You attach the missing arm to the statue and notice it doing a very vertraut pose. A ramp falls down nearby.")
         player.inventory.deleteItem(21797, 1)
-        player.vars.saveVarBit(9833, 1)
+        player.vars.saveVarBit(mah5_statue_armed, 1)
     }
 
     onObjectClick(6754, 6755, 6753) { (player, obj) ->

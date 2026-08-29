@@ -1,6 +1,6 @@
 package com.rs.game.content.dnds.penguins
 
-import com.google.gson.Gson
+import org.darkan.core.JsonFileManager
 import com.google.gson.reflect.TypeToken
 import org.darkan.core.map.pathfinder.Direction
 import com.rs.game.World
@@ -11,6 +11,7 @@ import world.gregs.voidps.type.Tile
 import org.darkan.core.Logger
 import com.rs.utils.spawns.NPCSpawn
 import java.time.Month
+import com.rs.engine.variables.peng_spy_week_peng
 
 const val PUMPKIN_ID = 14415
 const val SNOWMAN_ID = 14766
@@ -51,7 +52,7 @@ class PenguinSpawnService () {
         removeAllSpawns()
 
         for (player in World.players) { // Reset Quickchat varbit to 0 for all logged in players
-            player.vars.saveVarBit(5276, 0)
+            player.vars.saveVarBit(peng_spy_week_peng, 0)
         }
 
         val currentMonth = PenguinServices.penguinHideAndSeekManager.getCurrentMonth()
@@ -180,10 +181,10 @@ class PenguinSpawnService () {
             mutableListOf()
         } else {
             val type = object : TypeToken<List<Penguin>>() {}.type
-            Gson().fromJson(penguinsJson, type) ?: mutableListOf()
+            JsonFileManager.getGSON().fromJson(penguinsJson, type) ?: mutableListOf()
         }
         penguins.add(newPenguin)
-        World.data.attribs.setO<String>(PENGUINS_WORLD_ATTR, Gson().toJson(penguins))
+        World.data.attribs.setO<String>(PENGUINS_WORLD_ATTR, JsonFileManager.toJson(penguins))
         return newPenguin
     }
 
@@ -191,7 +192,7 @@ class PenguinSpawnService () {
         val penguinsJson: String? = World.data.attribs.getO(PENGUINS_WORLD_ATTR)
         return if (penguinsJson != null) {
             val type = object : TypeToken<List<Penguin>>() {}.type
-            Gson().fromJson(penguinsJson, type)
+            JsonFileManager.getGSON().fromJson(penguinsJson, type)
         } else {
             mutableListOf()
         }

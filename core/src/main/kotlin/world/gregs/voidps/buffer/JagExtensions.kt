@@ -9,7 +9,6 @@ import kotlinx.io.readUByte
 import org.darkan.core.currentTimeTicks
 import org.darkan.core.hashToShort
 import world.gregs.voidps.buffer.write.BufferWriter
-import kotlin.text.toByteArray
 
 suspend fun ByteWriteChannel.writeBoolean(value: Boolean) = writeByte(if (value) 1 else 0)
 
@@ -82,9 +81,17 @@ suspend fun ByteWriteChannel.writeMediumReverseEnd(value: Int) {
     writeByte(value shr 8)
 }
 
-suspend fun ByteWriteChannel.write5(value: Int) {
+/**
+ * Writes a 40-bit big-endian value, most significant byte first.
+ *
+ * Exact inverse of [ByteReadChannel.read40BitULong] / [Source.read40BitULong]
+ * (and of [world.gregs.voidps.buffer.read.Reader.read5]).
+ *
+ * Only the low 40 bits of [value] are written.
+ */
+suspend fun ByteWriteChannel.write5(value: Long) {
     writeByte((value shr 32).toByte())
-    writeInt((value and 0xffffffffL.toInt()).toInt())
+    writeInt((value and 0xffffffffL).toInt())
 }
 
 suspend fun ByteWriteChannel.writeSmart(value: Int) {
@@ -120,7 +127,7 @@ suspend fun ByteWriteChannel.writeFlags(flags: Int) {
 }
 
 suspend fun ByteWriteChannel.writeRSString(value: String) {
-    writeFully(value.toByteArray())
+    writeFully(Cp1252.encode(value))
     writeByte(0)
 }
 
@@ -130,7 +137,7 @@ suspend fun ByteWriteChannel.writeJagString(value: String) {
 }
 
 fun BytePacketBuilder.writeRSString(value: String) {
-    writeFully(value.toByteArray())
+    writeFully(Cp1252.encode(value))
     writeByte(0)
 }
 
@@ -218,18 +225,14 @@ fun Source.readRSString(): String {
         if (b == 0) {
             break
         }
-        sb.append(b.toChar())
+        sb.append(Cp1252.decode(b))
     }
     return sb.toString()
 }
 
 fun Source.readJagString(): String {
     readByte()
-    var s = ""
-    var b: Int
-    while ((readByte().toInt().also { b = it }) != 0)
-        s += b.toChar()
-    return s
+    return readRSString()
 }
 
 fun Source.readFlags(): Int {
@@ -250,11 +253,29 @@ fun Source.readUByte(): Int = readByte().toInt() and 0xff
 
 fun Source.readUShort(): Int = (readUByte().toInt() shl 8) or readUByte().toInt()
 
-fun Source.readMedium() = (readByte().toInt() shl 16) + (readByte().toInt() shl 8) + readByte().toInt()
+/**
+ * Reads a signed 24-bit big-endian value (-8388608..8388607).
+ *
+ * Each byte is masked before shifting; the result is sign-corrected from bit 23,
+ * matching the client's `readMedium`. Use [readUMedium] for the unsigned form.
+ */
+fun Source.readMedium(): Int {
+    val value = (readUByte().toInt() shl 16) or (readUByte().toInt() shl 8) or readUByte().toInt()
+    return if (value > 0x7fffff) value - 0x1000000 else value
+}
 
 fun Source.readUMedium() = (readUByte().toInt() shl 16) + (readUByte().toInt() shl 8) + readUByte().toInt()
 
-fun Source.read40BitLong() = (readByte().toLong() shl 32) + (readByte().toLong() shl 24) + (readByte().toLong() shl 16) + (readByte().toLong() shl 8) + readByte().toLong()
+/**
+ * Reads a signed 40-bit big-endian value (-549755813888..549755813887).
+ *
+ * Every byte is masked before shifting; only bit 39 carries the sign.
+ * Use [read40BitULong] for the unsigned form (that is the one the JS5 protocol uses).
+ */
+fun Source.read40BitLong(): Long {
+    val value = read40BitULong()
+    return if (value > 0x7fffffffffL) value - 0x10000000000L else value
+}
 
 fun Source.read40BitULong() = (readUByte().toLong() shl 32) + (readUByte().toLong() shl 24) + (readUByte().toLong() shl 16) + (readUByte().toLong() shl 8) + readUByte().toLong()
 
@@ -268,15 +289,24 @@ fun Source.readBooleanAdd() = readByteAdd() == 1
 
 fun Source.readByteAdd(): Int = (readByte() - 128).toByte().toInt()
 
-fun Source.readByteInverse(): Int = -readByte()
+fun Source.readByteInverse(): Int = (-readByte()).toByte().toInt()
 
 fun Source.readByteSubtract(): Int = (readByteInverse() + 128).toByte().toInt()
 
-fun Source.readShortAdd(): Int = (readByte().toInt() shl 8) or readByteAdd()
+/**
+ * Reads a signed 16-bit big-endian value whose low byte is offset by 128 (-32768..32767).
+ *
+ * Both bytes are masked before being combined; the result is sign-corrected from bit 15,
+ * matching the client's `readShortAdd`. Use [readUShortAdd] for the unsigned form.
+ */
+fun Source.readShortAdd(): Int {
+    val value = (readUByte().toInt() shl 8) or ((readByte() - 128) and 0xff)
+    return if (value > 0x7fff) value - 0x10000 else value
+}
 
 fun Source.readShortAddLittle(): Int = ((readByte().toInt() - 128) and 0xff) or ((readByte().toInt() shl 8) and 0xff00)
 
-fun Source.readUShortAdd(): Int = (readByte().toInt() shl 8) or ((readByte() - 128) and 0xff)
+fun Source.readUShortAdd(): Int = (readUByte().toInt() shl 8) or ((readByte() - 128) and 0xff)
 
 fun Source.readUShortLittle(): Int = readUByte().toInt() or (readUByte().toInt() shl 8)
 
@@ -291,7 +321,13 @@ fun Source.readUShortAddLittle(): Int = (readByte() - 128 and 0xff) + (readByte(
 
 fun Source.readUIntMiddle(): Int = (readUByte().toInt() shl 8) or readUByte().toInt() or (readUByte().toInt() shl 24) or (readUByte().toInt() shl 16)
 
-fun Source.readIntInverseMiddle(): Int = (readByte().toInt() shl 16) or (readByte().toInt() shl 24) or readUByte().toInt() or (readByte().toInt() shl 8)
+/**
+ * Reads a 32-bit value in the inverse-middle byte order (bytes arrive 2, 3, 0, 1).
+ *
+ * All four bytes are masked; a full 32-bit read fills every bit of an [Int], so this is
+ * bit-identical to [readUIntInverseMiddle] - both are kept for call-site symmetry.
+ */
+fun Source.readIntInverseMiddle(): Int = (readUByte().toInt() shl 16) or (readUByte().toInt() shl 24) or readUByte().toInt() or (readUByte().toInt() shl 8)
 
 fun Source.readUIntInverseMiddle(): Int = (readUByte().toInt() shl 16) or (readUByte().toInt() shl 24) or readUByte().toInt() or (readUByte().toInt() shl 8)
 
@@ -313,7 +349,7 @@ suspend fun ByteReadChannel.readRSString(): String {
         b = readByte().toInt()
         if (b == 0)
             break
-        sb.append(b.toChar())
+        sb.append(Cp1252.decode(b))
     }
     return sb.toString()
 }
@@ -341,11 +377,29 @@ suspend fun ByteReadChannel.readUByte(): Int = readByte().toInt() and 0xff
 
 suspend fun ByteReadChannel.readUShort(): Int = (readUByte().toInt() shl 8) or readUByte().toInt()
 
-suspend fun ByteReadChannel.readMedium() = (readByte().toInt() shl 16) + (readByte().toInt() shl 8) + readByte().toInt()
+/**
+ * Reads a signed 24-bit big-endian value (-8388608..8388607).
+ *
+ * Each byte is masked before shifting; the result is sign-corrected from bit 23,
+ * matching the client's `readMedium`. Use [readUMedium] for the unsigned form.
+ */
+suspend fun ByteReadChannel.readMedium(): Int {
+    val value = (readUByte().toInt() shl 16) or (readUByte().toInt() shl 8) or readUByte().toInt()
+    return if (value > 0x7fffff) value - 0x1000000 else value
+}
 
 suspend fun ByteReadChannel.readUMedium() = (readUByte().toInt() shl 16) + (readUByte().toInt() shl 8) + readUByte().toInt()
 
-suspend fun ByteReadChannel.read40BitLong() = (readByte().toLong() shl 32) + (readByte().toLong() shl 24) + (readByte().toLong() shl 16) + (readByte().toLong() shl 8) + readByte().toLong()
+/**
+ * Reads a signed 40-bit big-endian value (-549755813888..549755813887).
+ *
+ * Every byte is masked before shifting; only bit 39 carries the sign.
+ * Use [read40BitULong] for the unsigned form (that is the one the JS5 protocol uses).
+ */
+suspend fun ByteReadChannel.read40BitLong(): Long {
+    val value = read40BitULong()
+    return if (value > 0x7fffffffffL) value - 0x10000000000L else value
+}
 
 suspend fun ByteReadChannel.read40BitULong() = (readUByte().toLong() shl 32) + (readUByte().toLong() shl 24) + (readUByte().toLong() shl 16) + (readUByte().toLong() shl 8) + readUByte().toLong()
 
@@ -359,15 +413,24 @@ suspend fun ByteReadChannel.readBooleanAdd() = readByteAdd() == 1
 
 suspend fun ByteReadChannel.readByteAdd(): Int = (readByte() - 128).toByte().toInt()
 
-suspend fun ByteReadChannel.readByteInverse(): Int = -readByte()
+suspend fun ByteReadChannel.readByteInverse(): Int = (-readByte()).toByte().toInt()
 
 suspend fun ByteReadChannel.readByteSubtract(): Int = (readByteInverse() + 128).toByte().toInt()
 
-suspend fun ByteReadChannel.readShortAdd(): Int = (readByte().toInt() shl 8) or readByteAdd()
+/**
+ * Reads a signed 16-bit big-endian value whose low byte is offset by 128 (-32768..32767).
+ *
+ * Both bytes are masked before being combined; the result is sign-corrected from bit 15,
+ * matching the client's `readShortAdd`. Use [readUShortAdd] for the unsigned form.
+ */
+suspend fun ByteReadChannel.readShortAdd(): Int {
+    val value = (readUByte().toInt() shl 8) or ((readByte() - 128) and 0xff)
+    return if (value > 0x7fff) value - 0x10000 else value
+}
 
 suspend fun ByteReadChannel.readShortAddLittle(): Int = ((readByte().toInt() - 128) and 0xff) or ((readByte().toInt() shl 8) and 0xff00)
 
-suspend fun ByteReadChannel.readUShortAdd(): Int = (readByte().toInt() shl 8) or ((readByte() - 128) and 0xff)
+suspend fun ByteReadChannel.readUShortAdd(): Int = (readUByte().toInt() shl 8) or ((readByte() - 128) and 0xff)
 
 suspend fun ByteReadChannel.readUShortLittle(): Int = readUByte().toInt() or (readUByte().toInt() shl 8)
 
@@ -382,7 +445,13 @@ suspend fun ByteReadChannel.readUShortAddLittle(): Int = (readByte() - 128 and 0
 
 suspend fun ByteReadChannel.readUIntMiddle(): Int = (readUByte().toInt() shl 8) or readUByte().toInt() or (readUByte().toInt() shl 24) or (readUByte().toInt() shl 16)
 
-suspend fun ByteReadChannel.readIntInverseMiddle(): Int = (readByte().toInt() shl 16) or (readByte().toInt() shl 24) or readUByte().toInt() or (readByte().toInt() shl 8)
+/**
+ * Reads a 32-bit value in the inverse-middle byte order (bytes arrive 2, 3, 0, 1).
+ *
+ * All four bytes are masked; a full 32-bit read fills every bit of an [Int], so this is
+ * bit-identical to [readUIntInverseMiddle] - both are kept for call-site symmetry.
+ */
+suspend fun ByteReadChannel.readIntInverseMiddle(): Int = (readUByte().toInt() shl 16) or (readUByte().toInt() shl 24) or readUByte().toInt() or (readUByte().toInt() shl 8)
 
 suspend fun ByteReadChannel.readUIntInverseMiddle(): Int = (readUByte().toInt() shl 16) or (readUByte().toInt() shl 24) or readUByte().toInt() or (readUByte().toInt() shl 8)
 

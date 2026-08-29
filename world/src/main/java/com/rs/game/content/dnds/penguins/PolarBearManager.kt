@@ -1,8 +1,9 @@
 package com.rs.game.content.dnds.penguins
 
-import com.google.gson.Gson
+import org.darkan.core.JsonFileManager
 import com.rs.game.World
 import org.darkan.core.Logger
+import com.rs.engine.variables.peng_spy_bear
 
 enum class PolarBearLocation(val id: Int) { RELLEKKA(0), VARROCK(1), RIMMINGTON(2), MUSA_POINT(3), ARDOUGNE(4), FALADOR(5) }
 
@@ -25,7 +26,7 @@ class PolarBearManager() {
                 polarBearLocationId = newLocation.id
 
                 World.players.forEach { player ->
-                    player.vars.setVarBit(2045, polarBearLocationId)
+                    player.vars.setVarBit(peng_spy_bear, polarBearLocationId)
                 }
 
                 Logger.debug(PolarBearManager::class.java, "setLocation", "Polar bear location changed to $newLocation for ${World.players.size()} logged-in player(s).")
@@ -74,15 +75,15 @@ fun updatePolarBearState(newLocation: PolarBearLocation) {
         spotters = mutableListOf()
     )
 
-    World.data.attribs.setO<String>(POLAR_BEAR_WORLD_ATTR, Gson().toJson(updatedPolarBear))
-    Logger.debug(PolarBearManager::class.java, "updatePolarBearState", "Updated polar bear state: ${Gson().toJson(updatedPolarBear)}")
+    World.data.attribs.setO<String>(POLAR_BEAR_WORLD_ATTR, JsonFileManager.toJson(updatedPolarBear))
+    Logger.debug(PolarBearManager::class.java, "updatePolarBearState", "Updated polar bear state: ${JsonFileManager.toJson(updatedPolarBear)}")
 }
 
 
 fun getPolarBear(): PolarBear? {
     val polarBearJson: String? = World.data.attribs.getO(POLAR_BEAR_WORLD_ATTR)
     return if (!polarBearJson.isNullOrEmpty()) {
-        Gson().fromJson(polarBearJson, PolarBear::class.java)
+        JsonFileManager.getGSON().fromJson(polarBearJson, PolarBear::class.java)
     } else null
 }
 

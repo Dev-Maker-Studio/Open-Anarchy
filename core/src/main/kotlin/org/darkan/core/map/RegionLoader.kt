@@ -118,7 +118,7 @@ object RegionLoader {
             val xtea = MapXteas.getKeys(regionId)
             val objectData = cache.data(Index.MAPS, objectArchive, 0, xtea)
             if (objectData != null && objectData.isNotEmpty()) {
-                decodeObjects(objectData, settings, regionX, regionY)
+                decodeObjects(objectData, settings, regionX, regionY, xtea != null)
             } else {
                 emptyList()
             }
@@ -200,7 +200,8 @@ object RegionLoader {
         data: ByteArray,
         settings: ByteArray,
         regionTileX: Int,
-        regionTileY: Int
+        regionTileY: Int,
+        encrypted: Boolean
     ): List<MapObject> {
         val objects = mutableListOf<MapObject>()
 
@@ -226,7 +227,25 @@ object RegionLoader {
         try {
             decoder.decode(data, settings, regionTileX, regionTileY)
         } catch (e: Exception) {
-            // Decryption might fail with wrong keys - return empty list
+            // A region that silently contains no objects is indistinguishable from one
+            // that is genuinely empty, so this failure must never be silent. That is not
+            // hypothetical: MapObjectDecoder chained object-id deltas only once where the
+            // client's readSum loops, and 22 of 2399 archives threw here and loaded with
+            // zero objects -- no doors, stairs or banks -- undetected because this catch
+            // said nothing.
+            //
+            // Wrong/absent XTEA keys are an expected, benign failure (the data decrypts to
+            // noise), so they are reported differently from a decode fault on data we could
+            // read. Anything in the second class is a real bug worth chasing.
+            System.err.println(
+                "[RegionLoader] region ($regionTileX, $regionTileY): object decode failed after " +
+                    "${objects.size} object(s) - " +
+                    if (encrypted) "encrypted, XTEA keys may be wrong: ${e}"
+                    else "UNENCRYPTED data, so this is a decoder fault, not a key problem: ${e}"
+            )
+            // Partial output is worse than none: it looks like a valid region while silently
+            // missing everything past the fault. Drop it, having said so above.
+            return emptyList()
         }
 
         return objects

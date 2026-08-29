@@ -3,7 +3,7 @@ package org.darkan.world.server.packet
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.PluginManager
 import com.rs.plugin.events.ButtonClickEvent
-import org.darkan.core.net.prot.IfContinue
+import org.darkan.core.net.prot.packet.IfContinue
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class IfContinueHandler : PacketHandler<Player, IfContinue> {

@@ -3,10 +3,19 @@ package org.darkan.core.net.prot.revision.rev727
 import io.ktor.utils.io.*
 import org.darkan.core.clientwatch.ReflectionCheckType
 import org.darkan.core.net.prot.*
+import org.darkan.core.net.prot.packet.*
 import world.gregs.voidps.buffer.*
 import java.io.ByteArrayOutputStream
 import java.io.ObjectOutputStream
 import kotlin.io.use
+
+/**
+ * Port the client assumes for a world unless the world list marks it as custom.
+ *
+ * A world on this port omits its port from the list entry; anything else sets the custom-port
+ * flag and appends the real port.
+ */
+private const val DEFAULT_WORLD_PORT = 43595
 
 internal fun Codec.registerRev727MiscPackets() {
     // Reflection/clientwatch
@@ -19,12 +28,19 @@ internal fun Codec.registerRev727MiscPackets() {
                 ReflectionCheckType.GET_INT, ReflectionCheckType.SET_INT, ReflectionCheckType.GET_FIELD_MODIFIERS -> {
                     out.writeRSString(check.className)
                     out.writeRSString(check.methodName)
+                    // The client reads this int unconditionally for SET_INT, so it
+                    // must always be written or the rest of the packet desyncs.
                     if (check.type == ReflectionCheckType.SET_INT)
-                        check.fieldValue?.let { out.writeInt(it) }
+                        out.writeInt(check.fieldValue ?: 0)
                 }
                 ReflectionCheckType.GET_METHOD_RETURN_VALUE, ReflectionCheckType.GET_METHOD_MODIFIERS -> {
                     out.writeRSString(check.className)
                     out.writeRSString(check.methodName)
+                    // The client reads exactly this many argument blobs back, so the
+                    // two arrays must agree in length.
+                    require(check.paramValues.size == check.paramTypes.size || check.type != ReflectionCheckType.GET_METHOD_RETURN_VALUE) {
+                        "ReflectionCheck ${check.className}#${check.methodName}: paramValues (${check.paramValues.size}) must match paramTypes (${check.paramTypes.size})"
+                    }
                     out.writeByte(check.paramTypes.size)
                     check.paramTypes.forEach { out.writeRSString(it) }
                     out.writeRSString(check.returnType ?: "void")
@@ -145,43 +161,60 @@ internal fun Codec.registerRev727MiscPackets() {
         }
     }
 
+    // OPEN_SOCIAL_NETWORK_URL: raw, un-terminated url; the packet length is the string length.
+    serverProt<OpenSocialNetworkUrl>(opcode = 86, size = ProtSize.VarShort) { out ->
+        out.writeBytes(Cp1252.encode(url))
+    }
+
+    // WINDOW_CALL_WITH_ARGS: raw, un-terminated argument string; length comes from the packet length.
+    serverProt<WindowCallWithArgs>(opcode = 156, size = ProtSize.VarShort) { out ->
+        out.writeBytes(Cp1252.encode(args))
+    }
+
+    serverProt<DisplayNameChangeState>(opcode = 52, size = 1) { out ->
+        out.writeByte(state)
+    }
+
     serverProt<WorldListPacket>(opcode = 103, size = ProtSize.VarShort) { out ->
-        val worlds = worldList.getWorldArray()
-        out.writeByte(1)
-        out.writeByte(if (refreshOnClient) 2 else 0)
+        val entries = worlds.entries
+        // Byte 0 is the client's "decode now" flag - when 0 the client only buffers
+        // the chunk. Byte 1 is a decode-mode constant: the client bails out of
+        // WorldDescriptor.decodeWorldList unless it is exactly 2.
+        out.writeByte(if (refreshOnClient) 1 else 0)
+        out.writeByte(2)
         if (!refreshOnlyPlayerCounts) {
             out.writeByte(1)
-            val size: Int = worlds.size
-            out.writeSmart(size)
-            for (world in worlds) {
-                out.writeSmart(world.metadata.country.id)
-                out.writeJagString(world.metadata.activity)
+            out.writeSmart(entries.size)
+            for (world in entries) {
+                out.writeSmart(world.countryId)
+                out.writeJagString(world.activity)
             }
             out.writeSmart(0)
-            out.writeSmart(worldList.maxWorlds+1)
-            out.writeSmart(size)
-            for (world in worlds) {
-                out.writeSmart(world.metadata.number)
+            out.writeSmart(worlds.maxWorlds + 1)
+            out.writeSmart(entries.size)
+            for (world in entries) {
+                out.writeSmart(world.number)
                 out.writeByte(world.index)
                 var flags = 0
-                if (world.metadata.members) flags = flags or 0x1
-                if (world.metadata.quickchat) flags = flags or 0x2
-                if (world.metadata.pvp) flags = flags or 0x4
-                if (world.metadata.lootShare) flags = flags or 0x8
-                if (world.metadata.highlighted) flags = flags or 0x10
-                if (world.metadata.port != 43595) flags = flags or 0x40000000 // Custom port flag
+                if (world.members) flags = flags or 0x1
+                if (world.quickChat) flags = flags or 0x2
+                if (world.pvp) flags = flags or 0x4
+                if (world.lootShare) flags = flags or 0x8
+                if (world.highlighted) flags = flags or 0x10
+                val customPort = world.port != DEFAULT_WORLD_PORT
+                if (customPort) flags = flags or 0x40000000
 
                 out.writeInt(flags)
                 out.writeJagString("")
-                out.writeJagString(world.metadata.ipAddress)
-                if (world.metadata.port != 43595) out.writeInt(world.metadata.port)
+                out.writeJagString(world.address)
+                if (customPort) out.writeInt(world.port)
             }
-            out.writeInt(worldList.revision)
+            out.writeInt(worlds.revision)
         } else
             out.writeByte(0)
-        for (world in worlds) {
-            out.writeSmart(world.metadata.number)
-            out.writeShort(if (world.offline) -1 else world.playersOnline)
+        for (world in entries) {
+            out.writeSmart(world.number)
+            out.writeShort(world.playersOnline)
         }
     }
 
@@ -381,6 +414,19 @@ internal fun Codec.registerRev727MiscPackets() {
         out.writeShortAddLittle(if (songId == -1) 65535 else songId)
     }
 
+    serverProt<StopVorbisStream>(opcode = 11, size = 2) { out ->
+        out.writeShortAddLittle(soundId)
+    }
+
+    serverProt<VorbisPreloadSound>(opcode = 17, size = 3) { out ->
+        out.writeByte(priority)
+        out.writeShortAdd(soundId)
+    }
+
+    serverProt<SetVorbisSound>(opcode = 106, size = 2) { out ->
+        out.writeShort(soundId)
+    }
+
     serverProt<SoundMixbussSetLevel>(opcode = 134, size = 2) { out ->
         out.writeByte(level)
         out.writeByteInverse(index)
@@ -390,8 +436,7 @@ internal fun Codec.registerRev727MiscPackets() {
 
     // Login details
     serverProt<LobbyLoginDetails>(opcode = 2, size = ProtSize.VarByte) { out ->
-        var ipHash = 0
-        out.writeByte(account.rights.crown) // rights
+        out.writeByte(crown)
         out.writeByte(0) // PLAYER_MOD_LEVEL
         out.writeByte(0) // USERDETAIL_QUICKCHAT_ONLY
         out.writeMedium(0)
@@ -399,7 +444,7 @@ internal fun Codec.registerRev727MiscPackets() {
         out.writeByte(0) // VERIFIED_EMAIL_ADDRESS
         out.writeByte(1)
         out.writeLong(Long.MAX_VALUE) // members subscription end
-        out.write5(12)
+        out.write5(12L)
         out.writeByte(0x1) // 0x1 - if members, 0x2 - subscription
         out.writeInt(1) // jcoins?
         out.writeByte(1) // is loyalty member?
@@ -407,26 +452,18 @@ internal fun Codec.registerRev727MiscPackets() {
         out.writeShort(592) // recovery questions set date
         out.writeShort(0) // Messages add support for forum integration
         out.writeShort(0) // last logged in date
-        if (account.lastIp != null) {
-            val ipSplit = account.lastIp?.replace("[", "")?.replace("]", "")?.split(".")
-            if (ipSplit != null)
-                ipHash = ipSplit[0].toInt() shl 24 or (ipSplit[1].toInt() shl 16) or (ipSplit[2].toInt() shl 8) or ipSplit[3].toInt()
-        }
-        out.writeInt(ipHash) // ip part
+        out.writeInt(lastIpHash)
         out.writeRSString(worldLoginToken)
         out.writeByte(2) // email status (0 - no email, 1 - pending parental confirmation, 2 - pending confirmation, 3 - registered)
         out.writeShort(302)
         out.writeShort(1)
         out.writeByte(1)
-        out.writeJagString(account.displayName)
+        out.writeJagString(displayName)
         out.writeByte(1)
         out.writeInt(1)
         out.writeByte(0) // Removed on EOC revisions for some reason. idk
-        //val defWorld: World? = Lobby.getWorlds().getDefault().getInfo()
-        //out.writeShort(if (defWorld == null) Lobby.WORLD_INFO.number() else defWorld.number()) // Default world ID
-        //out.writeJagString(if (defWorld == null) Lobby.WORLD_INFO.ipAddress() else defWorld.ipAddress())
-        out.writeShort(0)
-        out.writeJagString("127.0.0.1")
+        out.writeShort(defaultWorldId) // default world id
+        out.writeJagString(defaultWorldAddress) // default world address
     }
 
     // World-login details blob (LobbyStage.LOBBY_TO_WORLD).

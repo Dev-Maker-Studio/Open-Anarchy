@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.abs
 
@@ -14,9 +13,9 @@ class TextureOpWeave : TextureOperation(0, true) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            val verticalValue = TextureRaster.verticalTable!![y]
-            for (x in 0 until TextureRaster.currentWidth) {
-                val horizontalValue = TextureRaster.horizontalTable!![x]
+            val verticalValue = verticalTable[y]
+            for (x in 0 until currentWidth) {
+                val horizontalValue = horizontalTable[x]
 
                 output[x] = when {
                     horizontalValue > threshold && horizontalValue < 4096 - threshold &&

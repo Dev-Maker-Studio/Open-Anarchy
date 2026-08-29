@@ -311,49 +311,75 @@ class ChunkedTerrain(val regionX: Int, val regionY: Int, val plane: Int) {
 
     // ---- Rendering ----
 
-    /** Render all non-empty color chunks (untextured terrain). */
-    fun renderColor(shader: ShaderProgram) {
+    /**
+     * Render all non-empty color chunks (untextured terrain).
+     *
+     * @return what was actually submitted, so the caller can charge it to the frame's
+     *         draw-call and triangle counters. An empty [ChunkMesh] issues no draw.
+     */
+    fun renderColor(shader: ShaderProgram): TerrainRenderStats {
+        var drawCalls = 0
+        var triangles = 0
         for (cx in 0 until CHUNKS_PER_AXIS) {
             for (cy in 0 until CHUNKS_PER_AXIS) {
-                chunks[cx][cy].colorMesh?.render()
+                val mesh = chunks[cx][cy].colorMesh ?: continue
+                if (mesh.isEmpty()) continue
+                mesh.render()
+                drawCalls++
+                triangles += mesh.vertexCount / 3
             }
         }
+        return TerrainRenderStats(drawCalls, triangles)
     }
 
     /**
      * Render all non-empty textured chunks (opaque textured terrain).
      * The [bindTexture] callback is invoked before each texture group to bind the
      * appropriate GL texture.
+     *
+     * @return what was actually submitted. See [renderColor].
      */
-    fun renderTextured(shader: ShaderProgram, bindTexture: (Int) -> Unit) {
+    fun renderTextured(shader: ShaderProgram, bindTexture: (Int) -> Unit): TerrainRenderStats {
+        var drawCalls = 0
+        var triangles = 0
         for (cx in 0 until CHUNKS_PER_AXIS) {
             for (cy in 0 until CHUNKS_PER_AXIS) {
                 for ((texId, mesh) in chunks[cx][cy].texturedMeshes) {
                     if (!mesh.isEmpty()) {
                         bindTexture(texId)
                         mesh.render()
+                        drawCalls++
+                        triangles += mesh.vertexCount / 3
                     }
                 }
             }
         }
+        return TerrainRenderStats(drawCalls, triangles)
     }
 
     /**
      * Render all non-empty alpha chunks (semi-transparent textured terrain).
      * The [bindTexture] callback is invoked before each texture group to bind the
      * appropriate GL texture.
+     *
+     * @return what was actually submitted. See [renderColor].
      */
-    fun renderAlpha(shader: ShaderProgram, bindTexture: (Int) -> Unit) {
+    fun renderAlpha(shader: ShaderProgram, bindTexture: (Int) -> Unit): TerrainRenderStats {
+        var drawCalls = 0
+        var triangles = 0
         for (cx in 0 until CHUNKS_PER_AXIS) {
             for (cy in 0 until CHUNKS_PER_AXIS) {
                 for ((texId, mesh) in chunks[cx][cy].alphaMeshes) {
                     if (!mesh.isEmpty()) {
                         bindTexture(texId)
                         mesh.render()
+                        drawCalls++
+                        triangles += mesh.vertexCount / 3
                     }
                 }
             }
         }
+        return TerrainRenderStats(drawCalls, triangles)
     }
 
     /** Release all GPU resources for every chunk. */

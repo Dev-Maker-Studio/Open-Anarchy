@@ -4,7 +4,7 @@ import com.google.common.base.Objects;
 import org.darkan.core.model.RegionSize;
 import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
-import org.darkan.core.net.prot.UpdateZonePartialEnclosed;
+import org.darkan.core.net.prot.packet.UpdateZonePartialEnclosed;
 import org.darkan.core.net.prot.ZonePacketEncoder;
 import org.darkan.core.util.MapUtils;
 import org.darkan.core.util.Structure;

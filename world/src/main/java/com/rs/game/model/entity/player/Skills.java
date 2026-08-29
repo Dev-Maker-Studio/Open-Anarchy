@@ -42,6 +42,9 @@ import it.unimi.dsi.fastutil.ints.IntSets;
 
 import java.util.HashSet;
 import java.util.Set;
+import static com.rs.engine.variables.VarBitPlayer.lvl_setting;
+import static com.rs.engine.variables.VarBitPlayer.skill_guide_skill_v2;
+import static com.rs.engine.variables.VarBitPlayer.skill_guide_subsection_v2;
 
 @PluginEventHandler
 public final class Skills {
@@ -314,18 +317,18 @@ public final class Skills {
 			e.getPlayer().getInterfaceManager().sendInterface(499);
 	});
 
-	public static ButtonClickHandler handleGuideButtons = new ButtonClickHandler(499, e -> e.getPlayer().getVars().setVarBit(3289, e.getComponentId()-9));
+	public static ButtonClickHandler handleGuideButtons = new ButtonClickHandler(499, e -> e.getPlayer().getVars().setVarBit(skill_guide_subsection_v2, e.getComponentId()-9));
 
 	public static ButtonClickHandler handleSkillTabButtons = new ButtonClickHandler(320, e -> {
 		if (e.getOpNum() == 1) {
 			e.getPlayer().stopAll();
 			int targetId = Skills.getTargetIdByComponentId(e.getComponentId());
 			int skillId = Skills.getSkillIdByTargetId(targetId);
-			e.getPlayer().getVars().setVarBit(3289, 0);
-			e.getPlayer().getVars().setVarBit(3288, targetId+1);
+			e.getPlayer().getVars().setVarBit(skill_guide_subsection_v2, 0);
+			e.getPlayer().getVars().setVarBit(skill_guide_skill_v2, targetId+1);
 			if (e.getPlayer().getSkills().lastCheckedLevels[skillId] != e.getPlayer().getSkills().getLevelForXp(skillId)) {
 				e.getPlayer().getPackets().sendVarc(getVarcIdFromTarget(targetId), e.getPlayer().getSkills().lastCheckedLevels[skillId]);
-				e.getPlayer().getVars().setVarBit(4729, targetId+1);
+				e.getPlayer().getVars().setVarBit(lvl_setting, targetId+1);
 			}
 			e.getPlayer().getVars().syncVarsToClient();
 

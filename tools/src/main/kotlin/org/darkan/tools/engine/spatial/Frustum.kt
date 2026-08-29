@@ -62,6 +62,21 @@ class Frustum {
     }
 
     /**
+     * Test an AABB stored as six consecutive floats — `minX, minY, minZ, maxX, maxY, maxZ`
+     * — starting at [offset] in [boxes].
+     *
+     * For callers that test thousands of boxes per frame and keep them packed in one array
+     * rather than as [AABB] objects, so the walk stays sequential in memory. See
+     * `RegionBatches` for the layout.
+     */
+    fun isAABBVisible(boxes: FloatArray, offset: Int): Boolean {
+        return intersection.testAab(
+            boxes[offset], boxes[offset + 1], boxes[offset + 2],
+            boxes[offset + 3], boxes[offset + 4], boxes[offset + 5]
+        )
+    }
+
+    /**
      * Test if a bounding sphere is visible.
      */
     fun isSphereVisible(sphere: BoundingSphere): Boolean {
@@ -110,6 +125,26 @@ class Frustum {
     fun distanceToPlane(planeIndex: Int, x: Float, y: Float, z: Float): Float {
         val n = planes[planeIndex]
         return n.x * x + n.y * y + n.z * z + planeDistances[planeIndex]
+    }
+
+    /**
+     * Copy the six normalized planes into [out] as tightly packed `(nx, ny, nz, d)` quads,
+     * ready to hand to a shader as a `vec4[6]` uniform.
+     *
+     * A sphere of radius `r` centred at `p` is outside plane `i` when
+     * `dot(n_i, p) + d_i < -r`, which is the same convention [distanceToPlane] uses.
+     *
+     * @param out array of at least 24 floats
+     */
+    fun writePlanes(out: FloatArray) {
+        require(out.size >= 24) { "frustum plane array needs 24 floats, got ${out.size}" }
+        for (i in 0 until 6) {
+            val n = planes[i]
+            out[i * 4] = n.x
+            out[i * 4 + 1] = n.y
+            out[i * 4 + 2] = n.z
+            out[i * 4 + 3] = planeDistances[i]
+        }
     }
 
     /**
