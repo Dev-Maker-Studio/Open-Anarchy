@@ -5,6 +5,12 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.*
 import org.darkan.core.EnvVars
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration
+import kotlin.system.exitProcess
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import org.darkan.core.deploy.ArtifactWatcher
 import org.darkan.core.Logger
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.engine.EngineLoop
@@ -25,6 +31,9 @@ import java.lang.management.ManagementFactory
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.CoroutineContext
 
+/** 20 ticks, matching the world's login cutoff before a system update. */
+private const val UPDATE_LOGIN_CUTOFF_MILLIS = 20 * 600L
+
 object Lobby : CoroutineScope {
     private val job = SupervisorJob()
     override val coroutineContext: CoroutineContext = Dispatchers.Default + job
@@ -39,6 +48,34 @@ object Lobby : CoroutineScope {
     private val accountCreationSessions = ConcurrentHashMap.newKeySet<AccountCreationSession>()
     private val lobbyPlayers = ConcurrentHashMap<String, LobbyPlayer>()
     private lateinit var lobbyEngineLoop: EngineLoop
+
+    /** Epoch millis of the scheduled restart, or 0 when none is pending. */
+    @Volatile
+    private var updateAt = 0L
+    private val updateWatcher = ArtifactWatcher("lobby-server", this) { version ->
+        scheduleUpdate(EnvVars.autoUpdateCountdownMinutes.minutes, "build $version")
+    }
+
+    /** True inside the last moments before a scheduled restart; logins are refused so nobody lands on a dying lobby. */
+    val updatingSoon: Boolean
+        get() = updateAt != 0L && updateAt - System.currentTimeMillis() < UPDATE_LOGIN_CUTOFF_MILLIS
+
+    /**
+     * The lobby's equivalent of the world's `::update`: stops accepting logins near the end of
+     * [countdown], then stops cleanly. The run script restarts the process on the newest build, and
+     * the worlds' social clients reconnect on their own.
+     */
+    fun scheduleUpdate(countdown: Duration, reason: String) {
+        if (updateAt != 0L) return
+        updateAt = System.currentTimeMillis() + countdown.inWholeMilliseconds
+        logInfo("Lobby restart scheduled in $countdown ($reason)")
+        launch {
+            delay(countdown)
+            logInfo("Restarting lobby for $reason")
+            stop()
+            exitProcess(0)
+        }
+    }
 
     @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
     fun start() {
@@ -59,6 +96,7 @@ object Lobby : CoroutineScope {
             ::reportTickConcern
         )
         lobbyEngineLoop.start(CoroutineScope(newSingleThreadContext("Lobby engine loop")))
+        updateWatcher.start()
         logInfo("All services started successfully")
     }
 

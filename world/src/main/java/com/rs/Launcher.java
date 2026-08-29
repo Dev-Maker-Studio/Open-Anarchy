@@ -27,6 +27,7 @@ import org.darkan.core.JsonFileManager;
 import org.darkan.core.Logger;
 import com.rs.plugin.PluginManager;
 import org.darkan.core.net.prot.handler.PacketHandlers;
+import org.darkan.world.AutoUpdate;
 import org.darkan.world.server.WorldServer;
 import com.rs.utils.MapXTEAs;
 import com.rs.utils.json.WorldGson;
@@ -78,6 +79,7 @@ public final class Launcher {
 			return;
 		}
 		WorldThread.init();
+		AutoUpdate.start();
 		Logger.info(Launcher.class, "main", "Server launched in " + (System.currentTimeMillis() - currentTime) + " ms...");
 		Logger.info(Launcher.class, "main", "Server is listening at " + InetAddress.getLocalHost().getHostAddress() + ":" + Settings.getConfig().getWorldInfo().port() + "...");
 		Logger.info(Launcher.class, "main", "Player will be directed to "+Settings.getConfig().getWorldInfo()+"...");

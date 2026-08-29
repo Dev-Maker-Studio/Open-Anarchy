@@ -11,15 +11,22 @@ A failed download keeps the current jar running.
 | `darkan-lobbies` | `10.69.69.22` | `prod-lobby` (43594 / API 4040), `dev-lobby` (43593 / API 4039) |
 | `darkan-worlds` | `10.69.69.21` | `bleeding-edge-world` (dev, world 1, 43601) + the production worlds |
 
-CI (`.gitlab-ci.yml`): `build` runs `./gradlew assemble`; `deploy` runs `./gradlew publish` on
-`dev` and `master`, publishing `org/darkan/lobby-server` and `org/darkan/world-server` versioned
-`3.0.0-<pipeline id>`. The scripts resolve `latest` from the registry's `maven-metadata.xml`.
+CI (`.gitlab-ci.yml`) - `dev` is the only branch; releases are tags cut from it:
+
+- `build` compiles every branch and tag and keeps nothing.
+- `deploy` on a `dev` push publishes `org/darkan/{lobby,world}-server` as `3.0.0-dev-<pipeline id>` -
+  the channel the beta scripts and the servers' auto-update follow (`AUTO_UPDATE_CHANNEL`, default
+  `dev`, highest pipeline id wins).
+- `deploy` on a tag publishes the same two packages under the tag, and `release` creates a GitLab
+  Release named after the tag with a download link per component. The `run-*-release.sh` scripts pull
+  the newest release's jar; `AUTO_UPDATE_CHANNEL=release` makes a server restart onto new releases
+  automatically, through the same countdown.
 
 ## Layout of a server directory
 
 ```
 /home/trent/<name>/
-  run-lobby-beta.sh | run-world-beta.sh   # from the repo root; -release variants track master releases
+  run-lobby-beta.sh | run-world-beta.sh   # from the repo root; -release variants follow tagged releases
   .env                                    # all configuration (see below); chmod 600
   lobby-server.jar | world-server.jar     # replaced by the script on restart
   mainlog.txt
@@ -116,6 +123,21 @@ constants the legacy servers compiled in), so they need no entries unless they c
 
 Stop the unit, restore the backed-up unit file, `mv` the legacy directory back, `daemon-reload`,
 start. The legacy database was never modified.
+
+## Automatic updates (dev servers)
+
+The `run-*-beta.sh` scripts start the server with `AUTO_UPDATE=true` (set `AUTO_UPDATE=false` in the unit's environment to opt out; the release scripts never set it). With it on, a server polls the registry (`AUTO_UPDATE_POLL_SECONDS`, default
+60) for a `latest` newer than the `BUILD_VERSION` the run script started it with. When one appears:
+
+- **world** - the same countdown an admin's `::update` starts: `SystemUpdate` timer on every client
+  for `AUTO_UPDATE_COUNTDOWN_MINUTES` (default 5), then every player is saved and logged out and the
+  process exits;
+- **lobby** - logins are refused with "server being updated" for the final 20 ticks, then a clean stop;
+  worlds reconnect to it automatically.
+
+The run script's loop then downloads the new jar and restarts. So a deploy to dev is just: push to
+`dev`, wait for the pipeline. A server started from a local jar (blank `BUILD_VERSION`) updates to
+the first published build. Production units run the release scripts, which never enable it; they restart on purpose.
 
 ## Notes from the dev cut-over
 

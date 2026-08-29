@@ -62,6 +62,17 @@ object EnvVars {
     val socialGatewayUrl: String = dotenv.get("SOCIAL_GATEWAY_URL", "ws://localhost:${lobbyApiPort}/social/ws")
     val socialGatewayToken: String = dotenv.get("SOCIAL_GATEWAY_TOKEN", "CHANGE_ME")
     val worldId: Int = dotenv.get("WORLD_ID", "300").toInt()
+
+    //Automatic updates from the CI package registry (dev servers only). BUILD_VERSION is exported by the
+    //run scripts from the package they downloaded; a blank version means "not a CI build" and updates
+    //to the first published one.
+    val autoUpdate: Boolean = dotenv.get("AUTO_UPDATE", "false").toBooleanStrict()
+    val buildVersion: String = dotenv.get("BUILD_VERSION", "")
+    val autoUpdateChannel: String = dotenv.get("AUTO_UPDATE_CHANNEL", "dev")
+    val autoUpdatePollSeconds: Int = dotenv.get("AUTO_UPDATE_POLL_SECONDS", "60").toInt()
+    val autoUpdateCountdownMinutes: Int = dotenv.get("AUTO_UPDATE_COUNTDOWN_MINUTES", "5").toInt()
+    val gitlabAccessToken: String = dotenv.get("GITLAB_ACCESS_TOKEN", "")
+    val gitlabProjectId: String = dotenv.get("DARKAN_GITLAB_PROJECT_ID", "67255206")
     val worldName: String = dotenv.get("WORLD_NAME", serverName)
     val worldHost: String = dotenv.get("WORLD_HOST", "localhost")
     val worldPublicHost: String = dotenv.get("WORLD_PUBLIC_HOST", worldHost)
