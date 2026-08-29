@@ -8,12 +8,13 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.LoginHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
+import static com.rs.engine.variables.VarBitPlayer.feud_npc_multi;
 @PluginEventHandler
 public class MenaphiteThug {
 
     public static LoginHandler login = new LoginHandler(e -> {
         if (e.getPlayer().isQuestComplete(Quest.THE_FEUD)) {
-            e.getPlayer().getVars().setVarBit(340, 2);
+            e.getPlayer().getVars().setVarBit(feud_npc_multi, 2);
         }
     });
 

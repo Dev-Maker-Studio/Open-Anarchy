@@ -1,5 +1,6 @@
 package world.gregs.voidps.buffer.write
 
+import world.gregs.voidps.buffer.Cp1252
 
 /**
  * All functions relative to writing directly to a packet are done by this class
@@ -44,6 +45,18 @@ interface Writer {
 
     fun writeLong(value: Long)
 
+    /**
+     * Writes a 40-bit big-endian value, most significant byte first.
+     *
+     * Exact inverse of [world.gregs.voidps.buffer.read.Reader.read5].
+     *
+     * Only the low 40 bits of [value] are written.
+     */
+    fun write5(value: Long) {
+        writeByte((value shr 32).toInt())
+        writeInt((value and 0xffffffffL).toInt())
+    }
+
     fun writeSmart(value: Int) {
         if (value >= 128) {
             writeShort(value + 32768)
@@ -63,7 +76,7 @@ interface Writer {
     fun writeString(value: String?) {
         if (value != null) {
             for (char in value) {
-                writeByte(char.code)
+                writeByte(Cp1252.encode(char).toInt())
             }
         }
         writeByte(0)
@@ -72,7 +85,7 @@ interface Writer {
     fun writePrefixedString(value: String) {
         writeByte(0)
         for (char in value) {
-            writeByte(char.code)
+            writeByte(Cp1252.encode(char).toInt())
         }
         writeByte(0)
     }

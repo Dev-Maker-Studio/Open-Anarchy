@@ -12,6 +12,7 @@ import org.darkan.core.net.prot.ClientProt
 import java.net.ConnectException
 import org.darkan.core.social.gateway.ClanAddMemberRequest
 import org.darkan.core.social.gateway.ClanBanMemberRequest
+import org.darkan.core.social.gateway.ClanCheckNameRequest
 import org.darkan.core.social.gateway.ClanCreateRequest
 import org.darkan.core.social.gateway.ClanGuestJoinRequest
 import org.darkan.core.social.gateway.ClanGuestLeaveRequest
@@ -85,6 +86,10 @@ class SocialClient(
 
     suspend fun sendClanCreate(username: String, clanName: String) {
         send(ClanCreateRequest(username = username, clanName = clanName))
+    }
+
+    suspend fun sendClanCheckName(username: String, clanName: String) {
+        send(ClanCheckNameRequest(username = username, clanName = clanName))
     }
 
     suspend fun sendClanLeave(username: String) {

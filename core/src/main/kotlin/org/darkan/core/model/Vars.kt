@@ -4,10 +4,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.jvm.Transient as JvmTransient
 import org.darkan.core.net.Session
-import org.darkan.core.net.prot.ClearVarps
-import org.darkan.core.net.prot.setVarcPacket
-import org.darkan.core.net.prot.setVarcStrPacket
-import org.darkan.core.net.prot.setVarpPacket
+import org.darkan.core.net.prot.packet.ClearVarps
+import org.darkan.core.net.prot.packet.setVarcPacket
+import org.darkan.core.net.prot.packet.setVarcStrPacket
+import org.darkan.core.net.prot.packet.setVarpPacket
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Config
 import world.gregs.voidps.cache.Index

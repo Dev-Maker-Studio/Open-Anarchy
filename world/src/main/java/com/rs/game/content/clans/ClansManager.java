@@ -38,7 +38,7 @@ import org.darkan.core.model.ClanPermission;
 import org.darkan.core.model.ClanRank;
 import org.darkan.core.model.ClanSetting;
 import org.darkan.core.model.ClanVar;
-import org.darkan.core.net.prot.ClanSettingsFullRaw;
+import org.darkan.core.net.prot.packet.ClanSettingsFullRaw;
 import org.darkan.core.Logger;
 import com.rs.utils.RSColor;
 import org.darkan.core.Utils;
@@ -48,10 +48,14 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.InterfaceOnPlayerHandler;
 
+import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import static com.rs.engine.variables.VarBitPlayer.clan_custom_motif_a_varp;
+import static com.rs.engine.variables.VarBitPlayer.clan_custom_motif_b_varp;
+import static com.rs.engine.variables.VarPlayer.clan_keyword_temp_cat_varp;
 
 @PluginEventHandler
 public class ClansManager {
@@ -167,7 +171,8 @@ public class ClansManager {
 				player.simpleDialogue("Your previous request to create a clan is still in progress... Please wait or relog.");
 				return;
 			}
-			create(player, name);
+			player.getTempAttribs().setB("ccCreateLock", true);
+			WorldServer.INSTANCE.forwardClanCheckName(player.getUsername(), name);
 		});
 	}
 	
@@ -340,9 +345,9 @@ public class ClansManager {
 		if (e.getPlayer().hasRights(Rights.DEVELOPER))
 			e.getPlayer().sendMessage("handleKeywordButtons: " + e.getComponentId() + " - " + e.getSlotId() + " - " + e.getOpNum());
 		switch(e.getComponentId()) {
-		case 193 -> e.getPlayer().getVars().setVar(2136, e.getSlotId());
+		case 193 -> e.getPlayer().getVars().setVar(clan_keyword_temp_cat_varp, e.getSlotId());
 		case 207 -> {
-			int enumId = EnumDefinitions.getEnum(3703).getIntValue(e.getPlayer().getVars().getVar(2136));
+			int enumId = EnumDefinitions.getEnum(3703).getIntValue(e.getPlayer().getVars().getVar(clan_keyword_temp_cat_varp));
 			if (enumId == -1) {
 				e.getPlayer().getTempAttribs().removeI("keywordTempVal");
 				return;
@@ -354,7 +359,7 @@ public class ClansManager {
 				e.getPlayer().getTempAttribs().removeI("keywordTempVal");
 		}
 		case 15 -> {
-			int category = e.getPlayer().getVars().getVar(2136);
+			int category = e.getPlayer().getVars().getVar(clan_keyword_temp_cat_varp);
 			if (category <= 0)
 				return;
 			int index = e.getPlayer().getTempAttribs().getI("keywordTempVal");
@@ -555,15 +560,26 @@ public class ClansManager {
 	}
 	
 	private static void banPlayer(Player player, String name) {
-		// TODO Auto-generated method stub
+		if (player.getClan() == null)
+			return;
+		WorldServer.INSTANCE.forwardClanBanMember(player.getUsername(), Utils.formatPlayerNameForProtocol(name));
 	}
 
 	private static void unban(Player player, String displayName) {
-		// TODO Auto-generated method stub
+		if (player.getClan() == null)
+			return;
+		WorldServer.INSTANCE.forwardClanUnbanMember(player.getUsername(), Utils.formatPlayerNameForProtocol(displayName));
 	}
 
 	private static void unban(Player player, int slotId) {
-		// TODO Auto-generated method stub
+		Clan clan = player.getClan();
+		if (clan == null)
+			return;
+		// The ban list interface shows bannedUsers in the order the settings packet sent them.
+		List<String> banned = new ArrayList<>(clan.getBannedUsers());
+		if (slotId < 0 || slotId >= banned.size())
+			return;
+		WorldServer.INSTANCE.forwardClanUnbanMember(player.getUsername(), banned.get(slotId));
 	}
 
 	public static void unlockBanList(Player player) {
@@ -727,7 +743,7 @@ public class ClansManager {
 		}
 		player.stopAll();
 		player.getTempAttribs().removeI("keywordTempVal");
-		player.getVars().setVar(2136, 0);
+		player.getVars().setVar(clan_keyword_temp_cat_varp, 0);
 		for (int var : KEYWORD_INDICES.inverse().keySet())
 			player.getVars().setVarBit(var, (int) player.getClan().getSetting(KEYWORD_INDICES.inverse().get(var)));
 		player.getInterfaceManager().sendInterface(1097);
@@ -775,8 +791,8 @@ public class ClansManager {
 		player.getPackets().sendRunScript(4400, 72417446);
 		player.getPackets().setIFRightClickOps(1105, 66, 0, 116, 0); // top
 		player.getPackets().setIFRightClickOps(1105, 63, 0, 116, 0); // button
-		player.getVars().setVarBit(9086, player.getClan().getMotifTopIcon());
-		player.getVars().setVarBit(9087, player.getClan().getMotifBottomIcon());
+		player.getVars().setVarBit(clan_custom_motif_a_varp, player.getClan().getMotifTopIcon());
+		player.getVars().setVarBit(clan_custom_motif_b_varp, player.getClan().getMotifBottomIcon());
 		for (int i = 0; i < player.getClan().getMotifColors().length; i++)
 			player.getVars().setVar(2094 + i, player.getClan().getMotifColors()[i]);
 		player.setCloseInterfacesEvent(() -> openSettings(player));
@@ -804,8 +820,8 @@ public class ClansManager {
 			setClanSetting(player, ClanSetting.MOTIF_TOP_ICON, slot+1);
 		else
 			setClanSetting(player, ClanSetting.MOTIF_BOTTOM_ICON, slot+1);
-		player.getVars().setVarBit(9086, player.getClan().getMotifTopIcon());
-		player.getVars().setVarBit(9087, player.getClan().getMotifBottomIcon());
+		player.getVars().setVarBit(clan_custom_motif_a_varp, player.getClan().getMotifTopIcon());
+		player.getVars().setVarBit(clan_custom_motif_b_varp, player.getClan().getMotifBottomIcon());
 	}
 	
 	public static void setVar(Clan clan, int id, Object value) {

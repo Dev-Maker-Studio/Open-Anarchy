@@ -13,6 +13,7 @@ import org.darkan.core.model.SpotAnim;
 import com.rs.plugin.annotations.PluginEventHandler;
 
 import static com.rs.game.content.quests.wolfwhistle.WolfWhistle.*;
+import static com.rs.engine.variables.VarBitPlayer.wolf_stikklebrix_location;
 
 @PluginEventHandler
 public class QuestPikkupstix extends Conversation {
@@ -65,7 +66,7 @@ public class QuestPikkupstix extends Conversation {
                     .addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "The hare meat is available from the pet shop, which is on the bottom floor of the building to the south of here.")
                     .addNPC(PIKKUPSTIX, HeadE.CALM_TALK, "The pouch is lost somewhere upstairs. I managed to lose it in a rather violent kafuffle.", () -> {
                         player.getQuestManager().setStage(Quest.WOLF_WHISTLE, WolfWhistle.WOLPERTINGER_MATERIALS);
-                        player.getVars().setVarBit(10734, 1);
+                        player.getVars().setVarBit(wolf_stikklebrix_location, 1);
                     });
             case WOLPERTINGER_MATERIALS -> {
                 if (WolfWhistle.wolfWhistleObeliskReadyToInfusePouch(p)) {
@@ -86,7 +87,7 @@ public class QuestPikkupstix extends Conversation {
                         .addNPC(PIKKUPSTIX, HeadE.CALM, "Well, you should come over here and let me inspect your work. You never know what could go wrong with such a monumental summoning effort like this one!")
                         .addNext(() -> {
                             player.getQuestManager().setStage(Quest.WOLF_WHISTLE, WolfWhistle.WOLPERTINGER_CREATION);
-                            player.getVars().setVarBit(10734, 0);
+                            player.getVars().setVarBit(wolf_stikklebrix_location, 0);
                         });
                 } else {
                     addNPC(PIKKUPSTIX, HeadE.CONFUSED, "How goes the hunt?")

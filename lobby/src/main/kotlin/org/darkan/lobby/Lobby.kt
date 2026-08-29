@@ -107,10 +107,9 @@ object Lobby : CoroutineScope {
     }
 
     val flushOutgoingNetworkSessions = Runnable {
-        runBlocking {
-            lobbyPlayers.values.forEach { it.session.flush() }
-            accountCreationSessions.forEach { it.session.flush() }
-        }
+        // Only signals each session's writer coroutine, so one stalled socket can't hold the tick.
+        lobbyPlayers.values.forEach { it.session.requestFlush() }
+        accountCreationSessions.forEach { it.session.requestFlush() }
     }
 
     fun reportTickConcern(actualTime: Long, stepTimes: Map<String, Long>) {

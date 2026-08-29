@@ -2,6 +2,7 @@ package org.darkan.core.net.prot.revision.rev727
 
 import io.ktor.utils.io.*
 import org.darkan.core.net.prot.*
+import org.darkan.core.net.prot.packet.*
 import org.darkan.core.toInterfaceHash
 import world.gregs.voidps.buffer.*
 
@@ -10,10 +11,13 @@ internal fun Codec.registerRev727IfPackets() {
         out.writeIntLittle(toInterfaceHash(interfaceId, componentId))
     }
 
+    // Wire order is kit1, kit3, kit2: the client packs fields 1 and 3 into
+    // primaryMediaId (primary/secondary head) and field 2 into secondaryMediaId
+    // (tertiary head).
     serverProt<IfSetPlayerHeadIgnoreWorn>(opcode = 130, size = 10) { out ->
         out.writeShortLittle(identiKit1)
-        out.writeShortAdd(identiKit2)
         out.writeShortAdd(identiKit3)
+        out.writeShortAdd(identiKit2)
         out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
     }
 
@@ -71,8 +75,9 @@ internal fun Codec.registerRev727IfPackets() {
         out.writeIntMiddle(xteas[3])
         out.writeShortAdd(interfaceId)
         out.writeByteSubtract(type)
-        out.writeIntLittle(xteas[1])
-        out.writeIntLittle(xteas[0])
+        // The client reads these two with big-endian readInt(), not readUIntLittle().
+        out.writeInt(xteas[1])
+        out.writeInt(xteas[0])
     }
 
     serverProt<IfOpenSub>(opcode = 38, size = 23) { out ->
@@ -161,9 +166,11 @@ internal fun Codec.registerRev727IfPackets() {
         out.writeIntMiddle(toInterfaceHash(interfaceId, componentId))
     }
 
+    // The client reads the destination texture first (little endian) and the
+    // source texture second (big endian) - the opposite order to IF_SETRECOL.
     serverProt<IfSetReTex>(opcode = 132, size = 9) { out ->
-        out.writeShortLittle(fromTextureId)
-        out.writeShort(toTextureId)
+        out.writeShortLittle(toTextureId)
+        out.writeShort(fromTextureId)
         out.writeByteSubtract(index)
         out.writeIntLittle(toInterfaceHash(interfaceId, componentId))
     }
@@ -202,6 +209,20 @@ internal fun Codec.registerRev727IfPackets() {
         out.writeIntMiddle(tile.id)
         out.writeIntMiddle(xteas[1])
         out.writeShortAddLittle(itemId)
+    }
+
+    // OUTDATED_SET_THEORA_STRING_SOMETHING: queues a T17 pulse event on a component.
+    serverProt<OutdatedSetTheoraString>(opcode = 20, size = 6) { out ->
+        out.writeShortAdd(value)
+        out.writeIntLittle(toInterfaceHash(interfaceId, componentId))
+    }
+
+    // OUTDATED_INTERFACE_PULSE_EVENT: queues a T13 pulse event on a component.
+    // The client rebuilds the payload as `low + (high shl 16)`.
+    serverProt<OutdatedInterfacePulseEvent>(opcode = 96, size = 8) { out ->
+        out.writeShortAdd(value and 0xFFFF)
+        out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
+        out.writeShortLittle((value shr 16) and 0xFFFF)
     }
 
     serverProt<IfSetPlayerHeadOther>(opcode = 158, size = 10) { out ->

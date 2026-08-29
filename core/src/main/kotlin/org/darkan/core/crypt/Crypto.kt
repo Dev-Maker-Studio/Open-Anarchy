@@ -14,6 +14,8 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 import kotlin.experimental.and
 
+private const val ARGON2_PREFIX = "\$argon2"
+
 object Crypto {
     private val secureRandom = SecureRandom()
     private val argon2 = Argon2Factory.create(
@@ -38,9 +40,19 @@ object Crypto {
         }
     }
 
+    /**
+     * True if [hash] is an Argon2 hash produced by [hashPasswordArgon2]. Callers use this to decide
+     * whether to take the Argon2 path or fall through to a legacy credential, rather than testing
+     * for a non-empty string - anything else in the field must not short-circuit the fallbacks.
+     */
+    fun isArgon2Hash(hash: String) = hash.startsWith(ARGON2_PREFIX)
+
+    /**
+     * Verifies [password] against an Argon2 [hash]. Returns false rather than throwing for empty or
+     * non-Argon2 input so a malformed stored hash fails the login instead of the request.
+     */
     fun verifyPasswordArgon2(password: String, hash: String): Boolean {
-        require(password.isNotEmpty()) { "Password cannot be empty" }
-        require(hash.isNotEmpty()) { "Hash cannot be null or empty" }
+        if (password.isEmpty() || !isArgon2Hash(hash)) return false
 
         return password.toCharArray().let { chars ->
             try {

@@ -5,7 +5,7 @@ import com.rs.game.World
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.PluginManager
 import com.rs.plugin.events.IFOnPlayerEvent
-import org.darkan.core.net.prot.IfOnPlayer
+import org.darkan.core.net.prot.packet.IfOnPlayer
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class IfOnPlayerHandler : PacketHandler<Player, IfOnPlayer> {

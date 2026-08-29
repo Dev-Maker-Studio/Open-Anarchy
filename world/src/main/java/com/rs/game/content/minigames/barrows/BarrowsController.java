@@ -51,6 +51,8 @@ import java.util.List;
 import java.util.Set;
 
 import static com.rs.game.content.GlobalNPCDropPluginsKt.yellDrop;
+import static com.rs.engine.variables.VarBitPlayer.barrows_chest_open;
+import static com.rs.engine.variables.VarBitPlayer.barrows_killed_count;
 
 public final class BarrowsController extends Controller {
 
@@ -295,9 +297,9 @@ public final class BarrowsController extends Controller {
 				player.getPackets().sendCameraShake(3, 12, 25, 12, 25);
 				player.getInterfaceManager().removeOverlay();
 				player.resetBarrows();
-				player.getVars().setVarBit(1394, 0);
+				player.getVars().setVarBit(barrows_chest_open, 0);
 			} else
-				player.getVars().setVarBit(1394, 1);
+				player.getVars().setVarBit(barrows_chest_open, 1);
 			return false;
 		} else if (object.getId() >= 6716 && object.getId() <= 6750) {
 
@@ -393,7 +395,7 @@ public final class BarrowsController extends Controller {
 		player.incrementCount("Barrows chests looted");
 		sendReward();
 		player.resetBarrows();
-		player.getVars().setVarBit(1394, 0);
+		player.getVars().setVarBit(barrows_chest_open, 0);
 	}
 
 	public void targetFinishedWithoutDie() {
@@ -487,7 +489,7 @@ public final class BarrowsController extends Controller {
 	}
 
 	public void sendCreaturesSlainCount(int count) {
-		player.getVars().setVarBit(464, count+player.getKilledBarrowBrothersCount());
+		player.getVars().setVarBit(barrows_killed_count, count+player.getKilledBarrowBrothersCount());
 	}
 
 	public void savePathVars() {

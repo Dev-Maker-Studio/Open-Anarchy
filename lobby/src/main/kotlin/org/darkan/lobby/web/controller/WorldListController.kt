@@ -15,6 +15,7 @@ object WorldListController {
 
             post {
                 val req = call.receive<WorldMetadata>()
+                if (!req.isValid) return@post call.respond(HttpStatusCode.BadRequest, "Invalid world registration")
                 Lobby.worldList.put(World(req))
                 call.respond(HttpStatusCode.Created)
             }

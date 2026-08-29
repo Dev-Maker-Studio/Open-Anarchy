@@ -24,19 +24,19 @@ import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
 import org.darkan.core.model.Sound;
 import org.darkan.core.model.SoundType;
-import org.darkan.core.net.prot.CreateGroundItem;
-import org.darkan.core.net.prot.CreateObject;
-import org.darkan.core.net.prot.CustomizeObject;
-import org.darkan.core.net.prot.DestroyObject;
-import org.darkan.core.net.prot.GroundItemCount;
-import org.darkan.core.net.prot.GroundItemReveal;
-import org.darkan.core.net.prot.MapProjAnim;
-import org.darkan.core.net.prot.MapProjAnimHalfSq;
-import org.darkan.core.net.prot.ObjAnim;
-import org.darkan.core.net.prot.RemoveGroundItem;
+import org.darkan.core.net.prot.packet.CreateGroundItem;
+import org.darkan.core.net.prot.packet.CreateObject;
+import org.darkan.core.net.prot.packet.CustomizeObject;
+import org.darkan.core.net.prot.packet.DestroyObject;
+import org.darkan.core.net.prot.packet.GroundItemCount;
+import org.darkan.core.net.prot.packet.GroundItemReveal;
+import org.darkan.core.net.prot.packet.MapProjAnim;
+import org.darkan.core.net.prot.packet.MapProjAnimHalfSq;
+import org.darkan.core.net.prot.packet.ObjAnim;
+import org.darkan.core.net.prot.packet.RemoveGroundItem;
 import org.darkan.core.net.prot.ServerProt;
-import org.darkan.core.net.prot.SoundEffectTile;
-import org.darkan.core.net.prot.UpdateZoneFullFollows;
+import org.darkan.core.net.prot.packet.SoundEffectTile;
+import org.darkan.core.net.prot.packet.UpdateZoneFullFollows;
 import org.darkan.core.Logger;
 import org.darkan.core.util.MapUtils;
 import org.darkan.core.util.Structure;
@@ -144,8 +144,10 @@ public class Chunk {
         ));
     }
 
+    // The packet type and the game model share the simple name SpotAnim, and Java has no import
+    // aliases, so one of the two has to be written out in full here.
     public void addSpotAnim(Tile tile, SpotAnim spotAnim) {
-        addChunkUpdate(new org.darkan.core.net.prot.SpotAnim(
+        addChunkUpdate(new org.darkan.core.net.prot.packet.SpotAnim(
             tile.getXInChunk(), tile.getYInChunk(),
             spotAnim.getId(), spotAnim.getHeight(), spotAnim.getSpeed(), spotAnim.getRotation()
         ));

@@ -1,6 +1,9 @@
 package org.darkan.core
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import kotlinx.io.IOException
+import java.io.IOException as JavaIOException
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
@@ -179,20 +182,20 @@ object JsonFileManager {
 
     // --- Gson backward-compatibility for legacy Java callers ---
 
-    private var gsonInstance: com.google.gson.Gson? = null
+    private var gsonInstance: Gson? = null
 
-    private val gson: com.google.gson.Gson get() = gsonInstance ?: com.google.gson.GsonBuilder()
+    private val gson: Gson get() = gsonInstance ?: GsonBuilder()
         .setPrettyPrinting()
         .disableHtmlEscaping()
         .create().also { gsonInstance = it }
 
     @JvmStatic
-    fun setGSON(gson: com.google.gson.Gson) {
+    fun setGSON(gson: Gson) {
         gsonInstance = gson
     }
 
     @JvmStatic
-    fun getGSON(): com.google.gson.Gson = gson
+    fun getGSON(): Gson = gson
 
     @JvmStatic
     fun <T> loadJsonFile(file: File, clazz: Class<T>): T? {
@@ -231,6 +234,6 @@ object JsonFileManager {
     fun toJson(data: Any): String = gson.toJson(data)
 
     @JvmStatic
-    @Throws(java.io.IOException::class)
+    @Throws(JavaIOException::class)
     fun <T> fromJSONString(jsonStr: String, clazz: Class<T>): T = gson.fromJson(jsonStr, clazz)
 }

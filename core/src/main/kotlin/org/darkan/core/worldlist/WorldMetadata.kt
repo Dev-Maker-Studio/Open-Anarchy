@@ -16,4 +16,7 @@ data class WorldMetadata(
     val highlighted: Boolean)
 {
     val isLobby get() = number >= 1000
+
+    /** A world the lobby can actually hand players to: a real id, a host, and a usable port. */
+    val isValid get() = number > 0 && ipAddress.isNotBlank() && port in 1..65535
 }

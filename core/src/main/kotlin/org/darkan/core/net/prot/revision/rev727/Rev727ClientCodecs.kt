@@ -6,9 +6,9 @@ import kotlinx.io.readUByte
 import kotlinx.io.readUShort
 import org.darkan.core.clientwatch.MouseTrailStep
 import org.darkan.core.clientwatch.MouseTrailStep.Type
-import org.darkan.core.clientwatch.ReflectionResponseCode
 import org.darkan.core.model.Preference
 import org.darkan.core.net.prot.*
+import org.darkan.core.net.prot.packet.*
 import world.gregs.voidps.buffer.*
 import org.darkan.core.fixChatMessage
 import world.gregs.voidps.cache.Cache
@@ -18,17 +18,18 @@ internal fun Codec.registerRev727ClientProts() {
     //Utility/clientwatch
     clientProt<Ping>(opcode = 0)
 
+    // Client writes: writeShort(pid), writeString(name). The leading byte is the VarByte
+    // length prefix, already consumed by the framing layer.
     clientProt(opcode = 39, size = ProtSize.VarByte) {
-        readUByte() // client-supplied payload length for the remaining fields; ignore
         UnusedClanOp(
             pid = readUShort().toInt(),
             username = readRSString()
         )
     }
 
+    // Client writes: writeInt(checkId), then one result blob per requested operation.
     clientProt(opcode = 36, size = ProtSize.VarByte) {
-        val responseCode = ReflectionResponseCode.fromId(readByte().toInt()) ?: throw IllegalArgumentException("Invalid response code")
-        ReflectionResponse(responseCode, readByteArray(remaining.toInt()))
+        ReflectionResponse(readInt(), readByteArray(remaining.toInt()))
     }
 
     clientProt(opcode = 62, size = 1) { ClientFocus(readBoolean()) }
@@ -43,41 +44,53 @@ internal fun Codec.registerRev727ClientProts() {
     }
 
     clientProt(opcode = 83, size = 4) {
-        MoveCamera(angleX = readShortAddLittle().toInt(), angleY = readShortAdd().toInt())
+        MoveCamera(angleX = readUShortAddLittle(), angleY = readUShortAdd())
     }
 
     clientProt(opcode = 44, size = 9) { //TODO test
         SendFps(
-            key1 = readIntInverseMiddle(),
+            key1 = readUIntInverseMiddle(),
             key2 = readUIntMiddle(),
-            fps = readByteAdd().toInt()
+            fps = readByteSubtract()
         )
     }
 
     clientProt(opcode = 59, size = 6) {
         val positionHash = readUIntLittle()
-        val mouseHash = readShort()
+        val mouseHash = readUShort().toInt()
         MouseClick(
-            mouseButton = mouseHash.toInt() ushr 15,
-            time = mouseHash.toInt() and 0x7FFF,
+            mouseButton = mouseHash ushr 15,
+            time = mouseHash and 0x7FFF,
             x = positionHash and 0xFFFF,
             y = positionHash ushr 16
         )
     }
 
+    // Opcode 57 is emitted only by the client's native (jaclib/ICMP) mouse hook, so every event
+    // that arrives here is a hardware one - the software mouse sends MOUSE_CLICK (59) instead.
+    // Bit 0 of the flags byte is not that distinction: the client writes
+    // `writeByte128(meta shl 1 or (constant and 0x1))`, where `constant` is an opaque value from
+    // the native library that is 0 in practice, so reading it as a hardware flag always said
+    // "software".
     clientProt(opcode = 57, size = 7) {
         val positionHash = readUIntLittle()
-        val flags = readByteAdd()
+        val flags = readByteAdd() and 0xFF
         MouseButtonClick(
             mouseButton = flags ushr 1,
             time = readUShortLittle(),
             x = positionHash and 0xFFFF,
             y = positionHash ushr 16,
-            hw = (flags and 1) == 1
+            hw = true
         )
     }
 
+    // Opcode 40 is the native (jaclib/ICMP) mouse trail, opcode 78 the java/AWT one: the client
+    // has a recorder per input source and each always sends its own opcode, so the opcode is what
+    // says "hardware", not any field in the payload. The native recorder appends one extra byte
+    // per step (an opaque native value, 0 in practice) that the java one omits, so it still has to
+    // be consumed or every later step decodes from the wrong offset.
     clientProt(opcodes = intArrayOf(40, 78), size = ProtSize.VarByte) { opcode ->
+        val hardware = opcode == 40
         val steps = mutableListOf<MouseTrailStep>()
         val frameSteps = readUByte().toInt()
         val frameCount = readUByte().toInt()
@@ -108,8 +121,8 @@ internal fun Codec.registerRev727ClientProts() {
                 firstByte >= 128 -> {
                     frames = firstByte - 128
                     val posHash = readUShort().toInt()
-                    dY = posHash shr 8
-                    dX = posHash and 0xFF
+                    dX = posHash shr 8
+                    dY = posHash and 0xFF
                 }
                 else -> {
                     val secondByte = readByte().toUByte().toInt()
@@ -120,7 +133,8 @@ internal fun Codec.registerRev727ClientProts() {
                 }
             }
 
-            steps.add(MouseTrailStep(type, frames, dX, dY, if (opcode == 40) readBoolean() else true))
+            if (hardware) readByte()
+            steps.add(MouseTrailStep(type, frames, dX, dY, hardware))
         }
         MoveMouseData(
             steps = steps.toTypedArray(),
@@ -129,7 +143,7 @@ internal fun Codec.registerRev727ClientProts() {
         )
     }
 
-    clientProt(opcode = 28, size = ProtSize.VarShort) { KeyPress(keyCode = readByte().toInt(), time = readMedium()) }
+    clientProt(opcode = 28, size = ProtSize.VarShort) { KeyPress(keyCode = readByte().toInt(), time = readUMedium()) }
 
     clientProt(opcode = 85, size = ProtSize.VarByte) {
         ClientCheat(
@@ -215,16 +229,16 @@ internal fun Codec.registerRev727ClientProts() {
             interfaceId = interfaceHash shr 16,
             componentId = interfaceHash and 0xFFFF,
             itemId = readShort().toInt(),
-            slotId = readShortAdd()
+            slotId = readUShortAdd()
         )
     }
 
     clientProt(opcode = 4, size = 16) {
-        val toSlot = readShortAddLittle()
+        val toSlot = readUShortAddLittle()
         val fromSlot = readUShortLittle()
-        val toItemId = readShortAddLittle()
+        val toItemId = readUShortAddLittle()
         val toHash = readUIntLittle()
-        val fromHash = readIntInverseMiddle()
+        val fromHash = readUIntInverseMiddle()
         val fromItemId = readUShortLittle()
         IfOnIf(
             fromInter = fromHash shr 16,
@@ -239,12 +253,12 @@ internal fun Codec.registerRev727ClientProts() {
     }
 
     clientProt(opcode = 98, size = 17) {
-        val x = readShortAddLittle()
-        val forceRun = readBooleanAdd()
+        val x = readUShortAddLittle()
+        val forceRun = readBooleanSubtract()
         val objectId = readUIntMiddle()
         val interfaceHash = readInt()
         val itemId = readUShortLittle()
-        val slotId = readShortAdd()
+        val slotId = readUShortAdd()
         val y = readUShortLittle()
         IfOnObject(
             interfaceId = interfaceHash shr 16,
@@ -259,12 +273,12 @@ internal fun Codec.registerRev727ClientProts() {
     }
 
     clientProt(opcode = 67, size = 15) {
-        val itemIdContainer = readShortAdd()
-        val interfaceHash = readIntInverseMiddle()
+        val itemIdContainer = readUShortAdd()
+        val interfaceHash = readUIntInverseMiddle()
         val itemId = readShort().toInt()
-        val forceRun = readBooleanAdd()
-        val slotId = readShortAddLittle()
-        val y = readShortAddLittle()
+        val forceRun = readBooleanSubtract()
+        val slotId = readUShortAddLittle()
+        val y = readUShortAddLittle()
         val x = readUShortLittle()
         IfOnGroundItem(
             interfaceId = interfaceHash shr 16,
@@ -279,7 +293,7 @@ internal fun Codec.registerRev727ClientProts() {
     }
 
     clientProt(opcode = 41, size = 11) {
-        val interfaceHash = readIntInverseMiddle()
+        val interfaceHash = readUIntInverseMiddle()
         val npcIndex = readUShortAddLittle()
         val forceRun = readBooleanSubtract()
         val itemId = readUShortAddLittle()
@@ -298,7 +312,7 @@ internal fun Codec.registerRev727ClientProts() {
         val slotId = readUShort().toInt()
         val playerIndex = readUShortLittle()
         val forceRun = readBooleanSubtract()
-        val interfaceHash = readIntInverseMiddle()
+        val interfaceHash = readUIntInverseMiddle()
         val itemId = readUShortLittle()
         IfOnPlayer(
             interfaceId = interfaceHash shr 16,
@@ -313,8 +327,8 @@ internal fun Codec.registerRev727ClientProts() {
     clientProt(opcode = 46, size = 12) {
         val itemId = readUShortLittle()
         val y = readUShortLittle()
-        val interfaceHash = readIntInverseMiddle()
-        val slotId = readShortAdd()
+        val interfaceHash = readUIntMiddle()
+        val slotId = readUShortAdd()
         val x = readUShortLittle()
         IfOnTile(
             interfaceId = interfaceHash shr 16,
@@ -328,7 +342,7 @@ internal fun Codec.registerRev727ClientProts() {
 
     clientProt(opcode = 49, size = 6) {
         val interfaceHash = readUIntMiddle()
-        val slotId = readShortAddLittle()
+        val slotId = readUShortAddLittle()
         IfContinue(
             interfaceId = interfaceHash shr 16,
             componentId = interfaceHash and 0xFFFF,
@@ -337,10 +351,10 @@ internal fun Codec.registerRev727ClientProts() {
     }
 
     clientProt(opcode = 74, size = 16) {
-        val toSlot = readShortAddLittle()
+        val toSlot = readUShortAddLittle()
         val fromSlot = readUShortLittle()
         val toItemId = readShort().toInt()
-        val fromItemId = readShortAddLittle()
+        val fromItemId = readUShortAddLittle()
         val fromInterfaceHash = readUIntMiddle()
         val toInterfaceHash = readUIntLittle()
         IfDragOntoIf(
@@ -429,9 +443,12 @@ internal fun Codec.registerRev727ClientProts() {
         SendPreferences(buildMap {
             var currIdx = 0
             while (remaining > 0) {
-                Preference.forIndex(currIdx++)?.let {
-                    put(it, readUByte().toInt())
-                } ?: readUByte()
+                // Index 0 is the client's entry count and index 21 is a reserved filler byte;
+                // both map to no Preference and are read purely to advance the cursor.
+                val preference = Preference.forIndex(currIdx++)
+                val value = readUByte().toInt()
+                if (preference != null)
+                    put(preference, value)
             }
         })
     }
@@ -476,7 +493,7 @@ internal fun Codec.registerRev727ClientProts() {
 
     // Unknown/Misc
     clientProt(opcode = 37, size = 2) { PlayVorbis(readShort().toInt()) }
-    clientProt(opcode = 63, size = 4) { AltWalk(x = readShortAdd(), y = readShort().toInt()) }
+    clientProt(opcode = 63, size = 4) { AltWalk(x = readUShortAdd(), y = readUShort().toInt()) }
     clientProt(opcode = 82, size = 4) { AppletLoadingPleaseWait(readInt() /*Always 1057001181*/) }
     clientProt(opcode = 97, size = ProtSize.VarByte) { UnkCs2StringResponse(readRSString()) }
 }

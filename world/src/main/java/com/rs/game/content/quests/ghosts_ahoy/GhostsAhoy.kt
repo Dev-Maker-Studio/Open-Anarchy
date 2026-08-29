@@ -1,18 +1,46 @@
 package com.rs.game.content.quests.ghosts_ahoy
 
+import com.rs.engine.command.Commands
 import com.rs.engine.quest.Quest
 import com.rs.engine.quest.QuestHandler
 import com.rs.engine.quest.QuestOutline
 import com.rs.game.content.items.Dye
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
+import org.darkan.core.model.Rights
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onLogin
+import com.rs.engine.variables.ahoy_questvar
 
 private const val Ectophial = 4251
 val HARICANTO_TILE = Tile.of(3803, 3530, 0)
+internal val GHOSTS_AHOY_SAIL_DYES = arrayOf(
+    Dye.RED,
+    Dye.YELLOW,
+    Dye.BLUE,
+    Dye.ORANGE,
+    Dye.PURPLE,
+    Dye.GREEN
+)
+private val GHOSTS_AHOY_SAIL_DYE_NAMES = GHOSTS_AHOY_SAIL_DYES.map { it.name }.toSet()
+
+private fun randomGhostsAhoySailDye(): Dye = GHOSTS_AHOY_SAIL_DYES[Utils.random(GHOSTS_AHOY_SAIL_DYES.size)]
+
+private fun ensureGhostsAhoySailColors(player: Player) {
+    val attribs = player.questManager.getAttribs(Quest.GHOSTS_AHOY)
+
+    fun ensureTargetColor(key: String) {
+        val color = attribs.getO<String>(key)
+        if (color == null || color !in GHOSTS_AHOY_SAIL_DYE_NAMES)
+            attribs.setO<String>(key, randomGhostsAhoySailDye().name)
+    }
+
+    ensureTargetColor("sailColour1")
+    ensureTargetColor("sailColour2")
+    ensureTargetColor("sailColour3")
+}
 
 @QuestHandler(
     quest = Quest.GHOSTS_AHOY,
@@ -102,19 +130,9 @@ class GhostsAhoy : QuestOutline() {
 
     override fun updateStage(player: Player, stage: Int) {
         if (stage == STAGE_5_GATHER_ITEMS) {
-            player.vars.saveVarBit(217, 5)
+            player.vars.saveVarBit(ahoy_questvar, 5)
             player.vars.syncVarsToClient()
-            if(player.questManager.getAttribs(Quest.GHOSTS_AHOY).getO<String>("sailColour1") == null) {
-                val sailColour1 = Dye.entries[Utils.random(Dye.entries.size)]
-                player.questManager.getAttribs(Quest.GHOSTS_AHOY).setO<String>("sailColour1", sailColour1.name)
-                val sailColour2 = Dye.entries[Utils.random(Dye.entries.size)]
-                player.questManager.getAttribs(Quest.GHOSTS_AHOY).setO<String>("sailColour2", sailColour2.name)
-                val sailColour3 = Dye.entries[Utils.random(Dye.entries.size)]
-                player.questManager.getAttribs(Quest.GHOSTS_AHOY).setO<String>("sailColour3", sailColour3.name)
-                player.questManager.getAttribs(Quest.GHOSTS_AHOY).setO<String>("sailColour1Player", "white")
-                player.questManager.getAttribs(Quest.GHOSTS_AHOY).setO<String>("sailColour2Player", "white")
-                player.questManager.getAttribs(Quest.GHOSTS_AHOY).setO<String>("sailColour3Player", "white")
-            }
+            ensureGhostsAhoySailColors(player)
         }
         else
             return
@@ -124,8 +142,10 @@ class GhostsAhoy : QuestOutline() {
 @ServerStartupEvent
 fun mapGAVarbits(){
     onLogin { (player) ->
+        if (player.getQuestStage(Quest.GHOSTS_AHOY) >= GhostsAhoy.STAGE_4_SEEK_OLD_WOMAN && !player.isQuestComplete(Quest.GHOSTS_AHOY))
+             ensureGhostsAhoySailColors(player)
         if (player.isQuestComplete(Quest.GHOSTS_AHOY) || player.getQuestStage(Quest.GHOSTS_AHOY) >= GhostsAhoy.STAGE_5_GATHER_ITEMS) {
-            player.vars.saveVarBit(217, 5)
+            player.vars.saveVarBit(ahoy_questvar, 5)
             player.vars.syncVarsToClient()
         }
     }
@@ -149,5 +169,14 @@ object SailColorManager {
             "sailColour3" to getSailColor(player, "sailColour3"),
             "sailColour3Player" to getSailColor(player, "sailColour3Player")
         )
+    }
+}
+
+@ServerStartupEvent
+fun resetGhostsAhoy() {
+    Commands.add(Rights.PLAYER, "resetghostsahoy", "Reset Ghosts Ahoy Quest.", ) { p, args ->
+        if (p.isQuestComplete(Quest.GHOSTS_AHOY)) return@add
+        p.questManager.resetQuest(Quest.GHOSTS_AHOY)
+        p.questManager.setStage(Quest.GHOSTS_AHOY, 1)
     }
 }

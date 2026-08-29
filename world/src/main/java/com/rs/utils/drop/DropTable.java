@@ -27,6 +27,7 @@ import org.darkan.core.Utils;
 import com.rs.utils.DropSets;
 
 import java.util.List;
+import static com.rs.engine.variables.VarBitPlayer.bank_show_equipscreen;
 
 public class DropTable {
 
@@ -123,7 +124,7 @@ public class DropTable {
 			}
 			dropCollection.sortByItemId();
 			player.getTempAttribs().setB("viewingOtherBank", true);
-			player.getVars().setVarBit(8348, 0);
+			player.getVars().setVarBit(bank_show_equipscreen, 0);
 			player.getVars().syncVarsToClient();
 			player.getInterfaceManager().sendInterface(762);
 			player.getPackets().sendRunScript(2319);

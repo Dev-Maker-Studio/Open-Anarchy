@@ -1,4 +1,4 @@
-image: eclipse-temurin:23.0.2_7-jdk-alpine
+image: eclipse-temurin:25-jdk-alpine
 
 stages:
   - build

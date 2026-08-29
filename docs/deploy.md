@@ -1,0 +1,139 @@
+# Deploying the servers
+
+Two VMs, one pattern. Each server is a directory owned by `trent` holding a run script, a `.env`,
+and the jar, driven by a systemd unit that runs the script in a restart loop. On every restart the
+script pulls the newest jar CI published to the GitLab package registry (`darkanrs/server`,
+project `67255206`), so **deploying is: push to the branch, wait for the pipeline, restart the unit.**
+A failed download keeps the current jar running.
+
+| VM | Host | Units |
+|---|---|---|
+| `darkan-lobbies` | `10.69.69.22` | `prod-lobby` (43594 / API 4040), `dev-lobby` (43593 / API 4039) |
+| `darkan-worlds` | `10.69.69.21` | `bleeding-edge-world` (dev, world 1, 43601) + the production worlds |
+
+CI (`.gitlab-ci.yml`): `build` runs `./gradlew assemble`; `deploy` runs `./gradlew publish` on
+`dev` and `master`, publishing `org/darkan/lobby-server` and `org/darkan/world-server` versioned
+`3.0.0-<pipeline id>`. The scripts resolve `latest` from the registry's `maven-metadata.xml`.
+
+## Layout of a server directory
+
+```
+/home/trent/<name>/
+  run-lobby-beta.sh | run-world-beta.sh   # from the repo root; -release variants track master releases
+  .env                                    # all configuration (see below); chmod 600
+  lobby-server.jar | world-server.jar     # replaced by the script on restart
+  mainlog.txt
+  data/  plugins/                         # world only - the repo's data/ and plugins/ trees
+```
+
+The unit puts a JDK 25 first on `PATH` for that unit only, so the machine default (and every other
+unit) is unaffected:
+
+```ini
+[Service]
+Environment=DARKAN_JAVA_VM_ARGS="..."
+Environment=GITLAB_ACCESS_TOKEN=...
+Environment=DARKAN_GITLAB_PROJECT_ID=67255206
+Environment=PATH=/home/trent/.sdkman/candidates/java/25.0.4-tem/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/trent/<name>/run-<lobby|world>-beta.sh
+WorkingDirectory=/home/trent/<name>
+User=trent
+```
+
+JDK 25 was installed with sdkman as `trent` (`yes n | sdk install java 25.0.4-tem` - the `n`
+declines making it the default; verify `readlink ~/.sdkman/candidates/java/current` is unchanged).
+
+## `.env` - lobby
+
+```env
+DEBUG=true
+SERVER_NAME=Darkan Dev
+LOBBY_PORT=43593
+LOBBY_API_PORT=4039
+CACHE_PATH=../dev-cache/
+MONGO_URI=mongodb://dkadmin:<pw>@10.69.69.11:27017/<db>?authSource=<db>&retryWrites=true&w=majority
+LEGACY_CRYPTO_SECRET=<from the legacy lobby's data/crypt.json "secret">
+LEGACY_CRYPTO_SALT="<crypt.json "salt" ints, comma separated>"
+SOCIAL_GATEWAY_TOKEN=<shared with the worlds>
+WORLD_LOGIN_TOKEN_SECRET=<shared with the worlds>
+API_KEY=<admin API key>
+LOCAL_WORLD_ID=300              # dev lobby only: lists world 300 as localhost:43595 for developers' own worlds
+```
+
+## `.env` - world
+
+```env
+DEBUG=true
+SERVER_NAME=Darkan BE
+CACHE_PATH=../cache/
+MONGO_URI=<same database as the lobby>
+WORLD_ID=1
+WORLD_NAME=Darkan BE
+WORLD_PORT=43601                 # must match worldInfo.port in data/worldConfig.json (the bind port)
+WORLD_HOST=10.69.69.21
+WORLD_PUBLIC_HOST=xmr.darkan.org # what the lobby advertises to clients
+WORLD_ACTIVITY=Bleeding-Edge Test World
+WORLD_MEMBERS=true
+WORLD_PVP=false
+WORLD_LOOTSHARE=true
+WORLD_COUNTRY=USA
+SOCIAL_GATEWAY_URL=ws://10.69.69.22:4039/social/ws
+SOCIAL_GATEWAY_TOKEN=<same as lobby>
+WORLD_LOGIN_TOKEN_SECRET=<same as lobby>
+```
+
+`data/worldConfig.json` keeps the world's gameplay settings (name, world info, start tiles, xp
+rate, start items). Its old `mongo*` keys are unused; `MONGO_URI` is the only database setting.
+
+RSA keys and the JS5/world tokens default to the values the client was built with (the same
+constants the legacy servers compiled in), so they need no entries unless they change.
+
+## Cutting a lobby + world over from legacy (what was done for dev, 2026-08-29)
+
+1. `systemctl stop <lobby-unit>` and `systemctl stop <world-unit>` for the pair being replaced only.
+2. Create the database user: a `dkadmin` scoped to the new database (`dbOwner` on it), so the VMs
+   never hold admin credentials.
+3. Migrate, from a machine with the `migration/` module and admin access to Mongo
+   (see `docs/migration.md`):
+   ```bash
+   ./gradlew :migration:run --args="migrate --source '$OLD' --target '$NEW' --replace"
+   MONGO_URI="$NEW" ./gradlew :migration:run --args="verify --target '$NEW'"
+   ```
+   Both must finish "with no problems". The source database is never written; it is the rollback.
+4. Move the legacy directory aside (`mv <name> <name>-legacy-backup-<date>`), keep a copy of the
+   unit file next to it, and create the new directory with the script, `.env` and a bootstrap jar
+   (`./gradlew :lobby:shadowJar :world:shadowJar` locally and `scp`, until CI has published one).
+   For a world, keep `data/` and `plugins/` from the legacy checkout and strip the `mongo*` keys
+   from `data/worldConfig.json`.
+5. Write the unit (above), `systemctl daemon-reload`, start the lobby, then the world.
+6. Verify - all from the lobby VM:
+   - `grep 'Lobby server started' mainlog.txt`; `curl -s localhost:<api>/health` → 200
+   - world log: `World server started` and `SocialClient connected`
+   - lobby log: `SocialGateway: world connected worldId=<n>`; `curl -s localhost:<api>/worldlist`
+   - a JS5 handshake (`[15][len][6][727][1][token\0]` and without the `6`) answers `0` (JS5_SYNC)
+
+### Rollback
+
+Stop the unit, restore the backed-up unit file, `mv` the legacy directory back, `daemon-reload`,
+start. The legacy database was never modified.
+
+## Notes from the dev cut-over
+
+- `data/world.json` (persisted world state: counters, penguin hide-and-seek, polar bear) carries over
+  as-is; the world reads and rewrites it through the world Gson (`TileAdapter`), so tiles persisted by
+  the legacy server load correctly. Content must never use a bare `Gson()` for anything holding a
+  `Tile` - the value class has no `x`/`y` fields for reflection to find, and every tile decodes as (0, 0).
+- An entity at an off-map coordinate used to throw from the pathfinder every tick it tried to move;
+  off-map now reads as blocked, and an NPC spawned in the (0..31, 0..31) corner logs a warning naming
+  it and its spawner so the cause is visible in `mainlog.txt`.
+- The `localhost` world (300) for developers' own machines is opt-in via `LOCAL_WORLD_ID`, not a `DEBUG` side effect.
+- The lobby's Netty engine logs `RejectedExecutionException: event executor terminated` while a
+  restart tears it down; that is shutdown noise, not an error in our code.
+
+## Production
+
+Same steps against `prod-lobby` and each production world, with the production database as the
+source and a new database as the target - after the dev pair has soaked. Do worlds one at a time;
+each one's `SOCIAL_GATEWAY_URL` points at the production lobby's API port and shares its tokens.
+Re-run `migrate`/`verify` immediately before starting the new lobby so nothing written in between
+is lost.

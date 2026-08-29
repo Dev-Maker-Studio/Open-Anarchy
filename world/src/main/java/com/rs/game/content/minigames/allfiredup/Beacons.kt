@@ -107,11 +107,23 @@ object Beacons {
             if (litCount <= bonusXP.size && player.get("Beacon_$beacon") != null) {
                 player.skills.addXp(Skills.FIREMAKING, bonusXP[litCount])
             }
-            val burnTicks = player.getL(beacon.name + "BurnTime")
-            val dyingTicks = player.getL(beacon.name + "DyingTime")
+
+            val burnExpiry: Long
+            val dyingExpiry: Long
+            val logType = player.getI("${beacon.name}LogType", -1)
+            if (logType != -1) {
+                val log = Log.getLogFromID(logType) ?: Log.LOG
+                val now = getServerTicks()
+                burnExpiry = now + log.burnTime
+                dyingExpiry = now + log.dyingTime
+            } else {
+                burnExpiry = player.getL(beacon.name + "BurnTime")
+                dyingExpiry = player.getL(beacon.name + "DyingTime")
+            }
+            player.set("${beacon.name}BurnTime", burnExpiry)
+            player.set("${beacon.name}DyingTime", dyingExpiry)
+
             var initialized = false
-            val expireAt = getServerTicks() + burnTicks
-            val beginDyingOut = getServerTicks() + dyingTicks
             player.tasks.scheduleLooping("LIGHT_BEACON_${beacon.name}", 0, 0) {
                 val now = getServerTicks()
                 if (!initialized) {
@@ -120,12 +132,13 @@ object Beacons {
                     checkAchievements(player)
                     initialized = true
                 }
-                if (now >= beginDyingOut) {
+                if (now >= dyingExpiry) {
                     player.vars.saveVarBit(beacon.varBit, 3)
                 }
-                if (now >= expireAt) {
+                if (now >= burnExpiry) {
                     player.vars.saveVarBit(beacon.varBit, 0)
                     player.set("Beacon_$beacon", null)
+                    player.set("${beacon.name}LogType", null)
                     player.tasks.remove("LIGHT_BEACON_${beacon}")
                 }
             }
@@ -139,17 +152,26 @@ object Beacons {
 @ServerStartupEvent
 fun handleBeacons() {
     onLogin { (player) ->
-        if(!player.isQuestStarted(Quest.ALL_FIRED_UP) || !player.isQuestComplete(Quest.ALL_FIRED_UP))
+        if (!player.isQuestStarted(Quest.ALL_FIRED_UP))
             return@onLogin
         val now = getServerTicks()
         for (beacon in Beacon.entries) {
             if (player.get("Beacon_${beacon.name}") == null) continue
+            if (!player.isBeaconLit(beacon) && !player.isBeaconDyingOut(beacon)) {
+                player.set("Beacon_${beacon.name}", null)
+                continue
+            }
             val burnExpiry  = player.getL("${beacon.name}BurnTime")
             val dyingExpiry = player.getL("${beacon.name}DyingTime")
+            if (player.hasInvalidBeaconTimers(beacon, burnExpiry, now)) {
+                player.clearInvalidBeaconState(beacon)
+                continue
+            }
             when {
                 now >= burnExpiry -> {
                     player.vars.saveVarBit(beacon.varBit, 0)
                     player.set("Beacon_${beacon.name}", null)
+                    player.set("${beacon.name}LogType", null)
                     continue
                 }
                 now < dyingExpiry -> {
@@ -175,6 +197,7 @@ fun handleBeacons() {
                     ticks >= burnExpiry -> {
                         player.vars.saveVarBit(beacon.varBit, 0)
                         player.set("Beacon_${beacon.name}", null)
+                        player.set("${beacon.name}LogType", null)
                         player.tasks.remove("LIGHT_BEACON_${beacon.name}")
                     }
                 }
@@ -192,11 +215,7 @@ fun handleBeacons() {
             return@onObjectClick
         }
 
-        if (player.questManager.getStage(Quest.ALL_FIRED_UP) == 2 && beacon == Beacon.RIVER_SALVE) {
-            player.questManager.setStage(Quest.ALL_FIRED_UP, 3)
-        } else if (player.questManager.getStage(Quest.ALL_FIRED_UP) == 4 && beacon == Beacon.RAG_AND_BONE_MAN) {
-            player.questManager.setStage(Quest.ALL_FIRED_UP, 5)
-        }
+        player.questGate(beacon)
 
         if (beacon == Beacon.GOD_WARS && !player.getBool("AllFiredUp.GodWars")) {
             player.sendMessage("The wind is too high, perhaps you should repair the windbreak.")
@@ -223,11 +242,7 @@ fun handleBeacons() {
             player.sendMessage("You cannot use this item on a beacon.")
             return@onItemOnObject
         }
-        if (player.questManager.getStage(Quest.ALL_FIRED_UP) == 2 && beacon == Beacon.RIVER_SALVE) {
-            player.questManager.setStage(Quest.ALL_FIRED_UP, 3)
-        } else if (player.questManager.getStage(Quest.ALL_FIRED_UP) == 4 && beacon == Beacon.RAG_AND_BONE_MAN) {
-            player.questManager.setStage(Quest.ALL_FIRED_UP, 5)
-        }
+        player.questGate(beacon)
 
         lightBeacon(player, e.`object`)
     }
@@ -262,9 +277,26 @@ fun handleBeacons() {
     }
 }
 
+fun Player.questGate(beacon: Beacon) {
+    val stage = questManager.getStage(Quest.ALL_FIRED_UP)
+    if (stage == 2 && beacon == Beacon.RIVER_SALVE) {
+        questManager.setStage(Quest.ALL_FIRED_UP, 3)
+    } else if (stage == 4 && beacon == Beacon.RAG_AND_BONE_MAN) {
+        questManager.setStage(Quest.ALL_FIRED_UP, 5)
+    }
+}
+
 fun Player.canInteractWithBeacon(beacon: Beacon): Boolean {
     if (!isQuestStarted(Quest.ALL_FIRED_UP) || questManager.getStage(Quest.ALL_FIRED_UP) <= 0) {
         sendMessage("I don't think I should meddle with this right now.")
+        return false
+    }
+    if (beacon == Beacon.RIVER_SALVE && questManager.getStage(Quest.ALL_FIRED_UP) == 1) {
+        sendMessage("I should speak to Blaze Sharpeye before using this beacon.")
+        return false
+    }
+    if (beacon == Beacon.RAG_AND_BONE_MAN && questManager.getStage(Quest.ALL_FIRED_UP) == 3) {
+        sendMessage("I should speak to Squire Fyre before using this beacon.")
         return false
     }
     if (skills.getLevel(Skills.FIREMAKING) < beacon.fireLevel) {
@@ -283,16 +315,34 @@ fun Player.tryFillBeacon(beacon: Beacon): Boolean {
         return true
     }
     inventory.deleteItem(selectedLog.logItemID, 20)
-    set("${beacon.name}BurnTime", selectedLog.burnTime + getServerTicks())
-    set("${beacon.name}DyingTime", selectedLog.dyingTime + getServerTicks())
+    set("${beacon.name}LogType", selectedLog.logItemID)
     vars.saveVarBit(beacon.varBit, 1)
     sendMessage("You fill the beacon with logs.")
     return true
 }
 
 fun Player.hasTinderbox(): Boolean {
-    val hasToolbelt = (toolbelt.entries as? Set<*>)?.contains(Toolbelt.Tools.TINDERBOX) == true
-    return inventory.containsItem(590) || hasToolbelt
+    if (inventory.containsItem(590)) return true
+    val tb = toolbelt
+    return tb != null && (tb.entries as? Set<*>)?.contains(Toolbelt.Tools.TINDERBOX) == true
+}
+
+private const val MAX_BEACON_BURN_TICKS = 1177 // Magic logs (1077) + generous buffer
+
+fun Player.hasInvalidBeaconTimers(beacon: Beacon, burnExpiry: Long, now: Long): Boolean {
+    if (burnExpiry <= 0) return true
+    val remaining = burnExpiry - now
+    return remaining > MAX_BEACON_BURN_TICKS
+}
+
+fun Player.clearInvalidBeaconState(beacon: Beacon) {
+    vars.saveVarBit(beacon.varBit, 0)
+    set("Beacon_${beacon.name}", null)
+    set("${beacon.name}LogType", null)
+    set("${beacon.name}BurnTime", null)
+    set("${beacon.name}DyingTime", null)
+    tasks.remove("LIGHT_BEACON_${beacon.name}")
+    sendMessage("The ${beacon.name.lowercase().replace('_', ' ')} beacon had an invalid burn state and has been reset.")
 }
 
 enum class Beacon(

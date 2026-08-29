@@ -26,6 +26,8 @@ object EnvVars {
     val lobbyPort: Int = dotenv.get("LOBBY_PORT", "43594").toInt()
     val worldPort: Int = dotenv.get("WORLD_PORT", "43595").toInt()
     val lobbyApiPort: Int = dotenv.get("LOBBY_API_PORT", "4040").toInt()
+    //World number to list as "localhost" so developers can reach a world running on their own machine (0 = none)
+    val localWorldId: Int = dotenv.get("LOCAL_WORLD_ID", "0").toInt()
     val apiKey: String = dotenv.get("API_KEY", "TEST_API_KEY")
     val cachePath: String = dotenv.get("CACHE_PATH", "../cache/")
     val memCache: Boolean = dotenv.get("MEM_CACHE", (!debug).toString()).toBooleanStrict()
@@ -33,6 +35,10 @@ object EnvVars {
     val minorVersion: Int = dotenv.get("MINOR_VERSION", "1").toInt()
     val packetSizeLimit: Int = dotenv.get("PACKET_SIZE_LIMIT", "7500").toInt()
     val packetQueueCapacity: Int = dotenv.get("PACKET_QUEUE_CAPACITY", "50").toInt()
+    // Per-session outbound backlog. A client that lets this many packets pile up unsent is dropped
+    // rather than buffered forever. Needs headroom for the login burst, so it is far larger than
+    // the inbound queue.
+    val outboundQueueCapacity: Int = dotenv.get("OUTBOUND_QUEUE_CAPACITY", "4096").toInt()
     val packetValidateSizes: Boolean = dotenv.get("PACKET_VALIDATE_SIZES", debug.toString()).toBooleanStrict()
     val worldCycleNanos: Long = dotenv.get("WORLD_CYCLE_NANOS", "600000000").toLong()
     val worldCycleMillis: Long = worldCycleNanos / 1000000L

@@ -12,6 +12,7 @@ import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnNpc
 import com.rs.plugin.kts.onNpcClick
+import com.rs.engine.variables.golem_clay
 
 private const val SOFT_CLAY_ID = 1761
 private const val GOLEM_ID = 1907
@@ -126,7 +127,7 @@ fun mapGolemDialog() {
                         if (player.questManager.getAttribs(Quest.THE_GOLEM).getI("HAS_USED_CLAY") >= 3) {
                             player.inventory.removeItems(Item(item.id, 1))
                             player.questManager.getAttribs(Quest.THE_GOLEM).setI("HAS_USED_CLAY", 4)
-                            player.vars.saveVarBit(348, 4)
+                            player.vars.saveVarBit(golem_clay, 4)
                             player.startConversation {
                                 item(item.id, "You repair the golem with a final piece of clay.")
                                 npc(npc, HeadE.CALM, "Damage repaired... Thank you. My body and mind are fully healed. Now I must complete my task by defeating the great enemy.")
@@ -143,7 +144,7 @@ fun mapGolemDialog() {
                             player.startConversation {
                                 item(item.id, "The golem is nearly whole.")
                             }
-                            player.vars.saveVarBit(348, 3)
+                            player.vars.saveVarBit(golem_clay, 3)
                         }
                     } else {
                         player.inventory.removeItems(Item(item.id, 1))
@@ -151,7 +152,7 @@ fun mapGolemDialog() {
                         player.startConversation {
                             item(item.id, "You fix the golem's legs.")
                         }
-                        player.vars.saveVarBit(348, 2)
+                        player.vars.saveVarBit(golem_clay, 2)
                     }
                 } else {
                     player.inventory.removeItems(Item(item.id, 1))
@@ -159,7 +160,7 @@ fun mapGolemDialog() {
                     player.startConversation {
                         item(item.id, "You apply some clay to the golem's wounds. The clay begins to harden in the hot sun.")
                     }
-                    player.vars.saveVarBit(348, 1)
+                    player.vars.saveVarBit(golem_clay, 1)
                 }
             }
 

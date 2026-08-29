@@ -9,7 +9,7 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.PluginManager
 import com.rs.plugin.events.PlayerClickEvent
-import org.darkan.core.net.prot.OpPlayer
+import org.darkan.core.net.prot.packet.OpPlayer
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class OpPlayerHandler : PacketHandler<Player, OpPlayer> {

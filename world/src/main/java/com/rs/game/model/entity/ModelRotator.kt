@@ -1,7 +1,6 @@
 package com.rs.game.model.entity
 
 import org.darkan.core.update.ModelOverrides
-import world.gregs.voidps.buffer.write.Writer
 
 class ModelRotator {
 
@@ -15,37 +14,11 @@ class ModelRotator {
         return this
     }
 
-    fun encodeNPC(stream: Writer) {
-        stream.writeByteSubtract(curr)
-        for (i in 0 until curr) {
-            if ((targetData[i] and 0xc000) == 0xc000) {
-                stream.writeShortAddLittle(targetData[i] shr 16)
-                stream.writeShort(targetData[i] and 0xFFFF)
-            } else {
-                stream.writeShortAddLittle(targetData[i])
-            }
-            stream.writeShortAddLittle(slotHashes[i])
-        }
-    }
-
-    fun encodePlayer(stream: Writer) {
-        stream.writeByteSubtract(curr)
-        for (i in 0 until curr) {
-            if ((targetData[i] and 0xc000) == 0xc000) {
-                stream.writeShortAdd(targetData[i] shr 16)
-                stream.writeShortAdd(targetData[i] and 0xFFFF)
-            } else {
-                stream.writeShortAdd(targetData[i])
-            }
-            stream.writeShort(slotHashes[i])
-        }
-    }
-
     /**
      * Converts this ModelRotator into a core [ModelOverrides] snapshot.
      *
      * Each entry's targetData is packed as the "key" and slotHashes as the "value".
-     * The revision encoder later unpacks these in the same way [encodeNPC]/[encodePlayer] do.
+     * The core revision encoder unpacks and writes them; this class holds no wire format.
      */
     fun toModelOverrides(): ModelOverrides {
         val keys = IntArray(curr)

@@ -13,8 +13,8 @@ import org.darkan.core.map.pathfinder.RouteCoordinates
 import org.darkan.core.map.pathfinder.DEFAULT_SEARCH_MAP_SIZE
 import org.darkan.core.model.GroundItem
 import world.gregs.voidps.type.Tile
-import org.darkan.core.net.prot.MinimapFlag
-import org.darkan.core.net.prot.Walk
+import org.darkan.core.net.prot.packet.MinimapFlag
+import org.darkan.core.net.prot.packet.Walk
 
 private const val DEFAULT_MAX_TURNS = 25
 

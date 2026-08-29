@@ -1,7 +1,7 @@
 package org.darkan.world.server.packet
 
 import com.rs.game.model.entity.player.Player
-import org.darkan.core.net.prot.CutsceneFinished
+import org.darkan.core.net.prot.packet.CutsceneFinished
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class CutsceneFinishedHandler : PacketHandler<Player, CutsceneFinished> {

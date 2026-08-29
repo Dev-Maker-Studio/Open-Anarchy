@@ -30,6 +30,7 @@ import com.rs.utils.Areas;
 
 import java.util.ArrayList;
 import java.util.List;
+import static com.rs.engine.variables.VarBitPlayer.delrith_drain_key;
 
 @QuestHandler(
 		quest = Quest.DEMON_SLAYER,
@@ -91,7 +92,7 @@ public class DemonSlayer extends QuestOutline {
 				lines.add("to push it into the sewers.");
 				lines.add("");
 			}
-			if(player.getVars().getVarBit(2568) == 1) {
+			if(player.getVars().getVarBit(delrith_drain_key) == 1) {
 				lines.add("The key was pushed into the varrock sewers,");
 				lines.add("I just have to find it...");
 				lines.add("");
@@ -152,9 +153,9 @@ public class DemonSlayer extends QuestOutline {
 
 	public static ItemOnObjectHandler handleBucketOfWaterOnDrain = new ItemOnObjectHandler(new Object[] { 31759 }, new Object[] { 1929 }, e -> {
 		Player p = e.getPlayer();
-		if(p.getVars().getVarBit(2568) == 0) {
+		if(p.getVars().getVarBit(delrith_drain_key) == 0) {
 			p.getInventory().replace(e.getItem(), new Item(1925, 1));
-			e.getPlayer().getVars().setVarBit(2568, 1);
+			e.getPlayer().getVars().setVarBit(delrith_drain_key, 1);
 			p.sendMessage("You pour the liquid down the drain.");
 			p.playerDialogue(HeadE.WORRIED, "OK, I think I've washed the key down into the sewer. I'd better go down and get it!");
 		}
@@ -163,13 +164,13 @@ public class DemonSlayer extends QuestOutline {
 	public static ObjectClickHandler handleDrainSearch = new ObjectClickHandler(new Object[] { 31759 }, e -> {
 		Player p = e.getPlayer();
 		p.sendMessage("You peer into the drain.");
-        if (!p.isQuestComplete(Quest.DEMON_SLAYER) && !p.getInventory().containsItem(2401) && p.getVars().getVarBit(2568) != 1)
-			p.getVars().setVarBit(2568, 0);
-		if (p.getVars().getVarBit(2568) == 0)
+        if (!p.isQuestComplete(Quest.DEMON_SLAYER) && !p.getInventory().containsItem(2401) && p.getVars().getVarBit(delrith_drain_key) != 1)
+			p.getVars().setVarBit(delrith_drain_key, 0);
+		if (p.getVars().getVarBit(delrith_drain_key) == 0)
 			p.playerDialogue(HeadE.WORRIED, "It looks like I will need to wash the key down with a bucket of water.");
-		if (p.getVars().getVarBit(2568) == 1)
+		if (p.getVars().getVarBit(delrith_drain_key) == 1)
 			p.playerDialogue(HeadE.HAPPY_TALKING, "Okay, time to go in the sewers and get that key...");
-		if (p.getVars().getVarBit(2568) == 2)
+		if (p.getVars().getVarBit(delrith_drain_key) == 2)
 			p.playerDialogue(HeadE.SKEPTICAL_THINKING, "Filthy in there...");
 	});
 
@@ -192,7 +193,7 @@ public class DemonSlayer extends QuestOutline {
 				create();
 			}
 		});
-		e.getPlayer().getVars().setVarBit(2568, 2);
+		e.getPlayer().getVars().setVarBit(delrith_drain_key, 2);
 	});
 
 	public static EnterChunkHandler handleFinalCutsceneChunk = new EnterChunkHandler(e -> {
@@ -206,8 +207,8 @@ public class DemonSlayer extends QuestOutline {
 
 	public static LoginHandler onLogin = new LoginHandler(e -> {
 		if(e.getPlayer().isQuestComplete(Quest.DEMON_SLAYER))
-			e.getPlayer().getVars().setVarBit(2568, 2);
+			e.getPlayer().getVars().setVarBit(delrith_drain_key, 2);
 		else
-			e.getPlayer().getVars().setVarBit(2568, 0);
+			e.getPlayer().getVars().setVarBit(delrith_drain_key, 0);
 	});
 }

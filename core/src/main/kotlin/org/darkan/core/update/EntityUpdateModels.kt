@@ -1,5 +1,7 @@
 package org.darkan.core.update
 
+import java.security.MessageDigest
+
 /**
  * Revision-agnostic entity update models shared across Player/NPC update protocols.
  *
@@ -204,7 +206,20 @@ data class NpcUpdateBlocks(
 data class PlayerAppearance(
     val hash: ByteArray,
     val data: ByteArray,
-)
+) {
+    companion object {
+        private const val HASH_ALGORITHM = "MD5"
+
+        /**
+         * Wraps an already encoded appearance block, deriving the change-detection hash from it.
+         *
+         * The hash is what `PlayerUpdateTrackingState` compares
+         * per observer to decide whether the block needs re-sending.
+         */
+        fun of(data: ByteArray): PlayerAppearance =
+            PlayerAppearance(hash = MessageDigest.getInstance(HASH_ALGORITHM).digest(data), data = data)
+    }
+}
 
 data class MovementAnimations(
     val ids: IntArray,

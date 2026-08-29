@@ -39,6 +39,7 @@ import java.util.List;
 
 import static com.rs.game.content.world.doors.Doors.handleDoubleDoor;
 import static com.rs.game.content.world.doors.Doors.handleGate;
+import static com.rs.engine.variables.VarPlayer.priestperil;
 
 @QuestHandler(
 		quest = Quest.PRIEST_IN_PERIL,
@@ -151,7 +152,7 @@ public class PriestInPeril extends QuestOutline {
 	@Override
 	public void updateStage(Player player, int stage) {
 		if (stage == 2) {
-			player.getVars().setVar(302, 2);
+			player.getVars().setVar(priestperil, 2);
 		}
 	}
 

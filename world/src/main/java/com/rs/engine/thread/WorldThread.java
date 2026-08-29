@@ -151,7 +151,7 @@ public final class WorldThread extends Thread {
 					try {
 						npc.processMovement();
 					} catch (Throwable e) {
-						Logger.handle(WorldThread.class, "processNPCMovement", e);
+						Logger.handle(WorldThread.class, "processNPCMovement", "NPC " + npc.getId() + " at " + npc.getTile() + " (spawned at " + npc.getRespawnTile() + ")", e);
 					}
 				}
 				Logger.trace(WorldThread.class, "tick", "processNPCMovement() - " + timerNpcMove.stop());
@@ -191,7 +191,7 @@ public final class WorldThread extends Thread {
 					if (player == null || !player.hasStarted() || player.hasFinished())
 						continue;
 					try {
-						player.getSession().flushBlocking();
+						player.getSession().requestFlush();
 					} catch (Throwable e) {
 						Logger.handle(WorldThread.class, "flushPlayerPackets", e);
 					}

@@ -16,7 +16,7 @@
 //
 package com.rs.game.model.entity.npc
 
-import world.gregs.voidps.buffer.write.Writer
+import org.darkan.core.update.NpcCustomisation
 import world.gregs.voidps.cache.definition.data.NPCDefinition
 
 class NPCBodyMeshModifier(private val defs: NPCDefinition?) {
@@ -96,45 +96,23 @@ class NPCBodyMeshModifier(private val defs: NPCDefinition?) {
         return this
     }
 
-    fun encode(stream: Writer): Int {
-        val flags = getModificationFlags()
-        if (flags == 0) return -1
-
-        stream.writeByteSubtract(flags)
-        if ((flags and MODEL_FLAG) != 0) encodeModels(stream)
-        if ((flags and COLOR_FLAG) != 0) encodeColors(stream)
-        if ((flags and TEXTURE_FLAG) != 0) encodeTextures(stream)
-        return flags
-    }
-
-    fun encodeModels(stream: Writer) {
-        for (modelId in modelIds!!) stream.writeBigSmart(modelId)
-    }
-
-    fun encodeColors(stream: Writer) {
-        for (color in modifiedColors!!) stream.writeShort(color.toInt())
-    }
-
-    fun encodeTextures(stream: Writer) {
-        for (texture in modifiedTextures!!) stream.writeShort(texture.toInt())
-    }
-
-    fun getModificationFlags(): Int {
-        var flags = 0
-        if (modelIds != null) flags = flags or MODEL_FLAG
-        if (modifiedColors != null) flags = flags or COLOR_FLAG
-        if (modifiedTextures != null) flags = flags or TEXTURE_FLAG
-        if (flags == 0) flags = flags or RESET_FLAG
-        return flags
-    }
+    /**
+     * Converts this modifier into the core [NpcCustomisation] schema.
+     *
+     * Which models, colours and textures apply is decided here; how they are framed on the wire is
+     * decided by the revision encoder in core. A modifier that overrides nothing means "reset to
+     * the definition's own appearance", which the schema carries as [NpcCustomisation.clear].
+     */
+    fun toCustomisation(): NpcCustomisation = NpcCustomisation(
+        clear = modelIds == null && modifiedColors == null && modifiedTextures == null,
+        models = modelIds,
+        recolors = modifiedColors,
+        retextures = modifiedTextures,
+    )
 
     companion object {
+        /** Sentinel meaning "drop every override and render the definition's own appearance". */
         @JvmField
         val RESET: NPCBodyMeshModifier = NPCBodyMeshModifier(null as NPCDefinition?)
-
-        private const val RESET_FLAG = 0x1
-        private const val MODEL_FLAG = 0x2
-        private const val COLOR_FLAG = 0x4
-        private const val TEXTURE_FLAG = 0x8
     }
 }

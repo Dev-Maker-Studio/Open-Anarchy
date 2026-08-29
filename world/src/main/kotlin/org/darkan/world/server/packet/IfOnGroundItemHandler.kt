@@ -4,7 +4,7 @@ import com.rs.engine.pathfinder.RouteEvent
 import com.rs.game.content.skills.firemaking.Firemaking
 import com.rs.game.map.ChunkManager
 import com.rs.game.model.entity.player.Player
-import org.darkan.core.net.prot.IfOnGroundItem
+import org.darkan.core.net.prot.packet.IfOnGroundItem
 import org.darkan.core.net.prot.handler.PacketHandler
 import world.gregs.voidps.type.Tile
 

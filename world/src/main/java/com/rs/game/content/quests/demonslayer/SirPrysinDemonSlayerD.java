@@ -31,6 +31,7 @@ import org.darkan.core.model.Animation;
 import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
+import static com.rs.engine.variables.VarBitPlayer.dsqip_key;
 
 @PluginEventHandler
 public class SirPrysinDemonSlayerD extends Conversation {
@@ -259,13 +260,13 @@ public class SirPrysinDemonSlayerD extends Conversation {
 							p.faceEntityTile(dummy);
 						} else if (tick == 1) {
 							dummy.setNextAnimation(new Animation(2579));
-							p.getVars().setVarBit(6922, 1);
+							p.getVars().setVarBit(dsqip_key, 1);
 						} else if(tick == 2) {
 							dummy.setNextAnimation(new Animation(4611));
-							p.getVars().setVarBit(6922, 2);
+							p.getVars().setVarBit(dsqip_key, 2);
 						} else if(tick == 3) {
 							dummy.setNextAnimation(new Animation(2579));
-							p.getVars().setVarBit(6922, 0);
+							p.getVars().setVarBit(dsqip_key, 0);
 							dummy.transformIntoNPC(SIR_PRYSIN_W_SWORD);
 						} else if(tick == 4)
 							dummy.faceEntityTile(p);

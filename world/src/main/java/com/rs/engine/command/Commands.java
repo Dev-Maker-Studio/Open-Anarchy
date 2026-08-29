@@ -40,6 +40,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import static com.rs.engine.variables.VarPlayer.rand_perm_int_03;
+import static com.rs.engine.variables.VarPlayer.rand_perm_int_04;
 
 public final class Commands {
 
@@ -201,8 +203,8 @@ public final class Commands {
 			int desperado = 0;
 			int keenEye = 0;
 			p.getInterfaceManager().sendInterface(993);
-			p.getVars().setVar(1776, (sniper << 28) + (berserker << 24) + (tactician << 20) + (tank << 16));
-			p.getVars().setVar(1851, (artisan << 28) + (gatherer << 24) + (medic << 20) + (blitzer << 16) + (blaster << 12) + (blazer << 8) + (desperado << 4) + keenEye);
+			p.getVars().setVar(rand_perm_int_03, (sniper << 28) + (berserker << 24) + (tactician << 20) + (tank << 16));
+			p.getVars().setVar(rand_perm_int_04, (artisan << 28) + (gatherer << 24) + (medic << 20) + (blitzer << 16) + (blaster << 12) + (blazer << 8) + (desperado << 4) + keenEye);
 			return true;
 
 		case "loadouts":

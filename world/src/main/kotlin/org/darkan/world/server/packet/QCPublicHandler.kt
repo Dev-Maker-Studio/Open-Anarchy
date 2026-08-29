@@ -1,7 +1,7 @@
 package org.darkan.world.server.packet
 
 import com.rs.game.model.entity.player.Player
-import org.darkan.core.net.prot.QuickChatPublic
+import org.darkan.core.net.prot.packet.QuickChatPublic
 import org.darkan.core.net.prot.handler.PacketHandler
 import org.darkan.world.server.WorldServer
 

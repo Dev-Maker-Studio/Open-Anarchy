@@ -14,6 +14,7 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnNPCHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import com.rs.utils.music.Music;
+import static com.rs.engine.variables.VarBitPlayer.easter12_egg_1;
 
 @PluginEventHandler
 public class ChocatriceD extends Conversation {
@@ -144,7 +145,7 @@ public class ChocatriceD extends Conversation {
                             .addNPC(Easter2022.CHOCATRICE, HeadE.NO_EXPRESSION, "Every two hours, a new hunt will begin. Hunt down the five eggs, smash them open using the Eggsterminator and then shoot at the chick that emerges with the Eggsterminator. " +
                                     "This will turn the chick into a tasty treat."));
                     
-	                    option("Can I have a hint?", (EggHunt.active() ? (player.getVars().getVarBit(10954) == 3 ?
+	                    option("Can I have a hint?", (EggHunt.active() ? (player.getVars().getVarBit(easter12_egg_1) == 3 ?
 	                            new Dialogue()
 	                                    .addNPC(Easter2022.EVIL_CHICKEN, HeadE.NO_EXPRESSION, "You've already found the egg I have information on.") :
 	                            new Dialogue()

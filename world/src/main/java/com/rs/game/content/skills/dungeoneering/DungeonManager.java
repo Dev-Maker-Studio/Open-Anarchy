@@ -65,6 +65,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
+import static com.rs.engine.variables.VarBitPlayer.rand_current_progress;
+import static com.rs.engine.variables.VarBitPlayer.rand_last_progress;
+import static com.rs.engine.variables.VarBitPlayer.worldmap_modifier;
 
 public class DungeonManager {
 
@@ -1118,7 +1121,7 @@ public class DungeonManager {
 	}
 
 	public void setWorldMap(Player player, boolean dungIcon) {
-		player.getVars().setVarBit(6090, dungIcon ? 1 : 0);
+		player.getVars().setVarBit(worldmap_modifier, dungIcon ? 1 : 0);
 	}
 
 	public void endFarming() {
@@ -1372,8 +1375,8 @@ public class DungeonManager {
 				}
 			}
 			double prestigeXP = tickedOff ? 0 : getFloorXP(player.getDungManager().getPrestige(), party.getSize(), getVisibleRoomsCount());
-			player.getVars().setVarBit(7550, player.getDungManager().getCurrentProgress());
-			player.getVars().setVarBit(7551, player.getDungManager().getPreviousProgress());
+			player.getVars().setVarBit(rand_current_progress, player.getDungManager().getCurrentProgress());
+			player.getVars().setVarBit(rand_last_progress, player.getDungManager().getPreviousProgress());
 			double averageXP = (floorXP + prestigeXP) / 2;
 			multiplier = Math.max(0.1, multiplier);
 			double totalXp = averageXP * multiplier;

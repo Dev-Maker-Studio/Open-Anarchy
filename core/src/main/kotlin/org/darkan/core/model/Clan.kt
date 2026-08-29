@@ -47,7 +47,7 @@ object ClanSettingValueSerializer : KSerializer<Any> {
 @Serializable
 data class ClanMemberData(
     var rank: ClanRank = ClanRank.NONE,
-    val joinDate: Long = System.currentTimeMillis(),
+    var joinDate: Long = System.currentTimeMillis(),
     var job: Int? = 0,
     var banFromKeep: Boolean? = false,
     var banFromCitadel: Boolean? = false,
@@ -55,14 +55,19 @@ data class ClanMemberData(
     var firstWeek: Boolean? = false,
 )
 
+/**
+ * Every persisted property is a `var`: the Mongo POJO codec constructs through the no-arg
+ * constructor and then assigns via setters, so a `val` here would decode as its default and the
+ * stored value would be silently discarded.
+ */
 @Serializable
 class Clan(
-    val name: String = "",
+    var name: String = "",
     var leaderUsername: String = "",
-    val members: MutableMap<String, ClanMemberData> = mutableMapOf(),
-    val bannedUsers: MutableSet<String> = mutableSetOf(),
-    val settings: MutableMap<String, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
-    val vars: MutableMap<String, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
+    var members: MutableMap<String, ClanMemberData> = mutableMapOf(),
+    var bannedUsers: MutableSet<String> = mutableSetOf(),
+    var settings: MutableMap<String, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
+    var vars: MutableMap<String, @Serializable(with = ClanSettingValueSerializer::class) Any> = mutableMapOf(),
     var ccChatRank: ClanRank = ClanRank.NONE,
     var ccKickRank: ClanRank = ClanRank.ADMIN,
     var motto: String = "",
