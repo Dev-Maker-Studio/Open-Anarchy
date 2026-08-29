@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import java.util.Random
 import kotlin.math.pow
@@ -46,7 +45,7 @@ class TextureOpPerlinNoise : TextureOperation(0, true) {
     }
 
     private fun computeNoiseRow(y: Int, output: IntArray) {
-        val coordY = TextureRaster.verticalTable!![y] * texCoordScaleY
+        val coordY = verticalTable[y] * texCoordScaleY
 
         if (numNoiseSteps == 1) {
             val stepMul = stepMultipliers!![0]
@@ -63,15 +62,15 @@ class TextureOpPerlinNoise : TextureOperation(0, true) {
             val permNextY = noiseArray[nextRowY and 0xff].toInt() and 0xff
 
             if (useFogEffect) {
-                for (x in 0 until TextureRaster.currentWidth) {
-                    val coordX = TextureRaster.horizontalTable!![x] * texCoordScaleX
+                for (x in 0 until currentWidth) {
+                    val coordX = horizontalTable[x] * texCoordScaleX
                     var noise = computeNoise(ampMul * coordX shr 12, posY, permY, permNextY, sinY, scaleX)
                     noise = stepMul * noise shr 12
                     output[x] = (noise shr 1) + 2048
                 }
             } else {
-                for (x in 0 until TextureRaster.currentWidth) {
-                    val coordX = TextureRaster.horizontalTable!![x] * texCoordScaleX
+                for (x in 0 until currentWidth) {
+                    val coordX = horizontalTable[x] * texCoordScaleX
                     val noise = computeNoise(ampMul * coordX shr 12, posY, permY, permNextY, sinY, scaleX)
                     output[x] = stepMul * noise shr 12
                 }
@@ -92,13 +91,13 @@ class TextureOpPerlinNoise : TextureOperation(0, true) {
                 val permY = noiseArray[rowY and 0xff].toInt() and 0xff
                 val permNextY = noiseArray[nextRowY and 0xff].toInt() and 0xff
 
-                for (x in 0 until TextureRaster.currentWidth) {
-                    val coordX = TextureRaster.horizontalTable!![x] * texCoordScaleX
+                for (x in 0 until currentWidth) {
+                    val coordX = horizontalTable[x] * texCoordScaleX
                     val noise = computeNoise(ampMul * coordX shr 12, posY, permY, permNextY, sinY, scaleX)
                     output[x] = noise * stepMul shr 12
                 }
             } else {
-                for (x in 0 until TextureRaster.currentWidth) {
+                for (x in 0 until currentWidth) {
                     output[x] = 0
                 }
             }
@@ -120,15 +119,15 @@ class TextureOpPerlinNoise : TextureOperation(0, true) {
                     val permNextY = noiseArray[nextRowY and 0xff].toInt() and 0xff
 
                     if (useFogEffect && octave == numNoiseSteps - 1) {
-                        for (x in 0 until TextureRaster.currentWidth) {
-                            val coordX = TextureRaster.horizontalTable!![x] * texCoordScaleX
+                        for (x in 0 until currentWidth) {
+                            val coordX = horizontalTable[x] * texCoordScaleX
                             var noise = computeNoise(coordX * ampMul shr 12, posY, permY, permNextY, sinY, scaleX)
                             noise = output[x] + (stepMul * noise shr 12)
                             output[x] = (noise shr 1) + 2048
                         }
                     } else {
-                        for (x in 0 until TextureRaster.currentWidth) {
-                            val coordX = TextureRaster.horizontalTable!![x] * texCoordScaleX
+                        for (x in 0 until currentWidth) {
+                            val coordX = horizontalTable[x] * texCoordScaleX
                             val noise = computeNoise(ampMul * coordX shr 12, posY, permY, permNextY, sinY, scaleX)
                             output[x] += noise * stepMul shr 12
                         }

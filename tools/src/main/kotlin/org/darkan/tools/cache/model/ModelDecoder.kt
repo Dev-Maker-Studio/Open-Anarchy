@@ -5,10 +5,52 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
 
 /**
+ * Why a model id produced no [ModelDefinition].
+ *
+ * [ModelDecoder.decode] collapses every one of these to `null`, which reads like a decoder
+ * bug wherever it is reported. [ModelDecoder.describeUnavailable] separates a genuine gap in
+ * the cache data from a failure that is ours to fix.
+ */
+enum class ModelUnavailableReason {
+    /** No archive under this id in [Index.MODELS] — the id is not in the cache at all. */
+    MISSING_ARCHIVE,
+
+    /**
+     * The archive is present and decompresses, but declares zero vertices or zero faces.
+     *
+     * Rev727 ships exactly eight of these — 1077, 2862, 4420, 6932, 15553, 15554, 15555 and
+     * 15556 — and all eight are byte-identical 24-byte placeholders: version 15, every footer
+     * flag clear except `hasVersion`, and the `0xFFFF` new-format marker. There is no geometry
+     * to recover. The reference client builds an equally empty `Mesh` from the same bytes
+     * (`Mesh.decodeNewFormat` allocates `numVertices == 0` arrays and returns), so object
+     * instances pointing at these ids draw nothing in the real game either.
+     */
+    EMPTY_PLACEHOLDER,
+
+    /** Fewer bytes than a header needs, or declared sections running past the end of the data. */
+    TRUNCATED,
+
+    /** The archive threw while decoding. Unlike the others, this one is a bug on our side. */
+    DECODE_ERROR
+}
+
+/** A [ModelUnavailableReason] together with a message naming the evidence behind it. */
+data class ModelUnavailable(val reason: ModelUnavailableReason, val message: String)
+
+/**
  * Decoder for RS model binary format (revision 727).
  * Based on reference implementation from darkan-bot.
  */
 object ModelDecoder {
+
+    /** Smallest archive that could hold a model header; see [decode]. */
+    private const val MIN_MODEL_BYTES = 20
+
+    /** Footer size for the `0xFFFF`-terminated format: 21 header bytes plus the 2 marker bytes. */
+    private const val NEW_FORMAT_FOOTER_BYTES = 23
+
+    /** Footer size for the pre-`0xFFFF` format. */
+    private const val OLD_FORMAT_FOOTER_BYTES = 18
 
     fun decode(cache: Cache, modelId: Int): ModelDefinition? {
         val data = cache.data(Index.MODELS, modelId) ?: return null
@@ -20,8 +62,71 @@ object ModelDecoder {
         }
     }
 
+    /**
+     * Explain why [modelId] yields no definition, or `null` when it decodes successfully.
+     *
+     * Both footer layouts put the vertex and face counts in their first four bytes, so the
+     * counts can be read without running a full decode. That short parse is repeated here
+     * rather than shared with [decodeNewFormat]/[decodeOldFormat] so that this diagnostic
+     * stays off the decode hot path and cannot change it; the two footer sizes it depends on
+     * are the same named constants the decoders use.
+     */
+    fun describeUnavailable(cache: Cache, modelId: Int): ModelUnavailable? {
+        val data = cache.data(Index.MODELS, modelId)
+            ?: return ModelUnavailable(
+                ModelUnavailableReason.MISSING_ARCHIVE,
+                "no archive $modelId in index ${Index.MODELS}: this id is not in the cache"
+            )
+
+        if (data.size < MIN_MODEL_BYTES) {
+            return ModelUnavailable(
+                ModelUnavailableReason.TRUNCATED,
+                "archive is only ${data.size} bytes, too short to hold a model header"
+            )
+        }
+
+        val isNewFormat = data[data.size - 1] == (-1).toByte() && data[data.size - 2] == (-1).toByte()
+        val footerOffset = data.size - if (isNewFormat) NEW_FORMAT_FOOTER_BYTES else OLD_FORMAT_FOOTER_BYTES
+        if (footerOffset < 0) {
+            return ModelUnavailable(
+                ModelUnavailableReason.TRUNCATED,
+                "archive is ${data.size} bytes, shorter than its own footer"
+            )
+        }
+
+        val reader = BufferReader(data)
+        reader.position(footerOffset)
+        val vertexCount = reader.readUnsignedShort()
+        val faceCount = reader.readUnsignedShort()
+        if (vertexCount == 0 || faceCount == 0) {
+            return ModelUnavailable(
+                ModelUnavailableReason.EMPTY_PLACEHOLDER,
+                "archive is present (${data.size} bytes) and decompresses cleanly, but declares " +
+                        "$vertexCount vertices and $faceCount faces: an empty placeholder with no " +
+                        "geometry. Nothing can draw it, and the reference client draws nothing either"
+            )
+        }
+
+        return try {
+            if (decode(modelId, data) == null) {
+                ModelUnavailable(
+                    ModelUnavailableReason.TRUNCATED,
+                    "header declares $vertexCount vertices and $faceCount faces, but the sections " +
+                            "they describe run past the end of the ${data.size}-byte archive"
+                )
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            ModelUnavailable(
+                ModelUnavailableReason.DECODE_ERROR,
+                "decoding threw ${e.javaClass.simpleName}: ${e.message}"
+            )
+        }
+    }
+
     fun decode(modelId: Int, data: ByteArray): ModelDefinition? {
-        if (data.size < 20) {
+        if (data.size < MIN_MODEL_BYTES) {
             return null
         }
 
@@ -40,7 +145,7 @@ object ModelDecoder {
         val buffer2 = BufferReader(data)
 
         // Read header from end of file (23 bytes before end)
-        buffer.position(data.size - 23)
+        buffer.position(data.size - NEW_FORMAT_FOOTER_BYTES)
         val vertexCount = buffer.readUnsignedShort()
         val faceCount = buffer.readUnsignedShort()
         val texturedFaceCount = buffer.readUnsignedByte()
@@ -55,9 +160,9 @@ object ModelDecoder {
         // Version byte is stored at data.size - 24 (one byte before the 23-byte footer)
         var version = 12  // Default version for models without explicit version
         if (hasVersion) {
-            buffer.position(data.size - 24)  // Version byte is immediately before the footer
+            buffer.position(data.size - NEW_FORMAT_FOOTER_BYTES - 1)  // Version byte is immediately before the footer
             version = buffer.readUnsignedByte()
-            buffer.position(data.size - 23 + 6)  // Continue reading from after footerFlags
+            buffer.position(data.size - NEW_FORMAT_FOOTER_BYTES + 6)  // Continue reading from after footerFlags
         }
 
         val modelPriority = buffer.readUnsignedByte()
@@ -556,7 +661,7 @@ object ModelDecoder {
         val buffer = BufferReader(data)
 
         // Read header from end of file (18 bytes before end)
-        buffer.position(data.size - 18)
+        buffer.position(data.size - OLD_FORMAT_FOOTER_BYTES)
         val vertexCount = buffer.readUnsignedShort()
         val faceCount = buffer.readUnsignedShort()
         val texturedFaceCount = buffer.readUnsignedByte()

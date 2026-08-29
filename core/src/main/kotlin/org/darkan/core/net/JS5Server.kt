@@ -21,7 +21,9 @@ class JS5Server(val provider: FileProvider, val prefetchKeys: IntArray) {
         try {
             val size = input.readByte().toInt() //unused because suspend OP
 
-            if (input.readInt() != EnvVars.majorVersion || input.readInt() != EnvVars.minorVersion) {
+            var major = input.readInt()
+            if (major == LEGACY_CLIENT_VERSION) major = input.readInt() // legacy darkan client prepends a 6; skip it
+            if (major != EnvVars.majorVersion || input.readInt() != EnvVars.minorVersion) {
                 logTrace("Invalid client version")
                 output.writeByte(ResponseOpcode.GAME_UPDATE)
                 output.flushAndClose()
@@ -94,3 +96,6 @@ class JS5Server(val provider: FileProvider, val prefetchKeys: IntArray) {
         return true
     }
 }
+
+/** The legacy darkan client's extra handshake int. Frozen; remove with the client. */
+private const val LEGACY_CLIENT_VERSION = 6

@@ -6,12 +6,13 @@ import org.darkan.core.Logger.logDebug
 import org.darkan.core.Logger.logError
 import org.darkan.core.model.Account
 import org.darkan.core.model.Vars
+import org.darkan.core.model.toLobbyLoginDetails
 import org.darkan.core.net.Session
 import org.darkan.core.net.login.LoginToken
-import org.darkan.core.net.prot.LobbyLoginDetails
-import org.darkan.core.net.prot.Ping
-import org.darkan.core.net.prot.WorldListPacket
 import org.darkan.core.net.prot.handler.PacketHandlers
+import org.darkan.core.net.prot.packet.LobbyLoginDetails
+import org.darkan.core.net.prot.packet.Ping
+import org.darkan.core.net.prot.packet.WorldListPacket
 import org.darkan.lobby.Lobby
 import org.darkan.lobby.social.SocialGateway
 
@@ -26,8 +27,18 @@ class LobbyPlayer(val session: Session, val account: Account) {
 
     suspend fun login(read: ByteReadChannel) {
         try {
-            session.send(LobbyLoginDetails(account, worldLoginToken), noIsaac = true)
-            session.send(WorldListPacket(Lobby.worldList, true, false))
+            // The client caches the world it is told to "play now" on, so hand it a world that
+            // actually exists; the placeholder only stands in until a world registers.
+            val defaultWorld = Lobby.worldList.getDefault()?.metadata?.takeIf { it.isValid }
+            session.send(
+                account.toLobbyLoginDetails(
+                    worldLoginToken = worldLoginToken,
+                    defaultWorldId = defaultWorld?.number ?: LobbyLoginDetails.DEFAULT_WORLD_ID,
+                    defaultWorldAddress = defaultWorld?.ipAddress ?: LobbyLoginDetails.DEFAULT_WORLD_ADDRESS,
+                ),
+                noIsaac = true,
+            )
+            session.send(WorldListPacket(Lobby.worldList.snapshot(), refreshOnClient = true, refreshOnlyPlayerCounts = false))
             vars.setVar(281, 1000)
             vars.setVar(2528, 1)
             vars.setVar(2567, 1)

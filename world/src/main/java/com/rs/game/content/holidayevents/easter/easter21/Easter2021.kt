@@ -33,6 +33,10 @@ import com.rs.utils.spawns.NPCSpawn
 import com.rs.utils.spawns.NPCSpawns
 import com.rs.utils.spawns.ObjectSpawn
 import com.rs.utils.spawns.ObjectSpawns
+import com.rs.engine.variables.easter09_incubator
+import com.rs.engine.variables.easter09_main
+import com.rs.engine.variables.easter09_seed_bowl
+import com.rs.engine.variables.easter09_water_bowl
 
 private const val STAGE_KEY = "easter2024"
 private const val ENABLED = false
@@ -92,9 +96,9 @@ fun mapEaster2021() {
         e.player.nsv.setI("cogLocation", Utils.random(COG_LOCATIONS.size))
         e.player.nsv.setI("pistonLocation", Utils.random(PISTON_LOCATIONS.size))
         e.player.nsv.setI("chimneyLocation", Utils.random(CHIMNEY_LOCATIONS.size))
-        e.player.vars.setVarBit(6014, if (e.player.getI(STAGE_KEY) >= 3) 1 else 0)
-        e.player.vars.setVarBit(6016, if (e.player.getI(STAGE_KEY) >= 6) 3 else 0)
-        if (e.player.getI(STAGE_KEY) >= 8) e.player.vars.setVarBit(6014, 85)
+        e.player.vars.setVarBit(easter09_main, if (e.player.getI(STAGE_KEY) >= 3) 1 else 0)
+        e.player.vars.setVarBit(easter09_incubator, if (e.player.getI(STAGE_KEY) >= 6) 3 else 0)
+        if (e.player.getI(STAGE_KEY) >= 8) e.player.vars.setVarBit(easter09_main, 85)
     }
 
     onObjectClick(30083) { e -> e.player.inventory.addItem(1929) }
@@ -116,15 +120,15 @@ fun mapEaster2021() {
         }
         e.player.inventory.deleteItem(1929, 1)
         e.player.inventory.addItem(1925, 1)
-        e.player.vars.setVarBit(6027, 1)
+        e.player.vars.setVarBit(easter09_water_bowl, 1)
         e.player.sendMessage("You fill the bird's dish with water.")
-        if (e.player.vars.getVarBit(6026) == e.player.nsv.getI("easterBirdFood")) {
+        if (e.player.vars.getVarBit(easter09_seed_bowl) == e.player.nsv.getI("easterBirdFood")) {
             e.player.sendMessage("The bird wakes up and begins eating and drinking!")
             e.player.set(STAGE_KEY, 3)
-            e.player.vars.setVarBit(6014, 1)
+            e.player.vars.setVarBit(easter09_main, 1)
             WorldTasks.delay(10) {
-                e.player.vars.setVarBit(6026, 0)
-                e.player.vars.setVarBit(6027, 0)
+                e.player.vars.setVarBit(easter09_seed_bowl, 0)
+                e.player.vars.setVarBit(easter09_water_bowl, 0)
             }
         } else e.player.sendMessage("The bird still needs the correct food it seems.")
     }
@@ -136,18 +140,18 @@ fun mapEaster2021() {
         }
         val foodId = e.item.id - 14713
         e.player.inventory.deleteItem(e.item.id, 1)
-        e.player.vars.setVarBit(6026, foodId)
+        e.player.vars.setVarBit(easter09_seed_bowl, foodId)
         e.player.sendMessage("You fill the bird's dish with " + e.item.name + ".")
-        if (e.player.vars.getVarBit(6027) == 0) {
+        if (e.player.vars.getVarBit(easter09_water_bowl) == 0) {
             e.player.sendMessage("The bird still looks thirsty.")
             return@onItemOnObject
         }
-        if (e.player.vars.getVarBit(6026) == (e.player.nsv.getI("easterBirdFood") + 1)) {
+        if (e.player.vars.getVarBit(easter09_seed_bowl) == (e.player.nsv.getI("easterBirdFood") + 1)) {
             e.player.set(STAGE_KEY, 3)
-            e.player.vars.setVarBit(6014, 1)
+            e.player.vars.setVarBit(easter09_main, 1)
             WorldTasks.delay(10) {
-                e.player.vars.setVarBit(6026, 0)
-                e.player.vars.setVarBit(6027, 0)
+                e.player.vars.setVarBit(easter09_seed_bowl, 0)
+                e.player.vars.setVarBit(easter09_water_bowl, 0)
             }
         } else e.player.sendMessage("That doesn't seem to be the correct food." + e.player.nsv.getI("easterBirdFood"))
     }
@@ -181,21 +185,21 @@ fun mapEaster2021() {
             return@onItemOnObject
         }
         when (e.item.id) {
-            COG -> if (e.player.vars.getVarBit(6016) <= 0) {
+            COG -> if (e.player.vars.getVarBit(easter09_incubator) <= 0) {
                 e.player.inventory.deleteItem(e.item)
-                e.player.vars.setVarBit(6016, 1)
+                e.player.vars.setVarBit(easter09_incubator, 1)
                 e.player.sendMessage("You attach the cog back into place.")
             } else e.player.sendMessage("You already have attached the cog.")
 
-            PISTON -> if (e.player.vars.getVarBit(6016) == 1) {
+            PISTON -> if (e.player.vars.getVarBit(easter09_incubator) == 1) {
                 e.player.inventory.deleteItem(e.item)
-                e.player.vars.setVarBit(6016, 2)
+                e.player.vars.setVarBit(easter09_incubator, 2)
                 e.player.sendMessage("You attach the pistons back into place.")
             } else e.player.sendMessage("That part won't fit quite yet.")
 
-            CHIMNEY -> if (e.player.vars.getVarBit(6016) == 2) {
+            CHIMNEY -> if (e.player.vars.getVarBit(easter09_incubator) == 2) {
                 e.player.inventory.deleteItem(e.item)
-                e.player.vars.setVarBit(6016, 4)
+                e.player.vars.setVarBit(easter09_incubator, 4)
                 e.player.sendMessage("You attach the chimney back into place.")
                 e.player.sendMessage("You hear the machine whirr as it turns back on.")
                 e.player.set(STAGE_KEY, 6)
@@ -218,7 +222,7 @@ fun mapEaster2021() {
                     player(HeadE.CHEERFUL, "Thank you for your help!")
                     exec {
                         player.set(STAGE_KEY, 8)
-                        player.vars.setVarBit(6014, 85)
+                        player.vars.setVarBit(easter09_main, 85)
                     }
                 }
                 8 -> npc(CHARLIE, HeadE.CAT_CHEERFUL, "You head on back and let the Easter Bunny know we're coming!")

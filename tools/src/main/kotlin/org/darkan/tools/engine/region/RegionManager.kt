@@ -13,6 +13,7 @@ import org.darkan.tools.cache.map.VertexDisplacer
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.cache.texture.TextureLoader
+import org.darkan.tools.engine.async.ParallelChunks
 import org.darkan.tools.engine.render.BatchKey
 import org.darkan.tools.engine.render.GeometryTransformer
 import org.darkan.tools.engine.render.InstanceManager
@@ -21,9 +22,11 @@ import org.darkan.tools.engine.render.Mesh
 import org.darkan.tools.engine.render.StaticBatcher
 import org.darkan.tools.engine.render.TextureAtlas
 import org.darkan.tools.engine.render.TexturePixelProvider
+import org.darkan.tools.engine.render.withReversedWinding
 import org.darkan.tools.util.CoordinateUtil
 import org.joml.Matrix4f
 import java.util.IdentityHashMap
+import java.util.concurrent.atomic.AtomicLong
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.definition.data.MapObject
@@ -111,6 +114,21 @@ class RegionManager(
     var instanceManager: InstanceManager? = null
         private set
 
+    /**
+     * Mesh data registered for the center region, keyed by the model id that
+     * [getModelIdForInstance] reports (so displaced variants appear under their displaced id).
+     *
+     * Kept so a second consumer -- the multi-draw-indirect renderer -- can build its shared
+     * geometry from the meshes that were already decoded here rather than re-decoding every
+     * model in the region from the cache. Reset by [cleanup], i.e. once per region load, so
+     * it stays readable for as long as the registered InstanceManager batches are valid.
+     */
+    private val centerModelMeshDataInternal = mutableMapOf<Int, List<MeshData>>()
+
+    /** Read-only view of the mesh data registered for the current center region. */
+    val centerModelMeshData: Map<Int, List<MeshData>>
+        get() = centerModelMeshDataInternal
+
     /** Static batcher for context region objects. */
     var contextObjectBatcher: StaticBatcher? = null
         private set
@@ -136,11 +154,45 @@ class RegionManager(
     /** Set of registered model IDs (shared between center and context). */
     private val registeredModels = mutableSetOf<Int>()
 
+    /**
+     * `-Ddarkan.displaceAudit=true`: see [AsyncRegionManager]'s flag of the same name.
+     * Read here too so the centre region, which does not go through that path, reports
+     * the same three numbers.
+     */
+    private val displaceAudit: Boolean =
+        System.getProperty("darkan.displaceAudit", "false").toBoolean()
+
+    /** Per-load displacement accounting; drained by [displaceChunked]. */
+    private val auditConsidered = AtomicLong(0)
+    private val auditFlatSkips = AtomicLong(0)
+    private val auditZeroMoved = AtomicLong(0)
+
     /** Displaced model tracking for contourType 1 objects.
      *  Keyed by ObjectInstance reference (IdentityHashMap) to avoid
      *  System.identityHashCode() collisions that cause wrong mesh lookups. */
     private val displacedModels = IdentityHashMap<ObjectInstance, Int>()
     private var nextDisplacedId = Int.MIN_VALUE / 2
+
+    /**
+     * Winding-reversed variants for mirrored objects, keyed by the base combined model id.
+     *
+     * A mirrored instance is drawn with a `scale(1, 1, -1)` term in its model matrix. That
+     * makes the matrix's determinant negative, which reverses the winding of every triangle
+     * it draws, and back-face culling then discards the object outright. The instanced and
+     * indirect paths keep the matrix on the GPU and share one copy of the geometry between
+     * instances, so the compensating flip has to live in a separate copy of the geometry
+     * that only mirrored instances reference. Variant ids come from [nextDisplacedId], the
+     * same allocator the displaced meshes use, so they cannot collide with anything.
+     */
+    private val mirroredModels = mutableMapOf<Int, Int>()
+
+    /**
+     * Combined model ids used by this region that the cache has no geometry for.
+     *
+     * Instances of these cannot be drawn by any path. Kept so that a dropped instance can
+     * be reported as missing data rather than as a renderer that lost track of a model.
+     */
+    val unavailableModels = mutableSetOf<Int>()
 
     /** Object spatial index for tile lookup. */
     val objectsByTile = mutableMapOf<Long, MutableList<ObjectInstance>>()
@@ -207,8 +259,10 @@ class RegionManager(
         currentPlane = plane
 
         // Load center region terrain
+        val terrainStart = System.nanoTime()
         val td = TerrainLoader.loadRegion(cache, regionX, regionY)
         val regionData = RegionLoader.loadRegion(cache, regionX, regionY)
+        RegionLoadProfiler.record(RegionLoadProfiler.PHASE_CENTER_TERRAIN, System.nanoTime() - terrainStart)
 
         centerTerrainData = td
         centerRegionData = regionData
@@ -230,28 +284,44 @@ class RegionManager(
             // Create object instances for center region using the SAME code path
             // as context regions — ObjectRenderer.createInstancesAllPlanes().
             // This guarantees absolute parity between center and surrounding regions.
+            val instancesStart = System.nanoTime()
             val tiles = td.tiles
+            // The corner samples for an object on the last row/column land one tile past
+            // the region, where the client reads its neighbour. Neighbour regions are
+            // cached, so this is the same data the terrain mesh pass builds below.
+            val centerNeighbors = TerrainLoader.buildNeighborData(cache, regionX, regionY)
             val allPlaneInstances = ObjectRenderer.createInstancesAllPlanes(
                 objects = regionData.objects,
                 regionX = regionX,
                 regionY = regionY,
                 tileHeights = { localX, localY, p ->
-                    TerrainLoader.getTileHeightScaled(tiles, localX, localY, p)
+                    TerrainLoader.getExtendedTileHeightScaled(tiles, centerNeighbors, p, localX, localY)
                 },
                 rsHeightSampler = { localX, localY, p ->
-                    TerrainLoader.getTileHeight(tiles, localX, localY, p)
+                    TerrainLoader.getExtendedTileHeight(tiles, centerNeighbors, p, localX, localY)
                 }
             )
             centerObjects = allPlaneInstances.values.flatten().let { instances ->
                 if (!showRoofs) instances.filter { it.mapObject.shape !in 12..21 }
                 else instances
             }
+            RegionLoadProfiler.record(RegionLoadProfiler.PHASE_CENTER_OBJECTS, System.nanoTime() - instancesStart)
+            RegionLoadProfiler.noteObjects(centerObjects.size)
 
-            // Register models with instance manager
-            registerCenterModels(centerObjects)
+            // Decode every distinct model used by the center region once, in
+            // parallel, then register on this (GL) thread. The decoded meshes are
+            // reused by the displacement pass instead of being decoded a second
+            // time per displaced object.
+            val centerMeshData = runBlocking { decodeCenterModels(centerObjects) }
+
+            // Register models with instance manager (GL thread)
+            registerCenterModels(centerObjects, centerMeshData)
 
             // Register displaced meshes for contourType 1 objects
-            registerDisplacedModels(centerObjects, td.tiles, regionX, regionY)
+            registerDisplacedModels(centerObjects, centerMeshData, td.tiles, centerNeighbors)
+
+            // Register winding-reversed copies for mirrored objects
+            registerMirroredVariants(centerObjects, centerMeshData)
 
             // Build object spatial index
             populateObjectSpatialIndex()
@@ -305,7 +375,9 @@ class RegionManager(
      * Get the displaced model ID for an object instance, or its combined model ID.
      */
     fun getModelIdForInstance(obj: ObjectInstance): Int {
-        return displacedModels[obj] ?: obj.cachedCombinedModelId
+        displacedModels[obj]?.let { return it }
+        if (obj.mirrored) mirroredModels[obj.cachedCombinedModelId]?.let { return it }
+        return obj.cachedCombinedModelId
     }
 
     /**
@@ -515,6 +587,9 @@ class RegionManager(
 
         registeredModels.clear()
         displacedModels.clear()
+        mirroredModels.clear()
+        unavailableModels.clear()
+        centerModelMeshDataInternal.clear()
         nextDisplacedId = Int.MIN_VALUE / 2
 
         TerrainLoader.clearBatchedMeshCache()
@@ -524,78 +599,268 @@ class RegionManager(
     // Internal: Model Registration
     // ========================================================================
 
-    private fun registerCenterModels(objects: List<ObjectInstance>) {
+    /**
+     * Decode the mesh data for every distinct model used by [objects], fanned out
+     * across worker threads.
+     *
+     * Deduplication happens before the fan-out (thousands of objects collapse to a
+     * few hundred unique models), and the result is keyed by combined model id so
+     * the registration pass and the displacement pass share a single decode
+     * instead of decoding the same model twice as the old code did.
+     */
+    private suspend fun decodeCenterModels(objects: List<ObjectInstance>): Map<Int, List<MeshData>> {
+        if (objects.isEmpty()) return emptyMap()
+        val decodeStart = System.nanoTime()
+
+        val uniqueIds = ArrayList<Int>()
+        val uniqueOwners = ArrayList<ObjectInstance>()
+        val seen = HashSet<Int>()
+        for (obj in objects) {
+            if (seen.add(obj.cachedCombinedModelId)) {
+                uniqueIds.add(obj.cachedCombinedModelId)
+                uniqueOwners.add(obj)
+            }
+        }
+
+        val decoded = arrayOfNulls<List<MeshData>>(uniqueIds.size)
+        // Workers write disjoint slots; ModelLoader's caches are all ConcurrentHashMap.
+        ParallelChunks.forEachChunk(uniqueIds.size) { from, to ->
+            for (i in from until to) {
+                val obj = uniqueOwners[i]
+                decoded[i] = if (obj.modifications.hasModifications()) {
+                    ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
+                } else {
+                    ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
+                }
+            }
+        }
+
+        val result = LinkedHashMap<Int, List<MeshData>>(uniqueIds.size * 2)
+        unavailableModels.clear()
+        for (i in uniqueIds.indices) {
+            val meshDataList = decoded[i]
+            if (meshDataList.isNullOrEmpty()) {
+                // The cache has no geometry under this id. Nothing downstream can draw it,
+                // so record it rather than letting it look like a registration failure to
+                // whoever is later told the instance was dropped.
+                unavailableModels.add(uniqueIds[i])
+                continue
+            }
+            result[uniqueIds[i]] = meshDataList
+        }
+        if (unavailableModels.isNotEmpty()) {
+            System.err.println(
+                "[RegionManager] ${unavailableModels.size} of ${uniqueIds.size} models used by this " +
+                        "region decoded to no geometry (data gap, not a decoder failure — run " +
+                        "'tools faces <id>' for the reason): ${unavailableModels.sorted().take(16)}"
+            )
+        }
+        RegionLoadProfiler.record(RegionLoadProfiler.PHASE_CENTER_MODELS, System.nanoTime() - decodeStart)
+        RegionLoadProfiler.noteModelDecode(uniqueIds.size, 0)
+        return result
+    }
+
+    private fun registerCenterModels(
+        objects: List<ObjectInstance>,
+        meshDataById: Map<Int, List<MeshData>>
+    ) {
         val im = instanceManager ?: return
+        val registerStart = System.nanoTime()
         for (obj in objects) {
             val combinedId = obj.cachedCombinedModelId
             if (registeredModels.contains(combinedId)) continue
 
-            val meshDataList = if (obj.modifications.hasModifications()) {
-                ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
-            } else {
-                ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
+            val meshDataList = meshDataById[combinedId] ?: continue
+            im.registerModel(combinedId, meshDataList)
+            registeredModels.add(combinedId)
+            centerModelMeshDataInternal[combinedId] = meshDataList
+        }
+        RegionLoadProfiler.record(RegionLoadProfiler.PHASE_CENTER_REGISTER, System.nanoTime() - registerStart)
+    }
+
+    /**
+     * Register a winding-reversed copy of every model a mirrored object draws.
+     *
+     * Runs after [registerDisplacedModels] so objects that already got a displaced mesh —
+     * which carries its own flip — are skipped and no variant is built for them.
+     */
+    private fun registerMirroredVariants(
+        objects: List<ObjectInstance>,
+        meshDataById: Map<Int, List<MeshData>>
+    ) {
+        val im = instanceManager ?: return
+        val registerStart = System.nanoTime()
+        for (obj in objects) {
+            if (!obj.mirrored || displacedModels.containsKey(obj)) continue
+            val baseId = obj.cachedCombinedModelId
+            if (mirroredModels.containsKey(baseId)) continue
+
+            val meshDataList = meshDataById[baseId] ?: continue
+            val mirroredId = nextDisplacedId++
+            val meshes = meshDataList.withReversedWinding()
+            im.registerModel(mirroredId, meshes)
+            registeredModels.add(mirroredId)
+            mirroredModels[baseId] = mirroredId
+            centerModelMeshDataInternal[mirroredId] = meshes
+        }
+        RegionLoadProfiler.record(RegionLoadProfiler.PHASE_CENTER_REGISTER, System.nanoTime() - registerStart)
+    }
+
+    /**
+     * Displace every contour-type-1 object's meshes, chunked over the object list.
+     *
+     * Each worker returns its own index -> displaced-meshes map; the caller merges them
+     * in chunk order, which reproduces the serial insertion order exactly.
+     *
+     * Objects standing on ground that is uniformly at their average height are resolved
+     * by [VertexDisplacer.footprintIsFlat] without walking a single vertex.
+     */
+    private suspend fun displaceChunked(
+        objects: List<ObjectInstance>,
+        meshDataById: Map<Int, List<MeshData>>,
+        terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>,
+        neighbors: TerrainLoader.NeighborData?
+    ): List<LinkedHashMap<Int, List<MeshData>>> {
+        val field = VertexDisplacer.HeightField.from(terrainTiles, neighbors)
+        val result = ParallelChunks.mapChunks(objects.size) { from, to ->
+            val local = LinkedHashMap<Int, List<MeshData>>()
+            // considered / flat-skipped / moved-nothing, per worker chunk.
+            val stats = LongArray(3)
+            for (objIndex in from until to) {
+                val displaced = displaceObject(objects[objIndex], meshDataById, field, stats)
+                if (displaced != null) local[objIndex] = displaced
             }
-            if (meshDataList != null && meshDataList.isNotEmpty()) {
-                im.registerModel(combinedId, meshDataList)
-                registeredModels.add(combinedId)
+            RegionLoadProfiler.noteDisplace(stats[0], stats[1], 0, 0, stats[2])
+            auditConsidered.addAndGet(stats[0])
+            auditFlatSkips.addAndGet(stats[1])
+            auditZeroMoved.addAndGet(stats[2])
+            local
+        }
+        // The centre region loads through here rather than through AsyncRegionManager, so
+        // without this it would be the one region the displacement audit could not see --
+        // and the centre region is exactly where a user notices a flat railing.
+        if (displaceAudit) {
+            println("[displace] region $currentRegionX,$currentRegionY (centre) " +
+                    "considered=${auditConsidered.getAndSet(0)} " +
+                    "flat-skipped=${auditFlatSkips.getAndSet(0)} " +
+                    "moved-nothing=${auditZeroMoved.getAndSet(0)}")
+        } else {
+            auditConsidered.set(0)
+            auditFlatSkips.set(0)
+            auditZeroMoved.set(0)
+        }
+        return result
+    }
+
+    /**
+     * Displaced meshes for one object, or null when the object needs no displacement.
+     * Meshes that did not move are carried through unchanged so the returned list still
+     * lines up with the model's batch list.
+     */
+    private fun displaceObject(
+        obj: ObjectInstance,
+        meshDataById: Map<Int, List<MeshData>>,
+        field: VertexDisplacer.HeightField,
+        /** Optional accounting: considered, flat-skipped, moved-nothing. See [displaceChunked]. */
+        stats: LongArray? = null
+    ): List<MeshData>? {
+        if (!VertexDisplacer.needsDisplacement(obj.groundContourType, obj.groundContourModifier)) return null
+        val baseMeshDataList = meshDataById[obj.cachedCombinedModelId] ?: return null
+        stats?.let { it[0]++ }
+
+        val definition = obj.definition
+        val bounds = VertexDisplacer.modelBounds(obj.cachedCombinedModelId, baseMeshDataList) ?: return null
+        if (VertexDisplacer.footprintIsFlat(
+                bounds = bounds,
+                sceneX = obj.rsSceneX,
+                sceneY = obj.rsSceneY,
+                averageHeight = obj.rsAverageHeight,
+                plane = obj.mapObject.level,
+                field = field,
+                rsRotation = obj.rsRotation,
+                mirrored = obj.mirrored,
+                resizeX = definition.modelSizeX,
+                resizeY = definition.modelSizeZ,
+                resizeZ = definition.modelSizeY,
+                rsOffsetX = definition.offsetX,
+                rsOffsetZ = definition.offsetY
+            )
+        ) {
+            stats?.let { it[1]++ }
+            return null
+        }
+
+        val displaced = ArrayList<MeshData>(baseMeshDataList.size)
+        var anyDisplaced = false
+        for (meshData in baseMeshDataList) {
+            val displacedMesh = VertexDisplacer.displaceVertices(
+                meshData = meshData,
+                sceneX = obj.rsSceneX,
+                sceneY = obj.rsSceneY,
+                averageHeight = obj.rsAverageHeight,
+                plane = obj.mapObject.level,
+                field = field,
+                rsRotation = obj.rsRotation,
+                mirrored = obj.mirrored,
+                resizeX = definition.modelSizeX,
+                resizeY = definition.modelSizeZ,
+                resizeZ = definition.modelSizeY,
+                rsOffsetX = definition.offsetX,
+                rsOffsetZ = definition.offsetY
+            )
+            if (displacedMesh != null) {
+                displaced.add(displacedMesh)
+                anyDisplaced = true
+            } else {
+                displaced.add(meshData)
             }
         }
+        if (!anyDisplaced) {
+            // Asked to displace, not resolved as flat, moved nothing. Benign only when
+            // every vertex genuinely stands at the object's average height; a whole
+            // region's edge reporting it means the height field is too small.
+            stats?.let { it[2]++ }
+            return null
+        }
+        return displaced
     }
 
     private fun registerDisplacedModels(
         objects: List<ObjectInstance>,
+        meshDataById: Map<Int, List<MeshData>>,
         terrainTiles: Array<Array<Array<TerrainLoader.TileData>>>,
-        regionX: Int,
-        regionY: Int
+        neighbors: TerrainLoader.NeighborData?
     ) {
         val im = instanceManager ?: return
-        for (obj in objects) {
-            if (!VertexDisplacer.needsDisplacement(obj.groundContourType, obj.groundContourModifier)) continue
+        if (objects.isEmpty()) return
 
-            val baseMeshDataList = if (obj.modifications.hasModifications()) {
-                ModelLoader.createCombinedMeshDataListWithModifications(cache, obj.modelIds, obj.modifications)
-            } else {
-                ModelLoader.createCombinedMeshDataList(cache, obj.modelIds)
-            }
-            if (baseMeshDataList == null || baseMeshDataList.isEmpty()) continue
+        val displaceStart = System.nanoTime()
 
-            val displacedMeshDataList = mutableListOf<MeshData>()
-            var anyDisplaced = false
+        // CPU displacement is chunked over the object list. Each worker fills its own
+        // map; merging in chunk order keeps object indices ascending, so the displaced
+        // id assignment below matches the old serial loop exactly.
+        val chunkResults = runBlocking {
+            displaceChunked(objects, meshDataById, terrainTiles, neighbors)
+        }
+        RegionLoadProfiler.record(RegionLoadProfiler.PHASE_CENTER_DISPLACE, System.nanoTime() - displaceStart)
 
-            for (meshData in baseMeshDataList) {
-                val displaced = VertexDisplacer.displaceVertices(
-                    meshData = meshData,
-                    sceneX = obj.rsSceneX,
-                    sceneY = obj.rsSceneY,
-                    averageHeight = obj.rsAverageHeight,
-                    plane = obj.mapObject.level,
-                    tiles = terrainTiles,
-                    regionBaseX = regionX * 64,
-                    regionBaseY = regionY * 64,
-                    rsRotation = obj.mapObject.rotation,
-                    mirrored = obj.mirrored,
-                    resizeX = obj.definition.modelSizeX,
-                    resizeY = obj.definition.modelSizeZ,
-                    resizeZ = obj.definition.modelSizeY,
-                    rsOffsetX = obj.definition.offsetX,
-                    rsOffsetZ = obj.definition.offsetY
-                )
-
-                if (displaced != null) {
-                    displacedMeshDataList.add(displaced)
-                    anyDisplaced = true
-                } else {
-                    displacedMeshDataList.add(meshData)
-                }
-            }
-
-            if (anyDisplaced) {
+        // GPU registration stays on this thread, in ascending object order.
+        val registerStart = System.nanoTime()
+        for (chunk in chunkResults) {
+            for ((objIndex, displacedMeshDataList) in chunk) {
+                val obj = objects[objIndex]
                 val displacedId = nextDisplacedId++
-                im.registerModel(displacedId, displacedMeshDataList, maxInstances = 4)
+                // A displaced mesh already belongs to exactly one object, so a mirrored
+                // one can carry its winding flip directly rather than needing a variant.
+                val meshes = if (obj.mirrored) displacedMeshDataList.withReversedWinding()
+                else displacedMeshDataList
+                im.registerModel(displacedId, meshes, maxInstances = 4)
                 registeredModels.add(displacedId)
                 displacedModels[obj] = displacedId
+                centerModelMeshDataInternal[displacedId] = meshes
             }
         }
+        RegionLoadProfiler.record(RegionLoadProfiler.PHASE_CENTER_REGISTER, System.nanoTime() - registerStart)
     }
 
     // ========================================================================
@@ -653,10 +918,10 @@ class RegionManager(
                             regionX = rx,
                             regionY = ry,
                             tileHeights = { localX, localY, p ->
-                                TerrainLoader.getTileHeightScaled(ctxTiles, localX, localY, p)
+                                TerrainLoader.getExtendedTileHeightScaled(ctxTiles, ctxNeighbors, p, localX, localY)
                             },
                             rsHeightSampler = { localX, localY, p ->
-                                TerrainLoader.getTileHeight(ctxTiles, localX, localY, p)
+                                TerrainLoader.getExtendedTileHeight(ctxTiles, ctxNeighbors, p, localX, localY)
                             }
                         )
 
@@ -703,43 +968,10 @@ class RegionManager(
                         // Compute vertex displacement for contourType 1 objects.
                         // Key by list index (not identityHashCode) to avoid hash collisions
                         // that would cause wrong displaced meshes to be used.
+                        val ctxField = VertexDisplacer.HeightField.from(ctxTiles, ctxNeighbors)
                         for ((objIndex, obj) in ctxObjectInstances.withIndex()) {
-                            if (!VertexDisplacer.needsDisplacement(obj.groundContourType, obj.groundContourModifier)) continue
-
-                            val baseMeshDataList = allModelMeshData[obj.cachedCombinedModelId] ?: continue
-                            val displaced = mutableListOf<MeshData>()
-                            var anyDisplaced = false
-
-                            for (meshData in baseMeshDataList) {
-                                val displacedMesh = VertexDisplacer.displaceVertices(
-                                    meshData = meshData,
-                                    sceneX = obj.rsSceneX,
-                                    sceneY = obj.rsSceneY,
-                                    averageHeight = obj.rsAverageHeight,
-                                    plane = obj.mapObject.level,
-                                    tiles = ctxTiles,
-                                    regionBaseX = rx * 64,
-                                    regionBaseY = ry * 64,
-                                    rsRotation = obj.mapObject.rotation,
-                                    mirrored = obj.mirrored,
-                                    resizeX = obj.definition.modelSizeX,
-                                    resizeY = obj.definition.modelSizeZ,
-                                    resizeZ = obj.definition.modelSizeY,
-                                    rsOffsetX = obj.definition.offsetX,
-                                    rsOffsetZ = obj.definition.offsetY
-                                )
-
-                                if (displacedMesh != null) {
-                                    displaced.add(displacedMesh)
-                                    anyDisplaced = true
-                                } else {
-                                    displaced.add(meshData)
-                                }
-                            }
-
-                            if (anyDisplaced) {
-                                displacedMeshData[objIndex] = displaced
-                            }
+                            val displaced = displaceObject(obj, allModelMeshData, ctxField) ?: continue
+                            displacedMeshData[objIndex] = displaced
                         }
                     }
 

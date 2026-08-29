@@ -2,7 +2,7 @@ package org.darkan.world.server.packet
 
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.events.InputHSLEvent
-import org.darkan.core.net.prot.ResumeHSLDialog
+import org.darkan.core.net.prot.packet.ResumeHSLDialog
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class ResumeHSLDialogHandler : PacketHandler<Player, ResumeHSLDialog> {

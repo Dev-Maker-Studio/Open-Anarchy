@@ -19,10 +19,11 @@ import org.darkan.core.crypt.Crypto
 import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.generateRandom24ByteArray
 import org.darkan.core.model.MachineInformation
+import org.darkan.core.model.Account
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.*
 import org.darkan.core.net.prot.Codec
-import org.darkan.core.net.prot.UpdateUid192
+import org.darkan.core.net.prot.packet.UpdateUid192
 import org.darkan.lobby.Lobby
 import org.darkan.lobby.web.model.AccountCreationSession
 import org.darkan.lobby.web.model.LobbyPlayer
@@ -175,47 +176,76 @@ class LobbyServer(val js5: JS5Server) {
         }
 
         if (!pendingLogins.add(username)) return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
-        val account = Accounts.find(username) ?: return run {
+        // Whatever happens below, the username must not stay in pendingLogins - a throwing decode
+        // used to leave it there for good and lock the account out until restart.
+        val account = try {
+            authenticate(username, password, output) ?: return
+        } finally {
             pendingLogins.remove(username)
-            logInfo("Account not found: $username")
-            output.finish(ResponseOpcode.INVALID_CREDENTIALS)
-        }
-        if (!account.passwordHash.isEmpty()) {
-            if (!Crypto.verifyPasswordArgon2(password, account.passwordHash))
-                return run {
-                    logInfo("Invalid argon password hash for found: $username")
-                    pendingLogins.remove(username)
-                    output.finish(ResponseOpcode.INVALID_CREDENTIALS)
-                }
-        } else if (account.password != null) {
-            if (!Crypto.legacyCompare(password, account.password!!.map { it.toByte() }.toByteArray()))
-                return run {
-                    logInfo("Invalid legacy password hash for found: $username")
-                    pendingLogins.remove(username)
-                    output.finish(ResponseOpcode.INVALID_CREDENTIALS)
-                }
-            account.passwordHash = Crypto.hashPasswordArgon2(password)
-            account.password = null
-            Accounts.save(account)
-        } else if (account.legacyPass != null) {
-            if (!Crypto.gigaLegacyCompare(password, account.legacyPass!!))
-                return run {
-                    logInfo("Invalid giga legacy password hash for found: $username")
-                    pendingLogins.remove(username)
-                    output.finish(ResponseOpcode.INVALID_CREDENTIALS)
-                }
-            account.passwordHash = Crypto.hashPasswordArgon2(password)
-            account.legacyPass = null
-            Accounts.save(account)
         }
 
         logInfo("Logging in $username")
-        pendingLogins.remove(username)
         val session = initSession(output, isaacKeys, ip, codec)
         val lobbyPlayer = LobbyPlayer(session, account)
         Lobby.addLobbyPlayer(lobbyPlayer)
         session.onDisconnected { Lobby.removeLobbyPlayer(username) }
         lobbyPlayer.login(input)
+    }
+
+    /**
+     * Resolves and verifies the account for a login attempt. Returns null after writing the
+     * response when the login must be refused. Argon2 is authoritative; the older SHA-1/AES
+     * credentials are only consulted until the account has been upgraded by a successful login.
+     */
+    private suspend fun authenticate(username: String, password: String, output: ByteWriteChannel): Account? {
+        val account = try {
+            Accounts.find(username)
+        } catch (e: Exception) {
+            logError("Failed to load account $username", e)
+            output.finish(ResponseOpcode.COULD_NOT_COMPLETE_LOGIN)
+            return null
+        }
+        if (account == null) {
+            logInfo("Account not found: $username")
+            output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+            return null
+        }
+        if (Crypto.isArgon2Hash(account.passwordHash)) {
+            if (!Crypto.verifyPasswordArgon2(password, account.passwordHash)) {
+                logInfo("Invalid argon password hash for found: $username")
+                output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+                return null
+            }
+            //Drop any AES/SHA-1 credential left behind by an earlier upgrade
+            if (account.password != null || account.legacyPass != null) {
+                account.password = null
+                account.legacyPass = null
+                Accounts.save(account)
+            }
+        } else if (account.password != null) {
+            if (!Crypto.legacyCompare(password, account.password!!.map { it.toByte() }.toByteArray())) {
+                logInfo("Invalid legacy password hash for found: $username")
+                output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+                return null
+            }
+            account.passwordHash = Crypto.hashPasswordArgon2(password)
+            account.password = null
+            Accounts.save(account)
+        } else if (account.legacyPass != null) {
+            if (!Crypto.gigaLegacyCompare(password, account.legacyPass!!)) {
+                logInfo("Invalid giga legacy password hash for found: $username")
+                output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+                return null
+            }
+            account.passwordHash = Crypto.hashPasswordArgon2(password)
+            account.legacyPass = null
+            Accounts.save(account)
+        } else {
+            logInfo("Account has no usable credential: $username")
+            output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+            return null
+        }
+        return account
     }
 
     private suspend fun initAccountCreation(input: ByteReadChannel, output: ByteWriteChannel, ip: String) {

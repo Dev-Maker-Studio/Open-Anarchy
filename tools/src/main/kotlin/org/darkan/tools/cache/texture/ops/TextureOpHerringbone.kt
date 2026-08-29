@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -15,9 +14,9 @@ class TextureOpHerringbone : TextureOperation(0, true) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            for (x in 0 until TextureRaster.currentWidth) {
-                val horizontalPos = TextureRaster.horizontalTable!![x]
-                val verticalPos = TextureRaster.verticalTable!![y]
+            for (x in 0 until currentWidth) {
+                val horizontalPos = horizontalTable[x]
+                val verticalPos = verticalTable[y]
                 var tileX = horizontalPos * scaleX shr 12
                 val tileY = verticalPos * scaleY shr 12
                 val offsetX = horizontalPos % (4096 / scaleX) * scaleX

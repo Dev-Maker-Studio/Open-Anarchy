@@ -20,6 +20,7 @@ import com.rs.game.model.entity.player.Player;
 import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
+import static com.rs.engine.variables.VarBitPlayer.sc_points;
 
 @PluginEventHandler
 public class StealingCreationShop {
@@ -100,6 +101,6 @@ public class StealingCreationShop {
 	}
 
 	private static void refresh(Player player) {
-		player.getVars().setVarBit(5505, player.scPoints);
+		player.getVars().setVarBit(sc_points, player.scPoints);
 	}
 }

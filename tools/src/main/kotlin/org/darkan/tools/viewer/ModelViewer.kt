@@ -1,5 +1,7 @@
 package org.darkan.tools.viewer
 
+import imgui.ImGui
+import imgui.flag.ImGuiWindowFlags
 import org.darkan.tools.cache.model.ModelDefinition
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.model.TexturedModel
@@ -11,6 +13,7 @@ import org.darkan.tools.engine.window.WindowConfig
 import org.darkan.tools.ui.AssetBrowser
 import org.darkan.tools.ui.DebugPanel
 import org.darkan.tools.ui.ImGuiLayer
+import org.darkan.tools.ui.ImGuiText
 import org.darkan.tools.util.ColorUtil
 import org.darkan.tools.util.CoordinateUtil
 import org.joml.Matrix4f
@@ -437,10 +440,14 @@ class ModelViewer(
             node.mesh?.render()
         }
 
-        // Render untextured faces
+        // Render untextured faces. RS model geometry is single-sided (see
+        // RenderSystem.enableModelCullFace); the grid above is not, so cull only here.
         modelNode?.let { node ->
+            renderSystem.enableModelCullFace()
             colorShader.setUniform("model", node.getModelMatrix())
             node.mesh?.render()
+            renderSystem.disableCullFace()
+            renderSystem.resetFrontFace()
         }
 
         colorShader.unbind()
@@ -449,8 +456,8 @@ class ModelViewer(
         // Pass 1: Opaque materials (no blending, depth write ON)
         // Pass 2: Transparent materials (alpha blending, depth write OFF but depth test ON)
         if (texturedModelNodes.isNotEmpty() && currentTexturedModel != null) {
-            // Disable face culling - RS models often have two-sided faces
-            renderSystem.disableCullFace()
+            // RS models are single-sided; the client back-face culls them.
+            renderSystem.enableModelCullFace()
 
             texturedShader.bind()
             texturedShader.setUniform("view", viewMatrix)
@@ -497,6 +504,7 @@ class ModelViewer(
             renderSystem.disableBlending()
             TextureLoader.unbindTexture()
             texturedShader.unbind()
+            renderSystem.resetFrontFace()
             renderSystem.enableCullFace()
         }
 
@@ -533,55 +541,55 @@ class ModelViewer(
     private fun renderFacePickerPanel() {
         // Set size constraints: min width 340, max height 80% of screen
         val maxHeight = window.height * 0.8f
-        imgui.ImGui.setNextWindowSizeConstraints(340f, 150f, 450f, maxHeight)
+        ImGui.setNextWindowSizeConstraints(340f, 150f, 450f, maxHeight)
 
         // Only set initial position on first frame
         if (facePickerFirstFrame) {
-            imgui.ImGui.setNextWindowPos(imgui.ImGui.getIO().displaySizeX - 350f, 10f)
+            ImGui.setNextWindowPos(ImGui.getIO().displaySizeX - 350f, 10f)
             facePickerFirstFrame = false
         }
 
         // Allow moving and resizing, scrollbar appears automatically when needed
-        val flags = imgui.flag.ImGuiWindowFlags.None
-        if (imgui.ImGui.begin("Face Picker (F4)", flags)) {
+        val flags = ImGuiWindowFlags.None
+        if (ImGui.begin("Face Picker (F4)", flags)) {
             // Clamp window position to stay on screen
             clampWindowToScreen()
-            imgui.ImGui.text("Left-click to select face")
-            imgui.ImGui.text("Middle-click to clear selection")
-            imgui.ImGui.separator()
+            ImGui.text("Left-click to select face")
+            ImGui.text("Middle-click to clear selection")
+            ImGui.separator()
 
             val info = selectedFaceInfo
             if (info != null) {
-                imgui.ImGui.textColored(0f, 1f, 0f, 1f, "Face #${info.faceIndex}")
-                imgui.ImGui.separator()
+                ImGuiText.coloured(0f, 1f, 0f, 1f, "Face #${info.faceIndex}")
+                ImGui.separator()
 
                 // Vertex indices
-                imgui.ImGui.text("Vertex Indices:")
-                imgui.ImGui.bulletText("A: ${info.vertexA}")
-                imgui.ImGui.bulletText("B: ${info.vertexB}")
-                imgui.ImGui.bulletText("C: ${info.vertexC}")
+                ImGui.text("Vertex Indices:")
+                ImGuiText.bullet("A: ${info.vertexA}")
+                ImGuiText.bullet("B: ${info.vertexB}")
+                ImGuiText.bullet("C: ${info.vertexC}")
 
-                imgui.ImGui.separator()
+                ImGui.separator()
 
                 // Positions (OpenGL space)
-                imgui.ImGui.text("Positions (GL):")
-                imgui.ImGui.bulletText("A: (%.2f, %.2f, %.2f)".format(info.posA.x, info.posA.y, info.posA.z))
-                imgui.ImGui.bulletText("B: (%.2f, %.2f, %.2f)".format(info.posB.x, info.posB.y, info.posB.z))
-                imgui.ImGui.bulletText("C: (%.2f, %.2f, %.2f)".format(info.posC.x, info.posC.y, info.posC.z))
+                ImGui.text("Positions (GL):")
+                ImGuiText.bullet("A: (%.2f, %.2f, %.2f)".format(info.posA.x, info.posA.y, info.posA.z))
+                ImGuiText.bullet("B: (%.2f, %.2f, %.2f)".format(info.posB.x, info.posB.y, info.posB.z))
+                ImGuiText.bullet("C: (%.2f, %.2f, %.2f)".format(info.posC.x, info.posC.y, info.posC.z))
 
-                imgui.ImGui.separator()
+                ImGui.separator()
 
                 // Color info
-                imgui.ImGui.text("Color:")
-                imgui.ImGui.bulletText("HSL Raw: ${info.hslColor} (0x${info.hslColor.toString(16).uppercase()})")
+                ImGui.text("Color:")
+                ImGuiText.bullet("HSL Raw: ${info.hslColor} (0x${info.hslColor.toString(16).uppercase()})")
 
                 // Decode HSL components
                 val hue = (info.hslColor shr 10) and 0x3f
                 val sat = (info.hslColor shr 7) and 0x7
                 val light = info.hslColor and 0x7f
-                imgui.ImGui.bulletText("H: $hue  S: $sat  L: $light")
+                ImGuiText.bullet("H: $hue  S: $sat  L: $light")
 
-                imgui.ImGui.bulletText("RGB: (%.2f, %.2f, %.2f)".format(info.rgbColor.x, info.rgbColor.y, info.rgbColor.z))
+                ImGuiText.bullet("RGB: (%.2f, %.2f, %.2f)".format(info.rgbColor.x, info.rgbColor.y, info.rgbColor.z))
 
                 // Show color swatch
                 val rgb255 = intArrayOf(
@@ -589,80 +597,80 @@ class ModelViewer(
                     (info.rgbColor.y * 255).toInt(),
                     (info.rgbColor.z * 255).toInt()
                 )
-                imgui.ImGui.bulletText("RGB255: (${rgb255[0]}, ${rgb255[1]}, ${rgb255[2]})")
+                ImGuiText.bullet("RGB255: (${rgb255[0]}, ${rgb255[1]}, ${rgb255[2]})")
 
-                imgui.ImGui.separator()
+                ImGui.separator()
 
                 // Texture info
-                imgui.ImGui.text("Texture:")
+                ImGui.text("Texture:")
                 if (info.textureId >= 0) {
-                    imgui.ImGui.textColored(1f, 1f, 0f, 1f, "Texture ID: ${info.textureId}")
+                    ImGuiText.coloured(1f, 1f, 0f, 1f, "Texture ID: ${info.textureId}")
                 } else {
-                    imgui.ImGui.text("No texture (untextured face)")
+                    ImGui.text("No texture (untextured face)")
                 }
 
-                imgui.ImGui.separator()
+                ImGui.separator()
 
                 // Other face properties
-                imgui.ImGui.text("Properties:")
-                imgui.ImGui.bulletText("Alpha: ${info.alpha}")
-                imgui.ImGui.bulletText("Render Type: ${info.renderType}")
-                imgui.ImGui.bulletText("Priority: ${info.priority}")
+                ImGui.text("Properties:")
+                ImGuiText.bullet("Alpha: ${info.alpha}")
+                ImGuiText.bullet("Render Type: ${info.renderType}")
+                ImGuiText.bullet("Priority: ${info.priority}")
 
                 // UV coordinates
                 if (info.uvA != null || info.uvB != null || info.uvC != null) {
-                    imgui.ImGui.separator()
-                    imgui.ImGui.text("UV Coordinates:")
-                    info.uvA?.let { imgui.ImGui.bulletText("A: (%.4f, %.4f)".format(it.first, it.second)) }
-                    info.uvB?.let { imgui.ImGui.bulletText("B: (%.4f, %.4f)".format(it.first, it.second)) }
-                    info.uvC?.let { imgui.ImGui.bulletText("C: (%.4f, %.4f)".format(it.first, it.second)) }
+                    ImGui.separator()
+                    ImGui.text("UV Coordinates:")
+                    info.uvA?.let { ImGuiText.bullet("A: (%.4f, %.4f)".format(it.first, it.second)) }
+                    info.uvB?.let { ImGuiText.bullet("B: (%.4f, %.4f)".format(it.first, it.second)) }
+                    info.uvC?.let { ImGuiText.bullet("C: (%.4f, %.4f)".format(it.first, it.second)) }
                 }
 
-                imgui.ImGui.separator()
+                ImGui.separator()
 
                 // Copy button for easy sharing
-                if (imgui.ImGui.button("Copy Face Info")) {
+                if (ImGui.button("Copy Face Info")) {
                     // Face info is displayed in the panel - clipboard copy would require GLFW integration
                 }
             } else {
-                imgui.ImGui.textColored(0.5f, 0.5f, 0.5f, 1f, "No face selected")
-                imgui.ImGui.text("Click on the model to select a face")
+                ImGuiText.coloured(0.5f, 0.5f, 0.5f, 1f, "No face selected")
+                ImGui.text("Click on the model to select a face")
             }
         }
-        imgui.ImGui.end()
+        ImGui.end()
     }
 
     private fun renderModelInfo() {
         if (currentModelId < 0) return
 
-        imgui.ImGui.setNextWindowPos(10f, imgui.ImGui.getIO().displaySizeY - 200f)
-        imgui.ImGui.setNextWindowSize(280f, 0f)
+        ImGui.setNextWindowPos(10f, ImGui.getIO().displaySizeY - 200f)
+        ImGui.setNextWindowSize(280f, 0f)
 
-        if (imgui.ImGui.begin("Model Info", imgui.flag.ImGuiWindowFlags.NoMove or imgui.flag.ImGuiWindowFlags.NoResize)) {
-            imgui.ImGui.text("Model ID: $currentModelId")
+        if (ImGui.begin("Model Info", ImGuiWindowFlags.NoMove or ImGuiWindowFlags.NoResize)) {
+            ImGui.text("Model ID: $currentModelId")
 
             val def = ModelLoader.getCachedDefinition(currentModelId)
             if (def != null) {
-                imgui.ImGui.text("Vertices: ${def.vertexCount}")
-                imgui.ImGui.text("Faces: ${def.faceCount}")
+                ImGui.text("Vertices: ${def.vertexCount}")
+                ImGui.text("Faces: ${def.faceCount}")
             }
 
             // Texture info
             currentTexturedModel?.let { model ->
-                imgui.ImGui.separator()
-                imgui.ImGui.text("Textures: ${if (model.hasTextures) "Yes" else "No"}")
+                ImGui.separator()
+                ImGui.text("Textures: ${if (model.hasTextures) "Yes" else "No"}")
                 if (model.textureBatches.isNotEmpty()) {
-                    imgui.ImGui.text("Texture batches: ${model.textureBatches.size}")
+                    ImGui.text("Texture batches: ${model.textureBatches.size}")
                     model.textureBatches.forEach { batch ->
-                        imgui.ImGui.bulletText("Material ${batch.textureId}: ${batch.mesh.vertexCount} verts")
+                        ImGuiText.bullet("Material ${batch.textureId}: ${batch.mesh.vertexCount} verts")
                     }
                 }
             }
 
             // Raw face texture data from model definition
             if (def != null && def.faceTextures != null) {
-                imgui.ImGui.separator()
-                imgui.ImGui.text("Raw faceTextures (first 20):")
+                ImGui.separator()
+                ImGui.text("Raw faceTextures (first 20):")
                 val uniqueTextures = mutableSetOf<Int>()
                 for (i in 0 until minOf(def.faceCount, def.faceTextures!!.size)) {
                     val rawTex = def.faceTextures!![i].toInt() and 0xFFFF
@@ -670,19 +678,19 @@ class ModelViewer(
                         uniqueTextures.add(rawTex)
                     }
                 }
-                imgui.ImGui.text("Unique texture IDs: ${uniqueTextures.sorted()}")
+                ImGui.text("Unique texture IDs: ${uniqueTextures.sorted()}")
             }
 
-            imgui.ImGui.separator()
-            if (imgui.ImGui.checkbox("Auto-Rotate (R)", autoRotate)) {
+            ImGui.separator()
+            if (ImGui.checkbox("Auto-Rotate (R)", autoRotate)) {
                 autoRotate = !autoRotate
             }
 
-            imgui.ImGui.separator()
-            imgui.ImGui.text("Navigation: < > or , .")
-            imgui.ImGui.text("Face Picker: F4")
+            ImGui.separator()
+            ImGui.text("Navigation: < > or , .")
+            ImGui.text("Face Picker: F4")
         }
-        imgui.ImGui.end()
+        ImGui.end()
     }
 
     /**
@@ -690,8 +698,8 @@ class ModelViewer(
      * Call this inside ImGui.begin() block.
      */
     private fun clampWindowToScreen() {
-        val pos = imgui.ImGui.getWindowPos()
-        val size = imgui.ImGui.getWindowSize()
+        val pos = ImGui.getWindowPos()
+        val size = ImGui.getWindowSize()
         val screenWidth = window.width.toFloat()
         val screenHeight = window.height.toFloat()
 
@@ -707,7 +715,7 @@ class ModelViewer(
         if (newY > screenHeight - 50f) newY = screenHeight - 50f
 
         if (newX != pos.x || newY != pos.y) {
-            imgui.ImGui.setWindowPos(newX, newY)
+            ImGui.setWindowPos(newX, newY)
         }
     }
 

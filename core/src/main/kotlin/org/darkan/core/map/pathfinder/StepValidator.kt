@@ -46,7 +46,10 @@ public class StepValidator(private val flags: Array<IntArray?>) {
 
     @Suppress("NOTHING_TO_INLINE")
     private inline operator fun Array<IntArray?>.get(x: Int, y: Int, level: Int): Int {
-        val zone = this[getZoneIndex(x, y, level)] ?: return -1
+        // Coordinates off the map (x or y below 0) pack to a negative zone index; treat them as fully blocked.
+        val zoneIndex = getZoneIndex(x, y, level)
+        if (zoneIndex < 0 || zoneIndex >= size) return -1
+        val zone = this[zoneIndex] ?: return -1
         return zone[getIndexInZone(x, y)]
     }
 

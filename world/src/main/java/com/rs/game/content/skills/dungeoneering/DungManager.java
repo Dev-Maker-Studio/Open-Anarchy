@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import static com.rs.engine.variables.VarBitPlayer.rand_kinship_ring_inuse;
 
 @PluginEventHandler
 public class DungManager {
@@ -274,7 +275,7 @@ public class DungManager {
 	public void refreshKinship() {
 		for (KinshipPerk p : KinshipPerk.values())
 			player.getVars().setVarBit(p.getVarbit(), getKinshipTier(p));
-		player.getVars().setVarBit(8065, activeRingPerk == null ? 0 : activeRingPerk.ordinal() + 1);
+		player.getVars().setVarBit(rand_kinship_ring_inuse, activeRingPerk == null ? 0 : activeRingPerk.ordinal() + 1);
 		if (player.getInterfaceManager().topOpen(993))
 			player.getPackets().sendRunScript(3494, switch(player.getTempAttribs().getI("kinshipTab", 0)) {
                 case 1 -> Utils.toInterfaceHash(993, 227);

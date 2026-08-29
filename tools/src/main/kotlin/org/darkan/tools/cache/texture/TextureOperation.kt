@@ -32,6 +32,67 @@ abstract class TextureOperation(
     /** Child operations that provide input to this operation */
     val operations: Array<TextureOperation?> = arrayOfNulls(childCount)
 
+    // ---------------------------------------------------------------------------------
+    // Per-generation raster state.
+    //
+    // These used to be singleton fields on TextureRaster, reassigned for every texture
+    // generation. A TextureType (and therefore its whole operation DAG) is constructed
+    // fresh per generation, so holding the state here confines it to the generation that
+    // owns it: two threads rasterising different sizes can no longer clobber each other.
+    //
+    // They are flat copies of the values in the bound RasterContext rather than a
+    // reference to it, so a read inside a per-pixel loop remains a single field access -
+    // exactly what it cost when these were statics.
+    // ---------------------------------------------------------------------------------
+
+    /** Current texture width */
+    @JvmField
+    protected var currentWidth: Int = 0
+
+    /** Current texture height */
+    @JvmField
+    protected var currentHeight: Int = 0
+
+    /** Width - 1, used for wrapping */
+    @JvmField
+    protected var rowEnd: Int = 0
+
+    /** Height - 1, used for wrapping */
+    @JvmField
+    protected var columnEnd: Int = 0
+
+    /** Width * 32, used for emboss calculations */
+    @JvmField
+    protected var widthScale: Int = 0
+
+    /** Precomputed horizontal texture coordinate mapping table */
+    @JvmField
+    protected var horizontalTable: IntArray = EMPTY_TABLE
+
+    /** Precomputed vertical texture coordinate mapping table */
+    @JvmField
+    protected var verticalTable: IntArray = EMPTY_TABLE
+
+    /** Absolute [System.nanoTime] deadline for the enclosing generation, or 0 for none. */
+    @JvmField
+    protected var deadlineNanos: Long = 0L
+
+    /**
+     * Bind the raster dimensions and generation deadline for the generation this
+     * operation is about to take part in. Must be called before [createImageCache],
+     * which propagates the deadline into the row caches.
+     */
+    fun bindRaster(raster: RasterContext, deadlineNanos: Long) {
+        currentWidth = raster.currentWidth
+        currentHeight = raster.currentHeight
+        rowEnd = raster.rowEnd
+        columnEnd = raster.columnEnd
+        widthScale = raster.widthScale
+        horizontalTable = raster.horizontalTable
+        verticalTable = raster.verticalTable
+        this.deadlineNanos = deadlineNanos
+    }
+
     /**
      * Creates the image cache with the specified dimensions.
      *
@@ -41,9 +102,9 @@ abstract class TextureOperation(
     open fun createImageCache(width: Int, height: Int) {
         val capacity = if (imageCacheCapacity == 255) height else imageCacheCapacity
         if (monochrome) {
-            monochromeImageCache = MonochromeImageCache(capacity, height, width)
+            monochromeImageCache = MonochromeImageCache(capacity, height, width, deadlineNanos)
         } else {
-            colorImageCache = ColorImageCache(capacity, height, width)
+            colorImageCache = ColorImageCache(capacity, height, width, deadlineNanos)
         }
     }
 
@@ -144,6 +205,11 @@ abstract class TextureOperation(
         } else {
             colorImageCache.clear()
         }
+    }
+
+    companion object {
+        /** Placeholder for the coordinate tables before a raster context is bound. */
+        private val EMPTY_TABLE = IntArray(0)
     }
 }
 

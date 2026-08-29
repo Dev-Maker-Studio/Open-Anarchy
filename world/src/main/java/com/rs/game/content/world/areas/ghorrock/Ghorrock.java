@@ -21,6 +21,7 @@ import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.LoginHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
+import static com.rs.engine.variables.VarBitPlayer.mah1_canoe_state;
 
 @PluginEventHandler
 public class Ghorrock {
@@ -42,7 +43,7 @@ public class Ghorrock {
 			e.getPlayer().tele(e.getPlayer().transform(e.getObj().getRotation() == 3 ? -0 : e.getObj().getRotation() == 0 ? 1 : 0, e.getObj().getRotation() == 3 ? 0 : e.getObj().getRotation() == 0 ? 4 : 0, -1));
 	});
 	public static ObjectClickHandler handleGhorrockstairsuponly = new ObjectClickHandler(new Object[] { 47143 }, e -> e.getPlayer().tele(Tile.of(2921, 3931, 1)));
-	public static LoginHandler makeghorrockcanoe = new LoginHandler(e -> e.getPlayer().getVars().setVarBit(6075, 1));
+	public static LoginHandler makeghorrockcanoe = new LoginHandler(e -> e.getPlayer().getVars().setVarBit(mah1_canoe_state, 1));
 	public static ObjectClickHandler handlecanoetoghorrock = new ObjectClickHandler(new Object[] { 42886 }, e -> {
 		if (e.getPlayer().isQuestComplete(Quest.TALE_OF_MUSPAH)) {
 		e.getPlayer().tele(Tile.of(2856, 3933, 0));

@@ -23,6 +23,10 @@ import com.rs.plugin.handlers.ButtonClickHandler;
 
 import java.util.ArrayList;
 import java.util.List;
+import static com.rs.engine.variables.VarPlayer.notes_colours_base0;
+import static com.rs.engine.variables.VarPlayer.notes_colours_base1;
+import static com.rs.engine.variables.VarPlayer.notes_loaded;
+import static com.rs.engine.variables.VarPlayer.notes_selected;
 
 @PluginEventHandler
 public final class Notes {
@@ -83,16 +87,16 @@ public final class Notes {
 				.enableDrag());
 		player.getPackets().setIFHidden(34, 3, false);
 		player.getPackets().setIFHidden(34, 44, false);
-		player.getVars().setVar(1437, 1); // unlocks add notes
-		player.getVars().setVar(1439, -1);
+		player.getVars().setVar(notes_loaded, 1); // unlocks add notes
+		player.getVars().setVar(notes_selected, -1);
 		refresh();
 	}
 
 	private void refresh() {
 		for (int i = 0; i < 30; i++)
 			player.getPackets().sendVarcString(149 + i, notes.size() <= i ? "" : notes.get(i).text);
-		player.getVars().setVar(1440, getPrimaryColour(this));
-		player.getVars().setVar(1441, getSecondaryColour(this));
+		player.getVars().setVar(notes_colours_base0, getPrimaryColour(this));
+		player.getVars().setVar(notes_colours_base1, getSecondaryColour(this));
 	}
 
 	public int getCurrentNote() {
@@ -103,12 +107,12 @@ public final class Notes {
 		if (id >= 30)
 			return;
 		player.getTempAttribs().setI("CURRENT_NOTE", id);
-		player.getVars().setVar(1439, id);
+		player.getVars().setVar(notes_selected, id);
 	}
 
 	public void removeCurrentNote() {
 		player.getTempAttribs().removeI("CURRENT_NOTE");
-		player.getVars().setVar(1439, -1);
+		player.getVars().setVar(notes_selected, -1);
 	}
 
 	public boolean add(String text) {
@@ -144,9 +148,9 @@ public final class Notes {
 			return false;
 		notes.get(id).setColour(colour);
 		if (id < 16)
-			player.getVars().setVar(1440, getPrimaryColour(this));
+			player.getVars().setVar(notes_colours_base0, getPrimaryColour(this));
 		else
-			player.getVars().setVar(1441, getSecondaryColour(this));
+			player.getVars().setVar(notes_colours_base1, getSecondaryColour(this));
 		return true;
 	}
 

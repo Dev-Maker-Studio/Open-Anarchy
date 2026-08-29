@@ -2,7 +2,7 @@ package org.darkan.world.server.packet
 
 import com.rs.engine.command.Commands
 import com.rs.game.model.entity.player.Player
-import org.darkan.core.net.prot.Chat
+import org.darkan.core.net.prot.packet.Chat
 import org.darkan.core.net.prot.handler.PacketHandler
 import org.darkan.core.social.PublicChatMessage
 import org.darkan.world.server.WorldServer

@@ -1,6 +1,6 @@
 package com.rs.game.content.dnds.penguins
 
-import com.google.gson.Gson
+import org.darkan.core.JsonFileManager
 import com.rs.Settings
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
@@ -25,6 +25,8 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.time.temporal.WeekFields
+import com.rs.engine.variables.peng_spy_week_peng
+import com.rs.engine.variables.peng_spy_bear
 
 const val PENGUIN_POINTS = "PenguinPoints"
 const val MAX_PENGUIN_POINTS = 50
@@ -66,7 +68,7 @@ fun mapPenguinHideAndSeekInteractions() {
                     }
 
                     penguin.addSpotter(player.username)
-                    World.data.attribs.setO<String>(PENGUINS_WORLD_ATTR, Gson().toJson(penguins))
+                    World.data.attribs.setO<String>(PENGUINS_WORLD_ATTR, JsonFileManager.toJson(penguins))
                     player.incWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR, 1)
 
                     player.lock(3)
@@ -74,7 +76,7 @@ fun mapPenguinHideAndSeekInteractions() {
                     player.jingle(345)
                     player.incrementCount("Penguin Agents spied", 1)
 
-                    player.vars.saveVarBit(5276, player.getWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR))
+                    player.vars.saveVarBit(peng_spy_week_peng, player.getWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR))
 
                     player.sendMessage("You spy on the penguin.")
 
@@ -104,8 +106,8 @@ fun mapPenguinHideAndSeekInteractions() {
 
     // Polar bear interactions
     onLogin { (player) ->
-        player.vars.setVarBit(2045, polarBearManager.getCurrentLocationId())
-        player.vars.saveVarBit(5276, player.getWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR))
+        player.vars.setVarBit(peng_spy_bear, polarBearManager.getCurrentLocationId())
+        player.vars.saveVarBit(peng_spy_week_peng, player.getWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR))
     }
     onObjectClick(43094, 43095, 43096, 43097, 43098, 43099) { (player) ->
         if (player.get(UNLOCKED_PENGUIN_HAS) as Boolean) {
@@ -128,7 +130,7 @@ fun mapPenguinHideAndSeekInteractions() {
                             }
 
                             polarBear.addSpotter(player.username)
-                            World.data.attribs.setO<String>(POLAR_BEAR_WORLD_ATTR, Gson().toJson(polarBear))
+                            World.data.attribs.setO<String>(POLAR_BEAR_WORLD_ATTR, JsonFileManager.toJson(polarBear))
                             player.setWeeklyI(POLAR_BEAR_WEEKLY_ATTR, 1)
 
                             player.lock(5)

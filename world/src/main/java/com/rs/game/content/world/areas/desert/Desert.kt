@@ -10,6 +10,8 @@ import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 import com.rs.utils.shop.ShopsHandler
+import com.rs.engine.variables.apmeken_transport
+import com.rs.engine.variables.ics_ent_open
 
 
 enum class CarpetLocation(val npcId: Int, val tile: Tile) {
@@ -71,10 +73,10 @@ fun mapDesertInteractions() {
 
     // Monkey Colony Rug Merchant
     onLogin { (player) ->
-        player.vars.setVarBit(8628, 1)
-        player.vars.setVarBit(8628, 1)
-        player.vars.setVarBit(8628, 1)
-        player.vars.setVarBit(395, 1)
+        player.vars.setVarBit(apmeken_transport, 1)
+        player.vars.setVarBit(apmeken_transport, 1)
+        player.vars.setVarBit(apmeken_transport, 1)
+        player.vars.setVarBit(ics_ent_open, 1)
     }
 
     // Spirit Waterfall

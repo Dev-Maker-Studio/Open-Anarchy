@@ -2,6 +2,7 @@ package org.darkan.tools.cache.texture
 
 import org.darkan.tools.cache.texture.ops.*
 import world.gregs.voidps.buffer.read.BufferReader
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -118,14 +119,17 @@ class TextureType(data: ByteArray) {
 
     /**
      * Prepare texture operations by loading sprites and nested textures,
-     * creating image caches, and setting up brightness/dimensions.
+     * binding the raster dimensions, and creating image caches.
+     *
+     * The raster dimensions are bound onto the operations themselves rather than into a
+     * singleton, so a concurrent generation at another size cannot disturb this one.
      */
     private fun prepareOperations(
         width: Int,
         height: Int,
-        brightness: Double,
         spriteLoader: (Int) -> SpriteData?,
-        textureLoader: ((Int, Int, Int) -> IntArray?)? = null
+        textureLoader: ((Int, Int, Int) -> IntArray?)? = null,
+        deadlineNanos: Long = 0L
     ) {
         // Load required sprites
         for (operation in textureOperations) {
@@ -140,8 +144,7 @@ class TextureType(data: ByteArray) {
         // Load required nested textures
         if (textureLoader != null) {
             for (operation in textureOperations) {
-                if (TextureRaster.generationStartNanos != 0L &&
-                    System.nanoTime() - TextureRaster.generationStartNanos > TextureRaster.MAX_GENERATION_NANOS) {
+                if (deadlineNanos != 0L && System.nanoTime() > deadlineNanos) {
                     throw TextureGenerationException("Texture generation timeout during nested texture loading")
                 }
                 if (operation is TextureOpTexture && operation.getMaterialId() >= 0) {
@@ -159,14 +162,14 @@ class TextureType(data: ByteArray) {
             }
         }
 
-        // Create caches for all operations
+        // Bind the raster dimensions, then create caches for all operations.
+        // bindRaster must run first: createImageCache propagates the deadline into the
+        // row caches.
+        val raster = TextureRaster.context(width, height)
         for (operation in textureOperations) {
+            operation.bindRaster(raster, deadlineNanos)
             operation.createImageCache(width, height)
         }
-
-        // Set up brightness and dimensions
-        setBrightness(brightness)
-        TextureRaster.setDimensions(width, height)
     }
 
     /**
@@ -188,6 +191,7 @@ class TextureType(data: ByteArray) {
      * @param brightness The brightness/gamma value (typically 0.7)
      * @param spriteLoader Function to load sprite pixels by ID
      * @param textureLoader Optional function to load nested texture pixels by material ID
+     * @param deadlineNanos Absolute [System.nanoTime] deadline for this generation, or 0 for none
      * @return ARGB pixel array (width * height)
      */
     fun getPixelsArgb(
@@ -195,18 +199,19 @@ class TextureType(data: ByteArray) {
         height: Int,
         spriteLoader: (Int) -> SpriteData?,
         textureLoader: ((Int, Int, Int) -> IntArray?)? = null,
-        brightness: Double = 0.7
+        brightness: Double = 0.7,
+        deadlineNanos: Long = 0L
     ): IntArray {
-        prepareOperations(width, height, brightness, spriteLoader, textureLoader)
+        prepareOperations(width, height, spriteLoader, textureLoader, deadlineNanos)
 
         try {
             val pixels = IntArray(width * height)
             var pixelIndex = 0
+            val brightnessTable = brightnessTable(brightness)
 
             // Generate row by row
             for (row in 0 until height) {
-                if (TextureRaster.generationStartNanos != 0L &&
-                    System.nanoTime() - TextureRaster.generationStartNanos > TextureRaster.MAX_GENERATION_NANOS) {
+                if (deadlineNanos != 0L && System.nanoTime() > deadlineNanos) {
                     throw TextureGenerationException("Texture generation timeout at row $row")
                 }
 
@@ -243,9 +248,9 @@ class TextureType(data: ByteArray) {
                     var blue = (blueBuffer[x] shr 4).coerceIn(0, 255)
 
                     // Apply brightness curve
-                    red = BRIGHTNESS_TABLE[red]
-                    green = BRIGHTNESS_TABLE[green]
-                    blue = BRIGHTNESS_TABLE[blue]
+                    red = brightnessTable[red]
+                    green = brightnessTable[green]
+                    blue = brightnessTable[blue]
 
                     // Black pixels are always fully transparent.
                     // Non-black pixels use the opacity channel value.
@@ -276,6 +281,7 @@ class TextureType(data: ByteArray) {
      * @param brightness The brightness/gamma value (typically 0.7)
      * @param spriteLoader Function to load sprite pixels by ID
      * @param textureLoader Optional function to load nested texture pixels by material ID
+     * @param deadlineNanos Absolute [System.nanoTime] deadline for this generation, or 0 for none
      * @return ARGB pixel array (width * height) with alpha=255 for non-black, alpha=0 for black
      */
     fun getPixelsRgb(
@@ -283,18 +289,19 @@ class TextureType(data: ByteArray) {
         height: Int,
         spriteLoader: (Int) -> SpriteData?,
         textureLoader: ((Int, Int, Int) -> IntArray?)? = null,
-        brightness: Double = 0.7
+        brightness: Double = 0.7,
+        deadlineNanos: Long = 0L
     ): IntArray {
-        prepareOperations(width, height, brightness, spriteLoader, textureLoader)
+        prepareOperations(width, height, spriteLoader, textureLoader, deadlineNanos)
 
         try {
             val pixels = IntArray(width * height)
             var pixelIndex = 0
+            val brightnessTable = brightnessTable(brightness)
 
             // Generate row by row
             for (row in 0 until height) {
-                if (TextureRaster.generationStartNanos != 0L &&
-                    System.nanoTime() - TextureRaster.generationStartNanos > TextureRaster.MAX_GENERATION_NANOS) {
+                if (deadlineNanos != 0L && System.nanoTime() > deadlineNanos) {
                     throw TextureGenerationException("Texture generation timeout at row $row")
                 }
 
@@ -324,9 +331,9 @@ class TextureType(data: ByteArray) {
                     var blue = (blueBuffer[x] shr 4).coerceIn(0, 255)
 
                     // Apply brightness curve
-                    red = BRIGHTNESS_TABLE[red]
-                    green = BRIGHTNESS_TABLE[green]
-                    blue = BRIGHTNESS_TABLE[blue]
+                    red = brightnessTable[red]
+                    green = brightnessTable[green]
+                    blue = brightnessTable[blue]
 
                     // Opaque path: alpha=255 for non-black, alpha=0 for black
                     val pixel = blue + (green shl 8) + (red shl 16)
@@ -345,24 +352,31 @@ class TextureType(data: ByteArray) {
     }
 
     companion object {
-        /** Brightness lookup table for gamma correction */
-        val BRIGHTNESS_TABLE = IntArray(256)
-
-        private var currentBrightness = -1.0
+        /**
+         * Gamma correction tables, interned per brightness value.
+         *
+         * This used to be a single shared table rebuilt whenever the requested brightness
+         * changed. Nested materials generate at brightness 1.0 and top-level ones at 0.7,
+         * so two concurrent generations would repeatedly rebuild the table under each
+         * other and silently mis-grade each other's pixels. The tables are pure functions
+         * of the brightness, so interning them makes them safe to share.
+         */
+        private val brightnessTables = ConcurrentHashMap<Double, IntArray>()
 
         /**
-         * Set the brightness/gamma correction value.
+         * Get the gamma correction table for a brightness value, building it on first use.
+         * Callers hoist the result into a local so the per-pixel lookup stays an array read.
          *
-         * @param brightness The brightness value (typically 0.7)
+         * @param brightness The brightness value (typically 0.7, or 1.0 for nested textures)
          */
-        fun setBrightness(brightness: Double) {
-            if (brightness != currentBrightness) {
-                for (grade in 0..255) {
-                    val value = ((grade / 255.0).pow(brightness) * 255.0).toInt()
-                    BRIGHTNESS_TABLE[grade] = min(255, value)
-                }
-                currentBrightness = brightness
+        fun brightnessTable(brightness: Double): IntArray {
+            brightnessTables[brightness]?.let { return it }
+            val table = IntArray(256) { grade ->
+                min(255, ((grade / 255.0).pow(brightness) * 255.0).toInt())
             }
+            // putIfAbsent, not computeIfAbsent: a duplicate build is cheap and the first
+            // publication wins, so every caller at a given brightness sees one table.
+            return brightnessTables.putIfAbsent(brightness, table) ?: table
         }
 
         /**

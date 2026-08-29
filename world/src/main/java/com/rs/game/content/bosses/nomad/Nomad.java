@@ -34,6 +34,7 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCInstanceHandler;
 
 import java.util.ArrayList;
+import static com.rs.engine.variables.VarBitPlayer.nom_quest;
 
 @PluginEventHandler
 public class Nomad extends NPC {
@@ -93,7 +94,7 @@ public class Nomad extends NPC {
 	public void sendDeath(Entity source) {
 		if (throneTile != null) {
 			target.lock();
-			target.getVars().setVarBit(6962, 0);
+			target.getVars().setVarBit(nom_quest, 0);
 			target.npcDialogue(getId(), HeadE.ANGRY, "You...<br>You have doomed this world.");
 			target.voiceEffect(8260, false);
 			WorldTasks.schedule(new Task() {

@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -57,17 +56,17 @@ open class TextureOpSprite : TextureOperation(0, false) {
             val outputBlue = output[2]
 
             // Calculate source row with scaling
-            val srcY = if (spriteHeight != TextureRaster.currentHeight) {
-                spriteHeight * y / TextureRaster.currentHeight
+            val srcY = if (spriteHeight != currentHeight) {
+                spriteHeight * y / currentHeight
             } else {
                 y
             }
             val rowOffset = srcY * spriteWidth
 
-            if (spriteWidth == TextureRaster.currentWidth) {
+            if (spriteWidth == currentWidth) {
                 // Fast path: no horizontal scaling needed
                 var offset = rowOffset
-                for (x in 0 until TextureRaster.currentWidth) {
+                for (x in 0 until currentWidth) {
                     val pixel = spritePixels!![offset++]
                     outputBlue[x] = (pixel and 0xff) shl 4
                     outputGreen[x] = (pixel and 0xff00) shr 4
@@ -75,8 +74,8 @@ open class TextureOpSprite : TextureOperation(0, false) {
                 }
             } else {
                 // Scaled path
-                for (x in 0 until TextureRaster.currentWidth) {
-                    val srcX = x * spriteWidth / TextureRaster.currentWidth
+                for (x in 0 until currentWidth) {
+                    val srcX = x * spriteWidth / currentWidth
                     val pixel = spritePixels!![rowOffset + srcX]
                     outputBlue[x] = (pixel and 0xff) shl 4
                     outputGreen[x] = (pixel and 0xff00) shr 4

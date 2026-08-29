@@ -7,7 +7,11 @@ import org.lwjgl.opengl.GL13.GL_TEXTURE0
 import org.lwjgl.opengl.GL13.glActiveTexture
 import org.lwjgl.opengl.GL30.glGenerateMipmap
 import org.lwjgl.system.MemoryUtil
+import java.awt.image.BufferedImage
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import javax.imageio.ImageIO
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
@@ -22,8 +26,8 @@ import world.gregs.voidps.cache.definition.decoder.MaterialDecoder
  */
 object TextureLoader {
     private val textureCache = mutableMapOf<Int, Int>() // textureId -> GL texture ID
-    private val spriteDataCache = ConcurrentHashMap<Int, SpriteData?>() // spriteId -> SpriteData
-    private val textureTypeCache = ConcurrentHashMap<Int, TextureType?>() // textureId -> TextureType
+    private val spriteDataCache = ConcurrentHashMap<Int, SpriteData>() // spriteId -> SpriteData
+    private val textureDataCache = ConcurrentHashMap<Int, ByteArray>() // textureId -> raw TEXTURES data
     private var defaultTextureId: Int = 0
     private var cacheRef: Cache? = null
 
@@ -34,9 +38,38 @@ object TextureLoader {
     private const val TEXTURE_SIZE_NORMAL = 128
     private const val TEXTURE_SIZE_SMALL = 64
 
+    /**
+     * Absolute deadline for the top-level generation currently running on this thread.
+     *
+     * The 5 second budget covers a whole generation *tree*: the top level entry point sets
+     * it and every nested material inherits it. Nested generation is reached through the
+     * `textureLoader` lambda, which carries no context of its own, so the deadline is held
+     * per thread here and passed down as a plain parameter from there. It is read once per
+     * generation, never per row.
+     */
+    private val deadlineLocal: ThreadLocal<Long> = ThreadLocal.withInitial { 0L }
+
+    /** Start a top-level generation on this thread and return its absolute deadline. */
+    private fun beginGeneration(): Long {
+        val deadline = System.nanoTime() + TextureRaster.MAX_GENERATION_NANOS
+        deadlineLocal.set(deadline)
+        return deadline
+    }
+
     fun init(cache: Cache) {
-        cacheRef = cache
+        initHeadless(cache)
         defaultTextureId = createCheckerTexture()
+    }
+
+    /**
+     * Initialise everything that does not require an OpenGL context: the raster
+     * lookup tables and the material definitions.
+     *
+     * CPU-only tools (texture dumps, diagnostics, concurrency checks) call this
+     * directly; [init] layers the GL placeholder texture on top for viewers.
+     */
+    fun initHeadless(cache: Cache) {
+        cacheRef = cache
         TextureRaster.calculateTable()
 
         // Load all material definitions once at init time
@@ -142,7 +175,7 @@ object TextureLoader {
                 val material = getMaterial(textureId)
                 val textureSize = getTextureSize(material)
                 val opaque = isMaterialOpaque(material)
-                TextureRaster.generationStartNanos = System.nanoTime()
+                val deadline = beginGeneration()
 
                 val pixels = if (opaque) {
                     // Opaque path: alpha=255 for non-black, alpha=0 for black.
@@ -156,7 +189,8 @@ object TextureLoader {
                         textureLoader = { materialId, width, height ->
                             generateTexturePixels(cache, materialId, width, height)
                         },
-                        brightness = 0.7
+                        brightness = 0.7,
+                        deadlineNanos = deadline
                     )
                 } else {
                     // Transparent path: alpha from the opacity operation.
@@ -169,7 +203,8 @@ object TextureLoader {
                         textureLoader = { materialId, width, height ->
                             generateTexturePixels(cache, materialId, width, height)
                         },
-                        brightness = 0.7
+                        brightness = 0.7,
+                        deadlineNanos = deadline
                     )
                 }
 
@@ -230,6 +265,36 @@ object TextureLoader {
      * The returned pixels are in ARGB format with the same alpha post-processing
      * applied as [getTextureForMaterial] (effectCombiner-based alpha handling).
      *
+     * Memoised in [materialPixelCache], and the reason is navigation rather than the initial
+     * load. On a cold load the two callers ask for almost disjoint sets — 161 terrain and
+     * 185 object materials at Lumbridge share exactly 10 ids — so the first attempt at this
+     * cache measured a 0.5-2.9% reuse rate and was reverted. Navigating is a different
+     * workload, and nothing in that measurement covered it: the terrain atlas is built once
+     * in `MapViewer.init` and kept, while the whole IndirectRenderer, `buildTextureArrays`
+     * included, is torn down and rebuilt on every jump and asks for the same materials
+     * again. Over a 50,50 -> 54,54 -> 52,50 -> 50,50 tour at render distance 3 the per-jump
+     * reuse rate is **70.5%, 80.8% and 100.0%**.
+     *
+     * All of that regeneration sits on the GL thread inside the blocking half of a jump,
+     * which is the half that shows up as a freeze. Counterbalanced OFF/ON/ON/OFF, the
+     * generation inside a jump falls from 592/127/240 ms to 76/12/0 ms and the blocking half
+     * with it, 1231/498/1097 ms -> 780/373/759 ms. The *total* jump wall only moves where
+     * the asynchronous context-region tail is not the binding constraint: at the third stop,
+     * with 14 new regions, 2613 -> 2261 ms; at the first, with 39, the tail simply absorbs
+     * the saving. Cold load is unchanged (10904/10952 ms vs 10622/10998 ms), as the 5.4%
+     * cold reuse rate predicts. Cost is 17.0 MiB resident for the 369 distinct materials a
+     * three-area tour touches, and the rendered image is unchanged: every cross-arm frame
+     * diff came in at or below the same-config control for that location.
+     *
+     * The entries are handed out without copying. Every consumer is strictly read-only
+     * ([TextureAtlas.addTexture] writes only the atlas page, [IndirectRenderer]'s array
+     * upload and alpha audit, [SkyRenderer]'s material build, [InstanceManager]'s texture
+     * packing), which was verified by re-hashing every returned array after use: zero
+     * violations. A defensive copy would cost the very bytes the cache exists to stop moving.
+     *
+     * Bounded by [PIXEL_CACHE_BUDGET_BYTES] — past the budget generation still succeeds, it
+     * just is not retained — and disabled entirely by `-Ddarkan.texPixelCache=false`.
+     *
      * @param cache The game cache
      * @param textureId The texture/material ID
      * @return Triple of (ARGB pixels, width, height) or null if the texture doesn't exist
@@ -239,14 +304,20 @@ object TextureLoader {
         // Guard against circular references at the top level too
         if (textureId in generatingSet.get()) return null
 
+        materialPixelCache[textureId]?.let {
+            TexturePixelStats.recordHit()
+            return it
+        }
+
         val textureType = loadTextureType(cache, textureId) ?: return null
 
         val material = getMaterial(textureId)
         val textureSize = getTextureSize(material)
         val opaque = isMaterialOpaque(material)
 
+        val statsStart = System.nanoTime()
         generatingSet.get().add(textureId)
-        TextureRaster.generationStartNanos = System.nanoTime()
+        val deadline = beginGeneration()
         val pixels = try {
             if (opaque) {
                 textureType.getPixelsRgb(
@@ -256,7 +327,8 @@ object TextureLoader {
                     textureLoader = { materialId, width, height ->
                         generateTexturePixels(cache, materialId, width, height)
                     },
-                    brightness = 0.7
+                    brightness = 0.7,
+                    deadlineNanos = deadline
                 )
             } else {
                 textureType.getPixelsArgb(
@@ -266,7 +338,8 @@ object TextureLoader {
                     textureLoader = { materialId, width, height ->
                         generateTexturePixels(cache, materialId, width, height)
                     },
-                    brightness = 0.7
+                    brightness = 0.7,
+                    deadlineNanos = deadline
                 )
             }
         } finally {
@@ -292,7 +365,63 @@ object TextureLoader {
             }
         }
 
-        return Triple(pixels, textureSize, textureSize)
+        TexturePixelStats.record(textureId, System.nanoTime() - statsStart, pixels.size)
+        val result = Triple(pixels, textureSize, textureSize)
+        retainPixels(textureId, result)
+        return result
+    }
+
+    /**
+     * Memoised output of [getTexturePixelsForMaterial], keyed by material id.
+     *
+     * Generation is a pure function of the material id and the cache, both of which are
+     * fixed for the life of the process, so an entry never goes stale on its own; the only
+     * thing that drops one is [clearCpuCaches].
+     *
+     * Distinct from the [pixelCache] a few methods down, which memoises *nested* material
+     * references at their own size and brightness 1.0. That one is an implementation detail
+     * of a single generation tree and its entries are not what a caller asked for — they
+     * carry neither the top-level brightness nor the effectCombiner alpha post-processing.
+     */
+    private val materialPixelCache = ConcurrentHashMap<Int, Triple<IntArray, Int, Int>>()
+
+    private val materialPixelCacheBytes = AtomicLong(0)
+
+    /** `-Ddarkan.texPixelCache=false` restores the regenerate-every-time behaviour. */
+    private val materialPixelCacheEnabled: Boolean =
+        System.getProperty("darkan.texPixelCache", "true").toBoolean()
+
+    /**
+     * Ceiling on retained pixel bytes. A tour of three areas retains ~16 MiB across 369
+     * distinct materials, so this leaves roughly 4x headroom over anything a session
+     * reaches; it exists so a pathological run degrades to the old regenerate-every-time
+     * behaviour instead of growing without limit. `-Ddarkan.texPixelCacheMiB=<n>` overrides.
+     */
+    private val materialPixelCacheBudgetBytes: Long =
+        (System.getProperty("darkan.texPixelCacheMiB")?.toLongOrNull() ?: 64L) * 1024L * 1024L
+
+    /**
+     * Retain [result] for [textureId] if the cache is on and still inside its budget.
+     *
+     * [ConcurrentHashMap.putIfAbsent] rather than `computeIfAbsent`, and this must stay that
+     * way. Generating a material recurses back into this cache for every nested
+     * `TextureOpTexture` reference, so a `computeIfAbsent` mapping function for the outer key
+     * would insert the inner key into the same map. That is illegal reentrancy: when the two
+     * keys share a bin the JDK throws `IllegalStateException: Recursive update`, and when they
+     * do not, the reservation node stays live across an insert that may resize the table,
+     * which the JDK documents as possible deadlock or memory-consistency corruption. It
+     * reproduces on a single thread; it is not a data race.
+     *
+     * Here, two threads may have generated the same material concurrently and the loser simply
+     * drops its copy. No generation, and no cache I/O, happens inside the map operation.
+     */
+    private fun retainPixels(textureId: Int, result: Triple<IntArray, Int, Int>) {
+        if (!materialPixelCacheEnabled) return
+        val bytes = result.first.size.toLong() * Int.SIZE_BYTES
+        if (materialPixelCacheBytes.get() + bytes > materialPixelCacheBudgetBytes) return
+        if (materialPixelCache.putIfAbsent(textureId, result) == null) {
+            materialPixelCacheBytes.addAndGet(bytes)
+        }
     }
 
     /**
@@ -315,59 +444,82 @@ object TextureLoader {
      * brightness=1.0. This is separate from getTextureForMaterial to avoid circular
      * GL texture creation.
      */
-    private val pixelCache = ConcurrentHashMap<Int, IntArray?>()
+    private val pixelCache = ConcurrentHashMap<Int, IntArray>()
     private val generatingSet: ThreadLocal<MutableSet<Int>> = ThreadLocal.withInitial { mutableSetOf() }
 
     private fun generateTexturePixels(cache: Cache, textureId: Int, @Suppress("UNUSED_PARAMETER") width: Int, @Suppress("UNUSED_PARAMETER") height: Int): IntArray? {
-        // Break circular texture references (A->B->A) by tracking in-progress generation
-        if (textureId in generatingSet.get()) return null
-
-        // Check cache first (fast path avoids computeIfAbsent overhead)
+        // Fast path: already generated.
         pixelCache[textureId]?.let { return it }
 
-        // Use computeIfAbsent for atomic insertion (avoids redundant concurrent generation)
-        return pixelCache.computeIfAbsent(textureId) {
-            generatingSet.get().add(textureId)
-            try {
-                val textureType = loadTextureType(cache, textureId) ?: return@computeIfAbsent null
+        // Break circular texture references (A->B->A) by tracking in-progress generation.
+        val inProgress = generatingSet.get()
+        if (textureId in inProgress) return null
 
-                // In the RS client, TextureOpTexture.createImageCache() loads nested textures
-                // at the NESTED material's own size (based on isSmall), NOT the parent's.
-                // We must do the same here to avoid array bounds mismatches.
-                val nestedMaterial = getMaterial(textureId)
-                val nestedSize = getTextureSize(nestedMaterial)
+        val textureType = loadTextureType(cache, textureId) ?: return null
 
-                // Nested textures always use the RGB (opaque) path with brightness=1.0
-                textureType.getPixelsRgb(
-                    nestedSize,
-                    nestedSize,
-                    spriteLoader = { spriteId ->
-                        loadSpriteData(cache, spriteId)
-                    },
-                    textureLoader = { materialId, w, h ->
-                        generateTexturePixels(cache, materialId, w, h)
-                    },
-                    brightness = 1.0
-                )
-            } finally {
-                generatingSet.get().remove(textureId)
-            }
+        // In the RS client, TextureOpTexture.createImageCache() loads nested textures
+        // at the NESTED material's own size (based on isSmall), NOT the parent's.
+        // We must do the same here to avoid array bounds mismatches.
+        val nestedSize = getTextureSize(getMaterial(textureId))
+
+        // Generation runs OUTSIDE any map mapping function. Generating a texture recurses
+        // back into this method for every nested TextureOpTexture reference, and
+        // ConcurrentHashMap forbids reentrant modification from inside computeIfAbsent:
+        // a nested key landing in the same bin throws "Recursive update", and one landing
+        // elsewhere can deadlock or corrupt the table during a resize. Resolving the whole
+        // dependency chain first and only then publishing with putIfAbsent keeps every
+        // insertion a single, non-reentrant operation.
+        inProgress.add(textureId)
+        val pixels = try {
+            // Nested textures always use the RGB (opaque) path with brightness=1.0
+            textureType.getPixelsRgb(
+                nestedSize,
+                nestedSize,
+                spriteLoader = { spriteId ->
+                    loadSpriteData(cache, spriteId)
+                },
+                textureLoader = { materialId, w, h ->
+                    generateTexturePixels(cache, materialId, w, h)
+                },
+                brightness = 1.0,
+                // Inherit the enclosing top-level generation's budget rather than
+                // restarting it, so a deep chain of nested materials cannot extend the
+                // total time indefinitely.
+                deadlineNanos = deadlineLocal.get()
+            )
+        } finally {
+            inProgress.remove(textureId)
         }
+
+        // Two threads racing on the same material duplicate the work but agree on the
+        // result; the first publication wins so every caller sees the same array.
+        return pixelCache.putIfAbsent(textureId, pixels) ?: pixels
     }
 
     /**
-     * Load a TextureType from the TEXTURES index.
+     * Decode a TextureType from the TEXTURES index.
+     *
+     * Returns a FRESH instance on every call. Generation mutates the operation DAG in
+     * place (nested texture pixels, per-operation image caches, brightness), so handing
+     * out a shared instance would let two generations of the same material corrupt each
+     * other's intermediate state. Only the raw bytes are cached, which is where the
+     * decompression cost lives; re-parsing a few dozen opcodes is free next to
+     * rasterising the DAG.
      */
     private fun loadTextureType(cache: Cache, textureId: Int): TextureType? {
-        return textureTypeCache.computeIfAbsent(textureId) {
-            val data = cache.data(Index.TEXTURES, textureId) ?: return@computeIfAbsent null
-            if (data.isEmpty()) return@computeIfAbsent null
-            try {
-                TextureType(data)
-            } catch (e: Exception) {
-                // Invalid texture data - return null
-                null
-            }
+        // putIfAbsent rather than computeIfAbsent: reading from the cache must not run
+        // while a bin lock is held. A duplicate read is wasted work, not a correctness
+        // problem, and the first publication wins.
+        val data = textureDataCache[textureId] ?: run {
+            val loaded = cache.data(Index.TEXTURES, textureId) ?: return null
+            if (loaded.isEmpty()) return null
+            textureDataCache.putIfAbsent(textureId, loaded) ?: loaded
+        }
+        return try {
+            TextureType(data)
+        } catch (e: Exception) {
+            // Invalid texture data
+            null
         }
     }
 
@@ -375,10 +527,10 @@ object TextureLoader {
      * Load sprite data for use by TextureOpSprite operations.
      */
     private fun loadSpriteData(cache: Cache, spriteId: Int): SpriteData? {
-        return spriteDataCache.computeIfAbsent(spriteId) {
-            val data = cache.data(Index.SPRITES, spriteId) ?: return@computeIfAbsent null
-            decodeSpriteToData(data, 0)
-        }
+        spriteDataCache[spriteId]?.let { return it }
+        val data = cache.data(Index.SPRITES, spriteId) ?: return null
+        val sprite = decodeSpriteToData(data, 0) ?: return null
+        return spriteDataCache.putIfAbsent(spriteId, sprite) ?: sprite
     }
 
     /**
@@ -586,8 +738,12 @@ object TextureLoader {
     }
 
     /**
-     * Debug: Dump the generated texture pixels to a PPM image file for visual inspection.
-     * The image is saved WITHOUT vertical flip (as generated, row 0 = top).
+     * Debug: Dump the generated texture pixels to PNG files for visual inspection.
+     *
+     * Writes `<base>.png` (RGB colour, alpha forced opaque so the colours are always
+     * visible) and `<base>_alpha.png` (the alpha channel as greyscale), where `<base>`
+     * is [outputPath] with any extension stripped. Images are saved WITHOUT vertical
+     * flip (as generated, row 0 = top).
      */
     fun dumpTextureImage(cache: Cache, materialId: Int, outputPath: String) {
         val textureType = loadTextureType(cache, materialId)
@@ -634,38 +790,30 @@ object TextureLoader {
             }
         }
 
-        // Write as PPM (P3 format) - shows RGB, ignoring alpha
-        // Also write a separate file with alpha channel visualized
-        val sb = StringBuilder()
-        sb.appendLine("P3")
-        sb.appendLine("$textureSize $textureSize")
-        sb.appendLine("255")
-        for (y in 0 until textureSize) {
-            for (x in 0 until textureSize) {
-                val pixel = pixels[y * textureSize + x]
-                val r = (pixel shr 16) and 0xFF
-                val g = (pixel shr 8) and 0xFF
-                val b = pixel and 0xFF
-                sb.append("$r $g $b ")
-            }
-            sb.appendLine()
-        }
-        java.io.File(outputPath).writeText(sb.toString())
+        // Write two real PNGs: the RGB colour image, and the alpha channel as greyscale.
+        // The colour image forces alpha to opaque so the actual colours are visible even
+        // where the material is fully transparent.
+        val base = outputPath.substringBeforeLast('.', outputPath)
+        val colorPath = "$base.png"
+        val alphaPath = "${base}_alpha.png"
 
-        // Also write alpha channel as grayscale
-        val sbAlpha = StringBuilder()
-        sbAlpha.appendLine("P2")
-        sbAlpha.appendLine("$textureSize $textureSize")
-        sbAlpha.appendLine("255")
+        val colorImage = BufferedImage(textureSize, textureSize, BufferedImage.TYPE_INT_RGB)
+        val alphaImage = BufferedImage(textureSize, textureSize, BufferedImage.TYPE_INT_RGB)
+        val colorRow = IntArray(textureSize)
+        val alphaRow = IntArray(textureSize)
         for (y in 0 until textureSize) {
+            val rowStart = y * textureSize
             for (x in 0 until textureSize) {
-                val pixel = pixels[y * textureSize + x]
+                val pixel = pixels[rowStart + x]
+                colorRow[x] = pixel and 0x00FFFFFF
                 val a = (pixel shr 24) and 0xFF
-                sbAlpha.append("$a ")
+                alphaRow[x] = (a shl 16) or (a shl 8) or a
             }
-            sbAlpha.appendLine()
+            colorImage.setRGB(0, y, textureSize, 1, colorRow, 0, textureSize)
+            alphaImage.setRGB(0, y, textureSize, 1, alphaRow, 0, textureSize)
         }
-        java.io.File(outputPath.replace(".ppm", "_alpha.ppm")).writeText(sbAlpha.toString())
+        ImageIO.write(colorImage, "png", File(colorPath))
+        ImageIO.write(alphaImage, "png", File(alphaPath))
 
         // Print stats
         var nonBlack = 0
@@ -677,16 +825,27 @@ object TextureLoader {
             if (a == 0) transparent++
         }
         println("dumpTextureImage($materialId): ${textureSize}x${textureSize}, opaque=$opaque, effectCombiner=${material?.anInt1226}, nonBlack=$nonBlack/${pixels.size}, transparent=$transparent/${pixels.size}")
-        println("  Saved to $outputPath")
+        println("  Saved colour to $colorPath")
+        println("  Saved alpha to $alphaPath")
+    }
+
+    /**
+     * Drop the CPU-side caches (decoded texture types, sprites, generated pixels)
+     * without touching any GL resource. Safe to call without a GL context.
+     */
+    fun clearCpuCaches() {
+        spriteDataCache.clear()
+        textureDataCache.clear()
+        pixelCache.clear()
+        materialPixelCache.clear()
+        materialPixelCacheBytes.set(0)
+        generatingSet.get().clear()
     }
 
     fun clearCache() {
         textureCache.values.forEach { glDeleteTextures(it) }
         textureCache.clear()
-        spriteDataCache.clear()
-        textureTypeCache.clear()
-        pixelCache.clear()
-        generatingSet.get().clear()
+        clearCpuCaches()
         if (defaultTextureId != 0) {
             glDeleteTextures(defaultTextureId)
             defaultTextureId = 0

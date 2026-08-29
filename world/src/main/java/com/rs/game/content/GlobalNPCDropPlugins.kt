@@ -34,7 +34,7 @@ fun mapDrops() {
                     "<shad=000000><col=cc0033>You received: ${e.item.amount} ${e.item.definitions.name}"
                 )
                 while(true) {
-                    val owner = e.item.getOwner() ?: continue
+                    val owner = e.item.getOwner() ?: break
                     owner.packets.sendSpotAnim(SpotAnim(owner.getI("lootbeamAnim")), e.item.tile)
                     wait(2)
                 }

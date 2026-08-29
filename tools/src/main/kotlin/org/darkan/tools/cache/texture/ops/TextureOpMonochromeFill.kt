@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -14,7 +13,7 @@ class TextureOpMonochromeFill : TextureOperation(0, true) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 output[x] = fillValue
             }
         }

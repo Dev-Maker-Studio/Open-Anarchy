@@ -24,6 +24,10 @@ import com.rs.plugin.events.ObjectClickEvent
 import com.rs.plugin.handlers.ObjectClickHandler
 import com.rs.plugin.kts.onObjectClick
 import java.util.function.Consumer
+import com.rs.engine.variables.dsd_surok_at_statue
+import com.rs.engine.variables.dsd_surok_clothes_2
+import com.rs.engine.variables.dsd_unlock_portal
+import com.rs.engine.variables.surok_tunnelcheck
 
 @MiniquestHandler(
     miniquest = Miniquest.HUNT_FOR_SUROK,
@@ -52,10 +56,10 @@ class HuntForSurok : MiniquestOutline() {
 
     override fun updateStage(player: Player) {
         if (player.getMiniquestStage(Miniquest.HUNT_FOR_SUROK) >= 1) {
-            player.vars.saveVarBit(4312, 2)
-            player.vars.saveVarBit(4314, 2)
+            player.vars.saveVarBit(dsd_surok_at_statue, 2)
+            player.vars.saveVarBit(dsd_surok_clothes_2, 2)
         }
-        if (player.getMiniquestStage(Miniquest.HUNT_FOR_SUROK) >= 2) player.vars.saveVarBit(4311, 1)
+        if (player.getMiniquestStage(Miniquest.HUNT_FOR_SUROK) >= 2) player.vars.saveVarBit(dsd_unlock_portal, 1)
     }
 }
 
@@ -93,8 +97,8 @@ fun mapHuntForSurok() {
                     e.player.anim(pick.animId)
                     if (Utils.skillSuccess(e.player.skills.getLevel(Skills.MINING), 16, 100)) {
                         e.player.anim(-1)
-                        e.player.vars.saveVarBit(3524, 1)
-                        if (e.player.isQuestComplete(Quest.WHAT_LIES_BELOW)) e.player.vars.saveVarBit(4312, 1)
+                        e.player.vars.saveVarBit(surok_tunnelcheck, 1)
+                        if (e.player.isQuestComplete(Quest.WHAT_LIES_BELOW)) e.player.vars.saveVarBit(dsd_surok_at_statue, 1)
                         e.player.startConversation {
                             npc(AnnaJones.ID, HeadE.CHEERFUL, "You did it! Oh, well done! How exciting!")
                             player(HeadE.CHEERFUL, "Right, well, I better see what's down there, then.")

@@ -10,6 +10,7 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
+import com.rs.engine.variables.firedup_whereami
 
 private object NPCs {
     const val BLAZE = 8065
@@ -41,7 +42,7 @@ fun allFiredUpDialogue(player: Player, npc: NPC, headE: HeadE) {
                 npc(npc.id, headE, "Sure!")
                 exec {
                     Beacon.getBeaconForNPC(npc.id)?.ordinal?.plus(1)?.let { current ->
-                        player.vars.setVarBit(5145, current, true)
+                        player.vars.setVarBit(firedup_whereami, current, true)
                         player.interfaceManager.sendInterface(575, false)
                         player.packets.sendRunScript(803)
                     }

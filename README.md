@@ -12,6 +12,16 @@
 ./gradlew :world:run
 ```
 
+### Smoke test
+
+`./smoke-test.sh` builds both servers, boots them against the database in `.env`, waits for the
+world to register with the lobby gateway and checks `/health`. See the script header for running
+it alongside the legacy servers on other ports.
+
+### Migrating a legacy database
+
+See `docs/migration.md` (`migration/` module: `inspect`, `migrate --dry-run`, `migrate`, `verify`).
+
 ## SocialGateway (world <-> lobby)
 
 The lobby HTTP server exposes a persistent WebSocket endpoint for world-servers:

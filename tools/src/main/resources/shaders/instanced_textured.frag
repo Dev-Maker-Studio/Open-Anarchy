@@ -1,5 +1,18 @@
 #version 330 core
 
+// Not loaded by any code path. Every ShaderProgram in the tool is built from an explicit
+// "/shaders/<name>" literal (Engine.kt, MapViewer.kt, InterfaceViewer.kt, SkyRenderer.kt)
+// and none of them names this file, so nothing here reaches a GPU today.
+//
+// It keeps the vMirrored front-face inversion that was deleted from indirect_*.frag and
+// ubo_*.frag. That deletion does not apply here. Those shaders draw mirrored instances
+// from geometry whose winding was already reversed on the CPU
+// (RegionManager.registerMirroredVariants -> StaticBatcher.reverseWinding), so
+// gl_FrontFacing was already correct and inverting it again negated the normal on every
+// visible mirrored surface. This file pairs with a vertex stage that derives vMirrored
+// from determinant(mat3(model)) < 0 - a reflection in the model matrix, which really does
+// invert raster winding - so for that input the compensation is the correct behaviour.
+
 in vec3 vColor;
 in vec2 vTexCoord;
 in vec3 vNormal;

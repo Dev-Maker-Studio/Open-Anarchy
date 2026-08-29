@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -16,9 +15,9 @@ class TextureOpMandelbrot : TextureOperation(0, true) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            for (x in 0 until TextureRaster.currentWidth) {
-                val scaledX = (TextureRaster.horizontalTable!![x] shl 12) / zoom + offsetX
-                val scaledY = (TextureRaster.verticalTable!![y] shl 12) / zoom + offsetY
+            for (x in 0 until currentWidth) {
+                val scaledX = (horizontalTable[x] shl 12) / zoom + offsetX
+                val scaledY = (verticalTable[y] shl 12) / zoom + offsetY
                 val startX = scaledX
                 val startY = scaledY
                 var realPart = scaledX

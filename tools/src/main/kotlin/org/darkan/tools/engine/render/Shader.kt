@@ -1,6 +1,7 @@
 package org.darkan.tools.engine.render
 
 import org.lwjgl.opengl.GL20.*
+import org.lwjgl.opengl.GL43.GL_COMPUTE_SHADER
 
 class Shader(private val type: Int) {
     var id: Int = 0
@@ -34,6 +35,14 @@ class Shader(private val type: Int) {
 
         fun fragment(source: String): Shader {
             return Shader(GL_FRAGMENT_SHADER).apply { compile(source) }
+        }
+
+        /**
+         * Compile a compute shader. Requires GL 4.3 / ARB_compute_shader; check the
+         * capability before calling, the compile itself only reports a GLSL error.
+         */
+        fun compute(source: String): Shader {
+            return Shader(GL_COMPUTE_SHADER).apply { compile(source) }
         }
     }
 }

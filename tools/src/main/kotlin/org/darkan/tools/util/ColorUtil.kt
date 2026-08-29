@@ -1,7 +1,10 @@
 package org.darkan.tools.util
 
 import org.joml.Vector3f
+import java.util.concurrent.atomic.AtomicReferenceArray
+import kotlin.math.floor
 import kotlin.math.pow
+import kotlin.math.sin
 
 object ColorUtil {
     /** Brightness/gamma value used by RS (approximately 0.7, with slight randomness in original) */
@@ -24,9 +27,9 @@ object ColorUtil {
         // Use a simple hash combining both coordinates for pseudo-random but deterministic noise
         // The magic numbers create good distribution without obvious patterns
         val seed = (worldX * 12.9898 + worldZ * 78.233)
-        val hash = kotlin.math.sin(seed) * 43758.5453
+        val hash = sin(seed) * 43758.5453
         // Get fractional part for 0-1 range
-        val noise = (hash - kotlin.math.floor(hash)).toFloat()
+        val noise = (hash - floor(hash)).toFloat()
         // Convert to centered variation: [0,1] -> [1-variation/2, 1+variation/2]
         return 1.0f - variation * 0.5f + noise * variation
     }
@@ -76,6 +79,46 @@ object ColorUtil {
      * - Applies gamma correction with brightness ~0.7
      */
     fun hslToRgb(hsl: Int): Vector3f {
+        // A packed HSL is 16 bits, so the conversion has only 65536 possible answers and
+        // is a pure function of its argument -- which is exactly why the client bakes it
+        // into a table (calculateHslToRgbTable) instead of converting per vertex. Terrain
+        // tessellation calls this once per ground vertex and the conversion ends in three
+        // Math.pow gamma corrections, so memoising it removes the single most expensive
+        // thing on that path while returning bit-identical colours.
+        //
+        // Entries are published through an atomic array: two threads racing on the same
+        // colour compute the same floats, and the CAS makes sure a reader never sees a
+        // half-written entry. Callers mutate the vector they get back (the shoreline
+        // composite lerps in place), so each call still hands out its own instance.
+        if (hsl in 0 until HSL_TABLE_SIZE) {
+            var entry = hslRgbTable.get(hsl)
+            if (entry == null) {
+                entry = computeHslToRgb(hsl)
+                hslRgbTable.compareAndSet(hsl, null, entry)
+            }
+            return Vector3f(entry[0], entry[1], entry[2])
+        }
+        val rgb = computeHslToRgb(hsl)
+        return Vector3f(rgb[0], rgb[1], rgb[2])
+    }
+
+    /** Number of distinct packed HSL values, i.e. the size of the memo table. */
+    private const val HSL_TABLE_SIZE = 1 shl 16
+
+    /** Lazily filled memo for [hslToRgb]; see the note there for the publication rules. */
+    private val hslRgbTable = AtomicReferenceArray<FloatArray>(HSL_TABLE_SIZE)
+
+    /**
+     * [hslToRgb] with the memo bypassed. Only exists so a caller can A/B the memo's
+     * contribution inside one build; it returns exactly the same colour.
+     */
+    fun hslToRgbUncached(hsl: Int): Vector3f {
+        val rgb = computeHslToRgb(hsl)
+        return Vector3f(rgb[0], rgb[1], rgb[2])
+    }
+
+    /** The actual conversion behind [hslToRgb], as [r, g, b]. */
+    private fun computeHslToRgb(hsl: Int): FloatArray {
         // Extract components matching client's bit layout (EXACTLY as in calculateHslToRgbTable)
         val hue = (hsl shr 10 and 0x3f) / 64.0 + 0.0078125  // d_4 in client
         val saturation = 0.0625 + (hsl shr 7 and 0x7) / 8.0  // d_6 in client
@@ -148,7 +191,7 @@ object ColorUtil {
         val gGamma = g.pow(BRIGHTNESS).toFloat()
         val bGamma = b.pow(BRIGHTNESS).toFloat()
 
-        return Vector3f(rGamma, gGamma, bGamma)
+        return floatArrayOf(rGamma, gGamma, bGamma)
     }
 
     /**

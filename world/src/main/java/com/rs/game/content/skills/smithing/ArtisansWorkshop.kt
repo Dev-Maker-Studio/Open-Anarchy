@@ -34,6 +34,7 @@ import com.rs.plugin.kts.onNpcClick
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onXpDrop
 import com.rs.utils.Areas
+import com.rs.engine.variables.artisan_temp_bar_number
 
 private enum class Metal(val itemId: Int, val varBit: Int, val cap: Int, val furnaceComp: Int, val barSet: Array<ReqItem>) {
     Iron(441, 8857,  4000, 201, arrayOf(ReqItem.IRON_INGOT_I, ReqItem.IRON_INGOT_II, ReqItem.IRON_INGOT_III, ReqItem.IRON_INGOT_IV)),
@@ -135,8 +136,8 @@ private var Player.selectedRewardIndex
     set(value) = vars.setVarBit(8902, clampI(value, 1, 12))
 
 private var Player.ingotQuantity
-    get() = vars.getVarBit(8877).let { if (it <= 0) inventory.freeSlots else it }
-    set(value) = vars.setVarBit(8877, clampI(value, 1, 28))
+    get() = vars.getVarBit(artisan_temp_bar_number).let { if (it <= 0) inventory.freeSlots else it }
+    set(value) = vars.setVarBit(artisan_temp_bar_number, clampI(value, 1, 28))
 
 private var Player.xpCount
     get() = getI("artisansXpCount", 0)

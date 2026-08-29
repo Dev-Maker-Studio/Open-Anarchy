@@ -48,6 +48,12 @@ import org.darkan.core.model.Projectile;
 
 import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
+import static com.rs.engine.variables.VarBitPlayer.sc_team;
+import static com.rs.engine.variables.VarPlayer.sc_score_clay_deposited;
+import static com.rs.engine.variables.VarPlayer.sc_score_clay_gathered;
+import static com.rs.engine.variables.VarPlayer.sc_score_clay_processed;
+import static com.rs.engine.variables.VarPlayer.sc_score_clay_taken;
+import static com.rs.engine.variables.VarPlayer.sc_score_damage_inflicted;
 
 public class StealingCreationController extends Controller {
 
@@ -81,15 +87,15 @@ public class StealingCreationController extends Controller {
 	public void sendInterfaces() {
 		player.getInterfaceManager().sendOverlay(809, false);
 		player.getPackets().sendVarc(558, (int) ((game.getEndTime() - System.currentTimeMillis()) / 600)); // sync
-		player.getVars().setVarBit(5493, getTeam() ? 2 : 1);
+		player.getVars().setVarBit(sc_team, getTeam() ? 2 : 1);
 	}
 
 	public void sendScore(Score score) {
-		player.getVars().setVar(1332, score.getGathering());
-		player.getVars().setVar(1333, score.getDepositing());
-		player.getVars().setVar(1334, score.getProcessing());
-		player.getVars().setVar(1335, score.getWithdrawing());
-		player.getVars().setVar(1337, score.getDamaging());
+		player.getVars().setVar(sc_score_clay_gathered, score.getGathering());
+		player.getVars().setVar(sc_score_clay_deposited, score.getDepositing());
+		player.getVars().setVar(sc_score_clay_processed, score.getProcessing());
+		player.getVars().setVar(sc_score_clay_taken, score.getWithdrawing());
+		player.getVars().setVar(sc_score_damage_inflicted, score.getDamaging());
 	}
 
 	@Override

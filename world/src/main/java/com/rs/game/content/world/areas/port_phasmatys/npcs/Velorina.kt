@@ -39,7 +39,7 @@ private fun dialoguePostQuest(p: Player, npc: NPC) {
                 npc(
                     npc,
                     HeadE.CALM_TALK,
-                    "All in good time, Player. We stand forever in your debt, and will certainly put in a good word for you when we pass over."
+                    "All in good time, ${p.displayName}. We stand forever in your debt, and will certainly put in a good word for you when we pass over."
                 )
             }
             op("Can I have another Ectophial?") {

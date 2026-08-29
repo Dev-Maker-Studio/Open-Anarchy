@@ -2,7 +2,7 @@ package org.darkan.world.server.packet
 
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.InterfaceManager.ScreenMode
-import org.darkan.core.net.prot.ClientScreenSize
+import org.darkan.core.net.prot.packet.ClientScreenSize
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class ClientScreenSizeHandler : PacketHandler<Player, ClientScreenSize> {

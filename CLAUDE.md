@@ -7,8 +7,8 @@ This document provides comprehensive guidance for AI assistants working with the
 Darkan is a multiplayer game server emulator implementing **revision 727** of the RuneScape protocol. It consists of a multi-server architecture with a centralized lobby server handling authentication and social features, and multiple world servers handling gameplay.
 
 **Language**: Kotlin 2.3.0
-**Build System**: Gradle 8.13
-**Runtime**: Java 23
+**Build System**: Gradle 9.3
+**Runtime**: Java 25
 **Database**: MongoDB 5.3.1
 
 ---
@@ -178,7 +178,8 @@ server/
 ├── core/           # Shared library (networking, models, MongoDB, crypto)
 ├── lobby/          # Lobby server (auth, API, social gateway host)
 ├── world/          # World server (gameplay, social gateway client)
-├── tools/          # Utility scripts
+├── tools/          # Cache/map/interface/CS2 editor suite (LWJGL)
+├── migration/      # Legacy → modern database migration (see docs/migration.md)
 ├── docs/           # Architecture documentation
 └── build.gradle.kts
 ```
@@ -290,6 +291,7 @@ SERVER_NAME=Darkan
 LOBBY_PORT=43594
 WORLD_PORT=43595
 LOBBY_API_PORT=4040
+LOCAL_WORLD_ID=0   # >0 lists that world as localhost:WORLD_PORT for local development
 ```
 
 ### Security
@@ -345,6 +347,7 @@ MAJOR_VERSION=727
 MINOR_VERSION=1
 PACKET_SIZE_LIMIT=7500
 PACKET_QUEUE_CAPACITY=50
+OUTBOUND_QUEUE_CAPACITY=4096
 WORLD_CYCLE_NANOS=600000000
 ```
 
@@ -668,6 +671,9 @@ Configure `STAFF_WEBHOOK_URL` for tick performance warnings and error notificati
 
 - `docs/social-gateway.md` - Comprehensive social gateway architecture
 - `README.md` - Quick start guide
+- `docs/migration.md` - Legacy database migration tooling and runbook
+- `docs/deploy.md` - VM layout, systemd units, CI-driven deploys and the legacy cut-over runbook
+- `docs/legacy-baseline.md` - Which legacy commits the modern tree is synced to
 
 ---
 

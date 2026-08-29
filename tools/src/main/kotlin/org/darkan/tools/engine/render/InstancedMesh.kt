@@ -22,30 +22,78 @@ import java.nio.FloatBuffer
  * - 2: texCoord (vec2)
  * - 3: normal (vec3)
  * - 4-7: instanceMatrix (mat4, one vec4 per column)
+ *
+ * ## GL resources are created on first instance, not on construction
+ *
+ * Registering a model is not the same as drawing it. The map viewer registers every unique mesh
+ * in every loaded region here, then draws the scene through the indirect and static-batch paths
+ * instead — `instanced=0` in the capture stats, every frame. Building a VAO, five buffers and
+ * their uploads for each of those was the whole of `gl:modelRegister`: 0.3 ms of main-thread GL
+ * time per mesh, several thousand meshes per load, for geometry this class never drew.
+ *
+ * So construction only keeps the arrays, and the GL objects appear the moment an instance is
+ * actually added. A mesh nothing instances costs one small object and no driver calls; one that
+ * is instanced behaves exactly as before, just with its upload deferred to the frame that needs
+ * it. [render] returns on a zero instance count before touching GL at all.
  */
 class InstancedMesh(
-    positions: FloatArray,
-    colors: FloatArray? = null,
-    textureCoords: FloatArray? = null,
-    normals: FloatArray? = null,
-    indices: IntArray,
+    private var positions: FloatArray?,
+    private var colors: FloatArray? = null,
+    private var textureCoords: FloatArray? = null,
+    private var normals: FloatArray? = null,
+    private var indices: IntArray?,
     private val maxInstances: Int = 10000
 ) {
-    val vaoId: Int
+    private var vaoId: Int = 0
     private val vboIds = mutableListOf<Int>()
-    private val indexVboId: Int
-    private val instanceVboId: Int
-    val vertexCount: Int = indices.size
+    private var indexVboId: Int = 0
+    private var instanceVboId: Int = 0
 
-    // Instance data buffer (16 floats per matrix)
-    private val instanceBuffer: FloatBuffer = MemoryUtil.memAllocFloat(maxInstances * 16)
+    /** True once [createGlResources] has run. */
+    private var glReady = false
+
+    val vertexCount: Int = indices?.size ?: 0
+
+    /**
+     * Instance data staging buffer (16 floats per matrix), grown on demand.
+     *
+     * [maxInstances] is a ceiling, not a size. The region pipeline registers every model with a
+     * ceiling of 50,000, which as an eager allocation is 3.2 MB of pinned native memory *and* a
+     * 3.2 MB `GL_DYNAMIC_DRAW` buffer the driver has to zero — about 0.3 ms of GL-thread time per
+     * mesh, paid whether or not a single instance is ever drawn through it. A town at render
+     * distance 3 registers a few thousand meshes and draws all of them through the indirect and
+     * static-batch paths instead, so that was the entire cost of `gl:modelRegister` and none of
+     * it bought anything.
+     *
+     * Allocating on first use and doubling from there keeps the ceiling's meaning (an instance
+     * beyond it is still refused) while making registration free for meshes nothing instances.
+     */
+    private var instanceBuffer: FloatBuffer? = null
+
+    /** Instances the staging buffer and the GPU buffer can currently hold. */
+    private var instanceCapacity = 0
     private var instanceCount = 0
     private var instanceDataDirty = false
 
     // Temp matrix for storing transforms
     private val tempFloats = FloatArray(16)
 
-    init {
+    /**
+     * Build the VAO and vertex buffers, and release the CPU-side arrays.
+     *
+     * Called the first time an instance is added. Must run on the GL thread, which every caller
+     * that can reach it (the per-frame instance batching) already is.
+     */
+    private fun createGlResources() {
+        if (glReady) return
+        glReady = true
+
+        val positions = this.positions ?: FloatArray(0)
+        val colors = this.colors
+        val textureCoords = this.textureCoords
+        val normals = this.normals
+        val indices = this.indices ?: IntArray(0)
+
         vaoId = glGenVertexArrays()
         glBindVertexArray(vaoId)
 
@@ -123,8 +171,10 @@ class InstancedMesh(
         // Instance matrix VBO (attributes 4-7)
         instanceVboId = glGenBuffers()
         glBindBuffer(GL_ARRAY_BUFFER, instanceVboId)
-        // Allocate buffer for max instances, will be updated each frame
-        glBufferData(GL_ARRAY_BUFFER, (maxInstances * 16 * 4).toLong(), GL_DYNAMIC_DRAW)
+        // Sized to nothing until an instance is actually added; see [instanceBuffer].
+        // glVertexAttribPointer below only records *which* buffer feeds attributes 4-7, so a
+        // later glBufferData resize of the same buffer name leaves this VAO state valid.
+        glBufferData(GL_ARRAY_BUFFER, 0L, GL_DYNAMIC_DRAW)
 
         val vec4Size = 4 * 4 // 4 floats * 4 bytes
         val mat4Size = vec4Size * 4 // 4 vec4s per mat4
@@ -150,6 +200,13 @@ class InstancedMesh(
 
         glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
+
+        // The GL buffers own this geometry now.
+        this.positions = null
+        this.colors = null
+        this.textureCoords = null
+        this.normals = null
+        this.indices = null
     }
 
     /**
@@ -157,9 +214,44 @@ class InstancedMesh(
      * Clears the instance buffer for new data.
      */
     fun beginBatch() {
-        instanceBuffer.clear()
+        instanceBuffer?.clear()
         instanceCount = 0
         instanceDataDirty = true
+    }
+
+    /**
+     * Make room for one more instance, growing the staging and GPU buffers if needed.
+     *
+     * Returns the staging buffer, or null when [maxInstances] is already reached.
+     *
+     * The GPU buffer is resized with `glBufferData`, which orphans its contents — harmless here
+     * because [endBatch] always re-uploads the whole batch from offset zero.
+     */
+    private fun instanceSlot(): FloatBuffer? {
+        if (instanceCount >= maxInstances) return null
+        createGlResources()
+        val existing = instanceBuffer
+        if (existing != null && instanceCount < instanceCapacity) return existing
+
+        var capacity = if (instanceCapacity == 0) INITIAL_INSTANCE_CAPACITY else instanceCapacity * 2
+        while (capacity <= instanceCount) capacity *= 2
+        if (capacity > maxInstances) capacity = maxInstances
+
+        val grown = if (existing == null) {
+            MemoryUtil.memAllocFloat(capacity * 16)
+        } else {
+            // memRealloc preserves the contents but not the position, and the instances written
+            // so far have to stay where they are.
+            val position = existing.position()
+            MemoryUtil.memRealloc(existing, capacity * 16).also { it.position(position) }
+        }
+        instanceBuffer = grown
+        instanceCapacity = capacity
+
+        glBindBuffer(GL_ARRAY_BUFFER, instanceVboId)
+        glBufferData(GL_ARRAY_BUFFER, (capacity * 16 * 4).toLong(), GL_DYNAMIC_DRAW)
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        return grown
     }
 
     /**
@@ -168,13 +260,11 @@ class InstancedMesh(
      * @return true if the instance was added, false if buffer is full
      */
     fun addInstance(modelMatrix: Matrix4f): Boolean {
-        if (instanceCount >= maxInstances) {
-            return false
-        }
+        val buffer = instanceSlot() ?: return false
 
         // Get matrix data as column-major floats
         modelMatrix.get(tempFloats)
-        instanceBuffer.put(tempFloats)
+        buffer.put(tempFloats)
         instanceCount++
         return true
     }
@@ -187,11 +277,9 @@ class InstancedMesh(
      * @return true if the instance was added, false if buffer is full
      */
     fun addInstanceRaw(matrixData: FloatArray): Boolean {
-        if (instanceCount >= maxInstances) {
-            return false
-        }
+        val buffer = instanceSlot() ?: return false
 
-        instanceBuffer.put(matrixData)
+        buffer.put(matrixData)
         instanceCount++
         return true
     }
@@ -200,9 +288,7 @@ class InstancedMesh(
      * Add an instance at a position with optional scale.
      */
     fun addInstance(x: Float, y: Float, z: Float, scale: Float = 1f): Boolean {
-        if (instanceCount >= maxInstances) {
-            return false
-        }
+        val buffer = instanceSlot() ?: return false
 
         // Build a simple TRS matrix inline
         tempFloats[0] = scale;  tempFloats[1] = 0f;     tempFloats[2] = 0f;     tempFloats[3] = 0f
@@ -210,7 +296,7 @@ class InstancedMesh(
         tempFloats[8] = 0f;     tempFloats[9] = 0f;     tempFloats[10] = scale; tempFloats[11] = 0f
         tempFloats[12] = x;     tempFloats[13] = y;     tempFloats[14] = z;     tempFloats[15] = 1f
 
-        instanceBuffer.put(tempFloats)
+        buffer.put(tempFloats)
         instanceCount++
         return true
     }
@@ -220,12 +306,13 @@ class InstancedMesh(
      */
     fun endBatch() {
         if (!instanceDataDirty || instanceCount == 0) return
+        val buffer = instanceBuffer ?: return
 
-        instanceBuffer.flip()
+        buffer.flip()
 
         glBindBuffer(GL_ARRAY_BUFFER, instanceVboId)
         // Use glBufferSubData for partial updates (more efficient than glBufferData)
-        glBufferSubData(GL_ARRAY_BUFFER, 0, instanceBuffer)
+        glBufferSubData(GL_ARRAY_BUFFER, 0, buffer)
         glBindBuffer(GL_ARRAY_BUFFER, 0)
 
         instanceDataDirty = false
@@ -269,20 +356,38 @@ class InstancedMesh(
      * Clean up GPU resources.
      */
     fun cleanup() {
-        glDisableVertexAttribArray(0)
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        positions = null
+        colors = null
+        textureCoords = null
+        normals = null
+        indices = null
 
-        vboIds.forEach { glDeleteBuffers(it) }
-        glDeleteBuffers(instanceVboId)
-        glDeleteBuffers(indexVboId)
+        if (glReady) {
+            glDisableVertexAttribArray(0)
+            glBindBuffer(GL_ARRAY_BUFFER, 0)
 
-        glBindVertexArray(0)
-        glDeleteVertexArrays(vaoId)
+            vboIds.forEach { glDeleteBuffers(it) }
+            glDeleteBuffers(instanceVboId)
+            glDeleteBuffers(indexVboId)
 
-        MemoryUtil.memFree(instanceBuffer)
+            glBindVertexArray(0)
+            glDeleteVertexArrays(vaoId)
+            glReady = false
+        }
+
+        instanceBuffer?.let { MemoryUtil.memFree(it) }
+        instanceBuffer = null
+        instanceCapacity = 0
     }
 
     companion object {
+        /**
+         * Instances the staging buffer holds the first time one is added. Small enough that a
+         * mesh nothing instances costs nothing, large enough that the common cases (a handful of
+         * copies of a piece of scenery) never grow twice.
+         */
+        private const val INITIAL_INSTANCE_CAPACITY = 64
+
         /**
          * Create an instanced mesh from an existing Mesh's data.
          * Note: The original Mesh should not be cleaned up while this is in use

@@ -19,7 +19,7 @@ class TextureOpCurve : TextureOperation(1, true) {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
             val input = getChildMonochromeOutput(0, y)
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 var index = input[x] shr 4
                 if (index < 0) index = 0
                 if (index > 256) index = 256
@@ -107,7 +107,7 @@ class TextureOpCurve : TextureOperation(1, true) {
             val p0 = curvePoints!![segmentIndex - 1]
             val p1 = curvePoints!![segmentIndex]
             val t = ((x - p0[0]) shl 12) / (p1[0] - p0[0])
-            val cosT = (4096 - TextureRaster.PALETTE_COS!![(t shr 5) and 0xff]) shr 1
+            val cosT = (4096 - TextureRaster.PALETTE_COS[(t shr 5) and 0xff]) shr 1
             val invCosT = 4096 - cosT
             var result = (cosT * p1[1] + invCosT * p0[1]) shr 12
 

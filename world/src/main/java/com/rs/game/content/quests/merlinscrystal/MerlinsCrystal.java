@@ -20,6 +20,7 @@ import com.rs.utils.shop.ShopsHandler;
 
 import java.util.ArrayList;
 import java.util.List;
+import static com.rs.engine.variables.VarPlayer.arthur;
 
 @QuestHandler(
 		quest = Quest.MERLINS_CRYSTAL,
@@ -179,7 +180,7 @@ public class MerlinsCrystal extends QuestOutline {
 				if (e.getPlayer().getInventory().containsItem(EXCALIBUR, 1) || e.getPlayer().getEquipment().containsOneItem(EXCALIBUR)) {
 					e.getPlayer().sendMessage("... and it shatters under the force of Excalibur!");
 					e.getPlayer().getQuestManager().setStage(Quest.MERLINS_CRYSTAL, TALK_TO_ARTHUR);
-					e.getPlayer().getVars().setVar(14, 7);
+					e.getPlayer().getVars().setVar(arthur, 7);
                     OwnedNPC merlin = new OwnedNPC(e.getPlayer(), 249, Tile.of(obj.getX(), obj.getY(), obj.getPlane()), true);
 					merlin.setCantInteract(true);
 					merlin.setRandomWalk(false);

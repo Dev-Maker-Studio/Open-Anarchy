@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -17,13 +16,13 @@ class TextureOpSquareWaveform : TextureOperation(0, true) {
     override fun getMonochromeOutput(y: Int): IntArray {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
-            val verticalValue = TextureRaster.verticalTable!![y]
+            val verticalValue = verticalTable[y]
 
             if (direction != 0) {
-                for (x in 0 until TextureRaster.currentWidth) {
+                for (x in 0 until currentWidth) {
                     var value = 0
                     var waveOutput: Short = 0
-                    val horizontalValue = TextureRaster.horizontalTable!![x]
+                    val horizontalValue = horizontalTable[x]
 
                     value = when (direction) {
                         1 -> horizontalValue
@@ -54,7 +53,7 @@ class TextureOpSquareWaveform : TextureOperation(0, true) {
                     }
                     waveIndex++
                 }
-                for (x in 0 until TextureRaster.currentWidth) {
+                for (x in 0 until currentWidth) {
                     output[x] = waveOutput.toInt()
                 }
             }

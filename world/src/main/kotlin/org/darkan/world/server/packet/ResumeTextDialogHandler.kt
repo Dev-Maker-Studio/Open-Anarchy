@@ -2,9 +2,9 @@ package org.darkan.world.server.packet
 
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.events.InputStringEvent
-import org.darkan.core.net.prot.ResumeTextDialog
-import org.darkan.core.net.prot.ResumeNameDialog
-import org.darkan.core.net.prot.ResumeClanForumQFCDialog
+import org.darkan.core.net.prot.packet.ResumeTextDialog
+import org.darkan.core.net.prot.packet.ResumeNameDialog
+import org.darkan.core.net.prot.packet.ResumeClanForumQFCDialog
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class ResumeTextDialogHandler : PacketHandler<Player, ResumeTextDialog> {

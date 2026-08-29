@@ -3,6 +3,8 @@ package world.gregs.voidps.cache.definition.encoder
 import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.DefinitionEncoder
 import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
+import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
+import world.gregs.voidps.cache.definition.data.InterfaceComponentSetting
 
 class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
 
@@ -11,7 +13,9 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
             return
         }
         writeByte(-1)
-        if (!definition.unknown.isNullOrEmpty()) {
+        // The decoder only reads the name back when the high bit is set, so an empty (but present)
+        // name still has to set it or the field decodes as null instead of "".
+        if (definition.unknown != null) {
             writeByte(definition.type or 0x80)
             writeString(definition.unknown)
         } else {
@@ -46,7 +50,7 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
                 writeByte(definition.alpha)
             }
             4 -> {
-                writeShort(definition.fontId)
+                writeBigSmart(definition.fontId)
                 writeString(definition.text)
                 writeByte(definition.lineHeight)
                 writeByte(definition.horizontalTextAlign)
@@ -74,7 +78,7 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
                 writeInt(definition.colour)
             }
             6 -> {
-                writeShort(definition.defaultMediaId)
+                writeBigSmart(definition.defaultMediaId)
                 var flag = 0
                 if (definition.animated) {
                     flag = flag or 0x4
@@ -85,11 +89,15 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
                 if (definition.ignoreZBuffer) {
                     flag = flag or 0x8
                 }
-                if (definition.viewportZ == 0 && (definition.viewportX != 0 || definition.viewportY != 0 || definition.spritePitch != 0 || definition.spriteRoll != 0 || definition.spriteYaw != 0 || definition.spriteScale != 100)) {
+                // Only one of the two viewport blocks is ever present. 0x2 (centreType) carries
+                // viewportZ, 0x1 does not, so a component that wants a Z has to use the centre block
+                // and viewportZ is dropped when centreType is false - the format has nowhere to put it.
+                val transform = !definition.centreType && (definition.viewportX != 0 || definition.viewportY != 0 || definition.spritePitch != 0 || definition.spriteRoll != 0 || definition.spriteYaw != 0 || definition.spriteScale != 100)
+                if (transform) {
                     flag = flag or 0x1
                 }
                 writeByte(flag)
-                if (flag and 0x1 == 1) {
+                if (transform) {
                     writeShort(definition.viewportX)
                     writeShort(definition.viewportY)
                     writeShort(definition.spritePitch)
@@ -105,7 +113,7 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
                     writeShort(definition.spriteYaw)
                     writeShort(definition.spriteScale)
                 }
-                writeShort(definition.animation)
+                writeBigSmart(definition.animation)
                 if (definition.horizontalSizeMode.toInt() != 0) {
                     writeShort(definition.viewportWidth)
                 }
@@ -121,55 +129,32 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
         }
 
         writeMedium(definition.setting.setting)
-        var startOffset: Int
-        val keyRepeat = definition.keyRepeats
-        val keyCodes = definition.keyCodes
-        val keyModifiers = definition.keyModifiers
-        if (keyRepeat != null && keyCodes != null && keyModifiers != null) {
-            startOffset = 16
-            for (i in keyCodes) {
-                if (i.toInt() != 0) {
-                    break
-                }
-                startOffset += 16
-            }
-            writeByte(startOffset)
-            var counter = (startOffset shr 4) - 1
-            val length = 11
-            while (counter != length) {
-                writeByte(keyRepeat[counter].toInt())
-                writeByte(keyCodes[counter].toInt())
-                writeByte(keyModifiers[counter])
-                counter += 1
-                while (counter != length) {
-                    if (keyCodes[counter].toInt() != 0) {
-                        break
-                    }
-                    counter++
-                }
-                writeByte(if (counter == length) 0 else counter + 1 shl 4)
-            }
-        } else {
-            writeByte(0)
-        }
+        encodeKeyBindings(definition)
         writeString(definition.name)
         var optionFlag = 0
         val options = definition.options
         if (options != null) {
             optionFlag = options.size
         }
-        val icons = definition.mouseIcon
+        // Only the entries actually written go in the high nibble, not the array length; the decoder
+        // takes the array length from the index byte of the first entry instead.
+        val icons = definition.mouseIcon?.takeIf { it.isNotEmpty() }
+        val extraIcon = if (icons == null) -1 else icons.indices.firstOrNull { it != icons.lastIndex && icons[it] != -1 } ?: -1
         if (icons != null) {
-            optionFlag = optionFlag or (icons.size shl 4)
+            optionFlag = optionFlag or ((if (extraIcon == -1) 1 else 2) shl 4)
         }
         writeByte(optionFlag)
         options?.forEach {
             writeString(it)
         }
-        if (icons != null && icons.isNotEmpty()) {
+        if (icons != null) {
+            // The last entry has to come first so the decoder sizes the array correctly. The format
+            // only carries two entries in total, so anything else set past the second is lost.
             writeByte(icons.lastIndex)
-            for (index in icons.indices) {
-                writeShort(icons[index])
+            writeShort(icons[icons.lastIndex])
+            if (extraIcon != -1) {
+                writeByte(extraIcon)
+                writeShort(icons[extraIcon])
             }
         }
 
@@ -179,43 +164,93 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
         writeByte(definition.anInt4860)
         writeString(definition.useOption)
 
-        if (definition.setting.anInt7413 != -1) {
+        // The presence of these three shorts is decided by the setting bits, never by their own value:
+        // components routinely have the bits set and store 65535, which reads back as -1. Gating the
+        // write on "not -1" instead drops three shorts the decoder still expects and desyncs the rest
+        // of the component. writeShort truncates to 16 bits, so -1 goes out as the 65535 sentinel.
+        if (InterfaceComponentSetting.useOptionFlags(definition.setting.setting) != 0) {
             writeShort(definition.setting.anInt7413)
             writeShort(definition.anInt4698)
             writeShort(definition.anInt4839)
         }
 
-        encodeScript(definition.information)
-        encodeScript(definition.mouseEnterHandler)
-        encodeScript(definition.mouseExitHandler)
-        encodeScript(definition.anObjectArray4771)
-        encodeScript(definition.anObjectArray4768)
-        encodeScript(definition.stateChangeHandler)
-        encodeScript(definition.invUpdateHandler)
-        encodeScript(definition.refreshHandler)
-        encodeScript(definition.updateHandler)
-        encodeScript(definition.anObjectArray4770)
-        encodeScript(definition.mouseMotionHandler)
-        encodeScript(definition.mousePressedHandler)
-        encodeScript(definition.mouseDraggedHandler)
-        encodeScript(definition.mouseReleasedHandler)
-        encodeScript(definition.mouseDragPassHandler)
-        encodeScript(definition.anObjectArray4852)
-        encodeScript(definition.anObjectArray4711)
-        encodeScript(definition.anObjectArray4753)
-        encodeScript(definition.anObjectArray4688)
-        encodeScript(definition.anObjectArray4775)
-        encodeIntArray(definition.clientVarp)
-        encodeIntArray(definition.inventories)
-        encodeIntArray(definition.anIntArray4789)
-        encodeIntArray(definition.clientVarc)
-        encodeIntArray(definition.anIntArray4805)
+        encodeScript(definition.onLoadScript)
+        encodeScript(definition.onMouseOver)
+        encodeScript(definition.onMouseLeaveScript)
+        encodeScript(definition.hookParams)
+        encodeScript(definition.onTargetEnter)
+        encodeScript(definition.onVarpTransmit)
+        encodeScript(definition.mouseLeaveScript)
+        encodeScript(definition.onStatTransmit)
+        encodeScript(definition.onTimer)
+        encodeScript(definition.params)
+        // onTargetLeave is skipped, the format written above is the original if3
+        encodeScript(definition.popupScript)
+        encodeScript(definition.onClick)
+        encodeScript(definition.onClickRepeat)
+        encodeScript(definition.onRelease)
+        encodeScript(definition.onHold)
+        encodeScript(definition.onDrag)
+        encodeScript(definition.onDragComplete)
+        encodeScript(definition.onMouseMove)
+        encodeScript(definition.onKey)
+        encodeScript(definition.onScrollWheel)
+        encodeIntArray(definition.varps)
+        encodeIntArray(definition.mouseLeaveArrayParams)
+        encodeIntArray(definition.statTransmitFilter)
+        encodeIntArray(definition.keyPressArray)
+        encodeIntArray(definition.mouseWheelArray)
     }
 
-    private fun Writer.encodeScript(script: Array<Any>?) {
-        val size = script?.size ?: 0
-        writeByte(size)
-        script?.forEach {
+    /**
+     * Writes the key binding list; each entry is four bytes and the list is terminated by a zero byte
+     * where the next entry's header would start.
+     *
+     * Header byte packs the slot as `slot + 1` in the high nibble - which is what makes zero a valid
+     * terminator - and the top nibble of the 12 bit repeat delay in the low nibble. The remaining
+     * eight bits of the delay follow, then the key and the modifier mask.
+     */
+    private fun Writer.encodeKeyBindings(definition: InterfaceComponentDefinition) {
+        val keyRepeats = definition.keyRepeats
+        val keyCodes = definition.keyCodes
+        val keyModifiers = definition.keyModifiers
+        if (keyRepeats == null || keyCodes == null || keyModifiers == null) {
+            writeByte(0)
+            return
+        }
+        val size = minOf(keyRepeats.size, keyCodes.size, keyModifiers.size, SLOTS)
+        var written = 0
+        for (slot in 0 until size) {
+            if (keyRepeats[slot].toInt() == 0 && keyCodes[slot].toInt() == 0 && keyModifiers[slot] == 0) {
+                continue
+            }
+            val delay = keyModifiers[slot] and 0xfff
+            writeByte(((slot + 1) shl 4) or (delay shr 8))
+            writeByte(delay)
+            writeByte(keyRepeats[slot].toInt())
+            writeByte(keyCodes[slot].toInt())
+            written++
+        }
+        if (written == 0) {
+            // Arrays exist but every slot is empty; an entirely empty list would decode back as null,
+            // so keep the arrays alive with a single blank binding in slot 0.
+            writeByte(1 shl 4)
+            writeByte(0)
+            writeByte(0)
+            writeByte(0)
+        }
+        writeByte(0)
+    }
+
+    private fun Writer.encodeScript(hook: InterfaceComponentHook?) {
+        if (hook == null) {
+            writeByte(0)
+            return
+        }
+        writeByte(hook.args.size + 1)
+        writeByte(false)
+        writeInt(hook.script)
+        hook.args.forEach {
             writeByte(it is String)
             if (it is String) {
                 writeString(it)
@@ -233,4 +268,8 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
         }
     }
 
+    private companion object {
+        /** Key binding slots the decoder allocates; slot 10 is the "use" binding. */
+        private const val SLOTS = 11
+    }
 }

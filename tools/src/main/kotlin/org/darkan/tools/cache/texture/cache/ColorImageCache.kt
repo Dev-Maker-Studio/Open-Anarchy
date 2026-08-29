@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.cache
 
 import org.darkan.tools.cache.texture.TextureGenerationException
-import org.darkan.tools.cache.texture.TextureRaster
 
 /**
  * LRU cache for color (RGB) texture operation output.
@@ -13,11 +12,14 @@ import org.darkan.tools.cache.texture.TextureRaster
  * @param capacity The number of rows to cache
  * @param totalRows The total number of rows in the texture
  * @param width The width of each row in pixels
+ * @param deadlineNanos Absolute [System.nanoTime] deadline for the enclosing generation,
+ *        or 0 to disable the timeout check
  */
 class ColorImageCache(
     private val capacity: Int,
     private val totalRows: Int,
-    width: Int
+    width: Int,
+    private val deadlineNanos: Long = 0L
 ) {
     /** True if the current row needs to be regenerated */
     var dirty: Boolean = false
@@ -50,8 +52,7 @@ class ColorImageCache(
      * @return The RGB palette data for this row
      */
     fun getPalette(rowIndex: Int): Array<IntArray> {
-        if (TextureRaster.generationStartNanos != 0L &&
-            System.nanoTime() - TextureRaster.generationStartNanos > TextureRaster.MAX_GENERATION_NANOS) {
+        if (deadlineNanos != 0L && System.nanoTime() > deadlineNanos) {
             throw TextureGenerationException("Texture generation timeout in cache access")
         }
         // Case 1: Full cache (capacity == totalRows)

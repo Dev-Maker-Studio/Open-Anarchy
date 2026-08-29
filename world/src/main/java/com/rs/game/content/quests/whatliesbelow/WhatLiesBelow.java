@@ -20,6 +20,9 @@ import com.rs.plugin.handlers.NPCDeathHandler;
 
 import java.util.ArrayList;
 import java.util.List;
+import static com.rs.engine.variables.VarBitPlayer.dsd_surok_at_statue;
+import static com.rs.engine.variables.VarBitPlayer.dsd_surok_clothes_2;
+import static com.rs.engine.variables.VarBitPlayer.surok_tunnelcheck;
 
 @QuestHandler(
         quest = Quest.WHAT_LIES_BELOW,
@@ -97,12 +100,12 @@ public class WhatLiesBelow extends QuestOutline {
 
     @Override
     public void updateStage(Player player, int stage) {
-        if (player.getVars().getVarBit(3524) >= 0 && stage == getCompletedStage())
-            player.getVars().saveVarBit(4312, 1);
+        if (player.getVars().getVarBit(surok_tunnelcheck) >= 0 && stage == getCompletedStage())
+            player.getVars().saveVarBit(dsd_surok_at_statue, 1);
         if (stage >= 6)
-            player.getVars().setVarBit(4314, 1);
+            player.getVars().setVarBit(dsd_surok_clothes_2, 1);
         if (player.isMiniquestStarted(Miniquest.HUNT_FOR_SUROK))
-            player.getVars().setVarBit(4314, 2);
+            player.getVars().setVarBit(dsd_surok_clothes_2, 2);
     }
 
     public static ItemClickHandler readFolders = new ItemClickHandler(new Object[] { 11003, 11006, 11007, 11008, 11009, 11010, 11011 }, new String[] { "Read" }, e -> {

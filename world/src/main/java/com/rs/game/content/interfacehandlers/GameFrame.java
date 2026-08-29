@@ -30,6 +30,9 @@ import com.rs.utils.ReportsManager;
 
 import java.text.NumberFormat;
 import java.util.Locale;
+import static com.rs.engine.variables.VarBitPlayer.option_clanchatcolour;
+import static com.rs.engine.variables.VarBitPlayer.option_friendchatcolour;
+import static com.rs.engine.variables.VarBitPlayer.option_guestchatcolour;
 
 @PluginEventHandler
 public class GameFrame {
@@ -77,13 +80,13 @@ public class GameFrame {
 		else if (e.getComponentId() == 41)
 			e.getPlayer().getVars().saveVar(287, e.getPlayer().getVars().getVar(287) == 0 ? 1 : 0);
 		else if (e.getComponentId() >= 17 && e.getComponentId() <= 36)
-			e.getPlayer().getVars().saveVarBit(3612, e.getComponentId() - 17);
+			e.getPlayer().getVars().saveVarBit(option_clanchatcolour, e.getComponentId() - 17);
 		else if (e.getComponentId() >= 97 && e.getComponentId() <= 116)
-			e.getPlayer().getVars().saveVarBit(9191, e.getComponentId() - 97);
+			e.getPlayer().getVars().saveVarBit(option_guestchatcolour, e.getComponentId() - 97);
 		else if (e.getComponentId() >= 49 && e.getComponentId() <= 66)
 			e.getPlayer().getVars().saveVar(287, e.getComponentId() - 48);
 		else if (e.getComponentId() >= 72 && e.getComponentId() <= 91)
-			e.getPlayer().getVars().saveVarBit(9188, e.getComponentId() - 72);
+			e.getPlayer().getVars().saveVarBit(option_friendchatcolour, e.getComponentId() - 72);
 	});
 
 	public static ButtonClickHandler handleSettingsTab = new ButtonClickHandler(261, e -> {

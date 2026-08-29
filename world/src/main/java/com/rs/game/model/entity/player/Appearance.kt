@@ -25,12 +25,17 @@ import com.rs.utils.rotate90RightAnimation
 import com.rs.utils.specialByte
 import com.rs.utils.walkingAnimation
 import org.darkan.core.Logger
-import org.darkan.core.Utils
 import org.darkan.core.cache.EnumDefinitions
 import org.darkan.core.cache.NPCDefinitions
 import org.darkan.core.cache.StructDefinitions
+import org.darkan.core.EnvVars
 import org.darkan.core.model.Item
-import world.gregs.voidps.buffer.write.BufferWriter
+import org.darkan.core.net.prot.Codec
+import org.darkan.core.net.prot.update.UpdateProtocol
+import org.darkan.core.update.AppearanceSlot
+import org.darkan.core.update.AppearanceTitle
+import org.darkan.core.update.NpcRenderAnimations
+import org.darkan.core.update.PlayerAppearanceData
 import world.gregs.voidps.cache.definition.data.EnumDefinition
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 import world.gregs.voidps.cache.definition.data.NPCDefinition
@@ -93,123 +98,114 @@ class Appearance {
         return StructDefinitions.getStruct(structID).getIntValue(if (isFaceMask) HAIR_WITH_FACE_MASK_PARAM else HAIR_WITH_HAT_PARAM, -1)
     }
 
+    /** Revision encoder that owns the appearance block's wire format. */
+    private val updateProtocol: UpdateProtocol
+        get() = Codec.get(EnvVars.majorVersion)?.updateProtocol
+            ?: error("No update protocol registered for revision ${EnvVars.majorVersion}")
+
     fun generateAppearanceData() {
         val player = this.player ?: return
-        val stream = BufferWriter(512)
         val pvpArea = World.isPvpArea(player)
         val showSkillTotal = player.tempAttribs.getB("showSkillTotal") && !pvpArea
-        var flag = 0
-        if (!isMale)
-            flag = flag or 0x1
-        if (transformedNpcId >= 0 && NPCDefinitions.getDefs(transformedNpcId.toInt()).aBool4872)
-            flag = flag or 0x2
-        if (showSkillTotal)
-            flag = flag or 0x4
-        if (title != 0 || player.getTitle() != null)
-            flag = flag or if (isTitleAfter(title) || player.isTitleAfter) 0x80 else 0x40
+        val npcDefs: NPCDefinition? = if (isNPC) NPCDefinitions.getDefs(transformedNpcId.toInt()) else null
+        val hasTitle = title != 0 || player.getTitle() != null
 
-        stream.writeByte(flag)
-        if (title != 0 || player.getTitle() != null)
-            stream.writePrefixedString(player.formattedTitle)
-        stream.writeByte(if (player.hasSkull()) player.skullId else -1)
-        stream.writeByte(if (player.tempAttribs.getI("customHeadIcon", -1) != -1) player.tempAttribs.getI("customHeadIcon", 0) else player.prayer.prayerHeadIcon)
-        stream.writeByte(if (hidePlayer) 1 else 0)
-
-        if (transformedNpcId >= 0) {
-            stream.writeShort(-1)
-            stream.writeShort(transformedNpcId.toInt())
-            stream.writeByte(0)
-        } else {
-            for (index in 0 until 4) {
-                val item: Item? = player.equipment[index]
-                if (item == null)
-                    stream.writeByte(0)
-                else
-                    stream.writeShort(16384 + item.id)
-            }
-
-            var item: Item? = player.equipment[Equipment.CHEST]
-            stream.writeShort(if (item == null) 0x100 + lookI[2] else 16384 + item.id)
-
-            item = player.equipment[Equipment.SHIELD]
-            if (item == null)
-                stream.writeByte(0)
+        val appearance = PlayerAppearanceData(
+            male = isMale,
+            npcTransformSizeFlag = npcDefs != null && npcDefs.aBool4872,
+            showSkillTotal = showSkillTotal,
+            title = if (hasTitle) AppearanceTitle(player.formattedTitle, isTitleAfter(title) || player.isTitleAfter) else null,
+            skullIcon = if (player.hasSkull()) player.skullId else -1,
+            headIcon = if (player.tempAttribs.getI("customHeadIcon", -1) != -1)
+                player.tempAttribs.getI("customHeadIcon", 0)
             else
-                stream.writeShort(16384 + item.id)
+                player.prayer.prayerHeadIcon,
+            hidden = hidePlayer,
+            transformedNpcId = transformedNpcId.toInt(),
+            slots = if (npcDefs != null) emptyList() else buildSlots(player),
+            meshOverrides = if (npcDefs != null) emptyList() else getMeshModifiers().map { it.toOverride() },
+            colours = colour.copyOf(),
+            renderEmote = renderEmote,
+            displayName = player.displayName,
+            combatLevel = if (pvpArea) player.skills.combatLevel else player.skills.combatLevelWithSummoning,
+            totalLevel = player.skills.totalLevel,
+            summoningCombatLevel = if (pvpArea) player.skills.combatLevelWithSummoning else 0,
+            pvpCombatLevelThreshold = player.pvpCombatLevelThreshhold,
+            npcRenderAnimations = npcDefs?.let {
+                NpcRenderAnimations(
+                    walk = it.walkingAnimation,
+                    rotate180 = it.rotate180Animation,
+                    rotate90Right = it.rotate90RightAnimation,
+                    rotate90Left = it.rotate90LeftAnimation,
+                    special = it.specialByte,
+                )
+            },
+        )
 
-            item = player.equipment[Equipment.CHEST]
-            if (lookI[3] != -1 && (item == null || !Equipment.hideArms(item)))
-                stream.writeShort(0x100 + lookI[3])
-            else if (item != null && !Equipment.hideArms(item))
-                stream.writeShort(0x100 + oldArms)
-            else
-                stream.writeByte(0)
-
-            item = player.equipment[Equipment.LEGS]
-            stream.writeShort(if (item == null) 0x100 + lookI[5] else 16384 + item.id)
-
-            item = player.equipment[Equipment.HEAD]
-            if (lookI[0] != -1 && (item == null || !Equipment.hideHair(item))) {
-                if (item == null)
-                    stream.writeShort(0x100 + lookI[0])
-                else {
-                    val hatHairStyle = getHatHairStyle(lookI[0], item.definitions.faceMask())
-                    if (hatHairStyle != -1)
-                        stream.writeShort(0x100 + hatHairStyle)
-                    else
-                        stream.writeByte(0)
-                }
-            } else
-                stream.writeByte(0)
-
-            item = player.equipment[Equipment.HANDS]
-            stream.writeShort(if (item == null) 0x100 + lookI[4] else 16384 + item.id)
-
-            item = player.equipment[Equipment.FEET]
-            stream.writeShort(if (item == null) 0x100 + lookI[6] else 16384 + item.id)
-
-            item = player.equipment[if (isMale) Equipment.HEAD else Equipment.CHEST]
-            if (isMale && lookI[1] != -1 && (item == null || (isMale && !Equipment.hideBeard(item))))
-                stream.writeShort(0x100 + lookI[1])
-            else
-                stream.writeByte(0)
-
-            item = player.equipment[Equipment.AURA]
-            if (item == null)
-                stream.writeByte(0)
-            else
-                stream.writeShort(16384 + item.id)
-
-            encodeMeshModifiers(stream)
-        }
-
-        for (element in colour)
-            stream.writeByte(element)
-
-        stream.writeShort(renderEmote)
-        stream.writeString(player.displayName)
-        stream.writeByte(if (pvpArea) player.skills.combatLevel else player.skills.combatLevelWithSummoning)
-        if (showSkillTotal)
-            stream.writeShort(player.skills.totalLevel)
-        else {
-            stream.writeByte(if (pvpArea) player.skills.combatLevelWithSummoning else 0)
-            stream.writeByte(player.pvpCombatLevelThreshhold)
-        }
-        stream.writeByte(if (transformedNpcId >= 0) 1 else 0)
-        if (transformedNpcId >= 0) {
-            val defs: NPCDefinition = NPCDefinitions.getDefs(transformedNpcId.toInt())
-            stream.writeShort(defs.walkingAnimation)
-            stream.writeShort(defs.rotate180Animation)
-            stream.writeShort(defs.rotate90RightAnimation)
-            stream.writeShort(defs.rotate90LeftAnimation)
-            stream.writeByte(defs.specialByte)
-        }
-
-        val data = stream.toArray()
-        val md5Hash = Utils.encryptUsingMD5(data)
-        appeareanceData = data
-        mD5AppeareanceDataHash = md5Hash
+        val encoded = updateProtocol.encodePlayerAppearance(appearance)
+        appeareanceData = encoded.data
+        mD5AppeareanceDataHash = encoded.hash
     }
+
+    /**
+     * Resolves the body/equipment slots in transmission order.
+     *
+     * Each entry is the *semantic* value for that slot; the core revision encoder decides how it
+     * is framed on the wire.
+     */
+    private fun buildSlots(player: Player): List<AppearanceSlot> {
+        val slots = ArrayList<AppearanceSlot>(13)
+
+        for (index in 0 until 4)
+            slots.add(wornOrEmpty(player.equipment[index]))
+
+        val chest: Item? = player.equipment[Equipment.CHEST]
+        slots.add(chest?.let { AppearanceSlot.Worn(it.id) } ?: AppearanceSlot.Body(lookI[2]))
+
+        slots.add(wornOrEmpty(player.equipment[Equipment.SHIELD]))
+
+        slots.add(
+            when {
+                lookI[3] != -1 && (chest == null || !Equipment.hideArms(chest)) -> AppearanceSlot.Body(lookI[3])
+                chest != null && !Equipment.hideArms(chest) -> AppearanceSlot.Body(oldArms)
+                else -> AppearanceSlot.Empty
+            }
+        )
+
+        val legs: Item? = player.equipment[Equipment.LEGS]
+        slots.add(legs?.let { AppearanceSlot.Worn(it.id) } ?: AppearanceSlot.Body(lookI[5]))
+
+        slots.add(hairSlot(player.equipment[Equipment.HEAD]))
+
+        val hands: Item? = player.equipment[Equipment.HANDS]
+        slots.add(hands?.let { AppearanceSlot.Worn(it.id) } ?: AppearanceSlot.Body(lookI[4]))
+
+        val feet: Item? = player.equipment[Equipment.FEET]
+        slots.add(feet?.let { AppearanceSlot.Worn(it.id) } ?: AppearanceSlot.Body(lookI[6]))
+
+        val beardBlocker: Item? = player.equipment[if (isMale) Equipment.HEAD else Equipment.CHEST]
+        slots.add(
+            if (isMale && lookI[1] != -1 && (beardBlocker == null || !Equipment.hideBeard(beardBlocker)))
+                AppearanceSlot.Body(lookI[1])
+            else
+                AppearanceSlot.Empty
+        )
+
+        slots.add(wornOrEmpty(player.equipment[Equipment.AURA]))
+        return slots
+    }
+
+    /** Hair is hidden entirely by some helms, and remapped to a hat-compatible style by others. */
+    private fun hairSlot(head: Item?): AppearanceSlot {
+        if (lookI[0] == -1) return AppearanceSlot.Empty
+        if (head == null) return AppearanceSlot.Body(lookI[0])
+        if (Equipment.hideHair(head)) return AppearanceSlot.Empty
+        val hatHairStyle = getHatHairStyle(lookI[0], head.definitions.faceMask())
+        return if (hatHairStyle != -1) AppearanceSlot.Body(hatHairStyle) else AppearanceSlot.Empty
+    }
+
+    private fun wornOrEmpty(item: Item?): AppearanceSlot =
+        if (item == null) AppearanceSlot.Empty else AppearanceSlot.Worn(item.id)
 
     private fun getMeshModifiers(): ArrayList<ItemMeshModifier> {
         val player = this.player!!
@@ -267,21 +263,6 @@ class Appearance {
             }
         }
         return modifiers
-    }
-
-    private fun encodeMeshModifiers(stream: BufferWriter) {
-        val start = stream.position()
-        stream.writeShort(0)
-        var slotHash = 0
-        for (modifier in getMeshModifiers()) {
-            val slot = modifier.encode(stream)
-            if (slot != -1)
-                slotHash = slotHash or (1 shl slot)
-        }
-        val end = stream.position()
-        stream.position(start)
-        stream.writeShort(slotHash)
-        stream.position(end)
     }
 
     val size: Int

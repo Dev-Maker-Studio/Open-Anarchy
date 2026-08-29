@@ -3,8 +3,11 @@ package org.darkan.tools.engine.render
 import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL15.*
 import org.lwjgl.opengl.GL30.*
+import org.lwjgl.opengl.GL31.GL_UNIFORM_BUFFER
+import org.lwjgl.opengl.GL31.GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT
 import org.lwjgl.opengl.GL32.*
 import org.lwjgl.opengl.GL43.GL_SHADER_STORAGE_BUFFER
+import org.lwjgl.opengl.GL43.GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT
 import org.lwjgl.opengl.GL44.GL_MAP_COHERENT_BIT
 import org.lwjgl.opengl.GL44.GL_MAP_PERSISTENT_BIT
 import org.lwjgl.opengl.GL44.glBufferStorage
@@ -12,6 +15,7 @@ import org.lwjgl.opengl.GLCapabilities
 import org.lwjgl.opengl.GL
 import org.lwjgl.system.MemoryUtil
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 /**
  * A triple-buffered persistent mapped buffer for streaming per-frame data to the GPU
@@ -25,15 +29,36 @@ import java.nio.ByteBuffer
  * If persistent mapping is unavailable (no GL 4.4 / ARB_buffer_storage), the class falls back
  * to a traditional CPU-side ByteBuffer + `glBufferSubData` path.
  *
+ * ### Frame protocol
+ * ```
+ * val buf = pb.beginFrame()      // waits on this section's fence, returns writable memory
+ * ... write bytes ...
+ * pb.endWrite(bytesWritten)      // fallback path uploads here; persistent path is a no-op
+ * ... bind / issue draw calls, using readOffset() as the byte offset ...
+ * pb.endFrame()                  // fence AFTER the draws that read this section, then advance
+ * ```
+ * The fence must be placed after the draws, not after the writes: a fence records
+ * "everything issued before me has completed", so fencing at write time would let the
+ * CPU reclaim a section while the GPU was still reading it.
+ *
  * @param target         GL buffer target (`GL_SHADER_STORAGE_BUFFER` or `GL_DRAW_INDIRECT_BUFFER`)
- * @param sectionSize    Size in bytes of a single frame's section
+ * @param requestedSectionSize Size in bytes of a single frame's section (rounded up for alignment)
  * @param frames         Number of buffered frames (default 3 for triple buffering)
  */
 class PersistentBuffer(
     val target: Int,
-    val sectionSize: Long,
+    requestedSectionSize: Long,
     val frames: Int = BUFFER_FRAMES
 ) {
+    /**
+     * Size in bytes of a single frame's section.
+     *
+     * Rounded up to the binding alignment required by [target] so that every section
+     * offset is a legal `glBindBufferRange` offset. Without this the ring only works
+     * by accident, for section sizes that happen to be a multiple of the alignment.
+     */
+    val sectionSize: Long = alignUp(requestedSectionSize, bindingAlignment(target))
+
     /** GL buffer name. */
     var bufferId: Int = 0
         private set
@@ -50,6 +75,9 @@ class PersistentBuffer(
 
     /** Index of the current frame section (0 until [frames]). */
     private var currentFrame: Int = 0
+
+    /** True between [beginFrame] and [endFrame]. Guards against fencing a section never written. */
+    private var frameOpen: Boolean = false
 
     /** GL fence sync objects, one per frame section. Null means no fence placed yet. */
     private val fences = arrayOfNulls<Long>(frames)
@@ -84,6 +112,7 @@ class PersistentBuffer(
      * or the mapping call fails.
      */
     private fun tryPersistentInit(): Boolean {
+        if (!PERSISTENT_MAPPING_ENABLED) return false
         val caps: GLCapabilities = GL.getCapabilities()
         if (!caps.GL_ARB_buffer_storage && !caps.OpenGL44) {
             return false
@@ -101,8 +130,16 @@ class PersistentBuffer(
 
         glBufferStorage(target, totalBytes, storageFlags)
 
-        if (GL11.glGetError() != GL11.GL_NO_ERROR) {
+        val storageError = GL11.glGetError()
+        if (storageError != GL11.GL_NO_ERROR) {
+            System.err.println(
+                "[PersistentBuffer] glBufferStorage($totalBytes bytes) failed with GL error " +
+                        "0x${storageError.toString(16)}; falling back to glBufferSubData"
+            )
             glBindBuffer(target, 0)
+            // The buffer name may now have immutable storage attached; start over with a fresh one.
+            glDeleteBuffers(bufferId)
+            bufferId = glGenBuffers()
             return false
         }
 
@@ -110,11 +147,16 @@ class PersistentBuffer(
         glBindBuffer(target, 0)
 
         if (mapped == null) {
-            // Mapping failed; caller will fall back
+            System.err.println("[PersistentBuffer] glMapBufferRange returned null; falling back to glBufferSubData")
+            glDeleteBuffers(bufferId)
+            bufferId = glGenBuffers()
             return false
         }
 
-        persistentMap = mapped
+        // LWJGL hands back a native-order buffer, but every ByteBuffer view derived from it
+        // (slice/duplicate) resets to BIG_ENDIAN per the java.nio spec. Normalise here so the
+        // per-section slices handed out by beginFrame() can inherit the right order explicitly.
+        persistentMap = mapped.order(ByteOrder.nativeOrder())
         return true
     }
 
@@ -126,7 +168,7 @@ class PersistentBuffer(
         glBufferData(target, sectionSize, GL_DYNAMIC_DRAW)
         glBindBuffer(target, 0)
 
-        fallbackBuffer = MemoryUtil.memAlloc(sectionSize.toInt())
+        fallbackBuffer = MemoryUtil.memAlloc(sectionSize.toInt()).order(ByteOrder.nativeOrder())
     }
 
     // ====================================================================
@@ -141,18 +183,23 @@ class PersistentBuffer(
      *
      * For fallback buffers this simply clears and returns the CPU staging buffer.
      *
-     * @return A ByteBuffer positioned at the start of the writable region. The caller
-     *         should write up to [sectionSize] bytes starting from position 0 (relative).
+     * @return A ByteBuffer positioned at the start of the writable region, in native byte
+     *         order. The caller may write up to [sectionSize] bytes.
      */
     fun beginFrame(): ByteBuffer {
+        frameOpen = true
         if (isPersistent) {
             waitForFence()
             val map = persistentMap!!
-            val offset = currentFrame.toLong() * sectionSize
+            val offset = currentFrame * sectionSize
             // Return a slice positioned at the current section
             map.position(offset.toInt())
             map.limit((offset + sectionSize).toInt())
-            val slice = map.slice()
+            // ByteBuffer.slice() always produces a BIG_ENDIAN view regardless of the parent's
+            // order. Writing GPU structs through a big-endian view byte-swaps every float and
+            // int: matrices become garbage and DrawElementsIndirectCommand counts become
+            // astronomically large, which wedges the GPU. Restore native order explicitly.
+            val slice = map.slice().order(ByteOrder.nativeOrder())
             // Restore the parent buffer's full range
             map.position(0)
             map.limit(map.capacity())
@@ -165,30 +212,39 @@ class PersistentBuffer(
     }
 
     /**
-     * Finish writing for the current frame.
+     * Finish *writing* for the current frame.
      *
-     * For persistent buffers: places a fence sync and advances the frame counter.
-     * For fallback buffers: uploads the staging buffer via glBufferSubData and resets.
+     * For the fallback path this uploads the staging buffer via `glBufferSubData`.
+     * For the persistent path it is a no-op: coherent mapping makes the writes visible.
      *
-     * @param bytesWritten The number of bytes actually written this frame. For the fallback
-     *                     path this limits the upload size. For persistent buffers it is
-     *                     informational only (coherent mapping makes data visible automatically).
+     * Draw calls that read this data may be issued after this call; [endFrame] must be
+     * called once they have been.
+     *
+     * @param bytesWritten The number of bytes actually written this frame.
      */
-    fun endFrame(bytesWritten: Long) {
-        if (isPersistent) {
-            placeFence()
-            currentFrame = (currentFrame + 1) % frames
-        } else {
-            val fb = fallbackBuffer!!
-            fb.flip()
-            // Only upload the bytes that were actually written
-            if (bytesWritten > 0) {
-                fb.limit(bytesWritten.toInt())
-                glBindBuffer(target, bufferId)
-                glBufferSubData(target, 0, fb)
-                glBindBuffer(target, 0)
-            }
+    fun endWrite(bytesWritten: Long) {
+        if (isPersistent) return
+        val fb = fallbackBuffer!!
+        if (bytesWritten > 0) {
+            fb.position(0)
+            fb.limit(bytesWritten.toInt())
+            glBindBuffer(target, bufferId)
+            glBufferSubData(target, 0, fb)
+            glBindBuffer(target, 0)
         }
+        fb.clear()
+    }
+
+    /**
+     * Finish the frame: place a fence covering the draw calls that read this section and
+     * advance the ring. Must be called *after* those draws have been issued.
+     */
+    fun endFrame() {
+        if (!frameOpen) return
+        frameOpen = false
+        if (!isPersistent) return
+        placeFence()
+        currentFrame = (currentFrame + 1) % frames
     }
 
     /**
@@ -198,21 +254,17 @@ class PersistentBuffer(
      * For fallback buffers (single section, no offset), this binds the entire buffer.
      *
      * @param binding The indexed binding point
-     * @param size    The number of bytes to bind (should match bytesWritten from endFrame)
+     * @param size    The number of bytes to bind (should match bytesWritten from endWrite)
      */
     fun bindRange(binding: Int, size: Long) {
-        if (isPersistent) {
-            val offset = currentFrameReadOffset()
-            glBindBufferRange(target, binding, bufferId, offset, size)
-        } else {
-            glBindBufferRange(target, binding, bufferId, 0, size)
-        }
+        if (size <= 0L) return
+        glBindBufferRange(target, binding, bufferId, readOffset(), size)
     }
 
     /**
      * Bind the buffer as the current target (e.g., GL_DRAW_INDIRECT_BUFFER).
-     * For persistent mapping, the caller must use an explicit byte offset in the draw call.
-     * For fallback, offset is always 0.
+     * For persistent mapping, the caller must add [readOffset] to any byte offset it passes
+     * to the draw call. For fallback, the offset is always 0.
      */
     fun bind() {
         glBindBuffer(target, bufferId)
@@ -226,23 +278,11 @@ class PersistentBuffer(
     }
 
     /**
-     * Get the byte offset into the buffer for the most recently written frame section.
-     * This is the section that was written during the last [beginFrame]/[endFrame] cycle.
+     * Byte offset of the section currently being written/read this frame.
      *
-     * For persistent buffers, the "read" frame is the one that was just written (before
-     * the frame counter advanced in endFrame). Since endFrame advances the counter,
-     * the last-written section is (currentFrame - 1 + frames) % frames.
-     *
-     * For fallback buffers, this is always 0.
+     * Valid between [beginFrame] and [endFrame]; always 0 for the fallback path.
      */
-    fun currentFrameReadOffset(): Long {
-        return if (isPersistent) {
-            val readFrame = (currentFrame - 1 + frames) % frames
-            readFrame.toLong() * sectionSize
-        } else {
-            0L
-        }
-    }
+    fun readOffset(): Long = if (isPersistent) currentFrame * sectionSize else 0L
 
     // ====================================================================
     // Fence synchronization (persistent path only)
@@ -266,6 +306,7 @@ class PersistentBuffer(
      * Place a fence after the current frame's draw calls.
      */
     private fun placeFence() {
+        fences[currentFrame]?.let { glDeleteSync(it) }
         fences[currentFrame] = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
     }
 
@@ -303,10 +344,35 @@ class PersistentBuffer(
 
         isPersistent = false
         currentFrame = 0
+        frameOpen = false
     }
 
     companion object {
         /** Default number of buffered frames (triple buffering). */
         const val BUFFER_FRAMES = 3
+
+        /**
+         * `-Ddarkan.persistentMapping=false` forces the `glBufferSubData` path even where
+         * ARB_buffer_storage is available, so the fallback stays exercisable on hardware
+         * that would otherwise never take it.
+         */
+        private val PERSISTENT_MAPPING_ENABLED: Boolean =
+            System.getProperty("darkan.persistentMapping", "true").toBoolean()
+
+        /** Round [value] up to the next multiple of [alignment]. */
+        private fun alignUp(value: Long, alignment: Long): Long =
+            if (alignment <= 1L) value else ((value + alignment - 1L) / alignment) * alignment
+
+        /**
+         * Minimum legal `glBindBufferRange` offset granularity for [target].
+         *
+         * Indirect buffers are not bound by range, but their command offsets must still be a
+         * multiple of 4, so a small alignment is applied uniformly.
+         */
+        private fun bindingAlignment(target: Int): Long = when (target) {
+            GL_SHADER_STORAGE_BUFFER -> GL11.glGetInteger(GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT).toLong().coerceAtLeast(4L)
+            GL_UNIFORM_BUFFER -> GL11.glGetInteger(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT).toLong().coerceAtLeast(4L)
+            else -> 4L
+        }
     }
 }

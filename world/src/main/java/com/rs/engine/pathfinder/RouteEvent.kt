@@ -25,7 +25,7 @@ import com.rs.game.model.gameobject.GameObject
 import org.darkan.core.map.pathfinder.Route
 import org.darkan.core.model.GroundItem
 import world.gregs.voidps.type.Tile
-import org.darkan.core.net.prot.MinimapFlag
+import org.darkan.core.net.prot.packet.MinimapFlag
 import com.rs.utils.WorldUtil
 
 class RouteEvent(private val target: Any, private val onReachedEvent: Runnable, private val onNearestEvent: (() -> Boolean)?) {

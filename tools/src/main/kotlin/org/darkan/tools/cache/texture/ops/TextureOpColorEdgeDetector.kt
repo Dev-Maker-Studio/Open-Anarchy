@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.sqrt
 
@@ -16,16 +15,16 @@ class TextureOpColorEdgeDetector : TextureOperation(1, false) {
     override fun getColorOutput(y: Int): Array<IntArray> {
         val output = colorImageCache.getPalette(y)
         if (colorImageCache.dirty) {
-            val prevRow = getChildMonochromeOutput(0, (y - 1) and TextureRaster.columnEnd)
+            val prevRow = getChildMonochromeOutput(0, (y - 1) and columnEnd)
             val currentRow = getChildMonochromeOutput(0, y)
-            val nextRow = getChildMonochromeOutput(0, (y + 1) and TextureRaster.columnEnd)
+            val nextRow = getChildMonochromeOutput(0, (y + 1) and columnEnd)
             val redChannel = output[0]
             val greenChannel = output[1]
             val blueChannel = output[2]
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 val verticalGradient = (nextRow[x] - prevRow[x]) * strength
-                val horizontalGradient = (currentRow[(x + 1) and TextureRaster.rowEnd] - currentRow[(x - 1) and TextureRaster.rowEnd]) * strength
+                val horizontalGradient = (currentRow[(x + 1) and rowEnd] - currentRow[(x - 1) and rowEnd]) * strength
                 val gradientX = horizontalGradient shr 12
                 val gradientY = verticalGradient shr 12
                 val gradientXSquared = gradientX * gradientX shr 12

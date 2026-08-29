@@ -1,7 +1,6 @@
 package org.darkan.tools.cache.texture.ops
 
 import org.darkan.tools.cache.texture.TextureOperation
-import org.darkan.tools.cache.texture.TextureRaster
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
@@ -20,7 +19,7 @@ class TextureOpInvert : TextureOperation(1, false) {
             val outputGreen = output[1]
             val outputBlue = output[2]
 
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 outputRed[x] = 4096 - inputRed[x]
                 outputGreen[x] = 4096 - inputGreen[x]
                 outputBlue[x] = 4096 - inputBlue[x]
@@ -33,7 +32,7 @@ class TextureOpInvert : TextureOperation(1, false) {
         val output = monochromeImageCache.getPalette(y)
         if (monochromeImageCache.dirty) {
             val input = getChildMonochromeOutput(0, y)
-            for (x in 0 until TextureRaster.currentWidth) {
+            for (x in 0 until currentWidth) {
                 output[x] = 4096 - input[x]
             }
         }

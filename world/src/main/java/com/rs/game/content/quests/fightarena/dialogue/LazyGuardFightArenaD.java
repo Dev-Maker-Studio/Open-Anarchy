@@ -16,6 +16,7 @@ import com.rs.plugin.handlers.NPCClickHandler;
 import com.rs.plugin.handlers.NPCInteractionDistanceHandler;
 
 import static com.rs.game.content.quests.fightarena.FightArena.*;
+import static com.rs.engine.variables.VarBitPlayer.arena_lazy_guard;
 
 @PluginEventHandler
 public class LazyGuardFightArenaD extends Conversation {
@@ -50,7 +51,7 @@ public class LazyGuardFightArenaD extends Conversation {
 						player.lock(9);
 						player.getInventory().deleteItem(77, 1);
 						player.faceTile(Tile.of(2617, 3144, 0));
-						player.getVars().setVarBit(5627, 1);
+						player.getVars().setVarBit(arena_lazy_guard, 1);
 						WorldTasks.scheduleLooping(new Task() {
 							int tick;
 							@Override
@@ -59,7 +60,7 @@ public class LazyGuardFightArenaD extends Conversation {
 									npc.setNextAnimation(new Animation(11669));
 								if (tick == 9) {
 									npc.setNextAnimation(new Animation(11670));
-									player.getVars().setVarBit(5627, 2);
+									player.getVars().setVarBit(arena_lazy_guard, 2);
 								}
 								if(tick == 10)
 									stop();
@@ -90,12 +91,12 @@ public class LazyGuardFightArenaD extends Conversation {
 			if(e.getPlayer().getInventory().hasFreeSlots()) {
 				e.getPlayer().startConversation(new Dialogue().addSimple("You grab the keys"));
 				e.getPlayer().getInventory().addItem(76, 1);
-				e.getPlayer().getVars().setVarBit(5627, 3);
+				e.getPlayer().getVars().setVarBit(arena_lazy_guard, 3);
 				return;
 			}
 			e.getPlayer().sendMessage("You need free space to grab his keys...");
 		}
-		if(e.getPlayer().getVars().getVarBit(5627) > 0)
+		if(e.getPlayer().getVars().getVarBit(arena_lazy_guard) > 0)
 			return;
 
 		e.getPlayer().startConversation(new LazyGuardFightArenaD(e.getPlayer(), e.getNPC()).getStart());

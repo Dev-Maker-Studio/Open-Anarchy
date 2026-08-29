@@ -1,7 +1,6 @@
 package com.rs.game.content.quests.ghosts_ahoy
 
 import com.rs.engine.dialogue.Options
-import com.rs.game.content.items.Dye
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnItem
@@ -27,8 +26,8 @@ fun mapToyShip() {
         val sailColour3Player = SailColorManager.getSailColor(player, "sailColour3Player")
         player.itemDialogue(4254, "The top of the flag is $sailColour1Player.<br>The skull emblem is $sailColour2Player.<br>The bottom of the flag is $sailColour3Player.")
     }
-    onItemOnItem(Dye.entries.map{ it.id }.toIntArray(), intArrayOf(4254)) { e ->
-        val dye = Dye.fromId(e.item1.id) ?: Dye.fromId(e.item2.id)
+    onItemOnItem(GHOSTS_AHOY_SAIL_DYES.map { it.id }.toIntArray(), intArrayOf(4254)) { e ->
+        val dye = GHOSTS_AHOY_SAIL_DYES.firstOrNull { it.id == e.item1.id || it.id == e.item2.id }
         if (dye != null) {
             e.player.sendOptionDialogue("What part of the flag would you like to dye ${dye.name}?") { ops: Options ->
                 ops.add("The top of the flag.")

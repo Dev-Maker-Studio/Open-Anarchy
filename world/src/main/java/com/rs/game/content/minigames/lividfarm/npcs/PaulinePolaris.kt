@@ -14,6 +14,7 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.onNpcClick
 import com.rs.utils.Ticks
+import com.rs.engine.variables.lunarfm_pauline_state
 
 fun encouragePauline(player: Player, npc: NPC) {
     val dialogues = listOf(
@@ -76,7 +77,7 @@ fun encouragePauline(player: Player, npc: NPC) {
                                     player.inventory.addItem(Rune.ASTRAL.id(), 3)
                                     player.tempAttribs.setB("LividFarm.Suqah.Claimed", true)
                                 }
-                                player.vars.setVarBit(9063, 0)
+                                player.vars.setVarBit(lunarfm_pauline_state, 0)
                                 player.producePoints += 10
                                 player.skills.addXp(Constants.AGILITY, 254.5)
                                 player.sendMessage("You are awarded 100 Produce Points. Current total: ${player.producePoints * 10}")
@@ -181,7 +182,7 @@ fun mapPaulinePolaris() {
             return@onNpcClick
         }
         if (e.option.equals("Energise", true)) {
-            if (e.player.vars.getVarBit(9063) == 1) {
+            if (e.player.vars.getVarBit(lunarfm_pauline_state) == 1) {
                 encouragePauline(e.player, e.npc)
             } else {
                 e.player.sendMessage("Pauline's currently fine.")

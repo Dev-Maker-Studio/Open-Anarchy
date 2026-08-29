@@ -57,8 +57,8 @@ import org.darkan.core.model.HintIcon
 import org.darkan.core.model.Projectile
 import org.darkan.core.model.Sound
 import org.darkan.core.model.SoundType
-// TODO: import org.darkan.core.net.prot.CreateObject - refreshObject needs migration to new update zone system
-// TODO: import org.darkan.core.net.prot.CustomizeObject
+import org.darkan.core.net.prot.packet.CreateObject
+import org.darkan.core.net.prot.packet.CustomizeObject
 import org.darkan.core.Logger
 import org.darkan.core.util.MapUtils
 import org.darkan.core.util.Structure
@@ -456,9 +456,24 @@ object World {
 
     @JvmStatic
     fun refreshObject(obj: GameObject) {
-        // TODO: migrate to new update zone system (CreateObject/CustomizeObject ServerProt)
-        // Old code used: addChunkUpdate(AddObject(chunkLocalHash, obj)) and addChunkUpdate(CustomizeObject(chunkLocalHash, obj, ...))
-        ChunkManager.getChunk(obj.tile.getChunkId()).spawnObject(obj, false)
+        // Re-send the object as it currently stands to everyone watching the chunk. This is purely a
+        // visual resend - the object is already in the chunk's spawned/base bookkeeping and its clipping
+        // is untouched - so it goes out as a chunk update rather than through spawnObject().
+        val chunk = ChunkManager.getChunk(obj.tile.getChunkId())
+        chunk.addChunkUpdate(CreateObject(obj.tile.getXInChunk(), obj.tile.getYInChunk(), obj.id, obj.type.id, obj.rotation))
+        val modifier = obj.meshModifier ?: return
+        chunk.addChunkUpdate(
+            CustomizeObject(
+                localX = obj.tile.getXInChunk(),
+                localY = obj.tile.getYInChunk(),
+                objectId = obj.id,
+                shape = obj.type.id,
+                rotation = obj.rotation,
+                modelIds = modifier.modelIds,
+                recolors = modifier.modifiedColors?.let { arr -> ShortArray(arr.size) { arr[it].toShort() } },
+                retextures = modifier.modifiedTextures?.let { arr -> ShortArray(arr.size) { arr[it].toShort() } }
+            )
+        )
     }
 
     @JvmStatic

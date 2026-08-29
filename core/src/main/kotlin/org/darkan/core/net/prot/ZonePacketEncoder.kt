@@ -1,6 +1,8 @@
 package org.darkan.core.net.prot
 
+import world.gregs.voidps.buffer.Cp1252
 import java.io.ByteArrayOutputStream
+import org.darkan.core.net.prot.packet.*
 
 /**
  * Encodes a list of zone [ServerProt] sub-packets into a [ByteArray] suitable for
@@ -118,7 +120,7 @@ object ZonePacketEncoder {
             if (p.retextures != null) flags = flags or 0x8
         }
         writeByte(out, flags)
-        writeByteAdd(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByteAdd(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         if (!p.clear) {
             p.modelIds?.forEach { writeInt(out, it) }
             p.recolors?.forEach { writeShort(out, it.toInt() and 0xFFFF) }
@@ -128,7 +130,7 @@ object ZonePacketEncoder {
 
     // opcode 125, size 3
     private fun encodeRemoveGroundItem(out: ByteArrayOutputStream, p: RemoveGroundItem) {
-        writeByteInverse(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByteInverse(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShortAddLittle(out, p.itemId)
     }
 
@@ -136,19 +138,19 @@ object ZonePacketEncoder {
     private fun encodeCreateGroundItem(out: ByteArrayOutputStream, p: CreateGroundItem) {
         writeShortAddLittle(out, p.amount)
         writeShortAdd(out, p.itemId)
-        writeByteInverse(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByteInverse(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
     }
 
     // opcode 69, size 2
     private fun encodeDestroyObject(out: ByteArrayOutputStream, p: DestroyObject) {
         writeByteAdd(out, (p.shape shl 2) or (p.rotation and 0x3))
-        writeByte(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
     }
 
     // opcode 117, size 6
     private fun encodeCreateObject(out: ByteArrayOutputStream, p: CreateObject) {
         writeInt(out, p.objectId)
-        writeByteSubtract(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByteSubtract(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeByteSubtract(out, (p.shape shl 2) or (p.rotation and 0x3))
     }
 
@@ -201,14 +203,14 @@ object ZonePacketEncoder {
     // opcode 107, size 7
     private fun encodeGroundItemReveal(out: ByteArrayOutputStream, p: GroundItemReveal) {
         writeShort(out, p.playerId)
-        writeByte(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShortAddLittle(out, p.amount)
         writeShortAddLittle(out, p.itemId)
     }
 
     // opcode 3, size 7
     private fun encodeGroundItemCount(out: ByteArrayOutputStream, p: GroundItemCount) {
-        writeByte(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShort(out, p.itemId)
         writeShort(out, p.oldAmount)
         writeShort(out, p.newAmount)
@@ -216,7 +218,7 @@ object ZonePacketEncoder {
 
     // opcode 128, size 8
     private fun encodeSoundEffectTile(out: ByteArrayOutputStream, p: SoundEffectTile) {
-        writeByte(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShort(out, if (p.soundId == -1) 65535 else p.soundId)
         writeByte(out, ((p.range and 0xF) shl 4) or (p.mode and 0x7))
         writeByte(out, p.delay)
@@ -227,7 +229,7 @@ object ZonePacketEncoder {
     // opcode 114, VarByte
     private fun encodeTileMessage(out: ByteArrayOutputStream, p: TileMessage) {
         writeByte(out, 0) // Unused
-        writeByte(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShort(out, p.priority)
         writeByte(out, p.duration)
         writeMedium(out, p.color)
@@ -237,13 +239,13 @@ object ZonePacketEncoder {
     // opcode 113, size 6
     private fun encodeObjAnim(out: ByteArrayOutputStream, p: ObjAnim) {
         writeByteSubtract(out, (p.shape shl 2) or (p.rotation and 0x3))
-        writeByteSubtract(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByteSubtract(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeIntLittle(out, p.animationId)
     }
 
     // opcode 139, size 8
     private fun encodeSpotAnim(out: ByteArrayOutputStream, p: SpotAnim) {
-        writeByte(out, (p.localX shl 4) or (p.localY and 0x7))
+        writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
         writeShort(out, if (p.spotAnimId == -1) 65535 else p.spotAnimId)
         writeShort(out, p.height)
         writeShort(out, p.speed)
@@ -311,7 +313,9 @@ object ZonePacketEncoder {
     }
 
     private fun writeRSString(out: ByteArrayOutputStream, value: String) {
-        out.write(value.toByteArray())
+        // Cp1252, not UTF-8: the protocol is one byte per character, and a wider encoding would
+        // both corrupt the text and desync the enclosing sub-packet stream.
+        out.write(Cp1252.encode(value))
         out.write(0)
     }
 }

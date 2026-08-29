@@ -28,11 +28,13 @@ import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
 import org.darkan.core.Utils;
 import com.rs.utils.Ticks;
+import static com.rs.utils.KtExtensionsKt.copyItem;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import static com.rs.engine.variables.VarBitPlayer.gravestone_transmit;
 
 public class GraveStone extends NPC {// 652 - gravestone selection interface
 
@@ -146,7 +148,7 @@ public class GraveStone extends NPC {// 652 - gravestone selection interface
 
 	public void sendGraveInscription(Player reader) {
 		reader.getInterfaceManager().sendInterface(GRAVE_STONE_INTERFACE);
-		reader.getVars().setVarBit(4191, graveStone == 0 ? 0 : 1);
+		reader.getVars().setVarBit(gravestone_transmit, graveStone == 0 ? 0 : 1);
 		if (ticks <= 50) // if the grave is almost broken
 			reader.getPackets().setIFText(GRAVE_STONE_INTERFACE, 22, "The inscription is too unclear to read.");
 		else if (reader == getPlayer())
@@ -238,7 +240,7 @@ public class GraveStone extends NPC {// 652 - gravestone selection interface
 		ArrayList<Item> droppedItems = new ArrayList<>();
 		ArrayList<Item> keptItems = new ArrayList<>();
 		for (int i : slots[0]) { // items kept on death
-			Item item = i >= 16 ? com.rs.utils.KtExtensionsKt.copyItem(player.getInventory().getItem(i - 16)) : com.rs.utils.KtExtensionsKt.copyItem(player.getEquipment().getItem(i - 1));
+			Item item = i >= 16 ? copyItem(player.getInventory().getItem(i - 16)) : copyItem(player.getEquipment().getItem(i - 1));
 			if (item.getAmount() > 1) {
 				droppedItems.add(new Item(item.getId(), item.getAmount() - 1));
 				item.setAmount(1);

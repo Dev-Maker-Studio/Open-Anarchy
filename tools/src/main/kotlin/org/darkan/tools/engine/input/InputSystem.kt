@@ -15,6 +15,10 @@ class InputSystem(private val window: Window) {
             keyboard.onKeyEvent(key, scancode, action, mods)
         }
 
+        window.setCharCallback { codepoint ->
+            keyboard.onChar(codepoint)
+        }
+
         window.setMouseButtonCallback { button, action, mods ->
             mouse.onMouseButton(button, action, mods)
         }
@@ -25,6 +29,10 @@ class InputSystem(private val window: Window) {
 
         window.setScrollCallback { xoffset, yoffset ->
             mouse.onScroll(xoffset, yoffset)
+        }
+
+        window.setFocusCallback { focused ->
+            if (focused) mouse.resetDeltaReference()
         }
     }
 

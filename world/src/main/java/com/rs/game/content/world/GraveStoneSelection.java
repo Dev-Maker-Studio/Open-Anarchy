@@ -21,6 +21,7 @@ import com.rs.game.model.entity.player.Player;
 import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
+import static com.rs.engine.variables.VarPlayer.gravestone;
 
 @PluginEventHandler
 public class GraveStoneSelection {
@@ -29,7 +30,7 @@ public class GraveStoneSelection {
 		player.getInterfaceManager().sendInterface(652);
 		player.getPackets().setIFRightClickOps(652, 31, 0, 78, 0, 1);
 		player.getPackets().setIFRightClickOps(652, 34, 0, 13, 0, 1);
-		player.getVars().setVar(1146, player.getGraveStone() | 262112);
+		player.getVars().setVar(gravestone, player.getGraveStone() | 262112);
 	}
 
 	public static ButtonClickHandler handleSelectionInterface = new ButtonClickHandler(652, e -> {

@@ -29,6 +29,7 @@ import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.Ticks
 import java.util.*
 import kotlin.math.ceil
+import com.rs.engine.variables.eviltree_reward_points
 
 const val NURTURES_PER_STAGE = 25
 const val CHOPS_PER_STAGE = 250
@@ -205,7 +206,7 @@ fun mapEvilTrees() {
         }
     }
 
-    onLogin { (player) -> player.vars.setVarBit(1542, if (player.getDailyI("evilTreeChippings") >= 200) 0 else 1) }
+    onLogin { (player) -> player.vars.setVarBit(eviltree_reward_points, if (player.getDailyI("evilTreeChippings") >= 200) 0 else 1) }
 }
 
 class EvilTree(val treeType: Type, val location: Location, val centerTile: Tile) : GameObject(11391, ObjectShape.SCENERY_INTERACT, 0, centerTile) {
@@ -443,7 +444,7 @@ class EvilTree(val treeType: Type, val location: Location, val centerTile: Tile)
                 player.inventory.addItemDrop(logs)
             player.setDailyI("evilTreeChippings", player.getDailyI("evilTreeChippings", 0) + toHandIn)
             if (player.getDailyI("evilTreeChippings") >= 200)
-                player.vars.setVarBit(1542, 1)
+                player.vars.setVarBit(eviltree_reward_points, 1)
         }
     }
 

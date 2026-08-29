@@ -23,6 +23,7 @@ import com.rs.game.model.entity.player.managers.EmotesManager.Emote;
 import org.darkan.core.model.Item;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
+import static com.rs.engine.variables.VarBitPlayer.xmas09_santa_free;
 
 @PluginEventHandler
 public class Santa2019D extends Conversation {
@@ -78,7 +79,7 @@ public class Santa2019D extends Conversation {
 			addItem(962, "Santa has given you a christmas cracker, allowed you to keep the ice amulet, and has taught you the Snowman Dance emote!");
 			addNext(() -> {
 				player.set(Christmas2019.STAGE_KEY, 10);
-				player.getVars().setVarBit(6934, 1);
+				player.getVars().setVarBit(xmas09_santa_free, 1);
 				player.getInventory().addItemDrop(new Item(1050, 1));
 				player.getInventory().addItemDrop(new Item(6860, 1));
 				player.getInventory().addItemDrop(new Item(6861, 1));

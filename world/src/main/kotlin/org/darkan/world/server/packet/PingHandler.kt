@@ -1,7 +1,7 @@
 package org.darkan.world.server.packet
 
 import com.rs.game.model.entity.player.Player
-import org.darkan.core.net.prot.Ping
+import org.darkan.core.net.prot.packet.Ping
 import org.darkan.core.net.prot.handler.PacketHandler
 
 class PingHandler : PacketHandler<Player, Ping> {

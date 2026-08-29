@@ -23,6 +23,7 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.definition.data.MapObject
 import java.util.IdentityHashMap
+import kotlin.math.abs
 import kotlin.math.floor
 
 /**
@@ -226,8 +227,8 @@ class MapScene(
         val toUnload = loadedRegions.keys.filter { regionId ->
             val rx = regionId shr 8
             val ry = regionId and 0xff
-            val dx = kotlin.math.abs(rx - regionX)
-            val dy = kotlin.math.abs(ry - regionY)
+            val dx = abs(rx - regionX)
+            val dy = abs(ry - regionY)
             dx > unloadRadius || dy > unloadRadius
         }
 
@@ -388,20 +389,27 @@ class MapScene(
         // Create object instances for ALL planes
         // Use TerrainLoader's computed heights for consistency with terrain mesh
         // Also provide RS-unit height sampler for per-vertex displacement (contourType 1)
+        // Objects on the region's last row/column sample a corner one tile past the
+        // region edge, which the client reads out of its neighbour; see
+        // TerrainLoader.getExtendedTileHeight.
+        val neighbors = TerrainLoader.buildNeighborData(cache, regionX, regionY)
         val objectsByPlane = ObjectRenderer.createInstancesAllPlanes(
             data.objects,
             regionX,
             regionY,
             tileHeights = { x, y, plane ->
                 if (terrainData != null) {
-                    TerrainLoader.getTileHeightScaled(terrainData.tiles, x, y, plane)
+                    TerrainLoader.getExtendedTileHeightScaled(terrainData.tiles, neighbors, plane, x, y)
                 } else {
-                    // Fallback to old method if terrain data unavailable
-                    getTileHeight(data, x, y, plane)
+                    // Fallback to old method if terrain data unavailable. Clamped because
+                    // this sampler now receives corner tile 64 for edge objects and the
+                    // fallback has no neighbour to resolve it into; it would otherwise
+                    // return 0 and drop the object to the floor.
+                    getTileHeight(data, x.coerceIn(0, 63), y.coerceIn(0, 63), plane)
                 }
             },
             rsHeightSampler = if (terrainData != null) {
-                { x, y, plane -> TerrainLoader.getTileHeight(terrainData.tiles, x, y, plane) }
+                { x, y, plane -> TerrainLoader.getExtendedTileHeight(terrainData.tiles, neighbors, plane, x, y) }
             } else {
                 null
             }
@@ -565,8 +573,11 @@ class MapScene(
         regionY: Int,
         loadedRegion: LoadedRegion
     ) {
-        val regionBaseX = regionX * 64
-        val regionBaseY = regionY * 64
+        // Flattened once for the whole region; the per-vertex loop then reads a single
+        // IntArray instead of walking the [plane][x][z] TileData array. Padded with
+        // neighbour terrain so objects on the last row/column displace at all.
+        val neighbors = TerrainLoader.buildNeighborData(cache, regionX, regionY)
+        val field = VertexDisplacer.HeightField.from(terrainData.tiles, neighbors)
 
         for (obj in objects) {
             if (!VertexDisplacer.needsDisplacement(obj.groundContourType, obj.groundContourModifier)) {
@@ -592,10 +603,8 @@ class MapScene(
                     sceneY = obj.rsSceneY,
                     averageHeight = obj.rsAverageHeight,
                     plane = plane,
-                    tiles = terrainData.tiles,
-                    regionBaseX = regionBaseX,
-                    regionBaseY = regionBaseY,
-                    rsRotation = obj.mapObject.rotation,
+                    field = field,
+                    rsRotation = obj.rsRotation,
                     mirrored = obj.mirrored,
                     resizeX = obj.definition.modelSizeX,
                     resizeY = obj.definition.modelSizeZ,
