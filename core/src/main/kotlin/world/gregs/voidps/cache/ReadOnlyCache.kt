@@ -1,5 +1,6 @@
 package world.gregs.voidps.cache
 
+import it.unimi.dsi.fastutil.ints.Int2IntMaps
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap
 import org.darkan.core.Logger.logTrace
 import world.gregs.voidps.buffer.read.BufferReader
@@ -17,6 +18,9 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
     val fileCounts: Array<IntArray?> = arrayOfNulls(indexCount)
     val files: Array<Array<IntArray?>?> = arrayOfNulls(indexCount)
     private val hashes: MutableMap<Int, Int> = Int2IntOpenHashMap(32767)
+    // [index] -> (archiveId -> archiveNameHash). Unlike [hashes] this is keyed per-index and by
+    // archive id, so name hashes shared between indices (or repeated within one) aren't lost.
+    private val archiveHashes: Array<Int2IntOpenHashMap?> = arrayOfNulls(indexCount)
     // [index][archive] -> (fileNameHash -> fileId). File name hashes are only unique within an archive.
     private val fileHashes: Array<Array<Int2IntOpenHashMap?>?> = arrayOfNulls(indexCount)
     // Per-index name introspection. NAME_FLAG governs both archive and file name sections at the format
@@ -137,10 +141,13 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
         archives[indexId] = archiveIds
         nameFlags[indexId] = (flags and NAME_FLAG) != 0
         if (flags and NAME_FLAG != 0) {
+            val indexArchiveHashes = Int2IntOpenHashMap(archiveCount)
+            archiveHashes[indexId] = indexArchiveHashes
             for (i in 0 until archiveCount) {
                 val archiveId = archiveIds[i]
                 val nameHash = reader.readInt()
                 hashes[nameHash] = archiveId
+                indexArchiveHashes[archiveId] = nameHash
                 if (nameHash != 0) {
                     archiveNameCounts[indexId]++
                 }
@@ -215,6 +222,18 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
     }
 
     override fun hasNameFlag(index: Int) = nameFlags.getOrNull(index) ?: false
+
+    override fun archiveIds(index: Int): IntArray {
+        val ids = archives.getOrNull(index) ?: return IntArray(0)
+        val copy = ids.copyOf()
+        copy.sort()
+        return copy
+    }
+
+    override fun archiveNameHashes(index: Int): Map<Int, Int> {
+        val map = archiveHashes.getOrNull(index) ?: return emptyMap()
+        return Int2IntMaps.unmodifiable(map)
+    }
 
     override fun archiveNameCount(index: Int) = archiveNameCounts.getOrNull(index) ?: 0
 
