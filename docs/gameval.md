@@ -29,6 +29,23 @@ regenerated from scratch. This document covers how the server reads them.
   `"<interfaceName>:<componentName>"`.
 - `clientscript.json` names keep Jagex's `[category,name]` form.
 
+### How confident is a name? The `brute` channel
+
+Most names are proof-grade: a name-hash match against a ~6k-entry dictionary, a field-for-field
+structural match at the same id, or an aligned clientscript witness — each with an expected
+false-hit budget under 0.05 for a whole run. One channel, `brute`, is deliberately weaker. It
+recovers a name by searching a very large generated dictionary against the 727 name hashes, where
+a 32-bit hit alone is worthless, and then requires the hit to be the *unique* one in the whole
+searched space **and** to be corroborated by the asset itself — for a clientscript, agreement
+between the candidate's tokens and what the script actually references; for a sprite or a music
+track, membership of the cheapest pre-specifiable region that could have generated the name. The
+gate is calibrated against held-out real names and against negative-control runs on random target
+hashes, so each catalog reports the measured number of its `brute` names expected to be wrong
+(`coverage.brute_residual_false_expectation`; 0.14 for `clientscript`, 0.24 for `graphic`, 0.05
+for `midi`). Treat `brute` names as very likely right rather than certain: `coverage.by_channel`
+counts them separately and the evidence sidecar records the exact hashed literal and the score
+that carried each one. Full rules in `gamevals/CONTRACT.md`.
+
 ### The placeholder rule
 
 An id with no proven name still has an entry, holding the placeholder `<type>_<id>`
