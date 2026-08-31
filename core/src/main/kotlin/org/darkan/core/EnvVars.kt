@@ -31,6 +31,8 @@ object EnvVars {
     val apiKey: String = dotenv.get("API_KEY", "TEST_API_KEY")
     val cachePath: String = dotenv.get("CACHE_PATH", "../cache/")
     val memCache: Boolean = dotenv.get("MEM_CACHE", (!debug).toString()).toBooleanStrict()
+    // Folder of gamevals/<type>.json name catalogs (see docs/gameval.md). Wins over the copy bundled in the jar.
+    val gamevalPath: String = dotenv.get("GAMEVAL_PATH", "./gamevals")
     val majorVersion: Int = dotenv.get("MAJOR_VERSION", "727").toInt()
     val minorVersion: Int = dotenv.get("MINOR_VERSION", "1").toInt()
     val packetSizeLimit: Int = dotenv.get("PACKET_SIZE_LIMIT", "7500").toInt()

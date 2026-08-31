@@ -180,6 +180,7 @@ server/
 ├── world/          # World server (gameplay, social gateway client)
 ├── tools/          # Cache/map/interface/CS2 editor suite (LWJGL)
 ├── migration/      # Legacy → modern database migration (see docs/migration.md)
+├── gamevals/       # 727 asset id → Jagex dev-name catalogs (<type>.json, canonical; see docs/gameval.md)
 ├── docs/           # Architecture documentation
 └── build.gradle.kts
 ```
@@ -205,6 +206,7 @@ Shared code used by both lobby and world servers.
 | `social` | Chat models: `ChatMessage`, `QuickChatMessage` |
 | `social.gateway` | Gateway protocol: JSON-serialized messages for world↔lobby |
 | `engine` | Tick-based game loop: `EngineLoop` (600ms default cycle) |
+| `gameval` | Jagex dev-name lookup for 727 asset ids: `Gameval` / `GamevalCatalog` read `gamevals/<type>.json`; `gameval.gen` holds the generated typed constants (`Obj.coins`, `Seq.swarm_walk`, Java, committed) |
 
 ### Lobby Module (`org.darkan.lobby`)
 
@@ -254,6 +256,9 @@ Shared code used by both lobby and world servers.
 
 # Build shadow JAR (lobby)
 ./gradlew :lobby:shadowJar
+
+# Dump the 727 cache to JSONL for the gameval crosswalk (tools module)
+./gradlew :tools:run --args="gameval dump gamevals/work/727"
 ```
 
 ### Startup Flow
@@ -320,6 +325,11 @@ CRYPTO_ARGON2_PARALLELISM=4
 MONGO_URI=mongodb://localhost:27017/darkan-server
 MEM_CACHE=false
 CACHE_PATH=../cache/
+```
+
+### Gamevals
+```env
+GAMEVAL_PATH=./gamevals   # folder of <type>.json name catalogs; per file, falls back to the copy bundled in core's jar
 ```
 
 ### Social Gateway (World Server)
@@ -600,6 +610,32 @@ object MyCollection {
 
 2. Define document data class with MongoDB annotations as needed.
 
+### Regenerating the Gameval Catalogs and Constants
+
+The catalogs in `gamevals/<type>.json` are generated, never hand-edited; the rules are in
+`gamevals/CONTRACT.md` (a name only on proof, placeholder `<type>_<id>` otherwise, every 727 id
+present). The typed constants in `core/src/main/java/org/darkan/core/gameval/gen/` are generated
+from the catalogs and committed with them.
+
+The crosswalk that originally produced the catalogs is local-only tooling (gitignored
+`gamevals/crosswalk/`); 727 is version-locked, so catalogs are improved in place, never
+regenerated from scratch. After editing a catalog, regenerate the constants:
+
+```bash
+python3 gamevals/gen_kotlin.py            # or: ./gradlew :core:generateGamevals
+python3 gamevals/gen_kotlin.py --check    # exit 1 if the committed constants are stale (-Pcheck)
+```
+
+`gamevals/work/` (dumps, evidence sidecars, reports) is gitignored. Use `Gameval.requireId(Gameval.INV, "worn")`
+or `Obj.coins` in new code rather than magic numbers; see `docs/gameval.md`.
+
+The legacy flat var constant package `com.rs.engine.variables` (world module) has been
+**removed**: all callers use `org.darkan.core.gameval.gen` (`Varbit`, `Varp`, `Varc`, `Varcstr`,
+`Varclan`, ...) directly, migrated id-for-id with a per-reference proof
+(id-preservation proof in `gamevals/work/reports/legacy-var-migration.md`). If a legacy re-sync
+batch (`docs/legacy-baseline.md`) reintroduces the package or imports of it, re-run that script
+to migrate the new callers and delete the package again.
+
 ### Adding a New API Endpoint
 
 1. Add route in `lobby/.../web/Routes.kt`:
@@ -631,6 +667,10 @@ fun Application.configureRoutes() {
 | `lobby/src/main/kotlin/org/darkan/lobby/social/SocialGateway.kt` | Gateway host |
 | `world/src/main/kotlin/org/darkan/world/Main.kt` | World entry point |
 | `world/src/main/kotlin/org/darkan/world/social/SocialClient.kt` | Gateway client |
+| `core/src/main/kotlin/org/darkan/core/gameval/Gameval.kt` | Runtime name lookup for 727 asset ids (catalogs in `gamevals/`) |
+| `core/src/main/java/org/darkan/core/gameval/gen/` | Generated typed gameval constants (`Obj`, `Npc`, `Loc`, `Component`, `Cs2`, ...) |
+| `gamevals/CONTRACT.md` | Rule book for the gameval catalogs |
+| `gamevals/gen_kotlin.py` | Generates the typed constants from the catalogs |
 
 ---
 
@@ -677,6 +717,8 @@ Configure `STAFF_WEBHOOK_URL` for tick performance warnings and error notificati
 - `docs/migration.md` - Legacy database migration tooling and runbook
 - `docs/deploy.md` - VM layout, systemd units, CI-driven deploys and the legacy cut-over runbook
 - `docs/legacy-baseline.md` - Which legacy commits the modern tree is synced to
+- `docs/gameval.md` - Gameval name catalogs: runtime API, typed constants, regeneration
+- `gamevals/CONTRACT.md` - The evidence rules under which every gameval name was proven
 
 ---
 
