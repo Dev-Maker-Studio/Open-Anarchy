@@ -16,6 +16,17 @@ dependencies {
     }
 }
 
+// Bundle the gameval name catalogs (gamevals/<type>.json at the repo root) under /gamevals on the
+// classpath so a jar with no working tree can still resolve names. GAMEVAL_PATH overrides per file
+// at runtime; see docs/gameval.md. Only the catalogs are shipped: CONTRACT.md, crosswalk/ and
+// work/ stay behind. The directory may be absent or mid-regeneration; the copy just takes what is there.
+tasks.processResources {
+    from(rootProject.file("gamevals")) {
+        into("gamevals")
+        include("*.json")
+    }
+}
+
 tasks.test {
     // Cache paths (CACHE_PATH, default "../cache/") and the .env file are resolved relative to the
     // repository root, not the module directory.
@@ -24,4 +35,16 @@ tasks.test {
     testLogging {
         showStandardStreams = true
     }
+}
+
+// Typed gameval constants (org.darkan.core.gameval.gen.*) are generated from gamevals/<type>.json
+// by gamevals/gen_kotlin.py and committed, so a build never needs python. Run this (or the script
+// directly) after the catalogs change; `-Pcheck` only reports whether they are current.
+tasks.register<Exec>("generateGamevals") {
+    group = "generation"
+    description = "Regenerates core/src/main/java/org/darkan/core/gameval/gen from gamevals/*.json"
+    workingDir = rootDir
+    val args = mutableListOf("python3", "gamevals/gen_kotlin.py")
+    if (project.hasProperty("check")) args += "--check"
+    commandLine(args)
 }

@@ -81,3 +81,8 @@ __pycache__/
 # run scripts
 world-server.jar
 *.jar.new
+
+/gamevals/work/
+# One-time crosswalk/RE tooling and review artifacts stay local; only the catalogs are canonical
+/gamevals/crosswalk/
+/gamevals/REVIEW.md
