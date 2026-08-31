@@ -30,14 +30,9 @@ import com.rs.plugin.handlers.ItemEquipHandler;
 import com.rs.plugin.handlers.LoginHandler;
 import com.rs.utils.spawns.NPCSpawn;
 import com.rs.utils.spawns.NPCSpawns;
-
 import java.util.HashMap;
 import java.util.Map;
-import static com.rs.engine.variables.VarBitPlayer.xmas09_imp_summoned1;
-import static com.rs.engine.variables.VarBitPlayer.xmas09_imp_summoned2;
-import static com.rs.engine.variables.VarBitPlayer.xmas09_imp_summoned3;
-import static com.rs.engine.variables.VarBitPlayer.xmas09_imp_summoned4;
-import static com.rs.engine.variables.VarBitPlayer.xmas09_santa_free;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class Christmas2019 {
@@ -131,10 +126,10 @@ public class Christmas2019 {
 			return;
 		if (e.getEntity() instanceof Player p) {
 			if (p.get(Christmas2019.STAGE_KEY+"loc") == null) {
-				p.getVars().setVarBit(xmas09_imp_summoned1, 1);
-				p.getVars().setVarBit(xmas09_imp_summoned2, 1);
-				p.getVars().setVarBit(xmas09_imp_summoned3, 1);
-				p.getVars().setVarBit(xmas09_imp_summoned4, 1);
+				p.getVars().setVarBit(Varbit.xmas09_imp_summoned1, 1);
+				p.getVars().setVarBit(Varbit.xmas09_imp_summoned2, 1);
+				p.getVars().setVarBit(Varbit.xmas09_imp_summoned3, 1);
+				p.getVars().setVarBit(Varbit.xmas09_imp_summoned4, 1);
 				return;
 			}
 			if (p.getPetManager().getNpcId() == Pets.SNOW_IMP.getBabyNpcId()) {
@@ -154,10 +149,10 @@ public class Christmas2019 {
 								p.getPet().setNextForceTalk(new ForceTalk("Yer gettin closer, guv!"));
 						p.getTempAttribs().setI("christ19LocDist", currDist);
 					}
-					p.getVars().setVarBit(xmas09_imp_summoned1, 1);
-					p.getVars().setVarBit(xmas09_imp_summoned2, 1);
-					p.getVars().setVarBit(xmas09_imp_summoned3, 1);
-					p.getVars().setVarBit(xmas09_imp_summoned4, 1);
+					p.getVars().setVarBit(Varbit.xmas09_imp_summoned1, 1);
+					p.getVars().setVarBit(Varbit.xmas09_imp_summoned2, 1);
+					p.getVars().setVarBit(Varbit.xmas09_imp_summoned3, 1);
+					p.getVars().setVarBit(Varbit.xmas09_imp_summoned4, 1);
 				}
 			}
 		}
@@ -166,12 +161,12 @@ public class Christmas2019 {
 	public static LoginHandler login = new LoginHandler(e -> {
 		if (!ACTIVE)
 			return;
-		e.getPlayer().getVars().setVarBit(xmas09_imp_summoned1, 1);
-		e.getPlayer().getVars().setVarBit(xmas09_imp_summoned2, 1);
-		e.getPlayer().getVars().setVarBit(xmas09_imp_summoned3, 1);
-		e.getPlayer().getVars().setVarBit(xmas09_imp_summoned4, 1);
+		e.getPlayer().getVars().setVarBit(Varbit.xmas09_imp_summoned1, 1);
+		e.getPlayer().getVars().setVarBit(Varbit.xmas09_imp_summoned2, 1);
+		e.getPlayer().getVars().setVarBit(Varbit.xmas09_imp_summoned3, 1);
+		e.getPlayer().getVars().setVarBit(Varbit.xmas09_imp_summoned4, 1);
 		if (e.getPlayer().getI(Christmas2019.STAGE_KEY, 0) == 10)
-			e.getPlayer().getVars().setVarBit(xmas09_santa_free, 1);
+			e.getPlayer().getVars().setVarBit(Varbit.xmas09_santa_free, 1);
 	});
 
 	public static ItemClickHandler handle = new ItemClickHandler(new Object[] { 14599 }, new String[] { "Summon Imp" }, e -> e.getPlayer().getPetManager().spawnPet(50001, false));

@@ -9,10 +9,9 @@ import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.plugin.handlers.PlayerStepHandler;
-
 import java.util.ArrayList;
 import java.util.List;
-import static com.rs.engine.variables.VarBitPlayer.monkquest_ladder;
+import org.darkan.core.gameval.gen.Varbit;
 
 @QuestHandler(
 		quest = Quest.MONKS_FRIEND,
@@ -86,7 +85,7 @@ public class MonksFriend extends QuestOutline {
 
 	public static PlayerStepHandler handleInvisibleLadder = new PlayerStepHandler(ladderTilesInACircle, e -> {
 		Player p = e.getPlayer();
-		p.getVars().setVarBit(monkquest_ladder, 1);
+		p.getVars().setVarBit(Varbit.monkquest_ladder, 1);
 	});
 
 	public static ObjectClickHandler handleThiefLadder = new ObjectClickHandler(new Object[]{42, 32015}, e -> {

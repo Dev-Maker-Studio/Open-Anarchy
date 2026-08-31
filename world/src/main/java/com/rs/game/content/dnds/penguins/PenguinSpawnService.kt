@@ -11,7 +11,7 @@ import world.gregs.voidps.type.Tile
 import org.darkan.core.Logger
 import com.rs.utils.spawns.NPCSpawn
 import java.time.Month
-import com.rs.engine.variables.peng_spy_week_peng
+import org.darkan.core.gameval.gen.Varbit
 
 const val PUMPKIN_ID = 14415
 const val SNOWMAN_ID = 14766
@@ -52,7 +52,7 @@ class PenguinSpawnService () {
         removeAllSpawns()
 
         for (player in World.players) { // Reset Quickchat varbit to 0 for all logged in players
-            player.vars.saveVarBit(peng_spy_week_peng, 0)
+            player.vars.saveVarBit(Varbit.peng_spy_week_peng, 0)
         }
 
         val currentMonth = PenguinServices.penguinHideAndSeekManager.getCurrentMonth()

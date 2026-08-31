@@ -26,7 +26,7 @@ import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.LoginHandler;
 import com.rs.utils.spawns.NPCSpawn;
 import com.rs.utils.spawns.NPCSpawns;
-import static com.rs.engine.variables.VarBitPlayer.xmas09_santa_free;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class Christmas2020 {
@@ -46,6 +46,6 @@ public class Christmas2020 {
 	public static LoginHandler login = new LoginHandler(e -> {
 		if (!ACTIVE)
 			return;
-		e.getPlayer().getVars().setVarBit(xmas09_santa_free, 1);
+		e.getPlayer().getVars().setVarBit(Varbit.xmas09_santa_free, 1);
 	});
 }

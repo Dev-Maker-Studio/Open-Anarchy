@@ -26,16 +26,13 @@ import org.darkan.core.model.AttribMap;
 import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
-
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import static com.rs.engine.variables.VarBitPlayer.ql4_perm_donefilter;
-import static com.rs.engine.variables.VarBitPlayer.ql4_perm_filter;
-import static com.rs.engine.variables.VarBitPlayer.ql4_perm_sort;
-import static com.rs.engine.variables.VarPlayer.qp;
+import org.darkan.core.gameval.gen.Varbit;
+import org.darkan.core.gameval.gen.Varp;
 
 @PluginEventHandler
 public class QuestManager {
@@ -175,7 +172,7 @@ public class QuestManager {
     }
 
     public void sendQuestPoints() {
-        player.getVars().setVar(qp, getQuestPoints());
+        player.getVars().setVar(Varp.qp, getQuestPoints());
         player.getVars().setVar(904, MAX_QUESTPOINTS);
     }
 
@@ -207,9 +204,9 @@ public class QuestManager {
 
     public void updateOptions() {
         //4538 = free/members toggle which is first?
-        player.getVars().setVarBit(ql4_perm_sort, sort);
-        player.getVars().setVarBit(ql4_perm_filter, filter ? 0 : 1);
-        player.getVars().setVarBit(ql4_perm_donefilter, hideDone ? 0 : 1);
+        player.getVars().setVarBit(Varbit.ql4_perm_sort, sort);
+        player.getVars().setVarBit(Varbit.ql4_perm_filter, filter ? 0 : 1);
+        player.getVars().setVarBit(Varbit.ql4_perm_donefilter, hideDone ? 0 : 1);
         player.getVars().syncVarsToClient();
         player.getPackets().sendRunScript(2160, 0);
     }

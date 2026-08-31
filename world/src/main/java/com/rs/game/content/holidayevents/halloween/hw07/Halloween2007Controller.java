@@ -26,10 +26,9 @@ import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.model.Animation;
 import world.gregs.voidps.type.Tile;
 import org.darkan.core.Utils;
-
 import java.util.HashSet;
 import java.util.Set;
-import static com.rs.engine.variables.VarBitPlayer.hw07_garden_skull_multi;
+import org.darkan.core.gameval.gen.Varbit;
 
 public class Halloween2007Controller extends Controller {
 
@@ -154,7 +153,7 @@ public class Halloween2007Controller extends Controller {
 	}
 
 	public void refreshSkull() {
-		player.getVars().setVarBit(hw07_garden_skull_multi, player.getI(Halloween2007.STAGE_KEY) >= 4 || player.getInventory().containsItem(Halloween2007.SERVANT_SKULL) ? 1 : 0);
+		player.getVars().setVarBit(Varbit.hw07_garden_skull_multi, player.getI(Halloween2007.STAGE_KEY) >= 4 || player.getInventory().containsItem(Halloween2007.SERVANT_SKULL) ? 1 : 0);
 	}
 
 	public boolean checkWeb(int tileHash) {

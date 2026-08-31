@@ -71,15 +71,14 @@ import org.darkan.core.model.SpotAnim;
 import org.darkan.core.model.Rights;
 import org.darkan.core.model.GroundItem;
 import org.darkan.core.model.WorldObject;
-// Hit class from com.rs.game.model.entity.Hit (not core module)
 import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
-
 import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
 import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
-import static com.rs.engine.variables.VarBitPlayer.rand_deaths;
+import org.darkan.core.gameval.gen.Varbit;
+// Hit class from com.rs.game.model.entity.Hit (not core module)
 
 public class DungeonController extends Controller {
 
@@ -331,7 +330,7 @@ public class DungeonController extends Controller {
 	}
 
 	private void refreshDeaths() {
-		player.getVars().setVarBit(rand_deaths, getDeaths());
+		player.getVars().setVarBit(Varbit.rand_deaths, getDeaths());
 	}
 
 	private void increaseDeaths() {

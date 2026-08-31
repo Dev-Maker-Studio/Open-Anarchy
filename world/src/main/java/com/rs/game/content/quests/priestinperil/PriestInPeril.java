@@ -32,14 +32,13 @@ import com.rs.plugin.handlers.ItemOnObjectHandler;
 import com.rs.plugin.handlers.NPCDeathHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.ItemConfig;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.darkan.core.gameval.gen.Varp;
 
 import static com.rs.game.content.world.doors.Doors.handleDoubleDoor;
 import static com.rs.game.content.world.doors.Doors.handleGate;
-import static com.rs.engine.variables.VarPlayer.priestperil;
 
 @QuestHandler(
 		quest = Quest.PRIEST_IN_PERIL,
@@ -152,7 +151,7 @@ public class PriestInPeril extends QuestOutline {
 	@Override
 	public void updateStage(Player player, int stage) {
 		if (stage == 2) {
-			player.getVars().setVar(priestperil, 2);
+			player.getVars().setVar(Varp.priestperil, 2);
 		}
 	}
 

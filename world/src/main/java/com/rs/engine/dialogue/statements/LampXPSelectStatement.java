@@ -5,8 +5,8 @@ import world.gregs.voidps.cache.definition.data.EnumDefinition;
 import org.darkan.core.model.IFEvents;
 import com.rs.game.content.items.Lamp;
 import com.rs.game.model.entity.player.Player;
-import static com.rs.engine.variables.VarBitPlayer.poh_house_location;
-import static com.rs.engine.variables.VarPlayer.poh_house_data;
+import org.darkan.core.gameval.gen.Varbit;
+import org.darkan.core.gameval.gen.Varp;
 
 public class LampXPSelectStatement implements Statement {
 	
@@ -21,8 +21,8 @@ public class LampXPSelectStatement implements Statement {
 		if (lamp.getId() == 12628)
             lamp.setXp(500);
         player.getTempAttribs().setO("lampInstance", lamp);
-        player.getVars().setVar(poh_house_data, 1); //has house
-        player.getVars().setVarBit(poh_house_location, 1);
+        player.getVars().setVar(Varp.poh_house_data, 1); //has house
+        player.getVars().setVarBit(Varbit.poh_house_location, 1);
         player.getInterfaceManager().sendInterface(1263);
         player.getPackets().sendVarcString(358, "What skill would you like XP in?");
         sendSelectedSkill(player);

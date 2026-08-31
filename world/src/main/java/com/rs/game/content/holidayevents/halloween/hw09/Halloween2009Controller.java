@@ -27,10 +27,9 @@ import com.rs.game.tasks.Task;
 import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.model.Animation;
 import world.gregs.voidps.type.Tile;
-
 import java.util.HashSet;
 import java.util.Set;
-import static com.rs.engine.variables.VarBitPlayer.hw09_event;
+import org.darkan.core.gameval.gen.Varbit;
 
 
 public class Halloween2009Controller extends Controller {
@@ -128,9 +127,9 @@ public class Halloween2009Controller extends Controller {
 
 	private void refreshVars(Player player) {
 		if (player.getI(Halloween2009.STAGE_KEY) >= 10)
-			player.getVars().setVarBit(hw09_event, 50);
+			player.getVars().setVarBit(Varbit.hw09_event, 50);
 		else if (player.getI(Halloween2009.STAGE_KEY) >= 3)
-			player.getVars().setVarBit(hw09_event, 20);
+			player.getVars().setVarBit(Varbit.hw09_event, 20);
 	}
 
 	public Set<Integer> getPath() {

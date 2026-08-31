@@ -22,17 +22,13 @@ import com.rs.game.model.entity.player.managers.InterfaceManager;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
 import com.rs.game.model.entity.player.managers.PriceChecker;
 import org.darkan.core.model.Animation;
-
 import org.darkan.world.server.WorldServer;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.utils.ReportsManager;
-
 import java.text.NumberFormat;
 import java.util.Locale;
-import static com.rs.engine.variables.VarBitPlayer.option_clanchatcolour;
-import static com.rs.engine.variables.VarBitPlayer.option_friendchatcolour;
-import static com.rs.engine.variables.VarBitPlayer.option_guestchatcolour;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class GameFrame {
@@ -80,13 +76,13 @@ public class GameFrame {
 		else if (e.getComponentId() == 41)
 			e.getPlayer().getVars().saveVar(287, e.getPlayer().getVars().getVar(287) == 0 ? 1 : 0);
 		else if (e.getComponentId() >= 17 && e.getComponentId() <= 36)
-			e.getPlayer().getVars().saveVarBit(option_clanchatcolour, e.getComponentId() - 17);
+			e.getPlayer().getVars().saveVarBit(Varbit.option_clanchatcolour, e.getComponentId() - 17);
 		else if (e.getComponentId() >= 97 && e.getComponentId() <= 116)
-			e.getPlayer().getVars().saveVarBit(option_guestchatcolour, e.getComponentId() - 97);
+			e.getPlayer().getVars().saveVarBit(Varbit.option_guestchatcolour, e.getComponentId() - 97);
 		else if (e.getComponentId() >= 49 && e.getComponentId() <= 66)
 			e.getPlayer().getVars().saveVar(287, e.getComponentId() - 48);
 		else if (e.getComponentId() >= 72 && e.getComponentId() <= 91)
-			e.getPlayer().getVars().saveVarBit(option_friendchatcolour, e.getComponentId() - 72);
+			e.getPlayer().getVars().saveVarBit(Varbit.option_friendchatcolour, e.getComponentId() - 72);
 	});
 
 	public static ButtonClickHandler handleSettingsTab = new ButtonClickHandler(261, e -> {

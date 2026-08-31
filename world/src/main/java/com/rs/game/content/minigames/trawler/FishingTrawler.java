@@ -20,7 +20,6 @@ import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.model.Animation;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
-
 import org.darkan.core.Logger;
 import org.darkan.core.util.MapUtils;
 import org.darkan.core.util.Area;
@@ -30,12 +29,11 @@ import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.Ticks;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import static com.rs.engine.variables.VarPlayer.trawler_activity_base;
+import org.darkan.core.gameval.gen.Varp;
 
 @PluginEventHandler
 public class FishingTrawler {
@@ -294,7 +292,7 @@ public class FishingTrawler {
 	}
 
 	public void refreshInterface(Player player) {
-		player.getVars().setVar(trawler_activity_base, activity.get(player.getUsername()));
+		player.getVars().setVar(Varp.trawler_activity_base, activity.get(player.getUsername()));
 		player.getPackets().sendVarc(817, waterLevel);
 		player.getPackets().sendVarc(818, ripped ? 1 :0);
 		player.getPackets().sendVarc(819, totalCaught*2);

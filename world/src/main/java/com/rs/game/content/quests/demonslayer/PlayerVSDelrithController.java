@@ -26,9 +26,8 @@ import com.rs.game.model.entity.player.InstancedController;
 import world.gregs.voidps.type.Tile;
 import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
-
 import java.util.stream.Stream;
-import static com.rs.engine.variables.VarBitPlayer.delrith_seen_summoning_cutscene;
+import org.darkan.core.gameval.gen.Varbit;
 
 public class PlayerVSDelrithController extends InstancedController {
 	private static final Tile LOCATION_ON_DEATH = Tile.of(3211, 3382, 0);
@@ -125,7 +124,7 @@ public class PlayerVSDelrithController extends InstancedController {
 				cs.npcAnim(label, SPELL4);
 			});
 			cs.delay(1);
-			cs.action(() -> player.getVars().setVarBit(delrith_seen_summoning_cutscene, 1));
+			cs.action(() -> player.getVars().setVarBit(Varbit.delrith_seen_summoning_cutscene, 1));
 			cs.camShake(3, 0, 0, 0, 0);
 			cs.camLook(spawnX, spawnY+10, 250, 0, 1);
 			cs.delay(1);
@@ -186,7 +185,7 @@ public class PlayerVSDelrithController extends InstancedController {
 		player.reset();
 		player.sendMessage("You have been defeated!");
 		Magic.sendNormalTeleportSpell(player, LOCATION_ON_DEATH);
-		player.getVars().setVarBit(delrith_seen_summoning_cutscene, 0);
+		player.getVars().setVarBit(Varbit.delrith_seen_summoning_cutscene, 0);
 		return false;
 	}
 }

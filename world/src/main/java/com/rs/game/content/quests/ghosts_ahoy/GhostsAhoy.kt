@@ -12,7 +12,7 @@ import world.gregs.voidps.type.Tile
 import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onLogin
-import com.rs.engine.variables.ahoy_questvar
+import org.darkan.core.gameval.gen.Varbit
 
 private const val Ectophial = 4251
 val HARICANTO_TILE = Tile.of(3803, 3530, 0)
@@ -130,7 +130,7 @@ class GhostsAhoy : QuestOutline() {
 
     override fun updateStage(player: Player, stage: Int) {
         if (stage == STAGE_5_GATHER_ITEMS) {
-            player.vars.saveVarBit(ahoy_questvar, 5)
+            player.vars.saveVarBit(Varbit.ahoy_questvar, 5)
             player.vars.syncVarsToClient()
             ensureGhostsAhoySailColors(player)
         }
@@ -145,7 +145,7 @@ fun mapGAVarbits(){
         if (player.getQuestStage(Quest.GHOSTS_AHOY) >= GhostsAhoy.STAGE_4_SEEK_OLD_WOMAN && !player.isQuestComplete(Quest.GHOSTS_AHOY))
              ensureGhostsAhoySailColors(player)
         if (player.isQuestComplete(Quest.GHOSTS_AHOY) || player.getQuestStage(Quest.GHOSTS_AHOY) >= GhostsAhoy.STAGE_5_GATHER_ITEMS) {
-            player.vars.saveVarBit(ahoy_questvar, 5)
+            player.vars.saveVarBit(Varbit.ahoy_questvar, 5)
             player.vars.syncVarsToClient()
         }
     }

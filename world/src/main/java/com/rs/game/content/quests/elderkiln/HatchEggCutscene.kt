@@ -14,9 +14,8 @@ import com.rs.game.model.entity.player.InstancedController
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.InterfaceManager
 import world.gregs.voidps.type.Tile
-
 import org.darkan.core.Utils
-import com.rs.engine.variables.tzhaar2_egg_states
+import org.darkan.core.gameval.gen.Varbit
 
 private const val GAAL = 15131
 
@@ -43,7 +42,7 @@ fun hatchEggCutscene(player: Player) {
                             schedule {
                                 if (id == TZHAAR_MEJ_JEH_BPOOL)
                                     wait(25)
-                                while (player.vars.getVarBit(tzhaar2_egg_states) == 0) {
+                                while (player.vars.getVarBit(Varbit.tzhaar2_egg_states) == 0) {
                                     forceTalk("Firing now!")
                                     wait(5)
                                     val delay = CombatSpell.FIRE_WAVE.cast(this@npcCreate, player.transform(4, 2), 80)
@@ -61,7 +60,7 @@ fun hatchEggCutscene(player: Player) {
                     wait { hatchPercent >= 100 }
                     closeInterfaces()
                     player.lock()
-                    player.vars.setVarBit(tzhaar2_egg_states, 1)
+                    player.vars.setVarBit(Varbit.tzhaar2_egg_states, 1)
                     dialogue { npc(jeh.id, T_CALM_TALK, "It hatches!") }
                     waitForDialogue()
                     World.getClosestObject(player.tile) { it.id == 68824 }?.animate(16245)
@@ -70,7 +69,7 @@ fun hatchEggCutscene(player: Player) {
                         anim(16244)
                     }
                     wait(7)
-                    player.vars.setVarBit(tzhaar2_egg_states, 2)
+                    player.vars.setVarBit(Varbit.tzhaar2_egg_states, 2)
                     dialogue {
                         npc(ak.id, T_SAD, "It is like I said, TzHaar-Mej-Jeh! Another one born as Ga'al.")
                         npc(jeh.id, T_CONFUSED_DENIAL, "No, it cannot be.")
@@ -195,7 +194,7 @@ fun hatchEggCutscene(player: Player) {
         }
 
         override fun canMove(dir: Direction?): Boolean {
-            if (player.vars.getVarBit(tzhaar2_egg_states) == 0)
+            if (player.vars.getVarBit(Varbit.tzhaar2_egg_states) == 0)
                 sendInterfaces()
             return false
         }

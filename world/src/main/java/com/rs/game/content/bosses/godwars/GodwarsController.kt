@@ -31,7 +31,7 @@ import org.darkan.core.Constants
 import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
-import com.rs.engine.variables.godwars_lore_book_saradomin_amulet
+import org.darkan.core.gameval.gen.Varbit
 
 @ServerStartupEvent
 fun mapGWDEntranceAndExit() {
@@ -40,7 +40,7 @@ fun mapGWDEntranceAndExit() {
             if (player.inventory.containsItem(954)) {
                 player.anim(832)
                 player.inventory.deleteItem(954, 1)
-                player.vars.saveVarBit(godwars_lore_book_saradomin_amulet, 1)
+                player.vars.saveVarBit(Varbit.godwars_lore_book_saradomin_amulet, 1)
                 player.sendMessage("You carefully secure the rope and throw it into the dark hole.")
             } else
                 player.sendMessage("A rope would help here.")

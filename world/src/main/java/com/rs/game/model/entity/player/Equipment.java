@@ -32,7 +32,6 @@ import com.rs.game.model.item.ItemsContainer;
 import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.Constants;
 import org.darkan.core.model.Item;
-
 import org.darkan.core.Logger;
 import org.darkan.core.Utils;
 import com.rs.plugin.PluginManager;
@@ -43,10 +42,9 @@ import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.InterfaceOnInterfaceHandler;
 import com.rs.utils.ItemConfig;
 import com.rs.utils.KtExtensionsKt;
-
 import java.util.Arrays;
 import java.util.List;
-import static com.rs.engine.variables.VarBitPlayer.bank_show_equipscreen;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public final class Equipment {
@@ -851,7 +849,7 @@ public final class Equipment {
 	public static void openEquipmentBonuses(final Player player, boolean banking) {
 		player.stopAll();
 		player.getVars().setVarBit(4894, banking ? 1 : 0);
-		player.getVars().setVarBit(bank_show_equipscreen, 1);
+		player.getVars().setVarBit(Varbit.bank_show_equipscreen, 1);
 		player.getVars().syncVarsToClient();
 		player.getPackets().sendItems(93, player.getInventory().getItems());
 		player.getPackets().setIFEvents(new IFEvents(667, 9, 0, 20).enableUseOption(UseFlag.ICOMPONENT)

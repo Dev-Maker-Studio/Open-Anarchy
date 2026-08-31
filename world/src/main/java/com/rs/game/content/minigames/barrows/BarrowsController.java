@@ -39,20 +39,17 @@ import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.Constants;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
-
 import org.darkan.core.Utils;
 import com.rs.utils.drop.Drop;
 import com.rs.utils.drop.DropSet;
 import com.rs.utils.drop.DropTable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import org.darkan.core.gameval.gen.Varbit;
 
 import static com.rs.game.content.GlobalNPCDropPluginsKt.yellDrop;
-import static com.rs.engine.variables.VarBitPlayer.barrows_chest_open;
-import static com.rs.engine.variables.VarBitPlayer.barrows_killed_count;
 
 public final class BarrowsController extends Controller {
 
@@ -297,9 +294,9 @@ public final class BarrowsController extends Controller {
 				player.getPackets().sendCameraShake(3, 12, 25, 12, 25);
 				player.getInterfaceManager().removeOverlay();
 				player.resetBarrows();
-				player.getVars().setVarBit(barrows_chest_open, 0);
+				player.getVars().setVarBit(Varbit.barrows_chest_open, 0);
 			} else
-				player.getVars().setVarBit(barrows_chest_open, 1);
+				player.getVars().setVarBit(Varbit.barrows_chest_open, 1);
 			return false;
 		} else if (object.getId() >= 6716 && object.getId() <= 6750) {
 
@@ -395,7 +392,7 @@ public final class BarrowsController extends Controller {
 		player.incrementCount("Barrows chests looted");
 		sendReward();
 		player.resetBarrows();
-		player.getVars().setVarBit(barrows_chest_open, 0);
+		player.getVars().setVarBit(Varbit.barrows_chest_open, 0);
 	}
 
 	public void targetFinishedWithoutDie() {
@@ -489,7 +486,7 @@ public final class BarrowsController extends Controller {
 	}
 
 	public void sendCreaturesSlainCount(int count) {
-		player.getVars().setVarBit(barrows_killed_count, count+player.getKilledBarrowBrothersCount());
+		player.getVars().setVarBit(Varbit.barrows_killed_count, count+player.getKilledBarrowBrothersCount());
 	}
 
 	public void savePathVars() {

@@ -107,7 +107,6 @@ import org.darkan.core.model.Rights;
 import org.darkan.core.model.GroundItem;
 import com.rs.game.GroundItemHelper;
 import org.darkan.core.model.WorldObject;
-// Hit class from com.rs.game.model.entity.Hit (not core module)
 import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
 import org.darkan.core.model.Account;
@@ -141,7 +140,6 @@ import it.unimi.dsi.fastutil.ints.IntSets;
 import kotlin.Pair;
 import org.darkan.core.model.Vars;
 import org.jetbrains.annotations.NotNull;
-
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Clock;
@@ -149,18 +147,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
-import static com.rs.engine.variables.VarBitPlayer.afr_complete;
-import static com.rs.engine.variables.VarBitPlayer.loot_share_on;
-import static com.rs.engine.variables.VarBitPlayer.loot_waiting_on;
-import static com.rs.engine.variables.VarBitPlayer.lost_tribe_quest;
-import static com.rs.engine.variables.VarBitPlayer.ra3_quest;
-import static com.rs.engine.variables.VarPlayer.tutorial;
-import static com.rs.engine.variables.VarBitPlayer.lifepoints;
-import static com.rs.engine.variables.VarBitPlayer.lore_incubator_var_2;
-import static com.rs.engine.variables.VarPlayer._100intro;
-import static com.rs.engine.variables.VarPlayer.lore_incubators_var;
-import static com.rs.engine.variables.VarPlayer.option_mouse;
-import static com.rs.engine.variables.VarPlayer.option_run;
+import org.darkan.core.gameval.gen.Varbit;
+import org.darkan.core.gameval.gen.Varp;
+// Hit class from com.rs.game.model.entity.Hit (not core module)
 
 public class Player extends Entity {
 
@@ -1179,7 +1168,7 @@ public class Player extends Entity {
 	}
 
 	public void sendRunButtonConfig() {
-		getVars().setVar(option_run, resting ? 3 : getRun() ? 1 : 0);
+		getVars().setVar(Varp.option_run, resting ? 3 : getRun() ? 1 : 0);
 	}
 
 	public void restoreRunEnergy(double energy) {
@@ -1233,14 +1222,14 @@ public class Player extends Entity {
 		refreshHitPoints();
 		prayer.refreshPoints();
 		getPoison().refresh();
-		getVars().setVar(tutorial, 1000); // unlock can't do this on tutorial
-		getVars().setVar(lore_incubators_var, -1); // unlock summoning orb
+		getVars().setVar(Varp.tutorial, 1000); // unlock can't do this on tutorial
+		getVars().setVar(Varp.lore_incubators_var, -1); // unlock summoning orb
 		getVars().setVar(1159, 1);
-		getVars().setVarBit(lore_incubator_var_2, 0); //unlock incubator
+		getVars().setVarBit(Varbit.lore_incubator_var_2, 0); //unlock incubator
 		getVars().setVarBit(1766, 1); //unlock killerwatt portal
-		getVars().setVarBit(ra3_quest, 45); //chaos dwarf area
-		getVars().setVarBit(lost_tribe_quest, 4); //lumbridge underground
-		getVars().setVar(_100intro, 3); //rfd chest
+		getVars().setVarBit(Varbit.ra3_quest, 45); //chaos dwarf area
+		getVars().setVarBit(Varbit.lost_tribe_quest, 4); //lumbridge underground
+		getVars().setVar(Varp._100intro, 3); //rfd chest
 
 		updateSlayerTask();
 
@@ -1272,7 +1261,7 @@ public class Player extends Entity {
 		checkWasInDynamicRegion();
 		controllerManager.login(); // checks what to do on login after welcome
 		//unlock robust glass
-		getVars().setVarBit(afr_complete, 1);
+		getVars().setVarBit(Varbit.afr_complete, 1);
 		// screen
 		if (machineInformation != null)
 			machineInformation.sendSuggestions(this);
@@ -1714,7 +1703,7 @@ public class Player extends Entity {
 	}
 
 	public void refreshHitPoints() {
-		getVars().setVarBit(lifepoints, Utils.clampI(getHitpoints(), 0, Short.MAX_VALUE));
+		getVars().setVarBit(Varbit.lifepoints, Utils.clampI(getHitpoints(), 0, Short.MAX_VALUE));
 	}
 
 	@Override
@@ -2525,7 +2514,7 @@ public class Player extends Entity {
 	}
 
 	public void refreshMouseButtons() {
-		getVars().setVar(option_mouse, mouseButtons ? 0 : 1);
+		getVars().setVar(Varp.option_mouse, mouseButtons ? 0 : 1);
 	}
 
 	public boolean isForceNextMapLoadRefresh() {
@@ -3439,10 +3428,10 @@ public class Player extends Entity {
 
 	public void refreshLootShare() {
 		if (isLootSharing())
-			getVars().setVarBit(loot_share_on, 1);
+			getVars().setVarBit(Varbit.loot_share_on, 1);
 		else
-			getVars().setVarBit(loot_share_on, 0);
-		getVars().setVarBit(loot_waiting_on, 0);
+			getVars().setVarBit(Varbit.loot_share_on, 0);
+		getVars().setVarBit(Varbit.loot_waiting_on, 0);
 	}
 
 	public void toggleLootShare() {
@@ -3458,7 +3447,7 @@ public class Player extends Entity {
 			refreshLootShare();
 		} else {
 			sendMessage("You aren't currently in a friends chat.");
-			getVars().setVarBit(loot_waiting_on, 0);
+			getVars().setVarBit(Varbit.loot_waiting_on, 0);
 		}
 	}
 

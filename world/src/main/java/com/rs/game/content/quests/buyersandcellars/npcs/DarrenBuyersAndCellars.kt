@@ -10,8 +10,7 @@ import com.rs.game.model.gameobject.GameObject
 import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnNpc
-import com.rs.engine.variables.thigui_humble
-import com.rs.engine.variables.thigui_quest
+import org.darkan.core.gameval.gen.Varbit
 
 @ServerStartupEvent
 fun mapDarrenBuyersAndCellars() {
@@ -31,8 +30,8 @@ fun mapDarrenBuyersAndCellars() {
                     e.player.fadeScreen {
                         e.player.inventory.deleteItem(18648, 1)
                         e.player.tele(Tile.of(3223, 3269, 0))
-                        e.player.vars.saveVarBit(thigui_quest, 10)
-                        e.player.vars.setVarBit(thigui_humble, 0)
+                        e.player.vars.saveVarBit(Varbit.thigui_quest, 10)
+                        e.player.vars.setVarBit(Varbit.thigui_humble, 0)
                     }
                     e.player.questManager.completeQuest(Quest.BUYERS_AND_CELLARS)
                 }

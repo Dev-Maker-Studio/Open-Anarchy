@@ -48,14 +48,12 @@ import org.darkan.core.Constants;
 import org.darkan.core.model.GroundItem;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
-
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
 import it.unimi.dsi.fastutil.ints.IntSet;
-
 import java.util.function.Consumer;
-import static com.rs.engine.variables.VarPlayer.tutorial_progress_overlay;
+import org.darkan.core.gameval.gen.Varp;
 
 @PluginEventHandler
 public final class TutorialIslandController extends Controller {
@@ -1297,7 +1295,7 @@ public final class TutorialIslandController extends Controller {
 
 	public void sendProgress() {
 		float percent = (float) getStage().ordinal() / (float) Stage.values().length;
-		player.getVars().setVar(tutorial_progress_overlay, Math.round(percent * 21.0f));
+		player.getVars().setVar(Varp.tutorial_progress_overlay, Math.round(percent * 21.0f));
 	}
 
 	public NPC getNPC(int id) {

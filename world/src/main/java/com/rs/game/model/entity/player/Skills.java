@@ -29,7 +29,6 @@ import org.darkan.core.model.Item;
 import org.darkan.core.model.Rights;
 import org.darkan.core.model.SpotAnim;
 import world.gregs.voidps.type.Tile;
-
 import org.darkan.core.model.Sound;
 import org.darkan.core.model.SoundType;
 import org.darkan.core.Utils;
@@ -39,12 +38,9 @@ import com.rs.plugin.events.XPGainEvent;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
-
 import java.util.HashSet;
 import java.util.Set;
-import static com.rs.engine.variables.VarBitPlayer.lvl_setting;
-import static com.rs.engine.variables.VarBitPlayer.skill_guide_skill_v2;
-import static com.rs.engine.variables.VarBitPlayer.skill_guide_subsection_v2;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public final class Skills {
@@ -317,18 +313,18 @@ public final class Skills {
 			e.getPlayer().getInterfaceManager().sendInterface(499);
 	});
 
-	public static ButtonClickHandler handleGuideButtons = new ButtonClickHandler(499, e -> e.getPlayer().getVars().setVarBit(skill_guide_subsection_v2, e.getComponentId()-9));
+	public static ButtonClickHandler handleGuideButtons = new ButtonClickHandler(499, e -> e.getPlayer().getVars().setVarBit(Varbit.skill_guide_subsection_v2, e.getComponentId()-9));
 
 	public static ButtonClickHandler handleSkillTabButtons = new ButtonClickHandler(320, e -> {
 		if (e.getOpNum() == 1) {
 			e.getPlayer().stopAll();
 			int targetId = Skills.getTargetIdByComponentId(e.getComponentId());
 			int skillId = Skills.getSkillIdByTargetId(targetId);
-			e.getPlayer().getVars().setVarBit(skill_guide_subsection_v2, 0);
-			e.getPlayer().getVars().setVarBit(skill_guide_skill_v2, targetId+1);
+			e.getPlayer().getVars().setVarBit(Varbit.skill_guide_subsection_v2, 0);
+			e.getPlayer().getVars().setVarBit(Varbit.skill_guide_skill_v2, targetId+1);
 			if (e.getPlayer().getSkills().lastCheckedLevels[skillId] != e.getPlayer().getSkills().getLevelForXp(skillId)) {
 				e.getPlayer().getPackets().sendVarc(getVarcIdFromTarget(targetId), e.getPlayer().getSkills().lastCheckedLevels[skillId]);
-				e.getPlayer().getVars().setVarBit(lvl_setting, targetId+1);
+				e.getPlayer().getVars().setVarBit(Varbit.lvl_setting, targetId+1);
 			}
 			e.getPlayer().getVars().syncVarsToClient();
 

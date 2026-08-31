@@ -31,11 +31,10 @@ import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.utils.Ticks;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import static com.rs.engine.variables.VarPlayer.tzhaar_fightpit_remaining;
+import org.darkan.core.gameval.gen.Varp;
 
 @PluginEventHandler
 public final class FightPits {
@@ -151,7 +150,7 @@ public final class FightPits {
 	public static void refreshFoes() {
 		int foes = arena.size() - 1;
 		for (Player player : arena)
-			player.getVars().setVar(tzhaar_fightpit_remaining, foes);
+			player.getVars().setVar(Varp.tzhaar_fightpit_remaining, foes);
 
 	}
 

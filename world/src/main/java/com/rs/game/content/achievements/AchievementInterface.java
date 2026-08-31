@@ -19,7 +19,7 @@ package com.rs.game.content.achievements;
 import com.rs.game.model.entity.player.Player;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
-import static com.rs.engine.variables.VarBitPlayer.task_completed_total;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class AchievementInterface {
@@ -32,7 +32,7 @@ public class AchievementInterface {
 		player.getVars().setVarBit(8581, -1); //refresh?..
 		player.getPackets().sendVarc(1423, 0); //completed in set
 		player.getPackets().sendVarc(1424, 0); //total in set
-		player.getVars().setVarBit(task_completed_total, 533); //total completed overall 534 unlocks taskmaster
+		player.getVars().setVarBit(Varbit.task_completed_total, 533); //total completed overall 534 unlocks taskmaster
 		for (int i = 0;i < 6;i++)
 			player.getVars().setVarBit(8587+i, 4095);
 		player.getPackets().setIFHidden(1056, 117, true);

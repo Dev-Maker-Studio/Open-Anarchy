@@ -47,15 +47,13 @@ import org.darkan.world.server.WorldServer;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.InterfaceOnPlayerHandler;
-
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import static com.rs.engine.variables.VarBitPlayer.clan_custom_motif_a_varp;
-import static com.rs.engine.variables.VarBitPlayer.clan_custom_motif_b_varp;
-import static com.rs.engine.variables.VarPlayer.clan_keyword_temp_cat_varp;
+import org.darkan.core.gameval.gen.Varbit;
+import org.darkan.core.gameval.gen.Varp;
 
 @PluginEventHandler
 public class ClansManager {
@@ -345,9 +343,9 @@ public class ClansManager {
 		if (e.getPlayer().hasRights(Rights.DEVELOPER))
 			e.getPlayer().sendMessage("handleKeywordButtons: " + e.getComponentId() + " - " + e.getSlotId() + " - " + e.getOpNum());
 		switch(e.getComponentId()) {
-		case 193 -> e.getPlayer().getVars().setVar(clan_keyword_temp_cat_varp, e.getSlotId());
+		case 193 -> e.getPlayer().getVars().setVar(Varp.clan_keyword_temp_cat_varp, e.getSlotId());
 		case 207 -> {
-			int enumId = EnumDefinitions.getEnum(3703).getIntValue(e.getPlayer().getVars().getVar(clan_keyword_temp_cat_varp));
+			int enumId = EnumDefinitions.getEnum(3703).getIntValue(e.getPlayer().getVars().getVar(Varp.clan_keyword_temp_cat_varp));
 			if (enumId == -1) {
 				e.getPlayer().getTempAttribs().removeI("keywordTempVal");
 				return;
@@ -359,7 +357,7 @@ public class ClansManager {
 				e.getPlayer().getTempAttribs().removeI("keywordTempVal");
 		}
 		case 15 -> {
-			int category = e.getPlayer().getVars().getVar(clan_keyword_temp_cat_varp);
+			int category = e.getPlayer().getVars().getVar(Varp.clan_keyword_temp_cat_varp);
 			if (category <= 0)
 				return;
 			int index = e.getPlayer().getTempAttribs().getI("keywordTempVal");
@@ -743,7 +741,7 @@ public class ClansManager {
 		}
 		player.stopAll();
 		player.getTempAttribs().removeI("keywordTempVal");
-		player.getVars().setVar(clan_keyword_temp_cat_varp, 0);
+		player.getVars().setVar(Varp.clan_keyword_temp_cat_varp, 0);
 		for (int var : KEYWORD_INDICES.inverse().keySet())
 			player.getVars().setVarBit(var, (int) player.getClan().getSetting(KEYWORD_INDICES.inverse().get(var)));
 		player.getInterfaceManager().sendInterface(1097);
@@ -791,8 +789,8 @@ public class ClansManager {
 		player.getPackets().sendRunScript(4400, 72417446);
 		player.getPackets().setIFRightClickOps(1105, 66, 0, 116, 0); // top
 		player.getPackets().setIFRightClickOps(1105, 63, 0, 116, 0); // button
-		player.getVars().setVarBit(clan_custom_motif_a_varp, player.getClan().getMotifTopIcon());
-		player.getVars().setVarBit(clan_custom_motif_b_varp, player.getClan().getMotifBottomIcon());
+		player.getVars().setVarBit(Varbit.clan_custom_motif_a_varp, player.getClan().getMotifTopIcon());
+		player.getVars().setVarBit(Varbit.clan_custom_motif_b_varp, player.getClan().getMotifBottomIcon());
 		for (int i = 0; i < player.getClan().getMotifColors().length; i++)
 			player.getVars().setVar(2094 + i, player.getClan().getMotifColors()[i]);
 		player.setCloseInterfacesEvent(() -> openSettings(player));
@@ -820,8 +818,8 @@ public class ClansManager {
 			setClanSetting(player, ClanSetting.MOTIF_TOP_ICON, slot+1);
 		else
 			setClanSetting(player, ClanSetting.MOTIF_BOTTOM_ICON, slot+1);
-		player.getVars().setVarBit(clan_custom_motif_a_varp, player.getClan().getMotifTopIcon());
-		player.getVars().setVarBit(clan_custom_motif_b_varp, player.getClan().getMotifBottomIcon());
+		player.getVars().setVarBit(Varbit.clan_custom_motif_a_varp, player.getClan().getMotifTopIcon());
+		player.getVars().setVarBit(Varbit.clan_custom_motif_b_varp, player.getClan().getMotifBottomIcon());
 	}
 	
 	public static void setVar(Clan clan, int id, Object value) {

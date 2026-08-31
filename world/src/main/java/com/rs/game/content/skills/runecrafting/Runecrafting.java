@@ -29,7 +29,6 @@ import org.darkan.core.model.Animation;
 import org.darkan.core.model.Item;
 import org.darkan.core.model.SpotAnim;
 import world.gregs.voidps.type.Tile;
-
 import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
@@ -39,11 +38,10 @@ import com.rs.utils.drop.Drop;
 import com.rs.utils.drop.DropList;
 import com.rs.utils.drop.DropSet;
 import com.rs.utils.drop.DropTable;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import static com.rs.engine.variables.VarPlayer.abyssal_warp;
+import org.darkan.core.gameval.gen.Varp;
 
 @PluginEventHandler
 public class Runecrafting {
@@ -153,7 +151,7 @@ public class Runecrafting {
 		e.getPlayer().stopAll(false);
 	});
 	
-	public static ItemEquipHandler shouldShowEnterOption = new ItemEquipHandler(new Object[] { AIR_TIARA, WATER_TIARA, BODY_TIARA, EARTH_TIARA, FIRE_TIARA, COSMIC_TIARA, NATURE_TIARA, CHAOS_TIARA, LAW_TIARA, DEATH_TIARA, BLOOD_TIARA, SOUL_TIARA, ASTRAL_TIARA, OMNI_TIARA }, e -> e.getPlayer().getVars().setVar(abyssal_warp, e.equip() ? 1 : 0));
+	public static ItemEquipHandler shouldShowEnterOption = new ItemEquipHandler(new Object[] { AIR_TIARA, WATER_TIARA, BODY_TIARA, EARTH_TIARA, FIRE_TIARA, COSMIC_TIARA, NATURE_TIARA, CHAOS_TIARA, LAW_TIARA, DEATH_TIARA, BLOOD_TIARA, SOUL_TIARA, ASTRAL_TIARA, OMNI_TIARA }, e -> e.getPlayer().getVars().setVar(Varp.abyssal_warp, e.equip() ? 1 : 0));
 
 	public static void craftTalisman(Player player, RunecraftingTalisman talisman) {
 		player.sendOptionDialogue("What would you like to imbue?", ops -> {

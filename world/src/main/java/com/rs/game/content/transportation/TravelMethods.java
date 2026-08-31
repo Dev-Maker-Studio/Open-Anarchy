@@ -30,13 +30,12 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import com.rs.utils.shop.ShopsHandler;
-
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import static com.rs.engine.variables.VarPlayer.journey_number;
+import org.darkan.core.gameval.gen.Varp;
 
 @PluginEventHandler
 public class TravelMethods {
@@ -245,7 +244,7 @@ public class TravelMethods {
 			}
 			player.getInterfaceManager().sendInterface(TRAVEL_INTERFACE);
 			int configValue = 1 + (((ship.ordinal() - 10) * 2) + (ship.ordinal() >= 17 ? returning ? -1 : 0 : returning ? 1 : 0));
-			player.getVars().setVar(journey_number, configValue);
+			player.getVars().setVar(Varp.journey_number, configValue);
 		}
 		final Tile tile = returning ? ship.getOrigon() : ship.getDestination();
 		player.lock();
@@ -258,7 +257,7 @@ public class TravelMethods {
 				player.lock(1);
 				player.closeInterfaces();
 				if (isFare)
-					player.getVars().setVar(journey_number, 0);
+					player.getVars().setVar(Varp.journey_number, 0);
 				player.getTempAttribs().removeB("using_carrier");
 			});
 		else {

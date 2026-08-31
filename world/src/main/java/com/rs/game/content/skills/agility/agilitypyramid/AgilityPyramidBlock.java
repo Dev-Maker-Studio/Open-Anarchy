@@ -26,10 +26,9 @@ import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCInstanceHandler;
 import com.rs.utils.WorldUtil;
-
 import java.util.ArrayList;
 import java.util.List;
-import static com.rs.engine.variables.VarBitPlayer.agility_pyramid_level;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class AgilityPyramidBlock extends NPC {
@@ -46,7 +45,7 @@ public class AgilityPyramidBlock extends NPC {
 	public void processNPC() {
 		if (timer-- <= 0) {
 			for (Player player : World.getPlayersInChunkRange(getChunkId(), 1))
-				player.getVars().setVarBit(agility_pyramid_level, getId() == 3125 ? 1 : 3);
+				player.getVars().setVarBit(Varbit.agility_pyramid_level, getId() == 3125 ? 1 : 3);
 			forceMoveVisually(dangerTile, 20, 0);
 			timer = 10;
 		}
@@ -68,7 +67,7 @@ public class AgilityPyramidBlock extends NPC {
 			}
 		if (timer == 4)
 			for (Player player : World.getPlayersInChunkRange(getChunkId(), 1))
-				player.getVars().setVarBit(agility_pyramid_level, 0);
+				player.getVars().setVarBit(Varbit.agility_pyramid_level, 0);
 	}
 
 	public List<Player> getHittablePlayers() {

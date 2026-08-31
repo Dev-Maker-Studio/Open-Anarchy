@@ -21,11 +21,9 @@ import com.rs.game.model.entity.actions.EntityFollow;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
+import org.darkan.core.gameval.gen.Varbit;
+import org.darkan.core.gameval.gen.Varp;
 import world.gregs.voidps.type.Tile;
-import static com.rs.engine.variables.VarPlayer.follower_obj;
-import static com.rs.engine.variables.VarBitPlayer.lore_animal_hunger_percent;
-import static com.rs.engine.variables.VarBitPlayer.lore_animal_size_percent;
-import static com.rs.engine.variables.VarBitPlayer.lore_interface_boolean;
 
 public final class Pet extends NPC {
 
@@ -61,11 +59,11 @@ public final class Pet extends NPC {
 		if (details != null) {
 			if (pet != Pets.TROLL_BABY || pet.getFood().length > 0) {
 				details.updateHunger(0.025);
-				owner.getVars().setVarBit(lore_animal_hunger_percent, (int) details.getHunger());
+				owner.getVars().setVarBit(Varbit.lore_animal_hunger_percent, (int) details.getHunger());
 			}
 			if (growthRate > 0.000) {
 				details.updateGrowth(growthRate);
-				owner.getVars().setVarBit(lore_animal_size_percent, (int) details.getGrowth());
+				owner.getVars().setVarBit(Varbit.lore_animal_size_percent, (int) details.getGrowth());
 				if (details.getGrowth() == 100.0)
 					growNextStage();
 			}
@@ -121,9 +119,9 @@ public final class Pet extends NPC {
 	 * Baby troll = var 2480 itemId it's eaten
 	 */
 	public void sendMainConfigurations() {
-		owner.getVars().setVar(follower_obj, itemId);// configures pet type
+		owner.getVars().setVar(Varp.follower_obj, itemId);// configures pet type
 		owner.getVars().setVar(1174, 0); //refresh pet head
-		owner.getVars().setVarBit(lore_interface_boolean, 0); //refresh pet emote
+		owner.getVars().setVarBit(Varbit.lore_interface_boolean, 0); //refresh pet emote
 		owner.getPackets().sendVarc(1436, 0);
 		owner.getPackets().setIFHidden(747, 9, false);
 	}
@@ -131,8 +129,8 @@ public final class Pet extends NPC {
 	public void sendFollowerDetails() {
 		if (details == null || owner == null)
 			return;
-		owner.getVars().setVarBit(lore_animal_size_percent, (int) details.getGrowth());
-		owner.getVars().setVarBit(lore_animal_hunger_percent, (int) details.getHunger());
+		owner.getVars().setVarBit(Varbit.lore_animal_size_percent, (int) details.getGrowth());
+		owner.getVars().setVarBit(Varbit.lore_animal_hunger_percent, (int) details.getHunger());
 		owner.getInterfaceManager().sendSub(Sub.TAB_FOLLOWER, 662);
 		owner.getInterfaceManager().openTab(Sub.TAB_FOLLOWER);
 	}
