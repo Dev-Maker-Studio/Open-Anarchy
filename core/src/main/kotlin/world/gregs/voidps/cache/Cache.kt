@@ -57,6 +57,19 @@ interface Cache {
 
     fun hasNameFlag(index: Int): Boolean = false
 
+    /**
+     * Every archive id present in [index]'s reference table, ascending.
+     * Empty when the index has no reference table.
+     */
+    fun archiveIds(index: Int): IntArray = IntArray(0)
+
+    /**
+     * Archive id to name hash for [index], for archives whose reference table entry carries a
+     * name hash (the table's NAME_FLAG is set). Empty when the index stores no archive names.
+     * A hash of 0 means the entry exists but has no real name.
+     */
+    fun archiveNameHashes(index: Int): Map<Int, Int> = emptyMap()
+
     fun archiveNameCount(index: Int): Int = 0
 
     fun fileNameCount(index: Int): Int = 0

@@ -1,6 +1,7 @@
 package world.gregs.voidps.cache.definition.decoder
 
 import world.gregs.voidps.buffer.read.Reader
+import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.NPCS
 import world.gregs.voidps.cache.definition.data.NPCDefinition
@@ -8,6 +9,11 @@ import world.gregs.voidps.cache.definition.data.NPCDefinition
 class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>(NPCS) {
 
     override fun create(size: Int) = Array(size) { NPCDefinition(it) }
+
+    // Index 18 packs 128 npcs per archive (id ushr 7 below); the base class assumes 256.
+    override fun size(cache: Cache): Int {
+        return cache.lastArchiveId(index) * 128 + (cache.fileCount(index, cache.lastArchiveId(index)))
+    }
 
     override fun getFile(id: Int) = id and 0x7f
 
