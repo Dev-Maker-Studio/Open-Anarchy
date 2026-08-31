@@ -4,6 +4,7 @@ import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionLoader
 import org.darkan.tools.cache.NameLookup
 import org.darkan.tools.cs2.runCs2
+import org.darkan.tools.gameval.runGameval
 import org.darkan.tools.cache.map.DisplaceProbe
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.map.TiltProbe
@@ -126,6 +127,9 @@ fun main(args: Array<String>) {
         }
         "cs2" -> {
             runCs2(cache, args.drop(1))
+        }
+        "gameval", "gamevals" -> {
+            runGameval(cache, args.drop(1))
         }
         "env", "environment", "lighting" -> {
             runEnvironmentDiagnostic(cache, args.drop(1))
@@ -1417,6 +1421,12 @@ private fun printHelp() {
                         data sizes. "not found" / null are handled gracefully.
                         'scan' (alias 'indices') reports, per index, whether
                         it carries archive/file name hashes.
+          gameval    - Dump the whole cache as one JSONL file per type, for
+                        crosswalking 727 ids against RS3 dev names. One JSON
+                        object per line, ascending id, arrays always inline.
+                        Also writes manifest.json (per-type counts) and
+                        index-name-hashes.json.
+                        Usage: gameval dump <outDir>
 
         Controls (Model Viewer):
           WASD        - Move camera
