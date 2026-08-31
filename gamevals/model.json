@@ -2,7 +2,7 @@
   "revision": 727,
   "type": "model",
   "source": "rs3-949 gameval names crosswalked onto the 727 cache; see gamevals/CONTRACT.md",
-  "date": "2026-08-30",
+  "date": "2026-08-31",
   "coverage": {
     "cache_ids": 73417,
     "named": 106,
