@@ -18,7 +18,7 @@ import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
  *
  * - `HOOK_MOUSE_ENTER` writes `onMouseOver` ([MOUSE_ENTER]) while
  *   `IF_SETONMOUSEOVER` writes `popupScript` ([MOUSE_OVER]).
- * - `IF_SETONMOUSELEAVE` writes `mouseLeaveScript`, which the client fires off
+ * - `IF_SETONINVTRANSMIT` writes `mouseLeaveScript`, which the client fires off
  *   inventory updates ([INV_TRANSMIT]); the hover-leave hook is
  *   `onMouseLeaveScript`, written by `HOOK_MOUSE_EXIT` ([MOUSE_EXIT]).
  *
@@ -71,7 +71,7 @@ enum class InterfaceEvent(
      * `mouseY`, which is how the client smuggles it into a hook that otherwise
      * carries a pointer position.
      */
-    MOUSE_WHEEL("onMouseMove", "MOUSEREPEAT", { it.onMouseMove }),
+    MOUSE_WHEEL("onMouseMove", "SCROLLWHEEL", { it.onMouseMove }),
 
     /** A right-click option was chosen; the event carries the option and its label. */
     OPTION("params", "OPT", { it.params }),
@@ -105,30 +105,31 @@ enum class InterfaceEvent(
 
     /**
      * An item container the component listens for changed. Bound by
-     * `IF_SETONMOUSELEAVE` despite having nothing to do with the mouse.
+     * `IF_SETONINVTRANSMIT`, whose field the cache decoder calls `mouseLeaveScript`
+     * despite it having nothing to do with the mouse.
      */
     INV_TRANSMIT(
         "mouseLeaveScript",
-        "MOUSELEAVE",
+        "INVTRANSMIT",
         { it.mouseLeaveScript },
         { it.mouseLeaveArrayParams },
     ),
 
     /**
      * A client int var the component listens for changed. Bound by
-     * `IF_SETONINVTRANSMIT`, and the filter array the decoder calls `keyPressArray`
+     * `IF_SETONVARCTRANSMIT`, and the filter array the decoder calls `keyPressArray`
      * holds varc ids.
      */
-    VARC_TRANSMIT("onKey", "INVTRANSMIT", { it.onKey }, { it.keyPressArray }),
+    VARC_TRANSMIT("onKey", "VARCTRANSMIT", { it.onKey }, { it.keyPressArray }),
 
     /**
      * A client string var the component listens for changed. Bound by
-     * `IF_SETONSCROLLWHEEL`, and the filter the decoder calls `mouseWheelArray`
-     * holds varc ids - the wheel goes to [MOUSE_WHEEL], not here.
+     * `IF_SETONVARCSTRTRANSMIT`, and the filter the decoder calls `mouseWheelArray`
+     * holds varcstring ids - the wheel goes to [MOUSE_WHEEL], not here.
      */
     VARC_STRING_TRANSMIT(
         "onScrollWheel",
-        "SCROLLWHEEL",
+        "VARCSTRTRANSMIT",
         { it.onScrollWheel },
         { it.mouseWheelArray },
     ),
