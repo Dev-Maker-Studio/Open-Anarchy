@@ -25,9 +25,8 @@ import com.rs.game.model.gameobject.GameObject
 import org.darkan.core.model.Rights
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Utils
-import com.rs.engine.variables.ntk_player_timer_count
-import com.rs.engine.variables.ntk_room_number
-import com.rs.engine.variables.ntk_var_temp
+import org.darkan.core.gameval.gen.Varbit
+import org.darkan.core.gameval.gen.Varp
 
 const val PLUNDER_INTERFACE = 428
 
@@ -57,9 +56,9 @@ class PyramidPlunderController : Controller() {
     }
 
     private fun updatePlunderInterface() {
-        player.vars.setVar(ntk_var_temp, (currentRoom + 1) * 10 + 1)
-        player.vars.setVarBit(ntk_room_number, currentRoom)
-        player.vars.setVarBit(ntk_player_timer_count, 500 - tick)
+        player.vars.setVar(Varp.ntk_var_temp, (currentRoom + 1) * 10 + 1)
+        player.vars.setVarBit(Varbit.ntk_room_number, currentRoom)
+        player.vars.setVarBit(Varbit.ntk_player_timer_count, 500 - tick)
     }
 
     private fun kickPlayer() {

@@ -18,7 +18,7 @@ import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
-import com.rs.engine.variables.jaro_shortcut
+import org.darkan.core.gameval.gen.Varbit
 
 
 @ServerStartupEvent
@@ -144,7 +144,7 @@ private fun chop(player: Player, obj: GameObject) {
         }
 
         override fun processWithDelay(player: Player): Int {
-            player.vars.saveVarBit(jaro_shortcut, 1)
+            player.vars.saveVarBit(Varbit.jaro_shortcut, 1)
             player.anim(-1)
             return -1
         }

@@ -18,7 +18,6 @@ package com.rs.net.encoders
 
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.cs2.CS2Type
-import com.rs.engine.variables.gimp_main
 import com.rs.game.Account
 import com.rs.game.World
 import com.rs.game.map.Chunk
@@ -137,6 +136,7 @@ import org.darkan.core.net.prot.dto.GrandExchangeOffer
 import org.darkan.core.net.prot.dto.InstanceLoadType
 import org.darkan.core.net.prot.dto.InvSlotUpdate
 import java.io.ByteArrayOutputStream
+import org.darkan.core.gameval.gen.Varp
 
 class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
@@ -818,7 +818,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     fun sendGameBarStages() {
         sendVar(1054, player.clanStatus)
         sendVar(1055, player.assistStatus)
-        sendVar(gimp_main, if (player.isFilterGame) 1 else 0)
+        sendVar(Varp.gimp_main, if (player.isFilterGame) 1 else 0)
         sendVar(2159, player.account.social.fcStatus.toInt())
         sendChatFilterSettings()
         sendChatFilterSettingsPrivateChat()

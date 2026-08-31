@@ -8,9 +8,9 @@ import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Player;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
+import org.darkan.core.gameval.gen.Varbit;
 
 import static com.rs.game.content.quests.fightarena.FightArena.*;
-import static com.rs.engine.variables.VarBitPlayer.arena_suit_of_armour;
 
 @PluginEventHandler
 public class LadyServilFightArenaD extends Conversation {
@@ -38,7 +38,7 @@ public class LadyServilFightArenaD extends Conversation {
 						option("Yes", new Dialogue()
 							.addPlayer(HeadE.HAPPY_TALKING, "I'll try my best to return your family.", ()->{
 								player.getQuestManager().setStage(Quest.FIGHT_ARENA, FREE_JEREMY);
-								player.getVars().setVarBit(arena_suit_of_armour, 1);
+								player.getVars().setVarBit(Varbit.arena_suit_of_armour, 1);
 							})
 							.addNPC(NPC, HeadE.SAD, "Please do. My family can reward you for your troubles. I'll be waiting here for you")
 						);

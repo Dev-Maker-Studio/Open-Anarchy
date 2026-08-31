@@ -33,8 +33,7 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import java.util.concurrent.CopyOnWriteArraySet
 import kotlin.math.floor
-import com.rs.engine.variables.curse_perm2
-import com.rs.engine.variables.prayer_points_var
+import org.darkan.core.gameval.gen.Varp
 
 @ServerStartupEvent
 fun mapPrayerInterface() {
@@ -535,7 +534,7 @@ class PrayerManager {
             player.vars.setVarBit(p.varBit, if (active.contains(p)) 1 else 0)
             player.vars.setVarBit(p.qpVarBit, if (quickPrays.contains(p) || quickCurses.contains(p)) 1 else 0)
         }
-        player.vars.setVar(curse_perm2, if (this.isCurses) 1 else 0)
+        player.vars.setVar(Varp.curse_perm2, if (this.isCurses) 1 else 0)
     }
 
     fun refreshSettingQuickPrayers() {
@@ -706,7 +705,7 @@ class PrayerManager {
         }
 
     fun refreshPoints() {
-        player.vars.setVar(prayer_points_var, points.toInt())
+        player.vars.setVar(Varp.prayer_points_var, points.toInt())
     }
 
     fun hasFullPoints(): Boolean {

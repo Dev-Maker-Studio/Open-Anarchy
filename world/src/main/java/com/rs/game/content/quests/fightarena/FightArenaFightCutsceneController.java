@@ -32,11 +32,9 @@ import org.darkan.core.model.Animation;
 import world.gregs.voidps.type.Tile;
 import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
-
 import java.util.ArrayList;
 import java.util.List;
-import static com.rs.engine.variables.VarBitPlayer.arena_servil_state;
-import static com.rs.engine.variables.VarBitPlayer.delrith_seen_summoning_cutscene;
+import org.darkan.core.gameval.gen.Varbit;
 
 public class FightArenaFightCutsceneController extends Controller {
 	public transient Instance instance;
@@ -292,7 +290,7 @@ public class FightArenaFightCutsceneController extends Controller {
 						forceClose();
 					}
 					if(tick == 6) {
-						player.getVars().setVarBit(arena_servil_state, 2);
+						player.getVars().setVarBit(Varbit.arena_servil_state, 2);
 						stop();
 					}
 					tick++;
@@ -326,7 +324,7 @@ public class FightArenaFightCutsceneController extends Controller {
 		player.reset();
 		player.sendMessage("You have been defeated!");
 		player.tele(locationOnFail);
-		player.getVars().setVarBit(delrith_seen_summoning_cutscene, 0);
+		player.getVars().setVarBit(Varbit.delrith_seen_summoning_cutscene, 0);
 		forceClose();
 		return false;
 	}

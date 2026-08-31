@@ -8,11 +8,7 @@ import com.rs.game.model.entity.player.Skills
 import org.darkan.core.model.Item
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onLogin
-import com.rs.engine.variables.tzhaar2_ak_showing
-import com.rs.engine.variables.tzhaar2_egg_states
-import com.rs.engine.variables.tzhaar2_jalytgaal_showing
-import com.rs.engine.variables.tzhaar2_jeh_showing
-import com.rs.engine.variables.tzhaar2_main
+import org.darkan.core.gameval.gen.Varbit
 
 const val STAGE_UNSTARTED = 0
 const val STAGE_HATCH_EGG = 1
@@ -59,17 +55,17 @@ class ElderKiln : QuestOutline() {
     override fun updateStage(player: Player, stage: Int) {
         when(stage) {
             STAGE_SAVE_GAAL_FIGHTPITS -> {
-                player.vars.setVarBit(tzhaar2_main, 25)
-                player.vars.setVarBit(tzhaar2_egg_states, 2)
-                player.vars.setVarBit(tzhaar2_jalytgaal_showing, 1)
-                player.vars.setVarBit(tzhaar2_ak_showing, 1)
+                player.vars.setVarBit(Varbit.tzhaar2_main, 25)
+                player.vars.setVarBit(Varbit.tzhaar2_egg_states, 2)
+                player.vars.setVarBit(Varbit.tzhaar2_jalytgaal_showing, 1)
+                player.vars.setVarBit(Varbit.tzhaar2_ak_showing, 1)
             }
             STAGE_WRAP_UP_FIGHT_PITS, STAGE_GO_TO_KILN -> {
-                player.vars.setVarBit(tzhaar2_main, 40)
-                player.vars.setVarBit(tzhaar2_egg_states, 2)
-                player.vars.setVarBit(tzhaar2_jalytgaal_showing, 1)
-                player.vars.setVarBit(tzhaar2_ak_showing, 1)
-                player.vars.setVarBit(tzhaar2_jeh_showing, 1)
+                player.vars.setVarBit(Varbit.tzhaar2_main, 40)
+                player.vars.setVarBit(Varbit.tzhaar2_egg_states, 2)
+                player.vars.setVarBit(Varbit.tzhaar2_jalytgaal_showing, 1)
+                player.vars.setVarBit(Varbit.tzhaar2_ak_showing, 1)
+                player.vars.setVarBit(Varbit.tzhaar2_jeh_showing, 1)
             }
         }
     }
@@ -79,7 +75,7 @@ class ElderKiln : QuestOutline() {
 fun mapElderKiln() {
     onLogin {
         if (!Quest.ELDER_KILN.isImplemented)
-            it.player.vars.setVarBit(tzhaar2_jeh_showing, 1)
+            it.player.vars.setVarBit(Varbit.tzhaar2_jeh_showing, 1)
         else
             it.player.setQuestStage(Quest.ELDER_KILN, STAGE_ESCORT_GAAL_KILN)
     }

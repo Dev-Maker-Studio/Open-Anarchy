@@ -20,12 +20,12 @@ import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.LoginHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
-import static com.rs.engine.variables.VarBitPlayer.dttd_ham_trapdoor_state;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class HAMDungeon {
 
-	public static LoginHandler unlockTrapdoor = new LoginHandler(e -> e.getPlayer().getVars().setVarBit(dttd_ham_trapdoor_state, 2));
+	public static LoginHandler unlockTrapdoor = new LoginHandler(e -> e.getPlayer().getVars().setVarBit(Varbit.dttd_ham_trapdoor_state, 2));
 
 	public static ObjectClickHandler handleKeyTrapdoor = new ObjectClickHandler(new Object[] { 15766, 15747 }, e -> {
 		if (e.getObjectId() == 15766) {

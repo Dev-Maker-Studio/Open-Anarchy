@@ -3,7 +3,7 @@ package com.rs.game.content.dnds.penguins
 import org.darkan.core.JsonFileManager
 import com.rs.game.World
 import org.darkan.core.Logger
-import com.rs.engine.variables.peng_spy_bear
+import org.darkan.core.gameval.gen.Varbit
 
 enum class PolarBearLocation(val id: Int) { RELLEKKA(0), VARROCK(1), RIMMINGTON(2), MUSA_POINT(3), ARDOUGNE(4), FALADOR(5) }
 
@@ -26,7 +26,7 @@ class PolarBearManager() {
                 polarBearLocationId = newLocation.id
 
                 World.players.forEach { player ->
-                    player.vars.setVarBit(peng_spy_bear, polarBearLocationId)
+                    player.vars.setVarBit(Varbit.peng_spy_bear, polarBearLocationId)
                 }
 
                 Logger.debug(PolarBearManager::class.java, "setLocation", "Polar bear location changed to $newLocation for ${World.players.size()} logged-in player(s).")

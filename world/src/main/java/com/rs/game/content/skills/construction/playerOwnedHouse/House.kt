@@ -33,8 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import com.rs.utils.chunkX
 import com.rs.utils.chunkY
 import kotlin.math.pow
-import com.rs.engine.variables.poh_building_mode
-import com.rs.engine.variables.poh_servant_type
+import org.darkan.core.gameval.gen.Varbit
 
 @PluginEventHandler
 class House {
@@ -411,7 +410,7 @@ class House {
      * Updates the build mode varbit so the client can reflect the new state.
      */
     private fun refreshBuildMode() {
-        player?.vars?.setVarBit(poh_building_mode, if (buildMode) 1 else 0)
+        player?.vars?.setVarBit(Varbit.poh_building_mode, if (buildMode) 1 else 0)
     }
 
     /****
@@ -1536,7 +1535,7 @@ class House {
     private fun refreshServantVarBit() {
         var bit = if (houseServants == null) 0 else ((houseServants!!.ordinal * 2) + 1)
         if (houseServants == HouseServants.DEMON_BUTLER) bit = 8
-        player?.vars?.setVarBit(poh_servant_type, bit)
+        player?.vars?.setVarBit(Varbit.poh_servant_type, bit)
     }
 
     // ========================================================================

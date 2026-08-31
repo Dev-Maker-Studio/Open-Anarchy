@@ -12,26 +12,26 @@ import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.*;
 import com.rs.utils.shop.ShopsHandler;
-import static com.rs.engine.variables.VarBitPlayer.thigui_quest;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class TheivesGuild {
 
     public static LoginHandler login = new LoginHandler(e -> {
         if (Miniquest.A_GUILD_OF_OUR_OWN.isImplemented() && e.getPlayer().isMiniquestComplete(Miniquest.A_GUILD_OF_OUR_OWN, false)) {
-            e.getPlayer().getVars().saveVarBit(thigui_quest, 40);
+            e.getPlayer().getVars().saveVarBit(Varbit.thigui_quest, 40);
             return;
         }
         if (Miniquest.LOST_HER_MARBLES.isImplemented() && e.getPlayer().isMiniquestComplete(Miniquest.LOST_HER_MARBLES, false)) {
-            e.getPlayer().getVars().saveVarBit(thigui_quest, 20);
+            e.getPlayer().getVars().saveVarBit(Varbit.thigui_quest, 20);
             return;
         }
         if (Miniquest.FROM_TINY_ACORNS.isImplemented() && e.getPlayer().isMiniquestComplete(Miniquest.FROM_TINY_ACORNS, false)) {
-            e.getPlayer().getVars().saveVarBit(thigui_quest, 10);
+            e.getPlayer().getVars().saveVarBit(Varbit.thigui_quest, 10);
             return;
         }
         if (Quest.BUYERS_AND_CELLARS.isImplemented() && e.getPlayer().isQuestComplete(Quest.BUYERS_AND_CELLARS, null)) {
-            e.getPlayer().getVars().saveVarBit(thigui_quest, 10);
+            e.getPlayer().getVars().saveVarBit(Varbit.thigui_quest, 10);
         }
     });
     public static ObjectClickHandler handleThievesGuildExitLadder = new ObjectClickHandler(new Object[]{ 52308 }, e ->
@@ -45,13 +45,13 @@ public class TheivesGuild {
         }
         if (Miniquest.A_GUILD_OF_OUR_OWN.isImplemented() && e.getPlayer().isMiniquestComplete(Miniquest.A_GUILD_OF_OUR_OWN, false)) {
             e.getPlayer().useLadder(Tile.of(4762, 5763, 0));
-            e.getPlayer().getVars().saveVarBit(thigui_quest, 40); //Darren T4
+            e.getPlayer().getVars().saveVarBit(Varbit.thigui_quest, 40); //Darren T4
             e.getPlayer().getMusicsManager().unlockMusic(840);
             return;
         }
         if (Miniquest.LOST_HER_MARBLES.isImplemented() && e.getPlayer().isMiniquestComplete(Miniquest.LOST_HER_MARBLES, false)) {
             e.getPlayer().useLadder(Tile.of(4634, 5763, 0));
-            e.getPlayer().getVars().saveVarBit(thigui_quest, 20); //Darren T3
+            e.getPlayer().getVars().saveVarBit(Varbit.thigui_quest, 20); //Darren T3
             e.getPlayer().getMusicsManager().unlockMusic(838);
             return;
         }
@@ -62,7 +62,7 @@ public class TheivesGuild {
         }
         if (Quest.BUYERS_AND_CELLARS.isImplemented() && e.getPlayer().isQuestComplete(Quest.BUYERS_AND_CELLARS, null)) {
             e.getPlayer().useLadder(Tile.of(4762, 5891, 0));
-            e.getPlayer().getVars().saveVarBit(thigui_quest, 10); //Darren T2
+            e.getPlayer().getVars().saveVarBit(Varbit.thigui_quest, 10); //Darren T2
         } else {
             e.getPlayer().useLadder(Tile.of(4664, 5891, 0));
             e.getPlayer().getMusicsManager().unlockMusic(842);

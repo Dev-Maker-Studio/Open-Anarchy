@@ -9,22 +9,19 @@ import com.rs.plugin.events.LoginEvent
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.ItemConfig
-import com.rs.engine.variables.firedup_access12
-import com.rs.engine.variables.firedup_access10
-import com.rs.engine.variables.firedup_access13
-import com.rs.engine.variables.firedup_access9
+import org.darkan.core.gameval.gen.Varbit
 
 @ServerStartupEvent
 fun mapBeaconConstruction() {
     onLogin { e: LoginEvent ->
-        if (e.player.getBool("AllFiredUp.Burthorpe")) e.player.vars.setVarBit(firedup_access9, 1, true)
-        if (e.player.getBool("AllFiredUp.DeathPlateau")) e.player.vars.setVarBit(firedup_access10, 1, true)
-        if (e.player.getBool("AllFiredUp.GodWars")) e.player.vars.setVarBit(firedup_access12, 1, true)
-        if (e.player.getBool("AllFiredUp.WildernessTemple")) e.player.vars.setVarBit(firedup_access13, 1, true)
+        if (e.player.getBool("AllFiredUp.Burthorpe")) e.player.vars.setVarBit(Varbit.firedup_access9, 1, true)
+        if (e.player.getBool("AllFiredUp.DeathPlateau")) e.player.vars.setVarBit(Varbit.firedup_access10, 1, true)
+        if (e.player.getBool("AllFiredUp.GodWars")) e.player.vars.setVarBit(Varbit.firedup_access12, 1, true)
+        if (e.player.getBool("AllFiredUp.WildernessTemple")) e.player.vars.setVarBit(Varbit.firedup_access13, 1, true)
     }
     //Repair Burthorpe
     onObjectClick(34893, checkDistance = false) { e ->
-        if (e.player.getBool("AllFiredUp.Burthorpe")) e.player.vars.saveVarBit(firedup_access10, 1)
+        if (e.player.getBool("AllFiredUp.Burthorpe")) e.player.vars.saveVarBit(Varbit.firedup_access10, 1)
         if (e.option.equals("repair", ignoreCase = true)) {
             if (e.player.skills.getLevel(Skills.SMITHING) < 56) {
                 e.player.sendMessage("You do not possess the required level of Smithing(56) to repair the ladder.")
@@ -37,7 +34,7 @@ fun mapBeaconConstruction() {
             else {
                 e.player.sendMessage("You repair the ladder using 2 iron bars.")
                 e.player.inventory.deleteItem(2351, 2)
-                e.player.vars.saveVarBit(firedup_access9, 1)
+                e.player.vars.saveVarBit(Varbit.firedup_access9, 1)
                 e.player.set("AllFiredUp.Burthorpe", true)
                 return@onObjectClick
             }
@@ -71,7 +68,7 @@ fun mapBeaconConstruction() {
     //Repair DeathPlateau
     onObjectClick(34992) { e ->
         if (e.option.equals("repair", ignoreCase = true)) {
-            if (e.player.getBool("AllFiredUp.DeathPlateau")) e.player.vars.saveVarBit(firedup_access10, 1)
+            if (e.player.getBool("AllFiredUp.DeathPlateau")) e.player.vars.saveVarBit(Varbit.firedup_access10, 1)
             if (e.player.skills.getLevel(Skills.CONSTRUCTION) < 42) {
                 e.player.sendMessage("You do not possess the required level of Construction(42) to repair the ladder.")
                 return@onObjectClick
@@ -124,7 +121,7 @@ fun mapBeaconConstruction() {
                 }
                 if (e.player.getBool("AllFiredUp.DeathPlateauI") && e.player.getBool("AllFiredUp.DeathPlateauII")) {
                     e.player.set("AllFiredUp.DeathPlateau", true)
-                    e.player.vars.saveVarBit(firedup_access10, 1)
+                    e.player.vars.saveVarBit(Varbit.firedup_access10, 1)
                 }
             }
         }
@@ -157,7 +154,7 @@ fun mapBeaconConstruction() {
     onObjectClick(38495) { e ->
         val player = e.player
         if (e.option.equals("repair", ignoreCase = true)) {
-            if (player.getBool("AllFiredUp.GodWars")) player.vars.saveVarBit(firedup_access12, 1)
+            if (player.getBool("AllFiredUp.GodWars")) player.vars.saveVarBit(Varbit.firedup_access12, 1)
             if (player.skills.getLevel(Skills.CRAFTING) < 60) {
                 player.sendMessage("You do not possess the required level of Crafting(42) to repair the windbreak.")
                 return@onObjectClick
@@ -171,7 +168,7 @@ fun mapBeaconConstruction() {
                         ) + "."
                     )
                     player.set("AllFiredUp.GodWars", true)
-                    player.vars.saveVarBit(firedup_access12, 1)
+                    player.vars.saveVarBit(Varbit.firedup_access12, 1)
                     player.inventory.deleteItem(5931, 3)
                 } else player.sendMessage(
                     "You need 3 " + ItemConfig.get(5931).uidName.replace(
@@ -194,7 +191,7 @@ fun mapBeaconConstruction() {
     onObjectClick(38499, 38497, checkDistance = false) { e ->
         val player = e.player
         if (e.option.equals("repair", ignoreCase = true)) {
-            if (player.getBool("AllFiredUp.WildernessTemple")) player.vars.saveVarBit(firedup_access13, 1)
+            if (player.getBool("AllFiredUp.WildernessTemple")) player.vars.saveVarBit(Varbit.firedup_access13, 1)
             if (player.skills.getLevel(Skills.CONSTRUCTION) < 59) {
                 player.sendMessage("You do not possess the required level of Construction(59) to repair the ladder.")
                 return@onObjectClick
@@ -238,7 +235,7 @@ fun mapBeaconConstruction() {
             }
             if (player.getBool("AllFiredUp.WildernessTempleI") && player.getBool("AllFiredUp.WildernessTempleII")) {
                 player.set("AllFiredUp.WildernessTemple", true)
-                player.vars.saveVarBit(firedup_access13, 1)
+                player.vars.saveVarBit(Varbit.firedup_access13, 1)
             }
         }
         if (e.option.equals("climb", ignoreCase = true)) {

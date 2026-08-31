@@ -31,14 +31,11 @@ import org.darkan.core.model.Animation;
 import org.darkan.core.model.GroundItem;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
-
 import org.darkan.core.Utils;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import static com.rs.engine.variables.VarBitPlayer.falador_spawn;
-import static com.rs.engine.variables.VarBitPlayer.soulwars_spawn;
+import org.darkan.core.gameval.gen.Varbit;
 
 public class DeathOfficeController extends InstancedController {
 	
@@ -107,7 +104,7 @@ public class DeathOfficeController extends InstancedController {
 		List<Hub> hubs = new ArrayList<>();
 		hubs.add(Hub.LUMBRIDGE_CASTLE);
 		if (player.isQuestComplete(Quest.RECRUITMENT_DRIVE)) {
-			player.getVars().setVarBit(falador_spawn, 1);
+			player.getVars().setVarBit(Varbit.falador_spawn, 1);
 			hubs.add(Hub.FALADOR_CASTLE);
 		}
 		if (player.isMiniquestComplete(Miniquest.KNIGHTS_WAVE_TRAINING_GROUNDS)) {
@@ -115,7 +112,7 @@ public class DeathOfficeController extends InstancedController {
 			hubs.add(Hub.CAMELOT);
 		}
 		if (player.isQuestComplete(Quest.NOMADS_REQUIEM)) {
-			player.getVars().setVarBit(soulwars_spawn, 1);
+			player.getVars().setVarBit(Varbit.soulwars_spawn, 1);
 			hubs.add(Hub.SOUL_WARS);
 		}
 		return hubs;

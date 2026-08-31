@@ -31,18 +31,16 @@ import com.rs.game.model.item.ItemsContainer;
 import org.darkan.core.Constants;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
-
 import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.ItemClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import static com.rs.engine.variables.VarBitPlayer.rand_kinship_ring_inuse;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class DungManager {
@@ -275,7 +273,7 @@ public class DungManager {
 	public void refreshKinship() {
 		for (KinshipPerk p : KinshipPerk.values())
 			player.getVars().setVarBit(p.getVarbit(), getKinshipTier(p));
-		player.getVars().setVarBit(rand_kinship_ring_inuse, activeRingPerk == null ? 0 : activeRingPerk.ordinal() + 1);
+		player.getVars().setVarBit(Varbit.rand_kinship_ring_inuse, activeRingPerk == null ? 0 : activeRingPerk.ordinal() + 1);
 		if (player.getInterfaceManager().topOpen(993))
 			player.getPackets().sendRunScript(3494, switch(player.getTempAttribs().getI("kinshipTab", 0)) {
                 case 1 -> Utils.toInterfaceHash(993, 227);

@@ -8,7 +8,7 @@ import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
 import org.darkan.core.Constants
 import org.darkan.core.Utils
-import com.rs.engine.variables.thigui_dragonheld
+import org.darkan.core.gameval.gen.Varbit
 
 class StealToyDragon(private val obj: GameObject) : PlayerAction() {
 
@@ -38,7 +38,7 @@ class StealToyDragon(private val obj: GameObject) : PlayerAction() {
             if (player.inventory.hasFreeSlots()) {
                 player.inventory.addItem(18651, 1)
                 player.sendMessage("You take the toy dragon from the stall.")
-                player.vars.setVarBit(thigui_dragonheld, 0)
+                player.vars.setVarBit(Varbit.thigui_dragonheld, 0)
                 player.miniquestManager.setStage(Miniquest.FROM_TINY_ACORNS, 2)
             } else {
                 player.sendMessage("You do not have enough space to do that.")

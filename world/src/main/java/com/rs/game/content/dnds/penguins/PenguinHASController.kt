@@ -25,8 +25,7 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.time.temporal.WeekFields
-import com.rs.engine.variables.peng_spy_week_peng
-import com.rs.engine.variables.peng_spy_bear
+import org.darkan.core.gameval.gen.Varbit
 
 const val PENGUIN_POINTS = "PenguinPoints"
 const val MAX_PENGUIN_POINTS = 50
@@ -76,7 +75,7 @@ fun mapPenguinHideAndSeekInteractions() {
                     player.jingle(345)
                     player.incrementCount("Penguin Agents spied", 1)
 
-                    player.vars.saveVarBit(peng_spy_week_peng, player.getWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR))
+                    player.vars.saveVarBit(Varbit.peng_spy_week_peng, player.getWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR))
 
                     player.sendMessage("You spy on the penguin.")
 
@@ -106,8 +105,8 @@ fun mapPenguinHideAndSeekInteractions() {
 
     // Polar bear interactions
     onLogin { (player) ->
-        player.vars.setVarBit(peng_spy_bear, polarBearManager.getCurrentLocationId())
-        player.vars.saveVarBit(peng_spy_week_peng, player.getWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR))
+        player.vars.setVarBit(Varbit.peng_spy_bear, polarBearManager.getCurrentLocationId())
+        player.vars.saveVarBit(Varbit.peng_spy_week_peng, player.getWeeklyI(PENGUIN_COUNT_WEEKLY_ATTR))
     }
     onObjectClick(43094, 43095, 43096, 43097, 43098, 43099) { (player) ->
         if (player.get(UNLOCKED_PENGUIN_HAS) as Boolean) {

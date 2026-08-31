@@ -38,7 +38,7 @@ import org.darkan.core.model.Animation;
 import world.gregs.voidps.type.Tile;
 import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
-import static com.rs.engine.variables.VarBitPlayer.agility_pyramid_top;
+import org.darkan.core.gameval.gen.Varbit;
 
 public class AgilityPyramidController extends Controller {
 
@@ -282,7 +282,7 @@ public class AgilityPyramidController extends Controller {
 	}
 
 	private void updateTop() {
-		player.getVars().setVarBit(agility_pyramid_top, grabbedTop ? 1 : 0);
+		player.getVars().setVarBit(Varbit.agility_pyramid_top, grabbedTop ? 1 : 0);
 	}
 
 	public void finishCourse() {

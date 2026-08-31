@@ -8,7 +8,7 @@ import com.rs.game.model.entity.player.Player;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.LoginHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
-import static com.rs.engine.variables.VarBitPlayer.afr_complete;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class Thump {
@@ -16,9 +16,9 @@ public class Thump {
     //Varbit handles all post quest content, Move to quest once implemented
     public static LoginHandler login = new LoginHandler(e -> {
         if (e.getPlayer().isQuestComplete(Quest.AS_A_FIRST_RESORT))
-            e.getPlayer().getVars().setVarBit(afr_complete, 1);
+            e.getPlayer().getVars().setVarBit(Varbit.afr_complete, 1);
         else
-            e.getPlayer().getVars().setVarBit(afr_complete, 0);
+            e.getPlayer().getVars().setVarBit(Varbit.afr_complete, 0);
     });
 
     public static NPCClickHandler Thump = new NPCClickHandler(new Object[]{ 7101, 7100 }, new String[]{"Talk-to"}, e -> {

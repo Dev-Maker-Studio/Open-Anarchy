@@ -37,17 +37,14 @@ import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
-
 import org.darkan.core.model.AttribMap;
 import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.InterfaceOnInterfaceHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
-import static com.rs.engine.variables.VarPlayer.follower_obj;
-import static com.rs.engine.variables.VarBitPlayer.lore_interface_boolean;
-import static com.rs.engine.variables.VarBitPlayer.lore_timer_2;
-import static com.rs.engine.variables.VarPlayer.lore_general_varp_1;
+import org.darkan.core.gameval.gen.Varbit;
+import org.darkan.core.gameval.gen.Varp;
 
 @PluginEventHandler
 public final class Familiar extends NPC {
@@ -595,7 +592,7 @@ public final class Familiar extends NPC {
 
 	public void sendTimeRemaining() {
 		owner.getVars().setVarBit(4534, ticks / 100);
-		owner.getVars().setVarBit(lore_timer_2, (ticks % 100) == 0 ? 0 : 1);
+		owner.getVars().setVarBit(Varbit.lore_timer_2, (ticks % 100) == 0 ? 0 : 1);
 	}
 
 	/**
@@ -605,9 +602,9 @@ public final class Familiar extends NPC {
 	 * 
 	 */
 	public void sendMainConfigs() {
-		owner.getVars().setVar(follower_obj, pouch.getId());// configures familiar type
+		owner.getVars().setVar(Varp.follower_obj, pouch.getId());// configures familiar type
 		owner.getVars().setVar(1174, 0, true); //refresh familiar head
-		owner.getVars().setVarBit(lore_interface_boolean, pouch.getHeadAnimIndex()); //refresh familiar emote
+		owner.getVars().setVarBit(Varbit.lore_interface_boolean, pouch.getHeadAnimIndex()); //refresh familiar emote
 		refreshSpecialEnergy();
 		sendTimeRemaining();
 		owner.getVars().setVarBit(4288, pouch.getScroll().getPointCost());// check
@@ -646,7 +643,7 @@ public final class Familiar extends NPC {
 	public static void sendLeftClickOption(Player player) {
 		if (player.getFamiliar() == null)
 			return;
-		player.getVars().setVar(lore_general_varp_1, player.getSummoningLeftClickOption());
+		player.getVars().setVar(Varp.lore_general_varp_1, player.getSummoningLeftClickOption());
 		player.getVars().setVar(1494, player.getSummoningLeftClickOption());
 		player.getPackets().setIFHidden(747, 9, false);
 	}

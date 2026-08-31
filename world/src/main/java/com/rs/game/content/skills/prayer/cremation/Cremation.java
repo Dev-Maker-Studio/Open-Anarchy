@@ -30,11 +30,9 @@ import com.rs.plugin.handlers.LoginHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.DropSets;
 import com.rs.utils.drop.DropTable;
-
 import java.util.Arrays;
 import java.util.stream.Collectors;
-import static com.rs.engine.variables.VarBitPlayer.myq4_columbarium_entrance_vis;
-import static com.rs.engine.variables.VarBitPlayer.myq4_columbarium_tally_vis;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class Cremation {
@@ -51,8 +49,8 @@ public class Cremation {
 	});
 
 	public static LoginHandler unlockColumbariumStairs = new LoginHandler(e -> {
-		e.getPlayer().getVars().setVarBit(myq4_columbarium_entrance_vis, 1); //stairs
-		e.getPlayer().getVars().setVarBit(myq4_columbarium_tally_vis, 1); //shiny blood talisman
+		e.getPlayer().getVars().setVarBit(Varbit.myq4_columbarium_entrance_vis, 1); //stairs
+		e.getPlayer().getVars().setVarBit(Varbit.myq4_columbarium_tally_vis, 1); //shiny blood talisman
 	});
 
 	public static ObjectClickHandler handleColumbariumStairs = new ObjectClickHandler(new Object[] { 30621, 30534 }, e -> e.getPlayer().useStairs(e.getObjectId() == 30621 ? Tile.of(3422, 9965, 0) : Tile.of(3425, 9899, 0)));

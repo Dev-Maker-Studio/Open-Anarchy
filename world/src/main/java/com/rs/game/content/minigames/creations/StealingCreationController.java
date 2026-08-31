@@ -45,15 +45,10 @@ import org.darkan.core.model.WorldObject;
 import org.darkan.core.model.Hit;
 import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
-
 import org.darkan.core.Utils;
 import com.rs.utils.WorldUtil;
-import static com.rs.engine.variables.VarBitPlayer.sc_team;
-import static com.rs.engine.variables.VarPlayer.sc_score_clay_deposited;
-import static com.rs.engine.variables.VarPlayer.sc_score_clay_gathered;
-import static com.rs.engine.variables.VarPlayer.sc_score_clay_processed;
-import static com.rs.engine.variables.VarPlayer.sc_score_clay_taken;
-import static com.rs.engine.variables.VarPlayer.sc_score_damage_inflicted;
+import org.darkan.core.gameval.gen.Varbit;
+import org.darkan.core.gameval.gen.Varp;
 
 public class StealingCreationController extends Controller {
 
@@ -87,15 +82,15 @@ public class StealingCreationController extends Controller {
 	public void sendInterfaces() {
 		player.getInterfaceManager().sendOverlay(809, false);
 		player.getPackets().sendVarc(558, (int) ((game.getEndTime() - System.currentTimeMillis()) / 600)); // sync
-		player.getVars().setVarBit(sc_team, getTeam() ? 2 : 1);
+		player.getVars().setVarBit(Varbit.sc_team, getTeam() ? 2 : 1);
 	}
 
 	public void sendScore(Score score) {
-		player.getVars().setVar(sc_score_clay_gathered, score.getGathering());
-		player.getVars().setVar(sc_score_clay_deposited, score.getDepositing());
-		player.getVars().setVar(sc_score_clay_processed, score.getProcessing());
-		player.getVars().setVar(sc_score_clay_taken, score.getWithdrawing());
-		player.getVars().setVar(sc_score_damage_inflicted, score.getDamaging());
+		player.getVars().setVar(Varp.sc_score_clay_gathered, score.getGathering());
+		player.getVars().setVar(Varp.sc_score_clay_deposited, score.getDepositing());
+		player.getVars().setVar(Varp.sc_score_clay_processed, score.getProcessing());
+		player.getVars().setVar(Varp.sc_score_clay_taken, score.getWithdrawing());
+		player.getVars().setVar(Varp.sc_score_damage_inflicted, score.getDamaging());
 	}
 
 	@Override

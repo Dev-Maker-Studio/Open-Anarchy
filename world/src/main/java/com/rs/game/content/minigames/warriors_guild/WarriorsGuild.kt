@@ -37,12 +37,11 @@ import org.darkan.core.model.Animation
 import org.darkan.core.model.Item
 import org.darkan.core.model.SpotAnim
 import world.gregs.voidps.type.Tile
-
 import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.*
 import kotlin.random.Random
-import com.rs.engine.variables.warguild_token_type_temp
+import org.darkan.core.gameval.gen.Varbit
 
 private var killedCyclopses = 0
 private var amountOfPlayers = 0
@@ -162,7 +161,7 @@ fun mapWarriorsGuild() {
     onButtonClick(CYCLOPS_ROOM_SELECT_INTERFACE) { (player, _, componentId) ->
         val controller = player.controllerManager.controller as? WarriorsGuildController ?: return@onButtonClick
         when(componentId) {
-            2 -> player.vars.saveVarBit(VARBIT_CURRENT_TOKEN_PAY, Utils.clampI(player.vars.getVarBit(warguild_token_type_temp), 1, 5))
+            2 -> player.vars.saveVarBit(VARBIT_CURRENT_TOKEN_PAY, Utils.clampI(player.vars.getVarBit(Varbit.warguild_token_type_temp), 1, 5))
             3 -> player.vars.saveVarBit(VARBIT_CURRENT_TOKEN_PAY, TOKEN_PAY_ALL)
             22 -> {
                 player.vars.saveVarBit(VARBIT_CURRENT_TOKEN_PAY, TOKEN_PAY_BALANCE)

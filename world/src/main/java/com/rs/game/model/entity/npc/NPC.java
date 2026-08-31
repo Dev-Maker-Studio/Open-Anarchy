@@ -76,13 +76,11 @@ import com.rs.utils.NPCClueDrops;
 import com.rs.utils.WorldUtil;
 import com.rs.utils.drop.Drop;
 import com.rs.utils.drop.DropTable;
-import static com.rs.utils.KtExtensionsKt.getAttackDelay;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import org.darkan.core.gameval.gen.Varbit;
 
-import static com.rs.engine.variables.VarBitPlayer.bank_show_equipscreen;
-import static com.rs.engine.variables.VarBitPlayer.barrows_killed_count;
+import static com.rs.utils.KtExtensionsKt.getAttackDelay;
 
 public class NPC extends Entity {
 
@@ -574,7 +572,7 @@ public class NPC extends Entity {
 
 			if (BarrowsController.barrowsKCNPCs.contains(getId())) {
 				killer.setBarrowsKillCount(killer.getBarrowsKillCount() + 1);
-				killer.getVars().setVarBit(barrows_killed_count, killer.getBarrowsKillCount() + killer.getKilledBarrowBrothersCount());
+				killer.getVars().setVarBit(Varbit.barrows_killed_count, killer.getBarrowsKillCount() + killer.getKilledBarrowBrothersCount());
 			}
 
 			Item[] drops = DropTable.calculateDrops(killer, DropSets.getDropSet(id));
@@ -675,7 +673,7 @@ public class NPC extends Entity {
 			}
 			dropCollection.sortByItemId();
 			player.getTempAttribs().setB("viewingOtherBank", true);
-			player.getVars().setVarBit(bank_show_equipscreen, 0);
+			player.getVars().setVarBit(Varbit.bank_show_equipscreen, 0);
 			player.getVars().syncVarsToClient();
 			player.getInterfaceManager().sendInterface(762);
 			player.getPackets().sendRunScript(2319);

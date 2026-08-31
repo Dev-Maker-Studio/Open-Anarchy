@@ -10,14 +10,14 @@ import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.Ticks;
-import static com.rs.engine.variables.VarBitPlayer.ham_thief;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class HAMHideout {
     public static ObjectClickHandler handleHAMEntranceTrapdoor = new ObjectClickHandler(new Object[]{ 5490, 5492 }, Tile.of(3165, 3252, 0), e -> {
         switch (e.getOption()) {
             case "Open" -> e.getPlayer().sendMessage("The trapdoor is securely locked");
-            case "Close" -> e.getPlayer().getVars().setVarBit(ham_thief, 0);
+            case "Close" -> e.getPlayer().getVars().setVarBit(Varbit.ham_thief, 0);
             case "Climb-down" -> e.getPlayer().ladder(Tile.of(3149, 9652, 0));
             case "Pick-lock" -> PickLock(e.getPlayer(), e.getObj());
         }
@@ -71,7 +71,7 @@ public class HAMHideout {
 
         if (Utils.skillSuccess(player.getSkills().getLevel(Skills.THIEVING), hasLockpickRate, 190, 190)) {
             player.getSkills().addXp(Constants.THIEVING, 0.5);
-            player.getVars().setVarBit(ham_thief, 1);
+            player.getVars().setVarBit(Varbit.ham_thief, 1);
             player.unlock();
         } else {
             player.sendMessage("You fail to pick the lock.");

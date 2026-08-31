@@ -43,12 +43,7 @@ import com.rs.plugin.annotations.PluginEventHandler
 import com.rs.plugin.kts.onItemOnItem
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onObjectClick
-import com.rs.engine.variables.golem_retrieved_statuette
-import com.rs.engine.variables.golem_statuettestatusa
-import com.rs.engine.variables.golem_statuettestatusb
-import com.rs.engine.variables.golem_statuettestatusc
-import com.rs.engine.variables.golem_statuettestatusd
-import com.rs.engine.variables.golem_throne_gems
+import org.darkan.core.gameval.gen.Varbit
 
 private const val EXT_STAIRCASE_ID = 34978
 private const val INT_STAIRCASE_ID = 6372
@@ -118,18 +113,18 @@ fun mapTheGolem() {
 
     fun completePuzzle(player: Player) {
         player.sendMessage("The door grinds open.")
-        player.vars.saveVarBit(golem_statuettestatusc, 0)
-        player.vars.saveVarBit(golem_statuettestatusd, 2)
-        player.vars.saveVarBit(golem_statuettestatusb, 1)
-        player.vars.saveVarBit(golem_statuettestatusa, 1)
+        player.vars.saveVarBit(Varbit.golem_statuettestatusc, 0)
+        player.vars.saveVarBit(Varbit.golem_statuettestatusd, 2)
+        player.vars.saveVarBit(Varbit.golem_statuettestatusb, 1)
+        player.vars.saveVarBit(Varbit.golem_statuettestatusa, 1)
     }
 
 
     fun checkPuzzle(player: Player) =
-        player.vars.getVarBit(golem_statuettestatusc) == 0 &&
-        player.vars.getVarBit(golem_statuettestatusd) == 2 &&
-        player.vars.getVarBit(golem_statuettestatusb) == 1 &&
-        player.vars.getVarBit(golem_statuettestatusa) == 1
+        player.vars.getVarBit(Varbit.golem_statuettestatusc) == 0 &&
+        player.vars.getVarBit(Varbit.golem_statuettestatusd) == 2 &&
+        player.vars.getVarBit(Varbit.golem_statuettestatusb) == 1 &&
+        player.vars.getVarBit(Varbit.golem_statuettestatusa) == 1
 
     onItemClick(LETTER_ID, options = arrayOf("Read")) { e ->
         if (e.player.questManager.getStage(Quest.THE_GOLEM) == STAGE_CONTINUE_INVESTIGATION) {
@@ -182,7 +177,7 @@ fun mapTheGolem() {
     onObjectClick(STATUETTE_DISPLAY_CASE_ID) { (player, obj, options) ->
 
         if (options == "Study") {
-            if (player.vars.getVarBit(golem_retrieved_statuette) == 1) {
+            if (player.vars.getVarBit(Varbit.golem_retrieved_statuette) == 1) {
                 player.startConversation {
                     simple("Recently this display was stolen and its whereabouts are unknown.")
                 }
@@ -204,7 +199,7 @@ fun mapTheGolem() {
                         item(STATUETTE_ID, "You open the cabinet and retrieve the statuette.")
                     }
                     player.inventory.addItem(STATUETTE_ID)
-                    player.vars.saveVarBit(golem_retrieved_statuette, 1)
+                    player.vars.saveVarBit(Varbit.golem_retrieved_statuette, 1)
                     player.questManager.setStage(Quest.THE_GOLEM, STAGE_RETURN_TO_UZER)
                 }
             }
@@ -213,10 +208,10 @@ fun mapTheGolem() {
 
     onObjectClick(6305) { (player, obj, options) ->
         if (!checkPuzzle(player)) {
-            if (player.vars.getVarBit(golem_statuettestatusc) == 0) {
-                player.vars.setVarBit(golem_statuettestatusc, 1)
+            if (player.vars.getVarBit(Varbit.golem_statuettestatusc) == 0) {
+                player.vars.setVarBit(Varbit.golem_statuettestatusc, 1)
             } else {
-                player.vars.setVarBit(golem_statuettestatusc, 0)
+                player.vars.setVarBit(Varbit.golem_statuettestatusc, 0)
                 if (checkPuzzle(player)) {
                     completePuzzle(player)
                 }
@@ -226,39 +221,39 @@ fun mapTheGolem() {
 
     onObjectClick(6306) { (player, obj, options) ->
         if (!checkPuzzle(player)) {
-            if (player.vars.getVarBit(golem_statuettestatusd) == 1) {
-                player.vars.setVarBit(golem_statuettestatusd, 2)
+            if (player.vars.getVarBit(Varbit.golem_statuettestatusd) == 1) {
+                player.vars.setVarBit(Varbit.golem_statuettestatusd, 2)
                 if (checkPuzzle(player)) {
                     completePuzzle(player)
                 }
             } else {
-                player.vars.setVarBit(golem_statuettestatusd, 1)
+                player.vars.setVarBit(Varbit.golem_statuettestatusd, 1)
             }
         }
     }
 
     onObjectClick(6304) { (player, obj, options) ->
         if (!checkPuzzle(player)) {
-            if (player.vars.getVarBit(golem_statuettestatusb) == 0) {
-                player.vars.setVarBit(golem_statuettestatusb, 1)
+            if (player.vars.getVarBit(Varbit.golem_statuettestatusb) == 0) {
+                player.vars.setVarBit(Varbit.golem_statuettestatusb, 1)
                 if (checkPuzzle(player)) {
                     completePuzzle(player)
                 }
             } else {
-                player.vars.setVarBit(golem_statuettestatusb, 0)
+                player.vars.setVarBit(Varbit.golem_statuettestatusb, 0)
             }
         }
     }
 
     onObjectClick(6303) { (player, obj, options) ->
         if (!checkPuzzle(player)) {
-            if (player.vars.getVarBit(golem_statuettestatusa) == 0) {
-                player.vars.setVarBit(golem_statuettestatusa, 1)
+            if (player.vars.getVarBit(Varbit.golem_statuettestatusa) == 0) {
+                player.vars.setVarBit(Varbit.golem_statuettestatusa, 1)
                 if (checkPuzzle(player)) {
                     completePuzzle(player)
                 }
             } else {
-                player.vars.setVarBit(golem_statuettestatusa, 0)
+                player.vars.setVarBit(Varbit.golem_statuettestatusa, 0)
             }
         }
     }
@@ -270,7 +265,7 @@ fun mapTheGolem() {
             player.inventory.addItem(Item(SAPPHIRE, 2), true)
             player.inventory.addItem(Item(EMERALD, 2), true)
             player.inventory.addItem(Item(RUBY, 2), true)
-            player.vars.setVarBit(golem_throne_gems, 1)
+            player.vars.setVarBit(Varbit.golem_throne_gems, 1)
         } else {
             player.sendMessage("You need a chisel to do that.")
         }
@@ -278,7 +273,7 @@ fun mapTheGolem() {
 
     onItemOnObject(objectNamesOrIds = arrayOf(6306, 6309), itemNamesOrIds = arrayOf("Statuette")) { (player, obj, item) ->
         player.inventory.removeItems(Item(STATUETTE_ID, 1))
-        player.vars.saveVarBit(golem_statuettestatusd, 1)
+        player.vars.saveVarBit(Varbit.golem_statuettestatusd, 1)
         player.startConversation {
             simple("You add the statuette to the alcove.")
         }
@@ -291,13 +286,13 @@ fun mapTheGolem() {
         player.inventory.addItem(Item(SAPPHIRE, 2), true)
         player.inventory.addItem(Item(EMERALD, 2), true)
         player.inventory.addItem(Item(RUBY, 2), true)
-        player.vars.setVarBit(golem_throne_gems, 1)
+        player.vars.setVarBit(Varbit.golem_throne_gems, 1)
     }
 
     onObjectClick(DEMON_DOOR_ID) { (player, obj, options) ->
         if (checkPuzzle(player)) {
             if (player.questManager.getAttribs(Quest.THE_GOLEM).getB("HAS_CHISELED_THRONE")) {
-                player.vars.setVarBit(golem_throne_gems, 1)
+                player.vars.setVarBit(Varbit.golem_throne_gems, 1)
             }
             player.sendMessage("You step into the portal")
             player.fadeScreen {

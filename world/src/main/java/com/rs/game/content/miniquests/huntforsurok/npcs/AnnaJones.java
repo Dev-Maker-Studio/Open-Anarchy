@@ -7,7 +7,7 @@ import com.rs.game.content.skills.mining.Pickaxe;
 import com.rs.game.model.entity.player.Player;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
-import static com.rs.engine.variables.VarBitPlayer.surok_tunnelcheck;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class AnnaJones extends Conversation {
@@ -17,7 +17,7 @@ public class AnnaJones extends Conversation {
 
     public AnnaJones(Player player) {
         super(player);
-        if (player.isQuestComplete(Quest.WHAT_LIES_BELOW) && player.getVars().getVarBit(surok_tunnelcheck) == 1) {
+        if (player.isQuestComplete(Quest.WHAT_LIES_BELOW) && player.getVars().getVarBit(Varbit.surok_tunnelcheck) == 1) {
             addNPC(ID, HeadE.CHEERFUL, "It's so exciting!");
             addPlayer(HeadE.CONFUSED, "What is?");
             addNPC(ID, HeadE.CHEERFUL, "Surok is here! He's looking at the tunnel right now! Gosh, isn't this the best thing ever?");

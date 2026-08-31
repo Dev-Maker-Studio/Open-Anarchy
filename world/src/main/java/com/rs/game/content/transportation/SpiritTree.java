@@ -27,7 +27,7 @@ import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
-import static com.rs.engine.variables.VarBitPlayer.pog_spirit;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public class SpiritTree {
@@ -63,7 +63,7 @@ public class SpiritTree {
 	});
 
 	public static void openInterface(Player player) {
-		player.getVars().setVarBit(pog_spirit, 3);
+		player.getVars().setVarBit(Varbit.pog_spirit, 3);
 		player.getInterfaceManager().sendInterface(TREE_INTERFACE);
 		player.getPackets().setIFRightClickOps(TREE_INTERFACE, 6, 0, 7, 0);
 		if (player.getRegionId() == 10033 || player.getRegionId() == 12102)

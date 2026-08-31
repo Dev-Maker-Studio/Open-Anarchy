@@ -34,7 +34,7 @@ import com.rs.plugin.kts.onNpcClick
 import com.rs.utils.DropSets
 import com.rs.utils.drop.DropTable
 import kotlin.math.floor
-import com.rs.engine.variables.pest_points_old2
+import org.darkan.core.gameval.gen.Varbit
 
 private const val INTERFACE = 1011
 private val COMPS: IntArray = intArrayOf(15, 196, 208, 220, 232, 244, 256, 268, 280)
@@ -237,7 +237,7 @@ private fun Player.openExchangeShop() {
 }
 
 private fun Player.refreshPoints() {
-    vars.setVarBit(pest_points_old2, pestPoints)
+    vars.setVarBit(Varbit.pest_points_old2, pestPoints)
 }
 
 private fun Player.confirmBuy() {

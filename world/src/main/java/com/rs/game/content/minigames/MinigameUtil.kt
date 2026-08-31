@@ -1,7 +1,7 @@
 package com.rs.game.content.minigames
 
 import com.rs.game.model.entity.player.Player
-import com.rs.engine.variables.sc_team
+import org.darkan.core.gameval.gen.Varbit
 
 val MINIGAME_SUPPLIES = arrayOf(12850, 12851, 4049, 4050, 18715, 18716, 18717, 18718, 22373, 22374, 22375, 22376, 22379, 22380)
 
@@ -28,9 +28,9 @@ fun isMinigameSupply(id: Int): Boolean {
 }
 
 fun enableMinigameRunes(player: Player) {
-    player.vars.setVarBit(sc_team, 1)
+    player.vars.setVarBit(Varbit.sc_team, 1)
 }
 
 fun disableMinigameRunes(player: Player) {
-    player.vars.setVarBit(sc_team, 0)
+    player.vars.setVarBit(Varbit.sc_team, 0)
 }

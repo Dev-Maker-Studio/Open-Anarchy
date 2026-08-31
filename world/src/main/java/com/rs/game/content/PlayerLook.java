@@ -25,8 +25,7 @@ import com.rs.game.model.entity.player.Player;
 import org.darkan.core.model.Animation;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
-import static com.rs.engine.variables.VarBitPlayer.player_kit_mom_colour;
-import static com.rs.engine.variables.VarBitPlayer.player_kit_mom_gender;
+import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
 public final class PlayerLook {
@@ -231,8 +230,8 @@ public final class PlayerLook {
 	public static void openMageMakeOver(Player player) {
 		player.getInterfaceManager().sendInterface(900);
 		player.getPackets().setIFText(900, 33, "Confirm");
-		player.getVars().setVarBit(player_kit_mom_gender, player.getAppearance().isMale() ? 0 : 1);
-		player.getVars().setVarBit(player_kit_mom_colour, player.getAppearance().getSkinColor());
+		player.getVars().setVarBit(Varbit.player_kit_mom_gender, player.getAppearance().isMale() ? 0 : 1);
+		player.getVars().setVarBit(Varbit.player_kit_mom_colour, player.getAppearance().getSkinColor());
 		player.getTempAttribs().setB("MageMakeOverGender", player.getAppearance().isMale());
 		player.getTempAttribs().setI("MageMakeOverSkin", player.getAppearance().getSkinColor());
 	}
