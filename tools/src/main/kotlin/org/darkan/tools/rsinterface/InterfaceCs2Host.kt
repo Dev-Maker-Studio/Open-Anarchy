@@ -543,24 +543,24 @@ class InterfaceCs2Host(
          * dispatch table to the `Component` field it assigns. The pairing is not
          * guessable from the names: `IF_SETONMOUSEOVER` writes `popupScript` while
          * the field actually called `onMouseOver` is written by `HOOK_MOUSE_ENTER`,
-         * and `IF_SETONMOUSELEAVE` writes `mouseLeaveScript` rather than the
-         * similarly named `onMouseLeaveScript`. The definition field is the stable
-         * identity, so it is the key.
+         * and `IF_SETONINVTRANSMIT` writes the field the cache decoder calls
+         * `mouseLeaveScript` rather than the similarly named `onMouseLeaveScript`.
+         * The definition field is the stable identity, so it is the key.
          */
         val HOOK_SUFFIX_BY_FIELD: Map<String, String> = mapOf(
             "onMouseOver" to "MOUSE_ENTER",
             "onMouseLeaveScript" to "MOUSE_EXIT",
             "onClick" to "CLICK",
             "popupScript" to "MOUSEOVER",
-            "mouseLeaveScript" to "MOUSELEAVE",
+            "mouseLeaveScript" to "INVTRANSMIT",
             "onClickRepeat" to "CLICKREPEAT",
             "onRelease" to "RELEASE",
             "onHold" to "HOLD",
             "onDrag" to "DRAG",
             "onDragComplete" to "DRAGCOMPLETE",
-            "onMouseMove" to "MOUSEREPEAT",
-            "onKey" to "INVTRANSMIT",
-            "onScrollWheel" to "SCROLLWHEEL",
+            "onMouseMove" to "SCROLLWHEEL",
+            "onKey" to "VARCTRANSMIT",
+            "onScrollWheel" to "VARCSTRTRANSMIT",
             "onVarpTransmit" to "VARTRANSMIT",
             "onStatTransmit" to "STATTRANSMIT",
             "onTimer" to "TIMER",
