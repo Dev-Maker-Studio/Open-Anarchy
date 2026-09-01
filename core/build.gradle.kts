@@ -1,5 +1,8 @@
+import org.darkan.build.gameval.GenerateGamevalConstants
+
 plugins {
     kotlin("plugin.serialization") version "2.3.0"
+    idea
 }
 
 dependencies {
@@ -18,8 +21,8 @@ dependencies {
 
 // Bundle the gameval name catalogs (gamevals/<type>.json at the repo root) under /gamevals on the
 // classpath so a jar with no working tree can still resolve names. GAMEVAL_PATH overrides per file
-// at runtime; see docs/gameval.md. Only the catalogs are shipped: CONTRACT.md, crosswalk/ and
-// work/ stay behind. The directory may be absent or mid-regeneration; the copy just takes what is there.
+// at runtime; see docs/gameval.md. Only the catalogs are shipped; CONTRACT.md stays behind. The
+// directory may be absent or mid-edit; the copy just takes what is there.
 tasks.processResources {
     from(rootProject.file("gamevals")) {
         into("gamevals")
@@ -37,14 +40,24 @@ tasks.test {
     }
 }
 
-// Typed gameval constants (org.darkan.core.gameval.gen.*) are generated from gamevals/<type>.json
-// by gamevals/gen_kotlin.py and committed, so a build never needs python. Run this (or the script
-// directly) after the catalogs change; `-Pcheck` only reports whether they are current.
-tasks.register<Exec>("generateGamevals") {
+// Typed gameval constants (org.darkan.core.gameval.gen.*): one Java class of public static final
+// int per gamevals/<type>.json, generated into build/generated/sources/gameval/java by the
+// buildSrc task and compiled as part of this module. Nothing is committed and no python is
+// involved; see docs/gameval.md, "Typed constants".
+val generateGamevalConstants = tasks.register<GenerateGamevalConstants>("generateGamevalConstants") {
     group = "generation"
-    description = "Regenerates core/src/main/java/org/darkan/core/gameval/gen from gamevals/*.json"
-    workingDir = rootDir
-    val args = mutableListOf("python3", "gamevals/gen_kotlin.py")
-    if (project.hasProperty("check")) args += "--check"
-    commandLine(args)
+    description = "Generates org.darkan.core.gameval.gen.* from gamevals/*.json"
+    catalogDirectory.set(rootProject.layout.projectDirectory.dir("gamevals"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/sources/gameval/java"))
+    generatorLabel.set("the :core:generateGamevalConstants Gradle task (buildSrc org.darkan.build.gameval)")
+    regenerateCommand.set("./gradlew :core:generateGamevalConstants")
+}
+
+sourceSets.main {
+    java.srcDir(generateGamevalConstants.flatMap { it.outputDirectory })
+}
+
+// So a Gradle-imported IDE indexes the constants (and marks them generated rather than hand-written).
+idea.module {
+    generatedSourceDirs.add(layout.buildDirectory.dir("generated/sources/gameval/java").get().asFile)
 }

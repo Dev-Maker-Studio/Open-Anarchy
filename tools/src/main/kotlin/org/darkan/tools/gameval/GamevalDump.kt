@@ -40,7 +40,7 @@ import java.io.File
 /**
  * Dumps the whole 727 cache to one JSONL file per gameval type.
  *
- * The corpus exists to be crosswalked against RS3 dev names, so it is written for a differ and
+ * The corpus exists to be diffed against other revisions' dumps, so it is written for a differ and
  * not for a human: one JSON object per line, ascending id, every array inline and complete, and
  * one file per type so a type can be reloaded on its own. Types are decoded one at a time and
  * streamed straight out, so peak memory is one type's definitions rather than the whole cache.
@@ -196,7 +196,7 @@ object GamevalDump {
          * The decoders size their arrays one past the last file, so a bulk load always ends on
          * an id that has no file, and some archives have holes (`obj`, `varp`, `varc`). Those ids
          * decode to a default definition; without this check they would be dumped as if the
-         * cache had them, and the crosswalk would emit placeholders for ids that do not exist.
+         * cache had them, and a consumer would take placeholders for ids that do not exist.
          */
         private fun hasFile(decoder: DefinitionDecoder<*>, id: Int): Boolean =
             cache.files(decoder.index, decoder.getArchive(id)).contains(decoder.getFile(id))

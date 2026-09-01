@@ -9,7 +9,7 @@ import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Minimal streaming JSON writer for the gameval crosswalk corpus.
+ * Minimal streaming JSON writer for the gameval dump corpus.
  *
  * The corpus is consumed by tooling that diffs 727 records against RS3 dev names, so it needs
  * every value a decoder produced: arrays are always emitted inline and in full, never

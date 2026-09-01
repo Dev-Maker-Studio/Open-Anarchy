@@ -10,9 +10,9 @@ import kotlin.test.assertTrue
  * Covers the reference table enumeration API: every archive id in an index and, where the table
  * carries archive names, the archive id to name hash table.
  *
- * The name hashes are what a gameval crosswalk keys off, so a per index table that silently dropped
- * or merged entries (the global [Cache.archiveId] hash map is keyed by hash, so it is lossy across
- * indices) would go unnoticed without this.
+ * Archive names are addressed by hash, so a per index table that silently dropped or merged entries
+ * (the global [Cache.archiveId] hash map is keyed by hash, so it is lossy across indices) would go
+ * unnoticed without this.
  */
 class ArchiveNameHashTest {
 
@@ -26,7 +26,7 @@ class ArchiveNameHashTest {
         assertEquals(ids.size, hashes.size, "every archive should carry a name hash entry")
         assertEquals(ids.toSet(), hashes.keys, "hash table keys should be the archive ids")
         // Every script but the last (6566, an unnamed archive) carries a real name hash, and those
-        // hashes are unique - the crosswalk depends on both.
+        // hashes are unique - name lookup depends on both.
         val named = hashes.filterValues { it != 0 }
         assertEquals(ids.size - 1, named.size)
         assertEquals(named.size, named.values.toSet().size, "name hashes should be unique")

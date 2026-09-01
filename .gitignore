@@ -2,8 +2,11 @@
 .gradle
 .kotlin
 
-# Ignore Gradle build output directory
-build
+# Ignore Gradle build output directory. Anchored to the root and to each module, because an
+# unanchored "build" also matches source package directories such as
+# buildSrc/src/main/kotlin/org/darkan/build/.
+/build/
+/*/build/
 
 # eclipse specific
 *.pydevproject
@@ -82,7 +85,5 @@ __pycache__/
 world-server.jar
 *.jar.new
 
+# Default output of `:tools:run --args="gameval dump"`; only the catalogs are canonical
 /gamevals/work/
-# One-time crosswalk/RE tooling and review artifacts stay local; only the catalogs are canonical
-/gamevals/crosswalk/
-/gamevals/REVIEW.md
