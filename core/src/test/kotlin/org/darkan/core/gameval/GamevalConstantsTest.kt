@@ -7,23 +7,47 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * The generated constants (`org.darkan.core.gameval.gen.*`, from `gamevals/gen_kotlin.py`) must
- * agree with the runtime catalog they were generated from. The generated classes exist only for
- * the types whose catalog existed at generation time, so they are reached by reflection and each
- * check skips itself when its class, field or catalog is not there yet.
+ * The generated constants (`org.darkan.core.gameval.gen.*`, from `:core:generateGamevalConstants`)
+ * must agree with the runtime catalog they were generated from, and must now cover it completely:
+ * every id of every type has a constant, an unnamed one under its placeholder.
+ *
+ * The classes are reached by reflection so the test still runs (and says what is missing) when a
+ * catalog or a class is not there.
  */
 class GamevalConstantsTest {
 
     private val genPackage = "org.darkan.core.gameval.gen"
 
+    private val regenerate = "regenerate with ./gradlew :core:generateGamevalConstants"
+
+    /** Catalog type -> generated class, for every type except the nested `component` layout. */
+    private val classes = mapOf(
+        Gameval.OBJ to "Obj", Gameval.NPC to "Npc", Gameval.LOC to "Loc", Gameval.SEQ to "Seq",
+        Gameval.SPOTANIM to "Spotanim", Gameval.ENUM to "Enum", Gameval.STRUCT to "Struct",
+        Gameval.PARAM to "Param", Gameval.INV to "Inv", Gameval.INTERFACE to "Interface",
+        Gameval.CLIENTSCRIPT to "Cs2", Gameval.VARP to "Varp", Gameval.VARBIT to "Varbit",
+        Gameval.VARC to "Varc", Gameval.VARCSTR to "Varcstr", Gameval.VARCLAN to "Varclan",
+        Gameval.VARBITCLAN to "Varbitclan", Gameval.VARCLANSETTING to "Varclansetting",
+        Gameval.VARBITCLANSETTING to "Varbitclansetting", Gameval.BAS to "Bas",
+        Gameval.HITMARK to "Hitmark", Gameval.HEADBAR to "Headbar", Gameval.CURSOR to "Cursor",
+        Gameval.MAPELEMENT to "Mapelement", Gameval.QUEST to "Quest", Gameval.MODEL to "Model",
+        Gameval.GRAPHIC to "Graphic", Gameval.SOUND to "Sound", Gameval.MIDI to "Midi",
+        Gameval.MATERIAL to "Material", Gameval.FONTMETRICS to "Fontmetrics",
+        Gameval.IDK to "Idk", Gameval.OVERLAY to "Overlay", Gameval.UNDERLAY to "Underlay",
+        Gameval.MAPSCENE to "Mapscene", Gameval.SKYBOX to "Skybox",
+        Gameval.QUICKCHATOPTION to "Quickchatoption", Gameval.QUICKCHATPHRASE to "Quickchatphrase",
+        Gameval.WORLDMAP to "Worldmap",
+    )
+
+    private fun generatedClass(cls: String): Class<*>? = try {
+        Class.forName("$genPackage.$cls")
+    } catch (_: ClassNotFoundException) {
+        null
+    }
+
     /** `<Class>.<field>` walked up the generated superclass chain, or `null` when either is absent. */
     private fun constant(cls: String, field: String): Int? {
-        val type = try {
-            Class.forName("$genPackage.$cls")
-        } catch (_: ClassNotFoundException) {
-            return null
-        }
-        var current: Class<*>? = type
+        var current: Class<*>? = generatedClass(cls) ?: return null
         while (current != null) {
             val f = current.declaredFields.firstOrNull { it.name == field && Modifier.isStatic(it.modifiers) }
             if (f != null) return f.also { it.isAccessible = true }.getInt(null)
@@ -34,13 +58,8 @@ class GamevalConstantsTest {
 
     /** Every public static int constant reachable through the class, superclass chain included. */
     private fun constants(cls: String): Map<String, Int>? {
-        val type = try {
-            Class.forName("$genPackage.$cls")
-        } catch (_: ClassNotFoundException) {
-            return null
-        }
+        var current: Class<*>? = generatedClass(cls) ?: return null
         val out = LinkedHashMap<String, Int>()
-        var current: Class<*>? = type
         while (current != null) {
             for (f in current.declaredFields) {
                 if (Modifier.isStatic(f.modifiers) && f.type == Int::class.javaPrimitiveType) {
@@ -60,7 +79,7 @@ class GamevalConstantsTest {
             return
         }
         val generated = constant("Obj", "coins")
-        assertNotNull(generated, "obj.json exists but Obj.coins was not generated; run python3 gamevals/gen_kotlin.py")
+        assertNotNull(generated, "obj.json exists but Obj.coins was not generated; $regenerate")
         assertEquals(Gameval.requireId(Gameval.OBJ, "coins"), generated)
     }
 
@@ -71,32 +90,92 @@ class GamevalConstantsTest {
             println("skipped: no clientscript.json catalog with [proc,quicksort]")
             return
         }
-        // Bare name unless the crosswalk also proved a [clientscript,quicksort], then category-prefixed.
+        // Bare name unless the catalog also carries a [clientscript,quicksort], then category-prefixed.
         val generated = constant("Cs2", "quicksort") ?: constant("Cs2", "proc_quicksort")
-        assertNotNull(generated, "clientscript.json exists but Cs2.quicksort was not generated; run python3 gamevals/gen_kotlin.py")
+        assertNotNull(generated, "clientscript.json exists but Cs2.quicksort was not generated; $regenerate")
         assertEquals(id, generated)
     }
 
     @Test
-    fun `every generated constant is a named id of its catalog`() {
-        val classes = mapOf(
-            Gameval.OBJ to "Obj", Gameval.NPC to "Npc", Gameval.LOC to "Loc", Gameval.SEQ to "Seq",
-            Gameval.SPOTANIM to "Spotanim", Gameval.INV to "Inv", Gameval.CLIENTSCRIPT to "Cs2",
-            Gameval.VARP to "Varp", Gameval.VARBIT to "Varbit", Gameval.MODEL to "Model", Gameval.SOUND to "Sound",
-        )
+    fun `every constant is an id of its catalog and every id has a constant`() {
         var checked = 0
+        var total = 0
         for ((type, cls) in classes) {
-            val generated = constants(cls) ?: continue
             if (!Gameval.has(type)) continue
-            val named = Gameval.entries(type)
-            val unknown = generated.filterValues { it !in named }
+            val generated = constants(cls)
+            assertNotNull(generated, "$type.json exists but no $cls class was generated; $regenerate")
+            val all = Gameval.allEntries(type)
+            val unknown = generated.filterValues { it !in all }
             assertTrue(
                 unknown.isEmpty(),
-                "$cls has ${unknown.size} constant(s) whose id is no longer named in $type.json (e.g. ${unknown.entries.take(3)}); regenerate with python3 gamevals/gen_kotlin.py",
+                "$cls has ${unknown.size} constant(s) whose id is not in $type.json (e.g. ${unknown.entries.take(3)}); $regenerate",
             )
-            assertEquals(named.size, generated.size, "$cls constant count differs from the named ids in $type.json; regenerate with python3 gamevals/gen_kotlin.py")
+            assertEquals(all.size, generated.size, "$cls has ${generated.size} constants for ${all.size} ids in $type.json; $regenerate")
+            checked++
+            total += generated.size
+        }
+        println("checked $checked generated class(es), $total constants, against their catalogs")
+    }
+
+    @Test
+    fun `an id with no proven name is reachable under its placeholder`() {
+        var checked = 0
+        for ((type, cls) in classes) {
+            if (!Gameval.has(type)) continue
+            val unnamed = Gameval.allEntries(type).entries.firstOrNull { Gameval.isPlaceholder(type, it.key) } ?: continue
+            val placeholder = GamevalCatalog.placeholder(type, unnamed.key.toString())
+            assertEquals(
+                unnamed.key,
+                constant(cls, placeholder),
+                "$type ${unnamed.key} has no proven name, so $cls.$placeholder must be its constant; $regenerate",
+            )
             checked++
         }
-        println("checked $checked generated class(es) against their catalogs")
+        assertTrue(checked > 0, "no catalog had an unnamed id to check")
+        println("checked $checked placeholder constant(s)")
+    }
+
+    @Test
+    fun `Component has a class per interface and packs every component id`() {
+        if (!Gameval.has(GamevalCatalog.COMPONENT)) {
+            println("skipped: no component.json catalog")
+            return
+        }
+        val outer = generatedClass("Component")
+        assertNotNull(outer, "component.json exists but no Component class was generated; $regenerate")
+        // Keyed by the interface id the class itself declares rather than by its name, so this check
+        // stays independent of the generator's identifier-escaping rules.
+        val nested = outer.declaredClasses.associateBy { it.getDeclaredField("IFACE").also { f -> f.isAccessible = true }.getInt(null) }
+        val raw = Gameval.rawEntries(GamevalCatalog.COMPONENT)
+        val byIface = raw.keys.groupBy { it.substringBefore(':').toInt() }
+        assertEquals(byIface.size, nested.size, "Component has ${nested.size} nested classes for ${byIface.size} interfaces; $regenerate")
+
+        var packed = 0
+        for ((iface, keys) in byIface) {
+            val cls = nested[iface]
+            assertNotNull(cls, "no Component class declares IFACE = $iface; $regenerate")
+            val fields = cls.declaredFields.filter { it.type == Int::class.javaPrimitiveType }
+            // IFACE and a component can share a value (interface 0, component 0 both pack to 0), so
+            // count the fields and match on the set of values.
+            val values = fields.map { it.also { f -> f.isAccessible = true }.getInt(null) }.toHashSet()
+            assertEquals(keys.size + 1, fields.size, "Component class for interface $iface has ${fields.size} constants for ${keys.size} components plus IFACE; $regenerate")
+            for (key in keys) {
+                val expected = GamevalCatalog.pack(iface, key.substringAfter(':').toInt())
+                assertTrue(expected in values, "component $key is not packed as $expected in the class for interface $iface; $regenerate")
+                packed++
+            }
+        }
+
+        // And one entry whose two halves need no escaping, to pin the name -> constant mapping.
+        val plain = Regex("[a-z][a-z0-9_]*")
+        val sample = raw.entries.firstOrNull { (_, name) ->
+            name.count { it == ':' } == 1 && name.split(":").all { plain.matches(it) && it !in setOf("class", "val", "int") }
+        }
+        assertNotNull(sample, "no component name was a plain identifier to sample")
+        val iface = sample.key.substringBefore(':').toInt()
+        val field = nested.getValue(iface).getDeclaredField(sample.value.substringAfter(':'))
+        field.isAccessible = true
+        assertEquals(GamevalCatalog.pack(iface, sample.key.substringAfter(':').toInt()), field.getInt(null))
+        println("checked $packed component constant(s) over ${nested.size} interface classes, sample ${sample.value}")
     }
 }

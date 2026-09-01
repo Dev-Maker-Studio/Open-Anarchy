@@ -45,12 +45,23 @@ object Gameval : GamevalCatalog(File(EnvVars.gamevalPath)) {
     const val MIDI = "midi"
     const val MATERIAL = "material"
     const val FONTMETRICS = "fontmetrics"
+    const val IDK = "idk"
+    const val OVERLAY = "overlay"
+    const val UNDERLAY = "underlay"
+    const val MAPSCENE = "mapscene"
+    const val SKYBOX = "skybox"
+    const val QUICKCHATOPTION = "quickchatoption"
+    const val QUICKCHATPHRASE = "quickchatphrase"
+
+    /** World map areas: the `details` archive file ids the `WORLDMAP_*` clientscript opcodes take. */
+    const val WORLDMAP = "worldmap"
 
     /** Every catalog type name, in the order the contract lists them. */
     val TYPES: List<String> = listOf(
         OBJ, NPC, LOC, SEQ, SPOTANIM, ENUM, STRUCT, PARAM, INV, INTERFACE, COMPONENT, CLIENTSCRIPT,
         VARP, VARBIT, VARC, VARCSTR, VARCLAN, VARBITCLAN, VARCLANSETTING, VARBITCLANSETTING,
         BAS, HITMARK, HEADBAR, CURSOR, MAPELEMENT, QUEST, MODEL, GRAPHIC, SOUND, MIDI, MATERIAL, FONTMETRICS,
+        IDK, OVERLAY, UNDERLAY, MAPSCENE, SKYBOX, QUICKCHATOPTION, QUICKCHATPHRASE, WORLDMAP,
     )
 
     /** The folder catalogs are read from before falling back to the bundled copy. */

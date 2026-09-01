@@ -1421,9 +1421,9 @@ private fun printHelp() {
                         data sizes. "not found" / null are handled gracefully.
                         'scan' (alias 'indices') reports, per index, whether
                         it carries archive/file name hashes.
-          gameval    - Dump the whole cache as one JSONL file per type, for
-                        crosswalking 727 ids against RS3 dev names. One JSON
-                        object per line, ascending id, arrays always inline.
+          gameval    - Dump the whole cache as one JSONL file per type. One
+                        JSON object per line, ascending id, arrays always
+                        inline.
                         Also writes manifest.json (per-type counts) and
                         index-name-hashes.json.
                         Usage: gameval dump <outDir>

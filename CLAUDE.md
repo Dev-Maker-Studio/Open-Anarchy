@@ -206,7 +206,7 @@ Shared code used by both lobby and world servers.
 | `social` | Chat models: `ChatMessage`, `QuickChatMessage` |
 | `social.gateway` | Gateway protocol: JSON-serialized messages for world↔lobby |
 | `engine` | Tick-based game loop: `EngineLoop` (600ms default cycle) |
-| `gameval` | Jagex dev-name lookup for 727 asset ids: `Gameval` / `GamevalCatalog` read `gamevals/<type>.json`; `gameval.gen` holds the generated typed constants (`Obj.coins`, `Seq.swarm_walk`, Java, committed) |
+| `gameval` | Jagex dev-name lookup for 727 asset ids: `Gameval` / `GamevalCatalog` read `gamevals/<type>.json`; `gameval.gen` holds the typed constants (`Obj.coins`, `Seq.swarm_walk`), generated into `core/build/generated` by the build, not committed |
 
 ### Lobby Module (`org.darkan.lobby`)
 
@@ -257,7 +257,7 @@ Shared code used by both lobby and world servers.
 # Build shadow JAR (lobby)
 ./gradlew :lobby:shadowJar
 
-# Dump the 727 cache to JSONL for the gameval crosswalk (tools module)
+# Dump every 727 cache definition to JSONL, one file per type (tools module)
 ./gradlew :tools:run --args="gameval dump gamevals/work/727"
 ```
 
@@ -610,31 +610,41 @@ object MyCollection {
 
 2. Define document data class with MongoDB annotations as needed.
 
-### Regenerating the Gameval Catalogs and Constants
+### Editing the Gameval Catalogs
 
-The catalogs in `gamevals/<type>.json` are generated, never hand-edited; the rules are in
-`gamevals/CONTRACT.md` (a name only on proof, placeholder `<type>_<id>` otherwise, every 727 id
-present). The typed constants in `core/src/main/java/org/darkan/core/gameval/gen/` are generated
-from the catalogs and committed with them.
+The 40 catalogs in `gamevals/<type>.json` are **canonical and hand-edited**. 727 is permanently
+version-locked, the one-time recovery tooling that first produced them is gone, and there is
+nothing to regenerate them from - they are improved in place. `gamevals/CONTRACT.md` records the
+evidence rules the recovered names were held to (a name only on proof, placeholder `<type>_<id>`
+otherwise, every 727 id present); a name added by hand is held to the same bar.
 
-The crosswalk that originally produced the catalogs is local-only tooling (gitignored
-`gamevals/crosswalk/`); 727 is version-locked, so catalogs are improved in place, never
-regenerated from scratch. After editing a catalog, regenerate the constants:
+The typed constants in `org.darkan.core.gameval.gen` are **not committed**: the
+`:core:generateGamevalConstants` Gradle task (in `buildSrc/`) emits them into
+`core/build/generated/sources/gameval/java` on every build that needs them. To rename an asset,
+edit the catalog and rebuild - there is nothing to regenerate by hand:
 
 ```bash
-python3 gamevals/gen_kotlin.py            # or: ./gradlew :core:generateGamevals
-python3 gamevals/gen_kotlin.py --check    # exit 1 if the committed constants are stale (-Pcheck)
+./gradlew :core:generateGamevalConstants   # only if you want it alone; any build runs it
+./gradlew :buildSrc:test                   # the generator's own tests
 ```
 
-`gamevals/work/` (dumps, evidence sidecars, reports) is gitignored. Use `Gameval.requireId(Gameval.INV, "worn")`
-or `Obj.coins` in new code rather than magic numbers; see `docs/gameval.md`.
+Every id has a constant, placeholders included (`Loc.loc_54321`), so renaming an entry in the
+catalog renames the constant and every stale call site fails to compile. A catalog whose names
+conflict (duplicates, collisions after identifier escaping, a name that is another id's
+placeholder, a coverage block that disagrees with the entries) **fails the build** with a message
+naming the ids; see `docs/gameval.md`.
+
+At runtime the catalogs are read from `GAMEVAL_PATH` (default `./gamevals`) per file, falling back
+to the copy bundled in `core`'s jar, so an edited catalog needs only a restart. Use
+`Gameval.requireId(Gameval.INV, "worn")` or `Obj.coins` in new code rather than magic numbers; see
+`docs/gameval.md`. Cache **archive** names (map squares, native libraries, shaders) are not
+gamevals and are built from formulas - see `docs/cache-archive-names.md`.
 
 The legacy flat var constant package `com.rs.engine.variables` (world module) has been
 **removed**: all callers use `org.darkan.core.gameval.gen` (`Varbit`, `Varp`, `Varc`, `Varcstr`,
-`Varclan`, ...) directly, migrated id-for-id with a per-reference proof
-(id-preservation proof in `gamevals/work/reports/legacy-var-migration.md`). If a legacy re-sync
-batch (`docs/legacy-baseline.md`) reintroduces the package or imports of it, re-run that script
-to migrate the new callers and delete the package again.
+`Varclan`, ...) directly, migrated id-for-id with a per-reference proof. If a legacy re-sync
+batch (`docs/legacy-baseline.md`) reintroduces the package or imports of it, migrate the new
+callers to `org.darkan.core.gameval.gen` and delete the package again.
 
 ### Adding a New API Endpoint
 
@@ -668,9 +678,8 @@ fun Application.configureRoutes() {
 | `world/src/main/kotlin/org/darkan/world/Main.kt` | World entry point |
 | `world/src/main/kotlin/org/darkan/world/social/SocialClient.kt` | Gateway client |
 | `core/src/main/kotlin/org/darkan/core/gameval/Gameval.kt` | Runtime name lookup for 727 asset ids (catalogs in `gamevals/`) |
-| `core/src/main/java/org/darkan/core/gameval/gen/` | Generated typed gameval constants (`Obj`, `Npc`, `Loc`, `Component`, `Cs2`, ...) |
+| `buildSrc/src/main/kotlin/org/darkan/build/gameval/` | Generator for the typed gameval constants (`Obj`, `Npc`, `Loc`, `Component`, `Cs2`, ...), run by `:core:generateGamevalConstants` |
 | `gamevals/CONTRACT.md` | Rule book for the gameval catalogs |
-| `gamevals/gen_kotlin.py` | Generates the typed constants from the catalogs |
 
 ---
 
