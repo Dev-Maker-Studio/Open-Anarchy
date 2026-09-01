@@ -254,6 +254,19 @@ At runtime nothing needs rebuilding: `GAMEVAL_PATH` (default `./gamevals`) wins 
 copy bundled in `core`'s jar, so a server restart picks up an edited catalog. Only the typed
 constants need the build.
 
+A decompiled clientscript project (`cs2 decompile-all`) carries the same names - `Obj.abyssal_whip`,
+`varbit_dungeoneering_floor`, `function quicksort` - all derived from the catalogs, never a second
+copy. Scripts are laid out by their gameval: `[proc,quicksort]` becomes `proc/quicksort.ts` with a
+`// [proc,quicksort]` header, and that catalog entry - not a numeric id in the file - is what binds
+the file to the archive it compiles into (placeholders live under `cs2/`). After editing a catalog, `./gradlew :tools:run --args="cs2 apply-names <dir>"` regenerates the
+project's declaration files and rewrites every reference to the new name; any reference it cannot
+rewrite fails `tsc` rather than compiling stale. The reverse direction also exists: rename a symbol
+in the editor (plain F2 in VS Code - the id binding lives in a header or doc comment, not the name)
+and `cs2 sync-names <dir>` writes the new name back into the catalog it came from, then re-derives
+the project so the two cannot diverge. `cs2 check-names <dir>` reports divergence without changing
+anything, and `cs2 compile` refuses a folder whose names contradict the catalogs instead of
+guessing.
+
 ### Regenerating
 
 Nothing to do: `./gradlew build` (anything that compiles `core`) regenerates the constants when a

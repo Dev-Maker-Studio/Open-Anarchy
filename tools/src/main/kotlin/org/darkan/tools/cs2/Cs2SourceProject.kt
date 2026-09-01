@@ -10,18 +10,19 @@ import world.gregs.voidps.cache.Cache
  * A folder of decompiled clientscripts, and the path from a file on disk back to
  * bytecode.
  *
- * The folder is the same shape `cs2 decompile-all` writes: one
- * `clientscript-<id>.ts` per script, plus `cs2.d.ts` for the opcode signatures
- * and `vars.d.ts` binding renamed variables to their ids. Two facts about that
- * layout drive everything here:
+ * The folder is the same shape `cs2 decompile-all` writes: `<category>/<name>.ts`
+ * per script - `proc/quicksort.ts` - plus `cs2.d.ts` for the opcode signatures,
+ * `gamevals.d.ts` for the id constants and `vars.d.ts` binding renamed variables
+ * to their ids. Two facts about that layout drive everything here:
  *
- *  - **The `// clientscript <id>` header is the script's identity**, not the file
- *    name and not the function name. [Cs2Parser] reads it, so a renamed function
- *    still compiles to the right id, and a file can be copied around freely as
- *    long as the header comes with it.
+ *  - **The gameval name is the script's identity**, not the function name.
+ *    `gamevals/clientscript.json` maps it to the archive id, and the header and
+ *    the path both spell it out ([Cs2Layout]), so a renamed function still
+ *    compiles to the right script.
  *  - **Renamed identifiers only resolve through the folder's declarations.**
- *    [Cs2SymbolTable.read] scans `vars.d.ts` and every script header, so it is
- *    folder-scoped state that has to be re-read whenever those files change.
+ *    [Cs2SymbolTable.read] scans `vars.d.ts`, `gamevals.d.ts` and every script
+ *    header, so it is folder-scoped state that has to be re-read whenever those
+ *    files change.
  *
  * Compilation happens on whichever thread asks - in practice the hot reload
  * watcher thread - so the mutable state here ([folder], [symbols]) is volatile
@@ -111,31 +112,39 @@ class Cs2SourceProject(
 
     // ------------------------------------------------------------------- paths
 
-    fun fileFor(scriptId: Int): File = folder.resolve("clientscript-$scriptId.ts")
+    /**
+     * Where a script's source belongs: `<category>/<name>.ts`, from its gameval
+     * name. A folder written by an older build still holds it at the numbered flat
+     * path, so that is accepted where it is what actually exists.
+     */
+    fun fileFor(scriptId: Int): File {
+        val derived = Cs2Layout.fileFor(folder, scriptId)
+        if (derived.isFile) return derived
+        val legacy = folder.resolve("${Cs2Layout.LEGACY_PREFIX}$scriptId.ts")
+        return if (legacy.isFile) legacy else derived
+    }
 
     fun hasSource(scriptId: Int): Boolean = fileFor(scriptId).isFile
 
-    /** The id a file declares in its header, which is the only authority on it. */
+    /** The id a file declares - its gameval name, or the path it sits at. */
     fun scriptIdOf(file: File): Int? = try {
-        HEADER.find(file.readText())?.groupValues?.get(1)?.toIntOrNull()
+        Cs2Layout.scriptIdOf(file.readText(), Cs2Layout.relativePath(folder, file))
     } catch (e: Exception) {
         null
     }
 
     /** True when a file is one of the folder's scripts rather than a declaration file. */
-    fun isScriptFile(file: File): Boolean =
-        file.name.startsWith("clientscript-") && file.name.endsWith(".ts")
+    fun isScriptFile(file: File): Boolean = Cs2Layout.isScriptFile(file)
 
     /** True when a file changing invalidates the symbol table for the whole folder. */
     fun isDeclarationFile(file: File): Boolean =
-        file.name == "vars.d.ts" || file.name == "cs2.d.ts"
+        file.name == Cs2Declarations.VARS_FILE ||
+            file.name == Cs2Declarations.OPCODES_FILE ||
+            file.name == Cs2Declarations.GAMEVALS_FILE
 
     /** Every script id the folder has a source file for, ascending. */
     fun sourceIds(): List<Int> =
-        folder.listFiles().orEmpty()
-            .filter { isScriptFile(it) }
-            .mapNotNull { SOURCE_NAME.find(it.name)?.groupValues?.get(1)?.toIntOrNull() }
-            .sorted()
+        Cs2Layout.scriptFiles(folder).mapNotNull { scriptIdOf(it) }.distinct().sorted()
 
     fun cachedBytes(scriptId: Int): ByteArray? = try {
         scripts.raw(scriptId)
@@ -171,9 +180,15 @@ class Cs2SourceProject(
                 Diagnostic(file, -1, "cannot read: ${e.message}", 1, 1, located = false),
             )
         }
-        val headerId = HEADER.find(source)?.groupValues?.get(1)?.toIntOrNull() ?: -1
+        val relative = Cs2Layout.relativePath(folder, file)
+        val headerId = Cs2Layout.scriptIdOf(source, relative) ?: -1
+        // A name that means one id here and another in the catalogs would compile
+        // either way, so the folder is refused rather than read one of the two ways.
+        symbols.refusal()?.let {
+            return CompileResult.Failed(Diagnostic(file, headerId, it, 1, 1, located = false))
+        }
         return try {
-            val function = Cs2Parser(source, analyzer::paramIsString, symbols).parse()
+            val function = Cs2Parser(source, analyzer::paramIsString, symbols, relative).parse()
             val script = Cs2CodeGen(function, analyzer).generate()
             CompileResult.Ok(Compiled(function.scriptId, file, script, Cs2Codec.encode(script)))
         } catch (e: Exception) {
@@ -252,7 +267,7 @@ class Cs2SourceProject(
             }
         }
         return try {
-            folder.mkdirs()
+            target.parentFile?.mkdirs()
             target.writeText(source)
             reloadSymbols()
             ExportResult(target, "wrote ${target.path}")
@@ -271,9 +286,14 @@ class Cs2SourceProject(
      */
     fun exportDeclarations(): ExportResult = try {
         folder.mkdirs()
-        folder.resolve("cs2.d.ts").writeText(Cs2Declarations.generate())
+        folder.resolve(Cs2Declarations.OPCODES_FILE).writeText(Cs2Declarations.generate())
+        folder.resolve(Cs2Declarations.GAMEVALS_FILE).writeText(Cs2Declarations.gamevals())
         folder.resolve("tsconfig.json").writeText(Cs2Declarations.tsconfig())
-        ExportResult(folder, "wrote cs2.d.ts and tsconfig.json to ${folder.path}")
+        ExportResult(
+            folder,
+            "wrote ${Cs2Declarations.OPCODES_FILE}, ${Cs2Declarations.GAMEVALS_FILE} " +
+                "and tsconfig.json to ${folder.path}",
+        )
     } catch (e: Exception) {
         ExportResult(null, "cannot write declarations: ${e.message}")
     }
@@ -331,8 +351,6 @@ class Cs2SourceProject(
          */
         const val DEFAULT_FOLDER = "cs2-dump"
 
-        private val HEADER = Regex("""^// clientscript (\d+)$""", RegexOption.MULTILINE)
-        private val SOURCE_NAME = Regex("""^clientscript-(\d+)\.ts$""")
         private val LINE_IN_MESSAGE = Regex("""(?:at|on) line (\d+)""")
         private val QUOTED = Regex("""'([^']+)'""")
     }

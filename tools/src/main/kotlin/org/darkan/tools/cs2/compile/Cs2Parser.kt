@@ -1,5 +1,9 @@
 package org.darkan.tools.cs2.compile
 
+import org.darkan.core.gameval.Gameval
+import org.darkan.tools.cs2.Cs2Identifiers
+import org.darkan.tools.cs2.Cs2Layout
+import org.darkan.tools.cs2.Cs2Names
 import org.darkan.tools.cs2.Cs2Op
 import org.darkan.tools.cs2.ArgType
 import org.darkan.tools.cs2.Cs2Opcodes
@@ -65,12 +69,21 @@ class Cs2Parser(
      * enough to compile a file nobody has touched.
      */
     private val symbols: Cs2SymbolTable = Cs2SymbolTable.EMPTY,
+    /**
+     * Where the file sits under the project folder, e.g. `proc/quicksort.ts`.
+     *
+     * The layout is a binding in its own right - the catalog turns a script's name
+     * into its archive id, and the path spells that name out - so it stands in for
+     * a header a hand-made file never had.
+     */
+    private val relativePath: String? = null,
 ) {
 
-    // The header comment is the only place the script's own name survives.
-    private val headerId: Int? =
-        Regex("^// clientscript (\\d+)$", RegexOption.MULTILINE).find(source)
-            ?.groupValues?.get(1)?.toIntOrNull()
+    // What the file says it is: its gameval name, or the numbered header an older
+    // dump wrote. See [Cs2Layout.scriptIdOf].
+    private val headerId: Int? = Cs2Layout.scriptIdOf(source, relativePath)
+
+    private val gamevalHeader: String? = Cs2Layout.gamevalHeader(source)
 
     private val nameComment: String? =
         Regex("^// name: (.*)$", RegexOption.MULTILINE).find(source)?.groupValues?.get(1)
@@ -115,7 +128,16 @@ class Cs2Parser(
         while (peek().kind == TokenKind.IDENT && peek().text != "function") skip()
         expectIdent("function")
         val name = expect(TokenKind.IDENT).text
-        // The header comment is authoritative, so the function can be renamed.
+        // The header is authoritative, so the function can be renamed freely. A
+        // header naming a script the catalogs no longer have is an error rather
+        // than something to fall back from: falling back would compile this file
+        // into whatever archive the function name happens to resolve to.
+        if (headerId == null && gamevalHeader != null) {
+            error(
+                "'$gamevalHeader' is not a clientscript in gamevals/clientscript.json; " +
+                    "the catalog was renamed without `cs2 apply-names`",
+            )
+        }
         scriptId = headerId ?: Cs2Symbols.scriptOf(name) ?: symbols.script(name)
             ?: error("Cannot tell which clientscript '$name' is")
 
@@ -286,27 +308,20 @@ class Cs2Parser(
     /**
      * Turns a spelled-out constant back into the integer it packs. This is the
      * inverse of the decompiler's typed-constant rendering.
+     *
+     * A gameval constant has already become an [IntConst] by the time it gets
+     * here, so a name and a number reach the bytecode identically; `scriptId`
+     * additionally accepts the referenced script's own function.
      */
     private fun packedConstant(name: String, args: List<Expr>): Expr? {
-        val values = args.map { (it as? IntConst)?.value ?: return null }
-        val kind = when (name) {
-            "component" -> ArgType.COMPONENT
-            "tile" -> ArgType.COORD
-            "item" -> ArgType.ITEM
-            "npc" -> ArgType.NPC
-            "loc" -> ArgType.LOC
-            "seq" -> ArgType.SEQ
-            "spotanim" -> ArgType.SPOTANIM
-            "enumId" -> ArgType.ENUM
-            "struct" -> ArgType.STRUCT
-            "param" -> ArgType.PARAM
-            "inv" -> ArgType.INV
-            "skill" -> ArgType.STAT
-            "scriptId" -> ArgType.SCRIPT
-            "colour" -> ArgType.COLOUR
-            "graphic" -> ArgType.GRAPHIC
-            else -> return null
+        val values = args.map {
+            when (it) {
+                is IntConst -> it.value
+                is ScriptCall -> if (it.args.isEmpty()) it.scriptId else return null
+                else -> return null
+            }
         }
+        val kind = Cs2Names.argTypeOf(name) ?: return null
         val packed = when {
             kind == ArgType.COMPONENT && values.size == 2 -> Cs2Packing.packComponent(values[0], values[1])
             kind == ArgType.COORD && values.size == 3 -> Cs2Packing.packCoord(values[0], values[1], values[2])
@@ -605,6 +620,8 @@ class Cs2Parser(
         if (name == "true") return TypedConst(1, ArgType.BOOLEAN)
         if (name == "false") return TypedConst(0, ArgType.BOOLEAN)
 
+        if (atPunct(".") && name in Cs2Names.NAMESPACES.values) return gamevalConstant(name)
+
         locals[name]?.let { return LocalRef(it.slot, it.type) }
         tempTypes[name]?.let { return it }
 
@@ -632,6 +649,43 @@ class Cs2Parser(
         if (atPunct("(")) return parseCall(name, operand)
         error("Unknown identifier '$name'")
     }
+
+    /**
+     * `Obj.abyssal_whip`, `Component.<interface>.<component>` - a gameval name
+     * standing for the number the bytecode holds.
+     *
+     * The name is looked up in exactly two places, in this order: the ids the
+     * project's `gamevals.d.ts` binds its names to, which is where an editor
+     * rename lands, and the catalogs those defaults came from. Nothing else may
+     * name an id, and where the two disagree the folder is refused before a
+     * compile starts (see [Cs2SymbolTable.conflicts]).
+     */
+    private fun gamevalConstant(namespace: String): Expr {
+        val path = StringBuilder(namespace)
+        expectPunct(".")
+        val first = expect(TokenKind.IDENT).text
+        path.append('.').append(first)
+        var second: String? = null
+        if (namespace == COMPONENT_NAMESPACE && atPunct(".")) {
+            skip()
+            second = expect(TokenKind.IDENT).text
+            path.append('.').append(second)
+        }
+        val text = path.toString()
+        symbols.gameval(text)?.let { return IntConst(it) }
+        val id = when {
+            namespace != COMPONENT_NAMESPACE -> {
+                val type = Cs2Names.NAMESPACES.entries.first { it.value == namespace }.key
+                Cs2Names.idOf(type, first)
+            }
+            second == null -> error("'$text' is an interface group, not a component")
+            second == Cs2Identifiers.IFACE_MEMBER -> Cs2Names.componentInterfaceId(first)
+            else -> Cs2Names.componentOf(first, second)
+        }
+        return IntConst(id ?: error("Unknown gameval '$text'"))
+    }
+
+    private val COMPONENT_NAMESPACE = Cs2Names.NAMESPACES.getValue(Gameval.COMPONENT)
 
     private fun parseCall(name: String, operand: Int = 0): Expr {
         expectPunct("(")
