@@ -3,7 +3,12 @@ package org.darkan.tools.cs2.compile
 /** Token kinds the CS2 TypeScript subset needs. */
 enum class TokenKind { IDENT, NUMBER, BIGINT, STRING, PUNCT, EOF }
 
-data class Token(val kind: TokenKind, val text: String, val line: Int) {
+/**
+ * [start] is the offset of the token's first character in the source, which is
+ * what lets a rewrite replace one identifier and copy everything around it -
+ * comments and string literals included - through untouched.
+ */
+data class Token(val kind: TokenKind, val text: String, val line: Int, val start: Int = -1) {
     override fun toString() = "$kind($text) at line $line"
 }
 
@@ -31,7 +36,7 @@ class Cs2Lexer(private val source: String) {
         while (true) {
             skipTrivia()
             if (at >= source.length) {
-                tokens.add(Token(TokenKind.EOF, "", line))
+                tokens.add(Token(TokenKind.EOF, "", line, source.length))
                 return tokens
             }
             tokens.add(next())
@@ -73,7 +78,7 @@ class Cs2Lexer(private val source: String) {
     private fun identifier(): Token {
         val start = at
         while (at < source.length && (source[at].isLetterOrDigit() || source[at] == '_' || source[at] == '$')) at++
-        return Token(TokenKind.IDENT, source.substring(start, at), line)
+        return Token(TokenKind.IDENT, source.substring(start, at), line, start)
     }
 
     private fun number(): Token {
@@ -86,12 +91,13 @@ class Cs2Lexer(private val source: String) {
         }
         if (at < source.length && source[at] == 'n') {
             at++
-            return Token(TokenKind.BIGINT, source.substring(start, at - 1), line)
+            return Token(TokenKind.BIGINT, source.substring(start, at - 1), line, start)
         }
-        return Token(TokenKind.NUMBER, source.substring(start, at), line)
+        return Token(TokenKind.NUMBER, source.substring(start, at), line, start)
     }
 
     private fun string(): Token {
+        val quote = at
         val start = ++at
         while (at < source.length && source[at] != '"') {
             if (source[at] == '\\') at++
@@ -99,14 +105,15 @@ class Cs2Lexer(private val source: String) {
         }
         val body = source.substring(start, at)
         at++ // closing quote
-        return Token(TokenKind.STRING, body, line)
+        return Token(TokenKind.STRING, body, line, quote)
     }
 
     private fun punct(): Token {
         for (candidate in punctuation) {
             if (source.startsWith(candidate, at)) {
+                val start = at
                 at += candidate.length
-                return Token(TokenKind.PUNCT, candidate, line)
+                return Token(TokenKind.PUNCT, candidate, line, start)
             }
         }
         error("Unexpected character '${source[at]}' on line $line")

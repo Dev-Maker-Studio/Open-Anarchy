@@ -1,5 +1,6 @@
 package org.darkan.tools.cs2
 
+import org.darkan.core.gameval.Gameval
 import org.darkan.tools.cs2.ArgType
 import org.darkan.tools.cs2.Cs2Packing
 import org.darkan.tools.cs2.ir.ArrayAssign
@@ -37,7 +38,6 @@ import org.darkan.tools.cs2.ir.TempRef
 import org.darkan.tools.cs2.ir.TypedConst
 import org.darkan.tools.cs2.ir.VarAssign
 import org.darkan.tools.cs2.ir.VarRef
-import org.darkan.tools.cs2.ir.VarSpace
 import org.darkan.tools.cs2.ir.While
 
 /**
@@ -65,10 +65,17 @@ class Cs2Emitter(private val function: Cs2Function) {
     }
 
     private fun emitHeader() {
-        // A triple-slash reference makes a single file resolve the opcode names
-        // on its own; cross-script calls still need the project's tsconfig.
-        line("/// <reference path=\"./cs2.d.ts\" />")
-        line("// clientscript ${function.scriptId}")
+        // A triple-slash reference makes a single file resolve the opcode and
+        // gameval names on its own; cross-script calls still need the tsconfig.
+        // The prefix walks back out of the category folder the file sits in.
+        val up = Cs2Layout.referencePrefix(function.scriptId)
+        line("/// <reference path=\"$up${Cs2Declarations.OPCODES_FILE}\" />")
+        line("/// <reference path=\"$up${Cs2Declarations.GAMEVALS_FILE}\" />")
+        line("/// <reference path=\"$up${Cs2Declarations.VARS_FILE}\" />")
+        // The gameval name is what this script *is*: `gamevals/clientscript.json`
+        // is what turns it into the archive id the bytecode is written to, and the
+        // path this file sits at says the same thing.
+        line("// ${Cs2Layout.headerOf(function.scriptId)}")
         if (function.name != null) line("// name: ${function.name}")
         line("")
     }
@@ -98,7 +105,7 @@ class Cs2Emitter(private val function: Cs2Function) {
         // Not exported: clientscripts share one flat namespace, and keeping the
         // files as scripts rather than modules is what lets one call another
         // without an import.
-        line("function script${function.scriptId}(${params.joinToString(", ")}): $returns {")
+        line("function ${Cs2Symbols.scriptName(function.scriptId)}(${params.joinToString(", ")}): $returns {")
     }
 
     /**
@@ -295,23 +302,19 @@ class Cs2Emitter(private val function: Cs2Function) {
             val variant = if (value.operand != 0) "<${value.operand}>" else ""
             "${value.op.tsName}$variant(${value.args.joinToString(", ") { expr(it) }})"
         }
-        is ScriptCall -> "script${value.scriptId}(${value.args.joinToString(", ") { expr(it) }})"
+        is ScriptCall -> "${Cs2Symbols.scriptName(value.scriptId)}(${value.args.joinToString(", ") { expr(it) }})"
         is Callback -> callback(value)
     }
 
     /**
-     * Spells out a composite constant. A component hash becomes the interface
-     * and component it packs; a coordinate becomes x, y and plane. Values that
-     * carry no such structure - `-1` and other sentinels - keep the single
-     * argument form so they still round-trip.
+     * Spells out a composite constant. A component hash becomes the interface and
+     * component it packs, by their gameval names where they have them; every other
+     * id becomes its gameval constant. Values that carry no such structure - `-1`
+     * and other sentinels - and ids the catalogs have no proven name for keep the
+     * bare number, so they still round-trip unchanged.
      */
     private fun typedConst(value: TypedConst): String = when (value.kind) {
-        ArgType.COMPONENT ->
-            if (Cs2Packing.isPackedComponent(value.value)) {
-                "component(${Cs2Packing.interfaceOf(value.value)}, ${Cs2Packing.componentOf(value.value)})"
-            } else {
-                "component(${value.value})"
-            }
+        ArgType.COMPONENT -> component(value.value)
         ArgType.COORD ->
             if (Cs2Packing.isPackedCoord(value.value)) {
                 "tile(${Cs2Packing.xOf(value.value)}, ${Cs2Packing.yOf(value.value)}, " +
@@ -319,17 +322,9 @@ class Cs2Emitter(private val function: Cs2Function) {
             } else {
                 "tile(${value.value})"
             }
-        ArgType.ITEM -> "item(${value.value})"
-        ArgType.NPC -> "npc(${value.value})"
-        ArgType.LOC -> "loc(${value.value})"
-        ArgType.SEQ -> "seq(${value.value})"
-        ArgType.SPOTANIM -> "spotanim(${value.value})"
-        ArgType.ENUM -> "enumId(${value.value})"
-        ArgType.STRUCT -> "struct(${value.value})"
-        ArgType.PARAM -> "param(${value.value})"
-        ArgType.INV -> "inv(${value.value})"
-        ArgType.STAT -> "skill(${value.value})"
-        ArgType.SCRIPT -> "scriptId(${value.value})"
+        // A script referred to by id names the function it is, so renaming the
+        // function renames the reference too.
+        ArgType.SCRIPT -> "scriptId(${scriptReference(value.value)})"
         // A flag reads as a flag; anything outside 0/1 keeps its number so the
         // value still round-trips.
         ArgType.BOOLEAN -> when (value.value) {
@@ -338,9 +333,33 @@ class Cs2Emitter(private val function: Cs2Function) {
             else -> value.value.toString()
         }
         ArgType.COLOUR -> "colour(0x%06X)".format(value.value and 0xFFFFFF)
-        ArgType.GRAPHIC -> "graphic(${value.value})"
         ArgType.INT -> value.value.toString()
+        else -> {
+            val helper = Cs2Names.helperFor(value.kind)
+            if (helper == null) value.value.toString() else "$helper(${constant(value.kind, value.value)})"
+        }
     }
+
+    /** The gameval constant for an id, or its number when the catalog has no name. */
+    private fun constant(kind: ArgType, id: Int): String {
+        val type = Cs2Names.catalogType(kind) ?: return id.toString()
+        val name = Cs2Names.identifier(type, id) ?: return id.toString()
+        return "${Cs2Names.NAMESPACES.getValue(type)}.$name"
+    }
+
+    private fun component(hash: Int): String {
+        Cs2Names.componentPath(hash)?.let { (interfaceName, componentName) ->
+            return "component(${Cs2Names.NAMESPACES.getValue(Gameval.COMPONENT)}.$interfaceName.$componentName)"
+        }
+        if (Cs2Packing.isPackedComponent(hash)) {
+            return "component(${Cs2Packing.interfaceOf(hash)}, ${Cs2Packing.componentOf(hash)})"
+        }
+        return "component($hash)"
+    }
+
+    /** The function name of a clientscript, or its id when the cache has no such script. */
+    private fun scriptReference(id: Int): String =
+        Cs2Names.scriptIdentifiers()[id] ?: id.toString()
 
     private fun varAccess(value: VarRef): String = Cs2Symbols.variableName(value)
 
@@ -348,9 +367,10 @@ class Cs2Emitter(private val function: Cs2Function) {
         if (value.scriptId == -1) return "noHook(\"${Cs2Strings.escape(value.format)}\")"
         val format = "\"${Cs2Strings.escape(value.format)}\""
         val args = "[${value.args.joinToString(", ") { expr(it) }}]"
-        if (!value.hasTriggerList) return "hook(script${value.scriptId}, $format, $args)"
+        val script = Cs2Symbols.scriptName(value.scriptId)
+        if (!value.hasTriggerList) return "hook($script, $format, $args)"
         val triggers = "[${value.triggers.joinToString(", ") { expr(it) }}]"
-        return "hook(script${value.scriptId}, $format, $args, $triggers)"
+        return "hook($script, $format, $args, $triggers)"
     }
 
     // --------------------------------------------------------------- output

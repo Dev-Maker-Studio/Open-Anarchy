@@ -43,6 +43,7 @@ import org.darkan.tools.rsinterface.InterfaceInteraction
 import org.darkan.tools.rsinterface.OptionKind
 import org.darkan.tools.rsinterface.InterfaceEvent
 import org.darkan.tools.rsinterface.InterfaceInstance
+import org.darkan.core.EnvVars
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
 
@@ -68,6 +69,9 @@ fun runCs2(cache: Cache, args: List<String>) {
         "diff" -> cs2Diff(cache, args.getOrNull(1)?.toIntOrNull())
         "run" -> cs2Run(cache, args.getOrNull(1)?.toIntOrNull(), args.drop(2))
         "declarations" -> cs2Declarations(args.getOrNull(1))
+        "apply-names" -> cs2ApplyNames(args.getOrNull(1))
+        "sync-names" -> cs2SyncNames(args.getOrNull(1), args.drop(2))
+        "check-names" -> cs2CheckNames(args.getOrNull(1))
         "interface" -> cs2Interface(cache, args.getOrNull(1)?.toIntOrNull(), args.drop(2))
         "interfaces" -> cs2InterfaceSweep(cache)
         "compile" -> cs2Compile(cache, args.getOrNull(1), args.getOrNull(2)?.toIntOrNull())
@@ -85,6 +89,10 @@ fun runCs2(cache: Cache, args: List<String>) {
               compile <dir> <id>  compile one edited script and compare it to the cache
               sources <dir> [n]   compile every source file in dir, reporting the byte-exact rate
               watch [dir] [secs]  hot-reload scripts as they are saved
+              declarations <dir>  write cs2.d.ts, gamevals.d.ts and tsconfig.json
+              apply-names <dir>   re-derive every name in dir from gamevals/*.json
+              sync-names <dir>    write dir's renames back into gamevals/*.json, then re-derive
+              check-names <dir>   report where dir and the catalogs disagree, changing nothing
             """.trimIndent(),
         )
     }
@@ -109,10 +117,120 @@ private fun cs2Decompile(cache: Cache, scriptId: Int?) {
 /** Writes the ambient TypeScript declarations next to the decompiled scripts. */
 private fun cs2Declarations(directory: String?) {
     val target = File(directory ?: ".").apply { mkdirs() }
-    target.resolve("cs2.d.ts").writeText(Cs2Declarations.generate())
-    target.resolve("tsconfig.json").writeText(Cs2Declarations.tsconfig())
-    println("wrote ${target.resolve("cs2.d.ts").absolutePath}")
-    println("wrote ${target.resolve("tsconfig.json").absolutePath}")
+    for (file in writeDeclarations(target)) println("wrote ${file.absolutePath}")
+    Cs2Names.warnings.forEach { println("  note: $it") }
+}
+
+/**
+ * Writes the three generated declaration files and the project file.
+ *
+ * `gamevals.d.ts` and `cs2.d.ts` are derived wholesale - from the catalogs and
+ * from the opcode table - so they are always rewritten. `vars.d.ts` is not
+ * written here: it is produced by a whole-cache decompile and carries the
+ * developer's own renames.
+ */
+private fun writeDeclarations(target: File): List<File> {
+    val written = ArrayList<File>()
+    for ((name, body) in listOf(
+        Cs2Declarations.OPCODES_FILE to Cs2Declarations.generate(),
+        Cs2Declarations.GAMEVALS_FILE to Cs2Declarations.gamevals(),
+        "tsconfig.json" to Cs2Declarations.tsconfig(),
+    )) {
+        val file = target.resolve(name)
+        file.writeText(body)
+        written.add(file)
+    }
+    return written
+}
+
+/**
+ * Re-derives a folder's names from the catalogs.
+ *
+ * This is the catalog-first half of the workflow: edit a name in
+ * `gamevals/<type>.json`, run this, and the declarations and every identifier in
+ * every script follow. Nothing else has to be touched, and nothing can be left
+ * pointing at the old name.
+ */
+private fun cs2ApplyNames(directory: String?) {
+    val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
+    val report = Cs2NameSync.apply(folder)
+    report.problems.forEach { println("  $it") }
+    if (!report.ok) return
+    println("re-derived ${report.declarations.joinToString(", ")} in ${folder.absolutePath}")
+    println(
+        "${report.changes.size} names moved; ${report.filesRewritten} of ${report.filesScanned} " +
+            "scripts rewritten, ${report.filesMoved} relocated",
+    )
+    report.changes.take(40).forEach { println("  $it") }
+    if (report.changes.size > 40) println("  ... ${report.changes.size - 40} more")
+}
+
+/**
+ * Writes a folder's renames back into the catalogs, then re-derives it.
+ *
+ * This is the editor-first half: rename a symbol in VS Code, which rewrites every
+ * reference and the binding it hangs on, then run this to make the catalog say
+ * the same thing. `--dry-run` reports what it would write without touching a file.
+ */
+private fun cs2SyncNames(directory: String?, options: List<String>) {
+    val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
+    val dryRun = options.contains("--dry-run") || options.contains("-n")
+    val report = Cs2NameSync.sync(folder, File(EnvVars.gamevalPath), dryRun)
+    if (report.changes.isEmpty() && report.refusals.isEmpty()) {
+        println("no renames in ${folder.absolutePath}; the catalogs already say what it does")
+        return
+    }
+    println("${report.changes.size} renames to write:")
+    report.changes.take(40).forEach { println("  $it") }
+    if (report.changes.size > 40) println("  ... ${report.changes.size - 40} more")
+    if (report.refusals.isNotEmpty()) {
+        println()
+        println("REFUSED - nothing was written:")
+        report.refusals.forEach { println("  $it") }
+        return
+    }
+    if (dryRun) {
+        println()
+        println("--dry-run: no catalog was written")
+        return
+    }
+    println()
+    report.catalogs.forEach { (type, count) -> println("wrote $count names to ${EnvVars.gamevalPath}/$type.json") }
+    val applied = report.applied
+    if (applied != null) {
+        println("re-derived ${applied.declarations.joinToString(", ")}; ${applied.filesRewritten} scripts rewritten, ${applied.filesMoved} relocated")
+        applied.problems.forEach { println("  $it") }
+    }
+}
+
+/** Reports where a folder and the catalogs disagree, without changing either. */
+private fun cs2CheckNames(directory: String?) {
+    val folder = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
+    if (!folder.isDirectory) {
+        println("no such folder: ${folder.absolutePath}")
+        return
+    }
+    val symbols = Cs2SymbolTable.read(folder)
+    if (symbols.orphans.isNotEmpty()) {
+        println("${symbols.orphans.size} files name a clientscript the catalogs no longer have:")
+        symbols.orphans.take(20).forEach { println("  $it") }
+        if (symbols.orphans.size > 20) println("  ... ${symbols.orphans.size - 20} more")
+        println("nothing reads them as a script until `cs2 apply-names ${folder.path}` puts them back")
+        println()
+    }
+    println("renamed away from the catalogs: ${symbols.renames.size}")
+    symbols.renames.take(30).forEach { println("  $it") }
+    if (symbols.renames.size > 30) println("  ... ${symbols.renames.size - 30} more")
+    println()
+    if (symbols.conflicts.isEmpty()) {
+        println("no conflicts: every name means one thing")
+        return
+    }
+    println("CONFLICTS - a compile of this folder will refuse:")
+    symbols.conflicts.forEach { println("  $it") }
+    println()
+    println("run `cs2 sync-names ${folder.path}` to make the catalogs match the folder,")
+    println("or `cs2 apply-names ${folder.path}` to make the folder match the catalogs")
 }
 
 private fun cs2DecompileAll(cache: Cache, directory: String?) {
@@ -121,8 +239,7 @@ private fun cs2DecompileAll(cache: Cache, directory: String?) {
     analyzer.analyse()
 
     val target = directory?.let { File(it).apply { mkdirs() } }
-    target?.resolve("cs2.d.ts")?.writeText(Cs2Declarations.generate())
-    target?.resolve("tsconfig.json")?.writeText(Cs2Declarations.tsconfig())
+    target?.let { writeDeclarations(it) }
     val variables = LinkedHashSet<VarRef>()
     val failures = ArrayList<Pair<Int, String>>()
     var written = 0
@@ -136,16 +253,31 @@ private fun cs2DecompileAll(cache: Cache, directory: String?) {
             val source = Cs2Emitter(function).emit()
             collectVariables(function.body, variables)
             if (source.contains("goto(")) gotos++
-            target?.resolve("clientscript-$id.ts")?.writeText(source)
+            target?.let { root ->
+                val file = Cs2Layout.fileFor(root, id)
+                file.parentFile?.mkdirs()
+                file.writeText(source)
+            }
             written++
         } catch (e: Exception) {
             failures.add(id to (e.message ?: e::class.simpleName ?: "unknown"))
         }
     }
 
-    target?.resolve("vars.d.ts")?.writeText(Cs2Declarations.variables(variables))
+    target?.resolve(Cs2Declarations.VARS_FILE)?.writeText(Cs2Declarations.variables(variables))
+
+    // A folder written by an older build holds the same scripts at the flat
+    // `clientscript-<id>.ts` paths. Left in place they would declare every
+    // function a second time, so they are named rather than silently shadowed.
+    val stale = target?.let { Cs2Layout.legacyFiles(it) }.orEmpty()
+    if (stale.isNotEmpty()) {
+        println()
+        println("WARNING: ${stale.size} files from the old flat layout are still in the folder")
+        println("  (${stale.first().name} ...); delete them or every function is declared twice")
+    }
 
     println()
+    Cs2Names.warnings.forEach { println("note: $it") }
     println("decompiled:      $written")
     println("variables:       ${variables.size}")
     println("failed:          ${failures.size}")
@@ -1152,7 +1284,7 @@ private fun cs2Watch(cache: Cache, directory: String?, seconds: Int?) {
         return
     }
     println("watching ${reload.watchedFolder?.absolutePath}")
-    println("save a clientscript-<id>.ts to reload it. Commands: r <id>, v <id>, l, q")
+    println("save a <category>/<name>.ts to reload it. Commands: r <id>, v <id>, l, q")
 
     val drained = ArrayList<Cs2HotReload.Event>()
     val printer = Thread {
@@ -1217,18 +1349,27 @@ private fun cs2Compile(cache: Cache, directory: String?, scriptId: Int?) {
         return
     }
     val folder = File(directory)
-    val file = folder.resolve("clientscript-$scriptId.ts")
+    val analyzer = Cs2Analyzer(cache)
+    analyzer.analyse()
+    val project = Cs2SourceProject(cache, analyzer, folder)
+    val file = project.fileFor(scriptId)
     if (!file.isFile) {
         println("No ${file.path}")
         return
     }
 
-    val analyzer = Cs2Analyzer(cache)
-    analyzer.analyse()
-    val symbols = Cs2SymbolTable.read(folder)
+    val symbols = project.symbols
+    symbols.refusal()?.let {
+        println(it)
+        return
+    }
 
+    val relative = Cs2Layout.relativePath(folder, file)
     val rebuilt = try {
-        Cs2CodeGen(Cs2Parser(file.readText(), analyzer::paramIsString, symbols).parse(), analyzer).generate()
+        Cs2CodeGen(
+            Cs2Parser(file.readText(), analyzer::paramIsString, symbols, relative).parse(),
+            analyzer,
+        ).generate()
     } catch (e: Exception) {
         println("compile failed: ${e.message}")
         return
@@ -1236,7 +1377,7 @@ private fun cs2Compile(cache: Cache, directory: String?, scriptId: Int?) {
     val bytes = Cs2Codec.encode(rebuilt)
     val original = Cs2Cache(cache).raw(scriptId)
 
-    println("compiled ${file.name}: ${bytes.size} bytes, ${rebuilt.size} instructions")
+    println("compiled ${relative ?: file.name}: ${bytes.size} bytes, ${rebuilt.size} instructions")
     println(
         when {
             original == null -> "no original in the cache to compare against"

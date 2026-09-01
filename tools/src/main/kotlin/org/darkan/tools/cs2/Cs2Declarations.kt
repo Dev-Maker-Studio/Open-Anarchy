@@ -10,16 +10,37 @@ package org.darkan.tools.cs2
  * shapes - the hook setters, the param lookups, `JOIN_STRING` - are declared
  * loosely rather than wrongly.
  */
+import org.darkan.core.gameval.Gameval
+import org.darkan.core.gameval.GamevalCatalog
 import org.darkan.tools.cs2.ir.Cs2Type
 import org.darkan.tools.cs2.ir.VarRef
-import org.darkan.tools.cs2.ir.VarSpace
 
 object Cs2Declarations {
+
+    /** Names the preamble declares, which nothing else may take. */
+    val HELPERS: Set<String> = setOf(
+        "array0", "array1", "array2", "array3", "array4",
+        "defineArray", "hook", "noHook", "discard", "isTruthy", "isFalsy", "goto",
+        "component", "tile", "item", "npc", "loc", "seq", "spotanim", "enumId",
+        "struct", "param", "inv", "skill", "scriptId", "colour", "graphic",
+        "interfaceId", "sound", "midi", "cursor", "mapelement", "quest", "worldmap", "model",
+    )
+
+    /** The file `gamevals.d.ts` is written to, and the name it is referenced by. */
+    const val GAMEVALS_FILE = "gamevals.d.ts"
+
+    const val VARS_FILE = "vars.d.ts"
+
+    const val OPCODES_FILE = "cs2.d.ts"
 
     /**
      * The project file an editor needs. Without it every script is opened as an
      * isolated program, so neither `cs2.d.ts` nor any sibling script resolves and
      * every name comes back unknown.
+     *
+     * `**` rather than `*`: scripts sit in a folder per gameval category, and
+     * clientscripts share one flat namespace across all of them, so the whole tree
+     * has to be one program for a call to resolve.
      */
     fun tsconfig(): String = """
         {
@@ -33,9 +54,71 @@ object Cs2Declarations {
             "skipLibCheck": true,
             "disableSizeLimit": true
           },
-          "include": ["*.ts"]
+          "include": ["**/*.ts"]
         }
     """.trimIndent() + "\n"
+
+    /**
+     * Declares every id the catalogs have a proven name for, as a namespace per
+     * type: `Obj.abyssal_whip`, `Component.<interface>.<component>`.
+     *
+     * The names are derived from `gamevals/<type>.json` and nowhere else, and each
+     * one carries its id in the doc comment above it. That comment is the binding:
+     * renaming the property in an editor rewrites every use in the project and the
+     * compiler still knows which id it is, and `cs2 sync-names` writes the new name
+     * back to the catalog it came from.
+     *
+     * An id with no proven name gets no constant. It keeps its number in the
+     * decompiled source, which is exactly what it means for the catalog to be the
+     * only source of truth: naming it there is what makes a name appear here.
+     */
+    fun gamevals(): String {
+        val out = StringBuilder(1 shl 22)
+        out.appendLine("// GENERATED from gamevals/<type>.json - those catalogs are the only source of truth for these names.")
+        out.appendLine("// Do not edit a name here expecting it to stick: `cs2 apply-names <dir>` re-derives this file")
+        out.appendLine("// from the catalogs, and `cs2 sync-names <dir>` writes an editor rename back into them.")
+        out.appendLine("// The id in each doc comment is what binds the name; renaming the name never changes it.")
+        out.appendLine()
+
+        for (type in Cs2Names.SIMPLE_TYPES) {
+            val entries = Cs2Names.identifiers(type)
+            val namespace = Cs2Names.NAMESPACES.getValue(type)
+            out.append("/** Revision-727 ").append(type)
+                .append(" ids by Jagex dev-name (").append(entries.size).append(" named of ")
+                .append(Gameval.allEntries(type).size).appendLine("). */")
+            out.append("declare namespace ").append(namespace).appendLine(" {")
+            for ((id, identifier) in entries) {
+                out.append("    /** ").append(type).append(' ').append(id).append(" */ const ")
+                    .append(identifier).appendLine(": number;")
+            }
+            out.appendLine("}")
+            out.appendLine()
+        }
+
+        val interfaces = Cs2Names.componentInterfaces()
+        val components = interfaces.sumOf { it.components.size }
+        out.append("/** Revision-727 interface components: `Component.<interface>.<component>` is the packed ")
+        out.appendLine("`(iface << 16) | comp`,")
+        out.append("  * and `Component.<interface>.IFACE` the interface id (")
+            .append(components).append(" named components across ")
+            .append(interfaces.size).appendLine(" interfaces). */")
+        out.appendLine("declare namespace ${Cs2Names.NAMESPACES.getValue(Gameval.COMPONENT)} {")
+        for (group in interfaces) {
+            out.append("    /** ").append(group.rawName).append(", interface ")
+                .append(group.interfaceId).appendLine(". */")
+            out.append("    namespace ").append(group.identifier).appendLine(" {")
+            out.append("        /** interface id ").append(group.interfaceId)
+                .appendLine(" */ const ${Cs2Identifiers.IFACE_MEMBER}: number;")
+            for (component in group.components) {
+                out.append("        /** ").append(Gameval.COMPONENT).append(' ')
+                    .append(GamevalCatalog.componentKey(group.interfaceId, component.componentId))
+                    .append(" */ const ").append(component.identifier).appendLine(": number;")
+            }
+            out.appendLine("    }")
+        }
+        out.appendLine("}")
+        return out.toString()
+    }
 
     /**
      * Declares every variable the scripts touch, one named global each.
@@ -46,23 +129,16 @@ object Cs2Declarations {
      */
     fun variables(references: Collection<VarRef>): String {
         val out = StringBuilder()
-        out.appendLine("// GENERATED - names may be edited; the ids in the comments are what bind them.")
+        out.appendLine("// GENERATED - the default names come from gamevals/<type>.json, the only source of truth for them.")
+        out.appendLine("// A name may be edited here; the id in the comment above it is what binds it. `cs2 sync-names <dir>`")
+        out.appendLine("// writes an edit back to the catalog, `cs2 apply-names <dir>` re-derives this file from the catalogs.")
         out.appendLine()
         val seen = LinkedHashSet<String>()
         for (reference in references.sortedWith(compareBy({ it.space.ordinal }, { it.id }, { it.variant }))) {
             val name = Cs2Symbols.variableName(reference)
             if (!seen.add(name)) continue
             val variant = if (reference.variant == "old") " old" else ""
-            val space = when (reference.space) {
-                VarSpace.VARP -> "varp"
-                VarSpace.VARBIT -> "varbit"
-                VarSpace.VARC -> "varc"
-                VarSpace.VARC_STRING -> "varcstring"
-                VarSpace.VARN -> "varn"
-                VarSpace.VARNBIT -> "varnbit"
-                VarSpace.CLAN -> "clanvar"
-                VarSpace.CLAN_SETTING -> "clansetting"
-            }
+            val space = Cs2Names.VAR_PREFIXES.getValue(reference.space)
             val type = if (reference.type == Cs2Type.STRING) "string" else "number"
             out.appendLine("/** $space ${reference.id}$variant */")
             out.appendLine("declare let $name: $type;")
@@ -148,6 +224,11 @@ object Cs2Declarations {
             /**
              * Composite values, spelled out rather than left as packed integers.
              * Each one packs straight back to the integer the bytecode holds.
+             *
+             * The argument is normally a gameval constant from `gamevals.d.ts` -
+             * `item(Obj.abyssal_whip)`, `component(Component.chatbox.dialogue)` -
+             * and falls back to the bare number for an id the catalogs have no
+             * proven name for.
              */
             declare function component(interfaceId: number, component?: number): number;
             declare function tile(x: number, y?: number, plane?: number): number;
@@ -161,9 +242,22 @@ object Cs2Declarations {
             declare function param(id: number): number;
             declare function inv(id: number): number;
             declare function skill(id: number): number;
-            declare function scriptId(id: number): number;
             declare function colour(rgb: number): number;
             declare function graphic(id: number): number;
+            declare function interfaceId(id: number): number;
+            declare function sound(id: number): number;
+            declare function midi(id: number): number;
+            declare function cursor(id: number): number;
+            declare function mapelement(id: number): number;
+            declare function quest(id: number): number;
+            declare function worldmap(id: number): number;
+            declare function model(id: number): number;
+
+            /**
+             * A clientscript referred to by id rather than called. The script's own
+             * function is the name, so renaming the function renames the reference.
+             */
+            declare function scriptId(script: Function | number): number;
             """.trimIndent(),
         )
         out.appendLine()

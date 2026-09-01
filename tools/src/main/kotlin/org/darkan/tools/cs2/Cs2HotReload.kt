@@ -377,12 +377,14 @@ class Cs2HotReload(
         return try {
             val service = FileSystems.getDefault().newWatchService()
             val path = directory.toPath()
-            path.register(
-                service,
-                StandardWatchEventKinds.ENTRY_CREATE,
-                StandardWatchEventKinds.ENTRY_MODIFY,
-                StandardWatchEventKinds.ENTRY_DELETE,
-            )
+            // Scripts live one folder deep, under a folder per gameval category, and
+            // a WatchService only reports the directories it was handed - so the
+            // root and every category are registered, and a category created later
+            // is picked up when its own creation event arrives.
+            register(service, path)
+            for (child in directory.listFiles().orEmpty()) {
+                if (child.isDirectory) register(service, child.toPath())
+            }
             watcher = service
             watching = path
             watcherError = null
@@ -425,6 +427,15 @@ class Cs2HotReload(
         return if (wasWatching) start() else true
     }
 
+    private fun register(service: WatchService, path: Path) {
+        path.register(
+            service,
+            StandardWatchEventKinds.ENTRY_CREATE,
+            StandardWatchEventKinds.ENTRY_MODIFY,
+            StandardWatchEventKinds.ENTRY_DELETE,
+        )
+    }
+
     /**
      * Watch loop with a quiet-period debounce.
      *
@@ -439,9 +450,21 @@ class Cs2HotReload(
             try {
                 val key = service.poll(POLL_MS, TimeUnit.MILLISECONDS)
                 if (key != null) {
+                    val watched = key.watchable() as? Path ?: root
                     for (event in key.pollEvents()) {
                         val relative = event.context() as? Path ?: continue
-                        val file = root.resolve(relative).toFile()
+                        val file = watched.resolve(relative).toFile()
+                        // A category folder that did not exist when the watch
+                        // started still has to be watched, or its first save is the
+                        // only event ever seen from it.
+                        if (file.isDirectory) {
+                            try {
+                                register(service, file.toPath())
+                            } catch (e: Exception) {
+                                // Already watched, or gone again; neither is fatal.
+                            }
+                            continue
+                        }
                         if (!interesting(file)) continue
                         pending[file] = System.currentTimeMillis()
                     }
@@ -486,7 +509,9 @@ class Cs2HotReload(
         }
         if (!file.isFile) {
             // Deleted: the cached bytecode is the only version left.
-            val id = SOURCE_NAME.find(file.name)?.groupValues?.get(1)?.toIntOrNull() ?: return
+            val id = Cs2Names.scriptIdOfPath(
+                Cs2Layout.relativePath(project.folder, file) ?: return,
+            ) ?: return
             if (analyzer.uninstall(id)) {
                 record(Event(now(), id, file, true, "source deleted; reverted to the cached bytecode"))
             }
@@ -523,6 +548,5 @@ class Cs2HotReload(
         private const val POLL_MS = 100L
         private const val LOG_LIMIT = 200
 
-        private val SOURCE_NAME = Regex("""^clientscript-(\d+)\.ts$""")
     }
 }
