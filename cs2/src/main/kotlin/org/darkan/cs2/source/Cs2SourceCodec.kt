@@ -3,18 +3,18 @@ package org.darkan.cs2.source
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
-import org.darkan.core.cache.CacheSource
 import org.darkan.cs2.Cs2CompileException
 import org.darkan.cs2.Cs2Compiler
 import org.darkan.cs2.Cs2Corpus
+import org.darkan.cs2.Cs2Declarations
 import org.darkan.cs2.Cs2Layout
 import org.darkan.cs2.Cs2Names
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.source.ArchiveMetadata
+import world.gregs.voidps.cache.source.SourceFiles
+import world.gregs.voidps.cache.source.codec.Owner
 import world.gregs.voidps.cache.source.codec.PackedArchive
 import world.gregs.voidps.cache.source.codec.SourceArchive
 import world.gregs.voidps.cache.source.codec.SourceCodec
@@ -46,36 +46,37 @@ import world.gregs.voidps.cache.source.codec.UnpackedArchive
  * what it wrote *does* reproduce the group. Saying `false` would only make the unpacker compile
  * all 6,567 scripts a second time to rediscover the same answer.
  *
- * ### Where the cache comes from
+ * ### The two directions do not need the same things
  *
- * Compiling *anything* needs the whole corpus analysed first - a script's return signature is only
- * decidable across calls - so both directions need a [Cache] to read index 12 and the param
- * definitions out of, and [SourceCodec] is not handed one. [cache] is that seam: it defaults to
- * [Cache.get] and can be pointed elsewhere by a caller that knows better. See the class comment on
- * [state] for the one configuration that default cannot serve.
+ * **[pack] reads nothing but the tree.** Compiling one script needs every other script's
+ * signature and the param types, and a decompiled folder states all of it - each `.ts` carries
+ * its own `function ...(): [number, string]` and `cs2.d.ts` carries the params
+ * ([org.darkan.cs2.Cs2SourceContext]) - so [packIndex] builds a [Cs2Compiler.fromSources] and no
+ * [Cache] is involved. That is what lets a server with `CACHE_SOURCE_PATH` set build a tree whose
+ * clientscripts changed: the cache a corpus analysis would read is the one that build is
+ * producing.
+ *
+ * **[unpack] needs the cache it is unpacking.** Decompiling is the direction where the bytes are
+ * all there is, and a script's argument and return *order* is only recoverable from what its
+ * callers push, so the whole corpus has to be analysed first ([org.darkan.cs2.Cs2Analyzer]).
+ * [SourceCodec] hands a codec one archive at a time and no cache, so [cache] is the seam: it
+ * defaults to [Cache.get], which is right for every tool and every test, because unpacking a
+ * cache means having one.
  */
 object Cs2SourceCodec : SourceCodec {
 
     /** `.ts` - what a script's source is stored as. */
     const val EXTENSION = ".ts"
 
-    /**
-     * The original bytes kept beside a source the compiler cannot reproduce, `<name>.ts.pristine`.
-     *
-     * The name is the framework's, not this codec's: `cache status` finds a sidecar by this
-     * extension and the file it guards by dropping it.
-     */
-    const val PRISTINE_EXTENSION = ".pristine"
-
     /** Index 12's archives hold one file each, and it is always file 0. */
     private const val FILE = 0
 
     /**
-     * Where the corpus is analysed from. Replaceable so a caller can hand in a cache of its own;
-     * see the note on [state] about the one case where the default cannot work.
+     * Where the corpus is analysed from when [unpack] runs. Replaceable so a caller unpacking a
+     * cache other than [Cache.get]'s can say which. Nothing in [pack] reads it.
      */
     @Volatile
-    var cache: () -> Cache = { defaultCache() }
+    var cache: () -> Cache = { Cache.get() }
 
     override val id: String
         get() = "cs2-source"
@@ -103,17 +104,8 @@ object Cs2SourceCodec : SourceCodec {
         val path = Cs2Layout.pathOf(archive.archive)
         val source = decompiled.source.toByteArray(Charsets.UTF_8)
 
-        val files = ArrayList<SourceFile>(3)
+        val files = ArrayList<SourceFile>(2)
         files.add(SourceFile(path, source))
-        // The declarations and the report are a property of the whole corpus, not of any one
-        // script, and SourceCodec has no per-index hook to write them from - so the first archive
-        // to get here carries them. They are added to exactly one archive's file list because the
-        // unpacker deletes everything under the directory that no archive claimed.
-        if (state.claimProjectFiles(archive.archive)) {
-            for ((name, body) in state.projectFiles) {
-                files.add(SourceFile(name, body.toByteArray(Charsets.UTF_8)))
-            }
-        }
 
         // Compiled through the corpus rather than the folder: the folder is still being written,
         // and freshly decompiled source carries the catalogs' own names and no renames, so there
@@ -126,11 +118,47 @@ object Cs2SourceCodec : SourceCodec {
         if (rebuilt != null && rebuilt.contentEquals(bytes)) {
             return UnpackedArchive(files)
         }
-        files.add(SourceFile("$path$PRISTINE_EXTENSION", bytes))
-        return UnpackedArchive(files, mapOf(FILE to sha256(source)))
+        files.add(SourceFile(SourceFiles.pristine(path), bytes))
+        return UnpackedArchive(files, mapOf(FILE to SourceFiles.sha256(source)))
+    }
+
+    /**
+     * The five project files, written once after every archive of the index.
+     *
+     * None of them is a function of one archive: `vars.d.ts` only knows a variable exists because
+     * some script uses it, `cs2.d.ts` carries argument kinds and param types learned from all
+     * 6,567 scripts at once, and `dead-code.md` is a report over the corpus. Returning them here
+     * is also how they are *claimed*, so the unpacker's prune leaves them alone.
+     */
+    override fun unpackIndex(directory: Path, index: Int, archives: IntArray): List<SourceFile> {
+        // An index with no archives has no corpus to decompile, and asking for one would open a
+        // cache to analyse nothing. Nothing in 727 hits this; a cache without index 12 would.
+        if (archives.isEmpty()) {
+            return emptyList()
+        }
+        return state(directory).projectFiles.map { (name, body) ->
+            SourceFile(name, body.toByteArray(Charsets.UTF_8))
+        }
     }
 
     // --------------------------------------------------------------------------- pack
+
+    /**
+     * Prepares the folder's compiler for the archives about to be packed.
+     *
+     * Two things happen here rather than per archive. The compiler's context is a scan of every
+     * script's signature, which must be done once and shared - a build repacking three scripts
+     * must not pay for it three times - and it has to be *re*done when the tree has moved since
+     * the last build in this process: a changed signature, a renamed variable in `vars.d.ts` or a
+     * new script all change what the next compile resolves. So the folder's state is dropped here
+     * and rebuilt lazily by the first archive that actually compiles something.
+     *
+     * Lazily, because a pack of archives that all turn out to be pristine compiles nothing and
+     * must pay nothing; the framework already only calls this when there is something to do.
+     */
+    override fun packIndex(directory: Path, index: Int, archives: IntArray, changedIndexFiles: List<String>) {
+        state(directory).invalidateCompiler()
+    }
 
     override fun pack(directory: Path, archive: Int, metadata: ArchiveMetadata): PackedArchive {
         val file = sourceFile(directory, archive)
@@ -147,8 +175,8 @@ object Cs2SourceCodec : SourceCodec {
         // it. The guard is the whole point: the moment the source is edited it stops matching and
         // the edit is compiled instead.
         val guard = metadata.pristine[FILE]
-        if (guard != null && guard == sha256(source)) {
-            val sidecar = sidecarOf(file)
+        if (guard != null && guard == SourceFiles.sha256(source)) {
+            val sidecar = SourceFiles.pristine(file)
             if (!Files.isRegularFile(sidecar)) {
                 throw IOException(
                     "Clientscript $archive is recorded as pristine in index.json but " +
@@ -195,7 +223,8 @@ object Cs2SourceCodec : SourceCodec {
      *
      * The project files belong to no archive and answer null, as does anything else - an editor's
      * scratch file, a stray `.d.ts` - which an incremental build reports as unclaimed rather than
-     * repacking something at random.
+     * repacking something at random. The project files are still this codec's; [owner] is where
+     * that is said.
      */
     override fun archiveOf(path: String): Int? {
         if (!path.endsWith(EXTENSION) || path.endsWith(DECLARATION_EXTENSION)) {
@@ -218,12 +247,27 @@ object Cs2SourceCodec : SourceCodec {
         return archiveOf(path)
     }
 
+    /**
+     * The project files are the index's, everything else is an archive's or nobody's.
+     *
+     * They are what [unpackIndex] writes, so this is the other half of the same claim: a change to
+     * one of them repacks no archive - nothing in the cache is a function of it - and is handed to
+     * [packIndex] instead.
+     */
+    override fun owner(directory: Path, path: String): Owner {
+        if (path in PROJECT_FILES) {
+            return Owner.Index
+        }
+        val archive = archiveOf(directory, path)
+        return if (archive == null) Owner.None else Owner.Archive(archive)
+    }
+
     override fun files(directory: Path, archive: Int): List<Path> {
         val file = sourceFile(directory, archive)
         if (!Files.exists(file)) {
             return emptyList()
         }
-        val sidecar = sidecarOf(file)
+        val sidecar = SourceFiles.pristine(file)
         return if (Files.exists(sidecar)) listOf(file, sidecar) else listOf(file)
     }
 
@@ -240,10 +284,6 @@ object Cs2SourceCodec : SourceCodec {
         return if (Files.isRegularFile(legacy)) legacy else derived
     }
 
-    /** `<name>.ts.pristine` beside `<name>.ts`. */
-    private fun sidecarOf(file: Path): Path =
-        file.resolveSibling("${file.fileName}$PRISTINE_EXTENSION")
-
     private fun legacyId(path: String): Int? {
         if (path.contains('/') || !path.startsWith(Cs2Layout.LEGACY_PREFIX)) {
             return null
@@ -254,18 +294,13 @@ object Cs2SourceCodec : SourceCodec {
     // -------------------------------------------------------------------- shared state
 
     /**
-     * The corpus analysis and the folder's compiler, one set per directory.
+     * One set of shared state per directory: the corpus [unpack] decompiles from, and the compiler
+     * [pack] compiles with.
      *
-     * Both are lazy and both are shared: analysing the corpus takes seconds and compiling one
-     * file takes under a millisecond, so a build that repacks three scripts must not pay for the
-     * analysis three times, and a build that repacks nothing must not pay for it at all.
-     *
-     * **The one configuration this cannot serve.** With `CACHE_SOURCE_PATH` set the server builds
-     * its cache *from* the tree, and [Cache.get] is that build - so a pack that reached for it
-     * would be waiting for the build it is part of. The corpus has to come from somewhere that
-     * already exists, which means either a cache handed in through [cache] or, properly, an index
-     * 12 context derived from the tree's own sources. Until that exists, a pack in that
-     * configuration says so rather than hanging.
+     * Both are lazy and both are shared, for the same reason and with different costs: analysing
+     * the corpus takes seconds and scanning the folder's signatures a fraction of one, while
+     * compiling a file takes well under a millisecond. So a build that repacks three scripts must
+     * not pay for either three times, and a build that repacks nothing must not pay at all.
      */
     private fun state(directory: Path): State =
         states.computeIfAbsent(directory.toAbsolutePath().normalize().toString()) {
@@ -275,14 +310,14 @@ object Cs2SourceCodec : SourceCodec {
     private val states = ConcurrentHashMap<String, State>()
 
     /**
-     * Forget every directory's analysis and put [cache] back to its default.
+     * Forget every directory's state and put [cache] back to its default.
      *
-     * For tests, and for a tool that swapped the cache underneath a folder: the analysis is keyed
-     * by directory and would otherwise still be the old cache's.
+     * For tests, and for a tool that swapped the cache underneath a folder: the corpus is keyed by
+     * directory and would otherwise still be the old cache's.
      */
     fun reset() {
         states.clear()
-        cache = { defaultCache() }
+        cache = { Cache.get() }
     }
 
     private class State(val directory: Path) {
@@ -292,17 +327,6 @@ object Cs2SourceCodec : SourceCodec {
         val corpus: Cs2Corpus by lazy { Cs2Corpus(resolved) }
 
         val types by lazy { corpus.types() }
-
-        /**
-         * The folder's own compiler: reads its declarations, so it honours renames.
-         *
-         * Handed the corpus's analyzer rather than building its own, so a process that unpacks
-         * and packs the same tree - the parity check, `cache unpack` followed by `cache verify` -
-         * analyses the corpus once instead of twice.
-         */
-        val compiler: Cs2Compiler by lazy {
-            Cs2Compiler(resolved, directory.toFile()) { corpus.analyzer }
-        }
 
         /**
          * The whole-corpus decompile, done once, for the files no single script can produce.
@@ -315,56 +339,37 @@ object Cs2SourceCodec : SourceCodec {
             corpus.projectFiles(decompiled, types)
         }
 
-        private val claimant = AtomicInteger(UNCLAIMED)
-
         /**
-         * True for the one archive that carries the project files out of [unpack].
+         * The folder's own compiler: reads its signatures and its declarations, so it honours
+         * renames and needs no cache at all.
          *
-         * Which archive gets there first is a race, but it *stays* that archive: a second unpack
-         * of the same directory in the same process would otherwise emit them from nobody, and
-         * the unpacker deletes everything no archive claimed.
+         * Held behind a reference rather than a `lazy` because it has to be *droppable*: the tree
+         * can move between two builds in one process, and a compiler holding the previous scan
+         * would resolve a call against a signature that has since changed. [invalidateCompiler] is
+         * how a pack says so, and the next [compiler] read builds a fresh one.
          */
-        fun claimProjectFiles(archive: Int): Boolean =
-            claimant.compareAndSet(UNCLAIMED, archive) || claimant.get() == archive
-    }
+        val compiler: Cs2Compiler
+            get() = current ?: synchronized(this) {
+                current ?: Cs2Compiler.fromSources(directory.toFile()).also { current = it }
+            }
 
-    /**
-     * The cache the corpus is analysed from when nothing was handed in.
-     *
-     * [Cache.get] is right for every tool and for a server serving a prepacked cache. It is not
-     * available while a server is building its cache out of a tree, because that build is what
-     * would produce it, so that case is named rather than deadlocked on.
-     */
-    private fun defaultCache(): Cache {
-        if (CacheSource.enabled && CacheSource.lastBuild == null) {
-            throw IllegalStateException(
-                "Cannot compile clientscripts while the cache is still being built from " +
-                    "CACHE_SOURCE_PATH: the corpus analysis every compile needs would read the " +
-                    "cache this build is producing. Point Cs2SourceCodec.cache at a cache that " +
-                    "already exists - a prepacked one, or the previous build - before building a " +
-                    "tree whose clientscripts have changed."
-            )
+        @Volatile
+        private var current: Cs2Compiler? = null
+
+        fun invalidateCompiler() {
+            synchronized(this) { current = null }
         }
-        return Cache.get()
     }
 
-    /** No archive has claimed the project files yet; -1 is not an archive id. */
-    private const val UNCLAIMED = -1
+    /** The corpus-wide files, which belong to the index rather than to any archive. */
+    private val PROJECT_FILES: Set<String> = setOf(
+        Cs2Declarations.OPCODES_FILE,
+        Cs2Declarations.GAMEVALS_FILE,
+        Cs2Declarations.VARS_FILE,
+        Cs2Corpus.TSCONFIG_FILE,
+        Cs2Corpus.DEAD_CODE_FILE
+    )
 
     /** A `.d.ts` is a declaration file, never a script; [Cs2Layout] draws the same line. */
     private const val DECLARATION_EXTENSION = ".d$EXTENSION"
-
-    private val hex = "0123456789abcdef".toCharArray()
-
-    /** SHA-256 as lower case hex, the form `index.json` records a pristine guard in. */
-    private fun sha256(bytes: ByteArray): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
-        val out = CharArray(digest.size * 2)
-        for (index in digest.indices) {
-            val value = digest[index].toInt() and 0xff
-            out[index * 2] = hex[value shr 4]
-            out[index * 2 + 1] = hex[value and 0xf]
-        }
-        return String(out)
-    }
 }

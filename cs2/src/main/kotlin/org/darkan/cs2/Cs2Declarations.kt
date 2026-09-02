@@ -161,13 +161,23 @@ object Cs2Declarations {
         return out.toString()
     }
 
-    fun generate(learnedArguments: Map<String, ArgType> = emptyMap()): String {
+    fun generate(
+        learnedArguments: Map<String, ArgType> = emptyMap(),
+        /**
+         * The param ids whose `*_PARAM` lookups push a string; see [stringParams]. Empty writes
+         * the declaration with nothing in it, which still says "asked and answered"; a folder
+         * written before the declaration existed has no such line at all.
+         */
+        stringParams: Set<Int> = emptySet(),
+    ): String {
         val out = StringBuilder()
         out.appendLine("// GENERATED - do not edit by hand.")
         out.appendLine("// Ambient declarations for decompiled CS2 clientscripts.")
         out.appendLine("// Regenerate with: tools cs2 declarations <dir>")
         out.appendLine()
         appendPreamble(out)
+        out.append(stringParams(stringParams))
+        out.appendLine()
 
         for (op in Cs2Opcodes.all.sortedBy { it.tsName }) {
             if (op.tsName in HANDWRITTEN) continue
@@ -175,6 +185,60 @@ object Cs2Declarations {
         }
         return out.toString()
     }
+
+    /**
+     * The one fact about compiling a folder that no script's own source can state.
+     *
+     * A `*_PARAM` opcode - `oc_param`, `nc_param`, `lc_param`, `struct_param` - pushes an int or a
+     * string according to the *param definition's* declared type, and the bytecode records neither
+     * the type nor which stack it used. Every other thing a compile needs to know about the rest of
+     * the corpus is in the TypeScript already: a script's arguments and returns are its own
+     * declaration. This is not, so it is written down once for the folder, here, and read back by
+     * [Cs2SourceContext] - which is what lets the folder be compiled with no cache to analyse.
+     *
+     * Derived from the cache's param definitions and, for the ids they do not declare, from the
+     * corpus solver ([Cs2Analyzer.stringParams]). A param declared by hand belongs in this list;
+     * dropping an id compiles its lookups as ints, and the ids may be in any order.
+     */
+    fun stringParams(ids: Set<Int>): String {
+        val out = StringBuilder()
+        out.appendLine("/**")
+        out.appendLine(" * The params a `*_PARAM` opcode yields a string for; every other id yields an int.")
+        out.appendLine(" *")
+        out.appendLine(" * A param's type belongs to its param definition rather than to any script, and the")
+        out.appendLine(" * bytecode of a lookup does not say which stack it pushed onto - so this is the one thing")
+        out.appendLine(" * about compiling this folder that no script's own source states. It is what lets the")
+        out.appendLine(" * folder be compiled back with nothing but the folder; see docs/cache-source.md.")
+        out.appendLine(" */")
+        if (ids.isEmpty()) {
+            out.appendLine("type $STRING_PARAM = never;")
+            return out.toString()
+        }
+        out.appendLine("type $STRING_PARAM =")
+        val sorted = ids.sorted()
+        for ((index, id) in sorted.withIndex()) {
+            out.append("    | ").append(id).appendLine(if (index == sorted.lastIndex) ";" else "")
+        }
+        return out.toString()
+    }
+
+    /**
+     * The ids [stringParams] wrote, or null when the file carries no such declaration.
+     *
+     * Null and empty are different answers: a folder written before the declaration existed says
+     * nothing about params, and one whose params are all ints says they are all ints.
+     */
+    fun readStringParams(source: String): Set<Int>? {
+        val body = STRING_PARAMS.find(source)?.groupValues?.get(1) ?: return null
+        return NUMBER.findAll(body).mapNotNull { it.value.toIntOrNull() }.toCollection(LinkedHashSet())
+    }
+
+    /** The type alias name [stringParams] declares. */
+    private const val STRING_PARAM = "StringParam"
+
+    private val STRING_PARAMS = Regex("""type $STRING_PARAM =([^;]*);""")
+
+    private val NUMBER = Regex("""\d+""")
 
     /** Opcodes whose shape is declared by hand below rather than derived. */
     private val HANDWRITTEN = setOf(

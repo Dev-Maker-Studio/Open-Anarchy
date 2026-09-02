@@ -114,6 +114,9 @@ class Cs2Parser(
     private var scriptName: String? = null
     private var returns = emptyList<Cs2Type>()
 
+    /** The declared parameter types in declaration order; see [parseHeader]. */
+    private val argumentTypes = ArrayList<Cs2Type>()
+
     fun parse(): Cs2Function {
         parseSignature()
         val body = parseBlock()
@@ -134,10 +137,7 @@ class Cs2Parser(
     // ------------------------------------------------------------- signature
 
     private fun parseSignature() {
-        scriptName = nameComment
-        while (peek().kind == TokenKind.IDENT && peek().text != "function") skip()
-        expectIdent("function")
-        val name = expect(TokenKind.IDENT).text
+        val name = parseHeader()
         // The header is authoritative, so the function can be renamed freely. A
         // header naming a script the catalogs no longer have is an error rather
         // than something to fall back from: falling back would compile this file
@@ -150,19 +150,40 @@ class Cs2Parser(
         }
         scriptId = headerId ?: Cs2Symbols.scriptOf(name) ?: symbols.script(name)
             ?: error("Cannot tell which clientscript '$name' is")
+    }
 
+    /**
+     * The declaration itself - `function name(a: number, b: string): [number, string] {` - up to
+     * and including the brace that opens the body, leaving [returns] and the argument slots set.
+     *
+     * Split out of [parseSignature] because which script a file *is* and what its signature *says*
+     * are separate questions, and [Companion.signature] asks only the second one: a folder about to
+     * be compiled needs every other file's signature, and resolving 6,567 headers against the
+     * catalogs to get them would refuse the whole folder over one orphan.
+     *
+     * @return the function's name, which is what a caller writes.
+     */
+    private fun parseHeader(): String {
+        scriptName = nameComment
+        while (peek().kind == TokenKind.IDENT && peek().text != "function") skip()
+        expectIdent("function")
+        val name = expect(TokenKind.IDENT).text
         expectPunct("(")
         while (!atPunct(")")) {
             val parameter = expect(TokenKind.IDENT).text
             expectPunct(":")
             val type = parseType()
             declare(parameter, type, argument = true)
+            // Declaration order, which can interleave the stacks and is therefore not the slot
+            // order; it is the order callers push in and the order a signature has to be read in.
+            argumentTypes.add(type)
             if (atPunct(",")) skip()
         }
         expectPunct(")")
         expectPunct(":")
         returns = parseReturnType()
         expectPunct("{")
+        return name
     }
 
     private fun parseType(): Cs2Type = typeNamed(expect(TokenKind.IDENT).text)
@@ -184,15 +205,6 @@ class Cs2Parser(
             return emptyList()
         }
         return listOf(parseType())
-    }
-
-    private fun typeNamed(text: String): Cs2Type = when {
-        text == "number" -> Cs2Type.INT
-        text == "string" -> Cs2Type.STRING
-        text == "bigint" -> Cs2Type.LONG
-        // An alias says what an int means, never which stack it is on.
-        Cs2Names.isAlias(text) -> Cs2Type.INT
-        else -> error("Unsupported type '$text'")
     }
 
     private fun declare(name: String, type: Cs2Type, argument: Boolean): Local {
@@ -890,4 +902,73 @@ class Cs2Parser(
         if (peek().kind != kind) error("Expected $kind but found ${peek()}")
         return tokens[at++]
     }
+
+    /** What a script's declaration says about it, without parsing a line of its body. */
+    class Signature(
+        /** The function's name, which is what a caller writes. */
+        val name: String,
+        /** The arguments in the order callers push them, which can interleave the stacks. */
+        val arguments: List<Cs2Type>,
+        /** The values the script returns, in push order; empty for `void`. */
+        val returns: List<Cs2Type>,
+    )
+
+    companion object {
+
+        /**
+         * Reads the `function name(a: number): [number, string]` line and stops there.
+         *
+         * Compiling one file needs every *other* file's signature - a call's results have to be
+         * discarded on the right stacks, and `let [a, b] = f();` types its names from the callee -
+         * so a folder that is about to be compiled has to be able to answer that for all 6,567
+         * scripts without parsing 6,567 bodies. Parsing a body is also circular: it is the thing
+         * that needs the answer.
+         *
+         * Only the header is lexed. The body opens at the first `{`, because nothing in a
+         * signature can contain one, and the whole file is lexed as a fallback for a hand-written
+         * header that somehow does; either way it is this parser's own grammar walking it, not a
+         * second reading of the same shape.
+         *
+         * @return null when the file declares no function, or its header does not parse.
+         */
+        fun signature(source: String): Signature? {
+            val declaration = DECLARATION.find(source) ?: return null
+            val body = source.indexOf('{', declaration.range.first)
+            val header = if (body < 0) source else source.substring(0, body + 1)
+            return read(header) ?: if (body < 0) null else read(source)
+        }
+
+        /**
+         * The Cs2 type a TypeScript type name stands for.
+         *
+         * One spelling for the parser and for anything reading a signature back: an alias
+         * ([Cs2Names.ALIASES]) says what an int *means* and never which stack it is on, so every
+         * one of them is an [Cs2Type.INT].
+         */
+        fun typeNamed(text: String): Cs2Type = when {
+            text == "number" -> Cs2Type.INT
+            text == "string" -> Cs2Type.STRING
+            text == "bigint" -> Cs2Type.LONG
+            // An alias says what an int means, never which stack it is on.
+            Cs2Names.isAlias(text) -> Cs2Type.INT
+            else -> error("Unsupported type '$text'")
+        }
+
+        /** Lexes [header] and walks the declaration in it, or null when it will not walk. */
+        private fun read(header: String): Signature? = try {
+            Cs2Parser(header).headerOnly()
+        } catch (e: Exception) {
+            null
+        }
+
+        /** `function <name>(` at the start of a line - the shape the emitter always writes. */
+        private val DECLARATION = Regex("""^function \w+\s*\(""", RegexOption.MULTILINE)
+    }
+
+    /**
+     * [parseHeader] alone, for [Companion.signature]. Never called on a parser that is going
+     * to parse a body, so the locals it declares along the way are thrown away with it.
+     */
+    private fun headerOnly(): Signature =
+        Signature(name = parseHeader(), arguments = argumentTypes.toList(), returns = returns)
 }

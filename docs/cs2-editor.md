@@ -35,7 +35,7 @@ All of these run through the tools CLI:
 | `run <id> [args]` | Executes a script on the VM against a no-op host |
 | `interface <id>` | Runs one interface's load scripts and reports what changed |
 | `interfaces` | Runs every interface's load scripts |
-| `declarations [dir]` | Writes just the ambient TypeScript declarations |
+| `declarations [dir]` | Writes just the ambient TypeScript declarations, `StringParam` included |
 | `export <dir> [id]` | Decompiles one script into a folder |
 | `compile <dir> <id>` | Compiles an edited script from disk and compares it to the cache |
 | `sources <dir>` | Compiles every source file in a folder |
@@ -62,9 +62,10 @@ cache bytes ──Cs2Codec──▶ instructions ──Cs2Lifter──▶ expres
 
 `Cs2Analyzer` sits alongside it, resolving what the bytecode does not state outright: every
 script's return signature (by fixpoint across calls, with a search for the recursive ones),
-which param ids yield strings and what their type characters are (from `Cache.params`),
-confirmation that the opcode table's stack effects balance, and the cached corpus-wide
-`Cs2Types` analysis.
+which param ids yield strings and what their type characters are (decoded from the cache it was
+handed, not from `Cache.get()`), confirmation that the opcode table's stack effects balance, and
+the cached corpus-wide `Cs2Types` analysis. `Cs2SourceContext` is the same interface answered from
+a decompiled folder instead - see *Compiling from server code*.
 
 `Cs2Structurer` recovers a condition from the graph of test blocks between it and its body:
 the run of pure tests and lone jumps with exactly two ways out - into the body, or past it -
@@ -272,29 +273,69 @@ in it imports LWJGL, GLFW, ImGui or JOML, and nothing in it depends on `:tools`.
 lets the cache source tree packer compile index 12 on a server with no display.
 
 ```kotlin
-val compiler = Cs2Compiler(Cache.get(), File(tree, "clientscripts"))
+val compiler = Cs2Compiler.fromSources(File(tree, "clientscripts"))
 
 val id = compiler.scriptIdOf(file)        // the file's // [proc,quicksort] header, through the catalog
 val bytes = compiler.compile(file)        // one .ts file -> index 12 bytes
 val source = compiler.sourceFileOf(id)    // and back the other way, or null
 ```
 
-Compiling anything needs the whole corpus analysed first - return signatures are only decidable
-across calls - so `Cs2Compiler` does that once, lazily, and shares it. Each `compile` then builds
-its own parser and code generator and keeps no state, so a pack can run the folder's files in
-parallel. Compiling one file never requires the rest of the folder to compile; a file that fails
-throws `Cs2CompileException`, whose message is `file:line:col: what went wrong`.
+**No cache is involved.** Compiling one file needs facts about the *others* - a call site discards
+exactly what its callee leaves on the stacks, and a `*_PARAM` opcode pushes an int or a string
+according to the param's declared type - and a decompiled folder states every one of them:
+
+| what a compile has to know | where the folder says it |
+|---|---|
+| what script *n* returns, in push order | its own `function ...(): [number, string]` |
+| how many arguments it takes, on which stacks | its own parameter list |
+| whether param *n* yields a string | `cs2.d.ts`'s `StringParam` |
+| which id a renamed identifier means | `vars.d.ts`, `gamevals.d.ts`, the script headers |
+
+`Cs2SourceContext.read(folder)` is that reading, and it is the same `Cs2Context` interface
+`Cs2Analyzer` implements, so nothing downstream can tell which one it got. It lexes each script's
+declaration line and nothing else - parsing a body would be circular, since parsing is what needs
+the answers - which is 0.3 s for all 6,567 signatures against about 7 s for the corpus analysis.
+
+`Cs2Compiler(cache, folder)` is the other construction, for a tool that is *also* decompiling out
+of a cache: it analyses the corpus instead, which is what recovers those same facts from bytecode
+in the first place. Either way the work happens once, lazily, and is shared; each `compile` then
+builds its own parser and code generator and keeps no state, so a pack can run the folder's files
+in parallel. Compiling one file never requires the rest of the folder to compile; a file that
+fails throws `Cs2CompileException`, whose message is `file:line:col: what went wrong`.
 
 Under the facade the pipeline is public and can be driven directly:
 
 | entry point | what it is |
 |---|---|
-| `Cs2Analyzer(cache).analyse()` | the corpus analysis: return signatures, param types, opcode table check |
+| `Cs2SourceContext.read(folder)` | the folder's own answers: signatures and `cs2.d.ts`'s param types, no cache |
+| `Cs2Analyzer(cache).analyse()` | the same answers from bytecode: return signatures by fixpoint, param types, opcode table check |
 | `Cs2Corpus(cache)` | the whole corpus decompiled into a folder: `decompile`, `decompileScript`, `projectFiles`, `write` |
-| `Cs2SourceProject(cache, analyzer, folder)` | the folder: paths, symbol table, `compileFile`, `verify`, `exportSource` |
+| `Cs2SourceProject(context, folder)` | the folder: paths, symbol table, `compileFile`; `(cache, analyzer, folder)` adds `verify` and `exportSource` |
+| `Cs2Parser.signature(source)` | one script's declaration - name, arguments, returns - without parsing its body |
 | `Cs2Parser` -> `Cs2CodeGen` -> `Cs2Codec.encode` | the compile path itself, one file at a time |
 | `Cs2HotReload.sweepFolder(...)` | the whole-folder sweep `cs2 sources` / `cs2 verify-sources` run |
 | `verifyCodecRoundTrip(cache)` | decode + re-encode every script, asserting byte identity |
+
+### `StringParam` in `cs2.d.ts`
+
+The param types are the one thing a folder cannot derive from its own scripts, so
+`decompile-all` and the tree unpacker write them into `cs2.d.ts` as a type alias:
+
+```ts
+type StringParam =
+    | 528
+    | 529;
+```
+
+They come from the cache's param definitions (`type: "s"`) and, for the ids those do not declare,
+from the corpus solver - 131 of the 727 cache's 2,583 params, none of them solver-derived. A param
+declared by hand belongs in the list; the ids may be in any order, and dropping one compiles its
+lookups as ints. A folder written before the declaration existed carries no such line at all, which
+is a different thing from carrying an empty one: nothing fails - no id yields a string, which is
+what the compiler assumes without an answer, and no script in the 727 corpus compiles differently
+either way - but a hand-edited script reading a string param would be compiled against the wrong
+stack. `tools cs2 declarations <dir>` (or a re-unpack) fixes such a folder, and
+`Cs2SourceContext.declaresStringParams` is how it is told apart.
 
 ## The cache source tree
 
@@ -322,7 +363,16 @@ it last. Note that a script has to be decompiled from the **analyzed** script ra
 fresh decode of the same bytes - argument order is recovered from what a script's callers push, not
 from its bytecode, and 118 scripts render their parameters differently without it.
 
-The one thing this cannot yet do is compile clientscripts for a server that is building its cache
-*from* a tree with no other cache to read: the corpus analysis every compile depends on would have
-to read the index 12 the build is producing. It says so rather than hanging;
-`Cs2SourceCodec.cache` is where a cache can be handed in meanwhile.
+The two directions do not need the same things, and that asymmetry is the point:
+
+- **Packing reads nothing but the tree.** `packIndex` builds a `Cs2Compiler.fromSources`, so a
+  server with `CACHE_SOURCE_PATH` set can build a tree whose clientscripts changed even though the
+  cache a corpus analysis would read is the one that build is producing.
+- **Unpacking needs the cache it is unpacking**, because decompiling is the direction where the
+  bytes are all there is. `SourceCodec` hands a codec one archive at a time and no cache, so
+  `Cs2SourceCodec.cache` is the seam; it defaults to `Cache.get()`, which is right for every tool
+  and every test, since unpacking a cache means having one.
+
+The five project files come out of `unpackIndex` rather than out of whichever archive happened to
+be unpacked first - none of them is a function of one archive - and `owner` claims them as
+`Owner.Index`, so editing one repacks nothing and is handed to `packIndex` instead.

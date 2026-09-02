@@ -22,6 +22,27 @@ interface Cs2Context {
 
     /** The cache's own type character for a param, or 0 when it has none. */
     fun paramType(paramId: Int): Char = 0.toChar()
+
+    /**
+     * What a script leaves on the stacks, in the order it pushes them.
+     *
+     * The compiler needs this to type the names in `let [a, b] = f();`, which carry no annotation
+     * of their own: the order is the callee's own push order where something has revealed it, and
+     * the grouped signature otherwise - exactly the order the decompiler binds the results in.
+     *
+     * Derived from [script] rather than answered separately, so a context that can produce a
+     * callee's header at all produces this too: the whole-cache analysis
+     * ([Cs2Analyzer]) recovers the order from what callers push, and a context built from a
+     * folder of sources ([Cs2SourceContext]) reads it off each script's own return annotation.
+     */
+    fun returnTypes(scriptId: Int): List<Cs2Type> {
+        val script = script(scriptId) ?: return emptyList()
+        val signature = script.returnSignature ?: ReturnSignature.EMPTY
+        script.returnOrder.takeIf { it.size == signature.total }?.let { return it }
+        return List(signature.ints) { Cs2Type.INT } +
+            List(signature.strings) { Cs2Type.STRING } +
+            List(signature.longs) { Cs2Type.LONG }
+    }
 }
 
 /**

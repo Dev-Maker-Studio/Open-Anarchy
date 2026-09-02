@@ -70,7 +70,7 @@ fun runCs2(cache: Cache, args: List<String>) {
         "fixpoint" -> cs2FixPoint(cache, args.getOrNull(1)?.toIntOrNull(), args.getOrNull(2))
         "diff" -> cs2Diff(cache, args.getOrNull(1)?.toIntOrNull())
         "run" -> cs2Run(cache, args.getOrNull(1)?.toIntOrNull(), args.drop(2))
-        "declarations" -> cs2Declarations(args.getOrNull(1))
+        "declarations" -> cs2Declarations(cache, args.getOrNull(1))
         "apply-names" -> cs2ApplyNames(args.getOrNull(1))
         "sync-names" -> cs2SyncNames(args.getOrNull(1), args.drop(2))
         "check-names" -> cs2CheckNames(args.getOrNull(1))
@@ -143,9 +143,19 @@ private fun summary(findings: List<Cs2DeadCode>): String =
     }.joinToString(", ")
 
 /** Writes the ambient TypeScript declarations next to the decompiled scripts. */
-private fun cs2Declarations(directory: String?) {
+private fun cs2Declarations(cache: Cache, directory: String?) {
     val target = File(directory ?: ".").apply { mkdirs() }
-    for (file in writeDeclarations(target)) println("wrote ${file.absolutePath}")
+    // The param types are the one thing in cs2.d.ts that comes from the cache rather than from the
+    // opcode table, and they are what lets the folder be compiled back with no cache at all, so
+    // the analysis is worth its two seconds even for a bare `declarations` run - see
+    // Cs2SourceContext. A folder written before the declaration existed is fixed by running this.
+    val analyzer = Cs2Analyzer(cache)
+    analyzer.analyse()
+    val params = analyzer.stringParams()
+    for (file in writeDeclarations(target, stringParams = params)) {
+        println("wrote ${file.absolutePath}")
+    }
+    println("${params.size} params declared as yielding strings")
     Cs2Names.warnings.forEach { println("  note: $it") }
 }
 
@@ -157,10 +167,14 @@ private fun cs2Declarations(directory: String?) {
  * written here: it is produced by a whole-cache decompile and carries the
  * developer's own renames.
  */
-private fun writeDeclarations(target: File, learned: Map<String, ArgType> = emptyMap()): List<File> {
+private fun writeDeclarations(
+    target: File,
+    learned: Map<String, ArgType> = emptyMap(),
+    stringParams: Set<Int> = emptySet(),
+): List<File> {
     val written = ArrayList<File>()
     for ((name, body) in listOf(
-        Cs2Declarations.OPCODES_FILE to Cs2Declarations.generate(learned),
+        Cs2Declarations.OPCODES_FILE to Cs2Declarations.generate(learned, stringParams),
         Cs2Declarations.GAMEVALS_FILE to Cs2Declarations.gamevals(),
         "tsconfig.json" to Cs2Declarations.tsconfig(),
     )) {

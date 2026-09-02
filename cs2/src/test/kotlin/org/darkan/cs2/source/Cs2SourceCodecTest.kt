@@ -14,6 +14,7 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.FileCache
 import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.source.ArchiveMetadata
+import world.gregs.voidps.cache.source.codec.Owner
 import world.gregs.voidps.cache.source.codec.SourceArchive
 import world.gregs.voidps.cache.source.codec.SourceCodecs
 import world.gregs.voidps.cache.store.ArchiveGroup
@@ -84,6 +85,33 @@ class Cs2SourceCodecTest {
         val unpackMillis = (System.nanoTime() - unpackStart) / 1_000_000
         val exact = groups.size - pristine
 
+        // --- the index's own files ------------------------------------------------------------
+        // The project files belong to the index, not to any archive, so they come out of
+        // unpackIndex - which is also what claims them, since the unpacker deletes everything
+        // under the directory that neither an archive nor this call accounted for.
+        val projectFiles = Cs2SourceCodec.unpackIndex(directory, Index.CLIENT_SCRIPTS, ids)
+        for (file in projectFiles) {
+            Files.write(directory.resolve(file.path), file.bytes)
+        }
+        assertEquals(
+            listOf(
+                Cs2Declarations.OPCODES_FILE,
+                Cs2Declarations.GAMEVALS_FILE,
+                Cs2Declarations.VARS_FILE,
+                Cs2Corpus.TSCONFIG_FILE,
+                Cs2Corpus.DEAD_CODE_FILE
+            ),
+            projectFiles.map { it.path },
+            "unpackIndex has to write the five project files, in a fixed order"
+        )
+        for (file in projectFiles) {
+            assertEquals(
+                Owner.Index,
+                Cs2SourceCodec.owner(directory, file.path),
+                "${file.path} has to be claimed as the index's"
+            )
+        }
+
         // --- the layout ---------------------------------------------------------------------
         for (name in listOf(
             Cs2Declarations.OPCODES_FILE,
@@ -101,27 +129,13 @@ class Cs2SourceCodecTest {
             assertEquals(id, Cs2SourceCodec.archiveOf(directory, path), "$path's header does not say $id")
         }
 
-        // The project files are carried out of whichever archive is unpacked first - here the
-        // lowest id, since this loop is sequential. Unpacking it again has to claim them again:
-        // the unpacker deletes every file no archive claimed, so a second pass that dropped them
-        // would delete the declarations.
-        val first = ids[0]
-        val fileIds = cache.files(Index.CLIENT_SCRIPTS, first)
-        val group = groups.getValue(first)
-        val split = ArchiveGroup.split(group, fileIds)
-        val again = Cs2SourceCodec.unpack(
-            directory,
-            SourceArchive(
-                Index.CLIENT_SCRIPTS, first, null, fileIds, group, split.files, split.chunks,
-                ArchiveMetadata().apply { fileIds(fileIds) }
-            )
-        )
-        assertTrue(
-            again.files.any { it.path == Cs2Declarations.VARS_FILE },
-            "re-unpacking archive $first has to carry the project files again"
-        )
-
         // --- pack ---------------------------------------------------------------------------
+        // Nothing in the pack may touch a cache: this is the configuration a server building a
+        // tree is in, and the corpus the analysis would read is the cache the build is producing.
+        Cs2SourceCodec.cache = {
+            throw IllegalStateException("pack must not open a cache; the tree is the only input")
+        }
+        Cs2SourceCodec.packIndex(directory, Index.CLIENT_SCRIPTS, ids, emptyList())
         val packStart = System.nanoTime()
         var identical = 0
         val differing = ArrayList<Int>()
