@@ -28,7 +28,7 @@ import java.io.File
 @CacheableTask
 abstract class GenerateGamevalConstants : DefaultTask() {
 
-    /** The folder holding `<type>.json`; the repo's `gamevals/`. */
+    /** The folder holding `<type>.json`; the cache source tree's `gamevals/`. */
     @get:Internal
     abstract val catalogDirectory: DirectoryProperty
 

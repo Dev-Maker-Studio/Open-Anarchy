@@ -85,5 +85,7 @@ __pycache__/
 world-server.jar
 *.jar.new
 
-# Default output of `:tools:run --args="gameval dump"`; only the catalogs are canonical
-/gamevals/work/
+# Default output of `:tools:run --args="gameval dump"`
+/cache-source/gamevals/work/
+# The packed cache built from the cache source tree on startup (CACHE_BUILD_PATH); see docs/cache-source.md
+/data/cache/

@@ -184,7 +184,7 @@ server/
 ├── cs2/            # Headless CS2 clientscript toolchain: decompiler, TS compiler, VM (see docs/cs2-editor.md)
 ├── tools/          # Cache/map/interface/CS2 editor suite (LWJGL)
 ├── migration/      # Legacy → modern database migration (see docs/migration.md)
-├── gamevals/       # 727 asset id → Jagex dev-name catalogs (<type>.json, canonical; see docs/gameval.md)
+├── cache-source/   # git submodule: the unpacked 727 cache + gamevals/<type>.json catalogs (see docs/cache-source.md)
 ├── docs/           # Architecture documentation
 └── build.gradle.kts
 ```
@@ -210,7 +210,7 @@ Shared code used by both lobby and world servers.
 | `social` | Chat models: `ChatMessage`, `QuickChatMessage` |
 | `social.gateway` | Gateway protocol: JSON-serialized messages for world↔lobby |
 | `engine` | Tick-based game loop: `EngineLoop` (600ms default cycle) |
-| `gameval` | Jagex dev-name lookup for 727 asset ids: `Gameval` / `GamevalCatalog` read `gamevals/<type>.json`; `gameval.gen` holds the typed constants (`Obj.coins`, `Seq.swarm_walk`), generated into `core/build/generated` by the build, not committed |
+| `gameval` | Jagex dev-name lookup for 727 asset ids: `Gameval` / `GamevalCatalog` read `cache-source/gamevals/<type>.json`; `gameval.gen` holds the typed constants (`Obj.coins`, `Seq.swarm_walk`), generated into `core/build/generated` by the build, not committed |
 
 ### Lobby Module (`org.darkan.lobby`)
 
@@ -262,7 +262,7 @@ Shared code used by both lobby and world servers.
 ./gradlew :lobby:shadowJar
 
 # Dump every 727 cache definition to JSONL, one file per type (tools module)
-./gradlew :tools:run --args="gameval dump gamevals/work/727"
+./gradlew :tools:run --args="gameval dump cache-source/gamevals/work/727"
 ```
 
 ### Startup Flow
@@ -333,7 +333,9 @@ CACHE_PATH=../cache/
 
 ### Gamevals
 ```env
-GAMEVAL_PATH=./gamevals   # folder of <type>.json name catalogs; per file, falls back to the copy bundled in core's jar
+CACHE_SOURCE_PATH=        # unset: serve the prepacked CACHE_PATH. Set to a cache source tree: build it into CACHE_BUILD_PATH on startup and serve that
+CACHE_BUILD_PATH=./data/cache
+GAMEVAL_PATH=             # folder of <type>.json name catalogs; default <CACHE_SOURCE_PATH>/gamevals, else ./cache-source/gamevals (the only copy)
 ```
 
 ### Social Gateway (World Server)
@@ -616,7 +618,7 @@ object MyCollection {
 
 ### Editing the Gameval Catalogs
 
-The 40 catalogs in `gamevals/<type>.json` are **canonical and hand-edited**. 727 is permanently
+The 40 catalogs in `cache-source/gamevals/<type>.json` (the cache source tree submodule, `docs/cache-source.md`) are **canonical and hand-edited**. 727 is permanently
 version-locked, the one-time recovery tooling that first produced them is gone, and there is
 nothing to regenerate them from - they are improved in place. `gamevals/CONTRACT.md` records the
 evidence rules the recovered names were held to (a name only on proof, placeholder `<type>_<id>`
@@ -638,8 +640,9 @@ conflict (duplicates, collisions after identifier escaping, a name that is anoth
 placeholder, a coverage block that disagrees with the entries) **fails the build** with a message
 naming the ids; see `docs/gameval.md`.
 
-At runtime the catalogs are read from `GAMEVAL_PATH` (default `./gamevals`) per file, falling back
-to the copy bundled in `core`'s jar, so an edited catalog needs only a restart. Use
+At runtime the catalogs are read from `GAMEVAL_PATH` (default `<CACHE_SOURCE_PATH>/gamevals`, else
+`./cache-source/gamevals`); that folder is the only copy - nothing is bundled into a jar - so an
+edited catalog needs only a restart. Use
 `Gameval.requireId(Gameval.INV, "worn")` or `Obj.coins` in new code rather than magic numbers; see
 `docs/gameval.md`. Cache **archive** names (map squares, native libraries, shaders) are not
 gamevals and are built from formulas - see `docs/cache-archive-names.md`.
@@ -681,9 +684,10 @@ fun Application.configureRoutes() {
 | `lobby/src/main/kotlin/org/darkan/lobby/social/SocialGateway.kt` | Gateway host |
 | `world/src/main/kotlin/org/darkan/world/Main.kt` | World entry point |
 | `world/src/main/kotlin/org/darkan/world/social/SocialClient.kt` | Gateway client |
-| `core/src/main/kotlin/org/darkan/core/gameval/Gameval.kt` | Runtime name lookup for 727 asset ids (catalogs in `gamevals/`) |
+| `core/src/main/kotlin/org/darkan/core/gameval/Gameval.kt` | Runtime name lookup for 727 asset ids (catalogs in `cache-source/gamevals/`) |
 | `buildSrc/src/main/kotlin/org/darkan/build/gameval/` | Generator for the typed gameval constants (`Obj`, `Npc`, `Loc`, `Component`, `Cs2`, ...), run by `:core:generateGamevalConstants` |
-| `gamevals/CONTRACT.md` | Rule book for the gameval catalogs |
+| `cache-source/gamevals/CONTRACT.md` | Rule book for the gameval catalogs |
+| `docs/cache-source.md` | The cache source tree: unpack/pack parity, `index.json`, codecs, the incremental build |
 
 ---
 
@@ -732,7 +736,8 @@ Configure `STAFF_WEBHOOK_URL` for tick performance warnings and error notificati
 - `docs/legacy-baseline.md` - Which legacy commits the modern tree is synced to
 - `docs/gameval.md` - Gameval name catalogs: runtime API, typed constants, regeneration
 - `docs/cs2-editor.md` - The CS2 clientscript toolchain (`cs2/`), its CLI, and compiling from server code
-- `gamevals/CONTRACT.md` - The evidence rules under which every gameval name was proven
+- `docs/cache-source.md` - The unpacked cache: layout, parity guarantees, codecs, build and `CACHE_SOURCE_PATH`
+- `cache-source/gamevals/CONTRACT.md` - The evidence rules under which every gameval name was proven
 
 ---
 

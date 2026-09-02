@@ -22,17 +22,6 @@ dependencies {
     }
 }
 
-// Bundle the gameval name catalogs (gamevals/<type>.json at the repo root) under /gamevals on the
-// classpath so a jar with no working tree can still resolve names. GAMEVAL_PATH overrides per file
-// at runtime; see docs/gameval.md. Only the catalogs are shipped; CONTRACT.md stays behind. The
-// directory may be absent or mid-edit; the copy just takes what is there.
-tasks.processResources {
-    from(rootProject.file("gamevals")) {
-        into("gamevals")
-        include("*.json")
-    }
-}
-
 tasks.test {
     // Cache paths (CACHE_PATH, default "../cache/") and the .env file are resolved relative to the
     // repository root, not the module directory.
@@ -44,13 +33,19 @@ tasks.test {
 }
 
 // Typed gameval constants (org.darkan.core.gameval.gen.*): one Java class of public static final
-// int per gamevals/<type>.json, generated into build/generated/sources/gameval/java by the
-// buildSrc task and compiled as part of this module. Nothing is committed and no python is
-// involved; see docs/gameval.md, "Typed constants".
+// int per <cache source tree>/gamevals/<type>.json, generated into build/generated/sources/gameval/java
+// by the buildSrc task and compiled as part of this module. Nothing is committed and no python is
+// involved; see docs/gameval.md, "Typed constants". The catalogs are the only copy of the names and
+// live in the cache source tree (docs/cache-source.md): the cache-source submodule by default, or the
+// directory named by -Pdarkan.cacheSource=<path> / the DARKAN_CACHE_SOURCE environment variable.
+val cacheSourceDir: File = (findProperty("darkan.cacheSource") as String?
+    ?: System.getenv("DARKAN_CACHE_SOURCE"))
+    ?.let { rootProject.file(it) }
+    ?: rootProject.file("cache-source")
 val generateGamevalConstants = tasks.register<GenerateGamevalConstants>("generateGamevalConstants") {
     group = "generation"
-    description = "Generates org.darkan.core.gameval.gen.* from gamevals/*.json"
-    catalogDirectory.set(rootProject.layout.projectDirectory.dir("gamevals"))
+    description = "Generates org.darkan.core.gameval.gen.* from the cache source tree's gamevals/*.json"
+    catalogDirectory.set(File(cacheSourceDir, "gamevals"))
     outputDirectory.set(layout.buildDirectory.dir("generated/sources/gameval/java"))
     generatorLabel.set("the :core:generateGamevalConstants Gradle task (buildSrc org.darkan.build.gameval)")
     regenerateCommand.set("./gradlew :core:generateGamevalConstants")
