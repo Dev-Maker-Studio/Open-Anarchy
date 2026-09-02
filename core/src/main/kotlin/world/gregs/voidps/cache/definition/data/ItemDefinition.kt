@@ -3,8 +3,11 @@ package world.gregs.voidps.cache.definition.data
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.ColourPalette
 import world.gregs.voidps.cache.definition.Extra
+import world.gregs.voidps.cache.definition.KeyedValue
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 import world.gregs.voidps.cache.definition.Parameterized
 import world.gregs.voidps.cache.definition.Recolourable
+import world.gregs.voidps.cache.definition.ShadowedRecord
 
 data class ItemDefinition(
     override var id: Int = -1,
@@ -74,8 +77,15 @@ data class ItemDefinition(
     var singleNoteTemplateId: Int = -1,
     override var params: Map<Int, Any>? = null,
     override var stringId: String = "",
-    override var extras: Map<String, Any>? = null
-) : Definition, Recolourable, ColourPalette, Parameterized, Extra {
+    override var extras: Map<String, Any>? = null,
+    /**
+     * The opcode 249 parameter records in file order, kept only when the file listed an id more than once -
+     * [params] keeps the last value of each. Null when [params] holds every record.
+     */
+    var paramRecords: List<KeyedValue>? = null,
+    override var opcodeOrder: IntArray? = null,
+    override var shadowedRecords: List<ShadowedRecord>? = null
+) : Definition, Recolourable, ColourPalette, Parameterized, Extra, OpcodeOrdered {
 
     val noted: Boolean
         get() = notedTemplateId != -1
@@ -312,6 +322,12 @@ data class ItemDefinition(
         if (params != other.params) return false
         if (stringId != other.stringId) return false
         if (extras != other.extras) return false
+        if (opcodeOrder != null) {
+            if (other.opcodeOrder == null) return false
+            if (!opcodeOrder.contentEquals(other.opcodeOrder)) return false
+        } else if (other.opcodeOrder != null) return false
+        if (shadowedRecords != other.shadowedRecords) return false
+        if (paramRecords != other.paramRecords) return false
 
         return true
     }
@@ -385,6 +401,9 @@ data class ItemDefinition(
         result = 31 * result + (params?.hashCode() ?: 0)
         result = 31 * result + stringId.hashCode()
         result = 31 * result + extras.hashCode()
+        result = 31 * result + (opcodeOrder?.contentHashCode() ?: 0)
+        result = 31 * result + (shadowedRecords?.hashCode() ?: 0)
+        result = 31 * result + (paramRecords?.hashCode() ?: 0)
         return result
     }
 

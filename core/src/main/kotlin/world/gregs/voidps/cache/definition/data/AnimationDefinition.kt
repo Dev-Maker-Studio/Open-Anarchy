@@ -2,6 +2,8 @@ package world.gregs.voidps.cache.definition.data
 
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.Extra
+import world.gregs.voidps.cache.definition.OpcodeOrdered
+import world.gregs.voidps.cache.definition.ShadowedRecord
 
 data class AnimationDefinition(
     override var id: Int = -1,
@@ -25,8 +27,30 @@ data class AnimationDefinition(
     var primarySpeeds: IntArray? = null,
     var secondarySpeeds: IntArray? = null,
     override var stringId: String = "",
-    override var extras: Map<String, Any>? = null
-) : Definition, Extra {
+    override var extras: Map<String, Any>? = null,
+    /**
+     * The opcode 19 records in file order, as (frame, volume) pairs. [volumes] holds the same values indexed
+     * by frame, but not which frames the file wrote a record for - a frame may be given its default 255.
+     */
+    var soundVolumeRecords: IntArray? = null,
+    /**
+     * The opcode 20 records in file order, as (frame, primary, secondary) triples. [primarySpeeds] and
+     * [secondarySpeeds] hold the same values indexed by frame; see [soundVolumeRecords].
+     */
+    var soundSpeedRecords: IntArray? = null,
+    /**
+     * The opcode 3 interleave indices in file order, kept only when they are not the ascending distinct set
+     * [interleaveOrder] holds - ten seqs list an index twice.
+     */
+    var interleaveRecords: IntArray? = null,
+    /** Opcode 16, a flag with no payload that the client of this revision reads and discards. */
+    var unusedFlag16: Boolean = false,
+    override var opcodeOrder: IntArray? = null,
+    override var shadowedRecords: List<ShadowedRecord>? = null
+) : Definition, Extra, OpcodeOrdered {
+
+    /** Opcodes 19 and 20 are one record per sound frame, not a field written twice. */
+    override fun repeats(opcode: Int): Boolean = opcode == 19 || opcode == 20
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -80,6 +104,24 @@ data class AnimationDefinition(
         } else if (other.secondarySpeeds != null) return false
         if (stringId != other.stringId) return false
         if (extras != other.extras) return false
+        if (soundVolumeRecords != null) {
+            if (other.soundVolumeRecords == null) return false
+            if (!soundVolumeRecords.contentEquals(other.soundVolumeRecords)) return false
+        } else if (other.soundVolumeRecords != null) return false
+        if (soundSpeedRecords != null) {
+            if (other.soundSpeedRecords == null) return false
+            if (!soundSpeedRecords.contentEquals(other.soundSpeedRecords)) return false
+        } else if (other.soundSpeedRecords != null) return false
+        if (interleaveRecords != null) {
+            if (other.interleaveRecords == null) return false
+            if (!interleaveRecords.contentEquals(other.interleaveRecords)) return false
+        } else if (other.interleaveRecords != null) return false
+        if (unusedFlag16 != other.unusedFlag16) return false
+        if (opcodeOrder != null) {
+            if (other.opcodeOrder == null) return false
+            if (!opcodeOrder.contentEquals(other.opcodeOrder)) return false
+        } else if (other.opcodeOrder != null) return false
+        if (shadowedRecords != other.shadowedRecords) return false
 
         return true
     }
@@ -107,6 +149,12 @@ data class AnimationDefinition(
         result = 31 * result + (secondarySpeeds?.contentHashCode() ?: 0)
         result = 31 * result + stringId.hashCode()
         result = 31 * result + extras.hashCode()
+        result = 31 * result + (soundVolumeRecords?.contentHashCode() ?: 0)
+        result = 31 * result + (soundSpeedRecords?.contentHashCode() ?: 0)
+        result = 31 * result + (interleaveRecords?.contentHashCode() ?: 0)
+        result = 31 * result + unusedFlag16.hashCode()
+        result = 31 * result + (opcodeOrder?.contentHashCode() ?: 0)
+        result = 31 * result + (shadowedRecords?.hashCode() ?: 0)
         return result
     }
 

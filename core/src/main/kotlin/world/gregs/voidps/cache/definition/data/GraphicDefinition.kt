@@ -2,7 +2,9 @@ package world.gregs.voidps.cache.definition.data
 
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.Extra
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 import world.gregs.voidps.cache.definition.Recolourable
+import world.gregs.voidps.cache.definition.ShadowedRecord
 
 data class GraphicDefinition(
     override var id: Int = -1,
@@ -21,8 +23,10 @@ data class GraphicDefinition(
     override var originalTextureColours: ShortArray? = null,
     override var modifiedTextureColours: ShortArray? = null,
     override var stringId: String = "",
-    override var extras: Map<String, Any>? = null
-) : Definition, Recolourable, Extra {
+    override var extras: Map<String, Any>? = null,
+    override var opcodeOrder: IntArray? = null,
+    override var shadowedRecords: List<ShadowedRecord>? = null
+) : Definition, Recolourable, Extra, OpcodeOrdered {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -58,6 +62,11 @@ data class GraphicDefinition(
         } else if (other.modifiedTextureColours != null) return false
         if (stringId != other.stringId) return false
         if (extras != other.extras) return false
+        if (opcodeOrder != null) {
+            if (other.opcodeOrder == null) return false
+            if (!opcodeOrder.contentEquals(other.opcodeOrder)) return false
+        } else if (other.opcodeOrder != null) return false
+        if (shadowedRecords != other.shadowedRecords) return false
 
         return true
     }
@@ -80,6 +89,8 @@ data class GraphicDefinition(
         result = 31 * result + (modifiedTextureColours?.contentHashCode() ?: 0)
         result = 31 * result + stringId.hashCode()
         result = 31 * result + extras.hashCode()
+        result = 31 * result + (opcodeOrder?.contentHashCode() ?: 0)
+        result = 31 * result + (shadowedRecords?.hashCode() ?: 0)
         return result
     }
     companion object {

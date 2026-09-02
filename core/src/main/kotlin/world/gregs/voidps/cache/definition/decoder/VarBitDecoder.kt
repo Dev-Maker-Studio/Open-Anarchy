@@ -5,6 +5,7 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.VAR_BIT
 import world.gregs.voidps.cache.definition.data.VarBitDefinition
+import world.gregs.voidps.cache.definition.encoder.VarBitEncoder
 
 class VarBitDecoder : DefinitionDecoder<VarBitDefinition>(VAR_BIT) {
 
@@ -12,7 +13,12 @@ class VarBitDecoder : DefinitionDecoder<VarBitDefinition>(VAR_BIT) {
         return cache.lastArchiveId(index) * 0x400 + cache.fileCount(index, cache.lastArchiveId(index))
     }
 
+    private val encoder = VarBitEncoder()
+
     override fun create(size: Int) = Array(size) { VarBitDefinition(it) }
+
+    override fun readLoop(definition: VarBitDefinition, buffer: Reader) =
+        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
 
     override fun getFile(id: Int) = id and 0x3ff
 

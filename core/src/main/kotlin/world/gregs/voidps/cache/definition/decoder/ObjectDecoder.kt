@@ -4,13 +4,19 @@ import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.OBJECTS
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import world.gregs.voidps.cache.definition.encoder.ObjectEncoder
 
 open class ObjectDecoder(
     val members: Boolean = true,
     val lowDetail: Boolean = false
 ) : DefinitionDecoder<ObjectDefinition>(OBJECTS) {
 
+    private val encoder = ObjectEncoder()
+
     override fun create(size: Int) = Array(size) { ObjectDefinition(it) }
+
+    override fun readLoop(definition: ObjectDefinition, buffer: Reader) =
+        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
 
     override fun getFile(id: Int) = id and 0xff
 
@@ -51,6 +57,7 @@ open class ObjectDecoder(
             23 -> culling = 1
             24 -> {
                 val animation = buffer.readBigSmart()
+                singleAnimation = animation
                 if (animation != -1) {
                     animations = intArrayOf(animation)
                 }
@@ -62,7 +69,9 @@ open class ObjectDecoder(
                 if (options == null) {
                     options = arrayOf(null, null, null, null, null, "Examine")
                 }
-                options!![opcode - 30] = buffer.readString()
+                val option = buffer.readString()
+                options!![opcode - 30] = option
+                rawOption(opcode - 30, option)
             }
             39 -> contrast = buffer.readByte() * 5
             40 -> readColours(buffer)
@@ -137,6 +146,7 @@ open class ObjectDecoder(
                     percents!![index] = buffer.readUnsignedByte()
                     total += percents!![index]
                 }
+                rawPercents = percents!!.copyOf()
                 for (count in 0 until length) {
                     percents!![count] = 65535 * percents!![count] / total
                 }
@@ -146,7 +156,9 @@ open class ObjectDecoder(
                 if (options == null) {
                     options = arrayOf(null, null, null, null, null, "Examine")
                 }
-                options!![opcode - 150] = buffer.readString()
+                val option = buffer.readString()
+                options!![opcode - 150] = option
+                rawOption(5 + opcode - 150, option)
                 if (!members) {
                     options!![opcode - 150] = null
                 }
@@ -177,9 +189,20 @@ open class ObjectDecoder(
             177 -> aBoolean2992 = true
             178 -> anInt2975 = buffer.readUnsignedByte()
             189 -> dynamicTint = true
-            249 -> readParameters(buffer)
+            249 -> {
+                val records = readParameterRecords(buffer)
+                if (records.size != (params?.size ?: 0)) {
+                    paramRecords = records
+                }
+            }
             else -> error("Unhandled object definition opcode: $opcode for def $id")
         }
+    }
+
+    /** Keeps an option record as the file held it; [ObjectDefinition.options] merges 30 to 34 with 150 to 154. */
+    private fun ObjectDefinition.rawOption(index: Int, option: String) {
+        val raw = rawOptions ?: arrayOfNulls<String>(10).also { rawOptions = it }
+        raw[index] = option
     }
 
     companion object {

@@ -5,10 +5,16 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.ANIMATIONS
 import world.gregs.voidps.cache.definition.data.AnimationDefinition
+import world.gregs.voidps.cache.definition.encoder.AnimationEncoder
 
 class AnimationDecoder : DefinitionDecoder<AnimationDefinition>(ANIMATIONS) {
 
+    private val encoder = AnimationEncoder()
+
     override fun create(size: Int) = Array(size) { AnimationDefinition(it) }
+
+    override fun readLoop(definition: AnimationDefinition, buffer: Reader) =
+        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
 
     override fun getFile(id: Int) = id and 0x7f
 
@@ -32,8 +38,13 @@ class AnimationDecoder : DefinitionDecoder<AnimationDefinition>(ANIMATIONS) {
             3 -> {
                 interleaveOrder = BooleanArray(256)
                 val length = buffer.readUnsignedByte()
-                for (count in 0 until length) {
-                    interleaveOrder!![buffer.readUnsignedByte()] = true
+                val records = IntArray(length) { buffer.readUnsignedByte() }
+                for (index in records) {
+                    interleaveOrder!![index] = true
+                }
+                // The flags alone cannot say how many records there were, nor in what order.
+                if (!records.contentEquals(records.distinct().sorted().toIntArray())) {
+                    interleaveRecords = records
                 }
             }
             5 -> priority = buffer.readUnsignedByte()
@@ -66,6 +77,7 @@ class AnimationDecoder : DefinitionDecoder<AnimationDefinition>(ANIMATIONS) {
             }
             14 -> aBoolean691 = true
             15 -> tweened = true
+            16 -> unusedFlag16 = true
             18 -> useSounds = true
             19 -> {
                 if (volumes == null) {
@@ -74,7 +86,10 @@ class AnimationDecoder : DefinitionDecoder<AnimationDefinition>(ANIMATIONS) {
                         volumes!![index] = 255
                     }
                 }
-                volumes!![buffer.readUnsignedByte()] = buffer.readUnsignedByte()
+                val frame = buffer.readUnsignedByte()
+                val volume = buffer.readUnsignedByte()
+                volumes!![frame] = volume
+                soundVolumeRecords = (soundVolumeRecords ?: IntArray(0)) + intArrayOf(frame, volume)
             }
             20 -> {
                 if (primarySpeeds == null || secondarySpeeds == null) {
@@ -85,9 +100,12 @@ class AnimationDecoder : DefinitionDecoder<AnimationDefinition>(ANIMATIONS) {
                         secondarySpeeds!![index] = 256
                     }
                 }
-                val length = buffer.readUnsignedByte()
-                primarySpeeds!![length] = buffer.readShort()
-                secondarySpeeds!![length] = buffer.readShort()
+                val frame = buffer.readUnsignedByte()
+                val primary = buffer.readShort()
+                val secondary = buffer.readShort()
+                primarySpeeds!![frame] = primary
+                secondarySpeeds!![frame] = secondary
+                soundSpeedRecords = (soundSpeedRecords ?: IntArray(0)) + intArrayOf(frame, primary, secondary)
             }
         }
     }
