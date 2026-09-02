@@ -9,7 +9,16 @@ data class IndexedSprite(
     var height: Int = 0,
     var deltaHeight: Int = 0,
     var deltaWidth: Int = 0,
-    var alpha: ByteArray? = null
+    var alpha: ByteArray? = null,
+    /**
+     * The frame's format byte: bit 0 stores the pixels column major rather than row major, bit 1
+     * says an alpha plane follows them.
+     *
+     * The client reads it and keeps nothing, and it is not derivable from what it does keep: 302
+     * of the 727 cache's frames carry an alpha plane that is entirely opaque, which the client
+     * (and [alpha]) drops, so only this says the plane was there.
+     */
+    var flags: Int = 0
 ) {
     lateinit var raster: ByteArray
     lateinit var palette: IntArray
@@ -46,6 +55,7 @@ data class IndexedSprite(
         if (height != other.height) return false
         if (deltaHeight != other.deltaHeight) return false
         if (deltaWidth != other.deltaWidth) return false
+        if (flags != other.flags) return false
         if (alpha != null) {
             if (other.alpha == null) return false
             if (!alpha.contentEquals(other.alpha)) return false
@@ -63,6 +73,7 @@ data class IndexedSprite(
         result = 31 * result + height
         result = 31 * result + deltaHeight
         result = 31 * result + deltaWidth
+        result = 31 * result + flags
         result = 31 * result + (alpha?.contentHashCode() ?: 0)
         result = 31 * result + raster.contentHashCode()
         result = 31 * result + palette.contentHashCode()

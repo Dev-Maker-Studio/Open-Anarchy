@@ -11,6 +11,9 @@ import kotlinx.serialization.json.jsonPrimitive
 import world.gregs.voidps.cache.definition.KeyedValue
 import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
 import world.gregs.voidps.cache.definition.data.InterfaceComponentSetting
+import world.gregs.voidps.cache.definition.data.TextureOp
+import world.gregs.voidps.cache.definition.data.TextureOpcode
+import world.gregs.voidps.cache.definition.data.TextureShape
 import world.gregs.voidps.cache.source.SourceJson
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -99,14 +102,21 @@ internal class DefinitionJson private constructor(private val properties: List<P
         private val DERIVED = setOf(
             // ClanVarDefinition.typeChar is the descriptor byte the file holds; CS2Type.forJagexDesc of it
             // is many to one, has no JSON form, and is what the encoder is careful never to use.
-            "world.gregs.voidps.cache.definition.data.ClanVarDefinition.type"
+            "world.gregs.voidps.cache.definition.data.ClanVarDefinition.type",
+            // A font's 65,536 entry kerning table is computed from the glyph offset profiles the file
+            // does carry, and only for the variable width form; writing it would be a megabyte of
+            // derived numbers per font that the encoder ignores.
+            "world.gregs.voidps.cache.definition.data.FontDefinition.kerningAdjustments"
         )
 
         /** The record classes a definition field may hold, written as nested objects. */
         private val NESTED = setOf(
             InterfaceComponentSetting::class.java,
             InterfaceComponentHook::class.java,
-            KeyedValue::class.java
+            KeyedValue::class.java,
+            TextureOp::class.java,
+            TextureOpcode::class.java,
+            TextureShape::class.java
         )
 
         /**
@@ -147,16 +157,36 @@ internal class DefinitionJson private constructor(private val properties: List<P
          */
         private fun codec(type: Class<*>, field: Field): ValueCodec {
             simple(field.type)?.let { return it }
-            if (Map::class.java.isAssignableFrom(field.type)) {
-                val arguments = arguments(field, 2)
-                return MapCodec(scalar(type, field, arguments[0]), scalar(type, field, arguments[1]))
-            }
-            if (List::class.java.isAssignableFrom(field.type)) {
-                return ListCodec(scalar(type, field, arguments(field, 1)[0]))
+            if (Map::class.java.isAssignableFrom(field.type) || List::class.java.isAssignableFrom(field.type)) {
+                return element(type, field, field.genericType)
             }
             throw IllegalArgumentException(
                 "${type.name}.${field.name} is a ${field.type.name}, which ${DefinitionJson::class.simpleName} " +
                     "has no spelling for; give it one rather than leaving the field out of the tree."
+            )
+        }
+
+        /**
+         * The codec of a field's type, of a map's key or value, or of a list's element.
+         *
+         * Recursive rather than flat because a list's element may itself be a list of records: a
+         * texture is operations, each of which is opcodes, one of which is shapes.
+         */
+        private fun element(owner: Class<*>, field: Field, argument: ReflectType): ValueCodec {
+            val type = erase(argument) ?: throw IllegalArgumentException(
+                "${owner.name}.${field.name} is parameterised with $argument, which is not a class."
+            )
+            simple(type)?.let { return it }
+            if (List::class.java.isAssignableFrom(type)) {
+                return ListCodec(element(owner, field, arguments(owner, field, argument, 1)[0]))
+            }
+            if (Map::class.java.isAssignableFrom(type)) {
+                val arguments = arguments(owner, field, argument, 2)
+                return MapCodec(element(owner, field, arguments[0]), element(owner, field, arguments[1]))
+            }
+            throw IllegalArgumentException(
+                "${owner.name}.${field.name} holds ${type.name}, which ${DefinitionJson::class.simpleName} " +
+                    "has no spelling for."
             )
         }
 
@@ -183,17 +213,6 @@ internal class DefinitionJson private constructor(private val properties: List<P
             else -> null
         }
 
-        /** The codec of a map key, map value or list element, which is never itself a map or a list. */
-        private fun scalar(owner: Class<*>, field: Field, argument: ReflectType): ValueCodec {
-            val type = erase(argument) ?: throw IllegalArgumentException(
-                "${owner.name}.${field.name} is parameterised with $argument, which is not a class."
-            )
-            return simple(type) ?: throw IllegalArgumentException(
-                "${owner.name}.${field.name} holds ${type.name}, which ${DefinitionJson::class.simpleName} " +
-                    "has no spelling for."
-            )
-        }
-
         /**
          * The class a type argument stands for.
          *
@@ -208,12 +227,27 @@ internal class DefinitionJson private constructor(private val properties: List<P
             else -> null
         }
 
-        private fun arguments(field: Field, count: Int): Array<out ReflectType> {
-            val generic = field.genericType as? ParameterizedType
-                ?: throw IllegalArgumentException("${field.name} is a raw ${field.type.simpleName}.")
+        /** [type]'s [count] type arguments, unwrapping the wildcards Kotlin's covariance emits. */
+        private fun arguments(
+            owner: Class<*>,
+            field: Field,
+            type: ReflectType,
+            count: Int
+        ): Array<out ReflectType> {
+            val generic = parameterized(type)
+                ?: throw IllegalArgumentException("${owner.name}.${field.name} holds a raw $type.")
             val arguments = generic.actualTypeArguments
-            require(arguments.size == count) { "${field.name} has ${arguments.size} type arguments, not $count." }
+            require(arguments.size == count) {
+                "${owner.name}.${field.name} holds a $type with ${arguments.size} type arguments, not $count."
+            }
             return arguments
+        }
+
+        /** [type] as a parameterised type, through however many wildcards stand in front of it. */
+        private fun parameterized(type: ReflectType): ParameterizedType? = when (type) {
+            is ParameterizedType -> type
+            is WildcardType -> type.upperBounds.firstOrNull()?.let { parameterized(it) }
+            else -> null
         }
 
         // --- The JSON value tree -------------------------------------------------------------------
@@ -412,11 +446,15 @@ internal class DefinitionJson private constructor(private val properties: List<P
                 ?.also { it.isAccessible = true }
                 ?: throw IllegalArgumentException("${type.name} has no constructor taking all of its fields.")
 
+            /**
+             * The record's fields, nulls left out exactly as a definition's are: [value] reads a
+             * missing key back as null, so a written null says nothing a missing key does not.
+             */
             override fun node(value: Any): Node {
                 val entries = ArrayList<Pair<String, Node>>(json.properties.size)
                 for (property in json.properties) {
-                    val field = property.field.get(value)
-                    entries.add(property.name to if (field == null) NullNode else property.codec.node(field))
+                    val field = property.field.get(value) ?: continue
+                    entries.add(property.name to property.codec.node(field))
                 }
                 return ObjectNode(entries)
             }

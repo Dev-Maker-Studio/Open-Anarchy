@@ -92,6 +92,8 @@ object SourceCodecs {
         DefinitionCodecs.register()
         // Index 5, laid out by map square as editable JSON.
         MapCodecs.register()
+        // The 2D art indices, as standard images and JSON.
+        ImageCodecs.register()
     }
 
     /** A built in codec: a provider may still replace it, an explicit [register] always does. */
