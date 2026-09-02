@@ -15,6 +15,14 @@ import world.gregs.voidps.cache.definition.data.InterfaceComponentSetting
 import world.gregs.voidps.cache.definition.data.TextureOp
 import world.gregs.voidps.cache.definition.data.TextureOpcode
 import world.gregs.voidps.cache.definition.data.TextureShape
+import world.gregs.voidps.cache.definition.data.ShaderProgramDefine
+import world.gregs.voidps.cache.definition.data.ShaderProgramMapping
+import world.gregs.voidps.cache.definition.data.ShaderProgramVariable
+import world.gregs.voidps.cache.definition.data.SynthEnvelope
+import world.gregs.voidps.cache.definition.data.SynthFilter
+import world.gregs.voidps.cache.definition.data.SynthFilterPair
+import world.gregs.voidps.cache.definition.data.SynthInstrument
+import world.gregs.voidps.cache.definition.data.SynthShape
 import world.gregs.voidps.cache.source.SourceJson
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -130,6 +138,14 @@ internal class DefinitionJson private constructor(private val properties: List<P
             TextureOp::class.java,
             TextureOpcode::class.java,
             TextureShape::class.java
+            SynthInstrument::class.java,
+            SynthEnvelope::class.java,
+            SynthShape::class.java,
+            SynthFilter::class.java,
+            SynthFilterPair::class.java,
+            ShaderProgramVariable::class.java,
+            ShaderProgramMapping::class.java,
+            ShaderProgramDefine::class.java
         )
 
         /**
@@ -226,8 +242,27 @@ internal class DefinitionJson private constructor(private val properties: List<P
             Array<Any>::class.java -> ObjectArrayCodec(Any::class.java, AnyCodec)
             in NESTED -> NestedCodec(type, nulls = true)
             CharArray::class.java -> ArrayCodec.CHARS
-            // A record says it is one rather than being listed here; see DefinitionRecord.
-            else -> if (DefinitionRecord::class.java.isAssignableFrom(type)) NestedCodec(type) else null
+            // A record says it is one rather than being listed here (see DefinitionRecord); an array
+            // of records - a synth sound's ten instrument slots, a filter's pole pairs - is an array
+            // of nested objects, and nulls in it survive the trip.
+            else -> when {
+                DefinitionRecord::class.java.isAssignableFrom(type) -> NestedCodec(type)
+                type.componentType != null && NESTED.contains(type.componentType) ->
+                    ObjectArrayCodec(type.componentType, NestedCodec(type.componentType))
+                else -> null
+            }
+        }
+        }
+
+        /** The codec of a map key, map value or list element, which is never itself a map or a list. */
+        private fun scalar(owner: Class<*>, field: Field, argument: ReflectType): ValueCodec {
+            val type = erase(argument) ?: throw IllegalArgumentException(
+                "${owner.name}.${field.name} is parameterised with $argument, which is not a class."
+            )
+            return simple(type) ?: throw IllegalArgumentException(
+                "${owner.name}.${field.name} holds ${type.name}, which ${DefinitionJson::class.simpleName} " +
+                    "has no spelling for."
+            )
         }
 
         /**
