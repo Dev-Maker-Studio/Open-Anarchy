@@ -19,6 +19,14 @@ default:
       - .gradle
   before_script:
     - export GRADLE_USER_HOME="$(pwd)/.gradle"
+    # cache-source/ is a submodule holding the whole unpacked cache (GBs). The build needs only its
+    # gamevals/ catalogs (the typed constants are generated from them), so fetch just that directory
+    # at the pinned commit with a blob-less sparse clone instead of a submodule checkout.
+    - CACHE_SOURCE_SHA="$(git rev-parse HEAD:cache-source)"
+    - CACHE_SOURCE_URL="${CI_SERVER_PROTOCOL}://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_NAMESPACE}/cache-source.git"
+    - rm -rf cache-source && git clone --quiet --filter=blob:none --no-checkout --sparse "$CACHE_SOURCE_URL" cache-source
+    - git -C cache-source sparse-checkout set gamevals
+    - git -C cache-source checkout --quiet "$CACHE_SOURCE_SHA"
 
 # Every branch and tag gets compiled; nothing is kept from feature branches.
 build:

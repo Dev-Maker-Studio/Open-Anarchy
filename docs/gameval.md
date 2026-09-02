@@ -1,6 +1,7 @@
 # Gamevals: 727 asset ids by their Jagex names
 
-`gamevals/<type>.json` at the repo root maps every **revision-727 cache id** of an asset type to
+`gamevals/<type>.json` in the cache source tree (`cache-source/`, a git submodule - see
+`docs/cache-source.md`) maps every **revision-727 cache id** of an asset type to
 the Jagex developer name for that exact asset (`inv` 94 -> `worn`, `seq` 0 -> `swarm_walk`). They
 were recovered once from the RS3-949 gameval tables (727 is version-locked and Jagex never
 published gamevals for it, so this was reverse-engineered once); the rules a name had to clear
@@ -73,13 +74,11 @@ string.
 
 ## Where the server reads them from
 
-1. The folder named by `GAMEVAL_PATH` (`.env`, default `./gamevals`, i.e. the repo checkout when
-   the working directory is the repo root). Edits there take effect on restart with no rebuild.
-2. Otherwise the copy bundled into `core`'s jar under `/gamevals/<type>.json`.
-   `core/build.gradle.kts` copies the repo's `gamevals/*.json` into `core`'s resources at build
-   time; `CONTRACT.md` is not shipped.
-
-Resolution is per file, so a folder missing one catalog still gets that one from the jar.
+The folder named by `GAMEVAL_PATH` (`.env`), which defaults to `<CACHE_SOURCE_PATH>/gamevals` when a
+cache source tree is configured and to `./cache-source/gamevals` (the submodule in a repo checkout)
+otherwise. That folder is the **only** copy of the catalogs: nothing is bundled into a jar, so a
+deployed server needs the tree (or at least its `gamevals/` directory) on disk - `docs/deploy.md`,
+"The cache source tree". Edits there take effect on restart with no rebuild.
 
 A catalog that is missing or unreadable (a half-saved edit, say) is treated as empty:
 one warning is logged for that type and the file is re-examined after 30 seconds. Catalogs are
@@ -101,7 +100,7 @@ Gameval.has(Gameval.QUEST)                            // catalog present and non
 Gameval.entries(Gameval.OBJ)                          // Map<Int, String> of named ids only
 Gameval.allEntries(Gameval.OBJ)                       // placeholders included
 Gameval.rawName(Gameval.OBJ, 4151) / Gameval.isPlaceholder(Gameval.OBJ, 4151)
-Gameval.source(Gameval.OBJ)                           // FOLDER, BUNDLED or MISSING
+Gameval.source(Gameval.OBJ)                           // FOLDER or MISSING
 ```
 
 Type constants: `OBJ NPC LOC SEQ SPOTANIM ENUM STRUCT PARAM INV INTERFACE COMPONENT CLIENTSCRIPT
@@ -250,9 +249,10 @@ same asset, or leave the placeholder; `gamevals/CONTRACT.md` has the rules. The 
 duplicates, collisions after identifier escaping, a name that is another id's placeholder, an empty
 name and a stale `coverage` block (table above), so a bad edit fails loudly.
 
-At runtime nothing needs rebuilding: `GAMEVAL_PATH` (default `./gamevals`) wins per file over the
-copy bundled in `core`'s jar, so a server restart picks up an edited catalog. Only the typed
-constants need the build.
+At runtime nothing needs rebuilding: the catalogs are read from `GAMEVAL_PATH` on demand, so a
+server restart picks up an edited catalog. Only the typed constants need the build, which reads the
+same tree (`-Pdarkan.cacheSource=<path>` or `DARKAN_CACHE_SOURCE` point it elsewhere than the
+`cache-source/` submodule).
 
 A decompiled clientscript project (`cs2 decompile-all`) carries the same names - `Obj.abyssal_whip`,
 `varbit_dungeoneering_floor`, `function quicksort` - all derived from the catalogs, never a second
