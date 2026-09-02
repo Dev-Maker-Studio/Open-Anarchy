@@ -83,8 +83,31 @@ data class ObjectDefinition(
     var dynamicTint: Boolean = false,
     override var params: Map<Int, Any>? = null,
     override var stringId: String = "",
-    override var extras: Map<String, Any>? = null
-) : Definition, Transforms, Recolourable, ColourPalette, Parameterized, Extra {
+    override var extras: Map<String, Any>? = null,
+    /**
+     * Opcode 24's single animation, kept even when it is -1 - which the client reads and throws away rather
+     * than storing in [animations], so the record is otherwise invisible.
+     */
+    var singleAnimation: Int = -1,
+    /**
+     * Opcode 106's animation odds as the file held them, one byte each. [percents] holds them rescaled to
+     * 65535ths of their sum the way the client does, which is not reversible.
+     */
+    var rawPercents: IntArray? = null,
+    /**
+     * The option records as the file held them: indices 0 to 4 are opcodes 30 to 34, indices 5 to 9 are the
+     * members only opcodes 150 to 154. Null when the file had no option record. [options] is the merged view
+     * the client builds from them, which cannot say which opcode an option came from.
+     */
+    var rawOptions: Array<String?>? = null,
+    /**
+     * The opcode 249 parameter records in file order, kept only when the file listed an id more than once -
+     * [params] keeps the last value of each. Null when [params] holds every record.
+     */
+    var paramRecords: List<KeyedValue>? = null,
+    override var opcodeOrder: IntArray? = null,
+    override var shadowedRecords: List<ShadowedRecord>? = null
+) : Definition, Transforms, Recolourable, ColourPalette, Parameterized, Extra, OpcodeOrdered {
 
     var block: Int = PROJECTILE or ROUTE
 
@@ -246,6 +269,21 @@ data class ObjectDefinition(
         if (params != other.params) return false
         if (stringId != other.stringId) return false
         if (extras != other.extras) return false
+        if (singleAnimation != other.singleAnimation) return false
+        if (rawPercents != null) {
+            if (other.rawPercents == null) return false
+            if (!rawPercents.contentEquals(other.rawPercents)) return false
+        } else if (other.rawPercents != null) return false
+        if (rawOptions != null) {
+            if (other.rawOptions == null) return false
+            if (!rawOptions.contentEquals(other.rawOptions)) return false
+        } else if (other.rawOptions != null) return false
+        if (opcodeOrder != null) {
+            if (other.opcodeOrder == null) return false
+            if (!opcodeOrder.contentEquals(other.opcodeOrder)) return false
+        } else if (other.opcodeOrder != null) return false
+        if (shadowedRecords != other.shadowedRecords) return false
+        if (paramRecords != other.paramRecords) return false
         return true
     }
 
@@ -330,6 +368,12 @@ data class ObjectDefinition(
         result = 31 * result + (params?.hashCode() ?: 0)
         result = 31 * result + stringId.hashCode()
         result = 31 * result + (extras?.hashCode() ?: 0)
+        result = 31 * result + singleAnimation
+        result = 31 * result + (rawPercents?.contentHashCode() ?: 0)
+        result = 31 * result + (rawOptions?.contentHashCode() ?: 0)
+        result = 31 * result + (opcodeOrder?.contentHashCode() ?: 0)
+        result = 31 * result + (shadowedRecords?.hashCode() ?: 0)
+        result = 31 * result + (paramRecords?.hashCode() ?: 0)
         return result
     }
 

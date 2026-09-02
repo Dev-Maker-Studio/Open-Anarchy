@@ -4,10 +4,16 @@ import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.SPOTANIMS
 import world.gregs.voidps.cache.definition.data.GraphicDefinition
+import world.gregs.voidps.cache.definition.encoder.GraphicEncoder
 
 class GraphicDecoder : DefinitionDecoder<GraphicDefinition>(SPOTANIMS) {
 
+    private val encoder = GraphicEncoder()
+
     override fun create(size: Int) = Array(size) { GraphicDefinition(it) }
+
+    override fun readLoop(definition: GraphicDefinition, buffer: Reader) =
+        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
 
     override fun getFile(id: Int) = id and 0xff
 

@@ -1,371 +1,355 @@
 package world.gregs.voidps.cache.definition.encoder
 
+import it.unimi.dsi.fastutil.ints.IntArrayList
 import world.gregs.voidps.buffer.write.Writer
-import world.gregs.voidps.cache.DefinitionEncoder
+import world.gregs.voidps.cache.OrderedDefinitionEncoder
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
-import kotlin.math.roundToInt
 
-class ObjectEncoder : DefinitionEncoder<ObjectDefinition> {
+/**
+ * Writes an index 16 loc file.
+ *
+ * Several opcodes share a field: 17, 18 and 27 all describe how the loc blocks movement and sight, and 21,
+ * 81, 93, 94, 95 and 162 all set the contoured ground mode with a different payload width. The mode a
+ * definition came from is recovered from the value, and where the values cannot tell two records apart the
+ * decoder has kept the file's own opcode order, which decides for us.
+ *
+ * Options come from [ObjectDefinition.rawOptions] so that a file holding both a public (30 to 34) and a
+ * members (150 to 154) record for the same slot writes both back; [members] supplies the members half for a
+ * definition built by hand, which is what the two argument encode form is for.
+ */
+class ObjectEncoder : OrderedDefinitionEncoder<ObjectDefinition>() {
 
-    override fun Writer.encode(definition: ObjectDefinition, members: ObjectDefinition) {
-        if (definition.id == -1) {
-            return
+    override fun presentOpcodes(definition: ObjectDefinition): IntArray {
+        val opcodes = IntArrayList()
+        if (definition.modelIds != null && definition.modelTypes != null) {
+            opcodes.add(1)
         }
-
-        val modelIds = definition.modelIds
-        val modelTypes = definition.modelTypes
-        if (modelIds != null && modelTypes != null) {
-            writeByte(1)
-            writeByte(modelIds.size)
-            for ((index, models) in modelIds.withIndex()) {
-                val type = definition.modelTypes!![index]
-                writeByte(type.toInt())
-                writeByte(models.size)
-                for (model in models) {
-                    writeShort(model)
-                }
-            }
+        if (definition.name != "null") {
+            opcodes.add(2)
         }
-
-        val name = definition.name
-        if (name != "null") {
-            writeByte(2)
-            writeString(name)
-        }
-
         if (definition.sizeX != 1) {
-            writeByte(14)
-            writeByte(definition.sizeX)
+            opcodes.add(14)
         }
-
         if (definition.sizeY != 1) {
-            writeByte(15)
-            writeByte(definition.sizeY)
+            opcodes.add(15)
         }
-
         if (!definition.blocksSky) {
-            if (definition.solid == 0) {
-                writeByte(17)
-            } else {
-                writeByte(18)
-            }
+            opcodes.add(if (definition.solid == 0) 17 else 18)
         }
-
         if (definition.interactive != -1) {
-            writeByte(19)
-            writeByte(definition.interactive)
+            opcodes.add(19)
         }
-
         if (definition.contouredGround == 1.toByte()) {
-            writeByte(21)
+            opcodes.add(21)
         }
-
         if (definition.delayShading) {
-            writeByte(22)
+            opcodes.add(22)
         }
-
         if (definition.culling == 1) {
-            writeByte(23)
+            opcodes.add(23)
         }
-
-        val animations = definition.animations
-        val percents = definition.percents
-        if (animations != null && percents == null) {
-            writeByte(24)
-            writeShort(animations[0])
+        if (definition.singleAnimation != -1) {
+            opcodes.add(24)
         }
-
         if (definition.solid == 1) {
-            writeByte(27)
+            opcodes.add(27)
         }
-
         if (definition.offsetMultiplier != 64) {
-            writeByte(28)
-            writeByte(definition.offsetMultiplier shr 2)
+            opcodes.add(28)
         }
-
         if (definition.brightness != 0) {
-            writeByte(29)
-            writeByte(definition.brightness)
+            opcodes.add(29)
         }
-
-        val options = definition.options
-        if (options != null) {
-            for (index in 0 until 5) {
-                val option = options[index] ?: continue
-                writeByte(30 + index)
-                writeString(option)
+        val raw = definition.rawOptions
+        for (index in 0 until 5) {
+            if (if (raw != null) raw[index] != null else definition.options?.get(index) != null) {
+                opcodes.add(30 + index)
             }
         }
-
         if (definition.contrast != 0) {
-            writeByte(39)
-            writeByte(definition.contrast / 5)
+            opcodes.add(39)
         }
-
-        definition.writeColoursTextures(this)
-
-        definition.writeRecolourPalette(this)
-
+        if (definition.originalColours != null && definition.modifiedColours != null) {
+            opcodes.add(40)
+        }
+        if (definition.originalTextureColours != null && definition.modifiedTextureColours != null) {
+            opcodes.add(41)
+        }
+        if (definition.recolourPalette != null) {
+            opcodes.add(42)
+        }
         if (definition.mirrored) {
-            writeByte(62)
+            opcodes.add(62)
         }
-
         if (!definition.castsShadow) {
-            writeByte(64)
+            opcodes.add(64)
         }
-
         if (definition.modelSizeX != 128) {
-            writeByte(65)
-            writeShort(definition.modelSizeX)
+            opcodes.add(65)
         }
-
         if (definition.modelSizeZ != 128) {
-            writeByte(66)
-            writeShort(definition.modelSizeZ)
+            opcodes.add(66)
         }
-
         if (definition.modelSizeY != 128) {
-            writeByte(67)
-            writeShort(definition.modelSizeY)
+            opcodes.add(67)
         }
-
         if (definition.blockFlag != 0) {
-            writeByte(69)
-            writeByte(definition.blockFlag)
+            opcodes.add(69)
         }
-
         if (definition.offsetX != 0) {
-            writeByte(70)
-            writeShort(definition.offsetX shr 2)
+            opcodes.add(70)
         }
-
         if (definition.offsetZ != 0) {
-            writeByte(71)
-            writeShort(definition.offsetZ shr 2)
+            opcodes.add(71)
         }
-
         if (definition.offsetY != 0) {
-            writeByte(72)
-            writeShort(definition.offsetY shr 2)
+            opcodes.add(72)
         }
-
         if (definition.blocksLand) {
-            writeByte(73)
+            opcodes.add(73)
         }
-
         if (definition.ignoreOnRoute) {
-            writeByte(74)
+            opcodes.add(74)
         }
-
         if (definition.supportItems != -1) {
-            writeByte(75)
-            writeByte(definition.supportItems)
+            opcodes.add(75)
         }
-
-        definition.writeTransforms(this, 77, 92)
-
-        if (definition.anInt3015 != -1 || definition.anInt3012 != 0) {
-            writeByte(78)
-            writeShort(definition.anInt3015)
-            writeByte(definition.anInt3012)
+        if (definition.transforms != null) {
+            opcodes.add(if (definition.transforms!!.last() != -1) 92 else 77)
         }
-
-        val anIntArray3036 = definition.anIntArray3036
-        if (anIntArray3036 != null) {
-            writeByte(79)
-            writeShort(definition.anInt2989)
-            writeShort(definition.anInt2971)
-            writeByte(definition.anInt3012)
-            writeByte(anIntArray3036.size)
-            anIntArray3036.forEach {
-                writeShort(it)
-            }
+        if (definition.anInt3015 != -1) {
+            opcodes.add(78)
         }
-
+        if (definition.anIntArray3036 != null) {
+            opcodes.add(79)
+        }
         if (definition.contouredGround == 2.toByte()) {
-            writeByte(81)
-            writeByte(definition.anInt3023 / 256)
+            opcodes.add(81)
         }
-
         if (definition.hideMinimap) {
-            writeByte(82)
+            opcodes.add(82)
         }
-
         if (!definition.aBoolean2972) {
-            writeByte(88)
+            opcodes.add(88)
         }
-
         if (!definition.animateImmediately) {
-            writeByte(89)
+            opcodes.add(89)
         }
-
         if (definition.isMembers) {
-            writeByte(91)
+            opcodes.add(91)
         }
-
-        if (definition.contouredGround == 3.toByte() && definition.anInt3023 < Short.MAX_VALUE) {
-            writeByte(93)
-            writeShort(definition.anInt3023)
+        if (definition.contouredGround == 3.toByte()) {
+            opcodes.add(if (definition.anInt3023 in Short.MIN_VALUE..Short.MAX_VALUE) 93 else 162)
         }
-
         if (definition.contouredGround == 4.toByte()) {
-            writeByte(94)
+            opcodes.add(94)
         }
-
         if (definition.contouredGround == 5.toByte()) {
-            writeByte(95)
-            writeShort(definition.anInt3023)
+            opcodes.add(95)
         }
-
         if (definition.aBoolean3056) {
-            writeByte(97)
+            opcodes.add(97)
         }
-
         if (definition.aBoolean2998) {
-            writeByte(98)
+            opcodes.add(98)
         }
-
-        if (definition.anInt2987 != -1 || definition.anInt3008 != -1) {
-            writeByte(99)
-            writeByte(definition.anInt2987)
-            writeShort(definition.anInt3008)
+        if (definition.anInt2987 != -1) {
+            opcodes.add(99)
         }
-
-        if (definition.anInt3038 != -1 || definition.anInt3013 != -1) {
-            writeByte(100)
-            writeByte(definition.anInt3038)
-            writeShort(definition.anInt3013)
+        if (definition.anInt3038 != -1) {
+            opcodes.add(100)
         }
-
         if (definition.anInt2958 != 0) {
-            writeByte(101)
-            writeByte(definition.anInt2958)
+            opcodes.add(101)
         }
-
         if (definition.mapscene != -1) {
-            writeByte(102)
-            writeShort(definition.mapscene)
+            opcodes.add(102)
         }
-
         if (definition.culling == 0) {
-            writeByte(103)
+            opcodes.add(103)
         }
-
         if (definition.anInt3024 != 255) {
-            writeByte(104)
-            writeByte(definition.anInt3024)
+            opcodes.add(104)
         }
-
         if (definition.invertMapScene) {
-            writeByte(105)
+            opcodes.add(105)
         }
-
-        if (percents != null && animations != null) {
-            writeByte(106)
-            writeByte(animations.size)
-            val total = percents.sum().toDouble()
-            for (i in animations.indices) {
-                writeShort(animations[i])
-                writeByte(((percents[i] / total) * 100).roundToInt())
-            }
+        if (definition.rawPercents != null) {
+            opcodes.add(106)
         }
-
         if (definition.mapDefinitionId != -1) {
-            writeByte(107)
-            writeShort(definition.mapDefinitionId)
+            opcodes.add(107)
         }
-
-        val membersOptions = members.options
-        if (membersOptions != null) {
-            for (index in 0 until 5) {
-                val option = options?.get(index)
-                if (option != null) {
-                    continue
-                }
-                val membersOption = membersOptions[index] ?: continue
-                writeByte(150 + index)
-                writeString(membersOption)
+        for (index in 0 until 5) {
+            if (raw?.get(5 + index) != null) {
+                opcodes.add(150 + index)
             }
         }
-
-        val anIntArray2981 = definition.anIntArray2981
-        if (anIntArray2981 != null) {
-            writeByte(160)
-            writeByte(anIntArray2981.size)
-            anIntArray2981.forEach {
-                writeShort(it)
-            }
+        if (definition.anIntArray2981 != null) {
+            opcodes.add(160)
         }
-
-        if (definition.contouredGround == 3.toByte() && definition.anInt3023 >= Short.MAX_VALUE) {
-            writeByte(162)
-            writeInt(definition.anInt3023)
+        if (definition.aByte2974 != 0.toByte() || definition.aByte3045 != 0.toByte() ||
+            definition.aByte3052 != 0.toByte() || definition.aByte2960 != 0.toByte()
+        ) {
+            opcodes.add(163)
         }
-
-        if (definition.aByte2974 != 0.toByte() || definition.aByte3045 != 0.toByte() || definition.aByte3052 != 0.toByte() || definition.aByte2960 != 0.toByte()) {
-            writeByte(163)
-            writeByte(definition.aByte2974.toInt())
-            writeByte(definition.aByte3045.toInt())
-            writeByte(definition.aByte3052.toInt())
-            writeByte(definition.aByte2960.toInt())
-        }
-
         if (definition.anInt2964 != 0) {
-            writeByte(164)
-            writeShort(definition.anInt2964)
+            opcodes.add(164)
         }
-
         if (definition.anInt2963 != 0) {
-            writeByte(165)
-            writeShort(definition.anInt2963)
+            opcodes.add(165)
         }
-
         if (definition.anInt3018 != 0) {
-            writeByte(166)
-            writeShort(definition.anInt3018)
+            opcodes.add(166)
         }
-
         if (definition.anInt2983 != 0) {
-            writeByte(167)
-            writeShort(definition.anInt2983)
+            opcodes.add(167)
         }
-
         if (definition.aBoolean2961) {
-            writeByte(168)
+            opcodes.add(168)
         }
-
         if (definition.aBoolean2993) {
-            writeByte(169)
+            opcodes.add(169)
         }
-
         if (definition.anInt3032 != 960) {
-            writeByte(170)
-            writeSmart(definition.anInt3032)
+            opcodes.add(170)
         }
-
         if (definition.anInt2962 != 0) {
-            writeByte(171)
-            writeSmart(definition.anInt2962)
+            opcodes.add(171)
         }
-
         if (definition.anInt3050 != 256 || definition.anInt3020 != 256) {
-            writeByte(173)
-            writeShort(definition.anInt3050)
-            writeShort(definition.anInt3020)
+            opcodes.add(173)
         }
-
         if (definition.aBoolean2992) {
-            writeByte(177)
+            opcodes.add(177)
         }
-
         if (definition.anInt2975 != 0) {
-            writeByte(178)
-            writeByte(definition.anInt2975)
+            opcodes.add(178)
         }
-
-        definition.writeParameters(this)
-        writeByte(0)
+        if (definition.dynamicTint) {
+            opcodes.add(189)
+        }
+        if (definition.params != null) {
+            opcodes.add(249)
+        }
+        val array = opcodes.toIntArray()
+        array.sort()
+        return array
     }
 
+    override fun Writer.write(opcode: Int, definition: ObjectDefinition, members: ObjectDefinition, occurrence: Int) {
+        when (opcode) {
+            1 -> {
+                val modelIds = definition.modelIds ?: emptyArray()
+                val modelTypes = definition.modelTypes ?: ByteArray(modelIds.size)
+                writeByte(modelIds.size)
+                for (index in modelIds.indices) {
+                    writeByte(modelTypes[index].toInt())
+                    writeByte(modelIds[index].size)
+                    for (model in modelIds[index]) {
+                        writeBigSmart(model)
+                    }
+                }
+            }
+            2 -> writeString(definition.name)
+            14 -> writeByte(definition.sizeX)
+            15 -> writeByte(definition.sizeY)
+            17, 18, 21, 22, 23, 27, 62, 64, 73, 74, 82, 88, 89, 91, 94, 97, 98, 103, 105, 168, 169, 177, 189 -> Unit
+            19 -> writeByte(definition.interactive)
+            24 -> writeBigSmart(definition.singleAnimation)
+            28 -> writeByte(definition.offsetMultiplier shr 2)
+            29 -> writeByte(definition.brightness)
+            in 30..34 -> writeString(definition.rawOptions?.get(opcode - 30) ?: definition.options?.get(opcode - 30))
+            39 -> writeByte(definition.contrast / 5)
+            40 -> writeColours(definition.originalColours, definition.modifiedColours)
+            41 -> writeColours(definition.originalTextureColours, definition.modifiedTextureColours)
+            42 -> writeColourPalette(definition.recolourPalette)
+            65 -> writeShort(definition.modelSizeX)
+            66 -> writeShort(definition.modelSizeZ)
+            67 -> writeShort(definition.modelSizeY)
+            69 -> writeByte(definition.blockFlag)
+            70 -> writeShort(definition.offsetX shr 2)
+            71 -> writeShort(definition.offsetZ shr 2)
+            72 -> writeShort(definition.offsetY shr 2)
+            75 -> writeByte(definition.supportItems)
+            77, 92 -> {
+                val transforms = definition.transforms ?: IntArray(2) { -1 }
+                writeShort(definition.varbit)
+                writeShort(definition.varp)
+                if (opcode == 92) {
+                    writeBigSmart(transforms.last())
+                }
+                writeByte(transforms.size - 2)
+                for (index in 0 until transforms.size - 1) {
+                    writeBigSmart(transforms[index])
+                }
+            }
+            78 -> {
+                writeShort(definition.anInt3015)
+                writeByte(definition.anInt3012)
+            }
+            79 -> {
+                val sounds = definition.anIntArray3036 ?: IntArray(0)
+                writeShort(definition.anInt2989)
+                writeShort(definition.anInt2971)
+                writeByte(definition.anInt3012)
+                writeByte(sounds.size)
+                for (sound in sounds) {
+                    writeShort(sound)
+                }
+            }
+            81 -> writeByte(definition.anInt3023 / 256)
+            93 -> writeShort(definition.anInt3023)
+            95 -> writeShort(definition.anInt3023)
+            99 -> {
+                writeByte(definition.anInt2987)
+                writeShort(definition.anInt3008)
+            }
+            100 -> {
+                writeByte(definition.anInt3038)
+                writeShort(definition.anInt3013)
+            }
+            101 -> writeByte(definition.anInt2958)
+            102 -> writeShort(definition.mapscene)
+            104 -> writeByte(definition.anInt3024)
+            106 -> {
+                val animations = definition.animations ?: IntArray(0)
+                val percents = definition.rawPercents ?: IntArray(animations.size)
+                writeByte(animations.size)
+                for (index in animations.indices) {
+                    writeBigSmart(animations[index])
+                    writeByte(percents[index])
+                }
+            }
+            107 -> writeShort(definition.mapDefinitionId)
+            in 150..154 -> writeString(definition.rawOptions?.get(5 + opcode - 150) ?: members.options?.get(opcode - 150))
+            160 -> {
+                val values = definition.anIntArray2981 ?: IntArray(0)
+                writeByte(values.size)
+                for (value in values) {
+                    writeShort(value)
+                }
+            }
+            162 -> writeInt(definition.anInt3023)
+            163 -> {
+                writeByte(definition.aByte2974.toInt())
+                writeByte(definition.aByte3045.toInt())
+                writeByte(definition.aByte3052.toInt())
+                writeByte(definition.aByte2960.toInt())
+            }
+            164 -> writeShort(definition.anInt2964)
+            165 -> writeShort(definition.anInt2963)
+            166 -> writeShort(definition.anInt3018)
+            167 -> writeShort(definition.anInt2983)
+            170 -> writeSmart(definition.anInt3032)
+            171 -> writeSmart(definition.anInt2962)
+            173 -> {
+                writeShort(definition.anInt3050)
+                writeShort(definition.anInt3020)
+            }
+            178 -> writeByte(definition.anInt2975)
+            249 -> writeParams(definition.params, definition.paramRecords)
+            else -> error("Unhandled object definition opcode: $opcode for def ${definition.id}")
+        }
+    }
 }
