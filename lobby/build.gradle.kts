@@ -12,6 +12,9 @@ application {
 
 dependencies {
     implementation(project(":core"))
+    // The cache source tree stores index 12 as TypeScript; :cs2 carries the codec that
+    // compiles it back (docs/cache-source.md). Headless - no LWJGL, GLFW or ImGui.
+    implementation(project(":cs2"))
 }
 
 tasks.withType<Jar> {

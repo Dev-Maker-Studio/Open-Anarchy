@@ -24,7 +24,7 @@ All of these run through the tools CLI:
 | Sub-command | What it does |
 |---|---|
 | `decompile <id>` | Prints one script as TypeScript, then its dead code |
-| `decompile-all [dir]` | Writes every script, the declarations and `detected-cs2-dead-code.md`; the folder defaults to `cs2-dump` |
+| `decompile-all [dir]` | Writes every script, the declarations, `tsconfig.json` and `dead-code.md`; the folder defaults to `cs2-dump`. This is the cache source tree's `clientscripts/` layout |
 | `roundtrip [n]` | The stability check (see *Fidelity*) over every script |
 | `fixpoint <id> [dir]` | The same checks for one script, writing both sources out to diff |
 | `types [OP:slot]` | What the corpus says constants mean; with a slot, why it says so |
@@ -200,8 +200,9 @@ what keeps `if (int20 > 100000)` from claiming that `100000` is an obj.
 
 ## Dead code
 
-`decompile-all` writes `detected-cs2-dead-code.md`: everything in the bytecode that cannot affect what a
-script does, grouped by script, with the code itself.
+`decompile-all` writes `dead-code.md` into the folder (the repository's own copy of it is
+`docs/detected-cs2-dead-code.md`): everything in the bytecode that cannot affect what a script
+does, grouped by script, with the code itself.
 
 | Kind | What it means |
 |---|---|
@@ -289,7 +290,39 @@ Under the facade the pipeline is public and can be driven directly:
 | entry point | what it is |
 |---|---|
 | `Cs2Analyzer(cache).analyse()` | the corpus analysis: return signatures, param types, opcode table check |
+| `Cs2Corpus(cache)` | the whole corpus decompiled into a folder: `decompile`, `decompileScript`, `projectFiles`, `write` |
 | `Cs2SourceProject(cache, analyzer, folder)` | the folder: paths, symbol table, `compileFile`, `verify`, `exportSource` |
 | `Cs2Parser` -> `Cs2CodeGen` -> `Cs2Codec.encode` | the compile path itself, one file at a time |
 | `Cs2HotReload.sweepFolder(...)` | the whole-folder sweep `cs2 sources` / `cs2 verify-sources` run |
 | `verifyCodecRoundTrip(cache)` | decode + re-encode every script, asserting byte identity |
+
+## The cache source tree
+
+Index 12 of a cache source tree (`docs/cache-source.md`) *is* one of these folders. `clientscripts/`
+holds exactly what `decompile-all` writes - `<category>/<name>.ts` per script plus `cs2.d.ts`,
+`gamevals.d.ts`, `vars.d.ts`, `tsconfig.json` and `dead-code.md` - so editing a clientscript means
+editing the TypeScript in the tree, and the server compiles it back when it rebuilds the cache.
+Open `<tree>/clientscripts` in an editor and every command here works on it as it stands.
+
+`org.darkan.cs2.source.Cs2SourceCodec` is the two directions. It claims index 12 by being on the
+classpath (a `SourceCodecProvider` in `META-INF/services/`), so nothing has to register it.
+
+- **Unpacking** decompiles each script and compiles the result straight back. 5,501 of the 6,567
+  come out as the cache's own bytes; the other 1,066 are the ones the decompiler normalises, and
+  their shipped bytes are kept beside the source as `<name>.ts.pristine` with the source's SHA-256
+  recorded in `index.json`.
+- **Packing** emits those shipped bytes while the source still hashes to the recorded value, and
+  compiles the source once it does not. So an untouched tree reproduces index 12 byte for byte, and
+  the first edit to a normalised script is what makes its bytes change. `tools cache status` shows
+  the pristine count and any sidecar whose guard has gone stale.
+
+`Cs2Corpus` is the single implementation of the folder layout, shared by `decompile-all` and the
+codec: two implementations of it would show up as a tree that churns depending on which tool wrote
+it last. Note that a script has to be decompiled from the **analyzed** script rather than from a
+fresh decode of the same bytes - argument order is recovered from what a script's callers push, not
+from its bytecode, and 118 scripts render their parameters differently without it.
+
+The one thing this cannot yet do is compile clientscripts for a server that is building its cache
+*from* a tree with no other cache to read: the corpus analysis every compile depends on would have
+to read the index 12 the build is producing. It says so rather than hanging;
+`Cs2SourceCodec.cache` is where a cache can be handed in meanwhile.
