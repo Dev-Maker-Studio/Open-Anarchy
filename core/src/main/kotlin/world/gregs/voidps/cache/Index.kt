@@ -5,18 +5,18 @@ object Index {
     const val ANIMATION_SKELETONS = 1 // bases
     const val CONFIGS = 2
     const val INTERFACES = 3
-    const val SOUND_EFFECTS = 4
+    const val SYNTH_SOUNDS = 4
     const val MAPS = 5
-    const val MUSIC = 6
+    const val MIDI_SONGS = 6
     const val MODELS = 7
     const val SPRITES = 8
     const val TEXTURES = 9
     const val HUFFMAN = 10 // binary
-    const val MUSIC_EFFECTS = 11
+    const val MIDI_JINGLES = 11
     const val CLIENT_SCRIPTS = 12
     const val FONT_METRICS = 13
-    const val MIDI_INSTRUMENTS = 14 // vorbis
-    const val SOUND_EFFECTS_MIDI = 15
+    const val VORBIS = 14
+    const val MIDI_INSTRUMENTS = 15
     const val OBJECTS = 16// locations
     const val ENUMS = 17
     const val NPCS = 18
@@ -37,5 +37,5 @@ object Index {
     const val GAME_TIPS = 33 // loading screens
     const val LOADING_SPRITES_RAW = 34
     const val CUTSCENES = 35
-    const val VORBIS = 36
+    const val INDEX_36 = 36 // empty in 727
 }

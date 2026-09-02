@@ -11,6 +11,14 @@ import kotlinx.serialization.json.jsonPrimitive
 import world.gregs.voidps.cache.definition.KeyedValue
 import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
 import world.gregs.voidps.cache.definition.data.InterfaceComponentSetting
+import world.gregs.voidps.cache.definition.data.ShaderProgramDefine
+import world.gregs.voidps.cache.definition.data.ShaderProgramMapping
+import world.gregs.voidps.cache.definition.data.ShaderProgramVariable
+import world.gregs.voidps.cache.definition.data.SynthEnvelope
+import world.gregs.voidps.cache.definition.data.SynthFilter
+import world.gregs.voidps.cache.definition.data.SynthFilterPair
+import world.gregs.voidps.cache.definition.data.SynthInstrument
+import world.gregs.voidps.cache.definition.data.SynthShape
 import world.gregs.voidps.cache.source.SourceJson
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
@@ -106,7 +114,15 @@ internal class DefinitionJson private constructor(private val properties: List<P
         private val NESTED = setOf(
             InterfaceComponentSetting::class.java,
             InterfaceComponentHook::class.java,
-            KeyedValue::class.java
+            KeyedValue::class.java,
+            SynthInstrument::class.java,
+            SynthEnvelope::class.java,
+            SynthShape::class.java,
+            SynthFilter::class.java,
+            SynthFilterPair::class.java,
+            ShaderProgramVariable::class.java,
+            ShaderProgramMapping::class.java,
+            ShaderProgramDefine::class.java
         )
 
         /**
@@ -180,7 +196,12 @@ internal class DefinitionJson private constructor(private val properties: List<P
             Array<ByteArray>::class.java -> ObjectArrayCodec(ByteArray::class.java, HexCodec)
             Array<Any>::class.java -> ObjectArrayCodec(Any::class.java, AnyCodec)
             in NESTED -> NestedCodec(type)
-            else -> null
+            // An array of records - a synth sound's ten instrument slots, a filter's pole pairs - as an
+            // array of nested objects. Every other array class is named above, so this only ever catches
+            // one whose component type is a record, and nulls in it survive the trip.
+            else -> type.componentType?.takeIf { NESTED.contains(it) }?.let {
+                ObjectArrayCodec(it, NestedCodec(it))
+            }
         }
 
         /** The codec of a map key, map value or list element, which is never itself a map or a list. */

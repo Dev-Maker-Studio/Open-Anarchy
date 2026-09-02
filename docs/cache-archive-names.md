@@ -58,6 +58,11 @@ Verified: the 60 strings this formula generates cover **all 33** named index-30 
 left over. Examples: archive 1 is `windows/x86/hw3d.dll`, archive 12 is
 `macos/universal/libhw3d.dylib`, archive 24 is `linux/x86/libjaclib.so`.
 
+`world.gregs.voidps.cache.NativeLibrary` is the formula in code, and the cache source tree lays the
+index out at exactly these paths - `dlls/windows/x86/hw3d.dll` (`docs/cache-source.md`, *native
+libraries*). The name is display only: the tree records the hash, and packing hashes the path back
+and looks it up, so the recovered names never become a source of hashes.
+
 ## Index 31 - shaders
 
 Two archives, one per renderer: **`gl`** (archive 1) and **`dx`** (archive 3). The client asks for
@@ -81,6 +86,12 @@ The GLSL suffixes are `.vertex.glsl` / `.fragment.glsl` (plus `.filter.glsl`, `.
 `.fragment3d.glsl`, `.passthrough.glsl`, `.blur.glsl`, `.composite.glsl`, `.brightpass.glsl`); the
 Direct3D side uses the shader-model spellings `.vs_2_0`, `.ps_2_0`, `.ps_3_0`, sometimes with a
 trailing permutation number.
+
+`ShaderCodec` does exactly that recovery while it unpacks - it reads the program definitions of the
+archive it was handed and hashes the lower case of every string they spell - and lays the index out
+at `shaders/gl/basic.vertex.glsl` (`docs/cache-source.md`, *shaders*). All **112** file names and
+both archive names come back; nothing is stored for it, and the hashes in `index.json` stay the
+truth.
 
 ## Index 10 - huffman
 

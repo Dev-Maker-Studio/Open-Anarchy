@@ -150,8 +150,8 @@ object GamevalDump {
             interfaces()
             models()
             sprites()
-            rawArchives("sound", Index.SOUND_EFFECTS)
-            rawArchives("midi", Index.MUSIC)
+            rawArchives("sound", Index.SYNTH_SOUNDS)
+            rawArchives("midi", Index.MIDI_SONGS)
             for ((name, archive) in RAW_CONFIG_ARCHIVES) {
                 rawConfigArchive(name, archive)
             }
