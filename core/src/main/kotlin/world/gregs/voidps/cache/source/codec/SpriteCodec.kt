@@ -37,10 +37,18 @@ import kotlin.io.path.name
  * disagree with itself. Recolouring a sprite is therefore an edit to `sprite.json`; repainting one
  * is an edit to the PNG.
  *
- * **JPEG archives are not sprites.** Index 32 holds 21 loading screen images as JPEG containers
- * rather than palette sprites - the client hands them to `Toolkit.createImage` - so they are
- * stored under their real extension, byte for byte, and never re-encoded. See
- * `docs/cache-source.md`, "loading sprites".
+ * **JPEG archives are not sprites.** Index 32 holds 29 of its 34 loading screen images as four
+ * component JPEG containers rather than palette sprites - the client hands them to
+ * `Toolkit.createImage` - so they are stored as two ordinary JPEGs instead:
+ *
+ * ```
+ * loading_sprites/3770.jpg         Y, Cb and Cr as a three component baseline JPEG
+ * loading_sprites/3770.alpha.jpg   the fourth component as a greyscale baseline JPEG
+ * ```
+ *
+ * [JagexJpeg] splits and joins them at the DCT coefficient level, so both halves open in any viewer
+ * and the two together rebuild the archive byte for byte. See `docs/cache-source.md`, "loading
+ * sprites".
  */
 object SpriteCodec : SourceCodec {
 
@@ -53,8 +61,11 @@ object SpriteCodec : SourceCodec {
     /** The per group metadata the images cannot carry. */
     const val METADATA = "sprite.json"
 
-    /** A JPEG archive, stored verbatim. */
+    /** A JPEG archive's colour half: `Y`, `Cb` and `Cr` as a three component baseline JPEG. */
     const val JPEG_EXTENSION = ".jpg"
+
+    /** A JPEG archive's alpha half: the fourth component as a greyscale baseline JPEG. */
+    const val JPEG_ALPHA_EXTENSION = ".alpha$JPEG_EXTENSION"
 
     private val decoder = SpriteDecoder()
 
@@ -68,9 +79,12 @@ object SpriteCodec : SourceCodec {
     override fun fileIdsFromMetadata(archive: Int): Boolean = true
 
     /**
-     * False, so the unpacker packs every group back and compares it with the bytes it came from.
-     * [unpack] has already installed a pristine sidecar for anything that did not survive, so this
-     * is a second, independent proof rather than the only one.
+     * False, so the unpacker packs every archive back and compares it with the bytes it came from.
+     *
+     * For a sprite group [unpack] has already installed a pristine sidecar for anything that did
+     * not survive, so this is a second, independent proof rather than the only one. For a JPEG
+     * archive there is no sidecar to fall back to and this *is* the proof: a split that could not
+     * be joined back would be an inexact archive in the unpack report rather than a silent loss.
      */
     override fun exact(archive: Int): Boolean = false
 
@@ -80,7 +94,13 @@ object SpriteCodec : SourceCodec {
         }
         val data = archive.files[0]
         if (jpeg(data)) {
-            return UnpackedArchive(listOf(SourceFile("${archive.archive}$JPEG_EXTENSION", data)))
+            val parts = JagexJpeg.split(data)
+            return UnpackedArchive(
+                listOf(
+                    SourceFile("${archive.archive}$JPEG_EXTENSION", parts.colour),
+                    SourceFile("${archive.archive}$JPEG_ALPHA_EXTENSION", parts.alpha)
+                )
+            )
         }
         val definition = decode(archive.archive, data)
         val files = write(archive.archive, definition)
@@ -99,9 +119,13 @@ object SpriteCodec : SourceCodec {
     override fun pack(directory: Path, archive: Int, metadata: ArchiveMetadata): PackedArchive {
         val ids = metadata.fileIds()
         check(ids.size == 1) { "Archive $archive is one sprite group but its metadata lists ${ids.size} files." }
-        val jpeg = directory.resolve("$archive$JPEG_EXTENSION")
-        if (Files.isRegularFile(jpeg)) {
-            return PackedArchive(Files.readAllBytes(jpeg), ids)
+        val colour = directory.resolve("$archive$JPEG_EXTENSION")
+        if (Files.isRegularFile(colour)) {
+            val alpha = directory.resolve("$archive$JPEG_ALPHA_EXTENSION")
+            if (!Files.isRegularFile(alpha)) {
+                throw IOException("Archive $archive has no ${alpha.fileName} beside its ${colour.fileName}.")
+            }
+            return PackedArchive(JagexJpeg.join(Files.readAllBytes(colour), Files.readAllBytes(alpha)), ids)
         }
         val folder = directory.resolve(archive.toString())
         if (!Files.isRegularFile(folder.resolve(METADATA))) {
@@ -120,23 +144,29 @@ object SpriteCodec : SourceCodec {
     }
 
     override fun archiveOf(path: String): Int? {
-        val separator = path.indexOf('/')
+        val name = SourceFiles.guarded(path) ?: path
+        val separator = name.indexOf('/')
         if (separator < 0) {
-            if (!path.endsWith(JPEG_EXTENSION)) {
-                return null
+            // A JPEG archive is two files at the top of the index directory, and the alpha half's
+            // name ends in the colour half's, so it has to be tried first.
+            for (extension in listOf(JPEG_ALPHA_EXTENSION, JPEG_EXTENSION)) {
+                if (name.endsWith(extension)) {
+                    return name.dropLast(extension.length).toIntOrNull()
+                }
             }
-            return path.dropLast(JPEG_EXTENSION.length).toIntOrNull()
-        }
-        if (path.indexOf('/', separator + 1) >= 0) {
             return null
         }
-        return path.substring(0, separator).toIntOrNull()
+        if (name.indexOf('/', separator + 1) >= 0) {
+            return null
+        }
+        return name.substring(0, separator).toIntOrNull()
     }
 
     override fun files(directory: Path, archive: Int): List<Path> {
-        val jpeg = directory.resolve("$archive$JPEG_EXTENSION")
-        if (Files.isRegularFile(jpeg)) {
-            return listOf(jpeg)
+        val colour = directory.resolve("$archive$JPEG_EXTENSION")
+        if (Files.isRegularFile(colour)) {
+            val alpha = directory.resolve("$archive$JPEG_ALPHA_EXTENSION")
+            return if (Files.isRegularFile(alpha)) listOf(colour, alpha) else listOf(colour)
         }
         val folder = directory.resolve(archive.toString())
         if (!Files.isDirectory(folder)) {
@@ -148,8 +178,7 @@ object SpriteCodec : SourceCodec {
     }
 
     /** Whether [data] is a JPEG container rather than a palette sprite group. */
-    fun jpeg(data: ByteArray): Boolean =
-        data.size > 2 && data[0] == JPEG_MAGIC_0 && data[1] == JPEG_MAGIC_1
+    fun jpeg(data: ByteArray): Boolean = JagexJpeg.isJpeg(data)
 
     private fun decode(archive: Int, data: ByteArray): SpriteDefinition {
         val definition = SpriteDefinition(archive)
@@ -324,8 +353,4 @@ object SpriteCodec : SourceCodec {
     private const val FRAME_TRAILER = 8
 
     private const val COLOUR = 3
-
-    private const val JPEG_MAGIC_0 = 0xff.toByte()
-
-    private const val JPEG_MAGIC_1 = 0xd8.toByte()
 }

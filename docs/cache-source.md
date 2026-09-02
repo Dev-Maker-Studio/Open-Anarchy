@@ -143,7 +143,7 @@ the JS5 multi-file layout.
 | `DefinitionJsonCodec<T>` | indices 3, 9, 13 and 16-22, and 14 of index 2's archives | one JSON file per definition, see below |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `MapCodec` | index 5 | one directory per map square, `<x>_<y>/terrain.json` and friends - see *maps* below |
-| `SpriteCodec` | indices 8, 32 and 34 | `<archive>/sprite.json` plus an indexed colour PNG per frame, or `<archive>.jpg` verbatim - see *sprites* |
+| `SpriteCodec` | indices 8, 32 and 34 | `<archive>/sprite.json` plus an indexed colour PNG per frame, or `<archive>.jpg` and `<archive>.alpha.jpg` for a JPEG archive - see *sprites* |
 | `MaterialCodec` | index 26 | `<id>.json` per material of the index's one blob - see *materials* |
 | `VerbatimGroupCodec` | nothing, in 727 | `<archive>.grp` - the decompressed group verbatim, chunk table and all. Index 0's codec until `AnimationFrameCodec` replaced it; the answer for a multi-chunk index whose split follows from nothing |
 | `DefinitionJsonCodec<T>` | indices 1, 3, 10, 16-22, 33, 35, both quick chat archives, index 23's two typed archive kinds, index 28's six and 14 of index 2's archives | one JSON file per definition, see below |
@@ -191,7 +191,8 @@ bytes:
 Thirty-two of the 37 indices' *records* are now editable - JSON, or a glTF animation per frame set for
 index 0; what is left as bytes is the assets -
 models, sprites, textures, maps, sounds, fonts, particles, billboards, materials, native libraries,
-shaders and the loading sprites - and index 2's 31 undecoded archives.
+shaders and the loading sprites - all of them as images, audio or glTF rather than as bytes - and index
+2's 31 undecoded archives.
 | 4 | `synth_sounds` | `json-synth` | | 21 | `config_spotanim` | `json-spotanim` |
 | 6 | `midi_songs` | `midi` | | 22 | `config_varbit` | `json-varbit` |
 | 11 | `midi_jingles` | `midi` | | 30 | `dlls` | `dlls` |
@@ -566,22 +567,102 @@ archives each, the same ids in both. Which one the client reads is decided at st
 `Resource.USING_JAGEX_IMAGE_FORMAT` picks index 34 when `Toolkit.createImage` cannot be used and index 32
 otherwise - so the two are the same pictures in two formats.
 
-They get `SpriteCodec`, the same codec as index 8, because most of both indices *is* the palette sprite
-format:
+They get `SpriteCodec`, the same codec as index 8, because five of index 32's archives and all of index
+34 *are* the palette sprite format:
 
 | index | archives | what they are |
 |---|---|---|
 | 34 `loading_sprites_raw` | 34 | all palette sprite groups - this is the "Jagex image format" path |
-| 32 `loading_sprites` | 21 | JPEG containers, which the client hands to `Toolkit.createImage` |
+| 32 `loading_sprites` | 29 | four component JPEGs, which the client hands to `Toolkit.createImage` |
 | 32 `loading_sprites` | 5 | palette sprite groups: 494, 495, 496, 3793 and 3794, the pre-cache fonts |
 
-A JPEG archive is not re-encoded and never could be: it is stored as `loading_sprites/3762.jpg`, byte for
-byte, with its real extension, and packed straight back out. The codec sniffs the `ff d8` magic rather
-than being told which archives are which, so a tree of either index reads the same way. The sprite
-archives are laid out exactly as index 8's - `<id>/sprite.json` and a PNG per frame - and the five font
-groups are 256 frames each, most of them zero sized.
+The sprite archives are laid out exactly as index 8's - `<id>/sprite.json` and a PNG per frame - and the
+five font groups are 256 frames each, most of them zero sized. The codec sniffs the `ff d8` magic rather
+than being told which archives are which, so a tree of either index reads the same way, and index 8's
+and 34's archives never take the JPEG path because none of them is one.
 
-**All 68 archives of the two indices round trip byte for byte**, and none needs a pristine copy.
+#### the four component JPEGs
+
+Index 32's 29 image archives are not sprites and not ordinary JPEGs either. They are **baseline JPEGs
+with four components and no Adobe APP14 marker**, and all 29 have the same frame:
+
+```
+ffdb(67) ffdb(67)     the standard IJG luminance and chrominance tables, scaled 0.5, i.e. q75
+ffc0(20) id1 2x2 q0   Y,     full resolution
+         id2 1x1 q1   Cb,    subsampled 2:1 both ways
+         id3 1x1 q1   Cr,    subsampled 2:1 both ways
+         id4 2x2 q0   alpha, full resolution, quantised and coded like luminance
+ffc4(31) ffc4(181)    the standard DC and AC luminance tables, ids 0
+ffc4(31) ffc4(181)    the standard DC and AC chrominance tables, ids 1
+ffda(14)              one baseline scan interleaving all four, then EOI
+```
+
+The fourth component is an **alpha plane**, and nothing in the file says so. Four components with no
+Adobe marker is what every standard viewer types as CMYK or YCCK, which is why opening one of these
+shows a cyan and magenta RuneScape logo; `ImageIO.read` and `Toolkit.createImage` do not even guess
+wrong, they refuse - `libjpeg` types the stream `JCS_CMYK`, AWT asks it for RGB and it throws
+`Unsupported color conversion request`.
+
+The client's rules, which are worth writing down because they are *not in the client*:
+`NativeSprite.fromPixelgrabber` hands the container bytes to `Toolkit.getDefaultToolkit().createImage`
+and grabs `TYPE_INT_ARGB` ints back with a `PixelGrabber`, so there is no YCbCr matrix, no APP14
+handling and no alpha branch anywhere in it - the platform decoder does all of it, and the alpha reaches
+the GPU as `GL_BGRA` straight from those ints, un-premultiplied. The client knows the path is
+unreliable: `NativeSprite.supportsGzippedSprites` decodes one embedded 1x1 file of exactly this shape at
+startup and, when AWT throws, sets `Resource.USING_JAGEX_IMAGE_FORMAT` and reads index 34 instead. On
+any modern JVM that probe fails, so index 34 is the branch that actually runs - and is therefore an
+independent copy of the same 34 pictures to check a decoder against. Measured from the files and
+confirmed against it:
+
+- components 1 to 3 are `Y`, `Cb`, `Cr` with the usual 128 offset on the chroma planes, converted by
+  the standard JFIF (ITU-R BT.601) matrix;
+- component 4 is **straight alpha**: 255 opaque, no inversion, no offset. 27 of the 29 are a constant
+  255; 3764 and 3765 hold the sprite's silhouette at 255 on a 0 ground, which would be inside out were
+  it `255 - v`;
+- no colour transform applies, because with no Adobe marker there is no transform flag to apply one.
+
+#### stored as two ordinary JPEGs
+
+A JPEG archive is stored as **two files, both of which any viewer or editor opens**:
+
+```
+loading_sprites/3770.jpg         Y, Cb and Cr as a three component baseline JPEG
+loading_sprites/3770.alpha.jpg   the fourth component as a one component greyscale baseline JPEG
+```
+
+`JagexJpeg` splits and joins them and `BaselineJpeg` is how: it undoes only the *entropy* coding - the
+Huffman codes, the DC predictors, the run lengths, the byte stuffing - and leaves every coefficient
+exactly as it was quantised, in the zigzag order it was coded in. Nothing is dequantised, inverse
+transformed or re-compressed, and each half keeps the original's quantisation tables, Huffman tables and
+sampling factors, so the two together rebuild the archive **byte for byte**. That is why neither half
+needs a `.pristine` copy beside it - re-encoding pixels would have needed one, and doubling every
+loading screen on disk to hold it.
+
+The one thing a standalone one component JPEG cannot hold is the block grid's **MCU padding**. In the
+interleaved four component scan a 2x2 component is stored on the MCU grid, which for six files (3764,
+3765, 3773, 3774, 3775, 3776) runs a block past the image; alone in its own frame the alpha is coded on
+its own smaller grid and those blocks have nowhere to go. They are not information - they are what
+`libjpeg`'s `compress_data` fabricates at an edge: all AC zero, and the DC copied from the block before
+it, which for a whole dummy row is the last block of the row above *within the same MCU*. `join`
+rebuilds them, and byte for byte parity on those six files is the proof the rule is the right one.
+
+**On edit**, the guarantee changes shape but not kind. Re-save either half in any editor - its own
+quantisation tables, its own Huffman tables, a JFIF `APP0`, a different subsampling - and `pack` joins
+whatever coefficients and tables the two files now carry into one four component file the client
+decodes. The alpha's tables are matched against the colour half's by content and share an id where they
+are the same table, which is what reproduces Jagex's own two `ffdb` and four `ffc4` segments untouched,
+and take an id of their own where they are not. There is no re-compression on the unedited path and
+exactly one on the edited one, which is the editor's own.
+
+**All 68 archives of the two indices round trip byte for byte**, and none needs a pristine copy. The 29
+JPEGs cost 2.7% more on disk as two files than as one (332,724 cache bytes become 341,663), almost all
+of it the alpha half's duplicated table headers. `LoadingScreenCodecTest` is the measurement: the 29
+byte identical rebuilds, both halves through `javax.imageio` with no application segment in either, the
+decoded pixels against index 34's palette copy of the same picture - within 1.6 to 10.3 levels per
+channel, where a CMYK reading is off by ninety and more - and a re-saved colour or alpha half joining
+into a four component file whose pixels and alpha come back where they were put. It also writes every
+screen to `build/loading-screens` as the two halves plus a PNG of each, which is how the tree's files
+are regenerated after a change to the codec.
 
 ### textures
 
@@ -877,9 +958,9 @@ pristine.
 | 9 | `textures` | `json-texture` | 2,591 | 2,591 | 0 | 2,591 |
 | 13 | `fontmetrics` | `json-fontmetrics` | 27 | 27 | 0 | 27 |
 | 26 | `materials` | `json-material` | 1 | 1 | 0 | 2,591 |
-| 32 | `loading_sprites` | `sprite-png` | 34 | 34 | 0 | 998 |
+| 32 | `loading_sprites` | `sprite-png` | 34 | 34 | 0 | 1,027 |
 | 34 | `loading_sprites_raw` | `sprite-png` | 34 | 34 | 0 | 1,027 |
-| **total** | | | **14,758** | **14,758** | **0** | **40,990** |
+| **total** | | | **14,758** | **14,758** | **0** | **41,019** |
 
 **14,758 archives, all byte identical, no residuals and no pristine copies anywhere.** The files are 63 MB
 in total, and the codecs' own cost over the whole cache, single threaded, is 9.8 s - 8.6 s of it the

@@ -17,7 +17,7 @@ import world.gregs.voidps.cache.source.IndexNames
  * | index | directory | codec | layout |
  * |---|---|---|---|
  * | 8 | `sprites` | [SpriteCodec] | `<id>/sprite.json` and an indexed colour PNG per frame |
- * | 32 | `loading_sprites` | [SpriteCodec] | the same, or `<id>.jpg` verbatim for a JPEG archive |
+ * | 32 | `loading_sprites` | [SpriteCodec] | the same, or `<id>.jpg` plus `<id>.alpha.jpg` for a JPEG archive |
  * | 34 | `loading_sprites_raw` | [SpriteCodec] | the same; every archive here is a palette sprite |
  * | 9 | `textures` | [DefinitionJsonCodec] | `<id>.json`, the procedural operation graph |
  * | 13 | `fontmetrics` | [DefinitionJsonCodec] | `<id>.json`, the glyph advances and padding |
