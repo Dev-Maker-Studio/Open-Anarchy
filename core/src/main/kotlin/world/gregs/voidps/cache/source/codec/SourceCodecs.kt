@@ -9,9 +9,9 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Three layers, in order of increasing authority:
  *
- * 1. **Built ins.** The raw codecs for the indices nothing better exists for, [VerbatimGroupCodec] for
- *    index 0, [ConfigCodec] for index 2 and a [DefinitionJsonCodec] for each of the twenty-two definition
- *    types that have a byte exact encoder ([DefinitionCodecs]).
+ * 1. **Built ins.** The raw codecs for the indices nothing better exists for, [ConfigCodec] for index 2, a
+ *    [DefinitionJsonCodec] for each of the twenty-two definition types that have a byte exact encoder
+ *    ([DefinitionCodecs]), and [MiscCodecs] for the eight other indices that hold a decodable type.
  * 2. **Providers.** A module whose codec cannot live in core - the `cs2` module owns index 12, and core
  *    must not depend on `cs2` - declares it through [SourceCodecProvider] and `META-INF/services`. They
  *    are loaded once, the first time any codec is looked up, so a module is claimed by being on the
@@ -80,8 +80,6 @@ object SourceCodecs {
         codecs.clear()
         explicit.clear()
         loaded = false
-        // Three chunks per archive that nothing can recompute, so the group is kept whole.
-        codecs[Index.ANIMATION_FRAMES] = VerbatimGroupCodec
         // Forty-five unrelated definition types, one directory each, fourteen of them typed.
         codecs[Index.CONFIGS] = ConfigCodec
         // Indices whose archives hold more than one file and nothing better than bytes to say about it.
@@ -90,6 +88,8 @@ object SourceCodecs {
         }
         // The definition indices, as editable JSON.
         DefinitionCodecs.register()
+        // Animation frames and skeletons, huffman, the world map, quick chat, defaults, tips, cutscenes.
+        MiscCodecs.register()
     }
 
     /** A built in codec: a provider may still replace it, an explicit [register] always does. */

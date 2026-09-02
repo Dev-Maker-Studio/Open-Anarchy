@@ -8,6 +8,7 @@ import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import world.gregs.voidps.cache.definition.DefinitionRecord
 import world.gregs.voidps.cache.definition.KeyedValue
 import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
 import world.gregs.voidps.cache.definition.data.InterfaceComponentSetting
@@ -99,10 +100,22 @@ internal class DefinitionJson private constructor(private val properties: List<P
         private val DERIVED = setOf(
             // ClanVarDefinition.typeChar is the descriptor byte the file holds; CS2Type.forJagexDesc of it
             // is many to one, has no JSON form, and is what the encoder is careful never to use.
-            "world.gregs.voidps.cache.definition.data.ClanVarDefinition.type"
+            "world.gregs.voidps.cache.definition.data.ClanVarDefinition.type",
+            // A world map area's bounds are the extremes of its sections, which the file does carry.
+            "world.gregs.voidps.cache.definition.data.WorldMapDefinition.minX",
+            "world.gregs.voidps.cache.definition.data.WorldMapDefinition.minY",
+            "world.gregs.voidps.cache.definition.data.WorldMapDefinition.maxX",
+            "world.gregs.voidps.cache.definition.data.WorldMapDefinition.maxY",
+            // The zoom byte is rawZoom; anInt9547 is it with the client's 255 to 0 fold applied.
+            "world.gregs.voidps.cache.definition.data.WorldMapDefinition.anInt9547"
         )
 
-        /** The record classes a definition field may hold, written as nested objects. */
+        /**
+         * The record classes that predate [DefinitionRecord] and are named here instead.
+         *
+         * They write their null fields as `null`, which is what the trees that already exist hold, so
+         * they stay listed rather than being given the marker. Anything new implements the marker.
+         */
         private val NESTED = setOf(
             InterfaceComponentSetting::class.java,
             InterfaceComponentHook::class.java,
@@ -164,10 +177,12 @@ internal class DefinitionJson private constructor(private val properties: List<P
         private fun simple(type: Class<*>): ValueCodec? = when (type) {
             Int::class.javaPrimitiveType, Integer::class.java -> IntCodec
             Long::class.javaPrimitiveType, JavaLong::class.java -> LongCodec
-            Short::class.javaPrimitiveType -> ShortCodec
-            Byte::class.javaPrimitiveType -> ByteCodec
-            Char::class.javaPrimitiveType -> CharCodec
-            Boolean::class.javaPrimitiveType -> BooleanCodec
+            Short::class.javaPrimitiveType, Short::class.javaObjectType -> ShortCodec
+            Byte::class.javaPrimitiveType, Byte::class.javaObjectType -> ByteCodec
+            Char::class.javaPrimitiveType, Char::class.javaObjectType -> CharCodec
+            // The boxed form is what a nullable field declares, and a nullable field is how a record
+            // says "the file did not carry this" - see DefinitionRecord.
+            Boolean::class.javaPrimitiveType, Boolean::class.javaObjectType -> BooleanCodec
             String::class.java -> StringCodec
             Any::class.java -> AnyCodec
             IntArray::class.java -> ArrayCodec.INTS
@@ -179,8 +194,10 @@ internal class DefinitionJson private constructor(private val properties: List<P
             // The only byte[][] is a shadowed payload list: opaque record bytes, so hex, not numbers.
             Array<ByteArray>::class.java -> ObjectArrayCodec(ByteArray::class.java, HexCodec)
             Array<Any>::class.java -> ObjectArrayCodec(Any::class.java, AnyCodec)
-            in NESTED -> NestedCodec(type)
-            else -> null
+            in NESTED -> NestedCodec(type, nulls = true)
+            CharArray::class.java -> ArrayCodec.CHARS
+            // A record says it is one rather than being listed here; see DefinitionRecord.
+            else -> if (DefinitionRecord::class.java.isAssignableFrom(type)) NestedCodec(type) else null
         }
 
         /** The codec of a map key, map value or list element, which is never itself a map or a list. */
@@ -339,6 +356,13 @@ internal class DefinitionJson private constructor(private val properties: List<P
                     { array, index -> BooleanNode((array as BooleanArray)[index]) },
                     { items -> BooleanArray(items.size) { items[it].jsonPrimitive.boolean } }
                 )
+
+                /** Single cp1252 characters, each as a string, and the empty string for code 0. */
+                val CHARS = ArrayCodec(
+                    { (it as CharArray).size },
+                    { array, index -> CharCodec.node((array as CharArray)[index]) },
+                    { items -> CharArray(items.size) { CharCodec.value(items[it]) as Char } }
+                )
             }
         }
 
@@ -403,7 +427,11 @@ internal class DefinitionJson private constructor(private val properties: List<P
          * Its fields are mapped exactly like a definition's, and it is rebuilt through the constructor
          * that takes them all, in declaration order, since a record's fields may be read only.
          */
-        private class NestedCodec(private val type: Class<*>) : ValueCodec {
+        private class NestedCodec(
+            private val type: Class<*>,
+            /** Whether a null field is written as `null` rather than left out; see [DefinitionRecord]. */
+            private val nulls: Boolean = false
+        ) : ValueCodec {
 
             private val json = of(type)
 
@@ -416,7 +444,13 @@ internal class DefinitionJson private constructor(private val properties: List<P
                 val entries = ArrayList<Pair<String, Node>>(json.properties.size)
                 for (property in json.properties) {
                     val field = property.field.get(value)
-                    entries.add(property.name to if (field == null) NullNode else property.codec.node(field))
+                    if (field == null) {
+                        if (nulls) {
+                            entries.add(property.name to NullNode)
+                        }
+                        continue
+                    }
+                    entries.add(property.name to property.codec.node(field))
                 }
                 return ObjectNode(entries)
             }

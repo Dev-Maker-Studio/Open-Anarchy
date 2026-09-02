@@ -6,7 +6,9 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.QUICK_CHAT_MENUS
 import world.gregs.voidps.cache.Index.QUICK_CHAT_MESSAGES
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 import world.gregs.voidps.cache.definition.data.QuickChatPhraseDefinition
+import world.gregs.voidps.cache.definition.encoder.QuickChatPhraseEncoder
 import world.gregs.voidps.cache.definition.data.QuickChatType
 
 class QuickChatPhraseDecoder : DefinitionDecoder<QuickChatPhraseDefinition>(QUICK_CHAT_MESSAGES) {
@@ -50,8 +52,14 @@ class QuickChatPhraseDecoder : DefinitionDecoder<QuickChatPhraseDefinition>(QUIC
                     type
                 }
             }
+            4 -> searchable = false
+            else -> error("Unhandled quick chat phrase opcode $opcode for definition $id.")
         }
     }
+
+    /** The order [QuickChatPhraseEncoder] writes on its own; see [OpcodeOrdered.opcodeOrder]. */
+    override fun canonicalOpcodes(definition: QuickChatPhraseDefinition): IntArray =
+        QuickChatPhraseEncoder.opcodesOf(definition)
 
     override fun changeValues(definitions: Array<QuickChatPhraseDefinition>, definition: QuickChatPhraseDefinition) {
         val options = definition.responses
