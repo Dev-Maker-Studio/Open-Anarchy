@@ -7,6 +7,7 @@ import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.compress.DecompressionContext
 import world.gregs.voidps.cache.secure.VersionTableBuilder
 import world.gregs.voidps.cache.secure.Whirlpool
+import world.gregs.voidps.cache.store.ReferenceTable
 import java.io.RandomAccessFile
 
 /**
@@ -28,6 +29,8 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
     private val nameFlags: BooleanArray = BooleanArray(indexCount)
     private val archiveNameCounts: IntArray = IntArray(indexCount)
     private val fileNameCounts: IntArray = IntArray(indexCount)
+    /** [index] -> its decoded reference table, the model everything above is projected from. */
+    protected val referenceTables: Array<ReferenceTable?> = arrayOfNulls(indexCount)
 
     override lateinit var versionTable: ByteArray
 
@@ -114,95 +117,68 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
         }
         versionTable?.sector(indexId, archiveSector, whirlpool)
         val decompressed = context.decompress(archiveSector) ?: return -1
-        val reader = BufferReader(decompressed)
-        val version = reader.readUnsignedByte()
-        if (version < 5 || version > 7) {
-            throw RuntimeException("Unknown version: $version")
+        val table = ReferenceTable.decode(decompressed)
+        if (table.format >= 6) {
+            versionTable?.revision(indexId, table.revision)
         }
-        if (version >= 6) {
-            val revision = reader.readInt()
-            versionTable?.revision(indexId, revision)
-        }
-        val flags = reader.readUnsignedByte()
-        val archiveCount = if (version >= 7) reader.readBigSmart() else reader.readUnsignedShort()
-        var previous = 0
-        var highest = 0
-        val archiveIds = IntArray(archiveCount) {
-            val archiveId = if (version >= 7)
-                reader.readBigSmart() + previous
-            else
-                reader.readUnsignedShort() + previous
-            previous = archiveId
-            if (archiveId > highest) {
-                highest = archiveId
-            }
-            archiveId
-        }
+        return indexTable(indexId, table)
+    }
+
+    /**
+     * Project [table] onto the flat per-index lookups this class serves reads from, replacing
+     * whatever was there. Returns the highest archive id in the table, 0 when it is empty.
+     */
+    internal fun indexTable(indexId: Int, table: ReferenceTable): Int {
+        referenceTables[indexId] = table
+        val archiveIds = IntArray(table.archiveCount) { table.archives[it].id }
+        val highest = archiveIds.maxOrNull() ?: 0
         archives[indexId] = archiveIds
-        nameFlags[indexId] = (flags and NAME_FLAG) != 0
-        if (flags and NAME_FLAG != 0) {
-            val indexArchiveHashes = Int2IntOpenHashMap(archiveCount)
+        nameFlags[indexId] = table.named
+        archiveNameCounts[indexId] = 0
+        fileNameCounts[indexId] = 0
+        if (table.named) {
+            val indexArchiveHashes = Int2IntOpenHashMap(table.archiveCount)
             archiveHashes[indexId] = indexArchiveHashes
-            for (i in 0 until archiveCount) {
-                val archiveId = archiveIds[i]
-                val nameHash = reader.readInt()
-                hashes[nameHash] = archiveId
-                indexArchiveHashes[archiveId] = nameHash
-                if (nameHash != 0) {
+            for (entry in table.archives) {
+                hashes[entry.nameHash] = entry.id
+                indexArchiveHashes[entry.id] = entry.nameHash
+                if (entry.nameHash != 0) {
                     archiveNameCounts[indexId]++
                 }
             }
         }
-        reader.skip(archiveCount * 4)
-        if (flags and 0x8 != 0)
-            reader.skip(archiveCount * 4)
-        if (flags and WHIRLPOOL_FLAG != 0) {
-            for (i in 0 until archiveCount)
-                reader.skip(WHIRLPOOL_SIZE)
-        }
-        if (flags and 0x4 != 0)
-            reader.skip(archiveCount * 8)
-        reader.skip(archiveCount * 4) //revisions
         val archiveSizes = IntArray(highest + 1)
-        for (i in 0 until archiveCount) {
-            val id = archiveIds[i]
-            val size = if (version >= 7) reader.readBigSmart() else reader.readUnsignedShort()
-            archiveSizes[id] = size
-        }
-        fileCounts[indexId] = archiveSizes
         val fileIds = arrayOfNulls<IntArray>(highest + 1)
-        files[indexId] = fileIds
-        for (i in 0 until archiveCount) {
-            var fileId = 0
-            val archiveId = archiveIds[i]
-            val fileCount = archiveSizes[archiveId]
-            fileIds[archiveId] = IntArray(fileCount) {
-                fileId += if (version >= 7) reader.readBigSmart() else reader.readUnsignedShort()
-                fileId
-            }
-        }
-        if (flags and NAME_FLAG != 0) {
-            // File name hashes are stored in the same archive iteration order as the file-id deltas
-            // above, so the j-th hash corresponds to fileIds[archiveId][j].
-            val indexFileHashes = arrayOfNulls<Int2IntOpenHashMap>(highest + 1)
-            fileHashes[indexId] = indexFileHashes
-            for (i in 0 until archiveCount) {
-                val archiveId = archiveIds[i]
-                val fileCount = archiveSizes[archiveId]
-                val archiveFileIds = fileIds[archiveId]
-                val archiveFileHashes = Int2IntOpenHashMap(fileCount)
-                indexFileHashes[archiveId] = archiveFileHashes
-                for (j in 0 until fileCount) {
-                    val nameHash = reader.readInt()
-                    archiveFileHashes[nameHash] = archiveFileIds?.get(j) ?: j
-                    if (nameHash != 0) {
+        val indexFileHashes = if (table.named) arrayOfNulls<Int2IntOpenHashMap>(highest + 1) else null
+        for (entry in table.archives) {
+            archiveSizes[entry.id] = entry.files.size
+            fileIds[entry.id] = entry.fileIds
+            if (indexFileHashes != null) {
+                val archiveFileHashes = Int2IntOpenHashMap(entry.files.size)
+                indexFileHashes[entry.id] = archiveFileHashes
+                for (file in entry.files) {
+                    archiveFileHashes[file.nameHash] = file.id
+                    if (file.nameHash != 0) {
                         fileNameCounts[indexId]++
                     }
                 }
             }
         }
+        fileCounts[indexId] = archiveSizes
+        files[indexId] = fileIds
+        if (indexFileHashes != null) {
+            fileHashes[indexId] = indexFileHashes
+        }
         return highest
     }
+
+    override fun referenceTable(index: Int): ReferenceTable? = referenceTables.getOrNull(index)
+
+    override fun archiveVersion(index: Int, archive: Int): Int =
+        referenceTables.getOrNull(index)?.archive(archive)?.version ?: -1
+
+    override fun archiveCrc(index: Int, archive: Int): Int =
+        referenceTables.getOrNull(index)?.archive(archive)?.crc ?: 0
 
     override fun indexCount() = indices.size
 
@@ -275,9 +251,6 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
     }
 
     companion object {
-        private const val NAME_FLAG = 0x1
-        private const val WHIRLPOOL_FLAG = 0x2
-
         const val INDEX_SIZE = 6
         const val WHIRLPOOL_SIZE = 64
         internal const val SECTOR_SIZE = 520
@@ -285,8 +258,6 @@ abstract class ReadOnlyCache(indexCount: Int) : Cache {
         internal const val SECTOR_DATA_SIZE_SMALL = 512
         internal const val SECTOR_HEADER_SIZE_BIG = 10
         internal const val SECTOR_DATA_SIZE_BIG = 510
-
-        private fun BufferReader.readSmart(version: Int) = if (version >= 7) readBigSmart() else readUnsignedShort()
 
         /**
          * Reads a section of a cache's archive

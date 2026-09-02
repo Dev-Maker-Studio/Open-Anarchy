@@ -86,8 +86,12 @@ class MemoryCache(indexCount: Int) : ReadOnlyCache(indexCount) {
             indexCount: Int,
             versionTable: VersionTableBuilder?,
             xteas: Map<Int, IntArray>?,
-            threadUsage: Double
+            threadUsage: Double,
+            writable: Boolean,
+            exponent: BigInteger?,
+            modulus: BigInteger?
         ): Cache {
+            require(!writable) { "An in-memory cache cannot be opened writable." }
             val cache = MemoryCache(indexCount)
             val processors = (Runtime.getRuntime().availableProcessors() * threadUsage).toInt().coerceAtLeast(1)
             newFixedThreadPoolContext(processors, "cache-loader").use { dispatcher ->
