@@ -4,6 +4,7 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.DefinitionEncoder
 import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.definition.data.MapTile
+import world.gregs.voidps.cache.definition.encoder.MapEffectEncoder.writeEffects
 
 /**
  * Encodes the terrain block of a map archive (`m{regionX}_{regionY}`), the inverse of
@@ -20,8 +21,19 @@ import world.gregs.voidps.cache.definition.data.MapTile
  * ```
  *
  * Opcode 1 **terminates** the tile record after its height byte - it is not a field opcode followed by a
- * separate 0 terminator. Emitting both desynchronises the whole 4 * 64 * 64 stream, because the following
- * tile consumes the stray 0 as its own terminator, so every later tile decodes as some other tile's data.
+ * separate 0 terminator. Emitting both desynchronises the whole `levels * 64 * 64` stream, because the
+ * following tile consumes the stray 0 as its own terminator, so every later tile decodes as some other
+ * tile's data.
+ *
+ * ## The record order is the shipped order
+ *
+ * A tile's records are written **overlay, settings, underlay, terminator**, which is the order every
+ * tile of every archive in the 727 cache lists them in: 49,332,224 tiles across the 2,407 surface and
+ * 1,208 underwater squares use one of 16 subsequences of that order and not one of them repeats an
+ * opcode class (`MapCodecParityTest` measures it). So a decoded archive re-encodes byte for byte, and
+ * that is the property the cache source tree's map codec rests on. Emitting the fields in any other
+ * order would still decode to the same tiles - it is what this encoder used to do - but it would rewrite
+ * every byte of a region nobody edited.
  *
  * ## Height, and the one value that is not what it looks like
  *
@@ -37,15 +49,11 @@ import world.gregs.voidps.cache.definition.data.MapTile
  * Consequently a tile that carries an explicit height byte of `0` (which the shipped cache never does) loses
  * its height record here. That is the only tile field this encoder cannot represent.
  *
- * ## Fidelity
+ * ## Levels and the environment block
  *
- * Output is semantically identical to the input, not byte-identical to the shipped archive: the shipped files
- * order the field opcodes differently (overlay before settings) and contain redundant records, so re-encoding
- * a region rewrites every byte of its terrain block even if nothing was edited. Verified over all 2407 map
- * archives (39,436,288 tiles) by `MapEncoderRoundTripTest`: decoding the output reproduces every tile field
- * for 2407/2407 archives, while only 79/2407 come out byte-identical. If byte-identity is required (to prove
- * an edit touched nothing else), keep a byte-faithful echo of the original block and merge edits into it, the
- * way `tools` does for map environments with `EnvironmentLayout`.
+ * [MapDefinition.levels] levels are written, so an underwater square writes the single level its file
+ * holds, and [MapDefinition.effects] follows the tiles verbatim, which is what makes this the whole
+ * archive rather than only its terrain.
  */
 class MapTileEncoder : DefinitionEncoder<MapDefinition> {
 
@@ -53,24 +61,27 @@ class MapTileEncoder : DefinitionEncoder<MapDefinition> {
         // An unset id means the caller never populated the definition; writing the resulting empty block
         // would silently produce a valid looking archive that decodes to a blank region.
         require(definition.id != -1) { "Map definition has no region id, refusing to encode a blank terrain block." }
-        for (level in 0 until 4) {
-            for (localX in 0 until 64) {
-                for (localY in 0 until 64) {
+        require(definition.levels in 0..MapDefinition.LEVELS) {
+            "Map ${definition.id} claims ${definition.levels} levels, outside 0..${MapDefinition.LEVELS}."
+        }
+        for (level in 0 until definition.levels) {
+            for (localX in 0 until MapDefinition.SIZE) {
+                for (localY in 0 until MapDefinition.SIZE) {
                     val tile = definition.getTile(localX, localY, level)
                     require(tile.underlayId in 0..MAX_UNDERLAY) { describe(definition, localX, localY, level, "underlay ${tile.underlayId} is not in 0..$MAX_UNDERLAY") }
                     require(tile.settings in 0..MAX_SETTINGS) { describe(definition, localX, localY, level, "settings ${tile.settings} is not in 0..$MAX_SETTINGS") }
                     require(consistent(tile)) { describe(definition, localX, localY, level, "overlay opcode ${tile.attrOpcode} disagrees with shape ${tile.overlayPath} rotation ${tile.overlayRotation}") }
-                    if (tile.underlayId != 0) {
-                        writeByte(tile.underlayId + 81)
-                    }
-                    if (tile.settings != 0) {
-                        writeByte(tile.settings + 49)
-                    }
                     val opcode = overlayOpcode(tile)
                     if (opcode != 0) {
                         require(opcode in 2..49) { describe(definition, localX, localY, level, "overlay shape ${tile.overlayPath} rotation ${tile.overlayRotation} needs opcode $opcode, outside 2..49") }
                         writeByte(opcode)
                         writeByte(tile.overlayId)
+                    }
+                    if (tile.settings != 0) {
+                        writeByte(tile.settings + 49)
+                    }
+                    if (tile.underlayId != 0) {
+                        writeByte(tile.underlayId + 81)
                     }
                     // Opcode 1 is itself the terminator - no trailing 0 may follow it.
                     if (tile.height != 0) {
@@ -82,6 +93,7 @@ class MapTileEncoder : DefinitionEncoder<MapDefinition> {
                 }
             }
         }
+        writeEffects(definition.effects)
     }
 
     /**

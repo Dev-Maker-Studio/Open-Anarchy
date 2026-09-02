@@ -4,6 +4,7 @@ import org.darkan.core.EnvVars
 import org.darkan.core.map.MapXteas
 import world.gregs.voidps.buffer.write.BufferWriter
 import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.FileCache
 import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.definition.data.MapObject
@@ -27,9 +28,10 @@ import kotlin.test.fail
  * encoder cannot reproduce is terrain or objects silently corrupted on save. The tile block is especially
  * unforgiving: it has no per tile framing, so a single stray byte shifts every following tile in the region.
  *
- * The bar here is that decoding the output reproduces every field, not that the output is byte-identical to
- * the shipped archive - the shipped files order their opcodes differently and carry redundant records. Byte
- * identity is reported for information only.
+ * The bar is byte identity: the encoders write a tile's records and a location group in the order the
+ * shipped files use, so re-encoding a decoded archive reproduces it exactly. That is what
+ * `MapCodecParityTest` and the cache source tree's map codec rest on, so it is asserted here as well as
+ * the weaker property that decoding the output reproduces every field.
  */
 class MapEncoderRoundTripTest {
 
@@ -45,7 +47,9 @@ class MapEncoderRoundTripTest {
         for (region in regions(cache, "m")) {
             val data = cache.data(Index.MAPS, region.archive) ?: continue
             archives++
-            val definition = MapTileDecoder.decode(data, region.id)
+            // The whole archive, environment block included: encoding a definition decoded without
+            // it would drop the tail of every region that has one.
+            val definition = MapTileDecoder.decodeArchive(data, region.id)
 
             val writer = BufferWriter(TILE_CAPACITY)
             with(encoder) { writer.encode(definition) }
@@ -54,7 +58,7 @@ class MapEncoderRoundTripTest {
                 byteIdentical++
             }
 
-            val decoded = MapTileDecoder.decode(encoded, region.id)
+            val decoded = MapTileDecoder.decodeArchive(encoded, region.id)
             if (!decoded.tiles.contentEquals(definition.tiles)) {
                 mismatched++
                 if (mismatched <= EXAMPLE_LIMIT) {
@@ -71,6 +75,7 @@ class MapEncoderRoundTripTest {
         if (mismatched != 0) {
             fail("Terrain encoder does not round trip: $mismatched of $archives archives decode differently$examples")
         }
+        assertEquals(archives, byteIdentical, "every terrain archive must re-encode byte for byte")
     }
 
     @Test
@@ -122,6 +127,7 @@ class MapEncoderRoundTripTest {
         if (mismatched != 0) {
             fail("Object encoder does not round trip: $mismatched of $archives archives decode differently$examples")
         }
+        assertEquals(archives, byteIdentical, "every object archive must re-encode byte for byte")
     }
 
     /**
@@ -186,7 +192,12 @@ class MapEncoderRoundTripTest {
             }
         }
         return try {
-            decoder.decode(data, ByteArray(64 * 64 * 4), id shr 8, id and 0xff)
+            // 48 archives are padded past their last record; the padding is part of the file, so it
+            // is kept rather than dropped - without it those 48 re-encode two to twenty bytes short.
+            val end = decoder.decode(data, ByteArray(64 * 64 * 4), id shr 8, id and 0xff)
+            if (end < data.size) {
+                definition.trailing = data.copyOfRange(end, data.size)
+            }
             definition
         } catch (e: Exception) {
             null
@@ -209,13 +220,21 @@ class MapEncoderRoundTripTest {
         return regions
     }
 
+    /**
+     * The packed cache, opened directly rather than through [Cache.get].
+     *
+     * `Cache.get()` is an in memory cache by default (`MEM_CACHE`), and that one decrypts the map
+     * archives at load time with the keys it was built with - none - so it answers null for every
+     * encrypted `l<x>_<y>`. A [FileCache] takes the keys per call, which is what lets this test
+     * cover all 2,399 keyed location archives instead of the 375 that are stored in the clear.
+     */
     private fun cache(): Cache? {
         val directory = File(EnvVars.cachePath)
         if (!directory.isDirectory) {
             println("Skipping map round trip; no cache at ${directory.absolutePath}")
             return null
         }
-        return Cache.get()
+        return FileCache.load(directory.absolutePath)
     }
 
     private fun show(tile: MapTile) =

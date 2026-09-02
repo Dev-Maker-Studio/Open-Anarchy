@@ -7,6 +7,7 @@ import world.gregs.voidps.cache.MapSquare
 import world.gregs.voidps.cache.secure.CRC
 import world.gregs.voidps.cache.source.codec.Owner
 import world.gregs.voidps.cache.source.codec.PackedArchive
+import world.gregs.voidps.cache.source.codec.RawArchiveCodec
 import world.gregs.voidps.cache.source.codec.RawFilesCodec
 import world.gregs.voidps.cache.source.codec.SourceArchive
 import world.gregs.voidps.cache.source.codec.SourceCodec
@@ -49,6 +50,11 @@ class SourceTreeTest {
     @BeforeTest
     fun setup() {
         SourceCodecs.reset()
+        // Index 5 is the framework's fixture for names, keys and an archive nothing can open, and
+        // its archives here are three bytes of nothing rather than map squares. The map codec would
+        // (rightly) refuse to decode them, so this test keeps the raw layout it was written against;
+        // MapCodecParityTest is where the map codec meets real map data.
+        SourceCodecs.register(Index.MAPS, RawArchiveCodec)
         val root = Files.createTempDirectory("cache-source").toFile()
         packed = File(root, "packed")
         tree = File(root, "tree")
