@@ -2,12 +2,14 @@
 
 package world.gregs.voidps.cache.store
 
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream
 import world.gregs.voidps.cache.ReadOnlyCache
 import world.gregs.voidps.cache.compress.BZIP2Compressor
 import world.gregs.voidps.cache.compress.BZip2Encoder
 import world.gregs.voidps.cache.secure.CRC
 import world.gregs.voidps.cache.secure.Whirlpool
 import world.gregs.voidps.cache.secure.Xtea
+import java.io.ByteArrayOutputStream
 import java.util.zip.CRC32
 import java.util.zip.Deflater
 import java.util.zip.Inflater
@@ -162,6 +164,9 @@ class Container(
         /** libbzip2 block size the cache was built with, in hundreds of kilobytes. */
         private const val BZIP2_BLOCK_SIZE = 1
 
+        /** `BZh<n>`, which a cache container omits. */
+        private const val BZIP2_MAGIC_SIZE = 4
+
         private val inflaters = ThreadLocal.withInitial { Inflater(true) }
 
         private val bzip2 = ThreadLocal.withInitial { BZIP2Compressor() }
@@ -214,14 +219,39 @@ class Container(
          * gzip is written exactly the way the cache stores it: a standard ten byte header with a
          * zero MTIME and XFL, the [gzipOs] operating system byte, a raw deflate stream at level
          * 6 with the default strategy, and the eight byte little endian CRC32 and size trailer.
+         *
+         * bzip2 is written at block size 1 with the four byte magic stripped, the way the cache
+         * stores it; [bzip2Variant] picks the encoder, which matters only for the two reference
+         * tables commons-compress produced - see [BZip2Variant].
          */
-        fun compress(data: ByteArray, compression: Compression, version: Int?, gzipOs: Int = 0): Container {
+        fun compress(
+            data: ByteArray,
+            compression: Compression,
+            version: Int?,
+            gzipOs: Int = 0,
+            bzip2Variant: BZip2Variant = BZip2Variant.LIBBZIP2
+        ): Container {
             val payload = when (compression) {
                 Compression.NONE -> data.copyOf()
                 Compression.GZIP -> gzip(data, gzipOs)
-                Compression.BZIP2 -> BZip2Encoder.compress(data, BZIP2_BLOCK_SIZE)
+                Compression.BZIP2 -> bzip2(data, bzip2Variant)
             }
             return Container(compression, payload, data.size, version, gzipOs)
+        }
+
+        private fun bzip2(data: ByteArray, variant: BZip2Variant): ByteArray = when (variant) {
+            BZip2Variant.LIBBZIP2 -> BZip2Encoder.compress(data, BZIP2_BLOCK_SIZE)
+            BZip2Variant.COMMONS -> commonsBzip2(data)
+        }
+
+        /** commons-compress writes the `BZh<n>` magic the cache strips; everything after it is the payload. */
+        private fun commonsBzip2(data: ByteArray): ByteArray {
+            val output = ByteArrayOutputStream(maxOf(64, data.size / 2))
+            BZip2CompressorOutputStream(output, BZIP2_BLOCK_SIZE).use { stream ->
+                stream.write(data)
+            }
+            val stream = output.toByteArray()
+            return stream.copyOfRange(BZIP2_MAGIC_SIZE, stream.size)
         }
 
         private fun gzip(data: ByteArray, os: Int): ByteArray {

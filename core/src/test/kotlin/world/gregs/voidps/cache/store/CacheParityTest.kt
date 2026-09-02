@@ -25,11 +25,13 @@ import kotlin.test.fail
 
 /**
  * Proves the store layer against the real 727 cache: every reference table and every container
- * in it has to come back out of [ReferenceTable], [Container] and [ArchiveGroup] byte for byte.
+ * in it has to come back out of [ReferenceTable], [Container] and [ArchiveGroup] byte for byte,
+ * recompression included.
  *
- * bzip2 containers are counted and skipped for the recompression half of the check while
- * [world.gregs.voidps.cache.compress.BZip2Encoder] is still being ported - their decode, group
- * split and group join are still checked, as are their table CRCs.
+ * bzip2 is checked with both encoders. Every one of the 3,796 bzip2 archives and eleven of the
+ * thirteen bzip2 reference tables reproduce with the libbzip2 port; the tables of index 2 and
+ * index 9 were written by commons-compress and reproduce only with that, which is what
+ * [BZip2Variant] exists for and what this test pins down.
  *
  * Skipped entirely when there is no cache to test against, like the other whole-cache tests.
  */
@@ -38,6 +40,7 @@ class CacheParityTest {
     @Test
     fun `every reference table re-encodes byte for byte`() {
         val directory = cacheDirectory() ?: return
+        val commons = sortedSetOf<Int>()
         FileStore.open(directory).use { store ->
             var tables = 0
             for (index in 0 until store.indexCount()) {
@@ -51,14 +54,25 @@ class CacheParityTest {
                     table.encode(),
                     "index $index's reference table (format ${table.format}, flags ${table.flags}) does not re-encode"
                 )
+                val variant = variant(bytes, container, decompressed)
+                assertNotNull(variant, "index $index's reference table container does not recompress")
+                if (variant == BZip2Variant.COMMONS) {
+                    commons.add(index)
+                }
                 tables++
                 println(
                     "index ${index.toString().padStart(2)} table: format=${table.format} revision=${table.revision} " +
                         "flags=${table.flags} archives=${table.archiveCount} " +
-                        "files=${table.archives.sumOf { it.files.size }} compression=${container.compression}"
+                        "files=${table.archives.sumOf { it.files.size }} compression=${container.compression} " +
+                        "bzip2=${if (container.compression == Compression.BZIP2) variant.id else "-"}"
                 )
             }
             assertEquals(store.indexCount(), tables, "every index should have a reference table")
+            assertEquals(
+                COMMONS_TABLES,
+                commons,
+                "only these reference tables were written by commons-compress rather than libbzip2"
+            )
         }
     }
 
@@ -81,7 +95,7 @@ class CacheParityTest {
                                     "index ${index.toString().padStart(2)}: ${counts.archives.get()} archives, " +
                                         "${counts.multiFile.get()} multi-file, ${counts.chunked.get()} multi-chunk, " +
                                         "${counts.encrypted.get()} encrypted, ${counts.recompressed.get()} recompressed, " +
-                                        "${counts.skipped.get()} bzip2 skipped, ${counts.undecryptable.get()} unkeyed"
+                                        "${counts.bzip2.get()} bzip2, ${counts.undecryptable.get()} unkeyed"
                                 )
                                 totals.add(counts)
                             }
@@ -96,14 +110,19 @@ class CacheParityTest {
         println(
             "totals: ${totals.archives.get()} archives, ${totals.multiFile.get()} multi-file, " +
                 "${totals.chunked.get()} multi-chunk, ${totals.encrypted.get()} encrypted, " +
-                "${totals.recompressed.get()} recompressed byte-identical, ${totals.skipped.get()} bzip2 skipped, " +
+                "${totals.recompressed.get()} recompressed byte-identical, ${totals.bzip2.get()} bzip2, " +
                 "${totals.undecryptable.get()} without a usable xtea key"
         )
         if (failures.isNotEmpty()) {
             fail("${failures.size} archives are not reproducible:\n  " + failures.take(EXAMPLES).joinToString("\n  "))
         }
         assertTrue(totals.archives.get() > 100_000, "the cache should have far more archives than that")
-        assertTrue(totals.recompressed.get() > 100_000, "most containers should have been recompressed")
+        assertEquals(
+            totals.archives.get() - totals.undecryptable.get(),
+            totals.recompressed.get(),
+            "every container that could be opened should have recompressed byte for byte"
+        )
+        assertEquals(BZIP2_ARCHIVES, totals.bzip2.get(), "the cache's bzip2 archive count")
         assertTrue(
             totals.undecryptable.get() <= UNKEYED_LIMIT,
             "${totals.undecryptable.get()} archives could not be decrypted, more than the $UNKEYED_LIMIT known bad keys"
@@ -163,18 +182,37 @@ class CacheParityTest {
                 assertEquals(ids.size, split.files.size)
                 assertContentEquals(group, ArchiveGroup.join(split.files, split.chunks), "the group does not rejoin")
 
+                val rebuilt = Container.compress(group, container.compression, container.version, container.gzipOs)
+                assertContentEquals(bytes, rebuilt.encode(keys), "the container does not recompress")
+                counts.recompressed.incrementAndGet()
                 if (container.compression == Compression.BZIP2) {
-                    counts.skipped.incrementAndGet()
-                } else {
-                    val rebuilt = Container.compress(group, container.compression, container.version, container.gzipOs)
-                    assertContentEquals(bytes, rebuilt.encode(keys), "the container does not recompress")
-                    counts.recompressed.incrementAndGet()
+                    counts.bzip2.incrementAndGet()
                 }
             } catch (e: Throwable) {
                 failures.add("index $index archive ${entry.id}: ${e.message}")
             }
         }
         return counts
+    }
+
+    /**
+     * Which bzip2 encoder reproduces [bytes], or null when the container does not recompress at
+     * all. A container that is not bzip2 has only one way to be written and answers with the
+     * default when that way is right.
+     */
+    private fun variant(bytes: ByteArray, container: Container, data: ByteArray): BZip2Variant? {
+        val variants = if (container.compression == Compression.BZIP2) {
+            BZip2Variant.entries
+        } else {
+            listOf(BZip2Variant.LIBBZIP2)
+        }
+        for (variant in variants) {
+            val rebuilt = Container.compress(data, container.compression, container.version, container.gzipOs, variant)
+            if (rebuilt.encode().contentEquals(bytes)) {
+                return variant
+            }
+        }
+        return null
     }
 
     /**
@@ -315,7 +353,7 @@ class CacheParityTest {
         val chunked = AtomicInteger()
         val encrypted = AtomicInteger()
         val recompressed = AtomicInteger()
-        val skipped = AtomicInteger()
+        val bzip2 = AtomicInteger()
         val undecryptable = AtomicInteger()
 
         fun add(other: Counts) {
@@ -324,7 +362,7 @@ class CacheParityTest {
             chunked.addAndGet(other.chunked.get())
             encrypted.addAndGet(other.encrypted.get())
             recompressed.addAndGet(other.recompressed.get())
-            skipped.addAndGet(other.skipped.get())
+            bzip2.addAndGet(other.bzip2.get())
             undecryptable.addAndGet(other.undecryptable.get())
         }
     }
@@ -335,6 +373,12 @@ class CacheParityTest {
 
         /** Map archives `data/map/xteaKeys.json` has no working key for. Eight, as of 727. */
         private const val UNKEYED_LIMIT = 16
+
+        /** The reference tables commons-compress produced; everything else is libbzip2. */
+        private val COMMONS_TABLES = sortedSetOf(Index.CONFIGS, Index.TEXTURES)
+
+        /** How many archives in the 727 cache are bzip2; its thirteen bzip2 tables are extra. */
+        private const val BZIP2_ARCHIVES = 3783
 
         /** The two index 5 archive families the client is sent keys for. */
         private val ENCRYPTED_MAP_PREFIXES = listOf("l", "n")

@@ -44,6 +44,16 @@ class FileStore private constructor(
     private val indexChannels: Array<FileChannel?> = Array(indexFiles.size) { indexFiles[it]?.channel }
     private val lock = Any()
 
+    /**
+     * Whether every [write] forces its sectors and its index entry to disk before returning.
+     *
+     * On by default, which is what makes a write crash safe. A build that creates a store from
+     * scratch turns it off: a quarter of a million archives means half a million `fsync` calls,
+     * and a crash mid-build only costs the build, which starts over anyway.
+     */
+    @Volatile
+    var durable: Boolean = true
+
     /** Number of indices the store has, which is index 255's archive count. */
     fun indexCount(): Int {
         val fromTable = ((indexChannels[REFERENCE_INDEX]?.size() ?: 0L) / INDEX_ENTRY_SIZE).toInt()
@@ -129,14 +139,21 @@ class FileStore private constructor(
 
             val sectors = reusableChain(index, archive, needed, payloadSize, big) ?: appendChain(needed)
 
-            val buffer = ByteArray(SECTOR_SIZE)
+            // A chain that runs straight through the file - which every appended chain does -
+            // is built up whole and written in one call; 520 byte writes cost more in syscalls
+            // than the data itself when a whole cache is being packed.
+            val contiguous = (1 until needed).all { sectors[it] == sectors[it - 1] + 1 }
+            val buffer = ByteArray(if (contiguous) needed * SECTOR_SIZE else SECTOR_SIZE)
             var written = 0
             for (chunk in 0 until needed) {
                 val sector = sectors[chunk]
                 val length = minOf(container.size - written, payloadSize)
                 val next = if (chunk == needed - 1) 0 else sectors[chunk + 1]
-                buffer.fill(0)
-                var offset = 0
+                var offset = if (contiguous) chunk * SECTOR_SIZE else 0
+                val start = offset
+                if (!contiguous) {
+                    buffer.fill(0)
+                }
                 if (big) {
                     putInt(buffer, offset, archive)
                     offset += 4
@@ -149,20 +166,30 @@ class FileStore private constructor(
                 putMedium(buffer, offset, next)
                 offset += 3
                 buffer[offset] = index.toByte()
-                System.arraycopy(container, written, buffer, headerSize, length)
-                data.seek(sector.toLong() * SECTOR_SIZE)
-                data.write(buffer, 0, headerSize + length)
+                System.arraycopy(container, written, buffer, start + headerSize, length)
+                if (!contiguous) {
+                    data.seek(sector.toLong() * SECTOR_SIZE)
+                    data.write(buffer, 0, headerSize + length)
+                }
                 written += length
             }
+            if (contiguous) {
+                data.seek(sectors[0].toLong() * SECTOR_SIZE)
+                data.write(buffer, 0, (needed - 1) * SECTOR_SIZE + headerSize + minOf(container.size - (needed - 1) * payloadSize, payloadSize))
+            }
             // The entry must not become visible before the sectors it points at.
-            data.fd.sync()
+            if (durable) {
+                data.fd.sync()
+            }
 
             val entry = ByteArray(INDEX_ENTRY_SIZE)
             putMedium(entry, 0, container.size)
             putMedium(entry, 3, sectors[0])
             indexFile.seek(archive.toLong() * INDEX_ENTRY_SIZE)
             indexFile.write(entry)
-            indexFile.fd.sync()
+            if (durable) {
+                indexFile.fd.sync()
+            }
             if (index == REFERENCE_INDEX && archive >= indexCount) {
                 indexCount = archive + 1
             }
@@ -183,7 +210,9 @@ class FileStore private constructor(
             }
             indexFile.seek(archive.toLong() * INDEX_ENTRY_SIZE)
             indexFile.write(ByteArray(INDEX_ENTRY_SIZE))
-            indexFile.fd.sync()
+            if (durable) {
+                indexFile.fd.sync()
+            }
         }
     }
 

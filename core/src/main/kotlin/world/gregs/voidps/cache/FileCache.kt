@@ -65,6 +65,8 @@ class FileCache(
         return result
     }
 
+    override fun container(index: Int, archive: Int): ByteArray? = store.read(index, archive)
+
     override fun data(index: Int, archive: Int, file: Int, xtea: IntArray?): ByteArray? {
         if (index >= files.size) {
             return null
