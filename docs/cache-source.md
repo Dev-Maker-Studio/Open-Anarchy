@@ -41,7 +41,7 @@ cache (2026-09-02) established what that takes:
 | bzip2 containers (3,783 archives + 13 reference tables) reproduce at block size 1 with **libbzip2 1.0.8**, except the reference tables of indices 2 and 9, which only **commons-compress** reproduces | `BZip2Encoder` is a faithful Kotlin port of libbzip2's compressor; the odd two are a recorded `bzip2` variant |
 | No LZMA. Reference tables use formats 6 and 7, flags `0x1` (names) and `0x2` (whirlpool, index 30 only) | nothing else needs encoding; the client ignores `0x4`/`0x8` anyway |
 | Every archive in indices 0-35 ends in a 2-byte version trailer; reference tables have none | the trailer is the low 16 bits of the version in the table; JS5 never sends it |
-| Index 0 groups are split into 3 chunks per archive; everything else is 1 chunk | raw multi-file groups keep their chunk layout verbatim |
+| Index 0 groups are split into 3 chunks per archive; everything else is 1 chunk | the split is the frame format's own three sections, so the animation frame codec rebuilds it; a raw multi-file group keeps its layout verbatim |
 | `l<x>_<y>` and `n<x>_<y>` map archives are XTEA encrypted; the client is sent the keys | stored decrypted with the key in metadata, re-encrypted on pack |
 | The client validates the CRC (and whirlpool where flagged) of the exact container bytes served, and the RSA-signed whirlpool of the version table | CRCs, whirlpools and the version table are always derived, never stored |
 
@@ -146,6 +146,11 @@ the JS5 multi-file layout.
 | `MapCodec` | index 5 | one directory per map square, `<x>_<y>/terrain.json` and friends - see *maps* below |
 | `SpriteCodec` | indices 8, 32 and 34 | `<archive>/sprite.json` plus an indexed colour PNG per frame, or `<archive>.jpg` verbatim - see *sprites* |
 | `MaterialCodec` | index 26 | `<id>.json` per material of the index's one blob - see *materials* |
+| `VerbatimGroupCodec` | nothing, in 727 | `<archive>.grp` - the decompressed group verbatim, chunk table and all. Index 0's codec until `AnimationFrameCodec` replaced it; the answer for a multi-chunk index whose split follows from nothing |
+| `DefinitionJsonCodec<T>` | indices 1, 3, 10, 16-22, 33, 35, both quick chat archives, index 23's two typed archive kinds, index 28's six and 14 of index 2's archives | one JSON file per definition, see below |
+| `AnimationFrameCodec` | index 0 | `<archive>/<frame>.json`, with the three chunk group rebuilt from the frames - see *anims* below |
+| `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
+| `ArchiveDirectoryCodec` | indices 10, 23, 24, 25, 28 | the generalisation of `ConfigCodec`: a name and a codec per archive, either in a directory of its own (`worldmapdata/main_staticelements/`) or as one named file (`defaults/equipment.json`) |
 | `Cs2SourceCodec` | index 12 | the TypeScript layout `cs2 decompile-all` writes (`<category>/<name>.ts`), provided by the `cs2` module - see *clientscripts* below |
 
 So the indices that hold definitions are editable JSON and the rest are bytes:
@@ -162,6 +167,21 @@ So the indices that hold definitions are editable JSON and the rest are bytes:
 | 17 | `config_enum` | `json-enum` | | 0 | `anims` | `verbatim-group` |
 | 18 | `config_npc` | `json-npc` | | 5 | `maps` | `map-json` |
 | | | | | everything else | | `raw-archive` / `raw-files` |
+| 0 | `anims` | `json-animframe` | | 19 | `config_obj` | `json-obj` |
+| 1 | `bases` | `json-base` | | 20 | `config_seq` | `json-seq` |
+| 2 | `config` | `config` (14 archives JSON, 31 raw) | | 21 | `config_spotanim` | `json-spotanim` |
+| 3 | `interfaces` | `json-interface` | | 22 | `config_varbit` | `json-varbit` |
+| 10 | `binary` | `json-huffman` | | 23 | `worldmapdata` | `worldmap` (2 kinds JSON, the area images raw) |
+| 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 24 | `quickchat` | `quickchat` |
+| 16 | `config_loc` | `json-loc` | | 25 | `quickchat_global` | `quickchat` |
+| 17 | `config_enum` | `json-enum` | | 28 | `defaults` | `defaults` |
+| 18 | `config_npc` | `json-npc` | | 33 | `loading_screens` | `json-gametip` |
+| | | | | 35 | `cutscenes` | `json-cutscene` |
+| | | | | everything else | | `raw-archive` / `raw-files` |
+
+Thirty-two of the 37 indices' *records* are now editable JSON; what is left as bytes is the assets -
+models, sprites, textures, maps, sounds, fonts, particles, billboards, materials, native libraries,
+shaders and the loading sprites - and index 2's 31 undecoded archives.
 
 A codec is claimed per index in `SourceCodecs`, in three layers of increasing authority:
 
@@ -197,8 +217,10 @@ and file packed the way that type's decoder packs them (`id = archive shl bits o
 | layout | used by | file | id |
 |---|---|---|---|
 | `Packed(bits)` | indices 16-22 | `config_obj/4151.json` | `4151 = 16 shl 8 or 55`, so archive 16 file 55 |
-| `Nested(16)` | index 3 | `interfaces/1477/32.json` | `1477 shl 16 or 32` |
-| `Flat` | index 2's typed archives | `config/struct/26.json` | the file id; the directory is the archive |
+| `Packed(0)` | indices 1, 33, 35 | `bases/2405.json` | the archive id, because the archive holds one file whose id is 0 |
+| `Nested(16)` | indices 3 and 0 | `interfaces/1477/32.json`, `anims/12/5.json` | `1477 shl 16 or 32` |
+| `Flat` | index 2's typed archives, index 23's and both quick chat indices' | `config/struct/26.json`, `quickchat/quickchatphrase/12.json` | the file id; the directory is the archive |
+| `NamedLayout` | indices 10 and 28 | `defaults/equipment.json` | the archive id; the one file is named after the archive rather than after its id |
 
 An obj, abridged - the real file lists every field the definition carries, defaults included, and
 nothing that is not a field (60 keys for this one):
@@ -263,7 +285,8 @@ turned back into the three byte key the file needs.
 
 What that comes to over the whole 727 cache - **files** is how many JSON files the type has, **exact**
 how many of them re-encode to the shipped bytes, **pristine** how many still need those bytes beside
-them (`DefinitionJsonCodecTest`, and `cache status` on a real tree):
+them (`DefinitionJsonCodecTest` for the config types, `MiscCodecTest` for the eight other indices, and
+`cache status` on a real tree):
 
 | type | directory | codec | files | exact | pristine |
 |---|---|---|---|---|---|
@@ -289,7 +312,18 @@ them (`DefinitionJsonCodecTest`, and `cache status` on a real tree):
 | mapelement | `config/mapelement` | `json-mapelement` | 1,220 | 1,220 | 0 |
 | hitmark | `config/hitmark` | `json-hitmark` | 48 | 48 | 0 |
 | varclan | `config/varclan` | `json-varclan` | 2,845 | 2,845 | 0 |
-| **total** | | | **245,751** | **245,751** | **0** |
+| animation frame | `anims` | `json-animframe` | 490,049 | 490,049 | 0 |
+| animation base | `bases` | `json-base` | 3,535 | 3,535 | 0 |
+| huffman | `binary` | `json-huffman` | 1 | 1 | 0 |
+| world map area | `worldmapdata/details` | `json-worldmaparea` | 45 | 45 | 0 |
+| world map element | `worldmapdata/<area>_staticelements` | `json-worldmapelement` | 1,091 | 1,091 | 0 |
+| quick chat option | `quickchat*/quickchatoption` | `json-quickchatoption` | 242 | 242 | 0 |
+| quick chat phrase | `quickchat*/quickchatphrase` | `json-quickchatphrase` | 1,216 | 1,216 | 0 |
+| defaults | `defaults` | `json-defaults` | 5 | 5 | 0 |
+| equipment defaults | `defaults/equipment.json` | `json-equipment` | 1 | 1 | 0 |
+| game tip | `loading_screens` | `json-gametip` | 31 | 31 | 0 |
+| cutscene | `cutscenes` | `json-cutscene` | 16 | 16 | 0 |
+| **total** | | | **741,983** | **741,983** | **0** |
 
 Index 2's other 31 archives have no decoder and stay raw bytes (`raw-files-flat`).
 
@@ -704,6 +738,249 @@ better fit for a palette raster than the raw bytes were. Timings on this machine
 of which is I/O), 17 s to pack and 17 s to verify at full parity, but they vary by a factor of two with
 machine load and disk cache state and should be read as an order of magnitude rather than a benchmark.
 
+The rest of this section is one heading per index that is not a config: what its files hold, what the
+client destroys on the way in that the tree therefore keeps, and anything about the index that is not
+obvious from its format. `clientscripts` is the same kind of section and has its own, further down.
+
+### anims
+
+**Index 0, 4,085 frame sets, 490,049 animation frames, one JSON file each.** It is the only index whose
+*group layout* has to come back as well as its bytes.
+
+A frame is a sparse edit of the skeleton it names: for each of that skeleton's transforms in turn a flag
+byte says which of the x, y and z components the frame moves, and the components it does move follow as
+signed smarts in one run at the end of the file.
+
+```json
+{
+  "id": 5,
+  "baseId": 1,
+  "header": 1,
+  "flags": [3, 7, 0, 3, 7],
+  "values": [-64, 60, -112, -80, -16, -68, -28, -48, -112, -64]
+}
+```
+
+**The three chunk split is derived, not recorded.** Every multi-file archive in index 0 is stored in three
+chunks, and a group joined as one chunk is different - equally valid, but different - bytes, which is why
+index 0 used to be kept as the decompressed group verbatim (`<archive>.grp`, `VerbatimGroupCodec`). It does
+not have to be, because for index 0 the split *is* the frame format's own three sections:
+
+| chunk | holds | length |
+|---|---|---|
+| 0 | the header: one byte, the skeleton id, the transform count | always 4 |
+| 1 | one flag byte per transform | the transform count |
+| 2 | the transform values, as signed smarts | whatever is left |
+
+So `AnimationFrameCodec` rebuilds the layout from the frames rather than storing it: nothing about it goes
+into `index.json`, nothing about it can go stale against the files, and adding or removing a frame is
+adding or removing a file exactly as it is everywhere else. The eleven single-file archives carry no chunk
+table at all and get none. `MiscCodecTest` proves the split on all 4,085 archives.
+
+**What the client throws away and the tree keeps.** `AnimFrame` is lossy in five ways, so none of what it
+keeps is what the file holds:
+
+- a rotation transform's values are rescaled `(v shl 2) and 0x3fff`, which is not invertible;
+- a component whose flag bit is clear has no bytes at all, and the client substitutes `0` - or `128` for a
+  scale - which a decoded value cannot be told apart from, so the **raw flag byte** is what is stored;
+- flag bits `0x20`, `0x40` and `0x80` are read and dropped, and only a raw flag byte can carry them;
+- the file's first byte is never read by anything (it is `1` in all 490,049 frames), and is kept as
+  `header`;
+- the skeleton id is read by the frame set loader rather than by the frame, and is kept as `baseId`.
+
+`labels`, `modifiesAlpha`, `modifiesColour` and `modifiesBillboard` are the other direction - derived from
+the skeleton's transform types - and are not fields of the file, so they are not in the tree.
+
+**Two quirks of the 727 packer, both reproduced.** The transform count is one byte, and archive 162's nine
+frames declare **0** transforms and then carry **256** flag bytes: `count and 0xff` from a packer that
+never checked. The client reads 0, finds the file longer than its four byte header and throws the frame
+away, so those nine animations have never worked; the tree still has to reproduce them, and both directions
+read a declared 0 with a payload behind it as 256. Separately, a signed smart's two byte form can hold a
+value the one byte form fits, which would not survive a re-encode - `wideValues` records any such position
+and **no frame in the 727 cache has one**, so the field is never written.
+
+**The cost.** Index 0 is by a wide margin the most expensive index in the tree: 490,049 files and **747 MB**
+of JSON against 60 MB of `.grp` blobs, because a frame is almost all numbers and a number costs more as
+text than as a smart. That is the price of a frame being a file somebody can open, and `VerbatimGroupCodec`
+is still there for anyone who decides it is not worth paying.
+
+### bases
+
+**Index 1, 3,535 skeletons, one archive and one JSON file each** (`bases/2405.json`).
+
+Five columns of one row per transform, no opcodes and no length but its own: the transform's kind, whether
+it is shadowed, which submeshes it applies to, and the model labels it moves. The file's length is a
+function of its contents - the label table's own lengths are the fourth column - so anything past the table
+is kept verbatim in `trailing`, which nothing in 727 needs.
+
+Two values the client destroys on the way in are kept raw:
+
+- `AnimBase` rewrites a transform type of `6` to `2` in place, so a decoded `2` could have been either.
+  **No 727 base has a 6**, but a decoder that folds it is not one you can encode from, so `types` is the
+  file's byte.
+- `shadowed` is a byte the client compares `== 1`, so `0` and `2` both decode to false. It is kept as the
+  byte; 727 only ever holds 0 or 1.
+
+The same one byte count wrap as index 0: bases **161 and 3445** declare 0 transforms in 2,559 bytes, which
+is 256 transforms written into a byte, and both directions read it that way.
+
+### binary
+
+**Index 10, one archive, one file: the huffman table chat is compressed with** (`binary/huffman.json`).
+
+The file is 256 unsigned bytes, one per cp1252 symbol, holding the number of bits that symbol's code takes;
+the tree the server builds from it (`Huffman`) is derived from those lengths alone. So the file *is* the
+lengths, and as JSON it is 256 editable numbers with the short codes sitting on the letters chat uses.
+
+The archive is called `huffman`, which is the name the client asks for and a certain one
+(`docs/cache-archive-names.md`, "Index 10"), so the file is named after it rather than after its id. The
+reference table's name hash still lives in `index.json` like every other index's - a name is a display
+concern here too.
+
+### worldmapdata
+
+**Index 23, 86 archives of three unrelated things.**
+
+```
+worldmapdata/details/29.json                 one world map area; the file id is the area id
+worldmapdata/main_staticelements/0.json      one placed icon of that area
+worldmapdata/main/4.dat                      that area's rendered image, bytes
+```
+
+An **area** (`details`, 45 files) is a flat struct rather than an opcode list: the internal name, the shown
+name, the bitpacked origin, the colour, three display bytes and then the rectangles that map game
+coordinates onto world map coordinates, 17 bytes each. Two values are kept raw because the client folds
+them - `rawZoom`, because a zoom of 255 becomes 0 (one area, `null`/"Loading...", has it), and `mapSizeId`,
+which the client reads and drops. The four `minX`/`minY`/`maxX`/`maxY` bounds are the extremes of the
+sections and are derived, so they are not written.
+
+A **static element** (1,091 files across 34 archives) is seven bytes: a bitpacked coordinate, a `mapelement`
+id and the members flag, which is `1` on 25 of them.
+
+An **area image** is the single file of an area archive - 91 KB for Ardougne's underground - and has no
+decoder, so it stays bytes (`raw-files-flat`). Its file id is 4 in most areas and 0 in one, and the file
+name carries it, so nothing about it goes in `index.json` either.
+
+**The directory names are the archives' real names, and only because they are certain.** Index 23 is the one
+index in 727 whose archive names are neither a formula nor a catalog, so they were recovered once and are
+recorded in `WorldMapCodec`; every one of the 86 re-hashes to the name hash the reference table holds, which
+is what makes a name a fact rather than a guess. The table is checked against the cache on every unpack and
+by `MiscCodecTest`, so a tree built from a cache whose index 23 has moved fails loudly instead of writing
+wrong directories. The *file* names index 23 also carries - 731 of its 1,181 files have one - are not used
+for anything: a static element is addressed by its file id like every other definition and its name hash
+rides along in `index.json`, exactly as index 31's do. See `docs/cache-archive-names.md`, "Index 23", and
+`docs/reference/worldmap-cache-names.json`.
+
+### quickchat and quickchat_global
+
+**Indices 24 and 25, two archives each: the menus and the phrases.**
+
+```
+quickchat/quickchatoption/12.json         a quick chat menu
+quickchat/quickchatphrase/113.json        a quick chat phrase
+quickchat_global/quickchatoption/1.json   the same two archives, in the global index
+```
+
+The directories are the gameval type names, so a file's path and its catalog entry line up:
+`quickchat/quickchatoption/5.json` is `quickchatoption.json`'s entry 5. Both indices hold the same two
+archives and the same two types; at runtime the client tells them apart by setting `0x8000` on every id it
+reads out of index 25, which is a `changeValues` derivation and therefore not in the tree.
+
+Both types are opcode keyed and both gained the opcode this revision's decoders were dropping:
+
+- a **menu** (242 files) has opcode 4, a bare flag the client reads and does nothing with. Exactly one file
+  has it - index 25's `Quick Chat` root menu - and it is the *first* record in that file, so without
+  `unusedFlag4` the record would be lost and the file would not come back. That one file is also the only
+  one of the 242 that needs an `opcodeOrder`.
+- a **phrase** (1,216 files) has opcode 4, which clears `searchable`; nothing in 727 writes it.
+
+A phrase's text is stored split on `<`, one fragment per dynamic value slot and one trailing fragment,
+which is what the client does and is exactly invertible. Opcode 3's value types carry as many shorts as the
+type table declares, and a type the table does not know carries none - which is what the client does too,
+and is recorded rather than guessed at.
+
+### defaults
+
+**Index 28, six archives of six unrelated settings, one named JSON file each.**
+
+```
+defaults/scene_cube_textures.json      the six skybox cube face textures
+defaults/entity.json                   hitsplat stacking, the login interface, the recolour palettes
+defaults/titlescreen_music_info.json   which music archive the title screen plays
+defaults/equipment.json                the customisable worn slots and the weapon/shield slots
+defaults/interactions.json             the mouse and key bindings
+defaults/cutscene.json                 the key that exits a cutscene
+```
+
+The names are the client's own (`DefaultsFile`), and the archive holds one file so its name is the file's
+name - there is no directory in between. The ids are 1, 3, 4, 6, 7 and 8; 0, 2 and 5 do not exist in 727.
+
+Equipment is `BodyDefinition`, which the server already had, extended with the two layout fidelity fields
+and given an encoder. The other five share one `DefaultsDefinition` whose fields are all nullable, so an
+archive's file carries only its own settings and reads as what it is; which archive a definition is is its
+id, because the same opcode means a different thing in each. A `Boolean?` field is a bare flag opcode:
+non-null means the file carried the record.
+
+Three of the six needed a field for something the client reads and drops: interaction opcodes 8, 9 and 10
+decode an input binding and discard it, and `inputs` keeps them like any other. Two of the six carry a
+non-canonical record order - `entity` writes opcode 3 before opcode 1 because 3 is what sizes 1, and
+`equipment` writes 1, 3, 5, 4, 6 - and both keep an `opcodeOrder`.
+
+### loading_screens
+
+**Index 33, 31 archives: a stage table and 30 loading screens.**
+
+Archive 0 is the master table - a format version, the ten render types' signature, and per stage the list
+of screens it may show with their durations - and archives 2 to 37 are one screen each: a count and then a
+render type byte and a body per element. `GameTipDefinition` carries both shapes and which one a file is is
+whether it is archive 0.
+
+The ten element types are implemented from the client; **three of them occur in 727** - `SPRITE` 548 times,
+`ANCHORED_TEXT` 145 and `ANIMATED_LOADING_BAR` 30, 723 elements in all - so the other seven rest on the
+client code rather than on the bytes, and are called out here rather than left to be discovered.
+
+Everything the client checks and then folds is kept raw: the version and the render type signature (the two
+values it bails out on), `hasUpdates` and `drawOutline` as bytes rather than booleans, the anchors and
+alignments as ordinals, and `SPRITE_LOADING_BAR`'s fill colour, which the client reads and then passes its
+background colour twice instead. `wideFileIds` records a big smart the file packed wide when narrow would
+have held it; no element in 727 has one.
+
+The archive names are 31 hashes nobody has recovered (`docs/cache-archive-names.md`, "Indices with names
+still unrecovered"), so the directories here are ids.
+
+### cutscenes
+
+**Index 35, 16 archives, one cutscene each.**
+
+A cutscene is a header - a viewport size and a `255` terminator - and then six counted lists: the map areas
+it assembles, the camera movements, the actors, the objects, the actor movements, and the actions. An
+action is an id, a duration in cycles and a body, and there are 31 action ids.
+
+`CutsceneActionRecord` is one flat record with a `type` and a nullable field per member, which is both what
+the JSON mapper can hold and what reads best, because a null field is left out: a `PlaySong` action is
+`{"type": 30, "lengthInCycles": 6, "musicId": 62, "volume": 255}` and nothing else. Fields that mean the
+same thing across actions - `entityIndex`, `packedPos`, `plane`, `volume` - are shared rather than
+duplicated per action.
+
+**14 of the 31 action ids occur in 727**, 1,296 actions in all: `DirectCameraTransition` 248,
+`MoveEntity` 246, `AnimatedMovement` 164, `ResetEntity` 129, `BasicMovement` 123, `PlayVorbis` 116,
+`ReplaceObject` 97, `DestroyObject` 54, `AnimateObject` 42, `FadeScreen` 40, `Finished` 16,
+`EntitySpotAnimation` 12, `PlaySong` 7 and `ExecuteScript` 2. The other 17 - including all four projectile
+forms, whose source/target packing is the only place the client's dispatch table could be misread - are
+implemented from the client and unexercised by parity. Ids 2, 3 and 43 are dead in the client (it reads
+nothing and then dereferences null) and the decoder fails loudly on them.
+
+Two readings the bytes settled rather than the client:
+
+- `MoveEntity`'s direction is the **signed** smart, not the unsigned one. Both widths turn on the same
+  `first < 128` test so parity holds either way, but under the signed reading the 246 values are `0..16382`
+  - a 14-bit angle with its modes on the cardinal points - and under the unsigned one they would all be
+  `16384..32767`, off the end of the angle space.
+- an actor carries a null-terminated label the client reads and discards. 177 of them are non-empty, and
+  without keeping it the file cannot be rebuilt at all.
+
+Camera keyframes are stored as the file's unsigned shorts rather than the client's `- 5120` world
+coordinates, and an area's coordinate stays packed, so the JSON is what the file says.
 
 ### The pristine fallback
 
@@ -844,9 +1121,9 @@ gets a `<id>.json.pristine` beside it. So the guarded unit is one definition and
 share its archive. It still reports `exact(archive) = false`, so the unpacker packs the whole group
 back and compares that too - an independent second proof rather than the only one.
 
-Measured over the whole 727 cache, **all 245,751 definition files of all 22 types survive the round
-trip and not one needs a pristine copy**; `DefinitionJsonCodecTest` is the measurement and
-`docs/cache-source.md`'s "Parity per type" table the per type breakdown.
+Measured over the whole 727 cache, **all 741,983 definition files of all 33 types survive the round trip
+and not one needs a pristine copy**; `DefinitionJsonCodecTest` and `MiscCodecTest` are the measurement and
+the "Parity per type" table below the per type breakdown.
 
 ## The packed build
 
@@ -974,6 +1251,27 @@ which the build itself is a stat walk; editing one clientscript and rebuilding i
 repacks exactly that one archive. `cache verify` of the built cache against the tree is 12 s at
 full parity: 140,692 containers, 37 reference tables and the derived version table, all identical.
 
+**Those whole-tree numbers predate the eight record indices above and have not been re-measured.** They
+add 496,232 files and 769 MB of JSON to the tree, of which index 0 alone is 490,049 files and 747 MB, so
+both the unpack and the tree's size grow by roughly a factor of two and a half; `WholeCacheSourceTest`'s
+unpack time limit was raised to match. What has been measured, on the same machine, is the per index round
+trip: `MiscCodecTest` decodes all 7,764 archives of the eight indices, writes all 496,277 files to disk,
+reads them back and packs every group in **107 s**, and `MiscEncoderParityTest` encodes all 496,232
+definitions - no disk - in a few seconds. Index 0 is essentially all of both.
+
+| index | dir | archives | files | JSON |
+|---|---|---|---|---|
+| 0 | `anims` | 4,085 | 490,049 | 747 MB |
+| 1 | `bases` | 3,535 | 3,535 | 15 MB |
+| 10 | `binary` | 1 | 1 | 1 KB |
+| 23 | `worldmapdata` | 86 | 1,181 | 6.6 MB (6.5 MB of it the raw area images) |
+| 24 | `quickchat` | 2 | 1,372 | 178 KB |
+| 25 | `quickchat_global` | 2 | 86 | 9 KB |
+| 28 | `defaults` | 6 | 6 | 22 KB |
+| 33 | `loading_screens` | 31 | 31 | 223 KB |
+| 35 | `cutscenes` | 16 | 16 | 334 KB |
+| | **total** | **7,764** | **496,277** | **769 MB** |
+
 ## The `SourceCodec` interface
 
 A codec is asked a dozen questions. Only the five in bold have to be answered; the rest have
@@ -1099,12 +1397,20 @@ the whole 727 cache: the seven opcode keyed types of indices 16 to 22, the fourt
 archives of index 2, and index 3's interface components. Two more join them from the 2D indices -
 index 9's textures and index 13's font metrics - and the sprite and material codecs clear the same bar
 without being `DefinitionJsonCodec`s; see *What the 2D indices cost*.
+to keep a `.pristine` copy beside every file it cannot rebuild. All 33 do, so none of them keeps one;
+see "Definition files" for what the JSON looks like. Thirty-three types reach that bar for
+the whole 727 cache: the seven opcode keyed types of indices 16 to 22, the fourteen decoded
+archives of index 2, index 3's interface components, and the eleven types of the eight other indices
+that hold records rather than assets - animation frames and skeletons, the huffman table, the world map's
+areas and static elements, both quick chat types, the six client defaults, the loading screens and the
+cutscenes.
 
-Three tests measure it, each against the shipped bytes rather than against a re-decode:
+Four tests measure it, each against the shipped bytes rather than against a re-decode:
 
 - `core/src/test/kotlin/world/gregs/voidps/cache/definition/DefinitionEncoderParityTest.kt` (indices 16-22)
 - `core/src/test/kotlin/world/gregs/voidps/cache/config/ConfigEncoderParityTest.kt` (index 2)
 - `core/src/test/kotlin/world/gregs/voidps/cache/definition/InterfaceEncoderParityTest.kt` (index 3)
+- `core/src/test/kotlin/world/gregs/voidps/cache/definition/MiscEncoderParityTest.kt` (indices 0, 1, 10, 23, 24, 25, 28, 33, 35)
 
 The 2D encoders - sprites, textures, materials and font metrics - are measured the same way by
 `core/src/test/kotlin/world/gregs/voidps/cache/source/ImageCodecTest.kt`, which goes one step further and
@@ -1197,10 +1503,22 @@ their values alone.
 | 2 | 46 | `hitmark` | `HitSplatDecoder` / `HitSplatEncoder` | 48 | 48 | none | 48 | 0 |
 | 2 | 47 | `varclan` | `ClanVarDecoder` / `ClanVarEncoder` | 2,845 | 2,845 | none | 0 | 0 |
 | 3 | all | `interface` component | `InterfaceDecoder` / `InterfaceEncoder` | 65,239 | 65,239 | none | - | - |
+| 0 | all | `animation frame` | `AnimationFrameDecoder` / `AnimationFrameEncoder` | 490,049 | 490,049 | none | - | - |
+| 1 | all | `animation base` | `AnimationBaseDecoder` / `AnimationBaseEncoder` | 3,535 | 3,535 | none | - | - |
+| 10 | 1 | `huffman` | `HuffmanTableDecoder` / `HuffmanTableEncoder` | 1 | 1 | none | - | - |
+| 23 | `details` | `world map area` | `WorldMapDetailsDecoder` / `WorldMapDetailsEncoder` | 45 | 45 | none | - | - |
+| 23 | `*_staticelements` | `world map element` | `WorldMapStaticElementDecoder` / `…Encoder` | 1,091 | 1,091 | none | - | - |
+| 24, 25 | 0 | `quick chat option` | `QuickChatOptionDecoder` / `QuickChatOptionEncoder` | 242 | 242 | none | 1 | 0 |
+| 24, 25 | 1 | `quick chat phrase` | `QuickChatPhraseDecoder` / `QuickChatPhraseEncoder` | 1,216 | 1,216 | none | 0 | 0 |
+| 28 | 1, 3, 4, 7, 8 | `defaults` | `DefaultsDecoder` / `DefaultsEncoder` | 5 | 5 | none | 1 | 0 |
+| 28 | 6 | `equipment` | `BodyDecoder` / `BodyEncoder` | 1 | 1 | none | 1 | 0 |
+| 33 | all | `game tip` | `GameTipDecoder` / `GameTipEncoder` | 31 | 31 | none | - | - |
+| 35 | all | `cutscene` | `CutsceneDecoder` / `CutsceneEncoder` | 16 | 16 | none | - | - |
 
-**245,751 files - 153,109 of indices 16 to 22, 27,403 of index 2 and 65,239 interface components -
-all byte identical. No file of any of these types needs a pristine copy.** Index 2's other 31
-archives have no decoder and stay raw (`RawFilesCodec`).
+**741,983 files - 153,109 of indices 16 to 22, 27,403 of index 2, 65,239 interface components and 496,232
+of the eight other record indices - all byte identical. No file of any of these types needs a pristine
+copy.** Index 2's other 31 archives have no decoder and stay raw (`RawFilesCodec`), and so do index 23's 45
+per-area images.
 
 Interface components are the one type here that is not opcode keyed: index 3 is a fixed field layout,
 `InterfaceEncoder` was already byte exact and needed no change, and it implements neither
@@ -1238,6 +1556,14 @@ to either side shows up as a byte difference rather than only as a field differe
 | material | every field's name | `aBoolean1204`, `aByte1225`, `type`, `anInt1226` and the rest are now the client's `isSmall`, `alpha`, `effectId`, `effectCombiner` |
 | texture | the whole type | index 9 had no decoder in core at all; `TextureDefinition` is the operation graph as data, `TextureOpFormat` the wire shapes |
 | texture | `trailer` | the ten bytes past the three output indices that this revision's client never reads, on 2,562 of 2,591 textures |
+| animation frame | `header`, `flags`, `values`, `wideValues` | the file's unread first byte; the raw flag byte, whose top three bits the client drops and whose clear bits are indistinguishable from a decoded 0 or 128; the smarts before the client rescales a rotation's by `shl 2 and 0x3fff`; and the width a smart was written in |
+| animation base | `types`, `shadowed`, `trailing` | a transform type of 6, which the client rewrites to 2 in place; a shadow byte that is neither 0 nor 1; anything past the label table |
+| world map area | `rawZoom`, `mapSizeId` | the zoom byte before the client folds 255 to 0, and the map size byte it reads and drops |
+| quick chat option | `unusedFlag4` | opcode 4, a bare flag this revision's client does nothing with, and the first record of one file |
+| quick chat phrase | `searchable` | opcode 4, which hides a phrase from the quick chat search |
+| defaults | `inputs` entries for opcodes 8, 9 and 10 | three input bindings the client decodes and discards |
+| game tip | `version`, `renderTypes`, `hasUpdates`, `drawOutline`, `fillColour`, `wideFileIds` | the two values the client checks and then bails out on; two booleans that are bytes in the file; the fill colour of a sprite loading bar, which the client reads and then overwrites with its background colour; and the width a big smart was written in |
+| cutscene | `label`, `hitmarkFlags`, raw camera keyframes | an actor's dev label, read and discarded by the client; the hitmark flag byte, of which one bit selects two values the client throws away; and the keyframe coordinates before the client's `- 5120` |
 
 Two ordering rules matter to any future definition codec: `Parameterized.readParameterRecords`
 decodes into an insertion ordered `Int2ObjectArrayMap` and `Extra.readParameters` into an

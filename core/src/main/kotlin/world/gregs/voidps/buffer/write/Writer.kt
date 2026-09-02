@@ -65,6 +65,23 @@ interface Writer {
         }
     }
 
+    /**
+     * Writes a *signed* smart, the exact inverse of
+     * [world.gregs.voidps.buffer.read.Reader.readSignedSmart]: one byte biased by 64 for -64..63
+     * and two bytes biased by 49152 otherwise.
+     *
+     * [wide] forces the two byte form for a value the one byte form would fit, which is what a
+     * file that was packed that way needs to come back unchanged.
+     */
+    fun writeSignedSmart(value: Int, wide: Boolean = false) {
+        require(value in -16384..16383) { "A signed smart holds -16384..16383, not $value." }
+        if (!wide && value in -64..63) {
+            writeByte(value + 64)
+        } else {
+            writeShort(value + 49152)
+        }
+    }
+
     fun writeBigSmart(value: Int) {
         when {
             value == -1 -> writeShort(32767)

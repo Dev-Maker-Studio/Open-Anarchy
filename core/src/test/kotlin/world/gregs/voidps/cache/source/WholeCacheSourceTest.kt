@@ -223,10 +223,11 @@ class WholeCacheSourceTest {
         private const val OPAQUE = 8
 
         /**
-         * Unpacking the whole 876 MB cache has to stay well inside five minutes. Every definition file
-         * is decoded, written as JSON, read back and re-encoded on the way out, which is most of it.
+         * Unpacking the whole 876 MB cache. Every definition file is decoded, written as JSON, read back
+         * and re-encoded on the way out, which is most of it, and index 0's 490,049 animation frames are
+         * most of *that* - they roughly trebled the file count when they stopped being `.grp` blobs.
          */
-        private const val UNPACK_LIMIT = 300_000L
+        private const val UNPACK_LIMIT = 900_000L
 
         /** The obj whose name the edit test changes: a whip is a whip in every 727 cache. */
         private const val EDITED = 4151

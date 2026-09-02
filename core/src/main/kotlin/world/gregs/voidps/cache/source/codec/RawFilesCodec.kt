@@ -16,7 +16,7 @@ import kotlin.io.path.name
  *
  * The group is always written back as a single chunk, which every reader accepts and which is
  * what every multi-file archive outside index 0 already uses; index 0 keeps its three chunk
- * layout by never coming through here at all - see [VerbatimGroupCodec].
+ * layout by never coming through here at all - see [AnimationFrameCodec].
  *
  * [flat] drops the per-archive directory, for a codec that is already inside one - the config
  * index gives each of its archives a directory of its own and lays the files out inside it.

@@ -59,6 +59,25 @@ interface Reader {
 
     fun readSmart(): Int
 
+    /**
+     * Reads a *signed* smart: one byte biased by 64 while the high bit is clear, two bytes biased
+     * by 49152 otherwise, so the value is -64..63 or -16384..16383.
+     *
+     * The client's `readSmart`. It is a different encoding from [readSmart] - which is Jagex's
+     * unsigned smart, 0..127 or 0..32767 - and animation frame transform values are written in it.
+     * Exact inverse of [world.gregs.voidps.buffer.write.Writer.writeSignedSmart] for a canonically
+     * encoded value; the two byte form can legally hold a value the one byte form fits, so a
+     * byte exact encoder has to remember which width the file used.
+     */
+    fun readSignedSmart(): Int {
+        val peek = readUnsignedByte()
+        return if (peek < 128) {
+            peek - 64
+        } else {
+            ((peek shl 8) or readUnsignedByte()) - 49152
+        }
+    }
+
     fun readBigSmart(): Int
 
     fun readLargeSmart(): Int

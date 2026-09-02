@@ -100,10 +100,9 @@ class FileCache(
 
         val fileCount = fileCounts[index]?.getOrNull(archive) ?: return null
         val result = if (fileCount == 1) {
-            val fileId = fileIds.last()
-            Array(fileId + 1) {
-                if (it == fileId) decompressed else null
-            }
+            // One file, whose id is not necessarily 0 - index 23's area archives hold file 4 - and the
+            // array is indexed by position in [fileIds], which for a single file archive is only ever 0.
+            arrayOf<ByteArray?>(decompressed)
         } else {
             parseMultiFileArchive(decompressed, fileCount)
         }
