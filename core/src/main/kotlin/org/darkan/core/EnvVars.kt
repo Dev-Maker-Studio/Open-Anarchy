@@ -29,10 +29,15 @@ object EnvVars {
     //World number to list as "localhost" so developers can reach a world running on their own machine (0 = none)
     val localWorldId: Int = dotenv.get("LOCAL_WORLD_ID", "0").toInt()
     val apiKey: String = dotenv.get("API_KEY", "TEST_API_KEY")
+    // A cache source tree (docs/cache-source.md). When set, the server builds it into CACHE_BUILD_PATH on
+    // startup and serves that; when unset, CACHE_PATH names a prepacked cache.
+    val cacheSourcePath: String? = dotenv.get("CACHE_SOURCE_PATH", null)?.takeIf { it.isNotBlank() }
+    val cacheBuildPath: String = dotenv.get("CACHE_BUILD_PATH", "./data/cache")
     val cachePath: String = dotenv.get("CACHE_PATH", "../cache/")
     val memCache: Boolean = dotenv.get("MEM_CACHE", (!debug).toString()).toBooleanStrict()
-    // Folder of gamevals/<type>.json name catalogs (see docs/gameval.md). Wins over the copy bundled in the jar.
-    val gamevalPath: String = dotenv.get("GAMEVAL_PATH", "./gamevals")
+    // Folder of gamevals/<type>.json name catalogs (see docs/gameval.md): the source tree's gamevals/, which
+    // is the only copy. Defaults to the tree named by CACHE_SOURCE_PATH, else the cache-source submodule.
+    val gamevalPath: String = dotenv.get("GAMEVAL_PATH", (cacheSourcePath ?: "./cache-source") + "/gamevals")
     val majorVersion: Int = dotenv.get("MAJOR_VERSION", "727").toInt()
     val minorVersion: Int = dotenv.get("MINOR_VERSION", "1").toInt()
     val packetSizeLimit: Int = dotenv.get("PACKET_SIZE_LIMIT", "7500").toInt()

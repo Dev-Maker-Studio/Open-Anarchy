@@ -159,6 +159,51 @@ the first published build. Production units run the release scripts, which never
 - The lobby's Netty engine logs `RejectedExecutionException: event executor terminated` while a
   restart tears it down; that is shutdown noise, not an error in our code.
 
+## The cache source tree
+
+The game cache is no longer a git-lfs blob: `cache-source/` is a git submodule holding the whole
+727 cache unpacked (`docs/cache-source.md`), and the gameval catalogs live inside it
+(`cache-source/gamevals/`) - there is no other copy, nothing is bundled into the jars. A server
+needs that directory on disk for names to resolve, and can build and serve the cache from it.
+
+**On each host, once** (as `trent`, in the server checkout):
+
+```bash
+git submodule update --init --depth 1 cache-source   # a few GB the first time; shallow
+```
+
+The run scripts repeat that after their `git pull`, so the tree follows the commit the checkout
+pins. Then in `.env`:
+
+```env
+CACHE_SOURCE_PATH=./cache-source   # build the cache from the tree on startup and serve it
+CACHE_BUILD_PATH=./data/cache      # where the packed build lives (gitignored; default)
+# CACHE_PATH is ignored while CACHE_SOURCE_PATH is set. To keep serving a prepacked cache
+# instead, leave CACHE_SOURCE_PATH unset - the tree is still needed for GAMEVAL_PATH.
+```
+
+The first start packs the whole cache (a minute or two on 20 cores; ~900 MB under `data/cache/`).
+Every later start stats the tree and repacks only what changed, so an unchanged tree costs about a
+second. `data/cache/manifest.json` records what the build was made from; delete the directory to
+force a full rebuild.
+
+Disk: the tree is a few GB plus the packed build. The world host is memory-tight; the build runs
+inside the server JVM at startup, so keep `-Xmx` at least 3 GB on a host that builds.
+
+**CI** (`.gitlab-ci.yml`) does not check the submodule out: it sparse-clones only
+`cache-source/gamevals` at the pinned commit (blob-less clone, a few MB), which is all the typed
+constants generator needs. Locally, `git clone --recurse-submodules` or the `submodule update`
+above; `-Pdarkan.cacheSource=<path>` / `DARKAN_CACHE_SOURCE` point the build at a tree elsewhere.
+
+**Rollout order** (the catalogs moved out of the server repo, so the two repos must move together):
+
+1. Create the `darkanrs/cache-source` GitLab project and push the tree (`tools cache unpack`
+   produced it; `docs/cache-source.md`). The submodule URL in `.gitmodules` is relative
+   (`../cache-source.git`), so it resolves against the server repo's own remote.
+2. Push the server branch. CI's sparse clone needs the cache-source project to allow CI job tokens
+   from the server project (Settings → CI/CD → Token Access).
+3. On the two dev hosts run the `submodule update` above, add the `.env` lines, restart the units.
+
 ## Production
 
 Same steps against `prod-lobby` and each production world, with the production database as the

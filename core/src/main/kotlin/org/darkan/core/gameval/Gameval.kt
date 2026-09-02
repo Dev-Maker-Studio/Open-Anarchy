@@ -8,7 +8,8 @@ import java.io.File
  * code can say `Gameval.requireId(Gameval.INV, "worn")` and logs/UIs can print names instead of
  * magic numbers. See `docs/gameval.md` for the catalogs, the placeholder rule and `GAMEVAL_PATH`.
  *
- * The folder named by [EnvVars.gamevalPath] wins, per file, over the copy bundled in the jar.
+ * The catalogs live in the cache source tree (`<tree>/gamevals`, see `docs/cache-source.md`);
+ * [EnvVars.gamevalPath] names that folder and there is no other copy.
  */
 object Gameval : GamevalCatalog(File(EnvVars.gamevalPath)) {
     const val OBJ = "obj"
