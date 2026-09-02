@@ -18,6 +18,9 @@ sourceSets {
 
 dependencies {
     implementation(project(":core"))
+    // The cache source tree stores index 12 as TypeScript; :cs2 carries the codec that
+    // compiles it back (docs/cache-source.md). Headless - no LWJGL, GLFW or ImGui.
+    implementation(project(":cs2"))
     implementation("com.google.code.gson:gson:2.12.1")
     implementation("com.google.guava:guava:33.4.0-jre")
     implementation("it.unimi.dsi:fastutil:8.5.15")
