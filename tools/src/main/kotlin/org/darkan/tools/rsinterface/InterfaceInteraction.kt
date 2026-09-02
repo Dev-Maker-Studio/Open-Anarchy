@@ -1,7 +1,7 @@
 package org.darkan.tools.rsinterface
 
-import org.darkan.tools.cs2.vm.Cs2Event
-import org.darkan.tools.cs2.vm.Cs2HookDispatcher
+import org.darkan.cs2.vm.Cs2Event
+import org.darkan.cs2.vm.Cs2HookDispatcher
 import org.lwjgl.glfw.GLFW
 import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
 import world.gregs.voidps.cache.definition.data.InterfaceComponentHook

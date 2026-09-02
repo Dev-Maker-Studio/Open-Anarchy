@@ -10,10 +10,10 @@ import imgui.internal.ImGui as ImGuiInternal
 import imgui.internal.flag.ImGuiDockNodeFlags as InternalDockNodeFlags
 import imgui.type.ImInt
 import imgui.type.ImString
-import org.darkan.tools.cs2.Cs2Analyzer
-import org.darkan.tools.cs2.Cs2HotReload
-import org.darkan.tools.cs2.vm.Cs2Event
-import org.darkan.tools.cs2.vm.Cs2HookDispatcher
+import org.darkan.cs2.Cs2Analyzer
+import org.darkan.cs2.Cs2HotReload
+import org.darkan.cs2.vm.Cs2Event
+import org.darkan.cs2.vm.Cs2HookDispatcher
 import org.darkan.tools.engine.Engine
 import org.darkan.tools.engine.render.Canvas2D
 import org.darkan.tools.engine.render.RenderTarget

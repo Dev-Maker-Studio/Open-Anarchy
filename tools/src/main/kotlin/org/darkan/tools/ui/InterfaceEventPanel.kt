@@ -8,7 +8,7 @@ import imgui.flag.ImGuiTreeNodeFlags
 import imgui.type.ImBoolean
 import imgui.type.ImInt
 import imgui.type.ImString
-import org.darkan.tools.cs2.vm.Cs2Event
+import org.darkan.cs2.vm.Cs2Event
 import org.darkan.tools.rsinterface.ComponentState
 import org.darkan.tools.rsinterface.InterfaceCs2Host
 import org.darkan.tools.rsinterface.InterfaceEvent

@@ -25,6 +25,8 @@ tasks.named<JavaExec>("run") {
 
 dependencies {
     implementation(project(":core"))
+    // The CS2 toolchain, which is headless and shared with the server; see cs2/build.gradle.kts.
+    implementation(project(":cs2"))
 
     // LWJGL BOM
     implementation(platform("org.lwjgl:lwjgl-bom:$lwjglVersion"))

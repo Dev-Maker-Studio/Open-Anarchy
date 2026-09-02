@@ -71,7 +71,7 @@ This project uses **specialized agents** with deep domain expertise for critical
 |-------|---------------------|-------------|
 | **cache-library-engineer** | `core/src/main/kotlin/world/gregs/voidps/**` | RS cache format specialists: buffer operations, definition decoders/encoders, compression, cryptography, JS5 protocol |
 | **networking-protocol-engineer** | `core/src/main/kotlin/org/darkan/core/net/**` | RS protocol specialists: packet codec, ISAAC cipher, session management, update masks, protocol inversion |
-| **rendering-tools-engineer** | `tools/**` | OpenGL/rendering specialists: shaders, LWJGL, ImGui, spatial structures, performance optimization |
+| **rendering-tools-engineer** | `tools/**`, `cs2/**` | OpenGL/rendering specialists: shaders, LWJGL, ImGui, spatial structures, performance optimization; also the headless CS2 clientscript toolchain in `cs2/` |
 
 ### ✅ REQUIRED: When to Invoke Each Agent
 
@@ -134,8 +134,11 @@ This project uses **specialized agents** with deep domain expertise for critical
 - Scene graph (`Scene.kt`, `SceneNode.kt`, `SpatialScene.kt`)
 - Performance optimization for frame rate, draw calls, memory
 - ANY code in the `tools/` submodule
+- The CS2 clientscript toolchain in the `cs2/` module (`Cs2Codec.kt`, `Cs2Analyzer.kt`, `Cs2Parser.kt`,
+  `Cs2CodeGen.kt`, `Cs2Emitter.kt`, `Cs2Vm.kt`, `Cs2Compiler.kt`, ...) - headless, depends only on
+  `:core`, and must stay that way: no LWJGL, GLFW, ImGui or JOML, and no dependency on `:tools`
 
-**OWNERSHIP PATH**: `tools/src/main/kotlin/org/darkan/tools/`, `tools/src/main/resources/shaders/`
+**OWNERSHIP PATH**: `tools/src/main/kotlin/org/darkan/tools/`, `tools/src/main/resources/shaders/`, `cs2/src/`
 
 ### ❌ DO NOT
 
@@ -166,7 +169,7 @@ The user may explicitly bypass agent invocation with clear statements such as:
 ```
 Is the file in world/gregs/voidps/**?     → cache-library-engineer
 Is the file in org/darkan/core/net/**?    → networking-protocol-engineer
-Is the file in tools/**?                  → rendering-tools-engineer
+Is the file in tools/** or cs2/**?        → rendering-tools-engineer
 ```
 
 ---
@@ -178,6 +181,7 @@ server/
 ├── core/           # Shared library (networking, models, MongoDB, crypto)
 ├── lobby/          # Lobby server (auth, API, social gateway host)
 ├── world/          # World server (gameplay, social gateway client)
+├── cs2/            # Headless CS2 clientscript toolchain: decompiler, TS compiler, VM (see docs/cs2-editor.md)
 ├── tools/          # Cache/map/interface/CS2 editor suite (LWJGL)
 ├── migration/      # Legacy → modern database migration (see docs/migration.md)
 ├── gamevals/       # 727 asset id → Jagex dev-name catalogs (<type>.json, canonical; see docs/gameval.md)
@@ -727,6 +731,7 @@ Configure `STAFF_WEBHOOK_URL` for tick performance warnings and error notificati
 - `docs/deploy.md` - VM layout, systemd units, CI-driven deploys and the legacy cut-over runbook
 - `docs/legacy-baseline.md` - Which legacy commits the modern tree is synced to
 - `docs/gameval.md` - Gameval name catalogs: runtime API, typed constants, regeneration
+- `docs/cs2-editor.md` - The CS2 clientscript toolchain (`cs2/`), its CLI, and compiling from server code
 - `gamevals/CONTRACT.md` - The evidence rules under which every gameval name was proven
 
 ---
