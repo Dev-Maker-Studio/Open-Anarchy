@@ -491,7 +491,15 @@ table are core's to update. Two consequences worth naming:
 | `GAMEVAL_PATH` | `<CACHE_SOURCE_PATH>/gamevals` when set, else `./cache-source/gamevals` | the catalogs (the only copy) |
 
 The lobby and the worlds use the same switch; a world that needs its own cache in future points
-`CACHE_SOURCE_PATH` at its own tree.
+`CACHE_SOURCE_PATH` at its own tree. The switch lives in `org.darkan.core.cache.CacheSource`:
+`Cache.get()` calls `CacheSource.ensureBuilt()` before it opens anything, so with a tree configured
+the first thing any server does is build (or incrementally refresh) `CACHE_BUILD_PATH`, and
+`EnvVars.cachePath` then names that directory. `data/cache/manifest.json` records what the build was
+made from; deleting the directory forces a full pack. The map XTEA keys the world sends to clients
+still come from `data/map/xteaKeys.json`; the tree records the same keys per archive in
+`maps/index.json`, and the unpacker reads the file, not the tree, when it decrypts.
+
+Rolling this out to the servers and CI is in `docs/deploy.md`, "The cache source tree".
 
 ## Tools
 
