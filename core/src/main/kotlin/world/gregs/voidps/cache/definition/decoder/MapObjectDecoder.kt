@@ -18,8 +18,11 @@ abstract class MapObjectDecoder {
     /**
      * Decodes object information and calls [add] for each object.
      * Objects are stored at their original plane from the map data.
+     *
+     * Returns the offset the records ended at, which is the file's length for all but the 48
+     * location archives that carry trailing padding - see [MapDefinition.trailing].
      */
-    fun decode(buffer: ByteArray, settings: ByteArray, regionTileX: Int, regionTileY: Int) {
+    fun decode(buffer: ByteArray, settings: ByteArray, regionTileX: Int, regionTileY: Int): Int {
         var position = 0
         var objectId = -1
         while (true) {
@@ -71,6 +74,7 @@ abstract class MapObjectDecoder {
                 add(objectId, localX, localY, level, shape, rotation, regionTileX, regionTileY)
             }
         }
+        return position
     }
 
     abstract fun add(objectId: Int, localX: Int, localY: Int, level: Int, shape: Int, rotation: Int, regionTileX: Int, regionTileY: Int)

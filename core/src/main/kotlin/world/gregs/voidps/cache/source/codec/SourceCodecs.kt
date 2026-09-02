@@ -90,6 +90,8 @@ object SourceCodecs {
         }
         // The definition indices, as editable JSON.
         DefinitionCodecs.register()
+        // Index 5, laid out by map square as editable JSON.
+        MapCodecs.register()
     }
 
     /** A built in codec: a provider may still replace it, an explicit [register] always does. */

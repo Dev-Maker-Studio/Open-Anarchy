@@ -32,12 +32,20 @@ import world.gregs.voidps.cache.definition.data.MapObject
  * shifts objects between levels for rendering (bridge / "link below" handling) must be undone before
  * encoding, or the shifted level is what gets written.
  *
- * ## Fidelity
+ * ## Order, and why a decoded archive comes back byte for byte
  *
- * Output is semantically identical to the input, not necessarily byte-identical: objects are regrouped and
- * sorted, and the shipped files do not always use that order. Verified over every decryptable object archive
- * by `MapEncoderRoundTripTest`: the decoded object set is reproduced for 2399/2399 archives, 2351 of which
- * are also byte-identical.
+ * A group is a run of consecutive objects with the same id, so the list *is* the file: ids strictly
+ * ascend from group to group (a delta of 0 ends the block, so they cannot repeat) and a position delta is
+ * never negative, so a list that satisfies both spells exactly one byte sequence. Every one of the 727
+ * cache's 2,407 location archives and 1,208 underwater ones does ([isOrdered]), so the list is written as
+ * it stands and the bytes come back identical.
+ *
+ * A list that does not - objects an editor appended, or a caller that built them level by level - is
+ * grouped by id and sorted into that shape first. The result decodes to the same objects either way; only
+ * a list that was already in file order is guaranteed to re-encode to the same bytes.
+ *
+ * [MapDefinition.trailing] is written after the terminator, which is what the 48 zero padded archives
+ * need to come back byte for byte.
  */
 class MapObjectEncoder : DefinitionEncoder<MapDefinition> {
 
@@ -45,23 +53,85 @@ class MapObjectEncoder : DefinitionEncoder<MapDefinition> {
         // An unset id means the caller never populated the definition; an empty block is a valid looking
         // archive that decodes to a region with no objects at all.
         require(definition.id != -1) { "Map definition has no region id, refusing to encode a blank object block." }
+        val objects = definition.objects
+        for (loc in objects) {
+            require(loc.id >= 0) { "Map ${definition.id}: object id ${loc.id} is negative." }
+            require(loc.shape in 0..31) {
+                "Map ${definition.id}: object ${loc.id} at (${loc.x}, ${loc.y}, ${loc.level}) has shape " +
+                    "${loc.shape}, outside 0..31."
+            }
+            index(definition, loc)
+        }
+        val groups = if (isOrdered(definition, objects)) runs(objects) else sorted(objects)
         var id = -1
-        definition.objects.groupBy { it.id }.toList().sortedBy { it.first }.forEach { (objectId, objects) ->
-            require(objectId >= 0) { "Map ${definition.id}: object id $objectId is negative." }
+        for (group in groups) {
+            val objectId = group.first().id
             writeSum(objectId - id)
             id = objectId
             var location = 0
-            objects.sortedBy { index(definition, it) }.forEach { loc ->
+            for (loc in group) {
                 val local = index(definition, loc)
                 writeSmart(local - location + 1)
                 location = local
-                require(loc.shape in 0..31) { "Map ${definition.id}: object $objectId at (${loc.x}, ${loc.y}, ${loc.level}) has shape ${loc.shape}, outside 0..31." }
                 writeByte(loc.rotation or (loc.shape shl 2))
             }
             writeSmart(0)
         }
         writeSmart(0)
+        // 48 archives are padded past their last record; the padding is inside the container the
+        // client checks the CRC of, so it goes back out with them.
+        definition.trailing?.let { writeBytes(it) }
     }
+
+    /**
+     * Whether [objects] is already a file: ids strictly ascending from run to run, and positions never
+     * going backwards within a run.
+     *
+     * Those are exactly the two things the format cannot express - an id delta of 0 ends the block and a
+     * position delta is unsigned - so a list that satisfies them is written verbatim and anything else is
+     * regrouped.
+     */
+    private fun isOrdered(definition: MapDefinition, objects: List<MapObject>): Boolean {
+        var id = -1
+        var location = -1
+        for (loc in objects) {
+            if (loc.id != id) {
+                if (loc.id < id) {
+                    return false
+                }
+                id = loc.id
+                location = -1
+            }
+            val local = index(definition, loc)
+            if (local < location) {
+                return false
+            }
+            location = local
+        }
+        return true
+    }
+
+    /** [objects] split into runs of consecutive objects sharing an id. */
+    private fun runs(objects: List<MapObject>): List<List<MapObject>> {
+        val groups = ArrayList<List<MapObject>>()
+        var start = 0
+        while (start < objects.size) {
+            var end = start + 1
+            while (end < objects.size && objects[end].id == objects[start].id) {
+                end++
+            }
+            groups.add(objects.subList(start, end))
+            start = end
+        }
+        return groups
+    }
+
+    /** [objects] grouped by id and sorted, for a list that was not built in file order. */
+    private fun sorted(objects: List<MapObject>): List<List<MapObject>> = objects
+        .groupBy { it.id }
+        .toList()
+        .sortedBy { it.first }
+        .map { (_, group) -> group.sortedBy { MapDefinition.index(it.x, it.y, it.level) } }
 
     private fun index(definition: MapDefinition, loc: MapObject): Int {
         require(loc.x in 0..63 && loc.y in 0..63) {

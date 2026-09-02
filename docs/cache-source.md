@@ -143,6 +143,7 @@ the JS5 multi-file layout.
 | `VerbatimGroupCodec` | index 0 | `<archive>.grp` - the decompressed group verbatim, chunk table and all |
 | `DefinitionJsonCodec<T>` | indices 3 and 16-22, and 14 of index 2's archives | one JSON file per definition, see below |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
+| `MapCodec` | index 5 | one directory per map square, `<x>_<y>/terrain.json` and friends - see *maps* below |
 | `Cs2SourceCodec` | index 12 | the TypeScript layout `cs2 decompile-all` writes (`<category>/<name>.ts`), provided by the `cs2` module - see *clientscripts* below |
 
 So the indices that hold definitions are editable JSON and the rest are bytes:
@@ -154,7 +155,8 @@ So the indices that hold definitions are editable JSON and the rest are bytes:
 | 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 21 | `config_spotanim` | `json-spotanim` |
 | 16 | `config_loc` | `json-loc` | | 22 | `config_varbit` | `json-varbit` |
 | 17 | `config_enum` | `json-enum` | | 0 | `anims` | `verbatim-group` |
-| 18 | `config_npc` | `json-npc` | | everything else | | `raw-archive` / `raw-files` |
+| 18 | `config_npc` | `json-npc` | | 5 | `maps` | `map-json` |
+| | | | | everything else | | `raw-archive` / `raw-files` |
 
 A codec is claimed per index in `SourceCodecs`, in three layers of increasing authority:
 
@@ -282,6 +284,136 @@ them (`DefinitionJsonCodecTest`, and `cache status` on a real tree):
 | **total** | | | **245,751** | **245,751** | **0** |
 
 Index 2's other 31 archives have no decoder and stay raw bytes (`raw-files-flat`).
+
+### maps
+
+Index 5 is not a definition index - a map square is a grid and a list of placements, not an opcode
+keyed record - but it is stored the same way and for the same reason: a region is what a map editor
+opens. `MapCodec` (`map-json`) gives each map square a directory and each of the five archives it
+can be made of a file in it:
+
+```
+maps/50_50/terrain.json             m50_50   4 levels of tiles, then the environment block
+maps/50_50/locs.json                l50_50   the placed locations (XTEA encrypted in the cache)
+maps/50_50/npcs.json                n50_50   the npc spawns (XTEA encrypted)
+maps/50_50/underwater_terrain.json  um50_50  one level of tiles
+maps/50_50/underwater_locs.json     ul50_50  the underwater locations
+maps/<archive>.container                     one of the eight archives nobody has the key for
+```
+
+Only the files a region has are written: all 2,407 surface squares have terrain and locations, 1,208
+have the underwater pair and 38 have npc spawns.
+
+**A tile is a token group and a row of 64 is a line.** 64 x 64 x 4 tiles cannot be an object each -
+that is 16,384 objects a region - so a tile's records are transcribed as tokens and one localX of 64
+ascending localY is one line, which is the order the file itself stores them in:
+
+```json
+{
+  "region": "50_50",
+  "levels": 4,
+  "tiles": [
+    [
+      "u49,h30 u161,h30 u160,h30 o171/1/1,s4,u164,h30 o240/0/0,u164,h26 - u164,h28 ...",
+      ...
+    ]
+  ],
+  "effects": [
+    {
+      "type": "environment",
+      "sunColour": 14536379,
+      "sunAmbient": 334,
+      "sunLight": 512,
+      "sunBacklight": 92,
+      "sunPosition": [-4, -16, 1],
+      "fogColour": 9282754,
+      "fogDepth": 600,
+      "cubeTexture": [682, 683, 684, 685, 686, 687]
+    },
+    {
+      "type": "lights",
+      "lights": [
+        {"packedLevel": 0, "x": 726, "z": 3265, "heightOffset": 220, "packedRadius": 1, "ranges": [258, 258, 258], "colour": 6032, "packedType": 6}
+      ]
+    },
+    {"type": "hdr", "bloom": 32, "brightpass": 8, "whitePoint": 32}
+  ]
+}
+```
+
+| token | record | opcode |
+|---|---|---|
+| `o<id>/<shape>/<rotation>` | overlay | `2 + shape * 4 + rotation`, then the id byte |
+| `s<settings>` | tile settings | `49 + settings` |
+| `u<underlay>` | underlay | `81 + underlay` |
+| `h<height>` | explicit height | `1`, then the height byte |
+| `-` | a tile with no records at all | just the `0` terminator |
+
+**The token order is the record order**, which is what makes the file byte exact: the tokens are a
+transcription and not a set of fields an encoder has to re-derive an order for. Every one of the 727
+cache's 49,332,224 tiles lists its records in the order above - measured, 16 subsequences of it and
+not one repeated opcode class - so that is the order an editor should write too. A height of `1` is
+how the cache spells "deliberately flat" (the client folds an explicit `1` to `0`) and no `h` token
+means "let the client derive the height". `effects` is the environment block that follows the tiles
+of a surface square: the sun, fog and cube texture record, point lights, the HDR triple, the skybox
+and the per-level light intensity grid, each as the file holds it - an absent field is absent rather
+than defaulted, because presence is what opcode 0's flag byte is derived from.
+
+Locations and npc spawns are one object per line, in file order:
+
+```json
+{
+  "region": "50_50",
+  "locs": [
+    {"id": 1276, "x": 12, "y": 40, "level": 0, "shape": 10, "rotation": 2}
+  ]
+}
+```
+
+Order is fidelity here as well: consecutive objects sharing an id are one group in the file, group
+ids ascend and positions within a group never go backwards, and `MapObjectEncoder` writes a list
+that satisfies that verbatim (regrouping one that does not, so an editor can still append). 48
+location archives end in zero padding past their last record - the packer padded the plaintext
+before encrypting it - and a `"padding": <n>` above `locs` is those bytes; `"trailing": "<hex>"`
+covers the case where they are not zeroes, which nothing in 727 is.
+
+**Parity, measured over the whole 727 cache** (`MapCodecParityTest`): every archive decoded, written
+as JSON, read back, re-encoded and compared against the shipped bytes.
+
+| shape | file | archives | byte identical | pristine |
+|---|---|---|---|---|
+| terrain | `<x>_<y>/terrain.json` | 2,407 | 2,407 | 0 |
+| locations | `<x>_<y>/locs.json` | 2,399 | 2,399 | 0 |
+| npc spawns | `<x>_<y>/npcs.json` | 38 | 38 | 0 |
+| underwater terrain | `<x>_<y>/underwater_terrain.json` | 1,208 | 1,208 | 0 |
+| underwater locations | `<x>_<y>/underwater_locs.json` | 1,208 | 1,208 | 0 |
+| **total** | | **7,260** | **7,260** | **0** |
+
+The eight archives whose XTEA key was never published are the other eight of index 5's 7,268 and are
+`<archive>.container` as always ("Opaque archives"). The same test unpacks index 5 into a tree of its
+own and verifies a fresh pack of it against the packed cache: **7,268 of 7,268 containers identical,
+the reference table identical, nothing pristine**; it then edits one tile of `50_50/terrain.json`,
+rebuilds, and gets exactly one repacked archive carrying the edit. Index 5 costs 654 MB of tree and
+about 14 s of an unpack, which is the price of 39 million tiles being readable text.
+
+**Reading an encrypted map archive.** `Container` has always deciphered exactly the container - offset
+5 to the end of the payload, the two byte version trailer outside it - and the unpacker goes through
+it, which is why the tree was never affected. `DecompressionContext.decompress`, the read path
+`FileCache.data(index, archive, file, xtea)` uses, deciphered to the end of the *array* instead: two
+bytes too far, which adds a ninth XTEA block whenever the trailer completes one and corrupts the last
+eight bytes of the payload. It now uses the same bound as `Container` and the client's own
+`decryptXtea(keys, containerLength)`, and `MapEncoderRoundTripTest` covers all 2,399 keyed location
+archives instead of the 375 stored in the clear. (That test opens a `FileCache` rather than
+`Cache.get()`, because the default in-memory cache decrypts at load time with the keys it was built
+with - none - and answers null for every encrypted map archive.)
+
+**Where the archive id comes from.** Index 5 is the one index whose archive names are a formula
+rather than a catalogue (`MapSquare`, `docs/cache-archive-names.md`) and its reference table carries
+name hashes and no names, so a region directory cannot say which archive id it is. `MapCodec` answers
+`archiveOf` with the tree to look in - the binding is `index.json`'s name hashes, the way index 12's
+is a script header - and `unpack`/`pack` take the hash from the `ArchiveMetadata` they are handed.
+`MapSquare.of(hash)` is the way back, by hashing all 5 x 256 x 256 possible names once; no two of
+them collide, which is checked rather than assumed.
 
 ### The pristine fallback
 
@@ -531,12 +663,12 @@ Each command prints one line per index as it goes and then its totals:
   It also says whether the tree has its `gamevals` directory and how many catalogs are in it.
 
 Against the 727 cache on one 12-core machine, on the tree at `cache-source/`: unpack 12.8 s when the
-tree is already right and 42 s when every definition file has to be written (140,692 archives,
-398,112 files, 1.37 GB, 8 opaque, 1,066 pristine - all of them clientscripts), pack 12.1 s, verify
-10.6 s at full parity, a no-op build 2.0 s and a one-archive build 3.0 s. Unpacking costs six seconds more than it did as raw bytes
-because every one of the 245,751 definition files is decoded, written as JSON, read back and
-re-encoded on the way out to prove it survives the trip; the tree is 290 MB bigger for the same
-reason.
+tree is already right and 44 s when every file has to be written (140,692 archives, 397,041 files,
+1.9 GB, 8 opaque, 1,066 pristine - all of them clientscripts), pack 22 s, verify 20 s at full parity,
+a no-op build 3.2 s and a one-archive build 7.4 s. Index 5 is 654 MB and 14 s of that. Unpacking
+costs the time it does because every one of the 245,751 definition files and 7,260 map files is
+decoded, written as JSON, read back and re-encoded on the way out to prove it survives the trip; the
+tree is 290 MB bigger for the definitions and 650 MB for the maps, for the same reason.
 
 With index 12 as TypeScript the same runs cost about 8 s more to unpack (the CS2 corpus analysis
 and a round-trip compile of every script) and 1.6 s more to pack (the folder's signature scan, then
@@ -644,9 +776,9 @@ in `cs2.d.ts`; the copy in `cs2.d.ts` is the price of the index staying self-con
 
 - World servers hosting their own JS5 from their own tree (`CACHE_SOURCE_PATH` per world; the
   lobby's world flag decides whether the client re-inits JS5 against the world).
-- Typed codecs for the indices that are still bytes (sprites as PNG, maps as JSON for the map
-  editor, models). Each is one codec class plus a byte-exact proof, the way the definition indices
-  got theirs; the pristine fallback carries the rest meanwhile.
+- Typed codecs for the indices that are still bytes (sprites as PNG, models). Each is one codec
+  class plus a byte-exact proof, the way the definition indices and index 5 got theirs; the pristine
+  fallback carries the rest meanwhile.
 - Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
 - Handing a codec the cache a tree is being *unpacked from*, the last thing `SourceCodec` does not
   offer - see *The `SourceCodec` interface* above. Packing needs no cache any more.

@@ -19,12 +19,20 @@ internal class DecompressionContext {
     private val lzmaDecoder: Decoder by lazy { Decoder() }
 
     fun decompress(data: ByteArray, keys: IntArray? = null): ByteArray? {
-        if (keys != null && (keys[0] != 0 || keys[1] != 0 || keys[2] != 0 || 0 != keys[3])) {
-            Xtea.decipher(data, keys, 5)
-        }
         val buffer = BufferReader(data)
         val type = buffer.readUnsignedByte()
         val compressedSize = buffer.readInt() and 0xFFFFFF
+        if (keys != null && (keys[0] != 0 || keys[1] != 0 || keys[2] != 0 || 0 != keys[3])) {
+            // The encrypted region is the container and nothing else: from offset 5 to the end of
+            // the payload, so the two byte version trailer stays outside it. Deciphering to the end
+            // of the array instead adds a ninth block whenever the trailer completes one, which
+            // corrupts the last eight bytes of the payload - 2,033 of the 727 cache's 2,407 `l`
+            // archives failed to decompress because of it. The client's own
+            // `decryptXtea(keys, containerLength)` uses the same bound, and so does
+            // [world.gregs.voidps.cache.store.Container].
+            val end = (if (type == NONE) HEADER_SIZE_NONE else HEADER_SIZE_SIZED) + compressedSize
+            Xtea.decipher(data, keys, XTEA_OFFSET, minOf(end, data.size))
+        }
         var decompressedSize = 0
         if (type != 0) {
             decompressedSize = buffer.readInt() and 0xFFFFFF
@@ -102,6 +110,15 @@ internal class DecompressionContext {
     }
 
     companion object {
+        /** Everything but the compression byte and the compressed size is encrypted. */
+        private const val XTEA_OFFSET = 5
+
+        /** Bytes before the payload of an uncompressed container. */
+        private const val HEADER_SIZE_NONE = 5
+
+        /** Bytes before the payload of a compressed one: the decompressed size as well. */
+        private const val HEADER_SIZE_SIZED = 9
+
         private const val NONE = 0
         private const val BZIP2 = 1
         private const val GZIP = 2
