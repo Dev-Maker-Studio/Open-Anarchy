@@ -40,7 +40,7 @@ import world.gregs.voidps.cache.definition.encoder.QuickChatPhraseEncoder
  *
  * | index | dir | codec | shape |
  * |---|---|---|---|
- * | 0 | `anims` | [AnimationFrameCodec] | `anims/<archive>/<frame>.json`, three chunk group |
+ * | 0 | `anims` | [AnimationFrameCodec] | `anims/<archive>.glb`, a glTF animation per frame set, three chunk group |
  * | 1 | `bases` | `json-base` | `bases/<archive>.json` |
  * | 10 | `binary` | `json-huffman` | `binary/huffman.json` |
  * | 23 | `worldmapdata` | [WorldMapCodec] | `details/`, `<area>_staticelements/`, `<area>/` |
@@ -54,13 +54,15 @@ import world.gregs.voidps.cache.definition.encoder.QuickChatPhraseEncoder
  * [DefinitionJsonCodec] over [DefinitionLayout.Packed] with no bits, which names the file after the
  * archive and makes the definition id the archive id. An index whose archives are unrelated things is an
  * [ArchiveDirectoryCodec] with a name and a codec per archive, as index 2 has always been. Index 0 is the
- * only one that needs a codec of its own, because its group's chunk layout has to come back.
+ * only one that needs a codec of its own, for two reasons: a frame set is an animation, which is a thing
+ * glTF says better than JSON does ([AnimationGltf]), and its group's chunk layout has to come back.
  */
 object MiscCodecs {
 
     /** Claim all eight indices. Called by [SourceCodecs.reset]. */
     fun register() {
-        // Index 0's three chunk groups are the one layout no shared codec reproduces.
+        // Index 0 is a glTF animation per archive, and its three chunk groups are the one layout no
+        // shared codec reproduces.
         SourceCodecs.builtin(Index.ANIMATION_FRAMES, AnimationFrameCodec)
         SourceCodecs.builtin(Index.ANIMATION_SKELETONS, bases)
         SourceCodecs.builtin(Index.HUFFMAN, huffman)

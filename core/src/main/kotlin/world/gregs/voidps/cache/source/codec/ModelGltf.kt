@@ -1,9 +1,5 @@
 package world.gregs.voidps.cache.source.codec
 
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
@@ -44,10 +40,9 @@ import java.nio.ByteOrder
  *   re-oriented: what the cache holds is what the file holds.
  * - **Indices are `UNSIGNED_SHORT` while every index fits**, and `UNSIGNED_INT` otherwise, which is
  *   also how an index a malformed model puts out of range survives.
- * - **Deterministic to the byte.** The JSON is written by hand in a fixed key order with no
- *   whitespace, the chunks are padded the way the specification requires (spaces after the JSON,
- *   zeroes after the binary), and every number in it is an integer, so re-unpacking an unchanged
- *   cache rewrites nothing.
+ * - **Deterministic to the byte**, the way [Gltf] describes: a fixed key order, no whitespace, every
+ *   number an integer and a constant generator string, so re-unpacking an unchanged cache rewrites
+ *   nothing.
  * - **A model with no geometry has no mesh.** Eight archives in 727 declare no vertices and no
  *   faces; glTF has no way to spell an empty primitive, so those files carry the node and its
  *   extras and nothing else.
@@ -55,53 +50,15 @@ import java.nio.ByteOrder
  *   file's own per element arrays, and every model in the 727 cache has exactly the ones
  *   [ModelEncoder] derives, so no file carries either.
  *
- * Reading goes through the accessors properly - byte offsets, strides and component types - rather
- * than assuming this writer's layout, so a `.glb` that has been through another glTF tool still
- * reads. The one thing it insists on is a single primitive, because the extras are indexed by the
- * model's own face order and a split into several primitives loses it.
+ * Reading goes through [Gltf.accessor] - byte offsets, strides and component types - rather than
+ * assuming this writer's layout, so a `.glb` that has been through another glTF tool still reads.
+ * The one thing it insists on is a single primitive, because the extras are indexed by the model's
+ * own face order and a split into several primitives loses it.
+ *
+ * The `.glb` container itself, the accessor reader and the JSON writers are [Gltf], which
+ * [AnimationGltf] shares.
  */
 internal object ModelGltf {
-
-    /** `glTF`, little endian. */
-    private const val MAGIC = 0x46546C67
-
-    private const val VERSION = 2
-
-    /** `JSON`, little endian. */
-    private const val CHUNK_JSON = 0x4E4F534A
-
-    /** `BIN ` , little endian. */
-    private const val CHUNK_BIN = 0x004E4942
-
-    private const val HEADER_BYTES = 12
-
-    private const val CHUNK_HEADER_BYTES = 8
-
-    private const val FLOAT = 5126
-    private const val UNSIGNED_SHORT = 5123
-    private const val UNSIGNED_INT = 5125
-    private const val BYTE = 5120
-    private const val UNSIGNED_BYTE = 5121
-    private const val SHORT = 5122
-
-    private const val ARRAY_BUFFER = 34962
-    private const val ELEMENT_ARRAY_BUFFER = 34963
-
-    /** Triangles; the mode a model with faces is drawn in. */
-    private const val TRIANGLES = 4
-
-    /** Points; the mode a model with vertices but no faces is drawn in. */
-    private const val POINTS = 0
-
-    /** The largest index `UNSIGNED_SHORT` may carry: 65535 is reserved for primitive restart. */
-    private const val MAX_SHORT_INDEX = 65534
-
-    /** The JSON chunk is padded with spaces; the binary chunk with [ZERO]. */
-    private const val SPACE: Byte = 0x20
-
-    private const val ZERO: Byte = 0
-
-    private val json = Json { ignoreUnknownKeys = true }
 
     /** [model] as the exact bytes of its `.glb`. */
     fun write(model: ModelDefinition): ByteArray {
@@ -122,7 +79,7 @@ internal object ModelGltf {
         }
         // An index out of an unsigned short's range - or a negative one, which only a malformed
         // model has - goes in the wider accessor so that it comes back as itself.
-        val wide = negative || largest > MAX_SHORT_INDEX
+        val wide = negative || largest > Gltf.MAX_SHORT_INDEX
         val indexBytes = if (wide) 4 else 2
         val binary = ByteBuffer.allocate(vertices * 12 + faces * 3 * indexBytes).order(ByteOrder.LITTLE_ENDIAN)
         for (vertex in 0 until vertices) {
@@ -135,7 +92,7 @@ internal object ModelGltf {
             index(binary, model.faceB[face], wide)
             index(binary, model.faceC[face], wide)
         }
-        return assemble(asset(model, vertices, faces, wide), binary.array())
+        return Gltf.assemble(asset(model, vertices, faces, wide), binary.array())
     }
 
     private fun widest(index: Int, largest: Int): Int = if (index > largest) index else largest
@@ -156,8 +113,8 @@ internal object ModelGltf {
      * whatever the geometry looks like.
      */
     fun read(bytes: ByteArray, id: Int): ModelDefinition {
-        val chunks = chunks(bytes)
-        val root = json.parseToJsonElement(String(chunks.first, Charsets.UTF_8)).jsonObject
+        val chunks = Gltf.chunks(bytes)
+        val root = Gltf.root(chunks.first)
         val node = root["nodes"]?.jsonArray?.firstOrNull()?.jsonObject
             ?: throw IllegalArgumentException("Model $id has no glTF node.")
         val rs = node["extras"]?.jsonObject?.get("rs")?.jsonObject
@@ -174,18 +131,18 @@ internal object ModelGltf {
             }
             val primitive = primitives[0].jsonObject
             val position = primitive["attributes"]!!.jsonObject["POSITION"]!!.jsonPrimitive.int
-            positions = accessor(root, binary, position, 3)
-            primitive["indices"]?.let { indices = accessor(root, binary, it.jsonPrimitive.int, 1) }
+            positions = Gltf.accessor(root, binary, position, 3)
+            primitive["indices"]?.let { indices = Gltf.accessor(root, binary, it.jsonPrimitive.int, 1) }
         }
         val vertices = positions.size / 3
         val faces = indices.size / 3
-        val mappings = bytes(rs["textureMappings"])
-        val triangles = tuples(rs["textureTriangles"])
-        val scales = tuples(rs["textureScales"])
-        val translations = tuples(rs["cubeTranslations"])
-        val emitters = tuples(rs["particleEmitters"])
-        val effectors = tuples(rs["particleEffectors"])
-        val billboards = tuples(rs["billboards"])
+        val mappings = Gltf.bytes(rs["textureMappings"])
+        val triangles = Gltf.tuples(rs["textureTriangles"])
+        val scales = Gltf.tuples(rs["textureScales"])
+        val translations = Gltf.tuples(rs["cubeTranslations"])
+        val emitters = Gltf.tuples(rs["particleEmitters"])
+        val effectors = Gltf.tuples(rs["particleEffectors"])
+        val billboards = Gltf.tuples(rs["billboards"])
         val footer = rs["footer"]?.jsonObject ?: JsonObject(emptyMap())
         return ModelDefinition(
             id = id,
@@ -198,31 +155,31 @@ internal object ModelGltf {
             faceA = IntArray(faces) { indices[it * 3] },
             faceB = IntArray(faces) { indices[it * 3 + 1] },
             faceC = IntArray(faces) { indices[it * 3 + 2] },
-            faceColors = shorts(rs["colours"]) ?: ShortArray(faces),
-            faceAlphas = bytes(rs["alphas"]),
-            faceRenderTypes = bytes(rs["renderTypes"]),
-            facePriorities = bytes(rs["priorities"]),
-            faceTextures = shorts(rs["materials"]),
-            faceTexturePointers = bytes(rs["texturePointers"]),
+            faceColors = Gltf.shorts(rs["colours"]) ?: ShortArray(faces),
+            faceAlphas = Gltf.bytes(rs["alphas"]),
+            faceRenderTypes = Gltf.bytes(rs["renderTypes"]),
+            facePriorities = Gltf.bytes(rs["priorities"]),
+            faceTextures = Gltf.shorts(rs["materials"]),
+            faceTexturePointers = Gltf.bytes(rs["texturePointers"]),
             textureTriangleCount = mappings?.size ?: triangles.size,
             texturesMapping = mappings,
-            textureFaceX = if (rs["textureTriangles"] == null) null else shortColumn(triangles, 0),
-            textureFaceY = if (rs["textureTriangles"] == null) null else shortColumn(triangles, 1),
-            textureFaceZ = if (rs["textureTriangles"] == null) null else shortColumn(triangles, 2),
+            textureFaceX = if (rs["textureTriangles"] == null) null else Gltf.shortColumn(triangles, 0),
+            textureFaceY = if (rs["textureTriangles"] == null) null else Gltf.shortColumn(triangles, 1),
+            textureFaceZ = if (rs["textureTriangles"] == null) null else Gltf.shortColumn(triangles, 2),
             textureCoordU = null,
             textureCoordV = null,
             vertexNormalsX = null,
             vertexNormalsY = null,
             vertexNormalsZ = null,
-            unusedTexturePointers = rs["unusedTexturePointers"]?.let { hex(it.jsonPrimitive.content) },
-            texturesScaleX = if (rs["textureScales"] == null) null else column(scales, 0),
-            texturesScaleY = if (rs["textureScales"] == null) null else column(scales, 1),
-            texturesScaleZ = if (rs["textureScales"] == null) null else column(scales, 2),
-            texturesRotation = bytes(rs["textureRotations"]),
-            texturesDirection = bytes(rs["textureDirections"]),
-            texturesSpeed = ints(rs["textureSpeeds"]),
-            texturesUtrans = if (rs["cubeTranslations"] == null) null else column(translations, 0),
-            texturesVtrans = if (rs["cubeTranslations"] == null) null else column(translations, 1),
+            unusedTexturePointers = rs["unusedTexturePointers"]?.let { Gltf.hex(it.jsonPrimitive.content) },
+            texturesScaleX = if (rs["textureScales"] == null) null else Gltf.column(scales, 0),
+            texturesScaleY = if (rs["textureScales"] == null) null else Gltf.column(scales, 1),
+            texturesScaleZ = if (rs["textureScales"] == null) null else Gltf.column(scales, 2),
+            texturesRotation = Gltf.bytes(rs["textureRotations"]),
+            texturesDirection = Gltf.bytes(rs["textureDirections"]),
+            texturesSpeed = Gltf.ints(rs["textureSpeeds"]),
+            texturesUtrans = if (rs["cubeTranslations"] == null) null else Gltf.column(translations, 0),
+            texturesVtrans = if (rs["cubeTranslations"] == null) null else Gltf.column(translations, 1),
             billboards = if (rs["billboards"] == null) {
                 null
             } else {
@@ -237,10 +194,10 @@ internal object ModelGltf {
             faceSkinFlag = footer["faceSkins"]?.jsonPrimitive?.int ?: 0,
             textureFlag = footer["materials"]?.jsonPrimitive?.int ?: 0,
             vertexSkinFlag = footer["vertexSkins"]?.jsonPrimitive?.int ?: 0,
-            vertexFlags = bytes(rs["vertexFlags"]),
-            faceIndexTypes = bytes(rs["faceIndexTypes"]),
-            faceSkins = ints(rs["faceSkins"]),
-            vertexSkins = ints(rs["vertexSkins"]),
+            vertexFlags = Gltf.bytes(rs["vertexFlags"]),
+            faceIndexTypes = Gltf.bytes(rs["faceIndexTypes"]),
+            faceSkins = Gltf.ints(rs["faceSkins"]),
+            vertexSkins = Gltf.ints(rs["vertexSkins"]),
             particleEmitters = if (rs["particleEmitters"] == null) {
                 null
             } else {
@@ -251,12 +208,12 @@ internal object ModelGltf {
             } else {
                 Array(effectors.size) { ParticleEffectorAttachment(effectors[it][0], effectors[it][1]) }
             },
-            trailing = rs["trailing"]?.let { hex(it.jsonPrimitive.content) }
+            trailing = rs["trailing"]?.let { Gltf.hex(it.jsonPrimitive.content) }
         )
     }
 
     /** The `.glb`'s JSON chunk, for a report or a test that wants to show what a file says. */
-    fun json(bytes: ByteArray): String = String(chunks(bytes).first, Charsets.UTF_8)
+    fun json(bytes: ByteArray): String = Gltf.text(bytes)
 
     // --- writing -----------------------------------------------------------------------------
 
@@ -264,7 +221,7 @@ internal object ModelGltf {
     private fun asset(model: ModelDefinition, vertices: Int, faces: Int, wide: Boolean): String {
         val out = StringBuilder(1024 + model.faceCount * 8)
         val name = "model_" + model.id
-        out.append("{\"asset\":{\"generator\":\"").append(GENERATOR).append("\",\"version\":\"2.0\"}")
+        out.append("{\"asset\":{\"generator\":\"").append(Gltf.GENERATOR).append("\",\"version\":\"2.0\"}")
         out.append(",\"scene\":0,\"scenes\":[{\"nodes\":[0]}]")
         out.append(",\"nodes\":[{")
         if (vertices > 0) {
@@ -279,8 +236,8 @@ internal object ModelGltf {
             if (faces > 0) {
                 out.append(",\"indices\":1")
             }
-            out.append(",\"mode\":").append(if (faces > 0) TRIANGLES else POINTS).append("}]}]")
-            out.append(",\"accessors\":[{\"bufferView\":0,\"componentType\":").append(FLOAT)
+            out.append(",\"mode\":").append(if (faces > 0) Gltf.TRIANGLES else Gltf.POINTS).append("}]}]")
+            out.append(",\"accessors\":[{\"bufferView\":0,\"componentType\":").append(Gltf.FLOAT)
             out.append(",\"count\":").append(vertices).append(",\"type\":\"VEC3\",\"min\":")
             bounds(out, model, vertices, least = true)
             out.append(",\"max\":")
@@ -288,18 +245,18 @@ internal object ModelGltf {
             out.append('}')
             if (faces > 0) {
                 out.append(",{\"bufferView\":1,\"componentType\":")
-                    .append(if (wide) UNSIGNED_INT else UNSIGNED_SHORT)
+                    .append(if (wide) Gltf.UNSIGNED_INT else Gltf.UNSIGNED_SHORT)
                     .append(",\"count\":").append(faces * 3).append(",\"type\":\"SCALAR\"}")
             }
             out.append(']')
             val positionBytes = vertices * 12
             val indexBytes = faces * 3 * (if (wide) 4 else 2)
             out.append(",\"bufferViews\":[{\"buffer\":0,\"byteLength\":").append(positionBytes)
-                .append(",\"byteOffset\":0,\"target\":").append(ARRAY_BUFFER).append('}')
+                .append(",\"byteOffset\":0,\"target\":").append(Gltf.ARRAY_BUFFER).append('}')
             if (faces > 0) {
                 out.append(",{\"buffer\":0,\"byteLength\":").append(indexBytes)
                     .append(",\"byteOffset\":").append(positionBytes)
-                    .append(",\"target\":").append(ELEMENT_ARRAY_BUFFER).append('}')
+                    .append(",\"target\":").append(Gltf.ELEMENT_ARRAY_BUFFER).append('}')
             }
             out.append(']')
             out.append(",\"buffers\":[{\"byteLength\":").append(positionBytes + indexBytes).append("}]")
@@ -361,19 +318,19 @@ internal object ModelGltf {
             .append(",\"materials\":").append(model.textureFlag)
             .append(",\"vertexSkins\":").append(model.vertexSkinFlag)
             .append('}')
-        scalars(out, "colours", model.faceCount) { model.faceColors[it].toInt() and 0xffff }
-        model.faceRenderTypes?.let { values -> scalars(out, "renderTypes", values.size) { values[it].toInt() and 0xff } }
-        model.facePriorities?.let { values -> scalars(out, "priorities", values.size) { values[it].toInt() and 0xff } }
-        model.faceAlphas?.let { values -> scalars(out, "alphas", values.size) { values[it].toInt() and 0xff } }
-        model.faceTextures?.let { values -> scalars(out, "materials", values.size) { values[it].toInt() } }
-        model.faceTexturePointers?.let { values -> scalars(out, "texturePointers", values.size) { values[it].toInt() } }
-        model.faceSkins?.let { values -> scalars(out, "faceSkins", values.size) { values[it] } }
-        model.vertexSkins?.let { values -> scalars(out, "vertexSkins", values.size) { values[it] } }
+        Gltf.scalars(out, "colours", model.faceCount) { model.faceColors[it].toInt() and 0xffff }
+        model.faceRenderTypes?.let { values -> Gltf.scalars(out, "renderTypes", values.size) { values[it].toInt() and 0xff } }
+        model.facePriorities?.let { values -> Gltf.scalars(out, "priorities", values.size) { values[it].toInt() and 0xff } }
+        model.faceAlphas?.let { values -> Gltf.scalars(out, "alphas", values.size) { values[it].toInt() and 0xff } }
+        model.faceTextures?.let { values -> Gltf.scalars(out, "materials", values.size) { values[it].toInt() } }
+        model.faceTexturePointers?.let { values -> Gltf.scalars(out, "texturePointers", values.size) { values[it].toInt() } }
+        model.faceSkins?.let { values -> Gltf.scalars(out, "faceSkins", values.size) { values[it] } }
+        model.vertexSkins?.let { values -> Gltf.scalars(out, "vertexSkins", values.size) { values[it] } }
         model.texturesMapping?.let { values ->
-            scalars(out, "textureMappings", values.size) { values[it].toInt() and 0xff }
+            Gltf.scalars(out, "textureMappings", values.size) { values[it].toInt() and 0xff }
         }
         model.textureFaceX?.let { corners ->
-            tuples(out, "textureTriangles", corners.size, 3) { index, part ->
+            Gltf.tuples(out, "textureTriangles", corners.size, 3) { index, part ->
                 when (part) {
                     0 -> corners[index].toInt() and 0xffff
                     1 -> model.textureFaceY?.get(index)?.toInt()?.and(0xffff) ?: 0
@@ -382,7 +339,7 @@ internal object ModelGltf {
             }
         }
         model.texturesScaleX?.let { scaleX ->
-            tuples(out, "textureScales", scaleX.size, 3) { index, part ->
+            Gltf.tuples(out, "textureScales", scaleX.size, 3) { index, part ->
                 when (part) {
                     0 -> scaleX[index]
                     1 -> model.texturesScaleY?.get(index) ?: 0
@@ -390,26 +347,26 @@ internal object ModelGltf {
                 }
             }
         }
-        model.texturesRotation?.let { values -> scalars(out, "textureRotations", values.size) { values[it].toInt() } }
-        model.texturesDirection?.let { values -> scalars(out, "textureDirections", values.size) { values[it].toInt() } }
-        model.texturesSpeed?.let { values -> scalars(out, "textureSpeeds", values.size) { values[it] } }
+        model.texturesRotation?.let { values -> Gltf.scalars(out, "textureRotations", values.size) { values[it].toInt() } }
+        model.texturesDirection?.let { values -> Gltf.scalars(out, "textureDirections", values.size) { values[it].toInt() } }
+        model.texturesSpeed?.let { values -> Gltf.scalars(out, "textureSpeeds", values.size) { values[it] } }
         model.texturesUtrans?.let { translationU ->
-            tuples(out, "cubeTranslations", translationU.size, 2) { index, part ->
+            Gltf.tuples(out, "cubeTranslations", translationU.size, 2) { index, part ->
                 if (part == 0) translationU[index] else model.texturesVtrans?.get(index) ?: 0
             }
         }
         model.particleEmitters?.let { emitters ->
-            tuples(out, "particleEmitters", emitters.size, 2) { index, part ->
+            Gltf.tuples(out, "particleEmitters", emitters.size, 2) { index, part ->
                 if (part == 0) emitters[index].particleId else emitters[index].appliesOnFace
             }
         }
         model.particleEffectors?.let { effectors ->
-            tuples(out, "particleEffectors", effectors.size, 2) { index, part ->
+            Gltf.tuples(out, "particleEffectors", effectors.size, 2) { index, part ->
                 if (part == 0) effectors[index].effectorId else effectors[index].appliesOnVertex
             }
         }
         model.billboards?.let { billboards ->
-            tuples(out, "billboards", billboards.size, 4) { index, part ->
+            Gltf.tuples(out, "billboards", billboards.size, 4) { index, part ->
                 when (part) {
                     0 -> billboards[index].billboardId
                     1 -> billboards[index].appliesOnFace
@@ -421,209 +378,18 @@ internal object ModelGltf {
         // The two per element layout arrays, and only when the encoder would not derive them.
         model.vertexFlags?.let { flags ->
             if (!flags.contentEquals(ModelEncoder.deriveVertexFlags(model))) {
-                scalars(out, "vertexFlags", flags.size) { flags[it].toInt() and 0xff }
+                Gltf.scalars(out, "vertexFlags", flags.size) { flags[it].toInt() and 0xff }
             }
         }
         model.faceIndexTypes?.let { types ->
             if (!types.contentEquals(ModelEncoder.deriveFaceIndexTypes(model))) {
-                scalars(out, "faceIndexTypes", types.size) { types[it].toInt() and 0xff }
+                Gltf.scalars(out, "faceIndexTypes", types.size) { types[it].toInt() and 0xff }
             }
         }
         model.unusedTexturePointers?.let { bytes ->
-            out.append(",\"unusedTexturePointers\":\"").append(hex(bytes)).append('"')
+            out.append(",\"unusedTexturePointers\":\"").append(Gltf.hex(bytes)).append('"')
         }
-        model.trailing?.let { bytes -> out.append(",\"trailing\":\"").append(hex(bytes)).append('"') }
+        model.trailing?.let { bytes -> out.append(",\"trailing\":\"").append(Gltf.hex(bytes)).append('"') }
         out.append('}')
     }
-
-    private inline fun scalars(out: StringBuilder, name: String, count: Int, value: (Int) -> Int) {
-        out.append(",\"").append(name).append("\":[")
-        for (index in 0 until count) {
-            if (index != 0) {
-                out.append(',')
-            }
-            out.append(value(index))
-        }
-        out.append(']')
-    }
-
-    private inline fun tuples(out: StringBuilder, name: String, count: Int, arity: Int, value: (Int, Int) -> Int) {
-        out.append(",\"").append(name).append("\":[")
-        for (index in 0 until count) {
-            if (index != 0) {
-                out.append(',')
-            }
-            out.append('[')
-            for (part in 0 until arity) {
-                if (part != 0) {
-                    out.append(',')
-                }
-                out.append(value(index, part))
-            }
-            out.append(']')
-        }
-        out.append(']')
-    }
-
-    /** The 12 byte header, the JSON chunk padded with spaces, and the binary chunk padded with zeroes. */
-    private fun assemble(asset: String, binary: ByteArray): ByteArray {
-        val text = asset.toByteArray(Charsets.UTF_8)
-        val jsonPadding = padding(text.size)
-        val binaryPadding = if (binary.isEmpty()) 0 else padding(binary.size)
-        var length = HEADER_BYTES + CHUNK_HEADER_BYTES + text.size + jsonPadding
-        if (binary.isNotEmpty()) {
-            length += CHUNK_HEADER_BYTES + binary.size + binaryPadding
-        }
-        val out = ByteBuffer.allocate(length).order(ByteOrder.LITTLE_ENDIAN)
-        out.putInt(MAGIC)
-        out.putInt(VERSION)
-        out.putInt(length)
-        out.putInt(text.size + jsonPadding)
-        out.putInt(CHUNK_JSON)
-        out.put(text)
-        for (pad in 0 until jsonPadding) {
-            out.put(SPACE)
-        }
-        if (binary.isNotEmpty()) {
-            out.putInt(binary.size + binaryPadding)
-            out.putInt(CHUNK_BIN)
-            out.put(binary)
-            for (pad in 0 until binaryPadding) {
-                out.put(ZERO)
-            }
-        }
-        return out.array()
-    }
-
-    private fun padding(size: Int): Int = (4 - (size and 3)) and 3
-
-    // --- reading -----------------------------------------------------------------------------
-
-    /** The JSON chunk and the binary chunk, which is empty when the file has none. */
-    private fun chunks(bytes: ByteArray): Pair<ByteArray, ByteArray> {
-        val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-        require(bytes.size >= HEADER_BYTES && buffer.getInt(0) == MAGIC) { "Not a glb: bad magic." }
-        require(buffer.getInt(4) == VERSION) { "glb version ${buffer.getInt(4)}, expected $VERSION." }
-        var offset = HEADER_BYTES
-        var text: ByteArray? = null
-        var binary = ByteArray(0)
-        val end = minOf(buffer.getInt(8), bytes.size)
-        while (offset + CHUNK_HEADER_BYTES <= end) {
-            val length = buffer.getInt(offset)
-            val type = buffer.getInt(offset + 4)
-            val start = offset + CHUNK_HEADER_BYTES
-            require(start + length <= bytes.size) { "glb chunk at $offset runs past the file." }
-            when (type) {
-                CHUNK_JSON -> text = bytes.copyOfRange(start, start + length)
-                CHUNK_BIN -> binary = bytes.copyOfRange(start, start + length)
-            }
-            offset = start + length
-        }
-        return (text ?: throw IllegalArgumentException("glb has no JSON chunk.")) to binary
-    }
-
-    /**
-     * One accessor's values, [components] per element, read through its buffer view.
-     *
-     * General rather than an assumption about this writer's layout - byte offsets, strides and all
-     * six integer and float component types - so a file that has been through another glTF tool
-     * still reads. A sparse accessor is refused rather than silently read wrong.
-     */
-    private fun accessor(root: JsonObject, binary: ByteArray, index: Int, components: Int): IntArray {
-        val accessor = root["accessors"]!!.jsonArray[index].jsonObject
-        require(accessor["sparse"] == null) { "Sparse accessor $index is not supported." }
-        val count = accessor["count"]!!.jsonPrimitive.int
-        val componentType = accessor["componentType"]!!.jsonPrimitive.int
-        val size = componentSize(componentType)
-        val view = root["bufferViews"]!!.jsonArray[accessor["bufferView"]!!.jsonPrimitive.int].jsonObject
-        val stride = view["byteStride"]?.jsonPrimitive?.int ?: (size * components)
-        val start = (view["byteOffset"]?.jsonPrimitive?.int ?: 0) +
-            (accessor["byteOffset"]?.jsonPrimitive?.int ?: 0)
-        val buffer = ByteBuffer.wrap(binary).order(ByteOrder.LITTLE_ENDIAN)
-        val values = IntArray(count * components)
-        for (element in 0 until count) {
-            val offset = start + element * stride
-            for (part in 0 until components) {
-                values[element * components + part] = readComponent(buffer, offset + part * size, componentType)
-            }
-        }
-        return values
-    }
-
-    private fun readComponent(buffer: ByteBuffer, offset: Int, componentType: Int): Int = when (componentType) {
-        BYTE -> buffer.get(offset).toInt()
-        UNSIGNED_BYTE -> buffer.get(offset).toInt() and 0xff
-        SHORT -> buffer.getShort(offset).toInt()
-        UNSIGNED_SHORT -> buffer.getShort(offset).toInt() and 0xffff
-        UNSIGNED_INT -> buffer.getInt(offset)
-        // Rounded rather than truncated: our own files hold exact integers, and one that has been
-        // through another tool's float maths should not lose a unit to 82.99999.
-        FLOAT -> Math.round(buffer.getFloat(offset))
-        else -> throw IllegalArgumentException("Unknown glTF component type $componentType.")
-    }
-
-    private fun componentSize(componentType: Int): Int = when (componentType) {
-        BYTE, UNSIGNED_BYTE -> 1
-        SHORT, UNSIGNED_SHORT -> 2
-        UNSIGNED_INT, FLOAT -> 4
-        else -> throw IllegalArgumentException("Unknown glTF component type $componentType.")
-    }
-
-    private fun tuples(element: JsonElement?): List<IntArray> {
-        if (element == null || element is JsonNull) {
-            return emptyList()
-        }
-        return element.jsonArray.map { item ->
-            val parts = item.jsonArray
-            IntArray(parts.size) { parts[it].jsonPrimitive.int }
-        }
-    }
-
-    private fun column(tuples: List<IntArray>, part: Int): IntArray =
-        IntArray(tuples.size) { if (part < tuples[it].size) tuples[it][part] else 0 }
-
-    private fun shortColumn(tuples: List<IntArray>, part: Int): ShortArray =
-        ShortArray(tuples.size) { if (part < tuples[it].size) tuples[it][part].toShort() else 0 }
-
-    private fun ints(element: JsonElement?): IntArray? {
-        val array = numbers(element) ?: return null
-        return IntArray(array.size) { array[it].jsonPrimitive.int }
-    }
-
-    private fun shorts(element: JsonElement?): ShortArray? {
-        val array = numbers(element) ?: return null
-        return ShortArray(array.size) { array[it].jsonPrimitive.int.toShort() }
-    }
-
-    private fun bytes(element: JsonElement?): ByteArray? {
-        val array = numbers(element) ?: return null
-        return ByteArray(array.size) { array[it].jsonPrimitive.int.toByte() }
-    }
-
-    private fun numbers(element: JsonElement?): JsonArray? {
-        if (element == null || element is JsonNull) {
-            return null
-        }
-        return element.jsonArray
-    }
-
-    private val digits = "0123456789abcdef".toCharArray()
-
-    private fun hex(bytes: ByteArray): String {
-        val out = CharArray(bytes.size * 2)
-        for (index in bytes.indices) {
-            val byte = bytes[index].toInt() and 0xff
-            out[index * 2] = digits[byte shr 4]
-            out[index * 2 + 1] = digits[byte and 0xf]
-        }
-        return String(out)
-    }
-
-    private fun hex(text: String): ByteArray {
-        require(text.length % 2 == 0) { "'$text' is not a whole number of bytes." }
-        return ByteArray(text.length / 2) { text.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
-    }
-
-    /** Fixed, because a generator string that moved would rewrite all 73,417 files. */
-    private const val GENERATOR = "darkan cache-source"
 }

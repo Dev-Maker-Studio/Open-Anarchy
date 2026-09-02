@@ -41,13 +41,16 @@ class MiscCodecTest {
         val packed = cacheDirectory() ?: return
         SourceCodecs.reset()
         val cache = FileCache.load(packed.absolutePath)
+        // Index 0's codec reads the skeletons to lay its nodes out; point it at this cache rather
+        // than letting it open a second one through Cache.get.
+        AnimationFrameCodec.cache = { cache }
         val work = Files.createTempDirectory(scratch(), "misc-codec")
         var archives = 0
         var files = 0
         var pristine = 0
         var bytes = 0L
         try {
-            println("%-20s %-6s %9s %9s %9s %9s %9s".format("index", "id", "archives", "files", "identical", "pristine", "json KB"))
+            println("%-20s %-6s %9s %9s %9s %9s %9s".format("index", "id", "archives", "files", "identical", "pristine", "tree KB"))
             for (index in INDICES) {
                 val counts = index(cache, index, work.resolve(IndexNames.name(index)))
                 archives += counts.archives
@@ -72,15 +75,16 @@ class MiscCodecTest {
             assertEquals(EXPECTED_FILES, files, "the eight indices hold $EXPECTED_FILES files in 727")
             assertEquals(0, pristine, "no file of any of these indices may need a pristine copy")
         } finally {
+            AnimationFrameCodec.reset()
             cache.close()
             work.toFile().deleteRecursively()
         }
     }
 
     /**
-     * Index 0's groups are stored in three chunks and the codec reproduces the split rather than
-     * recording it, so it is worth saying out loud what the split is: the four byte header, the flag byte
-     * per transform, and the transform values.
+     * Index 0's groups are stored in three chunks and the codec derives the split from the frames rather
+     * than carrying it in `index.json`, so it is worth saying out loud what the split is: the four byte
+     * header, the flag byte per transform, and the transform values.
      */
     @Test
     fun `an animation frame group keeps its three chunks`() {
@@ -155,9 +159,13 @@ class MiscCodecTest {
             )
         }
         // The layouts, spelled out so a rename shows up here rather than as a rebuilt tree.
-        assertEquals(12, AnimationFrameCodec.archiveOf("12/5.json"))
-        assertEquals(12, AnimationFrameCodec.archiveOf("12/5.json.pristine"))
+        assertEquals(12, AnimationFrameCodec.archiveOf("12${AnimationFrameCodec.EXTENSION}"))
+        assertEquals(
+            12,
+            AnimationFrameCodec.archiveOf("12${AnimationFrameCodec.EXTENSION}${SourceFiles.PRISTINE_EXTENSION}")
+        )
         assertEquals(null, AnimationFrameCodec.archiveOf("12.json"))
+        assertEquals(null, AnimationFrameCodec.archiveOf("12/5${AnimationFrameCodec.EXTENSION}"))
         assertEquals(1, WorldMapCodec.archiveOf("details/29.json"))
         assertEquals(83, WorldMapCodec.archiveOf("main_staticelements/0.json"))
         assertEquals(29, WorldMapCodec.archiveOf("main/4.dat"))
@@ -267,8 +275,13 @@ class MiscCodecTest {
         /** 4,085 + 3,535 + 1 + 86 + 2 + 2 + 6 + 31 + 16. */
         private const val EXPECTED_ARCHIVES = 7764
 
-        /** 490,049 + 3,535 + 1 + 1,181 + 1,372 + 86 + 6 + 31 + 16. */
-        private const val EXPECTED_FILES = 496277
+        /**
+         * 4,085 + 3,535 + 1 + 1,181 + 1,372 + 86 + 6 + 31 + 16.
+         *
+         * Index 0 is 4,085 files rather than 490,049 because a frame set is one glTF animation
+         * (`anims/<archive>.glb`) rather than a JSON file per frame - see *anims*.
+         */
+        private const val EXPECTED_FILES = 10313
 
         private const val FRAME_CHUNKS = 3
         private const val FRAME_HEADER = 4

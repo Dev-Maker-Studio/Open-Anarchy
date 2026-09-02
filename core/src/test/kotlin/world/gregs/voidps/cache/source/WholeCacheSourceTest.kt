@@ -224,8 +224,9 @@ class WholeCacheSourceTest {
 
         /**
          * Unpacking the whole 876 MB cache. Every definition file is decoded, written as JSON, read back
-         * and re-encoded on the way out, which is most of it, and index 0's 490,049 animation frames are
-         * most of *that* - they roughly trebled the file count when they stopped being `.grp` blobs.
+         * and re-encoded on the way out, which is most of it. Index 0's 490,049 animation frames are
+         * 4,085 files rather than 490,049 of them, because a frame set is one glTF animation - see
+         * *anims* - so the count is the definitions and the maps.
          */
         private const val UNPACK_LIMIT = 900_000L
 
