@@ -210,7 +210,7 @@ object Cs2SourceCodec : SourceCodec {
      * The header survives a file being copied or moved, so it is the binding [Cs2Layout] trusts;
      * this is [archiveOf] with the one thing the interface cannot pass it.
      */
-    fun archiveOf(directory: Path, path: String): Int? {
+    override fun archiveOf(directory: Path, path: String): Int? {
         val file = directory.resolve(path)
         if (Files.isRegularFile(file)) {
             Cs2Layout.scriptIdOf(Files.readString(file), path)?.let { return it }

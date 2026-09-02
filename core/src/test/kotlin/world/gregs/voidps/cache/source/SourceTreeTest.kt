@@ -5,7 +5,14 @@ import world.gregs.voidps.cache.FileCache
 import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.MapSquare
 import world.gregs.voidps.cache.secure.CRC
+import world.gregs.voidps.cache.source.codec.Owner
+import world.gregs.voidps.cache.source.codec.PackedArchive
+import world.gregs.voidps.cache.source.codec.RawFilesCodec
+import world.gregs.voidps.cache.source.codec.SourceArchive
+import world.gregs.voidps.cache.source.codec.SourceCodec
 import world.gregs.voidps.cache.source.codec.SourceCodecs
+import world.gregs.voidps.cache.source.codec.SourceFile
+import world.gregs.voidps.cache.source.codec.UnpackedArchive
 import world.gregs.voidps.cache.store.ArchiveEntry
 import world.gregs.voidps.cache.store.ArchiveGroup
 import world.gregs.voidps.cache.store.Compression
@@ -53,6 +60,7 @@ class SourceTreeTest {
     @AfterTest
     fun cleanup() {
         root.deleteRecursively()
+        SourceCodecs.reset()
     }
 
     @Test
@@ -220,6 +228,113 @@ class SourceTreeTest {
         assertTrue(result.full, "an empty output directory has nothing to patch")
         assertContainersMatch(packed, output)
         assertTrue(Builder.build(source, output).unchanged, "the manifest it wrote makes the next build a no-op")
+    }
+
+    @Test
+    fun `a codec's index level files are kept, tracked and reported`() {
+        val codec = ProjectCodec()
+        SourceCodecs.register(Index.WORLD_MAP, codec)
+
+        unpack()
+        val project = File(tree, "worldmapdata/${ProjectCodec.PROJECT}")
+        assertTrue(project.isFile, "the codec's index level file should have been written")
+        assertContentEquals(intArrayOf(0, 1), codec.unpacked, "unpackIndex is told what was unpacked")
+
+        // The unpacker deletes everything no archive claimed, so a file only unpackIndex produced
+        // is the case that proves the claim works.
+        val again = unpack()
+        assertEquals(0, again.deleted, "an index level file must survive the prune")
+        assertEquals(0, again.written, "and must not be rewritten")
+
+        val source = SourceTree.open(tree)
+        codec.packs.clear()
+        Packer.pack(source, output)
+        assertEquals(
+            listOf(listOf(0, 1) to emptyList<String>()),
+            codec.packs,
+            "a full pack sets the codec up once, with every archive"
+        )
+
+        // An edit to it repacks no archive; it is handed to the codec instead, and the manifest
+        // records it like any other input, so the build after that is a no-op again.
+        codec.packs.clear()
+        project.writeText("edited\n")
+        val build = Builder.build(source, output) { assertFalse(it.contains("belongs to no codec"), it) }
+        assertEquals(0, build.archives, "an index level file repacks nothing on its own: $build")
+        assertEquals(1, build.changedFiles)
+        assertEquals(
+            listOf(emptyList<Int>() to listOf(ProjectCodec.PROJECT)),
+            codec.packs,
+            "the codec is told which of its index level files moved"
+        )
+
+        codec.packs.clear()
+        assertTrue(Builder.build(source, output).unchanged, "the manifest makes the next build a no-op")
+        assertEquals(emptyList(), codec.packs, "and the codec is not woken for nothing")
+    }
+
+    @Test
+    fun `status counts what the tree holds and which sidecars went stale`() {
+        unpack()
+        val source = SourceTree.open(tree)
+
+        val clean = source.status()
+        assertEquals(3, clean.indices.size)
+        assertEquals(8, clean.archives)
+        assertEquals(11, clean.files, "three groups, three map archives and five world map files")
+        assertEquals(0, clean.pristine)
+        assertEquals(1, clean.opaque)
+        assertEquals(0, clean.stale.size)
+        assertTrue(clean.gamevals > 0, "the unpack copied the catalogs in")
+
+        // What every pristine fallback looks like: the original bytes beside the editable file,
+        // guarded by that file's hash.
+        val guarded = File(tree, "worldmapdata/0/1.dat")
+        File(tree, "worldmapdata/0/1.dat${SourceFiles.PRISTINE_EXTENSION}").writeBytes(byteArrayOf(1, 2))
+        val metadata = source.metadata(Index.WORLD_MAP)
+        metadata.archives.getValue(0).pristine = mapOf(1 to SourceFiles.sha256(guarded.readBytes()))
+        source.writeMetadata(metadata)
+
+        val kept = source.status()
+        assertEquals(1, kept.pristine)
+        assertEquals(0, kept.stale.size, "the guard still holds, so the pack will emit the sidecar")
+
+        guarded.writeBytes(byteArrayOf(9, 9, 9, 9))
+        val stale = source.status().stale
+        assertEquals(1, stale.size, "an edited file leaves its sidecar stale: $stale")
+        assertEquals("worldmapdata/0/1.dat", stale.single().path)
+    }
+
+    /**
+     * A codec with a file that is a property of the index rather than of any archive - what index
+     * 12's `cs2.d.ts` and friends are - over the raw layout the fixture's bytes need.
+     */
+    private class ProjectCodec : SourceCodec by RawFilesCodec.NESTED {
+
+        var unpacked: IntArray = IntArray(0)
+        val packs = ArrayList<Pair<List<Int>, List<String>>>()
+
+        override fun unpackIndex(directory: Path, index: Int, archives: IntArray): List<SourceFile> {
+            unpacked = archives
+            return listOf(SourceFile(PROJECT, "the whole index\n".toByteArray()))
+        }
+
+        override fun packIndex(directory: Path, index: Int, archives: IntArray, changedIndexFiles: List<String>) {
+            packs.add(archives.toList() to changedIndexFiles)
+        }
+
+        override fun owner(directory: Path, path: String): Owner =
+            if (path == PROJECT) Owner.Index else super.owner(directory, path)
+
+        override fun unpack(directory: Path, archive: SourceArchive): UnpackedArchive =
+            RawFilesCodec.NESTED.unpack(directory, archive)
+
+        override fun pack(directory: Path, archive: Int, metadata: ArchiveMetadata): PackedArchive =
+            RawFilesCodec.NESTED.pack(directory, archive, metadata)
+
+        companion object {
+            const val PROJECT = "project.txt"
+        }
     }
 
     private fun unpack(): UnpackReport {

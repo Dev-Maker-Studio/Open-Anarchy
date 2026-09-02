@@ -1,5 +1,6 @@
 package world.gregs.voidps.cache.source
 
+import world.gregs.voidps.cache.source.codec.Owner
 import world.gregs.voidps.cache.source.codec.SourceCodecs
 import world.gregs.voidps.cache.store.Container
 import world.gregs.voidps.cache.store.FileStore
@@ -46,10 +47,12 @@ class BuildResult(
  * This is what the server runs on startup, so its cost when nothing changed is the number that
  * matters: a stat of every file in the tree, a parse of the manifest, and nothing else - the
  * output files are not opened, let alone written. When something did change, the changed paths
- * are mapped back to archives through the indices' codecs, `index.json` is diffed archive by
+ * are mapped back through the indices' codecs onto the archive each belongs to
+ * ([world.gregs.voidps.cache.source.codec.SourceCodec.owner]), `index.json` is diffed archive by
  * archive against the digests the manifest kept, and only the affected archives and their
  * reference tables are rewritten - into the existing store, reusing each archive's sector chain
- * where the new container still fits.
+ * where the new container still fits. A changed file the codec owns at index level rather than per
+ * archive repacks nothing and is handed to its `packIndex` instead.
  *
  * A missing or stale manifest, a manifest from a different tree, or a missing cache means there
  * is nothing to patch, and the build falls back to [Packer].
@@ -115,14 +118,15 @@ object Builder {
 
             val affected = HashMap<Int, MutableSet<Int>>()
             val metadataChanged = HashSet<Int>()
+            val indexFiles = HashMap<Int, MutableList<String>>()
             val unclaimed = ArrayList<String>()
             for (path in scan.changed + scan.removed) {
-                claim(path, affected, metadataChanged, unclaimed)
+                claim(tree, path, affected, metadataChanged, indexFiles, unclaimed)
             }
             for (path in unclaimed.take(UNCLAIMED)) {
                 report("ignored: $path belongs to no codec")
             }
-            val indices = (affected.keys + metadataChanged).sorted()
+            val indices = (affected.keys + metadataChanged + indexFiles.keys).sorted()
             if (indices.isEmpty()) {
                 if (scan.hashed > 0) {
                     // Nothing changed, but files were touched; recording that saves the next
@@ -142,7 +146,10 @@ object Builder {
             var tables = 0
             FileStore.open(output, writable = true).use { store ->
                 for (index in indices) {
-                    val result = buildIndex(tree, index, store, pool, manifest, affected[index] ?: HashSet(), threads, report)
+                    val result = buildIndex(
+                        tree, index, store, pool, manifest,
+                        affected[index] ?: HashSet(), indexFiles[index] ?: emptyList(), threads, report
+                    )
                     archives += result.archives
                     removed += result.removed
                     if (result.table) {
@@ -162,11 +169,23 @@ object Builder {
         }
     }
 
-    /** Map a tree relative path onto the index and archive whose rebuild it forces. */
+    /**
+     * Map a tree relative path onto what its change forces a rebuild of.
+     *
+     * Three answers, which is what [Owner] is: an archive, which is repacked; the index itself, for
+     * a file that is a property of the whole index rather than of any archive (index 12's project
+     * files), which repacks nothing on its own but is handed to
+     * [SourceCodec.packIndex][world.gregs.voidps.cache.source.codec.SourceCodec.packIndex] so the
+     * codec can decide; or nothing here, which is reported and ignored. Every one of them is in the
+     * manifest either way - the scan hashes every file in the tree - so a claimed index level file
+     * stops being reported as changed the moment the build records it.
+     */
     private fun claim(
+        tree: SourceTree,
         path: String,
         affected: MutableMap<Int, MutableSet<Int>>,
         metadataChanged: MutableSet<Int>,
+        indexFiles: MutableMap<Int, MutableList<String>>,
         unclaimed: MutableList<String>
     ) {
         val separator = path.indexOf('/')
@@ -183,16 +202,22 @@ object Builder {
             metadataChanged.add(index)
             return
         }
-        val archive = if (relative.endsWith(SourceTree.OPAQUE_EXTENSION) && !relative.contains('/')) {
-            relative.dropLast(SourceTree.OPAQUE_EXTENSION.length).toIntOrNull()
-        } else {
-            SourceCodecs.codec(index).archiveOf(relative)
-        }
-        if (archive == null) {
-            unclaimed.add(path)
+        if (relative.endsWith(SourceTree.OPAQUE_EXTENSION) && !relative.contains('/')) {
+            // An opaque archive belongs to no codec: its container never opened, so the framework
+            // owns the file and the codec has never seen it.
+            val archive = relative.dropLast(SourceTree.OPAQUE_EXTENSION.length).toIntOrNull()
+            if (archive == null) {
+                unclaimed.add(path)
+            } else {
+                affected.getOrPut(index) { HashSet() }.add(archive)
+            }
             return
         }
-        affected.getOrPut(index) { HashSet() }.add(archive)
+        when (val owner = SourceCodecs.codec(index).owner(tree.indexDirectory(index), relative)) {
+            is Owner.Archive -> affected.getOrPut(index) { HashSet() }.add(owner.id)
+            Owner.Index -> indexFiles.getOrPut(index) { ArrayList() }.add(relative)
+            Owner.None -> unclaimed.add(path)
+        }
     }
 
     /** What one index's rebuild came to. */
@@ -206,6 +231,7 @@ object Builder {
         pool: ExecutorService,
         manifest: BuildManifest,
         changed: MutableSet<Int>,
+        indexFiles: List<String>,
         threads: Int,
         report: (String) -> Unit
     ): IndexBuild {
@@ -251,6 +277,11 @@ object Builder {
         table.revision = metadata.revision
 
         val ids = changed.filter { metadata.archives.containsKey(it) }.sorted()
+        if (ids.isNotEmpty() || indexFiles.isNotEmpty()) {
+            // Only when there is something to pack, which is what keeps a build that touches no
+            // clientscript from paying for the corpus analysis.
+            codec.packIndex(directory, index, ids.toIntArray(), indexFiles)
+        }
         val window = threads * PIPELINE
         val pending = ArrayDeque<Pair<Int, Future<PackedContainer>>>()
         var next = 0
@@ -285,10 +316,11 @@ object Builder {
         if (rewritten) {
             store.write(FileStore.REFERENCE_INDEX, index, encoded)
         }
-        if (ids.isNotEmpty() || dropped.isNotEmpty() || rewritten) {
+        if (ids.isNotEmpty() || dropped.isNotEmpty() || rewritten || indexFiles.isNotEmpty()) {
             report(
                 "$name: ${ids.size} archives repacked" +
                     (if (dropped.isEmpty()) "" else ", ${dropped.size} removed") +
+                    (if (indexFiles.isEmpty()) "" else ", ${indexFiles.size} index files changed") +
                     (if (rewritten) "" else ", table unchanged")
             )
         }

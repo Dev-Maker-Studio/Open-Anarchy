@@ -67,6 +67,12 @@ class SourceTree private constructor(
     fun writeMetadata(metadata: IndexMetadata): Boolean =
         SourceFiles.write(indexFile(metadata.index), metadata.write().toByteArray(Charsets.UTF_8))
 
+    /**
+     * A read-only inventory of the tree: per index the codec, the archive, file, pristine and
+     * opaque counts, and every pristine sidecar whose guard no longer holds. See [SourceStatus].
+     */
+    fun status(): SourceStatus = SourceStatus.of(this)
+
     /** The tree relative, `/` separated path of [path], or null when it is outside the tree. */
     fun relative(path: Path): String? {
         if (!path.startsWith(directory)) {

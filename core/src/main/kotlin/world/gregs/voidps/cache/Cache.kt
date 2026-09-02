@@ -30,8 +30,9 @@ import world.gregs.voidps.cache.definition.decoder.StructDecoder
 import world.gregs.voidps.cache.definition.decoder.VarBitDecoder
 import world.gregs.voidps.cache.secure.Huffman
 import world.gregs.voidps.cache.store.ReferenceTable
+import java.io.Closeable
 
-interface Cache {
+interface Cache : Closeable {
 
     val versionTable: ByteArray
 
@@ -122,7 +123,7 @@ interface Cache {
 
     fun update(): Boolean
 
-    fun close()
+    override fun close()
 
     companion object {
         private val singleton: Cache by lazy {

@@ -54,7 +54,8 @@ class UnpackReport(
  * Turns a packed cache into a source tree.
  *
  * Every index with a reference table gets a directory, an `index.json` holding what its files
- * cannot say, and its archives laid out by the index's codec. Nothing derivable is written down:
+ * cannot say, its archives laid out by the index's codec, and whatever that codec writes for the
+ * index as a whole ([SourceCodec.unpackIndex]). Nothing derivable is written down:
  * CRCs, whirlpools, sizes and the file ids a codec spells out in its own layout are all recomputed
  * when the tree is packed, so they cannot rot.
  *
@@ -156,6 +157,19 @@ object Unpacker {
             future.get()
         }
         metadata.archives.putAll(archives)
+
+        // The index's own files, if it has any: a corpus-wide answer no single archive can give.
+        // They are claimed here exactly as an archive's files are, which is what keeps [prune] from
+        // deleting them again a moment later.
+        for (file in codec.unpackIndex(directory, index, archives.keys.sorted().toIntArray())) {
+            expected.add(file.path)
+            counts.files.incrementAndGet()
+            counts.bytes.addAndGet(file.bytes.size.toLong())
+            if (SourceFiles.write(directory.resolve(file.path), file.bytes)) {
+                counts.written.incrementAndGet()
+            }
+        }
+
         expected.add(SourceTree.INDEX_FILE)
         if (tree.writeMetadata(metadata)) {
             counts.written.incrementAndGet()
