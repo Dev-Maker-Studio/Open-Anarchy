@@ -188,7 +188,7 @@ class Cs2SourceProject(
             return CompileResult.Failed(Diagnostic(file, headerId, it, 1, 1, located = false))
         }
         return try {
-            val function = Cs2Parser(source, analyzer::paramIsString, symbols, relative).parse()
+            val function = Cs2Parser(source, analyzer::paramIsString, symbols, relative, analyzer::returnTypes).parse()
             val script = Cs2CodeGen(function, analyzer).generate()
             CompileResult.Ok(Compiled(function.scriptId, file, script, Cs2Codec.encode(script)))
         } catch (e: Exception) {
@@ -277,7 +277,7 @@ class Cs2SourceProject(
     }
 
     private fun emit(script: Cs2Script, scriptId: Int, faithful: Boolean): String =
-        Cs2Emitter(Cs2Structurer(script, scriptId, analyzer, faithful).structure()).emit()
+        Cs2Emitter(analyzer.types().apply(Cs2Structurer(script, scriptId, analyzer, faithful).structure())).emit()
 
     /**
      * Writes the ambient declarations a fresh folder needs for the editor to

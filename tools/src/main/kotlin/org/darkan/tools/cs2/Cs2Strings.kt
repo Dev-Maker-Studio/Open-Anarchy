@@ -21,7 +21,11 @@ object Cs2Strings {
                 ch == '\r' -> sb.append("\\r")
                 ch == '\t' -> sb.append("\\t")
                 ch.code in 0x20..0x7E -> sb.append(ch)
-                else -> sb.append("\\x").append("%02x".format(ch.code and 0xFF))
+                // A byte the client renders through its cp1252 table decodes to
+                // a character outside latin-1, so the escape has to be wide
+                // enough to carry it back unchanged.
+                ch.code <= 0xFF -> sb.append("\\x").append("%02x".format(ch.code))
+                else -> sb.append("\\u").append("%04x".format(ch.code))
             }
         }
         return sb.toString()
@@ -52,6 +56,11 @@ object Cs2Strings {
                     require(i + 2 <= value.length) { "Truncated \\x escape" }
                     sb.append(value.substring(i, i + 2).toInt(16).toChar())
                     i += 2
+                }
+                'u' -> {
+                    require(i + 4 <= value.length) { "Truncated \\u escape" }
+                    sb.append(value.substring(i, i + 4).toInt(16).toChar())
+                    i += 4
                 }
                 else -> error("Unsupported escape \\$esc in string literal")
             }

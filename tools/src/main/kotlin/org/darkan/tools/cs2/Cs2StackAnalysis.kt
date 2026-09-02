@@ -19,6 +19,9 @@ interface Cs2Context {
 
     /** True when a `*_PARAM` opcode with this param id yields a string. */
     fun paramIsString(paramId: Int): Boolean
+
+    /** The cache's own type character for a param, or 0 when it has none. */
+    fun paramType(paramId: Int): Char = 0.toChar()
 }
 
 /**

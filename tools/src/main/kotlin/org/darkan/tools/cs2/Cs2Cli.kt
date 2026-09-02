@@ -9,6 +9,7 @@ import org.darkan.tools.cs2.ir.Binary
 import org.darkan.tools.cs2.ir.Callback
 import org.darkan.tools.cs2.ir.Compare
 import org.darkan.tools.cs2.ir.Condition
+import org.darkan.tools.cs2.ir.Cs2Function
 import org.darkan.tools.cs2.ir.Expr
 import org.darkan.tools.cs2.ir.ExprStmt
 import org.darkan.tools.cs2.ir.If
@@ -66,6 +67,8 @@ fun runCs2(cache: Cache, args: List<String>) {
         "decompile" -> cs2Decompile(cache, args.getOrNull(1)?.toIntOrNull())
         "decompile-all" -> cs2DecompileAll(cache, args.getOrNull(1))
         "roundtrip" -> cs2RoundTrip(cache, args.getOrNull(1)?.toIntOrNull())
+        "types" -> cs2Types(cache, args.getOrNull(1))
+        "fixpoint" -> cs2FixPoint(cache, args.getOrNull(1)?.toIntOrNull(), args.getOrNull(2))
         "diff" -> cs2Diff(cache, args.getOrNull(1)?.toIntOrNull())
         "run" -> cs2Run(cache, args.getOrNull(1)?.toIntOrNull(), args.drop(2))
         "declarations" -> cs2Declarations(args.getOrNull(1))
@@ -82,9 +85,24 @@ fun runCs2(cache: Cache, args: List<String>) {
         else -> println(
             """
             cs2 sub-commands:
-              verify              decode and re-encode every clientscript, checking byte identity
+              decompile <id>      print one script as TypeScript, with its dead code
+              decompile-all [dir] write every script, the declarations and dead-code.md;
+                                  the folder defaults to cs2-dump
+              roundtrip [n]       the stability check: bytes -> source -> bytes -> source
+                                  -> bytes, requiring the last two bytecodes to match, the
+                                  two sources to match, the rebuild to simulate, its work
+                                  census to match and both versions to run the same
+              fixpoint <id> [dir] the same five checks for one script, both sources written out
+              types [OP:slot]     what the corpus says constants mean, or one slot's evidence
+              diff <id>           show where one script's re-compiled bytecode diverges
               dump <id>           print the instruction listing for one script
               info <id>           print one script's header
+              verify              decode and re-encode every clientscript, checking byte identity
+              analyse             stack-simulate every script, checking the opcode table
+              unknown             list opcodes no script uses
+              run <id> [args]     execute a script on the virtual machine with a no-op host
+              interface <id> ...  run one interface's load scripts and report what changed
+              interfaces          run every interface's load scripts
               export <dir> [id]   decompile one script into dir, or just the declarations
               compile <dir> <id>  compile one edited script and compare it to the cache
               sources <dir> [n]   compile every source file in dir, reporting the byte-exact rate
@@ -110,8 +128,39 @@ private fun cs2Decompile(cache: Cache, scriptId: Int?) {
         println("No clientscript $scriptId in the cache.")
         return
     }
-    val function = Cs2Structurer(script, scriptId, analyzer).structure()
+    val structurer = Cs2Structurer(script, scriptId, analyzer)
+    val function = analyzer.types().apply(structurer.structure())
     println(Cs2Emitter(function).emit())
+    if (structurer.deadCode.isEmpty()) return
+    println("// dead code (${summary(structurer.deadCode)}):")
+    print(deadCodeNotes(function, structurer.deadCode, "// "))
+}
+
+/** One line per finding kind, as `2 unreachable, 1 dead store`. */
+private fun summary(findings: List<Cs2DeadCode>): String =
+    Cs2DeadCodeKind.entries.mapNotNull { kind ->
+        val count = findings.count { it.kind == kind }
+        if (count == 0) null else "$count ${kind.label}"
+    }.joinToString(", ")
+
+/** The findings themselves, each with the code it is about, one block per finding. */
+private fun deadCodeNotes(
+    function: Cs2Function,
+    findings: List<Cs2DeadCode>,
+    prefix: String,
+): String {
+    val emitter = Cs2Emitter(function)
+    val out = StringBuilder()
+    for (finding in findings) {
+        val where = finding.instructions?.let { " (instructions ${it.first}..${it.last})" } ?: ""
+        val note = finding.note?.let { ": $it" } ?: ""
+        out.append(prefix).append(finding.kind.label).append(where).append(note).append('\n')
+        finding.condition?.let { out.append(prefix).append("  ").append(emitter.renderCondition(it)).append('\n') }
+        if (finding.statements.isEmpty()) continue
+        emitter.renderStatements(finding.statements).trimEnd().lines()
+            .forEach { out.append(prefix).append("  ").append(it).append('\n') }
+    }
+    return out.toString()
 }
 
 /** Writes the ambient TypeScript declarations next to the decompiled scripts. */
@@ -129,10 +178,10 @@ private fun cs2Declarations(directory: String?) {
  * written here: it is produced by a whole-cache decompile and carries the
  * developer's own renames.
  */
-private fun writeDeclarations(target: File): List<File> {
+private fun writeDeclarations(target: File, learned: Map<String, ArgType> = emptyMap()): List<File> {
     val written = ArrayList<File>()
     for ((name, body) in listOf(
-        Cs2Declarations.OPCODES_FILE to Cs2Declarations.generate(),
+        Cs2Declarations.OPCODES_FILE to Cs2Declarations.generate(learned),
         Cs2Declarations.GAMEVALS_FILE to Cs2Declarations.gamevals(),
         "tsconfig.json" to Cs2Declarations.tsconfig(),
     )) {
@@ -238,38 +287,65 @@ private fun cs2DecompileAll(cache: Cache, directory: String?) {
     val analyzer = Cs2Analyzer(cache)
     analyzer.analyse()
 
-    val target = directory?.let { File(it).apply { mkdirs() } }
-    target?.let { writeDeclarations(it) }
+    val types = analyzer.types { println("  $it") }
+    // With no folder named, this writes the project folder every other command
+    // already defaults to, which is where an editor keeps the sources.
+    val target = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER).apply { mkdirs() }
+    writeDeclarations(target, types.argumentKinds)
     val variables = LinkedHashSet<VarRef>()
     val failures = ArrayList<Pair<Int, String>>()
     var written = 0
     var gotos = 0
     val started = System.currentTimeMillis()
+    val counts = HashMap<Cs2DeadCodeKind, Int>()
+    val report = StringBuilder(
+        "# Dead code in the 727 clientscripts\n\n" +
+            "Everything here is in the bytecode but cannot affect what the script does.\n" +
+            "A dead store is kept in the decompiled source; unreachable code is dropped from it.\n" +
+            "Unreachable code that only jumps somewhere is the compiler's own layout and is not listed,\n" +
+            "and neither is the default `return` every script ends with.\n",
+    )
+    var scriptsWithDeadCode = 0
 
     for (id in analyzer.ids) {
         val script = analyzer.script(id) ?: continue
         try {
-            val function = Cs2Structurer(script, id, analyzer).structure()
+            val structurer = Cs2Structurer(script, id, analyzer)
+            val function = types.apply(structurer.structure())
             val source = Cs2Emitter(function).emit()
+            if (structurer.deadCode.isNotEmpty()) {
+                scriptsWithDeadCode++
+                structurer.deadCode.forEach { counts[it.kind] = (counts[it.kind] ?: 0) + 1 }
+                report.append("\n## ").append(Cs2Layout.headerOf(id)).append(" (script ").append(id).append(")\n")
+                for (finding in structurer.deadCode) {
+                    val where = finding.instructions?.let { " (instructions ${it.first}..${it.last})" } ?: ""
+                    report.append("\n- **").append(finding.kind.label).append("**").append(where)
+                    finding.note?.let { report.append(" - ").append(it) }
+                    report.append('\n')
+                    val body = deadCodeNotes(function, listOf(finding), "").lines().drop(1)
+                        .joinToString("\n").trimEnd()
+                    if (body.isNotBlank()) report.append("\n```ts\n").append(body).append("\n```\n")
+                }
+            }
             collectVariables(function.body, variables)
             if (source.contains("goto(")) gotos++
-            target?.let { root ->
-                val file = Cs2Layout.fileFor(root, id)
-                file.parentFile?.mkdirs()
-                file.writeText(source)
-            }
+            val file = Cs2Layout.fileFor(target, id)
+            file.parentFile?.mkdirs()
+            file.writeText(source)
             written++
         } catch (e: Exception) {
             failures.add(id to (e.message ?: e::class.simpleName ?: "unknown"))
         }
     }
 
-    target?.resolve(Cs2Declarations.VARS_FILE)?.writeText(Cs2Declarations.variables(variables))
+    target.resolve(Cs2Declarations.VARS_FILE)
+        .writeText(Cs2Declarations.variables(variables) { types.varKind(it.space, it.id) })
+    target.resolve("dead-code.md").writeText(report.toString())
 
     // A folder written by an older build holds the same scripts at the flat
     // `clientscript-<id>.ts` paths. Left in place they would declare every
     // function a second time, so they are named rather than silently shadowed.
-    val stale = target?.let { Cs2Layout.legacyFiles(it) }.orEmpty()
+    val stale = Cs2Layout.legacyFiles(target)
     if (stale.isNotEmpty()) {
         println()
         println("WARNING: ${stale.size} files from the old flat layout are still in the folder")
@@ -279,11 +355,15 @@ private fun cs2DecompileAll(cache: Cache, directory: String?) {
     println()
     Cs2Names.warnings.forEach { println("note: $it") }
     println("decompiled:      $written")
+    println("with dead code:  $scriptsWithDeadCode scripts, ${counts.values.sum()} findings")
+    Cs2DeadCodeKind.entries.forEach { kind ->
+        println("  %-20s %d".format(kind.label, counts[kind] ?: 0))
+    }
     println("variables:       ${variables.size}")
     println("failed:          ${failures.size}")
     println("with raw gotos:  $gotos")
     println("elapsed:         ${System.currentTimeMillis() - started}ms")
-    if (target != null) println("written to:      ${target.absolutePath}")
+    println("written to:      ${target.absolutePath}")
 
     if (failures.isNotEmpty()) {
         println()
@@ -295,6 +375,60 @@ private fun cs2DecompileAll(cache: Cache, directory: String?) {
         println("Grouped:")
         grouped.forEach { (message, count) -> println("  %-62s %d".format(message, count)) }
     }
+}
+
+/** What the corpus-wide type inference worked out, and what it was read from. */
+private fun cs2Types(cache: Cache, slot: String?) {
+    val analyzer = Cs2Analyzer(cache)
+    analyzer.analyse()
+    val started = System.currentTimeMillis()
+    val types = analyzer.types { println("  $it") }
+    if (slot != null) {
+        println()
+        println("evidence for $slot:")
+        val evidence = types.evidenceFor(slot)
+        if (evidence.isEmpty()) println("  nothing voted at that slot")
+        evidence.forEach { println("  $it") }
+        return
+    }
+    val report = types.describe()
+    println()
+    println("symbols typed:")
+    report.symbols.forEach { (what, count) -> println("  %-16s %d".format(what, count)) }
+
+    println()
+    println("type characters, against what the corpus makes of the same values:")
+    println("  %-6s %-12s %8s %8s  %s".format("char", "claims", "agreed", "against", "kept"))
+    for (check in report.chars) {
+        val against = check.conflicts.entries.joinToString(", ") { "${it.key}x${it.value}" }
+        println(
+            "  %-6s %-12s %8d %8s  %s".format(
+                check.char, check.kind, check.agreed,
+                if (check.conflicts.isEmpty()) "-" else against,
+                if (check.kept) "yes" else "no",
+            ),
+        )
+    }
+
+    println()
+    println("learned opcode results (${report.learnedResults.size}):")
+    report.learnedResults.entries.sortedBy { it.key }
+        .forEach { (slot, kind) -> println("  %-52s %s".format(slot.removePrefix("o:"), kind)) }
+    println()
+    println("learned argument slots (${report.learnedArguments.size}):")
+    report.learnedArguments.entries.sortedBy { it.key }
+        .forEach { (slot, kind) -> println("  %-52s %s".format(slot.removePrefix("a:"), kind)) }
+
+    println()
+    println("constants written out, by kind:")
+    report.constantsByKind.entries.sortedByDescending { it.value }
+        .forEach { (kind, count) -> println("  %-14s %d".format(kind, count)) }
+    println()
+    println("constants written out, by what said so:")
+    report.constantsBySource.entries.sortedByDescending { it.value }
+        .forEach { (source, count) -> println("  %-22s %d".format(source, count)) }
+    println()
+    println("elapsed: ${System.currentTimeMillis() - started}ms")
 }
 
 private fun cs2Analyse(cache: Cache) {
@@ -468,81 +602,6 @@ private fun printHeader(scriptId: Int, script: Cs2Script) {
     println("  switch tables: ${script.switchTables.size}")
 }
 
-/**
- * Decompiles every script, re-compiles the TypeScript, and checks the bytes
- * come back unchanged. This is the end-to-end guarantee: anything that does not
- * round-trip is a decompiler or code-generator bug, not a formatting choice.
- */
-private fun cs2RoundTrip(cache: Cache, limit: Int?) {
-    println("Decompiling and re-compiling every clientscript...")
-    val analyzer = Cs2Analyzer(cache)
-    analyzer.analyse()
-
-    var identical = 0
-    val mismatched = ArrayList<Int>()
-    val failed = ArrayList<Pair<Int, String>>()
-    val divergences = HashMap<String, Int>()
-    val lostWork = ArrayList<Int>()
-    var viaFallback = 0
-    val started = System.currentTimeMillis()
-    val ids = if (limit != null) analyzer.ids.take(limit) else analyzer.ids.toList()
-
-    for (id in ids) {
-        val raw = try {
-            Cs2Cache(cache).raw(id) ?: continue
-        } catch (e: Exception) {
-            continue
-        }
-        try {
-            val script = Cs2Codec.decode(raw)
-            script.returnSignature = analyzer.script(id)?.returnSignature
-            val source = Cs2Emitter(Cs2Structurer(script, id, analyzer).structure()).emit()
-            val rebuilt = Cs2CodeGen(Cs2Parser(source, analyzer::paramIsString).parse(), analyzer).generate()
-            if (Cs2Codec.encode(rebuilt).contentEquals(raw)) {
-                identical++
-            } else if (faithfulMatches(raw, script, id, analyzer)) {
-                identical++
-                viaFallback++
-            } else {
-                mismatched.add(id)
-                firstDivergence(script, rebuilt)?.let { divergences[it] = (divergences[it] ?: 0) + 1 }
-                if (!sameWork(script, rebuilt)) lostWork.add(id)
-            }
-        } catch (e: Exception) {
-            failed.add(id to (e.message ?: e::class.simpleName ?: "unknown"))
-        }
-    }
-
-    println()
-    println("scripts:    ${ids.size}")
-    println("identical:  $identical  (${viaFallback} of them via the faithful fallback)")
-    println("mismatched: ${mismatched.size}")
-    println("failed:     ${failed.size}")
-    println("elapsed:    ${System.currentTimeMillis() - started}ms")
-
-    if (failed.isNotEmpty()) {
-        println()
-        println("Failed scripts: ${failed.take(12).map { it.first }}")
-        println("Failure causes:")
-        failed.groupingBy { it.second.take(70) }.eachCount()
-            .entries.sortedByDescending { it.value }.take(12)
-            .forEach { (message, count) -> println("  %-72s %d".format(message, count)) }
-    }
-    println(
-        if (lostWork.isEmpty()) "every mismatch is layout-only; no instructions gained or lost"
-        else "WARNING: ${lostWork.size} scripts changed their actual work: ${lostWork.take(10)}",
-    )
-    if (divergences.isNotEmpty()) {
-        println()
-        println("Where the opcode sequence first diverges:")
-        divergences.entries.sortedByDescending { it.value }.take(15)
-            .forEach { (where, count) -> println("  %-52s %d".format(where, count)) }
-    }
-    if (mismatched.isNotEmpty()) println("\nFirst mismatches: ${mismatched.take(20)}")
-    println()
-    println(if (mismatched.isEmpty() && failed.isEmpty()) "PASS" else "FAIL")
-}
-
 /** Shows the original and re-compiled instruction listings side by side. */
 private fun cs2Diff(cache: Cache, scriptId: Int?) {
     if (scriptId == null) {
@@ -555,8 +614,11 @@ private fun cs2Diff(cache: Cache, scriptId: Int?) {
         println("No clientscript $scriptId in the cache.")
         return
     }
-    val source = Cs2Emitter(Cs2Structurer(original, scriptId, analyzer).structure()).emit()
-    val rebuilt = Cs2CodeGen(Cs2Parser(source, analyzer::paramIsString).parse(), analyzer).generate()
+    val source = Cs2Emitter(analyzer.types().apply(Cs2Structurer(original, scriptId, analyzer).structure())).emit()
+    val rebuilt = Cs2CodeGen(
+        Cs2Parser(source, analyzer::paramIsString, returnTypes = analyzer::returnTypes).parse(),
+        analyzer,
+    ).generate()
 
     println(source)
     println("header: locals ${original.intLocalsCount}/${original.stringLocalsCount}/${original.longLocalsCount} " +
@@ -601,33 +663,6 @@ private fun cs2Diff(cache: Cache, scriptId: Int?) {
             if (++shown > 8) break
         }
     }
-}
-
-/** The first place two instruction lists stop agreeing, as `original -> rebuilt`. */
-private fun firstDivergence(original: Cs2Script, rebuilt: Cs2Script): String? {
-    for (index in 0 until maxOf(original.size, rebuilt.size)) {
-        val left = original.instructions.getOrNull(index)
-        val right = rebuilt.instructions.getOrNull(index)
-        val jump = left?.op?.let { Cs2Cfg.isConditionalBranch(it) || Cs2Cfg.isUnconditionalBranch(it) } == true
-        val same = if (jump) left?.op?.opName == right?.op?.opName else left?.toString() == right?.toString()
-        if (same) continue
-        return "${left?.op?.opName ?: "<end>"} -> ${right?.op?.opName ?: "<end>"}"
-    }
-    return null
-}
-
-/**
- * True when both scripts do the same work, ignoring layout. Jumps are excluded
- * because their distances shift with any layout change; everything else must
- * match exactly, so a mismatch here means the decompiler dropped or invented
- * instructions rather than merely arranging them differently.
- */
-private fun sameWork(original: Cs2Script, rebuilt: Cs2Script): Boolean {
-    fun census(script: Cs2Script) = script.instructions
-        .filterNot { Cs2Cfg.isConditionalBranch(it.op) || Cs2Cfg.isUnconditionalBranch(it.op) }
-        .groupingBy { it.toString() }
-        .eachCount()
-    return census(original) == census(rebuilt)
 }
 
 /** Lists instructions the rebuilt script gained or lost, ignoring jumps. */
@@ -689,22 +724,6 @@ private fun cs2Run(cache: Cache, scriptId: Int?, args: List<String>) {
     println("host calls (${calls.size}):")
     calls.take(40).forEach { println("  $it") }
 }
-
-/**
- * Re-decompiles with structuring disabled and checks that form round-trips.
- *
- * Structured output is the goal, but fidelity comes first: where the structurer
- * cannot reproduce a script's exact branch layout, the literal block-by-block
- * rendering can, and that is what gets written out for those scripts.
- */
-private fun faithfulMatches(raw: ByteArray, script: Cs2Script, id: Int, analyzer: Cs2Analyzer): Boolean =
-    try {
-        val source = Cs2Emitter(Cs2Structurer(script, id, analyzer, faithful = true).structure()).emit()
-        val rebuilt = Cs2CodeGen(Cs2Parser(source, analyzer::paramIsString).parse(), analyzer).generate()
-        Cs2Codec.encode(rebuilt).contentEquals(raw)
-    } catch (e: Exception) {
-        false
-    }
 
 /**
  * Opens an interface headlessly, runs its components' load scripts through the
@@ -1134,7 +1153,10 @@ private fun collectVariables(statements: List<Stmt>, into: MutableSet<VarRef>) {
                 collectVariables(statement.then, into)
                 collectVariables(statement.otherwise, into)
             }
-            is While -> { walkCondition(statement.condition); collectVariables(statement.body, into) }
+            is While -> {
+                statement.condition?.let { walkCondition(it) }
+                collectVariables(statement.body, into)
+            }
             is Switch -> {
                 walkExpr(statement.subject)
                 statement.cases.forEach { collectVariables(it.body, into) }
@@ -1367,7 +1389,7 @@ private fun cs2Compile(cache: Cache, directory: String?, scriptId: Int?) {
     val relative = Cs2Layout.relativePath(folder, file)
     val rebuilt = try {
         Cs2CodeGen(
-            Cs2Parser(file.readText(), analyzer::paramIsString, symbols, relative).parse(),
+            Cs2Parser(file.readText(), analyzer::paramIsString, symbols, relative, analyzer::returnTypes).parse(),
             analyzer,
         ).generate()
     } catch (e: Exception) {

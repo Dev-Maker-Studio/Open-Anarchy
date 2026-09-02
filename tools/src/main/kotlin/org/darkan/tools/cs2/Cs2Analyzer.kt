@@ -1,6 +1,7 @@
 package org.darkan.tools.cs2
 
 import java.util.concurrent.ConcurrentHashMap
+import org.darkan.tools.cs2.ir.Cs2Type
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.ParamDefinition
 
@@ -83,6 +84,54 @@ class Cs2Analyzer(cache: Cache) : Cs2Context {
         if (declared.type != 0.toChar()) return declared.isString()
         return paramTypes[paramId] ?: false
     }
+
+    /**
+     * What a script leaves on the stacks, in the order it pushes them.
+     *
+     * The compiler needs this to type the names in `let [a, b] = f();`, which
+     * carry no annotation of their own: the order is the callee's own push order
+     * where a caller has revealed it, and the grouped signature otherwise -
+     * exactly the order the decompiler binds the results in.
+     */
+    fun returnTypes(scriptId: Int): List<Cs2Type> {
+        val script = script(scriptId) ?: return emptyList()
+        val signature = script.returnSignature ?: ReturnSignature.EMPTY
+        script.returnOrder.takeIf { it.size == signature.total }?.let { return it }
+        return List(signature.ints) { Cs2Type.INT } +
+            List(signature.strings) { Cs2Type.STRING } +
+            List(signature.longs) { Cs2Type.LONG }
+    }
+
+    /**
+     * The type character the cache records for a param, which is what a
+     * `*_PARAM` opcode returns one of.
+     */
+    override fun paramType(paramId: Int): Char =
+        (Cache.params.getOrNull(paramId) ?: ParamDefinition.EMPTY).type
+
+    /**
+     * What the corpus says every constant means, worked out once and kept.
+     *
+     * Deciding that a number is an item id needs every other script that touches
+     * it, so this is whole-cache work like the return signatures are. It is done
+     * on demand because a tool that never renders source never needs it.
+     */
+    @Synchronized
+    fun types(log: (String) -> Unit = {}): Cs2Types {
+        inferred?.let { return it }
+        val functions = ids.toList().mapNotNull { id ->
+            val script = script(id) ?: return@mapNotNull null
+            try {
+                Cs2Structurer(script, id, this).structure()
+            } catch (e: Exception) {
+                null
+            }
+        }
+        log("${functions.size} scripts lifted for type inference")
+        return Cs2Types.analyse(this, functions, log).also { inferred = it }
+    }
+
+    private var inferred: Cs2Types? = null
 
     /** Problems found while validating a single script. */
     data class ScriptProblem(val scriptId: Int, val message: String)

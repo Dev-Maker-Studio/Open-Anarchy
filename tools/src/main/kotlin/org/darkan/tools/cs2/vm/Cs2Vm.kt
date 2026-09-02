@@ -421,7 +421,9 @@ class Cs2Vm(
         val array = ((operand shr 16) and 0x7).coerceAtMost(globalArrays.lastIndex)
         val size = popInt().coerceIn(0, 5000)
         globalArrayLengths[array] = size
-        val fill = if ((operand and 0xFFFF) == 's'.code) 0 else -1
+        // The client fills with 0 only for an int array; every other element
+        // type - including strings, which are held as ids here - starts at -1.
+        val fill = if ((operand and 0xFFFF) == 'i'.code) 0 else -1
         globalArrays[array].fill(fill, 0, size)
     }
 

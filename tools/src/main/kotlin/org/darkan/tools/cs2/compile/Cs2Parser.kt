@@ -9,6 +9,7 @@ import org.darkan.tools.cs2.ArgType
 import org.darkan.tools.cs2.Cs2Opcodes
 import org.darkan.tools.cs2.Cs2SymbolTable
 import org.darkan.tools.cs2.Cs2Symbols
+import org.darkan.tools.cs2.Cs2TypeChars
 import org.darkan.tools.cs2.Cs2Packing
 import org.darkan.tools.cs2.OpKind
 import org.darkan.tools.cs2.Cs2Strings
@@ -26,6 +27,7 @@ import org.darkan.tools.cs2.ir.negate
 import org.darkan.tools.cs2.ir.Continue
 import org.darkan.tools.cs2.ir.Cs2Function
 import org.darkan.tools.cs2.ir.Cs2Type
+import org.darkan.tools.cs2.ir.DestructureAssign
 import org.darkan.tools.cs2.ir.Expr
 import org.darkan.tools.cs2.ir.ExprStmt
 import org.darkan.tools.cs2.ir.Goto
@@ -41,6 +43,7 @@ import org.darkan.tools.cs2.ir.OpCall
 import org.darkan.tools.cs2.ir.ParallelAssign
 import org.darkan.tools.cs2.ir.Return
 import org.darkan.tools.cs2.ir.ScriptCall
+import org.darkan.tools.cs2.ir.Spread
 import org.darkan.tools.cs2.ir.Stmt
 import org.darkan.tools.cs2.ir.StrConst
 import org.darkan.tools.cs2.ir.Switch
@@ -77,6 +80,12 @@ class Cs2Parser(
      * a header a hand-made file never had.
      */
     private val relativePath: String? = null,
+    /**
+     * What a called script leaves on the stacks, in push order. A destructuring
+     * declaration has nowhere to write the types of the names it introduces, so
+     * they come from the call on its right.
+     */
+    private val returnTypes: (Int) -> List<Cs2Type> = { emptyList() },
 ) {
 
     // What the file says it is: its gameval name, or the numbered header an older
@@ -155,12 +164,7 @@ class Cs2Parser(
         expectPunct("{")
     }
 
-    private fun parseType(): Cs2Type = when (val text = expect(TokenKind.IDENT).text) {
-        "number" -> Cs2Type.INT
-        "string" -> Cs2Type.STRING
-        "bigint" -> Cs2Type.LONG
-        else -> error("Unsupported type '$text'")
-    }
+    private fun parseType(): Cs2Type = typeNamed(expect(TokenKind.IDENT).text)
 
     private fun parseReturnType(): List<Cs2Type> {
         if (atPunct("[")) {
@@ -179,6 +183,15 @@ class Cs2Parser(
             return emptyList()
         }
         return listOf(parseType())
+    }
+
+    private fun typeNamed(text: String): Cs2Type = when {
+        text == "number" -> Cs2Type.INT
+        text == "string" -> Cs2Type.STRING
+        text == "bigint" -> Cs2Type.LONG
+        // An alias says what an int means, never which stack it is on.
+        Cs2Names.isAlias(text) -> Cs2Type.INT
+        else -> error("Unsupported type '$text'")
     }
 
     private fun declare(name: String, type: Cs2Type, argument: Boolean): Local {
@@ -248,24 +261,89 @@ class Cs2Parser(
         return parseExpressionStatement()
     }
 
-    private fun parseDeclaration(): Stmt {
+    private fun parseDeclaration(): Stmt? {
         val keyword = expect(TokenKind.IDENT).text
-        if (keyword == "const" && atPunct("[")) return parseDestructuring()
+        if (atPunct("[")) {
+            // `const [...]` names a call's results; `let [...]` puts them
+            // straight into locals it declares as it goes.
+            return if (keyword == "const") parseTemporaries() else parseDeclaredDestructuring()
+        }
 
         val name = expect(TokenKind.IDENT).text
         expectPunct(":")
         val type = parseType()
+        // Slots are handed out in declaration order, which is what lets a local
+        // be renamed to anything: the name never says which slot it is.
         val local = declare(name, type, argument = false)
-        // The initialiser is the type's zero value and carries no instructions.
-        if (atPunct("=")) {
-            skip()
-            parseExpression()
+        // A declaration with no initialiser only reserves the slot; one with an
+        // initialiser is an ordinary store that happens to introduce the name.
+        if (!atPunct("=")) {
+            expectPunct(";")
+            return null
         }
+        skip()
+        val value = parseExpression()
         expectPunct(";")
-        return LocalAssign(local.slot, local.type, IntConst(0), declare = true)
+        return LocalAssign(local.slot, local.type, value, declare = true)
     }
 
+    /** `[a, b] = f();` - a call's results, stored into locals that already exist. */
     private fun parseDestructuring(): Stmt {
+        expectPunct("[")
+        val targets = ArrayList<Expr>()
+        while (!atPunct("]")) {
+            val target = parseExpression()
+            require(target is LocalRef || target is VarRef) { "Cannot assign to $target" }
+            targets.add(target)
+            if (atPunct(",")) skip()
+        }
+        skip()
+        expectPunct("=")
+        val call = parseExpression()
+        expectPunct(";")
+        return DestructureAssign(targets, call, declare = false)
+    }
+
+    /**
+     * `let [a, b] = f();` - a call's results, into locals it declares here.
+     *
+     * The names are read before the call so the call can say what they are: a
+     * destructured name has no type annotation, and which stack it lives on is
+     * exactly what decides the opcode that stores it.
+     */
+    private fun parseDeclaredDestructuring(): Stmt {
+        expectPunct("[")
+        val names = ArrayList<String>()
+        while (!atPunct("]")) {
+            names.add(expect(TokenKind.IDENT).text)
+            if (atPunct(",")) skip()
+        }
+        skip()
+        expectPunct("=")
+        val call = parseExpression()
+        expectPunct(";")
+        val types = resultTypes(call)
+        if (types.size != names.size) {
+            error("${names.size} names but the call leaves ${types.size} values")
+        }
+        val targets = names.mapIndexed { index, name ->
+            val local = declare(name, types[index], argument = false)
+            LocalRef(local.slot, local.type) as Expr
+        }
+        return DestructureAssign(targets, call, declare = true)
+    }
+
+    /** The stacks a multi-value call leaves its results on, in push order. */
+    private fun resultTypes(call: Expr): List<Cs2Type> = when (call) {
+        is ScriptCall -> returnTypes(call.scriptId)
+        is OpCall -> List(call.op.pushInt) { Cs2Type.INT } +
+            List(call.op.pushStr) { Cs2Type.STRING } +
+            List(call.op.pushLong) { Cs2Type.LONG }
+        else -> error("$call does not leave several values")
+    }
+
+    /** `const [tmpInt0, tmpStr0] = f();` - a call's results, bound to names. */
+    private fun parseTemporaries(): Stmt {
         expectPunct("[")
         val names = ArrayList<String>()
         while (!atPunct("]")) {
@@ -361,7 +439,8 @@ class Cs2Parser(
     private fun parseWhile(): Stmt {
         expectIdent("while")
         expectPunct("(")
-        val condition = parseCondition()
+        // `while (true)` is a loop with its test written out in the body.
+        val condition = if (peek().text == "true") skip().let { null } else parseCondition()
         expectPunct(")")
         expectPunct("{")
         return While(condition, parseBlock())
@@ -376,25 +455,40 @@ class Cs2Parser(
 
         val cases = ArrayList<SwitchCase>()
         var default = emptyList<Stmt>()
-        var defaultFirst = false
         while (!atPunct("}")) {
             if (peek().text == "default") {
                 skip()
                 expectPunct(":")
-                defaultFirst = cases.isEmpty()
                 default = parseCaseBody()
                 continue
             }
             val keys = ArrayList<Int>()
             while (peek().text == "case") {
                 skip()
-                keys.add(parseSignedInt())
+                keys.add(parseCaseKey())
                 expectPunct(":")
             }
             cases.add(SwitchCase(keys, parseCaseBody()))
         }
         skip()
-        return Switch(subject, cases, default, table = -1, defaultFirst = defaultFirst)
+        // Where `default:` sits says nothing about the layout any more: the code
+        // generator writes the jump-to-default shape, which is the one the
+        // structurer reads back, unless the arms are a bare jump table.
+        return Switch(subject, cases, default, table = -1)
+    }
+
+    /** The number a constant expression holds, whatever spelling it was given. */
+    private fun constantValue(value: Expr): Int = when (value) {
+        is IntConst -> value.value
+        is TypedConst -> value.value
+        else -> error("Expected a constant, but found $value")
+    }
+
+    /** A case key is any constant expression, so `case colour(0xFF0000):` works. */
+    private fun parseCaseKey(): Int = when (val key = parseExpression()) {
+        is IntConst -> key.value
+        is TypedConst -> key.value
+        else -> error("A case key has to be a constant, but found $key")
     }
 
     private fun parseCaseBody(): List<Stmt> {
@@ -431,8 +525,9 @@ class Cs2Parser(
         return Return(values)
     }
 
-    /** `[a, b] = [x, y];` - a parallel assignment. */
+    /** `[a, b] = [x, y];` - a parallel assignment, or a destructured call. */
     private fun parseParallelAssign(): Stmt {
+        val mark = at
         expectPunct("[")
         val targets = ArrayList<Expr>()
         while (!atPunct("]")) {
@@ -443,6 +538,12 @@ class Cs2Parser(
         }
         skip()
         expectPunct("=")
+        // A list on the right is a parallel assignment; anything else is a call
+        // whose results go straight into the targets.
+        if (!atPunct("[")) {
+            at = mark
+            return parseDestructuring()
+        }
         expectPunct("[")
         val values = ArrayList<Expr>()
         while (!atPunct("]")) {
@@ -469,8 +570,8 @@ class Cs2Parser(
         }
         expectPunct(";")
         if (target is OpCall && target.op.opName == "DEFINE_ARRAY") {
-            val array = (target.args[0] as IntConst).value
-            val elementType = (target.args[1] as IntConst).value
+            val array = constantValue(target.args[0])
+            val elementType = constantValue(target.args[1])
             return ArrayDefine(array, elementType, target.args[2])
         }
         return ExprStmt(target)
@@ -552,24 +653,35 @@ class Cs2Parser(
         return Compare(op, left, right, negated = false)
     }
 
-    private val binaryOperators = mapOf(
-        "+" to "ADD", "-" to "SUB", "*" to "MULTIPLY", "/" to "DIVIDE",
-        "%" to "MODULO", "&" to "AND", "|" to "OR",
+    /**
+     * Binary operators by binding strength, loosest first - TypeScript's own
+     * order, which is what the decompiler prints against.
+     */
+    private val precedenceLevels = listOf(
+        setOf("|"), setOf("&"), setOf("+", "-"), setOf("*", "/", "%"),
     )
 
-    private fun parseExpression(): Expr {
-        var left = parseUnary()
-        while (peek().kind == TokenKind.PUNCT && peek().text in binaryOperators) {
+    private fun parseExpression(): Expr = parseBinary(0)
+
+    private fun parseBinary(level: Int): Expr {
+        if (level >= precedenceLevels.size) return parseUnary()
+        val operators = precedenceLevels[level]
+        var left = parseBinary(level + 1)
+        // String `+` is JOIN_STRING, which takes all its parts at once. A
+        // bracketed join is a JOIN_STRING of its own, so only the parts this
+        // loop reads are joined here.
+        var parts: MutableList<Expr>? = null
+        while (peek().kind == TokenKind.PUNCT && peek().text in operators) {
             val symbol = skip().text
-            val right = parseUnary()
-            left = if (left.type == Cs2Type.STRING || right.type == Cs2Type.STRING) {
-                // String `+` is JOIN_STRING, which takes all its parts at once.
-                val parts = ArrayList<Expr>()
-                if (left is Join) parts.addAll(left.parts) else parts.add(left)
-                parts.add(right)
-                Join(parts)
+            val right = parseBinary(level + 1)
+            if (left.type == Cs2Type.STRING || right.type == Cs2Type.STRING) {
+                val joined = parts ?: ArrayList<Expr>().also { it.add(left) }
+                joined.add(right)
+                parts = joined
+                left = Join(joined.toList())
             } else {
-                Binary(symbol, left, right, Cs2Type.INT)
+                left = Binary(symbol, left, right, Cs2Type.INT)
+                parts = null
             }
         }
         return left
@@ -619,6 +731,8 @@ class Cs2Parser(
 
         if (name == "true") return TypedConst(1, ArgType.BOOLEAN)
         if (name == "false") return TypedConst(0, ArgType.BOOLEAN)
+        // `type_obj` and friends are the characters a compiler wrote for a type.
+        Cs2TypeChars.charNamed(name)?.let { return TypedConst(it.code, ArgType.TYPECHAR) }
 
         if (atPunct(".") && name in Cs2Names.NAMESPACES.values) return gamevalConstant(name)
 
@@ -702,6 +816,9 @@ class Cs2Parser(
                 skip()
                 lists.add(items)
                 args.add(IntConst(lists.size - 1))
+            } else if (atPunct("...")) {
+                skip()
+                args.add(Spread(parseExpression()))
             } else {
                 args.add(parseExpression())
             }

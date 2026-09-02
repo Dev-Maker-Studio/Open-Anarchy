@@ -150,6 +150,25 @@ object Cs2Names {
 
     fun helperFor(kind: ArgType): String? = HELPERS[kind]
 
+    /**
+     * The TypeScript type a kind reads as. It is the helper's own name, so
+     * `item(Obj.coins)` and `: item` say the same word; `boolean` is taken by
+     * TypeScript itself, so a flag is a `flag`.
+     */
+    val ALIASES: Map<ArgType, String> = linkedMapOf(
+        ArgType.BOOLEAN to "flag",
+        *HELPERS.entries.filter { it.key != ArgType.SCRIPT }
+            .map { (kind, helper) -> kind to helper }.toTypedArray(),
+    )
+
+    fun aliasFor(kind: ArgType): String? = ALIASES[kind]
+
+    private val aliasKinds: Map<String, ArgType> =
+        ALIASES.entries.associate { (kind, alias) -> alias to kind }
+
+    /** True when a name is one of the type aliases, which are all plain ints. */
+    fun isAlias(name: String): Boolean = name in aliasKinds
+
     /** The kind of constant a helper name spells out, or null when it is not one. */
     fun argTypeOf(helper: String): ArgType? = helperKinds[helper]
 
@@ -176,7 +195,7 @@ object Cs2Names {
         ArgType.MODEL -> Gameval.MODEL
         // STAT has no catalog; the rest are not ids at all.
         ArgType.INT, ArgType.COORD, ArgType.STAT, ArgType.SCRIPT,
-        ArgType.BOOLEAN, ArgType.COLOUR,
+        ArgType.BOOLEAN, ArgType.COLOUR, ArgType.TYPECHAR,
         -> null
     }
 
@@ -281,12 +300,19 @@ object Cs2Names {
         return synchronized(current) { current.reverse[type]?.get(identifier) }
     }
 
-    /** id -> identifier for every named id of [type], ascending. */
+    /**
+     * id -> identifier for every id of [type], ascending, placeholders included.
+     *
+     * An id with no proven name still gets its catalog placeholder - `obj_5`,
+     * `struct_1234` - rather than being left as a bare number, because a name is
+     * what an editor can rename and `cs2 sync-names` can write back. A number is
+     * not: it would have to be found and understood before it could be named.
+     */
     fun identifiers(type: String): Map<Int, String> {
         val current = state()
         synchronized(current) {
             current.byType[type]?.let { return it }
-            val entries = Gameval.entries(type).entries.sortedBy { it.key }
+            val entries = Gameval.allEntries(type).entries.sortedBy { it.key }
             val out = LinkedHashMap<Int, String>(entries.size * 2)
             val taken = HashMap<String, Int>(entries.size * 2)
             for ((id, name) in entries) {
@@ -358,7 +384,6 @@ object Cs2Names {
             current.componentsBuilt = true
             val byInterface = HashMap<Int, MutableList<Triple<Int, String, String?>>>()
             for ((key, name) in Gameval.rawEntries(Gameval.COMPONENT)) {
-                if (GamevalCatalog.placeholder(Gameval.COMPONENT, key) == name) continue
                 val colon = key.indexOf(':')
                 if (colon < 0) continue
                 val interfaceId = key.substring(0, colon).toIntOrNull() ?: continue
