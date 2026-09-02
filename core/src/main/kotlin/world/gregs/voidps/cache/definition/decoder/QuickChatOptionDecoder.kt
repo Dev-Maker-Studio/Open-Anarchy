@@ -6,7 +6,9 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.QUICK_CHAT_MENUS
 import world.gregs.voidps.cache.Index.QUICK_CHAT_MESSAGES
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 import world.gregs.voidps.cache.definition.data.QuickChatOptionDefinition
+import world.gregs.voidps.cache.definition.encoder.QuickChatOptionEncoder
 
 class QuickChatOptionDecoder : DefinitionDecoder<QuickChatOptionDefinition>(QUICK_CHAT_MESSAGES) {
 
@@ -52,8 +54,15 @@ class QuickChatOptionDecoder : DefinitionDecoder<QuickChatOptionDefinition>(QUIC
                     if (b.toInt() != 0) byteToChar(b) else '\u0000'
                 }
             }
+            // Read as a bare flag by the client and acted on nowhere; kept so the record survives.
+            4 -> unusedFlag4 = true
+            else -> error("Unhandled quick chat option opcode $opcode for definition $id.")
         }
     }
+
+    /** The order [QuickChatOptionEncoder] writes on its own; see [OpcodeOrdered.opcodeOrder]. */
+    override fun canonicalOpcodes(definition: QuickChatOptionDefinition): IntArray =
+        QuickChatOptionEncoder.opcodesOf(definition)
 
     override fun changeValues(definitions: Array<QuickChatOptionDefinition>, definition: QuickChatOptionDefinition) {
         if (definition.id >= 32768) {

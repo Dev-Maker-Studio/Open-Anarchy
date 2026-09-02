@@ -1,18 +1,29 @@
 package world.gregs.voidps.cache.definition.data
 
 import world.gregs.voidps.cache.Definition
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 /**
- * Equipment Slots Definition
+ * The equipment defaults: index 28 archive 6, the client's `EquipmentDefaultsType`.
+ *
+ * Which worn slots an obj may be customised in, which slot the shield and the weapon are, and the slots
+ * whose models an animation hides.
  */
 data class BodyDefinition(
     override var id: Int = -1,
+    /** Opcode 1: one byte per worn slot, non zero where the slot takes a customised obj. */
     var disabledSlots: IntArray = IntArray(0),
+    /** Opcode 3: the shield slot. */
     var anInt4506: Int = -1,
+    /** Opcode 4: the weapon slot. */
     var anInt4504: Int = -1,
+    /** Opcode 5: the slots an animation hides along with the shield. */
     var anIntArray4501: IntArray? = null,
-    var anIntArray4507: IntArray? = null
-) : Definition {
+    /** Opcode 6: the slots an animation hides along with the weapon. */
+    var anIntArray4507: IntArray? = null,
+    override var opcodeOrder: IntArray? = null,
+    override var shadowedPayloads: Array<ByteArray?>? = null
+) : Definition, OpcodeOrdered {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

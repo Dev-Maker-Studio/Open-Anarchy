@@ -18,8 +18,8 @@ class SourceFile(val path: String, val bytes: ByteArray)
  * [group] is the decompressed archive - decrypted, and with the container's framing gone - and
  * [files] is that group already split by [world.gregs.voidps.cache.store.ArchiveGroup], parallel
  * to [fileIds]. A codec that has no use for the split can ignore it; one that has no use for the
- * chunk layout can ignore that too, which is every codec but
- * [VerbatimGroupCodec], the only one that has to reproduce it.
+ * chunk layout can ignore that too, which is every codec but [AnimationFrameCodec] - index 0's groups are
+ * three chunks and it is the only index whose split has to come back.
  */
 class SourceArchive(
     val index: Int,
