@@ -93,8 +93,8 @@ object TextureLoader {
      */
     private fun isMaterialOpaque(material: MaterialDefinition?): Boolean {
         if (material == null) return true
-        val effectId = material.type.toInt()
-        val effectCombiner = material.anInt1226
+        val effectId = material.effectId.toInt()
+        val effectCombiner = material.effectCombiner
         return effectCombiner != 2 && effectId != 1 && effectId != 7
     }
 
@@ -115,18 +115,18 @@ object TextureLoader {
     fun isOpaque(textureId: Int): Boolean {
         if (textureId < 0) return true
         val material = getMaterial(textureId) ?: return true
-        val effectId = material.type.toInt()
-        val effectCombiner = material.anInt1226
+        val effectId = material.effectId.toInt()
+        val effectCombiner = material.effectCombiner
 
         // Standard opaque materials (not effectId 1/7, not effectCombiner 2)
         if (effectCombiner != 2 && effectId != 1 && effectId != 7) return true
 
         // For effectCombiner 0: check if constant alpha makes it opaque.
-        // aByte1225 is a signed byte: only negative values (unsigned >= 128) trigger
+        // alpha is a signed byte: only negative values (unsigned >= 128) trigger
         // BlendMode.ALPHA in the RS client. Positive values are color blend weights,
         // not render alpha, so the material is still opaque.
         if (effectCombiner == 0) {
-            return material.aByte1225.toInt() >= 0
+            return material.alpha.toInt() >= 0
         }
 
         // effectCombiner 1 (binary) or 2 (per-pixel): needs transparency handling
@@ -153,7 +153,7 @@ object TextureLoader {
      */
     private fun getTextureSize(material: MaterialDefinition?): Int {
         if (material == null) return TEXTURE_SIZE_NORMAL
-        return if (material.aBoolean1204) TEXTURE_SIZE_SMALL else TEXTURE_SIZE_NORMAL
+        return if (material.isSmall) TEXTURE_SIZE_SMALL else TEXTURE_SIZE_NORMAL
     }
 
     /**
@@ -218,15 +218,15 @@ object TextureLoader {
                 //     all pixels to prevent black texels from being discarded.
                 //   effectCombiner=1: binary alpha (0 for black/transparent, 255 for non-black).
                 //     This creates hard-edged transparency masks (e.g., foliage, fences).
-                if (material != null && material.anInt1226 != 2) {
-                    val effectCombiner = material.anInt1226
+                if (material != null && material.effectCombiner != 2) {
+                    val effectCombiner = material.effectCombiner
                     if (effectCombiner == 0) {
                         // Constant alpha for ALL pixels (including black).
-                        // aByte1225 is a signed byte: only negative values (unsigned >= 128)
+                        // alpha is a signed byte: only negative values (unsigned >= 128)
                         // trigger BlendMode.ALPHA in the RS client GL path. Positive values
                         // are color blend weights (texture vs face color), NOT render alpha.
                         // Zero is treated as fully opaque (1.0).
-                        val signedAlpha = material.aByte1225.toInt()
+                        val signedAlpha = material.alpha.toInt()
                         val constAlpha = if (signedAlpha >= 0) 255 else (signedAlpha and 0xFF)
                         for (i in pixels.indices) {
                             val px = pixels[i]
@@ -347,10 +347,10 @@ object TextureLoader {
         }
 
         // Apply same alpha post-processing as getTextureForMaterial
-        if (material != null && material.anInt1226 != 2) {
-            val effectCombiner = material.anInt1226
+        if (material != null && material.effectCombiner != 2) {
+            val effectCombiner = material.effectCombiner
             if (effectCombiner == 0) {
-                val signedAlpha = material.aByte1225.toInt()
+                val signedAlpha = material.alpha.toInt()
                 val constAlpha = if (signedAlpha >= 0) 255 else (signedAlpha and 0xFF)
                 for (i in pixels.indices) {
                     val px = pixels[i]
@@ -772,10 +772,10 @@ object TextureLoader {
         }
 
         // Apply same alpha post-processing as getTextureForMaterial
-        if (material != null && material.anInt1226 != 2) {
-            val effectCombiner = material.anInt1226
+        if (material != null && material.effectCombiner != 2) {
+            val effectCombiner = material.effectCombiner
             if (effectCombiner == 0) {
-                val signedAlpha = material.aByte1225.toInt()
+                val signedAlpha = material.alpha.toInt()
                 val constAlpha = if (signedAlpha >= 0) 255 else (signedAlpha and 0xFF)
                 for (i in pixels.indices) {
                     val px = pixels[i]
@@ -824,7 +824,7 @@ object TextureLoader {
             if (rgb != 0) nonBlack++
             if (a == 0) transparent++
         }
-        println("dumpTextureImage($materialId): ${textureSize}x${textureSize}, opaque=$opaque, effectCombiner=${material?.anInt1226}, nonBlack=$nonBlack/${pixels.size}, transparent=$transparent/${pixels.size}")
+        println("dumpTextureImage($materialId): ${textureSize}x${textureSize}, opaque=$opaque, effectCombiner=${material?.effectCombiner}, nonBlack=$nonBlack/${pixels.size}, transparent=$transparent/${pixels.size}")
         println("  Saved colour to $colorPath")
         println("  Saved alpha to $alphaPath")
     }
