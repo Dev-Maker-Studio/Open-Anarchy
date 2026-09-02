@@ -1,12 +1,19 @@
 package world.gregs.voidps.cache.source
 
 import org.darkan.core.EnvVars
+import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.FileCache
+import world.gregs.voidps.cache.Index
+import world.gregs.voidps.cache.definition.data.ItemDefinition
+import world.gregs.voidps.cache.definition.decoder.ItemDecoder
+import world.gregs.voidps.cache.source.codec.DefinitionCodecs
+import world.gregs.voidps.cache.source.codec.DefinitionLayout
 import world.gregs.voidps.cache.source.codec.SourceCodecs
 import world.gregs.voidps.cache.store.FileStore
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.name
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -17,7 +24,10 @@ import kotlin.test.assertTrue
  *
  * This is the parity guarantee `docs/cache-source.md` makes, and the only place it can actually
  * be proved. It also checks the two properties everything downstream leans on: unpacking the same
- * cache twice writes nothing the second time, and building an unchanged tree is a no-op.
+ * cache twice writes nothing the second time, and building an unchanged tree is a no-op. With the
+ * definition indices stored as JSON it also reports what each type cost - files written, files that
+ * survived the JSON round trip, files that still need their shipped bytes beside them - and finishes by
+ * editing one obj's name and rebuilding, which is the whole reason the typed codecs exist.
  *
  * Skipped when there is no cache to test against, like the other whole-cache tests.
  */
@@ -40,13 +50,15 @@ class WholeCacheSourceTest {
             }
             println("unpack: $unpacked")
             assertEquals(0, unpacked.missing, "every table entry should have a container")
-            assertEquals(0, unpacked.inexact, "no codec should have needed a pristine fallback yet")
+            assertEquals(0, unpacked.inexact, "no archive should have needed a pristine fallback")
+            assertEquals(0, unpacked.pristine, "no file should have needed a pristine copy")
             assertEquals(OPAQUE, unpacked.opaque, "only the unkeyed map archives should be opaque")
             assertTrue(unpacked.archives > 100_000, "the cache has far more archives than ${unpacked.archives}")
             assertTrue(unpacked.millis < UNPACK_LIMIT, "unpacking took ${unpacked.millis}ms")
 
             val size = size(tree.toPath())
             println("tree: ${size.first} files, ${size.second / 1_000_000} MB in ${tree.absolutePath}")
+            assertEquals(0, types(SourceTree.open(tree)), "no definition type may need a pristine copy")
 
             val result = Packer.pack(SourceTree.open(tree), output)
             val packedSize = size(output.toPath())
@@ -80,8 +92,87 @@ class WholeCacheSourceTest {
             assertEquals(0, second.written, "re-unpacking an unchanged cache must rewrite nothing")
             assertEquals(0, second.deleted)
             assertEquals(stamps, timestamps(tree.toPath()), "not a single file may have been touched")
+
+            edit(SourceTree.open(tree), output)
         } finally {
             work.deleteRecursively()
+        }
+    }
+
+
+    /**
+     * Per type: how many JSON files it wrote and how many of them still need the shipped bytes beside
+     * them. Returns the pristine total, which is the number `docs/cache-source.md` promises is zero.
+     */
+    private fun types(tree: SourceTree): Int {
+        var files = 0
+        var pristine = 0
+        println("%-11s %-24s %9s %9s %9s".format("type", "directory", "files", "exact", "pristine"))
+        for (type in DefinitionCodecs.types) {
+            val directory = tree.directory.resolve(type.directory)
+            val written = json(directory)
+            val metadata = tree.metadata(type.index)
+            val kept = if (type.archive < 0) {
+                metadata.archives.values.sumOf { it.pristine.size }
+            } else {
+                metadata.archive(type.archive)?.pristine?.size ?: 0
+            }
+            files += written
+            pristine += kept
+            println("%-11s %-24s %9d %9d %9d".format(type.name, type.directory, written, written - kept, kept))
+        }
+        println("%-11s %-24s %9d %9d %9d".format("total", "", files, files - pristine, pristine))
+        return pristine
+    }
+
+    /** Every `<id>.json` under [directory] - the index's own `index.json` and the sidecars excluded. */
+    private fun json(directory: Path): Int {
+        if (!Files.isDirectory(directory)) {
+            return 0
+        }
+        var count = 0
+        Files.walk(directory).use { stream ->
+            for (path in stream) {
+                if (path.name == SourceTree.INDEX_FILE || !Files.isRegularFile(path)) {
+                    continue
+                }
+                if (path.name.endsWith(DefinitionLayout.EXTENSION)) {
+                    count++
+                }
+            }
+        }
+        return count
+    }
+
+    /**
+     * Change one obj's name in the tree and rebuild: exactly one archive may be repacked, and the built
+     * cache must decode the new name.
+     *
+     * This is the whole point of the typed codecs - a definition is a file somebody edits - and the
+     * incremental build is what makes that cheap, so both are checked in one go.
+     */
+    private fun edit(tree: SourceTree, output: File) {
+        val file = tree.indexDirectory(Index.ITEMS).resolve("$EDITED${DefinitionLayout.EXTENSION}")
+        val before = Files.readString(file)
+        assertTrue(before.contains(""""name": "$ORIGINAL""""), "obj $EDITED is not $ORIGINAL: $before")
+        Files.writeString(file, before.replace(""""name": "$ORIGINAL"""", """"name": "$RENAMED""""))
+
+        val build = Builder.build(tree, output) { println("  edit build $it") }
+        println("one file build: $build")
+        assertTrue(!build.full, "an edited file must be patched, not repacked from scratch")
+        assertEquals(1, build.changedFiles, "only the edited file changed")
+        assertEquals(1, build.archives, "only obj $EDITED's archive may be repacked")
+        assertEquals(1, build.indices, "only index ${Index.ITEMS}'s table may be rewritten")
+
+        val cache = FileCache.load(output.absolutePath)
+        try {
+            val data = cache.data(Index.ITEMS, EDITED ushr 8, EDITED and 0xff)
+            assertTrue(data != null, "obj $EDITED is not in the built cache")
+            val definition = ItemDefinition(EDITED)
+            ItemDecoder().readLoop(definition, BufferReader(data!!))
+            assertEquals(RENAMED, definition.name, "the built cache must carry the edited name")
+        } finally {
+            cache.close()
         }
     }
 
@@ -131,7 +222,15 @@ class WholeCacheSourceTest {
         /** The eight `l<x>_<y>` archives `data/map/xteaKeys.json` has no working key for. */
         private const val OPAQUE = 8
 
-        /** Unpacking the whole 876 MB cache has to stay well inside two minutes. */
-        private const val UNPACK_LIMIT = 120_000L
+        /**
+         * Unpacking the whole 876 MB cache has to stay well inside five minutes. Every definition file
+         * is decoded, written as JSON, read back and re-encoded on the way out, which is most of it.
+         */
+        private const val UNPACK_LIMIT = 300_000L
+
+        /** The obj whose name the edit test changes: a whip is a whip in every 727 cache. */
+        private const val EDITED = 4151
+        private const val ORIGINAL = "Abyssal whip"
+        private const val RENAMED = "Abyssal thwip"
     }
 }

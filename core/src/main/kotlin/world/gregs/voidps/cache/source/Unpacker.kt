@@ -38,6 +38,8 @@ class UnpackReport(
     val opaque: Int,
     /** Archives whose codec did not reproduce the group and fell back to pristine bytes. */
     val inexact: Int,
+    /** Editable files whose codec could not reproduce the shipped bytes, so a sidecar carries them. */
+    val pristine: Int,
     /** Archives listed in a reference table with no container behind them. */
     val missing: Int,
     val bytes: Long,
@@ -45,7 +47,7 @@ class UnpackReport(
 ) {
     override fun toString(): String =
         "$archives archives, $files files ($bytes bytes), $written written, $deleted deleted, " +
-            "$opaque opaque, $inexact inexact, $missing missing, in ${millis}ms"
+            "$opaque opaque, $pristine pristine, $inexact inexact, $missing missing, in ${millis}ms"
 }
 
 /**
@@ -220,6 +222,7 @@ object Unpacker {
         val unpacked = codec.unpack(directory, source)
         if (unpacked.pristine.isNotEmpty()) {
             metadata.pristine = unpacked.pristine
+            counts.pristine.addAndGet(unpacked.pristine.size)
         }
         for (file in unpacked.files) {
             expected.add(file.path)
@@ -365,12 +368,13 @@ object Unpacker {
         val deleted = AtomicInteger()
         val opaque = AtomicInteger()
         val inexact = AtomicInteger()
+        val pristine = AtomicInteger()
         val missing = AtomicInteger()
         val bytes = AtomicLong()
 
         fun report(nanos: Long) = UnpackReport(
             indices.get(), archives.get(), files.get(), written.get(), deleted.get(),
-            opaque.get(), inexact.get(), missing.get(), bytes.get(), nanos / 1_000_000
+            opaque.get(), inexact.get(), pristine.get(), missing.get(), bytes.get(), nanos / 1_000_000
         )
     }
 }
