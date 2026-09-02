@@ -152,6 +152,11 @@ the JS5 multi-file layout.
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `ArchiveDirectoryCodec` | indices 10, 23, 24, 25, 28 | the generalisation of `ConfigCodec`: a name and a codec per archive, either in a directory of its own (`worldmapdata/main_staticelements/`) or as one named file (`defaults/equipment.json`) |
 | `Cs2SourceCodec` | index 12 | the TypeScript layout `cs2 decompile-all` writes (`<category>/<name>.ts`), provided by the `cs2` module - see *clientscripts* below |
+| `TranscodedArchiveCodec` | indices 6 and 11 | `<archive>.mid` - a standard MIDI file, rebuilt into the cache's compact encoding on the way back |
+| `BinaryArchiveCodec` | index 15 | `<archive>.jagpatch` - the payload verbatim, under an extension that says what it is |
+| `VorbisCodec` | index 14 | `<archive>.jagvorbis`, plus one derived `samples.json` listing every sample's header |
+| `NamedBytesCodec` | index 30 | `<os>/<arch>/<library>` - one file per archive, at the archive's own recovered name |
+| `ShaderCodec` | index 31 | `<archive name>/<file name>` - the names the archives spell out; program definitions as JSON |
 
 So the indices that hold definitions are editable JSON and the rest are bytes:
 
@@ -182,6 +187,15 @@ So the indices that hold definitions are editable JSON and the rest are bytes:
 Thirty-two of the 37 indices' *records* are now editable JSON; what is left as bytes is the assets -
 models, sprites, textures, maps, sounds, fonts, particles, billboards, materials, native libraries,
 shaders and the loading sprites - and index 2's 31 undecoded archives.
+| 4 | `synth_sounds` | `json-synth` | | 21 | `config_spotanim` | `json-spotanim` |
+| 6 | `midi_songs` | `midi` | | 22 | `config_varbit` | `json-varbit` |
+| 11 | `midi_jingles` | `midi` | | 30 | `dlls` | `dlls` |
+| 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 31 | `shaders` | `shaders` |
+| 14 | `vorbis` | `vorbis` | | 0 | `anims` | `verbatim-group` |
+| 15 | `midi_instruments` | `jagpatch` | | everything else | | `raw-archive` / `raw-files` |
+| 16 | `config_loc` | `json-loc` | | | | |
+| 17 | `config_enum` | `json-enum` | | | | |
+| 18 | `config_npc` | `json-npc` | | | | |
 
 A codec is claimed per index in `SourceCodecs`, in three layers of increasing authority:
 
@@ -221,6 +235,9 @@ and file packed the way that type's decoder packs them (`id = archive shl bits o
 | `Nested(16)` | indices 3 and 0 | `interfaces/1477/32.json`, `anims/12/5.json` | `1477 shl 16 or 32` |
 | `Flat` | index 2's typed archives, index 23's and both quick chat indices' | `config/struct/26.json`, `quickchat/quickchatphrase/12.json` | the file id; the directory is the archive |
 | `NamedLayout` | indices 10 and 28 | `defaults/equipment.json` | the archive id; the one file is named after the archive rather than after its id |
+| `Nested(16)` | index 3 | `interfaces/1477/32.json` | `1477 shl 16 or 32` |
+| `Flat` | index 2's typed archives | `config/struct/26.json` | the file id; the directory is the archive |
+| `Packed(0)` | index 4 | `synth_sounds/1234.json` | the archive id, since the index holds one file per archive |
 
 An obj, abridged - the real file lists every field the definition carries, defaults included, and
 nothing that is not a field (60 keys for this one):
@@ -981,6 +998,10 @@ Two readings the bytes settled rather than the client:
 
 Camera keyframes are stored as the file's unsigned shorts rather than the client's `- 5120` world
 coordinates, and an area's coordinate stays packed, so the JSON is what the file says.
+Index 4's synth sounds are the twenty-third type this codec stores and the only one outside indices
+2, 3 and 16-22, so they are counted in *synth sounds (index 4)* below rather than in this table,
+which `DefinitionJsonCodecTest` produces from `DefinitionCodecs`. The audio and native asset indices
+each get a section of their own after *clientscripts*.
 
 ### The pristine fallback
 
@@ -1125,6 +1146,251 @@ Measured over the whole 727 cache, **all 741,983 definition files of all 33 type
 and not one needs a pristine copy**; `DefinitionJsonCodecTest` and `MiscCodecTest` are the measurement and
 the "Parity per type" table below the per type breakdown.
 
+### synth sounds (index 4)
+
+Index 4 is not audio. Each of its 10,084 archives is the *recipe* for a sound - ten instrument
+slots, each an additive synthesiser of up to five oscillators shaped by envelopes, an echo and a
+resonant filter, plus the loop points - which the client mixes into 22 kHz PCM at play time. That is
+why an archive is a few hundred bytes and the sound it makes is a second long, and why it is worth
+storing as JSON: every number in it is a knob somebody might want to turn.
+
+```
+synth_sounds/1234.json
+```
+
+`SynthSoundDecoder` / `SynthSoundEncoder` are the pair, and the layout is a fixed sequence rather
+than an opcode list, so there is no `opcodeOrder` to record:
+
+| field | width | note |
+|---|---|---|
+| ten instrument slots | a byte, or an instrument | the byte is the slot's pitch envelope form, and a zero means the slot is empty |
+| an envelope | form, `start`, `end`, then its shape | shape is a phase count and that many duration/peak short pairs |
+| an optional envelope pair | a zero byte, or two envelopes | vibrato, tremolo and the gater are each written as a pair or not at all |
+| oscillators | volume, pitch, delay | smart, *signed* smart, smart; a zero volume ends the list, and the terminator is always written |
+| echo and timing | `delayTime`, `delayDecay` smart, `duration`, `offset` short | |
+| the filter | a nibble each of pole pairs, two gains, a mask byte, then the pairs | the sweep envelope follows exactly when the mask is set or the gains differ |
+| loop | `loopBegin`, `loopEnd` short | milliseconds |
+
+Two values the client throws away are kept because the file cannot be rebuilt without them: the
+filter's **mask byte** (`varying`), whose unused high bits still decide whether a sweep envelope
+follows, and each pole pair's **end values**, which the client copies from the start values for a
+pair whose mask bit is clear. Everything else is a field a reader would expect. The signed smart the
+oscillator pitch uses is `Reader.readSignedSmart` / `Writer.writeSignedSmart`, added for this.
+
+**10,084 of 10,084 files are byte identical and none needs a pristine copy** - measured twice, by
+the encoder alone (`encode(decode(bytes)) == bytes`) and through the JSON
+(`encode(read(write(decode(bytes)))) == bytes`), in `SynthSoundCodecTest`.
+
+### midi songs and jingles (indices 6 and 11)
+
+Indices 6 and 11 hold **Jagex's compact MIDI encoding**, which is a column store of exactly the
+events a standard MIDI file carries. A standard file interleaves everything - a delta time, a status
+byte, that event's data bytes, over and over; Jagex's splits the same stream into one column per
+kind of byte and delta-codes each column against its own running value:
+
+```
+opcodes        one byte per event, tracks back to back, each track closed by 0x07
+deltas         one variable-length int per event, in the same order
+controllers    one byte per controller change: the delta of the controller number
+<18 columns>   one byte per event that uses them, in event order
+tempo          three bytes per tempo event
+trackCount     one byte
+division       two bytes
+```
+
+An opcode's low nibble is the event type and its high nibble is the **exclusive or** of the channel
+with the running channel, so a run of events on one channel costs a nibble of zero; `0x07` ends a
+track and `0x17` is a tempo change. A status byte goes into the standard file only when the opcode
+differs from the previous opcode's low nibble, which is where the standard file's running status
+comes from - and is why both directions agree on it without anything being recorded.
+
+The tree stores the **standard MIDI file**:
+
+```
+midi_songs/42.mid
+midi_jingles/7.mid
+```
+
+That is only allowed because the way back is exact, and it was measured rather than assumed
+(`JagexMidiTest`): expand every one of the 1,662 files, rebuild the compact encoding from the
+expansion alone, and compare. **1,137 of 1,137 songs and 525 of 525 jingles come back byte for
+byte.** Two conventions had to be measured, because the format admits more than one encoding of the
+same music and only one of them is what Jagex's packer wrote:
+
+- **a column's delta is the non-negative byte** congruent to the difference. The client adds the byte
+  to a running total and keeps the low seven bits, so `-3` and `125` decode identically; the shipped
+  files use `125`. This is the whole difference between 18 files round-tripping and all 1,662.
+- **a delta time is the shortest variable-length int.** No file uses a padded one.
+
+Round-tripping through `.mid` costs the tree nothing and saves it 10 MB: the compact encoding is
+*larger* raw (50.6 MB against 40.0 MB for the same music), because it spends a byte per event on the
+opcode to save the status bytes that running status would have elided. Its advantage is that similar
+bytes end up adjacent, which is worth about a third to the gzip the container wraps it in - and the
+container still gzips whatever the tree packs, so nothing is lost either way.
+
+`JagexMidi.toStandard` and `JagexMidi.toCompact` are the pair, and `TranscodedArchiveCodec` is the
+codec both indices share. It keeps the pristine mechanism even though nothing uses it, so an archive
+that ever stopped reproducing would cost a `<archive>.mid.pristine` sidecar rather than the parity
+guarantee.
+
+### vorbis (index 14)
+
+Index 14 is 16,824 mono samples and, in archive 0, the one vorbis **setup header** they all share.
+The samples are **bare vorbis packets in Jagex's own framing** - five big endian ints and then each
+audio packet preceded by its length:
+
+| field | width |
+|---|---|
+| `sampleRate` | int |
+| `samples` | int, the decoded length in mono samples |
+| `loopStart` | int |
+| `loopEnd` | int, whose **sign bit** is a loop consistency flag and whose value is then inverted |
+| `packets` | int |
+| per packet | its length as bytes that add up, `0xff` meaning "255 and more", then that many bytes |
+
+**These stay bytes** (`vorbis/1234.jagvorbis`), and the reason is that an `.ogg` is not a
+re-encoding of them, it is an invention. Ogg carries, and index 14 does not: a stream serial number,
+a granule position per page, a page segmentation, a CRC per page, an identification header (version,
+channel count, three bitrate fields), and a comment header with a vendor string. A converter would
+have to make every one of those up, and *nothing* about the file it produced could be checked back
+against the cache - which is the opposite of the parity this tree exists for. The two blocksize
+nibbles the identification header would carry are not in the samples either; they are the first byte
+of archive 0.
+
+What the codec does instead is describe them. `vorbis/samples.json` lists every sample's header -
+sample rate, length in samples and in milliseconds, loop points, packet count - and the setup
+header's block sizes and codebook count. It is **derived**: it belongs to the index rather than to
+any archive (`Owner.Index`), so editing it changes nothing and packs nothing. A per-file sidecar was
+the alternative and is worse, because a header field and the packets it counts are not independent:
+two files could disagree and nothing would notice. One listing that owns nothing cannot.
+
+**16,825 of 16,825 archives, exact by construction.** 228 MB, which is two thirds of everything
+these seven indices weigh.
+
+### midi instruments (index 15)
+
+Index 15's 247 archives are the sound bank: for each of 128 keys, which sample plays
+(index 4 or index 14, packed into one varint), at what pitch, volume, pan and loop mode, plus the
+volume and release envelopes of the patches those keys share. **These stay bytes**
+(`midi_instruments/12.jagpatch`), and for a different reason than index 14's.
+
+The format is a run-length column store - four run tables terminated by `0x00`, value regions
+reserved at the front and consumed a hundred lines later, per-key cumulative deltas, a varint column,
+and two curves interpolated across the keyboard - and the client's decode is **destructive**: it
+folds the volume curve into `volumeOffset` and the pan curve into `panOffset`, clamps the result,
+never stores either curve, and drops all four run tables on the floor. The decoded object is
+therefore not enough to rebuild the file, and re-deriving the runs by run-length-encoding the decoded
+arrays would not reproduce a packer that split a run redundantly. On top of that the client
+reference's own reader is visibly damaged in this class (its run-table scan double-counts the buffer
+offset, so it is correct only for the first of the four tables), so there is no trustworthy decoder
+to port in the first place.
+
+A lossless JSON of this format is possible - it would have to keep the raw columns and the run
+lengths, which is a hex dump wearing a schema - and it is not worth it until something wants to edit
+a sound bank. Meanwhile the bytes are exact by construction and say what they are.
+
+**247 of 247 archives, exact by construction.**
+
+### native libraries (index 30)
+
+Index 30's 33 archives are the client's native libraries - `hw3d`, `sw3d`, `jaggl`, `jaclib`,
+`jagdx` - one per platform, and the payload is the PE, ELF or Mach-O image itself, byte for byte
+what the client writes to disk and hands to `System.load`. There is nothing to decode; what there is
+to recover is the **name**.
+
+```
+dlls/windows/x86/hw3d.dll
+dlls/linux/x86_64/libjaggl.so
+dlls/macos/universal/libhw3d.dylib
+```
+
+The names are a formula, not a catalogue (`docs/cache-archive-names.md`): `<os>/<arch>/<file>` over
+`windows|linux|macos`, `x86|x86_64|ppc|universal` and the platform's spelling of the library name.
+`world.gregs.voidps.cache.NativeLibrary` builds the 60 candidates the client can ask for and hashes
+them, and **all 33 archives are accounted for** with none left over - which `NativeAssetCodecTest`
+asserts, so a cache with an archive the formula does not cover fails rather than quietly becoming
+`<archive>.dat`.
+
+The hash stays the truth, exactly as `index.json`'s `nameHash` field promises. Packing hashes the
+path back and looks it up in the metadata, so a renamed file is a file the pack does not recognise -
+never a silently re-hashed archive.
+
+**33 of 33 archives, exact by construction.**
+
+### shaders (index 31)
+
+Index 31 is two archives - `gl` (archive 1) and `dx` (archive 3) - and 112 files, all of them named
+in the reference table and none of the names a formula. It is the one index that **describes
+itself**: a dozen files in each archive are *program definitions*, and a program definition spells
+out the program's name and the source file names its techniques compile. The table hashes the
+**lower case** form of exactly those strings, so reading an archive's definitions recovers the names
+of every file in it. Nothing is stored for the recovery; it runs from the archive's own bytes while
+it is unpacked.
+
+```
+shaders/gl/model.json                              the program definition
+shaders/gl/model.vertex.glsl                       GLSL source, verbatim
+shaders/dx/model.vertex.vs_2_0.0000000400000001    compiled Direct3D bytecode, verbatim
+```
+
+A GLSL source is plain text and a Direct3D source is a compiled `vs_2_0`/`ps_2_0` blob; both are the
+payload verbatim under their own name, because there is nothing to decode and the leading blank
+lines in the GLSL are really in the file. A program definition is a small binary structure and is
+stored as JSON:
+
+```json
+{
+  "header": 4,
+  "name": "Sprite",
+  "variables": [
+    {"type": 45, "elementType": null, "arraySize": null, "name": "SpriteSampler",
+     "alias": "", "program": [-1, -1, -1], "slot": [0, 0, 0]}
+  ],
+  "optionalVariables": [],
+  "mappings": [
+    {"name": "Masked", "vertexSource": "Sprite.vertex.glsl", "fragmentSource": "Sprite.fragment.glsl",
+     "vertexDefines": [{"name": "Masked", "value": "true"}],
+     "fragmentDefines": [{"name": "Masked", "value": "true"}, {"name": "AlphaTex", "value": "false"}]}
+  ]
+}
+```
+
+Every scalar in that format is a **signed 16 bit little endian** int - the only little endian
+anything in the cache - and a string is one of those as a length followed by that many bytes, so
+`-1` is null and `0` is the empty string and both occur. `ShaderProgramDecoder` /
+`ShaderProgramEncoder` are the pair. The `program` and `slot` arrays are the Direct3D constant
+register and sampler slot per technique; the OpenGL renderer ignores them and looks its uniforms up
+by name, but they are the file's and they are kept. The permutation suffix on a `dx` source name
+(`.0000000400000001`) is a packed decimal spelling of that technique's `#define` set and lives only
+in the name, which is why the name had to be recovered rather than invented.
+
+**Both archives pack back identically, all 112 file names are recovered - no file falls back to
+`<file>.dat` - and none of the 24 program definitions needs a pristine copy.** As for index 30, the
+file name hashes in `index.json` stay the truth: packing hashes each path's lower case form and
+looks it up in `fileNames`.
+
+### What these seven cost
+
+Measured on the 727 cache on one 12-core machine (`AudioSourceTreeTest`), unpacking the seven
+indices into a tree, packing that tree into a cache and verifying it against the shipped one:
+
+| index | dir | codec | archives | files | tree size | exact | pristine |
+|---|---|---|---|---|---|---|---|
+| 4 | `synth_sounds` | `json-synth` | 10,084 | 10,084 | 33 MB | 10,084 | 0 |
+| 6 | `midi_songs` | `midi` | 1,137 | 1,137 | 40 MB | 1,137 | 0 |
+| 11 | `midi_jingles` | `midi` | 525 | 525 | 1.7 MB | 525 | 0 |
+| 14 | `vorbis` | `vorbis` | 16,825 | 16,826 | 228 MB | 16,825 | 0 |
+| 15 | `midi_instruments` | `jagpatch` | 247 | 247 | 92 KB | 247 | 0 |
+| 30 | `dlls` | `dlls` | 33 | 33 | 20 MB | 33 | 0 |
+| 31 | `shaders` | `shaders` | 2 | 112 | 159 KB | 2 | 0 |
+| **total** | | | **28,853** | **28,964** | **336 MB** | **28,853** | **0** |
+
+Unpack 13.3 s, pack 7.6 s, verify 6.2 s at full parity - 28,853 containers and 7 reference tables,
+all identical - a no-op build 0.8 s, and a re-unpack writes nothing and touches no file. The one
+thing that run cannot compare is the derived version table, which is a digest of *every* index's
+reference table and so differs between a tree of seven indices and a cache of thirty-seven;
+`WholeCacheSourceTest` is where that is checked, over all of them at once.
+
 ## The packed build
 
 `Builder.build(tree, outputDir)` produces a normal packed cache in `outputDir`
@@ -1228,6 +1494,11 @@ Each command prints one line per index as it goes and then its totals:
   count and how many `.pristine` sidecars are *stale* - the guarded file no longer hashes to the
   value `index.json` recorded, so the next pack will compile the edit rather than emit the original.
   It also says whether the tree has its `gamevals` directory and how many catalogs are in it.
+
+The whole-cache timings below were measured before the audio and native asset codecs landed, so
+they are the cost of a tree whose indices 4, 6, 11, 14, 30 and 31 were still `.dat` files; what those
+seven cost on their own is measured in *What these seven cost* above, and the shape of the change is
+about 30 MB more tree for index 4's JSON against 10 MB less for the songs and jingles.
 
 Against the 727 cache on one 12-core machine, on the tree at `cache-source/`: unpack 12.8 s when the
 tree is already right and 44 s when every file has to be written (140,692 archives, 397,041 files,
@@ -1382,6 +1653,13 @@ in `cs2.d.ts`; the copy in `cs2.d.ts` is the price of the index staying self-con
   decode straight into already-scaled rendering fields, so pointing them at core's records means
   rewriting all 40 `decodeOpcode` implementations, and the only check on that is a visual one. The
   format knowledge is duplicated until then, and core's is the one with a whole-cache proof behind it.
+- Typed codecs for the indices that are still bytes (sprites as PNG, maps as JSON for the map
+  editor, models). Each is one codec class plus a byte-exact proof, the way the definition indices
+  got theirs; the pristine fallback carries the rest meanwhile.
+- A lossless form for index 15's sound bank patches, which would have to keep the raw columns and
+  run lengths the client's own decode discards - see *midi instruments (index 15)*. Index 14's
+  streams are the one case where there is nothing to reach for: an `.ogg` of them would be mostly
+  invented and could not be checked back.
 - Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
 - Handing a codec the cache a tree is being *unpacked from*, the last thing `SourceCodec` does not
   offer - see *The `SourceCodec` interface* above. Packing needs no cache any more.
@@ -1406,6 +1684,13 @@ areas and static elements, both quick chat types, the six client defaults, the l
 cutscenes.
 
 Four tests measure it, each against the shipped bytes rather than against a re-decode:
+Three more encoders reach it outside that mechanism, because their formats are a fixed sequence
+rather than an opcode list and so have no order to replay: `SynthSoundEncoder` (index 4, 10,084
+files), `ShaderProgramEncoder` (index 31, 24 files) and `JagexMidi.toCompact` (indices 6 and 11,
+1,662 files, which rebuilds a whole archive rather than a definition). Their measurements are in
+*synth sounds*, *shaders* and *midi songs and jingles* above.
+
+Three tests measure it, each against the shipped bytes rather than against a re-decode:
 
 - `core/src/test/kotlin/world/gregs/voidps/cache/definition/DefinitionEncoderParityTest.kt` (indices 16-22)
 - `core/src/test/kotlin/world/gregs/voidps/cache/config/ConfigEncoderParityTest.kt` (index 2)
