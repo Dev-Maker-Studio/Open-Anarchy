@@ -38,7 +38,7 @@ cache (2026-09-02) established what that takes:
 | Fact | Consequence |
 |---|---|
 | Every gzip container reproduces with Java's `Deflater` level 6, default strategy, standard 10-byte header (2 archives in index 19 carry OS byte `0xff`) | gzip needs no stored bytes; the OS byte is metadata when nonstandard |
-| bzip2 containers (3,796 archives + 13 reference tables) reproduce with **libbzip2 1.0.8** at block size 1, and with nothing else on the JVM | `BZip2Encoder` is a faithful Kotlin port of libbzip2's compressor, verified against every bzip2 container |
+| bzip2 containers (3,783 archives + 13 reference tables) reproduce at block size 1 with **libbzip2 1.0.8**, except the reference tables of indices 2 and 9, which only **commons-compress** reproduces | `BZip2Encoder` is a faithful Kotlin port of libbzip2's compressor; the odd two are a recorded `bzip2` variant |
 | No LZMA. Reference tables use formats 6 and 7, flags `0x1` (names) and `0x2` (whirlpool, index 30 only) | nothing else needs encoding; the client ignores `0x4`/`0x8` anyway |
 | Every archive in indices 0-35 ends in a 2-byte version trailer; reference tables have none | the trailer is the low 16 bits of the version in the table; JS5 never sends it |
 | Index 0 groups are split into 3 chunks per archive; everything else is 1 chunk | raw multi-file groups keep their chunk layout verbatim |
@@ -92,19 +92,42 @@ Index directories use Jagex's own names:
 
 - `format`, `revision`, `flags` (`names`, `whirlpool`) and `compression` describe the index's
   reference table (index 255, archive = index id) and reproduce it exactly.
-- `archives` has one line per archive, sorted by id. Fields, all omitted when default:
+- `bzip2` - `commons` when the reference table needs commons-compress rather than the libbzip2
+  port. Only indices 2 and 9 do; omitted everywhere else.
+- `archives` has one line per archive, sorted by id. Fields, all omitted when default, and always
+  written in this order:
   - `version` - the reference-table version (full int; the container trailer is its low 16 bits).
-  - `compression` - `none` | `bzip2` | `gzip` of the archive's container.
+  - `compression` - `none` | `bzip2` | `gzip` of the archive's container. Always written.
   - `gzipOs` - the gzip header OS byte when not 0.
+  - `bzip2` - `commons` when the archive's payload needs commons-compress. Nothing in 727 does.
   - `nameHash` - the archive's name hash, only in indices whose table has names. Stored as the
     number: names are a display concern and never a source of hashes at pack time.
   - `file` - the single file's id when an archive has one file whose id is not 0.
+  - `fileCount` - the number of files, when the codec writes the group whole and the ids run
+    `0` until the count.
+  - `files` - the explicit id list, when the codec writes the group whole and the ids are not
+    `0` until *n*. Between them, `file`, `fileCount` and `files` carry the file ids for the
+    codecs whose layout cannot: a codec that writes a file per file needs none of them.
   - `fileNames` - `{"<fileId>": <nameHash>}` for the two indices with file names (23, 31).
   - `xtea` - `[k0, k1, k2, k3]` for encrypted map archives.
   - `pristine` - `{"<fileId>": "<sha256 of the editable file>"}`, see below.
+  - `opaque` - `true` for an archive whose container could not be opened, see below.
 
-Everything else (CRC, whirlpool, sizes, the file id list of a multi-file archive) is derived from
-the data files.
+Everything else (CRC, whirlpool, sizes, the file id list of an archive whose codec lays its files
+out by id) is derived from the data files.
+
+The file is written by hand rather than serialised, byte for byte the same way every time, so
+re-unpacking an unchanged cache leaves it alone and the builder can tell a changed archive from an
+untouched one by comparing single lines.
+
+### Opaque archives
+
+Eight `l<x>_<y>` map archives are XTEA encrypted with keys that were never published, so their
+plaintext cannot be reached, let alone re-compressed. They are stored as `<archive>.container` -
+the container bytes exactly as the cache holds them, minus the two byte version trailer the
+metadata already carries - and written straight back out with the trailer reattached. The entry
+is marked `"opaque": true` and carries no key. Region ids: `73_66`, `73_70`, `73_72`, `73_74`,
+`75_66`, `75_70`, `75_72`, `75_74`.
 
 ### Codecs
 
@@ -115,24 +138,41 @@ the JS5 multi-file layout.
 
 | codec | used by | layout |
 |---|---|---|
-| `RawArchiveCodec` | single-file indices with no better codec | `<archive>.dat` |
-| `RawFilesCodec` | multi-file archives with no better codec | `<archive>/<file>.dat` (requires and always writes 1 chunk) |
+| `RawArchiveCodec` | indices whose archives hold one file and have no better codec | `<archive>.dat` |
+| `RawFilesCodec` | indices with multi-file archives and no better codec | `<archive>/<file>.dat` (requires and always writes 1 chunk) |
 | `VerbatimGroupCodec` | index 0 | `<archive>.grp` - the decompressed group verbatim, chunk table and all |
 | `DefinitionJsonCodec<T>` | every definition type with a byte-exact encoder | `<definitionId>.json` (id = archive/file packed the way the decoder does) |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `Cs2SourceCodec` | index 12 | the TypeScript layout `cs2 decompile-all` writes (`<category>/<name>.ts`), provided by the `cs2` module |
+
+A codec is registered per index in `SourceCodecs` before a tree is read or written, so a module
+that has something better than raw bytes for an index claims it (`SourceCodecs.register(12, ...)`).
+`ConfigCodec` keeps the same kind of registry keyed by config archive id, and hands each sub-codec
+its own directory (`RawFilesCodec.FLAT`, which drops the redundant archive directory). Config
+directories are named in the gameval vocabulary where the type has one - `underlay`, `idk`,
+`overlay`, `inv`, `param`, `seq`, `varcstr`, `varp`, `varc`, `struct`, `skybox`, `light`, `bas`,
+`cursor`, `mapscene`, `quest`, `mapelement`, `hitmark`, `varclan`, `varclansetting`, `varplayer`,
+`varnpc`, `varclient`, `varbit`, `headbar`, `animflowcontrol`, `vargroup` - and `archive_<id>`
+for the twenty-six archives in 727 that nothing has identified yet.
+
+Besides the two directions, a codec answers `archiveOf(path)` - which archive a tree relative path
+belongs to, so an incremental build can map a changed file back to what it has to repack - and
+`files(directory, archive)`, the inputs of one archive.
 
 JSON is pretty-printed, keys in declaration order, ids numeric. Names come from the gameval
 catalogs at display time; the data never duplicates them.
 
 ### The pristine fallback
 
-`unpack` re-encodes every file it decodes and compares. When the bytes differ, the original bytes
-are written next to the editable file as `<name>.pristine` and the editable file's SHA-256 is
-recorded under `pristine` in `index.json`. `pack` emits the pristine bytes while the editable
-file still hashes to that value and compiles the editable file otherwise (deleting the stale
-sidecar). `cache status` reports the pristine count per type so encoder gaps are visible; the
-goal is zero, and the count can only shrink as encoders improve or files are edited.
+A codec that cannot promise to reproduce a group says so (`SourceCodec.exact(archive)`), and
+`unpack` then packs what the codec wrote straight back and compares. When the bytes differ, the
+original bytes are written next to the editable file as `<name>.pristine` and the editable file's
+SHA-256 is recorded under `pristine` in `index.json`. `pack` emits the pristine bytes while the
+editable file still hashes to that value and compiles the editable file otherwise (deleting the
+stale sidecar); assembling that is the codec's own job, since only it knows its layout. The raw
+codecs keep the bytes and are exact by construction, so none of this runs for them. `cache status`
+reports the pristine count per type so encoder gaps are visible; the goal is zero, and the count
+can only shrink as encoders improve or files are edited.
 
 This is what lets a normalising compiler (the CS2 decompiler drops dead code by design, so ~1,000
 scripts recompile to different but equivalent bytes) and a not-yet-exact encoder coexist with the
@@ -140,10 +180,14 @@ parity guarantee.
 
 ## The packed build
 
-`CacheSource.build(tree, outputDir)` produces a normal packed cache in `outputDir`:
+`Builder.build(tree, outputDir)` produces a normal packed cache in `outputDir`
+(`world.gregs.voidps.cache.source`; `Packer.pack` is the from-scratch half, `Verifier.verify` the
+parity check, `Unpacker.unpack` the other direction):
 
 1. Read `outputDir/manifest.json` if present: the tree path, format version, and for every input
-   file its size, mtime and content hash, and for every archive the container CRC it produced.
+   file its size, mtime and content hash, and for every archive the container CRC it produced and
+   a digest of its `index.json` line. A manifest that is missing, of an older format, or built
+   from a different tree means a full pack.
 2. Walk the tree in parallel, stat every file. Size and mtime unchanged means unchanged; anything
    else is hashed and compared. Removed and added files are noticed. The walk over ~250k files
    takes about a second.
@@ -153,8 +197,13 @@ parity guarantee.
    compression, encrypt, write the container into the store (`FileStore`, reusing the old
    sector chain when the new container fits, appending otherwise), and update the archive's
    entry in the in-memory reference table.
-5. For each affected index: encode the reference table, write it to index 255. Rebuild the
-   RSA-signed version table. Write the manifest last.
+5. For each affected index: encode the reference table, write it to index 255. Write the manifest
+   last. The RSA-signed version table is not written anywhere: it is derived from the reference
+   table containers and signed every time the cache is opened, so a rebuilt table is enough.
+
+`index.json` is diffed per archive rather than as a file: the manifest keeps a digest of each
+archive's metadata line, so a version bump or a key change repacks that one archive and a
+reformatted file repacks nothing.
 
 No changes: step 2 finds nothing and the build returns in the time it takes to stat the tree.
 A first build from an empty directory packs everything, compressing in parallel.

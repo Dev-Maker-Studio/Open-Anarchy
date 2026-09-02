@@ -42,6 +42,15 @@ interface Cache {
 
     fun sector(index: Int, archive: Int): ByteArray?
 
+    /**
+     * [archive]'s container bytes, read straight through without being retained.
+     *
+     * [sector] memoises what it reads so JS5 can serve the same archive again for nothing; a
+     * whole-cache walk - unpacking, verifying - reads every container exactly once and would
+     * only be filling a cache with 876 MB it will never look at again.
+     */
+    fun container(index: Int, archive: Int): ByteArray? = sector(index, archive)
+
     fun archives(index: Int): IntArray
 
     fun archiveCount(index: Int): Int
