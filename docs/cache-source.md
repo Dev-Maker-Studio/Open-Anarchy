@@ -143,7 +143,7 @@ the JS5 multi-file layout.
 | `DefinitionJsonCodec<T>` | indices 3, 9, 13 and 16-22, and 14 of index 2's archives | one JSON file per definition, see below |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `MapCodec` | index 5 | one directory per map square, `<x>_<y>/terrain.json` and friends - see *maps* below |
-| `SpriteCodec` | indices 8, 32 and 34 | `<archive>/sprite.json` plus an indexed colour PNG per frame, or `<archive>.jpg` and `<archive>.alpha.jpg` for a JPEG archive - see *sprites* |
+| `SpriteCodec` | indices 8, 32 and 34 | one RGBA PNG per frame, `<archive>/<frame>.png`, or one `<archive>.jpg` for a JPEG archive - see *sprites* |
 | `MaterialCodec` | index 26 | `<id>.json` per material of the index's one blob - see *materials* |
 | `VerbatimGroupCodec` | nothing, in 727 | `<archive>.grp` - the decompressed group verbatim, chunk table and all. Index 0's codec until `AnimationFrameCodec` replaced it; the answer for a multi-chunk index whose split follows from nothing |
 | `DefinitionJsonCodec<T>` | indices 1, 3, 10, 16-22, 33, 35, both quick chat archives, index 23's two typed archive kinds, index 28's six and 14 of index 2's archives | one JSON file per definition, see below |
@@ -413,40 +413,6 @@ ascending localY is one line, which is the order the file itself stores them in:
       ]
     },
     {"type": "hdr", "bloom": 32, "brightpass": 8, "whitePoint": 32}
-### sprites
-
-Index 8 is 12,071 sprite *groups*: a shared palette and one to 256 frames indexed into it, each frame
-trimmed and given its position in a common canvas. It is stored as standard images - one **indexed
-colour PNG per frame** - plus the little JSON a PNG cannot carry:
-
-```
-sprites/316/sprite.json     the palette, the canvas, and one entry per frame
-sprites/316/0.png           frame 0's palette indices, indexed colour, tRNS on index 0
-sprites/316/1.png
-sprites/316/0.alpha.png     frame 0's alpha plane, only when its format byte says it has one
-```
-
-The ids stay the directory names. Index 8's reference table does carry archive name hashes, and they are
-recorded in `index.json` like every other index's, but a name is a display concern and never a source of
-hashes at pack time - so nothing here is laid out by name.
-
-`sprite.json` for group 316, whole:
-
-```json
-{
-  "id": 316,
-  "width": 16,
-  "height": 16,
-  "palette": [
-    0,
-    7759444,
-    3353893,
-    5063219,
-    0
-  ],
-  "frames": [
-    {"minX": 0, "minY": 0, "width": 16, "height": 16, "flags": 1},
-    {"minX": 0, "minY": 0, "width": 16, "height": 16, "flags": 1}
   ]
 }
 ```
@@ -524,41 +490,118 @@ name hashes and no names, so a region directory cannot say which archive id it i
 is a script header - and `unpack`/`pack` take the hash from the `ArchiveMetadata` they are handed.
 `MapSquare.of(hash)` is the way back, by hashing all 5 x 256 x 256 possible names once; no two of
 them collide, which is checked rather than assumed.
-- `width` and `height` are the group canvas every frame is padded into (the client's `biggestWidth` and
-  `biggestHeight`); a frame's own `minX`, `minY`, `width`, `height` are its trimmed placement inside it.
-- `palette` is the file's own entries, entry 0 first. It is **not** the palette the client ends up with:
-  0 is the client's transparent colour, so it rewrites any entry that really is black to 1, and 5,264 of
-  the 12,071 groups have at least one such entry - 316's entry 4 above is one. The raw entry is what
-  writes back, and `IndexedSprite.palette` is the normalised copy the renderer uses.
-- `flags` is the frame's format byte: bit 0 stores the pixels column major rather than row major, bit 1
-  says an alpha plane follows them. Both are used; 9,014 frames are 0, 4,983 are 1, 3,363 are 2 and 1,730
-  are 3.
-- `paletteZeroEntry`, written only when true, says the file spells out an explicit `000000` for entry 0
-  before entry 1 - three bytes the client seeks straight past. Only 29 groups carry it, ids 12042 to
-  12070, which are the newest in the cache and were packed by a different tool than the rest.
 
-**What lives where.** The PNG owns the pixels and nothing else. The palette is written into every frame's
-`PLTE` in its original order - which is what makes a frame's pixel *indices* survive the round trip, and
-what makes the image display correctly in any viewer - but `sprite.json` is what is read back, for two
-reasons: 2,498 frames are zero sized (empty glyphs in the font sheets) and have no PNG at all, some groups
-are nothing but, so a group's palette can have nowhere to live; and one palette in one place cannot
-disagree with itself across 256 frames. So recolouring a sprite is an edit to `sprite.json` and repainting
-one is an edit to the PNG.
+### sprites
 
-**Alpha.** The format byte decides the shape, and both round trip:
+Index 8 is 12,071 sprite *groups*: a shared palette and one to 256 frames indexed into it, each frame
+trimmed and given its position in a common canvas. It is stored as **exactly one standard PNG per
+frame and nothing else** - no metadata file, no second image, no sidecar:
 
-| frame | PNG | alpha |
+```
+sprites/316/0.png     frame 0, 8 bit RGBA at the group's canvas size
+sprites/316/1.png     frame 1
+```
+
+The ids stay the directory names. Index 8's reference table does carry archive name hashes, and they are
+recorded in `index.json` like every other index's, but a name is a display concern and never a source of
+hashes at pack time - so nothing here is laid out by name.
+
+**The picture is the whole canvas.** Every frame is written at the group's canvas size - the canvas the
+client composes the group's frames onto - with the frame drawn at its own `minX`, `minY` and the rest
+fully transparent. That is what makes the pixels self-describing: a frame's placement is simply *where
+the pixels are*, so an editor that moves a drawing moves the frame, and one that paints outside the old
+box enlarges it. It costs almost nothing - the frames of the 727 cache cover 78.1 M pixels and their
+canvases 84.3 M, 7.9% more, nearly all of it fully transparent and nearly free to deflate.
+
+The colours are the ones the client renders and the alpha is the client's own rule:
+
+| the frame | red, green, blue | alpha |
 |---|---|---|
-| `flags and 2 == 0` | indexed colour with a `tRNS` chunk making index 0 transparent | none |
-| `flags and 2 != 0` | indexed colour, no `tRNS` - the plane carries the transparency | `<frame>.alpha.png`, 8 bit greyscale |
+| `flags and 2 == 0`, no alpha plane | the palette entry | 255, or 0 where the palette index is 0 |
+| `flags and 2 != 0`, an alpha plane | the palette entry | the plane's byte |
+| `flags and 2 != 0`, a plane the client drops as entirely opaque | the palette entry | 255, or 0 where the index is 0 |
 
-A plane whose every byte is 0xff is dropped by the client (and by `IndexedSprite.alpha`) because it
-carries no transparency - 302 frames are like that - so `flags` is the only thing that says the plane was
-there, and the encoder writes it back as 0xff.
+Palette index 0 is the client's transparent colour, which is why it is alpha 0 rather than black, and
+an entry that really is black is written as the `000001` the client nudges it to rather than the
+`000000` the file spells - so the PNG is what the client draws, not what the file says.
 
-Parity is measured on the *cache bytes*, never on the PNG: `ImageCodecTest` unpacks every group to real
-files, reads them back through `javax.imageio` and re-encodes, and demands the archive come out identical.
-**All 12,071 groups do, and none needs a pristine copy.**
+**Zero sized frames.** 3,130 of the 21,679 frames are 0x0 - empty glyphs in the font sheets, and some
+groups are nothing but - and a PNG cannot be. They are written as a canvas sized, fully transparent
+PNG, which trims back to 0x0 on the way in, so they need no special case at all. Only a group whose
+*canvas* is 0 wide or high would, and it would get a 1x1 transparent PNG with its true size in `rsFR`;
+nothing in the 727 cache is such a group, so that path is a guard and not a shape you will see.
+
+#### the private chunks
+
+What the pixels *under*-determine rides in three private ancillary PNG chunks in the same file. Every
+decoder ignores them, so the file stays an ordinary picture; they are what makes an untouched frame
+pack back to the cache's own bytes.
+
+| chunk | scope | payload |
+|---|---|---|
+| `rsPL` | the group | version, a `paletteZeroEntry` flag, the entry count, then the palette as RGB triples **exactly as the file spells it** - entry 0 first, and the raw `000000` entries the client rewrites |
+| `rsFR` | the frame | version, the archive id, the frame index, the canvas width and height, the frame's `minX`, `minY`, width and height, the format `flags` byte (bit 0 column major storage, bit 1 an alpha plane), and which of the three alpha shapes above the frame is |
+| `rsIX` | the frame | version, the raster's width and height, then one byte of palette index per pixel, row major over the frame's own box |
+
+All three are `rs` + an uppercase letter + an uppercase letter: lowercase first is PNG's *ancillary*
+bit, lowercase second is *private*, and the uppercase fourth letter is **unsafe to copy** - the type
+itself tells an editor that rewrites the pixels to drop the chunk rather than carry a stale one
+forward. Each carries a version byte, so a future shape is refused rather than misread. `rsPL` and
+`rsFR` are written for every frame; `rsIX` only where it is needed, which is 4,247 of the 21,679
+frames.
+
+Measured over the three sprite indices, this is how much of the tree actually depends on a chunk:
+
+| chunk | needed by | why |
+|---|---|---|
+| `rsPL` | 9,418 of 12,110 groups | the palette's order is not first-appearance order, so rebuilding it from the pixels would renumber the indices |
+| `rsFR` | 9,910 of 21,679 frames | 7,778 store their pixels column major, 3,035 have a box wider than the drawing in it, 302 carry an alpha plane the client drops as opaque, and a zero sized frame keeps its offsets |
+| `rsIX` | 4,247 of 21,679 frames | a pixel whose colour cannot recover its index: an index other than 0 at alpha 0, or index 0 drawn *opaque*, which the client renders as black |
+
+#### editing a sprite in any editor
+
+Open a frame in anything, paint, save. **Most editors strip unknown chunks**, and that is the case the
+layout is built for: with no chunk at all the whole group is rebuilt from the pixels, by the rules
+Jagex's own packer used.
+
+| field | derived from the pixels |
+|---|---|
+| the canvas | the PNGs' own size, which every frame of the group shares |
+| the frame's box | the fully transparent rows and columns trimmed off; 0x0 when nothing is drawn |
+| the palette | the distinct colours of the pixels that are not fully transparent, in first appearance order, frame by frame and row major |
+| index 0 | every fully transparent pixel |
+| the index raster | the palette index of each pixel's colour |
+| the alpha plane | the alpha channel, whenever any pixel is *partly* transparent - which also sets `flags` bit 1 |
+| the storage order | row major, `flags` bit 0 clear |
+
+A chunk that *does* survive is used only while it still agrees with the pixels: an `rsFR` box that no
+longer contains every drawn pixel and an `rsIX` raster that would not render what the PNG shows are
+both discarded in favour of the derivation. So a tool that keeps unknown chunks and edits the image
+cannot silently clip or recolour it.
+
+Two limits are the format's rather than the codec's. A sprite group holds 255 colours and a
+transparent index, so a picture with more than that has its extra colours quantised to the nearest
+entry the palette already holds - `ImageCodecTest` measures the whole cache through stripped PNGs and
+7 of 5,402 frames move at all, by one level of one channel, in the 81 groups whose palette is already
+full. And a frame rebuilt from pixels alone is *the same picture* rather than the same bytes: a box
+that was wider than its drawing comes back trimmed, and a dropped alpha plane comes back as no plane,
+neither of which the client can tell apart. Byte parity is the unedited path's guarantee, not the
+edited one's.
+
+**Parity, measured over the whole 727 cache** (`ImageCodecTest`): every group unpacked to real files,
+read back through `javax.imageio` and re-encoded, and the archive demanded identical.
+
+| index | directory | groups | byte identical | pristine | frame PNGs |
+|---|---|---|---|---|---|
+| 8 | `sprites` | 12,071 | 12,071 | 0 | 19,090 |
+| 32 | `loading_sprites` | 5 | 5 | 0 | 1,280 |
+| 34 | `loading_sprites_raw` | 34 | 34 | 0 | 1,309 |
+| **total** | | **12,110** | **12,110** | **0** | **21,679** |
+
+**All 12,110 groups are byte identical and none needs a pristine copy.** The frames are 80 MB of PNG
+against the 33,756 files and 54 MB the old three-file-per-frame layout cost, which is the price of
+every frame being a full RGBA canvas instead of a trimmed palette raster - 12,075 fewer files, and one
+of them per image.
 
 ### loading sprites
 
@@ -576,10 +619,10 @@ They get `SpriteCodec`, the same codec as index 8, because five of index 32's ar
 | 32 `loading_sprites` | 29 | four component JPEGs, which the client hands to `Toolkit.createImage` |
 | 32 `loading_sprites` | 5 | palette sprite groups: 494, 495, 496, 3793 and 3794, the pre-cache fonts |
 
-The sprite archives are laid out exactly as index 8's - `<id>/sprite.json` and a PNG per frame - and the
-five font groups are 256 frames each, most of them zero sized. The codec sniffs the `ff d8` magic rather
-than being told which archives are which, so a tree of either index reads the same way, and index 8's
-and 34's archives never take the JPEG path because none of them is one.
+The sprite archives are laid out exactly as index 8's - one RGBA PNG per frame, `<id>/<frame>.png` - and
+the five font groups are 256 frames each, most of them zero sized. The codec sniffs the `ff d8` magic
+rather than being told which archives are which, so a tree of either index reads the same way, and index
+8's and 34's archives never take the JPEG path because none of them is one.
 
 #### the four component JPEGs
 
@@ -621,48 +664,75 @@ confirmed against it:
   it `255 - v`;
 - no colour transform applies, because with no Adobe marker there is no transform flag to apply one.
 
-#### stored as two ordinary JPEGs
+#### stored as one ordinary JPEG
 
-A JPEG archive is stored as **two files, both of which any viewer or editor opens**:
+A JPEG archive is **one file, which any viewer or editor opens**:
 
 ```
-loading_sprites/3770.jpg         Y, Cb and Cr as a three component baseline JPEG
-loading_sprites/3770.alpha.jpg   the fourth component as a one component greyscale baseline JPEG
+loading_sprites/3770.jpg    Y, Cb and Cr as a three component baseline JPEG,
+                            with the fourth component inside it as APP11 segments
 ```
 
-`JagexJpeg` splits and joins them and `BaselineJpeg` is how: it undoes only the *entropy* coding - the
+`JagexJpeg` splits and joins it and `BaselineJpeg` is how: it undoes only the *entropy* coding - the
 Huffman codes, the DC predictors, the run lengths, the byte stuffing - and leaves every coefficient
 exactly as it was quantised, in the zigzag order it was coded in. Nothing is dequantised, inverse
 transformed or re-compressed, and each half keeps the original's quantisation tables, Huffman tables and
-sampling factors, so the two together rebuild the archive **byte for byte**. That is why neither half
-needs a `.pristine` copy beside it - re-encoding pixels would have needed one, and doubling every
-loading screen on disk to hold it.
+sampling factors, so the two together rebuild the archive **byte for byte**. That is why nothing needs a
+`.pristine` copy beside it - re-encoding pixels would have needed one, and doubling every loading screen
+on disk to hold it.
 
-The one thing a standalone one component JPEG cannot hold is the block grid's **MCU padding**. In the
-interleaved four component scan a 2x2 component is stored on the MCU grid, which for six files (3764,
+The alpha half is a one component greyscale codestream, and it rides in the colour file as one or more
+`APP11` application segments placed **straight after `SOI`, before the first `DQT`**:
+
+```
+ff eb <length>  "JagexAlpha\0"  <sequence:2> <count:2>  <slice of the alpha codestream>
+```
+
+A JPEG segment's length field counts itself, so at most 65,533 bytes follow it and the payload is that
+less the 11 byte identifier and the four byte sequence and count; the 29 alphas are 316 to 1,466 bytes,
+so all of them are one segment, and the splitting is there for an edited file rather than for the cache.
+Every standard decoder skips an application segment it does not recognise, which is why `ImageIO.read`
+opens the file as an ordinary three band sRGB image at the right size - and why the segments go before
+`DQT` rather than at the end, where an editor that truncates trailing data would take them with it.
+
+The one thing a standalone one component codestream cannot hold is the block grid's **MCU padding**. In
+the interleaved four component scan a 2x2 component is stored on the MCU grid, which for six files (3764,
 3765, 3773, 3774, 3775, 3776) runs a block past the image; alone in its own frame the alpha is coded on
 its own smaller grid and those blocks have nowhere to go. They are not information - they are what
 `libjpeg`'s `compress_data` fabricates at an edge: all AC zero, and the DC copied from the block before
 it, which for a whole dummy row is the last block of the row above *within the same MCU*. `join`
 rebuilds them, and byte for byte parity on those six files is the proof the rule is the right one.
 
-**On edit**, the guarantee changes shape but not kind. Re-save either half in any editor - its own
-quantisation tables, its own Huffman tables, a JFIF `APP0`, a different subsampling - and `pack` joins
-whatever coefficients and tables the two files now carry into one four component file the client
-decodes. The alpha's tables are matched against the colour half's by content and share an id where they
-are the same table, which is what reproduces Jagex's own two `ffdb` and four `ffc4` segments untouched,
-and take an id of their own where they are not. There is no re-compression on the unedited path and
-exactly one on the edited one, which is the editor's own.
+**On edit**, the guarantee changes shape but not kind.
+
+- *An editor that keeps the segments*, or a tool that puts them back: re-save the file with its own
+  quantisation tables, its own Huffman tables, a JFIF `APP0`, a different subsampling, and `pack` joins
+  whatever coefficients and tables it now carries into one four component file the client decodes. The
+  alpha's tables are matched against the colour half's by content and share an id where they are the same
+  table - which is what reproduces Jagex's own two `ffdb` and four `ffc4` segments untouched - and take an
+  id of their own where they are not.
+- *An editor that strips them*, which is most of them: what is left is a perfectly good three component
+  JPEG, and `pack` **synthesises an entirely opaque fourth component** rather than failing - a flat DC
+  that dequantises to 255 in every block, coded with the luminance tables the file already carries. The
+  picture survives an edit anywhere; only its transparency has to be painted again.
+- *A `<id>.png` in its place*: drop an RGBA PNG where the `.jpg` was and the packer encodes the four
+  component archive from its pixels, colour and alpha both, through the platform's own JPEG writer. That
+  is the way to paint transparency in an ordinary editor. The archive is a JPEG in the cache either way,
+  so this path re-compresses - it is the only one here that does, and the cache's own files never take it.
+
+There is no re-compression at all on the unedited path, and exactly one on the edited one, which is the
+editor's own.
 
 **All 68 archives of the two indices round trip byte for byte**, and none needs a pristine copy. The 29
-JPEGs cost 2.7% more on disk as two files than as one (332,724 cache bytes become 341,663), almost all
-of it the alpha half's duplicated table headers. `LoadingScreenCodecTest` is the measurement: the 29
-byte identical rebuilds, both halves through `javax.imageio` with no application segment in either, the
-decoded pixels against index 34's palette copy of the same picture - within 1.6 to 10.3 levels per
-channel, where a CMYK reading is off by ninety and more - and a re-saved colour or alpha half joining
-into a four component file whose pixels and alpha come back where they were put. It also writes every
-screen to `build/loading-screens` as the two halves plus a PNG of each, which is how the tree's files
-are regenerated after a change to the codec.
+JPEGs cost 2.9% more on disk as one file than as one archive (332,724 cache bytes become 342,214), all of
+it the alpha's duplicated table headers and segment framing. `LoadingScreenCodecTest` is the measurement:
+the 29 byte identical rebuilds, each file through `javax.imageio` with no application segment in it but
+the alpha, the decoded pixels against index 34's palette copy of the same picture - within 1.6 to 10.3
+levels per channel, where a CMYK reading is off by ninety and more - a re-saved file joining into a four
+component file whose pixels come back where they were put, a *stripped* re-save joining into an opaque
+one, and an RGBA PNG encoding into an archive whose painted transparency survives. It also writes every
+screen to `build/loading-screens` as the stored file plus a PNG of what a viewer shows and a PNG of what
+the client reads.
 
 ### textures
 
@@ -954,23 +1024,25 @@ pristine.
 
 | index | directory | codec | archives | byte identical | pristine | files written |
 |---|---|---|---|---|---|---|
-| 8 | `sprites` | `sprite-png` | 12,071 | 12,071 | 0 | 33,756 |
+| 8 | `sprites` | `sprite-png` | 12,071 | 12,071 | 0 | 19,090 |
 | 9 | `textures` | `json-texture` | 2,591 | 2,591 | 0 | 2,591 |
 | 13 | `fontmetrics` | `json-fontmetrics` | 27 | 27 | 0 | 27 |
 | 26 | `materials` | `json-material` | 1 | 1 | 0 | 2,591 |
-| 32 | `loading_sprites` | `sprite-png` | 34 | 34 | 0 | 1,027 |
-| 34 | `loading_sprites_raw` | `sprite-png` | 34 | 34 | 0 | 1,027 |
-| **total** | | | **14,758** | **14,758** | **0** | **41,019** |
+| 32 | `loading_sprites` | `sprite-png` | 34 | 34 | 0 | 1,309 |
+| 34 | `loading_sprites_raw` | `sprite-png` | 34 | 34 | 0 | 1,309 |
+| **total** | | | **14,758** | **14,758** | **0** | **26,917** |
 
-**14,758 archives, all byte identical, no residuals and no pristine copies anywhere.** The files are 63 MB
-in total, and the codecs' own cost over the whole cache, single threaded, is 9.8 s - 8.6 s of it the
-sprites, which are 33,756 PNG encodes and 33,756 decodes back.
+**14,758 archives, all byte identical, no residuals and no pristine copies anywhere.** The codecs' own
+cost over the whole cache, single threaded, is about 25 s of unpack *and* pack together - almost all of
+it the 21,679 PNG encodes and the 21,679 decodes back, since a frame is now a full RGBA canvas rather
+than a trimmed palette raster.
 
-Against the whole tree the change *shrinks* it: unpacking the 727 cache with these codecs writes 423,315
-files and 1,316 MB where the raw codecs wrote 397,083 files and 1,366 MB, because a PNG's deflate is a
-better fit for a palette raster than the raw bytes were. Timings on this machine were 23 s to unpack (12 s
-of which is I/O), 17 s to pack and 17 s to verify at full parity, but they vary by a factor of two with
-machine load and disk cache state and should be read as an order of magnitude rather than a benchmark.
+In the tree the three sprite indices are **21,711 files and 82 MB**, where the earlier layout of a
+`sprite.json`, an indexed colour PNG and sometimes an alpha PNG per frame cost 35,813 files and 56 MB.
+One file per image is 14,102 fewer files for 26 MB more, which is the whole trade: RGBA at canvas size
+rather than one byte per pixel at frame size, and every editor in the world able to open it. Timings
+vary by a factor of two with machine load and disk cache state and should be read as an order of
+magnitude rather than a benchmark.
 
 The rest of this section is one heading per index that is not a config: what its files hold, what the
 client destroys on the way in that the tree therefore keeps, and anything about the index that is not

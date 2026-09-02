@@ -24,39 +24,42 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Index 32's loading screens: the four component JPEGs, their split into two ordinary ones, and the
- * client's rules for reading them.
+ * Index 32's loading screens: the four component JPEGs, the one ordinary JPEG each is stored as, and
+ * the client's rules for reading them.
  *
- * Four things are proved here, in the order they matter.
+ * Five things are proved here, in the order they matter.
  *
- * 1. **Parity.** Every JPEG archive splits into `<id>.jpg` and `<id>.alpha.jpg` and joins back to
- *    the archive's bytes *byte for byte* - which is what lets the tree store them as editable images
- *    with no `.pristine` copy beside either half.
- * 2. **Both halves are ordinary JPEGs.** `javax.imageio` reads the colour half as a three band sRGB
- *    image and the alpha half as one band of grey, and neither carries an application segment, so
- *    any viewer or editor opens them.
+ * 1. **Parity.** Every JPEG archive becomes one `<id>.jpg` - a three component baseline JPEG with the
+ *    fourth component's codestream inside it as `APP11` segments - and comes back to the archive's
+ *    bytes *byte for byte*, which is what lets the tree store a loading screen as one editable image
+ *    with no `.pristine` copy and no second file.
+ * 2. **It is an ordinary JPEG.** `javax.imageio` reads it as a three band sRGB image at the right
+ *    size; the only application segment in it is the alpha, which every standard decoder skips.
  * 3. **The decode rules are the client's.** Index 34 holds the same 34 pictures as palette sprites -
  *    it is the branch the client takes when AWT will not decode these files - so it is an
  *    independent copy of the same art to measure against, and [JagexJpeg.decode] lands within a few
  *    levels of it. Nothing in this test asserts "the colours look plausible": it asserts they are
  *    the colours Jagex shipped in the other format.
- * 4. **An edit survives.** Re-saving either half through `ImageIO` - new quantisation tables, a JFIF
- *    segment, its own Huffman tables - still joins into a four component file whose pixels and alpha
- *    come back where they were put.
+ * 4. **An edit survives, with the alpha or without it.** Re-saving through `ImageIO` - new
+ *    quantisation tables, a JFIF segment, its own Huffman tables - still joins into a four component
+ *    file whose pixels come back where they were put; and a re-save that *strips* the `APP11`
+ *    segments, which is what most editors do, joins with an entirely opaque fourth component rather
+ *    than failing.
+ * 5. **A PNG may stand in for it.** An RGBA PNG dropped in place of the JPEG encodes into a four
+ *    component archive the client reads, which is how transparency is painted in an ordinary editor.
  *
  * Skipped when there is no cache to test against, like the other whole-cache tests.
  */
 class LoadingScreenCodecTest {
 
     @Test
-    fun `every four component loading screen splits into two ordinary JPEGs and joins back to the cache`() {
+    fun `every four component loading screen is one ordinary JPEG that joins back to the cache`() {
         val cache = cache() ?: return
         var jpegs = 0
         var sprites = 0
-        var colourBytes = 0L
-        var alphaBytes = 0L
+        var fileBytes = 0L
         var originalBytes = 0L
-        println("%-8s %-10s %8s %8s %8s %9s".format("archive", "size", "colour", "alpha", "cache", "overhead"))
+        println("%-8s %-10s %8s %8s %8s %9s".format("archive", "size", "file", "alpha", "cache", "overhead"))
         for (archive in cache.archiveIds(Index.LOADING_SPRITES)) {
             val group = cache.data(Index.LOADING_SPRITES, archive) ?: continue
             if (!JagexJpeg.isJpeg(group)) {
@@ -64,18 +67,13 @@ class LoadingScreenCodecTest {
                 continue
             }
             jpegs++
-            val parts = JagexJpeg.split(group)
-
-            val colour = BaselineJpeg.read(parts.colour)
-            val alpha = BaselineJpeg.read(parts.alpha)
+            val file = JagexJpeg.editable(group)
             val original = BaselineJpeg.read(group)
+            val colour = BaselineJpeg.read(file)
             assertEquals(4, original.components.size, "archive $archive is not four components")
-            assertEquals(3, colour.components.size, "archive $archive's colour half is not three components")
-            assertEquals(1, alpha.components.size, "archive $archive's alpha half is not one component")
-            assertEquals(original.width, colour.width, "archive $archive's colour half is a different width")
-            assertEquals(original.height, colour.height, "archive $archive's colour half is a different height")
-            assertEquals(original.width, alpha.width, "archive $archive's alpha half is a different width")
-            assertEquals(original.height, alpha.height, "archive $archive's alpha half is a different height")
+            assertEquals(3, colour.components.size, "archive $archive's file is not three components")
+            assertEquals(original.width, colour.width, "archive $archive's file is a different width")
+            assertEquals(original.height, colour.height, "archive $archive's file is a different height")
             for (index in 0 until 3) {
                 assertEquals(
                     original.components[index].horizontal, colour.components[index].horizontal,
@@ -101,41 +99,42 @@ class LoadingScreenCodecTest {
                 listOf(0, 1, 1, 0), original.components.map { it.quantisation },
                 "archive $archive's fourth component is not quantised like its luminance"
             )
-            for (half in listOf(parts.colour, parts.alpha)) {
-                assertTrue(
-                    markers(half).none { it in APPLICATION || it == COM },
-                    "archive $archive's halves must carry no application segment"
-                )
-            }
+            // The only application segment in the stored file is the alpha, and it comes first.
+            val stored = markers(file)
+            assertEquals(APP11, stored[0], "archive $archive's file does not open on its alpha segment")
+            assertTrue(
+                stored.none { it in APPLICATION && it != APP11 } && stored.none { it == COM },
+                "archive $archive's file carries an application segment that is not the alpha"
+            )
+            val alpha = JagexJpeg.alphaOf(file)
+            assertNotNull(alpha, "archive $archive's file carries no alpha")
+            assertEquals(1, BaselineJpeg.read(alpha).components.size, "archive $archive's alpha is not one component")
 
-            // Both halves through a standard reader, which is the whole point of the split: the
-            // four component original makes ImageIO.read throw and these do not.
-            val readable = ImageIO.read(ByteArrayInputStream(parts.colour))
-            assertNotNull(readable, "archive $archive's colour half is not readable by ImageIO")
-            assertEquals(3, readable.raster.numBands, "archive $archive's colour half is not three bands")
-            assertEquals(original.width, readable.width, "archive $archive's colour half read a different width")
-            val grey = ImageIO.read(ByteArrayInputStream(parts.alpha))
-            assertNotNull(grey, "archive $archive's alpha half is not readable by ImageIO")
-            assertEquals(1, grey.raster.numBands, "archive $archive's alpha half is not one band")
+            // Through a standard reader, which is the whole point: the four component original makes
+            // ImageIO.read throw and this does not.
+            val readable = ImageIO.read(ByteArrayInputStream(file))
+            assertNotNull(readable, "archive $archive's file is not readable by ImageIO")
+            assertEquals(3, readable.raster.numBands, "archive $archive's file is not three bands")
+            assertEquals(original.width, readable.width, "archive $archive's file read a different width")
+            assertEquals(original.height, readable.height, "archive $archive's file read a different height")
 
-            val joined = JagexJpeg.join(parts.colour, parts.alpha)
+            val joined = JagexJpeg.archive(file)
             assertTrue(
                 joined.contentEquals(group),
                 "archive $archive joined to ${joined.size} bytes, not the cache's ${group.size}"
             )
-            colourBytes += parts.colour.size
-            alphaBytes += parts.alpha.size
+            fileBytes += file.size
             originalBytes += group.size
             println(
                 "%-8d %-10s %8d %8d %8d %8.1f%%".format(
-                    archive, "${original.width}x${original.height}", parts.colour.size, parts.alpha.size,
-                    group.size, 100.0 * (parts.colour.size + parts.alpha.size - group.size) / group.size
+                    archive, "${original.width}x${original.height}", file.size, alpha.size,
+                    group.size, 100.0 * (file.size - group.size) / group.size
                 )
             )
         }
         println(
             "$jpegs JPEG archives, $sprites palette sprite groups; $originalBytes cache bytes became " +
-                "${colourBytes + alphaBytes} on disk (${"%.1f".format(100.0 * (colourBytes + alphaBytes - originalBytes) / originalBytes)}%)"
+                "$fileBytes on disk (${"%.1f".format(100.0 * (fileBytes - originalBytes) / originalBytes)}%)"
         )
         assertTrue(jpegs >= 21, "only $jpegs JPEG archives were found in index 32")
         // The rest of the index is the pre-cache fonts, which are palette sprite groups.
@@ -245,24 +244,26 @@ class LoadingScreenCodecTest {
     }
 
     @Test
-    fun `a re-saved colour half still joins into a four component file the client decodes`() {
+    fun `a re-saved loading screen still joins into a four component file the client decodes`() {
         val cache = cache() ?: return
         val (archive, group) = largest(cache) ?: return
-        val parts = JagexJpeg.split(group)
+        val file = JagexJpeg.editable(group)
         val original = JagexJpeg.decode(group)
 
         // What an image editor does to the file: its own quantisation and Huffman tables, a JFIF
         // segment, and no idea any of this was ever one image with a fourth component.
-        val edited = ImageIO.read(ByteArrayInputStream(parts.colour))
+        val edited = ImageIO.read(ByteArrayInputStream(file))
         for (y in 0 until HOLE) {
             for (x in 0 until HOLE) {
                 edited.setRGB(x, y, RED)
             }
         }
-        val resaved = resave(edited, "JPEG", 0.95f)
-        assertTrue(markers(resaved).contains(APP0), "the re-saved half should carry the JFIF segment ImageIO writes")
+        val resaved = resave(edited, 0.95f)
+        assertTrue(markers(resaved).contains(APP0), "the re-saved file should carry the JFIF segment ImageIO writes")
+        assertTrue(markers(resaved).none { it == APP11 }, "ImageIO was expected to strip the alpha segment")
 
-        val joined = JagexJpeg.join(resaved, parts.alpha)
+        // The alpha is put back the way a pack does when the editor kept it.
+        val joined = JagexJpeg.archive(JagexJpeg.embed(resaved, JagexJpeg.alphaOf(file)!!))
         val rebuilt = BaselineJpeg.read(joined)
         assertEquals(4, rebuilt.components.size, "archive $archive did not rejoin into four components")
         assertEquals(listOf(1, 2, 3, 4), rebuilt.components.map { it.id }, "the joined component ids changed")
@@ -278,56 +279,75 @@ class LoadingScreenCodecTest {
                 ((painted shr 8) and 0xff) < EDIT_TOLERANCE && (painted and 0xff) < EDIT_TOLERANCE,
             "the painted block came back as ${Integer.toHexString(painted)}, not red"
         )
-        var error = 0L
-        var pixels = 0L
-        for (y in 0 until original.height) {
-            for (x in 0 until original.width) {
-                if (x < HOLE * 2 && y < HOLE * 2) {
-                    continue
-                }
-                val was = original.getRGB(x, y)
-                val now = decoded.getRGB(x, y)
-                error += abs(((was shr 16) and 0xff) - ((now shr 16) and 0xff)).toLong()
-                error += abs(((was shr 8) and 0xff) - ((now shr 8) and 0xff)).toLong()
-                error += abs((was and 0xff) - (now and 0xff)).toLong()
-                pixels++
-            }
-        }
-        val mean = error / (pixels * 3.0)
-        println("archive $archive re-saved and rejoined: ${joined.size} bytes, mean channel drift $mean")
-        assertTrue(mean < COLOUR_TOLERANCE, "a re-saved half drifted $mean levels, which is more than a re-encode costs")
-    }
-
-    @Test
-    fun `a re-saved alpha half changes the alpha the client reads`() {
-        val cache = cache() ?: return
-        val (archive, group) = largest(cache) ?: return
-        val parts = JagexJpeg.split(group)
-        val plane = ImageIO.read(ByteArrayInputStream(parts.alpha))
-        assertEquals(0xff, plane.raster.getSample(0, 0, 0), "this archive's alpha was expected to start opaque")
-        for (y in 0 until HOLE) {
-            for (x in 0 until HOLE) {
-                plane.raster.setSample(x, y, 0, 0)
-            }
-        }
-        val joined = JagexJpeg.join(parts.colour, resave(plane, "JPEG", 0.95f))
-        val decoded = JagexJpeg.decode(joined)
-        assertEquals(4, BaselineJpeg.read(joined).components.size)
-        val hole = decoded.getRGB(HOLE / 2, HOLE / 2) ushr 24
-        val outside = decoded.getRGB(decoded.width - 1, decoded.height - 1) ushr 24
-        println("archive $archive with a ${HOLE}x$HOLE hole punched in its alpha: inside $hole, outside $outside")
-        assertTrue(hole < EDIT_TOLERANCE, "the punched hole is $hole, not transparent")
-        assertTrue(outside > 0xff - EDIT_TOLERANCE, "the rest of the alpha stopped being opaque")
+        println("archive $archive re-saved and rejoined: ${joined.size} bytes, drift ${drift(original, decoded)}")
+        assertTrue(drift(original, decoded) < COLOUR_TOLERANCE, "a re-saved file drifted more than a re-encode costs")
     }
 
     /**
-     * Every loading screen written out where somebody can look at it: the two halves exactly as
-     * `SpriteCodec` puts them in the source tree, and two PNGs of each - the colour half as any
-     * viewer shows it, and the whole four component archive as the client's rules read it, alpha
-     * included, which is the only difference between the two pictures.
+     * The case the layout has to survive: an editor that keeps the picture and throws the alpha
+     * segment away. The packer synthesises an entirely opaque fourth component rather than failing,
+     * so the loading screen still builds - it is simply no longer transparent anywhere.
+     */
+    @Test
+    fun `a loading screen whose alpha segment was stripped packs as an opaque image`() {
+        val cache = cache() ?: return
+        val (archive, group) = largest(cache) ?: return
+        val stripped = resave(ImageIO.read(ByteArrayInputStream(JagexJpeg.editable(group))), 0.95f)
+        assertEquals(null, JagexJpeg.alphaOf(stripped), "the re-saved file was expected to have no alpha")
+        val joined = JagexJpeg.archive(stripped)
+        val rebuilt = BaselineJpeg.read(joined)
+        assertEquals(4, rebuilt.components.size, "archive $archive did not rebuild into four components")
+        val decoded = JagexJpeg.decode(joined)
+        var opaque = 0
+        for (y in 0 until decoded.height) {
+            for (x in 0 until decoded.width) {
+                if (decoded.getRGB(x, y) ushr 24 == 0xff) {
+                    opaque++
+                }
+            }
+        }
+        println("archive $archive with its alpha stripped: ${joined.size} bytes, $opaque of ${decoded.width * decoded.height} pixels opaque")
+        assertEquals(decoded.width * decoded.height, opaque, "a synthesised alpha must be opaque everywhere")
+        assertTrue(drift(JagexJpeg.decode(group), decoded) < COLOUR_TOLERANCE, "the picture drifted more than a re-encode costs")
+    }
+
+    /** The other way to paint transparency: an RGBA PNG in place of the JPEG. */
+    @Test
+    fun `an RGBA PNG stands in for a loading screen`() {
+        val cache = cache() ?: return
+        val (archive, group) = largest(cache) ?: return
+        val original = JagexJpeg.decode(group)
+        val painted = BufferedImage(original.width, original.height, BufferedImage.TYPE_INT_ARGB)
+        painted.graphics.drawImage(original, 0, 0, null)
+        for (y in 0 until HOLE) {
+            for (x in 0 until HOLE) {
+                painted.setRGB(x, y, 0)
+            }
+        }
+        val out = ByteArrayOutputStream()
+        ImageIO.write(painted, "png", out)
+        val encoded = JagexJpeg.archive(ImageIO.read(ByteArrayInputStream(out.toByteArray())))
+        assertEquals(4, BaselineJpeg.read(encoded).components.size, "archive $archive's PNG did not encode four components")
+        val decoded = JagexJpeg.decode(encoded)
+        assertEquals(original.width, decoded.width)
+        assertTrue(
+            decoded.getRGB(HOLE / 2, HOLE / 2) ushr 24 < EDIT_TOLERANCE,
+            "the transparent block painted in the PNG did not survive"
+        )
+        assertTrue(
+            decoded.getRGB(decoded.width - 1, decoded.height - 1) ushr 24 > 0xff - EDIT_TOLERANCE,
+            "the rest of the picture stopped being opaque"
+        )
+        println("archive $archive through an RGBA PNG: ${encoded.size} bytes")
+    }
+
+    /**
+     * Every loading screen written out where somebody can look at it: the one file exactly as
+     * `SpriteCodec` puts it in the source tree, plus a PNG of what any viewer shows and a PNG of
+     * what the client's rules read, alpha included.
      *
-     * Not a parity check - that is the first test - but it is how the tree's own files are
-     * regenerated after a change here, and how anybody sees whether the colours came out right.
+     * Not a parity check - that is the first test - but it is how anybody sees whether the colours
+     * came out right, and it is where the proof render for 3770 comes from.
      */
     @Test
     fun `every loading screen is written out where somebody can look at it`() {
@@ -340,24 +360,49 @@ class LoadingScreenCodecTest {
             if (!JagexJpeg.isJpeg(group)) {
                 continue
             }
-            val parts = JagexJpeg.split(group)
-            val colour = File(directory, "$archive${SpriteCodec.JPEG_EXTENSION}")
-            colour.writeBytes(parts.colour)
-            File(directory, "$archive${SpriteCodec.JPEG_ALPHA_EXTENSION}").writeBytes(parts.alpha)
+            val file = JagexJpeg.editable(group)
+            File(directory, "$archive${SpriteCodec.JPEG_EXTENSION}").writeBytes(file)
             val preview = File(directory, "loading-$archive.png")
-            ImageIO.write(ImageIO.read(ByteArrayInputStream(parts.colour)), "png", preview)
+            // Exactly what a standard reader makes of the stored file, APP11 segments and all.
+            ImageIO.write(ImageIO.read(ByteArrayInputStream(file)), "png", preview)
             ImageIO.write(JagexJpeg.decode(group), "png", File(directory, "loading-$archive-rgba.png"))
             assertTrue(preview.length() > 0, "nothing was written to ${preview.absolutePath}")
+            if (archive == PROOF) {
+                val proof = File(PROOFS, "loading-proof.png")
+                proof.parentFile.mkdirs()
+                proof.writeBytes(preview.readBytes())
+                println("wrote loading_sprites/$PROOF${SpriteCodec.JPEG_EXTENSION} to ${proof.absolutePath}")
+            }
             written++
         }
         println("wrote $written loading screens to ${directory.absolutePath}")
     }
 
     @Test
-    fun `a JPEG archive maps both of its halves back to its archive`() {
+    fun `a JPEG archive maps its file back to its archive`() {
         assertEquals(3770, SpriteCodec.archiveOf("3770${SpriteCodec.JPEG_EXTENSION}"))
-        assertEquals(3770, SpriteCodec.archiveOf("3770${SpriteCodec.JPEG_ALPHA_EXTENSION}"))
-        assertEquals(null, SpriteCodec.archiveOf("3770.alpha.dat"))
+        assertEquals(3770, SpriteCodec.archiveOf("3770${SpriteCodec.EXTENSION}"))
+        assertEquals(null, SpriteCodec.archiveOf("3770.dat"))
+    }
+
+    /** Mean absolute channel difference between two decodings of the same picture. */
+    private fun drift(was: BufferedImage, now: BufferedImage): Double {
+        var error = 0L
+        var pixels = 0L
+        for (y in 0 until was.height) {
+            for (x in 0 until was.width) {
+                if (x < HOLE * 2 && y < HOLE * 2) {
+                    continue
+                }
+                val before = was.getRGB(x, y)
+                val after = now.getRGB(x, y)
+                error += abs(((before shr 16) and 0xff) - ((after shr 16) and 0xff)).toLong()
+                error += abs(((before shr 8) and 0xff) - ((after shr 8) and 0xff)).toLong()
+                error += abs((before and 0xff) - (after and 0xff)).toLong()
+                pixels++
+            }
+        }
+        return error / (pixels * 3.0)
     }
 
     /** The biggest JPEG archive of index 32, which is the one worth looking at. */
@@ -379,8 +424,8 @@ class LoadingScreenCodecTest {
     }
 
     /** [image] through the standard writer at [quality], which is what "the user re-saved it" means. */
-    private fun resave(image: BufferedImage, format: String, quality: Float): ByteArray {
-        val writer = ImageIO.getImageWritersByFormatName(format).next()
+    private fun resave(image: BufferedImage, quality: Float): ByteArray {
+        val writer = ImageIO.getImageWritersByFormatName("JPEG").next()
         try {
             val out = ByteArrayOutputStream(image.width * image.height)
             val param = writer.defaultWriteParam
@@ -429,6 +474,7 @@ class LoadingScreenCodecTest {
         private const val SOS = 0xda
         private const val DQT = 0xdb
         private const val APP0 = 0xe0
+        private const val APP11 = 0xeb
         private const val COM = 0xfe
         private val APPLICATION = 0xe0..0xef
 
@@ -452,5 +498,11 @@ class LoadingScreenCodecTest {
         private const val RED = 0xffff0000.toInt()
 
         private const val OUTPUT = "build/loading-screens"
+
+        /** The loading screen the proof render is taken from. */
+        private const val PROOF = 3770
+
+        private const val PROOFS =
+            "/tmp/claude-1000/-home-trent-darkan-server/7342d152-879a-4df7-9110-0ce208e488a1/scratchpad"
     }
 }

@@ -3,13 +3,17 @@ package world.gregs.voidps.cache.source.codec
 import java.awt.image.BufferedImage
 import java.awt.image.Raster
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.IOException
+import javax.imageio.IIOImage
 import javax.imageio.ImageIO
+import javax.imageio.ImageWriteParam
 import javax.imageio.stream.MemoryCacheImageInputStream
+import javax.imageio.stream.MemoryCacheImageOutputStream
 import kotlin.math.roundToInt
 
 /**
- * The four component JPEGs index 32 holds its loading screens in, and how they become two files
+ * The four component JPEGs index 32 holds its loading screens in, and how they become one file
  * anything can open.
  *
  * Jagex's loading screen art is a **baseline JPEG with four components and no Adobe APP14 marker**:
@@ -56,16 +60,27 @@ import kotlin.math.roundToInt
  *
  * ## How the source tree stores them
  *
- * [split] takes the file apart at the DCT coefficient level - see [BaselineJpeg] - into
+ * **One file per image**: `loading_sprites/<id>.jpg`, an ordinary three component baseline JPEG of
+ * `Y`, `Cb` and `Cr` that opens in any viewer or editor, with the fourth component's own
+ * entropy coded stream riding inside the same file as one or more `APP11` segments -
+ * `JagexAlpha\0`, a sequence number and a count, then a slice of the greyscale codestream. Every
+ * standard decoder skips an application segment it does not recognise, so the file *is* the picture
+ * and the alpha is along for the ride. [editable] writes it and [archive] reads it back.
  *
- * - `<id>.jpg`, an ordinary three component baseline JPEG of `Y`, `Cb` and `Cr`, and
- * - `<id>.alpha.jpg`, an ordinary one component greyscale JPEG of the fourth,
- *
- * each keeping the original's quantisation tables, Huffman tables, sampling factors and *the very
+ * Underneath, [split] takes the four component file apart at the DCT coefficient level - see
+ * [BaselineJpeg] - into a three component colour half and a one component greyscale half, each
+ * keeping the original's quantisation tables, Huffman tables, sampling factors and *the very
  * coefficients that were in the cache*, merely re-entropy-coded. Nothing is dequantised, inverse
  * transformed or re-compressed, so [join] puts the two back together into the cache's own bytes -
- * byte for byte, all 29 - and the tree needs no `.pristine` copy of anything. Both halves open in
- * any viewer or editor, which was the whole point.
+ * byte for byte, all 29 - and the tree needs no `.pristine` copy of anything.
+ *
+ * **An editor that strips the `APP11` segments** - most will, on a re-save - leaves a perfectly good
+ * three component JPEG behind, and [join] then *synthesises* an entirely opaque fourth component
+ * rather than failing: a flat DC that dequantises to 255 in every block, coded with the luminance
+ * tables the file already carries. The picture survives an edit anywhere; only its transparency has
+ * to be painted again. [archive] with a `BufferedImage` is the other way to paint it - drop a
+ * `<id>.png` with an alpha channel in place of the `.jpg` and the packer encodes the four component
+ * file from its pixels.
  *
  * The one thing a standalone one component JPEG cannot hold is the block grid's **MCU padding**. In
  * the interleaved four component scan a 2x2 component is stored on the MCU grid, which for six of
@@ -77,7 +92,7 @@ import kotlin.math.roundToInt
  */
 object JagexJpeg {
 
-    /** A four component Jagex JPEG as the two files a source tree keeps it in. */
+    /** A four component Jagex JPEG taken apart into the two codestreams [editable] stores in one file. */
     class Parts(
         /** The `Y`, `Cb` and `Cr` components as a three component baseline JPEG. */
         val colour: ByteArray,
@@ -88,6 +103,122 @@ object JagexJpeg {
     /** Whether [data] is a JPEG container rather than something else - the `ff d8` start of image. */
     fun isJpeg(data: ByteArray): Boolean =
         data.size > 2 && data[0] == MAGIC_0 && data[1] == MAGIC_1
+
+    /**
+     * [archive] as the one JPEG the source tree stores it as: the three component colour image, with
+     * the fourth component's codestream in `APP11` segments straight after `SOI`.
+     *
+     * @throws IOException when [archive] is not a four component baseline JPEG.
+     */
+    fun editable(archive: ByteArray): ByteArray {
+        val parts = split(archive)
+        return embed(parts.colour, parts.alpha)
+    }
+
+    /**
+     * The tree's one JPEG back as the four component archive the client reads.
+     *
+     * Byte for byte the archive [editable] came from while nothing has edited the file. An editor
+     * that stripped the `APP11` segments gets an entirely opaque fourth component instead of an
+     * error - see the class documentation.
+     */
+    fun archive(file: ByteArray): ByteArray = join(file, alphaOf(file))
+
+    /**
+     * An RGBA image as a four component archive, for a `<id>.png` dropped in place of the `.jpg`.
+     *
+     * The colour and the alpha are encoded as two ordinary JPEGs by the platform writer and then
+     * joined, so this is the one path here that re-compresses: the cache's own files are never
+     * touched by it.
+     */
+    fun archive(image: BufferedImage): ByteArray {
+        val width = image.width
+        val height = image.height
+        val colour = BufferedImage(width, height, BufferedImage.TYPE_3BYTE_BGR)
+        val plane = BufferedImage(width, height, BufferedImage.TYPE_BYTE_GRAY)
+        val row = IntArray(width)
+        for (y in 0 until height) {
+            image.getRGB(0, y, width, 1, row, 0, width)
+            for (x in 0 until width) {
+                colour.setRGB(x, y, row[x] and 0xffffff)
+                plane.raster.setSample(x, y, 0, row[x] ushr 24)
+            }
+        }
+        return join(jpeg(colour), jpeg(plane))
+    }
+
+    /** [colour] with [alpha] inside it as `APP11` segments, split at the segment length limit. */
+    fun embed(colour: ByteArray, alpha: ByteArray): ByteArray {
+        if (!isJpeg(colour)) {
+            throw IOException("An embedded alpha needs a JPEG to ride in.")
+        }
+        val segments = maxOf(BaselineJpeg.ceil(alpha.size, PAYLOAD), 1)
+        if (segments > 0xffff) {
+            throw IOException("An alpha codestream of ${alpha.size} bytes needs $segments APP11 segments.")
+        }
+        val out = ByteArrayOutputStream(colour.size + alpha.size + segments * OVERHEAD)
+        out.write(colour, 0, 2)
+        var offset = 0
+        for (sequence in 1..segments) {
+            val length = minOf(PAYLOAD, alpha.size - offset)
+            val size = 2 + IDENTIFIER.size + 4 + length
+            out.write(0xff)
+            out.write(APP11)
+            out.write(size shr 8)
+            out.write(size and 0xff)
+            out.write(IDENTIFIER)
+            out.write(sequence shr 8)
+            out.write(sequence and 0xff)
+            out.write(segments shr 8)
+            out.write(segments and 0xff)
+            out.write(alpha, offset, length)
+            offset += length
+        }
+        out.write(colour, 2, colour.size - 2)
+        return out.toByteArray()
+    }
+
+    /** [file]'s embedded alpha codestream, or null when nothing in it carries one. */
+    fun alphaOf(file: ByteArray): ByteArray? {
+        if (!isJpeg(file)) {
+            return null
+        }
+        val parts = HashMap<Int, ByteArray>()
+        var segments = 0
+        var position = 2
+        while (position + 3 < file.size) {
+            if ((file[position].toInt() and 0xff) != 0xff) {
+                break
+            }
+            val marker = file[position + 1].toInt() and 0xff
+            if (marker == SOS || marker == EOI) {
+                break
+            }
+            val length = ((file[position + 2].toInt() and 0xff) shl 8) or (file[position + 3].toInt() and 0xff)
+            val end = position + 2 + length
+            if (end > file.size) {
+                break
+            }
+            if (marker == APP11 && length >= 2 + IDENTIFIER.size + 4 && identifier(file, position + 4)) {
+                val start = position + 4 + IDENTIFIER.size
+                val sequence = ((file[start].toInt() and 0xff) shl 8) or (file[start + 1].toInt() and 0xff)
+                segments = ((file[start + 2].toInt() and 0xff) shl 8) or (file[start + 3].toInt() and 0xff)
+                parts[sequence] = file.copyOfRange(start + 4, end)
+            }
+            position = end
+        }
+        if (parts.isEmpty()) {
+            return null
+        }
+        if (segments != parts.size) {
+            throw IOException("An embedded alpha says it is $segments segments but ${parts.size} are in the file.")
+        }
+        val out = ByteArrayOutputStream(parts.values.sumOf { it.size })
+        for (sequence in 1..segments) {
+            out.write(parts[sequence] ?: throw IOException("An embedded alpha is missing segment $sequence of $segments."))
+        }
+        return out.toByteArray()
+    }
 
     /**
      * [data] as the colour and alpha halves the source tree stores, losing nothing.
@@ -141,8 +272,16 @@ object JagexJpeg {
      * tables are matched against the colour file's by content and share an id where they are the
      * same table - which is what reproduces Jagex's own two `ffdb` and four `ffc4` segments - and get
      * an id of their own where they are not.
+     *
+     * A null [alpha] - an editor stripped the `APP11` segments - is an entirely opaque fourth
+     * component built from the luminance component's own tables: [FLAT] is the DC a block of 255s
+     * transforms to, so the smallest DC coefficient that dequantises to at least it decodes back to
+     * 255 in every block, and the plane costs one Huffman code per block.
      */
-    fun join(colour: ByteArray, alpha: ByteArray): ByteArray {
+    fun join(colour: ByteArray, alpha: ByteArray?): ByteArray {
+        if (alpha == null) {
+            return opaque(BaselineJpeg.read(colour))
+        }
         val image = BaselineJpeg.read(colour)
         val plane = BaselineJpeg.read(alpha)
         if (plane.components.size != 1) {
@@ -222,6 +361,53 @@ object JagexJpeg {
             image.setRGB(0, y, width, 1, row, 0, width)
         }
         return image
+    }
+
+    /** [image] with an entirely opaque fourth component added, coded like its luminance. */
+    private fun opaque(image: BaselineJpeg): ByteArray {
+        val luma = image.components[0]
+        val table = image.quantisation[luma.quantisation]
+            ?: throw IOException("A JPEG's luminance quantisation table is not defined.")
+        val fourth = JpegComponent(COMPONENTS, image.maxHorizontal, image.maxVertical, luma.quantisation)
+        fourth.dc = luma.dc
+        fourth.ac = luma.ac
+        fourth.across = image.mcusAcross * fourth.horizontal
+        fourth.down = image.mcusDown * fourth.vertical
+        fourth.coefficients = ShortArray(fourth.across * fourth.down * BaselineJpeg.BLOCK_SIZE)
+        val level = BaselineJpeg.ceil(FLAT, table[0]).toShort()
+        for (block in 0 until fourth.across * fourth.down) {
+            fourth.coefficients[block * BaselineJpeg.BLOCK_SIZE] = level
+        }
+        image.components.add(fourth)
+        return image.write()
+    }
+
+    /** [image] through the platform writer, which is the only re-compression anywhere here. */
+    private fun jpeg(image: BufferedImage): ByteArray {
+        val writer = ImageIO.getImageWritersByFormatName(FORMAT).next()
+        try {
+            val out = ByteArrayOutputStream(image.width * image.height)
+            val param = writer.defaultWriteParam
+            param.compressionMode = ImageWriteParam.MODE_EXPLICIT
+            param.compressionQuality = QUALITY
+            MemoryCacheImageOutputStream(out).use { stream ->
+                writer.output = stream
+                writer.write(null, IIOImage(image, null, null), param)
+            }
+            return out.toByteArray()
+        } finally {
+            writer.dispose()
+        }
+    }
+
+    /** Whether [IDENTIFIER] is at [offset] of [data]. */
+    private fun identifier(data: ByteArray, offset: Int): Boolean {
+        for (index in IDENTIFIER.indices) {
+            if (data[offset + index] != IDENTIFIER[index]) {
+                return false
+            }
+        }
+        return true
     }
 
     /**
@@ -337,4 +523,29 @@ object JagexJpeg {
     private const val MAGIC_0 = 0xff.toByte()
 
     private const val MAGIC_1 = 0xd8.toByte()
+
+    /** The application segment the alpha codestream rides in, and the two markers that end a header. */
+    private const val APP11 = 0xeb
+
+    private const val SOS = 0xda
+
+    private const val EOI = 0xd9
+
+    /** What an `APP11` segment of this build's says it is, null terminated as JPEG conventions have it. */
+    private val IDENTIFIER = "JagexAlpha\u0000".toByteArray(Charsets.US_ASCII)
+
+    /** A segment's length field counts itself, so 65,533 bytes follow it at most. */
+    private const val SEGMENT = 65533
+
+    /** What is left of a segment for the codestream after the identifier, sequence and count. */
+    private const val PAYLOAD = SEGMENT - 11 - 4
+
+    /** The marker, the length, the identifier, the sequence and the count. */
+    private const val OVERHEAD = 4 + 11 + 4
+
+    /** The DC coefficient a block of 255s transforms to: `8 * (255 - 128)`. */
+    private const val FLAT = 1016
+
+    /** What a re-compressed half is written at, which is above the cache's own q75. */
+    private const val QUALITY = 0.95f
 }
