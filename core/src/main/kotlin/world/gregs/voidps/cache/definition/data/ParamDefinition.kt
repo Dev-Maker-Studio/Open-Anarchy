@@ -1,6 +1,7 @@
 package world.gregs.voidps.cache.definition.data
 
 import world.gregs.voidps.cache.Definition
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 /**
  * A param (attribute) type declaration.
@@ -16,7 +17,18 @@ data class ParamDefinition(
     var defaultInt: Int = 0,
     var defaultString: String? = null,
     var autoDisable: Boolean = true,
-) : Definition {
+) : Definition, OpcodeOrdered {
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
+
 
     /** Whether this param holds a string; ints otherwise. */
     fun isString(): Boolean = type == 's'

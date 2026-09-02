@@ -2,7 +2,7 @@ package world.gregs.voidps.cache.definition.encoder
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import world.gregs.voidps.buffer.write.Writer
-import world.gregs.voidps.cache.OrderedDefinitionEncoder
+import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 
 /**
@@ -11,9 +11,9 @@ import world.gregs.voidps.cache.definition.data.ItemDefinition
  * The ground options (30 to 34) and the inventory options (35 to 39) each keep one entry of their array at a
  * non null default - "Take" and "Drop" - so a record is written for an option only when it differs from that.
  */
-class ItemEncoder : OrderedDefinitionEncoder<ItemDefinition>() {
+class ItemEncoder : OpcodeEncoder<ItemDefinition>() {
 
-    override fun presentOpcodes(definition: ItemDefinition): IntArray {
+    override fun opcodes(definition: ItemDefinition): IntArray {
         val opcodes = IntArrayList()
         if (definition.modelId != 0) {
             opcodes.add(1)
@@ -190,7 +190,7 @@ class ItemEncoder : OrderedDefinitionEncoder<ItemDefinition>() {
         return opcodes.toIntArray()
     }
 
-    override fun Writer.write(opcode: Int, definition: ItemDefinition, members: ItemDefinition, occurrence: Int) {
+    override fun Writer.encodeOpcode(definition: ItemDefinition, members: ItemDefinition, opcode: Int, occurrence: Int) {
         when (opcode) {
             1 -> writeBigSmart(definition.modelId)
             2 -> writeString(definition.name)
@@ -274,7 +274,7 @@ class ItemEncoder : OrderedDefinitionEncoder<ItemDefinition>() {
             134 -> writeByte(definition.pickSizeShift)
             139 -> writeShort(definition.singleNoteId)
             140 -> writeShort(definition.singleNoteTemplateId)
-            249 -> writeParams(definition.params, definition.paramRecords)
+            249 -> writeParams(definition.id, definition.params, definition.paramRecords)
             else -> error("Unhandled item definition opcode: $opcode for def ${definition.id}")
         }
     }

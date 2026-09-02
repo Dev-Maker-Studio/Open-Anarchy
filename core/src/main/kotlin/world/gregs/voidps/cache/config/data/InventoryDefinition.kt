@@ -2,6 +2,7 @@ package world.gregs.voidps.cache.config.data
 
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.Extra
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 data class InventoryDefinition(
     override var id: Int = -1,
@@ -10,7 +11,18 @@ data class InventoryDefinition(
     var amounts: IntArray? = null,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null
-) : Definition, Extra {
+) : Definition, Extra, OpcodeOrdered {
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

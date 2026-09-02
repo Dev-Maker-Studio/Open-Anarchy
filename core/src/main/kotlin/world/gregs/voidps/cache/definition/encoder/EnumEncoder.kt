@@ -3,7 +3,7 @@ package world.gregs.voidps.cache.definition.encoder
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import world.gregs.voidps.buffer.Cp1252
 import world.gregs.voidps.buffer.write.Writer
-import world.gregs.voidps.cache.OrderedDefinitionEncoder
+import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.KeyedValue
 import world.gregs.voidps.cache.definition.data.EnumDefinition
 
@@ -14,9 +14,9 @@ import world.gregs.voidps.cache.definition.data.EnumDefinition
  * string or int value, 7 and 8 the same but keyed by a short index into an array whose capacity
  * ([EnumDefinition.arraySize]) the file also carries.
  */
-class EnumEncoder : OrderedDefinitionEncoder<EnumDefinition>() {
+class EnumEncoder : OpcodeEncoder<EnumDefinition>() {
 
-    override fun presentOpcodes(definition: EnumDefinition): IntArray {
+    override fun opcodes(definition: EnumDefinition): IntArray {
         val opcodes = IntArrayList()
         if (definition.keyType != 0.toChar()) {
             opcodes.add(1)
@@ -38,7 +38,7 @@ class EnumEncoder : OrderedDefinitionEncoder<EnumDefinition>() {
         return opcodes.toIntArray()
     }
 
-    override fun Writer.write(opcode: Int, definition: EnumDefinition, members: EnumDefinition, occurrence: Int) {
+    override fun Writer.encodeOpcode(definition: EnumDefinition, members: EnumDefinition, opcode: Int, occurrence: Int) {
         when (opcode) {
             1 -> writeByte(Cp1252.encode(definition.keyType).toInt())
             2 -> writeByte(Cp1252.encode(definition.valueType).toInt())

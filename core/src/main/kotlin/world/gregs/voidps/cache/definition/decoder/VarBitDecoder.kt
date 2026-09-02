@@ -17,18 +17,18 @@ class VarBitDecoder : DefinitionDecoder<VarBitDefinition>(VAR_BIT) {
 
     override fun create(size: Int) = Array(size) { VarBitDefinition(it) }
 
-    override fun readLoop(definition: VarBitDefinition, buffer: Reader) =
-        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
+    override fun canonicalOpcodes(definition: VarBitDefinition): IntArray = encoder.opcodes(definition)
 
     override fun getFile(id: Int) = id and 0x3ff
 
     override fun getArchive(id: Int) = id ushr 10
 
     override fun VarBitDefinition.read(opcode: Int, buffer: Reader) {
-        if (opcode == 1) {
-            index = buffer.readShort()
-            startBit = buffer.readUnsignedByte()
-            endBit = buffer.readUnsignedByte()
+        if (opcode != 1) {
+            error("Unhandled varbit definition opcode: $opcode for def $id")
         }
+        index = buffer.readShort()
+        startBit = buffer.readUnsignedByte()
+        endBit = buffer.readUnsignedByte()
     }
 }

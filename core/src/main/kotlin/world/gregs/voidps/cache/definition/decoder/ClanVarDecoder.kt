@@ -7,6 +7,7 @@ import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.definition.cs2.CS2Type
 import world.gregs.voidps.cache.definition.data.ClanVarDefinition
+import world.gregs.voidps.cache.definition.encoder.ClanVarEncoder
 
 /**
  * Decodes clan variable definitions from the CONFIGS index (2), archive 47.
@@ -18,7 +19,11 @@ import world.gregs.voidps.cache.definition.data.ClanVarDefinition
  */
 class ClanVarDecoder : DefinitionDecoder<ClanVarDefinition>(Index.CONFIGS) {
 
+    private val encoder = ClanVarEncoder()
+
     override fun create(size: Int) = Array(size) { ClanVarDefinition(it) }
+
+    override fun canonicalOpcodes(definition: ClanVarDefinition): IntArray = encoder.opcodes(definition)
 
     override fun getArchive(id: Int) = VAR_CLAN
 
@@ -28,12 +33,18 @@ class ClanVarDecoder : DefinitionDecoder<ClanVarDefinition>(Index.CONFIGS) {
 
     override fun ClanVarDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            1 -> type = CS2Type.forJagexDesc(byteToChar(buffer.readByte().toByte()))
+            1 -> {
+                // forJagexDesc is many to one, so the descriptor byte is kept as well.
+                typeChar = byteToChar(buffer.readByte().toByte())
+                type = CS2Type.forJagexDesc(typeChar)
+            }
             3 -> {
                 baseVar = buffer.readUnsignedShort()
                 startBit = buffer.readUnsignedByte()
                 endBit = buffer.readUnsignedByte()
             }
+            else -> error("Unhandled clan variable definition opcode: $opcode for def $id")
         }
     }
+
 }

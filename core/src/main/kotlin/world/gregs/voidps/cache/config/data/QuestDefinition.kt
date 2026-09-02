@@ -2,6 +2,7 @@ package world.gregs.voidps.cache.config.data
 
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.Extra
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 data class QuestDefinition(
     override var id: Int = -1,
@@ -10,6 +11,8 @@ data class QuestDefinition(
     var varps: Array<IntArray>? = null,
     var varbits: Array<IntArray>? = null,
     var subQuest: Int = -1,
+    /** Client `QuestType.type`, opcode 6. */
+    var type: Int = 0,
     var difficulty: Int = -1,
     var members: Boolean = false,
     var questPoints: Int = -1,
@@ -21,7 +24,18 @@ data class QuestDefinition(
     var itemSprite: Int = -1,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null,
-) : Definition, Extra {
+) : Definition, Extra, OpcodeOrdered {
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

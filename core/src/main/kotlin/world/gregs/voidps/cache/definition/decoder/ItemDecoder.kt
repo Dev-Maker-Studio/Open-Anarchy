@@ -12,8 +12,7 @@ class ItemDecoder : DefinitionDecoder<ItemDefinition>(ITEMS) {
 
     override fun create(size: Int) = Array(size) { ItemDefinition(it) }
 
-    override fun readLoop(definition: ItemDefinition, buffer: Reader) =
-        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
+    override fun canonicalOpcodes(definition: ItemDefinition): IntArray = encoder.opcodes(definition)
 
     override fun getFile(id: Int) = id and 0xff
 

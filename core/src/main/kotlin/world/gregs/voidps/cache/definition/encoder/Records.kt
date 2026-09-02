@@ -1,11 +1,13 @@
 package world.gregs.voidps.cache.definition.encoder
 
 import world.gregs.voidps.buffer.write.Writer
+import world.gregs.voidps.cache.definition.Extra
 import world.gregs.voidps.cache.definition.KeyedValue
+import world.gregs.voidps.cache.definition.Parameters
 
 /**
  * Payloads shared by the definition encoders. Each writes one record's payload, the opcode byte already
- * written by [world.gregs.voidps.cache.OrderedDefinitionEncoder], so unlike the mixin helpers on
+ * written by [world.gregs.voidps.cache.OpcodeEncoder], so unlike the mixin helpers on
  * [world.gregs.voidps.cache.definition.Recolourable] and friends they never decide whether to emit at all.
  */
 
@@ -31,27 +33,48 @@ internal fun Writer.writeColourPalette(palette: ByteArray?) {
 /**
  * Opcode 249: a count followed by that many parameters, each a string flag, a 3 byte id and either a string
  * or an int. A record with no parameters is legal and leaves the map null, so a null map writes a count of 0.
+ *
+ * [records] is the file's own record list, which a definition only keeps when the map cannot reproduce it -
+ * a file that lists the same id twice.
  */
-internal fun Writer.writeParams(params: Map<Int, Any>?, records: List<KeyedValue>?) {
+internal fun Writer.writeParams(id: Int, params: Map<Int, Any>?, records: List<KeyedValue>?) {
     if (records != null) {
         writeByte(records.size)
         for (record in records) {
-            writeParam(record.key, record.value)
+            writeParam(id, record.key, record.value)
         }
         return
     }
     writeByte(params?.size ?: 0)
-    for ((id, value) in params ?: emptyMap()) {
-        writeParam(id, value)
+    for ((key, value) in params ?: emptyMap()) {
+        writeParam(id, key, value)
     }
 }
 
-private fun Writer.writeParam(id: Int, value: Any) {
+/**
+ * Opcode 249 for an [Extra] definition, whose params are keyed by name rather than by id.
+ *
+ * [Extra.readParameters] keys the map by param *name* when it is given a [Parameters] catalog, and a name
+ * cannot be turned back into the 3 byte key. A decoder whose output is going to be encoded again has to be
+ * built with [Parameters.EMPTY], which keys by the id as a decimal string; that is the default for every
+ * decoder here.
+ */
+internal fun Writer.writeExtras(id: Int, extras: Map<String, Any>?) {
+    val parameters = extras ?: emptyMap()
+    writeByte(parameters.size)
+    for ((key, value) in parameters) {
+        val param = key.toIntOrNull()
+            ?: error("Param '$key' of definition $id is a name, not an id; decode with Parameters.EMPTY to encode again")
+        writeParam(id, param, value)
+    }
+}
+
+private fun Writer.writeParam(id: Int, key: Int, value: Any) {
     writeByte(value is String)
-    writeMedium(id)
-    if (value is String) {
-        writeString(value)
-    } else {
-        writeInt(value as Int)
+    writeMedium(key)
+    when (value) {
+        is String -> writeString(value)
+        is Int -> writeInt(value)
+        else -> error("Param $key of definition $id is a ${value::class.simpleName}, not an int or a string")
     }
 }

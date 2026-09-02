@@ -4,32 +4,42 @@ import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.cache.Config.WORLD_MAP_INFO
 import world.gregs.voidps.cache.config.ConfigDecoder
 import world.gregs.voidps.cache.config.data.WorldMapInfoDefinition
+import world.gregs.voidps.cache.config.encoder.WorldMapInfoEncoder
 import world.gregs.voidps.cache.definition.Parameters
 
 class WorldMapInfoDecoder(
     private val parameters: Parameters = Parameters.EMPTY
 ) : ConfigDecoder<WorldMapInfoDefinition>(WORLD_MAP_INFO) {
 
+    private val encoder = WorldMapInfoEncoder()
+
     override fun create(size: Int) = Array(size) { WorldMapInfoDefinition(it) }
+
+    override fun canonicalOpcodes(definition: WorldMapInfoDefinition): IntArray = encoder.opcodes(definition)
 
     override fun WorldMapInfoDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            1 -> spriteId = buffer.readShort()
-            2 -> highlightSpriteId = buffer.readShort()
+            1 -> spriteId = buffer.readBigSmart()
+            2 -> highlightSpriteId = buffer.readBigSmart()
             3 -> name = buffer.readString()
             4 -> anInt1058 = buffer.readUnsignedMedium()
             5 -> anInt1054 = buffer.readUnsignedMedium()
             6 -> fontSize = buffer.readUnsignedByte()
             7 -> {
-                val setting = buffer.readUnsignedByte()
-                if (setting and 0x1 == 0) {
+                // Only bits 0 and 1 mean anything to the client; the whole byte is kept so the
+                // file can be written back unchanged.
+                displayFlags = buffer.readUnsignedByte()
+                if (displayFlags and 0x1 == 0) {
                     aBoolean1047 = false
                 }
-                if (setting and 0x2 == 2) {
+                if (displayFlags and 0x2 == 2) {
                     aBoolean1079 = true
                 }
             }
-            8 -> aBoolean1063 = buffer.readUnsignedByte() == 1
+            8 -> {
+                randomisedMinimapPosition = buffer.readUnsignedByte()
+                aBoolean1063 = randomisedMinimapPosition == 1
+            }
             9 -> {
                 varbit = buffer.readShort()
                 if (varbit == 65535) {
@@ -53,7 +63,7 @@ class WorldMapInfoDecoder(
             }
             16 -> aBoolean1064 = false
             17 -> aString1045 = buffer.readString()
-            18 -> anInt1093 = buffer.readShort()
+            18 -> anInt1093 = buffer.readBigSmart()
             19 -> clientScript = buffer.readShort()
             20 -> {
                 anInt1048 = buffer.readShort()
@@ -79,6 +89,7 @@ class WorldMapInfoDecoder(
                 anInt1092 = buffer.readUnsignedShort()
             }
             249 -> readParameters(buffer, parameters)
+            else -> error("Unhandled map element definition opcode: $opcode for def $id")
         }
     }
 

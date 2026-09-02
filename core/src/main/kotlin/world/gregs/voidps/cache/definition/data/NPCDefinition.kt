@@ -87,10 +87,18 @@ data class NPCDefinition(
      * The opcode 249 parameter records in file order, kept only when the file listed an id more than once -
      * [params] keeps the last value of each. Null when [params] holds every record.
      */
-    var paramRecords: List<KeyedValue>? = null,
-    override var opcodeOrder: IntArray? = null,
-    override var shadowedRecords: List<ShadowedRecord>? = null
+    var paramRecords: List<KeyedValue>? = null
 ) : Definition, Transforms, Recolourable, ColourPalette, Parameterized, Extra, OpcodeOrdered {
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -199,11 +207,6 @@ data class NPCDefinition(
             if (other.rawOptions == null) return false
             if (!rawOptions.contentEquals(other.rawOptions)) return false
         } else if (other.rawOptions != null) return false
-        if (opcodeOrder != null) {
-            if (other.opcodeOrder == null) return false
-            if (!opcodeOrder.contentEquals(other.opcodeOrder)) return false
-        } else if (other.opcodeOrder != null) return false
-        if (shadowedRecords != other.shadowedRecords) return false
         return paramRecords == other.paramRecords
     }
 
@@ -277,8 +280,6 @@ data class NPCDefinition(
         result = 31 * result + (extras?.hashCode() ?: 0)
         result = 31 * result + unusedMovementType
         result = 31 * result + (rawOptions?.contentHashCode() ?: 0)
-        result = 31 * result + (opcodeOrder?.contentHashCode() ?: 0)
-        result = 31 * result + (shadowedRecords?.hashCode() ?: 0)
         result = 31 * result + (paramRecords?.hashCode() ?: 0)
         return result
     }

@@ -4,7 +4,6 @@ import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.Extra
 import world.gregs.voidps.cache.definition.KeyedValue
 import world.gregs.voidps.cache.definition.OpcodeOrdered
-import world.gregs.voidps.cache.definition.ShadowedRecord
 
 data class EnumDefinition(
     override var id: Int = -1,
@@ -25,10 +24,18 @@ data class EnumDefinition(
      * The entry records in file order, kept only when the file listed a key more than once - [map] keeps the
      * last value of each. Null when [map] holds every record.
      */
-    var entries: List<KeyedValue>? = null,
-    override var opcodeOrder: IntArray? = null,
-    override var shadowedRecords: List<ShadowedRecord>? = null
+    var entries: List<KeyedValue>? = null
 ) : Definition, Extra, OpcodeOrdered {
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
     fun getKey(value: Any) = map?.filterValues { it == value }?.keys?.lastOrNull() ?: -1
 
     fun getInt(id: Int) = map?.get(id) as? Int ?: defaultInt

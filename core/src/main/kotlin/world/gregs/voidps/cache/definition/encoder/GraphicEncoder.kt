@@ -2,7 +2,7 @@ package world.gregs.voidps.cache.definition.encoder
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import world.gregs.voidps.buffer.write.Writer
-import world.gregs.voidps.cache.OrderedDefinitionEncoder
+import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.GraphicDefinition
 
 /**
@@ -11,9 +11,9 @@ import world.gregs.voidps.cache.definition.data.GraphicDefinition
  * Opcodes 9 and 11 to 16 all set the same brightness/fade pair, so which of them a definition came from is
  * recovered from the pair's value; none of them appear in 727, where only 1, 2, 4 to 8, 10 and 40 are used.
  */
-class GraphicEncoder : OrderedDefinitionEncoder<GraphicDefinition>() {
+class GraphicEncoder : OpcodeEncoder<GraphicDefinition>() {
 
-    override fun presentOpcodes(definition: GraphicDefinition): IntArray {
+    override fun opcodes(definition: GraphicDefinition): IntArray {
         val opcodes = IntArrayList()
         if (definition.modelId != 0) {
             opcodes.add(1)
@@ -57,7 +57,7 @@ class GraphicEncoder : OrderedDefinitionEncoder<GraphicDefinition>() {
         return array
     }
 
-    override fun Writer.write(opcode: Int, definition: GraphicDefinition, members: GraphicDefinition, occurrence: Int) {
+    override fun Writer.encodeOpcode(definition: GraphicDefinition, members: GraphicDefinition, opcode: Int, occurrence: Int) {
         when (opcode) {
             1 -> writeBigSmart(definition.modelId)
             2 -> writeBigSmart(definition.animationId)

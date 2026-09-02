@@ -2,16 +2,23 @@ package world.gregs.voidps.cache.definition.data
 
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.OpcodeOrdered
-import world.gregs.voidps.cache.definition.ShadowedRecord
 
 data class VarBitDefinition(
     override var id: Int = -1,
     var index: Int = 0,
     var startBit: Int = 0,
-    var endBit: Int = 0,
-    override var opcodeOrder: IntArray? = null,
-    override var shadowedRecords: List<ShadowedRecord>? = null
+    var endBit: Int = 0
 ) : Definition, OpcodeOrdered {
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -23,11 +30,6 @@ data class VarBitDefinition(
         if (index != other.index) return false
         if (startBit != other.startBit) return false
         if (endBit != other.endBit) return false
-        if (opcodeOrder != null) {
-            if (other.opcodeOrder == null) return false
-            if (!opcodeOrder.contentEquals(other.opcodeOrder)) return false
-        } else if (other.opcodeOrder != null) return false
-        if (shadowedRecords != other.shadowedRecords) return false
         return true
     }
 
@@ -36,8 +38,6 @@ data class VarBitDefinition(
         result = 31 * result + index
         result = 31 * result + startBit
         result = 31 * result + endBit
-        result = 31 * result + (opcodeOrder?.contentHashCode() ?: 0)
-        result = 31 * result + (shadowedRecords?.hashCode() ?: 0)
         return result
     }
 }

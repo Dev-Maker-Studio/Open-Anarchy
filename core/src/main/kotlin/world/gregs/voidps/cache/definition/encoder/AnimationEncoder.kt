@@ -2,7 +2,7 @@ package world.gregs.voidps.cache.definition.encoder
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import world.gregs.voidps.buffer.write.Writer
-import world.gregs.voidps.cache.OrderedDefinitionEncoder
+import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.AnimationDefinition
 
 /**
@@ -11,9 +11,9 @@ import world.gregs.voidps.cache.definition.data.AnimationDefinition
  * Frame ids are split over two shorts, the low half first for every frame and the high half after, and the
  * decoder adds them as signed values, so the halves are recovered by rounding rather than by masking.
  */
-class AnimationEncoder : OrderedDefinitionEncoder<AnimationDefinition>() {
+class AnimationEncoder : OpcodeEncoder<AnimationDefinition>() {
 
-    override fun presentOpcodes(definition: AnimationDefinition): IntArray {
+    override fun opcodes(definition: AnimationDefinition): IntArray {
         val opcodes = IntArrayList()
         if (definition.durations != null) {
             opcodes.add(1)
@@ -74,7 +74,7 @@ class AnimationEncoder : OrderedDefinitionEncoder<AnimationDefinition>() {
         return opcodes.toIntArray()
     }
 
-    override fun Writer.write(opcode: Int, definition: AnimationDefinition, members: AnimationDefinition, occurrence: Int) {
+    override fun Writer.encodeOpcode(definition: AnimationDefinition, members: AnimationDefinition, opcode: Int, occurrence: Int) {
         when (opcode) {
             1 -> {
                 val durations = definition.durations ?: IntArray(0)

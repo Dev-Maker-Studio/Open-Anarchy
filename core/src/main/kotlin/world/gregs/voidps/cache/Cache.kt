@@ -1,6 +1,7 @@
 package world.gregs.voidps.cache
 
 import org.darkan.core.EnvVars
+import org.darkan.core.cache.CacheSource
 import world.gregs.voidps.cache.definition.data.AnimationDefinition
 import world.gregs.voidps.cache.definition.data.BASDefinition
 import world.gregs.voidps.cache.definition.data.ClanVarDefinition
@@ -125,6 +126,7 @@ interface Cache {
 
     companion object {
         private val singleton: Cache by lazy {
+            CacheSource.ensureBuilt()
             if (EnvVars.memCache) MemoryCache.load() else FileCache.load()
         }
 

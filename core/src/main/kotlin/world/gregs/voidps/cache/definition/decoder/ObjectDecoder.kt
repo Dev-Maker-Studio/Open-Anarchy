@@ -15,8 +15,7 @@ open class ObjectDecoder(
 
     override fun create(size: Int) = Array(size) { ObjectDefinition(it) }
 
-    override fun readLoop(definition: ObjectDefinition, buffer: Reader) =
-        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
+    override fun canonicalOpcodes(definition: ObjectDefinition): IntArray = encoder.opcodes(definition)
 
     override fun getFile(id: Int) = id and 0xff
 

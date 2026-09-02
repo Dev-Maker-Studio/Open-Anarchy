@@ -4,10 +4,15 @@ import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.cache.Config.FLOOR_UNDERLAY
 import world.gregs.voidps.cache.config.ConfigDecoder
 import world.gregs.voidps.cache.config.data.UnderlayDefinition
+import world.gregs.voidps.cache.config.encoder.UnderlayEncoder
 
 class UnderlayDecoder : ConfigDecoder<UnderlayDefinition>(FLOOR_UNDERLAY) {
 
+    private val encoder = UnderlayEncoder()
+
     override fun create(size: Int) = Array(size) { UnderlayDefinition(it) }
+
+    override fun canonicalOpcodes(definition: UnderlayDefinition): IntArray = encoder.opcodes(definition)
 
     override fun UnderlayDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
@@ -24,8 +29,10 @@ class UnderlayDecoder : ConfigDecoder<UnderlayDefinition>(FLOOR_UNDERLAY) {
             3 -> scale = buffer.readShort() shl 2
             4 -> blockShadow = false
             5 -> aBoolean2892 = false
+            else -> error("Unhandled underlay definition opcode: $opcode for def $id")
         }
     }
+
 
     /**
      * Compute HSL values from RGB for underlay blending.
