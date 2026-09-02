@@ -90,6 +90,8 @@ object SourceCodecs {
         }
         // The definition indices, as editable JSON.
         DefinitionCodecs.register()
+        // The 2D art indices, as standard images and JSON.
+        ImageCodecs.register()
     }
 
     /** A built in codec: a provider may still replace it, an explicit [register] always does. */
