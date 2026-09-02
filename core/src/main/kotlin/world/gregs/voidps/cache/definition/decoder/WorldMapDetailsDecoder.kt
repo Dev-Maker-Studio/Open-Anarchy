@@ -7,7 +7,6 @@ import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.WORLD_MAP
 import world.gregs.voidps.cache.definition.data.WorldMapDefinition
 import world.gregs.voidps.cache.definition.data.WorldMapSection
-import java.util.*
 
 class WorldMapDetailsDecoder : DefinitionDecoder<WorldMapDefinition>(WORLD_MAP) {
 
@@ -35,15 +34,16 @@ class WorldMapDetailsDecoder : DefinitionDecoder<WorldMapDefinition>(WORLD_MAP) 
         anInt9542 = buffer.readInt()// Size?
         static = buffer.readUnsignedBoolean()
         anInt9547 = buffer.readUnsignedByte()// Always zero except "Braindeath Island" which is -1
-        buffer.readUnsignedByte()
+        rawZoom = anInt9547
+        mapSizeId = buffer.readUnsignedByte()
 
         if (anInt9547 == 255) {
             anInt9547 = 0
         }
-        sections = LinkedList()
         val length = buffer.readUnsignedByte()
+        sections = ArrayList(length)
         for (i in 0 until length) {
-            sections!!.addLast(
+            sections!!.add(
                 WorldMapSection(
                     buffer.readUnsignedByte(),
                     buffer.readShort(),

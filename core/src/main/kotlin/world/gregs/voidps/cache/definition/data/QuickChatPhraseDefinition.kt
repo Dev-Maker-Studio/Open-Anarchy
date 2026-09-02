@@ -3,6 +3,7 @@ package world.gregs.voidps.cache.definition.data
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.Extra
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 data class QuickChatPhraseDefinition(
     override var id: Int = -1,
@@ -10,9 +11,13 @@ data class QuickChatPhraseDefinition(
     var responses: IntArray? = null,
     var ids: Array<IntArray>? = null,
     var types: IntArray? = null,
+    /** Opcode 4 clears it: the phrase is hidden from the quick chat search. */
+    var searchable: Boolean = true,
     override var stringId: String = "",
-    override var extras: Map<String, Any>? = null
-) : Definition, Extra {
+    override var extras: Map<String, Any>? = null,
+    override var opcodeOrder: IntArray? = null,
+    override var shadowedPayloads: Array<ByteArray?>? = null
+) : Definition, Extra, OpcodeOrdered {
 
     fun buildString(enums: Array<EnumDefinition>, items: Array<ItemDefinition>, data: ByteArray) = buildString(80) {
         val (_, stringParts, _, ids, types) = this@QuickChatPhraseDefinition
@@ -67,6 +72,7 @@ data class QuickChatPhraseDefinition(
             if (other.types == null) return false
             if (!types.contentEquals(other.types)) return false
         } else if (other.types != null) return false
+        if (searchable != other.searchable) return false
         if (stringId != other.stringId) return false
         if (extras != other.extras) return false
 
@@ -79,6 +85,7 @@ data class QuickChatPhraseDefinition(
         result = 31 * result + (responses?.contentHashCode() ?: 0)
         result = 31 * result + (ids?.contentDeepHashCode() ?: 0)
         result = 31 * result + (types?.contentHashCode() ?: 0)
+        result = 31 * result + searchable.hashCode()
         result = 31 * result + stringId.hashCode()
         result = 31 * result + (extras?.hashCode() ?: 0)
         return result

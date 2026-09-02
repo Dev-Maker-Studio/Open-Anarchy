@@ -1,6 +1,7 @@
 package world.gregs.voidps.cache.definition.data
 
 import world.gregs.voidps.cache.Definition
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 data class QuickChatOptionDefinition(
     override var id: Int = -1,
@@ -8,8 +9,17 @@ data class QuickChatOptionDefinition(
     var quickReplyOptions: IntArray? = null,
     var navigateChars: CharArray? = null,
     var dynamicData: IntArray? = null,
-    var staticData: CharArray? = null
-) : Definition {
+    var staticData: CharArray? = null,
+    /**
+     * Opcode 4, which this revision's client reads as a bare flag and does nothing with.
+     *
+     * One file has it - index 25 archive 0 file 1, the `Quick Chat` root menu - and it is first in that
+     * file, so without it the record would be lost and the file would not come back.
+     */
+    var unusedFlag4: Boolean = false,
+    override var opcodeOrder: IntArray? = null,
+    override var shadowedPayloads: Array<ByteArray?>? = null
+) : Definition, OpcodeOrdered {
     fun getDynamicIndex(c: Char): Int {
         if (dynamicData == null) {
             return -1
@@ -58,6 +68,7 @@ data class QuickChatOptionDefinition(
             if (other.staticData == null) return false
             if (!staticData.contentEquals(other.staticData)) return false
         } else if (other.staticData != null) return false
+        if (unusedFlag4 != other.unusedFlag4) return false
 
         return true
     }
@@ -69,6 +80,7 @@ data class QuickChatOptionDefinition(
         result = 31 * result + (navigateChars?.contentHashCode() ?: 0)
         result = 31 * result + (dynamicData?.contentHashCode() ?: 0)
         result = 31 * result + (staticData?.contentHashCode() ?: 0)
+        result = 31 * result + unusedFlag4.hashCode()
         return result
     }
 }
