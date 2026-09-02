@@ -1,16 +1,18 @@
 package world.gregs.voidps.cache.source.codec
 
 import world.gregs.voidps.cache.Index
+import java.util.ServiceLoader
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Which codec owns which index.
  *
  * The defaults below are the raw ones - what a source tree falls back to for an index nothing
- * better has been written for. A module that has something better registers it before the tree
- * is read or written; the `cs2` module claims index 12, and each typed definition codec claims
- * its own index the same way. Registration is a process-wide decision, so it belongs in a
- * module's initialisation and not in the middle of a build.
+ * better has been written for. A module that has something better claims it with a
+ * [SourceCodecProvider] on the classpath - the `cs2` module claims index 12 that way - which is
+ * loaded here after the built-ins, so no entry point has to remember to register anything.
+ * [register] is the same decision made by hand, for a test or a tool with its own codec;
+ * registration is process-wide, so it belongs in initialisation and not in the middle of a build.
  */
 object SourceCodecs {
 
@@ -53,8 +55,9 @@ object SourceCodecs {
     fun registered(): List<Int> = codecs.keys.sorted()
 
     /**
-     * Put every index back to the codec it starts with. Only tests need this; a module that
-     * registered a codec has to register it again afterwards.
+     * Put every index back to the codec it starts with: the built-ins, then whatever the
+     * [SourceCodecProvider]s on the classpath claim. Only tests need to call this; a codec
+     * registered by hand with [register] has to be registered again afterwards.
      */
     fun reset() {
         codecs.clear()
@@ -65,6 +68,11 @@ object SourceCodecs {
         // Indices whose archives hold more than one file.
         for (index in MULTI_FILE) {
             codecs[index] = RawFilesCodec.NESTED
+        }
+        // A module that ships a codec claims its index by being on the classpath, so every entry
+        // point - the servers, the CLI, the tests - reads and writes the same layout.
+        for (provider in ServiceLoader.load(SourceCodecProvider::class.java, javaClass.classLoader)) {
+            codecs.putAll(provider.codecs())
         }
     }
 }

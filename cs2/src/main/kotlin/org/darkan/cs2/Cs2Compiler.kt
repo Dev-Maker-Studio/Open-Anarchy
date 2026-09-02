@@ -51,7 +51,19 @@ import world.gregs.voidps.cache.Cache
  *
  * @property folder the folder of `.ts` sources this compiler reads, as handed in.
  */
-class Cs2Compiler(private val cache: Cache, val folder: File) {
+class Cs2Compiler(
+    private val cache: Cache,
+    val folder: File,
+    /**
+     * Where the corpus analysis comes from.
+     *
+     * The default analyses [cache] itself, which is what a caller that only compiles wants. A
+     * caller that is also decompiling the same cache - the source tree codec unpacks and packs
+     * index 12 in one process - passes its own [Cs2Analyzer] instead, because the analysis takes
+     * seconds and there is no reason to do it twice.
+     */
+    analysis: () -> Cs2Analyzer = { Cs2Analyzer(cache).also { it.analyse() } },
+) {
 
     /**
      * The corpus analysis, done once on first use.
@@ -59,9 +71,7 @@ class Cs2Compiler(private val cache: Cache, val folder: File) {
      * `by lazy` rather than an `init` block on purpose: constructing a compiler for a tree that
      * turns out to need no rebuild should cost nothing.
      */
-    private val analyzer: Cs2Analyzer by lazy {
-        Cs2Analyzer(cache).also { it.analyse() }
-    }
+    private val analyzer: Cs2Analyzer by lazy(analysis)
 
     private val project: Cs2SourceProject by lazy {
         Cs2SourceProject(cache, analyzer, folder)

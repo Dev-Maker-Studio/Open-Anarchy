@@ -143,10 +143,19 @@ the JS5 multi-file layout.
 | `VerbatimGroupCodec` | index 0 | `<archive>.grp` - the decompressed group verbatim, chunk table and all |
 | `DefinitionJsonCodec<T>` | every definition type with a byte-exact encoder | `<definitionId>.json` (id = archive/file packed the way the decoder does) |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
-| `Cs2SourceCodec` | index 12 | the TypeScript layout `cs2 decompile-all` writes (`<category>/<name>.ts`), provided by the `cs2` module |
+| `Cs2SourceCodec` | index 12 | the TypeScript layout `cs2 decompile-all` writes (`<category>/<name>.ts`), provided by the `cs2` module - see *clientscripts* below |
 
 A codec is registered per index in `SourceCodecs` before a tree is read or written, so a module
-that has something better than raw bytes for an index claims it (`SourceCodecs.register(12, ...)`).
+that has something better than raw bytes for an index claims it. A module outside `core` claims
+its index by **being on the classpath**: it ships a `SourceCodecProvider` (`fun codecs(): Map<Int,
+SourceCodec>`) declared in
+`META-INF/services/world.gregs.voidps.cache.source.codec.SourceCodecProvider`, and `SourceCodecs`
+loads every provider after its own built-ins. That is what `cs2` does for index 12, and it is why
+the servers, the tools CLI and the tests all read and write the same layout without any of them
+registering anything - a codec that had to be registered by hand would eventually be forgotten by
+one entry point, which would silently write a tree with the raw codec instead.
+`SourceCodecs.register(index, codec)` is the same decision made by hand, for a test or a tool with
+a codec of its own.
 `ConfigCodec` keeps the same kind of registry keyed by config archive id, and hands each sub-codec
 its own directory (`RawFilesCodec.FLAT`, which drops the redundant archive directory). Config
 directories are named in the gameval vocabulary where the type has one - `underlay`, `idk`,
@@ -164,19 +173,83 @@ catalogs at display time; the data never duplicates them.
 
 ### The pristine fallback
 
-A codec that cannot promise to reproduce a group says so (`SourceCodec.exact(archive)`), and
-`unpack` then packs what the codec wrote straight back and compares. When the bytes differ, the
-original bytes are written next to the editable file as `<name>.pristine` and the editable file's
-SHA-256 is recorded under `pristine` in `index.json`. `pack` emits the pristine bytes while the
-editable file still hashes to that value and compiles the editable file otherwise (deleting the
-stale sidecar); assembling that is the codec's own job, since only it knows its layout. The raw
-codecs keep the bytes and are exact by construction, so none of this runs for them. `cache status`
-reports the pristine count per type so encoder gaps are visible; the goal is zero, and the count
-can only shrink as encoders improve or files are edited.
+A codec that cannot reproduce a group keeps the original bytes next to the editable file as
+`<name>.pristine` and records the editable file's SHA-256 under `pristine` in `index.json`. `pack`
+emits the pristine bytes while the editable file still hashes to that value and compiles the
+editable file otherwise. Assembling that is the codec's own job, since only it knows its layout:
+it returns the sidecar as one more file from `unpack`, and the hashes in `UnpackedArchive.pristine`.
+The raw codecs keep the bytes and are exact by construction, so none of this runs for them.
+`cache status` reports the pristine count per type so encoder gaps are visible; the goal is zero,
+and the count can only shrink as encoders improve or files are edited. A *stale* sidecar - the
+guarded file no longer hashes to the recorded value - is `status`'s way of showing an edit that
+has not been packed yet.
 
-This is what lets a normalising compiler (the CS2 decompiler drops dead code by design, so ~1,000
-scripts recompile to different but equivalent bytes) and a not-yet-exact encoder coexist with the
-parity guarantee.
+`SourceCodec.exact(archive)` says whether packing what the codec wrote reproduces the group, and
+`unpack` packs the archive again to count the ones that do not. A codec that installs its own
+fallback while it unpacks - `Cs2SourceCodec` does, because it has to compile each script anyway to
+find out - is `exact` and reports its count through `UnpackedArchive.pristine` instead;
+`UnpackReport.inexact` only ever sees a codec that leaves the decision to the framework, so
+`cache unpack`'s pristine line reads 0 for such an index and `cache status` is the number to read.
+
+This is what lets a normalising compiler (the CS2 decompiler drops dead code by design, so 1,066
+of the 6,567 clientscripts recompile to different but equivalent bytes) and a not-yet-exact
+encoder coexist with the parity guarantee.
+
+### clientscripts
+
+Index 12 is not stored as bytecode. `clientscripts/` **is** a CS2 editor project - exactly the
+folder `cs2 decompile-all` writes (`docs/cs2-editor.md`) - so a clientscript is edited as
+TypeScript and the server compiles it back when it rebuilds the cache:
+
+```
+clientscripts/
+  index.json                       the reference table, as for every index
+  cs2.d.ts                         every opcode's signature, with the argument kinds the corpus taught us
+  gamevals.d.ts                    the id constants (Obj.abyssal_whip, Component.wornitems.head)
+  vars.d.ts                        every variable any script touches, bound to its id
+  tsconfig.json                    without it an editor opens each script as its own program
+  dead-code.md                     what the decompiler found that cannot affect what a script does
+  proc/quicksort.ts                one file per script, at its gameval name's path
+  clientscript/<name>.ts
+  cs2/cs2_1620.ts                  a script with no proven name, under the catalog's placeholder prefix
+  proc/<name>.ts.pristine          the shipped bytes of a script the compiler normalises
+```
+
+A script's identity is its gameval name, not a number: the path and the `// [proc,quicksort]`
+header both spell it out and `gamevals/clientscript.json` turns it into the archive id. Renaming a
+script therefore moves its file - `cs2 sync-names` writes an editor's rename back to the catalog
+and relocates the file - and nothing else may move it.
+
+The five project files are a property of the *corpus*, not of any one archive: `vars.d.ts` only
+knows a variable exists because some script uses it, and `cs2.d.ts` carries argument kinds learned
+from all 6,567 scripts at once. `SourceCodec` has no per-index hook to write them from, so the
+first archive to be unpacked carries them out with it (see *API gaps* below).
+
+**1,066 of the 6,567 scripts are pristine.** The decompiler normalises by design - it drops
+unreachable code, folds initialisers into declarations, lays branches out canonically - so those
+scripts compile back to equivalent but different bytes and their originals are kept in
+`<name>.ts.pristine`. The other 5,501 compile back to the cache's own bytes exactly. Either way
+the tree reproduces index 12 byte for byte until a script is actually edited.
+
+**Editing a script.** Edit the `.ts` and restart the server (or run `tools cache build`). The
+edited file no longer hashes to the guard `index.json` recorded, so the pack compiles it instead of
+emitting the shipped bytes; a compile error names the file and the diagnostic as
+`file:line:col: what went wrong` and fails the build rather than serving stale bytecode. Only the
+archives whose files changed are recompiled, so an edit to one script costs one compile. Renaming
+an identifier in `vars.d.ts` or `gamevals.d.ts` is a rename, not an edit: run `cs2 sync-names` to
+write it back into the catalogs, which is where the names live.
+
+**What a pack of index 12 costs.** Compiling anything at all needs the whole corpus analysed first
+- a script's return signature is only decidable across calls - which is about 7 s, done once and
+shared. After that a compile is well under a millisecond: all 6,567 scripts compile in 1.3 s. A
+build that changes no clientscript never constructs the compiler and pays none of it.
+
+**One limit worth knowing.** That corpus analysis reads index 12 out of a cache, and with
+`CACHE_SOURCE_PATH` set the cache the server opens *is* the build - so a server building a tree
+whose clientscripts changed has no analysed corpus to compile against yet. It says so
+(`Cs2SourceCodec.cache` is the seam for handing one in) rather than deadlocking on the build it is
+part of. Everything else - the tools CLI, a server serving a prepacked cache, the tests - has a
+cache and is unaffected. See *API gaps* below.
 
 ## The packed build
 
@@ -274,9 +347,30 @@ Each command prints one line per index as it goes and then its totals:
   value `index.json` recorded, so the next pack will compile the edit rather than emit the original.
   It also says whether the tree has its `gamevals` directory and how many catalogs are in it.
 
-Against the 727 cache on one 12-core machine: unpack 11.5 s (140,692 archives, 397,004 files,
-1.06 GB, 8 opaque, 0 pristine), pack 12.1 s, verify 9.5 s at full parity, a no-op build 2.0 s and a
-one-archive build 3.0 s.
+Against the 727 cache on one 12-core machine: unpack 21 s (140,692 archives, 398,112 files,
+1.09 GB, 8 opaque, 1,066 pristine - all of them clientscripts), pack 18 s, verify 16 s at full
+parity, a no-op build 2.0 s and a one-archive build 3.0 s. Index 12 as TypeScript is what most of
+the growth over the raw layout is: about 5 s of the unpack and 6 s of the pack are the CS2 corpus
+analysis and the compile of every script, and a build that touches one clientscript costs 9.6 s -
+the analysis, plus one compile.
+
+## API gaps a codec richer than bytes runs into
+
+`SourceCodec` was written for a codec whose files are a function of one archive. `Cs2SourceCodec`
+is the first that is not, and it works around four things rather than changing the interface:
+
+| gap | what it forces | what would fix it |
+|---|---|---|
+| No per-index hook. A codec is only ever called per archive, and `Unpacker` deletes every file under the index directory that no archive claimed. | The five corpus-wide project files are returned from whichever archive is unpacked first, so that they are claimed at all. | `unpackIndex(directory, index)` / `packIndex(directory, index)` on `SourceCodec`, called once around the per-archive loop. |
+| `archiveOf(path)` gets the path and nothing else. | A script's *header* is what binds it to an archive, and cannot be read. The path is the catalog's own and a rename moves file and catalog together, so the two agree for anything the tools wrote; the codec also offers `archiveOf(directory, path)`, which nothing in core can call. | `archiveOf(directory, path)` in the interface. |
+| `archiveOf` is two-valued: an archive, or "not mine". | The project files answer null, so an incremental build reports them as belonging to no codec. Harmless - it is a report line - but wrong. | A third answer meaning "mine, but not an archive", or a `claims(path)` companion. |
+| A codec is not told which `Cache` the tree is being unpacked from or built for. | Anything needing more than the bytes it is handed reaches for `Cache.get()`, which is the one thing a build from a tree cannot use. `Cs2SourceCodec.cache` is the seam. | The cache on `SourceArchive`, and a cache (or a bootstrap cache) passed to `Builder`/`Packer`. |
+
+The last one is the one that matters. The right fix for index 12 specifically is not to hand the
+codec a cache at all: everything the compiler needs from the corpus is each callee's signature,
+and every callee's signature is written out in its own `.ts`. An index 12 context derived from the
+tree's sources rather than from bytecode would make the codec self-sufficient and let a server
+build a tree whose clientscripts changed with no prepacked cache anywhere.
 
 ## Future work the design leaves room for
 
@@ -285,6 +379,9 @@ one-archive build 3.0 s.
 - Typed codecs for more indices (sprites as PNG, maps as JSON for the map editor, models). Each
   is one codec class plus a byte-exact proof; the pristine fallback carries the rest meanwhile.
 - Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
+- An index 12 context built from the tree's own `.ts` signatures rather than from cached bytecode,
+  so a server can build a tree whose clientscripts changed with no other cache to read.
+- Closing the `SourceCodec` gaps above, which would let `Cs2SourceCodec` stop working around them.
 
 
 ## Definition encoders
