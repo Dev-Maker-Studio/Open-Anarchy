@@ -6,6 +6,7 @@ import world.gregs.voidps.cache.Config.RENDER_ANIMATIONS
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.definition.data.BASDefinition
+import world.gregs.voidps.cache.definition.encoder.BASEncoder
 
 /**
  * Decodes Base Animation Set (BAS / Render Animations) definitions from the
@@ -14,10 +15,18 @@ import world.gregs.voidps.cache.definition.data.BASDefinition
  * BAS definitions store movement animation sets for players and NPCs,
  * including stand, walk, run, and teleport animations with directional
  * variants and turning animations.
+ *
+ * Archive 32 is the one and only render animation archive; the `bas` and "render animation" names
+ * are the same type. Every opcode's payload is kept on the definition so the file can be written
+ * back byte for byte.
  */
 class BASDecoder : DefinitionDecoder<BASDefinition>(Index.CONFIGS) {
 
+    private val encoder = BASEncoder()
+
     override fun create(size: Int) = Array(size) { BASDefinition(it) }
+
+    override fun canonicalOpcodes(definition: BASDefinition): IntArray = encoder.opcodes(definition)
 
     override fun getArchive(id: Int) = RENDER_ANIMATIONS
 
@@ -43,41 +52,41 @@ class BASDecoder : DefinitionDecoder<BASDefinition>(Index.CONFIGS) {
             9 -> runDir1 = buffer.readBigSmart()
             // Opcode 26: modelWidth and modelLength (2 unsigned bytes, each * 4)
             26 -> {
-                buffer.readUnsignedByte() // modelWidth * 4
-                buffer.readUnsignedByte() // modelLength * 4
+                modelWidth = (4 * buffer.readUnsignedByte()).toShort().toInt()
+                modelLength = (4 * buffer.readUnsignedByte()).toShort().toInt()
             }
             // Opcode 27: per-slot vertex transformations (slot index + 6 shorts)
             27 -> {
-                buffer.readUnsignedByte() // slot index
-                repeat(6) {
-                    buffer.readShort() // transformation value
-                }
+                val slots = objVerticeTransformations ?: arrayOfNulls<IntArray>(BASDefinition.SLOTS).also { objVerticeTransformations = it }
+                val slot = buffer.readUnsignedByte()
+                slots[slot] = IntArray(6) { buffer.readShort() }
             }
             // Opcode 28: per-slot obj visibility array
             28 -> {
                 val count = buffer.readUnsignedByte()
-                repeat(count) {
-                    buffer.readUnsignedByte() // visibility value
+                objVisibility = IntArray(count) {
+                    val value = buffer.readUnsignedByte()
+                    if (value == 255) -1 else value
                 }
             }
-            29 -> buffer.readUnsignedByte()  // yawAcceleration
-            30 -> buffer.readUnsignedShort() // yawMaxVelocity
-            31 -> buffer.readUnsignedByte()  // rollAcceleration
-            32 -> buffer.readUnsignedShort() // rollMaxVelocity
-            33 -> buffer.readShort()         // rollTargetAngle
-            34 -> buffer.readUnsignedByte()  // pitchAcceleration
-            35 -> buffer.readUnsignedShort() // pitchMaxVelocity
-            36 -> buffer.readShort()         // pitchTargetAngle
-            37 -> buffer.readUnsignedByte()  // unused
+            29 -> yawAcceleration = buffer.readUnsignedByte()
+            30 -> yawMaxVelocity = buffer.readUnsignedShort()
+            31 -> rollAcceleration = buffer.readUnsignedByte()
+            32 -> rollMaxVelocity = buffer.readUnsignedShort()
+            33 -> rollTargetAngle = buffer.readShort()
+            34 -> pitchAcceleration = buffer.readUnsignedByte()
+            35 -> pitchMaxVelocity = buffer.readUnsignedShort()
+            36 -> pitchTargetAngle = buffer.readShort()
+            37 -> unused = buffer.readUnsignedByte()
             // Opcodes 38-42: stand turn and walk directional animations
             38 -> standTurn1 = buffer.readBigSmart()
             39 -> standTurn2 = buffer.readBigSmart()
             40 -> walkDir3 = buffer.readBigSmart()
             41 -> walkDir2 = buffer.readBigSmart()
             42 -> walkDir1 = buffer.readBigSmart()
-            43 -> buffer.readUnsignedShort() // unknown
-            44 -> buffer.readUnsignedShort() // unknown
-            45 -> buffer.readUnsignedShort() // iconHeightOverride
+            43 -> unused43 = buffer.readUnsignedShort()
+            44 -> unused44 = buffer.readUnsignedShort()
+            45 -> iconHeightOverride = buffer.readUnsignedShort()
             // Opcodes 46-51: turn animations for teleport, run, and walk
             46 -> teleTurn1 = buffer.readBigSmart()
             47 -> teleTurn2 = buffer.readBigSmart()
@@ -88,31 +97,34 @@ class BASDecoder : DefinitionDecoder<BASDefinition>(Index.CONFIGS) {
             // Opcode 52: random stand sequences + chances
             52 -> {
                 val count = buffer.readUnsignedByte()
-                repeat(count) {
-                    buffer.readBigSmart() // animation id
-                    buffer.readUnsignedByte() // chance weight
+                val sequences = IntArray(count)
+                val chances = IntArray(count)
+                for (index in 0 until count) {
+                    sequences[index] = buffer.readBigSmart()
+                    chances[index] = buffer.readUnsignedByte()
                 }
+                randomStandSequences = sequences
+                randomStandSequenceChances = chances
             }
-            // Opcode 53: rendersShadow = false (boolean flag, no data bytes)
-            53 -> { }
-            // Opcode 54: hillRotateX and hillRotateZ (2 unsigned bytes, each << 6)
+            53 -> rendersShadow = false
+            // Opcode 54: hillRotateX and hillRotateZ (2 unsigned bytes, each shl 6)
             54 -> {
-                buffer.readUnsignedByte() // hillRotateX
-                buffer.readUnsignedByte() // hillRotateZ
+                hillRotateX = buffer.readUnsignedByte() shl 6
+                hillRotateZ = buffer.readUnsignedByte() shl 6
             }
             // Opcode 55: per-slot turn angle adjustment (slot + unsigned short)
             55 -> {
-                buffer.readUnsignedByte() // slot index
-                buffer.readUnsignedShort() // turn angle value
+                val slots = turnAngleAdjustment ?: IntArray(BASDefinition.SLOTS).also { turnAngleAdjustment = it }
+                slots[buffer.readUnsignedByte()] = buffer.readUnsignedShort()
             }
             // Opcode 56: per-slot projection offset (slot + 3 shorts)
             56 -> {
-                buffer.readUnsignedByte() // slot index
-                repeat(3) {
-                    buffer.readShort() // projection offset per direction
-                }
+                val slots = projectionOffset ?: arrayOfNulls<IntArray>(BASDefinition.SLOTS).also { projectionOffset = it }
+                val slot = buffer.readUnsignedByte()
+                slots[slot] = IntArray(3) { buffer.readShort() }
             }
             else -> error("Unhandled BAS definition opcode: $opcode for def $id")
         }
     }
+
 }

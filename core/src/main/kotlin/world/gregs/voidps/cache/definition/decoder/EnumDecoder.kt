@@ -18,8 +18,7 @@ class EnumDecoder : DefinitionDecoder<EnumDefinition>(ENUMS) {
 
     override fun getArchive(id: Int) = id ushr 8
 
-    override fun readLoop(definition: EnumDefinition, buffer: Reader) =
-        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
+    override fun canonicalOpcodes(definition: EnumDefinition): IntArray = encoder.opcodes(definition)
 
     override fun EnumDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {

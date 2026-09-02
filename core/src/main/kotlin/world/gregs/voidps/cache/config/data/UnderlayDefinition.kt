@@ -1,6 +1,7 @@
 package world.gregs.voidps.cache.config.data
 
 import world.gregs.voidps.cache.Definition
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 data class UnderlayDefinition(
     override var id: Int = -1,
@@ -13,4 +14,15 @@ data class UnderlayDefinition(
     var saturation: Int = 0,
     var lightness: Int = 0,
     var chroma: Int = 0
-) : Definition
+) : Definition, OpcodeOrdered {
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
+}

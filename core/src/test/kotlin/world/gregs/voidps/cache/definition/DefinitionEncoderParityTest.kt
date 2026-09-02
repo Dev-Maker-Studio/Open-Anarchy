@@ -7,7 +7,7 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index
-import world.gregs.voidps.cache.OrderedDefinitionEncoder
+import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.AnimationDefinition
 import world.gregs.voidps.cache.definition.data.EnumDefinition
 import world.gregs.voidps.cache.definition.data.GraphicDefinition
@@ -91,7 +91,7 @@ class DefinitionEncoderParityTest {
         index: Int,
         bits: Int,
         decoder: DefinitionDecoder<T>,
-        encoder: OrderedDefinitionEncoder<T>,
+        encoder: OpcodeEncoder<T>,
         residuals: Int = 0,
         create: (Int) -> T
     ) where T : Definition, T : OpcodeOrdered {
@@ -123,7 +123,7 @@ class DefinitionEncoderParityTest {
                 if (definition.opcodeOrder == null) {
                     canonical++
                 }
-                if (definition.shadowedRecords != null) {
+                if (definition.shadowedPayloads != null) {
                     shadowed++
                 }
                 if (encoded.contentEquals(data)) {

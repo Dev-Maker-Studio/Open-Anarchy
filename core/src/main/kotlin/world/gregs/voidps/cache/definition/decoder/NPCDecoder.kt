@@ -13,8 +13,7 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
 
     override fun create(size: Int) = Array(size) { NPCDefinition(it) }
 
-    override fun readLoop(definition: NPCDefinition, buffer: Reader) =
-        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
+    override fun canonicalOpcodes(definition: NPCDefinition): IntArray = encoder.opcodes(definition)
 
     // Index 18 packs 128 npcs per archive (id ushr 7 below); the base class assumes 256.
     override fun size(cache: Cache): Int {

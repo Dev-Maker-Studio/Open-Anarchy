@@ -3,7 +3,6 @@ package world.gregs.voidps.cache.definition.data
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.Extra
 import world.gregs.voidps.cache.definition.OpcodeOrdered
-import world.gregs.voidps.cache.definition.ShadowedRecord
 
 data class AnimationDefinition(
     override var id: Int = -1,
@@ -44,10 +43,18 @@ data class AnimationDefinition(
      */
     var interleaveRecords: IntArray? = null,
     /** Opcode 16, a flag with no payload that the client of this revision reads and discards. */
-    var unusedFlag16: Boolean = false,
-    override var opcodeOrder: IntArray? = null,
-    override var shadowedRecords: List<ShadowedRecord>? = null
+    var unusedFlag16: Boolean = false
 ) : Definition, Extra, OpcodeOrdered {
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
 
     /** Opcodes 19 and 20 are one record per sound frame, not a field written twice. */
     override fun repeats(opcode: Int): Boolean = opcode == 19 || opcode == 20
@@ -117,11 +124,6 @@ data class AnimationDefinition(
             if (!interleaveRecords.contentEquals(other.interleaveRecords)) return false
         } else if (other.interleaveRecords != null) return false
         if (unusedFlag16 != other.unusedFlag16) return false
-        if (opcodeOrder != null) {
-            if (other.opcodeOrder == null) return false
-            if (!opcodeOrder.contentEquals(other.opcodeOrder)) return false
-        } else if (other.opcodeOrder != null) return false
-        if (shadowedRecords != other.shadowedRecords) return false
 
         return true
     }
@@ -153,8 +155,6 @@ data class AnimationDefinition(
         result = 31 * result + (soundSpeedRecords?.contentHashCode() ?: 0)
         result = 31 * result + (interleaveRecords?.contentHashCode() ?: 0)
         result = 31 * result + unusedFlag16.hashCode()
-        result = 31 * result + (opcodeOrder?.contentHashCode() ?: 0)
-        result = 31 * result + (shadowedRecords?.hashCode() ?: 0)
         return result
     }
 

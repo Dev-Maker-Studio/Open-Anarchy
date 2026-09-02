@@ -13,8 +13,7 @@ class AnimationDecoder : DefinitionDecoder<AnimationDefinition>(ANIMATIONS) {
 
     override fun create(size: Int) = Array(size) { AnimationDefinition(it) }
 
-    override fun readLoop(definition: AnimationDefinition, buffer: Reader) =
-        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
+    override fun canonicalOpcodes(definition: AnimationDefinition): IntArray = encoder.opcodes(definition)
 
     override fun getFile(id: Int) = id and 0x7f
 
@@ -107,6 +106,7 @@ class AnimationDecoder : DefinitionDecoder<AnimationDefinition>(ANIMATIONS) {
                 secondarySpeeds!![frame] = secondary
                 soundSpeedRecords = (soundSpeedRecords ?: IntArray(0)) + intArrayOf(frame, primary, secondary)
             }
+            else -> error("Unhandled animation definition opcode: $opcode for def $id")
         }
     }
 

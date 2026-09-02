@@ -12,8 +12,7 @@ class GraphicDecoder : DefinitionDecoder<GraphicDefinition>(SPOTANIMS) {
 
     override fun create(size: Int) = Array(size) { GraphicDefinition(it) }
 
-    override fun readLoop(definition: GraphicDefinition, buffer: Reader) =
-        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
+    override fun canonicalOpcodes(definition: GraphicDefinition): IntArray = encoder.opcodes(definition)
 
     override fun getFile(id: Int) = id and 0xff
 

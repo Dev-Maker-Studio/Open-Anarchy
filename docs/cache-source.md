@@ -246,60 +246,177 @@ tools cache status <tree>                 codec per index, pristine counts, stal
   is one codec class plus a byte-exact proof; the pristine fallback carries the rest meanwhile.
 - Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
 
+
 ## Definition encoders
 
-`DefinitionJsonCodec` needs `encode(decode(bytes)) == bytes` or the file keeps a `.pristine` copy.
-The seven config types of indices 16 to 22 reach that for **every file in the cache** -
-`DefinitionEncoderParityTest` walks the reference table of each index (not the decoder's `size`,
-which rounds up to whole archives and invents ids), decodes with the decoder's `readLoop` and
-compares the encoder's output to the shipped bytes:
+`DefinitionJsonCodec<T>` can only store a type as editable JSON when its encoder reproduces the
+shipped file exactly - `encode(decode(bytes)) == bytes` for **every** file - otherwise the type has
+to keep a `.pristine` copy beside every file it cannot rebuild. Twenty-two types reach that bar for
+the whole 727 cache: the seven opcode keyed types of indices 16 to 22, the fourteen decoded
+archives of index 2, and index 3's interface components.
 
-| type | index | files | byte-identical | residuals |
-|---|---|---|---|---|
-| loc | 16 | 73,893 | 73,893 | none |
-| enum | 17 | 6,048 | 6,048 | none |
-| npc | 18 | 15,662 | 15,662 | none |
-| obj | 19 | 25,355 | 25,355 | none |
-| seq | 20 | 17,186 | 17,186 | none |
-| spotanim | 21 | 3,252 | 3,252 | none |
-| varbit | 22 | 11,713 | 11,713 | none |
+Three tests measure it, each against the shipped bytes rather than against a re-decode:
 
-**No file of these types needs a pristine copy.**
+- `core/src/test/kotlin/world/gregs/voidps/cache/definition/DefinitionEncoderParityTest.kt` (indices 16-22)
+- `core/src/test/kotlin/world/gregs/voidps/cache/config/ConfigEncoderParityTest.kt` (index 2)
+- `core/src/test/kotlin/world/gregs/voidps/cache/definition/InterfaceEncoderParityTest.kt` (index 3)
 
-Getting there took two things the decoded fields could not hold, both on `OpcodeOrdered`, which
-the seven definitions implement:
+All three enumerate files through the reference table (`Cache.archives` / `Cache.files`), not through
+a decoder's `size`, which rounds up to whole archives and invents ids that have no file. They decode
+with the decoder's `readLoop`, encode into a fresh `BufferWriter` and compare byte for byte, and they
+skip with a message when `../cache/` is absent.
 
-- **`opcodeOrder`** - Jagex's packer wrote fields in no fixed order. Only 1,914 of 73,893 locs,
-  121 of 15,662 npcs and 7,231 of 25,355 objs are in ascending opcode order; the rest carry the
-  file's own order and the encoder follows it. It is null when the order is the ascending one the
-  encoder emits by itself, which is what a definition authored by hand gets - and the decoder
-  nulls it only after checking the encoder agrees, so a field the encoder cannot reproduce from
-  keeps the explicit order rather than silently changing the file.
-- **`shadowedRecords`** - a file may hold the same opcode twice with different payloads (1,280
-  locs, 597 npcs, 354 objs); the decoder keeps the last, as the client does. The payload of every
-  overwritten record is kept verbatim and replayed in place.
+### One mechanism
 
-The rest was decoder loss, fixed by adding fields (no existing field changed meaning):
+Everything a byte-exact encoder needs beyond the decoded fields lives on one interface, is replayed
+by one base class and is recorded in one place:
+
+| piece | where | what it does |
+|---|---|---|
+| `OpcodeOrdered` | `cache/definition/OpcodeOrdered.kt` | `opcodeOrder`, `shadowedPayloads`, `repeats(opcode)` - the file shape the fields cannot hold |
+| `OpcodeEncoder<T>` | `cache/OpcodeEncoder.kt` | replays the record list; subclasses implement `opcodes(definition)` and `encodeOpcode(definition, members, opcode, occurrence)` |
+| `DefinitionDecoder.readLoop` | `cache/DefinitionDecoder.kt` | records the shape for any `OpcodeOrdered` definition; `canonicalOpcodes(definition)` is each decoder's one line into its encoder |
+
+A definition file is a list of records - an opcode byte and its payload - closed by a 0 terminator,
+so an encoder built on `OpcodeEncoder` is driven by a list of opcodes rather than by a fixed sequence
+of `if (field != default)` blocks. `encodeOpcode` only ever writes one payload; it never decides
+whether to write a record at all. Three things make that exact:
+
+1. **The opcode order.** Jagex's packer emitted fields in no fixed order: only 1,913 of 73,893 locs,
+   120 of 15,662 npcs, 7,231 of 25,355 objs, 7 of 1,220 map elements and none of the 48 hitmarks are
+   in the order an encoder derives on its own. Two opcodes also routinely write the same field - a
+   hitmark's fade is either the bare opcode 11 or opcode 14 with a cycle, a loc's contoured ground
+   mode has six spellings, a mapscene with no sprite is either opcode 4 or opcode 1 with a sentinel -
+   so which opcodes a file carried cannot be derived from the values either.
+   `OpcodeOrdered.opcodeOrder` records the opcodes exactly as the file had them and the encoder
+   replays that list.
+2. **Payloads a repeated opcode overwrote.** A file may hold the same opcode twice with different
+   values (603 locs, 149 objs, 111 npcs, 8 seqs, and four index 2 files: overlay 94 with two slot
+   bytes, base animation set 1799 with two stand turn pairs, map elements 779 and 780 with two
+   background colours). Only the last write survives on the definition, as in the client, so
+   `OpcodeOrdered.shadowedPayloads` keeps the earlier payloads verbatim, indexed against
+   `opcodeOrder`, and the encoder replays them in place. An entry stays null when the overwritten
+   record carried the same bytes as the write that replaced it - re-encoding from the fields
+   reproduces those - and for every opcode `repeats` declares to be one record per array element
+   rather than a field written twice (a seq's sound frames, a base animation set's per slot
+   transforms), which is written from its `occurrence`th element instead.
+3. **Values the decoders threw away.** Additive fields only; no existing field changed meaning. See
+   the table below.
+
+**The recording rule is self-validating.** `readLoop` records the order for every file and nulls it
+again only when the encoder's own `opcodes(definition)` reproduces it exactly. So a file that was
+packed canonically - and any definition authored by hand - carries no order at all, while anything
+the encoder would not emit exactly keeps the file's own order and comes back unchanged regardless.
+Parity therefore never rests on a presence rule (`if (field != default)`) being right: a wrong rule
+costs a stored `opcodeOrder`, not a corrupted file. A definition with any shadowed payload always
+keeps its order, because the two are indexed against each other.
+
+**Decode with `readLoop`, never `load`.** The recording happens in the read path for exactly this
+reason: `changeValues` derives values that are not in the file - an obj's note and lend templates are
+copied wholesale from another definition, an overlay packs its id into its slot, a quest falls back
+to its name for its list name - and a definition re-encoded after that no longer matches its file.
+Nothing an encoder reads is derived in `changeValues`: where the client derives an unrecoverable
+value, the decoder keeps the raw one beside it (`OverlayDefinition.slot`, `colourRgb`).
+
+### Parity per type
+
+`order` and `shadow` are how many files have to carry that metadata; the rest are reproduced from
+their values alone.
+
+| index | archive | type | decoder / encoder | files | byte identical | residuals | order | shadow |
+|---|---|---|---|---|---|---|---|---|
+| 16 | all | `loc` | `ObjectDecoder` / `ObjectEncoder` | 73,893 | 73,893 | none | 71,980 | 603 |
+| 17 | all | `enum` | `EnumDecoder` / `EnumEncoder` | 6,048 | 6,048 | none | 1,734 | 0 |
+| 18 | all | `npc` | `NPCDecoder` / `NPCEncoder` | 15,662 | 15,662 | none | 15,542 | 111 |
+| 19 | all | `obj` | `ItemDecoder` / `ItemEncoder` | 25,355 | 25,355 | none | 18,124 | 149 |
+| 20 | all | `seq` | `AnimationDecoder` / `AnimationEncoder` | 17,186 | 17,186 | none | 11,260 | 8 |
+| 21 | all | `spotanim` | `GraphicDecoder` / `GraphicEncoder` | 3,252 | 3,252 | none | 584 | 0 |
+| 22 | all | `varbit` | `VarBitDecoder` / `VarBitEncoder` | 11,713 | 11,713 | none | 0 | 0 |
+| 2 | 1 | `underlay` | `UnderlayDecoder` / `UnderlayEncoder` | 171 | 171 | none | 13 | 0 |
+| 2 | 3 | `idk` | `IdentityKitDecoder` / `IdentityKitEncoder` | 652 | 652 | none | 270 | 0 |
+| 2 | 4 | `overlay` | `OverlayDecoder` / `OverlayEncoder` | 248 | 248 | none | 135 | 1 |
+| 2 | 5 | `inv` | `InventoryDecoder` / `InventoryEncoder` | 674 | 674 | none | 0 | 0 |
+| 2 | 11 | `param` | `ParamDecoder` / `ParamEncoder` | 2,583 | 2,583 | none | 510 | 0 |
+| 2 | 16 | `varp` | `PlayerVariableParameterDecoder` / `…Encoder` | 2,696 | 2,696 | none | 0 | 0 |
+| 2 | 19 | `varc` | `ClientVariableParameterDecoder` / `…Encoder` | 1,992 | 1,992 | none | 0 | 0 |
+| 2 | 26 | `struct` | `StructDecoder` / `StructEncoder` | 11,389 | 11,389 | none | 0 | 0 |
+| 2 | 32 | `bas` | `BASDecoder` / `BASEncoder` | 2,574 | 2,574 | none | 895 | 1 |
+| 2 | 34 | `mapscene` | `MapSceneDecoder` / `MapSceneEncoder` | 107 | 107 | none | 0 | 0 |
+| 2 | 35 | `quest` | `QuestDecoder` / `QuestEncoder` | 204 | 204 | none | 201 | 0 |
+| 2 | 36 | `mapelement` | `WorldMapInfoDecoder` / `WorldMapInfoEncoder` | 1,220 | 1,220 | none | 1,213 | 2 |
+| 2 | 46 | `hitmark` | `HitSplatDecoder` / `HitSplatEncoder` | 48 | 48 | none | 48 | 0 |
+| 2 | 47 | `varclan` | `ClanVarDecoder` / `ClanVarEncoder` | 2,845 | 2,845 | none | 0 | 0 |
+| 3 | all | `interface` component | `InterfaceDecoder` / `InterfaceEncoder` | 65,239 | 65,239 | none | - | - |
+
+**245,751 files - 153,109 of indices 16 to 22, 27,403 of index 2 and 65,239 interface components -
+all byte identical. No file of any of these types needs a pristine copy.** Index 2's other 31
+archives have no decoder and stay raw (`RawFilesCodec`).
+
+Interface components are the one type here that is not opcode keyed: index 3 is a fixed field layout,
+`InterfaceEncoder` was already byte exact and needed no change, and it implements neither
+`OpcodeOrdered` nor `OpcodeEncoder`. `InterfaceEncoderParityTest` is the standalone proof, so a change
+to either side shows up as a byte difference rather than only as a field difference.
+
+### Lossless fields added
 
 | type | field | what was lost |
 |---|---|---|
 | loc | `singleAnimation` | opcode 24's id when it is -1, which the client throws away |
 | loc | `rawPercents` | opcode 106's animation odds, rescaled to 65535ths of their sum on read |
 | loc, npc | `rawOptions` | which opcode an option came from - 30 to 34 and 150 to 154 share one array |
-| loc, npc, obj | `paramRecords` | opcode 249 records when a file lists a param id twice |
-| npc | `unusedMovementType` | opcode 128, read and discarded by both client and decoder |
+| loc, npc, obj, struct | `paramRecords` | opcode 249 records when a file lists a param id twice (60 objs, 62 npcs, 37 structs) |
+| npc | `unusedMovementType` | opcode 128, read and discarded by both client and decoder (named unused because the world module derives a `movementType` of its own from `slowWalk`) |
 | enum | `arraySize` | the array capacity of the opcode 7 and 8 forms |
 | enum | `entries` | entry records when a file lists a key twice; the map is now insertion ordered |
 | seq | `soundVolumeRecords`, `soundSpeedRecords` | which frame each opcode 19 and 20 record set |
 | seq | `interleaveRecords` | opcode 3's indices when the file repeats one |
 | seq | `unusedFlag16` | opcode 16, a flag this revision's client ignores |
+| overlay | `colourRgb`, `blendColourRgb` | opcodes 1 and 7's rgb; the packed hsl the client derives is not invertible |
+| overlay | `slot` | opcode 11's raw byte, before `changeValues` packs the id into it |
+| mapelement | `displayFlags`, `randomisedMinimapPosition` | whole flag bytes, of which the client reads two bits |
+| quest | `type`, `questPointRequirement` | opcodes 6 and 15, read and discarded |
+| idk | `unknown3` | opcode 3, which the client's `IdkType` does not have at all, in 13 files |
+| varclan, varp | `typeChar` | the cp1252 type descriptor; `CS2Type.forJagexDesc` is many to one |
+| bas | the whole lower half of `BASDefinition` | the model box, camera easing, random stand table and per slot transforms (opcodes 26-56), all previously read and dropped |
 
-One caveat for the codec: decode with the decoder's `readLoop`, never `load`. `changeValues`
-derives values that are not in the file - an obj's note and lend templates are copied wholesale
-from another definition, a seq's two precedence fields are filled in from its interleave order -
-and a definition re-encoded after that no longer matches its file.
+Two ordering rules matter to any future definition codec: `Parameterized.readParameterRecords`
+decodes into an insertion ordered `Int2ObjectArrayMap` and `Extra.readParameters` into an
+`Object2ObjectLinkedOpenHashMap` (it was a plain open hash map, which iterated in hash order and
+reordered two quests' params on the way out). A decoder that takes a `Parameters` catalog must be
+built with `Parameters.EMPTY` when its output is going to be encoded again: with a catalog the extras
+are keyed by param *name*, and a name cannot be turned back into the three byte key - `writeExtras`
+says so rather than writing a wrong file. `Parameters.EMPTY` keys by the id as a decimal string, and
+is the default for every decoder here.
 
-Also fixed: loc transform ids (opcodes 77 and 92) are bigSmarts, not shorts, so the shared
-`Transforms.writeTransforms` helper wrote `-1` as `0xffff`, which reads back as a 4-byte smart.
-Npc transforms really are shorts, so the two cannot share one writer: the helper is gone and each
-encoder writes its own.
+### Decoder bugs found and fixed
+
+| decoder | bug | effect before |
+|---|---|---|
+| `IdentityKitDecoder` | model ids (opcode 2) and head models (60-69) are big smarts, not shorts | 29 of 652 files ran off the end of the buffer, and 8 more left trailing bytes |
+| `HitSplatDecoder` | the placement string (opcode 8) is a `gjstr2`, and the font and four sprites are big smarts | 47 of 48 files desynced - every opcode after the string was garbage |
+| `MapSceneDecoder`, `WorldMapInfoDecoder`, `QuestDecoder` | sprite ids (mapscene 1, mapelement 1/2/18, quest 17) are big smarts | correct only because every shipped value fits in two bytes |
+| `QuestDecoder` | opcodes 6 and 15 were read and discarded | `type` lost on 9 quests; `questPointRequirement` never populated |
+| `Transforms.writeTransforms` | loc transform ids (opcodes 77 and 92) are big smarts, npc's are shorts | the shared writer wrote a loc's `-1` as `0xffff`, which reads back as a 4 byte smart; the helper is gone and each encoder writes its own |
+
+Every decoder of an opcode keyed type now also fails loudly on an opcode it does not know
+(`error("Unhandled … opcode")`) instead of silently desyncing the rest of the file.
+
+### Removed duplicates
+
+- `config/decoder/StructDecoder` + `config/data/StructDefinition` duplicated the `definition` package
+  pair that `Cache.structs` actually uses, and carried a hand written patch for the seven structs
+  whose duplicate params the map dropped - now handled properly by `paramRecords`.
+- `config/decoder/RenderAnimationDecoder` + `RenderAnimationDefinition` were a second, *wrong* reader
+  of archive 32 (shorts where the format has big smarts, five values in opcode 27 where the client
+  reads six, two in 56 where it reads three); archive 32 is one type, and `BASDecoder` is the reader
+  that matches the client.
+- `Parameterized.readParameters(buffer)` and `Parameterized.writeParameters(writer)`: the lossy
+  reader that dropped a repeated param id and a second way of writing opcode 249.
+  `readParameterRecords` and `writeParams` are the one reader and the one writer.
+- `config/ConfigEncoder`: an empty base every config encoder has replaced with `OpcodeEncoder`.
+
+`Reader.readPrefixedString` is the `gjstr2` reader the client calls `readJagString`, the exact
+inverse of `Writer.writePrefixedString`; it replaces the private copy `QuestDecoder` had. Shared
+record payloads (colours, colour palettes, params, extras) live in
+`definition/encoder/Records.kt`; unlike the mixin helpers on `Recolourable` and friends they write a
+payload only, never the opcode and never a presence decision.

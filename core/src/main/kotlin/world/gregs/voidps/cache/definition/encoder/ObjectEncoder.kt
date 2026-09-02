@@ -2,7 +2,7 @@ package world.gregs.voidps.cache.definition.encoder
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import world.gregs.voidps.buffer.write.Writer
-import world.gregs.voidps.cache.OrderedDefinitionEncoder
+import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
 
 /**
@@ -17,9 +17,9 @@ import world.gregs.voidps.cache.definition.data.ObjectDefinition
  * members (150 to 154) record for the same slot writes both back; [members] supplies the members half for a
  * definition built by hand, which is what the two argument encode form is for.
  */
-class ObjectEncoder : OrderedDefinitionEncoder<ObjectDefinition>() {
+class ObjectEncoder : OpcodeEncoder<ObjectDefinition>() {
 
-    override fun presentOpcodes(definition: ObjectDefinition): IntArray {
+    override fun opcodes(definition: ObjectDefinition): IntArray {
         val opcodes = IntArrayList()
         if (definition.modelIds != null && definition.modelTypes != null) {
             opcodes.add(1)
@@ -237,7 +237,7 @@ class ObjectEncoder : OrderedDefinitionEncoder<ObjectDefinition>() {
         return array
     }
 
-    override fun Writer.write(opcode: Int, definition: ObjectDefinition, members: ObjectDefinition, occurrence: Int) {
+    override fun Writer.encodeOpcode(definition: ObjectDefinition, members: ObjectDefinition, opcode: Int, occurrence: Int) {
         when (opcode) {
             1 -> {
                 val modelIds = definition.modelIds ?: emptyArray()
@@ -348,7 +348,7 @@ class ObjectEncoder : OrderedDefinitionEncoder<ObjectDefinition>() {
                 writeShort(definition.anInt3020)
             }
             178 -> writeByte(definition.anInt2975)
-            249 -> writeParams(definition.params, definition.paramRecords)
+            249 -> writeParams(definition.id, definition.params, definition.paramRecords)
             else -> error("Unhandled object definition opcode: $opcode for def ${definition.id}")
         }
     }

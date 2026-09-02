@@ -6,6 +6,7 @@ import world.gregs.voidps.cache.Config.PARAMS
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.definition.data.ParamDefinition
+import world.gregs.voidps.cache.definition.encoder.ParamEncoder
 
 /**
  * Decodes param (attribute) definitions from the CONFIGS index (2), archive 11.
@@ -14,7 +15,11 @@ import world.gregs.voidps.cache.definition.data.ParamDefinition
  */
 class ParamDecoder : DefinitionDecoder<ParamDefinition>(Index.CONFIGS) {
 
+    private val encoder = ParamEncoder()
+
     override fun create(size: Int) = Array(size) { ParamDefinition(it) }
+
+    override fun canonicalOpcodes(definition: ParamDefinition): IntArray = encoder.opcodes(definition)
 
     override fun getArchive(id: Int) = PARAMS
 
@@ -33,4 +38,5 @@ class ParamDecoder : DefinitionDecoder<ParamDefinition>(Index.CONFIGS) {
             else -> error("Unhandled param definition opcode: $opcode for def $id")
         }
     }
+
 }

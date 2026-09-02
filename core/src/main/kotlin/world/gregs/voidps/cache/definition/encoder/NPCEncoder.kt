@@ -2,7 +2,7 @@ package world.gregs.voidps.cache.definition.encoder
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import world.gregs.voidps.buffer.write.Writer
-import world.gregs.voidps.cache.OrderedDefinitionEncoder
+import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.NPCDefinition
 
 /**
@@ -13,9 +13,9 @@ import world.gregs.voidps.cache.definition.data.NPCDefinition
  * (150 to 154) record for the same slot writes both back; [members] supplies the members half for a
  * definition built by hand, which is what the two argument encode form is for.
  */
-class NPCEncoder : OrderedDefinitionEncoder<NPCDefinition>() {
+class NPCEncoder : OpcodeEncoder<NPCDefinition>() {
 
-    override fun presentOpcodes(definition: NPCDefinition): IntArray {
+    override fun opcodes(definition: NPCDefinition): IntArray {
         val opcodes = IntArrayList()
         if (definition.modelIds != null) {
             opcodes.add(1)
@@ -182,7 +182,7 @@ class NPCEncoder : OrderedDefinitionEncoder<NPCDefinition>() {
         return opcodes.toIntArray()
     }
 
-    override fun Writer.write(opcode: Int, definition: NPCDefinition, members: NPCDefinition, occurrence: Int) {
+    override fun Writer.encodeOpcode(definition: NPCDefinition, members: NPCDefinition, opcode: Int, occurrence: Int) {
         when (opcode) {
             1 -> {
                 val models = definition.modelIds ?: IntArray(0)
@@ -290,7 +290,7 @@ class NPCEncoder : OrderedDefinitionEncoder<NPCDefinition>() {
             }
             165 -> writeByte(definition.anInt2831)
             168 -> writeByte(definition.anInt2862)
-            249 -> writeParams(definition.params, definition.paramRecords)
+            249 -> writeParams(definition.id, definition.params, definition.paramRecords)
             else -> error("Unhandled NPC definition opcode: $opcode for def ${definition.id}")
         }
     }
