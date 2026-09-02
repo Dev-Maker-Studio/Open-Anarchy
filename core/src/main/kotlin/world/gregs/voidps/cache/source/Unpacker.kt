@@ -72,11 +72,15 @@ object Unpacker {
      *   `data/map/xteaKeys.json` files them - see [mapKeys]. The `l` and `n` archives of index 5
      *   are stored decrypted with their key in the metadata; the eight whose key nobody has are
      *   kept as their container bytes instead.
+     * @param threads how many archives to unpack at once. Every core by default, which is what a
+     *   whole cache wants; a caller unpacking on a machine that is busy doing something else can
+     *   ask for fewer.
      */
     fun unpack(
         cache: Cache,
         tree: SourceTree,
         xteas: Map<Int, IntArray> = emptyMap(),
+        threads: Int = Runtime.getRuntime().availableProcessors(),
         report: (String) -> Unit = {}
     ): UnpackReport {
         val start = System.nanoTime()
@@ -86,8 +90,7 @@ object Unpacker {
             report("gamevals: $gamevals catalogs")
         }
         val counts = Counts()
-        val threads = Runtime.getRuntime().availableProcessors()
-        val pool = Executors.newFixedThreadPool(threads) { runnable ->
+        val pool = Executors.newFixedThreadPool(maxOf(threads, 1)) { runnable ->
             Thread(runnable, "cache-unpack").apply { isDaemon = true }
         }
         try {
