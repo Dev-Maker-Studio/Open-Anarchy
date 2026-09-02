@@ -6,7 +6,7 @@ import imgui.flag.ImGuiTreeNodeFlags
 import imgui.type.ImBoolean
 import imgui.type.ImInt
 import imgui.type.ImString
-import org.darkan.tools.cs2.vm.Cs2HookDispatcher
+import org.darkan.cs2.vm.Cs2HookDispatcher
 import org.darkan.tools.rsinterface.ComponentFields
 import org.darkan.tools.rsinterface.ComponentState
 import org.darkan.tools.rsinterface.ComponentType

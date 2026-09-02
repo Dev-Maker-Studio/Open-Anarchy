@@ -3,7 +3,15 @@
 Decompiles RuneScape clientscripts (cache index 12) into TypeScript, recompiles that
 TypeScript back into bytecode, and runs it against a live interface.
 
-Everything lives in `tools/src/main/kotlin/org/darkan/tools/cs2/`.
+The toolchain itself lives in `cs2/src/main/kotlin/org/darkan/cs2/` - its own Gradle module,
+headless and depending only on `:core`. The CLI (`Cs2Cli.kt`, still
+`tools/src/main/kotlin/org/darkan/tools/cs2/`) and the interface editor
+(`tools/.../rsinterface/`) stay in `tools`, which is where LWJGL, GLFW and ImGui come in.
+
+The split exists because the server compiles clientscripts too: index 12 of a cache source tree
+is stored as exactly the TypeScript `cs2 decompile-all` writes (`docs/cache-source.md`), and
+rebuilding a cache must not link a windowing toolkit. `org.darkan.cs2.Cs2Compiler` is the entry
+point for that - see *Compiling from server code* below.
 
 ## Commands
 
@@ -75,7 +83,7 @@ Rerun both after changing the client's CS2 engine:
 ```bash
 python3 tools/scripts/extract_cs2_sigs.py /tmp/sigs.json
 python3 tools/scripts/gen_cs2_opcodes.py /tmp/sigs.json \
-    tools/src/main/kotlin/org/darkan/tools/cs2/Cs2Opcodes.kt
+    cs2/src/main/kotlin/org/darkan/cs2/Cs2Opcodes.kt
 ```
 
 There are **1006** opcodes. The client's enum carried 44 of them as unnamed `instrNNNN`
@@ -255,3 +263,33 @@ scripts bind at runtime with `IF_SETON*` / `CC_SETON*`.
 arrays, branches, switches and calls — and hands every other opcode to a `Cs2Host`. The host
 returns results shaped to the opcode's signature, so the stacks stay correct even for
 opcodes it does not implement. That seam is what the interface editor plugs into.
+
+## Compiling from server code
+
+`:cs2` is a headless Gradle module: `implementation(project(":core"))` and nothing else. Nothing
+in it imports LWJGL, GLFW, ImGui or JOML, and nothing in it depends on `:tools`. That is what
+lets the cache source tree packer compile index 12 on a server with no display.
+
+```kotlin
+val compiler = Cs2Compiler(Cache.get(), File(tree, "clientscripts"))
+
+val id = compiler.scriptIdOf(file)        // the file's // [proc,quicksort] header, through the catalog
+val bytes = compiler.compile(file)        // one .ts file -> index 12 bytes
+val source = compiler.sourceFileOf(id)    // and back the other way, or null
+```
+
+Compiling anything needs the whole corpus analysed first - return signatures are only decidable
+across calls - so `Cs2Compiler` does that once, lazily, and shares it. Each `compile` then builds
+its own parser and code generator and keeps no state, so a pack can run the folder's files in
+parallel. Compiling one file never requires the rest of the folder to compile; a file that fails
+throws `Cs2CompileException`, whose message is `file:line:col: what went wrong`.
+
+Under the facade the pipeline is public and can be driven directly:
+
+| entry point | what it is |
+|---|---|
+| `Cs2Analyzer(cache).analyse()` | the corpus analysis: return signatures, param types, opcode table check |
+| `Cs2SourceProject(cache, analyzer, folder)` | the folder: paths, symbol table, `compileFile`, `verify`, `exportSource` |
+| `Cs2Parser` -> `Cs2CodeGen` -> `Cs2Codec.encode` | the compile path itself, one file at a time |
+| `Cs2HotReload.sweepFolder(...)` | the whole-folder sweep `cs2 sources` / `cs2 verify-sources` run |
+| `verifyCodecRoundTrip(cache)` | decode + re-encode every script, asserting byte identity |

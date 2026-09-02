@@ -1,7 +1,7 @@
 package org.darkan.tools.gameval
 
-import org.darkan.tools.cs2.Cs2Cache
-import org.darkan.tools.cs2.Cs2Codec
+import org.darkan.cs2.Cs2Cache
+import org.darkan.cs2.Cs2Codec
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Config
