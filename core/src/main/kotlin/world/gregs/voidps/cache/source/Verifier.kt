@@ -127,6 +127,10 @@ object Verifier {
         var identical = 0
         var different = 0
         var missing = 0
+        if (ids.isNotEmpty()) {
+            // A verify is a full pack that is never written, so the codec is set up the same way.
+            codec.packIndex(directory, index, ids, emptyList())
+        }
 
         val window = threads * PIPELINE
         val pending = ArrayDeque<Pair<Int, Future<PackedContainer>>>()

@@ -176,9 +176,11 @@ directory). Config directories are named in the gameval vocabulary where the typ
 `varplayer`, `varnpc`, `varclient`, `varbit`, `headbar`, `animflowcontrol`, `vargroup` - and
 `archive_<id>` for the twenty-six archives in 727 that nothing has identified yet.
 
-Besides the two directions, a codec answers `archiveOf(path)` - which archive a tree relative path
-belongs to, so an incremental build can map a changed file back to what it has to repack - and
-`files(directory, archive)`, the inputs of one archive.
+Besides the two directions, a codec answers which archive a tree relative path belongs to
+(`archiveOf`/`owner`, so an incremental build can map a changed file back to what it has to
+repack), `files(directory, archive)` - the inputs of one archive - and, when its files are not a
+function of one archive, the two per-index hooks `unpackIndex` and `packIndex`. The whole interface
+is in *The `SourceCodec` interface* below.
 
 ### Definition files
 
@@ -332,8 +334,9 @@ and relocates the file - and nothing else may move it.
 
 The five project files are a property of the *corpus*, not of any one archive: `vars.d.ts` only
 knows a variable exists because some script uses it, and `cs2.d.ts` carries argument kinds learned
-from all 6,567 scripts at once. `SourceCodec` has no per-index hook to write them from, so the
-first archive to be unpacked carries them out with it (see *API gaps* below).
+from all 6,567 scripts at once. `SourceCodec.unpackIndex` is the hook they belong in - it runs once
+after the index's archives and claims what it returns, so nothing under `clientscripts/` has to be
+carried out of an archive that has no business producing it (see *The `SourceCodec` interface*).
 
 **1,066 of the 6,567 scripts are pristine.** The decompiler normalises by design - it drops
 unreachable code, folds initialisers into declarations, lays branches out canonically - so those
@@ -359,7 +362,8 @@ build that changes no clientscript never constructs the compiler and pays none o
 whose clientscripts changed has no analysed corpus to compile against yet. It says so
 (`Cs2SourceCodec.cache` is the seam for handing one in) rather than deadlocking on the build it is
 part of. Everything else - the tools CLI, a server serving a prepacked cache, the tests - has a
-cache and is unaffected. See *API gaps* below.
+cache and is unaffected. It is the one thing the codec interface still does not offer; see *The
+`SourceCodec` interface* below.
 
 `DefinitionJsonCodec` checks itself file by file rather than archive by archive, because a definition
 *is* a file: on the way out it decodes the shipped bytes, writes the JSON, reads that JSON straight
@@ -480,23 +484,94 @@ With index 12 as TypeScript the same runs cost about 5 s more to unpack and 6 s 
 the CS2 corpus analysis and the compile of every script. A build that touches one clientscript
 costs about 9.6 s - the analysis, plus one compile; a build that touches none never runs it.
 
-## API gaps a codec richer than bytes runs into
+## The `SourceCodec` interface
 
-`SourceCodec` was written for a codec whose files are a function of one archive. `Cs2SourceCodec`
-is the first that is not, and it works around four things rather than changing the interface:
+A codec is asked a dozen questions. Only the five in bold have to be answered; the rest have
+defaults that are right for any codec whose files are a function of one archive, which is every
+codec in core.
 
-| gap | what it forces | what would fix it |
+| member | when | what it is for |
 |---|---|---|
-| No per-index hook. A codec is only ever called per archive, and `Unpacker` deletes every file under the index directory that no archive claimed. | The five corpus-wide project files are returned from whichever archive is unpacked first, so that they are claimed at all. | `unpackIndex(directory, index)` / `packIndex(directory, index)` on `SourceCodec`, called once around the per-archive loop. |
-| `archiveOf(path)` gets the path and nothing else. | A script's *header* is what binds it to an archive, and cannot be read. The path is the catalog's own and a rename moves file and catalog together, so the two agree for anything the tools wrote; the codec also offers `archiveOf(directory, path)`, which nothing in core can call. | `archiveOf(directory, path)` in the interface. |
-| `archiveOf` is two-valued: an archive, or "not mine". | The project files answer null, so an incremental build reports them as belonging to no codec. Harmless - it is a report line - but wrong. | A third answer meaning "mine, but not an archive", or a `claims(path)` companion. |
-| A codec is not told which `Cache` the tree is being unpacked from or built for. | Anything needing more than the bytes it is handed reaches for `Cache.get()`, which is the one thing a build from a tree cannot use. `Cs2SourceCodec.cache` is the seam. | The cache on `SourceArchive`, and a cache (or a bootstrap cache) passed to `Builder`/`Packer`. |
+| **`id`** | reports | the short name `cache status` and the build reports print, like `raw-archive` |
+| **`unpack(directory, archive)`** | per archive | the archive as files; paths relative to the index directory, and the caller does the writing |
+| **`pack(directory, archive, metadata)`** | per archive | the group rebuilt from those files, plus the file ids the reference table has to list |
+| **`files(directory, archive)`** | per archive | every file that makes up the archive, sidecars included |
+| `pristineFiles(directory, archive)` | per archive | the archive's `.pristine` sidecars; by default the ones `files` returns whose name says so |
+| `exact(archive)` | per archive | whether packing what `unpack` wrote reproduces the group; false makes the unpacker check, archive by archive |
+| `fileIdsFromMetadata(archive)` | per archive | whether the file ids have to be carried in `index.json` because the layout cannot spell them out |
+| `unpackIndex(directory, index, archives)` | once per index | files that belong to the index rather than to any archive - *and* the claim that keeps them |
+| `packIndex(directory, index, archives, changedIndexFiles)` | once per index | shared state to set up before the archives are packed, and the index level files that moved |
+| **`archiveOf(path)`** | per changed path | which archive a tree relative path belongs to, or null |
+| `archiveOf(directory, path)` | per changed path | the same with the tree to look in, for a binding that lives inside the file |
+| `owner(directory, path)` | per changed path | archive, index or neither - the three-valued form the build asks |
 
-The last one is the one that matters. The right fix for index 12 specifically is not to hand the
-codec a cache at all: everything the compiler needs from the corpus is each callee's signature,
-and every callee's signature is written out in its own `.ts`. An index 12 context derived from the
-tree's sources rather than from bytecode would make the codec self-sufficient and let a server
-build a tree whose clientscripts changed with no prepacked cache anywhere.
+### The per-index hooks
+
+`Cs2SourceCodec` is the first codec whose files are not a function of one archive: index 12's five
+project files (`cs2.d.ts`, `gamevals.d.ts`, `vars.d.ts`, `tsconfig.json`, `dead-code.md`) are a
+property of the *corpus* - `vars.d.ts` only knows a variable exists because some script uses it -
+and compiling any one script needs the whole corpus analysed first. Both halves are hooks now.
+
+- **`unpackIndex(directory, index, archives)`** runs once, after every archive of the index has
+  been unpacked, and returns files the same way `unpack` does. Returning a file here is also how a
+  codec *claims* it: `Unpacker.prune` deletes everything under the index directory that neither an
+  archive nor this call accounted for, so a corpus-wide file no longer has to be smuggled out of
+  whichever archive happened to be unpacked first. It is called after the loop rather than before
+  it because that is when a corpus-wide answer exists; `archives` is what was actually unpacked.
+- **`packIndex(directory, index, archives, changedIndexFiles)`** runs once, before the archives of
+  an index are packed - by the full pack, by `verify`, and by an incremental build - and is where a
+  codec builds the state its per-archive `pack` will share. It is called only when there is
+  something to do, so a build that touches no clientscript still never constructs the compiler.
+  `archives` is every archive for a full pack and only the changed ones for a build.
+
+**Index level files are tracked like any other input.** The manifest hashes every file in the tree
+regardless of who owns it, so a project file that changed is noticed the same way a script is. What
+differs is what that change *does*: it repacks no archive - nothing in the cache is a function of
+it - and is instead handed to `packIndex` as `changedIndexFiles`, which lets a codec that does care
+react and lets one that does not ignore it. The build then records the file's new hash, so the next
+build is a no-op again. That is the whole rule; there is no "changed index file forces a repack of
+the index" case, because for index 12 there is nothing to repack - renaming a variable in
+`vars.d.ts` is a rename, not an edit, and the ids the bytecode carries are unmoved.
+
+### Who owns a path
+
+`owner(directory, path)` is the three-valued question an incremental build asks:
+
+| answer | meaning | what the build does |
+|---|---|---|
+| `Owner.Archive(id)` | one of the index's archives owns it | repack that archive |
+| `Owner.Index` | the codec's, but the index's rather than any archive's | hand it to `packIndex`; repack nothing |
+| `Owner.None` | not this codec's file at all | report it as belonging to no codec and ignore it |
+
+The default answers with the archive or with `None`, so only a codec with index level files has to
+override it. Underneath it, `archiveOf(directory, path)` is `archiveOf(path)` with the tree to look
+in, for a layout whose binding is inside the file rather than in its name - index 12's is: a
+script's `// [proc,quicksort]` header survives the file being copied or moved, and it is what
+`Cs2Layout` trusts. `archiveOf(path)` remains the member every simple codec implements and the
+other two come back to it by default.
+
+### Pristine sidecars are the framework's, not a codec's
+
+`SourceFiles` is public and owns the naming: `SourceFiles.PRISTINE_EXTENSION`, `pristine(path)`,
+`guarded(path)` and `sha256` are the one spelling of `<name>.pristine`, of the file it guards and
+of the guard `index.json` records. A codec, a tool or a test that has to find a sidecar uses them
+rather than a private copy of the same two lines.
+
+`SourceTree.status()` is the read-only inventory `cache status` prints - per index the codec, the
+archive, file, pristine and opaque counts, and every sidecar whose guard no longer holds with the
+reason - so a tool reads the tree's contract rather than re-deriving it. It resolves each sidecar
+through `owner`, which is the only thing that knows the layout.
+
+### The one thing still outside the interface
+
+A codec is still not told which `Cache` the tree is being unpacked from or built for. Anything
+needing more than the bytes it is handed reaches for `Cache.get()`, which is the one thing a build
+from a tree cannot use; `Cs2SourceCodec.cache` is the seam a caller can point elsewhere. The right
+fix for index 12 specifically is not to hand the codec a cache at all: everything the compiler
+needs from the corpus is each callee's signature, and every callee's signature is written out in
+its own `.ts`. An index 12 context derived from the tree's sources rather than from bytecode would
+make the codec self-sufficient and let a server build a tree whose clientscripts changed with no
+prepacked cache anywhere.
 
 ## Future work the design leaves room for
 
@@ -508,7 +583,8 @@ build a tree whose clientscripts changed with no prepacked cache anywhere.
 - Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
 - An index 12 context built from the tree's own `.ts` signatures rather than from cached bytecode,
   so a server can build a tree whose clientscripts changed with no other cache to read.
-- Closing the `SourceCodec` gaps above, which would let `Cs2SourceCodec` stop working around them.
+- Handing a codec the cache the tree is being built for, the last thing `SourceCodec` does not
+  offer - see *The `SourceCodec` interface* above.
 
 
 ## Definition encoders

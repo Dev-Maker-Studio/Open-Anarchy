@@ -65,7 +65,7 @@ class DefinitionJsonCodec<T : Definition>(
             if (!compile(text, archive.archive, file).contentEquals(data)) {
                 // The JSON is still the editable form; the shipped bytes ride along beside it until
                 // somebody edits it, which is what keeps parity independent of the encoder being exact.
-                files.add(SourceFile("$name$PRISTINE", data))
+                files.add(SourceFile(SourceFiles.pristine(name), data))
                 pristine[file] = SourceFiles.sha256(text)
             }
         }
@@ -89,7 +89,7 @@ class DefinitionJsonCodec<T : Definition>(
         for (file in layout.fileIds(directory, archive)) {
             val path = directory.resolve(layout.file(archive, file))
             files.add(path)
-            val sidecar = path.resolveSibling("${path.fileName}$PRISTINE")
+            val sidecar = SourceFiles.pristine(path)
             if (Files.isRegularFile(sidecar)) {
                 files.add(sidecar)
             }
@@ -111,7 +111,7 @@ class DefinitionJsonCodec<T : Definition>(
             throw IOException("Archive $archive file $file has no JSON at ${path.toAbsolutePath()}.")
         }
         val text = Files.readAllBytes(path)
-        val sidecar = path.resolveSibling("${path.fileName}$PRISTINE")
+        val sidecar = SourceFiles.pristine(path)
         val hash = metadata.pristine[file]
         if (hash != null && Files.isRegularFile(sidecar)) {
             if (SourceFiles.sha256(text) == hash) {
@@ -147,13 +147,9 @@ class DefinitionJsonCodec<T : Definition>(
     }
 
     /** The editable file a path names, which for a sidecar is the file it guards. */
-    private fun editable(path: String): String =
-        if (path.endsWith(PRISTINE)) path.dropLast(PRISTINE.length) else path
+    private fun editable(path: String): String = SourceFiles.guarded(path) ?: path
 
     private companion object {
-        /** The sidecar a codec keeps the original bytes in when it cannot reproduce them. */
-        private const val PRISTINE = ".pristine"
-
         /** Big enough for every definition in 727; doubled on overflow all the same. */
         private const val CAPACITY = 16 * 1024
 

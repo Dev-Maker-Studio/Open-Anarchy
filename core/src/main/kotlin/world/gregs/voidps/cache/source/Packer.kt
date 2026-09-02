@@ -82,6 +82,12 @@ object Packer {
         val entries = ArrayList<ArchiveEntry>(ids.size)
         val states = manifest.archives(index)
         var bytes = 0L
+        if (ids.isNotEmpty()) {
+            // Before the loop, once: a codec with shared state to build - index 12's corpus
+            // analysis - must not build it per archive, and a pack of every archive is the one
+            // case where every one of them is going to need it.
+            codec.packIndex(directory, index, ids, emptyList())
+        }
 
         // Compression runs ahead of the store, which can only be written one archive at a time,
         // but only so far ahead: a whole index's containers at once is hundreds of megabytes.
