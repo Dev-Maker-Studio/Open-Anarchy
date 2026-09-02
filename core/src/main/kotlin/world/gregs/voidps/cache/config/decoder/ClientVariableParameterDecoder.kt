@@ -4,8 +4,11 @@ import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.cache.Config.VARC
 import world.gregs.voidps.cache.config.ConfigDecoder
 import world.gregs.voidps.cache.config.data.ClientVariableParameterDefinition
+import world.gregs.voidps.cache.config.encoder.ClientVariableParameterEncoder
 
 class ClientVariableParameterDecoder : ConfigDecoder<ClientVariableParameterDefinition>(VARC) {
+
+    private val encoder = ClientVariableParameterEncoder()
 
     override fun create(size: Int)= Array(size) { ClientVariableParameterDefinition(it) }
 
@@ -14,6 +17,12 @@ class ClientVariableParameterDecoder : ConfigDecoder<ClientVariableParameterDefi
             aChar3210 = byteToChar(buffer.readByte().toByte())
         } else if (opcode == 2) {
             anInt3208 = 0
+        } else {
+            error("Unhandled client variable definition opcode: $opcode for def $id")
         }
+    }
+
+    override fun changeValues(definitions: Array<ClientVariableParameterDefinition>, definition: ClientVariableParameterDefinition) {
+        encoder.normalise(definition)
     }
 }

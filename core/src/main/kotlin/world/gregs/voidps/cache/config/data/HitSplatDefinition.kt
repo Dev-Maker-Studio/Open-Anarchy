@@ -1,6 +1,7 @@
 package world.gregs.voidps.cache.config.data
 
 import world.gregs.voidps.cache.Definition
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 data class HitSplatDefinition(
     override var id: Int = -1,
@@ -17,4 +18,15 @@ data class HitSplatDefinition(
     var fade: Int = -1,
     var comparisonType: Int = -1,
     var anInt3214: Int = 0
-) : Definition
+) : Definition, OpcodeOrdered {
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
+}

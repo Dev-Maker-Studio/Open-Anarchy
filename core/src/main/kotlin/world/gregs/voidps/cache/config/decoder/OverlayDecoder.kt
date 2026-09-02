@@ -4,14 +4,21 @@ import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.cache.Config.FLOOR_OVERLAY
 import world.gregs.voidps.cache.config.ConfigDecoder
 import world.gregs.voidps.cache.config.data.OverlayDefinition
+import world.gregs.voidps.cache.config.encoder.OverlayEncoder
 
 class OverlayDecoder : ConfigDecoder<OverlayDefinition>(FLOOR_OVERLAY) {
+
+    private val encoder = OverlayEncoder()
 
     override fun create(size: Int) = Array(size) { OverlayDefinition(it) }
 
     override fun OverlayDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            1 -> colour = calculateHsl(buffer.readUnsignedMedium())
+            1 -> {
+                // The packed hsl the client uses is not invertible, so the rgb is kept too.
+                colourRgb = buffer.readUnsignedMedium()
+                colour = calculateHsl(colourRgb)
+            }
             2 -> texture = buffer.readUnsignedByte()
             3 -> {
                 texture = buffer.readShort()
@@ -20,7 +27,10 @@ class OverlayDecoder : ConfigDecoder<OverlayDefinition>(FLOOR_OVERLAY) {
                 }
             }
             5 -> hideUnderlay = false
-            7 -> blendColour = calculateHsl(buffer.readUnsignedMedium())
+            7 -> {
+                blendColourRgb = buffer.readUnsignedMedium()
+                blendColour = calculateHsl(blendColourRgb)
+            }
             8 -> anInt961 = id
             9 -> scale = buffer.readShort() shl 2
             10 -> blockShadow = false
@@ -29,11 +39,13 @@ class OverlayDecoder : ConfigDecoder<OverlayDefinition>(FLOOR_OVERLAY) {
             13 -> waterColour = buffer.readUnsignedMedium()
             14 -> waterScale = buffer.readUnsignedByte() shl 2
             16 -> waterIntensity = buffer.readUnsignedByte()
+            else -> error("Unhandled overlay definition opcode: $opcode for def $id")
         }
     }
 
     override fun changeValues(definitions: Array<OverlayDefinition>, definition: OverlayDefinition) {
         definition.anInt3633 = definition.id or (definition.anInt3633 shl 8)
+        encoder.normalise(definition)
     }
 
     companion object {

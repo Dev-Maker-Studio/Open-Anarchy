@@ -4,8 +4,11 @@ import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.cache.Config.INVENTORIES
 import world.gregs.voidps.cache.config.ConfigDecoder
 import world.gregs.voidps.cache.config.data.InventoryDefinition
+import world.gregs.voidps.cache.config.encoder.InventoryEncoder
 
 class InventoryDecoder : ConfigDecoder<InventoryDefinition>(INVENTORIES) {
+
+    private val encoder = InventoryEncoder()
 
     override fun create(size: Int) = Array(size) { InventoryDefinition(it) }
 
@@ -21,6 +24,11 @@ class InventoryDecoder : ConfigDecoder<InventoryDefinition>(INVENTORIES) {
                     amounts!![i] = buffer.readUnsignedShort()
                 }
             }
+            else -> error("Unhandled inventory definition opcode: $opcode for def $id")
         }
+    }
+
+    override fun changeValues(definitions: Array<InventoryDefinition>, definition: InventoryDefinition) {
+        encoder.normalise(definition)
     }
 }
