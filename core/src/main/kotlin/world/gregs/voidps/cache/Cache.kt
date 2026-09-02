@@ -28,6 +28,7 @@ import world.gregs.voidps.cache.definition.decoder.ParamDecoder
 import world.gregs.voidps.cache.definition.decoder.StructDecoder
 import world.gregs.voidps.cache.definition.decoder.VarBitDecoder
 import world.gregs.voidps.cache.secure.Huffman
+import world.gregs.voidps.cache.store.ReferenceTable
 
 interface Cache {
 
@@ -77,6 +78,18 @@ interface Cache {
     fun hasArchiveNames(index: Int): Boolean = archiveNameCount(index) > 0
 
     fun hasFileNames(index: Int): Boolean = fileNameCount(index) > 0
+
+    /**
+     * [index]'s decoded reference table, or null when the index has none.
+     * The returned model is the cache's own; a writable cache mutates it as archives are written.
+     */
+    fun referenceTable(index: Int): ReferenceTable? = null
+
+    /** The reference table's version for [archive], or -1 when the archive is not in the table. */
+    fun archiveVersion(index: Int, archive: Int): Int = -1
+
+    /** The reference table's CRC for [archive]'s container, or 0 when the archive is not in the table. */
+    fun archiveCrc(index: Int, archive: Int): Int = 0
 
     fun files(index: Int, archive: Int): IntArray
 
