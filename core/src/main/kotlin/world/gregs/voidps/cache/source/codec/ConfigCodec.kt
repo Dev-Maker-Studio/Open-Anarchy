@@ -18,7 +18,9 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Sub-codecs are registered by archive id the same way index codecs are registered by index id -
  * see [SourceCodecs] - and are called with their own directory, so they lay files out inside it
- * without repeating the archive id ([RawFilesCodec.FLAT]).
+ * without repeating the archive id ([RawFilesCodec.FLAT], [DefinitionLayout.Flat]). Fourteen of the
+ * forty-five archives have a byte exact encoder and are editable JSON ([DefinitionCodecs]); the rest
+ * have no decoder at all and stay raw bytes.
  */
 object ConfigCodec : SourceCodec {
 

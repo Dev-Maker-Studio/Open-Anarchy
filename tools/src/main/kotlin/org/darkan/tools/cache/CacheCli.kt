@@ -91,7 +91,7 @@ private fun unpack(args: List<String>) {
     println("  written  : ${report.written}")
     println("  deleted  : ${report.deleted}")
     println("  opaque   : ${report.opaque}")
-    println("  pristine : ${report.inexact}")
+    println("  pristine : ${report.pristine} files, ${report.inexact} archives")
     println("  missing  : ${report.missing}")
     println("  time     : ${report.millis} ms")
 }

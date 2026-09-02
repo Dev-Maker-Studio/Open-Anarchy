@@ -141,26 +141,145 @@ the JS5 multi-file layout.
 | `RawArchiveCodec` | indices whose archives hold one file and have no better codec | `<archive>.dat` |
 | `RawFilesCodec` | indices with multi-file archives and no better codec | `<archive>/<file>.dat` (requires and always writes 1 chunk) |
 | `VerbatimGroupCodec` | index 0 | `<archive>.grp` - the decompressed group verbatim, chunk table and all |
-| `DefinitionJsonCodec<T>` | every definition type with a byte-exact encoder | `<definitionId>.json` (id = archive/file packed the way the decoder does) |
+| `DefinitionJsonCodec<T>` | indices 3 and 16-22, and 14 of index 2's archives | one JSON file per definition, see below |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `Cs2SourceCodec` | index 12 | the TypeScript layout `cs2 decompile-all` writes (`<category>/<name>.ts`), provided by the `cs2` module |
 
-A codec is registered per index in `SourceCodecs` before a tree is read or written, so a module
-that has something better than raw bytes for an index claims it (`SourceCodecs.register(12, ...)`).
+So the indices that hold definitions are editable JSON and the rest are bytes:
+
+| index | dir | codec | | index | dir | codec |
+|---|---|---|---|---|---|---|
+| 2 | `config` | `config` (14 archives JSON, 31 raw) | | 19 | `config_obj` | `json-obj` |
+| 3 | `interfaces` | `json-interface` | | 20 | `config_seq` | `json-seq` |
+| 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 21 | `config_spotanim` | `json-spotanim` |
+| 16 | `config_loc` | `json-loc` | | 22 | `config_varbit` | `json-varbit` |
+| 17 | `config_enum` | `json-enum` | | 0 | `anims` | `verbatim-group` |
+| 18 | `config_npc` | `json-npc` | | everything else | | `raw-archive` / `raw-files` |
+
+A codec is claimed per index in `SourceCodecs`, in three layers of increasing authority:
+
+1. **Built ins**, which is everything in the table above except index 12.
+2. **Providers.** A codec that cannot live in core declares itself instead: the client script codec
+   is the `cs2` module's and core must not depend on `cs2`, so `cs2` ships a
+   `SourceCodecProvider` named in `META-INF/services/world.gregs.voidps.cache.source.codec.SourceCodecProvider`
+   and returning `{12: Cs2SourceCodec}`. `SourceCodecs` loads every provider on the classpath once,
+   the first time any codec is looked up, so a module claims its index by being on the classpath and
+   nothing has to be called. A provider's entry replaces the built in for its index.
+3. **Explicit registrations.** `SourceCodecs.register(index, codec)` still overrides both, for a test
+   or a tool that wants a particular codec.
+
 `ConfigCodec` keeps the same kind of registry keyed by config archive id, and hands each sub-codec
-its own directory (`RawFilesCodec.FLAT`, which drops the redundant archive directory). Config
-directories are named in the gameval vocabulary where the type has one - `underlay`, `idk`,
-`overlay`, `inv`, `param`, `seq`, `varcstr`, `varp`, `varc`, `struct`, `skybox`, `light`, `bas`,
-`cursor`, `mapscene`, `quest`, `mapelement`, `hitmark`, `varclan`, `varclansetting`, `varplayer`,
-`varnpc`, `varclient`, `varbit`, `headbar`, `animflowcontrol`, `vargroup` - and `archive_<id>`
-for the twenty-six archives in 727 that nothing has identified yet.
+its own directory (`RawFilesCodec.FLAT` and `DefinitionLayout.Flat`, which drop the redundant archive
+directory). Config directories are named in the gameval vocabulary where the type has one -
+`underlay`, `idk`, `overlay`, `inv`, `param`, `seq`, `varcstr`, `varp`, `varc`, `struct`, `skybox`,
+`light`, `bas`, `cursor`, `mapscene`, `quest`, `mapelement`, `hitmark`, `varclan`, `varclansetting`,
+`varplayer`, `varnpc`, `varclient`, `varbit`, `headbar`, `animflowcontrol`, `vargroup` - and
+`archive_<id>` for the twenty-six archives in 727 that nothing has identified yet.
 
 Besides the two directions, a codec answers `archiveOf(path)` - which archive a tree relative path
 belongs to, so an incremental build can map a changed file back to what it has to repack - and
 `files(directory, archive)`, the inputs of one archive.
 
-JSON is pretty-printed, keys in declaration order, ids numeric. Names come from the gameval
-catalogs at display time; the data never duplicates them.
+### Definition files
+
+`DefinitionJsonCodec<T>` stores one definition per file, named by its id, and the id is the archive
+and file packed the way that type's decoder packs them (`id = archive shl bits or file`):
+
+| layout | used by | file | id |
+|---|---|---|---|
+| `Packed(bits)` | indices 16-22 | `config_obj/4151.json` | `4151 = 16 shl 8 or 55`, so archive 16 file 55 |
+| `Nested(16)` | index 3 | `interfaces/1477/32.json` | `1477 shl 16 or 32` |
+| `Flat` | index 2's typed archives | `config/struct/26.json` | the file id; the directory is the archive |
+
+An obj, abridged - the real file lists every field the definition carries, defaults included, and
+nothing that is not a field (60 keys for this one):
+
+```json
+{
+  "id": 4151,
+  "modelId": 5412,
+  "name": "Abyssal whip",
+  "spriteScale": 840,
+  "spritePitch": 280,
+  ...
+  "floorOptions": [null, null, "Take", null, null, "Examine"],
+  "options": [null, "Wield", null, null, "Drop"],
+  "exchangeable": true,
+  "noteId": 4152,
+  "lendId": 13444,
+  "params": {
+    "2195": 24,
+    "644": 1578,
+    "641": 820,
+    "14": 4,
+    "1": 82
+  },
+  "stringId": "",
+  "opcodeOrder": [1, 7, 8, 4, 5, 36, 13, 23, 25, 16, 12, 65, 2, 126, 97, 121, 249, 127, 129]
+}
+```
+
+`DefinitionCodecs` is the one list of the twenty-two types and what registers them; `DefinitionJson`
+is the mapping, and it derives these rules from the data class rather than being told them:
+
+- **Keys are the fields, in declaration order**, so `id` leads. A field a decoder gains appears in the
+  tree the moment it exists, and a field whose type nothing here can spell is an error rather than a
+  silently dropped value.
+- **Defaults are kept, nulls are omitted.** Every non-null field is written whatever its value, so a
+  reader never needs the decoder's defaults to understand a file; an absent key reads back as the fresh
+  definition's default, which for every nullable field here is null.
+- **Ids are numbers**, and names are never duplicated into the data - they come from the gameval
+  catalogs at display time.
+- **Arrays are inline while they fit** on a 100 column line, then one element per line. `ShortArray`,
+  `ByteArray`, `IntArray` and `BooleanArray` are arrays of numbers; `Array<String?>` options are arrays
+  with `null` holes; `Array<IntArray?>` is an array of arrays.
+- **Maps keep the file's order.** Parameters (`Parameterized.params`), extras (`Extra.extras`) and an
+  enum's entries are objects keyed by the numeric id with int or string values, in the order the file
+  listed them, because that is the order the encoder writes them back in. A record class - a parameter
+  record, a component setting, a script hook - is a nested object.
+- **Two fields are layout fidelity, not data.** `opcodeOrder` and `shadowedPayloads` are what
+  `OpcodeOrdered` records (see "Definition encoders"): the order the file listed its records in, and
+  the bytes of any record a later record of the same opcode overwrote, as hex. They are written only
+  when the definition carries them - a canonically packed file, or one authored by hand, has neither -
+  and they are what makes the file that comes back the file that went in. Editing a field is safe with
+  an `opcodeOrder` present; deleting a record from it is not, so leave it alone.
+
+Decoding goes through the decoder's read path alone (`readLoop` for an opcode keyed type), never
+`load`: `changeValues` derives values that are not in the file. Every decoder that takes a parameter
+catalogue is left with its default `Parameters.EMPTY`, because a parameter keyed by *name* cannot be
+turned back into the three byte key the file needs.
+
+What that comes to over the whole 727 cache - **files** is how many JSON files the type has, **exact**
+how many of them re-encode to the shipped bytes, **pristine** how many still need those bytes beside
+them (`DefinitionJsonCodecTest`, and `cache status` on a real tree):
+
+| type | directory | codec | files | exact | pristine |
+|---|---|---|---|---|---|
+| loc | `config_loc` | `json-loc` | 73,893 | 73,893 | 0 |
+| enum | `config_enum` | `json-enum` | 6,048 | 6,048 | 0 |
+| npc | `config_npc` | `json-npc` | 15,662 | 15,662 | 0 |
+| obj | `config_obj` | `json-obj` | 25,355 | 25,355 | 0 |
+| seq | `config_seq` | `json-seq` | 17,186 | 17,186 | 0 |
+| spotanim | `config_spotanim` | `json-spotanim` | 3,252 | 3,252 | 0 |
+| varbit | `config_varbit` | `json-varbit` | 11,713 | 11,713 | 0 |
+| interface component | `interfaces` | `json-interface` | 65,239 | 65,239 | 0 |
+| underlay | `config/underlay` | `json-underlay` | 171 | 171 | 0 |
+| idk | `config/idk` | `json-idk` | 652 | 652 | 0 |
+| overlay | `config/overlay` | `json-overlay` | 248 | 248 | 0 |
+| inv | `config/inv` | `json-inv` | 674 | 674 | 0 |
+| param | `config/param` | `json-param` | 2,583 | 2,583 | 0 |
+| varp | `config/varp` | `json-varp` | 2,696 | 2,696 | 0 |
+| varc | `config/varc` | `json-varc` | 1,992 | 1,992 | 0 |
+| struct | `config/struct` | `json-struct` | 11,389 | 11,389 | 0 |
+| bas | `config/bas` | `json-bas` | 2,574 | 2,574 | 0 |
+| mapscene | `config/mapscene` | `json-mapscene` | 107 | 107 | 0 |
+| quest | `config/quest` | `json-quest` | 204 | 204 | 0 |
+| mapelement | `config/mapelement` | `json-mapelement` | 1,220 | 1,220 | 0 |
+| hitmark | `config/hitmark` | `json-hitmark` | 48 | 48 | 0 |
+| varclan | `config/varclan` | `json-varclan` | 2,845 | 2,845 | 0 |
+| **total** | | | **245,751** | **245,751** | **0** |
+
+Index 2's other 31 archives have no decoder and stay raw bytes (`raw-files-flat`).
 
 ### The pristine fallback
 
@@ -177,6 +296,17 @@ can only shrink as encoders improve or files are edited.
 This is what lets a normalising compiler (the CS2 decompiler drops dead code by design, so ~1,000
 scripts recompile to different but equivalent bytes) and a not-yet-exact encoder coexist with the
 parity guarantee.
+
+`DefinitionJsonCodec` checks itself file by file rather than archive by archive, because a definition
+*is* a file: on the way out it decodes the shipped bytes, writes the JSON, reads that JSON straight
+back into a fresh definition and re-encodes it, and only a file whose bytes do not come out identical
+gets a `<id>.json.pristine` beside it. So the guarded unit is one definition and not the 256 that
+share its archive. It still reports `exact(archive) = false`, so the unpacker packs the whole group
+back and compares that too - an independent second proof rather than the only one.
+
+Measured over the whole 727 cache, **all 245,751 definition files of all 22 types survive the round
+trip and not one needs a pristine copy**; `DefinitionJsonCodecTest` is the measurement and
+`docs/cache-source.md`'s "Parity per type" table the per type breakdown.
 
 ## The packed build
 
@@ -274,16 +404,21 @@ Each command prints one line per index as it goes and then its totals:
   value `index.json` recorded, so the next pack will compile the edit rather than emit the original.
   It also says whether the tree has its `gamevals` directory and how many catalogs are in it.
 
-Against the 727 cache on one 12-core machine: unpack 11.5 s (140,692 archives, 397,004 files,
-1.06 GB, 8 opaque, 0 pristine), pack 12.1 s, verify 9.5 s at full parity, a no-op build 2.0 s and a
-one-archive build 3.0 s.
+Against the 727 cache on one 12-core machine, on the tree at `cache-source/`: unpack 12.8 s when the
+tree is already right and 42 s when every definition file has to be written (140,692 archives,
+397,041 files, 1.35 GB, 8 opaque, 0 pristine), pack 12.1 s, verify 10.6 s at full parity, a no-op
+build 2.0 s and a one-archive build 3.0 s. Unpacking costs six seconds more than it did as raw bytes
+because every one of the 245,751 definition files is decoded, written as JSON, read back and
+re-encoded on the way out to prove it survives the trip; the tree is 290 MB bigger for the same
+reason.
 
 ## Future work the design leaves room for
 
 - World servers hosting their own JS5 from their own tree (`CACHE_SOURCE_PATH` per world; the
   lobby's world flag decides whether the client re-inits JS5 against the world).
-- Typed codecs for more indices (sprites as PNG, maps as JSON for the map editor, models). Each
-  is one codec class plus a byte-exact proof; the pristine fallback carries the rest meanwhile.
+- Typed codecs for the indices that are still bytes (sprites as PNG, maps as JSON for the map
+  editor, models). Each is one codec class plus a byte-exact proof, the way the definition indices
+  got theirs; the pristine fallback carries the rest meanwhile.
 - Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
 
 
@@ -291,7 +426,8 @@ one-archive build 3.0 s.
 
 `DefinitionJsonCodec<T>` can only store a type as editable JSON when its encoder reproduces the
 shipped file exactly - `encode(decode(bytes)) == bytes` for **every** file - otherwise the type has
-to keep a `.pristine` copy beside every file it cannot rebuild. Twenty-two types reach that bar for
+to keep a `.pristine` copy beside every file it cannot rebuild. All 22 do, so none of them keeps one;
+see "Definition files" for what the JSON looks like. Twenty-two types reach that bar for
 the whole 727 cache: the seven opcode keyed types of indices 16 to 22, the fourteen decoded
 archives of index 2, and index 3's interface components.
 

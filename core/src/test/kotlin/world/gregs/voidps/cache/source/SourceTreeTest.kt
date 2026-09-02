@@ -64,8 +64,8 @@ class SourceTreeTest {
             "cache.json",
             "anims/0.grp", "anims/1.grp", "anims/3.grp",
             "maps/0.dat", "maps/1.dat", "maps/2.container",
-            "config_obj/0/0.dat", "config_obj/0/1.dat", "config_obj/0/2.dat",
-            "config_obj/1/0.dat", "config_obj/1/7.dat"
+            "worldmapdata/0/0.dat", "worldmapdata/0/1.dat", "worldmapdata/0/2.dat",
+            "worldmapdata/1/0.dat", "worldmapdata/1/7.dat"
         )) {
             assertTrue(File(tree, path).isFile, "$path should exist")
         }
@@ -122,7 +122,7 @@ class SourceTreeTest {
         val before = containers(output)
 
         // One edited file and one bumped version, in two different indices.
-        val file = File(tree, "config_obj/0/1.dat")
+        val file = File(tree, "worldmapdata/0/1.dat")
         file.writeBytes(byteArrayOf(9, 9, 9, 9))
         val anims = source.metadata(Index.ANIMATION_FRAMES)
         anims.archives.getValue(1).version = 12
@@ -138,15 +138,15 @@ class SourceTreeTest {
         assertEquals(
             setOf(
                 Index.ANIMATION_FRAMES to 1,
-                Index.ITEMS to 0,
+                Index.WORLD_MAP to 0,
                 FileStore.REFERENCE_INDEX to Index.ANIMATION_FRAMES,
-                FileStore.REFERENCE_INDEX to Index.ITEMS
+                FileStore.REFERENCE_INDEX to Index.WORLD_MAP
             ),
             changed.keys,
             "only the edited archives and their tables should have moved"
         )
         assertEquals(12, cache(output).archiveVersion(Index.ANIMATION_FRAMES, 1))
-        assertContentEquals(byteArrayOf(9, 9, 9, 9), cache(output).data(Index.ITEMS, 0, 1))
+        assertContentEquals(byteArrayOf(9, 9, 9, 9), cache(output).data(Index.WORLD_MAP, 0, 1))
 
         // Nothing changed, so nothing may be touched.
         val stamps = timestamps(output)
@@ -162,28 +162,28 @@ class SourceTreeTest {
         val source = SourceTree.open(tree)
         Packer.pack(source, output)
 
-        File(tree, "config_obj/0/2.dat").delete()
-        File(tree, "config_obj/2").mkdirs()
-        File(tree, "config_obj/2/0.dat").writeBytes(byteArrayOf(1, 2, 3))
-        val items = source.metadata(Index.ITEMS)
+        File(tree, "worldmapdata/0/2.dat").delete()
+        File(tree, "worldmapdata/2").mkdirs()
+        File(tree, "worldmapdata/2/0.dat").writeBytes(byteArrayOf(1, 2, 3))
+        val items = source.metadata(Index.WORLD_MAP)
         items.archives[2] = ArchiveMetadata(version = 1, compression = Compression.NONE)
         source.writeMetadata(items)
 
         val result = Builder.build(source, output)
         assertEquals(2, result.archives, "the shrunken archive and the new one: $result")
         val built = cache(output)
-        assertContentEquals(intArrayOf(0, 1), built.files(Index.ITEMS, 0), "file 2 is gone")
-        assertContentEquals(byteArrayOf(1, 2, 3), built.data(Index.ITEMS, 2, 0), "archive 2 is new")
-        assertEquals(1, built.archiveVersion(Index.ITEMS, 2))
+        assertContentEquals(intArrayOf(0, 1), built.files(Index.WORLD_MAP, 0), "file 2 is gone")
+        assertContentEquals(byteArrayOf(1, 2, 3), built.data(Index.WORLD_MAP, 2, 0), "archive 2 is new")
+        assertEquals(1, built.archiveVersion(Index.WORLD_MAP, 2))
 
         // And back out again: dropping the archive from the metadata removes it from the cache.
-        File(tree, "config_obj/2/0.dat").delete()
-        val without = source.metadata(Index.ITEMS)
+        File(tree, "worldmapdata/2/0.dat").delete()
+        val without = source.metadata(Index.WORLD_MAP)
         without.archives.remove(2)
         source.writeMetadata(without)
         val removed = Builder.build(source, output)
         assertEquals(1, removed.removed, "the archive should have been dropped: $removed")
-        assertEquals(-1, cache(output).archiveVersion(Index.ITEMS, 2))
+        assertEquals(-1, cache(output).archiveVersion(Index.WORLD_MAP, 2))
     }
 
     @Test
@@ -271,9 +271,11 @@ class SourceTreeTest {
     }
 
     /**
-     * Two indices' worth of archives plus a config index, covering every shape the real cache
-     * has: `anims` keeps whole groups, `maps` is named and partly encrypted, `config_obj` holds
-     * several files per archive and a whirlpool flagged table.
+     * Three indices' worth of archives, covering every shape the real cache has: `anims` keeps
+     * whole groups, `maps` is named and partly encrypted, `worldmapdata` holds several files per
+     * archive and a whirlpool flagged table. All three are raw-byte indices on purpose - the
+     * typed JSON codecs decode what they are given, so a fixture of made up bytes has to stay out
+     * of their indices; `DefinitionJsonCodecTest` is where they are exercised.
      */
     private fun fixture(directory: File) {
         FileStore.create(directory, INDEX_COUNT).use { store ->
@@ -347,7 +349,7 @@ class SourceTreeTest {
             write(
                 store,
                 IndexSpec(
-                    index = Index.ITEMS,
+                    index = Index.WORLD_MAP,
                     format = 6,
                     revision = 9,
                     whirlpool = true,
@@ -418,7 +420,7 @@ class SourceTreeTest {
 
     private companion object {
         /** Enough idx files for the highest index the fixture uses. */
-        private const val INDEX_COUNT = 20
+        private const val INDEX_COUNT = 24
 
         /** Only `l50_50`'s key; `l60_60`'s is the one nobody has. */
         private val KEYS = mapOf((50 shl 8 or 50) to intArrayOf(1, 2, 3, 4))

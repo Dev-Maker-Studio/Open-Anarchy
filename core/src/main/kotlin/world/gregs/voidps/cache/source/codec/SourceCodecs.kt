@@ -1,34 +1,42 @@
 package world.gregs.voidps.cache.source.codec
 
 import world.gregs.voidps.cache.Index
+import java.util.ServiceLoader
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Which codec owns which index.
  *
- * The defaults below are the raw ones - what a source tree falls back to for an index nothing
- * better has been written for. A module that has something better registers it before the tree
- * is read or written; the `cs2` module claims index 12, and each typed definition codec claims
- * its own index the same way. Registration is a process-wide decision, so it belongs in a
- * module's initialisation and not in the middle of a build.
+ * Three layers, in order of increasing authority:
+ *
+ * 1. **Built ins.** The raw codecs for the indices nothing better exists for, [VerbatimGroupCodec] for
+ *    index 0, [ConfigCodec] for index 2 and a [DefinitionJsonCodec] for each of the twenty-two definition
+ *    types that have a byte exact encoder ([DefinitionCodecs]).
+ * 2. **Providers.** A module whose codec cannot live in core - the `cs2` module owns index 12, and core
+ *    must not depend on `cs2` - declares it through [SourceCodecProvider] and `META-INF/services`. They
+ *    are loaded once, the first time any codec is looked up, so a module is claimed by being on the
+ *    classpath and nothing has to call anything.
+ * 3. **Explicit registrations.** [register] replaces whatever an index had, providers included, for a
+ *    test or a tool that wants a particular codec.
+ *
+ * Registration is a process-wide decision, so it belongs in a module's initialisation and not in the
+ * middle of a build.
  */
 object SourceCodecs {
 
     private val codecs = ConcurrentHashMap<Int, SourceCodec>()
 
+    /** Indices somebody registered by hand, which no provider may take back. */
+    private val explicit = ConcurrentHashMap.newKeySet<Int>()
+
+    @Volatile
+    private var loaded = false
+
     /**
-     * The indices with multi-file archives in 727. Everything else holds one file per archive and
-     * gets [RawArchiveCodec], which says so loudly if that ever stops being true.
+     * The indices with multi-file archives in 727 that no typed codec claims. Everything else holds one
+     * file per archive and gets [RawArchiveCodec], which says so loudly if that ever stops being true.
      */
     private val MULTI_FILE = intArrayOf(
-        Index.INTERFACES,
-        Index.OBJECTS,
-        Index.ENUMS,
-        Index.NPCS,
-        Index.ITEMS,
-        Index.ANIMATIONS,
-        Index.SPOTANIMS,
-        Index.VAR_BIT,
         Index.WORLD_MAP,
         Index.QUICK_CHAT_MESSAGES,
         Index.QUICK_CHAT_MENUS,
@@ -42,29 +50,71 @@ object SourceCodecs {
     }
 
     /** [index]'s codec. */
-    fun codec(index: Int): SourceCodec = codecs[index] ?: RawArchiveCodec
-
-    /** Give [index] a codec, replacing whatever it had. */
-    fun register(index: Int, codec: SourceCodec) {
-        codecs[index] = codec
+    fun codec(index: Int): SourceCodec {
+        if (!loaded) {
+            load()
+        }
+        return codecs[index] ?: RawArchiveCodec
     }
 
-    /** Every index that has been given a codec explicitly, ascending. */
-    fun registered(): List<Int> = codecs.keys.sorted()
+    /** Give [index] a codec, replacing whatever it had - a built in or a provider's. */
+    fun register(index: Int, codec: SourceCodec) {
+        codecs[index] = codec
+        explicit.add(index)
+    }
+
+    /** Every index that has a codec of its own, ascending. */
+    fun registered(): List<Int> {
+        if (!loaded) {
+            load()
+        }
+        return codecs.keys.sorted()
+    }
 
     /**
-     * Put every index back to the codec it starts with. Only tests need this; a module that
-     * registered a codec has to register it again afterwards.
+     * Put every index back to the codec it starts with and let the providers be discovered again. Only
+     * tests need this; a module that registered a codec by hand has to register it again afterwards.
      */
+    @Synchronized
     fun reset() {
         codecs.clear()
+        explicit.clear()
+        loaded = false
         // Three chunks per archive that nothing can recompute, so the group is kept whole.
         codecs[Index.ANIMATION_FRAMES] = VerbatimGroupCodec
-        // Forty-five unrelated definition types, one directory each.
+        // Forty-five unrelated definition types, one directory each, fourteen of them typed.
         codecs[Index.CONFIGS] = ConfigCodec
-        // Indices whose archives hold more than one file.
+        // Indices whose archives hold more than one file and nothing better than bytes to say about it.
         for (index in MULTI_FILE) {
             codecs[index] = RawFilesCodec.NESTED
         }
+        // The definition indices, as editable JSON.
+        DefinitionCodecs.register()
+    }
+
+    /** A built in codec: a provider may still replace it, an explicit [register] always does. */
+    internal fun builtin(index: Int, codec: SourceCodec) {
+        codecs[index] = codec
+    }
+
+    /**
+     * Load every [SourceCodecProvider] on the classpath, once.
+     *
+     * After the built ins, so a provider's entry replaces one, and before the first lookup, so no build
+     * ever sees half a registry. An index somebody registered by hand is left alone.
+     */
+    @Synchronized
+    private fun load() {
+        if (loaded) {
+            return
+        }
+        for (provider in ServiceLoader.load(SourceCodecProvider::class.java)) {
+            for ((index, codec) in provider.codecs()) {
+                if (!explicit.contains(index)) {
+                    codecs[index] = codec
+                }
+            }
+        }
+        loaded = true
     }
 }
