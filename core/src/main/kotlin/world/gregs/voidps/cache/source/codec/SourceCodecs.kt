@@ -96,6 +96,8 @@ object SourceCodecs {
         MiscCodecs.register()
         // The audio and native asset indices: synth sounds as JSON, the rest as named bytes.
         AudioCodecs.register()
+        // Models, and the particle and billboard configs their footers name.
+        ModelCodecs.register()
     }
 
     /** A built in codec: a provider may still replace it, an explicit [register] always does. */

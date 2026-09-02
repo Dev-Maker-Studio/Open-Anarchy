@@ -2,7 +2,7 @@ package org.darkan.tools.viewer
 
 import imgui.ImGui
 import imgui.flag.ImGuiWindowFlags
-import org.darkan.tools.cache.model.ModelDefinition
+import world.gregs.voidps.cache.definition.data.ModelDefinition
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.model.TexturedModel
 import org.darkan.tools.cache.texture.TextureLoader
@@ -389,12 +389,12 @@ class ModelViewer(
         val renderType = def.faceRenderTypes?.get(faceIndex)?.toInt()?.and(0xFF) ?: 0
         val priority = def.facePriorities?.get(faceIndex)?.toInt()?.and(0xFF) ?: 0
 
-        val uvA = if (def.textureCoordU != null && aIdx < def.textureCoordU.size)
-            Pair(def.textureCoordU[aIdx], def.textureCoordV!![aIdx]) else null
-        val uvB = if (def.textureCoordU != null && bIdx < def.textureCoordU.size)
-            Pair(def.textureCoordU[bIdx], def.textureCoordV!![bIdx]) else null
-        val uvC = if (def.textureCoordU != null && cIdx < def.textureCoordU.size)
-            Pair(def.textureCoordU[cIdx], def.textureCoordV!![cIdx]) else null
+        val uvA = if (def.textureCoordU != null && aIdx < def.textureCoordU!!.size)
+            Pair(def.textureCoordU!![aIdx], def.textureCoordV!![aIdx]) else null
+        val uvB = if (def.textureCoordU != null && bIdx < def.textureCoordU!!.size)
+            Pair(def.textureCoordU!![bIdx], def.textureCoordV!![bIdx]) else null
+        val uvC = if (def.textureCoordU != null && cIdx < def.textureCoordU!!.size)
+            Pair(def.textureCoordU!![cIdx], def.textureCoordV!![cIdx]) else null
 
         return FaceInfo(
             faceIndex = faceIndex,

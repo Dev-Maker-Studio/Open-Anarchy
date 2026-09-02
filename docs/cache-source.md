@@ -151,6 +151,10 @@ the JS5 multi-file layout.
 | `AnimationFrameCodec` | index 0 | `<archive>/<frame>.json`, with the three chunk group rebuilt from the frames - see *anims* below |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `ArchiveDirectoryCodec` | indices 10, 23, 24, 25, 28 | the generalisation of `ConfigCodec`: a name and a codec per archive, either in a directory of its own (`worldmapdata/main_staticelements/`) or as one named file (`defaults/equipment.json`) |
+| `DefinitionJsonCodec<T>` | indices 3, 16-22 and 29, 14 of index 2's archives and both of index 27's | one JSON file per definition, see below |
+| `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
+| `ModelCodec` | index 7 | `<archive>.glb` - one glTF 2.0 binary per model, which is a whole archive; see *models* below |
+| `ParticleCodec` | index 27 | one sub-directory per particle archive (`producer`, `particle`), each with its own codec |
 | `Cs2SourceCodec` | index 12 | the TypeScript layout `cs2 decompile-all` writes (`<category>/<name>.ts`), provided by the `cs2` module - see *clientscripts* below |
 | `TranscodedArchiveCodec` | indices 6 and 11 | `<archive>.mid` - a standard MIDI file, rebuilt into the cache's compact encoding on the way back |
 | `BinaryArchiveCodec` | index 15 | `<archive>.jagpatch` - the payload verbatim, under an extension that says what it is |
@@ -158,7 +162,8 @@ the JS5 multi-file layout.
 | `NamedBytesCodec` | index 30 | `<os>/<arch>/<library>` - one file per archive, at the archive's own recovered name |
 | `ShaderCodec` | index 31 | `<archive name>/<file name>` - the names the archives spell out; program definitions as JSON |
 
-So the indices that hold definitions are editable JSON and the rest are bytes:
+So the indices that hold definitions are editable JSON, models are editable glTF, and the rest are
+bytes:
 
 | index | dir | codec | | index | dir | codec |
 |---|---|---|---|---|---|---|
@@ -196,6 +201,12 @@ shaders and the loading sprites - and index 2's 31 undecoded archives.
 | 16 | `config_loc` | `json-loc` | | | | |
 | 17 | `config_enum` | `json-enum` | | | | |
 | 18 | `config_npc` | `json-npc` | | | | |
+| 7 | `models` | `gltf-model` | | 21 | `config_spotanim` | `json-spotanim` |
+| 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 22 | `config_varbit` | `json-varbit` |
+| 16 | `config_loc` | `json-loc` | | 27 | `config_particle` | `particle` (`json-particle-producer`, `json-particle`) |
+| 17 | `config_enum` | `json-enum` | | 29 | `config_billboard` | `json-billboard` |
+| 18 | `config_npc` | `json-npc` | | 0 | `anims` | `verbatim-group` |
+| | | | | everything else | | `raw-archive` / `raw-files` |
 
 A codec is claimed per index in `SourceCodecs`, in three layers of increasing authority:
 
@@ -238,6 +249,9 @@ and file packed the way that type's decoder packs them (`id = archive shl bits o
 | `Nested(16)` | index 3 | `interfaces/1477/32.json` | `1477 shl 16 or 32` |
 | `Flat` | index 2's typed archives | `config/struct/26.json` | the file id; the directory is the archive |
 | `Packed(0)` | index 4 | `synth_sounds/1234.json` | the archive id, since the index holds one file per archive |
+| `Packed(bits)` | indices 16-22 and 29 | `config_obj/4151.json` | `4151 = 16 shl 8 or 55`, so archive 16 file 55 |
+| `Nested(16)` | index 3 | `interfaces/1477/32.json` | `1477 shl 16 or 32` |
+| `Flat` | index 2's and index 27's typed archives | `config/struct/26.json` | the file id; the directory is the archive |
 
 An obj, abridged - the real file lists every field the definition carries, defaults included, and
 nothing that is not a field (60 keys for this one):
@@ -643,6 +657,126 @@ Index 26 is one archive holding one blob: a count, a presence byte per material,
 per field carrying that field for every material at once. A material therefore has no bytes of its own,
 which is why it does not get a `DefinitionJsonCodec` - `MaterialCodec` decodes the whole blob, writes
 `materials/<id>.json` per material, and rebuilds the blob from all of them together.
+Indices 7, 27 and 29 - models and the particle and billboard configs a model's footer names - are
+editable too, and byte exact for the whole cache: models as glTF binaries, the two config indices as
+JSON. They are measured by `ModelCodecParityTest` rather than by `DefinitionJsonCodecTest`, so they
+are reported in *models*, *billboards* and *particles* below rather than in the table above.
+
+### models
+
+Index 7 is 73,417 archives of one file each, and each file is a model - stored as a **glTF 2.0
+binary**, `models/<id>.glb`. glTF is the format Blender imports and exports natively, so a model in
+the tree is a model an artist can open, edit and save, and a Blender plugin has a standard file to
+work with rather than a bespoke one. It is `ModelCodec` rather than a `DefinitionJsonCodec` because
+a model *is* an archive rather than a file inside one, but it carries the same guarantee: decode,
+write the `.glb`, read it straight back, re-encode, and keep the shipped bytes in a
+`<id>.glb.pristine` sidecar for anything that does not come out identical.
+
+**The geometry is real glTF.** The vertices are a `POSITION` accessor and the faces an `indices`
+accessor, in the model's own order, so any glTF tool draws the model without knowing anything about
+RuneScape:
+
+```
+glb
+  header      "glTF", version 2, total length
+  JSON chunk  the glTF asset, compact, fixed key order, padded with spaces
+  BIN chunk   the vertex positions then the face indices, padded with zeroes
+```
+
+Positions are the RS integers, **unscaled and unrotated** - nothing is divided, transformed or
+re-oriented - written as `FLOAT` because that is what the glTF core specification allows for
+`POSITION`, and a float32 holds every integer up to 2^24 exactly, so they come back as themselves.
+Indices are `UNSIGNED_SHORT` while every index fits and `UNSIGNED_INT` otherwise, which is also how
+an index a malformed model puts out of range survives.
+
+**Everything glTF cannot say rides in `extras`.** A colour per *face* rather than per vertex, a
+render type, a priority, a bone label, a texture projection, the particle and billboard
+attachments, the footer's own bytes: none of it has a glTF equivalent, so it sits on the node as
+`extras.rs`, as compact JSON arrays named after what they are. **The extras are the source of truth
+for the re-encoder**; nothing in the glTF proper is a second copy of them, and no viewer-only
+attribute (`COLOR_0`, `TEXCOORD_0`, `JOINTS_0`) is emitted, because a per-face colour would mean
+splitting every vertex three ways and tripling the file for something the extras already say
+exactly. `models/9808.glb` is 40,528 bytes for a 15,486 byte archive, and its JSON chunk - 25,368
+of them - starts like this. The file itself holds no whitespace at all; the line breaks below are
+for reading, and `...` is where the real file goes on:
+
+```json
+{"asset":{"generator":"darkan cache-source","version":"2.0"},"scene":0,"scenes":[{"nodes":[0]}],
+ "nodes":[{"mesh":0,"name":"model_9808","extras":{"rs":{"id":9808,"format":"new","version":15,
+   "footer":{"flags":8,"priority":255,"alphas":1,"faceSkins":1,"materials":1,"vertexSkins":1},
+   "colours":[4550,4550,4550,4550,4550,...],"priorities":[...],"alphas":[...],"materials":[...],
+   "faceSkins":[...],"vertexSkins":[...]}}}],
+ "meshes":[{"name":"model_9808","primitives":[{"attributes":{"POSITION":0},"indices":1,"mode":4}]}],
+ "accessors":[{"bufferView":0,"componentType":5126,"count":...,"type":"VEC3","min":[...],"max":[...]},
+              {"bufferView":1,"componentType":5123,"count":...,"type":"SCALAR"}],
+ "bufferViews":[...],"buffers":[{"byteLength":...}]}
+```
+
+| key in `extras.rs` | what it is |
+|---|---|
+| `id`, `format`, `version` | the archive id, which of the two model layouts the file uses (`new` or `old`) and the model format version |
+| `footer` | the footer's own bytes: the flag byte (`0x1` face render types, `0x2` particles, `0x4` billboards, `0x8` a version byte), the priority byte (255 means a priority per face) and the four "has this section" bytes, raw. Always written, because which sections exist is the file's statement and not something to infer from which arrays came back |
+| `colours`, `renderTypes`, `priorities`, `alphas`, `materials`, `texturePointers`, `faceSkins` | one entry per face, in the primitive's face order, each present only when the file carries that section |
+| `vertexSkins` | one entry per vertex, in the `POSITION` accessor's order |
+| `textureMappings`, `textureTriangles` | each texture triangle's projection type and its `[x,y,z]` corners |
+| `textureScales`, `textureRotations`, `textureDirections`, `textureSpeeds`, `cubeTranslations` | the projection of each *non planar* texture triangle, so these are indexed by complex texture rather than by triangle |
+| `particleEmitters`, `particleEffectors` | `[producer,face]` and `[particle,vertex]` - what the footer attaches, naming index 27 archive 0 and archive 1 |
+| `billboards` | `[billboard,face,depth,distance]`, naming index 29 |
+| `vertexFlags`, `faceIndexTypes` | layout fidelity, written only when the encoder would not derive them - which nothing in 727 needs |
+| `unusedTexturePointers`, `trailing` | hex, for bytes the file carries that nothing reads |
+
+Signedness follows the field: colours, alphas, render types, priorities, mappings and skins are
+unsigned (0-65535 or 0-255); materials and texture pointers are signed, because -1 is their "none";
+texture rotations, directions, speeds and cube translations are signed bytes, which is what the
+client reads them as.
+
+**A `.glb` is deterministic to the byte.** The glTF JSON is written by hand in a fixed key order
+with no whitespace and with every number an integer, the chunks are padded the way the
+specification requires - spaces after the JSON, zeroes after the binary - and the generator string
+is a constant, so re-unpacking an unchanged cache rewrites nothing. Reading goes through the
+accessors properly (byte offsets, strides, all six component types) rather than assuming the
+writer's layout, so a file that has been through Blender still reads; the one thing it insists on
+is a **single primitive**, because the extras are indexed by the model's own face order and a split
+into several primitives loses it.
+
+Two things the decode produces are the renderer's values rather than the file's, and the encoder
+inverts both: a model older than version 13 arrives with its vertices and its complex texture
+scales upscaled by four (the client's `Mesh.upscale`, which leaves a cylindrical mapping's Z
+alone), and a face's material and texture pointer are the file's values minus one so that -1 means
+none. `ModelDefinition.vertexFlags` and `faceIndexTypes` are the file's own per element arrays and
+are kept on the definition, but omitted from the `.glb` while they are what `ModelEncoder` derives:
+a vertex flag bit is set exactly when that axis's delta is not zero, and a face index type prefers
+2, then 3, then 4, then 1.
+
+**Parity: all 73,417 archives, byte identical, zero pristine** (`ModelEncoderParityTest` for the
+encoder against the shipped bytes, `ModelCodecParityTest` for the whole trip out through the `.glb`
+and back). Every archive uses the newer model layout; versions run 12 (31,692), 14 (2,314), 15
+(39,224), 16 (180) and 17 (7). Both layout fidelity arrays are derivable for every single model, so
+no file carries either. Two residuals are named and asserted so they cannot grow:
+
+- **Eight archives declare no geometry at all** - 1077, 2862, 4420, 6932, 15553, 15554, 15555 and
+  15556, byte-identical 24 byte placeholders. glTF has no way to spell an empty primitive, so those
+  `.glb` files carry the node and its extras and no mesh at all. `ModelDecoder.read` returns an
+  empty model for them, which is what the client builds from the same bytes;
+  `ModelDecoder.decode`, which every caller that means to *draw* a model uses, still answers null.
+- **One archive declares a texture index section with no texture triangle behind it** - model
+  73412, 47 bytes of it. The client allocates no array for those and never reads them, so they
+  reach no `faceTexturePointers`; they are kept verbatim in `unusedTexturePointers`.
+
+**Size: 1,042 MB of `.glb` for 380 MB of archives, 2.7x** - still by far the largest thing in the
+tree. The same models as pretty-printed JSON, one vertex and one face to a line the way the
+definition indices are written, measured **1,574 MB**, so moving the geometry into the binary chunk
+is worth 532 MB; what is left is the per-face arrays in the extras, which are text either way.
+Decoding, writing, reading back and re-encoding all 73,417 models costs 25 s on one core (the
+unpacker runs an archive per thread), measured by `ModelCodecParityTest`.
+
+### billboards
+
+Index 29 is one archive whose files are the billboard configs a model's footer pins to a face:
+`config_billboard/<id>.json`, 360 of them. An opcode keyed type like any config, so it is an
+ordinary `DefinitionJsonCodec` on the `Packed(9)` layout - nine bits covers all 360 file ids of
+archive 0 - and it goes through the same `OpcodeOrdered`/`OpcodeEncoder` mechanism as the
+twenty-two types above. `config_billboard/0.json` in full:
 
 ```json
 {
@@ -1002,6 +1136,117 @@ Index 4's synth sounds are the twenty-third type this codec stores and the only 
 2, 3 and 16-22, so they are counted in *synth sounds (index 4)* below rather than in this table,
 which `DefinitionJsonCodecTest` produces from `DefinitionCodecs`. The audio and native asset indices
 each get a section of their own after *clientscripts*.
+  "materialId": 735,
+  "size2d": 51,
+  "size3d": 51,
+  "shape": 1,
+  "blendType": 0,
+  "stationary": false,
+  "hasUid": true,
+  "unknown3": 0,
+  "opcodeOrder": [2, 3, 4, 5, 7, 1]
+}
+```
+
+`hasUid` is the one that matters to a model: when it is set the anchor face is hidden and the
+billboard's quad is drawn in its place. Two records are not the values they set, and the encoder
+inverts both: opcode 1's `0xffff` is the "no material" sentinel and reaches `materialId` as -1, and
+opcode 2's two shorts are one less than the sizes. `unknown3` is opcode 3's byte, which the client
+reads and throws away - 230 of the 360 files carry it, so a decoder that dropped it could not write
+them back.
+
+**Parity: all 360 files, byte identical, zero pristine.** Every one of them needs its own
+`opcodeOrder`: not a single billboard in the cache was packed in the order an encoder derives, and
+opcode 1 trailing the rest (as in the file above) is the usual reason. None needs a shadowed
+payload. 1.4 MB of raw archives becomes 0.1 MB of JSON.
+
+### particles
+
+Index 27 has two archives holding two unrelated types, so it works the way index 2 does: a
+directory per archive, each with its own codec, laid out flat inside it.
+
+| archive | directory | type | client's name | files |
+|---|---|---|---|---|
+| 0 | `config_particle/producer` | particle producer | `ParticleProducerType` | 741 |
+| 1 | `config_particle/particle` | particle | `ParticleType` | 18 |
+
+A producer is a fountain: the cone particles leave a face in, how fast, how big, how long they
+live, what colour they start and fade to, and which particles push them about. A model's footer
+names one by its emitter attachment. A "particle" in archive 1 is not one speck of dust but a force
+field a producer's output is deflected by, sat at an offset from the vertex a model's *effector*
+attachment puts it on.
+
+**Every field is the file's own value, not the client's derived one.** The client's
+`ParticleProducerType.decode` shifts the four emission angles left by three bits into a `short`
+that overflows, and multiplies the sizes by 2^14; its `build` then derives twenty more values - the
+colour, alpha, speed and size fade steps - from those. None of it is invertible and none of it is
+in the file, so none of it happens in the decoder, exactly as `changeValues` is kept out of every
+other definition's read path. `config_particle/producer/1.json`, abridged:
+
+```json
+{
+  "id": 1,
+  "minAngleHorizontal": 0,
+  "maxAngleHorizontal": 2047,
+  "minAngleVertical": 584,
+  "maxAngleVertical": 662,
+  "minSpeed": 1048576,
+  "maxSpeed": 2621440,
+  "size": 19,
+  "minStartColour": 2030016768,
+  "maxStartColour": 1694498662,
+  "minLifetime": 30,
+  "maxLifetime": 40,
+  ...
+  "materialId": 718,
+  "activeFirst": 1,
+  "emissionEndTime": 32767,
+  "lifetime": 32767,
+  "periodic": 1,
+  "faceColourRgb": 1264975872,
+  "colourFading": 100,
+  "alphaFading": 25,
+  "endSpeed": 2097152,
+  ...
+  "opcodeOrder": [1, 3, 5, 7, 8, 12, 13, 14, 15, 16, 20, 26, 21, 22, 23, 6, 18]
+}
+```
+
+`config_particle/particle/17.json` in full:
+
+```json
+{
+  "id": 17,
+  "rotation": 1023,
+  "offsetX": 81920,
+  "offsetY": 81920,
+  "offsetZ": 81920,
+  "type": 1,
+  "sizeMultiplier": 618,
+  "particleHandlingType": 0,
+  "currentOffset": true,
+  "verticeCalculationType": true,
+  "unusedOpcode10": true,
+  "opcodeOrder": [1, 4, 8, 9, 10, 3]
+}
+```
+
+A record whose absence cannot be told from a default value is a nullable field rather than a
+sentinel, so presence is a null check and never a guess: a producer's `unused2` (opcode 2's
+discarded byte), `size` (5), the four values of `activeFirst` (16), `endSize` (27), `unused29`
+(29's discarded short) and `minSize`/`maxSize` (31) are all nullable, and so is a particle's
+`unused2`. Five of the producer opcodes the client knows - 2, 11, 17, 25 and 29 - appear in no 727
+file at all.
+
+**One bug in the reference client, found by parity.** Its `ParticleType.decode` reads opcode 4 as a
+bare int. The record is a byte and an int - the `type` the client's own `setDefaults` switches on,
+followed by `sizeMultiplier` - and reading only the int desynchronises the rest of the record list.
+Ten of the eighteen files carry the record; with the leading byte read every one of them parses to
+its last byte, and without it none of them does. `ParticleDecoder` reads both.
+
+**Parity: all 741 producers and all 18 particles, byte identical, zero pristine.** 729 of the
+producers and all 18 particles need an explicit `opcodeOrder`; one producer needs a shadowed
+payload. 3.0 MB of raw archives becomes 0.5 MB of JSON.
 
 ### The pristine fallback
 
@@ -1499,6 +1744,10 @@ The whole-cache timings below were measured before the audio and native asset co
 they are the cost of a tree whose indices 4, 6, 11, 14, 30 and 31 were still `.dat` files; what those
 seven cost on their own is measured in *What these seven cost* above, and the shape of the change is
 about 30 MB more tree for index 4's JSON against 10 MB less for the songs and jingles.
+The timings below were measured with indices 7, 27 and 29 still stored as raw bytes and have not
+been re-measured since they became editable. What that costs is known per index rather than end to
+end: decoding, writing, re-reading and re-encoding all 73,417 models takes 25 s on one core (the
+unpacker runs an archive per thread), and the tree grows by 1,042 MB - see *models* above.
 
 Against the 727 cache on one 12-core machine, on the tree at `cache-source/`: unpack 12.8 s when the
 tree is already right and 44 s when every file has to be written (140,692 archives, 397,041 files,
@@ -1660,6 +1909,8 @@ in `cs2.d.ts`; the copy in `cs2.d.ts` is the price of the index staying self-con
   run lengths the client's own decode discards - see *midi instruments (index 15)*. Index 14's
   streams are the one case where there is nothing to reach for: an `.ogg` of them would be mostly
   invented and could not be checked back.
+  editor). Each is one codec class plus a byte-exact proof, the way the definition indices and the
+  model indices got theirs; the pristine fallback carries the rest meanwhile.
 - Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
 - Handing a codec the cache a tree is being *unpacked from*, the last thing `SourceCodec` does not
   offer - see *The `SourceCodec` interface* above. Packing needs no cache any more.
@@ -1690,7 +1941,7 @@ files), `ShaderProgramEncoder` (index 31, 24 files) and `JagexMidi.toCompact` (i
 1,662 files, which rebuilds a whole archive rather than a definition). Their measurements are in
 *synth sounds*, *shaders* and *midi songs and jingles* above.
 
-Three tests measure it, each against the shipped bytes rather than against a re-decode:
+Four tests measure it, each against the shipped bytes rather than against a re-decode:
 
 - `core/src/test/kotlin/world/gregs/voidps/cache/definition/DefinitionEncoderParityTest.kt` (indices 16-22)
 - `core/src/test/kotlin/world/gregs/voidps/cache/config/ConfigEncoderParityTest.kt` (index 2)
@@ -1701,6 +1952,7 @@ The 2D encoders - sprites, textures, materials and font metrics - are measured t
 `core/src/test/kotlin/world/gregs/voidps/cache/source/ImageCodecTest.kt`, which goes one step further and
 writes the files to disk before reading them back, because a sprite's pixels make the trip through a PNG
 and `javax.imageio` is half of that round trip. See *What the 2D indices cost*.
+- `core/src/test/kotlin/world/gregs/voidps/cache/definition/ModelEncoderParityTest.kt` (indices 7, 27 and 29)
 
 All three enumerate files through the reference table (`Cache.archives` / `Cache.files`), not through
 a decoder's `size`, which rounds up to whole archives and invents ids that have no file. They decode
@@ -1799,11 +2051,20 @@ their values alone.
 | 28 | 6 | `equipment` | `BodyDecoder` / `BodyEncoder` | 1 | 1 | none | 1 | 0 |
 | 33 | all | `game tip` | `GameTipDecoder` / `GameTipEncoder` | 31 | 31 | none | - | - |
 | 35 | all | `cutscene` | `CutsceneDecoder` / `CutsceneEncoder` | 16 | 16 | none | - | - |
+| 29 | 0 | `billboard` | `BillboardDecoder` / `BillboardEncoder` | 360 | 360 | none | 360 | 0 |
+| 27 | 0 | particle `producer` | `ParticleProducerDecoder` / `…Encoder` | 741 | 741 | none | 729 | 1 |
+| 27 | 1 | `particle` | `ParticleDecoder` / `ParticleEncoder` | 18 | 18 | none | 18 | 0 |
+| 7 | all | `model` | `ModelDecoder` / `ModelEncoder` | 73,417 | 73,417 | none | - | - |
 
 **741,983 files - 153,109 of indices 16 to 22, 27,403 of index 2, 65,239 interface components and 496,232
 of the eight other record indices - all byte identical. No file of any of these types needs a pristine
 copy.** Index 2's other 31 archives have no decoder and stay raw (`RawFilesCodec`), and so do index 23's 45
 per-area images.
+
+The last four rows are the model indices, measured by `ModelEncoderParityTest`: **74,536 more files
+- 73,417 models, 741 particle producers, 18 particles and 360 billboards - all byte identical too.**
+Models are the other type here that is not opcode keyed (see *models* above), so they carry neither
+an order nor a shadowed payload; the three configs are opcode keyed like everything else.
 
 Interface components are the one type here that is not opcode keyed: index 3 is a fixed field layout,
 `InterfaceEncoder` was already byte exact and needed no change, and it implements neither
@@ -1849,6 +2110,13 @@ to either side shows up as a byte difference rather than only as a field differe
 | defaults | `inputs` entries for opcodes 8, 9 and 10 | three input bindings the client decodes and discards |
 | game tip | `version`, `renderTypes`, `hasUpdates`, `drawOutline`, `fillColour`, `wideFileIds` | the two values the client checks and then bails out on; two booleans that are bytes in the file; the fill colour of a sprite loading bar, which the client reads and then overwrites with its background colour; and the width a big smart was written in |
 | cutscene | `label`, `hitmarkFlags`, raw camera keyframes | an actor's dev label, read and discarded by the client; the hitmark flag byte, of which one bit selects two values the client throws away; and the keyframe coordinates before the client's `- 5120` |
+| model | `footerFlags`, `modelPriority`, `alphaFlag`, `faceSkinFlag`, `textureFlag`, `vertexSkinFlag` | the footer's own bytes, of which the decoder read only the bits it drew with |
+| model | `vertexFlags`, `faceIndexTypes` | the two per element layout arrays, previously read into locals and dropped |
+| model | `faceSkins`, `vertexSkins` | two whole sections the decoder skipped over: the bone group of each face and of each vertex |
+| model | `particleEmitters`, `particleEffectors` | the footer's particle attachments, previously read only to find where the billboards started |
+| model | `unusedTexturePointers`, `trailing`, `newFormat` | a texture index section with no triangle behind it (model 73412), any byte the sections do not account for, and which of the two layouts the file used |
+| billboard | `id`, `unknown3` | the file id the type had no field for, and opcode 3's byte, which the client reads and discards - 230 of 360 files carry it |
+| particle | `type` | opcode 4's leading byte, which the reference client does not read at all; see *particles* |
 
 Two ordering rules matter to any future definition codec: `Parameterized.readParameterRecords`
 decodes into an insertion ordered `Int2ObjectArrayMap` and `Extra.readParameters` into an
@@ -1869,6 +2137,8 @@ is the default for every decoder here.
 | `QuestDecoder` | opcodes 6 and 15 were read and discarded | `type` lost on 9 quests; `questPointRequirement` never populated |
 | `Transforms.writeTransforms` | loc transform ids (opcodes 77 and 92) are big smarts, npc's are shorts | the shared writer wrote a loc's `-1` as `0xffff`, which reads back as a 4 byte smart; the helper is gone and each encoder writes its own |
 | `FontDecoder` | the variable width form's second glyph offset profile is `widths[glyph]` bytes long, as the first one is, not `heights[glyph]` | latent: it would desync every byte after the profiles for any font whose two tables differ, and none of the 27 fonts in 727 is variable width at all |
+| `ParticleType.decode` (the *reference client's*) | opcode 4 is a byte and an int, not a bare int | the byte is the `type` its own `setDefaults` switches on; without it the record list desynchronises from opcode 4 onwards in 10 of the 18 files |
+| `ModelDecoder` (old layout) | the sections start at offset 0, not after the texture mapping block, and the texture triangles sit between the face colours and the vertices | every offset in the pre-`0xFFFF` layout was wrong, and its texture triangles were dropped. No 727 archive uses that layout, so nothing rendered differently; it is now read the way the client reads it |
 
 Every decoder of an opcode keyed type now also fails loudly on an opcode it does not know
 (`error("Unhandled … opcode")`) instead of silently desyncing the rest of the file.
