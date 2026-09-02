@@ -83,6 +83,17 @@ data class ScriptCall(val scriptId: Int, val args: List<Expr>, override val type
 data class TempRef(val name: String, override val type: Cs2Type) : Expr
 
 /**
+ * A multi-value call spliced into an argument list: `f(a, ...g(), b)`.
+ *
+ * Every result of the call is pushed where the spread sits. This is the one
+ * form that can say a call happened *between* two of another call's arguments,
+ * which is exactly what the bytecode can do and a named temporary cannot.
+ */
+data class Spread(val call: Expr) : Expr {
+    override val type get() = call.type
+}
+
+/**
  * A callback passed to a hook setter: the script to run, its bound arguments,
  * and the trigger list that decides when it fires.
  */
@@ -109,6 +120,12 @@ sealed interface Stmt
 /** A call evaluated for its effect. */
 data class ExprStmt(val call: Expr) : Stmt
 
+/**
+ * A store to a local. [declare] marks the store that also declares it, which
+ * reads as `let int4: number = 1;` and compiles to the same push and store as
+ * any other assignment - the declaration is only about where the name is
+ * introduced, never about what runs.
+ */
 data class LocalAssign(val slot: Int, val type: Cs2Type, val value: Expr, val declare: Boolean) : Stmt
 
 data class VarAssign(val target: VarRef, val value: Expr) : Stmt
@@ -130,11 +147,32 @@ data class ParallelAssign(
 /** Binds every result of a multi-value call at once. */
 data class MultiAssign(val names: List<TempRef>, val call: Expr) : Stmt
 
+/**
+ * `[a, b] = f()` - a multi-value call whose results go straight into locals or
+ * variables, with no named temporaries in between.
+ *
+ * [targets] are in the order the call pushes its results, which is the order
+ * they read in; the code generator stores them back to front because that is
+ * the order the stacks pop in. [declare] marks the form that also declares its
+ * targets, `let [a, b] = f()`.
+ */
+data class DestructureAssign(
+    /** Each target is a [LocalRef] or a [VarRef]. */
+    val targets: List<Expr>,
+    val call: Expr,
+    val declare: Boolean = false,
+) : Stmt
+
 data class Return(val values: List<Expr>) : Stmt
 
 data class If(val condition: Condition, val then: List<Stmt>, val otherwise: List<Stmt>) : Stmt
 
-data class While(val condition: Condition, val body: List<Stmt>) : Stmt
+/**
+ * A loop. A null [condition] is `while (true)`: a loop whose test sits part way
+ * through the body, which is where the compiler put it when the work before the
+ * test has to run on every pass.
+ */
+data class While(val condition: Condition?, val body: List<Stmt>) : Stmt
 
 data class SwitchCase(val keys: List<Int>, val body: List<Stmt>)
 
@@ -144,12 +182,8 @@ data class Switch(
     val default: List<Stmt>,
     /** Index of the switch table this came from, so re-compilation keeps its slot. */
     val table: Int,
-    /**
-     * True when the default arm sits directly after the switch and the cases
-     * follow it; false when a jump leads to a default arm laid out last. Both
-     * shapes occur, and TypeScript can express either by where `default:` goes.
-     */
-    val defaultFirst: Boolean = false,
+    /** What the subject is, so the case keys read as the same thing. */
+    val keyKind: ArgType = ArgType.INT,
 ) : Stmt
 
 /** A goto the structurer could not fold into a loop or conditional. */
@@ -238,4 +272,10 @@ class Cs2Function(
     val returns: List<Cs2Type>,
     /** Parameter types in the order callers push them, when observed. */
     val argumentOrder: List<Cs2Type> = emptyList(),
+    /** What each int parameter holds, by slot, where the corpus agrees. */
+    val intParamKinds: List<ArgType> = emptyList(),
+    /** What each int local holds, by slot, where the function's own uses agree. */
+    val intLocalKinds: Map<Int, ArgType> = emptyMap(),
+    /** What each returned value is, by position in the tuple. */
+    val returnKinds: List<ArgType> = emptyList(),
 )

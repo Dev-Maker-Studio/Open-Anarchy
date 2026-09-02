@@ -16,6 +16,7 @@ import org.darkan.tools.cs2.ir.OrAny
 import org.darkan.tools.cs2.ir.Continue
 import org.darkan.tools.cs2.ir.Cs2Function
 import org.darkan.tools.cs2.ir.Cs2Type
+import org.darkan.tools.cs2.ir.DestructureAssign
 import org.darkan.tools.cs2.ir.Expr
 import org.darkan.tools.cs2.ir.ExprStmt
 import org.darkan.tools.cs2.ir.Goto
@@ -31,6 +32,7 @@ import org.darkan.tools.cs2.ir.OpCall
 import org.darkan.tools.cs2.ir.ParallelAssign
 import org.darkan.tools.cs2.ir.Return
 import org.darkan.tools.cs2.ir.ScriptCall
+import org.darkan.tools.cs2.ir.Spread
 import org.darkan.tools.cs2.ir.Stmt
 import org.darkan.tools.cs2.ir.StrConst
 import org.darkan.tools.cs2.ir.Switch
@@ -43,14 +45,28 @@ import org.darkan.tools.cs2.ir.While
 /**
  * Renders a decompiled script as TypeScript.
  *
- * Locals are declared up front in slot order, so they can be renamed freely
- * without changing which slot they compile back to: the compiler allocates
- * slots by declaration order within each type.
+ * Locals are declared where they are first written when that is a statement of
+ * the function body itself, and in the header otherwise. Either way the slot a
+ * name compiles back to comes from the name, so a local can be renamed freely.
  */
 class Cs2Emitter(private val function: Cs2Function) {
 
     private val out = StringBuilder()
     private var indent = 0
+
+    /** Locals a `let` in the body introduces, in the order they appear. */
+    private val declaredInBody: List<Int> = declarationsIn(function.body)
+
+    /**
+     * The name each local reads as.
+     *
+     * A local's slot is not its name any more: names are numbered in declaration
+     * order - parameters, then the slots the header reserves, then the ones the
+     * body declares as it goes - because that is the order the compiler hands
+     * slots out in. Numbering them any other way would make an untouched file
+     * compile to different slots than it came from.
+     */
+    private val localNames: Map<Int, String> = nameLocals()
 
     fun emit(): String {
         out.setLength(0)
@@ -58,11 +74,22 @@ class Cs2Emitter(private val function: Cs2Function) {
         emitSignature()
         indent = 1
         emitLocalDeclarations()
-        emitAll(function.body)
+        emitBody(function.body)
         indent = 0
         line("}")
         return out.toString()
     }
+
+    /** Renders a fragment on its own, for reports about code that was dropped. */
+    fun renderStatements(statements: List<Stmt>): String {
+        out.setLength(0)
+        indent = 0
+        emitAll(statements)
+        return out.toString()
+    }
+
+    /** Renders a condition on its own, for the same reports. */
+    fun renderCondition(value: Condition): String = condition(value)
 
     private fun emitHeader() {
         // A triple-slash reference makes a single file resolve the opcode and
@@ -94,13 +121,16 @@ class Cs2Emitter(private val function: Cs2Function) {
         val params = order.map { type ->
             val slot = next.getOrDefault(type, 0)
             next[type] = slot + 1
-            "${localName(slot, type)}: ${tsType(type)}"
+            val kind = if (type == Cs2Type.INT) function.intParamKinds.getOrNull(slot) else null
+            "${localName(slot, type)}: ${tsType(type, kind)}"
         }
 
         val returns = when (function.returns.size) {
             0 -> "void"
-            1 -> tsType(function.returns.first())
-            else -> "[" + function.returns.joinToString(", ") { tsType(it) } + "]"
+            1 -> tsType(function.returns.first(), function.returnKinds.firstOrNull())
+            else -> function.returns.mapIndexed { index, type ->
+                tsType(type, function.returnKinds.getOrNull(index))
+            }.joinToString(", ", "[", "]")
         }
         // Not exported: clientscripts share one flat namespace, and keeping the
         // files as scripts rather than modules is what lets one call another
@@ -109,47 +139,114 @@ class Cs2Emitter(private val function: Cs2Function) {
     }
 
     /**
-     * Declares every local that is not a parameter, in slot order. Keeping the
-     * order explicit is what makes renaming safe.
+     * Reserves the slots the body does not declare itself, in slot order. A
+     * declaration with no initialiser produces no instructions at all - it only
+     * says which slot the name means.
      */
     private fun emitLocalDeclarations() {
         var declared = false
         for (slot in function.intArgs until function.intLocals) {
-            line("let ${localName(slot, Cs2Type.INT)}: number = 0;")
+            if (key(slot, Cs2Type.INT) in declaredInBody) continue
+            line("let ${localName(slot, Cs2Type.INT)}: ${localType(slot)};")
             declared = true
         }
         for (slot in function.stringArgs until function.stringLocals) {
-            line("let ${localName(slot, Cs2Type.STRING)}: string = \"\";")
+            if (key(slot, Cs2Type.STRING) in declaredInBody) continue
+            line("let ${localName(slot, Cs2Type.STRING)}: string;")
             declared = true
         }
         for (slot in function.longArgs until function.longLocals) {
-            line("let ${localName(slot, Cs2Type.LONG)}: bigint = 0n;")
+            if (key(slot, Cs2Type.LONG) in declaredInBody) continue
+            line("let ${localName(slot, Cs2Type.LONG)}: bigint;")
             declared = true
         }
         if (declared) line("")
     }
 
-    private fun tsType(type: Cs2Type) = when (type) {
-        Cs2Type.INT -> "number"
+    private fun key(slot: Int, type: Cs2Type) = (slot shl 2) or type.ordinal
+
+    /** The locals the body introduces with a `let` of its own, in source order. */
+    private fun declarationsIn(body: List<Stmt>): List<Int> {
+        val out = ArrayList<Int>()
+        for (statement in body) {
+            when {
+                statement is LocalAssign && statement.declare ->
+                    out.add(key(statement.slot, statement.type))
+                statement is DestructureAssign && statement.declare ->
+                    statement.targets.filterIsInstance<LocalRef>()
+                        .forEach { out.add(key(it.slot, it.type)) }
+            }
+        }
+        return out
+    }
+
+    private fun nameLocals(): Map<Int, String> {
+        val out = HashMap<Int, String>()
+        for (type in Cs2Type.entries) {
+            val prefix = prefixOf(type)
+            val args = argumentsOf(type)
+            val total = localsOf(type)
+            for (slot in 0 until args) out[key(slot, type)] = "${prefix}Arg$slot"
+
+            val inline = declaredInBody.filter { it and 3 == type.ordinal }
+            val header = (args until total).map { key(it, type) }.filterNot { it in inline }
+            var index = args
+            for (local in header + inline) {
+                out[local] = "$prefix$index"
+                index++
+            }
+        }
+        return out
+    }
+
+    private fun prefixOf(type: Cs2Type) = when (type) {
+        Cs2Type.INT -> "int"
+        Cs2Type.STRING -> "str"
+        Cs2Type.LONG -> "long"
+    }
+
+    private fun argumentsOf(type: Cs2Type) = when (type) {
+        Cs2Type.INT -> function.intArgs
+        Cs2Type.STRING -> function.stringArgs
+        Cs2Type.LONG -> function.longArgs
+    }
+
+    private fun localsOf(type: Cs2Type) = when (type) {
+        Cs2Type.INT -> function.intLocals
+        Cs2Type.STRING -> function.stringLocals
+        Cs2Type.LONG -> function.longLocals
+    }
+
+    private fun tsType(type: Cs2Type, kind: ArgType? = null): String = when (type) {
+        Cs2Type.INT -> kind?.let { Cs2Names.aliasFor(it) } ?: "number"
         Cs2Type.STRING -> "string"
         Cs2Type.LONG -> "bigint"
     }
 
-    private fun localName(slot: Int, type: Cs2Type): String {
-        val prefix = when (type) {
-            Cs2Type.INT -> "int"
-            Cs2Type.STRING -> "str"
-            Cs2Type.LONG -> "long"
-        }
-        val args = when (type) {
-            Cs2Type.INT -> function.intArgs
-            Cs2Type.STRING -> function.stringArgs
-            Cs2Type.LONG -> function.longArgs
-        }
-        return if (slot < args) "${prefix}Arg$slot" else "$prefix$slot"
-    }
+    /** What an int local reads as, which is what its uses agree it holds. */
+    private fun localType(slot: Int) = tsType(Cs2Type.INT, function.intLocalKinds[slot])
+
+    private fun localName(slot: Int, type: Cs2Type): String =
+        localNames[key(slot, type)] ?: "${prefixOf(type)}$slot"
 
     // ----------------------------------------------------------- statements
+
+    /**
+     * The function body, with the blank lines that separate the run of leading
+     * declarations from the work and the work from the first block statement.
+     */
+    private fun emitBody(body: List<Stmt>) {
+        var leading = true
+        for ((index, statement) in body.withIndex()) {
+            val declaration = statement is LocalAssign && statement.declare
+            if (index > 0) {
+                if (statement is If || statement is While || statement is Switch) line("")
+                else if (leading && !declaration) line("")
+            }
+            if (!declaration) leading = false
+            emit(statement)
+        }
+    }
 
     private fun emitAll(statements: List<Stmt>) = statements.forEach(::emit)
 
@@ -163,8 +260,13 @@ class Cs2Emitter(private val function: Cs2Function) {
                 line("${expr(statement.call)};")
             }
 
-            is LocalAssign ->
-                line("${localName(statement.slot, statement.type)} = ${expr(statement.value)};")
+            is LocalAssign -> {
+                val name = localName(statement.slot, statement.type)
+                val type = if (statement.type == Cs2Type.INT) localType(statement.slot)
+                else tsType(statement.type)
+                val declaration = if (statement.declare) "let $name: $type" else name
+                line("$declaration = ${expr(statement.value)};")
+            }
 
             is ParallelAssign -> {
                 val targets = statement.targets.joinToString(", ") { expr(it) }
@@ -172,13 +274,23 @@ class Cs2Emitter(private val function: Cs2Function) {
                 line("[$targets] = [$values];")
             }
 
+            is DestructureAssign -> {
+                val targets = statement.targets.joinToString(", ") { expr(it) }
+                val keyword = if (statement.declare) "let " else ""
+                line("$keyword[$targets] = ${expr(statement.call)};")
+            }
+
             is VarAssign -> line("${expr(statement.target)} = ${expr(statement.value)};")
 
             is ArrayAssign ->
                 line("array${statement.array}[${expr(statement.index)}] = ${expr(statement.value)};")
 
-            is ArrayDefine ->
-                line("defineArray(${statement.array}, ${statement.elementType}, ${expr(statement.size)});")
+            // The element type is a type code, like an enum's: it decides what
+            // the array is filled with when it is made.
+            is ArrayDefine -> {
+                val element = Cs2TypeChars.nameOf(statement.elementType) ?: statement.elementType.toString()
+                line("defineArray(${statement.array}, $element, ${expr(statement.size)});")
+            }
 
             is MultiAssign -> {
                 val names = statement.names.joinToString(", ") { it.name }
@@ -191,20 +303,10 @@ class Cs2Emitter(private val function: Cs2Function) {
                 else -> line("return [${statement.values.joinToString(", ") { expr(it) }}];")
             }
 
-            is If -> {
-                line("if (${condition(statement.condition)}) {")
-                indented { emitAll(statement.then) }
-                if (statement.otherwise.isEmpty()) {
-                    line("}")
-                } else {
-                    line("} else {")
-                    indented { emitAll(statement.otherwise) }
-                    line("}")
-                }
-            }
+            is If -> emitIf(statement, "")
 
             is While -> {
-                line("while (${condition(statement.condition)}) {")
+                line("while (${statement.condition?.let { condition(it) } ?: "true"}) {")
                 indented { emitAll(statement.body) }
                 line("}")
             }
@@ -212,24 +314,16 @@ class Cs2Emitter(private val function: Cs2Function) {
             is Switch -> {
                 line("switch (${expr(statement.subject)}) {")
                 indented {
-                    // `default:` keeps the position it had in the bytecode:
-                    // first when it falls out of the switch directly, last when
-                    // a jump leads to it.
-                    if (statement.defaultFirst && statement.default.isNotEmpty()) {
-                        line("default:")
-                        indented {
-                            emitAll(statement.default)
-                            if (!exits(statement.default)) line("break;")
-                        }
-                    }
                     for (case in statement.cases) {
-                        case.keys.forEach { line("case $it:") }
+                        case.keys.forEach { line("case ${caseKey(it, statement.keyKind)}:") }
                         indented {
                             emitAll(case.body)
                             if (!exits(case.body)) line("break;")
                         }
                     }
-                    if (!statement.defaultFirst && statement.default.isNotEmpty()) {
+                    // `default:` always goes last, which is the layout the code
+                    // generator produces; the structurer still reads both.
+                    if (statement.default.isNotEmpty()) {
                         line("default:")
                         indented { emitAll(statement.default) }
                     }
@@ -251,6 +345,25 @@ class Cs2Emitter(private val function: Cs2Function) {
         }
     }
 
+    /**
+     * An `if` whose else-arm is nothing but another `if` is one link of a chain,
+     * and reads as `} else if (...) {` rather than as a new level of nesting.
+     */
+    private fun emitIf(statement: If, prefix: String) {
+        line("${prefix}if (${condition(statement.condition)}) {")
+        indented { emitAll(statement.then) }
+        val chained = statement.otherwise.singleOrNull() as? If
+        when {
+            statement.otherwise.isEmpty() -> line("}")
+            chained != null -> emitIf(chained, "} else ")
+            else -> {
+                line("} else {")
+                indented { emitAll(statement.otherwise) }
+                line("}")
+            }
+        }
+    }
+
     /** True when a body already transfers control, so no `break` is needed. */
     private fun exits(body: List<Stmt>): Boolean =
         when (body.lastOrNull()) {
@@ -265,16 +378,13 @@ class Cs2Emitter(private val function: Cs2Function) {
      */
     private fun condition(condition: Condition, parentBinds: Boolean = false): String = when (condition) {
         is Compare -> {
-            val subject = expr(condition.left)
+            val subject = expr(condition.left, COMPARISON)
             when (condition.comparison.opName) {
                 "BRANCH_IF_TRUE" -> if (condition.negated) "isFalsy($subject)" else "isTruthy($subject)"
                 "BRANCH_IF_FALSE" -> if (condition.negated) "isTruthy($subject)" else "isFalsy($subject)"
-                // A negated comparison is one the compiler used to *skip* the
-                // body, so the opcode is kept and the sense written out.
-                else -> {
-                    val test = "$subject ${condition.naturalSymbol} ${expr(condition.right)}"
-                    if (condition.negated) "!($test)" else test
-                }
+                // A branch taken when the comparison fails reads as the opposite
+                // operator; the opcode it compiles back to is chosen from that.
+                else -> "$subject ${condition.symbol} ${expr(condition.right, COMPARISON)}"
             }
         }
         is AndAll -> condition.terms.joinToString(" && ") { condition(it, parentBinds = true) }
@@ -285,7 +395,36 @@ class Cs2Emitter(private val function: Cs2Function) {
 
     // ---------------------------------------------------------- expressions
 
-    private fun expr(value: Expr): String = when (value) {
+    /**
+     * Operator binding strength, TypeScript's own, so the printed expression
+     * parses back into the tree it came from with the fewest brackets.
+     *
+     * Comparisons sit between the additive operators and `&`, which is why
+     * `a & b == c` means `a & (b == c)` in TypeScript and why a bitwise operand
+     * of a comparison is always bracketed.
+     */
+    private fun precedence(symbol: String) = when (symbol) {
+        "*", "/", "%" -> MULTIPLICATIVE
+        "+", "-" -> ADDITIVE
+        "&" -> BITWISE_AND
+        "|" -> BITWISE_OR
+        else -> ATOM
+    }
+
+    private fun precedenceOf(value: Expr) = when (value) {
+        is Binary -> precedence(value.symbol)
+        // String concatenation is `+`, and a nested one is a second JOIN_STRING
+        // rather than more parts of this one, so it has to stay bracketed.
+        is Join -> ADDITIVE
+        else -> ATOM
+    }
+
+    private fun expr(value: Expr, minimum: Int = 0): String {
+        val text = render(value)
+        return if (precedenceOf(value) < minimum) "($text)" else text
+    }
+
+    private fun render(value: Expr): String = when (value) {
         is IntConst -> value.value.toString()
         is TypedConst -> typedConst(value)
         is StrConst -> "\"${Cs2Strings.escape(value.value)}\""
@@ -294,8 +433,8 @@ class Cs2Emitter(private val function: Cs2Function) {
         is TempRef -> value.name
         is ArrayRef -> "array${value.array}[${expr(value.index)}]"
         is VarRef -> varAccess(value)
-        is Binary -> "(${expr(value.left)} ${value.symbol} ${expr(value.right)})"
-        is Join -> value.parts.joinToString(" + ") { expr(it) }
+        is Binary -> binary(value)
+        is Join -> value.parts.joinToString(" + ") { expr(it, ADDITIVE + 1) }
         is OpCall -> {
             // The instruction's own operand rides along as a type argument, so
             // it survives editing without cluttering the call's arguments.
@@ -303,8 +442,30 @@ class Cs2Emitter(private val function: Cs2Function) {
             "${value.op.tsName}$variant(${value.args.joinToString(", ") { expr(it) }})"
         }
         is ScriptCall -> "${Cs2Symbols.scriptName(value.scriptId)}(${value.args.joinToString(", ") { expr(it) }})"
+        is Spread -> "...${expr(value.call)}"
         is Callback -> callback(value)
     }
+
+    /**
+     * A binary operator with only the brackets it needs. The right operand keeps
+     * them at equal strength unless the operator is one the compiler can
+     * re-associate without changing the value.
+     */
+    private fun binary(value: Binary): String {
+        val level = precedence(value.symbol)
+        val associative = value.symbol in ASSOCIATIVE &&
+            (value.right as? Binary)?.symbol == value.symbol
+        val left = expr(value.left, level)
+        val right = if (value.symbol in MASKS && value.right is IntConst) {
+            hex(value.right.value)
+        } else {
+            expr(value.right, if (associative) level else level + 1)
+        }
+        return "$left ${value.symbol} $right"
+    }
+
+    /** A bit mask reads as one; the value is the same number either way. */
+    private fun hex(value: Int) = "0x%X".format(value.toLong() and 0xFFFFFFFFL)
 
     /**
      * Spells out a composite constant. A component hash becomes the interface and
@@ -313,7 +474,19 @@ class Cs2Emitter(private val function: Cs2Function) {
      * and other sentinels - and ids the catalogs have no proven name for keep the
      * bare number, so they still round-trip unchanged.
      */
-    private fun typedConst(value: TypedConst): String = when (value.kind) {
+    private fun caseKey(key: Int, kind: ArgType): String =
+        if (kind == ArgType.INT) key.toString() else typedConst(TypedConst(key, kind))
+
+    private fun typedConst(value: TypedConst): String = when {
+        // Every catalog kind uses -1 for "nothing"; spelling that out as an id
+        // would say it was one.
+        value.value == -1 && Cs2Names.catalogType(value.kind) != null -> "-1"
+        else -> typedSpelling(value)
+    }
+
+    private fun typedSpelling(value: TypedConst): String = when (value.kind) {
+        // A type code is a character, and reads as the type it names.
+        ArgType.TYPECHAR -> Cs2TypeChars.nameOf(value.value) ?: value.value.toString()
         ArgType.COMPONENT -> component(value.value)
         ArgType.COORD ->
             if (Cs2Packing.isPackedCoord(value.value)) {
@@ -332,7 +505,10 @@ class Cs2Emitter(private val function: Cs2Function) {
             1 -> "true"
             else -> value.value.toString()
         }
-        ArgType.COLOUR -> "colour(0x%06X)".format(value.value and 0xFFFFFF)
+        // Only a plain RGB triple reads as one: -1 is "no colour", and anything
+        // with bits above the low three bytes is not a colour at all.
+        ArgType.COLOUR ->
+            if (value.value in 0..0xFFFFFF) "colour(0x%06X)".format(value.value) else value.value.toString()
         ArgType.INT -> value.value.toString()
         else -> {
             val helper = Cs2Names.helperFor(value.kind)
@@ -377,6 +553,8 @@ class Cs2Emitter(private val function: Cs2Function) {
 
     private fun line(text: String) {
         if (text.isEmpty()) {
+            // Two blank lines in a row say nothing the first one did not.
+            if (out.isEmpty() || out.endsWith("\n\n")) return
             out.append('\n')
             return
         }
@@ -388,5 +566,20 @@ class Cs2Emitter(private val function: Cs2Function) {
         indent++
         body()
         indent--
+    }
+
+    private companion object {
+        const val BITWISE_OR = 1
+        const val BITWISE_AND = 2
+        const val COMPARISON = 3
+        const val ADDITIVE = 4
+        const val MULTIPLICATIVE = 5
+        const val ATOM = 100
+
+        /** Operators a compiler may re-associate without changing the result. */
+        val ASSOCIATIVE = setOf("+", "*", "&", "|")
+
+        /** Operators whose right-hand constant is a bit pattern, not a count. */
+        val MASKS = setOf("&", "|")
     }
 }

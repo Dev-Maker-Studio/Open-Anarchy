@@ -127,7 +127,11 @@ object Cs2Declarations {
      * can rename the symbol across the whole project and the compiler still
      * knows which variable it is.
      */
-    fun variables(references: Collection<VarRef>): String {
+    fun variables(
+        references: Collection<VarRef>,
+        /** What a variable holds, where the corpus agrees on one thing. */
+        kinds: (VarRef) -> ArgType? = { null },
+    ): String {
         val out = StringBuilder()
         out.appendLine("// GENERATED - the default names come from gamevals/<type>.json, the only source of truth for them.")
         out.appendLine("// A name may be edited here; the id in the comment above it is what binds it. `cs2 sync-names <dir>`")
@@ -139,14 +143,17 @@ object Cs2Declarations {
             if (!seen.add(name)) continue
             val variant = if (reference.variant == "old") " old" else ""
             val space = Cs2Names.VAR_PREFIXES.getValue(reference.space)
-            val type = if (reference.type == Cs2Type.STRING) "string" else "number"
+            val type = when {
+                reference.type == Cs2Type.STRING -> "string"
+                else -> kinds(reference)?.let { Cs2Names.aliasFor(it) } ?: "number"
+            }
             out.appendLine("/** $space ${reference.id}$variant */")
             out.appendLine("declare let $name: $type;")
         }
         return out.toString()
     }
 
-    fun generate(): String {
+    fun generate(learnedArguments: Map<String, ArgType> = emptyMap()): String {
         val out = StringBuilder()
         out.appendLine("// GENERATED - do not edit by hand.")
         out.appendLine("// Ambient declarations for decompiled CS2 clientscripts.")
@@ -156,7 +163,7 @@ object Cs2Declarations {
 
         for (op in Cs2Opcodes.all.sortedBy { it.tsName }) {
             if (op.tsName in HANDWRITTEN) continue
-            appendOpcode(out, op)
+            appendOpcode(out, op, learnedArguments)
         }
         return out.toString()
     }
@@ -261,16 +268,38 @@ object Cs2Declarations {
             """.trimIndent(),
         )
         out.appendLine()
+        appendKinds(out)
     }
 
-    private fun appendOpcode(out: StringBuilder, op: Cs2Op) {
+    /**
+     * The names an integer goes by once the corpus has said what it holds.
+     *
+     * They are all `number`: a type alias changes nothing about the value, it
+     * only says what the number means, which is exactly what CS2 itself does not
+     * record. `boolean` is TypeScript's own, so a flag is a `flag`.
+     */
+    private fun appendKinds(out: StringBuilder) {
+        out.appendLine("/** What an integer means, where the corpus agrees on one thing. */")
+        for (alias in Cs2Names.ALIASES.values.distinct()) {
+            // A flag is still an int underneath; `true` and `false` are only a
+            // nicer spelling for its two values.
+            val definition = if (alias == "flag") "number | boolean" else "number"
+            out.appendLine("type $alias = $definition;")
+        }
+        out.appendLine()
+        out.appendLine("/** The type codes a compiler writes into `enumOp` and hook formats. */")
+        for (name in Cs2TypeChars.NAMES.values) out.appendLine("declare const $name: number;")
+        out.appendLine()
+    }
+
+    private fun appendOpcode(out: StringBuilder, op: Cs2Op, learned: Map<String, ArgType>) {
         out.appendLine("/** `${op.opName}` (opcode ${op.id}) */")
         // The type parameter is what lets an instruction's own operand ride along
         // as `ccCreate<1>(...)`; it is never used as a type.
-        out.appendLine("declare function ${op.tsName}<Operand = void>(${parameters(op)}): ${returnType(op)};")
+        out.appendLine("declare function ${op.tsName}<Operand = void>(${parameters(op, learned)}): ${returnType(op)};")
     }
 
-    private fun parameters(op: Cs2Op): String {
+    private fun parameters(op: Cs2Op, learned: Map<String, ArgType>): String {
         if (op.kind == OpKind.HOOK) {
             val component = if (op.popInt == 1) ", component: number" else ""
             return "callback: unknown$component"
@@ -285,11 +314,13 @@ object Cs2Declarations {
         }
         val names = ArrayList<String>()
         repeat(op.popInt) {
-            val kind = op.argTypes.getOrNull(names.size)
-            // A flag is still an int underneath - `true`/`false` is only a nicer
-            // spelling for the literals, and a local holding one is a number.
-            val type = if (kind == ArgType.BOOLEAN) "number | boolean" else "number"
-            names.add("arg${names.size}: $type")
+            val kind = op.argTypes.getOrNull(names.size)?.takeIf { it != ArgType.INT }
+                ?: learned["${op.opName}:${names.size}"]
+            // The alias says what the argument means; `boolean` rides along
+            // because a flag is still an int underneath and `true`/`false` is
+            // only a nicer spelling for its two values.
+            val alias = kind?.let { Cs2Names.aliasFor(it) } ?: "number"
+            names.add("arg${names.size}: $alias | boolean")
         }
         repeat(op.popStr) { names.add("arg${names.size}: string") }
         repeat(op.popLong) { names.add("arg${names.size}: bigint") }

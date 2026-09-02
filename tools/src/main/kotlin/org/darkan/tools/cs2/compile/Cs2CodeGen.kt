@@ -21,6 +21,7 @@ import org.darkan.tools.cs2.ir.OrAny
 import org.darkan.tools.cs2.ir.Continue
 import org.darkan.tools.cs2.ir.Cs2Function
 import org.darkan.tools.cs2.ir.Cs2Type
+import org.darkan.tools.cs2.ir.DestructureAssign
 import org.darkan.tools.cs2.ir.Expr
 import org.darkan.tools.cs2.ir.ExprStmt
 import org.darkan.tools.cs2.ir.Goto
@@ -36,6 +37,7 @@ import org.darkan.tools.cs2.ir.OpCall
 import org.darkan.tools.cs2.ir.ParallelAssign
 import org.darkan.tools.cs2.ir.Return
 import org.darkan.tools.cs2.ir.ScriptCall
+import org.darkan.tools.cs2.ir.Spread
 import org.darkan.tools.cs2.ir.Stmt
 import org.darkan.tools.cs2.ir.StrConst
 import org.darkan.tools.cs2.ir.Switch
@@ -54,7 +56,8 @@ import org.darkan.tools.cs2.ir.While
  *  - a conditional jumps *into* its body over a single unconditional branch;
  *  - `if`/`else` puts the else-arm after the then-arm's jump to the join point;
  *  - `while` re-tests at the top and jumps back from the bottom;
- *  - `switch` puts the default arm first, then the cases in table order.
+ *  - `switch` jumps to its default arm, then lays the cases out in table order
+ *    with the default arm last.
  */
 class Cs2CodeGen(
     private val function: Cs2Function,
@@ -86,6 +89,7 @@ class Cs2CodeGen(
 
     fun generate(): Cs2Script {
         emitAll(function.body)
+        emitDefaultReturn()
         patchJumps()
         return Cs2Script(
             name = function.name,
@@ -98,6 +102,25 @@ class Cs2CodeGen(
             longArgsCount = function.longArgs,
             switchTables = switchTables,
         )
+    }
+
+    /**
+     * Every script ends in a `RETURN`, whether or not anything can reach it, so
+     * one is appended unless the body already ends in a return of its own. The
+     * values are the zero of each declared return type: nothing can observe them
+     * when the return is unreachable, and a script that falls off its end returns
+     * the same zeroes the original did.
+     */
+    private fun emitDefaultReturn() {
+        if (function.body.lastOrNull() is Return) return
+        for (type in function.returns) {
+            when (type) {
+                Cs2Type.INT -> emit("PUSH_CONSTANT_INT", 0)
+                Cs2Type.STRING -> emitString("")
+                Cs2Type.LONG -> emitLong(0L)
+            }
+        }
+        emit("RETURN")
     }
 
     // ---------------------------------------------------------------- output
@@ -150,17 +173,11 @@ class Cs2CodeGen(
 
     private fun emitStatement(statement: Stmt) {
         when (statement) {
-            // Declarations only reserve a slot; they produce no instructions.
-            is LocalAssign -> if (!statement.declare) {
+            // A declaration with an initialiser is an ordinary store; one
+            // without an initialiser never reaches the code generator at all.
+            is LocalAssign -> {
                 emitExpr(statement.value)
-                emit(
-                    when (statement.type) {
-                        Cs2Type.INT -> "POP_INT_LOCAL"
-                        Cs2Type.STRING -> "POP_STRING_LOCAL"
-                        Cs2Type.LONG -> "POP_LONG_LOCAL"
-                    },
-                    statement.slot,
-                )
+                emit(storeLocalOpcode(statement.type), statement.slot)
             }
 
             // Every value is computed first, then stored in reverse - the last
@@ -193,6 +210,21 @@ class Cs2CodeGen(
             }
 
             is MultiAssign -> emitExpr(statement.call)
+
+            // The call leaves its results on the stacks in push order, so the
+            // targets are stored back to front. The three stacks are
+            // independent, which is what makes that order right whatever mix of
+            // types the results are.
+            is DestructureAssign -> {
+                emitExpr(statement.call)
+                for (target in statement.targets.asReversed()) {
+                    when (target) {
+                        is LocalRef -> emit(storeLocalOpcode(target.type), target.slot)
+                        is VarRef -> emit(storeOpcode(target), target.id)
+                        else -> error("Cannot assign to $target")
+                    }
+                }
+            }
 
             is ExprStmt -> {
                 emitExpr(statement.call)
@@ -290,6 +322,27 @@ class Cs2CodeGen(
             return
         }
 
+        // A test with nothing hanging off it still has to run, but its branch
+        // has nowhere to go: it jumps to the instruction after itself, which is
+        // the single branch the compiler wrote and what the decompiler reads
+        // back as an empty `if`.
+        val test = statement.condition
+        if (statement.then.isEmpty() && statement.otherwise.isEmpty()) {
+            val next = newLabel("empty")
+            if (test is Compare && !test.negated) {
+                emitComparison(test, next)
+            } else {
+                // The body is a jump to the next instruction: the compiler wrote
+                // one for the empty statement, and without it the last test of a
+                // chain would branch where its own trampoline does, which reads
+                // back as the opposite test.
+                emitBranch(test, next)
+                emitJump("BRANCH", next)
+            }
+            placeLabel(next)
+            return
+        }
+
         val elseLabel = newLabel("else")
         emitBranch(statement.condition, elseLabel)
         emitAll(statement.then)
@@ -308,7 +361,7 @@ class Cs2CodeGen(
         val testLabel = newLabel("test")
         val exitLabel = newLabel("exit")
         placeLabel(testLabel)
-        emitBranch(statement.condition, exitLabel)
+        statement.condition?.let { emitBranch(it, exitLabel) }
 
         breakLabels.addLast(exitLabel)
         continueLabels.addLast(testLabel)
@@ -338,13 +391,9 @@ class Cs2CodeGen(
             }
             // Each term guards the rest, so failing any one skips the body.
             is AndAll -> condition.terms.forEach { emitBranch(it, skipLabel) }
-            // Each term jumps straight into the body; falling off the end skips it.
-            is OrAny -> {
-                val bodyLabel = newLabel("body")
-                condition.terms.forEach { emitEnterBody(it, bodyLabel, skipLabel) }
-                emitJump("BRANCH", skipLabel)
-                placeLabel(bodyLabel)
-            }
+            // Each alternative jumps straight into the body; running out of
+            // them skips it.
+            is OrAny -> emitAlternatives(condition, newLabel("body"), skipLabel)
         }
     }
 
@@ -363,7 +412,9 @@ class Cs2CodeGen(
             } else {
                 emitComparison(condition, target)
             }
-            // Any term being true is enough.
+            // Any alternative being true is enough, but a failing `&&` inside
+            // one has to fall into the next alternative rather than past them
+            // all - which for a jump means simply falling through.
             is OrAny -> condition.terms.forEach { emitConditionalJump(it, target) }
             // Every term must hold, so a failure skips past the jump.
             is AndAll -> {
@@ -395,8 +446,40 @@ class Cs2CodeGen(
                 condition.terms.dropLast(1).forEach { emitBranch(it, skipLabel) }
                 emitEnterBody(condition.terms.last(), bodyLabel, skipLabel)
             }
-            is OrAny -> condition.terms.forEach { emitEnterBody(it, bodyLabel, skipLabel) }
+            is OrAny -> emitAlternatives(condition, bodyLabel, skipLabel, close = false)
         }
+    }
+
+    /**
+     * Emits an `||` chain: each alternative jumps to [bodyLabel] when it holds.
+     *
+     * An alternative that fails has to reach the *next* one, not [skipLabel] -
+     * only running out of alternatives skips the body. The difference is
+     * invisible while every alternative is a single comparison, because such a
+     * comparison never mentions the failure label at all; it is what an `&&`
+     * inside an alternative branches to when one of its terms fails.
+     *
+     * [close] emits the branch past the body and places [bodyLabel], which a
+     * nested chain leaves to the chain that owns them.
+     */
+    private fun emitAlternatives(
+        condition: OrAny,
+        bodyLabel: String,
+        skipLabel: String,
+        close: Boolean = true,
+    ) {
+        for ((index, term) in condition.terms.withIndex()) {
+            if (index == condition.terms.lastIndex) {
+                emitEnterBody(term, bodyLabel, skipLabel)
+                break
+            }
+            val next = newLabel("or")
+            emitEnterBody(term, bodyLabel, next)
+            placeLabel(next)
+        }
+        if (!close) return
+        emitJump("BRANCH", skipLabel)
+        placeLabel(bodyLabel)
     }
 
     /** Pushes a comparison's operands and branches to [target] when it holds. */
@@ -410,6 +493,11 @@ class Cs2CodeGen(
         }
         emitJump(condition.comparison.opName, target)
     }
+
+    /** True for the jump-table shape the literal block rendering produces. */
+    private fun tableOnly(statement: Switch): Boolean =
+        statement.default.isEmpty() && statement.cases.isNotEmpty() &&
+            statement.cases.all { it.body.singleOrNull() is Goto }
 
     private fun emitSwitch(statement: Switch) {
         emitExpr(statement.subject)
@@ -432,7 +520,11 @@ class Cs2CodeGen(
             return
         }
 
-        if (statement.defaultFirst) {
+        // A switch whose every arm is a bare jump and which has no default arm is
+        // a jump table: the entries point at labelled blocks and control falls
+        // straight out of the switch. Every other switch gets the canonical
+        // layout, where the no-match path jumps to a default arm laid out last.
+        if (tableOnly(statement)) {
             // Control falls straight out of the switch into the default arm,
             // which then jumps to the join point like any other arm. With no
             // default arm at all it simply falls through to what follows.
@@ -501,6 +593,9 @@ class Cs2CodeGen(
             // Already on the stack from the call that produced it.
             is TempRef -> Unit
 
+            // Every result of the call lands where the spread sits.
+            is Spread -> emitExpr(value.call)
+
             is VarRef -> emit(loadOpcode(value), value.id)
 
             is ArrayRef -> {
@@ -519,12 +614,7 @@ class Cs2CodeGen(
                 emit("JOIN_STRING", value.parts.size)
             }
 
-            is TempRef -> when (value.type) {
-            Cs2Type.INT -> Triple(1, 0, 0)
-            Cs2Type.STRING -> Triple(0, 1, 0)
-            Cs2Type.LONG -> Triple(0, 0, 1)
-        }
-        is ScriptCall -> {
+            is ScriptCall -> {
                 value.args.forEach(::emitExpr)
                 emit("GOSUB_WITH_PARAMS", value.scriptId)
             }
