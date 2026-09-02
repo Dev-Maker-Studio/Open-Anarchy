@@ -1,7 +1,7 @@
 package org.darkan.tools.engine.input
 
 import org.darkan.tools.cache.map.ObjectRenderer
-import org.darkan.tools.cache.model.ModelDefinition
+import world.gregs.voidps.cache.definition.data.ModelDefinition
 import org.darkan.tools.cache.model.ModelLoader
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.engine.render.Camera

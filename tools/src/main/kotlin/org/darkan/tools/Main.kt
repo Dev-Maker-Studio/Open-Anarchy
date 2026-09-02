@@ -10,10 +10,10 @@ import org.darkan.tools.cache.map.DisplaceProbe
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.map.TiltProbe
 import org.darkan.tools.cache.map.environment.runEnvironmentDiagnostic
-import org.darkan.tools.cache.model.BillboardTypeLoader
-import org.darkan.tools.cache.model.ModelDecoder
+import world.gregs.voidps.cache.definition.decoder.BillboardTypeLoader
+import world.gregs.voidps.cache.definition.decoder.ModelDecoder
 import org.darkan.tools.cache.model.ModelLoader
-import org.darkan.tools.cache.model.ModelUnavailableReason
+import world.gregs.voidps.cache.definition.decoder.ModelUnavailableReason
 import org.darkan.tools.cache.texture.*
 import org.darkan.tools.cache.texture.ops.*
 import org.darkan.tools.cache.terrain.TerrainLoader
@@ -273,7 +273,7 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
                         val usedTextures = mutableSetOf<Int>()
                         if (modelDef.faceTextures != null) {
                             for (f in 0 until modelDef.faceCount) {
-                                val texId = modelDef.faceTextures[f].toInt()
+                                val texId = modelDef.faceTextures!![f].toInt()
                                 if (texId != -1) {
                                     usedTextures.add(texId and 0xffff)
                                 }
@@ -298,7 +298,7 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
                                             val mapping = modelDef.texturesMapping?.get(texPointer)?.toInt()?.and(0xff) ?: 0
                                             println("          mappingType=$mapping")
                                             if (modelDef.textureFaceX != null) {
-                                                val tA = modelDef.textureFaceX[texPointer].toInt()
+                                                val tA = modelDef.textureFaceX!![texPointer].toInt()
                                                 val tB = modelDef.textureFaceY?.get(texPointer)?.toInt() ?: 0
                                                 val tC = modelDef.textureFaceZ?.get(texPointer)?.toInt() ?: 0
                                                 println("          textureTriangle: ($tA, $tB, $tC)")
@@ -338,7 +338,7 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
 
                 var hasTexture928 = false
                 for (f in 0 until modelDef.faceCount) {
-                    val texId = modelDef.faceTextures[f].toInt() and 0xffff
+                    val texId = modelDef.faceTextures!![f].toInt() and 0xffff
                     if (texId == 928) {
                         hasTexture928 = true
                         break
@@ -376,7 +376,7 @@ private fun runDiagnostic(cache: Cache, regionX: Int, regionY: Int, localX: Int,
 
             var hasTexture928 = false
             for (f in 0 until modelDef.faceCount) {
-                val texId = modelDef.faceTextures[f].toInt() and 0xffff
+                val texId = modelDef.faceTextures!![f].toInt() and 0xffff
                 if (texId == 928) {
                     hasTexture928 = true
                     break
@@ -528,7 +528,7 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
         var type3Count = 0
         if (modelDef.texturesMapping != null) {
             for (i in 0 until modelDef.textureTriangleCount) {
-                when (modelDef.texturesMapping[i].toInt() and 0xff) {
+                when (modelDef.texturesMapping!![i].toInt() and 0xff) {
                     0 -> type0Count++
                     1 -> type1Count++
                     2 -> type2Count++
@@ -553,8 +553,8 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
         // Show complex texture data if present
         if (modelDef.texturesScaleX != null) {
             println("  Complex Texture Data (indexed by complex texture index):")
-            for (i in modelDef.texturesScaleX.indices) {
-                val scaleX = modelDef.texturesScaleX[i]
+            for (i in modelDef.texturesScaleX!!.indices) {
+                val scaleX = modelDef.texturesScaleX!![i]
                 val scaleY = modelDef.texturesScaleY?.get(i) ?: 0
                 val scaleZ = modelDef.texturesScaleZ?.get(i) ?: 0
                 val rotation = modelDef.texturesRotation?.get(i)?.toInt()?.and(0xff) ?: 0
@@ -567,8 +567,8 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
         // Show cube texture data if present
         if (modelDef.texturesUtrans != null) {
             println("  Cube Texture Data (indexed by cube texture index):")
-            for (i in modelDef.texturesUtrans.indices) {
-                val uTrans = modelDef.texturesUtrans[i]
+            for (i in modelDef.texturesUtrans!!.indices) {
+                val uTrans = modelDef.texturesUtrans!![i]
                 val vTrans = modelDef.texturesVtrans?.get(i) ?: 0
                 println("    Cube[$i]: uTrans=$uTrans, vTrans=$vTrans")
             }
@@ -579,7 +579,7 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
         val textureMappings = mutableMapOf<Int, MutableSet<Int>>() // textureId -> set of mapping types used
         if (modelDef.faceTextures != null) {
             for (f in 0 until modelDef.faceCount) {
-                val texId = modelDef.faceTextures[f].toInt()
+                val texId = modelDef.faceTextures!![f].toInt()
                 if (texId != -1) {
                     val actualTexId = texId and 0xffff
                     usedTextures[actualTexId] = (usedTextures[actualTexId] ?: 0) + 1
@@ -658,7 +658,7 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
         if (modelDef.faceTextures != null) {
             println("  Texture boundary analysis (faces 760-774):")
             for (f in 760 until minOf(774, modelDef.faceCount)) {
-                val texIdSigned = modelDef.faceTextures[f].toInt()
+                val texIdSigned = modelDef.faceTextures!![f].toInt()
                 val texId = if (texIdSigned == -1) -1 else (texIdSigned and 0xffff)
                 val rawHsl = modelDef.faceColors[f].toInt() and 0xffff
                 println("    Face $f: texId=$texId, HSL=$rawHsl")
@@ -682,8 +682,8 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
 
             // Print decoded billboard data from ModelDefinition
             if (modelDef.billboards != null) {
-                println("  Decoded billboards (${modelDef.billboards.size}):")
-                for ((bi, bb) in modelDef.billboards.withIndex()) {
+                println("  Decoded billboards (${modelDef.billboards!!.size}):")
+                for ((bi, bb) in modelDef.billboards!!.withIndex()) {
                     println("    [$bi] id=${bb.billboardId}, face=${bb.appliesOnFace}, depth=${bb.depth}, distance=${bb.distance}")
                     // Load the BillboardType config
                     val bbType = BillboardTypeLoader.get(cache, bb.billboardId)

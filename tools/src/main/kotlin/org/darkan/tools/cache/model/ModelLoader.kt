@@ -7,6 +7,9 @@ import org.darkan.tools.util.ColorUtil
 import org.darkan.tools.util.CoordinateUtil
 import org.joml.Vector3f
 import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.definition.data.ModelDefinition
+import world.gregs.voidps.cache.definition.decoder.BillboardTypeLoader
+import world.gregs.voidps.cache.definition.decoder.ModelDecoder
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.abs
@@ -522,7 +525,7 @@ object ModelLoader {
         for (i in 0 until numTextures) {
             complexIndex[i] = complexCount
             cubeIndex[i] = cubeCount
-            val mapping = def.texturesMapping[i].toInt() and 0xff
+            val mapping = def.texturesMapping!![i].toInt() and 0xff
             if (mapping in 1..3) complexCount++
             if (mapping == 2) cubeCount++
         }
@@ -568,7 +571,7 @@ object ModelLoader {
         val matrices = Array(numTextures) { floatArrayOf() }
 
         for (texIdx in 0 until numTextures) {
-            val mapping = def.texturesMapping[texIdx].toInt() and 0xff
+            val mapping = def.texturesMapping!![texIdx].toInt() and 0xff
             if (mapping > 0) {
                 // Compute center of bounding box
                 centerX[texIdx] = (minX[texIdx] + maxX[texIdx]) / 2

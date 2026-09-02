@@ -1,8 +1,12 @@
-package org.darkan.tools.cache.model
+package world.gregs.voidps.cache.definition.decoder
 
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
+import world.gregs.voidps.cache.definition.data.BillboardData
+import world.gregs.voidps.cache.definition.data.ModelDefinition
+import world.gregs.voidps.cache.definition.data.ParticleEffectorAttachment
+import world.gregs.voidps.cache.definition.data.ParticleEmitterAttachment
 
 /**
  * Why a model id produced no [ModelDefinition].
@@ -38,8 +42,21 @@ enum class ModelUnavailableReason {
 data class ModelUnavailable(val reason: ModelUnavailableReason, val message: String)
 
 /**
- * Decoder for RS model binary format (revision 727).
- * Based on reference implementation from darkan-bot.
+ * Decoder for the RS model binary format (revision 727), both of its layouts.
+ *
+ * The decode is lossless: every byte of an archive reaches a field of the [ModelDefinition] it
+ * produces, so [world.gregs.voidps.cache.definition.encoder.ModelEncoder] can write the archive
+ * back exactly. That is more than the renderer needs - it has no use for the skin sections, the
+ * particle attachments or the footer's own bytes - and everything it has no use for is kept
+ * below the "layout fidelity" line of [ModelDefinition] rather than mixed in with the geometry.
+ *
+ * The geometry itself keeps the semantics the viewer has always had: a pre-13 model's vertices
+ * and complex texture scales arrive already upscaled by four (the client's `Mesh.upscale`), a
+ * face's material is the file's short minus one so that -1 means none, and a face's texture
+ * pointer is the file's byte minus one. All three are exactly invertible, which is why the
+ * encoder can still reproduce the file.
+ *
+ * Based on the reference client's `Mesh.decodeNewFormat` and `Mesh.decodeOldFormat`.
  */
 object ModelDecoder {
 
@@ -47,10 +64,25 @@ object ModelDecoder {
     private const val MIN_MODEL_BYTES = 20
 
     /** Footer size for the `0xFFFF`-terminated format: 21 header bytes plus the 2 marker bytes. */
-    private const val NEW_FORMAT_FOOTER_BYTES = 23
+    const val NEW_FORMAT_FOOTER_BYTES = 23
 
     /** Footer size for the pre-`0xFFFF` format. */
-    private const val OLD_FORMAT_FOOTER_BYTES = 18
+    const val OLD_FORMAT_FOOTER_BYTES = 18
+
+    /** Footer flag: the file carries a face render type per face. */
+    const val FLAG_FACE_TYPES = 0x1
+
+    /** Footer flag: the file carries particle emitters and effectors. */
+    const val FLAG_PARTICLES = 0x2
+
+    /** Footer flag: the file carries billboard attachments. */
+    const val FLAG_BILLBOARDS = 0x4
+
+    /** Footer flag: a version byte sits immediately before the footer. */
+    const val FLAG_VERSION = 0x8
+
+    /** The version a file with no version byte is read as, and below which vertices are upscaled. */
+    const val DEFAULT_VERSION = 12
 
     fun decode(cache: Cache, modelId: Int): ModelDefinition? {
         val data = cache.data(Index.MODELS, modelId) ?: return null
@@ -85,7 +117,7 @@ object ModelDecoder {
             )
         }
 
-        val isNewFormat = data[data.size - 1] == (-1).toByte() && data[data.size - 2] == (-1).toByte()
+        val isNewFormat = newFormat(data)
         val footerOffset = data.size - if (isNewFormat) NEW_FORMAT_FOOTER_BYTES else OLD_FORMAT_FOOTER_BYTES
         if (footerOffset < 0) {
             return ModelUnavailable(
@@ -125,19 +157,46 @@ object ModelDecoder {
         }
     }
 
+    /** Whether [data] ends in the `0xFFFF` marker, which is what tells the two layouts apart. */
+    fun newFormat(data: ByteArray): Boolean =
+        data.size >= 2 && data[data.size - 1] == (-1).toByte() && data[data.size - 2] == (-1).toByte()
+
+    /**
+     * [data] as a definition that reproduces it, whatever it holds.
+     *
+     * The lossless entry point, and the one the source tree's codec uses. Unlike [decode] it never
+     * answers null: an archive that declares no geometry - the eight 24-byte placeholders rev727
+     * ships - is a model with no vertices and no faces, which is exactly what the client builds
+     * from the same bytes, and is a thing that has to round trip like any other.
+     *
+     * @throws IllegalStateException when the sections the footer declares do not fit in [data]
+     */
+    fun read(modelId: Int, data: ByteArray): ModelDefinition {
+        check(data.size >= MIN_MODEL_BYTES) { "Model $modelId is ${data.size} bytes, too short for a footer." }
+        val model = if (newFormat(data)) decodeNewFormat(modelId, data) else decodeOldFormat(modelId, data)
+        return checkNotNull(model) { "Model $modelId declares sections that run past its ${data.size} bytes." }
+    }
+
+    /**
+     * [data] as a definition the renderer can draw, or null when there is nothing to draw.
+     *
+     * What every caller that means to *use* a model wants: an archive with no vertices or no faces
+     * is null here rather than an empty mesh, and so is one whose sections do not fit.
+     * [describeUnavailable] says which of those it was. [read] is the total function.
+     */
     fun decode(modelId: Int, data: ByteArray): ModelDefinition? {
         if (data.size < MIN_MODEL_BYTES) {
             return null
         }
-
-        // Check format - both last two bytes must be -1 (0xFF) for new format
-        val isNewFormat = data[data.size - 1] == (-1).toByte() && data[data.size - 2] == (-1).toByte()
-
-        return if (isNewFormat) {
+        val model = if (newFormat(data)) {
             decodeNewFormat(modelId, data)
         } else {
             decodeOldFormat(modelId, data)
         }
+        if (model == null || model.vertexCount == 0 || model.faceCount == 0) {
+            return null
+        }
+        return model
     }
 
     private fun decodeNewFormat(modelId: Int, data: ByteArray): ModelDefinition? {
@@ -151,18 +210,18 @@ object ModelDecoder {
         val texturedFaceCount = buffer.readUnsignedByte()
         val footerFlags = buffer.readUnsignedByte()
 
-        val hasFaceTypes = (footerFlags and 0x1) == 1
-        val hasParticleEffects = (footerFlags and 0x2) == 0x2
-        val hasBillboards = (footerFlags and 0x4) == 0x4
-        val hasVersion = (footerFlags and 0x8) == 0x8
+        val hasFaceTypes = (footerFlags and FLAG_FACE_TYPES) != 0
+        val hasParticleEffects = (footerFlags and FLAG_PARTICLES) != 0
+        val hasBillboards = (footerFlags and FLAG_BILLBOARDS) != 0
+        val hasVersion = (footerFlags and FLAG_VERSION) != 0
 
-        // Read version if flag is set
-        // Version byte is stored at data.size - 24 (one byte before the 23-byte footer)
-        var version = 12  // Default version for models without explicit version
+        // The version byte sits immediately before the 23 byte footer, so it is read out of order
+        // and the cursor put back where the flags left it.
+        var version = DEFAULT_VERSION
         if (hasVersion) {
-            buffer.position(data.size - NEW_FORMAT_FOOTER_BYTES - 1)  // Version byte is immediately before the footer
+            buffer.position(data.size - NEW_FORMAT_FOOTER_BYTES - 1)
             version = buffer.readUnsignedByte()
-            buffer.position(data.size - NEW_FORMAT_FOOTER_BYTES + 6)  // Continue reading from after footerFlags
+            buffer.position(data.size - NEW_FORMAT_FOOTER_BYTES + 6)
         }
 
         val modelPriority = buffer.readUnsignedByte()
@@ -176,10 +235,6 @@ object ModelDecoder {
         val vertexZLength = buffer.readUnsignedShort()
         val faceIndicesLength = buffer.readUnsignedShort()
         val textureIndicesLength = buffer.readUnsignedShort()
-
-        if (vertexCount == 0 || faceCount == 0) {
-            return null
-        }
 
         // Decode texture mapping types first (they're at the start of the file)
         var simpleTextureFaceCount = 0
@@ -219,7 +274,7 @@ object ModelDecoder {
         offset += faceCount
 
         val facePrioritiesOffset = offset
-        if (modelPriority == 255) {
+        if (modelPriority == PER_FACE_PRIORITY) {
             offset += faceCount
         }
 
@@ -274,13 +329,8 @@ object ModelDecoder {
         // - Version < 14: 6 bytes (UShort + UShort + UShort for scales)
         // - Version 14: 7 bytes (UShort + UMedium + UShort for scales)
         // - Version >= 15: 9 bytes (UMedium + UMedium + UMedium for scales)
-        val textureScaleBytes = when {
-            version < 14 -> 6
-            version == 14 -> 7
-            else -> 9
-        }
         val complexTexScaleOffset = offset
-        offset += complexTextureFaceCount * textureScaleBytes
+        offset += complexTextureFaceCount * scaleBytes(version)
 
         val complexTexRotationOffset = offset
         offset += complexTextureFaceCount
@@ -345,13 +395,21 @@ object ModelDecoder {
 
         // Upscale vertices if version < 13 (required to match scene coordinates)
         // RS models with older format have vertices at 1/4 scale
-        val shouldUpscale = version < 13
+        val shouldUpscale = version < UPSCALE_BELOW_VERSION
         if (shouldUpscale) {
             for (i in 0 until vertexCount) {
                 vertexX[i] = vertexX[i] shl 2
                 vertexY[i] = vertexY[i] shl 2
                 vertexZ[i] = vertexZ[i] shl 2
             }
+        }
+
+        // Vertex skins - one byte per vertex, in a section of their own
+        val vertexSkins: IntArray? = if (hasVertexSkins == 1) {
+            buffer.position(vertexSkinOffset)
+            IntArray(vertexCount) { buffer.readUnsignedByte() }
+        } else {
+            null
         }
 
         // Decode face index types
@@ -365,46 +423,8 @@ object ModelDecoder {
         val faceA = IntArray(faceCount)
         val faceB = IntArray(faceCount)
         val faceC = IntArray(faceCount)
-
         buffer.position(faceIndicesOffset)
-        var a = 0
-        var b = 0
-        var c = 0
-        var lastIndex = 0
-
-        for (i in 0 until faceCount) {
-            val type = faceIndexTypes[i].toInt() and 0xff
-            when (type) {
-                1 -> {
-                    a = readSmart(buffer) + lastIndex
-                    lastIndex = a
-                    b = readSmart(buffer) + lastIndex
-                    lastIndex = b
-                    c = readSmart(buffer) + lastIndex
-                    lastIndex = c
-                }
-                2 -> {
-                    b = c
-                    c = readSmart(buffer) + lastIndex
-                    lastIndex = c
-                }
-                3 -> {
-                    a = c
-                    c = readSmart(buffer) + lastIndex
-                    lastIndex = c
-                }
-                4 -> {
-                    val temp = a
-                    a = b
-                    b = temp
-                    c = readSmart(buffer) + lastIndex
-                    lastIndex = c
-                }
-            }
-            faceA[i] = a
-            faceB[i] = b
-            faceC[i] = c
-        }
+        readFaces(buffer, faceIndexTypes, faceA, faceB, faceC)
 
         // Decode colors
         val faceColors = ShortArray(faceCount)
@@ -416,7 +436,7 @@ object ModelDecoder {
         }
 
         // Decode priorities
-        val facePriorities: ByteArray? = if (modelPriority == 255 && facePrioritiesOffset + faceCount <= data.size) {
+        val facePriorities: ByteArray? = if (modelPriority == PER_FACE_PRIORITY && facePrioritiesOffset + faceCount <= data.size) {
             buffer.position(facePrioritiesOffset)
             ByteArray(faceCount) { buffer.readByte().toByte() }
         } else {
@@ -427,6 +447,14 @@ object ModelDecoder {
         val faceAlphas: ByteArray? = if (hasFaceAlpha == 1 && faceAlphasOffset + faceCount <= data.size) {
             buffer.position(faceAlphasOffset)
             ByteArray(faceCount) { buffer.readByte().toByte() }
+        } else {
+            null
+        }
+
+        // Face skins - one byte per face, as the vertex skins are per vertex
+        val faceSkins: IntArray? = if (hasFaceSkins == 1 && faceSkinOffset + faceCount <= data.size) {
+            buffer.position(faceSkinOffset)
+            IntArray(faceCount) { buffer.readUnsignedByte() }
         } else {
             null
         }
@@ -458,6 +486,17 @@ object ModelDecoder {
                     -1
                 }
             }
+        } else {
+            null
+        }
+
+        // The same section when there is no texture triangle for it to point at, which the client
+        // allocates no array for and never reads; see ModelDefinition.unusedTexturePointers.
+        val unusedTexturePointers: ByteArray? = if (faceTexturePointers == null && hasFaceTextures == 1 &&
+            textureIndicesLength > 0 && textureIndicesOffset + textureIndicesLength <= data.size
+        ) {
+            buffer.position(textureIndicesOffset)
+            ByteArray(textureIndicesLength) { buffer.readByte().toByte() }
         } else {
             null
         }
@@ -531,13 +570,13 @@ object ModelDecoder {
                         if (version < 14) {
                             texturesScaleY!![complexIdx] = scaleBuffer.readUnsignedShort()
                         } else {
-                            texturesScaleY!![complexIdx] = readUnsignedMedium(scaleBuffer)
+                            texturesScaleY!![complexIdx] = scaleBuffer.readUnsignedMedium()
                         }
                         texturesScaleZ!![complexIdx] = scaleBuffer.readUnsignedShort()
                     } else {
-                        texturesScaleX!![complexIdx] = readUnsignedMedium(scaleBuffer)
-                        texturesScaleY!![complexIdx] = readUnsignedMedium(scaleBuffer)
-                        texturesScaleZ!![complexIdx] = readUnsignedMedium(scaleBuffer)
+                        texturesScaleX!![complexIdx] = scaleBuffer.readUnsignedMedium()
+                        texturesScaleY!![complexIdx] = scaleBuffer.readUnsignedMedium()
+                        texturesScaleZ!![complexIdx] = scaleBuffer.readUnsignedMedium()
                     }
 
                     texturesRotation!![complexIdx] = rotationBuffer.readByte().toByte()
@@ -578,45 +617,45 @@ object ModelDecoder {
             }
         }
 
-        // Decode footer section: particle effects and billboards
-        // This matches the client's Mesh.kt decodeNewFormat (lines 580-618)
+        // Decode footer section: particle attachments and billboards
+        var particleEmitters: Array<ParticleEmitterAttachment>? = null
+        var particleEffectors: Array<ParticleEffectorAttachment>? = null
         var billboards: Array<BillboardData>? = null
 
-        if (hasParticleEffects || hasBillboards) {
-            buffer.position(footerOffset)
-
-            if (hasParticleEffects) {
-                // Skip particle emitter data
-                val emitterCount = buffer.readUnsignedByte()
-                if (emitterCount > 0) {
-                    for (i in 0 until emitterCount) {
-                        buffer.readUnsignedShort()  // particleId
-                        buffer.readUnsignedShort()  // faceIndex
-                    }
-                }
-                // Skip particle effector data
-                val effectorCount = buffer.readUnsignedByte()
-                if (effectorCount > 0) {
-                    for (i in 0 until effectorCount) {
-                        buffer.readUnsignedShort()  // effectId
-                        buffer.readUnsignedShort()  // appliesOnVertex
-                    }
+        buffer.position(footerOffset)
+        if (hasParticleEffects) {
+            val emitterCount = buffer.readUnsignedByte()
+            if (emitterCount > 0) {
+                particleEmitters = Array(emitterCount) {
+                    ParticleEmitterAttachment(buffer.readUnsignedShort(), buffer.readUnsignedShort())
                 }
             }
-
-            if (hasBillboards) {
-                val billboardCount = buffer.readUnsignedByte()
-                if (billboardCount > 0) {
-                    billboards = Array(billboardCount) { i ->
-                        val id = buffer.readUnsignedShort()
-                        val face = buffer.readUnsignedShort()
-                        val depth = buffer.readUnsignedByte()
-                        val distance = buffer.readByte()  // signed byte
-                        BillboardData(id, face, depth, distance)
-                    }
+            val effectorCount = buffer.readUnsignedByte()
+            if (effectorCount > 0) {
+                particleEffectors = Array(effectorCount) {
+                    ParticleEffectorAttachment(buffer.readUnsignedShort(), buffer.readUnsignedShort())
                 }
             }
         }
+
+        if (hasBillboards) {
+            val billboardCount = buffer.readUnsignedByte()
+            if (billboardCount > 0) {
+                billboards = Array(billboardCount) {
+                    val id = buffer.readUnsignedShort()
+                    val face = buffer.readUnsignedShort()
+                    val depth = buffer.readUnsignedByte()
+                    val distance = buffer.readByte()  // signed byte
+                    BillboardData(id, face, depth, distance)
+                }
+            }
+        }
+
+        // Whatever is left between the last section read and the version byte belongs to the file
+        // and to nothing here; keeping it is what makes the round trip exact for a model nobody
+        // has seen the shape of.
+        val end = data.size - NEW_FORMAT_FOOTER_BYTES - if (hasVersion) 1 else 0
+        val trailing = trailing(data, buffer.position(), end)
 
         return ModelDefinition(
             id = modelId,
@@ -645,6 +684,7 @@ object ModelDecoder {
             vertexNormalsX = null,
             vertexNormalsY = null,
             vertexNormalsZ = null,
+            unusedTexturePointers = unusedTexturePointers,
             texturesScaleX = texturesScaleX,
             texturesScaleY = texturesScaleY,
             texturesScaleZ = texturesScaleZ,
@@ -653,10 +693,35 @@ object ModelDecoder {
             texturesSpeed = texturesSpeed,
             texturesUtrans = texturesUtrans,
             texturesVtrans = texturesVtrans,
-            billboards = billboards
+            billboards = billboards,
+            newFormat = true,
+            footerFlags = footerFlags,
+            modelPriority = modelPriority,
+            alphaFlag = hasFaceAlpha,
+            faceSkinFlag = hasFaceSkins,
+            textureFlag = hasFaceTextures,
+            vertexSkinFlag = hasVertexSkins,
+            vertexFlags = vertexFlags,
+            faceIndexTypes = faceIndexTypes,
+            faceSkins = faceSkins,
+            vertexSkins = vertexSkins,
+            particleEmitters = particleEmitters,
+            particleEffectors = particleEffectors,
+            trailing = trailing
         )
     }
 
+    /**
+     * The pre-`0xFFFF` layout.
+     *
+     * Three things differ from [decodeNewFormat] besides the shorter footer: the sections start at
+     * offset 0 rather than after a block of texture mapping bytes, the texture triangles sit
+     * between the face colours and the vertices instead of after them, and every texture triangle
+     * is planar - there are no mapping types, no scales and no cube translations. Its face render
+     * type byte is also a bit field the client unpacks into a render type, a texture pointer and a
+     * material; it is kept whole, which is both what the viewer has always read and what the
+     * encoder needs.
+     */
     private fun decodeOldFormat(modelId: Int, data: ByteArray): ModelDefinition? {
         val buffer = BufferReader(data)
 
@@ -667,7 +732,7 @@ object ModelDecoder {
         val texturedFaceCount = buffer.readUnsignedByte()
 
         val hasRenderTypes = buffer.readUnsignedByte()
-        val hasPriorities = buffer.readUnsignedByte()
+        val modelPriority = buffer.readUnsignedByte()
         val hasAlphas = buffer.readUnsignedByte()
         val hasFaceSkins = buffer.readUnsignedByte()
         val hasVertexSkins = buffer.readUnsignedByte()
@@ -677,12 +742,8 @@ object ModelDecoder {
         val vertexZLength = buffer.readUnsignedShort()
         val faceIndicesLength = buffer.readUnsignedShort()
 
-        if (vertexCount == 0 || faceCount == 0) {
-            return null
-        }
-
-        // Calculate offsets (starting after textured face count)
-        var offset = texturedFaceCount
+        // Calculate offsets - this layout starts at 0, there is no texture mapping block
+        var offset = 0
         val vertexFlagsOffset = offset
         offset += vertexCount
 
@@ -690,7 +751,7 @@ object ModelDecoder {
         offset += faceCount
 
         val facePrioritiesOffset = offset
-        if (hasPriorities == 255) {
+        if (modelPriority == PER_FACE_PRIORITY) {
             offset += faceCount
         }
 
@@ -720,6 +781,9 @@ object ModelDecoder {
         val faceColorsOffset = offset
         offset += faceCount * 2
 
+        val textureTrianglesOffset = offset
+        offset += texturedFaceCount * 6
+
         val vertexXOffset = offset
         offset += vertexXLength
 
@@ -729,11 +793,8 @@ object ModelDecoder {
         val vertexZOffset = offset
         offset += vertexZLength
 
-        val textureTrianglesOffset = offset
-
         // Validate
-        val minRequired = vertexZOffset + vertexZLength
-        if (minRequired > data.size) {
+        if (vertexZOffset + vertexZLength > data.size) {
             return null
         }
 
@@ -779,12 +840,18 @@ object ModelDecoder {
             vertexZ[i] = vZ
         }
 
-        // Old format models always have implicit version 12, so always upscale by 4
-        val version = 12
+        // This layout is always version 12, so its vertices are always at quarter scale
         for (i in 0 until vertexCount) {
             vertexX[i] = vertexX[i] shl 2
             vertexY[i] = vertexY[i] shl 2
             vertexZ[i] = vertexZ[i] shl 2
+        }
+
+        val vertexSkins: IntArray? = if (hasVertexSkins == 1) {
+            buffer.position(vertexSkinOffset)
+            IntArray(vertexCount) { buffer.readUnsignedByte() }
+        } else {
+            null
         }
 
         // Decode face index types
@@ -798,16 +865,131 @@ object ModelDecoder {
         val faceA = IntArray(faceCount)
         val faceB = IntArray(faceCount)
         val faceC = IntArray(faceCount)
-
         buffer.position(faceIndicesOffset)
+        readFaces(buffer, faceIndexTypes, faceA, faceB, faceC)
+
+        // Decode colors
+        val faceColors = ShortArray(faceCount)
+        if (faceColorsOffset + faceCount * 2 <= data.size) {
+            buffer.position(faceColorsOffset)
+            for (i in 0 until faceCount) {
+                faceColors[i] = buffer.readUnsignedShort().toShort()
+            }
+        }
+
+        // Decode priorities
+        val facePriorities: ByteArray? = if (modelPriority == PER_FACE_PRIORITY && facePrioritiesOffset + faceCount <= data.size) {
+            buffer.position(facePrioritiesOffset)
+            ByteArray(faceCount) { buffer.readByte().toByte() }
+        } else {
+            null
+        }
+
+        // Decode alphas
+        val faceAlphas: ByteArray? = if (hasAlphas == 1 && faceAlphasOffset + faceCount <= data.size) {
+            buffer.position(faceAlphasOffset)
+            ByteArray(faceCount) { buffer.readByte().toByte() }
+        } else {
+            null
+        }
+
+        val faceSkins: IntArray? = if (hasFaceSkins == 1 && faceSkinOffset + faceCount <= data.size) {
+            buffer.position(faceSkinOffset)
+            IntArray(faceCount) { buffer.readUnsignedByte() }
+        } else {
+            null
+        }
+
+        // Decode render types
+        val faceRenderTypes: ByteArray? = if (hasRenderTypes == 1 && faceRenderTypesOffset + faceCount <= data.size) {
+            buffer.position(faceRenderTypesOffset)
+            ByteArray(faceCount) { buffer.readByte().toByte() }
+        } else {
+            null
+        }
+
+        // Texture triangles: all planar, and the mapping block the newer layout has does not exist
+        var texturesMapping: ByteArray? = null
+        var textureFaceX: ShortArray? = null
+        var textureFaceY: ShortArray? = null
+        var textureFaceZ: ShortArray? = null
+        if (texturedFaceCount > 0 && textureTrianglesOffset + texturedFaceCount * 6 <= data.size) {
+            texturesMapping = ByteArray(texturedFaceCount)
+            textureFaceX = ShortArray(texturedFaceCount)
+            textureFaceY = ShortArray(texturedFaceCount)
+            textureFaceZ = ShortArray(texturedFaceCount)
+            buffer.position(textureTrianglesOffset)
+            for (i in 0 until texturedFaceCount) {
+                textureFaceX[i] = buffer.readUnsignedShort().toShort()
+                textureFaceY[i] = buffer.readUnsignedShort().toShort()
+                textureFaceZ[i] = buffer.readUnsignedShort().toShort()
+            }
+        }
+
+        val trailing = trailing(data, vertexZOffset + vertexZLength, data.size - OLD_FORMAT_FOOTER_BYTES)
+
+        return ModelDefinition(
+            id = modelId,
+            version = DEFAULT_VERSION,
+            vertexCount = vertexCount,
+            faceCount = faceCount,
+            vertexX = vertexX,
+            vertexY = vertexY,
+            vertexZ = vertexZ,
+            faceA = faceA,
+            faceB = faceB,
+            faceC = faceC,
+            faceColors = faceColors,
+            faceAlphas = faceAlphas,
+            faceRenderTypes = faceRenderTypes,
+            facePriorities = facePriorities,
+            faceTextures = null,
+            faceTexturePointers = null,
+            textureTriangleCount = texturedFaceCount,
+            texturesMapping = texturesMapping,
+            textureFaceX = textureFaceX,
+            textureFaceY = textureFaceY,
+            textureFaceZ = textureFaceZ,
+            textureCoordU = null,
+            textureCoordV = null,
+            vertexNormalsX = null,
+            vertexNormalsY = null,
+            vertexNormalsZ = null,
+            texturesScaleX = null,
+            texturesScaleY = null,
+            texturesScaleZ = null,
+            texturesRotation = null,
+            texturesDirection = null,
+            texturesSpeed = null,
+            texturesUtrans = null,
+            texturesVtrans = null,
+            billboards = null,
+            newFormat = false,
+            footerFlags = hasRenderTypes,
+            modelPriority = modelPriority,
+            alphaFlag = hasAlphas,
+            faceSkinFlag = hasFaceSkins,
+            textureFlag = 0,
+            vertexSkinFlag = hasVertexSkins,
+            vertexFlags = vertexFlags,
+            faceIndexTypes = faceIndexTypes,
+            faceSkins = faceSkins,
+            vertexSkins = vertexSkins,
+            trailing = trailing
+        )
+    }
+
+    /**
+     * The face index section, which is the same in both layouts: each face either rewrites all
+     * three of its vertex indices (type 1) or reuses two of the previous face's and reads one.
+     */
+    private fun readFaces(buffer: BufferReader, faceIndexTypes: ByteArray, faceA: IntArray, faceB: IntArray, faceC: IntArray) {
         var a = 0
         var b = 0
         var c = 0
         var lastIndex = 0
-
-        for (i in 0 until faceCount) {
-            val type = faceIndexTypes[i].toInt() and 0xff
-            when (type) {
+        for (i in faceIndexTypes.indices) {
+            when (faceIndexTypes[i].toInt() and 0xff) {
                 1 -> {
                     a = readSmart(buffer) + lastIndex
                     lastIndex = a
@@ -838,82 +1020,27 @@ object ModelDecoder {
             faceB[i] = b
             faceC[i] = c
         }
+    }
 
-        // Decode colors
-        val faceColors = ShortArray(faceCount)
-        if (faceColorsOffset + faceCount * 2 <= data.size) {
-            buffer.position(faceColorsOffset)
-            for (i in 0 until faceCount) {
-                faceColors[i] = buffer.readUnsignedShort().toShort()
-            }
-        }
+    /** `data[from until to]`, or null when there is nothing there. */
+    private fun trailing(data: ByteArray, from: Int, to: Int): ByteArray? =
+        if (to > from && to <= data.size && from >= 0) data.copyOfRange(from, to) else null
 
-        // Decode priorities
-        val facePriorities: ByteArray? = if (hasPriorities == 255 && facePrioritiesOffset + faceCount <= data.size) {
-            buffer.position(facePrioritiesOffset)
-            ByteArray(faceCount) { buffer.readByte().toByte() }
-        } else {
-            null
-        }
-
-        // Decode alphas
-        val faceAlphas: ByteArray? = if (hasAlphas == 1 && faceAlphasOffset + faceCount <= data.size) {
-            buffer.position(faceAlphasOffset)
-            ByteArray(faceCount) { buffer.readByte().toByte() }
-        } else {
-            null
-        }
-
-        // Decode render types
-        val faceRenderTypes: ByteArray? = if (hasRenderTypes == 1 && faceRenderTypesOffset + faceCount <= data.size) {
-            buffer.position(faceRenderTypesOffset)
-            ByteArray(faceCount) { buffer.readByte().toByte() }
-        } else {
-            null
-        }
-
-        return ModelDefinition(
-            id = modelId,
-            version = version,
-            vertexCount = vertexCount,
-            faceCount = faceCount,
-            vertexX = vertexX,
-            vertexY = vertexY,
-            vertexZ = vertexZ,
-            faceA = faceA,
-            faceB = faceB,
-            faceC = faceC,
-            faceColors = faceColors,
-            faceAlphas = faceAlphas,
-            faceRenderTypes = faceRenderTypes,
-            facePriorities = facePriorities,
-            faceTextures = null,
-            faceTexturePointers = null,
-            textureTriangleCount = 0,
-            texturesMapping = null,
-            textureFaceX = null,
-            textureFaceY = null,
-            textureFaceZ = null,
-            textureCoordU = null,
-            textureCoordV = null,
-            vertexNormalsX = null,
-            vertexNormalsY = null,
-            vertexNormalsZ = null,
-            texturesScaleX = null,
-            texturesScaleY = null,
-            texturesScaleZ = null,
-            texturesRotation = null,
-            texturesDirection = null,
-            texturesSpeed = null,
-            texturesUtrans = null,
-            texturesVtrans = null
-        )
+    /**
+     * How many bytes one complex texture's three scales take, which the format changed twice:
+     * six for a pre-14 model, seven for a 14 (the Y scale grew to a medium) and nine for a 15 or
+     * later (all three did).
+     */
+    fun scaleBytes(version: Int): Int = when {
+        version < 14 -> 6
+        version == 14 -> 7
+        else -> 9
     }
 
     /**
      * Read a smart-encoded value.
      * If first byte < 128: single byte, value range -64 to +63
-     * If first byte >= 128: two bytes, value range -49152 to +16383
+     * If first byte >= 128: two bytes, value range -16384 to +16383
      */
     private fun readSmart(buffer: BufferReader): Int {
         val peek = buffer.readUnsignedByte()
@@ -924,17 +1051,13 @@ object ModelDecoder {
         }
     }
 
-    /**
-     * Read an unsigned medium (3-byte) value in big-endian format.
-     */
-    private fun readUnsignedMedium(buffer: BufferReader): Int {
-        val b1 = buffer.readUnsignedByte()
-        val b2 = buffer.readUnsignedByte()
-        val b3 = buffer.readUnsignedByte()
-        return (b1 shl 16) or (b2 shl 8) or b3
-    }
-
     fun getModelCount(cache: Cache): Int {
         return cache.lastArchiveId(Index.MODELS) + 1
     }
+
+    /** The priority byte that means "the file carries a priority per face" rather than one for all. */
+    const val PER_FACE_PRIORITY = 255
+
+    /** Vertices and complex texture scales of a model older than this are stored at quarter scale. */
+    const val UPSCALE_BELOW_VERSION = 13
 }

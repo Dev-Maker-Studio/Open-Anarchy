@@ -1,5 +1,7 @@
 package org.darkan.tools.cache.model
 
+import world.gregs.voidps.cache.definition.data.ModelDefinition
+
 /**
  * The vertex normals an object instance ends up with after its neighbours' faces are folded in.
  *

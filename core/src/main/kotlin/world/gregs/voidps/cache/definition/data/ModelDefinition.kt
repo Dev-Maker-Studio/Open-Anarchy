@@ -1,4 +1,4 @@
-package org.darkan.tools.cache.model
+package world.gregs.voidps.cache.definition.data
 
 /**
  * Billboard attachment data decoded from model binary footer.
@@ -17,6 +17,38 @@ data class BillboardData(
     val appliesOnFace: Int,
     val depth: Int,
     val distance: Int
+)
+
+/**
+ * A particle emitter the model's footer attaches to one of its faces.
+ *
+ * The face is where the particles come out of; the id names a
+ * [ParticleProducerDefinition][world.gregs.voidps.cache.definition.data.ParticleProducerDefinition]
+ * in index 27 archive 0, which is everything about how they behave. The client resolves the face
+ * into its three vertices and its priority the moment it decodes the model and keeps neither the
+ * face index nor the id, so this is the pair as the file actually holds it.
+ *
+ * @param particleId the producer's id in index 27 archive 0
+ * @param appliesOnFace the face the emitter sits on
+ */
+data class ParticleEmitterAttachment(
+    val particleId: Int,
+    val appliesOnFace: Int
+)
+
+/**
+ * A particle effector the model's footer attaches to one of its vertices.
+ *
+ * The id names a [ParticleDefinition][world.gregs.voidps.cache.definition.data.ParticleDefinition]
+ * in index 27 archive 1 - a force field that pushes particles about - and the vertex is where it
+ * acts from.
+ *
+ * @param effectorId the particle's id in index 27 archive 1
+ * @param appliesOnVertex the vertex the effector sits on
+ */
+data class ParticleEffectorAttachment(
+    val effectorId: Int,
+    val appliesOnVertex: Int
 )
 
 /**
@@ -77,7 +109,83 @@ data class ModelDefinition(
     /** Cube mapping V translation - indexed by cube texture index (type 2 only) */
     val texturesVtrans: IntArray?,
     /** Billboard attachments decoded from model footer (null if no billboards) */
-    val billboards: Array<BillboardData>? = null
+    val billboards: Array<BillboardData>? = null,
+
+    // --- Layout fidelity: everything the renderer never looks at but the file still holds ------
+    //
+    // Below this line nothing is used to draw anything. It is what [ModelEncoder] needs to write
+    // the archive back byte for byte: the footer's own bytes, the two per-element layout arrays,
+    // the skin sections neither the viewer nor the client's scene graph reads here, and the
+    // particle attachments. See `docs/cache-source.md`, "models".
+
+    /**
+     * Whether the archive ended in the `0xFFFF` marker, which is the newer of the two 727 layouts.
+     *
+     * The old layout has no version byte, no particles and no billboards, packs its texture
+     * triangles between the face colours and the vertices, and starts its vertex flags at offset 0
+     * rather than after the texture mapping bytes.
+     */
+    val newFormat: Boolean = true,
+    /**
+     * The footer's flag byte: `0x1` face render types, `0x2` particles, `0x4` billboards, `0x8` a
+     * version byte. Kept whole because the four bits above them are the file's to carry even
+     * though nothing reads them.
+     *
+     * For the old layout there is no such byte and this holds that layout's single "has face
+     * render types" byte instead, which is a value rather than a bit field.
+     */
+    val footerFlags: Int = 0,
+    /** The footer's priority byte. 255 means the file carries a [facePriorities] section. */
+    val modelPriority: Int = 0,
+    /** The footer's "has face alphas" byte, kept raw: only the value 1 turns the section on. */
+    val alphaFlag: Int = 0,
+    /** The footer's "has face skins" byte, raw, as [alphaFlag]. */
+    val faceSkinFlag: Int = 0,
+    /** The footer's "has face materials" byte, raw, as [alphaFlag]. */
+    val textureFlag: Int = 0,
+    /** The footer's "has vertex skins" byte, raw, as [alphaFlag]. */
+    val vertexSkinFlag: Int = 0,
+    /**
+     * Per vertex, which of x, y and z the file carries a delta for: `0x1`, `0x2`, `0x4`.
+     *
+     * Almost always exactly "the axes whose delta is not zero", which is what
+     * [ModelEncoder][world.gregs.voidps.cache.definition.encoder.ModelEncoder] derives when this is
+     * null; a file that sets a bit for a zero delta anyway keeps its own bytes here.
+     */
+    val vertexFlags: ByteArray? = null,
+    /**
+     * Per face, how its three vertex indices follow from the face before it: 1 rewrites all three,
+     * 2, 3 and 4 keep two of them and read one.
+     *
+     * Derived from the faces when null, exactly as [vertexFlags] is.
+     */
+    val faceIndexTypes: ByteArray? = null,
+    /** The skin (bone group) each face belongs to, when [faceSkinFlag] is 1. */
+    val faceSkins: IntArray? = null,
+    /** The skin (bone group) each vertex belongs to, when [vertexSkinFlag] is 1. */
+    val vertexSkins: IntArray? = null,
+    /**
+     * The texture index section of a file that declares no texture triangles at all.
+     *
+     * A model may set the footer's "has face materials" byte and declare a texture index length
+     * without carrying a single texture triangle for those indices to point at - model 73412 of
+     * rev727 is the one that does, with 47 such bytes. The client allocates no `facesTexture`
+     * array in that case and never reads them, so they reach no [faceTexturePointers]; they are
+     * still the file's, so they are kept here. Null whenever [faceTexturePointers] is not, which
+     * is every other model in the cache.
+     */
+    val unusedTexturePointers: ByteArray? = null,
+    /** Particle emitters the footer attaches to faces, when [footerFlags] has `0x2`. */
+    val particleEmitters: Array<ParticleEmitterAttachment>? = null,
+    /** Particle effectors the footer attaches to vertices, when [footerFlags] has `0x2`. */
+    val particleEffectors: Array<ParticleEffectorAttachment>? = null,
+    /**
+     * Bytes between the end of the last section and the footer that nothing here accounts for.
+     *
+     * No archive in the 727 cache has any; the field exists so that one that did would round trip
+     * rather than lose them silently.
+     */
+    val trailing: ByteArray? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
