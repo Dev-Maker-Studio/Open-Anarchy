@@ -140,7 +140,6 @@ the JS5 multi-file layout.
 |---|---|---|
 | `RawArchiveCodec` | indices whose archives hold one file and have no better codec | `<archive>.dat` |
 | `RawFilesCodec` | indices with multi-file archives and no better codec | `<archive>/<file>.dat` (requires and always writes 1 chunk) |
-| `VerbatimGroupCodec` | index 0 | `<archive>.grp` - the decompressed group verbatim, chunk table and all |
 | `DefinitionJsonCodec<T>` | indices 3, 9, 13 and 16-22, and 14 of index 2's archives | one JSON file per definition, see below |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `MapCodec` | index 5 | one directory per map square, `<x>_<y>/terrain.json` and friends - see *maps* below |
@@ -148,7 +147,7 @@ the JS5 multi-file layout.
 | `MaterialCodec` | index 26 | `<id>.json` per material of the index's one blob - see *materials* |
 | `VerbatimGroupCodec` | nothing, in 727 | `<archive>.grp` - the decompressed group verbatim, chunk table and all. Index 0's codec until `AnimationFrameCodec` replaced it; the answer for a multi-chunk index whose split follows from nothing |
 | `DefinitionJsonCodec<T>` | indices 1, 3, 10, 16-22, 33, 35, both quick chat archives, index 23's two typed archive kinds, index 28's six and 14 of index 2's archives | one JSON file per definition, see below |
-| `AnimationFrameCodec` | index 0 | `<archive>/<frame>.json`, with the three chunk group rebuilt from the frames - see *anims* below |
+| `AnimationFrameCodec` | index 0 | `<archive>.glb` - one glTF 2.0 animation per frame set, with the three chunk group rebuilt from the frames - see *anims* below |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `ArchiveDirectoryCodec` | indices 10, 23, 24, 25, 28 | the generalisation of `ConfigCodec`: a name and a codec per archive, either in a directory of its own (`worldmapdata/main_staticelements/`) or as one named file (`defaults/equipment.json`) |
 | `DefinitionJsonCodec<T>` | indices 3, 16-22 and 29, 14 of index 2's archives and both of index 27's | one JSON file per definition, see below |
@@ -174,10 +173,10 @@ bytes:
 | 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 26 | `materials` | `json-material` |
 | 13 | `fontmetrics` | `json-fontmetrics` | | 32 | `loading_sprites` | `sprite-png` |
 | 16 | `config_loc` | `json-loc` | | 34 | `loading_sprites_raw` | `sprite-png` |
-| 17 | `config_enum` | `json-enum` | | 0 | `anims` | `verbatim-group` |
+| 17 | `config_enum` | `json-enum` | | 0 | `anims` | `gltf-anim` |
 | 18 | `config_npc` | `json-npc` | | 5 | `maps` | `map-json` |
 | | | | | everything else | | `raw-archive` / `raw-files` |
-| 0 | `anims` | `json-animframe` | | 19 | `config_obj` | `json-obj` |
+| 0 | `anims` | `gltf-anim` | | 19 | `config_obj` | `json-obj` |
 | 1 | `bases` | `json-base` | | 20 | `config_seq` | `json-seq` |
 | 2 | `config` | `config` (14 archives JSON, 31 raw) | | 21 | `config_spotanim` | `json-spotanim` |
 | 3 | `interfaces` | `json-interface` | | 22 | `config_varbit` | `json-varbit` |
@@ -189,14 +188,15 @@ bytes:
 | | | | | 35 | `cutscenes` | `json-cutscene` |
 | | | | | everything else | | `raw-archive` / `raw-files` |
 
-Thirty-two of the 37 indices' *records* are now editable JSON; what is left as bytes is the assets -
+Thirty-two of the 37 indices' *records* are now editable - JSON, or a glTF animation per frame set for
+index 0; what is left as bytes is the assets -
 models, sprites, textures, maps, sounds, fonts, particles, billboards, materials, native libraries,
 shaders and the loading sprites - and index 2's 31 undecoded archives.
 | 4 | `synth_sounds` | `json-synth` | | 21 | `config_spotanim` | `json-spotanim` |
 | 6 | `midi_songs` | `midi` | | 22 | `config_varbit` | `json-varbit` |
 | 11 | `midi_jingles` | `midi` | | 30 | `dlls` | `dlls` |
 | 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 31 | `shaders` | `shaders` |
-| 14 | `vorbis` | `vorbis` | | 0 | `anims` | `verbatim-group` |
+| 14 | `vorbis` | `vorbis` | | 0 | `anims` | `gltf-anim` |
 | 15 | `midi_instruments` | `jagpatch` | | everything else | | `raw-archive` / `raw-files` |
 | 16 | `config_loc` | `json-loc` | | | | |
 | 17 | `config_enum` | `json-enum` | | | | |
@@ -205,7 +205,7 @@ shaders and the loading sprites - and index 2's 31 undecoded archives.
 | 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 22 | `config_varbit` | `json-varbit` |
 | 16 | `config_loc` | `json-loc` | | 27 | `config_particle` | `particle` (`json-particle-producer`, `json-particle`) |
 | 17 | `config_enum` | `json-enum` | | 29 | `config_billboard` | `json-billboard` |
-| 18 | `config_npc` | `json-npc` | | 0 | `anims` | `verbatim-group` |
+| 18 | `config_npc` | `json-npc` | | 0 | `anims` | `gltf-anim` |
 | | | | | everything else | | `raw-archive` / `raw-files` |
 
 A codec is claimed per index in `SourceCodecs`, in three layers of increasing authority:
@@ -243,7 +243,7 @@ and file packed the way that type's decoder packs them (`id = archive shl bits o
 |---|---|---|---|
 | `Packed(bits)` | indices 16-22 | `config_obj/4151.json` | `4151 = 16 shl 8 or 55`, so archive 16 file 55 |
 | `Packed(0)` | indices 1, 33, 35 | `bases/2405.json` | the archive id, because the archive holds one file whose id is 0 |
-| `Nested(16)` | indices 3 and 0 | `interfaces/1477/32.json`, `anims/12/5.json` | `1477 shl 16 or 32` |
+| `Nested(16)` | index 3 | `interfaces/1477/32.json` | `1477 shl 16 or 32` |
 | `Flat` | index 2's typed archives, index 23's and both quick chat indices' | `config/struct/26.json`, `quickchat/quickchatphrase/12.json` | the file id; the directory is the archive |
 | `NamedLayout` | indices 10 and 28 | `defaults/equipment.json` | the archive id; the one file is named after the archive rather than after its id |
 | `Nested(16)` | index 3 | `interfaces/1477/32.json` | `1477 shl 16 or 32` |
@@ -343,7 +343,7 @@ them (`DefinitionJsonCodecTest` for the config types, `MiscCodecTest` for the ei
 | mapelement | `config/mapelement` | `json-mapelement` | 1,220 | 1,220 | 0 |
 | hitmark | `config/hitmark` | `json-hitmark` | 48 | 48 | 0 |
 | varclan | `config/varclan` | `json-varclan` | 2,845 | 2,845 | 0 |
-| animation frame | `anims` | `json-animframe` | 490,049 | 490,049 | 0 |
+| animation frame | `anims` | `gltf-anim` | 4,085 | 4,085 | 0 |
 | animation base | `bases` | `json-base` | 3,535 | 3,535 | 0 |
 | huffman | `binary` | `json-huffman` | 1 | 1 | 0 |
 | world map area | `worldmapdata/details` | `json-worldmaparea` | 45 | 45 | 0 |
@@ -354,9 +354,11 @@ them (`DefinitionJsonCodecTest` for the config types, `MiscCodecTest` for the ei
 | equipment defaults | `defaults/equipment.json` | `json-equipment` | 1 | 1 | 0 |
 | game tip | `loading_screens` | `json-gametip` | 31 | 31 | 0 |
 | cutscene | `cutscenes` | `json-cutscene` | 16 | 16 | 0 |
-| **total** | | | **741,983** | **741,983** | **0** |
+| **total** | | | **256,019** | **256,019** | **0** |
 
-Index 2's other 31 archives have no decoder and stay raw bytes (`raw-files-flat`).
+Index 2's other 31 archives have no decoder and stay raw bytes (`raw-files-flat`). The animation frame
+row counts *files* rather than records: index 0's 490,049 frames are 4,085 glTF animations, one per
+frame set, so the frames themselves are counted by *anims* below and by *Parity per type*.
 
 ### maps
 
@@ -895,27 +897,120 @@ obvious from its format. `clientscripts` is the same kind of section and has its
 
 ### anims
 
-**Index 0, 4,085 frame sets, 490,049 animation frames, one JSON file each.** It is the only index whose
-*group layout* has to come back as well as its bytes.
+**Index 0, 4,085 frame sets, 490,049 animation frames, one glTF 2.0 binary per frame set**
+(`anims/<archive>.glb`). It is the only index whose *group layout* has to come back as well as its
+bytes.
 
-A frame is a sparse edit of the skeleton it names: for each of that skeleton's transforms in turn a flag
-byte says which of the x, y and z components the frame moves, and the components it does move follow as
-signed smarts in one run at the end of the file.
+A frame set is an archive of frames, and a glTF animation is a list of keyframes, so the two line up:
+an animation is one file rather than 120 of them, the format is what Blender imports and exports
+natively - the same choice index 7's models made, see *models* - and the two can be opened by one
+plugin. That is 4,085 files instead of 490,049.
+
+A frame itself is a sparse edit of the skeleton it names (*bases*, index 1): for each of that
+skeleton's transforms in turn a flag byte says which of the x, y and z components the frame moves, and
+the components it does move follow as signed smarts in one run at the end of the file.
+
+**The nodes are the skeleton's label groups.** A base is a *list* of transforms, each with a kind -
+origin, translate, rotate, scale, alpha, colour, billboard - and a set of model labels it moves, not a
+bone tree, so the nodes are flat scene roots named by their group index, each carrying the base's
+transform type and that group's labels in its own `extras.rs`. `bases/<id>.json` is still the truth for
+index 1 and nothing reads a node back; what a node holds is the copy a viewer needs to draw the
+animation without opening another index.
+
+**The frames are a real glTF animation.** A group whose transform kind has a glTF equivalent gets a
+channel, the frame's own file id is the keyframe time, and the values are the RS integers, **unscaled**,
+written as `FLOAT` exactly as a model's positions are:
+
+| RS transform type | glTF | output |
+|---|---|---|
+| 1 translate | `translation` channel | `VEC3`, the frame's x, y, z |
+| 2 rotate (and the 6 the client folds into it) | `rotation` channel | `VEC4`, `[x, y, z, 0]` |
+| 3 scale | `scale` channel | `VEC3`, the frame's x, y, z |
+| 0 origin, 5 alpha, 7 colour, 8/9/10 billboard, and the 4 that 46 base transforms carry and no frame ever moves | none | the extras alone |
+
+Two consequences of *unscaled*, both deliberate and both the models convention: a `rotation` output is
+**not a unit quaternion** - an RS rotate value is an angle of `(v shl 2) and 0x3fff` out of 16,384 to the
+turn about that axis, so a viewer converts, and a scale is `v / 128` - and a component the frame's flag
+byte leaves clear is filled with what the client substitutes, `0` or `128` for a scale, so that a
+keyframe is a whole vector. Which components the *file* held is the flag byte in
+the extras and nothing else. Keyframe time accessors are shared between the groups that move on the
+same frames, which in a frame set is usually all of them.
+
+**`extras.rs` on the scene is the whole truth for the re-encoder.** Nothing in the glTF proper is read
+back:
+
+| key in `extras.rs` | what it is |
+|---|---|
+| `archive` | the frame set's own id |
+| `base` | the skeleton every frame of the set names, an index 1 archive id |
+| `groups` | how many label groups the file describes - the node count |
+| `layout` | the group layout facts the codec derives: `chunks`, 3 or 1, and `header`, the length of chunk 0 |
+| `frames` | one entry per frame, in the group's own order |
+| `frames[].file` | the frame's file id, which is its identity in the archive and its keyframe time |
+| `frames[].base` | written only when this frame names a different skeleton from the set's, which no 727 frame does |
+| `frames[].header` | the file's first byte, which nothing in the client ever reads; `1` in every 727 frame |
+| `frames[].count` | the transform count the file declares - the flag bytes it carries |
+| `frames[].transforms` | the group indices the frame moves; a group that is not listed had a flag byte of `0`, which `count` is what puts back |
+| `frames[].flags` | the raw flag byte for each of those groups: `0x1` x, `0x2` y, `0x4` z, `0x8`/`0x10` tween, rest unused |
+| `frames[].values` | the whole value run, in transform order and x, y, z order within one, exactly as the file holds it |
+| `frames[].wide` | the positions in `values` the file wrote in the two byte smart form though the one byte form would have held them - layout fidelity, and no frame in 727 has one |
+
+So a `.glb` that has lost its extras fails loudly instead of packing wrong bytes, and a plugin that
+means to *change* an animation writes the extras rather than only the samplers. The cost is the one
+place this format spends bytes twice - the values are in the samplers and in the extras - which is
+measured below.
+
+`anims/99.glb` is 1,796 bytes for a 55 byte archive: two frames over a six transform skeleton of
+origins and rotations. Its JSON chunk is 1,664 of those bytes, and this is the whole of it (the file
+holds no whitespace at all; the line breaks below are for reading):
 
 ```json
-{
-  "id": 5,
-  "baseId": 1,
-  "header": 1,
-  "flags": [3, 7, 0, 3, 7],
-  "values": [-64, 60, -112, -80, -16, -68, -28, -48, -112, -64]
-}
+{"asset":{"generator":"darkan cache-source","version":"2.0"},"scene":0,
+ "scenes":[{"nodes":[0,1,2,3,4,5],"extras":{"rs":{"archive":99,"base":100,"groups":6,
+   "layout":{"chunks":3,"header":4},
+   "frames":[{"file":0,"header":1,"count":6,"transforms":[1,2,3,5],"flags":[4,1,4,1],
+              "values":[32,-132,-48,32]},
+             {"file":1,"header":1,"count":6,"transforms":[1,2,3,5],"flags":[4,1,4,1],
+              "values":[-32,-132,48,-32]}]}}}],
+ "nodes":[{"name":"0","extras":{"rs":{"group":0,"type":0,"labels":[0]}}},
+          {"name":"1","extras":{"rs":{"group":1,"type":2,"labels":[1]}}},
+          {"name":"2","extras":{"rs":{"group":2,"type":0,"labels":[2]}}},
+          {"name":"3","extras":{"rs":{"group":3,"type":2,"labels":[2]}}},
+          {"name":"4","extras":{"rs":{"group":4,"type":0,"labels":[3]}}},
+          {"name":"5","extras":{"rs":{"group":5,"type":2,"labels":[3]}}}],
+ "animations":[{"name":"frameset_99",
+   "channels":[{"sampler":0,"target":{"node":1,"path":"rotation"}},
+               {"sampler":1,"target":{"node":3,"path":"rotation"}},
+               {"sampler":2,"target":{"node":5,"path":"rotation"}}],
+   "samplers":[{"input":0,"interpolation":"LINEAR","output":1},
+               {"input":0,"interpolation":"LINEAR","output":2},
+               {"input":0,"interpolation":"LINEAR","output":3}]}],
+ "accessors":[{"bufferView":0,"componentType":5126,"count":2,"max":[1],"min":[0],"type":"SCALAR"},
+              {"bufferView":1,"componentType":5126,"count":2,"type":"VEC4"},
+              {"bufferView":2,"componentType":5126,"count":2,"type":"VEC4"},
+              {"bufferView":3,"componentType":5126,"count":2,"type":"VEC4"}],
+ "bufferViews":[{"buffer":0,"byteLength":8,"byteOffset":0},
+                {"buffer":0,"byteLength":32,"byteOffset":8},
+                {"buffer":0,"byteLength":32,"byteOffset":40},
+                {"buffer":0,"byteLength":32,"byteOffset":72}],
+ "buffers":[{"byteLength":104}]}
 ```
 
-**The three chunk split is derived, not recorded.** Every multi-file archive in index 0 is stored in three
-chunks, and a group joined as one chunk is different - equally valid, but different - bytes, which is why
-index 0 used to be kept as the decompressed group verbatim (`<archive>.grp`, `VerbatimGroupCodec`). It does
-not have to be, because for index 0 the split *is* the frame format's own three sections:
+All three rotating groups move on both frames, so all three samplers share input accessor 0 - the
+keyframe times `[0, 1]` - and the binary chunk is those two times followed by the three groups' values.
+
+**A `.glb` is deterministic to the byte**, by the same rules as a model's: the glTF JSON is written by
+hand in a fixed key order with no whitespace and with every number an integer, the chunks are padded
+the way the specification requires - spaces after the JSON, zeroes after the binary - and the generator
+string is a constant, so re-unpacking an unchanged cache rewrites nothing. The container, the accessor
+reader and the JSON writers are shared with the model codec (`Gltf`); `AnimationGltf` is the format and
+`AnimationFrameCodec` the codec.
+
+**The three chunk split is derived, not recorded in `index.json`.** Every multi-file archive in index 0
+is stored in three chunks, and a group joined as one chunk is different - equally valid, but different -
+bytes, which is why index 0 used to be kept as the decompressed group verbatim (`<archive>.grp`,
+`VerbatimGroupCodec`). It does not have to be, because for index 0 the split *is* the frame format's own
+three sections:
 
 | chunk | holds | length |
 |---|---|---|
@@ -923,37 +1018,61 @@ not have to be, because for index 0 the split *is* the frame format's own three 
 | 1 | one flag byte per transform | the transform count |
 | 2 | the transform values, as signed smarts | whatever is left |
 
-So `AnimationFrameCodec` rebuilds the layout from the frames rather than storing it: nothing about it goes
-into `index.json`, nothing about it can go stale against the files, and adding or removing a frame is
-adding or removing a file exactly as it is everywhere else. The eleven single-file archives carry no chunk
-table at all and get none. `MiscCodecTest` proves the split on all 4,085 archives.
+So the codec rebuilds the layout from the frames rather than carrying it in `index.json`, where nothing
+can go stale against the files, and the two facts it needs - how many chunks, and how long chunk 0 is -
+are written into `extras.rs` as `layout`, so the file says what it is instead of the codec assuming it.
+The eleven single-frame archives carry no chunk table at all and get none. `AnimationGltfParityTest`
+proves the split on all 4,085 archives and `MiscCodecTest` proves it again through a real directory.
 
-**What the client throws away and the tree keeps.** `AnimFrame` is lossy in five ways, so none of what it
-keeps is what the file holds:
+**What the client throws away and the tree keeps.** `AnimFrame` is lossy in five ways, so none of what
+it keeps is what the file holds:
 
 - a rotation transform's values are rescaled `(v shl 2) and 0x3fff`, which is not invertible;
-- a component whose flag bit is clear has no bytes at all, and the client substitutes `0` - or `128` for a
-  scale - which a decoded value cannot be told apart from, so the **raw flag byte** is what is stored;
+- a component whose flag bit is clear has no bytes at all, and the client substitutes `0` - or `128` for
+  a scale - which a decoded value cannot be told apart from, so the **raw flag byte** is what is stored;
 - flag bits `0x20`, `0x40` and `0x80` are read and dropped, and only a raw flag byte can carry them;
 - the file's first byte is never read by anything (it is `1` in all 490,049 frames), and is kept as
   `header`;
-- the skeleton id is read by the frame set loader rather than by the frame, and is kept as `baseId`.
+- the skeleton id is read by the frame set loader rather than by the frame, and is kept as `base`.
 
-`labels`, `modifiesAlpha`, `modifiesColour` and `modifiesBillboard` are the other direction - derived from
-the skeleton's transform types - and are not fields of the file, so they are not in the tree.
+`labels`, `modifiesAlpha`, `modifiesColour` and `modifiesBillboard` are the other direction - derived
+from the skeleton's transform types - and are not fields of the file. The labels are still *written*,
+onto the nodes, because a viewer needs them; nothing reads them back.
 
-**Two quirks of the 727 packer, both reproduced.** The transform count is one byte, and archive 162's nine
-frames declare **0** transforms and then carry **256** flag bytes: `count and 0xff` from a packer that
-never checked. The client reads 0, finds the file longer than its four byte header and throws the frame
-away, so those nine animations have never worked; the tree still has to reproduce them, and both directions
-read a declared 0 with a payload behind it as 256. Separately, a signed smart's two byte form can hold a
-value the one byte form fits, which would not survive a re-encode - `wideValues` records any such position
-and **no frame in the 727 cache has one**, so the field is never written.
+**Two quirks of the 727 packer, both reproduced.** The transform count is one byte, and archive 162's
+nine frames declare **0** transforms and then carry **256** flag bytes: `count and 0xff` from a packer
+that never checked. The client reads 0, finds the file longer than its four byte header and throws the
+frame away, so those nine animations have never worked; the tree still has to reproduce them, and both
+directions read a declared 0 with a payload behind it as 256. Separately, a signed smart's two byte form
+can hold a value the one byte form fits, which would not survive a re-encode - `wide` records any such
+position and **no frame in the 727 cache has one**, so the field is never written.
 
-**The cost.** Index 0 is by a wide margin the most expensive index in the tree: 490,049 files and **747 MB**
-of JSON against 60 MB of `.grp` blobs, because a frame is almost all numbers and a number costs more as
-text than as a smart. That is the price of a frame being a file somebody can open, and `VerbatimGroupCodec`
-is still there for anyone who decides it is not worth paying.
+**What a Blender importer would do.** Read `scenes[0].extras.rs` for the frame set and its base, and the
+nodes for the label groups; make one empty (or one bone of a single armature) per node, named by its
+group index, and keep `type` and `labels` on it as custom properties. Then import the animation: each
+channel is that node's action, with a keyframe at every frame id, and the values converted on the way in
+- a translation as it stands, a rotation as three Euler angles of `(v shl 2) and 0x3fff` out of 16,384 to
+the turn, a scale as `v / 128`. The groups with no channel are in the extras: an alpha or a colour becomes a
+custom property track rather than a transform. Exporting is the same in reverse, and the one rule is that
+**the extras have to be rewritten**, because they and not the samplers are what the cache is packed from:
+per frame, its file id, the header byte, the declared count, and the groups it moves with their flag
+bytes and values. A model to attach it to is `models/<id>.glb`, whose `vertexSkins` extras are the labels
+these groups name.
+
+**The cost.** Index 0 is still the most expensive index in the tree, but a third less so than it was as
+JSON: **4,085 files and 530 MB** against 124 MB of decompressed group bytes (21 MB of them in the packed
+cache) and against the **747 MB in 490,049 files** the same frames cost as one JSON file each. 302 MB of
+that is the glTF JSON - the nodes and the extras - and 227 MB is the samplers' binary chunk, which is the
+price of the file being an animation a viewer can play as well as a thing the packer can rebuild; the
+extras alone would be about 300 MB, and the samplers alone would not be enough to pack from. Decoding
+4,085 groups and writing their `.glb` files costs **2.9 s** single threaded, and reading them back and
+re-encoding every group **9.5 s** - the parse of 302 MB of JSON is most of the second number.
+`VerbatimGroupCodec` is still there for anyone who decides none of this is worth paying.
+
+**Parity: all 4,085 archives, byte identical, chunk table and all, zero pristine.** Two independent
+proofs: `AnimationGltfParityTest` takes every archive out through `decode -> .glb -> read back ->
+encode` with nothing on disk and also compares all 490,049 frames field for field, and `MiscCodecTest`
+does the whole trip through a real directory. There are no residuals.
 
 ### bases
 
@@ -974,6 +1093,11 @@ Two values the client destroys on the way in are kept raw:
 
 The same one byte count wrap as index 0: bases **161 and 3445** declare 0 transforms in 2,559 bytes, which
 is 256 transforms written into a byte, and both directions read it that way.
+
+**This file stays the truth for index 1**, even though every frame set's `.glb` embeds the part of its base
+a viewer needs - one node per transform, with the kind and the labels on it (*anims*). The embedded copy is
+written and never read: index 1 is packed from `bases/<id>.json` alone, so editing a skeleton is editing one
+file, and a frame set's nodes are refreshed the next time it is unpacked.
 
 ### binary
 
@@ -1387,8 +1511,9 @@ gets a `<id>.json.pristine` beside it. So the guarded unit is one definition and
 share its archive. It still reports `exact(archive) = false`, so the unpacker packs the whole group
 back and compares that too - an independent second proof rather than the only one.
 
-Measured over the whole 727 cache, **all 741,983 definition files of all 33 types survive the round trip
-and not one needs a pristine copy**; `DefinitionJsonCodecTest` and `MiscCodecTest` are the measurement and
+Measured over the whole 727 cache, **all 741,983 definitions of all 33 types survive the round trip and
+not one needs a pristine copy** - 256,019 files, because index 0's 490,049 frames are 4,085 glTF
+animations; `DefinitionJsonCodecTest` and `MiscCodecTest` are the measurement and
 the "Parity per type" table below the per type breakdown.
 
 ### synth sounds (index 4)
@@ -1772,16 +1897,16 @@ repacks exactly that one archive. `cache verify` of the built cache against the 
 full parity: 140,692 containers, 37 reference tables and the derived version table, all identical.
 
 **Those whole-tree numbers predate the eight record indices above and have not been re-measured.** They
-add 496,232 files and 769 MB of JSON to the tree, of which index 0 alone is 490,049 files and 747 MB, so
-both the unpack and the tree's size grow by roughly a factor of two and a half; `WholeCacheSourceTest`'s
-unpack time limit was raised to match. What has been measured, on the same machine, is the per index round
-trip: `MiscCodecTest` decodes all 7,764 archives of the eight indices, writes all 496,277 files to disk,
-reads them back and packs every group in **107 s**, and `MiscEncoderParityTest` encodes all 496,232
-definitions - no disk - in a few seconds. Index 0 is essentially all of both.
+add 10,268 files and 553 MB to the tree, of which index 0 alone is 4,085 files and 530 MB, so the tree's
+size grows by roughly a factor of one and a half; `WholeCacheSourceTest`'s unpack time limit was raised to
+match. What has been measured, on the same machine, is the per index round trip: `MiscCodecTest` decodes
+all 7,764 archives of the eight indices, writes all 10,313 files to disk, reads them back and packs every
+group in **30 s**, and `MiscEncoderParityTest` encodes all 496,232 definitions - no disk - in a few
+seconds. Index 0 is essentially all of both.
 
-| index | dir | archives | files | JSON |
+| index | dir | archives | files | tree |
 |---|---|---|---|---|
-| 0 | `anims` | 4,085 | 490,049 | 747 MB |
+| 0 | `anims` | 4,085 | 4,085 | 530 MB |
 | 1 | `bases` | 3,535 | 3,535 | 15 MB |
 | 10 | `binary` | 1 | 1 | 1 KB |
 | 23 | `worldmapdata` | 86 | 1,181 | 6.6 MB (6.5 MB of it the raw area images) |
@@ -1790,7 +1915,7 @@ definitions - no disk - in a few seconds. Index 0 is essentially all of both.
 | 28 | `defaults` | 6 | 6 | 22 KB |
 | 33 | `loading_screens` | 31 | 31 | 223 KB |
 | 35 | `cutscenes` | 16 | 16 | 334 KB |
-| | **total** | **7,764** | **496,277** | **769 MB** |
+| | **total** | **7,764** | **10,313** | **553 MB** |
 
 ## The `SourceCodec` interface
 
