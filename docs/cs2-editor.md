@@ -130,7 +130,7 @@ Some of the output is shaped by what has to compile back, not by taste:
 
 ## Types
 
-CS2 records no types: an item id, a colour and a component hash are all plain integers.
+CS2 records no types: an obj id, a colour and a component hash are all plain integers.
 `cs2 types` works out what they are from how they are used, across all 6567 scripts at once,
 and the decompiler writes them out.
 
@@ -145,23 +145,50 @@ and the decompiler writes them out.
   where it stands. `cs2 types <OP:slot>` prints that evidence.
 - The type characters are checked against the corpus before they are used, and one that is
   ever contradicted is dropped. `i` (plain int) claims nothing, so it is ignored.
+- A value compared for order against a real threshold is a quantity, never an id; see below.
 
-Constants are then spelled out - `item(Obj.coins)`, `component(Component.wornitems.head)`,
-`colour(0xFF0000)`, `tile(x, y, plane)`, `true` / `false`. Every id a catalog covers goes
-through its constant, including the ones with no proven name yet: those read as their
-placeholder, `struct(Struct.struct_1234)`, `component(Component.interface_978.component_978_36)`,
-exactly as scripts (`cs2_1620`) and variables (`varc_157`) already do. A placeholder is a name
-an editor can rename and `cs2 sync-names` can write back to the catalog; a bare number is not.
-What stays a number is what no catalog covers: `-1` and the client's other sentinels, and a
-packed component the catalog has no entry for, which keeps `component(iface, comp)`.
+Constants are then written as what they are. An id goes through its gameval constant and
+nothing else: `Obj.staff_of_air`, `Component.wornitems.head`, `Graphic.verdana_11pt_regular`,
+`Param.wear_op1`, and a clientscript referred to by id reads as its own function name. Ids
+with no proven name yet use their catalog placeholder - `Struct.struct_1234`,
+`Component.interface_978.component_978_36` - exactly as scripts (`cs2_1620`) and variables
+(`varc_157`) already do: a placeholder is a name an editor can rename and `cs2 sync-names`
+can write back to the catalog, and a bare number is not.
 
-A type code reads as `type_obj`, `type_graphic`, `type_int`. Signatures and declarations use
-an alias named after the helper: `intArg0: colour`, `let int3: item = ...`, and `flag` for
-booleans, TypeScript having `boolean` already. Every alias is `number`.
+Only two kinds are still written through a call, having no name to carry them:
+`colour(0xFF0000)` and `coord(x, y, level)`. Everything else is bare - `true` / `false` for a
+flag, `type_obj` for a type code, `event_com` for a value the client substitutes, and a plain
+number for anything no catalog covers: `-1`, `Int.MAX_VALUE`, a threshold like `100000`. A
+wrapper never goes round a number that is not an id.
+
+The names are Jagex's, which is what the catalogs are named after: `obj` (not "item"),
+`coord` (whose third field is the level, not a plane), `stat`, `colour`, `boolean`. Signatures
+and declarations use them as type aliases - `intArg0: obj`, `let int3: component = ...`,
+`function f(): [coord, number]`. `enum` and `interface` are TypeScript keywords and cannot be
+type names, so those two aliases are `Enum` and `Interface`; `boolean` is TypeScript's own
+type and is used as it stands. Every alias is `number`.
 
 `gamevals.d.ts` declares all of them - 326 329 lines, 18 MB - with each id in the doc comment
 above its constant. It costs nothing to check: `tsc` reads the whole dump, 6570 files and
 569 000 lines, in under two seconds.
+
+### Event values
+
+A hook is bound long before it runs, so the values that only exist when it fires are written
+into its arguments as magic numbers and substituted on dispatch. They read as the client's own
+names, and `cs2.d.ts` declares them with the value in the doc comment:
+
+`event_mousex`, `event_mousey`, `event_com` (the source component), `event_opindex`,
+`event_comsubid` (the slot within it), `event_com2` (the target component), `event_comsubid2`,
+`event_keycode`, `event_keychar` - and the string `"event_opbase"`, which is already literal.
+
+### Ids are never ordered
+
+Nothing asks whether one obj is less than another. A value compared for order (`<`, `>`, `<=`,
+`>=`) against a real threshold - anything but 0 or -1, which is how everything is tested for
+being set at all - is a count, a level or a timer, and can never be an id. That marks the
+carrier a quantity, which conflicts with every kind it might otherwise have picked up, and is
+what keeps `if (int20 > 100000)` from claiming that `100000` is an obj.
 
 ## Dead code
 

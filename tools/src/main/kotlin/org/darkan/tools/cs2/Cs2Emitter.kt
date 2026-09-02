@@ -425,7 +425,7 @@ class Cs2Emitter(private val function: Cs2Function) {
     }
 
     private fun render(value: Expr): String = when (value) {
-        is IntConst -> value.value.toString()
+        is IntConst -> Cs2Events.nameOf(value.value) ?: value.value.toString()
         is TypedConst -> typedConst(value)
         is StrConst -> "\"${Cs2Strings.escape(value.value)}\""
         is LongConst -> "${value.value}n"
@@ -477,46 +477,51 @@ class Cs2Emitter(private val function: Cs2Function) {
     private fun caseKey(key: Int, kind: ArgType): String =
         if (kind == ArgType.INT) key.toString() else typedConst(TypedConst(key, kind))
 
-    private fun typedConst(value: TypedConst): String = when {
-        // Every catalog kind uses -1 for "nothing"; spelling that out as an id
-        // would say it was one.
-        value.value == -1 && Cs2Names.catalogType(value.kind) != null -> "-1"
-        else -> typedSpelling(value)
-    }
-
-    private fun typedSpelling(value: TypedConst): String = when (value.kind) {
-        // A type code is a character, and reads as the type it names.
-        ArgType.TYPECHAR -> Cs2TypeChars.nameOf(value.value) ?: value.value.toString()
-        ArgType.COMPONENT -> component(value.value)
-        ArgType.COORD ->
-            if (Cs2Packing.isPackedCoord(value.value)) {
-                "tile(${Cs2Packing.xOf(value.value)}, ${Cs2Packing.yOf(value.value)}, " +
-                    "${Cs2Packing.planeOf(value.value)})"
-            } else {
-                "tile(${value.value})"
+    /**
+     * A constant, written as what it means.
+     *
+     * A gameval constant says its own kind - `Obj.coins` is an obj because of
+     * where the name comes from - so nothing wraps it. What has no name in a
+     * catalog is a plain number: -1 and the client's other sentinels, and any
+     * value in a typed position that is not an id of that type at all. Only the
+     * packed values keep a helper, having no name to carry them.
+     */
+    private fun typedConst(value: TypedConst): String {
+        Cs2Events.nameOf(value.value)?.let { return it }
+        return when (value.kind) {
+            // A type code is a character, and reads as the type it names.
+            ArgType.TYPECHAR -> Cs2TypeChars.nameOf(value.value) ?: value.value.toString()
+            ArgType.COMPONENT -> component(value.value)
+            ArgType.COORD ->
+                if (Cs2Packing.isPackedCoord(value.value)) {
+                    "coord(${Cs2Packing.xOf(value.value)}, ${Cs2Packing.yOf(value.value)}, " +
+                        "${Cs2Packing.planeOf(value.value)})"
+                } else {
+                    value.value.toString()
+                }
+            // A script referred to by id names the function it is, so renaming the
+            // function renames the reference too.
+            ArgType.SCRIPT -> scriptReference(value.value)
+            // A flag reads as a flag; anything outside 0/1 keeps its number so the
+            // value still round-trips.
+            ArgType.BOOLEAN -> when (value.value) {
+                0 -> "false"
+                1 -> "true"
+                else -> value.value.toString()
             }
-        // A script referred to by id names the function it is, so renaming the
-        // function renames the reference too.
-        ArgType.SCRIPT -> "scriptId(${scriptReference(value.value)})"
-        // A flag reads as a flag; anything outside 0/1 keeps its number so the
-        // value still round-trips.
-        ArgType.BOOLEAN -> when (value.value) {
-            0 -> "false"
-            1 -> "true"
-            else -> value.value.toString()
-        }
-        // Only a plain RGB triple reads as one: -1 is "no colour", and anything
-        // with bits above the low three bytes is not a colour at all.
-        ArgType.COLOUR ->
-            if (value.value in 0..0xFFFFFF) "colour(0x%06X)".format(value.value) else value.value.toString()
-        ArgType.INT -> value.value.toString()
-        else -> {
-            val helper = Cs2Names.helperFor(value.kind)
-            if (helper == null) value.value.toString() else "$helper(${constant(value.kind, value.value)})"
+            // Only a plain RGB triple reads as one: -1 is "no colour", and anything
+            // with bits above the low three bytes is not a colour at all.
+            ArgType.COLOUR ->
+                if (value.value in 0..0xFFFFFF) "colour(0x%06X)".format(value.value)
+                else value.value.toString()
+            else -> constant(value.kind, value.value)
         }
     }
 
-    /** The gameval constant for an id, or its number when the catalog has no name. */
+    /**
+     * The gameval constant for an id, or the bare number when no catalog covers
+     * it - which is what a sentinel is.
+     */
     private fun constant(kind: ArgType, id: Int): String {
         val type = Cs2Names.catalogType(kind) ?: return id.toString()
         val name = Cs2Names.identifier(type, id) ?: return id.toString()
@@ -525,12 +530,9 @@ class Cs2Emitter(private val function: Cs2Function) {
 
     private fun component(hash: Int): String {
         Cs2Names.componentPath(hash)?.let { (interfaceName, componentName) ->
-            return "component(${Cs2Names.NAMESPACES.getValue(Gameval.COMPONENT)}.$interfaceName.$componentName)"
+            return "${Cs2Names.NAMESPACES.getValue(Gameval.COMPONENT)}.$interfaceName.$componentName"
         }
-        if (Cs2Packing.isPackedComponent(hash)) {
-            return "component(${Cs2Packing.interfaceOf(hash)}, ${Cs2Packing.componentOf(hash)})"
-        }
-        return "component($hash)"
+        return hash.toString()
     }
 
     /** The function name of a clientscript, or its id when the cache has no such script. */

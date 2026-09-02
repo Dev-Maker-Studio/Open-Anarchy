@@ -113,29 +113,73 @@ object Cs2Names {
     val SIMPLE_TYPES: List<String> = NAMESPACES.keys.filter { it != Gameval.COMPONENT }
 
     /**
-     * The helper each kind of typed constant is written through.
+     * The kinds still written through a helper call.
      *
-     * The spelling is load-bearing in both directions: it is what tells the reader
-     * what the number means, and what tells the compiler to pack it back as that
-     * kind. [ArgType.INT] has no helper because a plain number is what it is.
+     * A gameval constant carries its own kind - `Obj.coins` is an obj because of
+     * where the name comes from - so wrapping it would only repeat the namespace.
+     * What is left is the values no catalog names: a packed colour, a packed
+     * coordinate. Everything else is a plain number, which is what it is.
      */
-    val HELPERS: Map<ArgType, String> = linkedMapOf(
-        ArgType.COMPONENT to "component",
-        ArgType.COORD to "tile",
-        ArgType.ITEM to "item",
+    val WRAPPED: Map<ArgType, String> = linkedMapOf(
+        ArgType.COLOUR to "colour",
+        ArgType.COORD to "coord",
+    )
+
+    fun helperFor(kind: ArgType): String? = WRAPPED[kind]
+
+    /**
+     * Helper names the compiler still understands, including the ones the
+     * decompiler no longer writes, so a folder dumped by an older build still
+     * compiles. `tile` was Jagex's `coord`, `item` its `obj`, `skill` its `stat`.
+     */
+    private val helperKinds: Map<String, ArgType> = linkedMapOf(
+        "colour" to ArgType.COLOUR,
+        "coord" to ArgType.COORD,
+        "tile" to ArgType.COORD,
+        "component" to ArgType.COMPONENT,
+        "obj" to ArgType.OBJ,
+        "item" to ArgType.OBJ,
+        "npc" to ArgType.NPC,
+        "loc" to ArgType.LOC,
+        "seq" to ArgType.SEQ,
+        "spotanim" to ArgType.SPOTANIM,
+        "enumId" to ArgType.ENUM,
+        "struct" to ArgType.STRUCT,
+        "param" to ArgType.PARAM,
+        "inv" to ArgType.INV,
+        "stat" to ArgType.STAT,
+        "skill" to ArgType.STAT,
+        "scriptId" to ArgType.SCRIPT,
+        "graphic" to ArgType.GRAPHIC,
+        "interfaceId" to ArgType.INTERFACE,
+        "sound" to ArgType.SOUND,
+        "midi" to ArgType.MIDI,
+        "cursor" to ArgType.CURSOR,
+        "mapelement" to ArgType.MAPELEMENT,
+        "quest" to ArgType.QUEST,
+        "worldmap" to ArgType.WORLDMAP,
+        "model" to ArgType.MODEL,
+    )
+
+    /**
+     * The TypeScript type a kind reads as: Jagex's own word for it, which is what
+     * the catalogs are named after. `enum` and `interface` are TypeScript's own
+     * keywords and cannot be type names, so those two take the capitalised
+     * namespace instead; `boolean` is TypeScript's own type and is used as it is.
+     */
+    val ALIASES: Map<ArgType, String> = linkedMapOf(
+        ArgType.OBJ to "obj",
         ArgType.NPC to "npc",
         ArgType.LOC to "loc",
         ArgType.SEQ to "seq",
         ArgType.SPOTANIM to "spotanim",
-        ArgType.ENUM to "enumId",
+        ArgType.ENUM to "Enum",
         ArgType.STRUCT to "struct",
         ArgType.PARAM to "param",
         ArgType.INV to "inv",
-        ArgType.STAT to "skill",
-        ArgType.SCRIPT to "scriptId",
-        ArgType.COLOUR to "colour",
         ArgType.GRAPHIC to "graphic",
-        ArgType.INTERFACE to "interfaceId",
+        ArgType.INTERFACE to "Interface",
+        ArgType.COMPONENT to "component",
         ArgType.SOUND to "sound",
         ArgType.MIDI to "midi",
         ArgType.CURSOR to "cursor",
@@ -143,28 +187,24 @@ object Cs2Names {
         ArgType.QUEST to "quest",
         ArgType.WORLDMAP to "worldmap",
         ArgType.MODEL to "model",
-    )
-
-    private val helperKinds: Map<String, ArgType> =
-        HELPERS.entries.associate { (kind, helper) -> helper to kind }
-
-    fun helperFor(kind: ArgType): String? = HELPERS[kind]
-
-    /**
-     * The TypeScript type a kind reads as. It is the helper's own name, so
-     * `item(Obj.coins)` and `: item` say the same word; `boolean` is taken by
-     * TypeScript itself, so a flag is a `flag`.
-     */
-    val ALIASES: Map<ArgType, String> = linkedMapOf(
-        ArgType.BOOLEAN to "flag",
-        *HELPERS.entries.filter { it.key != ArgType.SCRIPT }
-            .map { (kind, helper) -> kind to helper }.toTypedArray(),
+        ArgType.COORD to "coord",
+        ArgType.STAT to "stat",
+        ArgType.COLOUR to "colour",
+        ArgType.BOOLEAN to "boolean",
     )
 
     fun aliasFor(kind: ArgType): String? = ALIASES[kind]
 
     private val aliasKinds: Map<String, ArgType> =
-        ALIASES.entries.associate { (kind, alias) -> alias to kind }
+        ALIASES.entries.associate { (kind, alias) -> alias to kind } + mapOf(
+            // What older dumps wrote.
+            "item" to ArgType.OBJ,
+            "tile" to ArgType.COORD,
+            "skill" to ArgType.STAT,
+            "flag" to ArgType.BOOLEAN,
+            "enumId" to ArgType.ENUM,
+            "interfaceId" to ArgType.INTERFACE,
+        )
 
     /** True when a name is one of the type aliases, which are all plain ints. */
     fun isAlias(name: String): Boolean = name in aliasKinds
@@ -172,9 +212,32 @@ object Cs2Names {
     /** The kind of constant a helper name spells out, or null when it is not one. */
     fun argTypeOf(helper: String): ArgType? = helperKinds[helper]
 
+    /** The kind a gameval namespace names, so `Obj.coins` knows what it is. */
+    val NAMESPACE_KINDS: Map<String, ArgType> = linkedMapOf(
+        "Obj" to ArgType.OBJ,
+        "Npc" to ArgType.NPC,
+        "Loc" to ArgType.LOC,
+        "Seq" to ArgType.SEQ,
+        "Spotanim" to ArgType.SPOTANIM,
+        "Enum" to ArgType.ENUM,
+        "Struct" to ArgType.STRUCT,
+        "Param" to ArgType.PARAM,
+        "Inv" to ArgType.INV,
+        "Graphic" to ArgType.GRAPHIC,
+        "Interface" to ArgType.INTERFACE,
+        "Component" to ArgType.COMPONENT,
+        "Sound" to ArgType.SOUND,
+        "Midi" to ArgType.MIDI,
+        "Cursor" to ArgType.CURSOR,
+        "Mapelement" to ArgType.MAPELEMENT,
+        "Quest" to ArgType.QUEST,
+        "Worldmap" to ArgType.WORLDMAP,
+        "Model" to ArgType.MODEL,
+    )
+
     /** The catalog an [ArgType] names ids in, where there is one. */
     fun catalogType(kind: ArgType): String? = when (kind) {
-        ArgType.ITEM -> Gameval.OBJ
+        ArgType.OBJ -> Gameval.OBJ
         ArgType.NPC -> Gameval.NPC
         ArgType.LOC -> Gameval.LOC
         ArgType.SEQ -> Gameval.SEQ
