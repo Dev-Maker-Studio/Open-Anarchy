@@ -49,7 +49,7 @@ object Cs2TypeChars {
     val KINDS: Map<Char, ArgType> = linkedMapOf(
         'i' to ArgType.INT,
         '1' to ArgType.BOOLEAN,
-        'o' to ArgType.ITEM,
+        'o' to ArgType.OBJ,
         'n' to ArgType.NPC,
         'l' to ArgType.LOC,
         'I' to ArgType.COMPONENT,
@@ -240,7 +240,25 @@ class Cs2Types private constructor(
 
         /** What first gave a symbol its kind, for explaining an answer. */
         val origins = HashMap<String, String>()
+
+        /** Symbols something counts or compares by size, which no id is. */
+        val quantities = HashSet<String>()
         var changed = false
+
+        /**
+         * Marks a symbol as a quantity. Ids are never ordered - nothing asks
+         * whether one obj is less than another - so a value compared for order
+         * against a real number is a count, a level, a timer or a threshold, and
+         * cannot be an id however it got here.
+         */
+        fun quantity(symbol: String): Boolean {
+            if (!quantities.add(symbol)) return false
+            val had = kinds.remove(symbol) != null
+            origins.remove(symbol)
+            conflicts.add(symbol)
+            changed = true
+            return had
+        }
 
         fun assign(symbol: String, kind: ArgType, why: String = "") {
             if (kind == ArgType.INT || symbol in conflicts) return
@@ -456,6 +474,7 @@ class Cs2Types private constructor(
             "variables" to global.kinds.keys.count { it.startsWith("v:") },
             "opcode results" to global.kinds.keys.count { it.startsWith("o:") },
             "locals" to locals,
+            "ordered, so not ids" to global.quantities.size,
         )
         val chars = Cs2TypeChars.KINDS.map { (char, kind) ->
             val votes = charEvidence[char].orEmpty()
@@ -578,6 +597,10 @@ class Cs2Types private constructor(
             is Compare -> {
                 val left = symbolOf(condition.left)
                 val right = symbolOf(condition.right)
+                if (condition.symbol in ORDERINGS) {
+                    ordered(left, condition.right)
+                    ordered(right, condition.left)
+                }
                 unify(left, right)
                 val kind = kindOf(left) ?: kindOf(right)
                 Compare(
@@ -713,6 +736,18 @@ class Cs2Types private constructor(
             return value.copy(args = args, triggers = value.triggers.map { expr(it, null, "") })
         }
 
+        /**
+         * Records that [symbol] was compared for order against [against]. Only a
+         * real threshold counts: 0 and -1 are how everything is tested for being
+         * set at all, ids included.
+         */
+        private fun ordered(symbol: String?, against: Expr) {
+            if (symbol == null || chars) return
+            val value = (against as? IntConst)?.value ?: (against as? TypedConst)?.value ?: return
+            if (value == 0 || value == -1) return
+            store(symbol).quantity(symbol)
+        }
+
         /** How a position that has just typed something would explain itself. */
         private fun why(source: String) = if (source.isEmpty()) "" else "$source in ${fn.scriptId}"
 
@@ -834,6 +869,9 @@ class Cs2Types private constructor(
 
         /** How many different scripts a slot's uses have to come from. */
         private const val LEARNING_SCRIPTS = 2
+
+        /** Comparisons that ask which value is bigger, which no id is asked. */
+        private val ORDERINGS = setOf("<", ">", "<=", ">=")
 
         /** Positions that say what they hold without anything being inferred. */
         private val AUTHORITATIVE = setOf("opcode argument", "hook format", "enum type code")

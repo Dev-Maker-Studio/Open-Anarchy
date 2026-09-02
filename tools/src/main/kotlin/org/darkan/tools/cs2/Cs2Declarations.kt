@@ -17,14 +17,22 @@ import org.darkan.tools.cs2.ir.VarRef
 
 object Cs2Declarations {
 
-    /** Names the preamble declares, which nothing else may take. */
+    /**
+     * Names the preamble declares, which nothing else may take.
+     *
+     * The wrappers a constant can still be written through, the event values the
+     * client substitutes, the type codes, and the names an older dump used, which
+     * the compiler still answers to.
+     */
     val HELPERS: Set<String> = setOf(
         "array0", "array1", "array2", "array3", "array4",
         "defineArray", "hook", "noHook", "discard", "isTruthy", "isFalsy", "goto",
-        "component", "tile", "item", "npc", "loc", "seq", "spotanim", "enumId",
-        "struct", "param", "inv", "skill", "scriptId", "colour", "graphic",
+        "colour", "coord",
+        // Older spellings, still accepted by the compiler.
+        "component", "tile", "item", "obj", "npc", "loc", "seq", "spotanim", "enumId",
+        "struct", "param", "inv", "skill", "stat", "scriptId", "graphic",
         "interfaceId", "sound", "midi", "cursor", "mapelement", "quest", "worldmap", "model",
-    )
+    ) + Cs2Events.NAMES.values + Cs2TypeChars.NAMES.values
 
     /** The file `gamevals.d.ts` is written to, and the name it is referenced by. */
     const val GAMEVALS_FILE = "gamevals.d.ts"
@@ -232,13 +240,16 @@ object Cs2Declarations {
              * Composite values, spelled out rather than left as packed integers.
              * Each one packs straight back to the integer the bytecode holds.
              *
-             * The argument is normally a gameval constant from `gamevals.d.ts` -
-             * `item(Obj.abyssal_whip)`, `component(Component.chatbox.dialogue)` -
-             * and falls back to the bare number for an id the catalogs have no
-             * proven name for.
+             * An id goes through its gameval constant instead - `Obj.abyssal_whip`,
+             * `Component.chatbox.dialogue` - which says what it is without a
+             * wrapper. Only `colour` and `coord` are still written this way, having
+             * no name to carry them; the rest are here because an older dump wrote
+             * them and still has to compile.
              */
             declare function component(interfaceId: number, component?: number): number;
+            declare function coord(x: number, y?: number, level?: number): number;
             declare function tile(x: number, y?: number, plane?: number): number;
+            declare function obj(id: number): number;
             declare function item(id: number): number;
             declare function npc(id: number): number;
             declare function loc(id: number): number;
@@ -248,6 +259,7 @@ object Cs2Declarations {
             declare function struct(id: number): number;
             declare function param(id: number): number;
             declare function inv(id: number): number;
+            declare function stat(id: number): number;
             declare function skill(id: number): number;
             declare function colour(rgb: number): number;
             declare function graphic(id: number): number;
@@ -281,14 +293,24 @@ object Cs2Declarations {
     private fun appendKinds(out: StringBuilder) {
         out.appendLine("/** What an integer means, where the corpus agrees on one thing. */")
         for (alias in Cs2Names.ALIASES.values.distinct()) {
-            // A flag is still an int underneath; `true` and `false` are only a
-            // nicer spelling for its two values.
-            val definition = if (alias == "flag") "number | boolean" else "number"
-            out.appendLine("type $alias = $definition;")
+            // `boolean` is TypeScript's own type, and `true`/`false` are what a
+            // flag is written as, so it is used as it stands.
+            if (alias == "boolean") continue
+            out.appendLine("type $alias = number;")
         }
         out.appendLine()
         out.appendLine("/** The type codes a compiler writes into `enumOp` and hook formats. */")
         for (name in Cs2TypeChars.NAMES.values) out.appendLine("declare const $name: number;")
+        out.appendLine()
+        out.appendLine("/**")
+        out.appendLine(" * What the client substitutes into a hook's arguments when it fires it.")
+        out.appendLine(" * A hook is bound long before it runs, so these stand in for the values")
+        out.appendLine(" * that only exist at the moment of the event.")
+        out.appendLine(" */")
+        for ((name, value) in Cs2Events.VALUES) {
+            val type = if (name in Cs2Events.COMPONENTS) "component" else "number"
+            out.appendLine("/** ${Cs2Events.MEANINGS[name]} ($value) */ declare const $name: $type;")
+        }
         out.appendLine()
     }
 

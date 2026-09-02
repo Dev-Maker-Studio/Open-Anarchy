@@ -8,6 +8,7 @@ import org.darkan.tools.cs2.Cs2Op
 import org.darkan.tools.cs2.ArgType
 import org.darkan.tools.cs2.Cs2Opcodes
 import org.darkan.tools.cs2.Cs2SymbolTable
+import org.darkan.tools.cs2.Cs2Events
 import org.darkan.tools.cs2.Cs2Symbols
 import org.darkan.tools.cs2.Cs2TypeChars
 import org.darkan.tools.cs2.Cs2Packing
@@ -395,6 +396,7 @@ class Cs2Parser(
         val values = args.map {
             when (it) {
                 is IntConst -> it.value
+                is TypedConst -> it.value
                 is ScriptCall -> if (it.args.isEmpty()) it.scriptId else return null
                 else -> return null
             }
@@ -733,6 +735,8 @@ class Cs2Parser(
         if (name == "false") return TypedConst(0, ArgType.BOOLEAN)
         // `type_obj` and friends are the characters a compiler wrote for a type.
         Cs2TypeChars.charNamed(name)?.let { return TypedConst(it.code, ArgType.TYPECHAR) }
+        // `event_com` and friends are the values the client substitutes on dispatch.
+        Cs2Events.valueOf(name)?.let { return IntConst(it) }
 
         if (atPunct(".") && name in Cs2Names.NAMESPACES.values) return gamevalConstant(name)
 
@@ -748,10 +752,10 @@ class Cs2Parser(
             return ArrayRef(name.drop(5).toInt(), index)
         }
 
-        // A bare script reference, as passed to hook().
+        // A bare script reference: the id of the script, not a call to it.
         val referenced = Cs2Symbols.scriptOf(name) ?: symbols.script(name)
         if (referenced != null && !atPunct("(")) {
-            return ScriptCall(referenced, emptyList(), Cs2Type.INT)
+            return TypedConst(referenced, ArgType.SCRIPT)
         }
         // `name<1>(...)` carries the instruction's own operand.
         var operand = 0
@@ -786,7 +790,8 @@ class Cs2Parser(
             path.append('.').append(second)
         }
         val text = path.toString()
-        symbols.gameval(text)?.let { return IntConst(it) }
+        val kind = Cs2Names.NAMESPACE_KINDS[namespace] ?: ArgType.INT
+        symbols.gameval(text)?.let { return TypedConst(it, kind) }
         val id = when {
             namespace != COMPONENT_NAMESPACE -> {
                 val type = Cs2Names.NAMESPACES.entries.first { it.value == namespace }.key
@@ -796,7 +801,7 @@ class Cs2Parser(
             second == Cs2Identifiers.IFACE_MEMBER -> Cs2Names.componentInterfaceId(first)
             else -> Cs2Names.componentOf(first, second)
         }
-        return IntConst(id ?: error("Unknown gameval '$text'"))
+        return TypedConst(id ?: error("Unknown gameval '$text'"), kind)
     }
 
     private val COMPONENT_NAMESPACE = Cs2Names.NAMESPACES.getValue(Gameval.COMPONENT)
@@ -829,15 +834,19 @@ class Cs2Parser(
         if (name == "hook") {
             val scriptRef = args.first()
             val callee = (scriptRef as? ScriptCall)?.scriptId
+                ?: (scriptRef as? TypedConst)?.value
                 ?: (scriptRef as? IntConst)?.value
                 ?: error("hook() needs a script reference")
             val format = (args.getOrNull(1) as? StrConst)?.value
                 ?: error("hook() needs its type spec")
             return Callback(callee, format, lists.getOrNull(0).orEmpty(), lists.getOrNull(1).orEmpty())
         }
-        // A real opcode always wins; the packing helpers only fill names no
-        // opcode uses, so `coord(...)` stays the opcode it has always been.
-        if (Cs2Opcodes.byTsName(name) == null) packedConstant(name, args)?.let { return it }
+        // Where a helper shares a name with an opcode, the number of arguments
+        // says which is meant: `coord()` is the opcode that reads the player's
+        // position, `coord(x, y, level)` is a coordinate written out.
+        val named = Cs2Opcodes.byTsName(name)
+        val arity = named?.let { it.popInt + it.popStr + it.popLong }
+        if (arity != args.size) packedConstant(name, args)?.let { return it }
         if (name == "discard") return args.first()
         if (name == "noHook") {
             return Callback(-1, (args.firstOrNull() as? StrConst)?.value ?: "", emptyList(), emptyList())
