@@ -3,6 +3,7 @@ package org.darkan.tools
 import org.darkan.core.map.MapXteas
 import org.darkan.core.map.RegionLoader
 import org.darkan.tools.cache.NameLookup
+import org.darkan.tools.cache.runCache
 import org.darkan.tools.cs2.runCs2
 import org.darkan.tools.gameval.runGameval
 import org.darkan.tools.cache.map.DisplaceProbe
@@ -32,6 +33,14 @@ import kotlin.math.sqrt
  */
 fun main(args: Array<String>) {
     val mode = args.firstOrNull() ?: "model"
+
+    // The cache source tree modes come first because most of them have no prepacked cache to
+    // open: `pack`, `build`, `verify` and `status` work from the tree alone, and `unpack` opens
+    // the directory it is pointed at rather than the one Cache.get() would.
+    if (mode.lowercase() == "cache") {
+        runCache(args.drop(1))
+        return
+    }
 
     println("Darkan Tools - Loading cache...")
     val cache = Cache.get()
@@ -1427,6 +1436,16 @@ private fun printHelp() {
                         Also writes manifest.json (per-type counts) and
                         index-name-hashes.json.
                         Usage: gameval dump <outDir>
+          cache      - The cache source tree (docs/cache-source.md): the whole
+                        packed cache unpacked into one file per asset, and the
+                        packed cache built back out of it. Sub-commands:
+                          cache unpack <tree> [packedDir]
+                          cache pack <tree> <outDir>
+                          cache build <tree> <outDir>
+                          cache verify <tree> <packedDir>
+                          cache status <tree>
+                        Only 'unpack' reads a packed cache; the rest work from
+                        the tree. 'verify' exits 1 on any difference.
 
         Controls (Model Viewer):
           WASD        - Move camera
@@ -1466,6 +1485,8 @@ private fun printHelp() {
           ./gradlew :tools:run --args="lookup 9 725"
           ./gradlew :tools:run --args="lookup 7 mymodel"
           ./gradlew :tools:run --args="lookup 12 myscript myfile"
+          ./gradlew :tools:run --args="cache unpack cache-source"
+          ./gradlew :tools:run --args="cache verify cache-source ../cache"
     """.trimIndent())
 }
 

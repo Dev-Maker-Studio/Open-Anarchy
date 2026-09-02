@@ -213,8 +213,25 @@ A first build from an empty directory packs everything, compressing in parallel.
 `FileCache` can be opened writable (`FileCache.load(path, writable = true)`); `Cache.write`
 then repacks the group, recompresses with the archive's existing compression, bumps the version,
 rewrites the reference table and the version table. This is the API editors use to save into a
-packed cache directly; it replaces the map editor's `CacheArchiveWriter`. Both paths share
-`FileStore`, `ReferenceTable` and `Container`.
+packed cache directly. Both paths share `FileStore`, `ReferenceTable` and `Container`.
+
+The map editor's environment write-back (`tools/.../map/environment/MapEnvironmentWriter.kt`) goes
+through it, and the sector writer it used to carry (`CacheArchiveWriter`, plus a second reference
+table parser) is gone. Its guard rails are unchanged - plan and apply are separate, the archive is
+decoded and re-encoded *unchanged* first and the write refuses unless that reproduces the original
+bytes, the container and the index 5 reference table are backed up before the first write of a
+session, a plan is refused when the container it was computed from has moved on disk, and after the
+write the archive is read straight back off the store and its reference table entry re-decoded from
+disk and checked. What changed is who writes: the container is recompressed with the archive's own
+compression rather than re-emitted uncompressed, and the reference table and the signed version
+table are core's to update. Two consequences worth naming:
+
+- Writing the archive without the reference table is no longer possible - `Cache.write` always
+  brings the table (and the version table derived from it) along - so `tools env write`'s
+  `--no-reference-table` flag is gone.
+- The table's own `revision` is left where it is. The tools writer used to bump it; core does not,
+  and does not need to, because the version table the client checks the signature of is derived
+  from the reference table containers as they actually are.
 
 ## Configuration
 
@@ -237,6 +254,29 @@ tools cache build <tree> <outDir>         incremental pack (what the server runs
 tools cache verify <tree> <packedDir>     container-level parity report against a packed cache
 tools cache status <tree>                 codec per index, pristine counts, stale sidecars
 ```
+
+`unpack` is the only one that opens a packed cache, and it opens the directory it is given rather
+than the one the rest of the tools share, so `Main` dispatches `cache` before it loads anything.
+Each command prints one line per index as it goes and then its totals:
+
+- **unpack** writes `cache.json`, copies the gameval catalogs in from `GAMEVAL_PATH`, loads the map
+  keys (`Unpacker.mapKeys()`, i.e. `data/map/xteaKeys.json`) so the encrypted map archives are
+  stored decrypted, and reports archives, files, bytes, how many files it actually had to write,
+  how many stale ones it deleted, and the opaque, pristine and missing counts.
+- **pack** replaces whatever cache is in `<outDir>`; **build** patches it and falls back to a full
+  pack when there is nothing usable to patch, saying which it did and why.
+- **verify** prints, per index, how many containers came out identical, different, missing or extra,
+  whether the reference table matched, and the first few differing archives with what differs about
+  them; then the totals and whether the derived version table matches. **It exits 1 on any
+  difference**, so it works as a test.
+- **status** is read-only: per index its codec, archive count, file count, pristine count, opaque
+  count and how many `.pristine` sidecars are *stale* - the guarded file no longer hashes to the
+  value `index.json` recorded, so the next pack will compile the edit rather than emit the original.
+  It also says whether the tree has its `gamevals` directory and how many catalogs are in it.
+
+Against the 727 cache on one 12-core machine: unpack 11.5 s (140,692 archives, 397,004 files,
+1.06 GB, 8 opaque, 0 pristine), pack 12.1 s, verify 9.5 s at full parity, a no-op build 2.0 s and a
+one-archive build 3.0 s.
 
 ## Future work the design leaves room for
 
