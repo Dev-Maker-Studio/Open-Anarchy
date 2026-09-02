@@ -1,11 +1,15 @@
 package org.darkan.tools.cache.map.environment
 
 import org.darkan.core.EnvVars
-import org.darkan.tools.cache.CacheArchiveWriter
-import org.darkan.tools.cache.ReferenceTable
 import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.FileCache
 import world.gregs.voidps.cache.Index
+import world.gregs.voidps.cache.secure.CRC
+import world.gregs.voidps.cache.store.Container
+import world.gregs.voidps.cache.store.FileStore
+import world.gregs.voidps.cache.store.ReferenceTable
 import java.io.File
+import java.math.BigInteger
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Collections
@@ -29,8 +33,15 @@ import java.util.concurrent.ConcurrentHashMap
  *    regenerated; the `4 * 64 * 64` tile records in front of it are copied verbatim.
  * 4. **The original is backed up before the first write of a session**, as the raw container
  *    bytes, which is exactly what a restore needs.
- * 5. **Read-back verification.** After writing, the archive is read straight off disk again
- *    and compared byte for byte with what was meant to be written.
+ * 5. **Read-back verification.** After writing, the archive is read straight off disk again,
+ *    decompressed, and compared byte for byte with what was meant to be written, and the
+ *    reference table is re-read and re-decoded to check the CRC and version it now carries.
+ *
+ * The write itself is [Cache.write] on a cache opened writable
+ * ([FileCache.load] with `writable = true`), so the container is recompressed with the
+ * compression the archive already used, the reference table's CRC, version and file list are
+ * brought in line, and the RSA-signed version table is rebuilt - all by the shared cache
+ * library, on the same [FileStore] the server reads through.
  *
  * Saving is always explicit. Nothing here is wired to region changes, panel edits or
  * shutdown.
@@ -80,11 +91,22 @@ object MapEnvironmentWriter {
         if (archiveId == -1) {
             return blocked(regionX, regionY, -1, name, "region ($regionX, $regionY) has no map archive")
         }
+        // Every `m` archive in this cache holds exactly one file, and the write replaces that
+        // file by id. More than one would mean the effects block is not the whole group and the
+        // splice below is addressing the wrong bytes, so refuse rather than guess.
+        val files = cache.files(Index.MAPS, archiveId)
+        if (files.size != 1) {
+            return blocked(
+                regionX, regionY, archiveId, name,
+                "$name has ${files.size} files; the writer only handles a single-file map archive",
+            )
+        }
+        val fileId = files[0]
         val original = written[archiveId]
-            ?: cache.data(Index.MAPS, archiveId)
+            ?: cache.data(Index.MAPS, archiveId, fileId)
             ?: return blocked(regionX, regionY, archiveId, name, "map archive $archiveId has no data")
         val containerCrc = writtenContainerCrc[archiveId]
-            ?: cache.sector(Index.MAPS, archiveId)?.let { CacheArchiveWriter.containerCrc(it, 0) }
+            ?: cache.sector(Index.MAPS, archiveId)?.let { token(it) }
 
         val layout = try {
             MapEnvironmentDecoder.readLayout(original, regionX, regionY)
@@ -138,6 +160,7 @@ object MapEnvironmentWriter {
             regionX = regionX,
             regionY = regionY,
             archiveId = archiveId,
+            fileId = fileId,
             archiveName = name,
             original = original,
             updated = updated,
@@ -149,13 +172,8 @@ object MapEnvironmentWriter {
         )
     }
 
-    /**
-     * Perform the write described by [plan]. Throws rather than half-writing.
-     *
-     * @param patchReferenceTable also update the archive's CRC and version in index 255 so
-     *   the cache stays internally consistent for JS5 clients.
-     */
-    fun apply(plan: EnvironmentWritePlan, patchReferenceTable: Boolean = true): EnvironmentWriteResult {
+    /** Perform the write described by [plan]. Throws rather than half-writing. */
+    fun apply(plan: EnvironmentWritePlan): EnvironmentWriteResult {
         check(plan.blocked == null) { "Refusing to apply a blocked plan: ${plan.blocked}" }
         check(plan.hasChanges) { "Nothing to write - the edit matches what is already in the cache" }
 
@@ -163,14 +181,21 @@ object MapEnvironmentWriter {
         val backupDir = backupDirectory()
         val log = ArrayList<String>()
 
-        CacheArchiveWriter(cacheDir).use { writer ->
-            val container = writer.readContainer(Index.MAPS, plan.archiveId)
+        // Writable so Cache.write works; the RSA key pair so the version table it rebuilds is
+        // signed the way the JS5 server will serve it.
+        val cache = FileCache.load(
+            cacheDir.path,
+            BigInteger(EnvVars.js5RsaExponent),
+            BigInteger(EnvVars.js5RsaModulus),
+            writable = true,
+        )
+        try {
+            val container = cache.container(Index.MAPS, plan.archiveId)
                 ?: throw IllegalStateException("Could not read the current container for ${plan.archiveName}")
-            val info = CacheArchiveWriter.describeContainer(container)
 
             // Guard: the plan was computed from a specific set of bytes. If the archive on
             // disk is no longer those bytes, the merge behind this plan is meaningless.
-            val onDisk = CacheArchiveWriter.containerCrc(container, 0)
+            val onDisk = token(container)
             check(plan.containerCrc == null || plan.containerCrc == onDisk) {
                 "${plan.archiveName} changed on disk since the preview was taken " +
                     "(container crc ${plan.containerCrc} vs $onDisk); take a fresh preview"
@@ -179,42 +204,55 @@ object MapEnvironmentWriter {
             backup(backupDir, "${plan.archiveName}.idx${Index.MAPS}.a${plan.archiveId}", container)?.let {
                 log.add("backed up ${container.size} container bytes to ${it.absolutePath}")
             }
-
-            val version = archiveVersion(info.trailing)
-            val newVersion = if (version >= 0) (version + 1) and 0xffff else -1
-            val trailing = if (version >= 0) byteArrayOf((newVersion shr 8).toByte(), newVersion.toByte()) else info.trailing
-            val newContainer = CacheArchiveWriter.buildContainer(plan.updated, trailing)
-
-            val startSector = writer.writeContainer(Index.MAPS, plan.archiveId, newContainer)
-            log.add(
-                "wrote ${newContainer.size} container bytes (${plan.updated.size} payload) " +
-                    "for ${plan.archiveName} at sector $startSector"
-            )
-            if (newVersion >= 0) log.add("archive version $version -> $newVersion")
-
-            // Guard 5: read the archive straight back off disk.
-            val readBack = writer.readContainer(Index.MAPS, plan.archiveId)
-                ?: throw IllegalStateException("Wrote ${plan.archiveName} but could not read it back")
-            check(readBack.contentEquals(newContainer)) {
-                "Read-back of ${plan.archiveName} does not match what was written " +
-                    "(${readBack.size} vs ${newContainer.size} bytes)"
+            val tableBefore = cache.container(FileStore.REFERENCE_INDEX, Index.MAPS)
+            if (tableBefore != null) {
+                backup(backupDir, "referencetable.idx${FileStore.REFERENCE_INDEX}.a${Index.MAPS}", tableBefore)?.let {
+                    log.add("backed up the index ${Index.MAPS} reference table to ${it.absolutePath}")
+                }
             }
-            val readBackInfo = CacheArchiveWriter.describeContainer(readBack)
-            val payload = readBack.copyOfRange(
-                readBackInfo.payloadOffset,
-                readBackInfo.payloadOffset + readBackInfo.payloadLength,
+
+            val compression = Container.decode(container).compression
+            val version = cache.archiveVersion(Index.MAPS, plan.archiveId)
+            val crc = cache.archiveCrc(Index.MAPS, plan.archiveId)
+
+            cache.write(Index.MAPS, plan.archiveId, plan.fileId, plan.updated)
+
+            // Guard 5: read the archive straight back off the store, decompress it, and compare.
+            // The container bytes are core's to build now, so the proof is that what comes back
+            // out of the sectors decompresses to exactly what was meant to go in.
+            val readBack = cache.container(Index.MAPS, plan.archiveId)
+                ?: throw IllegalStateException("Wrote ${plan.archiveName} but could not read it back")
+            val decoded = Container.decode(readBack)
+            check(decoded.compression == compression) {
+                "Read-back of ${plan.archiveName} is ${decoded.compression}, not the $compression it was stored as"
+            }
+            check(decoded.data().contentEquals(plan.updated)) {
+                "Read-back payload of ${plan.archiveName} differs (${decoded.decompressedSize} vs ${plan.updated.size} bytes)"
+            }
+            val newVersion = cache.archiveVersion(Index.MAPS, plan.archiveId)
+            check(newVersion == version + 1) {
+                "${plan.archiveName} went from version $version to $newVersion; a write bumps it by one"
+            }
+            check(decoded.version == (newVersion and 0xffff)) {
+                "${plan.archiveName}'s container trailer says ${decoded.version}, not ${newVersion and 0xffff}"
+            }
+            val newCrc = CRC.calculate(readBack, 0, readBack.size - if (decoded.version == null) 0 else TRAILER)
+            log.add(
+                "wrote ${readBack.size} container bytes (${plan.updated.size} payload, " +
+                    "recompressed as ${compression.name.lowercase()}) for ${plan.archiveName}"
             )
-            check(payload.contentEquals(plan.updated)) { "Read-back payload of ${plan.archiveName} differs" }
             log.add("read-back verified")
+            log.add("archive version $version -> $newVersion")
+
+            // Guard 5, second half: the table a client validates against is the one on disk, so
+            // re-read and re-decode it rather than trusting the model core just updated.
+            log.addAll(verifyTable(cache, plan, newCrc, newVersion, crc))
+
             // The next plan for this archive has to start from these bytes, not the stale
             // ones the live Cache is still memoising.
-            writtenContainerCrc[plan.archiveId] = CacheArchiveWriter.containerCrc(newContainer, 0)
-
-            if (patchReferenceTable) {
-                log.addAll(patchTable(writer, backupDir, plan.archiveId, newContainer, trailing.size, newVersion))
-            } else {
-                log.add("reference table NOT patched - index 255 CRC for ${plan.archiveName} is now stale")
-            }
+            writtenContainerCrc[plan.archiveId] = token(readBack)
+        } finally {
+            cache.close()
         }
 
         // The live Cache still holds the pre-save bytes in its own caches, so seed the
@@ -230,65 +268,47 @@ object MapEnvironmentWriter {
         return EnvironmentWriteResult(plan, log)
     }
 
-    private fun patchTable(
-        writer: CacheArchiveWriter,
-        backupDir: File,
-        archiveId: Int,
-        newContainer: ByteArray,
-        trailingSize: Int,
-        newVersion: Int,
+    /**
+     * Re-read index 255's archive for index 5 off the store, decode it, and check the entry it
+     * now holds for [plan]'s archive describes the container that was just written.
+     *
+     * [Cache.write] rewrote the table (and the signed version table derived from it); this only
+     * ever reads, so a disagreement means the write did not land the way core reported it.
+     */
+    private fun verifyTable(
+        cache: Cache,
+        plan: EnvironmentWritePlan,
+        crc: Int,
+        version: Int,
+        previousCrc: Int,
     ): List<String> {
         val log = ArrayList<String>()
-        val tableContainer = writer.readContainer(REFERENCE_TABLE_INDEX, Index.MAPS)
-        if (tableContainer == null) {
-            log.add("no reference table for index ${Index.MAPS}; CRC left untouched")
-            return log
+        val container = cache.container(FileStore.REFERENCE_INDEX, Index.MAPS)
+            ?: throw IllegalStateException("Wrote ${plan.archiveName} but index ${Index.MAPS} has no reference table")
+        val decoded = Container.decode(container)
+        val table = ReferenceTable.decode(decoded.data())
+        val entry = table.archive(plan.archiveId)
+            ?: throw IllegalStateException("The reference table read back has no entry for archive ${plan.archiveId}")
+        check(entry.crc == crc) {
+            "Reference table read-back has crc ${entry.crc}, expected $crc"
         }
-        backup(backupDir, "referencetable.idx${REFERENCE_TABLE_INDEX}.a${Index.MAPS}", tableContainer)?.let {
-            log.add("backed up the index ${Index.MAPS} reference table to ${it.absolutePath}")
+        check(entry.version == version) {
+            "Reference table read-back has version ${entry.version}, expected $version"
         }
-
-        val decompressed = ReferenceTable.decompress(tableContainer)
-        val table = ReferenceTable.parse(decompressed)
-        val crc = CacheArchiveWriter.containerCrc(newContainer, trailingSize)
-        val previousCrc = table.crc(archiveId)
-        table.setCrc(archiveId, crc)
-        if (newVersion >= 0) table.setVersion(archiveId, newVersion)
-        table.revision()?.let { table.setRevision(it + 1) }
-
-        val tableInfo = CacheArchiveWriter.describeContainer(tableContainer)
-        val rebuilt = CacheArchiveWriter.buildContainer(table.bytes, tableInfo.trailing)
-        writer.writeContainer(REFERENCE_TABLE_INDEX, Index.MAPS, rebuilt)
-
-        // Read the table straight back and re-parse it: the CRC that a client validates
-        // against is only useful if it survived the round trip through the container.
-        val readBack = writer.readContainer(REFERENCE_TABLE_INDEX, Index.MAPS)
-            ?: throw IllegalStateException("Wrote the reference table but could not read it back")
-        val verified = ReferenceTable.parse(ReferenceTable.decompress(readBack))
-        check(verified.crc(archiveId) == crc) {
-            "Reference table read-back has crc ${verified.crc(archiveId)}, expected $crc"
-        }
-        if (newVersion >= 0) {
-            check(verified.version(archiveId) == newVersion) {
-                "Reference table read-back has version ${verified.version(archiveId)}, expected $newVersion"
-            }
+        check(entry.fileIds.contentEquals(intArrayOf(plan.fileId))) {
+            "Reference table read-back lists files ${entry.fileIds.toList()} for archive ${plan.archiveId}, " +
+                "expected only ${plan.fileId}"
         }
         log.add(
-            "reference table: archive $archiveId crc " +
-                "0x${(previousCrc ?: 0).toUInt().toString(16)} -> 0x${crc.toUInt().toString(16)}" +
-                (if (newVersion >= 0) ", version -> $newVersion" else "")
+            "reference table: archive ${plan.archiveId} crc " +
+                "0x${previousCrc.toUInt().toString(16)} -> 0x${crc.toUInt().toString(16)}, version -> $version"
         )
-        log.add("reference table rewritten uncompressed (${rebuilt.size} bytes, was ${tableContainer.size})")
+        log.add(
+            "reference table rewritten as ${decoded.compression.name.lowercase()} (${container.size} bytes), " +
+                "version table re-signed"
+        )
         return log
     }
-
-    /** Two-byte archive version from a container's trailing bytes, or -1 when there is none. */
-    private fun archiveVersion(trailing: ByteArray): Int =
-        if (trailing.size == 2) {
-            ((trailing[0].toInt() and 0xff) shl 8) or (trailing[1].toInt() and 0xff)
-        } else {
-            -1
-        }
 
     private fun backup(directory: File, name: String, container: ByteArray): File? {
         if (!backedUp.add(name)) return null
@@ -318,6 +338,7 @@ object MapEnvironmentWriter {
         regionX = regionX,
         regionY = regionY,
         archiveId = archiveId,
+        fileId = 0,
         archiveName = name,
         original = ByteArray(0),
         updated = ByteArray(0),
@@ -405,8 +426,15 @@ object MapEnvironmentWriter {
         else -> a.contentEquals(b)
     }
 
-    /** Index 255 holds one reference table per index, keyed by the index id. */
-    private const val REFERENCE_TABLE_INDEX = 255
+    /**
+     * The identity of a set of container bytes, used only to notice that an archive moved
+     * underneath a plan. It covers the version trailer as well, which the JS5 CRC does not:
+     * a bumped version with an unchanged payload still invalidates a plan.
+     */
+    private fun token(container: ByteArray): Int = CRC.calculate(container, 0, container.size)
+
+    /** Every archive container in indices 0-35 ends in a two byte version trailer. */
+    private const val TRAILER = 2
 }
 
 /** What a save would do, produced without touching the filesystem. */
@@ -414,6 +442,8 @@ class EnvironmentWritePlan(
     val regionX: Int,
     val regionY: Int,
     val archiveId: Int,
+    /** The archive's single file, which is the one the write replaces. */
+    val fileId: Int,
     val archiveName: String,
     val original: ByteArray,
     val updated: ByteArray,

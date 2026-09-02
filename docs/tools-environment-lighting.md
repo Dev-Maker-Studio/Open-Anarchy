@@ -126,12 +126,22 @@ Write-back rules:
 
 - the `4 * 64 * 64` tile records are **spliced verbatim**; only the effects block
   at the tail is regenerated
-- the archive is re-emitted as an uncompressed container with the trailing version
-  short bumped, appended to fresh sectors past the end of `main_file_cache.dat2`,
-  and the index entry is repointed only after the sectors are `fsync`ed
-- the archive's CRC and version in the index 255 reference table are patched in
-  place and the index revision bumped, then read back and re-parsed
-- the original container is backed up before the first write of a session
+- the write itself is `Cache.write` on a cache opened writable
+  (`FileCache.load(path, writable = true)`, see `docs/cache-source.md`): the group
+  is repacked, **recompressed with the compression the archive already used**, its
+  version bumped, and its sector chain reused where the new container still fits
+  and appended past the end of `main_file_cache.dat2` otherwise, with the sectors
+  `fsync`ed before the index entry that points at them
+- the archive's CRC, version and file list in the index 255 reference table, and
+  the RSA-signed version table derived from it, are updated by the same call; the
+  table's own `revision` is left alone, because the version table the client checks
+  the signature of is derived from the table containers as they actually are
+- the archive is then read straight back off the store, decompressed and compared
+  with what was meant to be written, and the reference table is re-read and
+  re-decoded from disk to check the CRC, version and file list it now carries
+- the original container and the index 5 reference table are backed up before the
+  first write of a session
+- a plan is refused if the container it was computed from has moved on disk since
 
 ## Lighting model
 

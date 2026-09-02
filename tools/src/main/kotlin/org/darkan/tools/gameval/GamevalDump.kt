@@ -72,6 +72,15 @@ object GamevalDump {
     /** Above this size a raw config file is identified by digest only, not spelled out in hex. */
     private const val MAX_HEX_BYTES = 4096
 
+    /**
+     * Where a dump lands when no directory is given.
+     *
+     * The catalogs the dump is evidence for live in the cache source tree
+     * (`cache-source/gamevals`, see `docs/cache-source.md`), so the working files belong beside
+     * them rather than in a `gamevals/` directory that no longer exists at the repository root.
+     */
+    private const val DEFAULT_OUTPUT = "cache-source/gamevals/work/727"
+
     fun run(cache: Cache, args: List<String>) {
         val mode = args.firstOrNull()?.lowercase() ?: "dump"
         if (mode != "dump") {
@@ -79,7 +88,7 @@ object GamevalDump {
             printUsage()
             return
         }
-        val directory = File(args.getOrNull(1) ?: "gamevals/work/727")
+        val directory = File(args.getOrNull(1) ?: DEFAULT_OUTPUT)
         if (!directory.exists() && !directory.mkdirs()) {
             println("Could not create output directory ${directory.absolutePath}")
             return
@@ -88,7 +97,7 @@ object GamevalDump {
     }
 
     fun printUsage() {
-        println("  gameval dump <outDir>    Dump every decoded cache type to <outDir> as JSONL")
+        println("  gameval dump [outDir]    Dump every decoded cache type as JSONL (default $DEFAULT_OUTPUT)")
     }
 
     /** What one type's dump produced, for the manifest. */
