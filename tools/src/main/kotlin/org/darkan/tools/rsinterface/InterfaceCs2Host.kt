@@ -1,9 +1,9 @@
 package org.darkan.tools.rsinterface
 
-import org.darkan.tools.cs2.Cs2Op
-import org.darkan.tools.cs2.vm.Cs2Hook
-import org.darkan.tools.cs2.vm.Cs2Host
-import org.darkan.tools.cs2.vm.Cs2Values
+import org.darkan.cs2.Cs2Op
+import org.darkan.cs2.vm.Cs2Hook
+import org.darkan.cs2.vm.Cs2Host
+import org.darkan.cs2.vm.Cs2Values
 import world.gregs.voidps.cache.definition.data.EnumDefinition
 import world.gregs.voidps.cache.definition.data.ParamDefinition
 import world.gregs.voidps.cache.definition.data.StructDefinition
