@@ -140,74 +140,53 @@ the JS5 multi-file layout.
 |---|---|---|
 | `RawArchiveCodec` | indices whose archives hold one file and have no better codec | `<archive>.dat` |
 | `RawFilesCodec` | indices with multi-file archives and no better codec | `<archive>/<file>.dat` (requires and always writes 1 chunk) |
-| `DefinitionJsonCodec<T>` | indices 3, 9, 13 and 16-22, and 14 of index 2's archives | one JSON file per definition, see below |
+| `DefinitionJsonCodec<T>` | indices 1, 3, 4, 9, 10, 13, 16-22, 29, 33 and 35, both of index 27's archives and 14 of index 2's archives | one JSON file per definition, see below |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
+| `ArchiveDirectoryCodec` | indices 23, 24, 25 and 28 | the generalisation of `ConfigCodec`: a name and a codec per archive, either in a directory of its own (`worldmapdata/main_staticelements/`) or as one named file (`defaults/equipment.json`) |
 | `MapCodec` | index 5 | one directory per map square, `<x>_<y>/terrain.json` and friends - see *maps* below |
 | `SpriteCodec` | indices 8, 32 and 34 | one RGBA PNG per frame, `<archive>/<frame>.png`, or one `<archive>.jpg` for a JPEG archive - see *sprites* |
 | `MaterialCodec` | index 26 | `<id>.json` per material of the index's one blob - see *materials* |
-| `VerbatimGroupCodec` | nothing, in 727 | `<archive>.grp` - the decompressed group verbatim, chunk table and all. Index 0's codec until `AnimationFrameCodec` replaced it; the answer for a multi-chunk index whose split follows from nothing |
-| `DefinitionJsonCodec<T>` | indices 1, 3, 10, 16-22, 33, 35, both quick chat archives, index 23's two typed archive kinds, index 28's six and 14 of index 2's archives | one JSON file per definition, see below |
-| `AnimationFrameCodec` | index 0 | `<archive>.glb` - one glTF 2.0 animation per frame set, with the three chunk group rebuilt from the frames - see *anims* below |
-| `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
-| `ArchiveDirectoryCodec` | indices 10, 23, 24, 25, 28 | the generalisation of `ConfigCodec`: a name and a codec per archive, either in a directory of its own (`worldmapdata/main_staticelements/`) or as one named file (`defaults/equipment.json`) |
-| `DefinitionJsonCodec<T>` | indices 3, 16-22 and 29, 14 of index 2's archives and both of index 27's | one JSON file per definition, see below |
-| `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `ModelCodec` | index 7 | `<archive>.glb` - one glTF 2.0 binary per model, which is a whole archive; see *models* below |
+| `AnimationFrameCodec` | index 0 | `<archive>.glb` - one glTF 2.0 animation per frame set, with the three chunk group rebuilt from the frames - see *anims* below |
+| `VerbatimGroupCodec` | nothing, in 727 | `<archive>.grp` - the decompressed group verbatim, chunk table and all. Index 0's codec until `AnimationFrameCodec` replaced it; the answer for a multi-chunk index whose split follows from nothing |
 | `ParticleCodec` | index 27 | one sub-directory per particle archive (`producer`, `particle`), each with its own codec |
 | `Cs2SourceCodec` | index 12 | the TypeScript layout `cs2 decompile-all` writes (`<category>/<name>.ts`), provided by the `cs2` module - see *clientscripts* below |
 | `TranscodedArchiveCodec` | indices 6 and 11 | `<archive>.mid` - a standard MIDI file, rebuilt into the cache's compact encoding on the way back |
-| `BinaryArchiveCodec` | index 15 | `<archive>.jagpatch` - the payload verbatim, under an extension that says what it is |
 | `VorbisCodec` | index 14 | `<archive>.jagvorbis`, plus one derived `samples.json` listing every sample's header |
+| `BinaryArchiveCodec` | index 15 | `<archive>.jagpatch` - the payload verbatim, under an extension that says what it is |
 | `NamedBytesCodec` | index 30 | `<os>/<arch>/<library>` - one file per archive, at the archive's own recovered name |
 | `ShaderCodec` | index 31 | `<archive name>/<file name>` - the names the archives spell out; program definitions as JSON |
 
 So the indices that hold definitions are editable JSON, models are editable glTF, and the rest are
 bytes:
 
-| index | dir | codec | | index | dir | codec |
+| id | dir | codec | | id | dir | codec |
 |---|---|---|---|---|---|---|
-| 2 | `config` | `config` (14 archives JSON, 31 raw) | | 19 | `config_obj` | `json-obj` |
-| 3 | `interfaces` | `json-interface` | | 20 | `config_seq` | `json-seq` |
-| 8 | `sprites` | `sprite-png` | | 21 | `config_spotanim` | `json-spotanim` |
-| 9 | `textures` | `json-texture` | | 22 | `config_varbit` | `json-varbit` |
-| 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 26 | `materials` | `json-material` |
-| 13 | `fontmetrics` | `json-fontmetrics` | | 32 | `loading_sprites` | `sprite-png` |
-| 16 | `config_loc` | `json-loc` | | 34 | `loading_sprites_raw` | `sprite-png` |
-| 17 | `config_enum` | `json-enum` | | 0 | `anims` | `gltf-anim` |
-| 18 | `config_npc` | `json-npc` | | 5 | `maps` | `map-json` |
-| | | | | everything else | | `raw-archive` / `raw-files` |
 | 0 | `anims` | `gltf-anim` | | 19 | `config_obj` | `json-obj` |
 | 1 | `bases` | `json-base` | | 20 | `config_seq` | `json-seq` |
 | 2 | `config` | `config` (14 archives JSON, 31 raw) | | 21 | `config_spotanim` | `json-spotanim` |
 | 3 | `interfaces` | `json-interface` | | 22 | `config_varbit` | `json-varbit` |
-| 10 | `binary` | `json-huffman` | | 23 | `worldmapdata` | `worldmap` (2 kinds JSON, the area images raw) |
-| 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 24 | `quickchat` | `quickchat` |
-| 16 | `config_loc` | `json-loc` | | 25 | `quickchat_global` | `quickchat` |
-| 17 | `config_enum` | `json-enum` | | 28 | `defaults` | `defaults` |
-| 18 | `config_npc` | `json-npc` | | 33 | `loading_screens` | `json-gametip` |
-| | | | | 35 | `cutscenes` | `json-cutscene` |
-| | | | | everything else | | `raw-archive` / `raw-files` |
-
-Thirty-two of the 37 indices' *records* are now editable - JSON, or a glTF animation per frame set for
-index 0; what is left as bytes is the assets -
-models, sprites, textures, maps, sounds, fonts, particles, billboards, materials, native libraries,
-shaders and the loading sprites - all of them as images, audio or glTF rather than as bytes - and index
-2's 31 undecoded archives.
-| 4 | `synth_sounds` | `json-synth` | | 21 | `config_spotanim` | `json-spotanim` |
-| 6 | `midi_songs` | `midi` | | 22 | `config_varbit` | `json-varbit` |
+| 4 | `synth_sounds` | `json-synth` | | 23 | `worldmapdata` | `worldmap` (2 kinds JSON, the area images raw) |
+| 5 | `maps` | `map-json` | | 24 | `quickchat` | `quickchat` |
+| 6 | `midi_songs` | `midi` | | 25 | `quickchat_global` | `quickchat` |
+| 7 | `models` | `gltf-model` | | 26 | `materials` | `json-material` |
+| 8 | `sprites` | `sprite-png` | | 27 | `config_particle` | `particle` (`json-particle-producer`, `json-particle`) |
+| 9 | `textures` | `json-texture` | | 28 | `defaults` | `defaults` |
+| 10 | `binary` | `json-huffman` | | 29 | `config_billboard` | `json-billboard` |
 | 11 | `midi_jingles` | `midi` | | 30 | `dlls` | `dlls` |
-| 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 31 | `shaders` | `shaders` |
-| 14 | `vorbis` | `vorbis` | | 0 | `anims` | `gltf-anim` |
-| 15 | `midi_instruments` | `jagpatch` | | everything else | | `raw-archive` / `raw-files` |
-| 16 | `config_loc` | `json-loc` | | | | |
-| 17 | `config_enum` | `json-enum` | | | | |
+| 12 | `clientscripts` | `cs2-source`, from the `cs2` module | | 31 | `shaders` | `shaders` |
+| 13 | `fontmetrics` | `json-fontmetrics` | | 32 | `loading_sprites` | `sprite-png` |
+| 14 | `vorbis` | `vorbis` | | 33 | `loading_screens` | `json-gametip` |
+| 15 | `midi_instruments` | `jagpatch` | | 34 | `loading_sprites_raw` | `sprite-png` |
+| 16 | `config_loc` | `json-loc` | | 35 | `cutscenes` | `json-cutscene` |
+| 17 | `config_enum` | `json-enum` | | 36 | `index36` | `raw-archive` (empty in 727) |
 | 18 | `config_npc` | `json-npc` | | | | |
-| 7 | `models` | `gltf-model` | | 21 | `config_spotanim` | `json-spotanim` |
-| 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 22 | `config_varbit` | `json-varbit` |
-| 16 | `config_loc` | `json-loc` | | 27 | `config_particle` | `particle` (`json-particle-producer`, `json-particle`) |
-| 17 | `config_enum` | `json-enum` | | 29 | `config_billboard` | `json-billboard` |
-| 18 | `config_npc` | `json-npc` | | 0 | `anims` | `gltf-anim` |
-| | | | | everything else | | `raw-archive` / `raw-files` |
+
+Every index but 36 (empty in 727) now has a codec of its own: JSON for every definition type, glTF
+for models and animations, PNG or JPEG for the image indices, and a format-specific codec for
+materials, maps, midi, vorbis, native libraries and shaders. What is left as raw bytes is index 2's
+31 undecoded archives and index 23's per-area images - the two places nothing has identified a
+decodable format yet.
 
 A codec is claimed per index in `SourceCodecs`, in three layers of increasing authority:
 
@@ -242,17 +221,11 @@ and file packed the way that type's decoder packs them (`id = archive shl bits o
 
 | layout | used by | file | id |
 |---|---|---|---|
-| `Packed(bits)` | indices 16-22 | `config_obj/4151.json` | `4151 = 16 shl 8 or 55`, so archive 16 file 55 |
-| `Packed(0)` | indices 1, 33, 35 | `bases/2405.json` | the archive id, because the archive holds one file whose id is 0 |
-| `Nested(16)` | index 3 | `interfaces/1477/32.json` | `1477 shl 16 or 32` |
-| `Flat` | index 2's typed archives, index 23's and both quick chat indices' | `config/struct/26.json`, `quickchat/quickchatphrase/12.json` | the file id; the directory is the archive |
-| `NamedLayout` | indices 10 and 28 | `defaults/equipment.json` | the archive id; the one file is named after the archive rather than after its id |
-| `Nested(16)` | index 3 | `interfaces/1477/32.json` | `1477 shl 16 or 32` |
-| `Flat` | index 2's typed archives | `config/struct/26.json` | the file id; the directory is the archive |
-| `Packed(0)` | index 4 | `synth_sounds/1234.json` | the archive id, since the index holds one file per archive |
 | `Packed(bits)` | indices 16-22 and 29 | `config_obj/4151.json` | `4151 = 16 shl 8 or 55`, so archive 16 file 55 |
+| `Packed(0)` | indices 1, 4, 33 and 35 | `bases/2405.json` | the archive id, because the archive holds one file whose id is 0 |
 | `Nested(16)` | index 3 | `interfaces/1477/32.json` | `1477 shl 16 or 32` |
-| `Flat` | index 2's and index 27's typed archives | `config/struct/26.json` | the file id; the directory is the archive |
+| `Flat` | index 2's, 23's and 27's typed archives, and both quick chat indices' | `config/struct/26.json`, `quickchat/quickchatphrase/12.json` | the file id; the directory is the archive |
+| `NamedLayout` | indices 10 and 28 | `defaults/equipment.json` | the archive id; the one file is named after the archive rather than after its id |
 
 An obj, abridged - the real file lists every field the definition carries, defaults included, and
 nothing that is not a field (60 keys for this one):
@@ -317,7 +290,7 @@ turned back into the three byte key the file needs.
 
 What that comes to over the whole 727 cache - **files** is how many JSON files the type has, **exact**
 how many of them re-encode to the shipped bytes, **pristine** how many still need those bytes beside
-them (`DefinitionJsonCodecTest` for the config types, `MiscCodecTest` for the eight other indices, and
+them (`DefinitionJsonCodecTest` for the config types, `MiscCodecTest` for the nine other indices, and
 `cache status` on a real tree):
 
 | type | directory | codec | files | exact | pristine |
@@ -360,6 +333,16 @@ them (`DefinitionJsonCodecTest` for the config types, `MiscCodecTest` for the ei
 Index 2's other 31 archives have no decoder and stay raw bytes (`raw-files-flat`). The animation frame
 row counts *files* rather than records: index 0's 490,049 frames are 4,085 glTF animations, one per
 frame set, so the frames themselves are counted by *anims* below and by *Parity per type*.
+
+Index 4's synth sounds are the twenty-third type this codec stores and the only one outside indices
+2, 3 and 16-22, so they are counted in *synth sounds (index 4)* below rather than in this table,
+which `DefinitionJsonCodecTest` produces from `DefinitionCodecs`. The audio and native asset indices
+each get a section of their own after *particles*, before *the pristine fallback*.
+
+Indices 7, 27 and 29 - models and the particle and billboard configs a model's footer names - are
+editable too, and byte exact for the whole cache: models as glTF binaries, the two config indices as
+JSON. They are measured by `ModelCodecParityTest` rather than by `DefinitionJsonCodecTest`, so they
+are reported in *models*, *billboards* and *particles* below rather than in the table above.
 
 ### maps
 
@@ -810,10 +793,47 @@ Index 26 is one archive holding one blob: a count, a presence byte per material,
 per field carrying that field for every material at once. A material therefore has no bytes of its own,
 which is why it does not get a `DefinitionJsonCodec` - `MaterialCodec` decodes the whole blob, writes
 `materials/<id>.json` per material, and rebuilds the blob from all of them together.
-Indices 7, 27 and 29 - models and the particle and billboard configs a model's footer names - are
-editable too, and byte exact for the whole cache: models as glTF binaries, the two config indices as
-JSON. They are measured by `ModelCodecParityTest` rather than by `DefinitionJsonCodecTest`, so they
-are reported in *models*, *billboards* and *particles* below rather than in the table above.
+
+`materials/0.json`, whole:
+
+```json
+{
+  "id": 0,
+  "defined": true,
+  "detailsOnly": false,
+  "isSmall": false,
+  "skipTriangles": false,
+  "brightness": 0,
+  "alpha": -1,
+  "effectId": 0,
+  "effectParam1": 0,
+  "colourHsl": 6547,
+  "textureSpeedU": 0,
+  "textureSpeedV": 0,
+  "unusedBoolean": false,
+  "isBrickTile": false,
+  "mipmapping": 2,
+  "repeatS": true,
+  "repeatT": true,
+  "hdr": false,
+  "combineMode": 0,
+  "effectParam2": 0,
+  "effectCombiner": 0
+}
+```
+
+- The ids are dense - `0` until the count - so the number of files *is* the count, and a material the
+  presence byte says is absent is still a file, with `"defined": false`. All 2,591 of the 727 cache's
+  materials are defined, and they are one to one with index 9's textures.
+- The names are the client's (`MaterialTypeList`), not the obfuscated ones the decoder used to carry:
+  `aBoolean1204` is `isSmall`, `aByte1225` is `alpha`, `type` is `effectId`, `anInt1226` is
+  `effectCombiner`, and so on. `unusedBoolean` is the one field the client keeps (`aBool2087`) and never
+  reads.
+- Every boolean column is 0 or 1 in all 2,591 materials, which is what makes reading them as booleans
+  lossless - the client reads them as `byte == 1`, so any other value would have to be stored raw.
+
+The pristine sidecar, if it were ever needed, guards the whole blob rather than a file, because one
+material cannot be rebuilt on its own. **The blob re-encodes to the shipped bytes**, so there is none.
 
 ### models
 
@@ -929,46 +949,34 @@ Index 29 is one archive whose files are the billboard configs a model's footer p
 `config_billboard/<id>.json`, 360 of them. An opcode keyed type like any config, so it is an
 ordinary `DefinitionJsonCodec` on the `Packed(9)` layout - nine bits covers all 360 file ids of
 archive 0 - and it goes through the same `OpcodeOrdered`/`OpcodeEncoder` mechanism as the
-twenty-two types above. `config_billboard/0.json` in full:
+twenty-two types above. One record, abridged:
 
 ```json
 {
-  "id": 0,
-  "defined": true,
-  "detailsOnly": false,
-  "isSmall": false,
-  "skipTriangles": false,
-  "brightness": 0,
-  "alpha": -1,
-  "effectId": 0,
-  "effectParam1": 0,
-  "colourHsl": 6547,
-  "textureSpeedU": 0,
-  "textureSpeedV": 0,
-  "unusedBoolean": false,
-  "isBrickTile": false,
-  "mipmapping": 2,
-  "repeatS": true,
-  "repeatT": true,
-  "hdr": false,
-  "combineMode": 0,
-  "effectParam2": 0,
-  "effectCombiner": 0
+  ...
+  "materialId": 735,
+  "size2d": 51,
+  "size3d": 51,
+  "shape": 1,
+  "blendType": 0,
+  "stationary": false,
+  "hasUid": true,
+  "unknown3": 0,
+  "opcodeOrder": [2, 3, 4, 5, 7, 1]
 }
 ```
 
-- The ids are dense - `0` until the count - so the number of files *is* the count, and a material the
-  presence byte says is absent is still a file, with `"defined": false`. All 2,591 of the 727 cache's
-  materials are defined, and they are one to one with index 9's textures.
-- The names are the client's (`MaterialTypeList`), not the obfuscated ones the decoder used to carry:
-  `aBoolean1204` is `isSmall`, `aByte1225` is `alpha`, `type` is `effectId`, `anInt1226` is
-  `effectCombiner`, and so on. `unusedBoolean` is the one field the client keeps (`aBool2087`) and never
-  reads.
-- Every boolean column is 0 or 1 in all 2,591 materials, which is what makes reading them as booleans
-  lossless - the client reads them as `byte == 1`, so any other value would have to be stored raw.
+`hasUid` is the one that matters to a model: when it is set the anchor face is hidden and the
+billboard's quad is drawn in its place. Two records are not the values they set, and the encoder
+inverts both: opcode 1's `0xffff` is the "no material" sentinel and reaches `materialId` as -1, and
+opcode 2's two shorts are one less than the sizes. `unknown3` is opcode 3's byte, which the client
+reads and throws away - 230 of the 360 files carry it, so a decoder that dropped it could not write
+them back.
 
-The pristine sidecar, if it were ever needed, guards the whole blob rather than a file, because one
-material cannot be rebuilt on its own. **The blob re-encodes to the shipped bytes**, so there is none.
+**Parity: all 360 files, byte identical, zero pristine.** Every one of them needs its own
+`opcodeOrder`: not a single billboard in the cache was packed in the order an encoder derives, and
+opcode 1 trailing the rest (as in the file above) is the usual reason. None needs a shadowed
+payload. 1.4 MB of raw archives becomes 0.1 MB of JSON.
 
 ### fontmetrics
 
@@ -1409,33 +1417,6 @@ Two readings the bytes settled rather than the client:
 
 Camera keyframes are stored as the file's unsigned shorts rather than the client's `- 5120` world
 coordinates, and an area's coordinate stays packed, so the JSON is what the file says.
-Index 4's synth sounds are the twenty-third type this codec stores and the only one outside indices
-2, 3 and 16-22, so they are counted in *synth sounds (index 4)* below rather than in this table,
-which `DefinitionJsonCodecTest` produces from `DefinitionCodecs`. The audio and native asset indices
-each get a section of their own after *clientscripts*.
-  "materialId": 735,
-  "size2d": 51,
-  "size3d": 51,
-  "shape": 1,
-  "blendType": 0,
-  "stationary": false,
-  "hasUid": true,
-  "unknown3": 0,
-  "opcodeOrder": [2, 3, 4, 5, 7, 1]
-}
-```
-
-`hasUid` is the one that matters to a model: when it is set the anchor face is hidden and the
-billboard's quad is drawn in its place. Two records are not the values they set, and the encoder
-inverts both: opcode 1's `0xffff` is the "no material" sentinel and reaches `materialId` as -1, and
-opcode 2's two shorts are one less than the sizes. `unknown3` is opcode 3's byte, which the client
-reads and throws away - 230 of the 360 files carry it, so a decoder that dropped it could not write
-them back.
-
-**Parity: all 360 files, byte identical, zero pristine.** Every one of them needs its own
-`opcodeOrder`: not a single billboard in the cache was packed in the order an encoder derives, and
-opcode 1 trailing the rest (as in the file above) is the usual reason. None needs a shadowed
-payload. 1.4 MB of raw archives becomes 0.1 MB of JSON.
 
 ### particles
 
@@ -1524,150 +1505,6 @@ its last byte, and without it none of them does. `ParticleDecoder` reads both.
 **Parity: all 741 producers and all 18 particles, byte identical, zero pristine.** 729 of the
 producers and all 18 particles need an explicit `opcodeOrder`; one producer needs a shadowed
 payload. 3.0 MB of raw archives becomes 0.5 MB of JSON.
-
-### The pristine fallback
-
-A codec that cannot reproduce a group keeps the original bytes next to the editable file as
-`<name>.pristine` and records the editable file's SHA-256 under `pristine` in `index.json`. `pack`
-emits the pristine bytes while the editable file still hashes to that value and compiles the
-editable file otherwise. Assembling that is the codec's own job, since only it knows its layout:
-it returns the sidecar as one more file from `unpack`, and the hashes in `UnpackedArchive.pristine`.
-The raw codecs keep the bytes and are exact by construction, so none of this runs for them.
-`cache status` reports the pristine count per type so encoder gaps are visible; the goal is zero,
-and the count can only shrink as encoders improve or files are edited. A *stale* sidecar - the
-guarded file no longer hashes to the recorded value - is `status`'s way of showing an edit that
-has not been packed yet.
-
-`SourceCodec.exact(archive)` says whether packing what the codec wrote reproduces the group, and
-`unpack` packs the archive again to count the ones that do not. A codec that installs its own
-fallback while it unpacks - `Cs2SourceCodec` does, because it has to compile each script anyway to
-find out - is `exact` and reports its count through `UnpackedArchive.pristine` instead;
-`UnpackReport.inexact` only ever sees a codec that leaves the decision to the framework, so
-`cache unpack`'s pristine line reads 0 for such an index and `cache status` is the number to read.
-
-This is what lets a normalising compiler (the CS2 decompiler drops dead code by design, so 1,066
-of the 6,567 clientscripts recompile to different but equivalent bytes) and a not-yet-exact
-encoder coexist with the parity guarantee.
-
-### clientscripts
-
-Index 12 is not stored as bytecode. `clientscripts/` **is** a CS2 editor project - exactly the
-folder `cs2 decompile-all` writes (`docs/cs2-editor.md`) - so a clientscript is edited as
-TypeScript and the server compiles it back when it rebuilds the cache:
-
-```
-clientscripts/
-  index.json                       the reference table, as for every index
-  cs2.d.ts                         every opcode's signature, the argument kinds the corpus taught us,
-                                   and StringParam - which params a lookup returns a string for
-  gamevals.d.ts                    the id constants (Obj.abyssal_whip, Component.wornitems.head)
-  vars.d.ts                        every variable any script touches, bound to its id
-  tsconfig.json                    without it an editor opens each script as its own program
-  dead-code.md                     what the decompiler found that cannot affect what a script does
-  proc/quicksort.ts                one file per script, at its gameval name's path
-  clientscript/<name>.ts
-  cs2/cs2_1620.ts                  a script with no proven name, under the catalog's placeholder prefix
-  proc/<name>.ts.pristine          the shipped bytes of a script the compiler normalises
-```
-
-A script's identity is its gameval name, not a number: the path and the `// [proc,quicksort]`
-header both spell it out and `gamevals/clientscript.json` turns it into the archive id. Renaming a
-script therefore moves its file - `cs2 sync-names` writes an editor's rename back to the catalog
-and relocates the file - and nothing else may move it.
-
-The five project files are a property of the *corpus*, not of any one archive: `vars.d.ts` only
-knows a variable exists because some script uses it, and `cs2.d.ts` carries argument kinds and param
-types learned from all 6,567 scripts at once. `SourceCodec.unpackIndex` is the hook they come out
-of - it runs once after the index's archives and claims what it returns, so nothing under
-`clientscripts/` is carried out of an archive that has no business producing it - and `owner`
-answers `Owner.Index` for all five, so editing one repacks nothing and is handed to `packIndex`
-instead (see *The `SourceCodec` interface*).
-
-**1,066 of the 6,567 scripts are pristine.** The decompiler normalises by design - it drops
-unreachable code, folds initialisers into declarations, lays branches out canonically - so those
-scripts compile back to equivalent but different bytes and their originals are kept in
-`<name>.ts.pristine`. The other 5,501 compile back to the cache's own bytes exactly. Either way
-the tree reproduces index 12 byte for byte until a script is actually edited.
-
-**Editing a script.** Edit the `.ts` and restart the server (or run `tools cache build`). The
-edited file no longer hashes to the guard `index.json` recorded, so the pack compiles it instead of
-emitting the shipped bytes; a compile error names the file and the diagnostic as
-`file:line:col: what went wrong` and fails the build rather than serving stale bytecode. Only the
-archives whose files changed are recompiled, so an edit to one script costs one compile. Renaming
-an identifier in `vars.d.ts` or `gamevals.d.ts` is a rename, not an edit: run `cs2 sync-names` to
-write it back into the catalogs, which is where the names live.
-
-**Where the compiler's context comes from: the tree.** Compiling one script needs facts about the
-*others* - a call site discards exactly what its callee leaves on the stacks, and a `*_PARAM`
-opcode pushes an int or a string according to the param's declared type - and none of it is in the
-file being compiled. Neither is any of it in the *bytecode*: a script's argument and return order
-is only recoverable from what its callers push, which is why decompiling needs the whole corpus
-analysed. But a decompiled folder **states every one of them**:
-
-| what a compile has to know | where `clientscripts/` says it |
-|---|---|
-| what script *n* returns, in push order | its own `function ...(): [number, string]` |
-| how many arguments it takes, on which stacks | its own parameter list |
-| whether param *n* yields a string | `cs2.d.ts`'s `StringParam` |
-| which id a renamed identifier means | `vars.d.ts`, `gamevals.d.ts`, the script headers |
-
-`Cs2SourceContext.read(directory)` is that reading and `Cs2Compiler.fromSources(directory)` the
-compiler over it. It lexes each script's declaration line and nothing else - parsing a body would
-be circular, since parsing is what needs the answers - so the whole corpus's signatures cost about
-0.3 s against roughly 7 s for the analysis. It is the same `Cs2Context` the analyzer implements, so
-nothing downstream can tell which one it was handed, and the parity proof is that it produces the
-cache's own bytes: `Cs2SourceCodecTest` packs all 6,567 archives with the codec's cache seam wired
-to throw, and gets 5,501 exact compiles and 1,066 sidecars back.
-
-Only the param types needed writing down, because a param's type belongs to its param definition
-rather than to any script and a lookup's bytecode does not say which stack it used. They go into
-`cs2.d.ts` - the index's own file, so index 12 stays self-contained - as a type alias listing the
-ids, 131 of the 727 cache's 2,583 params:
-
-```ts
-type StringParam =
-    | 528
-    | 529;
-```
-
-A folder written before that declaration existed carries no such line, which is a different answer
-from an empty one: nothing fails - no id yields a string, which is what the compiler assumes
-without an answer, and no script in the 727 corpus compiles differently either way - but a
-hand-edited script reading a string param would be compiled against the wrong stack.
-`tools cs2 declarations <dir>` or a re-unpack writes it.
-
-**What a pack of index 12 costs.** The signature scan is about 0.3 s, done once per build and
-shared; after it a compile is well under a millisecond, and all 6,567 scripts compile in 1.3 s. A
-build that changes no clientscript never constructs the compiler and pays none of it. `packIndex`
-is where the context is set up, and it also *drops* the previous one, so a second build in the same
-process reads a tree that has moved rather than a stale scan of it.
-
-**The one direction that still needs a cache is unpacking**, because decompiling is where the bytes
-are all there is. `SourceCodec` hands a codec one archive at a time and no cache, so
-`Cs2SourceCodec.cache` is the seam; it defaults to `Cache.get()`, which is right for every tool and
-every test, since unpacking a cache means having one.
-
-**On a server.** With `CACHE_SOURCE_PATH` set, `Cache.get()` runs `CacheSource.ensureBuilt()` before
-it opens anything, so the first thing that asks for the cache triggers the build - index 12
-included, from the tree alone, with nothing else to read. Nothing has to be handed in and nothing
-has to be configured for it:
-
-```
-CACHE_SOURCE_PATH=/srv/darkan/cache-source
-CACHE_BUILD_PATH=/srv/darkan/data/cache
-```
-
-`DefinitionJsonCodec` checks itself file by file rather than archive by archive, because a definition
-*is* a file: on the way out it decodes the shipped bytes, writes the JSON, reads that JSON straight
-back into a fresh definition and re-encodes it, and only a file whose bytes do not come out identical
-gets a `<id>.json.pristine` beside it. So the guarded unit is one definition and not the 256 that
-share its archive. It still reports `exact(archive) = false`, so the unpacker packs the whole group
-back and compares that too - an independent second proof rather than the only one.
-
-Measured over the whole 727 cache, **all 741,983 definitions of all 33 types survive the round trip and
-not one needs a pristine copy** - 256,019 files, because index 0's 490,049 frames are 4,085 glTF
-animations; `DefinitionJsonCodecTest` and `MiscCodecTest` are the measurement and
-the "Parity per type" table below the per type breakdown.
 
 ### synth sounds (index 4)
 
@@ -1914,6 +1751,150 @@ thing that run cannot compare is the derived version table, which is a digest of
 reference table and so differs between a tree of seven indices and a cache of thirty-seven;
 `WholeCacheSourceTest` is where that is checked, over all of them at once.
 
+### The pristine fallback
+
+A codec that cannot reproduce a group keeps the original bytes next to the editable file as
+`<name>.pristine` and records the editable file's SHA-256 under `pristine` in `index.json`. `pack`
+emits the pristine bytes while the editable file still hashes to that value and compiles the
+editable file otherwise. Assembling that is the codec's own job, since only it knows its layout:
+it returns the sidecar as one more file from `unpack`, and the hashes in `UnpackedArchive.pristine`.
+The raw codecs keep the bytes and are exact by construction, so none of this runs for them.
+`cache status` reports the pristine count per type so encoder gaps are visible; the goal is zero,
+and the count can only shrink as encoders improve or files are edited. A *stale* sidecar - the
+guarded file no longer hashes to the recorded value - is `status`'s way of showing an edit that
+has not been packed yet.
+
+`SourceCodec.exact(archive)` says whether packing what the codec wrote reproduces the group, and
+`unpack` packs the archive again to count the ones that do not. A codec that installs its own
+fallback while it unpacks - `Cs2SourceCodec` does, because it has to compile each script anyway to
+find out - is `exact` and reports its count through `UnpackedArchive.pristine` instead;
+`UnpackReport.inexact` only ever sees a codec that leaves the decision to the framework, so
+`cache unpack`'s pristine line reads 0 for such an index and `cache status` is the number to read.
+
+This is what lets a normalising compiler (the CS2 decompiler drops dead code by design, so 1,066
+of the 6,567 clientscripts recompile to different but equivalent bytes) and a not-yet-exact
+encoder coexist with the parity guarantee.
+
+`DefinitionJsonCodec` checks itself file by file rather than archive by archive, because a definition
+*is* a file: on the way out it decodes the shipped bytes, writes the JSON, reads that JSON straight
+back into a fresh definition and re-encodes it, and only a file whose bytes do not come out identical
+gets a `<id>.json.pristine` beside it. So the guarded unit is one definition and not the 256 that
+share its archive. It still reports `exact(archive) = false`, so the unpacker packs the whole group
+back and compares that too - an independent second proof rather than the only one.
+
+Measured over the whole 727 cache, **all 741,983 definitions of all 33 types survive the round trip and
+not one needs a pristine copy** - 256,019 files, because index 0's 490,049 frames are 4,085 glTF
+animations; `DefinitionJsonCodecTest` and `MiscCodecTest` are the measurement and
+the "Parity per type" table below the per type breakdown.
+
+### clientscripts
+
+Index 12 is not stored as bytecode. `clientscripts/` **is** a CS2 editor project - exactly the
+folder `cs2 decompile-all` writes (`docs/cs2-editor.md`) - so a clientscript is edited as
+TypeScript and the server compiles it back when it rebuilds the cache:
+
+```
+clientscripts/
+  index.json                       the reference table, as for every index
+  cs2.d.ts                         every opcode's signature, the argument kinds the corpus taught us,
+                                   and StringParam - which params a lookup returns a string for
+  gamevals.d.ts                    the id constants (Obj.abyssal_whip, Component.wornitems.head)
+  vars.d.ts                        every variable any script touches, bound to its id
+  tsconfig.json                    without it an editor opens each script as its own program
+  dead-code.md                     what the decompiler found that cannot affect what a script does
+  proc/quicksort.ts                one file per script, at its gameval name's path
+  clientscript/<name>.ts
+  cs2/cs2_1620.ts                  a script with no proven name, under the catalog's placeholder prefix
+  proc/<name>.ts.pristine          the shipped bytes of a script the compiler normalises
+```
+
+A script's identity is its gameval name, not a number: the path and the `// [proc,quicksort]`
+header both spell it out and `gamevals/clientscript.json` turns it into the archive id. Renaming a
+script therefore moves its file - `cs2 sync-names` writes an editor's rename back to the catalog
+and relocates the file - and nothing else may move it.
+
+The five project files are a property of the *corpus*, not of any one archive: `vars.d.ts` only
+knows a variable exists because some script uses it, and `cs2.d.ts` carries argument kinds and param
+types learned from all 6,567 scripts at once. `SourceCodec.unpackIndex` is the hook they come out
+of - it runs once after the index's archives and claims what it returns, so nothing under
+`clientscripts/` is carried out of an archive that has no business producing it - and `owner`
+answers `Owner.Index` for all five, so editing one repacks nothing and is handed to `packIndex`
+instead (see *The `SourceCodec` interface*).
+
+**1,066 of the 6,567 scripts are pristine.** The decompiler normalises by design - it drops
+unreachable code, folds initialisers into declarations, lays branches out canonically - so those
+scripts compile back to equivalent but different bytes and their originals are kept in
+`<name>.ts.pristine`. The other 5,501 compile back to the cache's own bytes exactly. Either way
+the tree reproduces index 12 byte for byte until a script is actually edited.
+
+**Editing a script.** Edit the `.ts` and restart the server (or run `tools cache build`). The
+edited file no longer hashes to the guard `index.json` recorded, so the pack compiles it instead of
+emitting the shipped bytes; a compile error names the file and the diagnostic as
+`file:line:col: what went wrong` and fails the build rather than serving stale bytecode. Only the
+archives whose files changed are recompiled, so an edit to one script costs one compile. Renaming
+an identifier in `vars.d.ts` or `gamevals.d.ts` is a rename, not an edit: run `cs2 sync-names` to
+write it back into the catalogs, which is where the names live.
+
+**Where the compiler's context comes from: the tree.** Compiling one script needs facts about the
+*others* - a call site discards exactly what its callee leaves on the stacks, and a `*_PARAM`
+opcode pushes an int or a string according to the param's declared type - and none of it is in the
+file being compiled. Neither is any of it in the *bytecode*: a script's argument and return order
+is only recoverable from what its callers push, which is why decompiling needs the whole corpus
+analysed. But a decompiled folder **states every one of them**:
+
+| what a compile has to know | where `clientscripts/` says it |
+|---|---|
+| what script *n* returns, in push order | its own `function ...(): [number, string]` |
+| how many arguments it takes, on which stacks | its own parameter list |
+| whether param *n* yields a string | `cs2.d.ts`'s `StringParam` |
+| which id a renamed identifier means | `vars.d.ts`, `gamevals.d.ts`, the script headers |
+
+`Cs2SourceContext.read(directory)` is that reading and `Cs2Compiler.fromSources(directory)` the
+compiler over it. It lexes each script's declaration line and nothing else - parsing a body would
+be circular, since parsing is what needs the answers - so the whole corpus's signatures cost about
+0.3 s against roughly 7 s for the analysis. It is the same `Cs2Context` the analyzer implements, so
+nothing downstream can tell which one it was handed, and the parity proof is that it produces the
+cache's own bytes: `Cs2SourceCodecTest` packs all 6,567 archives with the codec's cache seam wired
+to throw, and gets 5,501 exact compiles and 1,066 sidecars back.
+
+Only the param types needed writing down, because a param's type belongs to its param definition
+rather than to any script and a lookup's bytecode does not say which stack it used. They go into
+`cs2.d.ts` - the index's own file, so index 12 stays self-contained - as a type alias listing the
+ids, 131 of the 727 cache's 2,583 params:
+
+```ts
+type StringParam =
+    | 528
+    | 529;
+```
+
+A folder written before that declaration existed carries no such line, which is a different answer
+from an empty one: nothing fails - no id yields a string, which is what the compiler assumes
+without an answer, and no script in the 727 corpus compiles differently either way - but a
+hand-edited script reading a string param would be compiled against the wrong stack.
+`tools cs2 declarations <dir>` or a re-unpack writes it.
+
+**What a pack of index 12 costs.** The signature scan is about 0.3 s, done once per build and
+shared; after it a compile is well under a millisecond, and all 6,567 scripts compile in 1.3 s. A
+build that changes no clientscript never constructs the compiler and pays none of it. `packIndex`
+is where the context is set up, and it also *drops* the previous one, so a second build in the same
+process reads a tree that has moved rather than a stale scan of it.
+
+**The one direction that still needs a cache is unpacking**, because decompiling is where the bytes
+are all there is. `SourceCodec` hands a codec one archive at a time and no cache, so
+`Cs2SourceCodec.cache` is the seam; it defaults to `Cache.get()`, which is right for every tool and
+every test, since unpacking a cache means having one.
+
+**On a server.** With `CACHE_SOURCE_PATH` set, `Cache.get()` runs `CacheSource.ensureBuilt()` before
+it opens anything, so the first thing that asks for the cache triggers the build - index 12
+included, from the tree alone, with nothing else to read. Nothing has to be handed in and nothing
+has to be configured for it:
+
+```
+CACHE_SOURCE_PATH=/srv/darkan/cache-source
+CACHE_BUILD_PATH=/srv/darkan/data/cache
+```
+
 ## The packed build
 
 `Builder.build(tree, outputDir)` produces a normal packed cache in `outputDir`
@@ -2049,11 +2030,11 @@ which the build itself is a stat walk; editing one clientscript and rebuilding i
 repacks exactly that one archive. `cache verify` of the built cache against the tree is 12 s at
 full parity: 140,692 containers, 37 reference tables and the derived version table, all identical.
 
-**Those whole-tree numbers predate the eight record indices above and have not been re-measured.** They
+**Those whole-tree numbers predate the nine record indices above and have not been re-measured.** They
 add 10,268 files and 553 MB to the tree, of which index 0 alone is 4,085 files and 530 MB, so the tree's
 size grows by roughly a factor of one and a half; `WholeCacheSourceTest`'s unpack time limit was raised to
 match. What has been measured, on the same machine, is the per index round trip: `MiscCodecTest` decodes
-all 7,764 archives of the eight indices, writes all 10,313 files to disk, reads them back and packs every
+all 7,764 archives of the nine indices, writes all 10,313 files to disk, reads them back and packs every
 group in **30 s**, and `MiscEncoderParityTest` encodes all 496,232 definitions - no disk - in a few
 seconds. Index 0 is essentially all of both.
 
@@ -2069,6 +2050,28 @@ seconds. Index 0 is essentially all of both.
 | 33 | `loading_screens` | 31 | 31 | 223 KB |
 | 35 | `cutscenes` | 16 | 16 | 334 KB |
 | | **total** | **7,764** | **10,313** | **553 MB** |
+
+**The tree today**, `du -sh --exclude=.git` and `find -type f | wc -l` against `cache-source/`,
+everything above included:
+
+| index | dir | size |
+|---|---|---|
+| 7 | `models` | 1.2 GB |
+| 5 | `maps` | 652 MB |
+| 0 | `anims` | 514 MB |
+| 3 | `interfaces` | 262 MB |
+| 14 | `vorbis` | 252 MB |
+| 8 | `sprites` | 183 MB |
+| 2 | `config` | 144 MB |
+| 12 | `clientscripts` | 54 MB |
+| 4 | `synth_sounds` | 53 MB |
+| 6 | `midi_songs` | 41 MB |
+| 1 | `bases` | 25 MB |
+| 30 | `dlls` | 19 MB |
+| 9 | `textures` | 15 MB |
+| 23 | `worldmapdata` | 12 MB |
+| 26 | `materials` | 11 MB |
+| **total** | | **4.0 GB, 410,354 files** |
 
 ## The `SourceCodec` interface
 
@@ -2164,78 +2167,43 @@ A codec is also not told the tree *root*, only its own index directory. Index 12
 able to read the param types straight out of `config/param/<id>.json` rather than keeping the list
 in `cs2.d.ts`; the copy in `cs2.d.ts` is the price of the index staying self-contained.
 
-## Future work the design leaves room for
-
-- World servers hosting their own JS5 from their own tree (`CACHE_SOURCE_PATH` per world; the
-  lobby's world flag decides whether the client re-inits JS5 against the world).
-- Typed codecs for the indices that are still bytes (sprites as PNG, models). Each is one codec
-  class plus a byte-exact proof, the way the definition indices and index 5 got theirs; the pristine
-  fallback carries the rest meanwhile.
-- Typed codecs for the indices that are still bytes (maps as JSON for the map editor, models,
-  index 3's remaining raw archives). Each is one codec class plus a byte-exact proof, the way the
-  definition indices and the 2D indices got theirs; the pristine fallback carries the rest meanwhile.
-- Having `tools`' texture rasteriser read core's `TextureDecoder` instead of parsing index 9 a second
-  time. The op *definitions* are pure data and now live in core (`TextureOpFormat`,
-  `TextureDefinition`), but `tools`' `TextureType` is the raster evaluator: its 40 operation classes
-  decode straight into already-scaled rendering fields, so pointing them at core's records means
-  rewriting all 40 `decodeOpcode` implementations, and the only check on that is a visual one. The
-  format knowledge is duplicated until then, and core's is the one with a whole-cache proof behind it.
-- Typed codecs for the indices that are still bytes (sprites as PNG, maps as JSON for the map
-  editor, models). Each is one codec class plus a byte-exact proof, the way the definition indices
-  got theirs; the pristine fallback carries the rest meanwhile.
-- A lossless form for index 15's sound bank patches, which would have to keep the raw columns and
-  run lengths the client's own decode discards - see *midi instruments (index 15)*. Index 14's
-  streams are the one case where there is nothing to reach for: an `.ogg` of them would be mostly
-  invented and could not be checked back.
-  editor). Each is one codec class plus a byte-exact proof, the way the definition indices and the
-  model indices got theirs; the pristine fallback carries the rest meanwhile.
-- Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
-- Handing a codec the cache a tree is being *unpacked from*, the last thing `SourceCodec` does not
-  offer - see *The `SourceCodec` interface* above. Packing needs no cache any more.
-
-
 ## Definition encoders
 
 `DefinitionJsonCodec<T>` can only store a type as editable JSON when its encoder reproduces the
 shipped file exactly - `encode(decode(bytes)) == bytes` for **every** file - otherwise the type has
-to keep a `.pristine` copy beside every file it cannot rebuild. All of them do, so none keeps one;
-see "Definition files" for what the JSON looks like. Twenty-two types reach that bar for
-the whole 727 cache: the seven opcode keyed types of indices 16 to 22, the fourteen decoded
-archives of index 2, and index 3's interface components. Two more join them from the 2D indices -
-index 9's textures and index 13's font metrics - and the sprite and material codecs clear the same bar
-without being `DefinitionJsonCodec`s; see *What the 2D indices cost*.
 to keep a `.pristine` copy beside every file it cannot rebuild. All 33 do, so none of them keeps one;
 see "Definition files" for what the JSON looks like. Thirty-three types reach that bar for
 the whole 727 cache: the seven opcode keyed types of indices 16 to 22, the fourteen decoded
-archives of index 2, index 3's interface components, and the eleven types of the eight other indices
+archives of index 2, index 3's interface components, and the eleven types of the nine other indices
 that hold records rather than assets - animation frames and skeletons, the huffman table, the world map's
 areas and static elements, both quick chat types, the six client defaults, the loading screens and the
-cutscenes.
+cutscenes. Two more join them from the 2D indices - index 9's textures and index 13's font metrics -
+and the sprite and material codecs clear the same bar without being `DefinitionJsonCodec`s; see
+*What the 2D indices cost*.
 
-Four tests measure it, each against the shipped bytes rather than against a re-decode:
 Three more encoders reach it outside that mechanism, because their formats are a fixed sequence
 rather than an opcode list and so have no order to replay: `SynthSoundEncoder` (index 4, 10,084
 files), `ShaderProgramEncoder` (index 31, 24 files) and `JagexMidi.toCompact` (indices 6 and 11,
 1,662 files, which rebuilds a whole archive rather than a definition). Their measurements are in
 *synth sounds*, *shaders* and *midi songs and jingles* above.
 
-Four tests measure it, each against the shipped bytes rather than against a re-decode:
+Five tests measure it, each against the shipped bytes rather than against a re-decode:
 
 - `core/src/test/kotlin/world/gregs/voidps/cache/definition/DefinitionEncoderParityTest.kt` (indices 16-22)
 - `core/src/test/kotlin/world/gregs/voidps/cache/config/ConfigEncoderParityTest.kt` (index 2)
 - `core/src/test/kotlin/world/gregs/voidps/cache/definition/InterfaceEncoderParityTest.kt` (index 3)
 - `core/src/test/kotlin/world/gregs/voidps/cache/definition/MiscEncoderParityTest.kt` (indices 0, 1, 10, 23, 24, 25, 28, 33, 35)
+- `core/src/test/kotlin/world/gregs/voidps/cache/definition/ModelEncoderParityTest.kt` (indices 7, 27 and 29)
+
+Each enumerates files through the reference table (`Cache.archives` / `Cache.files`), not through
+a decoder's `size`, which rounds up to whole archives and invents ids that have no file. They decode
+with the decoder's `readLoop`, encode into a fresh `BufferWriter` and compare byte for byte, and they
+skip with a message when `../cache/` is absent.
 
 The 2D encoders - sprites, textures, materials and font metrics - are measured the same way by
 `core/src/test/kotlin/world/gregs/voidps/cache/source/ImageCodecTest.kt`, which goes one step further and
 writes the files to disk before reading them back, because a sprite's pixels make the trip through a PNG
 and `javax.imageio` is half of that round trip. See *What the 2D indices cost*.
-- `core/src/test/kotlin/world/gregs/voidps/cache/definition/ModelEncoderParityTest.kt` (indices 7, 27 and 29)
-
-All three enumerate files through the reference table (`Cache.archives` / `Cache.files`), not through
-a decoder's `size`, which rounds up to whole archives and invents ids that have no file. They decode
-with the decoder's `readLoop`, encode into a fresh `BufferWriter` and compare byte for byte, and they
-skip with a message when `../cache/` is absent.
 
 ### One mechanism
 
@@ -2335,7 +2303,7 @@ their values alone.
 | 7 | all | `model` | `ModelDecoder` / `ModelEncoder` | 73,417 | 73,417 | none | - | - |
 
 **741,983 files - 153,109 of indices 16 to 22, 27,403 of index 2, 65,239 interface components and 496,232
-of the eight other record indices - all byte identical. No file of any of these types needs a pristine
+of the nine other record indices - all byte identical. No file of any of these types needs a pristine
 copy.** Index 2's other 31 archives have no decoder and stay raw (`RawFilesCodec`), and so do index 23's 45
 per-area images.
 
@@ -2440,3 +2408,21 @@ inverse of `Writer.writePrefixedString`; it replaces the private copy `QuestDeco
 record payloads (colours, colour palettes, params, extras) live in
 `definition/encoder/Records.kt`; unlike the mixin helpers on `Recolourable` and friends they write a
 payload only, never the opcode and never a presence decision.
+
+## Future work the design leaves room for
+
+- World servers hosting their own JS5 from their own tree (`CACHE_SOURCE_PATH` per world; the
+  lobby's world flag decides whether the client re-inits JS5 against the world).
+- Having `tools`' texture rasteriser read core's `TextureDecoder` instead of parsing index 9 a second
+  time. The op *definitions* are pure data and now live in core (`TextureOpFormat`,
+  `TextureDefinition`), but `tools`' `TextureType` is the raster evaluator: its 40 operation classes
+  decode straight into already-scaled rendering fields, so pointing them at core's records means
+  rewriting all 40 `decodeOpcode` implementations, and the only check on that is a visual one. The
+  format knowledge is duplicated until then, and core's is the one with a whole-cache proof behind it.
+- A lossless form for index 15's sound bank patches, which would have to keep the raw columns and
+  run lengths the client's own decode discards - see *midi instruments (index 15)*. Index 14's
+  streams are the one case where there is nothing to reach for: an `.ogg` of them would be mostly
+  invented and could not be checked back.
+- Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
+- Handing a codec the cache a tree is being *unpacked from*, the last thing `SourceCodec` does not
+  offer - see *The `SourceCodec` interface* above. Packing needs no cache any more.
