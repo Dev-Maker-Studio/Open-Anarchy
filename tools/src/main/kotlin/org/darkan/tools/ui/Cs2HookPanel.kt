@@ -7,7 +7,7 @@ import imgui.flag.ImGuiTableFlags
 import imgui.flag.ImGuiTreeNodeFlags
 import imgui.type.ImBoolean
 import imgui.type.ImString
-import org.darkan.tools.cs2.vm.Cs2HookDispatcher
+import org.darkan.cs2.vm.Cs2HookDispatcher
 import org.darkan.tools.rsinterface.InterfaceCs2Host
 import org.darkan.tools.rsinterface.InterfaceEvent
 

@@ -9,8 +9,8 @@ import imgui.type.ImInt
 import imgui.type.ImString
 import java.io.File
 import java.lang.ProcessBuilder.Redirect
-import org.darkan.tools.cs2.Cs2HotReload
-import org.darkan.tools.cs2.Cs2SourceProject
+import org.darkan.cs2.Cs2HotReload
+import org.darkan.cs2.Cs2SourceProject
 
 /**
  * Drives CS2 hot reload from the editor.
@@ -228,6 +228,9 @@ class Cs2ReloadPanel(
         if (ImGui.beginChild("Cs2ReloadErrors", 0f, 140f, true)) {
             for ((index, event) in errors.withIndex()) {
                 val diagnostic = event.diagnostic
+                // Bound to a local: `Diagnostic.file` lives in the :cs2 module now, and a public
+                // property from another module cannot be smart cast.
+                val diagnosticFile = diagnostic?.file
                 val label = if (diagnostic == null) {
                     "script ${event.scriptId}: ${event.message}"
                 } else {
@@ -236,9 +239,9 @@ class Cs2ReloadPanel(
                 ImGui.pushStyleColor(ImGuiCol.Text, 1f, 0.45f, 0.4f, 1f)
                 ImGuiText.wrapped(label)
                 ImGui.popStyleColor()
-                if (diagnostic?.file != null) {
+                if (diagnostic != null && diagnosticFile != null) {
                     if (ImGui.smallButton("open##err$index")) {
-                        status = open(diagnostic.file, diagnostic.line, diagnostic.column)
+                        status = open(diagnosticFile, diagnostic.line, diagnostic.column)
                     }
                     ImGui.sameLine()
                     if (ImGui.smallButton("copy##err$index")) {
