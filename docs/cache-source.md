@@ -141,9 +141,11 @@ the JS5 multi-file layout.
 | `RawArchiveCodec` | indices whose archives hold one file and have no better codec | `<archive>.dat` |
 | `RawFilesCodec` | indices with multi-file archives and no better codec | `<archive>/<file>.dat` (requires and always writes 1 chunk) |
 | `VerbatimGroupCodec` | index 0 | `<archive>.grp` - the decompressed group verbatim, chunk table and all |
-| `DefinitionJsonCodec<T>` | indices 3 and 16-22, and 14 of index 2's archives | one JSON file per definition, see below |
+| `DefinitionJsonCodec<T>` | indices 3, 9, 13 and 16-22, and 14 of index 2's archives | one JSON file per definition, see below |
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `MapCodec` | index 5 | one directory per map square, `<x>_<y>/terrain.json` and friends - see *maps* below |
+| `SpriteCodec` | indices 8, 32 and 34 | `<archive>/sprite.json` plus an indexed colour PNG per frame, or `<archive>.jpg` verbatim - see *sprites* |
+| `MaterialCodec` | index 26 | `<id>.json` per material of the index's one blob - see *materials* |
 | `Cs2SourceCodec` | index 12 | the TypeScript layout `cs2 decompile-all` writes (`<category>/<name>.ts`), provided by the `cs2` module - see *clientscripts* below |
 
 So the indices that hold definitions are editable JSON and the rest are bytes:
@@ -152,8 +154,11 @@ So the indices that hold definitions are editable JSON and the rest are bytes:
 |---|---|---|---|---|---|---|
 | 2 | `config` | `config` (14 archives JSON, 31 raw) | | 19 | `config_obj` | `json-obj` |
 | 3 | `interfaces` | `json-interface` | | 20 | `config_seq` | `json-seq` |
-| 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 21 | `config_spotanim` | `json-spotanim` |
-| 16 | `config_loc` | `json-loc` | | 22 | `config_varbit` | `json-varbit` |
+| 8 | `sprites` | `sprite-png` | | 21 | `config_spotanim` | `json-spotanim` |
+| 9 | `textures` | `json-texture` | | 22 | `config_varbit` | `json-varbit` |
+| 12 | `clientscripts` | `Cs2SourceCodec`, from the `cs2` module | | 26 | `materials` | `json-material` |
+| 13 | `fontmetrics` | `json-fontmetrics` | | 32 | `loading_sprites` | `sprite-png` |
+| 16 | `config_loc` | `json-loc` | | 34 | `loading_sprites_raw` | `sprite-png` |
 | 17 | `config_enum` | `json-enum` | | 0 | `anims` | `verbatim-group` |
 | 18 | `config_npc` | `json-npc` | | 5 | `maps` | `map-json` |
 | | | | | everything else | | `raw-archive` / `raw-files` |
@@ -223,8 +228,11 @@ nothing that is not a field (60 keys for this one):
 }
 ```
 
-`DefinitionCodecs` is the one list of the twenty-two types and what registers them; `DefinitionJson`
-is the mapping, and it derives these rules from the data class rather than being told them:
+`DefinitionCodecs` is the one list of the twenty-two opcode keyed and interface types and what registers
+them, and `ImageCodecs` is the same list for the two 2D definition types (index 9's textures and index 13's
+font metrics) plus the three sprite indices and the materials blob - each of those has a subsection of its
+own below. `DefinitionJson` is the mapping both use, and it derives these rules from the data class rather
+than being told them:
 
 - **Keys are the fields, in declaration order**, so `id` leads. A field a decoder gains appears in the
   tree the moment it exists, and a field whose type nothing here can spell is an error rather than a
@@ -337,6 +345,40 @@ ascending localY is one line, which is the order the file itself stores them in:
       ]
     },
     {"type": "hdr", "bloom": 32, "brightpass": 8, "whitePoint": 32}
+### sprites
+
+Index 8 is 12,071 sprite *groups*: a shared palette and one to 256 frames indexed into it, each frame
+trimmed and given its position in a common canvas. It is stored as standard images - one **indexed
+colour PNG per frame** - plus the little JSON a PNG cannot carry:
+
+```
+sprites/316/sprite.json     the palette, the canvas, and one entry per frame
+sprites/316/0.png           frame 0's palette indices, indexed colour, tRNS on index 0
+sprites/316/1.png
+sprites/316/0.alpha.png     frame 0's alpha plane, only when its format byte says it has one
+```
+
+The ids stay the directory names. Index 8's reference table does carry archive name hashes, and they are
+recorded in `index.json` like every other index's, but a name is a display concern and never a source of
+hashes at pack time - so nothing here is laid out by name.
+
+`sprite.json` for group 316, whole:
+
+```json
+{
+  "id": 316,
+  "width": 16,
+  "height": 16,
+  "palette": [
+    0,
+    7759444,
+    3353893,
+    5063219,
+    0
+  ],
+  "frames": [
+    {"minX": 0, "minY": 0, "width": 16, "height": 16, "flags": 1},
+    {"minX": 0, "minY": 0, "width": 16, "height": 16, "flags": 1}
   ]
 }
 ```
@@ -414,6 +456,254 @@ name hashes and no names, so a region directory cannot say which archive id it i
 is a script header - and `unpack`/`pack` take the hash from the `ArchiveMetadata` they are handed.
 `MapSquare.of(hash)` is the way back, by hashing all 5 x 256 x 256 possible names once; no two of
 them collide, which is checked rather than assumed.
+- `width` and `height` are the group canvas every frame is padded into (the client's `biggestWidth` and
+  `biggestHeight`); a frame's own `minX`, `minY`, `width`, `height` are its trimmed placement inside it.
+- `palette` is the file's own entries, entry 0 first. It is **not** the palette the client ends up with:
+  0 is the client's transparent colour, so it rewrites any entry that really is black to 1, and 5,264 of
+  the 12,071 groups have at least one such entry - 316's entry 4 above is one. The raw entry is what
+  writes back, and `IndexedSprite.palette` is the normalised copy the renderer uses.
+- `flags` is the frame's format byte: bit 0 stores the pixels column major rather than row major, bit 1
+  says an alpha plane follows them. Both are used; 9,014 frames are 0, 4,983 are 1, 3,363 are 2 and 1,730
+  are 3.
+- `paletteZeroEntry`, written only when true, says the file spells out an explicit `000000` for entry 0
+  before entry 1 - three bytes the client seeks straight past. Only 29 groups carry it, ids 12042 to
+  12070, which are the newest in the cache and were packed by a different tool than the rest.
+
+**What lives where.** The PNG owns the pixels and nothing else. The palette is written into every frame's
+`PLTE` in its original order - which is what makes a frame's pixel *indices* survive the round trip, and
+what makes the image display correctly in any viewer - but `sprite.json` is what is read back, for two
+reasons: 2,498 frames are zero sized (empty glyphs in the font sheets) and have no PNG at all, some groups
+are nothing but, so a group's palette can have nowhere to live; and one palette in one place cannot
+disagree with itself across 256 frames. So recolouring a sprite is an edit to `sprite.json` and repainting
+one is an edit to the PNG.
+
+**Alpha.** The format byte decides the shape, and both round trip:
+
+| frame | PNG | alpha |
+|---|---|---|
+| `flags and 2 == 0` | indexed colour with a `tRNS` chunk making index 0 transparent | none |
+| `flags and 2 != 0` | indexed colour, no `tRNS` - the plane carries the transparency | `<frame>.alpha.png`, 8 bit greyscale |
+
+A plane whose every byte is 0xff is dropped by the client (and by `IndexedSprite.alpha`) because it
+carries no transparency - 302 frames are like that - so `flags` is the only thing that says the plane was
+there, and the encoder writes it back as 0xff.
+
+Parity is measured on the *cache bytes*, never on the PNG: `ImageCodecTest` unpacks every group to real
+files, reads them back through `javax.imageio` and re-encodes, and demands the archive come out identical.
+**All 12,071 groups do, and none needs a pristine copy.**
+
+### loading sprites
+
+Indices 32 and 34 are the loading screen and the fonts the client draws before it has a cache: 34
+archives each, the same ids in both. Which one the client reads is decided at startup -
+`Resource.USING_JAGEX_IMAGE_FORMAT` picks index 34 when `Toolkit.createImage` cannot be used and index 32
+otherwise - so the two are the same pictures in two formats.
+
+They get `SpriteCodec`, the same codec as index 8, because most of both indices *is* the palette sprite
+format:
+
+| index | archives | what they are |
+|---|---|---|
+| 34 `loading_sprites_raw` | 34 | all palette sprite groups - this is the "Jagex image format" path |
+| 32 `loading_sprites` | 21 | JPEG containers, which the client hands to `Toolkit.createImage` |
+| 32 `loading_sprites` | 5 | palette sprite groups: 494, 495, 496, 3793 and 3794, the pre-cache fonts |
+
+A JPEG archive is not re-encoded and never could be: it is stored as `loading_sprites/3762.jpg`, byte for
+byte, with its real extension, and packed straight back out. The codec sniffs the `ff d8` magic rather
+than being told which archives are which, so a tree of either index reads the same way. The sprite
+archives are laid out exactly as index 8's - `<id>/sprite.json` and a PNG per frame - and the five font
+groups are 256 frames each, most of them zero sized.
+
+**All 68 archives of the two indices round trip byte for byte**, and none needs a pristine copy.
+
+### textures
+
+Index 9 is 2,591 textures, and a texture is not a raster: it is a small DAG of procedural operations that
+the client evaluates at 64x64 or 128x128 to produce one. So the file is the graph, and `textures/<id>.json`
+is the graph as JSON - `json-texture`, a `DefinitionJsonCodec` over `TextureDefinition`.
+
+`textures/100.json`, whole - a nested material tiled twice each way and run through a curve:
+
+```json
+{
+  "id": 100,
+  "operations": [
+    {"type": 0, "imageCacheCapacity": 1, "opcodes": [], "children": []},
+    {"type": 36, "imageCacheCapacity": 1, "opcodes": [{"opcode": 0, "value": 94}], "children": []},
+    {
+      "type": 20,
+      "imageCacheCapacity": 1,
+      "opcodes": [{"opcode": 0, "value": 2}, {"opcode": 1, "value": 2}],
+      "children": [1]
+    },
+    {
+      "type": 8,
+      "imageCacheCapacity": 1,
+      "opcodes": [{"opcode": 0, "value": 0, "values": [0, 1, 4096, 4096]}],
+      "children": [2]
+    },
+    {"type": 0, "imageCacheCapacity": 1, "opcodes": [{"opcode": 0, "value": 0}], "children": []}
+  ],
+  "opaque": 3,
+  "opacity": 0,
+  "hdr": 4,
+  "trailer": "00000101000000220000"
+}
+```
+
+- `operations` is the graph in file order. `children` are indices into that same list, which is what makes
+  it a DAG; `type` is the operation (`36` is a nested material, `20` a tile, `8` a curve, `0` a
+  monochrome fill), and how many children a type takes is fixed per type.
+- `opcodes` are the operation's configuration records, in the order the file listed them. The payload is
+  kept **raw** - the unsigned byte, short or 3 byte colour the file holds, before the scaling the client
+  does on the way into its own fields - because only the raw form writes back to the same bytes. Four
+  opcodes are variable length and use `values` (a curve's `x, y` pairs, a custom gradient's
+  `position, r, g, b` stops, perlin noise's per-step multipliers) or `shapes` (the rasterizer's lines,
+  beziers, rectangles and ellipses).
+- `opaque`, `opacity` and `hdr` name the three operations the client reads the colour, the alpha and the
+  intensity out of.
+- The file also leads every operation with its own index in the list. It is derivable, so it is not
+  stored; the decoder asserts it instead, on all 37,234 operations in the cache.
+
+`TextureOpFormat` is the table this rests on - the child count of each of the 40 operation types and the
+payload of each of their opcodes, transcribed from the client's `TextureOpX.decodeOpcode`. Two facts about
+it are load bearing and were established by reading all 2,591 files rather than by reading the client:
+
+- **An opcode a type does not handle carries nothing.** The client's `when` falls through, so the byte is
+  a no-op and the next byte is the next opcode. Twelve textures give the waveform operation (type 12)
+  opcodes 2, 4, 5 and 6, which it has never handled; reading them any other way runs off the end.
+- **Perlin noise's opcode 2 is length-dependent on opcode 1.** A negative amplitude is followed by one
+  short per noise step, and the step count is whatever opcode 1 last set - defaulting to 4, because the
+  file is free to give opcode 2 first and most do.
+
+`trailer` is the honest residual, and the only part of index 9 that is stored as opaque bytes. 2,562 of
+the 2,591 textures carry **ten more bytes** after the three output indices which this revision's client
+never reads: it stops at the third index. The other 29 - ids 2562 to 2590, the newest in the cache, and
+the same 29 whose sprites carry an explicit palette entry 0 - carry no trailer at all, so it is not even a
+fixed part of the format. Its bytes are not random (byte 7 of the ten is 0x22 in 2,554 of them and bytes
+2 and 3 are 0/1 flags), but nothing in the 727 client gives them a meaning, so they are kept verbatim as
+hex rather than guessed at and given wrong names.
+
+**All 2,591 textures re-encode to the shipped bytes**, and none needs a pristine copy.
+
+### materials
+
+Index 26 is one archive holding one blob: a count, a presence byte per material, and then one *column*
+per field carrying that field for every material at once. A material therefore has no bytes of its own,
+which is why it does not get a `DefinitionJsonCodec` - `MaterialCodec` decodes the whole blob, writes
+`materials/<id>.json` per material, and rebuilds the blob from all of them together.
+
+```json
+{
+  "id": 0,
+  "defined": true,
+  "detailsOnly": false,
+  "isSmall": false,
+  "skipTriangles": false,
+  "brightness": 0,
+  "alpha": -1,
+  "effectId": 0,
+  "effectParam1": 0,
+  "colourHsl": 6547,
+  "textureSpeedU": 0,
+  "textureSpeedV": 0,
+  "unusedBoolean": false,
+  "isBrickTile": false,
+  "mipmapping": 2,
+  "repeatS": true,
+  "repeatT": true,
+  "hdr": false,
+  "combineMode": 0,
+  "effectParam2": 0,
+  "effectCombiner": 0
+}
+```
+
+- The ids are dense - `0` until the count - so the number of files *is* the count, and a material the
+  presence byte says is absent is still a file, with `"defined": false`. All 2,591 of the 727 cache's
+  materials are defined, and they are one to one with index 9's textures.
+- The names are the client's (`MaterialTypeList`), not the obfuscated ones the decoder used to carry:
+  `aBoolean1204` is `isSmall`, `aByte1225` is `alpha`, `type` is `effectId`, `anInt1226` is
+  `effectCombiner`, and so on. `unusedBoolean` is the one field the client keeps (`aBool2087`) and never
+  reads.
+- Every boolean column is 0 or 1 in all 2,591 materials, which is what makes reading them as booleans
+  lossless - the client reads them as `byte == 1`, so any other value would have to be stored raw.
+
+The pristine sidecar, if it were ever needed, guards the whole blob rather than a file, because one
+material cannot be rebuilt on its own. **The blob re-encodes to the shipped bytes**, so there is none.
+
+### fontmetrics
+
+Index 13 is 27 fonts' metrics - the advance of each of the 256 cp1252 glyphs, the line spacing and the
+padding - as `fontmetrics/<id>.json`, `json-fontmetrics`. The glyph *bitmaps* are the sprite group of the
+same id in index 8, so a font is one file in each index.
+
+```json
+{
+  "id": 494,
+  "glyphWidths": [
+    0,
+    0,
+    ...
+  ],
+  "verticalSpacing": 10,
+  "topPadding": 10,
+  "bottomPadding": 2,
+  "version": 0,
+  "variableWidth": false,
+  "unusedByte1": 9,
+  "unusedByte2": 6,
+  "stringId": ""
+}
+```
+
+Every one of the 27 fonts is the fixed width form and 263 bytes long, so the file is `version`,
+`variableWidth`, the 256 advances, the spacing, two bytes and the two paddings, in that order and with no
+choices in it. Three things were being lost before:
+
+- `unusedByte1` and `unusedByte2` are the two bytes the client reads and discards between the spacing and
+  the padding. Every one of the 27 fonts carries a nonzero pair, so they are not padding.
+- `version` is the format byte the client refuses to read anything but 0 of.
+- `kerningAdjustments` is the one field the tree does not write: it is a 65,536 entry table the client
+  *computes* from the variable width form's glyph offset profiles, so it is derived rather than read, and
+  writing it would be a megabyte of numbers the encoder ignores. It is listed in `DefinitionJson.DERIVED`
+  beside the clan var descriptor for exactly that reason.
+
+The variable width form - two coverage tables and two delta coded offset profiles per glyph, from which
+the client derives both the kerning table and the spacing - is decoded and encoded for completeness, but
+**no 727 font uses it**, so nothing in the cache exercises that path. Fixing it did turn up a decoder bug
+worth naming: the second offset profile is `widths[glyph]` bytes long in the client, as the first one is,
+and the decoder was reading it with the *heights* as its lengths, which would desync the rest of the file
+for any font that had them differ.
+
+**All 27 fonts re-encode to the shipped bytes**, and none needs a pristine copy.
+
+### What the 2D indices cost
+
+`ImageCodecTest` is the measurement - every archive of all six indices, unpacked into real files and
+packed straight back - and the bar is the same as every other typed codec's: byte identical, zero
+pristine.
+
+| index | directory | codec | archives | byte identical | pristine | files written |
+|---|---|---|---|---|---|---|
+| 8 | `sprites` | `sprite-png` | 12,071 | 12,071 | 0 | 33,756 |
+| 9 | `textures` | `json-texture` | 2,591 | 2,591 | 0 | 2,591 |
+| 13 | `fontmetrics` | `json-fontmetrics` | 27 | 27 | 0 | 27 |
+| 26 | `materials` | `json-material` | 1 | 1 | 0 | 2,591 |
+| 32 | `loading_sprites` | `sprite-png` | 34 | 34 | 0 | 998 |
+| 34 | `loading_sprites_raw` | `sprite-png` | 34 | 34 | 0 | 1,027 |
+| **total** | | | **14,758** | **14,758** | **0** | **40,990** |
+
+**14,758 archives, all byte identical, no residuals and no pristine copies anywhere.** The files are 63 MB
+in total, and the codecs' own cost over the whole cache, single threaded, is 9.8 s - 8.6 s of it the
+sprites, which are 33,756 PNG encodes and 33,756 decodes back.
+
+Against the whole tree the change *shrinks* it: unpacking the 727 cache with these codecs writes 423,315
+files and 1,316 MB where the raw codecs wrote 397,083 files and 1,366 MB, because a PNG's deflate is a
+better fit for a palette raster than the raw bytes were. Timings on this machine were 23 s to unpack (12 s
+of which is I/O), 17 s to pack and 17 s to verify at full parity, but they vary by a factor of two with
+machine load and disk cache state and should be read as an order of magnitude rather than a benchmark.
+
 
 ### The pristine fallback
 
@@ -670,6 +960,12 @@ costs the time it does because every one of the 245,751 definition files and 7,2
 decoded, written as JSON, read back and re-encoded on the way out to prove it survives the trip; the
 tree is 290 MB bigger for the definitions and 650 MB for the maps, for the same reason.
 
+With the 2D indices as images and JSON the tree is **423,315 files and 1,316 MB** - 26,232 more files
+than the raw codecs wrote and 50 MB *smaller*, because a PNG's deflate beats a raw palette raster. A full
+unpack of the whole cache measured 23 s, a pack 17 s and a verify 17 s at full parity, but those numbers
+move by a factor of two with machine load and disk cache state; the codecs' own cost, measured on its own
+and single threaded, is 9.8 s for all 14,758 archives - see *What the 2D indices cost*.
+
 With index 12 as TypeScript the same runs cost about 8 s more to unpack (the CS2 corpus analysis
 and a round-trip compile of every script) and 1.6 s more to pack (the folder's signature scan, then
 5,501 compiles). Measured on the tree at `cache-source/`, building it into an empty directory and
@@ -779,6 +1075,15 @@ in `cs2.d.ts`; the copy in `cs2.d.ts` is the price of the index staying self-con
 - Typed codecs for the indices that are still bytes (sprites as PNG, models). Each is one codec
   class plus a byte-exact proof, the way the definition indices and index 5 got theirs; the pristine
   fallback carries the rest meanwhile.
+- Typed codecs for the indices that are still bytes (maps as JSON for the map editor, models,
+  index 3's remaining raw archives). Each is one codec class plus a byte-exact proof, the way the
+  definition indices and the 2D indices got theirs; the pristine fallback carries the rest meanwhile.
+- Having `tools`' texture rasteriser read core's `TextureDecoder` instead of parsing index 9 a second
+  time. The op *definitions* are pure data and now live in core (`TextureOpFormat`,
+  `TextureDefinition`), but `tools`' `TextureType` is the raster evaluator: its 40 operation classes
+  decode straight into already-scaled rendering fields, so pointing them at core's records means
+  rewriting all 40 `decodeOpcode` implementations, and the only check on that is a visual one. The
+  format knowledge is duplicated until then, and core's is the one with a whole-cache proof behind it.
 - Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
 - Handing a codec the cache a tree is being *unpacked from*, the last thing `SourceCodec` does not
   offer - see *The `SourceCodec` interface* above. Packing needs no cache any more.
@@ -788,16 +1093,23 @@ in `cs2.d.ts`; the copy in `cs2.d.ts` is the price of the index staying self-con
 
 `DefinitionJsonCodec<T>` can only store a type as editable JSON when its encoder reproduces the
 shipped file exactly - `encode(decode(bytes)) == bytes` for **every** file - otherwise the type has
-to keep a `.pristine` copy beside every file it cannot rebuild. All 22 do, so none of them keeps one;
+to keep a `.pristine` copy beside every file it cannot rebuild. All of them do, so none keeps one;
 see "Definition files" for what the JSON looks like. Twenty-two types reach that bar for
 the whole 727 cache: the seven opcode keyed types of indices 16 to 22, the fourteen decoded
-archives of index 2, and index 3's interface components.
+archives of index 2, and index 3's interface components. Two more join them from the 2D indices -
+index 9's textures and index 13's font metrics - and the sprite and material codecs clear the same bar
+without being `DefinitionJsonCodec`s; see *What the 2D indices cost*.
 
 Three tests measure it, each against the shipped bytes rather than against a re-decode:
 
 - `core/src/test/kotlin/world/gregs/voidps/cache/definition/DefinitionEncoderParityTest.kt` (indices 16-22)
 - `core/src/test/kotlin/world/gregs/voidps/cache/config/ConfigEncoderParityTest.kt` (index 2)
 - `core/src/test/kotlin/world/gregs/voidps/cache/definition/InterfaceEncoderParityTest.kt` (index 3)
+
+The 2D encoders - sprites, textures, materials and font metrics - are measured the same way by
+`core/src/test/kotlin/world/gregs/voidps/cache/source/ImageCodecTest.kt`, which goes one step further and
+writes the files to disk before reading them back, because a sprite's pixels make the trip through a PNG
+and `javax.imageio` is half of that round trip. See *What the 2D indices cost*.
 
 All three enumerate files through the reference table (`Cache.archives` / `Cache.files`), not through
 a decoder's `size`, which rounds up to whole archives and invents ids that have no file. They decode
@@ -916,6 +1228,16 @@ to either side shows up as a byte difference rather than only as a field differe
 | idk | `unknown3` | opcode 3, which the client's `IdkType` does not have at all, in 13 files |
 | varclan, varp | `typeChar` | the cp1252 type descriptor; `CS2Type.forJagexDesc` is many to one |
 | bas | the whole lower half of `BASDefinition` | the model box, camera easing, random stand table and per slot transforms (opcodes 26-56), all previously read and dropped |
+| sprite | `IndexedSprite.flags` | the frame's format byte: which storage order it used and whether it carried an alpha plane (302 frames carry an entirely opaque one, which the client drops) |
+| sprite | `SpriteDefinition.rawPalette` | the palette before the client rewrites a black entry to 1; 5,264 of 12,071 groups have one |
+| sprite | `SpriteDefinition.paletteZeroEntry` | the explicit `000000` entry 0 that 29 groups write and the client seeks past |
+| sprite | `SpriteDefinition.width`, `height` | the group canvas, which the client only keeps as each frame's derived border |
+| fontmetrics | `version`, `unusedByte1`, `unusedByte2` | the format byte, and the two bytes the client reads and discards before the padding |
+| fontmetrics | `variableWidth`, `glyphCoverageWidths`, `glyphCoverageHeights`, `horizontalOffsets`, `verticalOffsets` | the variable width form's coverage tables and offset profiles, from which the client derives the kerning table it keeps instead |
+| material | `defined` | the blob's presence byte, which is the only thing that says a material exists |
+| material | every field's name | `aBoolean1204`, `aByte1225`, `type`, `anInt1226` and the rest are now the client's `isSmall`, `alpha`, `effectId`, `effectCombiner` |
+| texture | the whole type | index 9 had no decoder in core at all; `TextureDefinition` is the operation graph as data, `TextureOpFormat` the wire shapes |
+| texture | `trailer` | the ten bytes past the three output indices that this revision's client never reads, on 2,562 of 2,591 textures |
 
 Two ordering rules matter to any future definition codec: `Parameterized.readParameterRecords`
 decodes into an insertion ordered `Int2ObjectArrayMap` and `Extra.readParameters` into an
@@ -935,6 +1257,7 @@ is the default for every decoder here.
 | `MapSceneDecoder`, `WorldMapInfoDecoder`, `QuestDecoder` | sprite ids (mapscene 1, mapelement 1/2/18, quest 17) are big smarts | correct only because every shipped value fits in two bytes |
 | `QuestDecoder` | opcodes 6 and 15 were read and discarded | `type` lost on 9 quests; `questPointRequirement` never populated |
 | `Transforms.writeTransforms` | loc transform ids (opcodes 77 and 92) are big smarts, npc's are shorts | the shared writer wrote a loc's `-1` as `0xffff`, which reads back as a 4 byte smart; the helper is gone and each encoder writes its own |
+| `FontDecoder` | the variable width form's second glyph offset profile is `widths[glyph]` bytes long, as the first one is, not `heights[glyph]` | latent: it would desync every byte after the profiles for any font whose two tables differ, and none of the 27 fonts in 727 is variable width at all |
 
 Every decoder of an opcode keyed type now also fails loudly on an opcode it does not know
 (`error("Unhandled … opcode")`) instead of silently desyncing the rest of the file.

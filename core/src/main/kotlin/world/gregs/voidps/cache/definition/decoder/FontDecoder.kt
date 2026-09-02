@@ -23,27 +23,35 @@ class FontDecoder : DefinitionDecoder<FontDefinition>(FONT_METRICS) {
     }
 
     override fun FontDefinition.read(opcode: Int, buffer: Reader) {
-        if (buffer.readUnsignedByte() != 0) {
+        version = buffer.readUnsignedByte()
+        if (version != 0) {
             return
         }
-        val hasTable = buffer.readUnsignedBoolean()
+        variableWidth = buffer.readUnsignedBoolean()
         glyphWidths = ByteArray(256)
         buffer.readBytes(glyphWidths)
-        if (hasTable) {
-            val rightOffsets = IntArray(256) { buffer.readUnsignedByte() }
-            val leftOffsets = IntArray(256) { buffer.readUnsignedByte() }
-            val rightGlyphData = glyphData(buffer, rightOffsets)
-            val leftGlyphData = glyphData(buffer, leftOffsets)
-            kerningAdjustments = Array(256) { left ->
-                ByteArray(256) { right ->
-                    calculateKerning(glyphWidths, right, left, rightGlyphData, leftGlyphData, leftOffsets, rightOffsets).toByte()
+        if (variableWidth) {
+            val widths = IntArray(GLYPHS) { buffer.readUnsignedByte() }
+            val heights = IntArray(GLYPHS) { buffer.readUnsignedByte() }
+            // Both profiles are `widths[glyph]` bytes long, as in the client: the heights are
+            // what it kerns against, not what it reads.
+            val left = profiles(buffer, widths)
+            val right = profiles(buffer, widths)
+            glyphCoverageWidths = widths
+            glyphCoverageHeights = heights
+            horizontalOffsets = left
+            verticalOffsets = right
+            kerningAdjustments = Array(GLYPHS) { first ->
+                ByteArray(GLYPHS) { second ->
+                    calculateKerning(glyphWidths, second, first, left, right, heights, widths).toByte()
                 }
             }
-            verticalSpacing = leftOffsets[32] + rightOffsets[32]
+            verticalSpacing = heights[SPACE] + widths[SPACE]
         } else {
             verticalSpacing = buffer.readUnsignedByte()
         }
-        buffer.skip(2)
+        unusedByte1 = buffer.readUnsignedByte()
+        unusedByte2 = buffer.readUnsignedByte()
         topPadding = buffer.readUnsignedByte()
         bottomPadding = buffer.readUnsignedByte()
     }
@@ -53,8 +61,8 @@ class FontDecoder : DefinitionDecoder<FontDefinition>(FONT_METRICS) {
             widths: ByteArray,
             rightGlyphIndex: Int,
             leftGlyphIndex: Int,
-            rightGlyphData: Array<ByteArray>,
-            leftGlyphData: Array<ByteArray>,
+            rightGlyphData: Array<IntArray>,
+            leftGlyphData: Array<IntArray>,
             leftOffsets: IntArray,
             rightOffsets: IntArray
         ): Int {
@@ -83,12 +91,22 @@ class FontDecoder : DefinitionDecoder<FontDefinition>(FONT_METRICS) {
             }
             return -minDelta
         }
-        private fun glyphData(buffer: Reader, offsets: IntArray) = Array(256) { index ->
+        /**
+         * One coverage profile per glyph, [lengths] bytes each, delta coded from 0 and wrapping
+         * in a byte exactly as the client's `(offset + readByte()).toByte()` does.
+         */
+        private fun profiles(buffer: Reader, lengths: IntArray) = Array(GLYPHS) { index ->
             var total = 0
-            ByteArray(offsets[index]) {
-                total += buffer.readByte()
-                total.toByte()
+            IntArray(lengths[index]) {
+                total = (total + buffer.readByte()).toByte().toInt()
+                total
             }
         }
+
+        /** The cp1252 code points a font has a glyph for. */
+        const val GLYPHS = 256
+
+        /** The space, whose profile the client reads the line spacing out of. */
+        private const val SPACE = 32
     }
 }

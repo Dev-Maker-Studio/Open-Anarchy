@@ -7,6 +7,20 @@ import world.gregs.voidps.cache.Index.SPRITES
 import world.gregs.voidps.cache.definition.data.IndexedSprite
 import world.gregs.voidps.cache.definition.data.SpriteDefinition
 
+/**
+ * A sprite group, read the way the client reads it and losslessly.
+ *
+ * The client's `SpriteType.decode` is the model for everything here: the file is read back to
+ * front - the frame count from the last two bytes, then the trailer, then the palette, then the
+ * pixels from offset 0 - and the derived fields ([IndexedSprite.deltaWidth], the normalised
+ * [IndexedSprite.palette]) are exactly what it computes.
+ *
+ * Three things the client keeps nothing of are recorded beside them, because
+ * [world.gregs.voidps.cache.definition.encoder.SpriteEncoder] cannot rebuild the file without
+ * them: the per frame format byte ([IndexedSprite.flags]), the palette as the file spells it
+ * ([SpriteDefinition.rawPalette]) and whether the file wrote an explicit entry 0
+ * ([SpriteDefinition.paletteZeroEntry]). See `docs/cache-source.md`, "sprites".
+ */
 class SpriteDecoder : DefinitionDecoder<SpriteDefinition>(SPRITES) {
 
     override fun size(cache: Cache): Int {
@@ -24,10 +38,13 @@ class SpriteDecoder : DefinitionDecoder<SpriteDefinition>(SPRITES) {
     override fun SpriteDefinition.read(opcode: Int, buffer: Reader) {
         buffer.position(buffer.array().size - 2)
         val size: Int = buffer.readShort()
-        buffer.position(buffer.array().size - 7 - size * 8)
+        val trailer = buffer.array().size - 7 - size * 8
+        buffer.position(trailer)
 
         val offsetX: Int = buffer.readShort()
         val offsetY: Int = buffer.readShort()
+        width = offsetX
+        height = offsetY
 
         val paletteSize: Int = buffer.readUnsignedByte() + 1
 
@@ -51,14 +68,20 @@ class SpriteDecoder : DefinitionDecoder<SpriteDefinition>(SPRITES) {
             sprite.deltaHeight = offsetY - sprite.height - sprite.offsetY
         }
 
-        buffer.position(buffer.array().size - 7 - size * 8 - (paletteSize - 1) * 3)
+        val paletteStart = trailer - (paletteSize - 1) * 3
+        buffer.position(paletteStart)
         val palette = IntArray(paletteSize)
+        val raw = IntArray(paletteSize)
         for (index in 1 until paletteSize) {
-            palette[index] = buffer.readUnsignedMedium()
+            raw[index] = buffer.readUnsignedMedium()
+            palette[index] = raw[index]
+            // The client's transparent colour is 0, so a palette entry that really is black is
+            // nudged to 1 - which is why the raw entry has to be kept beside the normalised one.
             if (palette[index] == 0) {
                 palette[index] = 1
             }
         }
+        rawPalette = raw
         for (index in 0 until size) {
             sprites[index].palette = palette
         }
@@ -71,6 +94,7 @@ class SpriteDecoder : DefinitionDecoder<SpriteDefinition>(SPRITES) {
             sprite.raster = ByteArray(area)
 
             val setting: Int = buffer.readUnsignedByte()
+            sprite.flags = setting
             if (setting and 0x2 == 0) {
                 if (setting and 0x1 == 0) {
                     for (pixel in 0 until area) {
@@ -113,6 +137,15 @@ class SpriteDecoder : DefinitionDecoder<SpriteDefinition>(SPRITES) {
                     sprite.alpha = alpha
                 }
             }
+        }
+
+        // Everything between the pixels and the palette is padding the client seeks over. The
+        // only shape of it in the 727 cache is an explicit `000000` entry 0, three bytes wide.
+        val padding = paletteStart - buffer.position()
+        paletteZeroEntry = when (padding) {
+            0 -> false
+            3 -> true
+            else -> error("Sprite $id has $padding bytes between its pixels and its palette.")
         }
     }
 }
