@@ -16,7 +16,7 @@ All of these run through the tools CLI:
 | Sub-command | What it does |
 |---|---|
 | `decompile <id>` | Prints one script as TypeScript, then its dead code |
-| `decompile-all [dir]` | Writes every script, the declarations and `dead-code.md`; the folder defaults to `cs2-dump` |
+| `decompile-all [dir]` | Writes every script, the declarations and `detected-cs2-dead-code.md`; the folder defaults to `cs2-dump` |
 | `roundtrip [n]` | The stability check (see *Fidelity*) over every script |
 | `fixpoint <id> [dir]` | The same checks for one script, writing both sources out to diff |
 | `types [OP:slot]` | What the corpus says constants mean; with a slot, why it says so |
@@ -192,7 +192,7 @@ what keeps `if (int20 > 100000)` from claiming that `100000` is an obj.
 
 ## Dead code
 
-`decompile-all` writes `dead-code.md`: everything in the bytecode that cannot affect what a
+`decompile-all` writes `detected-cs2-dead-code.md`: everything in the bytecode that cannot affect what a
 script does, grouped by script, with the code itself.
 
 | Kind | What it means |
