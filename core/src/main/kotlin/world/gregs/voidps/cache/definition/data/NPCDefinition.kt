@@ -70,8 +70,27 @@ data class NPCDefinition(
     var anInt2862: Int = 0,
     override var params: Map<Int, Any>? = null,
     override var stringId: String = "",
-    override var extras: Map<String, Any>? = null
-) : Definition, Transforms, Recolourable, ColourPalette, Parameterized, Extra {
+    override var extras: Map<String, Any>? = null,
+    /**
+     * Opcode 128, the movement type index this npc walks with, which the client of this revision reads and
+     * discards. Named unused rather than `movementType` because the world module already derives a movement
+     * type of its own from [slowWalk].
+     */
+    var unusedMovementType: Int = -1,
+    /**
+     * The option records as the file held them: indices 0 to 4 are opcodes 30 to 34, indices 5 to 9 are the
+     * members only opcodes 150 to 154. Null when the file had no option record. [options] is the merged view
+     * the client builds from them, which cannot say which opcode an option came from.
+     */
+    var rawOptions: Array<String?>? = null,
+    /**
+     * The opcode 249 parameter records in file order, kept only when the file listed an id more than once -
+     * [params] keeps the last value of each. Null when [params] holds every record.
+     */
+    var paramRecords: List<KeyedValue>? = null,
+    override var opcodeOrder: IntArray? = null,
+    override var shadowedRecords: List<ShadowedRecord>? = null
+) : Definition, Transforms, Recolourable, ColourPalette, Parameterized, Extra, OpcodeOrdered {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -174,7 +193,18 @@ data class NPCDefinition(
         if (anInt2862 != other.anInt2862) return false
         if (params != other.params) return false
         if (stringId != other.stringId) return false
-        return extras == other.extras
+        if (extras != other.extras) return false
+        if (unusedMovementType != other.unusedMovementType) return false
+        if (rawOptions != null) {
+            if (other.rawOptions == null) return false
+            if (!rawOptions.contentEquals(other.rawOptions)) return false
+        } else if (other.rawOptions != null) return false
+        if (opcodeOrder != null) {
+            if (other.opcodeOrder == null) return false
+            if (!opcodeOrder.contentEquals(other.opcodeOrder)) return false
+        } else if (other.opcodeOrder != null) return false
+        if (shadowedRecords != other.shadowedRecords) return false
+        return paramRecords == other.paramRecords
     }
 
     override fun hashCode(): Int {
@@ -245,6 +275,11 @@ data class NPCDefinition(
         result = 31 * result + (params?.hashCode() ?: 0)
         result = 31 * result + stringId.hashCode()
         result = 31 * result + (extras?.hashCode() ?: 0)
+        result = 31 * result + unusedMovementType
+        result = 31 * result + (rawOptions?.contentHashCode() ?: 0)
+        result = 31 * result + (opcodeOrder?.contentHashCode() ?: 0)
+        result = 31 * result + (shadowedRecords?.hashCode() ?: 0)
+        result = 31 * result + (paramRecords?.hashCode() ?: 0)
         return result
     }
 
