@@ -75,6 +75,17 @@ interface Reader {
     fun readString(): String
 
     /**
+     * Reads a `gjstr2`: a 0 version byte followed by a null terminated cp1252 string.
+     *
+     * Exact inverse of [world.gregs.voidps.buffer.write.Writer.writePrefixedString].
+     */
+    fun readPrefixedString(): String {
+        val version = readUnsignedByte()
+        require(version == 0) { "Bad version number in gjstr2: $version" }
+        return readString()
+    }
+
+    /**
      * Reads all bytes into [ByteArray]
      * @param value The array to be written to.
      */

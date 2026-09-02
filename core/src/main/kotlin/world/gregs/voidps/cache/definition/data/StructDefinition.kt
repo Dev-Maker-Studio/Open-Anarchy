@@ -1,12 +1,32 @@
 package world.gregs.voidps.cache.definition.data
 
 import world.gregs.voidps.cache.Definition
+import world.gregs.voidps.cache.definition.OpcodeOrdered
+import world.gregs.voidps.cache.definition.ParamRecord
 import world.gregs.voidps.cache.definition.Parameterized
 
 data class StructDefinition(
     override var id: Int = -1,
     override var params: Map<Int, Any>? = null,
-) : Definition, Parameterized {
+) : Definition, Parameterized, OpcodeOrdered {
+
+    /**
+     * The params in file order, kept only when [params] cannot reproduce the file: 37 shipped
+     * structs carry the same param key twice and the map keeps only the last write. Null - and
+     * therefore absent from the source tree - for every other struct.
+     */
+    var paramRecords: List<ParamRecord>? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
+
 
     /** Gets an int value from params by key, returning [default] if not found. */
     @JvmOverloads

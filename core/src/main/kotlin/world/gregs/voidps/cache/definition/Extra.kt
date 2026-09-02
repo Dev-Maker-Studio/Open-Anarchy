@@ -1,6 +1,6 @@
 package world.gregs.voidps.cache.definition
 
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap
 import world.gregs.voidps.buffer.read.Reader
 
 @Suppress("UNCHECKED_CAST")
@@ -21,7 +21,9 @@ interface Extra {
         if (length == 0) {
             return
         }
-        val extras = Object2ObjectOpenHashMap<String, Any>()
+        // Linked: an encoder has to write the params back in the order the file had them,
+        // and a plain open hash map iterates in hash order.
+        val extras = Object2ObjectLinkedOpenHashMap<String, Any>()
         for (i in 0 until length) {
             val string = buffer.readUnsignedBoolean()
             val id = buffer.readUnsignedMedium()

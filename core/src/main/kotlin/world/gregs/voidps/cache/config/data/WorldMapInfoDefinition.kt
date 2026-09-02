@@ -2,6 +2,7 @@ package world.gregs.voidps.cache.config.data
 
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.Extra
+import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 data class WorldMapInfoDefinition(
     override var id: Int = -1,
@@ -13,7 +14,15 @@ data class WorldMapInfoDefinition(
     var fontSize: Int = 0,
     var aBoolean1047: Boolean = true,
     var aBoolean1079: Boolean = false,
+    /**
+     * The whole opcode 7 flag byte. Only bits 0 ([aBoolean1047]) and 1 ([aBoolean1079]) have a
+     * meaning to the client; the rest are kept so the file can be written back unchanged. -1 when
+     * the file had no opcode 7.
+     */
+    var displayFlags: Int = -1,
     var aBoolean1063: Boolean = true,
+    /** The raw opcode 8 byte; [aBoolean1063] is `== 1` of it. -1 when the file had no opcode 8. */
+    var randomisedMinimapPosition: Int = -1,
     var varbit: Int = -1,
     var varp: Int = -1,
     var anInt1087: Int = 0,
@@ -44,7 +53,18 @@ data class WorldMapInfoDefinition(
     var anInt1060: Int = -2147483648,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null
-) : Definition, Extra {
+) : Definition, Extra, OpcodeOrdered {
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var opcodeOrder: IntArray? = null
+
+    /**
+     * @see OpcodeOrdered
+     */
+    override var shadowedPayloads: Array<ByteArray?>? = null
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
