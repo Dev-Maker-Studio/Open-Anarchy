@@ -8,6 +8,7 @@ import org.darkan.cs2.Cs2Analyzer
 import org.darkan.cs2.Cs2Cache
 import org.darkan.cs2.Cs2Cfg
 import org.darkan.cs2.Cs2Codec
+import org.darkan.cs2.Cs2Corpus
 import org.darkan.cs2.Cs2DeadCode
 import org.darkan.cs2.Cs2DeadCodeKind
 import org.darkan.cs2.Cs2Declarations
@@ -27,31 +28,6 @@ import org.darkan.cs2.compile.Cs2CodeGen
 import org.darkan.cs2.compile.Cs2Parser
 import org.darkan.cs2.cs2FixPoint
 import org.darkan.cs2.cs2RoundTrip
-import org.darkan.cs2.ir.AndAll
-import org.darkan.cs2.ir.ArrayAssign
-import org.darkan.cs2.ir.ArrayDefine
-import org.darkan.cs2.ir.ArrayRef
-import org.darkan.cs2.ir.Binary
-import org.darkan.cs2.ir.Callback
-import org.darkan.cs2.ir.Compare
-import org.darkan.cs2.ir.Condition
-import org.darkan.cs2.ir.Cs2Function
-import org.darkan.cs2.ir.Expr
-import org.darkan.cs2.ir.ExprStmt
-import org.darkan.cs2.ir.If
-import org.darkan.cs2.ir.Join
-import org.darkan.cs2.ir.LocalAssign
-import org.darkan.cs2.ir.MultiAssign
-import org.darkan.cs2.ir.OpCall
-import org.darkan.cs2.ir.OrAny
-import org.darkan.cs2.ir.ParallelAssign
-import org.darkan.cs2.ir.Return
-import org.darkan.cs2.ir.ScriptCall
-import org.darkan.cs2.ir.Stmt
-import org.darkan.cs2.ir.Switch
-import org.darkan.cs2.ir.VarAssign
-import org.darkan.cs2.ir.VarRef
-import org.darkan.cs2.ir.While
 import org.darkan.cs2.verifyCodecRoundTrip
 import org.darkan.cs2.vm.Cs2Event
 import org.darkan.cs2.vm.Cs2Hook
@@ -156,7 +132,7 @@ private fun cs2Decompile(cache: Cache, scriptId: Int?) {
     println(Cs2Emitter(function).emit())
     if (structurer.deadCode.isEmpty()) return
     println("// dead code (${summary(structurer.deadCode)}):")
-    print(deadCodeNotes(function, structurer.deadCode, "// "))
+    print(Cs2Corpus.notes(function, structurer.deadCode, "// "))
 }
 
 /** One line per finding kind, as `2 unreachable, 1 dead store`. */
@@ -165,26 +141,6 @@ private fun summary(findings: List<Cs2DeadCode>): String =
         val count = findings.count { it.kind == kind }
         if (count == 0) null else "$count ${kind.label}"
     }.joinToString(", ")
-
-/** The findings themselves, each with the code it is about, one block per finding. */
-private fun deadCodeNotes(
-    function: Cs2Function,
-    findings: List<Cs2DeadCode>,
-    prefix: String,
-): String {
-    val emitter = Cs2Emitter(function)
-    val out = StringBuilder()
-    for (finding in findings) {
-        val where = finding.instructions?.let { " (instructions ${it.first}..${it.last})" } ?: ""
-        val note = finding.note?.let { ": $it" } ?: ""
-        out.append(prefix).append(finding.kind.label).append(where).append(note).append('\n')
-        finding.condition?.let { out.append(prefix).append("  ").append(emitter.renderCondition(it)).append('\n') }
-        if (finding.statements.isEmpty()) continue
-        emitter.renderStatements(finding.statements).trimEnd().lines()
-            .forEach { out.append(prefix).append("  ").append(it).append('\n') }
-    }
-    return out.toString()
-}
 
 /** Writes the ambient TypeScript declarations next to the decompiled scripts. */
 private fun cs2Declarations(directory: String?) {
@@ -305,65 +261,20 @@ private fun cs2CheckNames(directory: String?) {
     println("or `cs2 apply-names ${folder.path}` to make the folder match the catalogs")
 }
 
+/**
+ * Decompiles the whole corpus into a folder.
+ *
+ * The folder this writes is the cache source tree's `clientscripts/` directory
+ * (`docs/cache-source.md`), so the layout belongs to [Cs2Corpus] and not to this
+ * command: two implementations of it would show up as a tree that churns
+ * depending on which tool touched it last.
+ */
 private fun cs2DecompileAll(cache: Cache, directory: String?) {
     println("Decompiling every clientscript...")
-    val analyzer = Cs2Analyzer(cache)
-    analyzer.analyse()
-
-    val types = analyzer.types { println("  $it") }
     // With no folder named, this writes the project folder every other command
     // already defaults to, which is where an editor keeps the sources.
-    val target = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER).apply { mkdirs() }
-    writeDeclarations(target, types.argumentKinds)
-    val variables = LinkedHashSet<VarRef>()
-    val failures = ArrayList<Pair<Int, String>>()
-    var written = 0
-    var gotos = 0
-    val started = System.currentTimeMillis()
-    val counts = HashMap<Cs2DeadCodeKind, Int>()
-    val report = StringBuilder(
-        "# Dead code in the 727 clientscripts\n\n" +
-            "Everything here is in the bytecode but cannot affect what the script does.\n" +
-            "A dead store is kept in the decompiled source; unreachable code is dropped from it.\n" +
-            "Unreachable code that only jumps somewhere is the compiler's own layout and is not listed,\n" +
-            "and neither is the default `return` every script ends with.\n",
-    )
-    var scriptsWithDeadCode = 0
-
-    for (id in analyzer.ids) {
-        val script = analyzer.script(id) ?: continue
-        try {
-            val structurer = Cs2Structurer(script, id, analyzer)
-            val function = types.apply(structurer.structure())
-            val source = Cs2Emitter(function).emit()
-            if (structurer.deadCode.isNotEmpty()) {
-                scriptsWithDeadCode++
-                structurer.deadCode.forEach { counts[it.kind] = (counts[it.kind] ?: 0) + 1 }
-                report.append("\n## ").append(Cs2Layout.headerOf(id)).append(" (script ").append(id).append(")\n")
-                for (finding in structurer.deadCode) {
-                    val where = finding.instructions?.let { " (instructions ${it.first}..${it.last})" } ?: ""
-                    report.append("\n- **").append(finding.kind.label).append("**").append(where)
-                    finding.note?.let { report.append(" - ").append(it) }
-                    report.append('\n')
-                    val body = deadCodeNotes(function, listOf(finding), "").lines().drop(1)
-                        .joinToString("\n").trimEnd()
-                    if (body.isNotBlank()) report.append("\n```ts\n").append(body).append("\n```\n")
-                }
-            }
-            collectVariables(function.body, variables)
-            if (source.contains("goto(")) gotos++
-            val file = Cs2Layout.fileFor(target, id)
-            file.parentFile?.mkdirs()
-            file.writeText(source)
-            written++
-        } catch (e: Exception) {
-            failures.add(id to (e.message ?: e::class.simpleName ?: "unknown"))
-        }
-    }
-
-    target.resolve(Cs2Declarations.VARS_FILE)
-        .writeText(Cs2Declarations.variables(variables) { types.varKind(it.space, it.id) })
-    target.resolve("dead-code.md").writeText(report.toString())
+    val target = File(directory ?: Cs2SourceProject.DEFAULT_FOLDER)
+    val corpus = Cs2Corpus(cache).write(target) { println("  $it") }
 
     // A folder written by an older build holds the same scripts at the flat
     // `clientscript-<id>.ts` paths. Left in place they would declare every
@@ -377,22 +288,22 @@ private fun cs2DecompileAll(cache: Cache, directory: String?) {
 
     println()
     Cs2Names.warnings.forEach { println("note: $it") }
-    println("decompiled:      $written")
-    println("with dead code:  $scriptsWithDeadCode scripts, ${counts.values.sum()} findings")
+    println("decompiled:      ${corpus.decompiled}")
+    println("with dead code:  ${corpus.scriptsWithDeadCode} scripts, ${corpus.deadCodeFindings} findings")
     Cs2DeadCodeKind.entries.forEach { kind ->
-        println("  %-20s %d".format(kind.label, counts[kind] ?: 0))
+        println("  %-20s %d".format(kind.label, corpus.deadCodeCounts[kind] ?: 0))
     }
-    println("variables:       ${variables.size}")
-    println("failed:          ${failures.size}")
-    println("with raw gotos:  $gotos")
-    println("elapsed:         ${System.currentTimeMillis() - started}ms")
+    println("variables:       ${corpus.variables.size}")
+    println("failed:          ${corpus.failures.size}")
+    println("with raw gotos:  ${corpus.gotos}")
+    println("elapsed:         ${corpus.millis}ms")
     println("written to:      ${target.absolutePath}")
 
-    if (failures.isNotEmpty()) {
+    if (corpus.failures.isNotEmpty()) {
         println()
         println("First failures:")
-        failures.take(10).forEach { (id, message) -> println("  script $id: $message") }
-        val grouped = failures.groupingBy { it.second.take(60) }.eachCount()
+        corpus.failures.take(10).forEach { (id, message) -> println("  script $id: $message") }
+        val grouped = corpus.failures.groupingBy { it.second.take(60) }.eachCount()
             .entries.sortedByDescending { it.value }.take(10)
         println()
         println("Grouped:")
@@ -1134,59 +1045,6 @@ private fun cs2InterfaceSweep(cache: Cache) {
         println()
         println("First few, with the interface they came from:")
         scriptErrors.take(8).forEach { (id, message) -> println("  interface $id: $message") }
-    }
-}
-
-/** Every variable a statement tree reads or writes. */
-private fun collectVariables(statements: List<Stmt>, into: MutableSet<VarRef>) {
-    fun walkExpr(value: Expr) {
-        when (value) {
-            is VarRef -> into.add(value)
-            is Binary -> { walkExpr(value.left); walkExpr(value.right) }
-            is Join -> value.parts.forEach { walkExpr(it) }
-            is ArrayRef -> walkExpr(value.index)
-            is OpCall -> value.args.forEach { walkExpr(it) }
-            is ScriptCall -> value.args.forEach { walkExpr(it) }
-            is Callback -> { value.args.forEach { walkExpr(it) }; value.triggers.forEach { walkExpr(it) } }
-            else -> Unit
-        }
-    }
-    fun walkCondition(condition: Condition) {
-        when (condition) {
-            is Compare -> { walkExpr(condition.left); walkExpr(condition.right) }
-            is AndAll -> condition.terms.forEach { walkCondition(it) }
-            is OrAny -> condition.terms.forEach { walkCondition(it) }
-        }
-    }
-    for (statement in statements) {
-        when (statement) {
-            is ExprStmt -> walkExpr(statement.call)
-            is LocalAssign -> walkExpr(statement.value)
-            is VarAssign -> { into.add(statement.target); walkExpr(statement.value) }
-            is ParallelAssign -> {
-                statement.targets.forEach { walkExpr(it) }
-                statement.values.forEach { walkExpr(it) }
-            }
-            is ArrayAssign -> { walkExpr(statement.index); walkExpr(statement.value) }
-            is ArrayDefine -> walkExpr(statement.size)
-            is MultiAssign -> walkExpr(statement.call)
-            is Return -> statement.values.forEach { walkExpr(it) }
-            is If -> {
-                walkCondition(statement.condition)
-                collectVariables(statement.then, into)
-                collectVariables(statement.otherwise, into)
-            }
-            is While -> {
-                statement.condition?.let { walkCondition(it) }
-                collectVariables(statement.body, into)
-            }
-            is Switch -> {
-                walkExpr(statement.subject)
-                statement.cases.forEach { collectVariables(it.body, into) }
-                collectVariables(statement.default, into)
-            }
-            else -> Unit
-        }
     }
 }
 
