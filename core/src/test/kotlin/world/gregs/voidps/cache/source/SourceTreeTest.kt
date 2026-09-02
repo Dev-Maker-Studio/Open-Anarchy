@@ -14,6 +14,7 @@ import world.gregs.voidps.cache.source.codec.SourceCodec
 import world.gregs.voidps.cache.source.codec.SourceCodecs
 import world.gregs.voidps.cache.source.codec.SourceFile
 import world.gregs.voidps.cache.source.codec.UnpackedArchive
+import world.gregs.voidps.cache.source.codec.VerbatimGroupCodec
 import world.gregs.voidps.cache.store.ArchiveEntry
 import world.gregs.voidps.cache.store.ArchiveGroup
 import world.gregs.voidps.cache.store.Compression
@@ -50,11 +51,14 @@ class SourceTreeTest {
     @BeforeTest
     fun setup() {
         SourceCodecs.reset()
-        // Index 5 is the framework's fixture for names, keys and an archive nothing can open, and
-        // its archives here are three bytes of nothing rather than map squares. The map codec would
-        // (rightly) refuse to decode them, so this test keeps the raw layout it was written against;
-        // MapCodecParityTest is where the map codec meets real map data.
+        // The fixture's archives are made up bytes: a chunk layout, a sparse file id list, names,
+        // keys and an archive nothing can open, none of it a real 727 format. Every index now has a
+        // typed codec, and those would (rightly) refuse to decode filler, so each index the fixture
+        // fabricates is given back the raw codec this test was written against. The typed codecs
+        // meet real data elsewhere - MapCodecParityTest, ModelCodecParityTest, DefinitionJsonCodecTest.
+        SourceCodecs.register(Index.ANIMATION_FRAMES, VerbatimGroupCodec)
         SourceCodecs.register(Index.MAPS, RawArchiveCodec)
+        SourceCodecs.register(Index.WORLD_MAP, RawFilesCodec.NESTED)
         val root = Files.createTempDirectory("cache-source").toFile()
         packed = File(root, "packed")
         tree = File(root, "tree")
