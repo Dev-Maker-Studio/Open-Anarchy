@@ -34,7 +34,7 @@ class GamevalTest {
             """{"revision":727,"type":"component","entries":{"548:1":"toplevel:root","548:2":"component_548_2"}}""",
         )
         File(dir, "npc.json").writeText("{ this is not json")
-        return GamevalCatalog(dir, bundleDir = null, retryMillis = 0L)
+        return GamevalCatalog(dir, retryMillis = 0L)
     }
 
     @Test

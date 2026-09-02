@@ -10,8 +10,8 @@ from it - incrementally, on startup - and serves the result over JS5.
 The gameval catalogs (`gamevals/<type>.json`, see `docs/gameval.md`) are cache assets too, so
 they live in the source tree and nowhere else.
 
-This document is the design and the contract. `docs/cache-source-build.md` (deploy section
-below) covers build and deployment changes.
+This document is the design and the contract; `docs/deploy.md` ("The cache source tree") covers
+what changes on the servers and in CI.
 
 ## Goals and guarantees
 
@@ -223,7 +223,7 @@ packed cache directly; it replaces the map editor's `CacheArchiveWriter`. Both p
 | `CACHE_SOURCE_PATH` | unset | a source tree. When set, the server builds it into `CACHE_BUILD_PATH` on startup and serves that |
 | `CACHE_BUILD_PATH` | `./data/cache` | the packed build output (gitignored) |
 | `CACHE_PATH` | `../cache/` | a prepacked cache, used when `CACHE_SOURCE_PATH` is unset |
-| `GAMEVAL_PATH` | `<CACHE_SOURCE_PATH>/gamevals` when set, else `./cache/gamevals` | the catalogs |
+| `GAMEVAL_PATH` | `<CACHE_SOURCE_PATH>/gamevals` when set, else `./cache-source/gamevals` | the catalogs (the only copy) |
 
 The lobby and the worlds use the same switch; a world that needs its own cache in future points
 `CACHE_SOURCE_PATH` at its own tree.

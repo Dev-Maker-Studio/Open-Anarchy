@@ -9,9 +9,9 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * One set of `gamevals/<type>.json` catalogs: id -> Jagex dev-name for every revision-727 asset type.
  *
- * Catalogs are read from [folder] when the file exists there, else from the classpath under
- * [bundleDir] (`/gamevals/<type>.json`, packaged from the repo's `gamevals/` by `core`'s
- * `processResources`). Each is parsed lazily on first use and cached per type, thread-safely.
+ * Catalogs are read from [folder] - the `gamevals/` directory of the cache source tree
+ * (`docs/cache-source.md`), which is the only copy there is; nothing is bundled into a jar. Each
+ * is parsed lazily on first use and cached per type, thread-safely.
  *
  * Every id the 727 cache has is present in a catalog, so a *missing* id means the type file is
  * absent. Ids with no proven name carry a placeholder (`<type>_<id>`, `cs2_<id>` for
@@ -27,14 +27,13 @@ import java.util.concurrent.ConcurrentHashMap
  */
 open class GamevalCatalog(
     private val folder: File?,
-    private val bundleDir: String? = BUNDLE_DIR,
     private val retryMillis: Long = DEFAULT_RETRY_MILLIS,
 ) {
     @Serializable
     private data class CatalogFile(val entries: Map<String, String> = emptyMap())
 
     /** Where a type's catalog was read from. */
-    enum class Source { FOLDER, BUNDLED, MISSING }
+    enum class Source { FOLDER, MISSING }
 
     private class Loaded(
         /** Raw `entries` exactly as stored: `"<iface>:<comp>"` keys for `component`, stringified ints otherwise. */
@@ -100,12 +99,8 @@ open class GamevalCatalog(
             val parsed = parse(type, file.absolutePath) { file.readText() }
             if (parsed != null) return Loaded(parsed, Source.FOLDER, now).also { warned.remove(type) }
         }
-        val bundled = bundleDir?.let { dir -> javaClass.getResourceAsStream("$dir/$type.json") }
-        if (bundled != null) {
-            val parsed = parse(type, "classpath $bundleDir/$type.json") { bundled.use { it.readBytes().decodeToString() } }
-            if (parsed != null) return Loaded(parsed, Source.BUNDLED, now).also { warned.remove(type) }
-        } else if (file == null || !file.isFile) {
-            warnOnce(type, "no $type.json catalog in ${folder?.absolutePath ?: "(no folder)"} or on the classpath; $type names will not resolve")
+        if (file == null || !file.isFile) {
+            warnOnce(type, "no $type.json catalog in ${folder?.absolutePath ?: "(no folder)"} (GAMEVAL_PATH, normally <cache source tree>/gamevals); $type names will not resolve")
         }
         return Loaded(emptyMap(), Source.MISSING, now)
     }
@@ -221,9 +216,6 @@ open class GamevalCatalog(
     companion object {
         const val COMPONENT = "component"
         const val CLIENTSCRIPT = "clientscript"
-
-        /** Classpath folder holding the packaged catalogs. */
-        const val BUNDLE_DIR = "/gamevals"
 
         /** How long a missing or unreadable catalog stays "empty" before the file is looked at again. */
         const val DEFAULT_RETRY_MILLIS = 30_000L
