@@ -1,12 +1,9 @@
 package org.darkan.tools.cache.map.environment
 
-import org.darkan.tools.cache.CacheArchiveWriter
-import org.darkan.tools.cache.ReferenceTable
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
-
-/** Index 255 holds one reference table per index, keyed by the index id. */
-private const val REFERENCE_TABLE_INDEX = 255
+import world.gregs.voidps.cache.secure.CRC
+import world.gregs.voidps.cache.store.Container
 
 /**
  * `tools env <regionX> <regionY>` - dumps the decoded environment block of a region:
@@ -150,6 +147,10 @@ private fun runEnvironmentScan(cache: Cache) {
  *
  * Fields: `fogColour` / `sunColour` (hex or decimal), `fogDepth`, `sunAmbient`, `sunLight`,
  * `sunBacklight`, `sunPos=x,y,z`, `skybox`, `skyboxRotation`.
+ *
+ * The write goes through the shared cache library, which always brings the reference table and
+ * the signed version table along with the archive; there is no way to write one without the
+ * others, and nothing here wants one.
  */
 private fun runEnvironmentWrite(cache: Cache, args: List<String>) {
     val regionX = args.getOrNull(0)?.toIntOrNull()
@@ -159,7 +160,6 @@ private fun runEnvironmentWrite(cache: Cache, args: List<String>) {
         return
     }
     val apply = args.any { it == "--apply" }
-    val skipTable = args.any { it == "--no-reference-table" }
 
     val current = MapEnvironmentLoader.load(cache, regionX, regionY)?.environment(0, 0) ?: MapEnvironment.DEFAULT
     var edit = EnvironmentEdit(
@@ -222,7 +222,7 @@ private fun runEnvironmentWrite(cache: Cache, args: List<String>) {
         println("\nDry run - nothing written. Re-run with --apply to commit.")
         return
     }
-    val result = MapEnvironmentWriter.apply(plan, patchReferenceTable = !skipTable)
+    val result = MapEnvironmentWriter.apply(plan)
     println("\n--- WRITE LOG ---")
     result.log.forEach { println("  $it") }
     println("\nWritten.")
@@ -268,9 +268,7 @@ private fun runEnvironmentRoundTrip(cache: Cache) {
     // the same walk checks that every stored CRC still matches the bytes on disk. Untouched
     // archives prove the convention (container minus the trailing version); a rewritten one
     // proves the write path kept the table honest.
-    val table = runCatching {
-        cache.sector(REFERENCE_TABLE_INDEX, Index.MAPS)?.let { ReferenceTable.parse(ReferenceTable.decompress(it)) }
-    }.getOrNull()
+    val table = cache.referenceTable(Index.MAPS)
 
     for (regionX in 0 until 256) {
         for (regionY in 0 until 256) {
@@ -281,10 +279,12 @@ private fun runEnvironmentRoundTrip(cache: Cache) {
 
             if (table != null) {
                 val container = cache.sector(Index.MAPS, archiveId)
-                val stored = table.crc(archiveId)
+                val stored = table.archive(archiveId)?.crc
                 if (container != null && stored != null) {
-                    val trailing = CacheArchiveWriter.describeContainer(container).trailing.size
-                    if (CacheArchiveWriter.containerCrc(container, trailing) == stored) {
+                    // The CRC covers the container without its two byte version trailer, which
+                    // is the range JS5 sends and the client hashes.
+                    val trailing = if (Container.decode(container).version == null) 0 else 2
+                    if (CRC.calculate(container, 0, container.size - trailing) == stored) {
                         crcMatched++
                     } else {
                         crcMismatched++
