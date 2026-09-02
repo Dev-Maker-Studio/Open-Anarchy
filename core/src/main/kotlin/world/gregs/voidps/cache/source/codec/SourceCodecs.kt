@@ -90,6 +90,8 @@ object SourceCodecs {
         }
         // The definition indices, as editable JSON.
         DefinitionCodecs.register()
+        // Models, and the particle and billboard configs their footers name.
+        ModelCodecs.register()
     }
 
     /** A built in codec: a provider may still replace it, an explicit [register] always does. */
