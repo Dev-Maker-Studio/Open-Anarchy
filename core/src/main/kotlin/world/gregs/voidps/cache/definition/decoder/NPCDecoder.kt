@@ -5,10 +5,16 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.NPCS
 import world.gregs.voidps.cache.definition.data.NPCDefinition
+import world.gregs.voidps.cache.definition.encoder.NPCEncoder
 
 class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>(NPCS) {
 
+    private val encoder = NPCEncoder()
+
     override fun create(size: Int) = Array(size) { NPCDefinition(it) }
+
+    override fun readLoop(definition: NPCDefinition, buffer: Reader) =
+        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
 
     // Index 18 packs 128 npcs per archive (id ushr 7 below); the base class assumes 256.
     override fun size(cache: Cache): Int {
@@ -30,7 +36,11 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
             }
             2 -> name = buffer.readString()
             12 -> size = buffer.readUnsignedByte()
-            in 30..34 -> options[opcode - 30] = buffer.readString()
+            in 30..34 -> {
+                val option = buffer.readString()
+                options[opcode - 30] = option
+                rawOption(opcode - 30, option)
+            }
             40 -> readColours(buffer)
             41 -> readTextures(buffer)
             42 -> readColourPalette(buffer)
@@ -91,7 +101,7 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
             123 -> height = buffer.readUnsignedShort()
             125 -> respawnDirection = buffer.readByte().toByte()
             127 -> renderEmote = buffer.readUnsignedShort()
-            128 -> buffer.readUnsignedByte()
+            128 -> unusedMovementType = buffer.readUnsignedByte()
             134 -> {
                 // Order per client: walk, crawl(teleport), idle, run
                 walkSound = buffer.readUnsignedShort()
@@ -129,7 +139,9 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
             142 -> mapFunction = buffer.readUnsignedShort()
             143 -> invisiblePriority = true
             in 150..154 -> {
-                options[opcode - 150] = buffer.readString()
+                val option = buffer.readString()
+                options[opcode - 150] = option
+                rawOption(5 + opcode - 150, option)
                 if (!members) {
                     options[opcode - 150] = null
                 }
@@ -156,9 +168,19 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
             168 -> anInt2862 = buffer.readUnsignedByte()
             // Opcode 169: hasTint = false (boolean flag, no data bytes)
             169 -> { /* hasTint = false */ }
-            249 -> readParameters(buffer)
+            249 -> {
+                val records = readParameterRecords(buffer)
+                if (records.size != (params?.size ?: 0)) {
+                    paramRecords = records
+                }
+            }
             else -> error("Unhandled NPC definition opcode: $opcode for def $id")
         }
     }
 
+    /** Keeps an option record as the file held it; [NPCDefinition.options] merges 30 to 34 with 150 to 154. */
+    private fun NPCDefinition.rawOption(index: Int, option: String) {
+        val raw = rawOptions ?: arrayOfNulls<String>(10).also { rawOptions = it }
+        raw[index] = option
+    }
 }

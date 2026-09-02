@@ -2,6 +2,9 @@ package world.gregs.voidps.cache.definition.data
 
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.Extra
+import world.gregs.voidps.cache.definition.KeyedValue
+import world.gregs.voidps.cache.definition.OpcodeOrdered
+import world.gregs.voidps.cache.definition.ShadowedRecord
 
 data class EnumDefinition(
     override var id: Int = -1,
@@ -12,8 +15,20 @@ data class EnumDefinition(
     var length: Int = 0,
     var map: Map<Int, Any>? = null,
     override var stringId: String = "",
-    override var extras: Map<String, Any>? = null
-) : Definition, Extra {
+    override var extras: Map<String, Any>? = null,
+    /**
+     * Capacity of the sparse value array of the opcode 7 and 8 forms, which the client sizes from it, or -1
+     * for the opcode 5 and 6 forms that carry no array. Always at least [length].
+     */
+    var arraySize: Int = -1,
+    /**
+     * The entry records in file order, kept only when the file listed a key more than once - [map] keeps the
+     * last value of each. Null when [map] holds every record.
+     */
+    var entries: List<KeyedValue>? = null,
+    override var opcodeOrder: IntArray? = null,
+    override var shadowedRecords: List<ShadowedRecord>? = null
+) : Definition, Extra, OpcodeOrdered {
     fun getKey(value: Any) = map?.filterValues { it == value }?.keys?.lastOrNull() ?: -1
 
     fun getInt(id: Int) = map?.get(id) as? Int ?: defaultInt

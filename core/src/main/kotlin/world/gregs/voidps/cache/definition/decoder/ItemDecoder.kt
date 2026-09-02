@@ -4,10 +4,16 @@ import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.ITEMS
 import world.gregs.voidps.cache.definition.data.ItemDefinition
+import world.gregs.voidps.cache.definition.encoder.ItemEncoder
 
 class ItemDecoder : DefinitionDecoder<ItemDefinition>(ITEMS) {
 
+    private val encoder = ItemEncoder()
+
     override fun create(size: Int) = Array(size) { ItemDefinition(it) }
+
+    override fun readLoop(definition: ItemDefinition, buffer: Reader) =
+        readLoopOrdered(definition, buffer) { encoder.opcodes(it) }
 
     override fun getFile(id: Int) = id and 0xff
 
@@ -114,7 +120,12 @@ class ItemDecoder : DefinitionDecoder<ItemDefinition>(ITEMS) {
             134 -> pickSizeShift = buffer.readUnsignedByte()
             139 -> singleNoteId = buffer.readUnsignedShort()
             140 -> singleNoteTemplateId = buffer.readUnsignedShort()
-            249 -> readParameters(buffer)
+            249 -> {
+                val records = readParameterRecords(buffer)
+                if (records.size != (params?.size ?: 0)) {
+                    paramRecords = records
+                }
+            }
             else -> error("Unhandled item definition opcode: $opcode for def $id")
         }
     }
