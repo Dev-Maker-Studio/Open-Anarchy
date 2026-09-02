@@ -90,6 +90,8 @@ object SourceCodecs {
         }
         // The definition indices, as editable JSON.
         DefinitionCodecs.register()
+        // The audio and native asset indices: synth sounds as JSON, the rest as named bytes.
+        AudioCodecs.register()
     }
 
     /** A built in codec: a provider may still replace it, an explicit [register] always does. */

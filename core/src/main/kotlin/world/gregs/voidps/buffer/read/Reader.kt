@@ -59,6 +59,16 @@ interface Reader {
 
     fun readSmart(): Int
 
+    /**
+     * The signed smart the client calls `readSmart`: one byte biased by 64 when the top bit is clear,
+     * two bytes biased by 49152 when it is set, so the range is -64..63 in one byte and -16384..16383
+     * in two. [readSmart] is the unsigned form; only the synth sound format uses this one.
+     */
+    fun readSignedSmart(): Int {
+        val peek = readUnsignedByte()
+        return if (peek < 128) peek - 64 else ((peek shl 8) or readUnsignedByte()) - 49152
+    }
+
     fun readBigSmart(): Int
 
     fun readLargeSmart(): Int

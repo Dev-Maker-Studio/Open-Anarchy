@@ -65,6 +65,16 @@ interface Writer {
         }
     }
 
+    /** The exact inverse of [world.gregs.voidps.buffer.read.Reader.readSignedSmart]. */
+    fun writeSignedSmart(value: Int) {
+        if (value in -64..63) {
+            writeByte(value + 64)
+        } else {
+            require(value in -16384..16383) { "Signed smart value out of range: $value" }
+            writeShort(value + 49152)
+        }
+    }
+
     fun writeBigSmart(value: Int) {
         when {
             value == -1 -> writeShort(32767)
