@@ -316,7 +316,8 @@ TypeScript and the server compiles it back when it rebuilds the cache:
 ```
 clientscripts/
   index.json                       the reference table, as for every index
-  cs2.d.ts                         every opcode's signature, with the argument kinds the corpus taught us
+  cs2.d.ts                         every opcode's signature, the argument kinds the corpus taught us,
+                                   and StringParam - which params a lookup returns a string for
   gamevals.d.ts                    the id constants (Obj.abyssal_whip, Component.wornitems.head)
   vars.d.ts                        every variable any script touches, bound to its id
   tsconfig.json                    without it an editor opens each script as its own program
@@ -333,10 +334,12 @@ script therefore moves its file - `cs2 sync-names` writes an editor's rename bac
 and relocates the file - and nothing else may move it.
 
 The five project files are a property of the *corpus*, not of any one archive: `vars.d.ts` only
-knows a variable exists because some script uses it, and `cs2.d.ts` carries argument kinds learned
-from all 6,567 scripts at once. `SourceCodec.unpackIndex` is the hook they belong in - it runs once
-after the index's archives and claims what it returns, so nothing under `clientscripts/` has to be
-carried out of an archive that has no business producing it (see *The `SourceCodec` interface*).
+knows a variable exists because some script uses it, and `cs2.d.ts` carries argument kinds and param
+types learned from all 6,567 scripts at once. `SourceCodec.unpackIndex` is the hook they come out
+of - it runs once after the index's archives and claims what it returns, so nothing under
+`clientscripts/` is carried out of an archive that has no business producing it - and `owner`
+answers `Owner.Index` for all five, so editing one repacks nothing and is handed to `packIndex`
+instead (see *The `SourceCodec` interface*).
 
 **1,066 of the 6,567 scripts are pristine.** The decompiler normalises by design - it drops
 unreachable code, folds initialisers into declarations, lays branches out canonically - so those
@@ -352,18 +355,65 @@ archives whose files changed are recompiled, so an edit to one script costs one 
 an identifier in `vars.d.ts` or `gamevals.d.ts` is a rename, not an edit: run `cs2 sync-names` to
 write it back into the catalogs, which is where the names live.
 
-**What a pack of index 12 costs.** Compiling anything at all needs the whole corpus analysed first
-- a script's return signature is only decidable across calls - which is about 7 s, done once and
-shared. After that a compile is well under a millisecond: all 6,567 scripts compile in 1.3 s. A
-build that changes no clientscript never constructs the compiler and pays none of it.
+**Where the compiler's context comes from: the tree.** Compiling one script needs facts about the
+*others* - a call site discards exactly what its callee leaves on the stacks, and a `*_PARAM`
+opcode pushes an int or a string according to the param's declared type - and none of it is in the
+file being compiled. Neither is any of it in the *bytecode*: a script's argument and return order
+is only recoverable from what its callers push, which is why decompiling needs the whole corpus
+analysed. But a decompiled folder **states every one of them**:
 
-**One limit worth knowing.** That corpus analysis reads index 12 out of a cache, and with
-`CACHE_SOURCE_PATH` set the cache the server opens *is* the build - so a server building a tree
-whose clientscripts changed has no analysed corpus to compile against yet. It says so
-(`Cs2SourceCodec.cache` is the seam for handing one in) rather than deadlocking on the build it is
-part of. Everything else - the tools CLI, a server serving a prepacked cache, the tests - has a
-cache and is unaffected. It is the one thing the codec interface still does not offer; see *The
-`SourceCodec` interface* below.
+| what a compile has to know | where `clientscripts/` says it |
+|---|---|
+| what script *n* returns, in push order | its own `function ...(): [number, string]` |
+| how many arguments it takes, on which stacks | its own parameter list |
+| whether param *n* yields a string | `cs2.d.ts`'s `StringParam` |
+| which id a renamed identifier means | `vars.d.ts`, `gamevals.d.ts`, the script headers |
+
+`Cs2SourceContext.read(directory)` is that reading and `Cs2Compiler.fromSources(directory)` the
+compiler over it. It lexes each script's declaration line and nothing else - parsing a body would
+be circular, since parsing is what needs the answers - so the whole corpus's signatures cost about
+0.3 s against roughly 7 s for the analysis. It is the same `Cs2Context` the analyzer implements, so
+nothing downstream can tell which one it was handed, and the parity proof is that it produces the
+cache's own bytes: `Cs2SourceCodecTest` packs all 6,567 archives with the codec's cache seam wired
+to throw, and gets 5,501 exact compiles and 1,066 sidecars back.
+
+Only the param types needed writing down, because a param's type belongs to its param definition
+rather than to any script and a lookup's bytecode does not say which stack it used. They go into
+`cs2.d.ts` - the index's own file, so index 12 stays self-contained - as a type alias listing the
+ids, 131 of the 727 cache's 2,583 params:
+
+```ts
+type StringParam =
+    | 528
+    | 529;
+```
+
+A folder written before that declaration existed carries no such line, which is a different answer
+from an empty one: nothing fails - no id yields a string, which is what the compiler assumes
+without an answer, and no script in the 727 corpus compiles differently either way - but a
+hand-edited script reading a string param would be compiled against the wrong stack.
+`tools cs2 declarations <dir>` or a re-unpack writes it.
+
+**What a pack of index 12 costs.** The signature scan is about 0.3 s, done once per build and
+shared; after it a compile is well under a millisecond, and all 6,567 scripts compile in 1.3 s. A
+build that changes no clientscript never constructs the compiler and pays none of it. `packIndex`
+is where the context is set up, and it also *drops* the previous one, so a second build in the same
+process reads a tree that has moved rather than a stale scan of it.
+
+**The one direction that still needs a cache is unpacking**, because decompiling is where the bytes
+are all there is. `SourceCodec` hands a codec one archive at a time and no cache, so
+`Cs2SourceCodec.cache` is the seam; it defaults to `Cache.get()`, which is right for every tool and
+every test, since unpacking a cache means having one.
+
+**On a server.** With `CACHE_SOURCE_PATH` set, `Cache.get()` runs `CacheSource.ensureBuilt()` before
+it opens anything, so the first thing that asks for the cache triggers the build - index 12
+included, from the tree alone, with nothing else to read. Nothing has to be handed in and nothing
+has to be configured for it:
+
+```
+CACHE_SOURCE_PATH=/srv/darkan/cache-source
+CACHE_BUILD_PATH=/srv/darkan/data/cache
+```
 
 `DefinitionJsonCodec` checks itself file by file rather than archive by archive, because a definition
 *is* a file: on the way out it decodes the shipped bytes, writes the JSON, reads that JSON straight
@@ -474,15 +524,19 @@ Each command prints one line per index as it goes and then its totals:
 
 Against the 727 cache on one 12-core machine, on the tree at `cache-source/`: unpack 12.8 s when the
 tree is already right and 42 s when every definition file has to be written (140,692 archives,
-397,041 files, 1.35 GB, 8 opaque, 0 pristine), pack 12.1 s, verify 10.6 s at full parity, a no-op
-build 2.0 s and a one-archive build 3.0 s. Unpacking costs six seconds more than it did as raw bytes
+398,112 files, 1.37 GB, 8 opaque, 1,066 pristine - all of them clientscripts), pack 12.1 s, verify
+10.6 s at full parity, a no-op build 2.0 s and a one-archive build 3.0 s. Unpacking costs six seconds more than it did as raw bytes
 because every one of the 245,751 definition files is decoded, written as JSON, read back and
 re-encoded on the way out to prove it survives the trip; the tree is 290 MB bigger for the same
 reason.
 
-With index 12 as TypeScript the same runs cost about 5 s more to unpack and 6 s more to pack:
-the CS2 corpus analysis and the compile of every script. A build that touches one clientscript
-costs about 9.6 s - the analysis, plus one compile; a build that touches none never runs it.
+With index 12 as TypeScript the same runs cost about 8 s more to unpack (the CS2 corpus analysis
+and a round-trip compile of every script) and 1.6 s more to pack (the folder's signature scan, then
+5,501 compiles). Measured on the tree at `cache-source/`, building it into an empty directory and
+opening the result takes **16 s** end to end; a second run with nothing changed is **2.7 s**, of
+which the build itself is a stat walk; editing one clientscript and rebuilding is **4.4 s** and
+repacks exactly that one archive. `cache verify` of the built cache against the tree is 12 s at
+full parity: 140,692 containers, 37 reference tables and the derived version table, all identical.
 
 ## The `SourceCodec` interface
 
@@ -564,14 +618,19 @@ through `owner`, which is the only thing that knows the layout.
 
 ### The one thing still outside the interface
 
-A codec is still not told which `Cache` the tree is being unpacked from or built for. Anything
-needing more than the bytes it is handed reaches for `Cache.get()`, which is the one thing a build
-from a tree cannot use; `Cs2SourceCodec.cache` is the seam a caller can point elsewhere. The right
-fix for index 12 specifically is not to hand the codec a cache at all: everything the compiler
-needs from the corpus is each callee's signature, and every callee's signature is written out in
-its own `.ts`. An index 12 context derived from the tree's sources rather than from bytecode would
-make the codec self-sufficient and let a server build a tree whose clientscripts changed with no
-prepacked cache anywhere.
+A codec is still not told which `Cache` the tree is being unpacked from. Packing needs none - index
+12's compiler is built from the tree's own sources, which is what makes a build from a tree
+self-sufficient (see *clientscripts*) - but unpacking is the direction where the bytes are all
+there is, and `Cs2SourceCodec` has to analyse the whole corpus to decompile one script correctly.
+So it reaches for `Cache.get()` by default, with `Cs2SourceCodec.cache` as the seam a caller can
+point elsewhere. Unpacking a cache means having one, so nothing is blocked by this; what it costs
+is that `tools cache unpack <tree> <somewhere-else>` analyses `CACHE_PATH` rather than the
+directory it was given, and says so loudly (the decompile requires the bytes it is handed to be the
+ones its corpus came from) instead of writing a wrong tree.
+
+A codec is also not told the tree *root*, only its own index directory. Index 12 would otherwise be
+able to read the param types straight out of `config/param/<id>.json` rather than keeping the list
+in `cs2.d.ts`; the copy in `cs2.d.ts` is the price of the index staying self-contained.
 
 ## Future work the design leaves room for
 
@@ -581,10 +640,8 @@ prepacked cache anywhere.
   editor, models). Each is one codec class plus a byte-exact proof, the way the definition indices
   got theirs; the pristine fallback carries the rest meanwhile.
 - Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
-- An index 12 context built from the tree's own `.ts` signatures rather than from cached bytecode,
-  so a server can build a tree whose clientscripts changed with no other cache to read.
-- Handing a codec the cache the tree is being built for, the last thing `SourceCodec` does not
-  offer - see *The `SourceCodec` interface* above.
+- Handing a codec the cache a tree is being *unpacked from*, the last thing `SourceCodec` does not
+  offer - see *The `SourceCodec` interface* above. Packing needs no cache any more.
 
 
 ## Definition encoders

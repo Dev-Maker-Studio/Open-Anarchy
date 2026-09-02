@@ -12,18 +12,28 @@ import world.gregs.voidps.cache.Cache
  * construction and depends only on `:core`.
  *
  * ```kotlin
- * val compiler = Cs2Compiler(Cache.get(), File(tree, "clientscripts"))
+ * val compiler = Cs2Compiler.fromSources(File(tree, "clientscripts"))
  * val bytes = compiler.compile(File(tree, "clientscripts/proc/quicksort.ts"))
  * val id = compiler.scriptIdOf(File(tree, "clientscripts/proc/quicksort.ts"))
  * ```
  *
+ * ### Where the signatures come from
+ *
+ * Compiling one file needs the *others*: a script's return signature decides what a call site
+ * discards, and a `*_PARAM` opcode pushes an int or a string depending on the param type. Neither
+ * is in the file being compiled, and there are two places to get them.
+ *
+ *  - [fromSources] reads them out of the folder - each script's own declaration, and `cs2.d.ts`
+ *    for the param types ([Cs2SourceContext]). This is what a cache source tree is packed with,
+ *    and the only thing that works while a server is building its cache *from* that tree.
+ *  - The [Cache] constructor analyses the corpus instead ([Cs2Analyzer.analyse]), which is what
+ *    an editor holding a cache open wants, since it is also decompiling out of it.
+ *
  * ### Cost, and what is shared
  *
- * Compiling anything at all needs the whole corpus first: a script's return signature is only
- * decidable across calls, and a `*_PARAM` opcode pushes an int or a string depending on the param
- * type, neither of which the source states. [Cs2Analyzer.analyse] does that work over all 6567
- * cached scripts and takes seconds, so it runs **once**, lazily, on first use, and is then shared
- * by every compile. [compile] itself allocates a fresh [Cs2Parser][org.darkan.cs2.compile.Cs2Parser]
+ * Either way the work happens **once**, lazily, on first use, and is then shared by every compile:
+ * seconds for the analysis, a fraction of one for the folder scan.
+ * [compile] itself allocates a fresh [Cs2Parser][org.darkan.cs2.compile.Cs2Parser]
  * and [Cs2CodeGen][org.darkan.cs2.compile.Cs2CodeGen] per call and holds no state between calls,
  * so a pack can compile the folder's files in parallel: the analysis, the gameval derivations
  * ([Cs2Names]) and the folder's symbol table are all read-only once built, and each is either
@@ -38,9 +48,9 @@ import world.gregs.voidps.cache.Cache
  *
  * The facade is deliberately thin. Where more is needed, the pipeline is public:
  *
- *  - [Cs2Analyzer] `(cache).analyse()` - the corpus analysis, and the `Cs2Context` everything
- *    downstream resolves calls through;
- *  - [Cs2SourceProject] `(cache, analyzer, folder)` - the folder itself: paths ([Cs2Layout]),
+ *  - [Cs2Analyzer] `(cache).analyse()` - the corpus analysis, and one of the two `Cs2Context`s
+ *    everything downstream resolves calls through; [Cs2SourceContext] `.read(folder)` is the other;
+ *  - [Cs2SourceProject] `(context, folder)` - the folder itself: paths ([Cs2Layout]),
  *    the symbol table ([Cs2SymbolTable]), per-file [Cs2SourceProject.compileFile] with a
  *    [Cs2SourceProject.Diagnostic] carrying `file:line:col`, [Cs2SourceProject.verify] against the
  *    cache and [Cs2SourceProject.exportSource] the other way;
@@ -51,31 +61,33 @@ import world.gregs.voidps.cache.Cache
  *
  * @property folder the folder of `.ts` sources this compiler reads, as handed in.
  */
-class Cs2Compiler(
-    private val cache: Cache,
+class Cs2Compiler private constructor(
     val folder: File,
     /**
-     * Where the corpus analysis comes from.
+     * The project, built on first use.
      *
-     * The default analyses [cache] itself, which is what a caller that only compiles wants. A
-     * caller that is also decompiling the same cache - the source tree codec unpacks and packs
-     * index 12 in one process - passes its own [Cs2Analyzer] instead, because the analysis takes
-     * seconds and there is no reason to do it twice.
+     * `by lazy` rather than an `init` block on purpose: constructing a compiler for a tree that
+     * turns out to need no rebuild has to cost nothing, and building the project is where the
+     * seconds are - either the corpus analysis or the scan of the folder's signatures.
      */
-    analysis: () -> Cs2Analyzer = { Cs2Analyzer(cache).also { it.analyse() } },
+    project: () -> Cs2SourceProject,
 ) {
 
     /**
-     * The corpus analysis, done once on first use.
+     * Compiles [folder] against [cache], analysing the corpus out of it.
      *
-     * `by lazy` rather than an `init` block on purpose: constructing a compiler for a tree that
-     * turns out to need no rebuild should cost nothing.
+     * @param analysis where the corpus analysis comes from. The default analyses [cache] itself,
+     *   which is what a caller that only compiles wants. A caller that is also decompiling the
+     *   same cache passes its own [Cs2Analyzer] instead, because the analysis takes seconds and
+     *   there is no reason to do it twice.
      */
-    private val analyzer: Cs2Analyzer by lazy(analysis)
+    constructor(
+        cache: Cache,
+        folder: File,
+        analysis: () -> Cs2Analyzer = { Cs2Analyzer(cache).also { it.analyse() } },
+    ) : this(folder, { Cs2SourceProject(cache, analysis(), folder) })
 
-    private val project: Cs2SourceProject by lazy {
-        Cs2SourceProject(cache, analyzer, folder)
-    }
+    private val project: Cs2SourceProject by lazy(project)
 
     /**
      * Compiles one source file to the bytes index 12 holds.
@@ -131,6 +143,25 @@ class Cs2Compiler(
      * concurrent [compile] calls - reload between sweeps, not during one.
      */
     fun reloadSources() = project.reloadSymbols()
+
+    companion object {
+
+        /**
+         * A compiler that reads nothing but [folder]: no cache, and no corpus analysis.
+         *
+         * This is what a cache source tree is packed with. The analysis exists to recover what
+         * bytecode does not state - each script's argument and return order, and which params yield
+         * strings - and a decompiled folder states all of it: every `.ts` carries its own
+         * signature and `cs2.d.ts` carries the param types ([Cs2SourceContext]). A server building
+         * its cache from a tree therefore has everything it needs, which matters because the cache
+         * an analysis would read is the one that build is producing.
+         *
+         * Costs one lex of every script's header line rather than a decode and fixpoint over the
+         * whole corpus, and is paid on the first compile rather than on construction.
+         */
+        fun fromSources(folder: File): Cs2Compiler =
+            Cs2Compiler(folder) { Cs2SourceProject(Cs2SourceContext.read(folder), folder) }
+    }
 }
 
 /** A source file that did not compile, with somewhere to jump to. */

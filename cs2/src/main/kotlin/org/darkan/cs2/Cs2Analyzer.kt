@@ -1,9 +1,10 @@
 package org.darkan.cs2
 
+import java.util.TreeSet
 import java.util.concurrent.ConcurrentHashMap
-import org.darkan.cs2.ir.Cs2Type
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.ParamDefinition
+import world.gregs.voidps.cache.definition.decoder.ParamDecoder
 
 /**
  * Whole-cache analysis that turns raw instruction lists into something the
@@ -18,9 +19,18 @@ import world.gregs.voidps.cache.definition.data.ParamDefinition
  * error, so simulating each block in isolation both validates the table and
  * gives the decompiler a clean starting state per block.
  */
-class Cs2Analyzer(cache: Cache) : Cs2Context {
+class Cs2Analyzer(private val cache: Cache) : Cs2Context {
 
     private val scripts = Cs2Cache(cache)
+
+    /**
+     * The param definitions, decoded from [cache] rather than from `Cache.params`.
+     *
+     * `Cache.params` is keyed to `Cache.get()`, which is the wrong cache twice over: it is not
+     * necessarily the one being analysed, and with `CACHE_SOURCE_PATH` set reaching for it starts
+     * the build the analysis may be part of. An analyzer answers about the cache it was handed.
+     */
+    private val params: Array<ParamDefinition> by lazy { ParamDecoder().load(cache) }
 
     /**
      * Decoded cache scripts, and the ids the cache has nothing usable for.
@@ -80,26 +90,33 @@ class Cs2Analyzer(cache: Cache) : Cs2Context {
      * the corpus solver worked out.
      */
     override fun paramIsString(paramId: Int): Boolean {
-        val declared = Cache.params.getOrNull(paramId) ?: ParamDefinition.EMPTY
+        val declared = params.getOrNull(paramId) ?: ParamDefinition.EMPTY
         if (declared.type != 0.toChar()) return declared.isString()
         return paramTypes[paramId] ?: false
     }
 
     /**
-     * What a script leaves on the stacks, in the order it pushes them.
+     * Every param id a `*_PARAM` opcode yields a *string* for, ascending.
      *
-     * The compiler needs this to type the names in `let [a, b] = f();`, which
-     * carry no annotation of their own: the order is the callee's own push order
-     * where a caller has revealed it, and the grouped signature otherwise -
-     * exactly the order the decompiler binds the results in.
+     * The whole truth about param types as far as a compile is concerned, and the one thing about
+     * it a script's own source cannot say: the cache's declared type where there is one, and the
+     * corpus solver's answer for the ids the cache does not declare. It is written into
+     * `cs2.d.ts` when a folder is decompiled ([Cs2Declarations.stringParams]) so that folder can
+     * be compiled back without a cache - see [Cs2SourceContext].
      */
-    fun returnTypes(scriptId: Int): List<Cs2Type> {
-        val script = script(scriptId) ?: return emptyList()
-        val signature = script.returnSignature ?: ReturnSignature.EMPTY
-        script.returnOrder.takeIf { it.size == signature.total }?.let { return it }
-        return List(signature.ints) { Cs2Type.INT } +
-            List(signature.strings) { Cs2Type.STRING } +
-            List(signature.longs) { Cs2Type.LONG }
+    fun stringParams(): Set<Int> {
+        val out = TreeSet<Int>()
+        for (id in params.indices) {
+            if (paramIsString(id)) {
+                out.add(id)
+            }
+        }
+        for ((id, string) in paramTypes) {
+            if (string) {
+                out.add(id)
+            }
+        }
+        return out
     }
 
     /**
@@ -107,7 +124,7 @@ class Cs2Analyzer(cache: Cache) : Cs2Context {
      * `*_PARAM` opcode returns one of.
      */
     override fun paramType(paramId: Int): Char =
-        (Cache.params.getOrNull(paramId) ?: ParamDefinition.EMPTY).type
+        (params.getOrNull(paramId) ?: ParamDefinition.EMPTY).type
 
     /**
      * What the corpus says every constant means, worked out once and kept.

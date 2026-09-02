@@ -28,11 +28,35 @@ import world.gregs.voidps.cache.Cache
  * watcher thread - so the mutable state here ([folder], [symbols]) is volatile
  * and replaced wholesale rather than mutated in place.
  */
-class Cs2SourceProject(
-    private val cache: Cache,
-    private val analyzer: Cs2Analyzer,
-    folder: File = File(DEFAULT_FOLDER),
+class Cs2SourceProject private constructor(
+    /**
+     * What compiling one file has to know about the others: every callee's signature, and which
+     * params yield strings.
+     *
+     * Either the whole-cache analysis ([Cs2Analyzer]) or the folder's own declarations
+     * ([Cs2SourceContext]). Nothing in the compile path can tell the difference, which is the
+     * point: a cache source tree is packed by a server that has no other cache to analyse.
+     */
+    private val context: Cs2Context,
+    /** Index 12's bytes, for [verify]; null for a project that only compiles. */
+    cache: Cache?,
+    /** The analysis, where there is one: decompiling into the folder needs it, compiling does not. */
+    private val analyzer: Cs2Analyzer?,
+    folder: File,
 ) {
+
+    /** A project over a cache: compiles, verifies against it and decompiles out of it. */
+    constructor(cache: Cache, analyzer: Cs2Analyzer, folder: File = File(DEFAULT_FOLDER)) :
+        this(analyzer, cache, analyzer, folder)
+
+    /**
+     * A project that only compiles, from [folder] and [context] alone.
+     *
+     * There is no cache, so [verify] has nothing to compare against and [exportSource] has nothing
+     * to decompile; both say so. Everything else - [compile], [compileFile], [scriptIdOf], the
+     * symbol table - works exactly as it does with one.
+     */
+    constructor(context: Cs2Context, folder: File) : this(context, null, null, folder)
 
     @Volatile
     var folder: File = folder
@@ -42,7 +66,7 @@ class Cs2SourceProject(
     var symbols: Cs2SymbolTable = Cs2SymbolTable.EMPTY
         private set
 
-    private val scripts = Cs2Cache(cache)
+    private val scripts = cache?.let { Cs2Cache(it) }
 
     init {
         reloadSymbols()
@@ -147,7 +171,7 @@ class Cs2SourceProject(
         Cs2Layout.scriptFiles(folder).mapNotNull { scriptIdOf(it) }.distinct().sorted()
 
     fun cachedBytes(scriptId: Int): ByteArray? = try {
-        scripts.raw(scriptId)
+        scripts?.raw(scriptId)
     } catch (e: Exception) {
         null
     }
@@ -167,10 +191,12 @@ class Cs2SourceProject(
     /**
      * Parses and lowers one file.
      *
-     * The analyzer is used twice over: as the parser's param-type oracle (a
+     * The [context] is used twice over: as the parser's param-type oracle (a
      * `*_PARAM` opcode pushes an int or a string depending on the param's declared
      * type, which the source cannot say) and as the code generator's context, so a
      * statement-position call discards exactly what its callee leaves behind.
+     * Whether it came from a cache or from the folder's own declarations makes no
+     * difference here - see [Cs2SourceContext].
      */
     fun compileFile(file: File): CompileResult {
         val source = try {
@@ -188,8 +214,8 @@ class Cs2SourceProject(
             return CompileResult.Failed(Diagnostic(file, headerId, it, 1, 1, located = false))
         }
         return try {
-            val function = Cs2Parser(source, analyzer::paramIsString, symbols, relative, analyzer::returnTypes).parse()
-            val script = Cs2CodeGen(function, analyzer).generate()
+            val function = Cs2Parser(source, context::paramIsString, symbols, relative, context::returnTypes).parse()
+            val script = Cs2CodeGen(function, context).generate()
             CompileResult.Ok(Compiled(function.scriptId, file, script, Cs2Codec.encode(script)))
         } catch (e: Exception) {
             val message = e.message ?: e::class.simpleName ?: "compile failed"
@@ -255,13 +281,15 @@ class Cs2SourceProject(
         if (target.isFile && !overwrite) {
             return ExportResult(target, "already present at ${target.path}")
         }
-        val script = analyzer.cachedScript(scriptId)
+        val analysis = analyzer
+            ?: return ExportResult(null, "this project has no cache to decompile out of")
+        val script = analysis.cachedScript(scriptId)
             ?: return ExportResult(null, "no clientscript $scriptId in the cache")
         val source = try {
-            emit(script, scriptId, faithful = false)
+            emit(analysis, script, scriptId, faithful = false)
         } catch (e: Exception) {
             try {
-                emit(script, scriptId, faithful = true)
+                emit(analysis, script, scriptId, faithful = true)
             } catch (fallback: Exception) {
                 return ExportResult(null, "decompile failed: ${fallback.message}")
             }
@@ -276,8 +304,8 @@ class Cs2SourceProject(
         }
     }
 
-    private fun emit(script: Cs2Script, scriptId: Int, faithful: Boolean): String =
-        Cs2Emitter(analyzer.types().apply(Cs2Structurer(script, scriptId, analyzer, faithful).structure())).emit()
+    private fun emit(analysis: Cs2Analyzer, script: Cs2Script, scriptId: Int, faithful: Boolean): String =
+        Cs2Emitter(analysis.types().apply(Cs2Structurer(script, scriptId, analysis, faithful).structure())).emit()
 
     /**
      * Writes the ambient declarations a fresh folder needs for the editor to
@@ -286,7 +314,8 @@ class Cs2SourceProject(
      */
     fun exportDeclarations(): ExportResult = try {
         folder.mkdirs()
-        folder.resolve(Cs2Declarations.OPCODES_FILE).writeText(Cs2Declarations.generate())
+        folder.resolve(Cs2Declarations.OPCODES_FILE)
+            .writeText(Cs2Declarations.generate(stringParams = analyzer?.stringParams() ?: emptySet()))
         folder.resolve(Cs2Declarations.GAMEVALS_FILE).writeText(Cs2Declarations.gamevals())
         folder.resolve("tsconfig.json").writeText(Cs2Declarations.tsconfig())
         ExportResult(

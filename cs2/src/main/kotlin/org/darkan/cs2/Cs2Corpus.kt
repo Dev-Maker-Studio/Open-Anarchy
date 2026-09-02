@@ -223,7 +223,11 @@ class Cs2Corpus(private val cache: Cache) {
      * come out the same every time it is written.
      */
     fun projectFiles(corpus: Corpus, types: Cs2Types = types()): Map<String, String> = linkedMapOf(
-        Cs2Declarations.OPCODES_FILE to Cs2Declarations.generate(types.argumentKinds),
+        // The param types go into cs2.d.ts because they are the one thing a compile needs that no
+        // script's source states, and a folder has to be compilable from the folder alone - see
+        // Cs2SourceContext.
+        Cs2Declarations.OPCODES_FILE to
+            Cs2Declarations.generate(types.argumentKinds, analyzer.stringParams()),
         Cs2Declarations.GAMEVALS_FILE to Cs2Declarations.gamevals(),
         Cs2Declarations.VARS_FILE to Cs2Declarations.variables(corpus.variables) {
             types.varKind(it.space, it.id)
