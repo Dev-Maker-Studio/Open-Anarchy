@@ -44,7 +44,7 @@ data class GroundItem @JvmOverloads constructor(
     fun addMetaData(key: String, value: Any) = item.addMetaData(key, value)
 
     /** Returns true if the wrapped item has any metadata entries. */
-    fun containsMetaData(): Boolean = item.metadata.isNotEmpty()
+    fun containsMetaData(): Boolean = item.containsMetaData()
 
     /** Sets the amount on the wrapped item. */
     fun setAmount(amount: Int) { item.amount = amount }

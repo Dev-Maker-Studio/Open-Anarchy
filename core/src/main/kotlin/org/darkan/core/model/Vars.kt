@@ -83,7 +83,15 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     fun saveVarBit(id: Int, value: Int) = setVarBit(id, value, forceSend = false, save = true)
 
-    fun getVar(id: Int) = varpValues[id]
+    /**
+     * Reads a varp, treating anything outside the varp table as unset (0), for the same reason
+     * [getVarBit] does: object and NPC transforms name varps straight out of the cache, and one
+     * dangling reference coming into view would otherwise take region loading down with it.
+     */
+    fun getVar(id: Int): Int {
+        if (id < 0 || id >= varpValues.size) return 0
+        return varpValues[id]
+    }
 
     /**
      * Reads a varbit, treating anything the cache cannot resolve as unset (0).

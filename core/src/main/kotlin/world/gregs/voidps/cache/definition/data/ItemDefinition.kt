@@ -1,5 +1,7 @@
 package world.gregs.voidps.cache.definition.data
 
+import org.darkan.core.Constants
+import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.ColourPalette
 import world.gregs.voidps.cache.definition.Extra
@@ -105,130 +107,347 @@ data class ItemDefinition(
 
     // --- Java interop convenience methods ---
 
-    /** Legacy alias for [cost]. */
-    fun getValue() = cost
+    /**
+     * Equipment bonuses, built on first access.
+     *
+     * Legacy `ItemDefinitions.parseBonuses()` fills the `bonuses` field once at the end of decoding and
+     * `getBonuses()` hands the same array back on every call.
+     */
+    private var bonusValues: IntArray? = null
 
-    /** Whether this item is stackable (stackable != 0). */
-    fun isStackable() = stackable != 0
+    /** Wield requirements, built on first access. Legacy `ItemDefinitions.wieldRequirements`. */
+    private var wieldRequirements: Map<Int, Int>? = null
 
-    /** Whether this item is lent (lendTemplateId != -1). */
-    fun isLended() = lent
-
-    /** Whether this item is noted (notedTemplateId != -1). */
-    fun isNoted() = noted
-
-    /** Legacy alias for [noteId]. */
-    fun getCertId() = noteId
-
-    /** Whether this item can be exchanged on the GE. */
-    fun canExchange() = exchangeable
-
-    /** Legacy alias for [wearPos]. */
-    fun getEquipSlot() = wearPos
-
-    /** Checks equipment type via params (param 528). */
-    fun isEquipType(type: Int): Boolean {
-        val equipType = params?.get(528) as? Int ?: return false
-        return equipType == type
-    }
-
-    /** Checks if the item's options array contains the given option string (case-insensitive). */
-    fun containsOption(option: String): Boolean {
-        return options.filterNotNull().any { it.equals(option, ignoreCase = true) }
-    }
-
-    /** Whether this item can be worn by the given gender. */
-    fun isWearItem(isMale: Boolean): Boolean {
-        if (wearPos == -1) return false
-        return if (isMale) primaryMaleModel != -1 else primaryFemaleModel != -1
-    }
-
-    /** Whether this item is a destroy item (cannot be dropped, param 1134 == 1). */
-    fun isDestroyItem(): Boolean = (params?.get(1134) as? Int ?: 0) == 1
-
-    /** Gets the render animation ID from params (param 644). */
-    fun getRenderAnimId(): Int = params?.get(644) as? Int ?: -1
-
-    /** Gets equipment bonuses array from item params. */
-    fun getBonuses(): IntArray {
-        val p = params ?: return IntArray(17)
-        return intArrayOf(
-            p[0] as? Int ?: 0, p[1] as? Int ?: 0, p[2] as? Int ?: 0, p[3] as? Int ?: 0, p[4] as? Int ?: 0,
-            p[5] as? Int ?: 0, p[6] as? Int ?: 0, p[7] as? Int ?: 0, p[8] as? Int ?: 0, p[9] as? Int ?: 0,
-            p[10] as? Int ?: 0, p[11] as? Int ?: 0, p[14] as? Int ?: 0, p[12] as? Int ?: 0,
-            p[956] as? Int ?: 0, p[957] as? Int ?: 0, p[958] as? Int ?: 0
-        )
-    }
-
-    /** Gets the equipment option at the given index (0-based). */
-    fun getEquipmentOption(index: Int): String? {
-        if (index < 0 || index >= options.size) return null
-        return options[index]
-    }
-
-    /** Gets the inventory option at the given index (0-based). */
-    fun getInventoryOption(index: Int): String? {
-        if (index < 0 || index >= options.size) return null
-        return options[index]
-    }
-
-    /** Gets the dungeoneering shop value multiplier from params (param 1149, default 100 = 1.0x). */
-    fun getDungShopValueMultiplier(): Double {
-        val raw = params?.get(1149) as? Int ?: 100
-        return raw / 100.0
-    }
-
-    /** Gets original model colours as an int array for legacy Java compat. */
-    fun getOriginalModelColors(): IntArray = originalColours?.map { it.toInt() }?.toIntArray() ?: IntArray(0)
-
-    /** Gets the primary male worn model ID. */
-    fun getMaleWornModelId1(): Int = primaryMaleModel
-
-    /** Gets the primary female worn model ID. */
-    fun getFemaleWornModelId1(): Int = primaryFemaleModel
-
-    /** Gets the general store sell price (cost * 0.3, minimum 1). */
-    fun getSellPrice(): Int = (cost * 0.3).toInt().coerceAtLeast(1)
-
-    /** Gets the high alchemy price (cost * 0.6, minimum 1). */
-    fun getHighAlchPrice(): Int = (cost * 0.6).toInt().coerceAtLeast(1)
-
-    /** Whether the item has a face/head covering mask (param 625). */
-    fun faceMask(): Boolean = (params?.get(625) as? Int ?: 0) != 0
-
-    /** Gets wearing skill requirements from params. */
-    fun getWearingSkillRequiriments(): Map<Int, Int> {
-        val reqs = mutableMapOf<Int, Int>()
-        val p = params ?: return reqs
-        val pairs = listOf(749 to 750, 751 to 752, 753 to 754)
-        for ((skillParam, levelParam) in pairs) {
-            val skill = p[skillParam] as? Int ?: continue
-            val level = p[levelParam] as? Int ?: continue
-            if (skill > 0) reqs[skill] = level
-        }
-        return reqs
+    /**
+     * Legacy `ItemDefinitions.getValue()` - [cost] with a handful of hardcoded overrides.
+     */
+    fun getValue(): Int = when (id) {
+        18744, 18745, 18746, 18747 -> 5
+        10551, 10548, 2952, 2890, 10499 -> 1
+        else -> cost
     }
 
     /**
-     * Gets the stage on death for this item.
-     * 1 = always kept (untradeable), -1 = always lost, 0 = normal.
+     * Whether this item is stackable.
+     *
+     * Legacy `isStackable()` is `stackable == 1`; opcode 165 sets [stackable] to 2 for coinshare shards,
+     * which are not stackable.
      */
-    fun getStageOnDeath(): Int {
-        // If it's a destroy item (untradeable), it's always kept
-        if (isDestroyItem()) return 1
-        return 0
+    fun isStackable() = stackable == 1
+
+    /** Whether this item is lent (lendTemplateId != -1). Legacy `isLended()`. */
+    fun isLended() = lent
+
+    /** Whether this item is noted (notedTemplateId != -1). Legacy `isNoted()`. */
+    fun isNoted() = noted
+
+    /** Legacy alias for [noteId]. Legacy `getCertId()`. */
+    fun getCertId() = noteId
+
+    /**
+     * Whether this item can be exchanged on the GE.
+     *
+     * Legacy `canExchange()` reads the unnoted item's flag when this definition is a note, because
+     * `toNote()` does not copy the exchangeable flag onto the note.
+     */
+    fun canExchange(): Boolean {
+        if (noted && noteId != -1) {
+            return Cache.items[noteId].exchangeable
+        }
+        return exchangeable
     }
 
-    /** Whether this item is bound (dungeoneering). */
-    fun isBinded(): Boolean = (params?.get(1135) as? Int ?: 0) == 1
+    /** Legacy alias for [wearPos]. Legacy `getEquipSlot()`. */
+    fun getEquipSlot() = wearPos
 
-    /** Gets the quest requirements for wearing this item from params. */
+    /**
+     * Whether either secondary equipment slot is [type].
+     *
+     * Legacy `isEquipType()` is `wearPos3 == type || wearPos2 == type` - the slots a worn item also
+     * occupies. 5 is two-handed (takes the shield slot), 6 hides arms, 8 hides hair, 11 hides the beard.
+     * Param 528 is the *string* equipment option (see [getEquipmentOption]), not an equip type.
+     */
+    fun isEquipType(type: Int): Boolean = wearPos3 == type || wearPos2 == type
+
+    /** Legacy `containsOption(String)` - an exact-match scan of the inventory options. */
+    fun containsOption(option: String): Boolean = options.any { it == option }
+
+    /** Legacy `containsOption(int, String)`. */
+    fun containsOption(index: Int, option: String): Boolean = options.getOrNull(index) == option
+
+    /** Legacy `containsInventoryOption(int, String)`. */
+    fun containsInventoryOption(index: Int, option: String): Boolean =
+        options.getOrNull(index)?.equals(option, ignoreCase = true) == true
+
+    /** Whether this item can be worn at all. Legacy `isWearItem()`. */
+    fun isWearItem(): Boolean = wearPos != -1
+
+    /**
+     * Whether this item can be worn by the given gender.
+     *
+     * Legacy `isWearItem(boolean male)` only requires a worn model for slots below 12, so rings (12),
+     * ammo (13) and auras (14) are exempt - they have no worn model in the cache.
+     */
+    fun isWearItem(isMale: Boolean): Boolean {
+        if (id == 4285) {
+            return true
+        }
+        if (wearPos < 12 && (if (isMale) primaryMaleModel == -1 else primaryFemaleModel == -1)) {
+            return false
+        }
+        return wearPos != -1
+    }
+
+    /** Legacy `isDestroyItem()` - an inventory option of "destroy". */
+    fun isDestroyItem(): Boolean = options.any { it != null && it.equals("destroy", ignoreCase = true) }
+
+    /** Legacy `isBindItem()` - an inventory option of "bind". */
+    fun isBindItem(): Boolean = options.any { it != null && it.equals("bind", ignoreCase = true) }
+
+    /** Whether this item is a dungeoneering bound item. Legacy `isBinded()` - hardcoded id ranges. */
+    fun isBinded(): Boolean = id in 15775..16272 || id in 19865..19866
+
+    /** Legacy `getParam(int defaultVal, int id)`. */
+    fun getParam(defaultVal: Int, id: Int): Int = params?.get(id) as? Int ?: defaultVal
+
+    /** Legacy `getParamVal(int id)` - [getParam] with a default of 0. */
+    fun getParamVal(id: Int): Int = getParam(0, id)
+
+    /**
+     * The render animation (BAS) id. Legacy `getRenderAnimId()` - param 644, defaulting to the
+     * unarmed BAS 1426 rather than -1.
+     */
+    fun getRenderAnimId(): Int = getParam(1426, 644)
+
+    /** Whether this weapon has a special attack bar. Legacy `hasSpecialBar()` - param 686. */
+    fun hasSpecialBar(): Boolean = getParamVal(686) == 1
+
+    /** The quest this item belongs to. Legacy `getQuestId()` - param 861. */
+    fun getQuestId(): Int = getParam(-1, 861)
+
+    /**
+     * Equipment bonuses, indexed by [org.darkan.core.model.Bonus] ordinal.
+     *
+     * Legacy `ItemDefinitions.parseBonuses()`: 18 entries, with summoning defence at param 417, the
+     * absorb bonuses at 967/968/969, melee and ranged strength at 641/643 (tenths) and magic damage
+     * at 685.
+     */
+    fun getBonuses(): IntArray {
+        bonusValues?.let { return it }
+        val bonuses = IntArray(18)
+        bonuses[STAB_ATTACK] = getParamVal(0)
+        bonuses[SLASH_ATTACK] = getParamVal(1)
+        bonuses[CRUSH_ATTACK] = getParamVal(2)
+        bonuses[MAGIC_ATTACK] = getParamVal(3)
+        bonuses[RANGE_ATTACK] = getParamVal(4)
+        bonuses[STAB_DEF] = getParamVal(5)
+        bonuses[SLASH_DEF] = getParamVal(6)
+        bonuses[CRUSH_DEF] = getParamVal(7)
+        bonuses[MAGIC_DEF] = getParamVal(8)
+        bonuses[RANGE_DEF] = getParamVal(9)
+        bonuses[SUMMONING_DEF] = getParamVal(417)
+        bonuses[PRAYER_BONUS] = getParamVal(11)
+        bonuses[ABSORB_MELEE_BONUS] = getParamVal(967)
+        bonuses[ABSORB_RANGE_BONUS] = getParamVal(968)
+        bonuses[ABSORB_MAGE_BONUS] = getParamVal(969)
+        bonuses[STRENGTH_BONUS] = getParamVal(641) / 10
+        bonuses[RANGED_STR_BONUS] = getParamVal(643) / 10
+        bonuses[MAGIC_DAMAGE] = getParamVal(685)
+        if (id == 25349) {
+            bonuses.fill(10000)
+        }
+        bonusValues = bonuses
+        return bonuses
+    }
+
+    /**
+     * The worn ("equipment") option at the given index.
+     *
+     * Legacy `getEquipmentOption(int)` - these are string params at 528 + optionId, with option 4
+     * living at param 1211. Returns the string "null" when absent, as legacy does.
+     */
+    fun getEquipmentOption(optionId: Int): String {
+        val p = params ?: return "null"
+        return p[if (optionId == 4) 1211 else 528 + optionId] as? String ?: "null"
+    }
+
+    /** Legacy `containsEquipmentOption(int, String)` - the string param at 528 + optionId. */
+    fun containsEquipmentOption(optionId: Int, option: String): Boolean =
+        params?.get(528 + optionId) as? String == option
+
+    /**
+     * The inventory option at the given index.
+     *
+     * Legacy `getInventoryOption(int)`, including its hardcoded overrides, returning the string "null"
+     * when absent.
+     */
+    fun getInventoryOption(optionId: Int): String {
+        when (id) {
+            6099, 6100, 6101, 6102 -> if (optionId == 2) {
+                return "Temple"
+            }
+            19760, 13561, 13562 -> {
+                if (optionId == 0) {
+                    return options.getOrNull(1) ?: "null"
+                }
+                if (optionId == 1) {
+                    return options.getOrNull(0) ?: "null"
+                }
+            }
+        }
+        return options.getOrNull(optionId) ?: "null"
+    }
+
+    /**
+     * The dungeoneering resource shop price multiplier.
+     *
+     * Legacy `getDungShopValueMultiplier()` - param 1046 as a percentage, defaulting to 1.0.
+     */
+    fun getDungShopValueMultiplier(): Double {
+        val value = params?.get(1046) as? Int ?: return 1.0
+        return value.toDouble() / 100
+    }
+
+    /**
+     * Original model colours as unsigned shorts, matching legacy's `originalModelColors` int array -
+     * [originalColours] holds them as signed shorts.
+     */
+    fun getOriginalModelColors(): IntArray {
+        val colours = originalColours ?: return IntArray(0)
+        return IntArray(colours.size) { colours[it].toInt() and 0xffff }
+    }
+
+    /** Gets the primary male worn model id. Legacy `getMaleWornModelId1()`. */
+    fun getMaleWornModelId1(): Int = primaryMaleModel
+
+    /** Gets the secondary male worn model id. Legacy `getMaleWornModelId2()`. */
+    fun getMaleWornModelId2(): Int = secondaryMaleModel
+
+    /** Gets the primary female worn model id. Legacy `getFemaleWornModelId1()`. */
+    fun getFemaleWornModelId1(): Int = primaryFemaleModel
+
+    /** Gets the secondary female worn model id. Legacy `getFemaleWornModelId2()`. */
+    fun getFemaleWornModelId2(): Int = secondaryFemaleModel
+
+    /** Legacy `isOverSized()` - a sprite scale above 5000. */
+    fun isOverSized(): Boolean = spriteScale > 5000
+
+    /** The general store sell price. Legacy `getSellPrice()` - three tenths of [cost]. */
+    fun getSellPrice(): Int = (cost / (10.0 / 3.0)).toInt()
+
+    /** The high alchemy price. Legacy `getHighAlchPrice()` - six tenths of [cost]. */
+    fun getHighAlchPrice(): Int = (cost / (10.0 / 6.0)).toInt()
+
+    /** Whether the item covers the face, hiding the head. Legacy `faceMask()` - param 625. */
+    fun faceMask(): Boolean {
+        if (id == 4168) {
+            return true
+        }
+        return getParamVal(625) == 1
+    }
+
+    /**
+     * Skill requirements for wearing this item, keyed by skill id.
+     *
+     * Legacy `getWearingSkillRequiriments()` - ten (skill, level) param pairs from 749/750 upwards,
+     * param 277 for "maxed skill", then a table of hardcoded requirements.
+     */
+    fun getWearingSkillRequiriments(): Map<Int, Int> {
+        wieldRequirements?.let { return it }
+        val skills = HashMap<Int, Int>()
+        val p = params
+        if (p != null) {
+            for (i in 0 until 10) {
+                val skill = p[749 + i * 2] as? Int ?: continue
+                val level = p[750 + i * 2] as? Int ?: continue
+                skills[skill] = level
+            }
+            val maxedSkill = p[277] as? Int
+            if (maxedSkill != null) {
+                skills[maxedSkill] = if (id == 19709) 120 else 99
+            }
+        }
+        when (id) {
+            8846 -> {
+                skills[Constants.ATTACK] = 5
+                skills[Constants.DEFENSE] = 5
+            }
+            8847 -> {
+                skills[Constants.ATTACK] = 10
+                skills[Constants.DEFENSE] = 10
+            }
+            8848 -> {
+                skills[Constants.ATTACK] = 20
+                skills[Constants.DEFENSE] = 20
+            }
+            8849 -> {
+                skills[Constants.ATTACK] = 30
+                skills[Constants.DEFENSE] = 30
+            }
+            8850 -> {
+                skills[Constants.ATTACK] = 40
+                skills[Constants.DEFENSE] = 40
+            }
+            20072 -> {
+                skills[Constants.ATTACK] = 60
+                skills[Constants.DEFENSE] = 60
+            }
+            10498 -> skills[Constants.RANGE] = 30
+            10499, 20068 -> skills[Constants.RANGE] = 50
+            22358, 22359, 22360, 22361 -> skills[Constants.ATTACK] = 80
+            22362, 22363, 22364, 22365 -> skills[Constants.RANGE] = 80
+            22366, 22367, 22368, 22369 -> skills[Constants.MAGIC] = 80
+            21371, 21372, 21373, 21374, 21375 -> {
+                skills[Constants.ATTACK] = 85
+                skills[Constants.SLAYER] = 80
+            }
+            10887 -> {
+                skills[Constants.ATTACK] = 60
+                skills[Constants.STRENGTH] = 40
+            }
+            7459 -> skills[Constants.DEFENSE] = 13
+            7460 -> skills[Constants.DEFENSE] = 34
+            7461 -> skills[Constants.DEFENSE] = 41
+            7462 -> {
+                skills[Constants.DEFENSE] = 41
+                skills[Constants.COOKING] = 64
+                skills[Constants.AGILITY] = 48
+                skills[Constants.MINING] = 44
+                skills[Constants.FISHING] = 47
+                skills[Constants.THIEVING] = 53
+                skills[Constants.HERBLORE] = 19
+                skills[Constants.MAGIC] = 50
+                skills[Constants.SMITHING] = 34
+                skills[Constants.FIREMAKING] = 50
+                skills[Constants.RANGE] = 40
+            }
+        }
+        wieldRequirements = skills
+        return skills
+    }
+
+    /**
+     * How this item behaves on death: 1 always kept, -1 always lost, 0 normal.
+     *
+     * Legacy `getStageOnDeath()` - param 1397.
+     */
+    fun getStageOnDeath(): Int = getParam(0, 1397)
+
+    /**
+     * The quest slot that must be complete to wield this item, or -1.
+     *
+     * Legacy `getWieldQuestReq()` - param 743, with two hardcoded overrides.
+     */
+    fun getWieldQuestReqId(): Int = when (id) {
+        19784 -> 174
+        10887 -> 120
+        else -> getParam(-1, 743)
+    }
+
+    /** [getWieldQuestReqId] as a map, for the callers that iterate quest slots. */
     fun getWieldQuestReq(): Map<Int, Int> {
-        val reqs = mutableMapOf<Int, Int>()
-        val p = params ?: return reqs
-        val questParam = p[1053] as? Int
-        if (questParam != null && questParam > 0) reqs[questParam] = 1
-        return reqs
+        val quest = getWieldQuestReqId()
+        return if (quest == -1) emptyMap() else mapOf(quest to 1)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -524,5 +743,28 @@ data class ItemDefinition(
 
     companion object {
         val EMPTY = ItemDefinition()
+
+        /**
+         * Indices into [getBonuses], matching [org.darkan.core.model.Bonus] ordinals and the
+         * constants of the same name on legacy `ItemDefinitions`.
+         */
+        const val STAB_ATTACK = 0
+        const val SLASH_ATTACK = 1
+        const val CRUSH_ATTACK = 2
+        const val MAGIC_ATTACK = 3
+        const val RANGE_ATTACK = 4
+        const val STAB_DEF = 5
+        const val SLASH_DEF = 6
+        const val CRUSH_DEF = 7
+        const val MAGIC_DEF = 8
+        const val RANGE_DEF = 9
+        const val SUMMONING_DEF = 10
+        const val ABSORB_MELEE_BONUS = 11
+        const val ABSORB_MAGE_BONUS = 12
+        const val ABSORB_RANGE_BONUS = 13
+        const val STRENGTH_BONUS = 14
+        const val RANGED_STR_BONUS = 15
+        const val PRAYER_BONUS = 16
+        const val MAGIC_DAMAGE = 17
     }
 }
