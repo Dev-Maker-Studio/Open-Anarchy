@@ -75,9 +75,16 @@ class Account {
     fun onlineTo(other: Account) =
         !(other.social.status.toInt() == 2 || (other.social.status.toInt() == 1 && !other.social.friends.contains(username)))
 
+    /**
+     * Replaces the Argon2 hash and drops every legacy credential (the AES [password] and the
+     * SHA-1 [legacyPass]), so the login path can never fall back to the old secret. The hash being
+     * replaced is remembered in [previousPasswords].
+     */
     fun changePassword(newPasswordHash: String) {
-        newPasswordHash.let { previousPasswords.add(it) }
+        if (passwordHash.isNotEmpty()) previousPasswords.add(passwordHash)
         passwordHash = newPasswordHash
+        password = null
+        legacyPass = null
     }
 
     // NEVER CALL THIS EVER. ONLY TO BE USED FOR ACCOUNT CREATION WHEN PLAYER SELECTS A DISPLAY NAME
