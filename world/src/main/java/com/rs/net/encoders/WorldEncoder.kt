@@ -65,6 +65,7 @@ import org.darkan.core.net.prot.packet.GroundItemCount
 import org.darkan.core.net.prot.packet.HintArrow
 import org.darkan.core.net.prot.packet.HintTrail
 import org.darkan.core.net.prot.packet.IfCloseSub
+import org.darkan.core.net.prot.packet.TriggerOnDialogAbort
 import org.darkan.core.net.prot.packet.IfOpenSub
 import org.darkan.core.net.prot.packet.IfOpenSubActiveGroundItem
 import org.darkan.core.net.prot.packet.IfOpenSubActiveNpc
@@ -200,6 +201,16 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     fun closeInterface(topChildId: Int) {
         session.queuePacket(IfCloseSub(topChildId ushr 16, topChildId and 0xFFFF))
+    }
+
+    /**
+     * Tells the client to run its dialogue-abort hook, tearing down the enter-amount /
+     * enter-name prompt and the chat dialogue. Legacy sent ServerPacket.TRIGGER_ONDIALOGABORT
+     * straight from Player#abortDialogue; it lives here because [TriggerOnDialogAbort] is a
+     * Kotlin value class and cannot be constructed from Java.
+     */
+    fun sendTriggerOnDialogAbort() {
+        session.queuePacket(TriggerOnDialogAbort())
     }
 
     fun setIFGraphic(interfaceId: Int, componentId: Int, spriteId: Int) {

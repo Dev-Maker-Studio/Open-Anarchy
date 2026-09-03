@@ -57,24 +57,33 @@ class SocialClient(
         scope.launch(Dispatchers.IO + SupervisorJob()) { connectLoop() }
     }
 
-    suspend fun send(msg: SocialGatewayWireMessage) {
+    /**
+     * @return true if the message was handed to the gateway socket, false if it was dropped
+     *         because the gateway is down (or the write failed). Callers that can reach a player
+     *         should tell them, the way legacy LobbyCommunicator.forwardPackets did.
+     */
+    suspend fun send(msg: SocialGatewayWireMessage): Boolean {
         val st = state.get()
-        val session = (st as? State.Connected)?.session ?: return
+        val session = (st as? State.Connected)?.session
+        if (session == null) {
+            logWarn("SocialClient dropped ${msg::class.simpleName}: gateway not connected (state=${st::class.simpleName})")
+            return false
+        }
         val text = SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), msg)
-        try {
+        return try {
             session.send(Frame.Text(text))
+            true
         } catch (e: Exception) {
             logWarn("SocialClient send failed type=${msg::class.simpleName}", e)
+            false
         }
     }
 
-    suspend fun sendClientPacket(username: String, packet: ClientProt) {
+    suspend fun sendClientPacket(username: String, packet: ClientProt): Boolean =
         send(ClientPacketEnvelope(username = username, packet = packet))
-    }
 
-    suspend fun sendPlayerOnline(username: String, displayName: String, rightsCrown: Int, privateStatus: Int) {
+    suspend fun sendPlayerOnline(username: String, displayName: String, rightsCrown: Int, privateStatus: Int): Boolean =
         send(PlayerOnline(username = username, displayName = displayName, rightsCrown = rightsCrown, privateStatus = privateStatus))
-    }
 
     suspend fun sendPlayerOffline(username: String) {
         send(PlayerOffline(username = username))

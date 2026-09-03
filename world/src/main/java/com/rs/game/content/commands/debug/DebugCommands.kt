@@ -165,7 +165,8 @@ fun loadDebugCommands() {
     }
 
     Commands.add(Rights.DEVELOPER, "tileflags", "Get the tile flags for the tile you're standing on.") { p, _ ->
-        p.sendMessage("Clip flags: 0x${Integer.toHexString(WorldCollision.getFlags(p.tile))}")
+        val flags = WorldCollision.getFlags(p.tile)
+        p.sendMessage("Clip flags: 0x${Integer.toHexString(flags)} ${ClipFlag.getFlags(flags)}")
     }
 
     Commands.add(Rights.DEVELOPER, "hinttrail [x y modelId]", "Sets a hint trail from the player to the specified location.") { p, args ->

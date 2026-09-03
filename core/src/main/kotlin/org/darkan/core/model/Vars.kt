@@ -36,7 +36,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     fun setSession(session: Session): Vars {
         this.session = session
-        varpValues = IntArray(Cache.get().fileCount(Index.CONFIGS, Config.VARP)+1)
+        varpValues = IntArray(Cache.get().lastFileId(Index.CONFIGS, Config.VARP) + 1)
         modified = HashSet()
         vars.forEach { (varId, value) -> setVar(varId, value) }
         return this
@@ -47,7 +47,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
      * This allows using getVar/setVar/getVarBit/setVarBit without network sync.
      */
     fun initWithoutSession(): Vars {
-        varpValues = IntArray(Cache.get().fileCount(Index.CONFIGS, Config.VARP)+1)
+        varpValues = IntArray(Cache.get().lastFileId(Index.CONFIGS, Config.VARP) + 1)
         modified = HashSet()
         vars.forEach { (varId, value) -> setVar(varId, value) }
         return this

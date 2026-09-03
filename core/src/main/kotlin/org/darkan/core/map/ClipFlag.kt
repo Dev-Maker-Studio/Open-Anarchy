@@ -46,6 +46,15 @@ enum class ClipFlag(val flag: Int) {
     UNDER_ROOF(1 shl 31);
 
     companion object {
+        /**
+         * Decodes a raw clip mask into the flags it has set, [EMPTY] excluded (its -1 matches
+         * everything). Legacy `com.rs.cache.loaders.map.ClipFlag#getFlags`
+         * (core ClipFlag.java:80-86); the `::tileflags` command prints this.
+         */
+        @JvmStatic
+        fun getFlags(value: Int): List<ClipFlag> =
+            entries.filter { it != EMPTY && (value and it.flag) != 0 }
+
         @JvmStatic
         fun flagged(value: Int, vararg flags: ClipFlag): Boolean {
             var flag = 0
