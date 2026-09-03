@@ -536,17 +536,17 @@ object Utils {
         return '?'.code.toByte()
     }
 
-    // --- Cache stub methods (sizes) ---
+    // --- Definition counts: the id space the loaded cache holds, one past the highest id ---
 
-    @JvmStatic fun getItemDefinitionsSize(): Int = 0
+    @JvmStatic fun getItemDefinitionsSize(): Int = Cache.items.size
 
-    @JvmStatic fun getNPCDefinitionsSize(): Int = 0
+    @JvmStatic fun getNPCDefinitionsSize(): Int = Cache.npcs.size
 
-    @JvmStatic fun getObjectDefinitionsSize(): Int = 0
+    @JvmStatic fun getObjectDefinitionsSize(): Int = Cache.objects.size
 
-    @JvmStatic fun getSpotAnimDefinitionsSize(): Int = 0
+    @JvmStatic fun getSpotAnimDefinitionsSize(): Int = Cache.graphics.size
 
-    @JvmStatic fun getAnimationDefinitionsSize(): Int = 0
+    @JvmStatic fun getAnimationDefinitionsSize(): Int = Cache.animations.size
 
     @JvmStatic fun getBASAnimDefSize(): Int = 0
 
