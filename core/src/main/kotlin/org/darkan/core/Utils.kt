@@ -24,9 +24,9 @@ object Utils {
     val FORMAT = DecimalFormat("###,###.##")
 
     private val ANGLE_DIRECTION_DELTA = arrayOf(
-        byteArrayOf(0, -1), byteArrayOf(1, -1), byteArrayOf(1, 0),
-        byteArrayOf(1, 1), byteArrayOf(0, 1), byteArrayOf(-1, 1),
-        byteArrayOf(-1, 0), byteArrayOf(-1, -1)
+        byteArrayOf(0, -1), byteArrayOf(-1, -1), byteArrayOf(-1, 0),
+        byteArrayOf(-1, 1), byteArrayOf(0, 1), byteArrayOf(1, 1),
+        byteArrayOf(1, 0), byteArrayOf(1, -1)
     )
 
     // --- Random ---
@@ -202,21 +202,15 @@ object Utils {
     }
 
     @JvmStatic
-    fun getFrontFace(dir: Int): IntArray = when (dir) {
-        0 -> intArrayOf(0, 1)
-        1 -> intArrayOf(1, 0)
-        2 -> intArrayOf(0, -1)
-        3 -> intArrayOf(-1, 0)
-        else -> intArrayOf(0, 0)
+    fun getBackFace(dir: Int): IntArray {
+        val ang = dir / 2607.5945876176133
+        return intArrayOf(sin(ang).roundToInt(), cos(ang).roundToInt())
     }
 
     @JvmStatic
-    fun getBackFace(dir: Int): IntArray = when (dir) {
-        0 -> intArrayOf(0, -1)
-        1 -> intArrayOf(-1, 0)
-        2 -> intArrayOf(0, 1)
-        3 -> intArrayOf(1, 0)
-        else -> intArrayOf(0, 0)
+    fun getFrontFace(dir: Int): IntArray {
+        val front = getBackFace(dir)
+        return intArrayOf(front[0] * -1, front[1] * -1)
     }
 
     // --- String / Name formatting ---
@@ -548,11 +542,26 @@ object Utils {
 
     @JvmStatic fun getAnimationDefinitionsSize(): Int = Cache.animations.size
 
-    @JvmStatic fun getBASAnimDefSize(): Int = 0
+    @JvmStatic fun getBASAnimDefSize(): Int = Cache.bas.size
 
-    @JvmStatic fun getConfigDefinitionsSize(): Int = 0
+    /**
+     * Legacy `com.rs.lib.util.Utils#getConfigDefinitionsSize` (core Utils.java:976-979):
+     * `lastArchiveId(VARBITS) * 256 + validFilesCount(lastArchiveId)`. Varbit configs are
+     * packed 256 per archive in index 22, so this is one past the highest packed config id.
+     */
+    @JvmStatic fun getConfigDefinitionsSize(): Int {
+        val cache = Cache.get()
+        val lastArchive = cache.lastArchiveId(Index.VAR_BIT)
+        if (lastArchive < 0) return 0
+        return lastArchive * 256 + cache.fileCount(Index.VAR_BIT, lastArchive)
+    }
 
-    @JvmStatic fun getVarbitDefinitionsSize(): Int = 0
+    /**
+     * Legacy used `lastArchiveId(VARBITS) * 0x3ff` (core Utils.java:1003-1005), an estimate from
+     * before the varbit table was decoded. The decoded table is exact and is what
+     * [org.darkan.core.model.Vars.getVarBit] already bounds itself by, so use its length.
+     */
+    @JvmStatic fun getVarbitDefinitionsSize(): Int = Cache.varbits.size
 
     // One past the highest id, matching every "size" here and the `id >= size` / `size <= id`
     // guards that call them - lastArchiveId/lastFileId are the highest id, not the count, and a
