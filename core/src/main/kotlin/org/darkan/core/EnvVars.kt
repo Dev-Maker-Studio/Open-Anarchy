@@ -29,6 +29,10 @@ object EnvVars {
     //World number to list as "localhost" so developers can reach a world running on their own machine (0 = none)
     val localWorldId: Int = dotenv.get("LOCAL_WORLD_ID", "0").toInt()
     val apiKey: String = dotenv.get("API_KEY", "TEST_API_KEY")
+    // The one account allowed to run the lobby's owner-tier commands (password recovery and the like),
+    // and, while DEBUG is on, the only account allowed any administrative lobby feature at all: a dev
+    // environment lets people grant themselves rights on their own worlds, so rights alone are no gate.
+    val lobbyOwner: String = dotenv.get("LOBBY_OWNER", "trent").lowercase().replace(" ", "_")
     // A cache source tree (docs/cache-source.md). When set, the server builds it into CACHE_BUILD_PATH on
     // startup and serves that; when unset, CACHE_PATH names a prepacked cache.
     val cacheSourcePath: String? = dotenv.get("CACHE_SOURCE_PATH", null)?.takeIf { it.isNotBlank() }

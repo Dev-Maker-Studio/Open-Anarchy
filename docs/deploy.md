@@ -215,6 +215,11 @@ dispatched by rights the same way the world does (`org.darkan.lobby.command.Lobb
 | `::changepass <new password>` | player | changes your own password |
 | `::changepassother <player name> <new password>` (aliases `setpass`, `resetpass`) | owner | account recovery: sets another player's password |
 
+Rights alone do not unlock the administrative tiers. The owner tier is reserved for the account named by
+`LOBBY_OWNER` in `.env` (default `trent`), and while `DEBUG=true` every tier above player is reserved
+for it too: a dev environment lets people grant themselves admin or owner rights on their own hosted
+worlds, so the lobby trusts the configured name, not the crown. Refused attempts are logged.
+
 Passwords must be at least 8 characters of letters and digits. A change writes a fresh Argon2id
 hash, drops any legacy AES or SHA-1 credential so the login path cannot fall back to the old
 secret, and is saved immediately; the player can log in with it on their next attempt. Command
