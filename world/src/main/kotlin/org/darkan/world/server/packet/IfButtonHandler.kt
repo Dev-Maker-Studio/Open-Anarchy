@@ -12,7 +12,11 @@ class IfButtonHandler : PacketHandler<Player, IfButton> {
         if (!player.hasStarted() || !player.isRunning)
             return
         logTrace("IfButton: inter=${packet.interfaceId} comp=${packet.componentId} slot=${packet.slotId} item=${packet.itemId} op=${packet.opNum}")
-        if (player.isDead || player.isLocked && !(packet.interfaceId == 14 && packet.componentId == 103))
+        // Transformation items (ring of stone, Easter ring, bone brooch) lock the player and put
+        // their own deactivate button on screen, so the lock has to let that click through or the
+        // player is stuck for good. The escape hatch is the temp attrib TransformationItems sets -
+        // nothing in the tree ever sends interface 14 component 103.
+        if (player.isDead || player.isLocked && !player.tempAttribs.getB("TransformationRing"))
             return
         if (!player.interfaceManager.topOpen(packet.interfaceId))
             return

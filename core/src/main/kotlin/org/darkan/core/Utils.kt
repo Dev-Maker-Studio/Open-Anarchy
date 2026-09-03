@@ -554,13 +554,40 @@ object Utils {
 
     @JvmStatic fun getVarbitDefinitionsSize(): Int = 0
 
+    // One past the highest id, matching every "size" here and the `id >= size` / `size <= id`
+    // guards that call them - lastArchiveId/lastFileId are the highest id, not the count, and a
+    // component archive is sparse so its file count is not its last file id either.
+
     @JvmStatic fun getInterfaceDefinitionsSize(): Int =
-        Cache.get().lastArchiveId(Index.INTERFACES)
+        Cache.get().lastArchiveId(Index.INTERFACES) + 1
 
     @JvmStatic fun getInterfaceDefinitionsComponentsSize(interfaceId: Int): Int =
-        Cache.get().fileCount(Index.INTERFACES, interfaceId)
+        Cache.get().lastFileId(Index.INTERFACES, interfaceId) + 1
 
-    @JvmStatic fun itemExists(id: Int): Boolean = false
+    /**
+     * Which item ids the cache actually holds a definition for, indexed by id.
+     *
+     * Index 19 is sparse - the decoded [Cache.items] array is dense over the whole id space, so a
+     * hole in the cache is indistinguishable from a real definition there. The authority is the
+     * reference table: an item exists when index 19 has file `id and 0xff` in archive `id ushr 8`.
+     * Built once because [itemExists] is on the path of every single item added to a container.
+     */
+    private val itemIdExists: BooleanArray by lazy {
+        val size = getItemDefinitionsSize()
+        val exists = BooleanArray(size)
+        val cache = Cache.get()
+        var archive = 0
+        while ((archive shl 8) < size) {
+            for (file in cache.files(Index.ITEMS, archive)) {
+                val id = (archive shl 8) or file
+                if (id < size) exists[id] = true
+            }
+            archive++
+        }
+        exists
+    }
+
+    @JvmStatic fun itemExists(id: Int): Boolean = id >= 0 && id < itemIdExists.size && itemIdExists[id]
 
     // --- Legacy compatibility methods ---
 
