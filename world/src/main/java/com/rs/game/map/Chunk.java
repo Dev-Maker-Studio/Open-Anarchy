@@ -219,7 +219,6 @@ public class Chunk {
         if (groundItems.isEmpty())
             return;
         List<GroundItem> toRemove = new ArrayList<>();
-        List<GroundItem[]> toReveal = new ArrayList<>();
         for (GroundItem item : groundItemList) {
             item.tick();
             if (item.getDeleteTime() != -1 && item.getTicks() >= item.getDeleteTime())
@@ -234,15 +233,12 @@ public class Chunk {
                     item.getTile().getXInChunk(), item.getTile().getYInChunk(),
                     item.getId(), item.getAmount()
                 ));
-                // Create a public copy (no owner) to replace the private item in mappings
-                GroundItem publicItem = new GroundItem(item.getItem(), item.getTile(), null, item.getType(), item.getRespawnTicks(), item.getPrivateTime(), item.getDeleteTime());
-                toReveal.add(new GroundItem[] { item, publicItem });
+                // Re-key the same instance as public, the way legacy did: a fresh GroundItem would
+                // restart its tick counter, and getDeleteTime() is an absolute threshold, so the
+                // drop would outlive its lifetime by the whole hidden window.
+                item.removeOwner();
+                addItemToOwnerMapping(item);
             }
-        }
-        for (GroundItem[] pair : toReveal) {
-            groundItemList.remove(pair[0]);
-            groundItemList.add(pair[1]);
-            addItemToOwnerMapping(pair[1]);
         }
         for (GroundItem item : toRemove)
             deleteGroundItem(item);

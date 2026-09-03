@@ -12,17 +12,33 @@ import world.gregs.voidps.cache.definition.data.ObjectDefinition
 import world.gregs.voidps.cache.definition.data.StructDefinition
 import world.gregs.voidps.cache.definition.data.VarBitDefinition
 
+/**
+ * Looks up [id] in [table], or hands back [blank] when the id is not one the cache has.
+ *
+ * Every legacy `*Definitions.getDefs(int)` accepted any id at all: it built a definition object,
+ * found no file for that id, and returned it with nothing but defaults filled in
+ * (`com.rs.cache.loaders.ItemDefinitions:188-199` and `:103-119`). Content leans on that
+ * constantly - `AttackStyle.getStyles(player.equipment.weaponId)` is called with -1 for bare hands
+ * on every equipment refresh, and `Equipment.getItemSlot`, `ItemConfig.get` and the drop tables do
+ * the same - so an out-of-range id must not throw here.
+ */
+private inline fun <T> lookup(table: Array<T>, id: Int, blank: T): T =
+    if (id in table.indices) table[id] else blank
+
+/** `VarBitDefinition` has no shared blank of its own, so this file keeps one. */
+private val EMPTY_VARBIT = VarBitDefinition()
+
 object ItemDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): ItemDefinition = Cache.items[id]
+    fun getDefs(id: Int): ItemDefinition = lookup(Cache.items, id, ItemDefinition.EMPTY)
 
     @JvmStatic
-    fun getItemDefinitions(id: Int, loadTemplates: Boolean = true): ItemDefinition = Cache.items[id]
+    fun getItemDefinitions(id: Int, loadTemplates: Boolean = true): ItemDefinition = getDefs(id)
 }
 
 object NPCDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): NPCDefinition = Cache.npcs[id]
+    fun getDefs(id: Int): NPCDefinition = lookup(Cache.npcs, id, NPCDefinition.EMPTY)
 
     /**
      * The definition this NPC presents as for a player with the given [vars].
@@ -35,7 +51,7 @@ object NPCDefinitions {
     @JvmStatic
     fun getDefs(id: Int, vars: Vars?): NPCDefinition {
         val npcs = Cache.npcs
-        val definition = npcs[id]
+        val definition = getDefs(id)
         val realId = definition.getIdForPlayer(vars)
         if (realId == id || realId < 0 || realId >= npcs.size) {
             return definition
@@ -46,10 +62,10 @@ object NPCDefinitions {
 
 object ObjectDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): ObjectDefinition = Cache.objects[id]
+    fun getDefs(id: Int): ObjectDefinition = lookup(Cache.objects, id, ObjectDefinition.EMPTY)
 
     @JvmStatic
-    fun getDefs(id: Int, init: Boolean): ObjectDefinition = Cache.objects[id]
+    fun getDefs(id: Int, init: Boolean): ObjectDefinition = getDefs(id)
 
     /**
      * The definition this object presents as for a player with the given [vars].
@@ -62,7 +78,7 @@ object ObjectDefinitions {
     @JvmStatic
     fun getDefs(id: Int, vars: Vars?): ObjectDefinition {
         val objects = Cache.objects
-        val definition = objects[id]
+        val definition = getDefs(id)
         val realId = definition.getIdForPlayer(vars)
         if (realId == id || realId < 0 || realId >= objects.size) {
             return definition
@@ -73,17 +89,17 @@ object ObjectDefinitions {
 
 object EnumDefinitions {
     @JvmStatic
-    fun getEnum(id: Int): EnumDefinition = Cache.enums[id]
+    fun getEnum(id: Int): EnumDefinition = lookup(Cache.enums, id, EnumDefinition.EMPTY)
 }
 
 object StructDefinitions {
     @JvmStatic
-    fun getStruct(id: Int): StructDefinition = Cache.structs[id]
+    fun getStruct(id: Int): StructDefinition = lookup(Cache.structs, id, StructDefinition.EMPTY)
 }
 
 object AnimationDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): AnimationDefinition = Cache.animations[id]
+    fun getDefs(id: Int): AnimationDefinition = lookup(Cache.animations, id, AnimationDefinition.EMPTY)
 
     /**
      * Finds an animation that uses the given item in either hand.
@@ -102,15 +118,15 @@ object AnimationDefinitions {
 
 object VarBitDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): VarBitDefinition = Cache.varbits[id]
+    fun getDefs(id: Int): VarBitDefinition = lookup(Cache.varbits, id, EMPTY_VARBIT)
 }
 
 object BASDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): BASDefinition = Cache.bas[id]
+    fun getDefs(id: Int): BASDefinition = lookup(Cache.bas, id, BASDefinition.EMPTY)
 }
 
 object SpotAnimDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): GraphicDefinition = Cache.graphics[id]
+    fun getDefs(id: Int): GraphicDefinition = lookup(Cache.graphics, id, GraphicDefinition.EMPTY)
 }

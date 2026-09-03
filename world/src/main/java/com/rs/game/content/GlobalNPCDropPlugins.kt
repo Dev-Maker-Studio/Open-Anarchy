@@ -104,7 +104,7 @@ fun bonecrush(player: Player, item: Item): Boolean {
 
 fun GroundItem.shouldLootbeam(player: Player) =
     player.getI("lootbeamAnim", -1) != -1 && (
-    definitions.cost * amount > player.getI("lootbeamThreshold", 90000) ||
+    definitions.getValue() * amount > player.getI("lootbeamThreshold", 90000) ||
     definitions.name.contains("Scroll box") ||
     definitions.name.contains(" defender") ||
     yellDrop(id))

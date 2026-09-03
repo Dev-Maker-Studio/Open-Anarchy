@@ -274,11 +274,10 @@ val NPCDefinition.movementType: MovementType get() =
 // --- Item utilities for Java interop ---
 
 /**
- * Creates a shallow copy of this Item (copies id, amount, and metadata).
+ * A copy of this item with its own metadata map, and [Item.slot] left at its default.
+ *
+ * This is legacy `new Item(Item)` (`com.rs.lib.game.Item:42-44`), which built a fresh item through
+ * the clamping constructor and so never carried the source's transient slot over.
  * Callable from Java as KtExtensionsKt.copyItem(item).
  */
-fun Item.copyItem(): Item {
-    val copy = Item(id, amount, metadata?.toMutableMap())
-    copy.slot = slot
-    return copy
-}
+fun Item.copyItem(): Item = clone()

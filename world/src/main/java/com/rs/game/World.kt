@@ -525,7 +525,7 @@ object World {
     fun addGroundItem(item: Item, tile: Tile, owner: Player? = null, invisible: Boolean = true, hiddenTime: Int = 60, type: DropMethod = DropMethod.NORMAL, deleteTime: Int = 150): GroundItem? {
         if ((item.id == -1) || (owner != null && owner.rights == Rights.ADMIN)) return null
         if (type != DropMethod.NORMAL) if (type == DropMethod.TURN_UNTRADEABLES_TO_COINS && !ItemConstants.isTradeable(item)) {
-            val price = item.definitions.cost
+            val price = item.definitions.getValue()
             if (price <= 0) return null
             item.id = 995
             item.amount = price
@@ -579,18 +579,18 @@ object World {
         if (groundItem.id == -1) return false
         val chunk: Chunk = ChunkManager.getChunk(groundItem.tile.getChunkId())
         if (!chunk.itemExists(groundItem)) return false
-        if (player.isIronMan && groundItem.ownerUsername != null && groundItem.ownerUsername != player.username) {
+        if (player.isIronMan && groundItem.sourceId != 0 && groundItem.sourceId != player.uuid) {
             player.sendMessage("You may not pick up other players items as an ironman.")
             return false
         }
-        if (add && !player.inventory.hasRoomFor(Item(groundItem.id, groundItem.amount, groundItem.metaData ?: mutableMapOf()))) {
+        if (add && !player.inventory.hasRoomFor(Item(groundItem.id, groundItem.amount, groundItem.metaData))) {
             player.sendMessage("Not enough space in your inventory.")
             return false
         }
         if (chunk.deleteGroundItem(groundItem)) {
             if (add) {
                 if (!player.inventory.addItem(Item(groundItem.id, groundItem.amount, groundItem.metaData))) return false
-                if (groundItem.ownerUsername != null && groundItem.ownerUsername != player.username) WorldDB.getLogs().logPickup(player, groundItem)
+                if (groundItem.sourceId != 0 && groundItem.sourceId != player.uuid) WorldDB.getLogs().logPickup(player, groundItem)
                 player.soundEffect(2582, false)
             }
             if (groundItem.isRespawn) WorldTasks.schedule(groundItem.respawnTicks) {

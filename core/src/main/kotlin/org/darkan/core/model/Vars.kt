@@ -8,6 +8,7 @@ import org.darkan.core.net.prot.packet.ClearVarps
 import org.darkan.core.net.prot.packet.setVarcPacket
 import org.darkan.core.net.prot.packet.setVarcStrPacket
 import org.darkan.core.net.prot.packet.setVarpPacket
+import org.darkan.core.cache.VarBitDefinitions
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Config
 import world.gregs.voidps.cache.Index
@@ -69,7 +70,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     @JvmOverloads
     fun setVarBit(id: Int, value: Int, forceSend: Boolean = false, save: Boolean = false) {
-        val defs = Cache.varbits[id]
+        val defs = VarBitDefinitions.getDefs(id)
         val bitLength = defs.endBit - defs.startBit
         val mask = BIT_MASKS[bitLength]
 

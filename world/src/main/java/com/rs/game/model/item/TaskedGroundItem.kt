@@ -9,7 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 
 /**
  * A GroundItem wrapper that supports async task scheduling.
- * Uses composition since GroundItem is a data class and cannot be subclassed.
+ * Uses composition because GroundItem is final, where legacy's TaskedGroundItem subclassed it.
  */
 class TaskedGroundItem(val groundItem: GroundItem) {
     val asyncTasks = AsyncTaskScheduler()
@@ -30,7 +30,7 @@ class TaskedGroundItem(val groundItem: GroundItem) {
     }
 
     fun getMetaData(key: String): Any? = groundItem.getMetaData(key)
-    fun getMetaDataI(key: String, default: Int = 0) = groundItem.getMetaDataI(key, default)
+    fun getMetaDataI(key: String, default: Int = -1) = groundItem.getMetaDataI(key, default)
     fun addMetaData(key: String, value: Any) = groundItem.addMetaData(key, value)
 
     /** Allow TaskedGroundItem to be used where GroundItem is expected */
