@@ -204,6 +204,22 @@ above; `-Pdarkan.cacheSource=<path>` / `DARKAN_CACHE_SOURCE` point the build at 
    from the server project (Settings → CI/CD → Token Access).
 3. On the two dev hosts run the `submodule update` above, add the `.env` lines, restart the units.
 
+## Lobby commands and password recovery
+
+The lobby accepts `::` commands from a logged-in client (typed as a command or as `::`/`;;` chat),
+dispatched by rights the same way the world does (`org.darkan.lobby.command.LobbyCommands`):
+
+| command | rights | effect |
+|---|---|---|
+| `::commands` | player | lists what you can run |
+| `::changepass <new password>` | player | changes your own password |
+| `::changepassother <player name> <new password>` (aliases `setpass`, `resetpass`) | owner | account recovery: sets another player's password |
+
+Passwords must be at least 8 characters of letters and digits. A change writes a fresh Argon2id
+hash, drops any legacy AES or SHA-1 credential so the login path cannot fall back to the old
+secret, and is saved immediately; the player can log in with it on their next attempt. Command
+lines are logged without the password.
+
 ## Production
 
 Same steps against `prod-lobby` and each production world, with the production database as the
