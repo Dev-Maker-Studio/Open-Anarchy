@@ -162,6 +162,46 @@ data class WorldHello(
     val token: String,
 ) : SocialGatewayWireMessage
 
+/** One player a world currently has in game, as the world sees them. */
+@Serializable
+data class GatewayPlayerPresence(
+    val username: String,
+    val displayName: String,
+    val rightsCrown: Int,
+    val privateStatus: Int,
+)
+
+/** Why a world is sending its online list; it decides how much the lobby pushes back. */
+@Serializable
+enum class PresenceSyncReason {
+    /**
+     * The socket has just come up. Either side may have restarted, so the lobby rebuilds its
+     * presence for this world from scratch and re-sends every listed player the social state
+     * their client needs - friend list, ignores, chat filter, friends chat and clan channels -
+     * without anybody having to relog.
+     */
+    CONNECT,
+
+    /**
+     * A periodic drift check. The lobby only applies the difference: players it did not know
+     * about come online, players it still thought were here go offline, and nobody else is
+     * disturbed.
+     */
+    PERIODIC,
+}
+
+/**
+ * Everyone a world currently has online, which is the authority for that world's presence. Sent
+ * immediately after the [WorldHello] handshake and again on a timer, so a lobby restart, a world
+ * restart or a dropped socket can never leave the two sides disagreeing about who is where.
+ */
+@Serializable
+@SerialName("WorldPresenceSnapshot")
+data class WorldPresenceSnapshot(
+    val players: List<GatewayPlayerPresence>,
+    val reason: PresenceSyncReason,
+) : SocialGatewayWireMessage
+
 @Serializable
 @SerialName("WorldHelloAck")
 data class WorldHelloAck(

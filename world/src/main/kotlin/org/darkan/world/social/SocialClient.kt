@@ -22,9 +22,12 @@ import org.darkan.core.social.gateway.ClanSetRankRequest
 import org.darkan.core.social.gateway.ClanUnbanMemberRequest
 import org.darkan.core.social.gateway.ClientPacketEnvelope
 import org.darkan.core.social.gateway.FcSettingsUpdate
+import org.darkan.core.social.gateway.GatewayPlayerPresence
 import org.darkan.core.social.gateway.GatewayWorldInfo
 import org.darkan.core.social.gateway.PlayerOffline
 import org.darkan.core.social.gateway.PlayerOnline
+import org.darkan.core.social.gateway.PresenceSyncReason
+import org.darkan.core.social.gateway.WorldPresenceSnapshot
 import org.darkan.core.social.gateway.SocialGatewayWireJson
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import org.darkan.core.social.gateway.WorldHello
@@ -33,8 +36,19 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+/**
+ * The world's end of the social gateway socket.
+ *
+ * Presence is pushed, not asked for: [onlinePlayers] is sent as a [WorldPresenceSnapshot] the
+ * moment the socket comes up and again every [EnvVars.socialPresenceResyncSeconds], so the lobby
+ * can always rebuild its picture of this world from the world's own. That is what makes a restart
+ * on either side recoverable - a world that outlived a lobby restart re-announces its players and
+ * gets their whole social state pushed back without anybody relogging, and a lobby that never saw
+ * a `PlayerOffline` (because the socket was down) drops those players at the next snapshot.
+ */
 class SocialClient(
     private val scope: CoroutineScope,
+    private val onlinePlayers: () -> List<GatewayPlayerPresence> = { emptyList() },
     private val onMessage: suspend (SocialGatewayWireMessage) -> Unit,
 ) {
     private val client = HttpClient(CIO) {
@@ -89,6 +103,10 @@ class SocialClient(
         send(PlayerOffline(username = username))
     }
 
+    /** Tells the lobby exactly who this world has in game right now. */
+    suspend fun sendPresenceSnapshot(reason: PresenceSyncReason): Boolean =
+        send(WorldPresenceSnapshot(players = onlinePlayers(), reason = reason))
+
     suspend fun sendFcSettingsUpdate(username: String, name: String?, rankToEnter: Int, rankToSpeak: Int, rankToKick: Int, rankToLS: Int) {
         send(FcSettingsUpdate(username = username, name = name, rankToEnter = rankToEnter, rankToSpeak = rankToSpeak, rankToKick = rankToKick, rankToLS = rankToLS))
     }
@@ -133,6 +151,19 @@ class SocialClient(
         send(ClanGuestLeaveRequest(username = username))
     }
 
+    /**
+     * Re-sends the online list on a timer. Nothing is expected to be wrong; this exists so that
+     * drift - a dropped `PlayerOnline`, a socket that died mid-logout - cannot outlive one
+     * interval.
+     */
+    private suspend fun resyncLoop() {
+        val interval = EnvVars.socialPresenceResyncSeconds.seconds
+        while (true) {
+            delay(interval)
+            if (!sendPresenceSnapshot(PresenceSyncReason.PERIODIC)) return
+        }
+    }
+
     private suspend fun connectLoop() {
         var attempt = 0
         while (scope.isActive) {
@@ -166,6 +197,11 @@ class SocialClient(
                     state.set(State.Connected(this))
                     logInfo("SocialClient connected")
 
+                    // The handshake is only half the story: the lobby cannot know who is already
+                    // in game here, so hand it the full list before anything else.
+                    sendPresenceSnapshot(PresenceSyncReason.CONNECT)
+                    val resync = launch { resyncLoop() }
+
                     for (frame in incoming) {
                         val txt = (frame as? Frame.Text)?.readText() ?: continue
                         val msg = try {
@@ -177,6 +213,7 @@ class SocialClient(
                         logInfo("SocialClient received: ${msg::class.simpleName}")
                         onMessage(msg)
                     }
+                    resync.cancel()
                 }
             } catch (_: CancellationException) {
                 return

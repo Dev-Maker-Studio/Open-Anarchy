@@ -44,6 +44,7 @@ import org.darkan.core.net.prot.packet.FcJoin
 import org.darkan.core.social.gateway.AnnouncementBroadcast
 import org.darkan.core.social.gateway.ClanCheckNameResponse
 import org.darkan.core.social.gateway.ClanCreateResponse
+import org.darkan.core.social.gateway.GatewayPlayerPresence
 import org.darkan.core.social.gateway.ServerPacketBatch
 import org.darkan.core.social.gateway.ServerPacketEnvelope
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
@@ -74,7 +75,7 @@ object WorldServer {
         selectorManager = ActorSelectorManager(dispatcher)
         val scope = CoroutineScope(dispatcher)
 
-        socialClient = SocialClient(scope) { msg -> handleSocialMessage(msg) }
+        socialClient = SocialClient(scope, ::onlinePresence) { msg -> handleSocialMessage(msg) }
         socialClient.start()
         logInfo("Starting world server...")
         serverSocket = runBlocking {
@@ -384,6 +385,23 @@ object WorldServer {
         }
         player.session.queuePacket(packet)
     }
+
+    /**
+     * Everyone this world currently has in game, for the presence snapshots the lobby reconciles
+     * against. The gate is the same one [deliverToPlayer] uses - a player still logging in or
+     * already finishing is not somebody the lobby can route packets to.
+     */
+    private fun onlinePresence(): List<GatewayPlayerPresence> =
+        World.players.mapNotNull { player ->
+            if (player == null || !player.hasStarted() || player.hasFinished()) return@mapNotNull null
+            val account = player.account
+            GatewayPlayerPresence(
+                username = account.username,
+                displayName = account.displayName,
+                rightsCrown = account.rights.crown,
+                privateStatus = account.social.status.toInt(),
+            )
+        }
 
     fun notifyPlayerOnline(account: Account) {
         // No gateway client at all means this process never started the world socket server

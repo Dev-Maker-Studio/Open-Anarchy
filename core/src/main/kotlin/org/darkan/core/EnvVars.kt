@@ -76,6 +76,9 @@ object EnvVars {
     // SocialGateway (world <-> lobby) settings
     val socialGatewayUrl: String = dotenv.get("SOCIAL_GATEWAY_URL", "ws://localhost:${lobbyApiPort}/social/ws")
     val socialGatewayToken: String = dotenv.get("SOCIAL_GATEWAY_TOKEN", "CHANGE_ME")
+    // How often a world re-announces everyone it has in game, so lobby-side presence cannot drift
+    // for longer than one interval after a dropped message or a restart on either side.
+    val socialPresenceResyncSeconds: Long = dotenv.get("SOCIAL_PRESENCE_RESYNC_SECONDS", "120").toLong()
     val worldId: Int = dotenv.get("WORLD_ID", "300").toInt()
 
     //Automatic updates from the CI package registry (dev servers only). BUILD_VERSION is exported by the

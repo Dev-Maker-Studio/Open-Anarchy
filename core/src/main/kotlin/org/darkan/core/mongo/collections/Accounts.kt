@@ -17,8 +17,19 @@ import org.darkan.core.mongo.MongoDB.database
 import org.darkan.core.net.web.AccountCreateRequest
 import org.darkan.core.net.web.ConflictException
 
-object Accounts {
-    private val collection by lazy {
+/**
+ * The account reads and writes the social layer performs, behind an interface so a test can put an
+ * in-memory store in front of [Accounts] instead of a Mongo connection. Production code always goes
+ * through [Accounts]; only the store underneath it is swappable.
+ */
+interface AccountStore {
+    suspend fun find(usernameOrEmail: String): Account?
+    suspend fun findByDisplayName(displayName: String): Account?
+    suspend fun findByUsernames(usernames: Collection<String>): List<Account>
+    suspend fun save(account: Account)
+}
+
+private val collection by lazy {
         val col = database.getCollection<Account>("accounts")
         runBlocking {
             col.createIndex(ascending(Account::username.name), IndexOptions().unique(true))
@@ -26,10 +37,12 @@ object Accounts {
             col.createIndex(ascending(Account::recoveryEmail.name), IndexOptions().sparse(true))
             col.createIndex(ascending(Account::displayName.name))
         }
-        return@lazy col
-    }
+    return@lazy col
+}
 
-    suspend fun find(usernameOrEmail: String): Account? {
+/** The real store: the Mongo `accounts` collection. */
+private object MongoAccounts : AccountStore {
+    override suspend fun find(usernameOrEmail: String): Account? {
         val formatted = usernameOrEmail.formatPlayerNameForProtocol()
         return collection.find(
             or(
@@ -39,7 +52,7 @@ object Accounts {
         ).firstOrNull()
     }
 
-    suspend fun findByDisplayName(displayName: String): Account? {
+    override suspend fun findByDisplayName(displayName: String): Account? {
         val byUsername = displayName.formatPlayerNameForProtocol()
         val byDisplay = byUsername.formatPlayerNameForDisplay()
         return collection.find(
@@ -51,11 +64,30 @@ object Accounts {
         ).firstOrNull()
     }
 
-    suspend fun findByUsernames(usernames: Collection<String>): List<Account> {
+    override suspend fun findByUsernames(usernames: Collection<String>): List<Account> {
         if (usernames.isEmpty()) return emptyList()
         val formatted = usernames.map { it.formatPlayerNameForProtocol() }
         return collection.find(`in`(Account::username.name, formatted)).toList()
     }
+
+    override suspend fun save(account: Account) {
+        collection.replaceOne(eq(Account::username.name, account.username), account, ReplaceOptions().upsert(true))
+    }
+}
+
+object Accounts : AccountStore {
+
+    /** Swapped by tests for an in-memory store; never reassigned by production code. */
+    @Volatile
+    var store: AccountStore = MongoAccounts
+
+    override suspend fun find(usernameOrEmail: String): Account? = store.find(usernameOrEmail)
+
+    override suspend fun findByDisplayName(displayName: String): Account? = store.findByDisplayName(displayName)
+
+    override suspend fun findByUsernames(usernames: Collection<String>): List<Account> = store.findByUsernames(usernames)
+
+    override suspend fun save(account: Account) = store.save(account)
 
     suspend fun exists(usernameOrEmail: String): Boolean {
         val formatted = usernameOrEmail.formatPlayerNameForProtocol()
@@ -116,6 +148,4 @@ object Accounts {
         }
     }
 
-    suspend fun save(account: Account) =
-        collection.replaceOne(eq(Account::username.name, account.username), account, ReplaceOptions().upsert(true))
 }
