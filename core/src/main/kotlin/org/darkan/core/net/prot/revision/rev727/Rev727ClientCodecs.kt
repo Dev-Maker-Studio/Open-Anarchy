@@ -14,6 +14,27 @@ import org.darkan.core.fixChatMessage
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.type.Tile
 
+/** The value a 16-bit interface field carries when the client means "none". */
+private const val NONE_16 = 0xFFFF
+
+/**
+ * Normalises the client's 16-bit "none" sentinel to -1.
+ *
+ * A component with no slot writes `slotId = -1` and one holding no obj writes
+ * `containerItemId = -1` (darkan-bot `Component.slotId` / `Component.containerItemId` and
+ * `Client.selectedSlotId` / `Client.selectedItemId`, all of which default to -1), and an interface
+ * hash naming a whole interface rather than one of its components carries 0xFFFF in its low half.
+ * Read back out of a 16-bit field every one of those arrives as 65535, so they are all mapped here
+ * and a handler only ever has to test for -1.
+ *
+ * The legacy decoders got to the same place unevenly: some read the field signed (IFDragOntoIF,
+ * IFOnIF, IFOnObject, IFOnGroundItem), some mapped 65535 in the decoder (IFOnNPC, IFOnPlayer), and
+ * some left it to the handler (IFOpHandler, IFOnIFHandler and IFOnGroundItemHandler each compare a
+ * component id against 65535). Only 65535 is remapped, so every other value still decodes exactly
+ * as the legacy unsigned reads decoded it.
+ */
+private fun Int.orNone(): Int = if (this == NONE_16) -1 else this
+
 internal fun Codec.registerRev727ClientProts() {
     //Utility/clientwatch
     clientProt<Ping>(opcode = 0)
@@ -227,24 +248,24 @@ internal fun Codec.registerRev727ClientProts() {
         IfButton(
             opNum = ifButtonOpcodes.indexOf(opcode) + 1,
             interfaceId = interfaceHash shr 16,
-            componentId = interfaceHash and 0xFFFF,
-            itemId = readShort().toInt(),
-            slotId = readUShortAdd()
+            componentId = (interfaceHash and 0xFFFF).orNone(),
+            itemId = readUShort().toInt().orNone(),
+            slotId = readUShortAdd().orNone()
         )
     }
 
     clientProt(opcode = 4, size = 16) {
-        val toSlot = readUShortAddLittle()
-        val fromSlot = readUShortLittle()
-        val toItemId = readUShortAddLittle()
+        val toSlot = readUShortAddLittle().orNone()
+        val fromSlot = readUShortLittle().orNone()
+        val toItemId = readUShortAddLittle().orNone()
         val toHash = readUIntLittle()
         val fromHash = readUIntInverseMiddle()
-        val fromItemId = readUShortLittle()
+        val fromItemId = readUShortLittle().orNone()
         IfOnIf(
             fromInter = fromHash shr 16,
             toInter = toHash shr 16,
-            fromComp = fromHash and 0xFFFF,
-            toComp = toHash and 0xFFFF,
+            fromComp = (fromHash and 0xFFFF).orNone(),
+            toComp = (toHash and 0xFFFF).orNone(),
             fromSlot = fromSlot,
             toSlot = toSlot,
             fromItemId = fromItemId,
@@ -257,12 +278,12 @@ internal fun Codec.registerRev727ClientProts() {
         val forceRun = readBooleanSubtract()
         val objectId = readUIntMiddle()
         val interfaceHash = readInt()
-        val itemId = readUShortLittle()
-        val slotId = readUShortAdd()
+        val itemId = readUShortLittle().orNone()
+        val slotId = readUShortAdd().orNone()
         val y = readUShortLittle()
         IfOnObject(
             interfaceId = interfaceHash shr 16,
-            componentId = interfaceHash and 0xFFFF,
+            componentId = (interfaceHash and 0xFFFF).orNone(),
             slotId = slotId,
             itemId = itemId,
             objectId = objectId,
@@ -273,16 +294,18 @@ internal fun Codec.registerRev727ClientProts() {
     }
 
     clientProt(opcode = 67, size = 15) {
-        val itemIdContainer = readUShortAdd()
+        val itemIdContainer = readUShortAdd().orNone()
         val interfaceHash = readUIntInverseMiddle()
+        // The ground item's own id, taken from the clicked menu entry rather than from the dragged
+        // component, so it is never the "none" sentinel - legacy IFOnGroundItem reads it signed too.
         val itemId = readShort().toInt()
         val forceRun = readBooleanSubtract()
-        val slotId = readUShortAddLittle()
+        val slotId = readUShortAddLittle().orNone()
         val y = readUShortAddLittle()
         val x = readUShortLittle()
         IfOnGroundItem(
             interfaceId = interfaceHash shr 16,
-            componentId = interfaceHash and 0xFFFF,
+            componentId = (interfaceHash and 0xFFFF).orNone(),
             slotId = slotId,
             itemIdContainer = itemIdContainer,
             itemId = itemId,
@@ -296,11 +319,11 @@ internal fun Codec.registerRev727ClientProts() {
         val interfaceHash = readUIntInverseMiddle()
         val npcIndex = readUShortAddLittle()
         val forceRun = readBooleanSubtract()
-        val itemId = readUShortAddLittle()
-        val slotId = readUShortAdd()
+        val itemId = readUShortAddLittle().orNone()
+        val slotId = readUShortAdd().orNone()
         IfOnNpc(
             interfaceId = interfaceHash shr 16,
-            componentId = interfaceHash and 0xFFFF,
+            componentId = (interfaceHash and 0xFFFF).orNone(),
             slotId = slotId,
             itemId = itemId,
             npcIndex = npcIndex,
@@ -309,14 +332,14 @@ internal fun Codec.registerRev727ClientProts() {
     }
 
     clientProt(opcode = 13, size = 11) {
-        val slotId = readUShort().toInt()
+        val slotId = readUShort().toInt().orNone()
         val playerIndex = readUShortLittle()
         val forceRun = readBooleanSubtract()
         val interfaceHash = readUIntInverseMiddle()
-        val itemId = readUShortLittle()
+        val itemId = readUShortLittle().orNone()
         IfOnPlayer(
             interfaceId = interfaceHash shr 16,
-            componentId = interfaceHash and 0xFFFF,
+            componentId = (interfaceHash and 0xFFFF).orNone(),
             slotId = slotId,
             itemId = itemId,
             playerIndex = playerIndex,
@@ -325,14 +348,14 @@ internal fun Codec.registerRev727ClientProts() {
     }
 
     clientProt(opcode = 46, size = 12) {
-        val itemId = readUShortLittle()
+        val itemId = readUShortLittle().orNone()
         val y = readUShortLittle()
         val interfaceHash = readUIntMiddle()
-        val slotId = readUShortAdd()
+        val slotId = readUShortAdd().orNone()
         val x = readUShortLittle()
         IfOnTile(
             interfaceId = interfaceHash shr 16,
-            componentId = interfaceHash and 0xFFFF,
+            componentId = (interfaceHash and 0xFFFF).orNone(),
             slotId = slotId,
             itemId = itemId,
             x = x,
@@ -342,26 +365,30 @@ internal fun Codec.registerRev727ClientProts() {
 
     clientProt(opcode = 49, size = 6) {
         val interfaceHash = readUIntMiddle()
-        val slotId = readUShortAddLittle()
+        val slotId = readUShortAddLittle().orNone()
         IfContinue(
             interfaceId = interfaceHash shr 16,
-            componentId = interfaceHash and 0xFFFF,
+            componentId = (interfaceHash and 0xFFFF).orNone(),
             slotId = slotId
         )
     }
 
+    // The drop target of a bank drag can be a tab header, which is a component with no slot: the
+    // client writes -1 there (darkan-bot PacketEncoder.sendInterfaceDragOntoInterface writes
+    // `target.slotId`, which Component defaults to -1), and legacy IFDragOntoIF read both slots
+    // signed. Read unsigned it arrived as 65535 and Bank.switchItem never saw the tab drag at all.
     clientProt(opcode = 74, size = 16) {
-        val toSlot = readUShortAddLittle()
-        val fromSlot = readUShortLittle()
-        val toItemId = readShort().toInt()
-        val fromItemId = readUShortAddLittle()
+        val toSlot = readUShortAddLittle().orNone()
+        val fromSlot = readUShortLittle().orNone()
+        val toItemId = readUShort().toInt().orNone()
+        val fromItemId = readUShortAddLittle().orNone()
         val fromInterfaceHash = readUIntMiddle()
         val toInterfaceHash = readUIntLittle()
         IfDragOntoIf(
             fromInter = fromInterfaceHash shr 16,
             toInter = toInterfaceHash shr 16,
-            fromComp = fromInterfaceHash and 0xFFFF,
-            toComp = toInterfaceHash and 0xFFFF,
+            fromComp = (fromInterfaceHash and 0xFFFF).orNone(),
+            toComp = (toInterfaceHash and 0xFFFF).orNone(),
             fromSlot = fromSlot,
             toSlot = toSlot,
             fromItemId = fromItemId,
@@ -377,6 +404,8 @@ internal fun Codec.registerRev727ClientProts() {
     clientProt(opcode = 69, size = ProtSize.VarByte) { ResumeClanForumQFCDialog(readRSString()) }
     clientProt(opcode = 11, size = 2) { ResumeHSLDialog(readUShort().toInt()) }
     clientProt(opcode = 58, size = 4) { ResumeCountDialog(readInt()) }
+    // Read signed on purpose: the client writes -1 when the obj dialog is dismissed without a
+    // pick, matching legacy GEItemSelect's `readShort()`.
     clientProt(opcode = 17, size = 2) { ResumeItemSelect(readShort().toInt()) }
 
     // Communication

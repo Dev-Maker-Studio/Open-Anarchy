@@ -24,7 +24,7 @@ class IfOnGroundItemHandler : PacketHandler<Player, IfOnGroundItem> {
     override suspend fun handle(player: Player, packet: IfOnGroundItem) {
         if (Utils.getInterfaceDefinitionsSize() <= packet.interfaceId || player.isDead || !player.interfaceManager.topOpen(packet.interfaceId))
             return
-        if (packet.componentId != 65535 && Utils.getInterfaceDefinitionsComponentsSize(packet.interfaceId) <= packet.componentId)
+        if (packet.componentId != -1 && Utils.getInterfaceDefinitionsComponentsSize(packet.interfaceId) <= packet.componentId)
             return
         val tile = Tile.of(packet.x, packet.y, player.plane)
         if (!player.mapChunkIds.contains(tile.getChunkId()))
