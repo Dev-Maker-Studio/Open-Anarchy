@@ -34,8 +34,17 @@ class IfDragOntoIfHandler : PacketHandler<Player, IfDragOntoIf> {
                     return
                 player.inventory.switchItem(packet.fromSlot, packet.toSlot)
             }
-            packet.fromInter == 762 && packet.toInter == 762 ->
+            // The bank. A toSlot of -1 is a drag onto a tab header, which is how a tab is created,
+            // so only a real slot is range-checked - the header's component id is validated by
+            // `Bank.switchItem` itself.
+            packet.fromInter == 762 && packet.toInter == 762 -> {
+                val bankSize = player.bank.bankSize
+                if (packet.fromSlot < 0 || packet.fromSlot >= bankSize)
+                    return
+                if (packet.toSlot != -1 && (packet.toSlot < 0 || packet.toSlot >= bankSize))
+                    return
                 player.bank.switchItem(packet.fromSlot, packet.toSlot, packet.fromComp, packet.toComp)
+            }
             // Drag a shop stock slot onto the inventory to buy one.
             packet.fromInter == 1265 && packet.toInter == 1266 && player.tempAttribs.getB("shop_buying") -> {
                 val shop = player.tempAttribs.getO<Shop>("Shop") ?: return

@@ -156,6 +156,10 @@ public final class Skills {
 					for (int i = 0;i < player.getBank().getBankTabs()[tab].length;i++) {
 						if (player.getBank().getBankTabs()[tab][i] == null)
 							continue;
+						// A placeholder is left as it is: mutating the id of an amount-0 entry is
+						// the one way a placeholder could become a real stack of something else.
+						if (Bank.isPlaceholder(player.getBank().getBankTabs()[tab][i]))
+							continue;
 						if (player.getBank().getBankTabs()[tab][i].getId() == cape.getUntrimmed()) {
 							player.getBank().getBankTabs()[tab][i].setId(cape.getTrimmed());
 							player.getBank().refreshItems();

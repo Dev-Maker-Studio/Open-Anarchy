@@ -63,6 +63,15 @@ public class Bank {
 	private Item[][] bankTabs;
 	private short bankPin;
 	private int lastX;
+	/**
+	 * Whether withdrawing the last of an item leaves a placeholder - the same id with amount 0 -
+	 * in its slot instead of releasing the slot.
+	 *
+	 * Persisted with the bank, and deliberately never consulted when a placeholder is released or
+	 * moved: turning the setting off keeps the placeholders that already exist, exactly as it does
+	 * in the live game.
+	 */
+	private boolean placeholders;
 
 	private transient Player player;
 	private transient int currentTab;
@@ -73,6 +82,15 @@ public class Bank {
 	private Map<String, Long> enteredPin;
 
 	public static final int MAX_BANK_SIZE = 800;
+
+	/** Interface 762's two placeholder buttons: the toggle frame, and the release-all frame. */
+	private static final int PLACEHOLDER_TOGGLE_COMPONENT = 124;
+	private static final int RELEASE_ALL_COMPONENT = 126;
+	/** The bank's toggle-frame sprites, the same pair the note and insert toggles use. */
+	private static final int TOGGLE_SPRITE_OFF = 1431;
+	private static final int TOGGLE_SPRITE_ON = 1433;
+	/** Right-click op index of "Release" on the bank's item component (762:95). */
+	private static final int OP_RELEASE = 9;
 
 	public Bank() {
 		bankTabs = new Item[1][0];
@@ -105,6 +123,10 @@ public class Bank {
 			e.getPlayer().getBank().switchInsertItems();
 		else if (e.getComponentId() == 19)
 			e.getPlayer().getBank().switchWithdrawNotes();
+		else if (e.getComponentId() == PLACEHOLDER_TOGGLE_COMPONENT)
+			e.getPlayer().getBank().togglePlaceholders();
+		else if (e.getComponentId() == RELEASE_ALL_COMPONENT)
+			e.getPlayer().getBank().promptReleaseAllPlaceholders();
 		else if (e.getComponentId() == 33)
 			e.getPlayer().getBank().depositAllInventory(true);
 		else if (e.getComponentId() == 37)
@@ -159,6 +181,8 @@ public class Bank {
 				e.getPlayer().getBank().withdrawItem(e.getSlotId(), Integer.MAX_VALUE);
 			else if (e.getOpNum() == 7)
 				e.getPlayer().getBank().withdrawItemButOne(e.getSlotId());
+			else if (e.getOpNum() == OP_RELEASE)
+				e.getPlayer().getBank().releasePlaceholder(e.getSlotId());
 			else if (e.getOpNum() == 10)
 				e.getPlayer().getBank().sendExamine(e.getSlotId());
 
@@ -205,39 +229,55 @@ public class Bank {
 				e.getPlayer().sendMessage(String.valueOf(e.getOpNum()));
 	});
 
+	/**
+	 * Removes every entry with this id, placeholders included.
+	 *
+	 * This is an explicit "take it back" (the loyalty shop, the barbarian guard's bar-crawl card),
+	 * not a withdrawal, so it passes forceDestroy and never leaves a placeholder behind.
+	 */
 	public void removeItem(int id) {
 		if (bankTabs != null)
 			for (int i = 0; i < bankTabs.length; i++)
 				for (int i2 = 0; i2 < bankTabs[i].length; i2++)
 					if (bankTabs[i][i2].getId() == id)
-						removeItem(new int[] { i, i2 }, Integer.MAX_VALUE, true, false);
+						removeItem(new int[] { i, i2 }, Integer.MAX_VALUE, true, true);
 	}
 
 	public void deleteItem(int itemId, int amount) {
 		if (bankTabs != null)
 			for (Item[] bankTab : bankTabs)
 				for (Item element : bankTab)
-					if (element.getId() == itemId) {
+					// A placeholder holds nothing, so there is nothing here to delete: skipping it
+					// also keeps setAmount's negative guard from being the only thing standing
+					// between a subtraction and a real stack.
+					if (element.getId() == itemId && !isPlaceholder(element)) {
 						element.setAmount(element.getAmount() - amount);
 						refreshItems();
 					}
 	}
 
+	/** Whether the bank holds at least [amount] of this item. Placeholders hold nothing. */
 	public boolean containsItem(int itemId, int amount) {
 		if (bankTabs != null)
 			for (Item[] bankTab : bankTabs)
 				for (Item element : bankTab)
-					if (element.getId() == itemId)
+					if (element.getId() == itemId && !isPlaceholder(element))
 						if (element.getAmount() >= amount)
 							return true;
 		return false;
 	}
 
+	/**
+	 * Whether the bank holds this item.
+	 *
+	 * A placeholder is not the item - roughly forty quest and content callers read this as "the
+	 * player has one", so an empty slot that merely remembers the id must answer false.
+	 */
 	public boolean containsItem(int itemId) {
 		if (bankTabs != null) {
 			for (Item[] bankTab : bankTabs) {
 				for (Item element : bankTab) {
-					if (element.getId() == itemId) {
+					if (element.getId() == itemId && !isPlaceholder(element)) {
 						return true;
 					}
 				}
@@ -250,6 +290,14 @@ public class Bank {
 		this.player = player;
 		if (bankTabs == null || bankTabs.length == 0)
 			bankTabs = new Item[1][0];
+		// A save written before placeholders existed can carry a negative amount from an
+		// over-subtraction (Item.setAmount ignores negatives, it does not clamp them). Normalise
+		// those to a placeholder; nothing else about a loaded bank is rewritten, because turning
+		// the setting off must not delete the placeholders a player already has.
+		for (Item[] tab : bankTabs)
+			for (Item item : tab)
+				if (item != null && item.getAmount() < 0)
+					item.setAmount(0);
 	}
 
 	public boolean sortCurrentTab() {
@@ -312,6 +360,9 @@ public class Bank {
 		int[] fromRealSlot = getRealSlot(fakeSlot);
 		Item item = getItem(fromRealSlot);
 		if (item == null)
+			return;
+		// Nothing is ever handed out of a placeholder, whichever withdraw op the client sent.
+		if (isPlaceholder(item))
 			return;
 		if (item.getAmount() <= 1) {
 			player.sendMessage("You only have one of this item in your bank");
@@ -381,9 +432,13 @@ public class Bank {
 	public void collapse(int tabId) {
 		if (tabId == 0 || tabId >= bankTabs.length)
 			return;
+		// The whole tab goes at once rather than one removeItem(getItemSlot(id)) per entry: that
+		// lookup finds the *first* entry with the id, which - now that a placeholder and a real
+		// stack of one id can coexist, as two metadata stacks always could - may live in another
+		// tab, and the re-add below would then merge the collapsed item into the copy that was
+		// never removed.
 		Item[] items = bankTabs[tabId];
-		for (Item item : items)
-			removeItem(getItemSlot(item.getId()), item.getAmount(), false, true);
+		destroyTab(tabId);
 		for (Item item : items)
 			addItem(item, 0, false);
 		refreshTabs();
@@ -656,6 +711,7 @@ public class Bank {
 		player.getPackets().setIFText(762, 47, "Bank of " + Settings.getConfig().getServerName());
 		refreshOpVars();
 		unlockButtons();
+		refreshPlaceholderButton();
 		sendItems();
 		refreshItems();
 		player.setCloseInterfacesEvent(() -> {
@@ -715,6 +771,10 @@ public class Bank {
 			return;
 		Item item = getItem(getRealSlot(bankSlot));
 		if (item == null)
+			return;
+		// Refuse before any inventory mutation: the client's op index is not trusted, so ops 1-7
+		// aimed at a placeholder are no-ops rather than a source of free items.
+		if (isPlaceholder(item))
 			return;
 		if (item.getMetaData() != null)
 			quantity = 1;
@@ -791,7 +851,8 @@ public class Bank {
 				item.setAmount(Integer.MAX_VALUE - bankedItem.getAmount());
 				player.sendMessage("Not enough space in your bank.");
 			}
-		} else if (!hasBankSpace()) {
+		} else if (getPlaceholderSlot(item.getId()) == null && !hasBankSpace()) {
+			// A deposit that lands in this item's placeholder needs no new slot.
 			player.sendMessage("Not enough space in your bank.");
 			return false;
 		}
@@ -827,6 +888,18 @@ public class Bank {
 		PluginManager.handle(event);
 		if (event.isCancelled())
 			return false;
+		// A placeholder for this id is filled in place, which keeps the slot the player arranged
+		// and works for a metadata item too (the merge below cannot take one). This is the only
+		// way an amount-0 entry ever gains an amount.
+		int[] placeholderSlot = getPlaceholderSlot(item.getId());
+		if (placeholderSlot != null) {
+			bankTabs[placeholderSlot[0]][placeholderSlot[1]] = item;
+			if (refresh) {
+				refreshTab(placeholderSlot[0]);
+				refreshItems();
+			}
+			return true;
+		}
 		int[] slotInfo = getItemSlot(item.getId());
 		if (slotInfo == null || item.getMetaData() != null || bankTabs[slotInfo[0]][slotInfo[1]].getMetaData() != null) {
 			if (creationTab >= bankTabs.length)
@@ -842,7 +915,10 @@ public class Bank {
 				refreshTab(creationTab);
 		} else {
 			Item existingItem = bankTabs[slotInfo[0]][slotInfo[1]];
-			bankTabs[slotInfo[0]][slotInfo[1]] = new Item(item.getId(), existingItem.getAmount() + item.getAmount(), item.getMetaData());
+			// Neither side has metadata here (the branch above takes those), so the merged stack
+			// can go through the amt0 constructor: a computed 0 must stay 0 rather than be clamped
+			// up to 1 by the ordinary one.
+			bankTabs[slotInfo[0]][slotInfo[1]] = new Item(item.getId(), existingItem.getAmount() + item.getAmount(), true);
 		}
 		if (refresh)
 			refreshItems();
@@ -853,13 +929,31 @@ public class Bank {
 		return removeItem(getRealSlot(fakeSlot), quantity, refresh, forceDestroy);
 	}
 
+	/**
+	 * The bank's only slot-release path, and so the only place a placeholder is created or
+	 * destroyed.
+	 *
+	 * With placeholders on, emptying a slot leaves the id behind with amount 0 instead of shrinking
+	 * the tab; an entry that is already a placeholder is untouched unless [forceDestroy], which
+	 * only an explicit release or take-back passes.
+	 */
 	public boolean removeItem(int[] slot, int quantity, boolean refresh, boolean forceDestroy) {
 		if (slot == null)
 			return false;
 		Item item = bankTabs[slot[0]][slot[1]];
 		boolean destroyed = false;
 		if (quantity >= item.getAmount()) {
-			if (bankTabs[slot[0]].length == 1 && (forceDestroy || bankTabs.length != 1)) {
+			if (isPlaceholder(item) && !forceDestroy)
+				return false;
+			else if (placeholders && !forceDestroy && !isPlaceholder(item) && item.getMetaData() == null)
+				// Item(id, 0, true) is the only constructor that keeps the 0; the ordinary ones
+				// clamp it up to 1.
+				bankTabs[slot[0]][slot[1]] = new Item(item.getId(), 0, true);
+			else if (bankTabs[slot[0]].length == 1 && bankTabs.length != 1) {
+				// The last remaining tab is never destroyed, forceDestroy or not: bankTabs would
+				// be left empty, and getRealSlot/generateContainer both assume a tab 0 exists.
+				// Legacy let forceDestroy through here, which is how an id-based removal of a
+				// one-item, one-tab bank could leave the bank unusable.
 				destroyTab(slot[0]);
 				if (refresh)
 					refreshTabs();
@@ -873,62 +967,191 @@ public class Bank {
 					refreshTab(slot[0]);
 			}
 		} else
+			// quantity is strictly less than the amount here, so the remainder is at least 1 and
+			// the clamping constructor cannot turn it into something it is not.
 			bankTabs[slot[0]][slot[1]] = new Item(item.getId(), item.getAmount() - quantity, item.getMetaData());
 		if (refresh)
 			refreshItems();
 		return destroyed;
 	}
 
+	/** Whether this entry is a placeholder: an id kept in its slot with nothing in it. */
+	public static boolean isPlaceholder(Item item) {
+		return item != null && item.getAmount() == 0;
+	}
+
+	/** Whether new placeholders are being created for this bank. */
+	public boolean isPlaceholdersEnabled() {
+		return placeholders;
+	}
+
+	/**
+	 * Sets the toggle without touching the bank's contents.
+	 *
+	 * Turning it off keeps every placeholder that already exists - only Release and "release all"
+	 * remove them.
+	 */
+	public void setPlaceholdersEnabled(boolean enabled) {
+		placeholders = enabled;
+	}
+
+	/** Whether the bank holds at least one placeholder. */
+	public boolean hasPlaceholders() {
+		for (Item[] tab : bankTabs)
+			for (Item item : tab)
+				if (isPlaceholder(item))
+					return true;
+		return false;
+	}
+
+	/** How many placeholders the bank holds, across every tab. */
+	public int countPlaceholders() {
+		int count = 0;
+		for (Item[] tab : bankTabs)
+			count += countPlaceholders(tab);
+		return count;
+	}
+
+	private static int countPlaceholders(Item[] tab) {
+		int count = 0;
+		for (Item item : tab)
+			if (isPlaceholder(item))
+				count++;
+		return count;
+	}
+
+	/** The tab/slot of this item's placeholder, or null when it has none. */
+	public int[] getPlaceholderSlot(int id) {
+		for (int tab = 0; tab < bankTabs.length; tab++)
+			for (int slot = 0; slot < bankTabs[tab].length; slot++)
+				if (bankTabs[tab][slot].getId() == id && isPlaceholder(bankTabs[tab][slot]))
+					return new int[] { tab, slot };
+		return null;
+	}
+
+	/** Destroys this item's placeholder, if it has one. Returns whether one was found. */
+	public boolean destroyPlaceholder(int id, boolean refresh) {
+		int[] slot = getPlaceholderSlot(id);
+		if (slot == null)
+			return false;
+		removeItem(slot, 1, refresh, true);
+		return true;
+	}
+
+	/**
+	 * The Release op (762:95 op 9).
+	 *
+	 * The op index the client sent is not trusted: this only ever releases a placeholder, so
+	 * Release on a real item is a no-op.
+	 */
+	public void releasePlaceholder(int fakeSlot) {
+		if (player.getTempAttribs().getB("viewingOtherBank"))
+			return;
+		int[] slot = getRealSlot(fakeSlot);
+		if (slot == null)
+			return;
+		if (!isPlaceholder(bankTabs[slot[0]][slot[1]]))
+			return;
+		removeItem(slot, 1, true, true);
+	}
+
+	/** Asks before releasing everything - the button is next to the withdraw-all buttons. */
+	public void promptReleaseAllPlaceholders() {
+		if (!hasPlaceholders()) {
+			player.sendMessage("You have no placeholders to release.");
+			return;
+		}
+		player.sendOptionDialogue("Release all placeholders?", ops -> {
+			ops.add("Yes", this::releaseAllPlaceholders);
+			ops.add("No");
+		});
+	}
+
+	/** Removes every placeholder, destroying any tab left empty by it. */
+	public void releaseAllPlaceholders() {
+		if (!hasPlaceholders())
+			return;
+		// Downwards, so destroying a tab only shifts tabs that have already been handled.
+		for (int tab = bankTabs.length - 1; tab >= 0; tab--) {
+			Item[] items = bankTabs[tab];
+			int keep = items.length - countPlaceholders(items);
+			if (keep == items.length)
+				continue;
+			if (keep == 0 && tab != 0) {
+				destroyTab(tab);
+				continue;
+			}
+			Item[] kept = new Item[keep];
+			int index = 0;
+			for (Item item : items)
+				if (!isPlaceholder(item))
+					kept[index++] = item;
+			bankTabs[tab] = kept;
+		}
+		refreshTabs();
+		// The container is shorter than the client's copy, so this takes refreshItems' full-send
+		// path rather than a slot diff.
+		refreshItems();
+	}
+
+	/** Flips the toggle and repaints its button. The flag is persisted with the bank. */
+	public void togglePlaceholders() {
+		placeholders = !placeholders;
+		refreshPlaceholderButton();
+	}
+
+	/** Lights the toggle button for the current setting. The client has no var for it. */
+	public void refreshPlaceholderButton() {
+		player.getPackets().setIFGraphic(762, PLACEHOLDER_TOGGLE_COMPONENT, placeholders ? TOGGLE_SPRITE_ON : TOGGLE_SPRITE_OFF);
+	}
+
+	/**
+	 * The tab/slot holding this item, skipping placeholders.
+	 *
+	 * Callers (the rune pouch filler, the house servant) look the slot up to take items out of it,
+	 * so it has to find the entry that actually holds them - see [getPlaceholderSlot] for the
+	 * empty ones.
+	 */
 	public int[] getSlot(int itemId) {
 		if (bankTabs != null)
 			for (int i = 0; i < bankTabs.length; i++)
 				for (int i2 = 0; i2 < bankTabs[i].length; i2++)
-					if (bankTabs[i][i2].getId() == itemId)
+					if (bankTabs[i][i2].getId() == itemId && !isPlaceholder(bankTabs[i][i2]))
 						return new int[] { i, i2 };
 		return null;
 	}
 
+	/**
+	 * Takes items out of the bank by id, for a withdrawal the player is not driving directly (the
+	 * house servant's fetch).
+	 *
+	 * This was a copy of [removeItem]'s body; it delegates now so there is exactly one slot-release
+	 * path and this one cannot drift out of step with placeholder handling. It is a withdrawal, so
+	 * it does not force the slot away - emptying it leaves a placeholder when the toggle is on.
+	 */
 	public boolean withdrawItemDel(int itemId, int amount) {
-		boolean refresh = true;
-		boolean forceDestroy = true;
-		int[] slot = getSlot(itemId);
-		if (slot == null)
-			return false;
-		Item item = bankTabs[slot[0]][slot[1]];
-		boolean destroyed = false;
-		if (amount >= item.getAmount()) {
-			if (bankTabs[slot[0]].length == 1 && (forceDestroy || bankTabs.length != 1)) {
-				destroyTab(slot[0]);
-				if (refresh)
-					refreshTabs();
-				destroyed = true;
-			} else {
-				Item[] tab = new Item[bankTabs[slot[0]].length - 1];
-				System.arraycopy(bankTabs[slot[0]], 0, tab, 0, slot[1]);
-				System.arraycopy(bankTabs[slot[0]], slot[1] + 1, tab, slot[1], bankTabs[slot[0]].length - slot[1] - 1);
-				bankTabs[slot[0]] = tab;
-				if (refresh)
-					refreshTab(slot[0]);
-			}
-		} else
-			bankTabs[slot[0]][slot[1]] = new Item(item.getId(), item.getAmount() - amount, item.getMetaData());
-		if (refresh)
-			refreshItems();
-		return destroyed;
+		return removeItem(getSlot(itemId), amount, true, false);
 	}
 
+	/**
+	 * The bank's stack of this item, skipping placeholders.
+	 *
+	 * Every caller reads an amount off what comes back or mutates it, so an empty slot that merely
+	 * remembers the id must not be handed over.
+	 */
 	public Item getItem(int id) {
 		for (Item[] bankTab : bankTabs)
 			for (Item item : bankTab)
-				if (item.getId() == id)
+				if (item.getId() == id && !isPlaceholder(item))
 					return item;
 		return null;
 	}
 
+	/** The slot of this item's stack, skipping placeholders - [addItem] merges into it. */
 	public int[] getItemSlot(int id) {
 		for (int tab = 0; tab < bankTabs.length; tab++)
 			for (int slot = 0; slot < bankTabs[tab].length; slot++)
-				if (bankTabs[tab][slot].getId() == id)
+				if (bankTabs[tab][slot].getId() == id && !isPlaceholder(bankTabs[tab][slot]))
 					return new int[] { tab, slot };
 		return null;
 	}
