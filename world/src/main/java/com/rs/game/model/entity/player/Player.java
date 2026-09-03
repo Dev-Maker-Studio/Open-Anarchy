@@ -776,8 +776,19 @@ public class Player extends Entity {
 					getInventory().deleteItem(item);
 		for (Item item : getBank().getContainerCopy())
 			if (item != null)
-				if (ItemConstants.isDungItem(item.getId()))
-					getBank().getItem(item.getId()).setId(995);
+				if (ItemConstants.isDungItem(item.getId())) {
+					// A placeholder holds nothing, so there is nothing to pay out for it: it is
+					// released instead. Turning its id into coins would hand the player an
+					// amount-0 coin row, and any later id mutation of an amount-0 entry is how a
+					// placeholder would turn into a real stack.
+					if (Bank.isPlaceholder(item)) {
+						getBank().destroyPlaceholder(item.getId(), false);
+						continue;
+					}
+					Item banked = getBank().getItem(item.getId());
+					if (banked != null)
+						banked.setId(995);
+				}
 		for (Item item : getEquipment().getItemsCopy())
 			if (item != null)
 				if (ItemConstants.isDungItem(item.getId()))
@@ -799,8 +810,19 @@ public class Player extends Entity {
 					getInventory().deleteItem(item);
 		for (Item item : getBank().getContainerCopy())
 			if (item != null)
-				if (ItemConstants.isHouseOnlyItem(item.getId()))
-					getBank().getItem(item.getId()).setId(995);
+				if (ItemConstants.isHouseOnlyItem(item.getId())) {
+					// A placeholder holds nothing, so there is nothing to pay out for it: it is
+					// released instead. Turning its id into coins would hand the player an
+					// amount-0 coin row, and any later id mutation of an amount-0 entry is how a
+					// placeholder would turn into a real stack.
+					if (Bank.isPlaceholder(item)) {
+						getBank().destroyPlaceholder(item.getId(), false);
+						continue;
+					}
+					Item banked = getBank().getItem(item.getId());
+					if (banked != null)
+						banked.setId(995);
+				}
 		for (Item item : getEquipment().getItemsCopy())
 			if (item != null)
 				if (ItemConstants.isHouseOnlyItem(item.getId()))
