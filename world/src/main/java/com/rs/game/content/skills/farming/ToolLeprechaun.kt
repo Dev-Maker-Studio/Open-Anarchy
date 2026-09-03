@@ -202,7 +202,7 @@ fun Player.takeLeprechaunItem(item: StorableItem, amount: Int) {
     amount = minOf(amount, curr.amount, inventory.freeSlots).coerceAtLeast(0)
 
     if (amount > 0) {
-        curr.amount = curr.amount - amount
+        curr.setAmount(curr.amount - amount)
         inventory.addItem(curr.id, amount)
         if (curr.amount == 0) leprechaunStorage.remove(item)
         item.updateVars(this)

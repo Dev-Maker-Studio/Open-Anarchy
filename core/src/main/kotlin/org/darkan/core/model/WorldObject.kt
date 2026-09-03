@@ -1,5 +1,6 @@
 package org.darkan.core.model
 
+import org.darkan.core.cache.ObjectDefinitions
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.type.Tile
 
@@ -12,7 +13,7 @@ open class WorldObject(
 
     constructor(id: Int, rotation: Int, x: Int, y: Int, plane: Int) : this(
         id = id,
-        type = Cache.objects[id].modelTypes?.let { ObjectShape.forId(it[0].toInt()) ?: ObjectShape.SCENERY_INTERACT } ?: ObjectShape.SCENERY_INTERACT,
+        type = ObjectDefinitions.getDefs(id).modelTypes?.let { ObjectShape.forId(it[0].toInt()) ?: ObjectShape.SCENERY_INTERACT } ?: ObjectShape.SCENERY_INTERACT,
         rotation = rotation,
         tile = Tile(x, y, plane)
     )
@@ -32,7 +33,7 @@ open class WorldObject(
     )
 
     val definitions
-        get() = Cache.objects[id]
+        get() = ObjectDefinitions.getDefs(id)
 
     val coordFaceX: Int
         get() = tile.getCoordFaceX(definitions.sizeX, definitions.sizeY, rotation)

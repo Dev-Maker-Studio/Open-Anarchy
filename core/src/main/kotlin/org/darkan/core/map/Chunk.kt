@@ -117,7 +117,7 @@ class Chunk(val chunkId: Int) {
     fun getGroundItem(itemId: Int, tile: Tile, username: String?): GroundItem? {
         return groundItems.firstOrNull { gi ->
             gi.tile == tile && gi.id == itemId &&
-                (gi.ownerUsername == null || gi.ownerUsername == username)
+                (!gi.isPrivate || gi.ownerUsername == username)
         }
     }
 
@@ -125,7 +125,7 @@ class Chunk(val chunkId: Int) {
      * Get all ground items visible to a given player (public items + their private items).
      */
     fun getGroundItemsForPlayer(username: String?): List<GroundItem> {
-        return groundItems.filter { it.ownerUsername == null || it.ownerUsername == username }
+        return groundItems.filter { !it.isPrivate || it.ownerUsername == username }
     }
 
     companion object {

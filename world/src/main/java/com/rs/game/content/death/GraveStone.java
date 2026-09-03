@@ -99,12 +99,12 @@ public class GraveStone extends NPC {// 652 - gravestone selection interface
 	public void addLeftTime(boolean clean) {
 		if (clean)
 			for (GroundItem item : floorItems) {
-				item.setPrivateTime(Ticks.fromSeconds(60));
+				item.setHiddenTime(Ticks.fromSeconds(60));
 				item.setDeleteTime(Ticks.fromMinutes(3));
 			}
 		else
 			for (GroundItem item : floorItems) {
-				item.setPrivateTime(ticks + Ticks.fromSeconds(180));
+				item.setHiddenTime(ticks + Ticks.fromSeconds(180));
 				item.setDeleteTime(Ticks.fromMinutes(6));
 			}
 	}
