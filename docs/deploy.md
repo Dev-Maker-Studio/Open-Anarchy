@@ -197,9 +197,9 @@ above; `-Pdarkan.cacheSource=<path>` / `DARKAN_CACHE_SOURCE` point the build at 
 
 **Rollout order** (the catalogs moved out of the server repo, so the two repos must move together):
 
-1. Create the `darkanrs/cache-source` GitLab project and push the tree (`tools cache unpack`
-   produced it; `docs/cache-source.md`). The submodule URL in `.gitmodules` is relative
-   (`../cache-source.git`), so it resolves against the server repo's own remote.
+1. The tree lives at `darkanrs/cache-unpacked` (checked out as `cache-source/`). The submodule URL in
+   `.gitmodules` is relative (`../cache-unpacked.git`), so it resolves against the server repo's own
+   remote; `tools cache unpack` regenerates the tree from a packed cache (`docs/cache-source.md`).
 2. Push the server branch. CI's sparse clone needs the cache-source project to allow CI job tokens
    from the server project (Settings → CI/CD → Token Access).
 3. On the two dev hosts run the `submodule update` above, add the `.env` lines, restart the units.
