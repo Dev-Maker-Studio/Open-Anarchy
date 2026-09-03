@@ -907,7 +907,10 @@ public class Player extends Entity {
 	}
 
 	public void abortDialogue() {
-		// TODO: getSession().queuePacket(TriggerOnDialogAbort); // ServerProt not yet defined
+		// Tells the client to tear down whatever dialogue-ish widget is up: the enter-amount /
+		// enter-name prompt and the chat dialogue. Legacy:
+		// com.rs.game.model.entity.player.Player#abortDialogue (line 900-902).
+		getPackets().sendTriggerOnDialogAbort();
 	}
 
 	public void setClientHasntLoadedMapRegion() {
@@ -3661,7 +3664,13 @@ public class Player extends Entity {
 			try {
 				PacketHandlers.INSTANCE.handleBlocking(this, packet);
 			} catch (Throwable e) {
-				Logger.handle(Player.class, "processPackets:" + packet.getClass().getSimpleName(), e);
+				// Kept deliberately: one bad packet must not kill the whole tick. The message
+				// names the packet class and the player so the failure is actionable in
+				// mainlog.txt rather than an anonymous "Exception".
+				Logger.handle(Player.class, "processPackets",
+						"Packet " + packet.getClass().getSimpleName() + " failed for player "
+								+ getUsername() + " (display '" + getDisplayName() + "'): "
+								+ (e.getMessage() == null ? e.getClass().getName() : e.getMessage()), e);
 			}
 		}
 	}

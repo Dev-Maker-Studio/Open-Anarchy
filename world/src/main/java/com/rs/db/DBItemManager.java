@@ -1,6 +1,7 @@
 package com.rs.db;
 
 import com.mongodb.client.MongoCollection;
+import com.rs.engine.thread.CatchExceptionRunnable;
 import org.bson.Document;
 
 import java.util.concurrent.ExecutorService;
@@ -33,6 +34,8 @@ public abstract class DBItemManager {
     }
 
     public void execute(Runnable task) {
-        executor.submit(task);
+        // Wrapped so a failing save is logged instead of vanishing into the ignored Future
+        // returned by submit(). Matches legacy com.rs.lib.db.DBItemManager#execute (line 61).
+        executor.execute(new CatchExceptionRunnable(task));
     }
 }
