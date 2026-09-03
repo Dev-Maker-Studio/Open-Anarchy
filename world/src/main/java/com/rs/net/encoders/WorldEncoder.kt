@@ -789,6 +789,11 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     fun sendLogout(lobby: Boolean) {
         session.queuePacket(if (lobby) LogoutLobby() else LogoutFull())
+        // Every caller (Player.logout, forceLogout, idleLog) finishes the player immediately after
+        // this returns, and the world tick's flush pass skips finished players - so without a flush
+        // here the logout packet is queued and never written, and the client just sits there. The
+        // legacy encoder flushed on the spot for exactly this reason.
+        session.requestFlush()
         if (player.hasFinished())
             player.session.close()
     }

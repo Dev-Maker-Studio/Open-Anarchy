@@ -1,6 +1,7 @@
 package org.darkan.world.server.packet
 
 import com.rs.engine.command.Commands
+import com.rs.game.content.skills.dungeoneering.DungeonController
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.net.prot.packet.Chat
 import org.darkan.core.net.prot.handler.PacketHandler
@@ -17,30 +18,30 @@ class ChatHandler : PacketHandler<Player, Chat> {
             return
         }
 
-        if (player.account.checkMuted()) {
-            player.sendMessage("You are muted.")
+        // Which channel the message belongs to is server-side state, set by ChatTypeHandler. The
+        // client never puts it in the Chat packet (`Chat.type` decodes as -1 always), so reading it
+        // off the packet sent every friends-chat and clan-chat line out as public chat instead.
+        val chatType = player.chatType
+        if (chatType in 1..3) {
+            WorldServer.forwardToLobby(player.username, packet.copy(type = chatType))
             return
         }
 
-        // Chat types 1-3 are forwarded to lobby (friends chat, private, clan)
-        if (packet.type in 1..3) {
-            WorldServer.forwardToLobby(player.username, packet)
-            return
-        }
-
-        // Dungeon party chat
-        val dungController = player.controllerManager.controller
-        if (dungController != null && dungController::class.java.simpleName == "DungeonController") {
-            try {
-                val method = dungController.javaClass.getMethod("sendPartyMessage", Player::class.java, String::class.java)
-                method.invoke(dungController, player, packet.message)
-                return
-            } catch (_: Exception) {}
-        }
-
-        // Public chat
         if (message.isBlank()) return
+
+        if (player.account.checkMuted()) {
+            player.sendMessage("You are muted. The mute will be lifted at ${player.account.getUnmuteDate()}")
+            return
+        }
+
         val effects = (packet.color shl 8) or (packet.effect and 0xff)
-        player.sendPublicChatMessage(PublicChatMessage(message, effects))
+        val chatMessage = PublicChatMessage(message, effects)
+        val controller = player.controllerManager.controller
+        if (controller is DungeonController) {
+            for (party in player.dungManager.party.team)
+                party.packets.sendPublicMessage(player, chatMessage)
+            return
+        }
+        player.sendPublicChatMessage(chatMessage)
     }
 }

@@ -36,6 +36,13 @@ public class PluginManager {
 	private static final List<Method> STARTUP_HOOKS = new ArrayList<>();
 	private static final PluginMethodRepository REPOSITORY = new PluginMethodRepository();
 
+	/** Handler fields that could not be registered during {@link #loadPlugins()}. */
+	private static int FAILURES = 0;
+
+	public static int getRegistrationFailures() {
+		return FAILURES;
+	}
+
 	private static void addUnmappedHandler(String type, PluginHandler<PluginEvent> method) {
 		HashSet<PluginHandler<PluginEvent>> methods = UNMAPPED_HANDLERS.get(type);
 		if (methods == null)
@@ -68,18 +75,36 @@ public class PluginManager {
 				handlers++;
 			}
 
+			// One broken handler field used to abort the whole registration loop and be swallowed by
+			// the catch below, leaving a silently half-registered server: every plugin after the bad
+			// one simply never existed. Failures are isolated per field and reported instead.
 			for (Class<?> clazz : classes) {
-				for (Field field : clazz.getFields()) {
+				Field[] fields;
+				try {
+					fields = clazz.getFields();
+				} catch (Throwable e) {
+					FAILURES++;
+					Logger.handle(PluginManager.class, "loadPlugins", "Could not read fields of " + clazz.getName(), e);
+					continue;
+				}
+				for (Field field : fields) {
 					if (!Modifier.isStatic(field.getModifiers()) || visitedFields.contains(field))
 						continue;
 					visitedFields.add(field);
-					handlers += processField(field, eventTypes);
+					try {
+						handlers += processField(field, eventTypes);
+					} catch (Throwable e) {
+						FAILURES++;
+						Logger.handle(PluginManager.class, "loadPlugins", "Could not register handler " + clazz.getName() + "." + field.getName(), e);
+					}
 				}
 			}
 			int kotlinScripts = PluginScriptHost.Companion.loadAndExecuteScripts();
 			handlers += kotlinScripts;
 			Logger.info(PluginManager.class, "loadPlugins", "Loaded " + kotlinScripts + " kotlin script plugins in " + (System.currentTimeMillis()-start) + "ms.");
 			Logger.info(PluginManager.class, "loadPlugins", "Loaded " + handlers + " plugin event handlers in " + (System.currentTimeMillis()-start) + "ms.");
+			if (FAILURES > 0)
+				Logger.error(PluginManager.class, "loadPlugins", FAILURES + " plugin handler(s) failed to register; that content is dead until they are fixed.");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -101,6 +126,8 @@ public class PluginManager {
 				continue;
 			field.setAccessible(true);
 			PluginHandler<PluginEvent> handler = (PluginHandler<PluginEvent>) field.get(null);
+			if (handler == null)
+				throw new IllegalStateException("Handler field " + field.getDeclaringClass().getName() + "." + field.getName() + " is null");
 			if (handler.keys() == null || handler.keys().length <= 0) {
 				addUnmappedHandler(eventType.getName(), handler);
 			} else {
@@ -117,9 +144,12 @@ public class PluginManager {
 			long start = System.currentTimeMillis();
 			try {
 				m.invoke(null);
-			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-				System.err.println("Error executing startup hook: " + m.getDeclaringClass().getName() + "." + m.getName());
-				e.printStackTrace();
+			} catch (Throwable e) {
+				// Startup hooks are where every Commands.add lives. An Error out of one of them
+				// (a class initialiser failing, typically) must not take the remaining hooks - and
+				// with them the rest of the command registry - down with it.
+				FAILURES++;
+				Logger.handle(PluginManager.class, "executeStartupHooks", "Error executing startup hook: " + m.getDeclaringClass().getName() + "." + m.getName(), e);
 			}
 			long time = System.currentTimeMillis() - start;
 			if (time > 100L)

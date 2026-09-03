@@ -24,6 +24,17 @@ dependencies {
     implementation("com.google.code.gson:gson:2.12.1")
     implementation("com.google.guava:guava:33.4.0-jre")
     implementation("it.unimi.dsi:fastutil:8.5.15")
+
+    testImplementation(kotlin("test"))
+}
+
+tasks.test {
+    // Cache paths, .env and data/ are resolved relative to the repository root, not the module dir.
+    workingDir = rootDir
+    maxHeapSize = "4g"
+    testLogging {
+        showStandardStreams = true
+    }
 }
 
 tasks.withType<Jar> {
