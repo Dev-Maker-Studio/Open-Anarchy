@@ -7,6 +7,13 @@ import org.darkan.core.model.Preference
 import org.darkan.core.net.prot.ClientProt
 import org.darkan.core.net.prot.Codec
 import org.darkan.core.net.prot.packet.IfButton
+import org.darkan.core.net.prot.packet.IfContinue
+import org.darkan.core.net.prot.packet.IfDragOntoIf
+import org.darkan.core.net.prot.packet.IfOnGroundItem
+import org.darkan.core.net.prot.packet.IfOnIf
+import org.darkan.core.net.prot.packet.IfOnNpc
+import org.darkan.core.net.prot.packet.IfOnObject
+import org.darkan.core.net.prot.packet.IfOnPlayer
 import org.darkan.core.net.prot.packet.IfOnTile
 import org.darkan.core.net.prot.packet.MoveCamera
 import org.darkan.core.net.prot.packet.OpNpc
@@ -198,5 +205,177 @@ class Rev727ClientDecoderTest {
         assertEquals(4, prefs[Preference.BRIGHTNESS])
         assertEquals(8, prefs[Preference.FOG], "index 7")
         assertEquals(13, prefs[Preference.SCENERY_SHADOWS], "index 12, the last byte")
+    }
+
+    // --- The client's 16-bit "none" sentinel ----------------------------------------------------
+    //
+    // A component with no slot sends slotId -1 and one holding no obj sends containerItemId -1, and
+    // an interface hash that names a whole interface carries 0xFFFF in its low half. Read unsigned
+    // those all arrive as 65535 and no handler's `== -1` test ever fires.
+
+    @Test
+    fun `a bank drag onto a tab header decodes the empty target slot as -1`() {
+        // Dragging an obj onto a bank tab header is how a tab is created and how items are moved
+        // between tabs: the header is a component with no slot, so the client sends -1, and
+        // Bank.switchItem keys the whole tab path on toSlot == -1.
+        val packet: IfDragOntoIf = decode(74, write {
+            writeShortAddLittle(-1)                 // toSlot: the tab header has no slot
+            writeShortLittle(5)                     // fromSlot
+            writeShort(-1)                          // toItemId: the tab header holds no obj
+            writeShortAddLittle(995)                // fromItemId
+            writeIntMiddle(interfaceHash(762, 39))  // from
+            writeIntLittle(interfaceHash(762, 43))  // to
+        })
+        assertEquals(-1, packet.toSlot, "a drop onto a tab header must reach Bank.switchItem as -1")
+        assertEquals(-1, packet.toItemId, "a tab header holds no obj")
+        assertEquals(5, packet.fromSlot)
+        assertEquals(995, packet.fromItemId)
+        assertEquals(762, packet.fromInter)
+        assertEquals(762, packet.toInter)
+        assertEquals(39, packet.fromComp)
+        assertEquals(43, packet.toComp)
+    }
+
+    @Test
+    fun `a drag between two occupied slots keeps both slots unsigned`() {
+        // Only 0xFFFF is the sentinel: a plain signed read would turn 40000 into -25536 and send
+        // the drag down the tab-header path.
+        val packet: IfDragOntoIf = decode(74, write {
+            writeShortAddLittle(40000)
+            writeShortLittle(50000)
+            writeShort(1050)
+            writeShortAddLittle(995)
+            writeIntMiddle(interfaceHash(762, 39))
+            writeIntLittle(interfaceHash(762, 39))
+        })
+        assertEquals(40000, packet.toSlot)
+        assertEquals(50000, packet.fromSlot)
+        assertEquals(1050, packet.toItemId)
+    }
+
+    @Test
+    fun `an unselected slot and obj decode as -1 across the use-item packets`() {
+        val hash = interfaceHash(750, 31)
+
+        val onIf: IfOnIf = decode(4, write {
+            writeShortAddLittle(-1)                 // toSlot
+            writeShortLittle(-1)                    // fromSlot
+            writeShortAddLittle(-1)                 // toItemId
+            writeIntLittle(hash)                    // to
+            writeIntInverseMiddle(hash)             // from
+            writeShortLittle(-1)                    // fromItemId
+        })
+        assertEquals(-1, onIf.toSlot)
+        assertEquals(-1, onIf.fromSlot)
+        assertEquals(-1, onIf.toItemId)
+        assertEquals(-1, onIf.fromItemId)
+
+        val onObject: IfOnObject = decode(98, write {
+            writeShortAddLittle(3222)               // x
+            writeByteSubtract(0)
+            writeIntMiddle(1276)                    // objectId
+            writeInt(hash)
+            writeShortLittle(-1)                    // itemId
+            writeShortAdd(-1)                       // slotId
+            writeShortLittle(3218)                  // y
+        })
+        assertEquals(-1, onObject.itemId)
+        assertEquals(-1, onObject.slotId)
+
+        val onNpc: IfOnNpc = decode(41, write {
+            writeIntInverseMiddle(hash)
+            writeShortAddLittle(1234)               // npcIndex
+            writeByteSubtract(0)
+            writeShortAddLittle(-1)                 // itemId
+            writeShortAdd(-1)                       // slotId
+        })
+        assertEquals(-1, onNpc.itemId)
+        assertEquals(-1, onNpc.slotId)
+        assertEquals(1234, onNpc.npcIndex, "the npc index is a real index, not a sentinel")
+
+        val onPlayer: IfOnPlayer = decode(13, write {
+            writeShort(-1)                          // slotId
+            writeShortLittle(1234)                  // playerIndex
+            writeByteSubtract(0)
+            writeIntInverseMiddle(hash)
+            writeShortLittle(-1)                    // itemId
+        })
+        assertEquals(-1, onPlayer.slotId)
+        assertEquals(-1, onPlayer.itemId)
+        assertEquals(1234, onPlayer.playerIndex)
+
+        val onGroundItem: IfOnGroundItem = decode(67, write {
+            writeShortAdd(-1)                       // itemIdContainer
+            writeIntInverseMiddle(hash)
+            writeShort(1050)                        // itemId: the ground obj, never a sentinel
+            writeByteSubtract(0)
+            writeShortAddLittle(-1)                 // slotId
+            writeShortAddLittle(3218)               // y
+            writeShortLittle(3222)                  // x
+        })
+        assertEquals(-1, onGroundItem.itemIdContainer)
+        assertEquals(-1, onGroundItem.slotId)
+        assertEquals(1050, onGroundItem.itemId)
+
+        val onTile: IfOnTile = decode(46, write {
+            writeShortLittle(-1)                    // itemId
+            writeShortLittle(3218)                  // y
+            writeIntMiddle(hash)
+            writeShortAdd(-1)                       // slotId
+            writeShortLittle(3222)                  // x
+        })
+        assertEquals(-1, onTile.itemId)
+        assertEquals(-1, onTile.slotId)
+
+        val button: IfButton = decode(96, write {
+            writeIntLittle(hash)
+            writeShort(-1)                          // itemId
+            writeShortAdd(-1)                       // slotId
+        })
+        assertEquals(-1, button.itemId)
+        assertEquals(-1, button.slotId)
+
+        val continued: IfContinue = decode(49, write {
+            writeIntMiddle(hash)
+            writeShortAddLittle(-1)                 // slotId
+        })
+        assertEquals(-1, continued.slotId)
+    }
+
+    @Test
+    fun `a hash naming a whole interface decodes its component as -1`() {
+        // Legacy IFOnNPC and IFOnPlayer mapped this in the decoder; IFOpHandler, IFOnIFHandler and
+        // IFOnGroundItemHandler each compared the component against 65535 instead. Decoding it once
+        // means no handler has to.
+        val wholeInterface = interfaceHash(750, 0xFFFF)
+
+        val onNpc: IfOnNpc = decode(41, write {
+            writeIntInverseMiddle(wholeInterface)
+            writeShortAddLittle(1234)
+            writeByteSubtract(0)
+            writeShortAddLittle(-1)
+            writeShortAdd(-1)
+        })
+        assertEquals(750, onNpc.interfaceId)
+        assertEquals(-1, onNpc.componentId)
+
+        val onIf: IfOnIf = decode(4, write {
+            writeShortAddLittle(3)
+            writeShortLittle(4)
+            writeShortAddLittle(1050)
+            writeIntLittle(wholeInterface)
+            writeIntInverseMiddle(interfaceHash(762, 39))
+            writeShortLittle(995)
+        })
+        assertEquals(-1, onIf.toComp, "the drop target is the interface itself")
+        assertEquals(39, onIf.fromComp)
+
+        val button: IfButton = decode(96, write {
+            writeIntLittle(wholeInterface)
+            writeShort(-1)
+            writeShortAdd(-1)
+        })
+        assertEquals(750, button.interfaceId)
+        assertEquals(-1, button.componentId)
     }
 }

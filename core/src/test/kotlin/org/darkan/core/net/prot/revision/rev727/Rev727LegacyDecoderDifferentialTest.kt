@@ -352,8 +352,8 @@ class Rev727LegacyDecoderDifferentialTest {
                 }
             },
         )
-        // The legacy decoder collapses a 65535 component id to -1; the modern one leaves it alone,
-        // so the case uses an ordinary component id, where the two agree.
+        // Both stacks collapse a 65535 component id to -1 - legacy inside this decoder, the modern
+        // one through the shared sentinel - so the case is free to use an ordinary component id.
         case(
             "IF_ON_NPC", 41,
             payload { u32(0x0BADF00D); u16(0x8f4e); u8(0x7f); u16(0x8fee); u16(0x8f4e) },
@@ -889,6 +889,15 @@ class Rev727LegacyDecoderDifferentialTest {
                 "It matters in exactly one place: MOVE_CAMERA angles legitimately exceed 32767, " +
                 "and the legacy signed read turns them negative. The modern reading is correct " +
                 "there and is separately pinned by `Rev727ClientDecoderTest`.",
+            "Interface slot/obj/component 65535 (resolved)" to
+                "The one 16-bit value where signedness carried meaning: a component with no slot " +
+                "sends `slotId = -1`, one holding no obj sends `containerItemId = -1`, and a hash " +
+                "naming a whole interface carries 0xFFFF in its low half. Legacy reached that " +
+                "unevenly - signed reads in IFDragOntoIF/IFOnIF/IFOnObject/IFOnGroundItem, a 65535 " +
+                "check inside IFOnNPC/IFOnPlayer, and a handler-side check in IFOpHandler, " +
+                "IFOnIFHandler and IFOnGroundItemHandler. The modern decoders map 65535 to -1 for " +
+                "every such field, so only the sentinel differs from a plain unsigned read and the " +
+                "`(16)` masked comparisons here still hold. Pinned by `Rev727ClientDecoderTest`.",
             "MOVE_MOUSE step deltas (128..191 form)" to
                 "The client writes `writeShort(dY + (dX shl 8))` (`MouseMovementRecord`), so X is " +
                 "the high byte. Legacy reads `dY = hash shr 8, dX = hash and 0xFF` - inverted. " +

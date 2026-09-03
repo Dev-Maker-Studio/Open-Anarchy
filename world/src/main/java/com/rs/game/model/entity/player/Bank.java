@@ -464,8 +464,13 @@ public class Bank {
 				removeItem(fromSlot, item.getAmount(), false, true);
 				createTab();
 				bankTabs[bankTabs.length - 1] = new Item[] { item };
-				refreshTab(fromRealSlot[0]);
-				refreshTab(toTab);
+				// Legacy refreshed just the two tabs it touched (Bank.java:414-415), which is wrong
+				// whenever the drag emptied - and so destroyed - the tab it came from: destroyTab
+				// renumbers every tab above it, and the created tab then lands at toTab - 1 rather
+				// than at toTab, leaving the client drawing a tab that no longer exists at the old
+				// size. Re-send all eight sizes; setVarBit only marks a var modified when its value
+				// actually changed, so the unchanged ones cost nothing.
+				refreshTabs();
 				refreshItems();
 			} else if (bankTabs.length > toTab) {
 				int[] fromRealSlot = getRealSlot(fromSlot);
@@ -479,12 +484,14 @@ public class Bank {
 				if (item == null)
 					return;
 				boolean removed = removeItem(fromSlot, item.getAmount(), false, true);
-				if (!removed)
-					refreshTab(fromRealSlot[0]);
-				else if (fromRealSlot[0] != 0 && toTab >= fromRealSlot[0])
+				// Emptying the source tab destroyed it, which shifts every tab above it down one -
+				// so the tab the player dropped on is one lower than the header said.
+				if (removed && fromRealSlot[0] != 0 && toTab >= fromRealSlot[0])
 					toTab -= 1;
-				refreshTab(fromRealSlot[0]);
 				addItem(item, toTab, true);
+				// Same reason as the tab-creating branch above: legacy's two refreshTab calls
+				// (Bank.java:430-433) left every tab above a destroyed one at its old size.
+				refreshTabs();
 			}
 		} else if (!insertItems)
 			switchItem(fromSlot, toSlot);
@@ -949,11 +956,14 @@ public class Bank {
 				// Item(id, 0, true) is the only constructor that keeps the 0; the ordinary ones
 				// clamp it up to 1.
 				bankTabs[slot[0]][slot[1]] = new Item(item.getId(), 0, true);
-			else if (bankTabs[slot[0]].length == 1 && bankTabs.length != 1) {
-				// The last remaining tab is never destroyed, forceDestroy or not: bankTabs would
-				// be left empty, and getRealSlot/generateContainer both assume a tab 0 exists.
-				// Legacy let forceDestroy through here, which is how an id-based removal of a
-				// one-item, one-tab bank could leave the bank unusable.
+			else if (slot[0] != 0 && bankTabs[slot[0]].length == 1 && bankTabs.length != 1) {
+				// Tab 0 is the main tab: emptying it leaves it empty, it is never destroyed.
+				// Legacy's condition was `bankTabs[slot[0]].length == 1 && (forceDestroy ||
+				// bankTabs.length != 1)` (Bank.java:864), which destroyed whichever tab held the
+				// last entry - tab 0 included. destroyTab shifts every tab down one, so taking the
+				// last item out of the main tab of a two-tab bank silently renumbered tab 1 into
+				// tab 0 and lost the player's arrangement; and with forceDestroy on a one-tab bank
+				// it left bankTabs empty, which getRealSlot/generateContainer both index blindly.
 				destroyTab(slot[0]);
 				if (refresh)
 					refreshTabs();
@@ -1312,11 +1322,21 @@ public class Bank {
 		return currentTab;
 	}
 
+	/**
+	 * The View Tab op (762:46-64 op 1), and the tab a deposit lands in.
+	 *
+	 * Legacy took the tab and sent varc 190 without ever pushing varbit 4893 (Bank.java:1094-1099),
+	 * so the server's idea of the viewed tab and the client's disagreed until the next unrelated
+	 * refreshTab happened to sync it - at which point the view jumped. The bounds check is now
+	 * two-sided as well: addItem's `creationTab < 0` guard was the only thing standing between a
+	 * negative currentTab and an out-of-bounds tab write.
+	 */
 	public void setCurrentTab(int currentTab) {
-		if (currentTab >= bankTabs.length)
+		if (currentTab < 0 || currentTab >= bankTabs.length)
 			return;
 		this.currentTab = currentTab;
 		player.getPackets().sendVarc(190, 1);
+		refreshViewingTab();
 	}
 
 	public int getLastX() {
