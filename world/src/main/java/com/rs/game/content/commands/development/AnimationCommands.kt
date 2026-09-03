@@ -1,6 +1,8 @@
 package com.rs.game.content.commands.development
 
 import com.rs.Settings
+import org.darkan.core.cache.AnimationDefinitions
+import org.darkan.core.cache.BASDefinitions
 import org.darkan.core.cache.NPCDefinitions
 import org.darkan.core.model.ObjectShape
 import com.rs.engine.command.Commands
@@ -46,14 +48,11 @@ fun loadAnimationCommands() {
 
     Commands.add(animRights, "companim [npcId]", "Prints out animations compatible with the npc id.") { p, args ->
         val npcId = args[0].toInt()
-        if (npcId <= Utils.getNPCDefinitionsSize()) {
-            val defs = NPCDefinitions.getDefs(npcId)
-            if (defs != null) {
-                val compatAnims = "renderEmote=${defs.renderEmote}"
-                p.packets.sendDevConsoleMessage("$npcId: $compatAnims")
-                p.sendMessage("$npcId: $compatAnims")
-                Logger.debug(Commands::class.java, "companim", compatAnims)
-            }
+        if (npcId in 0 until Utils.getNPCDefinitionsSize()) {
+            val compatAnims = compatibleAnimations(NPCDefinitions.getDefs(npcId).renderEmote).toString()
+            p.packets.sendDevConsoleMessage("$npcId: $compatAnims")
+            p.sendMessage("$npcId: $compatAnims")
+            Logger.debug(Commands::class.java, "companim", compatAnims)
         }
     }
 
@@ -133,4 +132,43 @@ fun loadAnimationCommands() {
     Commands.add(Rights.DEVELOPER, "getapp", "Prints out appearance data") { p, _ ->
         p.appearance.printDebug()
     }
+}
+
+
+/**
+ * Every animation id that shares a skeleton with the given BAS's stand animation, ascending.
+ *
+ * Ported from legacy `NPCDefinitions#getCompatibleAnimations` (core
+ * src/main/java/com/rs/cache/loaders/NPCDefinitions.java:255-276), which `companim` printed. It
+ * had been reduced to printing the raw render emote id because the animation table scan needs
+ * `Utils.getAnimationDefinitionsSize()`, which used to return 0.
+ *
+ * Legacy read the skeleton out of a separate `frameSetIds` array; the modern decoder packs the
+ * same value into the high half of each entry of [AnimationDefinition.frames]
+ * (`frames[i] = (frameSetId shl 16) + frameId`), so `frames[0] ushr 16` is legacy's
+ * `frameSetIds[0]`, and 0xFFFF is its "unset" -1.
+ */
+private fun compatibleAnimations(basId: Int): List<Int> {
+    if (basId == -1)
+        return emptyList()
+    val standAnimation = BASDefinitions.getDefs(basId).standAnimation
+    if (standAnimation == -1)
+        return emptyList()
+    val standFrames = AnimationDefinitions.getDefs(standAnimation).frames
+    if (standFrames == null || standFrames.isEmpty())
+        return emptyList()
+    val skeleton = standFrames[0] ushr 16
+
+    val matches = ArrayList<Int>()
+    for (i in 0 until Utils.getAnimationDefinitionsSize()) {
+        val frames = AnimationDefinitions.getDefs(i).frames
+        if (frames == null || frames.isEmpty())
+            continue
+        val frameSet = frames[0] ushr 16
+        if (frameSet == 0xFFFF)
+            continue
+        if (frameSet == skeleton)
+            matches.add(i)
+    }
+    return matches
 }

@@ -22,6 +22,7 @@ import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logTrace
+import org.darkan.core.Logger.logWarn
 import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.model.MachineInformation as CoreMachineInformation
 import org.darkan.core.net.*
@@ -321,7 +322,10 @@ object WorldServer {
     }
 
     suspend fun forwardToLobby(username: String, packet: ClientProt) {
-        socialClient.sendClientPacket(username, packet)
+        if (!socialClient.sendClientPacket(username, packet)) {
+            logWarn("Failed to forward ${packet::class.simpleName} to lobby for $username: social gateway unavailable")
+            onWorldThread(username) { it.sendMessage("Error forwarding packet to lobby.") }
+        }
     }
 
     /** Runs [block] against the named player on the next world tick, if they are still in game. */
@@ -382,8 +386,15 @@ object WorldServer {
     }
 
     fun notifyPlayerOnline(account: Account) {
+        // No gateway client at all means this process never started the world socket server
+        // (headless tools, the test harness). That is not a lobby rejection, so it must not
+        // log anybody out; only an attached client that refuses the player does.
+        if (!::socialClient.isInitialized) {
+            logWarn("No social gateway client attached; skipping online notify for ${account.username}")
+            return
+        }
         CoroutineScope(dispatcher).launch {
-            try {
+            val ok = try {
                 socialClient.sendPlayerOnline(
                     username = account.username,
                     displayName = account.displayName,
@@ -392,6 +403,15 @@ object WorldServer {
                 )
             } catch (e: Exception) {
                 logError("Failed to notify lobby of player online: ${account.username}", e)
+                false
+            }
+            // Legacy Player#run -> LobbyCommunicator.addWorldPlayer(account, response -> {
+            //   if (response == null || !response) forceLogout(); })
+            // (world-server Player.java:1186-1189). A player the lobby will not register is
+            // not logged in as far as social/presence is concerned, so drop them.
+            if (!ok) {
+                logWarn("Lobby did not accept ${account.username} as online; forcing logout")
+                onWorldThread(account.username) { it.forceLogout() }
             }
         }
     }

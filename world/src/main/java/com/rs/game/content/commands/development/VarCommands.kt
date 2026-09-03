@@ -1,8 +1,8 @@
 package com.rs.game.content.commands.development
 
-// TODO: import ArchiveType
 import world.gregs.voidps.cache.Cache
-// TODO: import IndexType
+import world.gregs.voidps.cache.Config
+import world.gregs.voidps.cache.Index
 import com.rs.engine.command.Commands
 import org.darkan.core.model.Rights
 import org.darkan.core.Utils
@@ -18,8 +18,10 @@ fun loadVarCommands() {
         val startId = args[0].toInt()
         val endId = args[1].toInt()
 
+        val size = varSpaceSize(Config.VARC_STRINGS)
         for (i in startId until endId) {
-            // TODO: legacy Cache.STORE/IndexType/ArchiveType removed - need cache size lookup
+            if (i >= size)
+                break
             p.packets.sendVarcString(i, "str$i")
         }
     }
@@ -33,8 +35,10 @@ fun loadVarCommands() {
         val endId = args[1].toInt()
         val value = args[2].toInt()
 
+        val size = varSpaceSize(Config.VARC)
         for (i in startId until endId) {
-            // TODO: legacy Cache.STORE/IndexType/ArchiveType removed - need cache size lookup
+            if (i >= size)
+                break
             p.packets.sendVarc(i, value)
         }
     }
@@ -53,8 +57,10 @@ fun loadVarCommands() {
         val endId = args[1].toInt()
         val value = args[2].toInt()
 
+        val size = varSpaceSize(Config.VARP)
         for (i in startId until endId) {
-            // TODO: legacy Cache.STORE/IndexType/ArchiveType removed - need cache size lookup
+            if (i >= size)
+                break
             p.vars.setVar(i, value)
         }
     }
@@ -85,3 +91,13 @@ fun loadVarCommands() {
         }
     }
 }
+
+/**
+ * One past the highest id the given config archive holds, the bound the `*loop` commands stop at.
+ *
+ * Legacy used `Cache.STORE.getIndex(IndexType.CONFIG).getValidFilesCount(archive)` (world-server
+ * VarCommands.kt:22/39/61), but these archives are sparse: index 2 / archive 16 holds 2715 varps
+ * with a valid-file count well under 2715, so a count would stop the loop before the highest ids.
+ * `lastFileId + 1` is the id space, and matches how `Vars` sizes its varp array.
+ */
+private fun varSpaceSize(archive: Int): Int = Cache.get().lastFileId(Index.CONFIGS, archive) + 1
