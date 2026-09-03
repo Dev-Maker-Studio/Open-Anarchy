@@ -1,5 +1,7 @@
 package world.gregs.voidps.cache.definition.data
 
+import org.darkan.core.model.Vars
+import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.*
 
@@ -149,8 +151,29 @@ data class ObjectDefinition(
     /** Gets the first non-null option (index 0). */
     fun getFirstOption(): String? = options?.getOrNull(0)
 
-    /** Legacy overload that accepts a vars parameter for transform support. Returns this definition's name. */
-    fun getName(vars: Any?): String = name
+    /**
+     * The id this object presents as for a player with the given [vars].
+     *
+     * Legacy `ObjectDefinitions.getIdForPlayer(VarManager)`.
+     */
+    fun getIdForPlayer(vars: Vars?): Int = getIdForVars(id, vars)
+
+    /**
+     * The name of the definition this object transforms into for the given [vars].
+     *
+     * Legacy `ObjectDefinitions.getName(VarManager)`.
+     */
+    fun getName(vars: Vars?): String {
+        val realId = getIdForPlayer(vars)
+        if (realId == id) {
+            return name
+        }
+        val objects = Cache.objects
+        if (realId < 0 || realId >= objects.size) {
+            return "null"
+        }
+        return objects[realId].name
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

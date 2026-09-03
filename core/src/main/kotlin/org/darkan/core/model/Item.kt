@@ -6,7 +6,18 @@ import kotlinx.serialization.Transient
 import world.gregs.voidps.cache.Cache
 
 @Serializable
-data class Item @JvmOverloads constructor(var id: Int, var amount: Int = 1, val metadata: MutableMap<String, @Contextual Any> = mutableMapOf()) : Cloneable {
+data class Item @JvmOverloads constructor(
+    var id: Int,
+    var amount: Int = 1,
+    /**
+     * Metadata, absent until something is stored.
+     *
+     * Nullable because legacy `com.rs.lib.game.Item`'s three-argument constructor accepts a null map and
+     * leaves the field null - Java callers pass `item.getMetaData()` straight through when merging stacks
+     * (`ItemsContainer.add`), which is null for every ordinary item.
+     */
+    var metadata: MutableMap<String, @Contextual Any>? = null
+) : Cloneable {
 
     /** Transient slot index, not serialized. Set by event dispatch to track inventory position. */
     @Transient
@@ -26,14 +37,17 @@ data class Item @JvmOverloads constructor(var id: Int, var amount: Int = 1, val 
         this.amount = amount
         return this
     }
-    fun withMeta(key: String, value: Any) = copy(metadata = metadata.toMutableMap().apply { put(key, value) })
+    fun withMeta(key: String, value: Any) = copy(metadata = (metadata?.toMutableMap() ?: HashMap()).apply { put(key, value) })
 
     val definitions get() = Cache.items[id]
     val defs get() = definitions
     val name get() = definitions.name
 
+    /** The metadata map, created on demand. Legacy `addMetaData` allocates the map the same way. */
+    private fun meta(): MutableMap<String, Any> = metadata ?: HashMap<String, Any>().also { metadata = it }
+
     fun getMetaInt(key: String, default: Int = 0): Int {
-        val v = metadata[key] ?: return default
+        val v = metadata?.get(key) ?: return default
         return when (v) {
             is Int -> v
             is Number -> v.toInt()
@@ -41,29 +55,29 @@ data class Item @JvmOverloads constructor(var id: Int, var amount: Int = 1, val 
         }
     }
 
-    fun getMetaData(key: String): Any? = metadata[key]
+    fun getMetaData(key: String): Any? = metadata?.get(key)
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> getMetaDataO(key: String): T? = metadata[key] as? T
+    fun <T> getMetaDataO(key: String): T? = metadata?.get(key) as? T
 
     @JvmOverloads
     fun getMetaDataI(key: String, default: Int = 0) = getMetaInt(key, default)
 
-    fun addMetaData(key: String, value: Any): Item { metadata[key] = value; return this }
+    fun addMetaData(key: String, value: Any): Item { meta()[key] = value; return this }
 
-    fun setMetaDataO(key: String, value: Any) { metadata[key] = value }
+    fun setMetaDataO(key: String, value: Any) { meta()[key] = value }
 
     /** Returns the metadata map, or null if empty (for legacy null-check compatibility). */
-    fun getMetaData(): Map<String, Any>? = if (metadata.isEmpty()) null else metadata
+    fun getMetaData(): Map<String, Any>? = metadata?.takeIf { it.isNotEmpty() }
 
-    fun deleteMetaData() { metadata.clear() }
+    fun deleteMetaData() { metadata = null }
 
     /** Returns true if this item has any metadata entries. */
-    fun containsMetaData(): Boolean = metadata.isNotEmpty()
+    fun containsMetaData(): Boolean = !metadata.isNullOrEmpty()
 
     fun incMetaDataI(key: String): Int {
         val newVal = getMetaInt(key) + 1
-        metadata[key] = newVal
+        meta()[key] = newVal
         return newVal
     }
 
@@ -72,13 +86,13 @@ data class Item @JvmOverloads constructor(var id: Int, var amount: Int = 1, val 
 
     fun decMetaDataI(key: String): Int {
         val newVal = getMetaInt(key) - 1
-        metadata[key] = newVal
+        meta()[key] = newVal
         return newVal
     }
 
     @JvmOverloads
     fun getMetaDataD(key: String, default: Double = 0.0): Double {
-        val v = metadata[key] ?: return default
+        val v = metadata?.get(key) ?: return default
         return when (v) {
             is Double -> v
             is Number -> v.toDouble()
@@ -86,10 +100,10 @@ data class Item @JvmOverloads constructor(var id: Int, var amount: Int = 1, val 
         }
     }
 
-    fun getMetaString(key: String, default: String? = null): String? = metadata[key] as? String ?: default
+    fun getMetaString(key: String, default: String? = null): String? = metadata?.get(key) as? String ?: default
 
     /** Creates a shallow copy of this item. For Java compat (data class copy() requires all params). */
-    public override fun clone(): Item = Item(id, amount, metadata.toMutableMap())
+    public override fun clone(): Item = Item(id, amount, metadata?.toMutableMap())
 
     override fun toString() = "Item($id, amount=$amount)"
 

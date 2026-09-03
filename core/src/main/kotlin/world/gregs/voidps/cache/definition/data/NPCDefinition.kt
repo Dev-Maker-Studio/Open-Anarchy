@@ -1,5 +1,8 @@
 package world.gregs.voidps.cache.definition.data
 
+import org.darkan.core.model.Bonus
+import org.darkan.core.model.Vars
+import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.*
 
@@ -289,20 +292,78 @@ data class NPCDefinition(
     /** Legacy alias for [combat]. */
     val combatLevel: Int get() = combat
 
-    /** Whether this NPC has "Attack" as one of its options. */
-    fun hasAttackOption(): Boolean = options.contains("Attack")
+    /**
+     * Whether this NPC can be attacked.
+     *
+     * Legacy `hasAttackOption()` accepts "attack" or "destroy", ignoring case, across both the ordinary
+     * and members option arrays - which [options] already holds merged.
+     */
+    fun hasAttackOption(): Boolean = options.any {
+        it != null && (it.equals("attack", ignoreCase = true) || it.equals("destroy", ignoreCase = true))
+    }
 
-    /** Whether this NPC has the given option string. */
-    fun hasOption(option: String): Boolean = options.contains(option)
+    /** Whether this NPC has the given option string. Legacy `hasOption()` ignores case. */
+    fun hasOption(option: String): Boolean = options.any { it != null && it.equals(option, ignoreCase = true) }
 
-    /** Gets a combat bonus from this NPC's params map by ordinal. */
-    fun getBonus(bonus: org.darkan.core.model.Bonus): Int = params?.get(bonus.ordinal) as? Int ?: 0
+    /** A param read as an int, 0 when absent or a string. Legacy `NPCDefinitions.getBonus(int)`. */
+    fun getParamVal(id: Int): Int = params?.get(id) as? Int ?: 0
+
+    /**
+     * A combat bonus.
+     *
+     * Legacy `NPCDefinitions.getBonus(Bonus)`: the attack and defence bonuses are params 0 to 9, so
+     * they happen to line up with the [Bonus] ordinals, but the strength bonuses are params 641, 643
+     * and 965 in tenths, and the summoning defence, absorb and prayer bonuses NPCs simply do not have.
+     */
+    fun getBonus(bonus: Bonus): Int = when (bonus) {
+        Bonus.STAB_ATT -> getParamVal(0)
+        Bonus.SLASH_ATT -> getParamVal(1)
+        Bonus.CRUSH_ATT -> getParamVal(2)
+        Bonus.MAGIC_ATT -> getParamVal(3)
+        Bonus.RANGE_ATT -> getParamVal(4)
+        Bonus.STAB_DEF -> getParamVal(5)
+        Bonus.SLASH_DEF -> getParamVal(6)
+        Bonus.CRUSH_DEF -> getParamVal(7)
+        Bonus.MAGIC_DEF -> getParamVal(8)
+        Bonus.RANGE_DEF -> getParamVal(9)
+        Bonus.MELEE_STR -> getParamVal(641) / 10
+        Bonus.RANGE_STR -> getParamVal(643) / 10
+        Bonus.MAGIC_STR -> getParamVal(965) / 10
+        else -> 0
+    }
+
+    /** The attack delay in ticks. Legacy `getAttackDelay()` - param 14, defaulting to 4. */
+    fun getAttackDelay(): Int {
+        val speed = getParamVal(14)
+        return if (speed <= 0) 4 else speed
+    }
 
     /** Gets the option at the given index. */
     fun getOption(index: Int): String? = options.getOrNull(index)
 
-    /** Legacy overload that accepts a vars parameter for transform support. Returns this definition's name. */
-    fun getName(vars: Any?): String = name
+    /**
+     * The id this NPC presents as for a player with the given [vars].
+     *
+     * Legacy `NPCDefinitions.getIdForPlayer(VarManager)`.
+     */
+    fun getIdForPlayer(vars: Vars?): Int = getIdForVars(id, vars)
+
+    /**
+     * The name of the definition this NPC transforms into for the given [vars].
+     *
+     * Legacy `NPCDefinitions.getName(VarManager)`.
+     */
+    fun getName(vars: Vars?): String {
+        val realId = getIdForPlayer(vars)
+        if (realId == id) {
+            return name
+        }
+        val npcs = Cache.npcs
+        if (realId < 0 || realId >= npcs.size) {
+            return "null"
+        }
+        return npcs[realId].name
+    }
 
     companion object {
         val EMPTY = NPCDefinition()

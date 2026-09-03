@@ -278,7 +278,7 @@ val NPCDefinition.movementType: MovementType get() =
  * Callable from Java as KtExtensionsKt.copyItem(item).
  */
 fun Item.copyItem(): Item {
-    val copy = Item(id, amount, metadata.toMutableMap())
+    val copy = Item(id, amount, metadata?.toMutableMap())
     copy.slot = slot
     return copy
 }
