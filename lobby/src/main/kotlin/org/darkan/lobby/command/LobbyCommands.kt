@@ -5,10 +5,8 @@ import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.crypt.Crypto
 import org.darkan.core.isValidPassword
-import org.darkan.core.model.ChatMessageType
 import org.darkan.core.model.Rights
 import org.darkan.core.mongo.collections.Accounts
-import org.darkan.core.net.prot.packet.GameMessage
 import org.darkan.lobby.web.model.LobbyPlayer
 import java.util.EnumMap
 
@@ -80,8 +78,6 @@ object LobbyCommands {
         }
         return false
     }
-
-    suspend fun LobbyPlayer.message(text: String) = session.send(GameMessage(ChatMessageType.GAME, text))
 
     /** Commands whose arguments are secrets and must never be logged. */
     private val SECRET_COMMANDS = setOf("changepass", "changepassother", "setpass", "resetpass")

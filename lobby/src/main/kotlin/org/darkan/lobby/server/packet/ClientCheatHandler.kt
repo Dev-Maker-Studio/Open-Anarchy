@@ -3,7 +3,6 @@ package org.darkan.lobby.server.packet
 import org.darkan.core.net.prot.handler.PacketHandler
 import org.darkan.core.net.prot.packet.ClientCheat
 import org.darkan.lobby.command.LobbyCommands
-import org.darkan.lobby.command.LobbyCommands.message
 import org.darkan.lobby.web.model.LobbyPlayer
 
 /** `::command` typed in the lobby arrives as the client's cheat packet, exactly as on a world. */

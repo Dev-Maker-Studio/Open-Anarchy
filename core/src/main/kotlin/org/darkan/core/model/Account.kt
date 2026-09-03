@@ -104,7 +104,12 @@ data class Social(
     var fcStatus: Byte = 0,
     var clanName: String? = null,
     var connectedToClan: Boolean = false,
-    var currentFriendsChat: String = "help",
+    /**
+     * Display name of the owner of the friends chat this account is in, remembered across logins
+     * so the lobby and the worlds can re-join it (legacy `Social.currentFriendsChat`). Null means
+     * "in no channel" - explicitly leaving a channel clears it, logging out does not.
+     */
+    var currentFriendsChat: String? = "help",
     var guestedClanChat: String? = null,
     var friendsChat: FriendsChat = FriendsChat()
 ) {

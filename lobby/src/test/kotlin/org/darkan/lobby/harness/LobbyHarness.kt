@@ -1,0 +1,232 @@
+package org.darkan.lobby.harness
+
+import kotlinx.coroutines.coroutineScope
+import org.darkan.core.formatPlayerNameForDisplay
+import org.darkan.core.formatPlayerNameForProtocol
+import org.darkan.core.model.Account
+import org.darkan.core.model.Rights
+import org.darkan.core.mongo.collections.AccountStore
+import org.darkan.core.mongo.collections.Accounts
+import org.darkan.core.net.prot.ClientProt
+import org.darkan.core.net.prot.Codec
+import org.darkan.core.net.prot.ServerProt
+import org.darkan.core.social.gateway.GatewayPlayerPresence
+import org.darkan.core.social.gateway.GatewayWorldInfo
+import org.darkan.core.social.gateway.PlayerOffline
+import org.darkan.core.social.gateway.PlayerOnline
+import org.darkan.core.social.gateway.PresenceSyncReason
+import org.darkan.core.social.gateway.ServerPacketBatch
+import org.darkan.core.social.gateway.ServerPacketEnvelope
+import org.darkan.core.social.gateway.SocialGatewayWireJson
+import org.darkan.core.social.gateway.SocialGatewayWireMessage
+import org.darkan.core.social.gateway.WorldPresenceSnapshot
+import org.darkan.lobby.social.SocialGateway
+import org.darkan.lobby.social.WorldSession
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * Drives [SocialGateway] with no Mongo, no socket and no client, so the lobby's social behaviour
+ * can be asserted packet by packet.
+ *
+ * Two seams make that possible and nothing else about the gateway is changed. [InMemoryAccounts]
+ * is installed as [Accounts.store], so account reads and writes go to a map; and [FakeWorld]
+ * builds a [WorldSession] over a lambda instead of a WebSocket and feeds it to the gateway's
+ * `handleWorldMessage`, which is the same entry point the real socket loop uses.
+ *
+ * The gateway is a process-wide `object`, so a test that inherited the previous test's presence,
+ * channels and watcher index would pass or fail depending on the order JUnit happened to pick.
+ * [reset] empties every map it holds, which is what makes each test independent; call it from a
+ * `@BeforeTest`. Accounts are also created with a fresh username each time, so nothing survives
+ * even by name.
+ */
+object LobbyHarness {
+
+    /** The gateway never encodes anything in a test, so an empty codec is all a session needs. */
+    val codec: Codec = Codec()
+
+    private val ids = AtomicInteger()
+
+    val accounts = InMemoryAccounts()
+
+    init {
+        Accounts.store = accounts
+    }
+
+    /**
+     * Empties the gateway and the account store, so a test starts from a lobby with nobody on it.
+     *
+     * The gateway keeps its state in private maps and has no reset hook - adding one would be
+     * test-only API in production code - so they are cleared reflectively. Anything map-shaped is
+     * fair game: every one of them is presence, membership or index state that a fresh lobby has
+     * empty.
+     */
+    fun reset() {
+        for (field in SocialGateway::class.java.declaredFields) {
+            field.isAccessible = true
+            val value = try {
+                field.get(SocialGateway)
+            } catch (_: Throwable) {
+                continue
+            }
+            if (value is MutableMap<*, *>) value.clear()
+        }
+        accounts.clear()
+    }
+
+    /**
+     * A fresh account, saved to the in-memory store. The name is unique per call so parallel or
+     * repeated tests cannot collide in the gateway's shared maps.
+     */
+    fun account(
+        name: String,
+        rights: Rights = Rights.PLAYER,
+        privateStatus: Int = 0,
+        friends: Set<String> = emptySet(),
+        currentFriendsChat: String? = null,
+    ): Account {
+        val username = "${name}${ids.incrementAndGet()}".formatPlayerNameForProtocol()
+        val account = Account(username, "$username@test.invalid", "hash")
+        account.rights = rights
+        account.social.status = privateStatus.toByte()
+        account.social.friends = friends.toMutableSet()
+        account.social.currentFriendsChat = currentFriendsChat
+        accounts.put(account)
+        return account
+    }
+
+    /** Makes [owner] the owner of a set-up friends chat called [chatName]. */
+    fun openFriendsChat(owner: Account, chatName: String = owner.displayName) {
+        owner.social.friendsChat.name = chatName
+        accounts.put(owner)
+    }
+
+    /** Adds [friend] to [account]'s friends list (one-directional, as the client's list is). */
+    fun befriend(account: Account, friend: Account) {
+        account.social.friends.add(friend.username)
+        accounts.put(account)
+    }
+
+    /**
+     * Logs [account] into the lobby the way `LobbyPlayer.login` does, and returns the recorder its
+     * packets land in.
+     */
+    suspend fun lobbyLogin(account: Account): RecordingSession {
+        val session = RecordingSession(codec)
+        SocialGateway.registerLobbyPlayerSession(account, session)
+        return session
+    }
+
+    suspend fun lobbyLogout(account: Account) {
+        SocialGateway.unregisterLobbyPlayerSession(account.username)
+    }
+
+    /** Feeds [packet] to the gateway as if [account]'s lobby client had sent it. */
+    suspend fun clientPacket(account: Account, packet: ClientProt) {
+        SocialGateway.handleClientPacket(account.username, packet)
+    }
+
+    fun world(worldId: Int, worldName: String = "Test $worldId"): FakeWorld = FakeWorld(worldId, worldName)
+
+    /**
+     * A connected world with a recording transport. Messages are handed to the gateway through the
+     * same `handleWorldMessage` the real socket loop calls, wrapped in a `coroutineScope` so the
+     * branches that launch background work have finished by the time the call returns.
+     */
+    class FakeWorld(val worldId: Int, val worldName: String) {
+        private val received = mutableListOf<SocialGatewayWireMessage>()
+
+        val session = WorldSession(worldId, worldName) { text ->
+            synchronized(received) {
+                received += SocialGatewayWireJson.json.decodeFromString(SocialGatewayWireMessage.serializer(), text)
+            }
+        }
+
+        val info = GatewayWorldInfo(
+            worldId = worldId,
+            worldName = worldName,
+            host = "127.0.0.1",
+            publicHost = "127.0.0.1",
+            port = 43595 + worldId,
+        )
+
+        /** Completes the handshake, i.e. what the gateway does once a [WorldHello] checks out. */
+        fun connect(): FakeWorld {
+            SocialGateway.attachWorld(session, info)
+            return this
+        }
+
+        /** Drops the socket, the way the gateway's `finally` block does. */
+        suspend fun disconnect() {
+            SocialGateway.detachWorld(session)
+        }
+
+        suspend fun deliver(msg: SocialGatewayWireMessage) = coroutineScope {
+            SocialGateway.handleWorldMessage(this, session, msg)
+        }
+
+        suspend fun playerOnline(account: Account) = deliver(
+            PlayerOnline(
+                username = account.username,
+                displayName = account.displayName,
+                rightsCrown = account.rights.crown,
+                privateStatus = account.social.status.toInt(),
+            )
+        )
+
+        suspend fun playerOffline(account: Account) = deliver(PlayerOffline(account.username))
+
+        /** Announces exactly [players] as this world's population. */
+        suspend fun presenceSnapshot(reason: PresenceSyncReason, vararg players: Account) = deliver(
+            WorldPresenceSnapshot(
+                players = players.map {
+                    GatewayPlayerPresence(it.username, it.displayName, it.rights.crown, it.social.status.toInt())
+                },
+                reason = reason,
+            )
+        )
+
+        /** Everything the lobby has pushed at this world, oldest first. */
+        fun sent(): List<SocialGatewayWireMessage> = synchronized(received) { received.toList() }
+
+        /** The [ServerProt]s the lobby addressed to [account], envelopes and batches alike. */
+        fun packetsFor(account: Account): List<ServerProt> = sent().mapNotNull { msg ->
+            when {
+                msg is ServerPacketEnvelope && msg.username == account.username -> msg.packet
+                msg is ServerPacketBatch && account.username in msg.usernames -> msg.packet
+                else -> null
+            }
+        }
+
+        fun clear() = synchronized(received) { received.clear() }
+    }
+}
+
+/** An [AccountStore] over a map, so the gateway's account reads and writes need no database. */
+class InMemoryAccounts : AccountStore {
+    private val byUsername = ConcurrentHashMap<String, Account>()
+
+    fun put(account: Account) {
+        byUsername[account.username] = account
+    }
+
+    fun clear() = byUsername.clear()
+
+    override suspend fun find(usernameOrEmail: String): Account? =
+        byUsername[usernameOrEmail.formatPlayerNameForProtocol()]
+            ?: byUsername.values.firstOrNull { it.email == usernameOrEmail }
+
+    override suspend fun findByDisplayName(displayName: String): Account? {
+        val byName = displayName.formatPlayerNameForProtocol()
+        val byDisplay = byName.formatPlayerNameForDisplay()
+        return byUsername[byName]
+            ?: byUsername.values.firstOrNull { it.displayName == displayName || it.displayName == byDisplay }
+    }
+
+    override suspend fun findByUsernames(usernames: Collection<String>): List<Account> =
+        usernames.mapNotNull { byUsername[it.formatPlayerNameForProtocol()] }
+
+    override suspend fun save(account: Account) {
+        byUsername[account.username] = account
+    }
+}
