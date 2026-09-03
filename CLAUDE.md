@@ -320,6 +320,7 @@ RSA_WORLD_MODULUS=<bigint>
 RSA_WORLD_EXPONENT=<bigint>
 WORLD_LOGIN_TOKEN_SECRET=<secret>
 API_KEY=<admin-api-key>
+LOBBY_OWNER=trent           # the only account allowed owner-tier lobby commands (and, with DEBUG=true, any administrative lobby command)
 ```
 
 ### Cryptography (Argon2id)

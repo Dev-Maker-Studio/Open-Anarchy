@@ -1,5 +1,6 @@
 package org.darkan.lobby.command
 
+import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.crypt.Crypto
@@ -34,9 +35,21 @@ object LobbyCommands {
         for (alias in command.name.split(',')) commands.getValue(rights)[alias.lowercase()] = command
     }
 
-    /** Every command the [rights] tier can run, for a `::commands` listing. */
-    fun available(rights: Rights): List<Command> =
-        Rights.entries.filter { it.ordinal <= rights.ordinal }.flatMap { commands.getValue(it).values.distinct() }
+    /** Every command an account with [rights] and [username] can run, for a `::commands` listing. */
+    fun available(rights: Rights, username: String = EnvVars.lobbyOwner): List<Command> =
+        Rights.entries.filter { allowed(it, rights, username) }.flatMap { commands.getValue(it).values.distinct() }
+
+    /**
+     * Whether an account holding [rights] under [username] may run the [tier]'s commands.
+     * The player tier is open; the owner tier needs the configured owner name; in debug every
+     * administrative tier needs it too.
+     */
+    fun allowed(tier: Rights, rights: Rights, username: String, debug: Boolean = EnvVars.debug, owner: String = EnvVars.lobbyOwner): Boolean {
+        if (tier == Rights.PLAYER) return true
+        if (rights.ordinal < tier.ordinal) return false
+        if (tier == Rights.OWNER || debug) return username.equals(owner, ignoreCase = true)
+        return true
+    }
 
     /**
      * Runs [line] (without its `::` prefix) for [player]. Returns false when no command of the
@@ -48,8 +61,11 @@ object LobbyCommands {
         val name = parts[0].lowercase()
         val args = parts.drop(1)
         for (tier in Rights.entries.reversed()) {
-            if (tier.ordinal > player.account.rights.ordinal) continue
             val command = commands.getValue(tier)[name] ?: continue
+            if (!allowed(tier, player.account.rights, player.account.username)) {
+                if (tier != Rights.PLAYER) logInfo("Lobby command '$name' refused for ${player.account.username} (${player.account.rights}): not the configured owner")
+                continue
+            }
             if (tier != Rights.PLAYER) {
                 val logged = if (name in SECRET_COMMANDS) "$name <${args.size} args>" else line
                 logInfo("Lobby command by ${player.account.username} (${player.account.rights}): $logged")
@@ -72,7 +88,7 @@ object LobbyCommands {
 
     init {
         add(Rights.PLAYER, "commands", "Lists the commands you can use.") { player, _ ->
-            for (command in available(player.account.rights)) player.message("::${command.usage} - ${command.description}")
+            for (command in available(player.account.rights, player.account.username)) player.message("::${command.usage} - ${command.description}")
         }
 
         add(Rights.PLAYER, "changepass [new password]", "Changes your own password.") { player, args ->
