@@ -36,6 +36,15 @@ class TransformsTest {
     }
 
     @Test
+    fun `account null current friends chat is kept because it means not in a chat`() {
+        val doc = Document.parse("""{"username":"quiet","email":"q@x.com","social":{"friends":[],"ignores":[],"currentFriendsChat":null}}""")
+        val out = assertNotNull(AccountsTransform.apply(doc, Report("accounts")))
+        val social = out.get("social", Document::class.java)
+        assertTrue(social.containsKey("currentFriendsChat"))
+        assertNull(social["currentFriendsChat"])
+    }
+
+    @Test
     fun `account without a username is dropped and reported`() {
         val report = Report("accounts")
         assertNull(AccountsTransform.apply(document("""{"email":"x@y.z"}"""), report))

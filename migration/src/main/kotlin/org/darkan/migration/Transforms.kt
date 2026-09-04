@@ -29,7 +29,8 @@ object CopyTransform : Transform {
  */
 object AccountsTransform : Transform {
     private val nonNullStrings = listOf("email", "recoveryEmail", "displayName", "prevDisplayName", "passwordHash")
-    private val socialNonNull = listOf("friends", "ignores", "status", "fcStatus", "connectedToClan", "currentFriendsChat", "friendsChat")
+    // `currentFriendsChat` is nullable on the modern model (null = not in a chat), so a legacy null stays.
+    private val socialNonNull = listOf("friends", "ignores", "status", "fcStatus", "connectedToClan", "friendsChat")
     private val friendsChatNonNull = listOf("friendsChatRanks", "rankToEnter", "rankToSpeak", "rankToKick", "rankToLS", "coinshare")
 
     private val socialDefaults: Map<String, Any> = Social().let { d ->
@@ -39,7 +40,7 @@ object AccountsTransform : Transform {
             "status" to d.status.toInt(),
             "fcStatus" to d.fcStatus.toInt(),
             "connectedToClan" to d.connectedToClan,
-            "currentFriendsChat" to d.currentFriendsChat,
+            "currentFriendsChat" to checkNotNull(d.currentFriendsChat),
         )
     }
     private val friendsChatDefaults: Map<String, Any> = FriendsChat().let { d ->
