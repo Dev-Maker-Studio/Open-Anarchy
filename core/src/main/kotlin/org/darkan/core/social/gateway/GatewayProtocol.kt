@@ -7,8 +7,14 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import org.darkan.core.EnvVars
+import org.darkan.core.clan.ClanAction
+import org.darkan.core.clan.ClanChannelState
+import org.darkan.core.model.Clan
 import org.darkan.core.net.prot.*
 import org.darkan.core.net.prot.packet.*
+import org.darkan.core.social.ChatMessage
+import org.darkan.core.social.PublicChatMessage
+import org.darkan.core.social.QuickChatMessage
 import org.darkan.core.worldlist.Country
 import org.darkan.core.worldlist.WorldMetadata
 
@@ -32,7 +38,6 @@ object SocialGatewayWireJson {
             subclass(FcJoin::class, FcJoin.serializer())
             subclass(FcKick::class, FcKick.serializer())
             subclass(FcSetRank::class, FcSetRank.serializer())
-            subclass(ClanChannelKickUser::class, ClanChannelKickUser.serializer())
             subclass(QuickChatPublic::class, QuickChatPublic.serializer())
             subclass(QuickChatPrivate::class, QuickChatPrivate.serializer())
         }
@@ -46,15 +51,13 @@ object SocialGatewayWireJson {
             subclass(MessageFriendsChat::class, MessageFriendsChat.serializer())
             subclass(GameMessage::class, GameMessage.serializer())
             subclass(ChatFilterSettingsPrivateChat::class, ChatFilterSettingsPrivateChat.serializer())
-            subclass(ClanChannelFull::class, ClanChannelFull.serializer())
-            subclass(ClanSettingsFull::class, ClanSettingsFull.serializer())
-            subclass(MessageClanChannel::class, MessageClanChannel.serializer())
-            subclass(VarclanEnable::class, VarclanEnable.serializer())
-            subclass(VarclanDisable::class, VarclanDisable.serializer())
             subclass(MessageQuickChatPrivate::class, MessageQuickChatPrivate.serializer())
             subclass(MessageQuickChatPrivateEcho::class, MessageQuickChatPrivateEcho.serializer())
             subclass(MessageQuickChatFriendsChat::class, MessageQuickChatFriendsChat.serializer())
-            subclass(MessageQuickChatClanChannel::class, MessageQuickChatClanChannel.serializer())
+        }
+        polymorphic(ChatMessage::class) {
+            subclass(PublicChatMessage::class, PublicChatMessage.serializer())
+            subclass(QuickChatMessage::class, QuickChatMessage.serializer())
         }
     }
 
@@ -258,55 +261,93 @@ data class FcSettingsUpdate(
     val rankToLS: Int,
 ) : SocialGatewayWireMessage
 
-// ─── Clan Management Requests ────────────────────────────────────────
+// ─── Clans (docs/clans.md) ───────────────────────────────────────────
 
+/**
+ * World → lobby: the player [username] asks for [action]. [requestId] is world-local and is
+ * echoed in the [ClanCommandResult] so the world can run the callback it kept for it.
+ */
 @Serializable
-@SerialName("ClanCreateRequest")
-data class ClanCreateRequest(val username: String, val clanName: String) : SocialGatewayWireMessage
+@SerialName("ClanCommand")
+data class ClanCommand(
+    val username: String,
+    val requestId: Int,
+    val action: ClanAction,
+) : SocialGatewayWireMessage
 
+/** World → lobby: send me [clanName] as a [ClanSnapshot], or [ClanDeleted] if it does not exist. */
 @Serializable
-@SerialName("ClanCreateResponse")
-data class ClanCreateResponse(val username: String, val success: Boolean, val message: String?) : SocialGatewayWireMessage
+@SerialName("ClanFetch")
+data class ClanFetch(val clanName: String) : SocialGatewayWireMessage
 
+/**
+ * Lobby → world: the outcome of one [ClanCommand]. [action] is the [ClanAction.serialName] of
+ * the request so a world can act without keeping it; [message] is shown to the player verbatim
+ * when present.
+ */
 @Serializable
-@SerialName("ClanCheckNameRequest")
-data class ClanCheckNameRequest(val username: String, val clanName: String) : SocialGatewayWireMessage
+@SerialName("ClanCommandResult")
+data class ClanCommandResult(
+    val username: String,
+    val requestId: Int,
+    val action: String,
+    val ok: Boolean,
+    val message: String? = null,
+) : SocialGatewayWireMessage
 
-/** Answer to [ClanCheckNameRequest]; the lobby has already messaged the player about a rejection. */
+/**
+ * Lobby → world: the whole clan document. Broadcast to every world on every change and sent in
+ * answer to a [ClanFetch]; worlds replace their copy wholesale.
+ */
 @Serializable
-@SerialName("ClanCheckNameResponse")
-data class ClanCheckNameResponse(val username: String, val clanName: String, val approved: Boolean) : SocialGatewayWireMessage
+@SerialName("ClanSnapshot")
+data class ClanSnapshot(val clan: Clan) : SocialGatewayWireMessage
 
+/** Lobby → world: the clan no longer exists. */
 @Serializable
-@SerialName("ClanLeaveRequest")
-data class ClanLeaveRequest(val username: String) : SocialGatewayWireMessage
+@SerialName("ClanDeleted")
+data class ClanDeleted(val clanName: String) : SocialGatewayWireMessage
 
+/** Lobby → world: a channel's chatter list. Broadcast to every world on every change. */
 @Serializable
-@SerialName("ClanAddMemberRequest")
-data class ClanAddMemberRequest(val inviterUsername: String, val targetUsername: String) : SocialGatewayWireMessage
+@SerialName("ClanChannelUpdate")
+data class ClanChannelUpdate(val state: ClanChannelState) : SocialGatewayWireMessage
 
+/**
+ * Lobby → world: the authoritative clan fields of one player's `Social`, sent to their world
+ * whenever they change and on world connect, so the world's own account saves never clobber
+ * them. [inChannel] is `connectedToClan`, [guestChannel] is `guestedClanChat`.
+ */
 @Serializable
-@SerialName("ClanKickMemberRequest")
-data class ClanKickMemberRequest(val kickerUsername: String, val targetUsername: String) : SocialGatewayWireMessage
+@SerialName("ClanMembership")
+data class ClanMembership(
+    val username: String,
+    val clanName: String? = null,
+    val inChannel: Boolean,
+    val guestChannel: String? = null,
+) : SocialGatewayWireMessage
 
+/**
+ * Lobby → world: one line said in [clanName]'s channel by [sender] (a display name) whose
+ * rights crown is [rights]. Sent to every world holding a chatter of that channel; the world
+ * delivers it to its local chatters with `guest = false` for members and `guest = true` for
+ * guests of that clan.
+ */
 @Serializable
-@SerialName("ClanSetRankRequest")
-data class ClanSetRankRequest(val username: String, val targetUsername: String, val rank: Int) : SocialGatewayWireMessage
+@SerialName("ClanChatMessage")
+data class ClanChatMessage(
+    val clanName: String,
+    val sender: String,
+    val rights: Int,
+    val message: ChatMessage,
+) : SocialGatewayWireMessage
 
+/** Lobby → world: the quick-chat form of [ClanChatMessage]. */
 @Serializable
-@SerialName("ClanBanMemberRequest")
-data class ClanBanMemberRequest(val username: String, val targetUsername: String) : SocialGatewayWireMessage
-
-@Serializable
-@SerialName("ClanUnbanMemberRequest")
-data class ClanUnbanMemberRequest(val username: String, val targetUsername: String) : SocialGatewayWireMessage
-
-// ─── Guest Clan Chat ────────────────────────────────────────────────
-
-@Serializable
-@SerialName("ClanGuestJoinRequest")
-data class ClanGuestJoinRequest(val username: String, val clanName: String) : SocialGatewayWireMessage
-
-@Serializable
-@SerialName("ClanGuestLeaveRequest")
-data class ClanGuestLeaveRequest(val username: String) : SocialGatewayWireMessage
+@SerialName("ClanQuickChatMessage")
+data class ClanQuickChatMessage(
+    val clanName: String,
+    val sender: String,
+    val rights: Int,
+    val message: QuickChatMessage,
+) : SocialGatewayWireMessage

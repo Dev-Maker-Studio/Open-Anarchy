@@ -1,18 +1,26 @@
 package org.darkan.core.social
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * A line a player said. On the social gateway wire it travels polymorphically: the
+ * implementations are registered on `SocialGatewayWireJson` under the serial names below.
+ */
 interface ChatMessage {
     val effects: Int
     val message: String
 }
 
+@Serializable
+@SerialName("PublicChat")
 data class PublicChatMessage(
     override val message: String,
     override val effects: Int = 0
 ) : ChatMessage
 
 @Serializable
+@SerialName("QuickChat")
 data class QuickChatMessage(
     override val message: String,
     val fileId: Int,

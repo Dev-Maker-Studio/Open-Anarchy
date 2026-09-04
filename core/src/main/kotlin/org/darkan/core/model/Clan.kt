@@ -2,14 +2,12 @@ package org.darkan.core.model
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
 import kotlinx.serialization.descriptors.element
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.*
-import org.bson.codecs.pojo.annotations.BsonIgnore
 
 /**
  * Serializer for clan setting values which can be Int, Long, or String.
@@ -72,10 +70,6 @@ class Clan(
     var ccKickRank: ClanRank = ClanRank.ADMIN,
     var motto: String = "",
 ) {
-    @Transient
-    @BsonIgnore
-    var updateBlock: ByteArray? = null
-
     companion object {
         const val MAX_MEMBERS = 100
         const val MIN_FILLER_SLOTS = 5

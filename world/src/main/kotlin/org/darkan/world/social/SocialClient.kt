@@ -8,19 +8,7 @@ import kotlinx.coroutines.*
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logWarn
-import org.darkan.core.net.prot.ClientProt
 import java.net.ConnectException
-import org.darkan.core.social.gateway.ClanAddMemberRequest
-import org.darkan.core.social.gateway.ClanBanMemberRequest
-import org.darkan.core.social.gateway.ClanCheckNameRequest
-import org.darkan.core.social.gateway.ClanCreateRequest
-import org.darkan.core.social.gateway.ClanGuestJoinRequest
-import org.darkan.core.social.gateway.ClanGuestLeaveRequest
-import org.darkan.core.social.gateway.ClanKickMemberRequest
-import org.darkan.core.social.gateway.ClanLeaveRequest
-import org.darkan.core.social.gateway.ClanSetRankRequest
-import org.darkan.core.social.gateway.ClanUnbanMemberRequest
-import org.darkan.core.social.gateway.ClientPacketEnvelope
 import org.darkan.core.social.gateway.FcSettingsUpdate
 import org.darkan.core.social.gateway.GatewayPlayerPresence
 import org.darkan.core.social.gateway.GatewayWorldInfo
@@ -49,6 +37,12 @@ import kotlin.time.Duration.Companion.seconds
 class SocialClient(
     private val scope: CoroutineScope,
     private val onlinePlayers: () -> List<GatewayPlayerPresence> = { emptyList() },
+    /**
+     * Told whenever the socket comes up or goes down. Replicas the world only holds because the
+     * lobby pushed them - the clan registry - are dropped here, so a reconnect starts from the
+     * lobby's resync rather than from stale copies.
+     */
+    private val onConnectionChange: (connected: Boolean) -> Unit = {},
     private val onMessage: suspend (SocialGatewayWireMessage) -> Unit,
 ) {
     private val client = HttpClient(CIO) {
@@ -93,9 +87,6 @@ class SocialClient(
         }
     }
 
-    suspend fun sendClientPacket(username: String, packet: ClientProt): Boolean =
-        send(ClientPacketEnvelope(username = username, packet = packet))
-
     suspend fun sendPlayerOnline(username: String, displayName: String, rightsCrown: Int, privateStatus: Int): Boolean =
         send(PlayerOnline(username = username, displayName = displayName, rightsCrown = rightsCrown, privateStatus = privateStatus))
 
@@ -109,46 +100,6 @@ class SocialClient(
 
     suspend fun sendFcSettingsUpdate(username: String, name: String?, rankToEnter: Int, rankToSpeak: Int, rankToKick: Int, rankToLS: Int) {
         send(FcSettingsUpdate(username = username, name = name, rankToEnter = rankToEnter, rankToSpeak = rankToSpeak, rankToKick = rankToKick, rankToLS = rankToLS))
-    }
-
-    suspend fun sendClanCreate(username: String, clanName: String) {
-        send(ClanCreateRequest(username = username, clanName = clanName))
-    }
-
-    suspend fun sendClanCheckName(username: String, clanName: String) {
-        send(ClanCheckNameRequest(username = username, clanName = clanName))
-    }
-
-    suspend fun sendClanLeave(username: String) {
-        send(ClanLeaveRequest(username = username))
-    }
-
-    suspend fun sendClanAddMember(inviterUsername: String, targetUsername: String) {
-        send(ClanAddMemberRequest(inviterUsername = inviterUsername, targetUsername = targetUsername))
-    }
-
-    suspend fun sendClanKickMember(kickerUsername: String, targetUsername: String) {
-        send(ClanKickMemberRequest(kickerUsername = kickerUsername, targetUsername = targetUsername))
-    }
-
-    suspend fun sendClanSetRank(username: String, targetUsername: String, rank: Int) {
-        send(ClanSetRankRequest(username = username, targetUsername = targetUsername, rank = rank))
-    }
-
-    suspend fun sendClanBanMember(username: String, targetUsername: String) {
-        send(ClanBanMemberRequest(username = username, targetUsername = targetUsername))
-    }
-
-    suspend fun sendClanUnbanMember(username: String, targetUsername: String) {
-        send(ClanUnbanMemberRequest(username = username, targetUsername = targetUsername))
-    }
-
-    suspend fun sendClanGuestJoin(username: String, clanName: String) {
-        send(ClanGuestJoinRequest(username = username, clanName = clanName))
-    }
-
-    suspend fun sendClanGuestLeave(username: String) {
-        send(ClanGuestLeaveRequest(username = username))
     }
 
     /**
@@ -195,6 +146,7 @@ class SocialClient(
                     }
 
                     state.set(State.Connected(this))
+                    onConnectionChange(true)
                     logInfo("SocialClient connected")
 
                     // The handshake is only half the story: the lobby cannot know who is already
@@ -225,6 +177,7 @@ class SocialClient(
                 }
             } finally {
                 state.set(State.Stopped)
+                onConnectionChange(false)
             }
 
             attempt++

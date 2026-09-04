@@ -2,33 +2,69 @@ package org.darkan.core.mongo.collections
 
 import com.mongodb.client.model.Filters.eq
 import com.mongodb.client.model.IndexOptions
+import com.mongodb.client.model.ReplaceOptions
 import com.mongodb.client.model.Sorts.ascending
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.darkan.core.model.Clan
 import org.darkan.core.mongo.MongoDB.database
 
-object Clans {
-    private val collection by lazy {
-        val col = database.getCollection<Clan>("clans")
-        runBlocking {
-            col.createIndex(ascending(Clan::name.name), IndexOptions().unique(true))
-            col.createIndex(ascending(Clan::leaderUsername.name))
-        }
-        return@lazy col
+/**
+ * The clan reads and writes the lobby performs, behind an interface so a test can put an
+ * in-memory store (`org.darkan.core.clan.InMemoryClanStore`) in front of [Clans] instead of a
+ * Mongo connection. Production code always goes through [Clans]; only the store underneath it is
+ * swappable.
+ */
+interface ClanStore {
+    suspend fun find(name: String): Clan?
+    suspend fun findByLeader(username: String): Clan?
+    suspend fun save(clan: Clan)
+    suspend fun delete(name: String)
+    suspend fun findAll(): List<Clan>
+}
+
+private val clanCollection by lazy {
+    val col = database.getCollection<Clan>("clans")
+    runBlocking {
+        col.createIndex(ascending(Clan::name.name), IndexOptions().unique(true))
+        col.createIndex(ascending(Clan::leaderUsername.name))
+    }
+    return@lazy col
+}
+
+/** The real store: the Mongo `clans` collection. */
+private object MongoClans : ClanStore {
+    override suspend fun find(name: String): Clan? =
+        clanCollection.find(eq(Clan::name.name, name)).firstOrNull()
+
+    override suspend fun findByLeader(username: String): Clan? =
+        clanCollection.find(eq(Clan::leaderUsername.name, username)).firstOrNull()
+
+    override suspend fun save(clan: Clan) {
+        clanCollection.replaceOne(eq(Clan::name.name, clan.name), clan, ReplaceOptions().upsert(true))
     }
 
-    suspend fun find(name: String): Clan? =
-        collection.find(eq(Clan::name.name, name)).firstOrNull()
-
-    suspend fun findByLeader(username: String): Clan? =
-        collection.find(eq(Clan::leaderUsername.name, username)).firstOrNull()
-
-    suspend fun save(clan: Clan) {
-        collection.replaceOne(eq(Clan::name.name, clan.name), clan, com.mongodb.client.model.ReplaceOptions().upsert(true))
+    override suspend fun delete(name: String) {
+        clanCollection.deleteOne(eq(Clan::name.name, name))
     }
 
-    suspend fun delete(name: String) {
-        collection.deleteOne(eq(Clan::name.name, name))
-    }
+    override suspend fun findAll(): List<Clan> = clanCollection.find().toList()
+}
+
+object Clans : ClanStore {
+
+    /** Swapped by tests for an in-memory store; never reassigned by production code. */
+    @Volatile
+    var store: ClanStore = MongoClans
+
+    override suspend fun find(name: String): Clan? = store.find(name)
+
+    override suspend fun findByLeader(username: String): Clan? = store.findByLeader(username)
+
+    override suspend fun save(clan: Clan) = store.save(clan)
+
+    override suspend fun delete(name: String) = store.delete(name)
+
+    override suspend fun findAll(): List<Clan> = store.findAll()
 }

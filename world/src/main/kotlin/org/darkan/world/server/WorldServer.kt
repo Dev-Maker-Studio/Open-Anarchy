@@ -4,7 +4,6 @@ import com.rs.Settings
 import com.rs.db.WorldDB
 import com.rs.game.World
 import com.rs.game.tasks.WorldTasks
-import com.rs.game.content.clans.ClansManager
 import com.rs.game.model.entity.player.Player
 import com.rs.utils.AccountLimiter
 import com.rs.utils.MachineInformation
@@ -36,18 +35,16 @@ import org.darkan.core.Logger
 import org.darkan.core.model.Account
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.login.LoginToken
-import org.darkan.core.model.Clan
-import org.darkan.core.mongo.collections.Clans
 import org.darkan.core.net.prot.ClientProt
 import org.darkan.core.net.prot.ServerProt
 import org.darkan.core.net.prot.packet.FcJoin
 import org.darkan.core.social.gateway.AnnouncementBroadcast
-import org.darkan.core.social.gateway.ClanCheckNameResponse
-import org.darkan.core.social.gateway.ClanCreateResponse
+import org.darkan.core.social.gateway.ClientPacketEnvelope
 import org.darkan.core.social.gateway.GatewayPlayerPresence
 import org.darkan.core.social.gateway.ServerPacketBatch
 import org.darkan.core.social.gateway.ServerPacketEnvelope
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
+import org.darkan.world.clan.ClanRegistry
 import org.darkan.world.social.SocialClient
 import java.math.BigInteger
 import java.util.concurrent.ConcurrentHashMap
@@ -75,7 +72,9 @@ object WorldServer {
         selectorManager = ActorSelectorManager(dispatcher)
         val scope = CoroutineScope(dispatcher)
 
-        socialClient = SocialClient(scope, ::onlinePresence) { msg -> handleSocialMessage(msg) }
+        // The clan replica is only valid while the socket that filled it is up: every connection
+        // change drops it, and the lobby's connect-time resync refills it (docs/clans.md).
+        socialClient = SocialClient(scope, ::onlinePresence, { ClanRegistry.clear() }) { msg -> handleSocialMessage(msg) }
         socialClient.start()
         logInfo("Starting world server...")
         serverSocket = runBlocking {
@@ -234,12 +233,15 @@ object WorldServer {
             return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
 
         val verified = LoginToken.verify(lobbyAuthToken, System.currentTimeMillis(), EnvVars.worldLoginTokenSecret)
-        if (verified == null || verified.username != username) {
-            logError("LoginToken verify failed for $username: verified=${verified?.username}")
+        if (verified == null) {
+            logError("LoginToken verify failed for $username")
             pendingLogins.remove(username)
             return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
         }
 
+        // The lobby signs the token for the account's username, but the client sends whatever the
+        // player typed - an email address just as often. Load by the login name and hold the token
+        // to the account it resolved to rather than to the typed string.
         val account = try {
             Accounts.find(username)
         } catch (e: Exception) {
@@ -248,6 +250,11 @@ object WorldServer {
             return output.finish(ResponseOpcode.LOGIN_SERVER_OFFLINE)
         }
         if (account == null || account.username.isEmpty()) {
+            pendingLogins.remove(username)
+            return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+        }
+        if (verified.username != account.username) {
+            logError("LoginToken for ${verified.username} presented by $username (account ${account.username})")
             pendingLogins.remove(username)
             return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
         }
@@ -322,15 +329,29 @@ object WorldServer {
         session.readPackets(input)
     }
 
+    /**
+     * Hands [msg] to the gateway socket.
+     *
+     * @return false when there is no gateway attached at all (headless tools, the test harness)
+     *         or the write failed, so the caller can tell the player rather than lose the intent.
+     */
+    suspend fun sendToGateway(msg: SocialGatewayWireMessage): Boolean {
+        if (!::socialClient.isInitialized) {
+            logWarn("No social gateway client attached; dropping ${msg::class.simpleName}")
+            return false
+        }
+        return socialClient.send(msg)
+    }
+
     suspend fun forwardToLobby(username: String, packet: ClientProt) {
-        if (!socialClient.sendClientPacket(username, packet)) {
+        if (!sendToGateway(ClientPacketEnvelope(username = username, packet = packet))) {
             logWarn("Failed to forward ${packet::class.simpleName} to lobby for $username: social gateway unavailable")
             onWorldThread(username) { it.sendMessage("Error forwarding packet to lobby.") }
         }
     }
 
     /** Runs [block] against the named player on the next world tick, if they are still in game. */
-    private fun onWorldThread(username: String, block: (Player) -> Unit) {
+    fun onWorldThread(username: String, block: (Player) -> Unit) {
         WorldTasks.schedule(0) {
             val player = World.getPlayerByUsername(username) ?: return@schedule
             if (player.hasStarted() && !player.hasFinished()) block(player)
@@ -338,6 +359,9 @@ object WorldServer {
     }
 
     private fun handleSocialMessage(msg: SocialGatewayWireMessage) {
+        // Clans are their own protocol (docs/clans.md): the registry owns every clan event and
+        // builds the client packets itself, so nothing clan-shaped reaches the dispatch below.
+        if (ClanRegistry.handle(msg)) return
         when (msg) {
             is ServerPacketEnvelope -> {
                 logInfo("handleSocialMessage: ServerPacketEnvelope username=${msg.username} packet=${msg.packet::class.simpleName}")
@@ -347,25 +371,22 @@ object WorldServer {
                 logInfo("handleSocialMessage: ServerPacketBatch usernames=${msg.usernames} packet=${msg.packet::class.simpleName}")
                 msg.usernames.forEach { deliverToPlayer(it, msg.packet) }
             }
-            // Gateway messages arrive on the social client's coroutine; anything that touches player
-            // state (appearance, dialogues, attribs) has to run on the world thread.
-            is ClanCreateResponse -> onWorldThread(msg.username) { player ->
-                if (msg.success) {
-                    player.sendMessage("Your clan has been created!")
-                    player.appearance.generateAppearanceData()
-                } else {
-                    player.sendMessage(msg.message ?: "Unable to create clan.")
-                }
-                player.tempAttribs.removeB("ccCreateLock")
-            }
-            is ClanCheckNameResponse -> onWorldThread(msg.username) { player ->
-                player.tempAttribs.removeB("ccCreateLock")
-                // The lobby has already told the player why the name was rejected, so a rejection
-                // just puts them back on the name prompt.
-                if (msg.approved) ClansManager.create(player, msg.clanName) else ClansManager.promptName(player)
-            }
-            is AnnouncementBroadcast -> logInfo("Received announcement: ${msg.message}")
+            is AnnouncementBroadcast -> announceToEveryone(msg)
             else -> logInfo("Ignoring gateway message: ${msg::class.simpleName}")
+        }
+    }
+
+    /**
+     * An announcement the lobby fanned out to the worlds. It is a game message to everybody in
+     * game here; the lobby has already decided who should get it, so the world does not filter.
+     */
+    private fun announceToEveryone(msg: AnnouncementBroadcast) {
+        logInfo("Received announcement: ${msg.message}")
+        WorldTasks.schedule(0) {
+            for (player in World.players) {
+                if (player == null || !player.hasStarted() || player.hasFinished()) continue
+                player.sendMessage(msg.message)
+            }
         }
     }
 
@@ -464,130 +485,12 @@ object WorldServer {
         }
     }
 
-    fun forwardClanCreate(username: String, clanName: String) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendClanCreate(username, clanName)
-            } catch (e: Exception) {
-                logError("Failed to forward clan create for $username", e)
-                // Otherwise the player is locked out of clan creation until they relog.
-                World.getPlayerByUsername(username)?.tempAttribs?.setB("ccCreateLock", false)
-            }
-        }
-    }
-
-    fun forwardClanCheckName(username: String, clanName: String) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendClanCheckName(username, clanName)
-            } catch (e: Exception) {
-                logError("Failed to forward clan name check for $username", e)
-                // Otherwise the player is locked out of clan creation until they relog.
-                World.getPlayerByUsername(username)?.tempAttribs?.setB("ccCreateLock", false)
-            }
-        }
-    }
-
-    fun forwardClanLeave(username: String) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendClanLeave(username)
-            } catch (e: Exception) {
-                logError("Failed to forward clan leave for $username", e)
-            }
-        }
-    }
-
-    fun forwardClanAddMember(inviterUsername: String, targetUsername: String) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendClanAddMember(inviterUsername, targetUsername)
-            } catch (e: Exception) {
-                logError("Failed to forward clan add member $targetUsername", e)
-            }
-        }
-    }
-
-    fun forwardClanBanMember(username: String, targetUsername: String) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendClanBanMember(username, targetUsername)
-            } catch (e: Exception) {
-                logError("Failed to forward clan ban $targetUsername", e)
-            }
-        }
-    }
-
-    fun forwardClanUnbanMember(username: String, targetUsername: String) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendClanUnbanMember(username, targetUsername)
-            } catch (e: Exception) {
-                logError("Failed to forward clan unban $targetUsername", e)
-            }
-        }
-    }
-
-    fun forwardClanKickMember(kickerUsername: String, targetUsername: String) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendClanKickMember(kickerUsername, targetUsername)
-            } catch (e: Exception) {
-                logError("Failed to forward clan kick $targetUsername", e)
-            }
-        }
-    }
-
-    fun forwardClanGuestJoin(username: String, clanName: String) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendClanGuestJoin(username, clanName)
-            } catch (e: Exception) {
-                logError("Failed to forward clan guest join for $username", e)
-            }
-        }
-    }
-
-    fun forwardClanGuestLeave(username: String) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendClanGuestLeave(username)
-            } catch (e: Exception) {
-                logError("Failed to forward clan guest leave for $username", e)
-            }
-        }
-    }
-
     fun saveAccountAsync(account: Account) {
         CoroutineScope(dispatcher).launch {
             try {
                 Accounts.save(account)
             } catch (e: Exception) {
                 logError("Failed to save account ${account.username}", e)
-            }
-        }
-    }
-
-    fun getClanAsync(name: String, callback: Consumer<Clan?>) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                val clan = Clans.find(name)
-                callback.accept(clan)
-            } catch (e: Exception) {
-                logError("Failed to load clan $name", e)
-                callback.accept(null)
-            }
-        }
-    }
-
-    fun saveClanAsync(clan: Clan, callback: Consumer<Clan?>? = null) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                Clans.save(clan)
-                callback?.accept(clan)
-            } catch (e: Exception) {
-                logError("Failed to save clan ${clan.name}", e)
-                callback?.accept(null)
             }
         }
     }

@@ -13,10 +13,8 @@ import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.formatPlayerNameForDisplay
 import org.darkan.core.formatPlayerNameForProtocol
-import org.darkan.core.isValidAccountName
 import org.darkan.core.model.*
 import org.darkan.core.mongo.collections.Accounts
-import org.darkan.core.mongo.collections.Clans
 import org.darkan.core.net.Session
 import org.darkan.core.net.prot.*
 import org.darkan.core.net.prot.packet.*
@@ -26,9 +24,6 @@ import org.darkan.core.social.gateway.*
 import org.darkan.core.worldlist.World
 import org.darkan.lobby.Lobby
 import java.util.concurrent.ConcurrentHashMap
-import org.darkan.core.net.prot.dto.ClanChannelChatter
-import org.darkan.core.net.prot.dto.ClanSettingsMember
-import org.darkan.core.net.prot.dto.ClanVarSetting
 import org.darkan.core.net.prot.dto.FriendStatusUpdate
 import org.darkan.core.net.prot.dto.FriendsChatPlayer
 import org.darkan.core.net.prot.dto.IgnoreEntry
@@ -69,16 +64,6 @@ object SocialGateway {
         val ownerUsername: String,
         val members: MutableSet<String>,
         val tempBans: ConcurrentHashMap<String, Long> = ConcurrentHashMap(),
-    )
-
-    private val ccRoomsByClanName = ConcurrentHashMap<String, CcRoom>()
-    private val ccClanByMember = ConcurrentHashMap<String, String>()
-
-    private data class CcRoom(
-        val clanName: String,
-        val members: MutableSet<String>,
-        val tempBans: ConcurrentHashMap<String, Long> = ConcurrentHashMap(),
-        var updateNum: Long = 0,
     )
 
     private fun rankAllowed(rankId: Int, requiredId: Int): Boolean {
@@ -173,579 +158,6 @@ object SocialGateway {
         if (room.members.isEmpty()) {
             fcRoomsByOwner.remove(ownerUsername, room)
         }
-    }
-
-    // ─── Clan Chat (CC) ────────────────────────────────────────────────
-
-    private fun clanRankAllowed(rankIconId: Int, requiredIconId: Int): Boolean {
-        if (requiredIconId <= ClanRank.NONE.iconId) return true
-        return rankIconId >= requiredIconId
-    }
-
-    private fun getClanRank(clan: Clan, username: String): ClanRank {
-        if (username == clan.leaderUsername) return ClanRank.OWNER
-        return clan.members[username]?.rank ?: ClanRank.NONE
-    }
-
-    private suspend fun resolveDisplayNames(usernames: Collection<String>): Map<String, String> {
-        val accounts = Accounts.findByUsernames(usernames)
-        return accounts.associate { it.username to it.displayName }
-    }
-
-    private suspend fun buildClanChannelFull(clan: Clan, room: CcRoom): ClanChannelFull {
-        val displayNames = resolveDisplayNames(room.members)
-        val chatters = room.members.mapNotNull { username ->
-            val display = displayNames[username] ?: return@mapNotNull null
-            val rank = getClanRank(clan, username)
-            ClanChannelChatter(displayName = display, rank = rank.iconId, worldId = locationOf(username)?.worldId ?: 0)
-        }.toTypedArray()
-
-        return ClanChannelFull(
-            main = true,
-            clanName = clan.name,
-            updateNum = room.updateNum,
-            kickRank = clan.ccKickRank.iconId,
-            talkRank = clan.ccChatRank.iconId,
-            chatters = chatters,
-        )
-    }
-
-    private suspend fun broadcastCcChannel(clan: Clan, room: CcRoom) {
-        room.updateNum++
-        val packet = buildClanChannelFull(clan, room)
-        sendBatchToUsers(room.members, packet)
-    }
-
-    private suspend fun buildClanSettingsFull(clan: Clan, updateCount: Int): ClanSettingsFull {
-        val allUsernames = clan.members.keys + clan.bannedUsers
-        val displayNames = resolveDisplayNames(allUsernames)
-
-        val members = clan.members.entries.map { (username, data) ->
-            val display = displayNames[username] ?: username
-            ClanSettingsMember(displayName = display, rank = data.rank.iconId)
-        }.toTypedArray()
-
-        val banned = clan.bannedUsers.map { username ->
-            displayNames[username] ?: username
-        }.toTypedArray()
-
-        //Settings are stored keyed by enum name; the client wants its own var-setting ids, and
-        //anything it has no id for is not transmittable.
-        val settings = clan.settings.mapNotNull { (key, value) ->
-            val id = ClanSetting.forName(key)?.id ?: return@mapNotNull null
-            if (id == NO_CLIENT_ID) return@mapNotNull null
-            when (value) {
-                is Int -> ClanVarSetting(key = id, intValue = value)
-                is Long -> ClanVarSetting(key = id, longValue = value)
-                is String -> ClanVarSetting(key = id, stringValue = value)
-                else -> ClanVarSetting(key = id, intValue = 0)
-            }
-        }.toTypedArray()
-
-        return ClanSettingsFull(
-            main = true,
-            clanName = clan.name,
-            updateCount = updateCount,
-            allowGuests = clan.ccChatRank == ClanRank.NONE,
-            talkRank = clan.ccChatRank.iconId,
-            kickRank = clan.ccKickRank.iconId,
-            members = members,
-            bannedUsers = banned,
-            settings = settings,
-        )
-    }
-
-    private suspend fun sendCcSettingsFull(clan: Clan, toUsername: String) {
-        val room = ccRoomsByClanName[clan.name]
-        val updateCount = room?.updateNum?.toInt() ?: 0
-        sendToUser(toUsername, buildClanSettingsFull(clan, updateCount))
-    }
-
-    private suspend fun broadcastCcSettings(clan: Clan, room: CcRoom) {
-        val packet = buildClanSettingsFull(clan, room.updateNum.toInt())
-        sendBatchToUsers(room.members, packet)
-    }
-
-    private suspend fun joinClanChat(username: String) {
-        val account = Accounts.find(username) ?: return
-        val clanName = account.social.clanName
-        if (clanName == null) {
-            // Try guest join
-            val guestClan = account.social.guestedClanChat
-            if (guestClan != null) {
-                joinClanChatAsGuest(username, guestClan)
-            }
-            return
-        }
-
-        val clan = Clans.find(clanName) ?: return
-        if (!clan.members.containsKey(username)) return
-
-        val existingClan = ccClanByMember[username]
-        if (existingClan != null) {
-            if (existingClan == clanName) return // already in this CC
-            leaveClanChat(username, notify = false)
-        }
-
-        val room = ccRoomsByClanName.computeIfAbsent(clanName) {
-            CcRoom(clanName = clanName, members = ConcurrentHashMap.newKeySet())
-        }
-        room.members.add(username)
-        ccClanByMember[username] = clanName
-
-        sendCcSettingsFull(clan, username)
-        sendToUser(username, VarclanEnable())
-        sendClanVars(clan, username)
-        broadcastCcChannel(clan, room)
-    }
-
-    private suspend fun joinClanChatAsGuest(username: String, clanName: String) {
-        val clan = Clans.find(clanName) ?: return
-
-        // Check if guests are allowed
-        if (clan.ccChatRank != ClanRank.NONE) return
-
-        val room = ccRoomsByClanName.computeIfAbsent(clanName) {
-            CcRoom(clanName = clanName, members = ConcurrentHashMap.newKeySet())
-        }
-
-        // Check temp ban
-        val banExpiry = room.tempBans[username]
-        if (banExpiry != null && System.currentTimeMillis() < banExpiry) return
-
-        val existingClan = ccClanByMember[username]
-        if (existingClan != null) {
-            if (existingClan == clanName) return
-            leaveClanChat(username, notify = false)
-        }
-
-        room.members.add(username)
-        ccClanByMember[username] = clanName
-
-        sendCcSettingsFull(clan, username)
-        sendToUser(username, VarclanEnable())
-        sendClanVars(clan, username)
-        broadcastCcChannel(clan, room)
-    }
-
-    private suspend fun leaveClanChat(username: String, notify: Boolean) {
-        val clanName = ccClanByMember.remove(username) ?: return
-        val room = ccRoomsByClanName[clanName] ?: return
-        room.members.remove(username)
-        if (notify) {
-            sendToUser(username, ClanChannelFull(main = true))
-            sendToUser(username, VarclanDisable())
-        }
-        val clan = Clans.find(clanName)
-        if (clan != null && room.members.isNotEmpty()) {
-            broadcastCcChannel(clan, room)
-        }
-        if (room.members.isEmpty()) {
-            ccRoomsByClanName.remove(clanName, room)
-        }
-    }
-
-    private suspend fun handleCcKick(kickerUsername: String, packet: ClanChannelKickUser) {
-        val clanName = ccClanByMember[kickerUsername] ?: return
-        val room = ccRoomsByClanName[clanName] ?: return
-        val clan = Clans.find(clanName) ?: return
-
-        // Resolve target: by username from packet
-        val targetUsername = packet.username.formatPlayerNameForProtocol()
-        if (!room.members.contains(targetUsername)) return
-
-        val kickerRank = getClanRank(clan, kickerUsername)
-        val targetRank = getClanRank(clan, targetUsername)
-
-        if (kickerRank.iconId < clan.ccKickRank.iconId) {
-            sendToUser(kickerUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to kick from this clan chat."))
-            return
-        }
-        if (kickerUsername != clan.leaderUsername && targetRank.ordinal >= kickerRank.ordinal) {
-            sendToUser(kickerUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You cannot kick that user."))
-            return
-        }
-
-        // If target is a guest (not in clan members), add temp ban
-        if (!clan.members.containsKey(targetUsername)) {
-            room.tempBans[targetUsername] = System.currentTimeMillis() + 3600000L
-        }
-
-        ccClanByMember.remove(targetUsername, clanName)
-        room.members.remove(targetUsername)
-        sendToUser(targetUsername, ClanChannelFull(main = true))
-        sendToUser(targetUsername, VarclanDisable())
-        broadcastCcChannel(clan, room)
-    }
-
-    private suspend fun handleClanChatMessage(fromUsername: String, message: String) {
-        val clanName = ccClanByMember[fromUsername] ?: return
-        val room = ccRoomsByClanName[clanName] ?: return
-        if (!room.members.contains(fromUsername)) return
-
-        val clan = Clans.find(clanName) ?: return
-        val fromAccount = Accounts.find(fromUsername) ?: return
-        if (fromAccount.checkMuted()) return
-
-        val fromRank = getClanRank(clan, fromUsername)
-        if (!clanRankAllowed(fromRank.iconId, clan.ccChatRank.iconId)) {
-            sendToUser(fromUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You are not allowed to speak in that clan chat."))
-            return
-        }
-
-        val guest = !clan.members.containsKey(fromUsername)
-        sendBatchToUsers(
-            room.members,
-            MessageClanChannel(
-                guest = guest,
-                crown = fromAccount.rights.crown,
-                displayName = fromAccount.displayName,
-                message = message,
-            )
-        )
-    }
-
-    // ─── Clan Management ─────────────────────────────────────────────
-
-    suspend fun createClan(leaderUsername: String, clanName: String): Boolean {
-        if (clanName.isBlank() || clanName.length > 12) return false
-        if (!clanName.matches(Regex("^[a-zA-Z0-9 ]+$"))) return false
-
-        val existing = Clans.find(clanName)
-        if (existing != null) return false
-
-        val account = Accounts.find(leaderUsername) ?: return false
-        if (account.social.clanName != null) return false
-
-        val clan = Clan(
-            name = clanName,
-            leaderUsername = leaderUsername,
-        )
-        // A fresh clan starts from the client's defaults (motif, recruiting, home world, guest CC)
-        // rather than an empty settings block the interface would render as all zeroes.
-        for (setting in ClanSetting.entries) {
-            if (setting.id == NO_CLIENT_ID) continue
-            val default = setting.defaultValue
-            if (default is String && default.isEmpty()) continue
-            clan.setSetting(setting, default)
-        }
-        clan.members[leaderUsername] = ClanMemberData(rank = ClanRank.OWNER)
-        Clans.save(clan)
-
-        account.social.clanName = clanName
-        Accounts.save(account)
-
-        joinClanChat(leaderUsername)
-        return true
-    }
-
-    suspend fun addClanMember(clanName: String, targetUsername: String, inviterUsername: String): Boolean {
-        val clan = Clans.find(clanName) ?: return false
-        if (clan.members.size >= Clan.MAX_MEMBERS) return false
-
-        val targetAccount = Accounts.find(targetUsername) ?: return false
-        if (targetAccount.social.clanName != null) return false
-
-        clan.members[targetUsername] = ClanMemberData(rank = ClanRank.RECRUIT)
-        Clans.save(clan)
-
-        targetAccount.social.clanName = clanName
-        Accounts.save(targetAccount)
-
-        // If target is online, join them to CC
-        if (presenceByUsername.containsKey(targetUsername) || lobbyByUsername.containsKey(targetUsername)) {
-            joinClanChat(targetUsername)
-        }
-
-        // Broadcast updated settings to current CC members
-        val room = ccRoomsByClanName[clanName]
-        if (room != null) {
-            broadcastCcSettings(clan, room)
-        }
-        return true
-    }
-
-    suspend fun removeClanMember(clanName: String, targetUsername: String, kickerUsername: String? = null): Boolean {
-        val clan = Clans.find(clanName) ?: return false
-
-        if (kickerUsername != null) {
-            val kickerRank = getClanRank(clan, kickerUsername)
-            val targetRank = getClanRank(clan, targetUsername)
-            if (kickerRank.iconId < clan.ccKickRank.iconId) return false
-            if (kickerUsername != clan.leaderUsername && targetRank.ordinal >= kickerRank.ordinal) return false
-        }
-
-        // Owner leaving requires transferring ownership
-        if (targetUsername == clan.leaderUsername) {
-            val deputy = clan.members.entries
-                .filter { it.key != targetUsername }
-                .maxByOrNull { it.value.rank.ordinal }
-            if (deputy == null) {
-                // Last member, delete clan
-                leaveClanChat(targetUsername, notify = true)
-                Clans.delete(clanName)
-                val account = Accounts.find(targetUsername)
-                if (account != null) {
-                    account.social.clanName = null
-                    Accounts.save(account)
-                }
-                return true
-            }
-            clan.leaderUsername = deputy.key
-            deputy.value.rank = ClanRank.OWNER
-        }
-
-        clan.members.remove(targetUsername)
-        Clans.save(clan)
-
-        val account = Accounts.find(targetUsername)
-        if (account != null) {
-            account.social.clanName = null
-            Accounts.save(account)
-        }
-
-        leaveClanChat(targetUsername, notify = true)
-
-        val room = ccRoomsByClanName[clanName]
-        if (room != null) {
-            broadcastCcSettings(clan, room)
-        }
-        return true
-    }
-
-    suspend fun leaveClan(username: String): Boolean {
-        val account = Accounts.find(username) ?: return false
-        val clanName = account.social.clanName ?: return false
-        return removeClanMember(clanName, username)
-    }
-
-    /** [updates] is keyed by the client's var-setting id; unknown ids are ignored. */
-    suspend fun updateClanSettings(clanName: String, updates: Map<Int, Any>) {
-        val clan = Clans.find(clanName) ?: return
-        for ((id, value) in updates) {
-            val setting = ClanSetting.forId(id) ?: continue
-            clan.settings[setting.name] = value
-        }
-        Clans.save(clan)
-        val room = ccRoomsByClanName[clanName]
-        if (room != null) {
-            broadcastCcSettings(clan, room)
-        }
-    }
-
-    // ─── Lobby Screen Clan UI ────────────────────────────────────────
-
-    /** Chatbox "enter a name" prompt; `sendInputNameScript` in the legacy world server. */
-    private const val INPUT_NAME_SCRIPT = 109
-
-    /**
-     * The lobby opens the same clan interfaces the world server does, so the component ids below
-     * are the ones the in-world clan plugin already uses.
-     */
-    private const val CLAN_CHAT_INTERFACE = 1110
-    private const val CLAN_SETTINGS_INTERFACE = 1096
-
-    /** Which outstanding lobby prompt a player's next name entry answers. */
-    private enum class NameInput { CREATE_CLAN, JOIN_GUEST_CC, BAN, UNBAN }
-
-    private val pendingNameInput = ConcurrentHashMap<String, NameInput>()
-
-    private suspend fun handleLobbyButton(username: String, packet: IfButton) {
-        when (packet.interfaceId) {
-            CLAN_CHAT_INTERFACE -> when (packet.componentId) {
-                82 -> toggleClanChannel(username)
-                91 -> toggleGuestClanChannel(username)
-                95 -> promptName(username, NameInput.BAN, "Which player would you like to ban?")
-                99 -> promptName(username, NameInput.UNBAN, "Which player would you like to unban?")
-                109 -> leaveClan(username)
-                else -> logTrace("SocialGateway: unhandled clan chat button ${packet.componentId} from $username")
-            }
-
-            CLAN_SETTINGS_INTERFACE -> when (packet.componentId) {
-                94 -> toggleClanSetting(username, ClanSetting.GUESTS_CAN_ENTER_CC)
-                95 -> toggleClanSetting(username, ClanSetting.GUESTS_CAN_TALK_CC)
-                96 -> toggleClanSetting(username, ClanSetting.IS_RECRUITING)
-                else -> logTrace("SocialGateway: unhandled clan settings button ${packet.componentId} from $username")
-            }
-
-            else -> logTrace("SocialGateway: unhandled lobby button ${packet.interfaceId}:${packet.componentId} from $username")
-        }
-    }
-
-    private suspend fun promptName(username: String, purpose: NameInput, question: String) {
-        pendingNameInput[username] = purpose
-        sendToUser(username, RunScript(INPUT_NAME_SCRIPT, arrayOf(question)))
-    }
-
-    private suspend fun handleNameInput(username: String, input: String) {
-        when (pendingNameInput.remove(username) ?: return) {
-            NameInput.CREATE_CLAN -> createClanFromLobby(username, input)
-            NameInput.JOIN_GUEST_CC -> joinGuestClanChat(username, input)
-            NameInput.BAN -> banByDisplayName(username, input)
-            NameInput.UNBAN -> unbanByDisplayName(username, input)
-        }
-    }
-
-    /** Clan chat toggle. With no clan yet this starts the create-a-clan flow, as in-world does. */
-    private suspend fun toggleClanChannel(username: String) {
-        val account = Accounts.find(username) ?: return
-        val clanName = account.social.clanName
-        if (clanName == null) {
-            promptName(username, NameInput.CREATE_CLAN, "Which name would you like for your clan?")
-            return
-        }
-        if (ccClanByMember[username] == clanName) {
-            leaveClanChat(username, notify = true)
-            return
-        }
-        joinClanChat(username)
-    }
-
-    private suspend fun toggleGuestClanChannel(username: String) {
-        val account = Accounts.find(username) ?: return
-        if (account.social.guestedClanChat != null) {
-            account.social.guestedClanChat = null
-            Accounts.save(account)
-            leaveClanChat(username, notify = true)
-            return
-        }
-        promptName(username, NameInput.JOIN_GUEST_CC, "Which clan chat would you like to join?")
-    }
-
-    private suspend fun joinGuestClanChat(username: String, input: String) {
-        val clanName = input.formatPlayerNameForDisplay()
-        if (Clans.find(clanName) == null) {
-            sendToUser(username, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "The channel you tried to join does not exist."))
-            return
-        }
-        val account = Accounts.find(username) ?: return
-        account.social.guestedClanChat = clanName
-        Accounts.save(account)
-        joinClanChatAsGuest(username, clanName)
-    }
-
-    /**
-     * The in-world flow confirms the name in an option dialogue between the check and the create;
-     * the lobby screen has no dialogue system, so an approved name is created straight away.
-     */
-    private suspend fun createClanFromLobby(username: String, input: String) {
-        val name = input.formatPlayerNameForDisplay()
-        if (!checkClanName(username, name)) return
-        val created = createClan(username, name)
-        sendToUser(
-            username,
-            GameMessage(
-                ChatMessageType.UNFILTERABLE,
-                if (created) "The clan $name has been created!" else "Unable to create the clan $name.",
-            )
-        )
-    }
-
-    private suspend fun banByDisplayName(username: String, input: String) {
-        val clanName = Accounts.find(username)?.social?.clanName ?: return
-        val target = Accounts.findByDisplayName(input.formatPlayerNameForDisplay())
-        if (target == null) {
-            sendToUser(username, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "Player not found."))
-            return
-        }
-        banClanMember(clanName, target.username, username)
-    }
-
-    private suspend fun unbanByDisplayName(username: String, input: String) {
-        val clanName = Accounts.find(username)?.social?.clanName ?: return
-        val target = Accounts.findByDisplayName(input.formatPlayerNameForDisplay())
-        if (target == null) {
-            sendToUser(username, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "Player not found."))
-            return
-        }
-        unbanClanMember(clanName, target.username, username)
-    }
-
-    private suspend fun toggleClanSetting(username: String, setting: ClanSetting) {
-        val clanName = Accounts.find(username)?.social?.clanName ?: return
-        val clan = Clans.find(clanName) ?: return
-        if (!clan.hasPermissions(username, ClanRank.ADMIN)) {
-            sendToUser(username, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to change clan settings."))
-            return
-        }
-        val enabled = ((clan.getSetting(setting) as? Number)?.toInt() ?: 0) != 0
-        val value = if (enabled) 0 else 1
-        updateClanSettings(clanName, mapOf(setting.id to value))
-        if (setting == ClanSetting.IS_RECRUITING) {
-            setClanVar(clanName, ClanVar.RECRUITING, value, username)
-        }
-    }
-
-    // ─── Clan Name Checks ────────────────────────────────────────────
-
-    /**
-     * Validity and uniqueness check for a proposed clan name, messaging the player about why a
-     * name was rejected. Mirrors the legacy lobby's `ClansManager.checkName`.
-     */
-    suspend fun checkClanName(username: String, input: String): Boolean {
-        val name = input.formatPlayerNameForDisplay()
-        if (!name.formatPlayerNameForProtocol().isValidAccountName()) {
-            sendToUser(username, GameMessage(ChatMessageType.UNFILTERABLE, "Clan names must be 12 or fewer characters and be alphanumeric."))
-            return false
-        }
-        if (Clans.find(name) != null) {
-            sendToUser(username, GameMessage(ChatMessageType.UNFILTERABLE, "The name $name is already taken. Please choose another."))
-            return false
-        }
-        return true
-    }
-
-    // ─── Clan Vars ───────────────────────────────────────────────────
-
-    /**
-     * Picks the transmission form for a clan var by its value type. Int-typed vars use the
-     * client's byte variant whenever the value fits, matching the legacy `SetVarClan` encoder.
-     */
-    private fun clanVarPacket(id: Int, value: Any): ServerProt = when (value) {
-        is String -> VarclanSetString(id, value)
-        is Long -> VarclanSetLong(id, value)
-        is Number -> {
-            val int = value.toInt()
-            if (int < Byte.MIN_VALUE || int > Byte.MAX_VALUE) VarclanSetInt(id, int) else VarclanSetByte(id, int)
-        }
-        else -> VarclanSetInt(id, 0)
-    }
-
-    /**
-     * Clan vars only go to players sitting on the lobby screen. A player in-world receives them
-     * from the world server's own clan sync, and the var-clan packets are not on the gateway's
-     * wire allowlist.
-     */
-    private suspend fun sendClanVarToLobby(usernames: Collection<String>, id: Int, value: Any) {
-        val packet = clanVarPacket(id, value)
-        for (username in usernames) {
-            val lobby = lobbyByUsername[username] ?: continue
-            try {
-                lobby.session.send(packet)
-            } catch (e: Exception) {
-                logWarn("Failed sending clan var to lobby user=$username", e)
-            }
-        }
-    }
-
-    private suspend fun sendClanVars(clan: Clan, toUsername: String) {
-        for ((key, value) in clan.vars) {
-            val id = key.toIntOrNull() ?: continue
-            sendClanVarToLobby(listOf(toUsername), id, value)
-        }
-    }
-
-    /** Persists a clan var and pushes it to everyone currently in the clan's channel. */
-    suspend fun setClanVar(clanName: String, clanVar: ClanVar, value: Any, setterUsername: String) {
-        val clan = Clans.find(clanName) ?: return
-        if (!clan.hasPermissions(setterUsername, ClanRank.ADMIN)) {
-            sendToUser(setterUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to change clan settings."))
-            return
-        }
-        clan.setVar(clanVar, value)
-        Clans.save(clan)
-        val room = ccRoomsByClanName[clanName] ?: return
-        sendClanVarToLobby(room.members, clanVar.id, value)
     }
 
     // ─── Friend Status ───────────────────────────────────────────────
@@ -905,7 +317,7 @@ object SocialGateway {
     private suspend fun loginSocial(account: Account) {
         registerFriendWatcher(account.username, account.social.friends)
         initializeSocial(account)
-        joinClanChat(account.username)
+        ClanService.onLogin(account)
         val savedFc = account.social.currentFriendsChat
         if (!savedFc.isNullOrBlank()) handleClientPacket(account.username, FcJoin(savedFc))
     }
@@ -921,7 +333,7 @@ object SocialGateway {
         notifyFriendsOfStatusChange(username, account)
         if (account != null) deregisterFriendWatcher(username, account.social.friends)
         leaveFriendsChat(username, notify = false)
-        leaveClanChat(username, notify = false)
+        ClanService.onLogout(username)
     }
 
     suspend fun registerLobbyPlayerSession(account: Account, session: Session) {
@@ -938,7 +350,7 @@ object SocialGateway {
     }
 
     suspend fun unregisterLobbyPlayerSession(username: String) {
-        pendingNameInput.remove(username)
+        LobbyClanScreen.forget(username)
         val prior = lobbyByUsername.remove(username) ?: return
         usernameByDisplayLower.remove(prior.displayName.lowercase(), username)
         // A player who clicked "play" is on a world by now; they have not logged out at all, so
@@ -1163,6 +575,7 @@ object SocialGateway {
             if (markOffline(username, session.worldId)) logoutSocialIfGone(username)
         }
 
+        ClanService.onWorldDetached(session.worldId)
         logInfo("SocialGateway: world disconnected worldId=${session.worldId}")
     }
 
@@ -1209,90 +622,15 @@ object SocialGateway {
                 scope.launch { handleFcSettingsUpdate(msg) }
             }
 
-            is ClanCreateRequest -> {
+            is ClanCommand -> {
                 scope.launch {
-                    val success = createClan(msg.username, msg.clanName)
-                    val response = ClanCreateResponse(
-                        username = msg.username,
-                        success = success,
-                        message = if (success) null else "Unable to create clan.",
-                    )
-                    sendToWorld(session.worldId, response)
+                    val result = ClanService.handle(msg.username, msg.action, msg.requestId)
+                    sendToWorld(session.worldId, result)
                 }
             }
 
-            is ClanCheckNameRequest -> {
-                scope.launch {
-                    val approved = checkClanName(msg.username, msg.clanName)
-                    val response = ClanCheckNameResponse(
-                        username = msg.username,
-                        clanName = msg.clanName,
-                        approved = approved,
-                    )
-                    sendToWorld(session.worldId, response)
-                }
-            }
-
-            is ClanLeaveRequest -> {
-                scope.launch { leaveClan(msg.username) }
-            }
-
-            is ClanAddMemberRequest -> {
-                scope.launch {
-                    val account = Accounts.find(msg.inviterUsername) ?: return@launch
-                    val clanName = account.social.clanName ?: return@launch
-                    addClanMember(clanName, msg.targetUsername, msg.inviterUsername)
-                }
-            }
-
-            is ClanKickMemberRequest -> {
-                scope.launch {
-                    val account = Accounts.find(msg.kickerUsername) ?: return@launch
-                    val clanName = account.social.clanName ?: return@launch
-                    removeClanMember(clanName, msg.targetUsername, msg.kickerUsername)
-                }
-            }
-
-            is ClanSetRankRequest -> {
-                scope.launch {
-                    val account = Accounts.find(msg.username) ?: return@launch
-                    val clanName = account.social.clanName ?: return@launch
-                    setClanMemberRank(clanName, msg.targetUsername, msg.rank, msg.username)
-                }
-            }
-
-            is ClanBanMemberRequest -> {
-                scope.launch {
-                    val account = Accounts.find(msg.username) ?: return@launch
-                    val clanName = account.social.clanName ?: return@launch
-                    banClanMember(clanName, msg.targetUsername, msg.username)
-                }
-            }
-
-            is ClanUnbanMemberRequest -> {
-                scope.launch {
-                    val account = Accounts.find(msg.username) ?: return@launch
-                    val clanName = account.social.clanName ?: return@launch
-                    unbanClanMember(clanName, msg.targetUsername, msg.username)
-                }
-            }
-
-            is ClanGuestJoinRequest -> {
-                scope.launch {
-                    val account = Accounts.find(msg.username) ?: return@launch
-                    account.social.guestedClanChat = msg.clanName
-                    Accounts.save(account)
-                    joinClanChatAsGuest(msg.username, msg.clanName)
-                }
-            }
-
-            is ClanGuestLeaveRequest -> {
-                scope.launch {
-                    val account = Accounts.find(msg.username) ?: return@launch
-                    account.social.guestedClanChat = null
-                    Accounts.save(account)
-                    leaveClanChat(msg.username, notify = true)
-                }
+            is ClanFetch -> {
+                scope.launch { sendToWorld(session.worldId, ClanService.fetch(msg.clanName)) }
             }
 
             else -> {
@@ -1339,7 +677,7 @@ object SocialGateway {
         }
     }
 
-    private suspend fun sendToWorld(worldId: Int, msg: SocialGatewayWireMessage) {
+    internal suspend fun sendToWorld(worldId: Int, msg: SocialGatewayWireMessage) {
         val session = worldsById[worldId] ?: return
         val text = SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), msg)
         try {
@@ -1348,6 +686,46 @@ object SocialGateway {
             logWarn("Failed sending message to world=$worldId type=${msg::class.simpleName}", e)
         }
     }
+
+    // ─── Seams for ClanService ───────────────────────────────────────
+
+    /** Sends [msg] to every connected world. */
+    internal suspend fun broadcastToWorlds(msg: SocialGatewayWireMessage) {
+        val text = SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), msg)
+        for (session in worldsById.values) {
+            try {
+                session.sendText(text)
+            } catch (e: Exception) {
+                logWarn("Failed sending message to world=${session.worldId} type=${msg::class.simpleName}", e)
+            }
+        }
+    }
+
+    /** Where [username] is: [LOBBY_WORLD_ID] on the lobby screen, a world id, or null when offline. */
+    internal fun worldIdOf(username: String): Int? = locationOf(username)?.worldId
+
+    /** The display name [username] is online under, or null when they are not online anywhere. */
+    internal fun displayNameOf(username: String): String? =
+        lobbyByUsername[username]?.displayName ?: presenceByUsername[username]?.displayName
+
+    /** Sends [packet] to [username]'s lobby-screen session; false when they are not on the lobby. */
+    internal suspend fun sendToLobbyPlayer(username: String, packet: ServerProt): Boolean {
+        val lobby = lobbyByUsername[username] ?: return false
+        try {
+            lobby.session.send(packet)
+        } catch (e: Exception) {
+            logWarn("Failed sending packet to lobby user=$username type=${packet::class.simpleName}", e)
+        }
+        return true
+    }
+
+    /** The channel a `Chat` goes to: the packet's own type, else the one the client last announced. */
+    internal fun chatTypeOf(username: String, packetType: Int): Int =
+        if (packetType != -1) packetType else (chatTypeByUsername[username] ?: 0)
+
+    /** As [chatTypeOf] for `QuickChatPublic`, whose "unset" is 0 rather than -1. */
+    internal fun quickChatTypeOf(username: String, packetType: Int): Int =
+        if (packetType != 0) packetType else (chatTypeByUsername[username] ?: 0)
 
     suspend fun handleClientPacket(username: String, packet: ClientProt) {
         when (packet) {
@@ -1552,32 +930,13 @@ object SocialGateway {
             }
 
             is Chat -> {
-                val effectiveType = if (packet.type != -1) packet.type else (chatTypeByUsername[username] ?: 0)
-                when (effectiveType) {
-                    1 -> handleFriendsChatMessage(username, packet.message)
-                    2 -> handleClanChatMessage(username, packet.message)
-                    else -> { /* ignore */ }
-                }
+                // Types 2 and 3 are clan chat: a world sends those as a ClanCommand and the
+                // lobby's own ChatHandler goes to ClanService, never through here.
+                if (chatTypeOf(username, packet.type) == 1) handleFriendsChatMessage(username, packet.message)
             }
 
             is PrivateMessage -> {
                 handlePrivateMessage(username, packet.toDisplayName, packet.message)
-            }
-
-            is ClanChannelKickUser -> {
-                handleCcKick(username, packet)
-            }
-
-            is IfButton -> {
-                handleLobbyButton(username, packet)
-            }
-
-            is ResumeNameDialog -> {
-                handleNameInput(username, packet.name)
-            }
-
-            is ResumeTextDialog -> {
-                handleNameInput(username, packet.text)
             }
 
             is QuickChatPrivate -> {
@@ -1585,12 +944,9 @@ object SocialGateway {
             }
 
             is QuickChatPublic -> {
-                val effectiveType = if (packet.chatType != 0) packet.chatType else (chatTypeByUsername[username] ?: 0)
-                when (effectiveType) {
-                    1 -> handleQuickChatFriendsChat(username, packet)
-                    2 -> handleQuickChatClanChat(username, packet)
-                    else -> { /* ignore */ }
-                }
+                // Types 2 and 3 are clan chat: a world sends those as a ClanCommand and the
+                // lobby's own QuickChatPublicHandler goes to ClanService, never through here.
+                if (quickChatTypeOf(username, packet.chatType) == 1) handleQuickChatFriendsChat(username, packet)
             }
 
             else -> {
@@ -1741,34 +1097,6 @@ object SocialGateway {
         )
     }
 
-    private suspend fun handleQuickChatClanChat(fromUsername: String, packet: QuickChatPublic) {
-        val clanName = ccClanByMember[fromUsername] ?: return
-        val room = ccRoomsByClanName[clanName] ?: return
-        if (!room.members.contains(fromUsername)) return
-
-        val clan = Clans.find(clanName) ?: return
-        val fromAccount = Accounts.find(fromUsername) ?: return
-        if (fromAccount.checkMuted()) return
-
-        val fromRank = getClanRank(clan, fromUsername)
-        if (!clanRankAllowed(fromRank.iconId, clan.ccChatRank.iconId)) {
-            sendToUser(fromUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You are not allowed to speak in that clan chat."))
-            return
-        }
-
-        val guest = !clan.members.containsKey(fromUsername)
-        val qcMessage = QuickChatMessage(message = "", fileId = packet.qcId, data = packet.messageData)
-        sendBatchToUsers(
-            room.members,
-            MessageQuickChatClanChannel(
-                guest = guest,
-                crown = fromAccount.rights.crown,
-                displayName = fromAccount.displayName,
-                message = qcMessage,
-            )
-        )
-    }
-
     // ─── FC Settings Update Handler ─────────────────────────────────────
 
     private suspend fun handleFcSettingsUpdate(msg: FcSettingsUpdate) {
@@ -1796,59 +1124,6 @@ object SocialGateway {
         } else if (room != null) {
             broadcastFcChannel(account, room)
         }
-    }
-
-    // ─── Clan Management via Gateway ─────────────────────────────────────
-
-    private suspend fun setClanMemberRank(clanName: String, targetUsername: String, rank: Int, setterUsername: String) {
-        val clan = Clans.find(clanName) ?: return
-        val setterRank = getClanRank(clan, setterUsername)
-        if (setterRank.iconId < ClanRank.ADMIN.iconId && setterUsername != clan.leaderUsername) {
-            sendToUser(setterUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to change ranks."))
-            return
-        }
-        val memberData = clan.members[targetUsername]
-        if (memberData == null) {
-            sendToUser(setterUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "That player is not a clan member."))
-            return
-        }
-        val newRank = ClanRank.fromIconId(rank)
-        memberData.rank = newRank
-        Clans.save(clan)
-        val room = ccRoomsByClanName[clanName]
-        if (room != null) {
-            broadcastCcSettings(clan, room)
-            broadcastCcChannel(clan, room)
-        }
-    }
-
-    private suspend fun banClanMember(clanName: String, targetUsername: String, bannerUsername: String) {
-        val clan = Clans.find(clanName) ?: return
-        val bannerRank = getClanRank(clan, bannerUsername)
-        if (bannerRank.iconId < clan.ccKickRank.iconId) {
-            sendToUser(bannerUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to ban users."))
-            return
-        }
-        if (clan.bannedUsers.contains(targetUsername)) return
-        clan.bannedUsers.add(targetUsername)
-        Clans.save(clan)
-        // Also kick from CC if online
-        leaveClanChat(targetUsername, notify = true)
-        val room = ccRoomsByClanName[clanName]
-        if (room != null) broadcastCcSettings(clan, room)
-    }
-
-    private suspend fun unbanClanMember(clanName: String, targetUsername: String, unbannerUsername: String) {
-        val clan = Clans.find(clanName) ?: return
-        val unbannerRank = getClanRank(clan, unbannerUsername)
-        if (unbannerRank.iconId < clan.ccKickRank.iconId) {
-            sendToUser(unbannerUsername, GameMessage(ChatMessageType.CLAN_NOTIFICATION, "You do not have permission to unban users."))
-            return
-        }
-        if (!clan.bannedUsers.remove(targetUsername)) return
-        Clans.save(clan)
-        val room = ccRoomsByClanName[clanName]
-        if (room != null) broadcastCcSettings(clan, room)
     }
 }
 

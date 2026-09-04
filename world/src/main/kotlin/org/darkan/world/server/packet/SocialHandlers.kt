@@ -1,8 +1,11 @@
 package org.darkan.world.server.packet
 
 import com.rs.game.model.entity.player.Player
+import org.darkan.core.clan.ClanAction
 import org.darkan.core.net.prot.packet.*
+import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.net.prot.handler.PacketHandler
+import org.darkan.world.clan.ClanRegistry
 import org.darkan.world.server.WorldServer
 
 class AddFriendHandler : PacketHandler<Player, AddFriend> {
@@ -47,8 +50,15 @@ class FcSetRankHandler : PacketHandler<Player, FcSetRank> {
     }
 }
 
+/**
+ * Kicking somebody out of a clan channel. Clans are not forwarded as client packets: the click
+ * becomes a typed action for the lobby, which owns the channel (docs/clans.md). `packet.guest`
+ * is which of the two lists the player clicked on; the lobby decides from its own membership
+ * whether the target really is a guest.
+ */
 class ClanChannelKickHandler : PacketHandler<Player, ClanChannelKickUser> {
     override suspend fun handle(player: Player, packet: ClanChannelKickUser) {
-        WorldServer.forwardToLobby(player.username, packet)
+        if (!player.hasStarted()) return
+        ClanRegistry.send(player, ClanAction.KickFromChannel(packet.username.formatPlayerNameForProtocol(), packet.guest))
     }
 }
