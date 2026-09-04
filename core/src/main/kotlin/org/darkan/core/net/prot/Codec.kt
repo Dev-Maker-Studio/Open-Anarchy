@@ -2,15 +2,21 @@ package org.darkan.core.net.prot
 
 import io.ktor.utils.io.*
 import kotlinx.io.Source
+import org.darkan.core.Logger.logSevere
 import org.darkan.core.net.prot.update.UpdateProtocol
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.KParameter
 import kotlin.reflect.full.primaryConstructor
 
 class Codec {
     val serverProts = mutableMapOf<KClass<out ServerProt>, ServerProtCodec>()
     val clientProtsByOpcode = mutableMapOf<Int, ClientProtCodec<*>>()
     private val opcodeToClassMap = mutableMapOf<Int, KClass<out ClientProt>>()
+
+    /** Prot classes already reported as uninstantiable, so the SEVERE log fires once per class. */
+    private val uninstantiableProts: MutableSet<KClass<out ClientProt>> = ConcurrentHashMap.newKeySet()
     var updateProtocol: UpdateProtocol? = null
 
     data class ServerProtCodec(
@@ -87,15 +93,21 @@ class Codec {
         return when {
             codec.decoder != null -> codec.decoder.invoke(channel, opcode) as T
             codec.size is ProtSize.Fixed && codec.size.length == 0 ->
-                try {
-                    T::class.constructors.firstOrNull { it.parameters.isEmpty() }?.call() ?: error("No empty constructor found for packet type: ${T::class}")
-                } catch (e: Exception) {
-                    error("Failed to create instance of empty packet ${T::class}: ${e.message}")
-                }
+                createInstanceForOpcode<T>(opcode) ?: error("Failed to create instance of empty packet ${T::class}")
             else -> error("No decoder provided for non-empty packet type: ${T::class}")
         }
     }
 
+    /**
+     * Builds a payload-less packet for [opcode], for prots registered without a decoder.
+     *
+     * A prot like `data class CloseInterface(val dummy: Int = 0)` has no zero-parameter
+     * constructor in Kotlin's reflection view - the synthetic JVM no-arg constructor that
+     * all-default-parameter classes get is not exposed as a [KFunction]. So any constructor whose
+     * parameters are *all optional* is invoked with [KFunction.callBy] and an empty argument map,
+     * which lets Kotlin fill in every default. Returns null only when the class genuinely cannot
+     * be built that way, and says so at SEVERE once per class rather than failing silently.
+     */
     @Suppress("UNCHECKED_CAST")
     fun <T : ClientProt> createInstanceForOpcode(opcode: Int): T? {
         val protClass = opcodeToClassMap[opcode] ?: return null
@@ -103,18 +115,33 @@ class Codec {
         return try {
             if (protClass.isValue) {
                 val constructor = protClass.primaryConstructor
-                return if (constructor != null) createValueClassInstance(constructor) as T else null
+                    ?: return null.also { reportUninstantiable(protClass, opcode, "value class has no primary constructor") }
+                createValueClassInstance(constructor) as T
             } else {
                 val constructor = protClass.constructors.firstOrNull { it.parameters.isEmpty() }
-                return constructor?.call() as T
+                    ?: protClass.constructors.firstOrNull { candidate -> candidate.parameters.all { it.isOptional } }
+                    ?: return null.also {
+                        reportUninstantiable(protClass, opcode, "no constructor with an empty or fully-defaulted parameter list")
+                    }
+                constructor.callBy(emptyMap()) as T
             }
         } catch (e: Exception) {
-            return null
+            reportUninstantiable(protClass, opcode, "${e::class.simpleName}: ${e.message}")
+            null
         }
     }
 
+    /** Logs an instantiation failure once per prot class, so a broken prot is loud but not spammy. */
+    private fun reportUninstantiable(protClass: KClass<out ClientProt>, opcode: Int, reason: String) {
+        if (!uninstantiableProts.add(protClass)) return
+        logSevere(
+            "Cannot instantiate payload-less packet ${protClass.qualifiedName ?: protClass} " +
+                "(opcode $opcode): $reason. Give it a decoder or a no-argument constructor."
+        )
+    }
+
     private fun <T : Any> createValueClassInstance(constructor: KFunction<T>): T {
-        val args = mutableMapOf<kotlin.reflect.KParameter, Any?>()
+        val args = mutableMapOf<KParameter, Any?>()
         for (param in constructor.parameters) {
             when (param.type.classifier) {
                 Int::class -> args[param] = 0
