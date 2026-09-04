@@ -6,6 +6,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.nio.file.Files
 import kotlin.random.Random
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -21,9 +22,18 @@ import kotlin.test.assertTrue
  */
 class GamevalTest {
 
+    private val tempDirs = mutableListOf<File>()
+
+    /** `deleteOnExit` never removes a non-empty directory, so the synthetic catalogs are deleted explicitly. */
+    @AfterTest
+    fun deleteSyntheticCatalogs() {
+        tempDirs.forEach { it.deleteRecursively() }
+        tempDirs.clear()
+    }
+
     private fun synthetic(): GamevalCatalog {
         val dir = Files.createTempDirectory("gameval-test").toFile()
-        dir.deleteOnExit()
+        tempDirs += dir
         File(dir, "seq.json").writeText(
             """{"revision":727,"type":"seq","entries":{"0":"swarm_walk","1":"seq_1","2":"swarm_attack"}}""",
         )
