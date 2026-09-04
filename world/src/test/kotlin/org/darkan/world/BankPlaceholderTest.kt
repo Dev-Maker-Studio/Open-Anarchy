@@ -9,14 +9,23 @@ import com.rs.plugin.events.InputIntegerEvent
 import kotlinx.coroutines.runBlocking
 import org.darkan.core.Constants
 import org.darkan.core.JsonFileManager
+import org.darkan.core.Utils
+import org.darkan.core.cache.VarBitDefinitions
+import org.darkan.core.gameval.gen.Component
+import org.darkan.core.gameval.gen.Interface
+import org.darkan.core.gameval.gen.Inv
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Varbit
+import org.darkan.core.gameval.gen.Varp
 import org.darkan.core.model.Item
 import org.darkan.core.model.Rights
 import org.darkan.core.net.prot.ServerProt
 import org.darkan.core.net.prot.packet.GameMessage
 import org.darkan.core.net.prot.packet.IfDragOntoIf
-import org.darkan.core.net.prot.packet.IfSetGraphic
 import org.darkan.core.net.prot.packet.UpdateInvFull
 import org.darkan.core.net.prot.packet.UpdateInvPartial
+import org.darkan.core.net.prot.packet.VarpLarge
+import org.darkan.core.net.prot.packet.VarpSmall
 import org.darkan.world.harness.HarnessPlayer
 import org.darkan.world.harness.WorldHarness
 import org.darkan.world.server.packet.IfDragOntoIfHandler
@@ -29,50 +38,14 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-/**
- * Bank placeholders, end to end on the real bank.
- *
- * A placeholder is an entry that keeps its id with amount 0. The whole feature is one invariant:
- * **an amount-0 entry only ever gains an amount through a real deposit, and only ever leaves
- * through an explicit release**. Everything below is a way that invariant could be broken - a
- * withdraw op aimed at a placeholder, a client-chosen op index, an id mutation by the dung-item or
- * skillcape sweeps, a merge that clamps a computed 0 up to 1 - so a failure here is a duplication
- * or item-loss bug, not a cosmetic one.
- */
 class BankPlaceholderTest {
 
     private companion object {
-        /** Abyssal whip: not stackable, takes metadata. */
-        const val WHIP = 4151
-
-        /** Wooden shield. */
-        const val SHIELD = 1171
-
-        /** Bronze arrows: stackable. */
-        const val ARROWS = 882
-
-        /** Coins. */
-        const val COINS = 995
-
-        /** Iron ore: not stackable, has a note form. */
-        const val ORE = 440
-
-        /** In `ItemConstants.isDungItem`'s range, so the login sweep turns it into coins. */
-        const val DUNG_ITEM = 15750
-        const val DUNG_ITEM_2 = 15751
-
-        /** Ids used only to fill the bank up to its 800-entry limit. None are blocked from banking. */
         const val FILLER_BASE = 30000
-
-        const val INV_CONTAINER = 93
-        const val BANK_CONTAINER = 95
-
-        /** The bank interface's toggle-frame sprites. */
-        const val TOGGLE_SPRITE_OFF = 1431
-        const val TOGGLE_SPRITE_ON = 1433
-
-        /** xp for level 99. */
         const val XP_99 = 13_034_431.0
+        val BANK_SLOTS = Component.interface_762.component_762_95
+        val TOGGLE_BUTTON = Component.interface_762.placeholder_toggle_button
+        val RELEASE_ALL_BUTTON = Component.interface_762.placeholder_release_button
     }
 
     private val loggedIn = mutableListOf<HarnessPlayer>()
@@ -90,7 +63,6 @@ class BankPlaceholderTest {
             it.clearSent()
         }
 
-    /** Ticks, then hands back everything the client would actually have received. */
     private fun HarnessPlayer.settle(): List<ServerProt> {
         WorldHarness.tick()
         return session.flushed
@@ -101,163 +73,137 @@ class BankPlaceholderTest {
             (it is UpdateInvFull && it.containerId == container)
     }
 
-    /** The (id, amount) the client was told to draw in [slot] of [container], newest last. */
     private fun List<ServerProt>.slotUpdates(container: Int, slot: Int): List<Pair<Int, Int>> =
         filterIsInstance<UpdateInvPartial>()
             .filter { it.containerId == container }
             .flatMap { p -> p.updates.filter { it.slot == slot }.map { it.itemId to it.amount } }
 
-    /** A click on interface 762, as `IfButtonHandler` would dispatch it. */
+    private fun List<ServerProt>.varpValues(id: Int): List<Int> = mapNotNull {
+        when {
+            it is VarpSmall && it.id == id -> it.value
+            it is VarpLarge && it.id == id -> it.value
+            else -> null
+        }
+    }
+
     private fun Player.clickBank(component: Int, slot: Int, op: Int) {
-        PluginManager.handle(ButtonClickEvent(this, 762, component, slot, -1, op))
+        PluginManager.handle(ButtonClickEvent(this, Interface.interface_762, Utils.componentIdFromHash(component), slot, -1, op))
     }
 
-    /**
-     * Empties [id]'s slot through the real slot-release path with the toggle on, which is the only
-     * way a placeholder is ever created. The item is not handed to the inventory - that part is
-     * asserted on its own in [withdrawingTheLastOfAnItemLeavesAPlaceholder].
-     */
-    private fun Bank.givePlaceholder(id: Int, tab: Int = 0) {
-        val was = isPlaceholdersEnabled
-        isPlaceholdersEnabled = true
-        addItem(Item(id, 1), tab, false)
-        removeItem(getItemSlot(id), 1, false, false)
-        isPlaceholdersEnabled = was
+    private var Player.placeholders: Boolean
+        get() = vars.getVarBit(Varbit.bank_placeholders) == 1
+        set(value) = vars.saveVarBit(Varbit.bank_placeholders, if (value) 1 else 0)
+
+    private fun Player.givePlaceholder(id: Int, tab: Int = 0) {
+        val was = placeholders
+        placeholders = true
+        bank.addItem(Item(id, 1), tab, false)
+        bank.removeItem(bank.getItemSlot(id), 1, false, false)
+        placeholders = was
     }
 
-    /** Puts the client's copy of the container in sync so a later refresh sends a real diff. */
     private fun Bank.primeClientCopy() {
         sendItems()
         refreshItems()
     }
 
-    // ------------------------------------------------------------------ creating placeholders
+    @Test
+    fun thePlaceholderVarbitIsOneBitInTheBankTabVarpAndOverlapsNothing() {
+        val defs = VarBitDefinitions.getDefs(Varbit.bank_placeholders)
+        assertEquals(Varp.varp_1248, defs.index)
+        assertEquals(defs.startBit, defs.endBit, "a toggle is one bit wide")
+        val bit = defs.startBit
+        for (other in listOf(Varbit.varbit_4891, Varbit.varbit_4892, Varbit.varbit_4893, Varbit.varbit_4894)) {
+            val o = VarBitDefinitions.getDefs(other)
+            assertEquals(Varp.varp_1248, o.index)
+            assertTrue(bit < o.startBit || bit > o.endBit, "bit $bit overlaps varbit $other (${o.startBit}-${o.endBit})")
+        }
+    }
 
-    /**
-     * Withdrawing everything with the toggle on keeps the slot: same id, amount 0, tab the same
-     * length, and the client is told about the amount-0 slot rather than a shorter container.
-     */
     @Test
     fun withdrawingTheLastOfAnItemLeavesAPlaceholder() {
         val harness = login("phwithdraw")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.addItem(Item(ORE, 20), false)
-        bank.addItem(Item(COINS, 1000), false)
+        player.placeholders = true
+        bank.addItem(Item(Obj.iron_ore, 20), false)
+        bank.addItem(Item(Obj.coins, 1000), false)
         player.inventory.items.clear()
         player.inventory.refresh()
         bank.primeClientCopy()
         WorldHarness.tick()
         harness.clearSent()
 
-        player.clickBank(95, 0, 6) // Withdraw-All
+        player.clickBank(BANK_SLOTS, 0, 6)
 
-        assertEquals(20, player.inventory.getNumberOf(ORE, false), "the withdrawal never reached the inventory")
+        assertEquals(20, player.inventory.getNumberOf(Obj.iron_ore, false), "the withdrawal never reached the inventory")
         assertEquals(2, bank.bankTabs[0].size, "the tab shrank instead of keeping a placeholder")
         val entry = bank.bankTabs[0][0]
-        assertEquals(ORE, entry.id, "the placeholder lost the item id")
-        assertEquals(0, entry.amount, "the placeholder is not empty")
-        assertTrue(Bank.isPlaceholder(entry), "the entry does not read as a placeholder")
+        assertEquals(Obj.iron_ore, entry.id)
+        assertEquals(0, entry.amount)
+        assertTrue(Bank.isPlaceholder(entry))
         assertEquals(2, bank.bankSize, "the placeholder stopped using a bank slot")
 
         val flushed = harness.settle()
-        assertEquals(
-            ORE to 0,
-            flushed.slotUpdates(BANK_CONTAINER, 0).last(),
-            "the client was not told to draw slot 0 as ($ORE, 0); flushed=${flushed.slotUpdates(BANK_CONTAINER, 0)}"
-        )
+        assertEquals(Obj.iron_ore to 0, flushed.slotUpdates(Inv.bank, 0).last(), "the client was not told to draw the empty slot")
     }
 
-    /** With the toggle off the slot is released, exactly as before placeholders existed. */
     @Test
     fun withdrawingTheLastOfAnItemWithTheToggleOffReleasesTheSlot() {
         val harness = login("phtoggleoff")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        assertFalse(bank.isPlaceholdersEnabled, "placeholders must default to off")
-        bank.addItem(Item(ORE, 20), false)
-        bank.addItem(Item(COINS, 1000), false)
+        assertFalse(player.placeholders, "placeholders must default to off")
+        bank.addItem(Item(Obj.iron_ore, 20), false)
+        bank.addItem(Item(Obj.coins, 1000), false)
         player.inventory.items.clear()
         player.inventory.refresh()
 
-        player.clickBank(95, 0, 6)
+        player.clickBank(BANK_SLOTS, 0, 6)
 
         assertEquals(1, bank.bankTabs[0].size, "the released slot is still there")
-        assertEquals(COINS, bank.bankTabs[0][0].id, "the wrong entry survived")
-        assertFalse(bank.hasPlaceholders(), "a placeholder was created with the toggle off")
+        assertEquals(Obj.coins, bank.bankTabs[0][0].id)
+        assertFalse(bank.hasPlaceholders())
     }
 
-    /**
-     * The toggle only governs *new* placeholders. Turning it off must never delete the ones a
-     * player already arranged - that would be a silent loss of their bank layout.
-     */
     @Test
-    fun turningTheToggleOffKeepsExistingPlaceholders() {
+    fun theToggleButtonSavesTheVarbitAndKeepsExistingPlaceholders() {
         val harness = login("phkeep")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.givePlaceholder(ORE)
-        bank.addItem(Item(COINS, 1000), false)
+        player.givePlaceholder(Obj.iron_ore)
+        bank.addItem(Item(Obj.coins, 1000), false)
         player.inventory.items.clear()
         player.inventory.refresh()
+        WorldHarness.tick()
         harness.clearSent()
 
-        player.clickBank(124, -1, 1) // the placeholder toggle button
+        player.clickBank(TOGGLE_BUTTON, -1, 1)
+        assertTrue(player.placeholders, "the button did not turn the setting on")
+        assertTrue(player.vars.vars.containsKey(Varp.varp_1248), "the setting is not in the saved vars")
+        val bit = 1 shl VarBitDefinitions.getDefs(Varbit.bank_placeholders).startBit
+        assertTrue(harness.settle().varpValues(Varp.varp_1248).any { it and bit != 0 }, "the client was not sent the varp with the bit set")
 
-        assertFalse(bank.isPlaceholdersEnabled, "the button did not turn the setting off")
+        player.clickBank(TOGGLE_BUTTON, -1, 1)
+        assertFalse(player.placeholders, "the button did not turn the setting off")
         assertEquals(1, bank.countPlaceholders(), "turning the setting off deleted an existing placeholder")
 
-        // ...and the next emptied slot is released rather than kept.
-        player.clickBank(95, bank.getRealSlotIndexOf(COINS), 6)
+        player.clickBank(BANK_SLOTS, bank.getRealSlotIndexOf(Obj.coins), 6)
         assertEquals(1, bank.countPlaceholders(), "a placeholder was created with the setting off")
-        assertNull(bank.getItem(COINS), "the coins were not withdrawn")
-
-        val flushed = harness.settle()
-        assertTrue(
-            flushed.any { it is IfSetGraphic && it.interfaceId == 762 && it.componentId == 124 && it.spriteId == TOGGLE_SPRITE_OFF },
-            "the toggle button was not repainted as off"
-        )
+        assertNull(bank.getItem(Obj.coins), "the coins were not withdrawn")
     }
 
-    /** Opening the bank lights the toggle button for whatever the saved setting is. */
-    @Test
-    fun openingTheBankPaintsTheToggleButton() {
-        val harness = login("phbutton")
-        val player = harness.player
-        player.bank.clear()
-        player.bank.isPlaceholdersEnabled = true
-        harness.clearSent()
-
-        player.bank.open()
-
-        val flushed = harness.settle()
-        assertTrue(
-            flushed.any { it is IfSetGraphic && it.interfaceId == 762 && it.componentId == 124 && it.spriteId == TOGGLE_SPRITE_ON },
-            "opening the bank did not light the placeholder toggle"
-        )
-    }
-
-    // ------------------------------------------------------------------ nothing comes out of one
-
-    /**
-     * Every withdraw op the client can send, aimed at a placeholder: 1/5/10, last-X, X, All and
-     * All-but-one. None of them may hand out an item, and none may touch the inventory - the op
-     * index is the client's choice, so the refusal has to live in the bank, not in the interface.
-     */
     @Test
     fun everyWithdrawOpOnAPlaceholderIsANoOp() {
         val harness = login("phnowithdraw")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.givePlaceholder(ORE)
-        bank.addItem(Item(COINS, 1000), false)
+        player.givePlaceholder(Obj.iron_ore)
+        bank.addItem(Item(Obj.coins, 1000), false)
         player.inventory.items.clear()
         player.inventory.refresh()
         bank.lastX = 7
@@ -267,284 +213,230 @@ class BankPlaceholderTest {
 
         val placeholder = bank.bankTabs[0][0]
         for (op in listOf(1, 2, 3, 4, 6, 7)) {
-            player.clickBank(95, 0, op)
+            player.clickBank(BANK_SLOTS, 0, op)
             assertSame(placeholder, bank.bankTabs[0][0], "op $op replaced the placeholder entry")
             assertEquals(0, bank.bankTabs[0][0].amount, "op $op gave the placeholder an amount")
-            assertEquals(0, player.inventory.getNumberOf(ORE, false), "op $op withdrew from a placeholder")
+            assertEquals(0, player.inventory.getNumberOf(Obj.iron_ore, false), "op $op withdrew from a placeholder")
         }
 
-        // Op 5 asks for an amount first; the answer arrives later, so run the callback the way the
-        // client's reply would.
-        player.clickBank(95, 0, 5)
-        val enterAmount = assertNotNull(
-            player.tempAttribs.getO<InputIntegerEvent>("pluginInteger"),
-            "Withdraw-X did not ask for an amount"
-        )
+        player.clickBank(BANK_SLOTS, 0, 5)
+        val enterAmount = assertNotNull(player.tempAttribs.getO<InputIntegerEvent>("pluginInteger"), "Withdraw-X did not ask for an amount")
         enterAmount.run(1000)
         assertSame(placeholder, bank.bankTabs[0][0], "Withdraw-X replaced the placeholder entry")
-        assertEquals(0, player.inventory.getNumberOf(ORE, false), "Withdraw-X withdrew from a placeholder")
+        assertEquals(0, player.inventory.getNumberOf(Obj.iron_ore, false), "Withdraw-X withdrew from a placeholder")
 
         assertEquals(2, bank.bankTabs[0].size, "the bank changed shape")
-        assertEquals(1000, assertNotNull(bank.getItem(COINS)).amount, "the neighbouring stack was touched")
+        assertEquals(1000, assertNotNull(bank.getItem(Obj.coins)).amount, "the neighbouring stack was touched")
         assertTrue(player.inventory.items.array().all { it == null }, "something reached the inventory")
-        assertFalse(harness.settle().touches(INV_CONTAINER), "an inventory (93) update was sent for a refused withdrawal")
+        assertFalse(harness.settle().touches(Inv.inv), "an inventory update was sent for a refused withdrawal")
     }
 
-    /** `withdrawItemDel` - the house servant's fetch - is a withdrawal too, so it refuses as well. */
     @Test
     fun withdrawItemDelRefusesAPlaceholder() {
         val harness = login("phservant")
-        val bank = harness.player.bank
+        val player = harness.player
+        val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.givePlaceholder(ORE)
+        player.givePlaceholder(Obj.iron_ore)
 
-        assertFalse(bank.containsItem(ORE, 1), "a placeholder answered containsItem")
-        bank.withdrawItemDel(ORE, 1)
+        assertFalse(bank.containsItem(Obj.iron_ore, 1))
+        bank.withdrawItemDel(Obj.iron_ore, 1)
 
         assertEquals(1, bank.countPlaceholders(), "the placeholder was consumed")
         assertEquals(0, bank.bankTabs[0][0].amount, "the placeholder gained an amount")
     }
 
-    // ------------------------------------------------------------------ filling one back up
-
-    /** A deposit lands in the placeholder's own slot, which is the point of keeping it. */
     @Test
     fun depositingOntoAPlaceholderRefillsItsSlot() {
         val harness = login("phdeposit")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.givePlaceholder(ORE)
-        bank.addItem(Item(COINS, 1000), false)
+        player.givePlaceholder(Obj.iron_ore)
+        bank.addItem(Item(Obj.coins, 1000), false)
         player.inventory.items.clear()
-        player.inventory.items.set(0, Item(ORE, 25))
+        player.inventory.items.set(0, Item(Obj.iron_ore, 25))
         player.inventory.refresh()
 
-        assertTrue(player.bank.depositItem(0, Int.MAX_VALUE, true), "the deposit was refused")
+        assertTrue(bank.depositItem(0, Int.MAX_VALUE, true), "the deposit was refused")
 
         assertEquals(2, bank.bankTabs[0].size, "the deposit appended instead of filling the placeholder")
-        assertEquals(ORE, bank.bankTabs[0][0].id, "the placeholder's slot holds the wrong item")
-        assertEquals(25, bank.bankTabs[0][0].amount, "the deposited amount is wrong")
+        assertEquals(Obj.iron_ore, bank.bankTabs[0][0].id)
+        assertEquals(25, bank.bankTabs[0][0].amount)
         assertNull(player.inventory.getItem(0), "the ore stayed in the inventory")
         assertFalse(bank.hasPlaceholders(), "the placeholder survived its own refill")
     }
 
-    /**
-     * A metadata item cannot be merged into a stack, so it replaces the placeholder outright - the
-     * branch that made the placeholder fill explicit rather than leaning on the merge path.
-     */
     @Test
     fun depositingAMetadataItemReplacesThePlaceholder() {
         val harness = login("phmeta")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.givePlaceholder(WHIP)
+        player.givePlaceholder(Obj.abyssal_whip)
         player.inventory.items.clear()
-        player.inventory.items.set(0, Item(WHIP, 1).apply { addMetaData("combatCharges", 30) })
+        player.inventory.items.set(0, Item(Obj.abyssal_whip, 1).apply { addMetaData("combatCharges", 30) })
         player.inventory.refresh()
 
-        assertTrue(player.bank.depositItem(0, Int.MAX_VALUE, true), "the deposit was refused")
+        assertTrue(bank.depositItem(0, Int.MAX_VALUE, true), "the deposit was refused")
 
         assertEquals(1, bank.bankTabs[0].size, "the charged whip did not take the placeholder's slot")
-        val banked = bank.bankTabs[0][0]
-        assertEquals(1, banked.amount, "a metadata item must bank as a single")
-        assertEquals(30, banked.getMetaDataI("combatCharges"), "the bank dropped the metadata")
+        assertEquals(1, bank.bankTabs[0][0].amount, "a metadata item must bank as a single")
+        assertEquals(30, bank.bankTabs[0][0].getMetaDataI("combatCharges"), "the bank dropped the metadata")
     }
 
-    /** Withdrawing a metadata item releases its slot: charged items get no placeholder. */
     @Test
     fun aMetadataItemLeavesNoPlaceholder() {
         val harness = login("phmetaout")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.addItem(Item(WHIP, 1).apply { addMetaData("combatCharges", 30) }, false)
-        bank.addItem(Item(COINS, 1000), false)
+        player.placeholders = true
+        bank.addItem(Item(Obj.abyssal_whip, 1).apply { addMetaData("combatCharges", 30) }, false)
+        bank.addItem(Item(Obj.coins, 1000), false)
         player.inventory.items.clear()
         player.inventory.refresh()
 
-        player.clickBank(95, 0, 6)
+        player.clickBank(BANK_SLOTS, 0, 6)
 
         assertEquals(1, bank.bankTabs[0].size, "a charged item left a placeholder behind")
         assertEquals(30, assertNotNull(player.inventory.getItem(0)).getMetaDataI("combatCharges"), "the whip lost its charges")
     }
 
-    // ------------------------------------------------------------------ releasing
-
-    /** Release (op 9) frees a placeholder's slot, and does nothing at all to a real item. */
     @Test
     fun releaseFreesAPlaceholderAndSparesARealItem() {
         val harness = login("phrelease")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.givePlaceholder(ORE)
-        bank.addItem(Item(COINS, 1000), false)
+        player.givePlaceholder(Obj.iron_ore)
+        bank.addItem(Item(Obj.coins, 1000), false)
 
-        // Op 9 on the real item: the client picks the op index, so this has to be a no-op.
-        player.clickBank(95, 1, 9)
+        player.clickBank(BANK_SLOTS, 1, 9)
         assertEquals(2, bank.bankTabs[0].size, "Release removed a real item")
-        assertEquals(1000, assertNotNull(bank.getItem(COINS)).amount, "Release changed a real stack")
+        assertEquals(1000, assertNotNull(bank.getItem(Obj.coins)).amount, "Release changed a real stack")
 
-        player.clickBank(95, 0, 9)
+        player.clickBank(BANK_SLOTS, 0, 9)
         assertEquals(1, bank.bankTabs[0].size, "Release did not free the placeholder's slot")
-        assertEquals(COINS, bank.bankTabs[0][0].id, "Release freed the wrong slot")
-        assertFalse(bank.hasPlaceholders(), "the placeholder is still there")
+        assertEquals(Obj.coins, bank.bankTabs[0][0].id, "Release freed the wrong slot")
+        assertFalse(bank.hasPlaceholders())
     }
 
-    /**
-     * Release-all asks first, then clears every placeholder across every tab, destroys a tab left
-     * with nothing in it, and leaves real items exactly where they were.
-     */
     @Test
     fun releaseAllClearsEveryPlaceholderAndCollapsesEmptiedTabs() {
         val harness = login("phreleaseall")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
         bank.createTab()
         bank.createTab()
-        bank.addItem(Item(COINS, 1000), 0, false)
-        bank.givePlaceholder(ORE, 0)
-        bank.givePlaceholder(WHIP, 1)
-        bank.addItem(Item(ARROWS, 50), 2, false)
-        bank.givePlaceholder(SHIELD, 2)
+        bank.addItem(Item(Obj.coins, 1000), 0, false)
+        player.givePlaceholder(Obj.iron_ore, 0)
+        player.givePlaceholder(Obj.abyssal_whip, 1)
+        bank.addItem(Item(Obj.bronze_arrow, 50), 2, false)
+        player.givePlaceholder(Obj.wooden_shield, 2)
         assertEquals(3, bank.countPlaceholders(), "the fixture is wrong")
 
-        player.clickBank(126, -1, 1) // release-all button
-        val conversation = assertNotNull(player.conversation, "release-all did not ask for confirmation")
-        conversation.process(1) // "No"
-
+        player.clickBank(RELEASE_ALL_BUTTON, -1, 1)
+        assertNotNull(player.conversation, "release-all did not ask for confirmation").process(1)
         assertEquals(3, bank.countPlaceholders(), "answering No released placeholders anyway")
 
-        player.clickBank(126, -1, 1)
-        assertNotNull(player.conversation, "release-all did not ask for confirmation").process(0) // "Yes"
+        player.clickBank(RELEASE_ALL_BUTTON, -1, 1)
+        assertNotNull(player.conversation, "release-all did not ask for confirmation").process(0)
 
         assertFalse(bank.hasPlaceholders(), "placeholders survived release-all")
         assertEquals(2, bank.bankTabs.size, "the tab left holding only a placeholder was not destroyed")
-        assertEquals(1, bank.bankTabs[0].size, "the main tab is the wrong size")
-        assertEquals(COINS, bank.bankTabs[0][0].id, "the main tab lost its coins")
-        assertEquals(1000, bank.bankTabs[0][0].amount, "the coins changed amount")
-        assertEquals(1, bank.bankTabs[1].size, "the surviving tab is the wrong size")
-        assertEquals(ARROWS, bank.bankTabs[1][0].id, "the surviving tab lost its arrows")
-        assertEquals(50, bank.bankTabs[1][0].amount, "the arrows changed amount")
-        assertEquals(2, bank.bankSize, "the bank size does not match its contents")
+        assertEquals(listOf(Obj.coins to 1000), bank.bankTabs[0].map { it.id to it.amount })
+        assertEquals(listOf(Obj.bronze_arrow to 50), bank.bankTabs[1].map { it.id to it.amount })
+        assertEquals(2, bank.bankSize)
     }
 
-    // ------------------------------------------------------------------ moving one around
-
-    /** A placeholder drags like any other entry, both by swap and in insert mode. */
     @Test
     fun aPlaceholderSwapsAndInsertsLikeAnItem() {
         val harness = login("phdrag")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.givePlaceholder(ORE)
-        bank.addItem(Item(COINS, 1000), false)
-        bank.addItem(Item(ARROWS, 50), false)
+        player.givePlaceholder(Obj.iron_ore)
+        bank.addItem(Item(Obj.coins, 1000), false)
+        bank.addItem(Item(Obj.bronze_arrow, 50), false)
 
-        bank.switchItem(0, 2, 95, 95)
-        assertEquals(listOf(ARROWS, COINS, ORE), bank.bankTabs[0].map { it.id }, "the swap moved the wrong entries")
+        bank.switchItem(0, 2, BANK_SLOTS)
+        assertEquals(listOf(Obj.bronze_arrow, Obj.coins, Obj.iron_ore), bank.bankTabs[0].map { it.id }, "the swap moved the wrong entries")
         assertEquals(listOf(50, 1000, 0), bank.bankTabs[0].map { it.amount }, "the swap changed an amount")
 
         bank.switchInsertItems()
-        bank.switchItem(2, 0, 95, 95)
-        assertEquals(listOf(ORE, ARROWS, COINS), bank.bankTabs[0].map { it.id }, "the insert moved the wrong entries")
+        bank.switchItem(2, 0, BANK_SLOTS)
+        assertEquals(listOf(Obj.iron_ore, Obj.bronze_arrow, Obj.coins), bank.bankTabs[0].map { it.id }, "the insert moved the wrong entries")
         assertEquals(listOf(0, 50, 1000), bank.bankTabs[0].map { it.amount }, "the insert changed an amount")
     }
 
-    /**
-     * The drag packet's slots are the client's, so they are range-checked before the bank sees
-     * them: with more than one tab, a negative slot used to index a tab array out of bounds.
-     */
     @Test
     fun theDragHandlerRejectsAnOutOfRangeBankSlot() {
         val harness = login("phdragbad")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
         bank.createTab()
-        bank.addItem(Item(COINS, 1000), 1, false)
-        bank.addItem(Item(ARROWS, 50), 0, false)
-        player.bank.open()
-        assertTrue(player.interfaceManager.topOpen(762), "the bank interface is not open")
+        bank.addItem(Item(Obj.coins, 1000), 1, false)
+        bank.addItem(Item(Obj.bronze_arrow, 50), 0, false)
+        bank.open()
+        assertTrue(player.interfaceManager.topOpen(Interface.interface_762), "the bank interface is not open")
 
+        val slots = Utils.componentIdFromHash(BANK_SLOTS)
         val handler = IfDragOntoIfHandler()
         runBlocking {
-            handler.handle(player, IfDragOntoIf(762, 95, -1, -1, 762, 95, 0, -1))
-            handler.handle(player, IfDragOntoIf(762, 95, 0, -1, 762, 95, Bank.MAX_BANK_SIZE, -1))
+            handler.handle(player, IfDragOntoIf(Interface.interface_762, slots, -1, -1, Interface.interface_762, slots, 0, -1))
+            handler.handle(player, IfDragOntoIf(Interface.interface_762, slots, 0, -1, Interface.interface_762, slots, Bank.MAX_BANK_SIZE, -1))
         }
 
-        assertEquals(listOf(COINS), bank.bankTabs[1].map { it.id }, "an out-of-range drag moved something")
-        assertEquals(listOf(ARROWS), bank.bankTabs[0].map { it.id }, "an out-of-range drag moved something")
+        assertEquals(listOf(Obj.coins), bank.bankTabs[1].map { it.id }, "an out-of-range drag moved something")
+        assertEquals(listOf(Obj.bronze_arrow), bank.bankTabs[0].map { it.id }, "an out-of-range drag moved something")
 
-        // A drag with both slots in range still works: tab 1 comes first in the client's numbering.
-        runBlocking { handler.handle(player, IfDragOntoIf(762, 95, 0, -1, 762, 95, 1, -1)) }
-        assertEquals(listOf(ARROWS), bank.bankTabs[1].map { it.id }, "a valid drag did not swap the entries")
-        assertEquals(listOf(COINS), bank.bankTabs[0].map { it.id }, "a valid drag did not swap the entries")
+        runBlocking { handler.handle(player, IfDragOntoIf(Interface.interface_762, slots, 0, -1, Interface.interface_762, slots, 1, -1)) }
+        assertEquals(listOf(Obj.bronze_arrow), bank.bankTabs[1].map { it.id }, "a valid drag did not swap the entries")
+        assertEquals(listOf(Obj.coins), bank.bankTabs[0].map { it.id }, "a valid drag did not swap the entries")
     }
 
-    // ------------------------------------------------------------------ a placeholder is not the item
-
-    /** Everything that answers "does the player have this" must say no for a placeholder. */
     @Test
     fun aPlaceholderIsNotTheItem() {
         val harness = login("phlookup")
-        val bank = harness.player.bank
+        val player = harness.player
+        val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.givePlaceholder(ORE)
-        bank.addItem(Item(COINS, 1000), false)
+        player.givePlaceholder(Obj.iron_ore)
+        bank.addItem(Item(Obj.coins, 1000), false)
 
-        assertFalse(bank.containsItem(ORE), "containsItem said a placeholder is the item")
-        assertFalse(bank.containsItem(ORE, 1), "containsItem(amount) said a placeholder is the item")
-        assertNull(bank.getItem(ORE), "getItem handed back a placeholder")
-        assertNull(bank.getItemSlot(ORE), "getItemSlot pointed at a placeholder")
-        assertNull(bank.getSlot(ORE), "getSlot pointed at a placeholder")
-        assertNotNull(bank.getPlaceholderSlot(ORE), "getPlaceholderSlot did not find it")
+        assertFalse(bank.containsItem(Obj.iron_ore))
+        assertFalse(bank.containsItem(Obj.iron_ore, 1))
+        assertNull(bank.getItem(Obj.iron_ore))
+        assertNull(bank.getItemSlot(Obj.iron_ore))
+        assertNull(bank.getSlot(Obj.iron_ore))
+        assertNotNull(bank.getPlaceholderSlot(Obj.iron_ore))
         assertEquals(2, bank.bankSize, "a placeholder must still use a bank slot")
 
-        // deleteItem is a subtraction, and must not find the placeholder to subtract from.
-        bank.deleteItem(ORE, 5)
+        bank.deleteItem(Obj.iron_ore, 5)
         assertEquals(0, bank.bankTabs[0][0].amount, "deleteItem changed a placeholder")
     }
 
-    /**
-     * The dung-item sweep turns banked items into coins by mutating the id in place. On a
-     * placeholder that would mint an amount-0 coin row, so the placeholder is released instead.
-     */
     @Test
     fun theDungItemSweepReleasesAPlaceholderAndConvertsRealItems() {
         val harness = login("phdung")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
-        bank.addItem(Item(DUNG_ITEM, 3), false)
-        bank.givePlaceholder(DUNG_ITEM_2)
-        bank.addItem(Item(ARROWS, 50), false)
+        bank.addItem(Item(Obj.rand_stomp_blue_power_crystal, 3), false)
+        player.givePlaceholder(Obj.rand_stomp_green_power_crystal)
+        bank.addItem(Item(Obj.bronze_arrow, 50), false)
         bank.refreshItems()
 
         player.removeDungItems()
 
         assertFalse(bank.hasPlaceholders(), "the dung placeholder was left in the bank")
         assertEquals(2, bank.bankSize, "the placeholder's slot was not freed")
-        assertEquals(COINS, bank.bankTabs[0][0].id, "the real dung item was not turned into coins")
-        assertEquals(3, bank.bankTabs[0][0].amount, "the converted amount changed")
-        assertEquals(ARROWS, bank.bankTabs[0][1].id, "an unrelated item was touched")
+        assertEquals(listOf(Obj.coins to 3, Obj.bronze_arrow to 50), bank.bankTabs[0].map { it.id to it.amount })
     }
 
-    /** The skillcape trim rewrites banked cape ids in place, and must leave placeholders alone. */
     @Test
     fun theSkillcapeTrimSkipsAPlaceholder() {
         val harness = login("phcape")
@@ -554,103 +446,77 @@ class BankPlaceholderTest {
         player.skills.setXp(Constants.STRENGTH, XP_99)
         assertTrue(player.skills.checkMulti99s(), "the fixture needs two 99s")
         bank.clear()
-        bank.isPlaceholdersEnabled = true
         bank.addItem(Item(Skillcapes.Attack.untrimmed, 1), false)
-        bank.givePlaceholder(Skillcapes.Mining.untrimmed)
+        player.givePlaceholder(Skillcapes.Mining.untrimmed)
 
-        player.skills.trimCapes()
+        Skillcapes.trimCapes(player)
 
         assertEquals(Skillcapes.Attack.trimmed, bank.bankTabs[0][0].id, "the real cape was not trimmed")
         assertEquals(Skillcapes.Mining.untrimmed, bank.bankTabs[0][1].id, "the placeholder's id was rewritten")
         assertEquals(0, bank.bankTabs[0][1].amount, "the placeholder gained an amount")
     }
 
-    // ------------------------------------------------------------------ capacity and persistence
-
-    /**
-     * Placeholders use bank slots (decided), so a bank full of them is full - but a deposit that
-     * lands in an existing placeholder needs no new slot and still goes through.
-     */
     @Test
     fun placeholdersCountTowardsTheBankLimit() {
         val harness = login("phcapacity")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
         for (i in 0 until Bank.MAX_BANK_SIZE - 1) bank.addItem(Item(FILLER_BASE + i, 1), false)
-        bank.givePlaceholder(ORE)
+        player.givePlaceholder(Obj.iron_ore)
         assertEquals(Bank.MAX_BANK_SIZE, bank.bankSize, "the fixture did not fill the bank")
 
         player.inventory.items.clear()
-        player.inventory.items.set(0, Item(ARROWS, 10))
+        player.inventory.items.set(0, Item(Obj.bronze_arrow, 10))
         player.inventory.refresh()
         harness.clearSent()
 
-        assertFalse(player.bank.depositItem(0, Int.MAX_VALUE, true), "a full bank accepted a new item")
+        assertFalse(bank.depositItem(0, Int.MAX_VALUE, true), "a full bank accepted a new item")
         assertEquals(Bank.MAX_BANK_SIZE, bank.bankSize, "the bank grew past its limit")
-        assertEquals(10, player.inventory.getNumberOf(ARROWS, false), "the refused deposit ate the items")
-        assertTrue(
-            harness.settle().any { it is GameMessage && it.message == "Not enough space in your bank." },
-            "the refusal was silent"
-        )
+        assertEquals(10, player.inventory.getNumberOf(Obj.bronze_arrow, false), "the refused deposit ate the items")
+        assertTrue(harness.settle().any { it is GameMessage && it.message == "Not enough space in your bank." }, "the refusal was silent")
 
-        // The same full bank still accepts what one of its placeholders is holding a slot for.
         player.inventory.items.clear()
-        player.inventory.items.set(0, Item(ORE, 5))
+        player.inventory.items.set(0, Item(Obj.iron_ore, 5))
         player.inventory.refresh()
-        assertTrue(player.bank.depositItem(0, Int.MAX_VALUE, true), "a deposit into an existing placeholder was refused")
+        assertTrue(bank.depositItem(0, Int.MAX_VALUE, true), "a deposit into an existing placeholder was refused")
         assertEquals(Bank.MAX_BANK_SIZE, bank.bankSize, "filling a placeholder changed the bank size")
-        assertEquals(5, assertNotNull(bank.getItem(ORE)).amount, "the deposit did not land in the placeholder")
+        assertEquals(5, assertNotNull(bank.getItem(Obj.iron_ore)).amount, "the deposit did not land in the placeholder")
     }
 
-    /**
-     * The save round trip: Gson builds `Item` through Unsafe, so amount 0 survives - the ordinary
-     * constructors would clamp it up to 1 and hand every placeholder back as a free item.
-     */
     @Test
-    fun gsonRoundTripKeepsPlaceholdersAndTheToggle() {
+    fun gsonRoundTripKeepsPlaceholders() {
         val harness = login("phsave")
-        val bank = harness.player.bank
+        val player = harness.player
+        val bank = player.bank
         bank.clear()
-        bank.isPlaceholdersEnabled = true
         bank.createTab()
-        bank.addItem(Item(COINS, 1000), 0, false)
-        bank.givePlaceholder(ORE, 0)
-        bank.addItem(Item(WHIP, 1).apply { addMetaData("combatCharges", 30) }, 1, false)
+        bank.addItem(Item(Obj.coins, 1000), 0, false)
+        player.givePlaceholder(Obj.iron_ore, 0)
+        bank.addItem(Item(Obj.abyssal_whip, 1).apply { addMetaData("combatCharges", 30) }, 1, false)
 
-        val loaded = assertNotNull(
-            JsonFileManager.fromJSONString(JsonFileManager.toJson(bank), Bank::class.java),
-            "the bank did not survive the round trip"
-        )
+        val loaded = assertNotNull(JsonFileManager.fromJSONString(JsonFileManager.toJson(bank), Bank::class.java), "the bank did not survive the round trip")
 
-        assertTrue(loaded.isPlaceholdersEnabled, "the placeholder setting was not saved")
         assertEquals(2, loaded.bankTabs.size, "a tab was lost")
-        assertEquals(COINS, loaded.bankTabs[0][0].id, "the coins were lost")
-        assertEquals(1000, loaded.bankTabs[0][0].amount, "the coin amount changed")
-        assertEquals(ORE, loaded.bankTabs[0][1].id, "the placeholder lost its id")
-        assertEquals(0, loaded.bankTabs[0][1].amount, "the placeholder came back as a real item")
+        assertEquals(listOf(Obj.coins to 1000, Obj.iron_ore to 0), loaded.bankTabs[0].map { it.id to it.amount })
         assertEquals(30, loaded.bankTabs[1][0].getMetaDataI("combatCharges"), "the metadata was lost")
     }
 
-    /** A save carrying a negative amount from an old over-subtraction loads as a placeholder. */
     @Test
     fun loadingNormalisesANegativeAmountToAPlaceholder() {
         val harness = login("phnegative")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        bank.addItem(Item(ORE, 5), false)
-        // setAmount refuses a negative, so write the field the way a bad save would have.
+        bank.addItem(Item(Obj.iron_ore, 5), false)
         bank.bankTabs[0][0].amount = -3
 
         bank.setPlayer(player)
 
         assertEquals(0, bank.bankTabs[0][0].amount, "a negative amount was left in the bank")
-        assertTrue(Bank.isPlaceholder(bank.bankTabs[0][0]), "the normalised entry is not a placeholder")
+        assertTrue(Bank.isPlaceholder(bank.bankTabs[0][0]))
     }
 
-    /** The client's flattened slot for the first entry of [id]; tabs 1..n come before tab 0. */
     private fun Bank.getRealSlotIndexOf(id: Int): Int {
         var slot = 0
         for (tab in 1 until bankTabs.size) {
