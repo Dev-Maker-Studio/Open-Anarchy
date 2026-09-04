@@ -5,6 +5,7 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.PluginManager
 import com.rs.plugin.events.ButtonClickEvent
 import kotlinx.coroutines.runBlocking
+import org.darkan.core.gameval.gen.Varbit
 import org.darkan.core.model.Item
 import org.darkan.core.model.Rights
 import org.darkan.core.net.prot.ServerProt
@@ -154,7 +155,7 @@ class BankTabTest {
     private fun Player.clientTabSizes(): List<Int> = (1..8).map { vars.getVarBit(TAB_SIZE_VARBIT + it - 1) }
 
     /** The client's flat container: tabs 1..n, then tab 0. */
-    private fun Bank.flattened(): List<Pair<Int, Int>> = generateContainer().map { it.id to it.amount }
+    private fun Bank.flattened(): List<Pair<Int, Int>> = generateContainer().map { it!!.id to it.amount }
 
     /** The (id, amount) the client was last told to draw in [slot] of the bank container. */
     private fun List<ServerProt>.slotUpdates(slot: Int): List<Pair<Int, Int>> =
@@ -695,7 +696,7 @@ class BankTabTest {
         )
         val player = harness.player
         val bank = player.bank
-        bank.isPlaceholdersEnabled = true
+        player.vars.saveVarBit(Varbit.bank_placeholders, 1)
         player.click(762, tabHeader(1), -1, 1)
 
         player.click(762, BANK_COMPONENT, bank.fakeSlotOf(ORE), 6) // Withdraw-All
