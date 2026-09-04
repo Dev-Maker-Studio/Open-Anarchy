@@ -54,6 +54,10 @@ public class ButtonClickEvent implements PluginEvent {
 		return componentId;
 	}
 
+	public int getComponent() {
+		return interfaceId << 16 | componentId;
+	}
+
 	public int getSlotId() {
 		return slotId;
 	}

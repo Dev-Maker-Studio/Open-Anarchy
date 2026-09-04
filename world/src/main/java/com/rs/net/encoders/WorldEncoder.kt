@@ -245,6 +245,10 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(IfSetText(interfaceId, componentId, text))
     }
 
+    fun setIFText(component: Int, text: String) {
+        setIFText(component shr 16, component and 0xFFFF, text)
+    }
+
     fun setIFAnimation(emoteId: Int, interfaceId: Int, componentId: Int) {
         session.queuePacket(IfSetAnim(interfaceId, componentId, emoteId))
     }

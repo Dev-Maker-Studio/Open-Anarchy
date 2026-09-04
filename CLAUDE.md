@@ -50,6 +50,26 @@ Darkan is a multiplayer game server emulator implementing **revision 727** of th
 
 ---
 
+## ⚠️ MANDATORY: Code Standards
+
+Every edit to source, tests, scripts or the cache source tree follows
+`.claude/skills/darkan-code-standards/SKILL.md`. The shared `.claude/settings.json` injects it
+before every Edit/Write through `.claude/hooks/code-standards.sh`; read it anyway before you start.
+In short:
+
+1. **No comments** except on something genuinely complex whose behaviour is unclear.
+2. **Kotlin, never new Java**; convert a touched Java file when player saves/serialization allow.
+3. **Logic lives where it belongs** - move misplaced code when you see it.
+4. **No magic numbers** - every id is a gameval constant, placeholders included; an asset we
+   add ourselves is named for its purpose in the identified-name convention, never a placeholder.
+5. **A varbit when the client must own the state** - new content whose interface has to reflect,
+   remember or refresh a value on its own (`saveVarBit`, first free bit of the feature's parent
+   varp, no overlap, CS2 var hooks instead of server-side `setIFGraphic`). Server-only state stays
+   in the player save.
+6. **No AI attribution** in commits, merge requests or code - ever.
+
+---
+
 ## ⚠️ MANDATORY: Specialized Agent Invocation
 
 > **THIS IS A BLOCKING REQUIREMENT. READ THIS SECTION CAREFULLY.**

@@ -42,6 +42,8 @@ class IFEvents {
 
     constructor(interfaceId: Int, componentId: Int, fromSlot: Int, toSlot: Int) : this(interfaceId, componentId, fromSlot, toSlot, 0)
 
+    constructor(component: Int, fromSlot: Int, toSlot: Int) : this(component shr 16, component and 0xFFFF, fromSlot, toSlot, 0)
+
     // Right-click options (bits 1..10)
     fun clickOptionEnabled(i: Int): Boolean = ((settings shr (1 + i)) and 0x1) != 0
 

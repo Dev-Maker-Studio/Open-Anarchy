@@ -3,8 +3,12 @@ package com.rs.game.content
 import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
+import com.rs.game.model.entity.player.Bank
+import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.Constants
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.model.Item
 
 enum class Skillcapes(
     val untrimmed: Int,
@@ -13,31 +17,31 @@ enum class Skillcapes(
     val master: Int,
     val verb: String
 ) {
-    Attack(9747, 9748, 9749, 25324, "a master in the fine art of attacking"),
-    Defence(9753, 9754, 9755, 25326, "a master in the fine art of defence"),
-    Strength(9750, 9751, 9752, 25325, "as strong as is possible"),
-    Constitution(9768, 9769, 9770, 25332, "as resilient as is possible"),
-    Ranging(9756, 9757, 9758, 25327, "a master in the fine art of ranging"),
-    Prayer(9759, 9760, 9761, 25328, "as devoted to prayer as possible"),
-    Magic(9762, 9763, 9764, 25329, "as powerful a wizard as I"),
-    Cooking(9801, 9802, 9803, 25344, "a master in the culinary arts"),
-    Woodcutting(9807, 9808, 9809, 25346, "a master woodsman"),
-    Fletching(9783, 9784, 9785, 25337, "a master in the fine art of fletching"),
-    Fishing(9798, 9799, 9800, 25343, "a master fisherman"),
-    Firemaking(9804, 9805, 9806, 25345, "a master of fire"),
-    Crafting(9780, 9781, 9782, 25336, "a master craftsman"),
-    Smithing(9795, 9796, 9797, 25342, "a master blacksmith"),
-    Mining(9792, 9793, 9794, 25341, "a master miner"),
-    Herblore(9774, 9775, 9776, 25334, "a master herbalist"),
-    Agility(9771, 9772, 9773, 25333, "as agile as possible"),
-    Thieving(9777, 9778, 9779, 25335, "a master thief"),
-    Slayer(9786, 9787, 9788, 25338, "an incredible student"),
-    Farming(9810, 9811, 9812, 25347, "a master farmer"),
-    Runecrafting(9765, 9766, 9767, 25330, "a master runecrafter"),
-    Hunter(9948, 9949, 9950, 25339, "a master hunter"),
-    Construction(9789, 9790, 9791, 25331, "a master home builder"),
-    Summoning(12169, 12170, 12171, 25348, "a master summoner"),
-    Dungeoneering(18508, 18509, 18510, 19709, "a master dungeon delver");
+    Attack(Obj.skillcape_attack, Obj.skillcape_attack_trimmed, Obj.skillcape_attack_hood, Obj.obj_25324, "a master in the fine art of attacking"),
+    Defence(Obj.skillcape_defence, Obj.skillcape_defence_trimmed, Obj.skillcape_defence_hood, Obj.obj_25326, "a master in the fine art of defence"),
+    Strength(Obj.skillcape_strength, Obj.skillcape_strength_trimmed, Obj.skillcape_strength_hood, Obj.obj_25325, "as strong as is possible"),
+    Constitution(Obj.skillcape_hitpoints, Obj.skillcape_hitpoints_trimmed, Obj.skillcape_hitpoints_hood, Obj.obj_25332, "as resilient as is possible"),
+    Ranging(Obj.obj_9756, Obj.obj_9757, Obj.obj_9758, Obj.obj_25327, "a master in the fine art of ranging"),
+    Prayer(Obj.skillcape_prayer, Obj.skillcape_prayer_trimmed, Obj.skillcape_prayer_hood, Obj.obj_25328, "as devoted to prayer as possible"),
+    Magic(Obj.skillcape_magic, Obj.skillcape_magic_trimmed, Obj.skillcape_magic_hood, Obj.obj_25329, "as powerful a wizard as I"),
+    Cooking(Obj.skillcape_cooking, Obj.skillcape_cooking_trimmed, Obj.skillcape_cooking_hood, Obj.obj_25344, "a master in the culinary arts"),
+    Woodcutting(Obj.skillcape_woodcutting, Obj.obj_9808, Obj.skillcape_woodcutting_hood, Obj.obj_25346, "a master woodsman"),
+    Fletching(Obj.skillcape_fletching, Obj.skillcape_fletching_trimmed, Obj.skillcape_fletching_hood, Obj.obj_25337, "a master in the fine art of fletching"),
+    Fishing(Obj.skillcape_fishing, Obj.skillcape_fishing_trimmed, Obj.skillcape_fishing_hood, Obj.obj_25343, "a master fisherman"),
+    Firemaking(Obj.skillcape_firemaking, Obj.skillcape_firemaking_trimmed, Obj.skillcape_firemaking_hood, Obj.obj_25345, "a master of fire"),
+    Crafting(Obj.skillcape_crafting, Obj.skillcape_crafting_trimmed, Obj.skillcape_crafting_hood, Obj.obj_25336, "a master craftsman"),
+    Smithing(Obj.skillcape_smithing, Obj.skillcape_smithing_trimmed, Obj.skillcape_smithing_hood, Obj.obj_25342, "a master blacksmith"),
+    Mining(Obj.skillcape_mining, Obj.skillcape_mining_trimmed, Obj.skillcape_mining_hood, Obj.obj_25341, "a master miner"),
+    Herblore(Obj.skillcape_herblore, Obj.skillcape_herblore_trimmed, Obj.skillcape_herblore_hood, Obj.obj_25334, "a master herbalist"),
+    Agility(Obj.skillcape_agility, Obj.skillcape_agility_trimmed, Obj.skillcape_agility_hood, Obj.obj_25333, "as agile as possible"),
+    Thieving(Obj.skillcape_thieving, Obj.skillcape_thieving_trimmed, Obj.skillcape_thieving_hood, Obj.obj_25335, "a master thief"),
+    Slayer(Obj.skillcape_slayer, Obj.skillcape_slayer_trimmed, Obj.skillcape_slayer_hood, Obj.obj_25338, "an incredible student"),
+    Farming(Obj.skillcape_farming, Obj.skillcape_farming_trimmed, Obj.skillcape_farming_hood, Obj.obj_25347, "a master farmer"),
+    Runecrafting(Obj.obj_9765, Obj.obj_9766, Obj.skillcape_runecrafting_hood, Obj.obj_25330, "a master runecrafter"),
+    Hunter(Obj.skillcape_hunting, Obj.skillcape_hunting_trimmed, Obj.skillcape_hunting_hood, Obj.obj_25339, "a master hunter"),
+    Construction(Obj.obj_9789, Obj.obj_9790, Obj.obj_9791, Obj.obj_25331, "a master home builder"),
+    Summoning(Obj.skillcape_summoning, Obj.skillcape_summoning_trimmed, Obj.skillcape_summoning_hood, Obj.obj_25348, "a master summoner"),
+    Dungeoneering(Obj.skillcape_dungeoneering, Obj.skillcape_dungeoneering_trimmed, Obj.skillcape_dungeoneering_hood, Obj.skillcape_120_dungeoneering, "a master dungeon delver");
 
     private fun getGiveCapeDialogue(player: Player, npcId: Int, masterCape: Boolean, dialogue: DialogueBuilder) {
         if (!player.inventory.hasCoins(if (masterCape) 120000 else 99000)) {
@@ -103,6 +107,32 @@ enum class Skillcapes(
                     }
                 }
             }
+        }
+    }
+
+    companion object {
+        @JvmStatic
+        fun trimCapes(player: Player) {
+            if (!player.skills.checkMulti99s()) return
+            val trimmedOf = entries.associate { it.untrimmed to it.trimmed }
+            trimmedOf[player.equipment.capeId]?.let {
+                player.equipment.setSlot(Equipment.CAPE, Item(it, 1))
+                player.appearance.generateAppearanceData()
+            }
+            val inventory = player.inventory
+            for (slot in 0 until inventory.items.size) {
+                val trimmed = trimmedOf[inventory.getItem(slot)?.id] ?: continue
+                inventory.replaceItem(trimmed, 1, slot)
+            }
+            inventory.refresh()
+            val bank = player.bank
+            var refresh = false
+            for (tab in bank.bankTabs) for (item in tab) {
+                if (Bank.isPlaceholder(item)) continue
+                item.id = trimmedOf[item.id] ?: continue
+                refresh = true
+            }
+            if (refresh) bank.refreshItems()
         }
     }
 }

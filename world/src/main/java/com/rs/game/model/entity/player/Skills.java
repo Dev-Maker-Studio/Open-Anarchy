@@ -138,37 +138,6 @@ public final class Skills {
 		return num99s > 1;
 	}
 
-	public void trimCapes() {
-		if (checkMulti99s())
-			for (Skillcapes cape : Skillcapes.getEntries()) {
-				if (player.getEquipment().getCapeId() == cape.getUntrimmed()) {
-					player.getEquipment().setSlot(Equipment.CAPE, new Item(cape.getTrimmed(), 1));
-					player.getAppearance().generateAppearanceData();
-				}
-				for(int i = 0;i < player.getInventory().getItems().getSize();i++) {
-					if (player.getInventory().getItem(i) != null && player.getInventory().getItem(i).getId() == cape.getUntrimmed())
-						player.getInventory().replaceItem(cape.getTrimmed(), 1, i);
-					player.getInventory().refresh();
-				}
-				for(int tab = 0;tab < player.getBank().getBankTabs().length;tab++) {
-					if (player.getBank().getBankTabs()[tab] == null)
-						continue;
-					for (int i = 0;i < player.getBank().getBankTabs()[tab].length;i++) {
-						if (player.getBank().getBankTabs()[tab][i] == null)
-							continue;
-						// A placeholder is left as it is: mutating the id of an amount-0 entry is
-						// the one way a placeholder could become a real stack of something else.
-						if (Bank.isPlaceholder(player.getBank().getBankTabs()[tab][i]))
-							continue;
-						if (player.getBank().getBankTabs()[tab][i].getId() == cape.getUntrimmed()) {
-							player.getBank().getBankTabs()[tab][i].setId(cape.getTrimmed());
-							player.getBank().refreshItems();
-						}
-					}
-				}
-			}
-	}
-
 	public static int getTargetIdByComponentId(int componentId) {
         return switch (componentId) {
             case 150 -> // Attack
@@ -868,7 +837,7 @@ public final class Skills {
 
 		if (oldLevel < 99 && newLevel >= 99) {
 			World.sendWorldMessage("<img=5><col=FF0000>" + player.getDisplayName() + " has achieved 99 " + Constants.SKILL_NAME[skill] + "!", false);
-			trimCapes();
+			Skillcapes.trimCapes(player);
 		}
 		if (oldXp <= 104273166 && newXp > 104273166)
 			World.sendWorldMessage("<img=5><col=FF0000>" + player.getDisplayName() + " has achieved the equivalent of 120 " + Constants.SKILL_NAME[skill] + "!", false);
@@ -924,7 +893,7 @@ public final class Skills {
 
 		if (oldLevel < 99 && newLevel >= 99) {
 			World.sendWorldMessage("<img=5><col=FF0000>" + player.getDisplayName() + " has achieved 99 " + Constants.SKILL_NAME[skill] + "!", false);
-			trimCapes();
+			Skillcapes.trimCapes(player);
 		}
 		if (oldXp <= 104273166 && newXp > 104273166)
 			World.sendWorldMessage("<img=5><col=FF0000>" + player.getDisplayName() + " has achieved the equivalent of 120 " + Constants.SKILL_NAME[skill] + "!", false);
@@ -1008,7 +977,7 @@ public final class Skills {
 
 		if (oldLevel < 99 && newLevel >= 99) {
 			World.sendWorldMessage("<img=5><col=FF0000>" + player.getDisplayName() + " has achieved 99 " + Constants.SKILL_NAME[skill] + "!", false);
-			trimCapes();
+			Skillcapes.trimCapes(player);
 		}
 		if (oldXp <= 104273166 && newXp > 104273166)
 			World.sendWorldMessage("<img=5><col=FF0000>" + player.getDisplayName() + " has achieved the equivalent of 120 " + Constants.SKILL_NAME[skill] + "!", false);
