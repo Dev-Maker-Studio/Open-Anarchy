@@ -170,7 +170,7 @@ public final class Settings {
 			EnvVars.INSTANCE.getWorldQuickChat(),
 			EnvVars.INSTANCE.getWorldLootShare(),
 			EnvVars.INSTANCE.getWorldMembers(),
-			EnvVars.INSTANCE.getWorldPvp(),
+			EnvVars.INSTANCE.getWorldBotsAllowed(),
 			false  // highlighted
 		);
 	}

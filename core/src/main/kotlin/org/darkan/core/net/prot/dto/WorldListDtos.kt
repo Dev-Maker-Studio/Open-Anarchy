@@ -18,7 +18,7 @@ data class WorldListEntry(
     val port: Int,
     val members: Boolean,
     val quickChat: Boolean,
-    val pvp: Boolean,
+    val botsAllowed: Boolean,
     val lootShare: Boolean,
     val highlighted: Boolean,
     /** Players currently online, or -1 when the world is offline. */

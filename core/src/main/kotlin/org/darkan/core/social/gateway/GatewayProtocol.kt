@@ -122,7 +122,7 @@ data class GatewayWorldInfo(
     val activity: String = "",
     val members: Boolean = true,
     val quickChat: Boolean = false,
-    val pvp: Boolean = false,
+    val botsAllowed: Boolean = false,
     val lootShare: Boolean = true,
     val country: String = "USA",
     val highlighted: Boolean = false,
@@ -136,7 +136,7 @@ data class GatewayWorldInfo(
         quickchat = quickChat,
         lootShare = lootShare,
         members = members,
-        pvp = pvp,
+        botsAllowed = botsAllowed,
         highlighted = highlighted,
     )
 
@@ -150,7 +150,7 @@ data class GatewayWorldInfo(
             activity = EnvVars.worldActivity,
             members = EnvVars.worldMembers,
             quickChat = EnvVars.worldQuickChat,
-            pvp = EnvVars.worldPvp,
+            botsAllowed = EnvVars.worldBotsAllowed,
             lootShare = EnvVars.worldLootShare,
             country = EnvVars.worldCountry,
             highlighted = EnvVars.worldHighlighted,

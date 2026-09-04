@@ -375,7 +375,7 @@ WORLD_NAME=Darkan
 WORLD_HOST=localhost
 WORLD_PUBLIC_HOST=localhost
 WORLD_MEMBERS=true
-WORLD_PVP=false
+WORLD_BOTS_ALLOWED=false      # the world list's flag 0x4 (PvP in Jagex's client): worlds that let bot clients in
 WORLD_LOOTSHARE=true
 ```
 
