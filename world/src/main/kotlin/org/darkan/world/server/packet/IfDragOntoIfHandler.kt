@@ -3,6 +3,7 @@ package org.darkan.world.server.packet
 import com.rs.engine.Shop
 import com.rs.game.model.entity.player.Inventory
 import com.rs.game.model.entity.player.Player
+import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.net.prot.packet.IfDragOntoIf
 import org.darkan.core.net.prot.handler.PacketHandler
 
@@ -34,16 +35,11 @@ class IfDragOntoIfHandler : PacketHandler<Player, IfDragOntoIf> {
                     return
                 player.inventory.switchItem(packet.fromSlot, packet.toSlot)
             }
-            // The bank. A toSlot of -1 is a drag onto a tab header, which is how a tab is created,
-            // so only a real slot is range-checked - the header's component id is validated by
-            // `Bank.switchItem` itself.
-            packet.fromInter == 762 && packet.toInter == 762 -> {
+            packet.fromInter == Interface.interface_762 && packet.toInter == Interface.interface_762 -> {
                 val bankSize = player.bank.bankSize
-                if (packet.fromSlot < 0 || packet.fromSlot >= bankSize)
+                if (packet.fromSlot !in 0 until bankSize || (packet.toSlot != -1 && packet.toSlot !in 0 until bankSize))
                     return
-                if (packet.toSlot != -1 && (packet.toSlot < 0 || packet.toSlot >= bankSize))
-                    return
-                player.bank.switchItem(packet.fromSlot, packet.toSlot, packet.fromComp, packet.toComp)
+                player.bank.switchItem(packet.fromSlot, packet.toSlot, packet.toInter shl 16 or packet.toComp)
             }
             // Drag a shop stock slot onto the inventory to buy one.
             packet.fromInter == 1265 && packet.toInter == 1266 && player.tempAttribs.getB("shop_buying") -> {
