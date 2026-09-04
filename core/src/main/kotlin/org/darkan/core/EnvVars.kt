@@ -97,7 +97,7 @@ object EnvVars {
     val worldActivity: String = dotenv.get("WORLD_ACTIVITY", "")
     val worldMembers: Boolean = dotenv.get("WORLD_MEMBERS", members.toString()).toBooleanStrict()
     val worldQuickChat: Boolean = dotenv.get("WORLD_QUICKCHAT", "false").toBooleanStrict()
-    val worldPvp: Boolean = dotenv.get("WORLD_PVP", "false").toBooleanStrict()
+    val worldBotsAllowed: Boolean = dotenv.get("WORLD_BOTS_ALLOWED", "false").toBooleanStrict()
     val worldLootShare: Boolean = dotenv.get("WORLD_LOOTSHARE", "true").toBooleanStrict()
     val worldCountry: String = dotenv.get("WORLD_COUNTRY", "USA")
     val worldHighlighted: Boolean = dotenv.get("WORLD_HIGHLIGHTED", "false").toBooleanStrict()

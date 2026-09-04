@@ -198,7 +198,7 @@ internal fun Codec.registerRev727MiscPackets() {
                 var flags = 0
                 if (world.members) flags = flags or 0x1
                 if (world.quickChat) flags = flags or 0x2
-                if (world.pvp) flags = flags or 0x4
+                if (world.botsAllowed) flags = flags or 0x4
                 if (world.lootShare) flags = flags or 0x8
                 if (world.highlighted) flags = flags or 0x10
                 val customPort = world.port != DEFAULT_WORLD_PORT
