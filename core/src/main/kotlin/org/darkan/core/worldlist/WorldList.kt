@@ -15,7 +15,7 @@ class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.loca
 
     init {
         if (localWorldId > 0)
-            worlds[localWorldId] = World(WorldMetadata(localWorldId, "localhost", EnvVars.worldPort, "Local development world", Country.USA, false, true, true, false, false))
+            worlds[localWorldId] = World(WorldMetadata(localWorldId, "localhost", EnvVars.worldPort, "Local development world", Country.USA, false, true, true, true, false))
         updateIndices()
     }
 
