@@ -1,15 +1,21 @@
 package org.darkan.lobby.harness
 
 import kotlinx.coroutines.coroutineScope
+import org.darkan.core.clan.ClanAction
+import org.darkan.core.clan.ClanVarKind
+import org.darkan.core.clan.InMemoryClanStore
 import org.darkan.core.formatPlayerNameForDisplay
 import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.model.Account
+import org.darkan.core.model.Clan
 import org.darkan.core.model.Rights
 import org.darkan.core.mongo.collections.AccountStore
 import org.darkan.core.mongo.collections.Accounts
+import org.darkan.core.mongo.collections.Clans
 import org.darkan.core.net.prot.ClientProt
 import org.darkan.core.net.prot.Codec
 import org.darkan.core.net.prot.ServerProt
+import org.darkan.core.social.gateway.ClanCommand
 import org.darkan.core.social.gateway.GatewayPlayerPresence
 import org.darkan.core.social.gateway.GatewayWorldInfo
 import org.darkan.core.social.gateway.PlayerOffline
@@ -20,6 +26,7 @@ import org.darkan.core.social.gateway.ServerPacketEnvelope
 import org.darkan.core.social.gateway.SocialGatewayWireJson
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import org.darkan.core.social.gateway.WorldPresenceSnapshot
+import org.darkan.lobby.social.ClanService
 import org.darkan.lobby.social.SocialGateway
 import org.darkan.lobby.social.WorldSession
 import java.util.concurrent.ConcurrentHashMap
@@ -29,9 +36,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * Drives [SocialGateway] with no Mongo, no socket and no client, so the lobby's social behaviour
  * can be asserted packet by packet.
  *
- * Two seams make that possible and nothing else about the gateway is changed. [InMemoryAccounts]
- * is installed as [Accounts.store], so account reads and writes go to a map; and [FakeWorld]
- * builds a [WorldSession] over a lambda instead of a WebSocket and feeds it to the gateway's
+ * Three seams make that possible and nothing else about the gateway is changed. [InMemoryAccounts]
+ * is installed as [Accounts.store], so account reads and writes go to a map; an
+ * [InMemoryClanStore] is installed as [Clans.store] the same way; and [FakeWorld] builds a
+ * [WorldSession] over a lambda instead of a WebSocket and feeds it to the gateway's
  * `handleWorldMessage`, which is the same entry point the real socket loop uses.
  *
  * The gateway is a process-wide `object`, so a test that inherited the previous test's presence,
@@ -49,8 +57,21 @@ object LobbyHarness {
 
     val accounts = InMemoryAccounts()
 
+    /** The clan store behind [Clans]; a fresh one per [reset] so no clan outlives its test. */
+    var clans = InMemoryClanStore()
+        private set
+
     init {
         Accounts.store = accounts
+        Clans.store = clans
+        // No cache is loaded under test, so clan vars are typed by their stored value.
+        ClanService.varKind = { _, value ->
+            when (value) {
+                is String -> ClanVarKind.STRING
+                is Long -> ClanVarKind.LONG
+                else -> ClanVarKind.INT
+            }
+        }
     }
 
     /**
@@ -62,16 +83,23 @@ object LobbyHarness {
      * empty.
      */
     fun reset() {
-        for (field in SocialGateway::class.java.declaredFields) {
+        clearMaps(SocialGateway)
+        clearMaps(ClanService)
+        accounts.clear()
+        clans = InMemoryClanStore()
+        Clans.store = clans
+    }
+
+    private fun clearMaps(owner: Any) {
+        for (field in owner.javaClass.declaredFields) {
             field.isAccessible = true
             val value = try {
-                field.get(SocialGateway)
+                field.get(owner)
             } catch (_: Throwable) {
                 continue
             }
             if (value is MutableMap<*, *>) value.clear()
         }
-        accounts.clear()
     }
 
     /**
@@ -93,6 +121,16 @@ object LobbyHarness {
         account.social.currentFriendsChat = currentFriendsChat
         accounts.put(account)
         return account
+    }
+
+    /** Puts [clan] in the store as if it had always been there; the service reads it on first use. */
+    suspend fun seedClan(clan: Clan) {
+        clans.save(clan)
+        for (username in clan.members.keys) {
+            val account = accounts.find(username) ?: continue
+            account.social.clanName = clan.name
+            accounts.put(account)
+        }
     }
 
     /** Makes [owner] the owner of a set-up friends chat called [chatName]. */
@@ -175,6 +213,13 @@ object LobbyHarness {
         )
 
         suspend fun playerOffline(account: Account) = deliver(PlayerOffline(account.username))
+
+        /** [account] asks for [action] from this world, the way `ClanRegistry.send` does. */
+        suspend fun command(account: Account, action: ClanAction, requestId: Int = 1) =
+            deliver(ClanCommand(username = account.username, requestId = requestId, action = action))
+
+        /** Every message of type [T] the lobby has pushed at this world, oldest first. */
+        inline fun <reified T : SocialGatewayWireMessage> messagesOf(): List<T> = sent().filterIsInstance<T>()
 
         /** Announces exactly [players] as this world's population. */
         suspend fun presenceSnapshot(reason: PresenceSyncReason, vararg players: Account) = deliver(

@@ -3,9 +3,11 @@ package org.darkan.world.server.packet
 import com.rs.engine.command.Commands
 import com.rs.game.content.skills.dungeoneering.DungeonController
 import com.rs.game.model.entity.player.Player
+import org.darkan.core.clan.ClanAction
 import org.darkan.core.net.prot.packet.Chat
 import org.darkan.core.net.prot.handler.PacketHandler
 import org.darkan.core.social.PublicChatMessage
+import org.darkan.world.clan.ClanRegistry
 import org.darkan.world.server.WorldServer
 
 class ChatHandler : PacketHandler<Player, Chat> {
@@ -22,7 +24,19 @@ class ChatHandler : PacketHandler<Player, Chat> {
         // client never puts it in the Chat packet (`Chat.type` decodes as -1 always), so reading it
         // off the packet sent every friends-chat and clan-chat line out as public chat instead.
         val chatType = player.chatType
-        if (chatType in 1..3) {
+        // 2 is the player's own clan channel, 3 the guest channel they are listening to. Clan chat
+        // is not forwarded as a client packet: it goes to the lobby as a typed action, which also
+        // means the talk-rank and mute rules are checked here first (docs/clans.md).
+        if (chatType == 2 || chatType == 3) {
+            if (message.isBlank()) return
+            val effects = (packet.color shl 8) or (packet.effect and 0xff)
+            ClanRegistry.send(
+                player,
+                ClanAction.Chat(guest = chatType == 3, message = PublicChatMessage(message, effects)),
+            )
+            return
+        }
+        if (chatType == 1) {
             WorldServer.forwardToLobby(player.username, packet.copy(type = chatType))
             return
         }

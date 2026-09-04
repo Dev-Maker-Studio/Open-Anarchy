@@ -738,6 +738,7 @@ Configure `STAFF_WEBHOOK_URL` for tick performance warnings and error notificati
 ## Documentation
 
 - `docs/social-gateway.md` - Comprehensive social gateway architecture
+- `docs/clans.md` - The clan system: lobby-authoritative `ClanService`, typed `ClanAction` commands over the gateway, world `ClanRegistry`, shared `ClanRules`/`ClanPackets`
 - `README.md` - Quick start guide
 - `docs/migration.md` - Legacy database migration tooling and runbook
 - `docs/deploy.md` - VM layout, systemd units, CI-driven deploys and the legacy cut-over runbook

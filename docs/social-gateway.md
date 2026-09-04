@@ -9,7 +9,8 @@ live socket per world.
 
 The lobby is authoritative for everything social - friends, ignores, private status, friends chat,
 clan chat, private messages. A world never decides any of it; it forwards its players' social
-`ClientProt`s and renders the `ServerProt`s the lobby sends back.
+`ClientProt`s and renders the `ServerProt`s the lobby sends back. Clans are the one subsystem that
+does not ride on forwarded packets - they have their own typed messages, see [Clans](#clans).
 
 **The lobby is also a place players are.** Somebody sitting on the lobby screen is online, and
 their friends have to see that. The gateway reports them on world id `1115`
@@ -132,6 +133,22 @@ distinction: `SocialPlayer.sendMessage` used `FC_NOTIFICATION` for lobby players
   `FriendsChat(ownerUsername)` - but the world's `handleSocialMessage` currently only logs the
   broadcast and shows it to nobody. **Not yet implemented on the world side.**
 
+### Clans
+
+Clans do not use `ClientPacketEnvelope` / `ServerPacketEnvelope` at all. A world turns a button
+into a typed `ClanAction` and sends `ClanCommand(username, requestId, action)`; the lobby's
+`ClanService` (`lobby/.../social/ClanService.kt`) judges it with the shared `ClanRules`, applies
+it, and answers with `ClanCommandResult` plus the events every world replicates from:
+`ClanSnapshot` / `ClanDeleted` (the clan document), `ClanChannelUpdate` (a channel's chatter list),
+`ClanMembership` (one player's authoritative `Social` clan fields) and `ClanChatMessage` /
+`ClanQuickChatMessage` (one line said in a channel). `ClanFetch(clanName)` asks for a snapshot the
+world does not have. Each side builds its own client packets from that state with
+`org.darkan.core.clan.ClanPackets`; the lobby does so for the players on the lobby screen, whose
+clan interfaces (`LobbyClanScreen`) call the same `ClanService.handle` as the gateway does.
+
+The whole protocol - the actions, the rules, the state each side holds and the login/logout/reconnect
+behaviour - is specified in [`docs/clans.md`](clans.md).
+
 ### Routing packets back to players
 
 `ServerPacketEnvelope(username, packet)` for one player, `ServerPacketBatch(usernames, packet)` for
@@ -152,5 +169,7 @@ client: `InMemoryAccounts` is installed as `Accounts.store`, and `LobbyHarness.F
 `WorldSession` over a lambda and feeds it `SocialGateway.handleWorldMessage` - the same entry point
 the real socket loop uses. `RecordingSession` (the lobby's copy of the world harness's recorder) is
 a real `Session` with its writer cancelled, so queued `ServerProt`s can be read back as objects.
-`LobbyHarness.reset()` empties the gateway between tests. See
-`lobby/src/test/kotlin/org/darkan/lobby/SocialGatewayTest.kt`.
+`LobbyHarness.reset()` empties the gateway and `ClanService` between tests and installs a fresh
+`InMemoryClanStore` as `Clans.store`. See `lobby/src/test/kotlin/org/darkan/lobby/SocialGatewayTest.kt`
+and, for the clan half, `ClanServiceTest.kt` (`FakeWorld.command(account, action)` sends a
+`ClanCommand`, `messagesOf<T>()` reads back what the lobby pushed).

@@ -21,6 +21,7 @@ import org.darkan.core.net.prot.packet.GameMessage
 import org.darkan.core.net.prot.packet.IfOnGroundItem
 import org.darkan.core.net.prot.packet.TriggerOnDialogAbort
 import org.darkan.world.harness.HarnessPlayer
+import org.darkan.core.social.gateway.ClientPacketEnvelope
 import org.darkan.world.harness.WorldHarness
 import org.darkan.world.server.WorldServer
 import org.darkan.world.server.packet.IfOnGroundItemHandler
@@ -195,8 +196,8 @@ class RemainingRegressionsTest {
         val harness = login("gatewaydown")
         val client = unstartedSocialClient()
         assertFalse(
-            runBlocking { client.sendClientPacket(harness.player.username, AddFriend("someone")) },
-            "sendClientPacket claimed success with no gateway connection"
+            runBlocking { client.send(ClientPacketEnvelope(harness.player.username, AddFriend("someone"))) },
+            "SocialClient.send claimed success with no gateway connection"
         )
 
         setSocialClient(client)

@@ -24,120 +24,59 @@ import com.rs.engine.dialogue.Conversation;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.statements.SimpleStatement;
 import com.rs.engine.dialogue.statements.Statement;
-import com.rs.game.World;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.NPCBodyMeshModifier;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.model.gameobject.ObjectMeshModifier;
-import com.rs.game.tasks.WorldTasks;
+import org.darkan.core.clan.ClanAction;
 import org.darkan.core.model.Rights;
 import org.darkan.core.model.ClanMemberData;
 import org.darkan.core.model.Clan;
 import org.darkan.core.model.ClanPermission;
 import org.darkan.core.model.ClanRank;
 import org.darkan.core.model.ClanSetting;
-import org.darkan.core.model.ClanVar;
-import org.darkan.core.net.prot.packet.ClanSettingsFullRaw;
-import org.darkan.core.Logger;
 import com.rs.utils.RSColor;
 import org.darkan.core.Utils;
 import com.rs.utils.KtExtensionsKt;
+import org.darkan.world.clan.ClanRegistry;
 import org.darkan.world.server.WorldServer;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
 import com.rs.plugin.handlers.InterfaceOnPlayerHandler;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import org.darkan.core.gameval.gen.Varbit;
 import org.darkan.core.gameval.gen.Varp;
 
+/**
+ * The clan interfaces as a world player sees them (docs/clans.md).
+ *
+ * Nothing here writes to a clan. The lobby owns every clan document and every channel, so each
+ * button becomes a typed {@link ClanAction} handed to {@link ClanRegistry#send} - which checks the
+ * shared {@code ClanRules} first so the player gets a denial straight away - and the change comes
+ * back as the snapshot the lobby broadcasts. What the interfaces read is the world's replica,
+ * {@link ClanRegistry}.
+ */
 @PluginEventHandler
 public class ClansManager {
-	
-	private static final Map<String, Clan> CACHED_CLANS = new ConcurrentHashMap<>();
-	
+
+	/** The clan the world knows under this name, asking the lobby for it if it has never seen it. */
 	public static Clan getClan(String name) {
-		if (name == null)
-			return null;
-		if (CACHED_CLANS.get(name) == null) {
-			try {
-				WorldServer.INSTANCE.getClanAsync(name, clan -> {
-					if (clan == null || clan.getName() == null) {
-						Logger.error(ClansManager.class, "getClan", "Clan returned from database was null " + name);
-						return;
-					}
-					CACHED_CLANS.put(name, clan);
-				});
-			} catch(Throwable e) {
-				Logger.error(ClansManager.class, "getClan", "Error loading clan: " + name);
-			}
-			return null;
-		}
-		return CACHED_CLANS.get(name);
+		return ClanRegistry.clanOrFetch(name);
 	}
 
 	public static void getClan(String name, Consumer<Clan> cb) {
-		if (name == null)
-			return;
-		if (CACHED_CLANS.get(name) == null) {
-			try {
-				WorldServer.INSTANCE.getClanAsync(name, clan -> {
-					if (clan == null || clan.getName() == null) {
-						Logger.error(ClansManager.class, "getClan", "Clan returned from database was null " + name);
-						cb.accept(null);
-						return;
-					}
-					CACHED_CLANS.put(name, clan);
-					cb.accept(clan);
-				});
-			} catch(Throwable e) {
-				cb.accept(null);
-				Logger.error(ClansManager.class, "getClan", "Error loading clan: " + name);
-			}
-		} else
-			cb.accept(CACHED_CLANS.get(name));
-	}
-	
-	public static void syncClanFromLobby(Clan clan) {
-		if (clan == null || clan.getName() == null) {
-			Logger.error(ClansManager.class, "syncClanFromLobby", "Clan returned from lobby server was null");
-			return;
-		}
-		CACHED_CLANS.put(clan.getName(), clan);
-		for (String username : clan.getMembers().keySet()) {
-			Player player = World.getPlayerByUsername(username);
-			if (player == null || player.hasFinished() || !player.hasStarted())
-				continue;
-			player.getAppearance().generateAppearanceData();
-			for (String key : clan.getVars().keySet())
-				player.getPackets().setClanVar(Integer.parseInt(key), clan.getVar(Integer.parseInt(key)));
-			if (player.getInterfaceManager().topOpen(1096))
-				WorldTasks.delay(0, () -> player.getPackets().sendRunScript(4295));
-		}
-	}
-	
-	public static void syncClanToLobby(Clan clan) {
-		syncClanToLobby(clan, null);
-	}
-	
-	public static void syncClanToLobby(Clan clan, Runnable done) {
-		WorldServer.INSTANCE.saveClanAsync(clan, res -> {
-			if (res != null)
-				CACHED_CLANS.put(res.getName(), res);
-			if (done != null)
-				done.run();
-		});
+		ClanRegistry.fetch(name, cb == null ? null : cb::accept);
 	}
 
 	public static void clanMotto(Player player) {
 		player.startConversation(new Dialogue(new Statement() {
 			@Override
 			public void send(Player player) {
-				player.sendInputLongText("Enter clan motto:", motto -> player.getClan().setMotto(motto));
+				player.sendInputLongText("Enter clan motto:", motto -> updateSetting(player, ClanSetting.MOTTO, motto));
 				player.getInterfaceManager().sendChatBoxInterface(1103);
 			}
 
@@ -148,7 +87,7 @@ public class ClansManager {
 
 			@Override
 			public void close(Player player) {
-				
+
 			}
 		}));
 	}
@@ -157,7 +96,14 @@ public class ClansManager {
 		player.sendOptionDialogue("The name " + name + " is available. Create the clan?", ops -> {
 			ops.add("Yes, create " + name + ".", () -> {
 				player.getTempAttribs().setB("ccCreateLock", true);
-				WorldServer.INSTANCE.forwardClanCreate(player.getUsername(), name);
+				// The snapshot the lobby broadcasts after the create is what regenerates the
+				// appearance and draws the clan; all this callback owns is the lock.
+				if (!ClanRegistry.send(player, new ClanAction.Create(name), result -> {
+					player.getTempAttribs().removeB("ccCreateLock");
+					if (result.getOk())
+						player.sendMessage("Your clan has been created!");
+				}))
+					player.getTempAttribs().removeB("ccCreateLock");
 			});
 			ops.add("No, I want to pick another name.");
         });
@@ -170,10 +116,19 @@ public class ClansManager {
 				return;
 			}
 			player.getTempAttribs().setB("ccCreateLock", true);
-			WorldServer.INSTANCE.forwardClanCheckName(player.getUsername(), name);
+			// The result has already shown the player why a name was rejected, so a rejection
+			// just puts them back on the name prompt.
+			if (!ClanRegistry.send(player, new ClanAction.CheckName(name), result -> {
+				player.getTempAttribs().removeB("ccCreateLock");
+				if (result.getOk())
+					create(player, name);
+				else
+					promptName(player);
+			}))
+				player.getTempAttribs().removeB("ccCreateLock");
 		});
 	}
-	
+
 	public static ButtonClickHandler handleClanChatButtons = new ButtonClickHandler(1110, e -> {
 		if (e.getPlayer().hasRights(Rights.DEVELOPER))
 			e.getPlayer().sendMessage("handleClanChatButtons: " + e.getComponentId() + " - " + e.getSlotId() + " - " + e.getOpNum());
@@ -198,7 +153,7 @@ public class ClansManager {
 		case 75 -> openClanDetails(e.getPlayer(), null, e.getPlayer().getClan());
 		case 109 -> leaveClan(e.getPlayer());
 		case 11 -> unban(e.getPlayer(), e.getSlotId());
-		case 99 -> e.getPlayer().sendInputName("Which player would you like to unban?", name -> unban(e.getPlayer(), Utils.formatPlayerNameForDisplay(name)));
+		case 99 -> e.getPlayer().sendInputName("Which player would you like to unban?", name -> unban(e.getPlayer(), name));
 		}
 	});
 
@@ -210,12 +165,8 @@ public class ClansManager {
 		case 26 -> {
 			int flag = e.getPlayer().getTempAttribs().removeI("clanflagselection", -1);
 			e.getPlayer().stopAll();
-			if (flag != -1) {
-				if (!e.getPlayer().getClan().hasPermissions(e.getPlayer().getUsername(), ClanRank.ADMIN))
-					return;
-				e.getPlayer().getClan().setSetting(ClanSetting.NATIONAL_FLAG, flag);
-				syncClanToLobby(e.getPlayer().getClan(), () -> e.getPlayer().sendMessage("Clan settings saved."));
-			}	
+			if (flag != -1)
+				updateSetting(e.getPlayer(), ClanSetting.NATIONAL_FLAG, flag);
 		}
 		}
 	});
@@ -225,31 +176,19 @@ public class ClansManager {
 			e.getPlayer().sendMessage("handleClanSettingsButtonsMain: " + e.getComponentId() + " - " + e.getSlotId() + " - " + e.getOpNum());
 		switch(e.getComponentId()) {
 		case 41 -> viewClanmateDetails(e.getPlayer(), e.getSlotId());
-		case 94 -> setClanSetting(e.getPlayer(), ClanSetting.GUESTS_CAN_ENTER_CC, (int) e.getPlayer().getClan().getSetting(ClanSetting.GUESTS_CAN_ENTER_CC) == 0 ? 1 : 0);
-		case 95 -> setClanSetting(e.getPlayer(), ClanSetting.GUESTS_CAN_TALK_CC, (int) e.getPlayer().getClan().getSetting(ClanSetting.GUESTS_CAN_TALK_CC) == 0 ? 1 : 0);
-		case 96 -> {
-			boolean set = ((int) e.getPlayer().getClan().getSetting(ClanSetting.IS_RECRUITING)) == 1;
-			setClanSetting(e.getPlayer(), ClanSetting.IS_RECRUITING, set ? 0 : 1);
-			syncClanToLobby(e.getPlayer().getClan());
-		}
-		case 97 -> {
-			boolean set = ((int) e.getPlayer().getClan().getSetting(ClanSetting.USES_CLANTIMEZONE)) == 1;
-			setClanSetting(e.getPlayer(), ClanSetting.USES_CLANTIMEZONE, set ? 0 : 1);
-			syncClanToLobby(e.getPlayer().getClan());
-		}
+		case 94 -> toggleSetting(e.getPlayer(), ClanSetting.GUESTS_CAN_ENTER_CC);
+		case 95 -> toggleSetting(e.getPlayer(), ClanSetting.GUESTS_CAN_TALK_CC);
+		case 96 -> toggleSetting(e.getPlayer(), ClanSetting.IS_RECRUITING);
+		case 97 -> toggleSetting(e.getPlayer(), ClanSetting.USES_CLANTIMEZONE);
 		case 113 -> showClanSettingsClanMates(e.getPlayer());
 		case 120 -> showClanSettingsSettings(e.getPlayer());
 		case 124 -> openClanMotifInterface(e.getPlayer());
 		case 131 -> openClanMottoInterface(e.getPlayer());
 		case 160 -> openKeywordEditor(e.getPlayer());
-		case 222 -> {
-			if (!canEditSettings(e.getPlayer()))
-				return;
-			setVar(e.getPlayer().getClan(), 2811, Utils.clampI(e.getSlotId(), 0, 4)); //signpost permissions
-		}
-		case 207 -> setClanSetting(e.getPlayer(), ClanSetting.GUEST_CITADEL_ACCESS, Utils.clampI(e.getSlotId(), 0, 3));
-		case 240 -> setClanSetting(e.getPlayer(), ClanSetting.GAME_TIME, -720 + e.getSlotId() * 10);
-		case 290 -> setClanSetting(e.getPlayer(), ClanSetting.HOME_WORLD, Utils.clampI(e.getSlotId(), 0, 200));
+		case 222 -> ClanRegistry.send(e.getPlayer(), new ClanAction.SetVar(2811, Utils.clampI(e.getSlotId(), 0, 4))); //signpost permissions
+		case 207 -> updateSetting(e.getPlayer(), ClanSetting.GUEST_CITADEL_ACCESS, Utils.clampI(e.getSlotId(), 0, 3));
+		case 240 -> updateSetting(e.getPlayer(), ClanSetting.GAME_TIME, -720 + e.getSlotId() * 10);
+		case 290 -> updateSetting(e.getPlayer(), ClanSetting.HOME_WORLD, Utils.clampI(e.getSlotId(), 0, 200));
 		case 297 -> openForumThreadInterface(e.getPlayer());
 		case 346 -> openNationalFlagInterface(e.getPlayer());
 		case 386 -> showClanSettingsPermissions(e.getPlayer());
@@ -258,29 +197,15 @@ public class ClansManager {
 		case 506 -> selectPermissionTab(e.getPlayer(), 3);
 		case 514 -> selectPermissionTab(e.getPlayer(), 4);
 		case 522 -> selectPermissionTab(e.getPlayer(), 5);
-		
+
 		case 262 -> e.getPlayer().getTempAttribs().setI("editClanMateJob", e.getSlotId());
 		case 276 -> e.getPlayer().getTempAttribs().setI("editClanMateRank", e.getSlotId());
 		case 309 -> kick(e.getPlayer());
 		case 318 -> saveClanmateDetails(e.getPlayer());
 		case 366 -> e.getPlayer().getPackets().sendVarc(1516, e.getSlotId());
-		case 558 -> {
-			ClanRank rank = e.getPlayer().getTempAttribs().getO("permissionRankEditing");
-			if (rank == null) {
-				e.getPlayer().sendMessage("Please select a rank before setting the chat ranking.");
-				return;
-			}
-			e.getPlayer().getClan().setCcChatRank(rank);
-		}
-		case 570 -> {
-			ClanRank rank = e.getPlayer().getTempAttribs().getO("permissionRankEditing");
-			if (rank == null) {
-				e.getPlayer().sendMessage("Please select a rank before setting the kick ranking.");
-				return;
-			}
-			e.getPlayer().getClan().setCcKickRank(rank);
-		}
-		case 534, 547, 752, 739, 483, 659, 581, 592, 648, 684, 671, 
+		case 558 -> setChannelRank(e.getPlayer(), true);
+		case 570 -> setChannelRank(e.getPlayer(), false);
+		case 534, 547, 752, 739, 483, 659, 581, 592, 648, 684, 671,
 			 793, 696, 603, 614, 782, 625, 815, 720, 708, 804 -> togglePermissionSetting(e.getPlayer(), e.getComponentId());
 		default -> {
 			if (e.getComponentId() >= 395 && e.getComponentId() <= 475) {
@@ -309,13 +234,13 @@ public class ClansManager {
 		else if (e.getComponentId() == 104)
 			ClansManager.openSetMotifColor(e.getPlayer(), 3);
 		else if (e.getComponentId() == 120) {
-			syncClanToLobby(e.getPlayer().getClan());
+			saveMotif(e.getPlayer());
 			e.getPlayer().stopAll();
 		}
 	});
-	
+
 	private static final BiMap<ClanSetting, Integer> KEYWORD_INDICES = HashBiMap.create(10);
-	
+
 	static {
 		KEYWORD_INDICES.put(ClanSetting.KEYWORD0_CATEGORY, 9155);
 		KEYWORD_INDICES.put(ClanSetting.KEYWORD0_INDEX, 9156);
@@ -338,7 +263,20 @@ public class ClansManager {
 		KEYWORD_INDICES.put(ClanSetting.KEYWORD9_CATEGORY, 9173);
 		KEYWORD_INDICES.put(ClanSetting.KEYWORD9_INDEX, 9174);
 	}
-	
+
+	/**
+	 * The motif interface edits a copy: the icons and the four colours are held in temp attribs
+	 * (and mirrored into the player's own vars so the interface draws them) until the save button
+	 * sends them as one {@link ClanAction.UpdateSettings}. The clan itself is read-only here.
+	 */
+	private static final ClanSetting[] MOTIF_SETTINGS = {
+		ClanSetting.MOTIF_TOP_ICON, ClanSetting.MOTIF_BOTTOM_ICON,
+		ClanSetting.MOTIF_PRIMARY_COLOR, ClanSetting.MOTIF_SECONDARY_COLOR,
+		ClanSetting.MOTIF_TOP_COLOR, ClanSetting.MOTIF_BOTTOM_COLOR,
+	};
+
+	private static final int MOTIF_FIRST_COLOR = 2;
+
 	public static ButtonClickHandler handleKeywordButtons = new ButtonClickHandler(1097, e -> {
 		if (e.getPlayer().hasRights(Rights.DEVELOPER))
 			e.getPlayer().sendMessage("handleKeywordButtons: " + e.getComponentId() + " - " + e.getSlotId() + " - " + e.getOpNum());
@@ -379,14 +317,12 @@ public class ClansManager {
 			e.getPlayer().getVars().setVarBit(baseVar+1, 0);
 		}
 		case 42 -> {
-			for (ClanSetting setting : KEYWORD_INDICES.keySet())
-				setClanSetting(e.getPlayer(), setting, e.getPlayer().getVars().getVarBit(KEYWORD_INDICES.get(setting)));
+			saveKeywords(e.getPlayer());
 			e.getPlayer().stopAll();
-			syncClanToLobby(e.getPlayer().getClan());
 		}
 		}
 	});
-	
+
 	public static ButtonClickHandler handleCloseButton = new ButtonClickHandler(1079, e -> e.getPlayer().closeInterfaces());
 
 	public static ButtonClickHandler handleInviteInter = new ButtonClickHandler(1095, e -> {
@@ -396,13 +332,17 @@ public class ClansManager {
 				e.getPlayer().sendMessage("There is a pending request to join a clan submitted to the clan service. Relog or try again later.");
 				return;
 			}
-			if (inviter.hasStarted() && !inviter.hasFinished()) {
-				WorldServer.INSTANCE.forwardClanAddMember(inviter.getUsername(), e.getPlayer().getUsername());
+			String clanName = inviter.getSocial().getClanName();
+			if (clanName == null) {
+				e.getPlayer().sendMessage(inviter.getDisplayName() + " is no longer in a clan.");
+				e.getPlayer().closeInterfaces();
+				return;
 			}
+			ClanRegistry.send(e.getPlayer(), new ClanAction.AcceptInvite(clanName, inviter.getUsername()));
 			e.getPlayer().closeInterfaces();
 		}
 	});
-	
+
 	public static InterfaceOnPlayerHandler handleInvite = new InterfaceOnPlayerHandler(false, new int[] { 1110 }, e -> {
 		if (e.getComponentId() == 87) {
 			if (e.getTarget().getSocial().getClanName() != null) {
@@ -413,16 +353,19 @@ public class ClansManager {
 			e.getTarget().getPackets().sendClanInviteMessage(e.getPlayer());
 		}
 	});
-	
+
 	public static void viewClanmateDetails(Player player, int index) {
-		if (player.getClan() == null)
+		Clan clan = player.getClan();
+		if (clan == null)
 			return;
-		if (index >= player.getClan().getMembers().keySet().size()) {
+		// Rows are in the order ClanSettingsFull listed the members, not the map's iteration order.
+		List<String> members = ClanRegistry.orderedMembers(clan);
+		if (index >= members.size()) {
 			player.sendMessage("This is a placeholder character to unlock all clan features without needing 5 players.");
 			return;
 		}
-		String username = new ArrayList<>(player.getClan().getMembers().keySet()).get(index);
-		ClanMemberData member = player.getClan().getMembers().get(username);
+		String username = members.get(index);
+		ClanMemberData member = clan.getMembers().get(username);
 		if (member == null)
 			return;
 		WorldServer.INSTANCE.getAccountAsync(username, acc -> {
@@ -433,15 +376,15 @@ public class ClansManager {
 			viewClanmateDetails(player, acc.getDisplayName(), member);
 			player.getTempAttribs().removeI("editClanMateRank");
 			player.getTempAttribs().removeI("editClanMateJob");
-			if (player.getClan().hasPermissions(player.getUsername(), ClanRank.ADMIN))
+			if (clan.hasPermissions(player.getUsername(), ClanRank.ADMIN))
 				player.getTempAttribs().setO("editClanMate", username);
 		});
 		player.getTempAttribs().removeI("editClanMateRank");
 		player.getTempAttribs().removeI("editClanMateJob");
-		if (player.getClan().hasPermissions(player.getUsername(), ClanRank.ADMIN))
+		if (clan.hasPermissions(player.getUsername(), ClanRank.ADMIN))
 			player.getTempAttribs().setO("editClanMate", username);
 	}
-	
+
 	protected static void togglePermissionSetting(Player player, int componentId) {
 		ClanRank rank = player.getTempAttribs().getO("permissionRankEditing");
 		if (rank == null) {
@@ -476,18 +419,12 @@ public class ClansManager {
 			player.sendMessage("Unknown clan setting for component: " + componentId);
 			return;
 		}
-		ClanSetting setting = null;
-		for (ClanSetting s : ClanSetting.values()) {
-			if (s.name().equals(rank.name() + "_" + settingName)) {
-				setting = s;
-				break;
-			}
-		}
+		ClanSetting setting = ClanSetting.Companion.forName(rank.name() + "_" + settingName);
 		if (setting == null) {
 			player.sendMessage("Cannot edit permission " + settingName + " for rank " + rank + ".");
 			return;
 		}
-		player.getClan().setSetting(setting, (int) player.getClan().getSetting(setting) == 1 ? 0 : 1);
+		toggleSetting(player, setting);
 	}
 
 	public static void viewClanmateDetails(Player player, String username, ClanMemberData member) {
@@ -501,72 +438,49 @@ public class ClansManager {
 		player.getPackets().sendVarcString(347, username);
 		player.getPackets().sendRunScriptBlank(4319);
 	}
-	
+
+	/**
+	 * The rank and job picked in the clanmate panel, as one UpdateMember. Everything the legacy
+	 * code checked by hand - who may edit whom, which ranks may be assigned, the owner needing a
+	 * deputy before stepping down, and handing the clan over when they do - is now the lobby's
+	 * (and {@code ClanRules}') job, so this only says what changed.
+	 */
 	private static void saveClanmateDetails(Player player) {
+		Clan clan = player.getClan();
+		if (clan == null)
+			return;
+		String editingUser = player.getTempAttribs().getO("editClanMate");
+		if (editingUser == null) {
+			player.sendMessage("Please select a clanmate to edit.");
+			return;
+		}
 		int jobId = player.getTempAttribs().getI("editClanMateJob", -1);
 		int rankId = player.getTempAttribs().getI("editClanMateRank", -1);
-		String editingUser = player.getTempAttribs().getO("editClanMate");
-		ClanRank currRank = player.getClan().getRank(editingUser);
-		ClanRank newRank = ClanRank.Companion.fromIconId(rankId);
-		ClanRank playerRank = player.getClan().getRank(player.getUsername());
-		if (!player.getClan().hasPermissions(player.getUsername(), ClanRank.ADMIN)) {
-			player.sendMessage("Only clan admins can edit ranks and jobs.");
+		ClanRank newRank = rankId == -1 ? null : ClanRank.Companion.fromIconId(rankId);
+		Integer newJob = jobId != -1 && EnumDefinitions.getEnum(3720).getStringValue(jobId) != null ? jobId : null;
+		if (newRank == null && newJob == null)
 			return;
-		}
-		if (newRank == ClanRank.NONE || newRank == ClanRank.OWNER)
-			return;
-		if (newRank != currRank) {
-			if (currRank.ordinal() >= playerRank.ordinal()) {
-				player.sendMessage("You can only edit the rank of players with lesser rank than you.");
-				return;
-			}
-			if (newRank.ordinal() > playerRank.ordinal()) {
-				player.sendMessage("You cannot promote someone to a rank higher than your own.");
-				return;
-			}
-		}
-		if (currRank == ClanRank.OWNER && newRank != ClanRank.OWNER) {
-			String deputyOwner = null;
-			for (String memberName : player.getClan().getMembers().keySet()) {
-				if (player.getClan().getMembers().get(memberName).getRank() == ClanRank.DEPUTY_OWNER) {
-					deputyOwner = memberName;
-					break;
-				}
-			}
-			if (deputyOwner == null) {
-				if (player != null)
-					player.sendMessage("You are currently the clan owner, you must at least have one deputy owner in the clan to demote yourself.");
-				return;
-			}
-			player.getClan().setLeaderUsername(deputyOwner);
-			player.getClan().getMembers().get(deputyOwner).setRank(ClanRank.OWNER);
-		}
-		player.getClan().getMembers().get(editingUser).setRank(newRank);
-		if (jobId != -1 && EnumDefinitions.getEnum(3720).getStringValue(jobId) != null)
-			player.getClan().getMembers().get(editingUser).setJob(jobId);
-		syncClanToLobby(player.getClan());
+		ClanRegistry.send(player, new ClanAction.UpdateMember(editingUser, newRank, newJob, null, null, null));
 	}
 
 	private static void kick(Player player) {
 		String editingUser = player.getTempAttribs().getO("editClanMate");
+		if (editingUser == null) {
+			player.sendMessage("Please select a clanmate to kick.");
+			return;
+		}
 		player.sendOptionDialogue("Are you sure you would like to kick this player from the clan?", ops -> {
-			ops.add("Yes, I am sure I want to kick them.", () -> {
-				WorldServer.INSTANCE.forwardClanKickMember(player.getUsername(), editingUser);
-			});
+			ops.add("Yes, I am sure I want to kick them.", () -> ClanRegistry.send(player, new ClanAction.RemoveMember(editingUser)));
 			ops.add("Nevermind");
 		});
 	}
-	
+
 	private static void banPlayer(Player player, String name) {
-		if (player.getClan() == null)
-			return;
-		WorldServer.INSTANCE.forwardClanBanMember(player.getUsername(), Utils.formatPlayerNameForProtocol(name));
+		ClanRegistry.send(player, new ClanAction.Ban(Utils.formatPlayerNameForProtocol(name)));
 	}
 
-	private static void unban(Player player, String displayName) {
-		if (player.getClan() == null)
-			return;
-		WorldServer.INSTANCE.forwardClanUnbanMember(player.getUsername(), Utils.formatPlayerNameForProtocol(displayName));
+	private static void unban(Player player, String name) {
+		ClanRegistry.send(player, new ClanAction.Unban(Utils.formatPlayerNameForProtocol(name)));
 	}
 
 	private static void unban(Player player, int slotId) {
@@ -574,16 +488,16 @@ public class ClansManager {
 		if (clan == null)
 			return;
 		// The ban list interface shows bannedUsers in the order the settings packet sent them.
-		List<String> banned = new ArrayList<>(clan.getBannedUsers());
+		List<String> banned = ClanRegistry.orderedBans(clan);
 		if (slotId < 0 || slotId >= banned.size())
 			return;
-		WorldServer.INSTANCE.forwardClanUnbanMember(player.getUsername(), banned.get(slotId));
+		ClanRegistry.send(player, new ClanAction.Unban(banned.get(slotId)));
 	}
 
 	public static void unlockBanList(Player player) {
 		player.getPackets().setIFRightClickOps(1110, 11, 0, 100, 0);
 	}
-	
+
 	private static void joinChannel(Player player, String guestClanName) {
 		if (guestClanName == null && player.getSocial().getClanName() == null) {
 			createClan(player);
@@ -593,11 +507,12 @@ public class ClansManager {
 			player.sendMessage("Please wait...");
 			return;
 		}
+		ClanAction action = guestClanName == null
+				? ClanAction.JoinChannel.INSTANCE
+				: new ClanAction.JoinGuestChannel(guestClanName.trim());
 		player.getTempAttribs().setB("ccJoinLock", true);
-		if (guestClanName != null) {
-			WorldServer.INSTANCE.forwardClanGuestJoin(player.getUsername(), guestClanName);
-		}
-		player.getTempAttribs().removeB("ccJoinLock");
+		if (!ClanRegistry.send(player, action, result -> player.getTempAttribs().removeB("ccJoinLock")))
+			player.getTempAttribs().removeB("ccJoinLock");
 	}
 
 	private static void createClan(Player player) {
@@ -611,11 +526,10 @@ public class ClansManager {
 			player.sendMessage("Please wait...");
 			return;
 		}
+		ClanAction action = guest ? ClanAction.LeaveGuestChannel.INSTANCE : ClanAction.LeaveChannel.INSTANCE;
 		player.getTempAttribs().setB("ccLeaveLock", true);
-		if (guest) {
-			WorldServer.INSTANCE.forwardClanGuestLeave(player.getUsername());
-		}
-		player.getTempAttribs().removeB("ccLeaveLock");
+		if (!ClanRegistry.send(player, action, result -> player.getTempAttribs().removeB("ccLeaveLock")))
+			player.getTempAttribs().removeB("ccLeaveLock");
 	}
 
 	private static void leaveClan(Player player) {
@@ -630,7 +544,9 @@ public class ClansManager {
 		player.sendOptionDialogue("Are you sure you want to leave your clan?", conf1 -> {
 			conf1.add("I am sure I want to leave the clan.").addOptions("Are you ABSOLUTELY sure you want to leave?", conf2 -> {
 				conf2.add("Yes, I am absolutely sure I want to leave my clan.", () -> {
-					WorldServer.INSTANCE.forwardClanLeave(player.getUsername());
+					player.getTempAttribs().setB("ccLeaveLock", true);
+					if (!ClanRegistry.send(player, ClanAction.Leave.INSTANCE, result -> player.getTempAttribs().removeB("ccLeaveLock")))
+						player.getTempAttribs().removeB("ccLeaveLock");
 				});
 				conf2.add("No, I've changed my mind.");
 			});
@@ -643,9 +559,9 @@ public class ClansManager {
 			player.sendMessage("You must be in a clan to do that.");
 			return;
 		}
+		// Every setting button sends its own UpdateSettings, so there is nothing left to save on
+		// close the way the legacy batch sync did.
 		player.getInterfaceManager().sendInterface(1096);
-		if (player.getClan().hasPermissions(player.getUsername(), ClanRank.ADMIN))
-			player.setCloseInterfacesEvent(() -> syncClanToLobby(player.getClan(), () -> player.sendMessage("Saved clan details successfully.")));
 		showClanSettingsClanMates(player);
 		selectPermissionTab(player, 1);
 		player.getPackets().setIFRightClickOps(1096, 240, 0, 144, 0); // unlocks timezone setting
@@ -657,7 +573,7 @@ public class ClansManager {
 		player.getPackets().setIFRightClickOps(1096, 222, 0, 4, 0); // unlocks signpost permissions
 		player.getPackets().setIFRightClickOps(1096, 207, 0, 3, 0); // unlocks guest access to citadel settings
 	}
-	
+
 	private static void selectPermissionRank(Player player, ClanRank rank) {
 		Clan clan = player.getClan();
 		if (clan == null || rank == null)
@@ -668,7 +584,7 @@ public class ClansManager {
 		for (ClanPermission perm : ClanPermission.values())
 			player.getPackets().sendVarc(perm.getVarc(), perm.hasPermission(clan, rank) ? 1 : 0);
 	}
-	
+
 	private static void selectPermissionTab(Player player, int tab) {
 		player.getPackets().sendRunScript(5136, tab);
 		player.getPackets().setIFHidden(1096, 26, true);
@@ -692,24 +608,25 @@ public class ClansManager {
 		player.getPackets().setIFHidden(1096, 85, false);
 		player.getPackets().setIFHidden(1096, 385, false);
 	}
-	
+
 	public static void openClanInvite(Player player, Player inviter, Clan clan) {
-		if (clan == null || clan.getUpdateBlock() == null) {
-			player.sendMessage("Error loading clan update block.");
+		if (clan == null) {
+			player.sendMessage("Error loading clan details.");
 			return;
 		}
-		player.getSession().queuePacket(new ClanSettingsFullRaw(false, clan.getUpdateBlock()));
+		// The invite panel only reads the clan, so it gets the guest form of the settings block.
+		player.getSession().queuePacket(ClanRegistry.settingsFull(clan, false));
 		player.getInterfaceManager().sendInterface(1095);
 		player.getTempAttribs().setO("clanInviter", inviter);
 		player.setCloseInterfacesEvent(() -> player.getTempAttribs().removeO("clanInviter"));
 	}
-	
+
 	public static void openClanDetails(Player player, Player vexPlanter, Clan clan) {
-		if (clan == null || clan.getUpdateBlock() == null) {
-			player.sendMessage("Error loading clan update block.");
+		if (clan == null) {
+			player.sendMessage("Error loading clan details.");
 			return;
 		}
-		player.getSession().queuePacket(new ClanSettingsFullRaw(false, clan.getUpdateBlock()));
+		player.getSession().queuePacket(ClanRegistry.settingsFull(clan, false));
 		player.getInterfaceManager().sendInterface(1107);
 		if (vexPlanter != null) {
 			player.getPackets().setIFText(1107, 92, vexPlanter.getDisplayName());
@@ -718,7 +635,7 @@ public class ClansManager {
 			//player.getPackets().sendRunScript(4422);
 		player.getPackets().sendRunScript(4413);
 	}
-	
+
 	public static void openNationalFlagInterface(Player player) {
 		if (player.getClan() == null)
 			return;
@@ -731,7 +648,7 @@ public class ClansManager {
 		player.getPackets().setIFRightClickOps(1089, 30, 0, 241, 0);
 		player.setCloseInterfacesEvent(() -> openSettings(player));
 	}
-	
+
 	public static void openKeywordEditor(Player player) {
 		if (player.getClan() == null)
 			return;
@@ -743,11 +660,22 @@ public class ClansManager {
 		player.getTempAttribs().removeI("keywordTempVal");
 		player.getVars().setVar(Varp.clan_keyword_temp_cat_varp, 0);
 		for (int var : KEYWORD_INDICES.inverse().keySet())
-			player.getVars().setVarBit(var, (int) player.getClan().getSetting(KEYWORD_INDICES.inverse().get(var)));
+			player.getVars().setVarBit(var, ((Number) player.getClan().getSetting(KEYWORD_INDICES.inverse().get(var))).intValue());
 		player.getInterfaceManager().sendInterface(1097);
 		player.getPackets().setIFRightClickOps(1097, 193, 0, 100, 0);
 		player.getPackets().setIFRightClickOps(1097, 207, 0, 100, 0);
 		player.setCloseInterfacesEvent(() -> openSettings(player));
+	}
+
+	/** The ten keyword pairs the editor built up in varbits, as one UpdateSettings. */
+	private static void saveKeywords(Player player) {
+		Clan clan = player.getClan();
+		if (clan == null)
+			return;
+		Map<String, Object> settings = new LinkedHashMap<>();
+		for (ClanSetting setting : KEYWORD_INDICES.keySet())
+			settings.put(setting.name(), player.getVars().getVarBit(KEYWORD_INDICES.get(setting)));
+		ClanRegistry.send(player, new ClanAction.UpdateSettings(settings));
 	}
 
 	public static void openForumThreadInterface(Player player) {
@@ -758,18 +686,17 @@ public class ClansManager {
 		player.getInterfaceManager().sendChatBoxInterface(1100);
 		player.sendInputForumQFC(qfc -> {
 			player.getInterfaceManager().closeChatBoxInterface();
-			long val = -1;
+			long val;
 			try {
 				val = Long.valueOf(qfc, 36);
 			} catch(NumberFormatException e) {
 				player.sendMessage("Please enter a valid formatted code.");
 				return;
 			}
-			if (setClanSetting(player, ClanSetting.FORUM_QFC, val))
-				syncClanToLobby(player.getClan(), () -> {});
+			updateSetting(player, ClanSetting.FORUM_QFC, val);
 		});
 	}
-	
+
 	public static void openClanMottoInterface(Player player) {
 		Clan clan = player.getClan();
 		if (clan == null)
@@ -777,34 +704,36 @@ public class ClansManager {
 		if (!clan.hasPermissions(player.getUsername(), ClanRank.ADMIN))
 			return;
 		player.stopAll();
-		player.sendInputLongText("Please enter your desired clan motto:", motto -> {
-			if (setClanSetting(player, ClanSetting.MOTTO, motto))
-				syncClanToLobby(player.getClan(), () -> {});
-		});
+		player.sendInputLongText("Please enter your desired clan motto:", motto -> updateSetting(player, ClanSetting.MOTTO, motto));
 	}
 
 	public static void openClanMotifInterface(Player player) {
+		Clan clan = player.getClan();
+		if (clan == null)
+			return;
 		player.stopAll();
 		player.getInterfaceManager().sendInterface(1105);
 		player.getPackets().sendRunScript(4400, 72417446);
 		player.getPackets().setIFRightClickOps(1105, 66, 0, 116, 0); // top
 		player.getPackets().setIFRightClickOps(1105, 63, 0, 116, 0); // button
-		player.getVars().setVarBit(Varbit.clan_custom_motif_a_varp, player.getClan().getMotifTopIcon());
-		player.getVars().setVarBit(Varbit.clan_custom_motif_b_varp, player.getClan().getMotifBottomIcon());
-		for (int i = 0; i < player.getClan().getMotifColors().length; i++)
-			player.getVars().setVar(2094 + i, player.getClan().getMotifColors()[i]);
+		player.getVars().setVarBit(Varbit.clan_custom_motif_a_varp, motifValue(player, clan, 0));
+		player.getVars().setVarBit(Varbit.clan_custom_motif_b_varp, motifValue(player, clan, 1));
+		for (int i = 0; i < 4; i++)
+			player.getVars().setVar(2094 + i, motifValue(player, clan, MOTIF_FIRST_COLOR + i));
 		player.setCloseInterfacesEvent(() -> openSettings(player));
 	}
 
 	public static void openSetMotifColor(Player player, int part) {
+		Clan clan = player.getClan();
+		if (clan == null)
+			return;
 		player.getInterfaceManager().sendInterface(1106);
 		player.sendInputHSL(color -> {
-			player.getClan().setMotifColor(part, color);
-			syncClanToLobby(player.getClan(), () -> player.sendMessage("Saved clan details successfully."));
+			player.getTempAttribs().setI(motifKey(MOTIF_FIRST_COLOR + part), color);
 			openClanMotifInterface(player);
 		});
 	}
-	
+
 	public static void setClanMotifTextureInterface(Player player, boolean top, int slot) {
 		if (slot > 116)
 			return;
@@ -812,35 +741,75 @@ public class ClansManager {
 	}
 
 	public static void setClanMotifTexture(Player player, boolean top, int slot) {
-		if (!player.getClan().hasPermissions(player.getUsername(), ClanRank.ADMIN))
+		Clan clan = player.getClan();
+		if (clan == null || !clan.hasPermissions(player.getUsername(), ClanRank.ADMIN))
 			return;
-		if (top)
-			setClanSetting(player, ClanSetting.MOTIF_TOP_ICON, slot+1);
-		else
-			setClanSetting(player, ClanSetting.MOTIF_BOTTOM_ICON, slot+1);
-		player.getVars().setVarBit(Varbit.clan_custom_motif_a_varp, player.getClan().getMotifTopIcon());
-		player.getVars().setVarBit(Varbit.clan_custom_motif_b_varp, player.getClan().getMotifBottomIcon());
+		player.getTempAttribs().setI(motifKey(top ? 0 : 1), slot + 1);
+		player.getVars().setVarBit(Varbit.clan_custom_motif_a_varp, motifValue(player, clan, 0));
+		player.getVars().setVarBit(Varbit.clan_custom_motif_b_varp, motifValue(player, clan, 1));
 	}
-	
-	public static void setVar(Clan clan, int id, Object value) {
-		clan.setVar(id, value);
-		syncClanToLobby(clan, () -> {});
+
+	/** Everything the motif editor changed, in one UpdateSettings; nothing changed sends nothing. */
+	private static void saveMotif(Player player) {
+		Clan clan = player.getClan();
+		if (clan == null)
+			return;
+		Map<String, Object> settings = new LinkedHashMap<>();
+		for (int i = 0; i < MOTIF_SETTINGS.length; i++) {
+			int pending = player.getTempAttribs().removeI(motifKey(i), -1);
+			if (pending == -1)
+				continue;
+			if (((Number) clan.getSetting(MOTIF_SETTINGS[i])).intValue() == pending)
+				continue;
+			settings.put(MOTIF_SETTINGS[i].name(), pending);
+		}
+		if (settings.isEmpty())
+			return;
+		ClanRegistry.send(player, new ClanAction.UpdateSettings(settings));
 	}
-	
-	public static void setVar(Clan clan, ClanVar var, Object value) {
-		clan.setVar(var, value);
-		syncClanToLobby(clan, () -> {});
+
+	private static String motifKey(int index) {
+		return "clanMotif" + index;
 	}
-	
-	public static boolean setClanSetting(Player player, ClanSetting setting, Object value) {
-		if (!canEditSettings(player))
-			return false;
-		if (player.getClan().getSetting(setting) == value)
-			return false;
-		player.getClan().setSetting(setting, value);
-		return true;
+
+	private static int motifValue(Player player, Clan clan, int index) {
+		int pending = player.getTempAttribs().getI(motifKey(index), -1);
+		if (pending != -1)
+			return pending;
+		return ((Number) clan.getSetting(MOTIF_SETTINGS[index])).intValue();
 	}
-	
+
+	private static void setChannelRank(Player player, boolean talk) {
+		ClanRank rank = player.getTempAttribs().getO("permissionRankEditing");
+		if (rank == null) {
+			player.sendMessage("Please select a rank before setting the " + (talk ? "chat" : "kick") + " ranking.");
+			return;
+		}
+		ClanRegistry.send(player, new ClanAction.SetChannelRanks(talk ? rank : null, talk ? null : rank));
+	}
+
+	/** Flips a 0/1 clan setting. */
+	private static void toggleSetting(Player player, ClanSetting setting) {
+		Clan clan = player.getClan();
+		if (clan == null) {
+			player.sendMessage("Error getting clan info to edit.");
+			return;
+		}
+		updateSetting(player, setting, ((Number) clan.getSetting(setting)).intValue() == 1 ? 0 : 1);
+	}
+
+	/** Asks the lobby to change one setting, unless it already holds that value. */
+	private static void updateSetting(Player player, ClanSetting setting, Object value) {
+		Clan clan = player.getClan();
+		if (clan == null) {
+			player.sendMessage("Error getting clan info to edit.");
+			return;
+		}
+		if (clan.getSetting(setting).equals(value))
+			return;
+		ClanRegistry.send(player, new ClanAction.UpdateSettings(Map.of(setting.name(), value)));
+	}
+
 	public static boolean canEditSettings(Player player) {
 		if (player.getClan() == null) {
 			player.sendMessage("Error getting clan info to edit.");
@@ -852,16 +821,16 @@ public class ClansManager {
 		}
 		return true;
 	}
-	
+
 	public static int[] generateColorGradient(Clan clan, int length, boolean hasTextures) {
-		RSColor primary = RSColor.fromHSL((int) clan.getSetting(ClanSetting.MOTIF_PRIMARY_COLOR));
-		RSColor secondary = RSColor.fromHSL((int) clan.getSetting(ClanSetting.MOTIF_SECONDARY_COLOR));
-		
+		RSColor primary = RSColor.fromHSL(((Number) clan.getSetting(ClanSetting.MOTIF_PRIMARY_COLOR)).intValue());
+		RSColor secondary = RSColor.fromHSL(((Number) clan.getSetting(ClanSetting.MOTIF_SECONDARY_COLOR)).intValue());
+
 		int[] colors = new int[length];
-		
+
 		if (hasTextures) {
-			colors[0] = (int) clan.getSetting(ClanSetting.MOTIF_TOP_COLOR);
-			colors[1] = (int) clan.getSetting(ClanSetting.MOTIF_BOTTOM_COLOR);
+			colors[0] = ((Number) clan.getSetting(ClanSetting.MOTIF_TOP_COLOR)).intValue();
+			colors[1] = ((Number) clan.getSetting(ClanSetting.MOTIF_BOTTOM_COLOR)).intValue();
 		}
 		int offset = hasTextures ? 2 : 0;
 		int luminanceAdjustor = 40 / (colors.length - offset);
@@ -878,7 +847,7 @@ public class ClansManager {
 		}
 		return colors;
 	}
-	
+
 	public static void clanifyObject(Clan clan, GameObject object) {
 		if (object.getDefinitions().getModifiedColours() == null)
 			return;
@@ -889,7 +858,7 @@ public class ClansManager {
 			modifier.addTextures(clan.getMotifTextures());
 		object.refresh();
 	}
-	
+
 	public static NPCBodyMeshModifier clanifyNPC(Clan clan, NPC npc) {
 		if (KtExtensionsKt.getModifiedColors(npc.getDefinitions()) == null)
 			return null;
