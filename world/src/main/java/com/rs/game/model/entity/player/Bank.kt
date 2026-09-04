@@ -822,8 +822,8 @@ class Bank {
             when (e.component) {
                 Component.interface_762.component_762_15 -> bank.switchInsertItems()
                 Component.interface_762.component_762_19 -> bank.switchWithdrawNotes()
-                Component.interface_762.component_762_124 -> bank.togglePlaceholders()
-                Component.interface_762.component_762_126 -> bank.promptReleaseAllPlaceholders()
+                Component.interface_762.placeholder_toggle_button -> bank.togglePlaceholders()
+                Component.interface_762.placeholder_release_button -> bank.promptReleaseAllPlaceholders()
                 Component.interface_762.component_762_33 -> bank.depositAllInventory(true)
                 Component.interface_762.component_762_35 -> bank.depositPouchCoins()
                 Component.interface_762.component_762_37 -> bank.depositAllEquipment(true)

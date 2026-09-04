@@ -44,8 +44,8 @@ class BankPlaceholderTest {
         const val FILLER_BASE = 30000
         const val XP_99 = 13_034_431.0
         val BANK_SLOTS = Component.interface_762.component_762_95
-        val TOGGLE_BUTTON = Component.interface_762.component_762_124
-        val RELEASE_ALL_BUTTON = Component.interface_762.component_762_126
+        val TOGGLE_BUTTON = Component.interface_762.placeholder_toggle_button
+        val RELEASE_ALL_BUTTON = Component.interface_762.placeholder_release_button
     }
 
     private val loggedIn = mutableListOf<HarnessPlayer>()

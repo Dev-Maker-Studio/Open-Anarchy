@@ -45,6 +45,16 @@ TypeScript the same applies (`Component.interface_762.component_762_19`, `varbit
 `Graphic.x`). Use canonical Jagex vocabulary for anything you name: `obj`, `loc`, `npc`, `inv`,
 `varp`, `varbit`, `varc`, `component`, `graphic`, `seq`, `spotanim`, `coord`, `stat`.
 
+**An asset we author gets a real name, never a placeholder.** A placeholder (`component_762_124`,
+`varbit_11713`, `cs2_6567`) means "nobody has proven what this is"; for a component, varbit,
+clientscript, obj or loc we add ourselves, we know exactly what it is, so its catalog entry is
+named for its purpose in the convention of the identified names around it - `[proc,bank_placeholder_button]`,
+`bank_placeholders`, `interface_762:placeholder_toggle_button` (a component is
+`<interface>:<component>`; the interface half stays `interface_762` while the interface itself is
+unproven). Look at how identified names for the same kind of thing are spelled (`close_button`,
+`quit_button_text`, `deaths_icon`, `bank_cert_button`) and follow them. Bump `coverage.named`, not
+`coverage.placeholder`.
+
 ## 5. Varbits, when the client needs to own the state
 
 A varbit is the right tool for **new content whose state the client interface must read for
