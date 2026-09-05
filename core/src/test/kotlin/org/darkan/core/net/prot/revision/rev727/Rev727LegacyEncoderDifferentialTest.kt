@@ -112,6 +112,7 @@ import org.darkan.core.model.RegionSize
 import org.darkan.core.net.prot.Codec
 import org.darkan.core.net.prot.ServerProt
 import org.darkan.core.net.prot.ZonePacketEncoder
+import org.darkan.core.net.prot.dto.CheckEmailReplyOpcode
 import org.darkan.core.net.prot.dto.CreateAccountReplyOpcode
 import org.darkan.core.net.prot.dto.GrandExchangeOffer
 import org.darkan.core.net.prot.dto.IgnoreEntry
@@ -299,13 +300,17 @@ class Rev727LegacyEncoderDifferentialTest {
     // --- Account, session and stats ------------------------------------------------------------
 
     private fun CaseBuilder.accountCases() {
-        case("CREATE_CHECK_EMAIL_REPLY", LegacyCheckEmailResponse(7), CreateCheckEmailReply(7))
-        // Both sides just write the numeric code; the two enums label the codes differently, so
-        // the case pins the number the client sees rather than the name either stack gives it.
+        // Legacy takes the raw code the client switches on; the modern packets name it, so each
+        // case pairs the enum with its value to pin the byte the client sees.
+        case(
+            "CREATE_CHECK_EMAIL_REPLY",
+            LegacyCheckEmailResponse(CheckEmailReplyOpcode.EMAIL_ALREADY_IN_USE.value),
+            CreateCheckEmailReply(CheckEmailReplyOpcode.EMAIL_ALREADY_IN_USE),
+        )
         case(
             "CREATE_ACCOUNT_REPLY",
-            LegacyCreateAccountResponse(CreateAccountReplyOpcode.UNKNOWN_ERROR.value),
-            CreateAccountReply(CreateAccountReplyOpcode.UNKNOWN_ERROR),
+            LegacyCreateAccountResponse(CreateAccountReplyOpcode.SERVER_ERROR.value),
+            CreateAccountReply(CreateAccountReplyOpcode.SERVER_ERROR),
         )
         // Legacy hard-codes the quick-chat, "members" and date-of-birth fields; the modern packet
         // takes them as parameters, so they are pinned to the legacy constants here.

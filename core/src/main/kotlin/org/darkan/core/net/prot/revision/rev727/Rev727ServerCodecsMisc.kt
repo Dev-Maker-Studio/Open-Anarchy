@@ -237,7 +237,7 @@ internal fun Codec.registerRev727MiscPackets() {
 
     // Account protocols
     serverProt<CreateCheckEmailReply>(opcode = 1, size = 1) { out ->
-        out.writeByte(responseCode)
+        out.writeByte(code.value)
     }
 
     serverProt<CreateAccountReply>(opcode = 87, size = 1) { out ->

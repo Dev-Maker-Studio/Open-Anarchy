@@ -4,9 +4,10 @@
 package org.darkan.core.net.prot.packet
 
 import org.darkan.core.net.prot.ServerProt
+import org.darkan.core.net.prot.dto.CheckEmailReplyOpcode
 import org.darkan.core.net.prot.dto.CreateAccountReplyOpcode
 
-@JvmInline value class CreateCheckEmailReply(val responseCode: Int) : ServerProt
+@JvmInline value class CreateCheckEmailReply(val code: CheckEmailReplyOpcode) : ServerProt
 
 @JvmInline value class CreateAccountReply(val code: CreateAccountReplyOpcode) : ServerProt
 
