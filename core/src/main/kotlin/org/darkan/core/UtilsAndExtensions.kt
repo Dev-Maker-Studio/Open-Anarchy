@@ -29,8 +29,18 @@ val EMAIL_REGEX = Regex("[A-Za-z0-9._-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", RegexOp
 fun String.isValidEmail() = matches(EMAIL_REGEX)
 val USERNAME_REGEX = Regex("^[a-zA-Z0-9][a-zA-Z0-9_]{0,10}[a-zA-Z0-9]$")
 fun String.isValidAccountName() = this.length in 1..12 && !this.contains("__") && matches(USERNAME_REGEX)
-val PASSWORD_REGEX = Regex("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$")
+const val PASSWORD_MIN_LENGTH = 8
+val PASSWORD_REGEX = Regex("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{$PASSWORD_MIN_LENGTH,}$")
 fun String.isValidPassword() = matches(PASSWORD_REGEX)
+
+enum class PasswordProblem { TOO_SHORT, NOT_ALPHANUMERIC, TOO_EASY }
+
+fun String.passwordProblem(): PasswordProblem? = when {
+    isValidPassword() -> null
+    length < PASSWORD_MIN_LENGTH -> PasswordProblem.TOO_SHORT
+    !all { it in 'A'..'Z' || it in 'a'..'z' || it in '0'..'9' } -> PasswordProblem.NOT_ALPHANUMERIC
+    else -> PasswordProblem.TOO_EASY
+}
 
 fun String.formatPlayerNameForDisplay(): String {
     return this.replace("_", " ")
