@@ -26,8 +26,15 @@ id, real names for what we author, no comments, no attribution.
 4. Commit in `cache-source` (branch `dev`), push, bump the submodule pointer in the server commit.
    The dev lobby and bleeding-edge world rebuild the cache from the tree on their next restart and
    log `cache build: clientscripts: n archives repacked`.
-5. The only real test is the client. Ask for a client check of anything you cannot decompile-verify:
-   layout, hover, tooltips, timing.
+5. The only real test is the client. Screenshot it yourself with `client-shot.sh` beside this skill:
+   it runs `~/darkan/darkan-bot/build/libs/darkan-client-shaded-*-all.jar` on a private Xvfb (GLX
+   off, or Auto Setup chooses OpenGL and captures are black), with a scratch client home, against
+   any lobby - a local one from the remote-built `lobby-server.jar` with `CACHE_SOURCE_PATH` in
+   `.env` serves the tree you just edited (restart it after every edit; it repacks incrementally),
+   and the dev lobby after its restart shows what players get. A fresh client home starts on the
+   first-run graphics popup: `INPUT="mousemove 386 320 mousedown 1 sleep 0.3 mouseup 1"` clicks
+   Auto Setup and the login screen follows. Ask for a client check only for what a screenshot cannot
+   show: hover, tooltips, timing.
 
 Gradle never runs on the desktop (remote build host, one build at a time); the local tools install
 and `jshell` are fine.
@@ -82,7 +89,20 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
 - **World list flags**: bit 0 members, 1 quickchat, 2 bots allowed (Jagex's PvP bit; the client
   never drew it and its PvP login warning keys off bit 10), 3 lootshare, 4 highlight.
 
+- **Components can be re-typed in place.** Every `interfaces/<iface>/<n>.json` carries the full
+  field superset, so turning a rect (type 3) into a graphic (type 5) or a text (4) is `type` plus the
+  fields the new type reads; copy them from a sibling of that type. Repurposing dead components this
+  way (the login screen's Facebook block became the Create Account button) leaves no gaps in the
+  archive and nothing hidden.
+
 ## 4. Patterns worth copying
+
+- **Login screen (interface 596, layer 4, 266x305)**: title 35 y11, username 38/39 y41-86, password
+  40/41 y87-132, separators 42/43 y142, Log In 44 y149 (180x26: caps 54/56 graphic 8701 flipped,
+  middle 55 graphic 8699 stretched, shadow text 57 colour 8082707 at (1,-2), text 58 at (0,-3), font
+  4040; hover swaps 8701/8699 for 8702/8700 through `loginscreen_button_highlight`), Recover link
+  45/53 y178, separators 46/47 y198, Create Account caption 52 y218 and button 59 y246 (parts 49/50/51,
+  texts 48/60, click `login_register`). Layout is static: no script repositions these.
 
 - **Var-driven interface state**: `onLoadScript` + `onVarpTransmit` (`varps: [parent varp]`) on the
   component, running a `[clientscript,x]` that calls `[proc,x]`; the proc reads `varbit_x` and sets
