@@ -31,7 +31,8 @@ id, real names for what we author, no comments, no attribution.
    off, or Auto Setup chooses OpenGL and captures are black), with a scratch client home, against
    any lobby - a local one from the remote-built `lobby-server.jar` with `CACHE_SOURCE_PATH` in
    `.env` serves the tree you just edited (restart it after every edit; it repacks incrementally),
-   and the dev lobby after its restart shows what players get. A fresh client home starts on the
+   and the dev lobby after its restart shows what players get (`10.69.69.22 43593` from the LAN; the
+   `dev.darkan.org` proxy refuses that port from here). A fresh client home starts on the
    first-run graphics popup: `INPUT="mousemove 386 320 mousedown 1 sleep 0.3 mouseup 1"` clicks
    Auto Setup and the login screen follows. Ask for a client check only for what a screenshot cannot
    show: hover, tooltips, timing.
