@@ -40,7 +40,7 @@ object Gameval : GamevalCatalog(File(EnvVars.gamevalPath)) {
     const val QUEST = "quest"
     const val MODEL = "model"
 
-    /** Jagex `type graphic` = 2D sprites; not spotanim. */
+    /** Jagex `type graphic` = 2D images; not spotanim. */
     const val GRAPHIC = "graphic"
     const val SOUND = "sound"
     const val MIDI = "midi"

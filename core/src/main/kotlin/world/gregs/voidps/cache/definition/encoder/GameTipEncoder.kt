@@ -72,15 +72,15 @@ class GameTipEncoder : DefinitionEncoder<GameTipDefinition> {
                 writeInt(element.field("fillColour", element.fillColour))
                 writeInt(element.field("outlineColour", element.outlineColour))
             }
-            SPRITE_LOADING_BAR -> {
+            GRAPHIC_LOADING_BAR -> {
                 writeAnchored(element, ids)
                 writeInt(element.field("fillColour", element.fillColour))
                 writeInt(element.field("backgroundColour", element.backgroundColour))
-                ids.write(element.field("spriteFileId", element.spriteFileId))
+                ids.write(element.field("graphicFileId", element.graphicFileId))
             }
-            MULTI_SPRITE_LOADING_BAR -> {
+            MULTI_GRAPHIC_LOADING_BAR -> {
                 writeAnchored(element, ids)
-                writeBarSprites(element, ids)
+                writeBarGraphics(element, ids)
             }
             OUTLINED -> {
                 writeByte(element.field("newsItemId", element.newsItemId))
@@ -95,9 +95,9 @@ class GameTipEncoder : DefinitionEncoder<GameTipDefinition> {
                 writeInt(element.field("backgroundColour", element.backgroundColour))
                 writeByte(element.field("drawOutline", element.drawOutline))
             }
-            SPRITE -> writeSprite(element, ids)
-            ROTATED_SPRITE -> {
-                writeSprite(element, ids)
+            GRAPHIC -> writeGraphic(element, ids)
+            ROTATED_GRAPHIC -> {
+                writeGraphic(element, ids)
                 writeShort(element.field("angle", element.angle))
             }
             ANCHORED_TEXT -> {
@@ -115,10 +115,10 @@ class GameTipEncoder : DefinitionEncoder<GameTipDefinition> {
                 writeInt(element.field("textColour", element.textColour))
                 writeInt(element.field("textShadowColour", element.textShadowColour))
             }
-            TIPS_SPRITE -> ids.write(element.field("spriteFileId", element.spriteFileId))
+            TIPS_GRAPHIC -> ids.write(element.field("graphicFileId", element.graphicFileId))
             ANIMATED_LOADING_BAR -> {
                 writeAnchored(element, ids)
-                writeBarSprites(element, ids)
+                writeBarGraphics(element, ids)
                 writeShort(element.field("scrollSpeed", element.scrollSpeed))
             }
             else -> throw IllegalArgumentException("Unknown game tip element type ${element.type}.")
@@ -137,17 +137,17 @@ class GameTipEncoder : DefinitionEncoder<GameTipDefinition> {
         writeInt(element.field("textColour", element.textColour))
     }
 
-    private fun writeBarSprites(element: GameTipElementRecord, ids: BigSmarts) {
-        ids.write(element.field("fillSprite", element.fillSprite))
-        ids.write(element.field("emptySprite", element.emptySprite))
-        ids.write(element.field("leftCapSprite", element.leftCapSprite))
-        ids.write(element.field("rightCapSprite", element.rightCapSprite))
-        ids.write(element.field("topBorderSprite", element.topBorderSprite))
-        ids.write(element.field("bottomBorderSprite", element.bottomBorderSprite))
+    private fun writeBarGraphics(element: GameTipElementRecord, ids: BigSmarts) {
+        ids.write(element.field("fillGraphic", element.fillGraphic))
+        ids.write(element.field("emptyGraphic", element.emptyGraphic))
+        ids.write(element.field("leftCapGraphic", element.leftCapGraphic))
+        ids.write(element.field("rightCapGraphic", element.rightCapGraphic))
+        ids.write(element.field("topBorderGraphic", element.topBorderGraphic))
+        ids.write(element.field("bottomBorderGraphic", element.bottomBorderGraphic))
     }
 
-    private fun Writer.writeSprite(element: GameTipElementRecord, ids: BigSmarts) {
-        ids.write(element.field("spriteId", element.spriteId))
+    private fun Writer.writeGraphic(element: GameTipElementRecord, ids: BigSmarts) {
+        ids.write(element.field("graphicId", element.graphicId))
         writeByte(element.field("anchorX", element.anchorX))
         writeByte(element.field("anchorY", element.anchorY))
         writeShort(element.field("offsetX", element.offsetX))
@@ -189,13 +189,13 @@ class GameTipEncoder : DefinitionEncoder<GameTipDefinition> {
 
         const val BACKGROUND = 0
         const val COLOR_LOADING_BAR = 1
-        const val SPRITE_LOADING_BAR = 2
-        const val MULTI_SPRITE_LOADING_BAR = 3
+        const val GRAPHIC_LOADING_BAR = 2
+        const val MULTI_GRAPHIC_LOADING_BAR = 3
         const val OUTLINED = 4
-        const val SPRITE = 5
-        const val ROTATED_SPRITE = 6
+        const val GRAPHIC = 5
+        const val ROTATED_GRAPHIC = 6
         const val ANCHORED_TEXT = 7
-        const val TIPS_SPRITE = 8
+        const val TIPS_GRAPHIC = 8
         const val ANIMATED_LOADING_BAR = 9
 
         val WIDE_FLAG = 0x80000000.toInt()

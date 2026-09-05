@@ -64,7 +64,7 @@ class TemplateComponent(
  * components onto one definition.
  */
 class ComponentTemplate(
-    /** Stable id for persistence and lookup, e.g. `sprite-button`. */
+    /** Stable id for persistence and lookup, e.g. `graphic-button`. */
     val id: String,
     val name: String,
     val description: String,
@@ -89,11 +89,11 @@ class ComponentTemplate(
  * - `baseWidth` and `baseHeight` default to 0, so the component is invisible and,
  *   if it is a container, so is everything inside it.
  * - `defaultImage` and `fontId` default to -1, which draws nothing.
- * - `alpha` 0 means fully opaque and `spriteScale` 100, `lineWidth` 1 and
+ * - `alpha` 0 means fully opaque and `graphicScale` 100, `lineWidth` 1 and
  *   `defaultMediaType` 1 are all sane - but only for the type that owns them, and
  *   the encoder writes a type's block whatever the other blocks contain.
  *
- * Sprite and font ids are cache specific, so [defaultSpriteId] and
+ * Graphic and font ids are cache specific, so [defaultGraphicId] and
  * [defaultFontId] are injectable; leave them at -1 and validation will flag the
  * new component rather than the template guessing an id that does not exist.
  */
@@ -105,8 +105,8 @@ object ComponentTemplates {
     const val BASIC = "Basic"
     const val PRESET = "Presets"
 
-    /** Sprite id new sprite components start with; set from the cache by the editor. */
-    var defaultSpriteId: Int = -1
+    /** Graphic id new graphic components start with; set from the cache by the editor. */
+    var defaultGraphicId: Int = -1
 
     /** Font id new text components start with; set from the cache by the editor. */
     var defaultFontId: Int = -1
@@ -150,12 +150,12 @@ object ComponentTemplates {
                 definition.shaded = false
                 definition.alpha = 0
             }
-            ComponentType.SPRITE -> {
-                definition.baseWidth = SPRITE_SIZE
-                definition.baseHeight = SPRITE_SIZE
-                definition.defaultImage = defaultSpriteId
+            ComponentType.GRAPHIC -> {
+                definition.baseWidth = GRAPHIC_SIZE
+                definition.baseHeight = GRAPHIC_SIZE
+                definition.defaultImage = defaultGraphicId
                 definition.alpha = 0
-                // colour 0 leaves the sprite untinted; rotation is the outline width
+                // colour 0 leaves the graphic untinted; rotation is the outline width
                 // the client bakes around it, not an angle.
                 definition.colour = 0
                 definition.rotation = 0
@@ -167,7 +167,7 @@ object ComponentTemplates {
                 // Leaving the viewport at the origin with scale 100 is what makes the
                 // encoder skip the optional viewport block entirely, which is the only
                 // shape of a type 6 component that round-trips byte for byte.
-                definition.spriteScale = MODEL_SCALE
+                definition.graphicScale = MODEL_SCALE
                 definition.centreType = false
             }
             ComponentType.LINE -> {
@@ -213,8 +213,8 @@ object ComponentTemplates {
             "text", "Text", "Single line of text in a cache font.", BASIC
         ) { single(defaults(ComponentType.TEXT)) },
         ComponentTemplate(
-            "sprite", "Sprite", "One frame of a cache sprite group.", BASIC
-        ) { single(defaults(ComponentType.SPRITE)) },
+            "graphic", "Graphic", "One frame of a cache graphic group.", BASIC
+        ) { single(defaults(ComponentType.GRAPHIC)) },
         ComponentTemplate(
             "model", "Model", "Model viewport; media type 1 is a raw cache model.", BASIC
         ) { single(defaults(ComponentType.MODEL)) },
@@ -235,10 +235,10 @@ object ComponentTemplates {
             "Text centred on both axes and stretched across its parent.", PRESET
         ) { single(label()) },
         ComponentTemplate(
-            "sprite-button", "Sprite button",
-            "Sprite with a right click option and a centred caption, ready for an onClick hook.",
+            "graphic-button", "Graphic button",
+            "Graphic with a right click option and a centred caption, ready for an onClick hook.",
             PRESET,
-            ::spriteButton
+            ::graphicButton
         ),
         ComponentTemplate(
             "model-viewport", "Model viewport",
@@ -248,7 +248,7 @@ object ComponentTemplates {
         ComponentTemplate(
             "window", "Window frame",
             "Layer with a backdrop, a title bar caption and a close button; fill in the " +
-                "sprite ids from the cache.", PRESET,
+                "graphic ids from the cache.", PRESET,
             ::windowFrame
         )
     )
@@ -265,7 +265,7 @@ object ComponentTemplates {
         ComponentType.TYPE_2 -> byId("unclipped")
         ComponentType.FIGURE -> byId("rectangle")
         ComponentType.TEXT -> byId("text")
-        ComponentType.SPRITE -> byId("sprite")
+        ComponentType.GRAPHIC -> byId("graphic")
         ComponentType.MODEL -> byId("model")
         ComponentType.LINE -> byId("line")
         else -> null
@@ -274,7 +274,7 @@ object ComponentTemplates {
     /**
      * Turns an existing subtree into a reusable template, which is how a real RS
      * window frame is obtained: point this at a cache interface that already has
-     * one rather than hard coding sprite ids that differ between caches.
+     * one rather than hard coding graphic ids that differ between caches.
      *
      * The extracted components are deep copies, so the template is independent of
      * the document it came from. The subtree root is re-parented to [ATTACH].
@@ -351,16 +351,16 @@ object ComponentTemplates {
         return text
     }
 
-    private fun spriteButton(): List<TemplateComponent> {
-        val sprite = defaults(ComponentType.SPRITE)
-        sprite.baseWidth = BUTTON_WIDTH
-        sprite.baseHeight = BUTTON_HEIGHT
-        sprite.name = "Button"
-        sprite.options = arrayOf("Ok")
+    private fun graphicButton(): List<TemplateComponent> {
+        val graphic = defaults(ComponentType.GRAPHIC)
+        graphic.baseWidth = BUTTON_WIDTH
+        graphic.baseHeight = BUTTON_HEIGHT
+        graphic.name = "Button"
+        graphic.options = arrayOf("Ok")
         // The client only delivers clicks for the setting bits an interface author
         // sets; leave them at 0 here rather than guessing, and let the developer
         // author them alongside the hook.
-        sprite.setting.setting = 0
+        graphic.setting.setting = 0
         val caption = defaults(ComponentType.TEXT)
         caption.baseWidth = 0
         caption.baseHeight = 0
@@ -369,9 +369,9 @@ object ComponentTemplates {
         caption.horizontalTextAlign = 1
         caption.verticalTextAlign = 1
         caption.text = "Ok"
-        // A sprite is not a container, so a caption parented to it would never be
+        // A graphic is not a container, so a caption parented to it would never be
         // laid out. The pair goes side by side under the insertion parent instead.
-        return listOf(TemplateComponent(sprite), TemplateComponent(caption))
+        return listOf(TemplateComponent(graphic), TemplateComponent(caption))
     }
 
     private fun modelViewport(): List<TemplateComponent> {
@@ -403,7 +403,7 @@ object ComponentTemplates {
         title.baseHeight = TITLE_HEIGHT
         title.verticalSizeMode = LayoutMode.SIZE_ABSOLUTE.toByte()
         title.text = "Window"
-        val close = defaults(ComponentType.SPRITE)
+        val close = defaults(ComponentType.GRAPHIC)
         close.baseWidth = CLOSE_SIZE
         close.baseHeight = CLOSE_SIZE
         close.basePositionX = CLOSE_INSET
@@ -422,7 +422,7 @@ object ComponentTemplates {
 
     private const val DEFAULT_SIZE = 100
     private const val TEXT_HEIGHT = 16
-    private const val SPRITE_SIZE = 32
+    private const val GRAPHIC_SIZE = 32
     private const val MODEL_SCALE = 100
     private const val SCROLL_WIDTH = 160
     private const val SCROLL_HEIGHT = 200

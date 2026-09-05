@@ -2,11 +2,11 @@ package org.darkan.tools.rsinterface
 
 import org.darkan.tools.engine.render.Canvas2D
 import world.gregs.voidps.cache.definition.data.FontDefinition
-import world.gregs.voidps.cache.definition.data.IndexedSprite
+import world.gregs.voidps.cache.definition.data.IndexedGraphic
 
 /**
  * A cache font: the metrics from index 13 plus a glyph atlas built from the
- * matching sprite group in index 8.
+ * matching graphic group in index 8.
  *
  * The atlas is a 16x16 grid of equally sized cells holding all 256 cp1252
  * glyphs. Interface fonts are "plain" in client terms, meaning the glyph bitmap
@@ -114,7 +114,7 @@ class RsFont(
     /**
      * Draws a single already-wrapped line. The pen advances by the metric glyph
      * width plus the kerning pair adjustment, while the glyph bitmap itself is
-     * placed at the pen plus the sprite's own trim offsets. The blit row is
+     * placed at the pen plus the graphic's own trim offsets. The blit row is
      * measured up from the line's baseline by the font's vertical spacing,
      * matching the client's `renderLine`.
      */
@@ -274,20 +274,20 @@ class RsFont(
         /**
          * Builds the glyph atlas for a decoded font.
          *
-         * Coverage comes from the sprite's alpha plane when it has one, and from
+         * Coverage comes from the graphic's alpha plane when it has one, and from
          * the palette index otherwise (index 0 transparent, anything else solid).
          * The palette itself is discarded: interface fonts are masks, tinted by
          * the component colour at draw time.
          */
-        fun buildAtlas(id: Int, definition: FontDefinition, sprites: Array<IndexedSprite>): RsFont? {
+        fun buildAtlas(id: Int, definition: FontDefinition, graphics: Array<IndexedGraphic>): RsFont? {
             var cellWidth = 1
             var cellHeight = 1
-            for (sprite in sprites) {
-                cellWidth = maxOf(cellWidth, sprite.width)
-                cellHeight = maxOf(cellHeight, sprite.height)
+            for (graphic in graphics) {
+                cellWidth = maxOf(cellWidth, graphic.width)
+                cellHeight = maxOf(cellHeight, graphic.height)
             }
             val columns = 16
-            val rows = (sprites.size + columns - 1) / columns
+            val rows = (graphics.size + columns - 1) / columns
             if (rows <= 0) {
                 return null
             }
@@ -296,19 +296,19 @@ class RsFont(
             val pixels = IntArray(atlasWidth * atlasHeight)
             val glyphs = arrayOfNulls<Glyph>(256)
 
-            for (index in sprites.indices) {
+            for (index in graphics.indices) {
                 if (index >= glyphs.size) {
                     break
                 }
-                val sprite = sprites[index]
+                val graphic = graphics[index]
                 val atlasX = (index % columns) * cellWidth
                 val atlasY = (index / columns) * cellHeight
-                glyphs[index] = Glyph(sprite.width, sprite.height, sprite.offsetX, sprite.offsetY, atlasX, atlasY)
-                val alpha = sprite.alpha
-                for (row in 0 until sprite.height) {
-                    for (column in 0 until sprite.width) {
-                        val source = column + row * sprite.width
-                        val paletteIndex = sprite.raster[source].toInt() and 0xff
+                glyphs[index] = Glyph(graphic.width, graphic.height, graphic.offsetX, graphic.offsetY, atlasX, atlasY)
+                val alpha = graphic.alpha
+                for (row in 0 until graphic.height) {
+                    for (column in 0 until graphic.width) {
+                        val source = column + row * graphic.width
+                        val paletteIndex = graphic.raster[source].toInt() and 0xff
                         val coverage = if (alpha != null) {
                             alpha[source].toInt() and 0xff
                         } else {

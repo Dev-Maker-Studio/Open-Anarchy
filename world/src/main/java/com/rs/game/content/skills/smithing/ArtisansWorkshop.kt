@@ -203,9 +203,9 @@ private enum class Reward(val componentId: Int, val price: Int, val desc: String
     ROYALE_CANNON(136, 100, "Allows turning the Dwarf multicannon to Royale version that can hold more cannonballs. Requires Golden Cannon.", { it.unlocked(GOLDEN_CANNON)});
 
     val defs = IComponentDefinitions.getInterfaceComponent(825, componentId) ?: error("Invalid artisans reward component id")
-    val spriteChildId: Int by lazy {
+    val graphicChildId: Int by lazy {
         val iface = IComponentDefinitions.getInterface(825) ?: error("Interface 825 not found")
-        iface.first { it.parent == componentId && it.type == ComponentType.SPRITE.id }.id
+        iface.first { it.parent == componentId && it.type == ComponentType.GRAPHIC.id }.id
     }
     val textChildId: Int by lazy {
         val iface = IComponentDefinitions.getInterface(825) ?: error("Interface 825 not found")
@@ -214,7 +214,7 @@ private enum class Reward(val componentId: Int, val price: Int, val desc: String
 
     fun select(player: Player) {
         player.selectedRewardIndex = ordinal+1
-        player.packets.sendRunScript(205, toInterfaceHash(825, spriteChildId))
+        player.packets.sendRunScript(205, toInterfaceHash(825, graphicChildId))
         player.packets.setIFText(825, 66, name.split('_').joinToString(" ") { it.lowercase().replaceFirstChar { char -> char.uppercase() } })
         player.packets.setIFText(825, 67, desc)
         player.packets.setIFText(825, 69, if (player.unlocked(this)) "Earned" else "$price%")
@@ -222,7 +222,7 @@ private enum class Reward(val componentId: Int, val price: Int, val desc: String
     }
 
     fun markUnlocked(player: Player) {
-        player.packets.setIFGraphic(825, spriteChildId, 5457)
+        player.packets.setIFGraphic(825, graphicChildId, 5457)
         player.packets.setIFText(825, textChildId, "<col=00FF00>Earned")
         select(player)
     }

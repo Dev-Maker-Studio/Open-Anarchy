@@ -8,17 +8,17 @@ import world.gregs.voidps.cache.definition.encoder.writeExtras
 /**
  * Writes a map element (`mapelement`, index 2 archive 36) file.
  *
- * The two sprite ids (opcodes 1, 2) and the label sprite (opcode 18) are big smarts. The min/max
+ * The two graphic ids (opcodes 1, 2) and the label graphic (opcode 18) are big smarts. The min/max
  * offset bounds the decoder derives from opcode 15 are not written; they are recomputed on decode.
  */
 class WorldMapInfoEncoder : OpcodeEncoder<WorldMapInfoDefinition>() {
 
     override fun opcodes(definition: WorldMapInfoDefinition): IntArray {
         val opcodes = ArrayList<Int>(24)
-        if (definition.spriteId != -1) {
+        if (definition.graphicId != -1) {
             opcodes.add(1)
         }
-        if (definition.highlightSpriteId != -1) {
+        if (definition.highlightGraphicId != -1) {
             opcodes.add(2)
         }
         if (definition.name != null) {
@@ -85,8 +85,8 @@ class WorldMapInfoEncoder : OpcodeEncoder<WorldMapInfoDefinition>() {
 
     override fun Writer.encodeOpcode(definition: WorldMapInfoDefinition, members: WorldMapInfoDefinition, opcode: Int, occurrence: Int) {
         when (opcode) {
-            1 -> writeBigSmart(definition.spriteId)
-            2 -> writeBigSmart(definition.highlightSpriteId)
+            1 -> writeBigSmart(definition.graphicId)
+            2 -> writeBigSmart(definition.highlightGraphicId)
             3 -> writeString(definition.name)
             4 -> writeMedium(definition.anInt1058)
             5 -> writeMedium(definition.anInt1054)

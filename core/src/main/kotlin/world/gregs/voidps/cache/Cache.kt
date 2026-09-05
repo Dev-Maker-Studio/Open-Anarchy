@@ -8,7 +8,7 @@ import world.gregs.voidps.cache.definition.data.ClanVarDefinition
 import world.gregs.voidps.cache.definition.data.EnumDefinition
 import world.gregs.voidps.cache.definition.data.FontDefinition
 import world.gregs.voidps.cache.definition.data.InterfaceDefinition
-import world.gregs.voidps.cache.definition.data.GraphicDefinition
+import world.gregs.voidps.cache.definition.data.SpotAnimDefinition
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 import world.gregs.voidps.cache.definition.data.NPCDefinition
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
@@ -20,7 +20,7 @@ import world.gregs.voidps.cache.definition.decoder.BASDecoder
 import world.gregs.voidps.cache.definition.decoder.ClanVarDecoder
 import world.gregs.voidps.cache.definition.decoder.EnumDecoder
 import world.gregs.voidps.cache.definition.decoder.FontDecoder
-import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
+import world.gregs.voidps.cache.definition.decoder.SpotAnimDecoder
 import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
 import world.gregs.voidps.cache.definition.decoder.ItemDecoder
 import world.gregs.voidps.cache.definition.decoder.NPCDecoder
@@ -167,8 +167,8 @@ interface Cache : Closeable {
             ParamDecoder().load(singleton)
         }
 
-        @JvmStatic val graphics: Array<GraphicDefinition> by lazy {
-            GraphicDecoder().load(singleton)
+        @JvmStatic val spotAnims: Array<SpotAnimDefinition> by lazy {
+            SpotAnimDecoder().load(singleton)
         }
 
         @JvmStatic val bas: Array<BASDefinition> by lazy {

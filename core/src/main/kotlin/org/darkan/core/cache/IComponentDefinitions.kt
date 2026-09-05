@@ -24,7 +24,7 @@ enum class ComponentType(val id: Int) {
     UNKNOWN2(2),
     RECTANGLE(3),
     TEXT(4),
-    SPRITE(5),
+    GRAPHIC(5),
     MODEL(6),
     UNKNOWN7(7),
     LINE(9);

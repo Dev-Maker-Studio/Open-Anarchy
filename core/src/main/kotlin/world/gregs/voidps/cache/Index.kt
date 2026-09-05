@@ -9,7 +9,7 @@ object Index {
     const val MAPS = 5
     const val MIDI_SONGS = 6
     const val MODELS = 7
-    const val SPRITES = 8
+    const val GRAPHICS = 8
     const val TEXTURES = 9
     const val HUFFMAN = 10 // binary
     const val MIDI_JINGLES = 11
@@ -33,9 +33,9 @@ object Index {
     const val BILLBOARDS = 29
     const val NATIVE_LIBRARIES = 30 // DLLS
     const val SHADERS = 31
-    const val LOADING_SPRITES = 32
+    const val LOADING_GRAPHICS = 32
     const val GAME_TIPS = 33 // loading screens
-    const val LOADING_SPRITES_RAW = 34
+    const val LOADING_GRAPHICS_RAW = 34
     const val CUTSCENES = 35
     const val INDEX_36 = 36 // empty in 727
 }

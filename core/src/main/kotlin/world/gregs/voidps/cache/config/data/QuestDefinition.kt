@@ -21,7 +21,7 @@ data class QuestDefinition(
     var questRequirements: IntArray? = null,
     var skillRequirements: Array<IntArray>? = null,
     var questPointRequirement: Int = 0,
-    var itemSprite: Int = -1,
+    var itemGraphic: Int = -1,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null,
 ) : Definition, Extra, OpcodeOrdered {
@@ -65,7 +65,7 @@ data class QuestDefinition(
             if (other.skillRequirements == null) return false
             if (!skillRequirements.contentDeepEquals(other.skillRequirements)) return false
         } else if (other.skillRequirements != null) return false
-        if (itemSprite != other.itemSprite) return false
+        if (itemGraphic != other.itemGraphic) return false
         if (stringId != other.stringId) return false
         if (extras != other.extras) return false
 
@@ -81,14 +81,14 @@ data class QuestDefinition(
         result = 31 * result + (pathStart?.contentHashCode() ?: 0)
         result = 31 * result + (questRequirements?.contentHashCode() ?: 0)
         result = 31 * result + (skillRequirements?.contentDeepHashCode() ?: 0)
-        result = 31 * result + itemSprite
+        result = 31 * result + itemGraphic
         result = 31 * result + stringId.hashCode()
         result = 31 * result + (extras?.hashCode() ?: 0)
         return result
     }
 
     override fun toString(): String {
-        return "QuestDefinition(id=$id, name=$name, listName=$listName, varps=${varps?.contentDeepToString()}, varbits=${varbits?.contentDeepToString()}, subQuest=$subQuest, difficulty=$difficulty, members=$members, questPoints=$questPoints, pathStart=${pathStart?.contentToString()}, otherPathStart=$otherPathStart, questRequirements=${questRequirements?.contentToString()}, skillRequirements=${skillRequirements?.contentDeepToString()}, questPointRequirement=$questPointRequirement, itemSprite=$itemSprite, stringId='$stringId', extras=$extras)"
+        return "QuestDefinition(id=$id, name=$name, listName=$listName, varps=${varps?.contentDeepToString()}, varbits=${varbits?.contentDeepToString()}, subQuest=$subQuest, difficulty=$difficulty, members=$members, questPoints=$questPoints, pathStart=${pathStart?.contentToString()}, otherPathStart=$otherPathStart, questRequirements=${questRequirements?.contentToString()}, skillRequirements=${skillRequirements?.contentDeepToString()}, questPointRequirement=$questPointRequirement, itemGraphic=$itemGraphic, stringId='$stringId', extras=$extras)"
     }
 
 

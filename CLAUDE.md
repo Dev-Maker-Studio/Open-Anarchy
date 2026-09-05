@@ -68,7 +68,7 @@ In short:
    in the player save.
 6. **No AI attribution** in commits, merge requests or code - ever.
 
-Clientscript, interface and sprite work in `cache-source/` also follows
+Clientscript, interface and graphic work in `cache-source/` also follows
 `.claude/skills/cs2-engineer/SKILL.md` (the same hook injects it for those paths); add what you learn
 about the client to it in the same change.
 

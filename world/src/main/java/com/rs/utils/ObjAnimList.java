@@ -23,7 +23,7 @@ import org.darkan.core.cache.SpotAnimDefinitions;
 import org.darkan.core.cache.AnimationDefinitions;
 import world.gregs.voidps.cache.definition.data.NPCDefinition;
 import world.gregs.voidps.cache.definition.data.AnimationDefinition;
-import world.gregs.voidps.cache.definition.data.GraphicDefinition;
+import world.gregs.voidps.cache.definition.data.SpotAnimDefinition;
 import world.gregs.voidps.cache.definition.data.ObjectDefinition;
 import world.gregs.voidps.cache.definition.data.BASDefinition;
 import org.darkan.core.Utils;
@@ -73,7 +73,7 @@ public class ObjAnimList {
 		}
 
 		for (int spotAnimId = 0;spotAnimId < Utils.getSpotAnimDefinitionsSize();spotAnimId++) {
-			GraphicDefinition defs = SpotAnimDefinitions.getDefs(spotAnimId);
+			SpotAnimDefinition defs = SpotAnimDefinitions.getDefs(spotAnimId);
 			if (defs.getAnimationId() != -1)
 				USED.add(defs.getAnimationId());
 		}

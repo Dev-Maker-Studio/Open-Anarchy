@@ -354,7 +354,7 @@ class Cs2Types private constructor(
      * something said what it was on the spot. Without that last rule a kind can
      * travel a long way through parameters and struct params before it lands in
      * a slot that has nothing to do with it: `basecolour`'s second argument is
-     * the colour index being set, and every value reaching it was typed a sprite
+     * the colour index being set, and every value reaching it was typed a graphic
      * somewhere else entirely.
      */
     private fun agreed(votes: Map<ArgType, Votes>, direct: Boolean): ArgType? {
@@ -368,7 +368,7 @@ class Cs2Types private constructor(
         // kind can travel a long way - through parameters, variables and struct
         // params - and land in a slot that has nothing to do with it: every
         // value reaching `basecolour`'s second argument, the colour index being
-        // set, was typed a sprite id somewhere else entirely.
+        // set, was typed a graphic id somewhere else entirely.
         return if (seen.direct > 0) kind else null
     }
 

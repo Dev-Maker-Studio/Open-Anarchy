@@ -2,7 +2,7 @@ package world.gregs.voidps.cache.definition.data
 
 import java.awt.image.BufferedImage
 
-data class IndexedSprite(
+data class IndexedGraphic(
     var offsetX: Int = 0,
     var offsetY: Int = 0,
     var width: Int = 0,
@@ -47,7 +47,7 @@ data class IndexedSprite(
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as IndexedSprite
+        other as IndexedGraphic
 
         if (offsetX != other.offsetX) return false
         if (offsetY != other.offsetY) return false

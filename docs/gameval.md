@@ -55,7 +55,7 @@ false-hit budget under 0.05 for a whole run. One channel, `brute`, is deliberate
 recovers a name by searching a very large generated dictionary against the 727 name hashes, where
 a 32-bit hit alone is worthless, and then requires the hit to be the *unique* one in the whole
 searched space **and** to be corroborated by the asset itself — for a clientscript, agreement
-between the candidate's tokens and what the script actually references; for a sprite or a music
+between the candidate's tokens and what the script actually references; for a graphic or a music
 track, membership of the cheapest pre-specifiable region that could have generated the name. The
 gate is calibrated against held-out real names and against negative-control runs on random target
 hashes, so each catalog reports the measured number of its `brute` names expected to be wrong

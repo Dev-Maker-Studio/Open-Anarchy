@@ -41,7 +41,7 @@ import world.gregs.voidps.cache.definition.data.AnimationDefinition
 import world.gregs.voidps.cache.definition.data.BASDefinition
 import world.gregs.voidps.cache.definition.data.ClanVarDefinition
 import world.gregs.voidps.cache.definition.data.EnumDefinition
-import world.gregs.voidps.cache.definition.data.GraphicDefinition
+import world.gregs.voidps.cache.definition.data.SpotAnimDefinition
 import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 import world.gregs.voidps.cache.definition.data.NPCDefinition
@@ -53,7 +53,7 @@ import world.gregs.voidps.cache.definition.decoder.AnimationDecoder
 import world.gregs.voidps.cache.definition.decoder.BASDecoder
 import world.gregs.voidps.cache.definition.decoder.ClanVarDecoder
 import world.gregs.voidps.cache.definition.decoder.EnumDecoder
-import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
+import world.gregs.voidps.cache.definition.decoder.SpotAnimDecoder
 import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
 import world.gregs.voidps.cache.definition.decoder.ItemDecoder
 import world.gregs.voidps.cache.definition.decoder.NPCDecoder
@@ -65,7 +65,7 @@ import world.gregs.voidps.cache.definition.encoder.AnimationEncoder
 import world.gregs.voidps.cache.definition.encoder.BASEncoder
 import world.gregs.voidps.cache.definition.encoder.ClanVarEncoder
 import world.gregs.voidps.cache.definition.encoder.EnumEncoder
-import world.gregs.voidps.cache.definition.encoder.GraphicEncoder
+import world.gregs.voidps.cache.definition.encoder.SpotAnimEncoder
 import world.gregs.voidps.cache.definition.encoder.InterfaceEncoder
 import world.gregs.voidps.cache.definition.encoder.ItemEncoder
 import world.gregs.voidps.cache.definition.encoder.NPCEncoder
@@ -112,7 +112,7 @@ object DefinitionCodecs {
         add(index(Index.NPCS, "npc", 7, NPCDecoder(), NPCEncoder()) { NPCDefinition(it) })
         add(index(Index.ITEMS, "obj", 8, ItemDecoder(), ItemEncoder()) { ItemDefinition(it) })
         add(index(Index.ANIMATIONS, "seq", 7, AnimationDecoder(), AnimationEncoder()) { AnimationDefinition(it) })
-        add(index(Index.SPOTANIMS, "spotanim", 8, GraphicDecoder(), GraphicEncoder()) { GraphicDefinition(it) })
+        add(index(Index.SPOTANIMS, "spotanim", 8, SpotAnimDecoder(), SpotAnimEncoder()) { SpotAnimDefinition(it) })
         add(index(Index.VAR_BIT, "varbit", 10, VarBitDecoder(), VarBitEncoder()) { VarBitDefinition(it) })
         add(interfaces())
         add(config(Config.FLOOR_UNDERLAY, "underlay", UnderlayDecoder(), UnderlayEncoder()) { UnderlayDefinition(it) })

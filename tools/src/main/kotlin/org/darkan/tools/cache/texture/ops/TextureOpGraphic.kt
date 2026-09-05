@@ -4,70 +4,70 @@ import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
 /**
- * Type 39: Renders a sprite as a texture.
- * The sprite is scaled to fit the texture dimensions.
+ * Type 39: Renders a graphic as a texture.
+ * The graphic is scaled to fit the texture dimensions.
  */
-open class TextureOpSprite : TextureOperation(0, false) {
-    /** Sprite ID to load */
-    var spriteId: Int = -1
+open class TextureOpGraphic : TextureOperation(0, false) {
+    /** Graphic ID to load */
+    var graphicId: Int = -1
         private set
 
-    /** Loaded sprite pixel data (ARGB format) */
-    protected var spritePixels: IntArray? = null
+    /** Loaded graphic pixel data (ARGB format) */
+    protected var graphicPixels: IntArray? = null
 
-    /** Sprite width */
-    protected var spriteWidth: Int = 0
+    /** Graphic width */
+    protected var graphicWidth: Int = 0
 
-    /** Sprite height */
-    protected var spriteHeight: Int = 0
+    /** Graphic height */
+    protected var graphicHeight: Int = 0
 
     override fun clearImageCache() {
         super.clearImageCache()
-        spritePixels = null
+        graphicPixels = null
     }
 
     /**
-     * Load sprite data for rendering.
+     * Load graphic data for rendering.
      *
      * @param pixels ARGB pixel data
-     * @param width Sprite width
-     * @param height Sprite height
+     * @param width Graphic width
+     * @param height Graphic height
      */
-    fun loadSprite(pixels: IntArray, width: Int, height: Int) {
-        spritePixels = pixels
-        spriteWidth = width
-        spriteHeight = height
+    fun loadGraphic(pixels: IntArray, width: Int, height: Int) {
+        graphicPixels = pixels
+        graphicWidth = width
+        graphicHeight = height
     }
 
     override fun decodeOpcode(opcode: Int, buffer: BufferReader) {
         when (opcode) {
-            0 -> spriteId = buffer.readShort() and 0xFFFF
+            0 -> graphicId = buffer.readShort() and 0xFFFF
         }
     }
 
-    override fun getTextureId(): Int = spriteId
+    override fun getTextureId(): Int = graphicId
 
     override fun getColorOutput(y: Int): Array<IntArray> {
         val output = colorImageCache.getPalette(y)
 
-        if (colorImageCache.dirty && spritePixels != null) {
+        if (colorImageCache.dirty && graphicPixels != null) {
             val outputRed = output[0]
             val outputGreen = output[1]
             val outputBlue = output[2]
 
             // Calculate source row with scaling
-            val srcY = if (spriteHeight != currentHeight) {
-                spriteHeight * y / currentHeight
+            val srcY = if (graphicHeight != currentHeight) {
+                graphicHeight * y / currentHeight
             } else {
                 y
             }
-            val rowOffset = srcY * spriteWidth
+            val rowOffset = srcY * graphicWidth
 
-            if (spriteWidth == currentWidth) {
+            if (graphicWidth == currentWidth) {
                 // Fast path: no horizontal scaling needed
                 var offset = rowOffset
                 for (x in 0 until currentWidth) {
-                    val pixel = spritePixels!![offset++]
+                    val pixel = graphicPixels!![offset++]
                     outputBlue[x] = (pixel and 0xff) shl 4
                     outputGreen[x] = (pixel and 0xff00) shr 4
                     outputRed[x] = (pixel and 0xff0000) shr 12
@@ -75,8 +75,8 @@ open class TextureOpSprite : TextureOperation(0, false) {
             } else {
                 // Scaled path
                 for (x in 0 until currentWidth) {
-                    val srcX = x * spriteWidth / currentWidth
-                    val pixel = spritePixels!![rowOffset + srcX]
+                    val srcX = x * graphicWidth / currentWidth
+                    val pixel = graphicPixels!![rowOffset + srcX]
                     outputBlue[x] = (pixel and 0xff) shl 4
                     outputGreen[x] = (pixel and 0xff00) shr 4
                     outputRed[x] = (pixel and 0xff0000) shr 12

@@ -343,7 +343,7 @@ internal fun Codec.registerRev727MiscPackets() {
             out.writeBytes(ByteArray(13))
             return@serverProt
         }
-        out.writeByte(arrowSprite)
+        out.writeByte(arrowGraphic)
         if (targetType == 1 || targetType == 10) {
             out.writeShort(targetIndex)
             out.writeShort(denominator)

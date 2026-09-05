@@ -16,7 +16,7 @@ class HitSplatDecoder : ConfigDecoder<HitSplatDefinition>(HIT_SPLATS) {
 
     override fun HitSplatDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            // The font and the four sprites are big smarts, not shorts (client HitSplatType).
+            // The font and the four graphics are big smarts, not shorts (client HitSplatType).
             // Read as shorts, 47 of the 48 shipped files desynced and left trailing bytes.
             1 -> font = buffer.readBigSmart()
             2 -> textColour = buffer.readUnsignedMedium()

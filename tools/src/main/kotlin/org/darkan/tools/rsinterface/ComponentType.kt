@@ -3,7 +3,7 @@ package org.darkan.tools.rsinterface
 /**
  * Interface component type ids, matching the client's `ComponentType` enum.
  *
- * Only [CONTAINER], [FIGURE], [TEXT], [SPRITE], [MODEL] and [LINE] carry draw
+ * Only [CONTAINER], [FIGURE], [TEXT], [GRAPHIC], [MODEL] and [LINE] carry draw
  * behaviour; the remaining ids are layout-only. [TYPE_2] is special-cased by the
  * layout: it never narrows the clip rectangle for its own children.
  */
@@ -13,7 +13,7 @@ object ComponentType {
     const val TYPE_2 = 2
     const val FIGURE = 3
     const val TEXT = 4
-    const val SPRITE = 5
+    const val GRAPHIC = 5
     const val MODEL = 6
     const val TYPE_7 = 7
     const val TYPE_8 = 8
@@ -25,7 +25,7 @@ object ComponentType {
         TYPE_2 -> "Unclipped"
         FIGURE -> "Rectangle"
         TEXT -> "Text"
-        SPRITE -> "Sprite"
+        GRAPHIC -> "Graphic"
         MODEL -> "Model"
         TYPE_7 -> "Type 7"
         TYPE_8 -> "Type 8"

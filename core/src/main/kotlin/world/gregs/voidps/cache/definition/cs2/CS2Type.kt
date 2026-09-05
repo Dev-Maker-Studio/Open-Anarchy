@@ -75,7 +75,7 @@ class CS2Type {
         @JvmField val BOOLEAN = CS2Type(1, 0, 0, "boolean", '1')
         @JvmField val INT = CS2Type(1, 0, 0, "int", 'i')
         @JvmField val FONTMETRICS = CS2Type(1, 0, 0, "FontMetrics", 'f')
-        @JvmField val SPRITE = CS2Type(1, 0, 0, "Sprite", 'd')
+        @JvmField val GRAPHIC = CS2Type(1, 0, 0, "Graphic", 'd')
         @JvmField val MODEL = CS2Type(1, 0, 0, "Model", 'm')
         @JvmField val MIDI = CS2Type(1, 0, 0, "Midi", 'M')
         @JvmField val ENUM = CS2Type(1, 0, 0, "Enum", 'g')
@@ -91,7 +91,7 @@ class CS2Type {
         @JvmField val IDENTIKIT = CS2Type(1, 0, 0, "Identikit", 'K')
         @JvmField val ANIM = CS2Type(1, 0, 0, "Animation", 'A')
         @JvmField val MAPID = CS2Type(1, 0, 0, "Map", '`')
-        @JvmField val GRAPHIC = CS2Type(1, 0, 0, "SpotAnim", 't')
+        @JvmField val SPOTANIM = CS2Type(1, 0, 0, "SpotAnim", 't')
         @JvmField val SKILL = CS2Type(1, 0, 0, "Skill", 'S')
         @JvmField val NPCDEF = CS2Type(1, 0, 0, "NpcDef", 'n')
         @JvmField val QCPHRASE = CS2Type(1, 0, 0, "QcPhrase", 'e')
@@ -105,9 +105,9 @@ class CS2Type {
         @JvmField val UNKNOWN = CS2Type(0, 0, 0, "??", '\u0000')
 
         @JvmField val TYPE_LIST: Array<CS2Type> = arrayOf(
-            VOID, CALLBACK, BOOLEAN, INT, FONTMETRICS, SPRITE, MODEL, MIDI, LOCATION,
+            VOID, CALLBACK, BOOLEAN, INT, FONTMETRICS, GRAPHIC, MODEL, MIDI, LOCATION,
             CHAR, STRING, LONG, UNKNOWN, ICOMPONENT, ITEM, COLOR, CONTAINER, ENUM, STRUCT,
-            IDENTIKIT, ANIM, MAPID, GRAPHIC, SKILL, NPCDEF, QCPHRASE, CHATCAT, TEXTURE,
+            IDENTIKIT, ANIM, MAPID, SPOTANIM, SKILL, NPCDEF, QCPHRASE, CHATCAT, TEXTURE,
             STANCE, SPELL, CATEGORY, SOUNDEFFECT
         )
 
@@ -144,13 +144,13 @@ class CS2Type {
                 'o'.code, 'O'.code -> ITEM
                 'A'.code -> ANIM
                 'S'.code -> SKILL
-                't'.code -> GRAPHIC
+                't'.code -> SPOTANIM
                 'c'.code -> LOCATION
                 'n'.code -> NPCDEF
                 'J'.code -> STRUCT
                 'g'.code -> ENUM
                 'f'.code -> FONTMETRICS
-                'd'.code -> SPRITE
+                'd'.code -> GRAPHIC
                 'm'.code -> MODEL
                 'M'.code -> MIDI
                 'K'.code -> IDENTIKIT

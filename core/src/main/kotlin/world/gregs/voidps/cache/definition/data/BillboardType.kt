@@ -4,7 +4,7 @@ import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 /**
- * Configuration type for billboards (2D sprites attached to 3D model faces).
+ * Configuration type for billboards (2D graphics attached to 3D model faces).
  *
  * Billboards define textured quads that are rendered at model face centroids.
  * The key property is [hasUid]: when true, the anchor face is hidden and replaced

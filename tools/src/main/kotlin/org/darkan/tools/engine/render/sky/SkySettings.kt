@@ -9,7 +9,7 @@ import org.joml.Vector3f
  * (`config/skybox/BackgroundMode.kt`).
  */
 enum class SkyBackgroundMode {
-    /** The material sprite is tiled in both axes (`drawRepeatingBackground`). */
+    /** The material graphic is tiled in both axes (`drawRepeatingBackground`). */
     SINGLE_COLOR,
 
     /**
@@ -59,11 +59,11 @@ enum class SkyStateRestore {
  * Rather than invent the visuals, the pass is left unwritten.
  *
  * For reference, the client (`config/sun/Sun.kt` → `calculateProjection`)
- * projects a point very far along the sun's direction and blits a square sprite
+ * projects a point very far along the sun's direction and blits a square graphic
  * of `positionOffset` pixels centred on the projected position.
  *
  * @param direction unit vector in engine world space pointing *at* the sun
- * @param materialId cache material used for the sprite, or -1 for none
+ * @param materialId cache material used for the graphic, or -1 for none
  * @param sizePixels on-screen edge length of the billboard, in pixels
  * @param alpha opacity multiplier, 0..1
  */
@@ -80,7 +80,7 @@ data class SkySun(
  * Deliberately independent of the cache environment decoder types: the map
  * environment record is adapted into this at wiring time.
  *
- * @param materialId cache material id for the panoramic sprite, or -1 for a
+ * @param materialId cache material id for the panoramic graphic, or -1 for a
  *        flat [backgroundColor] fill (the common case)
  * @param backgroundMode how that material is spread across the viewport
  * @param rotation the skybox's own yaw offset in RS angle units (0..16383),

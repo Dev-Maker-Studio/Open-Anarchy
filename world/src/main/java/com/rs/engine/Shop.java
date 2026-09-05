@@ -246,7 +246,7 @@ public class Shop {
 		for (int i = 0;i < mainStock.length;i++) {
 			if (mainStock[i] == null)
 				continue;
-			//player.getPackets().setIFSprite(1265, 24, i, 592);
+			//player.getPackets().setIFSlotGraphic(1265, 24, i, 592);
 			if (mainStock[i].getCustomPrice() > 0)
 				player.getPackets().setIFText(1265, 23, i, Utils.kmify(mainStock[i].getCustomPrice()));
 		}

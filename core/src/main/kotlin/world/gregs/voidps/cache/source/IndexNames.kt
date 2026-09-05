@@ -20,7 +20,7 @@ object IndexNames {
         "maps",
         "midi_songs",
         "models",
-        "sprites",
+        "graphics",
         "textures",
         "binary",
         "midi_jingles",
@@ -44,9 +44,9 @@ object IndexNames {
         "config_billboard",
         "dlls",
         "shaders",
-        "loading_sprites",
+        "loading_graphics",
         "loading_screens",
-        "loading_sprites_raw",
+        "loading_graphics_raw",
         "cutscenes",
         "index36"
     )

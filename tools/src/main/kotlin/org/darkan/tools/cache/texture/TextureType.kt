@@ -20,7 +20,7 @@ class TextureType(data: ByteArray) {
     /** All operations in this texture */
     val textureOperations: Array<TextureOperation>
 
-    /** Sprite IDs required by TextureOpSprite operations */
+    /** Graphic IDs required by TextureOpGraphic operations */
     val textureFileIds: IntArray
 
     /** Material IDs required by TextureOpTexture operations */
@@ -118,7 +118,7 @@ class TextureType(data: ByteArray) {
     }
 
     /**
-     * Prepare texture operations by loading sprites and nested textures,
+     * Prepare texture operations by loading graphics and nested textures,
      * binding the raster dimensions, and creating image caches.
      *
      * The raster dimensions are bound onto the operations themselves rather than into a
@@ -127,16 +127,16 @@ class TextureType(data: ByteArray) {
     private fun prepareOperations(
         width: Int,
         height: Int,
-        spriteLoader: (Int) -> SpriteData?,
+        graphicLoader: (Int) -> GraphicData?,
         textureLoader: ((Int, Int, Int) -> IntArray?)? = null,
         deadlineNanos: Long = 0L
     ) {
-        // Load required sprites
+        // Load required graphics
         for (operation in textureOperations) {
-            if (operation is TextureOpSprite && operation.spriteId >= 0) {
-                val sprite = spriteLoader(operation.spriteId)
-                if (sprite != null) {
-                    operation.loadSprite(sprite.pixels, sprite.width, sprite.height)
+            if (operation is TextureOpGraphic && operation.graphicId >= 0) {
+                val graphic = graphicLoader(operation.graphicId)
+                if (graphic != null) {
+                    operation.loadGraphic(graphic.pixels, graphic.width, graphic.height)
                 }
             }
         }
@@ -189,7 +189,7 @@ class TextureType(data: ByteArray) {
      * @param width The output width
      * @param height The output height
      * @param brightness The brightness/gamma value (typically 0.7)
-     * @param spriteLoader Function to load sprite pixels by ID
+     * @param graphicLoader Function to load graphic pixels by ID
      * @param textureLoader Optional function to load nested texture pixels by material ID
      * @param deadlineNanos Absolute [System.nanoTime] deadline for this generation, or 0 for none
      * @return ARGB pixel array (width * height)
@@ -197,12 +197,12 @@ class TextureType(data: ByteArray) {
     fun getPixelsArgb(
         width: Int,
         height: Int,
-        spriteLoader: (Int) -> SpriteData?,
+        graphicLoader: (Int) -> GraphicData?,
         textureLoader: ((Int, Int, Int) -> IntArray?)? = null,
         brightness: Double = 0.7,
         deadlineNanos: Long = 0L
     ): IntArray {
-        prepareOperations(width, height, spriteLoader, textureLoader, deadlineNanos)
+        prepareOperations(width, height, graphicLoader, textureLoader, deadlineNanos)
 
         try {
             val pixels = IntArray(width * height)
@@ -279,7 +279,7 @@ class TextureType(data: ByteArray) {
      * @param width The output width
      * @param height The output height
      * @param brightness The brightness/gamma value (typically 0.7)
-     * @param spriteLoader Function to load sprite pixels by ID
+     * @param graphicLoader Function to load graphic pixels by ID
      * @param textureLoader Optional function to load nested texture pixels by material ID
      * @param deadlineNanos Absolute [System.nanoTime] deadline for this generation, or 0 for none
      * @return ARGB pixel array (width * height) with alpha=255 for non-black, alpha=0 for black
@@ -287,12 +287,12 @@ class TextureType(data: ByteArray) {
     fun getPixelsRgb(
         width: Int,
         height: Int,
-        spriteLoader: (Int) -> SpriteData?,
+        graphicLoader: (Int) -> GraphicData?,
         textureLoader: ((Int, Int, Int) -> IntArray?)? = null,
         brightness: Double = 0.7,
         deadlineNanos: Long = 0L
     ): IntArray {
-        prepareOperations(width, height, spriteLoader, textureLoader, deadlineNanos)
+        prepareOperations(width, height, graphicLoader, textureLoader, deadlineNanos)
 
         try {
             val pixels = IntArray(width * height)
@@ -405,7 +405,7 @@ class TextureType(data: ByteArray) {
                 15 -> TextureOpVoronoiNoise()
                 16 -> TextureOpHerringbone()
                 17 -> TextureOpHslAdjust()
-                18 -> TextureOpTiledSprite()
+                18 -> TextureOpTiledGraphic()
                 19 -> TextureOpPolarDistortion()
                 20 -> TextureOpTile()
                 21 -> TextureOpInterpolate()
@@ -426,7 +426,7 @@ class TextureType(data: ByteArray) {
                 36 -> TextureOpTexture()
                 37 -> TextureOp37()
                 38 -> TextureOpLineNoise()
-                39 -> TextureOpSprite()
+                39 -> TextureOpGraphic()
                 else -> throw IllegalArgumentException("Unknown texture operation type: $typeId")
             }
         }
@@ -434,16 +434,16 @@ class TextureType(data: ByteArray) {
 }
 
 /**
- * Container for sprite data.
+ * Container for graphic data.
  */
-data class SpriteData(
+data class GraphicData(
     val pixels: IntArray,
     val width: Int,
     val height: Int
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is SpriteData) return false
+        if (other !is GraphicData) return false
         return pixels.contentEquals(other.pixels) && width == other.width && height == other.height
     }
 

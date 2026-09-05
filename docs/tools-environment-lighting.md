@@ -190,7 +190,7 @@ Fog colour also becomes the background clear colour when no skybox is present.
 
 Two forms, selected by whether the skybox type has a model:
 
-1. **Panoramic material** — a square material sprite scrolled by camera yaw and
+1. **Panoramic material** — a square material graphic scrolled by camera yaw and
    pitch and tiled across the viewport:
    `yOffset = rotationY * height / -4096`, `xOffset = (rotationX + skyboxAngle) *
    height / 4096 + (width - height) / 2`, both taken `% height`. Either repeated

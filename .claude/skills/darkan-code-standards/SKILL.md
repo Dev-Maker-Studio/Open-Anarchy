@@ -59,7 +59,7 @@ unproven). Look at how identified names for the same kind of thing are spelled (
 
 A varbit is the right tool for **new content whose state the client interface must read for
 itself**: a setting an interface has to reflect the moment it opens, remember between opens, or
-refresh live without the server re-sending sprites, text or hidden flags every time. The client
+refresh live without the server re-sending graphics, text or hidden flags every time. The client
 already holds its varps, its clientscripts react to them through `onLoadScript`/`onVarpTransmit`
 hooks, and the server sends nothing per open - that is what the mechanism is for. Save it with
 `player.vars.saveVarBit(Varbit.x, value)` and read it with `player.vars.getVarBit(Varbit.x)`.
@@ -79,7 +79,7 @@ When a varbit is the right tool, adding it (`cache-source/config_varbit/<id>.jso
 - Before choosing the bit, list every varbit whose `index` is that varp and prove the new range
   overlaps none of them; also check the server never writes the whole varp with `setVar`.
 - Give the component the hook (`onLoadScript`/`onVarpTransmit`, parent varp in `varps`) that runs
-  a clientscript reading the varbit and setting the sprites, ops and tooltips.
+  a clientscript reading the varbit and setting the graphics, ops and tooltips.
 
 ## 6. Attribution - hard rule
 

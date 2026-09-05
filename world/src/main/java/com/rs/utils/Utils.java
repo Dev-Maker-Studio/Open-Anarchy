@@ -878,7 +878,7 @@ public final class Utils {
 	}
 
 	public static final int getSpotAnimDefinitionsSize() {
-		return Cache.getGraphics().length;
+		return Cache.getSpotAnims().length;
 	}
 
 	public static final int getAnimationDefinitionsSize() {

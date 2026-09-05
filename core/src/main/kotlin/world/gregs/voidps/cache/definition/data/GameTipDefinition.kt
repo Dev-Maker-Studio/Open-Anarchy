@@ -78,21 +78,21 @@ data class GameTipUpdateRecord(
  * |---|---|---|
  * | 0 | `BACKGROUND` | [colour] |
  * | 1 | `COLOR_LOADING_BAR` | the anchored fields, [fillColour], [outlineColour] |
- * | 2 | `SPRITE_LOADING_BAR` | the anchored fields, [fillColour], [backgroundColour], [spriteFileId] |
- * | 3 | `MULTI_SPRITE_LOADING_BAR` | the anchored fields, the six bar sprites |
+ * | 2 | `GRAPHIC_LOADING_BAR` | the anchored fields, [fillColour], [backgroundColour], [graphicFileId] |
+ * | 3 | `MULTI_GRAPHIC_LOADING_BAR` | the anchored fields, the six bar graphics |
  * | 4 | `OUTLINED` | [newsItemId], [anchorX], [anchorY], [offsetX], [offsetY], [width], [height], [textColour], [shadeColour], [backgroundColour], [drawOutline] |
- * | 5 | `SPRITE` | [spriteId], [anchorX], [anchorY], [offsetX], [offsetY] |
- * | 6 | `ROTATED_SPRITE` | the `SPRITE` fields and [angle] |
+ * | 5 | `GRAPHIC` | [graphicId], [anchorX], [anchorY], [offsetX], [offsetY] |
+ * | 6 | `ROTATED_GRAPHIC` | the `GRAPHIC` fields and [angle] |
  * | 7 | `ANCHORED_TEXT` | [tipText], [anchorX], [anchorY], [offsetX], [offsetY], [textAlign], [textVAlign], [lineSpacing], [width], [height], [fileId], [textColour], [textShadowColour] |
- * | 8 | `TIPS_SPRITE` | [spriteFileId] |
- * | 9 | `ANIMATED_LOADING_BAR` | the `MULTI_SPRITE_LOADING_BAR` fields and [scrollSpeed] |
+ * | 8 | `TIPS_GRAPHIC` | [graphicFileId] |
+ * | 9 | `ANIMATED_LOADING_BAR` | the `MULTI_GRAPHIC_LOADING_BAR` fields and [scrollSpeed] |
  *
  * The anchored fields, the prefix types 1, 2, 3 and 9 share, are [anchorX], [anchorY], [offsetX],
  * [offsetY], [width], [height], [textOffsetY], [fileId] and [textColour].
  *
  * @param anchorX `AnchorX` ordinal: 0 left, 1 centre, 2 right.
  * @param anchorY `AnchorY` ordinal: 0 top, 1 centre, 2 bottom.
- * @param fileId the font, or sprite, the element's text is drawn with.
+ * @param fileId the font, or graphic, the element's text is drawn with.
  * @param drawOutline the raw byte the client tests for `== 1`, kept raw so any other value survives.
  * @param wideFileIds the ids of this element that the file packed in the four byte form of a big smart
  *        although the two byte form would have held them, low bit first in the order the element reads
@@ -103,7 +103,7 @@ data class GameTipElementRecord(
     var type: Int,
     var colour: Int? = null,
     var newsItemId: Int? = null,
-    var spriteId: Int? = null,
+    var graphicId: Int? = null,
     var tipText: String? = null,
     var anchorX: Int? = null,
     var anchorY: Int? = null,
@@ -123,13 +123,13 @@ data class GameTipElementRecord(
     var outlineColour: Int? = null,
     var backgroundColour: Int? = null,
     var drawOutline: Int? = null,
-    var spriteFileId: Int? = null,
-    var fillSprite: Int? = null,
-    var emptySprite: Int? = null,
-    var leftCapSprite: Int? = null,
-    var rightCapSprite: Int? = null,
-    var topBorderSprite: Int? = null,
-    var bottomBorderSprite: Int? = null,
+    var graphicFileId: Int? = null,
+    var fillGraphic: Int? = null,
+    var emptyGraphic: Int? = null,
+    var leftCapGraphic: Int? = null,
+    var rightCapGraphic: Int? = null,
+    var topBorderGraphic: Int? = null,
+    var bottomBorderGraphic: Int? = null,
     var angle: Int? = null,
     var scrollSpeed: Int? = null,
     var wideFileIds: Int? = null

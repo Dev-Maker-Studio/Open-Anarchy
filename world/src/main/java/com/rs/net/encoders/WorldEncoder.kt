@@ -213,8 +213,8 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(TriggerOnDialogAbort())
     }
 
-    fun setIFGraphic(interfaceId: Int, componentId: Int, spriteId: Int) {
-        session.queuePacket(IfSetGraphic(interfaceId, componentId, spriteId))
+    fun setIFGraphic(interfaceId: Int, componentId: Int, graphicId: Int) {
+        session.queuePacket(IfSetGraphic(interfaceId, componentId, graphicId))
     }
 
     fun setIFPosition(interfaceId: Int, componentId: Int, x: Int, y: Int) {
@@ -326,7 +326,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
             HintArrow(
                 iconIndex = icon.index,
                 targetType = icon.targetType,
-                arrowSprite = icon.arrowType,
+                arrowGraphic = icon.arrowType,
                 plane = icon.plane,
                 x = icon.coordX,
                 y = icon.coordY,
@@ -399,8 +399,8 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         sendRunScriptReverse(scriptId, *l.toTypedArray())
     }
 
-    fun setIFSprite(interfaceId: Int, componentId: Int, slotId: Int, spriteId: Int) {
-        sendRunScript(1351, Utils.toInterfaceHash(interfaceId, componentId), slotId, spriteId)
+    fun setIFSlotGraphic(interfaceId: Int, componentId: Int, slotId: Int, graphicId: Int) {
+        sendRunScript(1351, Utils.toInterfaceHash(interfaceId, componentId), slotId, graphicId)
     }
 
     fun setIFText(interfaceId: Int, componentId: Int, slotId: Int, text: String) {

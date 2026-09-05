@@ -94,15 +94,15 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
                 element.fillColour = buffer.readInt()
                 element.outlineColour = buffer.readInt()
             }
-            SPRITE_LOADING_BAR -> {
+            GRAPHIC_LOADING_BAR -> {
                 element.readAnchored(buffer, ids)
                 element.fillColour = buffer.readInt()
                 element.backgroundColour = buffer.readInt()
-                element.spriteFileId = ids.read()
+                element.graphicFileId = ids.read()
             }
-            MULTI_SPRITE_LOADING_BAR -> {
+            MULTI_GRAPHIC_LOADING_BAR -> {
                 element.readAnchored(buffer, ids)
-                element.readBarSprites(ids)
+                element.readBarGraphics(ids)
             }
             OUTLINED -> {
                 element.newsItemId = buffer.readUnsignedByte()
@@ -117,9 +117,9 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
                 element.backgroundColour = buffer.readInt()
                 element.drawOutline = buffer.readUnsignedByte()
             }
-            SPRITE -> element.readSprite(buffer, ids)
-            ROTATED_SPRITE -> {
-                element.readSprite(buffer, ids)
+            GRAPHIC -> element.readGraphic(buffer, ids)
+            ROTATED_GRAPHIC -> {
+                element.readGraphic(buffer, ids)
                 element.angle = buffer.readShort()
             }
             ANCHORED_TEXT -> {
@@ -137,10 +137,10 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
                 element.textColour = buffer.readInt()
                 element.textShadowColour = buffer.readInt()
             }
-            TIPS_SPRITE -> element.spriteFileId = ids.read()
+            TIPS_GRAPHIC -> element.graphicFileId = ids.read()
             ANIMATED_LOADING_BAR -> {
                 element.readAnchored(buffer, ids)
-                element.readBarSprites(ids)
+                element.readBarGraphics(ids)
                 element.scrollSpeed = buffer.readShort()
             }
             else -> throw IllegalArgumentException("Unknown game tip element type ${element.type}.")
@@ -162,19 +162,19 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
         textColour = buffer.readInt()
     }
 
-    /** The six sprites of a multi sprite bar, the client's `decodeMultiSpriteLoadingBar`. */
-    private fun GameTipElementRecord.readBarSprites(ids: BigSmarts) {
-        fillSprite = ids.read()
-        emptySprite = ids.read()
-        leftCapSprite = ids.read()
-        rightCapSprite = ids.read()
-        topBorderSprite = ids.read()
-        bottomBorderSprite = ids.read()
+    /** The six graphics of a multi graphic bar, the client's `decodeMultiSpriteLoadingBar`. */
+    private fun GameTipElementRecord.readBarGraphics(ids: BigSmarts) {
+        fillGraphic = ids.read()
+        emptyGraphic = ids.read()
+        leftCapGraphic = ids.read()
+        rightCapGraphic = ids.read()
+        topBorderGraphic = ids.read()
+        bottomBorderGraphic = ids.read()
     }
 
     /** The client's `SpritePositioning.decode`, which types 5 and 6 share. */
-    private fun GameTipElementRecord.readSprite(buffer: Reader, ids: BigSmarts) {
-        spriteId = ids.read()
+    private fun GameTipElementRecord.readGraphic(buffer: Reader, ids: BigSmarts) {
+        graphicId = ids.read()
         anchorX = buffer.readUnsignedByte()
         anchorY = buffer.readUnsignedByte()
         offsetX = buffer.readShort()
@@ -218,13 +218,13 @@ class GameTipDecoder : DefinitionDecoder<GameTipDefinition>(GAME_TIPS) {
 
         const val BACKGROUND = 0
         const val COLOR_LOADING_BAR = 1
-        const val SPRITE_LOADING_BAR = 2
-        const val MULTI_SPRITE_LOADING_BAR = 3
+        const val GRAPHIC_LOADING_BAR = 2
+        const val MULTI_GRAPHIC_LOADING_BAR = 3
         const val OUTLINED = 4
-        const val SPRITE = 5
-        const val ROTATED_SPRITE = 6
+        const val GRAPHIC = 5
+        const val ROTATED_GRAPHIC = 6
         const val ANCHORED_TEXT = 7
-        const val TIPS_SPRITE = 8
+        const val TIPS_GRAPHIC = 8
         const val ANIMATED_LOADING_BAR = 9
 
         const val WIDE_BYTES = 4

@@ -8,7 +8,7 @@ import java.nio.file.Path
 /**
  * The decompressed archive as one file, `<archive>.dat`.
  *
- * What the indices whose archives hold a single file use - models, sprites, textures, maps,
+ * What the indices whose archives hold a single file use - models, graphics, textures, maps,
  * sounds, client scripts and the rest - until something better than bytes exists for them. The
  * file id is almost always 0 and then says nothing; when it is not, it goes in the metadata,
  * because the file name cannot carry both ids.

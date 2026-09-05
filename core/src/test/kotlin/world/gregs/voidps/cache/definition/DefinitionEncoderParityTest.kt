@@ -10,24 +10,24 @@ import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.AnimationDefinition
 import world.gregs.voidps.cache.definition.data.EnumDefinition
-import world.gregs.voidps.cache.definition.data.GraphicDefinition
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 import world.gregs.voidps.cache.definition.data.NPCDefinition
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
+import world.gregs.voidps.cache.definition.data.SpotAnimDefinition
 import world.gregs.voidps.cache.definition.data.VarBitDefinition
 import world.gregs.voidps.cache.definition.decoder.AnimationDecoder
 import world.gregs.voidps.cache.definition.decoder.EnumDecoder
-import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
 import world.gregs.voidps.cache.definition.decoder.ItemDecoder
 import world.gregs.voidps.cache.definition.decoder.NPCDecoder
 import world.gregs.voidps.cache.definition.decoder.ObjectDecoder
+import world.gregs.voidps.cache.definition.decoder.SpotAnimDecoder
 import world.gregs.voidps.cache.definition.decoder.VarBitDecoder
 import world.gregs.voidps.cache.definition.encoder.AnimationEncoder
 import world.gregs.voidps.cache.definition.encoder.EnumEncoder
-import world.gregs.voidps.cache.definition.encoder.GraphicEncoder
 import world.gregs.voidps.cache.definition.encoder.ItemEncoder
 import world.gregs.voidps.cache.definition.encoder.NPCEncoder
 import world.gregs.voidps.cache.definition.encoder.ObjectEncoder
+import world.gregs.voidps.cache.definition.encoder.SpotAnimEncoder
 import world.gregs.voidps.cache.definition.encoder.VarBitEncoder
 import java.io.File
 import kotlin.test.Test
@@ -70,7 +70,7 @@ class DefinitionEncoderParityTest {
 
     @Test
     fun `every spotanim file re-encodes byte for byte`() {
-        parity("spotanim", Index.SPOTANIMS, 8, GraphicDecoder(), GraphicEncoder()) { GraphicDefinition(it) }
+        parity("spotanim", Index.SPOTANIMS, 8, SpotAnimDecoder(), SpotAnimEncoder()) { SpotAnimDefinition(it) }
     }
 
     @Test

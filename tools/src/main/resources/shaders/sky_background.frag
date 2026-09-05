@@ -5,7 +5,7 @@
 // Reproduces the reference client's screen-space scroll (graphics/light/Skybox.kt):
 //   yOffset = rotationY * height / -4096
 //   xOffset = (rotationX + skyboxAngle) * height /  4096 + (width - height) / 2
-// with the square material sprite drawn at edge length == viewport height and
+// with the square material graphic drawn at edge length == viewport height and
 // tiled from those offsets. Here that becomes one texture fetch per pixel.
 
 out vec4 fragColor;

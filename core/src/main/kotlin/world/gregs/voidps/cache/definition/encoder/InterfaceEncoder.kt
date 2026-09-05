@@ -92,7 +92,7 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
                 // Only one of the two viewport blocks is ever present. 0x2 (centreType) carries
                 // viewportZ, 0x1 does not, so a component that wants a Z has to use the centre block
                 // and viewportZ is dropped when centreType is false - the format has nowhere to put it.
-                val transform = !definition.centreType && (definition.viewportX != 0 || definition.viewportY != 0 || definition.spritePitch != 0 || definition.spriteRoll != 0 || definition.spriteYaw != 0 || definition.spriteScale != 100)
+                val transform = !definition.centreType && (definition.viewportX != 0 || definition.viewportY != 0 || definition.graphicPitch != 0 || definition.graphicRoll != 0 || definition.graphicYaw != 0 || definition.graphicScale != 100)
                 if (transform) {
                     flag = flag or 0x1
                 }
@@ -100,18 +100,18 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
                 if (transform) {
                     writeShort(definition.viewportX)
                     writeShort(definition.viewportY)
-                    writeShort(definition.spritePitch)
-                    writeShort(definition.spriteRoll)
-                    writeShort(definition.spriteYaw)
-                    writeShort(definition.spriteScale)
+                    writeShort(definition.graphicPitch)
+                    writeShort(definition.graphicRoll)
+                    writeShort(definition.graphicYaw)
+                    writeShort(definition.graphicScale)
                 } else if (definition.centreType) {
                     writeShort(definition.viewportX)
                     writeShort(definition.viewportY)
                     writeShort(definition.viewportZ)
-                    writeShort(definition.spritePitch)
-                    writeShort(definition.spriteRoll)
-                    writeShort(definition.spriteYaw)
-                    writeShort(definition.spriteScale)
+                    writeShort(definition.graphicPitch)
+                    writeShort(definition.graphicRoll)
+                    writeShort(definition.graphicYaw)
+                    writeShort(definition.graphicScale)
                 }
                 writeBigSmart(definition.animation)
                 if (definition.horizontalSizeMode.toInt() != 0) {

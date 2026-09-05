@@ -25,7 +25,7 @@ import kotlin.math.PI
  */
 class InterfaceRenderer(
     private val canvas: Canvas2D,
-    private val sprites: SpriteCache,
+    private val graphics: GraphicCache,
     private val fonts: FontCache,
     private val models: InterfaceModelRenderer?
 ) {
@@ -109,7 +109,7 @@ class InterfaceRenderer(
         when (state.type) {
             ComponentType.FIGURE -> drawRectangle(state, startX, startY)
             ComponentType.TEXT -> drawText(state, startX, startY)
-            ComponentType.SPRITE -> drawSprite(state, startX, startY)
+            ComponentType.GRAPHIC -> drawGraphic(state, startX, startY)
             ComponentType.MODEL -> drawModel(state, startX, startY)
             ComponentType.LINE -> drawLine(state, startX, startY)
         }
@@ -162,43 +162,43 @@ class InterfaceRenderer(
     }
 
     /**
-     * Sprites are drawn one of three ways, exactly as the client picks between
+     * Graphics are drawn one of three ways, exactly as the client picks between
      * them: tiled across the component box, rotated about the box centre at a
      * uniform scale, or stretched to the box. The component colour multiplies the
      * texels, and a colour of 0 with no transparency means "draw the art as-is".
      */
-    private fun drawSprite(state: ComponentState, startX: Int, startY: Int) {
+    private fun drawGraphic(state: ComponentState, startX: Int, startY: Int) {
         if (state.itemId != -1) {
             // The client swaps in a generated item icon here; the tool renders the
             // item's model into the same box instead.
             drawModel(state, startX, startY)
             return
         }
-        val sprite = sprites.sprite(state.spriteId, state.flipVertical, state.flipHorizontal) ?: return
-        if (sprite.width <= 0 || sprite.height <= 0) {
+        val graphic = graphics.graphic(state.graphicId, state.flipVertical, state.flipHorizontal) ?: return
+        if (graphic.width <= 0 || graphic.height <= 0) {
             return
         }
-        val argb = spriteTint(state)
-        val angle = state.spriteAngle and 0xffff
+        val argb = graphicTint(state)
+        val angle = state.graphicAngle and 0xffff
 
         if (state.tiling) {
-            drawTiledSprite(state, sprite, startX, startY, argb, angle)
+            drawTiledGraphic(state, graphic, startX, startY, argb, angle)
             return
         }
         if (angle != 0) {
-            // Rotation is uniformly scaled by width / spriteWidth, the client's
+            // Rotation is uniformly scaled by width / graphicWidth, the client's
             // `component.width * 4096 / spriteWidth` zoom.
-            val scale = state.width.toFloat() / sprite.width
+            val scale = state.width.toFloat() / graphic.width
             canvas.drawTextureRotated(
-                sprite.textureId,
+                graphic.textureId,
                 startX + state.width / 2f, startY + state.height / 2f,
-                sprite.width * scale, sprite.height * scale,
+                graphic.width * scale, graphic.height * scale,
                 radians(angle), argb
             )
             return
         }
         canvas.drawTexture(
-            sprite.textureId,
+            graphic.textureId,
             startX.toFloat(), startY.toFloat(),
             state.width.toFloat(), state.height.toFloat(),
             argb
@@ -206,13 +206,13 @@ class InterfaceRenderer(
     }
 
     /**
-     * Tiling repeats the sprite from the component's top-left by the sprite's
+     * Tiling repeats the graphic from the component's top-left by the graphic's
      * full (untrimmed) size. Un-rotated tiles fall out of a single GL_REPEAT quad;
      * rotated ones have to be emitted per tile, as the client does.
      */
-    private fun drawTiledSprite(
+    private fun drawTiledGraphic(
         state: ComponentState,
-        sprite: LoadedSprite,
+        graphic: LoadedGraphic,
         startX: Int,
         startY: Int,
         argb: Int,
@@ -221,28 +221,28 @@ class InterfaceRenderer(
         val visible = canvas.pushClip(startX, startY, startX + state.width, startY + state.height)
         if (visible) {
             if (angle != 0) {
-                val columns = (state.width + sprite.width - 1) / sprite.width
-                val rows = (state.height + sprite.height - 1) / sprite.height
+                val columns = (state.width + graphic.width - 1) / graphic.width
+                val rows = (state.height + graphic.height - 1) / graphic.height
                 for (row in 0 until rows) {
                     for (column in 0 until columns) {
                         canvas.drawTextureRotated(
-                            sprite.textureId,
-                            startX + column * sprite.width + sprite.width / 2f,
-                            startY + row * sprite.height + sprite.height / 2f,
-                            sprite.width.toFloat(), sprite.height.toFloat(),
+                            graphic.textureId,
+                            startX + column * graphic.width + graphic.width / 2f,
+                            startY + row * graphic.height + graphic.height / 2f,
+                            graphic.width.toFloat(), graphic.height.toFloat(),
                             radians(angle), argb
                         )
                     }
                 }
             } else {
                 canvas.drawTexture(
-                    sprite.textureId,
+                    graphic.textureId,
                     startX.toFloat(), startY.toFloat(),
                     state.width.toFloat(), state.height.toFloat(),
                     argb,
                     0f, 0f,
-                    state.width.toFloat() / sprite.width,
-                    state.height.toFloat() / sprite.height
+                    state.width.toFloat() / graphic.width,
+                    state.height.toFloat() / graphic.height
                 )
             }
         }
@@ -285,11 +285,11 @@ class InterfaceRenderer(
     }
 
     /**
-     * The tint applied to a sprite. Untinted, fully opaque sprites pass their
+     * The tint applied to a graphic. Untinted, fully opaque graphics pass their
      * texels straight through (the client's REPLACE combine mode); anything else
      * multiplies by the component colour, defaulting to white.
      */
-    private fun spriteTint(state: ComponentState): Int {
+    private fun graphicTint(state: ComponentState): Int {
         if (state.colour == 0 && state.transparency == 0) {
             return WHITE
         }
@@ -310,7 +310,7 @@ class InterfaceRenderer(
         private const val DEBUG_OUTLINE = 0x40ff00ff
 
         /**
-         * The cache stores 2D sprite angles as 65536 units per turn, increasing
+         * The cache stores 2D graphic angles as 65536 units per turn, increasing
          * counter-clockwise on screen; [Canvas2D] takes clockwise radians.
          */
         private fun radians(angle: Int): Float = -(angle / 65536f) * 2f * PI.toFloat()

@@ -413,7 +413,7 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         val name = when {
             definition.name.isNotEmpty() -> definition.name
             definition.type == ComponentType.TEXT && definition.text.isNotEmpty() -> "\"${strip(definition.text)}\""
-            definition.type == ComponentType.SPRITE && definition.defaultImage >= 0 -> "#${definition.defaultImage}"
+            definition.type == ComponentType.GRAPHIC && definition.defaultImage >= 0 -> "#${definition.defaultImage}"
             definition.type == ComponentType.MODEL && definition.defaultMediaId > 0 -> "model ${definition.defaultMediaId}"
             else -> ComponentType.name(definition.type)
         }
@@ -651,7 +651,7 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
             ComponentType.TYPE_2 -> "UNC"
             ComponentType.FIGURE -> "RCT"
             ComponentType.TEXT -> "TXT"
-            ComponentType.SPRITE -> "SPR"
+            ComponentType.GRAPHIC -> "GFX"
             ComponentType.MODEL -> "MDL"
             ComponentType.LINE -> "LIN"
             else -> "T$type"
@@ -663,7 +663,7 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
             ComponentType.TYPE_2 -> floatArrayOf(0.55f, 0.62f, 0.72f)
             ComponentType.FIGURE -> floatArrayOf(0.93f, 0.66f, 0.40f)
             ComponentType.TEXT -> floatArrayOf(0.55f, 0.88f, 0.60f)
-            ComponentType.SPRITE -> floatArrayOf(0.45f, 0.82f, 0.95f)
+            ComponentType.GRAPHIC -> floatArrayOf(0.45f, 0.82f, 0.95f)
             ComponentType.MODEL -> floatArrayOf(0.80f, 0.62f, 0.95f)
             ComponentType.LINE -> floatArrayOf(0.95f, 0.87f, 0.45f)
             else -> floatArrayOf(0.75f, 0.75f, 0.78f)

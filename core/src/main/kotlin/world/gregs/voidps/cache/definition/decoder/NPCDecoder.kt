@@ -96,7 +96,7 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
                     )
                 }
             }
-            122 -> hitbarSprite = buffer.readUnsignedShort()
+            122 -> hitbarGraphic = buffer.readUnsignedShort()
             123 -> height = buffer.readUnsignedShort()
             125 -> respawnDirection = buffer.readByte().toByte()
             127 -> renderEmote = buffer.readUnsignedShort()
@@ -130,9 +130,9 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
                 secondaryCursor = buffer.readUnsignedShort()
             }
             137 -> attackCursor = buffer.readUnsignedShort()
-            // Opcode 138: overhead sprite (bigSmart for rev 727)
+            // Opcode 138: overhead graphic (bigSmart for rev 727)
             138 -> armyIcon = buffer.readBigSmart()
-            139 -> spriteId = buffer.readUnsignedShort()
+            139 -> graphicId = buffer.readUnsignedShort()
             140 -> ambientSoundVolume = buffer.readUnsignedByte()
             141 -> visiblePriority = true
             142 -> mapFunction = buffer.readUnsignedShort()

@@ -284,7 +284,7 @@ class Canvas2D(
 
     /**
      * Draws a texture rotated about its centre. [angle] is in radians, clockwise
-     * on screen (matching the client's 2D sprite angle, which increases clockwise
+     * on screen (matching the client's 2D graphic angle, which increases clockwise
      * because +Y runs down).
      */
     fun drawTextureRotated(

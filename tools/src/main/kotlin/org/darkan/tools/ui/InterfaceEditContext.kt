@@ -23,7 +23,7 @@ import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
  * [InterfaceDocument] separates *definition* state from the live
  * [ComponentState]s the renderer reads, and it re-seeds the states from the
  * definitions on the next `instance()` after any edit. Re-seeding throws away
- * everything a CS2 load script did - the sprites it set, the text it wrote - so
+ * everything a CS2 load script did - the graphics it set, the text it wrote - so
  * an edit that only changed a colour would blank out half the interface unless
  * the load scripts are re-run afterwards. [onEdit] is what the viewer hangs that
  * on, and it only fires reliably because nothing writes to the document directly.

@@ -19,8 +19,8 @@ class WorldMapInfoDecoder(
 
     override fun WorldMapInfoDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            1 -> spriteId = buffer.readBigSmart()
-            2 -> highlightSpriteId = buffer.readBigSmart()
+            1 -> graphicId = buffer.readBigSmart()
+            2 -> highlightGraphicId = buffer.readBigSmart()
             3 -> name = buffer.readString()
             4 -> anInt1058 = buffer.readUnsignedMedium()
             5 -> anInt1054 = buffer.readUnsignedMedium()

@@ -10,7 +10,7 @@ import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
  * for ten seconds still collapses into a single step.
  */
 class HistoryEntry(
-    /** Short label for the UI, e.g. "Add Sprite" or "Delete 3 components". */
+    /** Short label for the UI, e.g. "Add Graphic" or "Delete 3 components". */
     val label: String,
     /**
      * Identity of the continuous gesture that produced this step, or null for a

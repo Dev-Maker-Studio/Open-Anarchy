@@ -61,7 +61,7 @@ internal fun Codec.registerRev727IfPackets() {
     }
 
     serverProt<IfSetGraphic>(opcode = 35, size = 8) { out ->
-        out.writeIntInverseMiddle(spriteId)
+        out.writeIntInverseMiddle(graphicId)
         out.writeIntInverseMiddle(toInterfaceHash(interfaceId, componentId))
     }
 

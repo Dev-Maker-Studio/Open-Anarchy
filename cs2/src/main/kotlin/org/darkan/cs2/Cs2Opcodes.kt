@@ -42,7 +42,7 @@ enum class ArgType {
     BOOLEAN,
     /** A packed RGB colour. */
     COLOUR,
-    /** A sprite id. */
+    /** A graphic id. */
     GRAPHIC,
     /** A bare interface id, not a packed component hash. */
     INTERFACE,
@@ -571,7 +571,7 @@ object Cs2Opcodes {
         Cs2Op(476, "CC_SETFONTMONO", "ccSetfontmono", false, OpKind.NORMAL, 1, 0, 0, 0, 0, 0, false, listOf(ArgType.BOOLEAN)),
         Cs2Op(477, "BROWSER_CLOSE", "browserClose", false, OpKind.NORMAL, 0, 0, 0, 0, 0, 0, false),
         Cs2Op(478, "IF_SETONDRAG", "ifSetOnDrag", false, OpKind.HOOK, 1, 1, 0, 0, 0, 0, true, listOf(ArgType.INT, ArgType.INT, ArgType.INT, ArgType.INT, ArgType.COMPONENT)),
-        Cs2Op(479, "IF_SETVIDEO_SPRITE", "ifSetVideoSprite", false, OpKind.NORMAL, 1, 0, 0, 0, 0, 0, false, listOf(ArgType.COMPONENT)),
+        Cs2Op(479, "IF_SETVIDEO_GRAPHIC", "ifSetVideoGraphic", false, OpKind.NORMAL, 1, 0, 0, 0, 0, 0, false, listOf(ArgType.COMPONENT)),
         Cs2Op(480, "STOCKMARKET_GETOFFERCOMPLETEDCOUNT", "stockmarketGetoffercompletedcount", false, OpKind.NORMAL, 1, 0, 0, 1, 0, 0, false),
         Cs2Op(481, "OC_MINIMENU_COLOUR_OVERRIDDEN", "ocMinimenuColourOverridden", false, OpKind.NORMAL, 1, 0, 0, 1, 0, 0, false, listOf(ArgType.OBJ)),
         Cs2Op(482, "CHATLINE_GETEFFECTFLAGS", "chatLineGeteffectflags", false, OpKind.NORMAL, 1, 0, 0, 1, 0, 0, false),
@@ -605,7 +605,7 @@ object Cs2Opcodes {
         Cs2Op(510, "STORE_VARC", "storeVarc", true, OpKind.NORMAL, 1, 0, 0, 0, 0, 0, false),
         Cs2Op(511, "EMAIL_VALIDATION_ADD_NEW_ADDRESS", "emailValidationAddNewAddress", false, OpKind.NORMAL, 3, 1, 0, 0, 0, 0, false),
         Cs2Op(512, "IF_CLEAROPS", "ifClearops", false, OpKind.NORMAL, 1, 0, 0, 0, 0, 0, false, listOf(ArgType.COMPONENT)),
-        Cs2Op(513, "CC_SETVIDEO_SPRITE", "ccSetVideoSprite", false, OpKind.NORMAL, 0, 0, 0, 0, 0, 0, false),
+        Cs2Op(513, "CC_SETVIDEO_GRAPHIC", "ccSetVideoGraphic", false, OpKind.NORMAL, 0, 0, 0, 0, 0, 0, false),
         Cs2Op(514, "WORLDMAP_FINDNEARESTELEMENT", "worldMapFindnearestelement", false, OpKind.NORMAL, 2, 0, 0, 1, 0, 0, false, listOf(ArgType.MAPELEMENT, ArgType.COORD)),
         Cs2Op(515, "IF_SENDTOFRONT", "ifSendtofront", false, OpKind.NORMAL, 1, 0, 0, 0, 0, 0, false, listOf(ArgType.COMPONENT)),
         Cs2Op(516, "SOUND_VORBIS_VOLUME", "soundVorbisVolume", false, OpKind.NORMAL, 4, 0, 0, 0, 0, 0, false),
@@ -723,7 +723,7 @@ object Cs2Opcodes {
         Cs2Op(628, "IF_SETSCROLLSIZE", "ifSetScrollSize", false, OpKind.NORMAL, 3, 0, 0, 0, 0, 0, false, listOf(ArgType.INT, ArgType.INT, ArgType.COMPONENT)),
         Cs2Op(629, "IGNORE_IS_TEMP", "ignoreIsTemp", false, OpKind.NORMAL, 1, 0, 0, 1, 0, 0, false),
         Cs2Op(630, "IF_SETONCAMFINISHED", "ifSetOnCamFinished", false, OpKind.HOOK, 1, 1, 0, 0, 0, 0, true, listOf(ArgType.INT, ArgType.INT, ArgType.INT, ArgType.INT, ArgType.COMPONENT)),
-        Cs2Op(631, "MEC_SPRITE", "mecSprite", false, OpKind.NORMAL, 1, 0, 0, 1, 0, 0, false, listOf(ArgType.MAPELEMENT)),
+        Cs2Op(631, "MEC_GRAPHIC", "mecGraphic", false, OpKind.NORMAL, 1, 0, 0, 1, 0, 0, false, listOf(ArgType.MAPELEMENT)),
         Cs2Op(632, "DETAIL_SPEECHVOL", "detailSpeechvol", false, OpKind.NORMAL, 1, 0, 0, 0, 0, 0, false),
         Cs2Op(633, "PUSH_LONG_CONSTANT", "pushLongConstant", true, OpKind.NORMAL, 0, 0, 0, 0, 0, 1, false),
         Cs2Op(634, "IS_NPC_ACTIVE", "isNpcActive", false, OpKind.NORMAL, 0, 0, 0, 1, 0, 0, false),

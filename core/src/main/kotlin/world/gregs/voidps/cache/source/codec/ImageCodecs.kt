@@ -16,27 +16,27 @@ import world.gregs.voidps.cache.source.IndexNames
  *
  * | index | directory | codec | layout |
  * |---|---|---|---|
- * | 8 | `sprites` | [SpriteCodec] | one RGBA PNG per frame, `<id>/<frame>.png` |
- * | 32 | `loading_sprites` | [SpriteCodec] | the same, or one `<id>.jpg` for a JPEG archive |
- * | 34 | `loading_sprites_raw` | [SpriteCodec] | the same; every archive here is a palette sprite |
+ * | 8 | `graphics` | [GraphicCodec] | one RGBA PNG per frame, `<id>/<frame>.png` |
+ * | 32 | `loading_graphics` | [GraphicCodec] | the same, or one `<id>.jpg` for a JPEG archive |
+ * | 34 | `loading_graphics_raw` | [GraphicCodec] | the same; every archive here is a palette graphic |
  * | 9 | `textures` | [DefinitionJsonCodec] | `<id>.json`, the procedural operation graph |
  * | 13 | `fontmetrics` | [DefinitionJsonCodec] | `<id>.json`, the glyph advances and padding |
  * | 26 | `materials` | [MaterialCodec] | `<id>.json` per material of the index's single blob |
  *
  * Registered from [SourceCodecs.reset] as one call, so the built in registry stays one list of
  * one-line claims however many indices each group of codecs owns. See `docs/cache-source.md`,
- * "sprites", "textures", "materials", "fontmetrics" and "loading sprites".
+ * "graphics", "textures", "materials", "fontmetrics" and "loading graphics".
  */
 object ImageCodecs {
 
     /** Every index this claims, ascending, for a report that wants to enumerate them. */
     val indices: IntArray = intArrayOf(
-        Index.SPRITES,
+        Index.GRAPHICS,
         Index.TEXTURES,
         Index.FONT_METRICS,
         Index.TEXTURE_DEFINITIONS,
-        Index.LOADING_SPRITES,
-        Index.LOADING_SPRITES_RAW
+        Index.LOADING_GRAPHICS,
+        Index.LOADING_GRAPHICS_RAW
     )
 
     /** The texture graphs of index 9 as JSON; see [TextureDefinition]. */
@@ -47,8 +47,8 @@ object ImageCodecs {
 
     /** Claim all six indices. Called by [SourceCodecs.reset]. */
     fun register() {
-        for (index in intArrayOf(Index.SPRITES, Index.LOADING_SPRITES, Index.LOADING_SPRITES_RAW)) {
-            SourceCodecs.builtin(index, SpriteCodec)
+        for (index in intArrayOf(Index.GRAPHICS, Index.LOADING_GRAPHICS, Index.LOADING_GRAPHICS_RAW)) {
+            SourceCodecs.builtin(index, GraphicCodec)
         }
         SourceCodecs.builtin(Index.TEXTURES, textures)
         SourceCodecs.builtin(Index.FONT_METRICS, fonts)

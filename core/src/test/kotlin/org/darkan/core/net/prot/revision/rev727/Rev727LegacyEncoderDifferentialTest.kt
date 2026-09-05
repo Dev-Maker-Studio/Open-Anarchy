@@ -498,7 +498,7 @@ class Rev727LegacyEncoderDifferentialTest {
                 },
             ),
             HintArrow(
-                iconIndex = 3, targetType = 1, arrowSprite = 2,
+                iconIndex = 3, targetType = 1, arrowGraphic = 2,
                 targetIndex = 1337, denominator = 2500, modelId = 0x0BADF00D,
             ),
         )
@@ -510,7 +510,7 @@ class Rev727LegacyEncoderDifferentialTest {
                 },
             ),
             HintArrow(
-                iconIndex = 3, targetType = 10, arrowSprite = 2,
+                iconIndex = 3, targetType = 10, arrowGraphic = 2,
                 targetIndex = 4321, denominator = 2500, modelId = 0x0BADF00D,
             ),
         )
@@ -525,7 +525,7 @@ class Rev727LegacyEncoderDifferentialTest {
                 },
             ),
             HintArrow(
-                iconIndex = 3, targetType = 2, arrowSprite = 2, plane = 0,
+                iconIndex = 3, targetType = 2, arrowGraphic = 2, plane = 0,
                 x = 3222, y = 3218, height = 32 * 4, distance = -1, modelId = 0x0BADF00D,
             ),
         )

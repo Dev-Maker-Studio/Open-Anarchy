@@ -4,13 +4,13 @@ import org.darkan.core.EnvVars
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
-import world.gregs.voidps.cache.definition.data.SpriteDefinition
-import world.gregs.voidps.cache.definition.decoder.SpriteDecoder
+import world.gregs.voidps.cache.definition.data.GraphicDefinition
+import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
+import world.gregs.voidps.cache.source.codec.GraphicCodec
 import world.gregs.voidps.cache.source.codec.ImageCodecs
 import world.gregs.voidps.cache.source.codec.SourceArchive
 import world.gregs.voidps.cache.source.codec.SourceCodec
 import world.gregs.voidps.cache.source.codec.SourceCodecs
-import world.gregs.voidps.cache.source.codec.SpriteCodec
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -29,13 +29,13 @@ import kotlin.test.assertTrue
  *
  * The bar is the one `docs/cache-source.md` sets for a typed codec: `pack(unpack(bytes)) == bytes`
  * for every archive of every index, with no pristine sidecar anywhere. Unlike
- * `DefinitionJsonCodecTest` this has to write the files out - a sprite is PNGs on disk and the
+ * `DefinitionJsonCodecTest` this has to write the files out - a graphic is PNGs on disk and the
  * codec reads them back through `javax.imageio`, which is the half of the round trip that could
  * lose a pixel - so each archive is unpacked into a scratch directory and packed straight back.
  *
  * Four further things are proved, because the layout promises them:
  *
- * 1. **One file per image.** A sprite directory holds nothing but `<frame>.png` and a JPEG archive
+ * 1. **One file per image.** A graphic directory holds nothing but `<frame>.png` and a JPEG archive
  *    is one `<id>.jpg`; no sidecar, no metadata, no second half.
  * 2. **Every PNG is a standard picture.** `ImageIO` opens it as 8 bit RGBA at the group's canvas
  *    size, so it displays correctly in any viewer.
@@ -87,11 +87,11 @@ class ImageCodecTest {
     }
 
     /**
-     * The three sprite indices as files: one PNG per frame and nothing else, every one of them a
+     * The three graphic indices as files: one PNG per frame and nothing else, every one of them a
      * standard RGBA picture at the group's canvas size, and the private chunks counted.
      */
     @Test
-    fun `a sprite index is one standard RGBA PNG per frame and nothing else`() {
+    fun `a graphic index is one standard RGBA PNG per frame and nothing else`() {
         val cache = cache() ?: return
         SourceCodecs.reset()
         val work = Files.createTempDirectory(SCRATCH)
@@ -108,48 +108,48 @@ class ImageCodecTest {
         var proofName = ""
         var best = 0
         try {
-            for (index in intArrayOf(Index.SPRITES, Index.LOADING_SPRITES, Index.LOADING_SPRITES_RAW)) {
+            for (index in intArrayOf(Index.GRAPHICS, Index.LOADING_GRAPHICS, Index.LOADING_GRAPHICS_RAW)) {
                 val directory = work.resolve(ImageCodecs.directory(index))
                 Files.createDirectories(directory)
                 for (archive in cache.archiveIds(index)) {
                     val group = cache.data(index, archive) ?: continue
                     val unpacked = unpack(index, archive, group, directory)
-                    if (SpriteCodec.jpeg(group)) {
+                    if (GraphicCodec.jpeg(group)) {
                         jpegs++
                         assertEquals(1, unpacked.size, "JPEG archive $archive is not one file")
                         assertTrue(
-                            unpacked[0].endsWith(SpriteCodec.JPEG_EXTENSION),
+                            unpacked[0].endsWith(GraphicCodec.JPEG_EXTENSION),
                             "JPEG archive $archive wrote ${unpacked[0]}"
                         )
                         continue
                     }
                     groups++
                     val definition = decode(archive, group)
-                    val sprites = definition.sprites!!
+                    val graphics = definition.graphics!!
                     assertEquals(
-                        sprites.size, unpacked.size,
-                        "index $index group $archive has ${sprites.size} frames but wrote ${unpacked.size} files"
+                        graphics.size, unpacked.size,
+                        "index $index group $archive has ${graphics.size} frames but wrote ${unpacked.size} files"
                     )
                     if (needsPalette(definition)) {
                         paletteChunk++
                     }
-                    for (frame in sprites.indices) {
-                        val path = directory.resolve("$archive/$frame${SpriteCodec.EXTENSION}")
+                    for (frame in graphics.indices) {
+                        val path = directory.resolve("$archive/$frame${GraphicCodec.EXTENSION}")
                         assertTrue(Files.isRegularFile(path), "index $index group $archive has no frame $frame")
                         val png = Files.readAllBytes(path)
                         bytes += png.size
                         frames++
-                        val sprite = sprites[frame]
-                        if (sprite.width == 0 || sprite.height == 0) {
+                        val graphic = graphics[frame]
+                        if (graphic.width == 0 || graphic.height == 0) {
                             empty++
                         }
                         if (needsFrame(definition, frame)) {
                             frameChunk++
                         }
                         val types = chunks(png)
-                        assertTrue(SpriteCodec.PALETTE_CHUNK in types, "$path has no palette chunk")
-                        assertTrue(SpriteCodec.FRAME_CHUNK in types, "$path has no frame chunk")
-                        if (SpriteCodec.INDEX_CHUNK in types) {
+                        assertTrue(GraphicCodec.PALETTE_CHUNK in types, "$path has no palette chunk")
+                        assertTrue(GraphicCodec.FRAME_CHUNK in types, "$path has no frame chunk")
+                        if (GraphicCodec.INDEX_CHUNK in types) {
                             indexChunk++
                         }
                         // A standard picture: RGBA, eight bits a channel, the group's canvas.
@@ -160,13 +160,13 @@ class ImageCodecTest {
                         assertEquals(4, image.raster.numBands, "$path is not four bands")
                         assertTrue(image.colorModel.hasAlpha(), "$path has no alpha channel")
                         assertEquals(8, image.colorModel.componentSize.max(), "$path is not eight bits a channel")
-                        if (index == Index.SPRITES && frame == 0 && sprite.width * sprite.height > best) {
-                            best = sprite.width * sprite.height
+                        if (index == Index.GRAPHICS && frame == 0 && graphic.width * graphic.height > best) {
+                            best = graphic.width * graphic.height
                             proof = png
-                            proofName = "sprites/$archive/0${SpriteCodec.EXTENSION}"
+                            proofName = "graphics/$archive/0${GraphicCodec.EXTENSION}"
                         }
                     }
-                    if (sprites.any { it.raster.any { pixel -> pixel.toInt() == 0 } }) {
+                    if (graphics.any { it.raster.any { pixel -> pixel.toInt() == 0 } }) {
                         index0++
                     }
                 }
@@ -178,13 +178,13 @@ class ImageCodecTest {
                         }
                         val name = path.fileName.toString()
                         assertTrue(
-                            name.endsWith(SpriteCodec.EXTENSION) || name.endsWith(SpriteCodec.JPEG_EXTENSION),
+                            name.endsWith(GraphicCodec.EXTENSION) || name.endsWith(GraphicCodec.JPEG_EXTENSION),
                             "${ImageCodecs.directory(index)} holds a $name, which is neither a PNG nor a JPEG"
                         )
                     }
                 }
             }
-            val file = File(PROOFS, "sprite-proof.png")
+            val file = File(PROOFS, "graphic-proof.png")
             file.parentFile.mkdirs()
             file.writeBytes(proof!!)
             println("wrote $proofName to ${file.absolutePath}")
@@ -192,14 +192,14 @@ class ImageCodecTest {
             work.toFile().deleteRecursively()
         }
         println(
-            "$groups sprite groups and $jpegs JPEG archives; $frames frame PNGs ($empty of them zero sized) " +
+            "$groups graphic groups and $jpegs JPEG archives; $frames frame PNGs ($empty of them zero sized) " +
                 "in ${bytes / 1_000_000} MB, $index0 groups drawing the transparent index"
         )
         println(
             "private chunks: rsPL needed by $paletteChunk of $groups groups, rsFR by $frameChunk of $frames frames, " +
                 "rsIX written for $indexChunk of $frames frames"
         )
-        assertTrue(groups > 12_000, "only $groups sprite groups were written")
+        assertTrue(groups > 12_000, "only $groups graphic groups were written")
         assertTrue(jpegs >= 21, "only $jpegs JPEG archives were written")
     }
 
@@ -222,22 +222,22 @@ class ImageCodecTest {
         var drifted = 0
         var saturated = 0
         try {
-            for (index in intArrayOf(Index.SPRITES, Index.LOADING_SPRITES, Index.LOADING_SPRITES_RAW)) {
+            for (index in intArrayOf(Index.GRAPHICS, Index.LOADING_GRAPHICS, Index.LOADING_GRAPHICS_RAW)) {
                 val directory = work.resolve(ImageCodecs.directory(index))
                 Files.createDirectories(directory)
                 for (archive in cache.archiveIds(index)) {
-                    if (index == Index.SPRITES && archive % SAMPLE != 0) {
+                    if (index == Index.GRAPHICS && archive % SAMPLE != 0) {
                         continue
                     }
                     val group = cache.data(index, archive) ?: continue
-                    if (SpriteCodec.jpeg(group)) {
+                    if (GraphicCodec.jpeg(group)) {
                         continue
                     }
                     unpack(index, archive, group, directory)
                     val was = decode(archive, group)
-                    val sprites = was.sprites!!
-                    for (frame in sprites.indices) {
-                        val path = directory.resolve("$archive/$frame${SpriteCodec.EXTENSION}")
+                    val graphics = was.graphics!!
+                    for (frame in graphics.indices) {
+                        val path = directory.resolve("$archive/$frame${GraphicCodec.EXTENSION}")
                         Files.write(path, strip(Files.readAllBytes(path)))
                         assertTrue(
                             chunks(Files.readAllBytes(path)).none { it.startsWith("rs") },
@@ -261,11 +261,11 @@ class ImageCodecTest {
                     // ... and now with one pixel repainted, in the first frame that has a pixel to
                     // repaint. The colour is one nothing in the group uses, so it has to be added to
                     // the palette and cannot be confused with an entry that was already there.
-                    val frame = sprites.indexOfFirst { it.width > 0 && it.height > 0 && it.raster.any { p -> p.toInt() != 0 } }
+                    val frame = graphics.indexOfFirst { it.width > 0 && it.height > 0 && it.raster.any { p -> p.toInt() != 0 } }
                     if (frame < 0) {
                         continue
                     }
-                    val path = directory.resolve("$archive/$frame${SpriteCodec.EXTENSION}")
+                    val path = directory.resolve("$archive/$frame${GraphicCodec.EXTENSION}")
                     val point = repaint(path) ?: continue
                     val repainted = decode(archive, SourceCodecs.codec(index).pack(directory, archive, metadata).group)
                     val canvas = canvas(repainted, frame)
@@ -299,22 +299,22 @@ class ImageCodecTest {
     }
 
     @Test
-    fun `a sprite maps every one of its files back to its archive`() {
-        assertEquals(1234, SpriteCodec.archiveOf("1234/0${SpriteCodec.EXTENSION}"))
-        assertEquals(1234, SpriteCodec.archiveOf("1234/255${SpriteCodec.EXTENSION}"))
-        assertEquals(1234, SpriteCodec.archiveOf("1234/${SpriteCodec.PRISTINE}.pristine"))
-        assertEquals(1234, SpriteCodec.archiveOf("1234${SpriteCodec.JPEG_EXTENSION}"))
-        assertEquals(1234, SpriteCodec.archiveOf("1234${SpriteCodec.EXTENSION}"))
-        assertEquals(null, SpriteCodec.archiveOf("1234.dat"))
-        assertEquals(null, SpriteCodec.archiveOf("1234/nested/0${SpriteCodec.EXTENSION}"))
+    fun `a graphic maps every one of its files back to its archive`() {
+        assertEquals(1234, GraphicCodec.archiveOf("1234/0${GraphicCodec.EXTENSION}"))
+        assertEquals(1234, GraphicCodec.archiveOf("1234/255${GraphicCodec.EXTENSION}"))
+        assertEquals(1234, GraphicCodec.archiveOf("1234/${GraphicCodec.PRISTINE}.pristine"))
+        assertEquals(1234, GraphicCodec.archiveOf("1234${GraphicCodec.JPEG_EXTENSION}"))
+        assertEquals(1234, GraphicCodec.archiveOf("1234${GraphicCodec.EXTENSION}"))
+        assertEquals(null, GraphicCodec.archiveOf("1234.dat"))
+        assertEquals(null, GraphicCodec.archiveOf("1234/nested/0${GraphicCodec.EXTENSION}"))
     }
 
     @Test
     fun `every 2D index has its codec registered`() {
         SourceCodecs.reset()
-        assertEquals(SpriteCodec, SourceCodecs.codec(Index.SPRITES))
-        assertEquals(SpriteCodec, SourceCodecs.codec(Index.LOADING_SPRITES))
-        assertEquals(SpriteCodec, SourceCodecs.codec(Index.LOADING_SPRITES_RAW))
+        assertEquals(GraphicCodec, SourceCodecs.codec(Index.GRAPHICS))
+        assertEquals(GraphicCodec, SourceCodecs.codec(Index.LOADING_GRAPHICS))
+        assertEquals(GraphicCodec, SourceCodecs.codec(Index.LOADING_GRAPHICS_RAW))
         assertEquals(ImageCodecs.textures, SourceCodecs.codec(Index.TEXTURES))
         assertEquals(ImageCodecs.fonts, SourceCodecs.codec(Index.FONT_METRICS))
         assertEquals("json-material", SourceCodecs.codec(Index.TEXTURE_DEFINITIONS).id)
@@ -381,7 +381,7 @@ class ImageCodecTest {
         val metadata = ArchiveMetadata()
         metadata.fileIds(intArrayOf(0))
         val source = SourceArchive(index, archive, null, intArrayOf(0), group, listOf(group), emptyList(), metadata)
-        val unpacked = SpriteCodec.unpack(directory, source)
+        val unpacked = GraphicCodec.unpack(directory, source)
         for (file in unpacked.files) {
             SourceFiles.write(directory.resolve(file.path), file.bytes)
         }
@@ -398,11 +398,11 @@ class ImageCodecTest {
      * from pixels alone quantises that pixel to the nearest colour the palette holds. Returns how
      * many frames were not identical, which is how rare that is measured.
      */
-    private fun compare(index: Int, archive: Int, was: SpriteDefinition, now: SpriteDefinition): Int {
+    private fun compare(index: Int, archive: Int, was: GraphicDefinition, now: GraphicDefinition): Int {
         assertEquals(was.width, now.width, "index $index group $archive changed canvas width")
         assertEquals(was.height, now.height, "index $index group $archive changed canvas height")
-        val before = was.sprites!!
-        val after = now.sprites!!
+        val before = was.graphics!!
+        val after = now.graphics!!
         assertEquals(before.size, after.size, "index $index group $archive changed frame count")
         var drifted = 0
         for (frame in before.indices) {
@@ -453,19 +453,19 @@ class ImageCodecTest {
      * alpha plane where the frame has one or the transparent index where it does not. A fully
      * transparent pixel is 0 whatever colour is under it, because nothing shows it.
      */
-    private fun canvas(definition: SpriteDefinition, frame: Int): IntArray {
+    private fun canvas(definition: GraphicDefinition, frame: Int): IntArray {
         val width = maxOf(definition.width, 1)
         val out = IntArray(width * maxOf(definition.height, 1))
-        val sprite = definition.sprites!![frame]
-        val plane = sprite.alpha
-        for (y in 0 until sprite.height) {
-            for (x in 0 until sprite.width) {
-                val offset = x + y * sprite.width
-                val entry = sprite.raster[offset].toInt() and 0xff
+        val graphic = definition.graphics!![frame]
+        val plane = graphic.alpha
+        for (y in 0 until graphic.height) {
+            for (x in 0 until graphic.width) {
+                val offset = x + y * graphic.width
+                val entry = graphic.raster[offset].toInt() and 0xff
                 val opacity = if (plane != null) plane[offset].toInt() and 0xff else if (entry == 0) 0 else 0xff
                 if (opacity != 0) {
-                    out[(x + sprite.offsetX) + (y + sprite.offsetY) * width] =
-                        (opacity shl 24) or sprite.palette[entry]
+                    out[(x + graphic.offsetX) + (y + graphic.offsetY) * width] =
+                        (opacity shl 24) or graphic.palette[entry]
                 }
             }
         }
@@ -473,7 +473,7 @@ class ImageCodecTest {
     }
 
     /** The frame's drawn pixels' bounding box in the canvas, which is what a stripped PNG recovers. */
-    private fun trimmed(definition: SpriteDefinition, frame: Int): String {
+    private fun trimmed(definition: GraphicDefinition, frame: Int): String {
         val width = maxOf(definition.width, 1)
         val pixels = canvas(definition, frame)
         var minX = width
@@ -495,18 +495,18 @@ class ImageCodecTest {
     }
 
     /** Whether the group's palette order is one the pixels alone would not rebuild. */
-    private fun needsPalette(definition: SpriteDefinition): Boolean {
+    private fun needsPalette(definition: GraphicDefinition): Boolean {
         val order = ArrayList<Int>()
         val seen = HashSet<Int>()
-        for (sprite in definition.sprites!!) {
-            val plane = sprite.alpha
-            for (y in 0 until sprite.height) {
-                for (x in 0 until sprite.width) {
-                    val offset = x + y * sprite.width
-                    val entry = sprite.raster[offset].toInt() and 0xff
+        for (graphic in definition.graphics!!) {
+            val plane = graphic.alpha
+            for (y in 0 until graphic.height) {
+                for (x in 0 until graphic.width) {
+                    val offset = x + y * graphic.width
+                    val entry = graphic.raster[offset].toInt() and 0xff
                     val opacity = if (plane != null) plane[offset].toInt() and 0xff else if (entry == 0) 0 else 0xff
-                    if (opacity != 0 && seen.add(sprite.palette[entry])) {
-                        order.add(sprite.palette[entry])
+                    if (opacity != 0 && seen.add(graphic.palette[entry])) {
+                        order.add(graphic.palette[entry])
                     }
                 }
             }
@@ -515,7 +515,7 @@ class ImageCodecTest {
             return true
         }
         for (entry in order.indices) {
-            if (order[entry] != definition.sprites!![0].palette[entry + 1]) {
+            if (order[entry] != definition.graphics!![0].palette[entry + 1]) {
                 return true
             }
         }
@@ -523,18 +523,18 @@ class ImageCodecTest {
     }
 
     /** Whether the frame's box, storage order or dropped alpha plane is something the pixels lose. */
-    private fun needsFrame(definition: SpriteDefinition, frame: Int): Boolean {
-        val sprite = definition.sprites!![frame]
-        if (sprite.width == 0 || sprite.height == 0) {
-            return sprite.offsetX != 0 || sprite.offsetY != 0 || sprite.flags != 0
+    private fun needsFrame(definition: GraphicDefinition, frame: Int): Boolean {
+        val graphic = definition.graphics!![frame]
+        if (graphic.width == 0 || graphic.height == 0) {
+            return graphic.offsetX != 0 || graphic.offsetY != 0 || graphic.flags != 0
         }
-        if (sprite.flags and 0x1 != 0) {
+        if (graphic.flags and 0x1 != 0) {
             return true
         }
-        if (sprite.flags and 0x2 != 0 && sprite.alpha == null) {
+        if (graphic.flags and 0x2 != 0 && graphic.alpha == null) {
             return true
         }
-        return trimmed(definition, frame) != "${sprite.offsetX},${sprite.offsetY} ${sprite.width}x${sprite.height}"
+        return trimmed(definition, frame) != "${graphic.offsetX},${graphic.offsetY} ${graphic.width}x${graphic.height}"
     }
 
     /** [png] rewritten through `ImageIO`, which is what an editor's save does to a private chunk. */
@@ -592,9 +592,9 @@ class ImageCodecTest {
         return out
     }
 
-    private fun decode(archive: Int, group: ByteArray): SpriteDefinition {
-        val definition = SpriteDefinition(archive)
-        SpriteDecoder().readLoop(definition, BufferReader(group))
+    private fun decode(archive: Int, group: ByteArray): GraphicDefinition {
+        val definition = GraphicDefinition(archive)
+        GraphicDecoder().readLoop(definition, BufferReader(group))
         return definition
     }
 
@@ -614,10 +614,10 @@ class ImageCodecTest {
         /** One group of index 8 in this many, for the checks that pack every frame twice over. */
         private const val SAMPLE = 8
 
-        /** Opaque magenta: a colour no sprite group in the cache holds, so an edit cannot hide. */
+        /** Opaque magenta: a colour no graphic group in the cache holds, so an edit cannot hide. */
         private const val PAINT = 0xffff00ff.toInt()
 
-        /** A sprite group's palette: 255 colours and the transparent index. */
+        /** A graphic group's palette: 255 colours and the transparent index. */
         private const val PALETTE = 256
 
         private const val PROOFS =
