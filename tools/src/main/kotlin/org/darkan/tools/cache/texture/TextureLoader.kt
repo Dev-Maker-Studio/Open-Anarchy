@@ -22,11 +22,11 @@ import world.gregs.voidps.cache.definition.decoder.MaterialDecoder
  * Loads textures from the cache using the full RS procedural texture system:
  * 1. TextureTypes (TEXTURES index) define texture operation DAGs
  * 2. TextureOperations process and combine inputs to generate pixels
- * 3. TextureOpSprite operations reference sprites from SPRITES index
+ * 3. TextureOpGraphic operations reference graphics from GRAPHICS index
  */
 object TextureLoader {
     private val textureCache = mutableMapOf<Int, Int>() // textureId -> GL texture ID
-    private val spriteDataCache = ConcurrentHashMap<Int, SpriteData>() // spriteId -> SpriteData
+    private val graphicDataCache = ConcurrentHashMap<Int, GraphicData>() // graphicId -> GraphicData
     private val textureDataCache = ConcurrentHashMap<Int, ByteArray>() // textureId -> raw TEXTURES data
     private var defaultTextureId: Int = 0
     private var cacheRef: Cache? = null
@@ -183,8 +183,8 @@ object TextureLoader {
                     textureType.getPixelsRgb(
                         textureSize,
                         textureSize,
-                        spriteLoader = { spriteId ->
-                            loadSpriteData(cache, spriteId)
+                        graphicLoader = { graphicId ->
+                            loadGraphicData(cache, graphicId)
                         },
                         textureLoader = { materialId, width, height ->
                             generateTexturePixels(cache, materialId, width, height)
@@ -197,8 +197,8 @@ object TextureLoader {
                     textureType.getPixelsArgb(
                         textureSize,
                         textureSize,
-                        spriteLoader = { spriteId ->
-                            loadSpriteData(cache, spriteId)
+                        graphicLoader = { graphicId ->
+                            loadGraphicData(cache, graphicId)
                         },
                         textureLoader = { materialId, width, height ->
                             generateTexturePixels(cache, materialId, width, height)
@@ -245,10 +245,10 @@ object TextureLoader {
                 return@getOrPut createTextureFromArgb(pixels, textureSize, textureSize)
             }
 
-            // Fallback: try loading texture ID directly as sprite ID (some models use this)
-            val directSprite = loadSpriteAsTexture(cache, textureId)
-            if (directSprite != null) {
-                return@getOrPut directSprite
+            // Fallback: try loading texture ID directly as graphic ID (some models use this)
+            val directGraphic = loadGraphicAsTexture(cache, textureId)
+            if (directGraphic != null) {
+                return@getOrPut directGraphic
             }
 
             defaultTextureId
@@ -323,7 +323,7 @@ object TextureLoader {
                 textureType.getPixelsRgb(
                     textureSize,
                     textureSize,
-                    spriteLoader = { spriteId -> loadSpriteData(cache, spriteId) },
+                    graphicLoader = { graphicId -> loadGraphicData(cache, graphicId) },
                     textureLoader = { materialId, width, height ->
                         generateTexturePixels(cache, materialId, width, height)
                     },
@@ -334,7 +334,7 @@ object TextureLoader {
                 textureType.getPixelsArgb(
                     textureSize,
                     textureSize,
-                    spriteLoader = { spriteId -> loadSpriteData(cache, spriteId) },
+                    graphicLoader = { graphicId -> loadGraphicData(cache, graphicId) },
                     textureLoader = { materialId, width, height ->
                         generateTexturePixels(cache, materialId, width, height)
                     },
@@ -475,8 +475,8 @@ object TextureLoader {
             textureType.getPixelsRgb(
                 nestedSize,
                 nestedSize,
-                spriteLoader = { spriteId ->
-                    loadSpriteData(cache, spriteId)
+                graphicLoader = { graphicId ->
+                    loadGraphicData(cache, graphicId)
                 },
                 textureLoader = { materialId, w, h ->
                     generateTexturePixels(cache, materialId, w, h)
@@ -524,52 +524,52 @@ object TextureLoader {
     }
 
     /**
-     * Load sprite data for use by TextureOpSprite operations.
+     * Load graphic data for use by TextureOpGraphic operations.
      */
-    private fun loadSpriteData(cache: Cache, spriteId: Int): SpriteData? {
-        spriteDataCache[spriteId]?.let { return it }
-        val data = cache.data(Index.SPRITES, spriteId) ?: return null
-        val sprite = decodeSpriteToData(data, 0) ?: return null
-        return spriteDataCache.putIfAbsent(spriteId, sprite) ?: sprite
+    private fun loadGraphicData(cache: Cache, graphicId: Int): GraphicData? {
+        graphicDataCache[graphicId]?.let { return it }
+        val data = cache.data(Index.GRAPHICS, graphicId) ?: return null
+        val graphic = decodeGraphicToData(data, 0) ?: return null
+        return graphicDataCache.putIfAbsent(graphicId, graphic) ?: graphic
     }
 
     /**
-     * Load a sprite directly as a GL texture (fallback for simple textures).
+     * Load a graphic directly as a GL texture (fallback for simple textures).
      */
-    private fun loadSpriteAsTexture(cache: Cache, spriteId: Int): Int? {
-        val spriteData = loadSpriteData(cache, spriteId) ?: return null
-        return createTextureFromArgb(spriteData.pixels, spriteData.width, spriteData.height)
+    private fun loadGraphicAsTexture(cache: Cache, graphicId: Int): Int? {
+        val graphicData = loadGraphicData(cache, graphicId) ?: return null
+        return createTextureFromArgb(graphicData.pixels, graphicData.width, graphicData.height)
     }
 
     /**
-     * Decode sprite data to SpriteData for use by texture operations.
+     * Decode graphic data to GraphicData for use by texture operations.
      */
-    private fun decodeSpriteToData(data: ByteArray, subIndex: Int): SpriteData? {
+    private fun decodeGraphicToData(data: ByteArray, subIndex: Int): GraphicData? {
         if (data.size < 10) return null
 
         val buffer = BufferReader(data)
 
-        // Read sprite count from end (unsigned short)
+        // Read graphic count from end (unsigned short)
         buffer.position(data.size - 2)
-        val spriteCount = buffer.readShort() and 0xFFFF
-        if (spriteCount == 0 || subIndex >= spriteCount) return null
+        val graphicCount = buffer.readShort() and 0xFFFF
+        if (graphicCount == 0 || subIndex >= graphicCount) return null
 
         // Read header
-        buffer.position(data.size - 7 - spriteCount * 8)
+        buffer.position(data.size - 7 - graphicCount * 8)
         val biggestWidth = buffer.readShort()
         val biggestHeight = buffer.readShort()
         val paletteSize = buffer.readUnsignedByte() + 1
 
-        // Read sprite dimensions
-        val minX = IntArray(spriteCount)
-        val minY = IntArray(spriteCount)
-        val widths = IntArray(spriteCount)
-        val heights = IntArray(spriteCount)
+        // Read graphic dimensions
+        val minX = IntArray(graphicCount)
+        val minY = IntArray(graphicCount)
+        val widths = IntArray(graphicCount)
+        val heights = IntArray(graphicCount)
 
-        for (i in 0 until spriteCount) minX[i] = buffer.readShort()
-        for (i in 0 until spriteCount) minY[i] = buffer.readShort()
-        for (i in 0 until spriteCount) widths[i] = buffer.readShort()
-        for (i in 0 until spriteCount) heights[i] = buffer.readShort()
+        for (i in 0 until graphicCount) minX[i] = buffer.readShort()
+        for (i in 0 until graphicCount) minY[i] = buffer.readShort()
+        for (i in 0 until graphicCount) widths[i] = buffer.readShort()
+        for (i in 0 until graphicCount) heights[i] = buffer.readShort()
 
         val innerWidth = widths[subIndex]
         val innerHeight = heights[subIndex]
@@ -584,7 +584,7 @@ object TextureLoader {
         val fullHeight = if (biggestHeight > 0) biggestHeight else innerHeight
 
         // Read palette
-        buffer.position(data.size - 7 - spriteCount * 8 - (paletteSize - 1) * 3)
+        buffer.position(data.size - 7 - graphicCount * 8 - (paletteSize - 1) * 3)
         val palette = IntArray(paletteSize)
         for (i in 1 until paletteSize) {
             palette[i] = buffer.readUnsignedMedium()
@@ -596,49 +596,49 @@ object TextureLoader {
         var raster: ByteArray? = null
         var alpha: ByteArray? = null
 
-        for (i in 0 until spriteCount) {
+        for (i in 0 until graphicCount) {
             val area = widths[i] * heights[i]
             val flags = buffer.readUnsignedByte()
             val hasAlpha = (flags and 0x2) != 0
             val columnMajor = (flags and 0x1) != 0
 
-            val spriteRaster = ByteArray(area)
-            val spriteAlpha = if (hasAlpha) ByteArray(area) else null
+            val graphicRaster = ByteArray(area)
+            val graphicAlpha = if (hasAlpha) ByteArray(area) else null
 
             if (!columnMajor) {
                 for (p in 0 until area) {
-                    spriteRaster[p] = buffer.readByte().toByte()
+                    graphicRaster[p] = buffer.readByte().toByte()
                 }
                 if (hasAlpha) {
                     for (p in 0 until area) {
-                        spriteAlpha!![p] = buffer.readByte().toByte()
+                        graphicAlpha!![p] = buffer.readByte().toByte()
                     }
                 }
             } else {
                 for (x in 0 until widths[i]) {
                     for (y in 0 until heights[i]) {
-                        spriteRaster[x + y * widths[i]] = buffer.readByte().toByte()
+                        graphicRaster[x + y * widths[i]] = buffer.readByte().toByte()
                     }
                 }
                 if (hasAlpha) {
                     for (x in 0 until widths[i]) {
                         for (y in 0 until heights[i]) {
-                            spriteAlpha!![x + y * widths[i]] = buffer.readByte().toByte()
+                            graphicAlpha!![x + y * widths[i]] = buffer.readByte().toByte()
                         }
                     }
                 }
             }
 
             if (i == subIndex) {
-                raster = spriteRaster
-                alpha = spriteAlpha
+                raster = graphicRaster
+                alpha = graphicAlpha
             }
         }
 
         if (raster == null) return null
 
         // Convert indexed to ARGB on the full canvas (like method1523 does)
-        // This expands the sprite to its full bounding box
+        // This expands the graphic to its full bounding box
         val pixels = IntArray(fullWidth * fullHeight)
         for (y in 0 until innerHeight) {
             val srcRowStart = y * innerWidth
@@ -660,7 +660,7 @@ object TextureLoader {
             }
         }
 
-        return SpriteData(pixels, fullWidth, fullHeight)
+        return GraphicData(pixels, fullWidth, fullHeight)
     }
 
     /**
@@ -731,10 +731,10 @@ object TextureLoader {
     }
 
     /**
-     * Public access to sprite decoding for diagnostic tools.
+     * Public access to graphic decoding for diagnostic tools.
      */
-    fun decodeSpriteToDataPublic(data: ByteArray, subIndex: Int): SpriteData? {
-        return decodeSpriteToData(data, subIndex)
+    fun decodeGraphicToDataPublic(data: ByteArray, subIndex: Int): GraphicData? {
+        return decodeGraphicToData(data, subIndex)
     }
 
     /**
@@ -758,14 +758,14 @@ object TextureLoader {
         val pixels = if (opaque) {
             textureType.getPixelsRgb(
                 textureSize, textureSize,
-                spriteLoader = { spriteId -> loadSpriteData(cache, spriteId) },
+                graphicLoader = { graphicId -> loadGraphicData(cache, graphicId) },
                 textureLoader = { matId, w, h -> generateTexturePixels(cache, matId, w, h) },
                 brightness = 0.7
             )
         } else {
             textureType.getPixelsArgb(
                 textureSize, textureSize,
-                spriteLoader = { spriteId -> loadSpriteData(cache, spriteId) },
+                graphicLoader = { graphicId -> loadGraphicData(cache, graphicId) },
                 textureLoader = { matId, w, h -> generateTexturePixels(cache, matId, w, h) },
                 brightness = 0.7
             )
@@ -830,11 +830,11 @@ object TextureLoader {
     }
 
     /**
-     * Drop the CPU-side caches (decoded texture types, sprites, generated pixels)
+     * Drop the CPU-side caches (decoded texture types, graphics, generated pixels)
      * without touching any GL resource. Safe to call without a GL context.
      */
     fun clearCpuCaches() {
-        spriteDataCache.clear()
+        graphicDataCache.clear()
         textureDataCache.clear()
         pixelCache.clear()
         materialPixelCache.clear()

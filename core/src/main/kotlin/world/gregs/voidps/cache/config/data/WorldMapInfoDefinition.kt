@@ -6,8 +6,8 @@ import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 data class WorldMapInfoDefinition(
     override var id: Int = -1,
-    var spriteId: Int = -1,
-    var highlightSpriteId: Int = -1,
+    var graphicId: Int = -1,
+    var highlightGraphicId: Int = -1,
     var name: String? = null,
     var anInt1058: Int = 0,
     var anInt1054: Int = -1,
@@ -72,8 +72,8 @@ data class WorldMapInfoDefinition(
         other as WorldMapInfoDefinition
 
         if (id != other.id) return false
-        if (spriteId != other.spriteId) return false
-        if (highlightSpriteId != other.highlightSpriteId) return false
+        if (graphicId != other.graphicId) return false
+        if (highlightGraphicId != other.highlightGraphicId) return false
         if (name != other.name) return false
         if (anInt1058 != other.anInt1058) return false
         if (anInt1054 != other.anInt1054) return false
@@ -126,8 +126,8 @@ data class WorldMapInfoDefinition(
 
     override fun hashCode(): Int {
         var result = id
-        result = 31 * result + spriteId
-        result = 31 * result + highlightSpriteId
+        result = 31 * result + graphicId
+        result = 31 * result + highlightGraphicId
         result = 31 * result + (name?.hashCode() ?: 0)
         result = 31 * result + anInt1058
         result = 31 * result + anInt1054

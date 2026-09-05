@@ -130,7 +130,7 @@ class InterfaceCs2Host(
             "IF_SETHIDE", "CC_SETHIDE" -> mutate(component) { it.hidden = values.first() != 0 }
             "IF_SETCOLOUR", "CC_SETCOLOUR" -> mutate(component) { it.colour = values.first() }
             "IF_SETTRANS", "CC_SETTRANS" -> mutate(component) { it.transparency = values.first() }
-            "IF_SETGRAPHIC", "CC_SETGRAPHIC" -> mutate(component) { it.spriteId = values.first() }
+            "IF_SETGRAPHIC", "CC_SETGRAPHIC" -> mutate(component) { it.graphicId = values.first() }
             "IF_SETTEXT", "CC_SETTEXT" -> mutate(component) { it.text = args.strings.firstOrNull() ?: "" }
             // `*_SETFILL` is the name the client's opcode table uses; the `*_SETFILLED`
             // spelling is kept so a rename in the opcode table cannot silently drop
@@ -165,7 +165,7 @@ class InterfaceCs2Host(
             "IF_SETTILING", "CC_SETTILING" -> mutate(component) { it.tiling = values.first() == 1 }
             "IF_SETOUTLINE", "CC_SETOUTLINE" -> mutate(component) { it.borderThickness = values.first() }
             "IF_SETGRAPHICSHADOW", "CC_SETGRAPHICSHADOW" ->
-                mutate(component) { it.spriteShadow = values.first() }
+                mutate(component) { it.graphicShadow = values.first() }
             "IF_SETLINEWID", "CC_SETLINEWID" -> mutate(component) { it.lineWidth = values.first() }
 
             "IF_SETDRAGRENDERBEHAVIOUR", "CC_SETDRAGRENDERBEHAVIOUR" ->
@@ -242,7 +242,7 @@ class InterfaceCs2Host(
             "IF_GETSCROLLY", "CC_GETSCROLLY" -> ints(component?.scrollY ?: 0)
             "IF_GETSCROLLWIDTH", "CC_GETSCROLLWIDTH" -> ints(component?.scrollWidth ?: 0)
             "IF_GETSCROLLHEIGHT", "CC_GETSCROLLHEIGHT" -> ints(component?.scrollHeight ?: 0)
-            "IF_GETGRAPHIC", "CC_GETGRAPHIC" -> ints(component?.spriteId ?: -1)
+            "IF_GETGRAPHIC", "CC_GETGRAPHIC" -> ints(component?.graphicId ?: -1)
             "IF_GETTEXT", "CC_GETTEXT" -> strings(component?.text ?: "")
             "IF_GETOP", "CC_GETOP" -> strings(component?.options?.getOrNull(values.first() - 1) ?: "")
             "IF_GETOPBASE", "CC_GETOPBASE" -> strings(component?.opBase ?: "")
@@ -281,7 +281,7 @@ class InterfaceCs2Host(
      * when [name] is not one of them.
      *
      * A great many RS widgets are not in the cache at all: the cache holds an empty
-     * layer and a load script fills it with `CC_CREATE` children - the nine sprites
+     * layer and a load script fills it with `CC_CREATE` children - the nine graphics
      * of a dropdown's border, the six parts of a scrollbar, one text child per
      * dropdown row. Without these opcodes the layer stays empty and every `CC_*`
      * call after the create lands on the layer itself, which is why an

@@ -56,7 +56,7 @@ class MapTable(val player: Player, val item: Item?) {
             player.packets.setIFHidden(780, Utils.componentIdFromHash(component), false)
         else {
             if (itemId == Talismans.ELEMENTAL.talismanId) {
-                // Show Air, Earth, Fire, and Water sprites for Elemental talisman
+                // Show Air, Earth, Fire, and Water graphics for Elemental talisman
                 val componentsToShow = listOf(Talismans.AIR, Talismans.EARTH, Talismans.FIRE, Talismans.WATER).mapNotNull { talisman -> enumMap[talisman.talismanId] as? Int }
                 componentsToShow.forEach { componentId ->
                     player.packets.setIFHidden(780, Utils.componentIdFromHash(componentId), false)

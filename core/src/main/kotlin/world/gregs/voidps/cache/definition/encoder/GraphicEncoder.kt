@@ -1,78 +1,98 @@
 package world.gregs.voidps.cache.definition.encoder
 
-import it.unimi.dsi.fastutil.ints.IntArrayList
 import world.gregs.voidps.buffer.write.Writer
-import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.GraphicDefinition
 
 /**
- * Writes an index 21 spotanim file.
+ * The exact inverse of [world.gregs.voidps.cache.definition.decoder.GraphicDecoder].
  *
- * Opcodes 9 and 11 to 16 all set the same brightness/fade pair, so which of them a definition came from is
- * recovered from the pair's value; none of them appear in 727, where only 1, 2, 4 to 8, 10 and 40 are used.
+ * The file is three blocks: the frames' pixels from offset 0, then the palette, then a fixed
+ * `7 + 8 * frames` byte trailer. Nothing here decides anything - every frame writes the storage
+ * order and the alpha plane its own [world.gregs.voidps.cache.definition.data.IndexedGraphic.flags]
+ * calls for, and the palette is written from
+ * [GraphicDefinition.rawPalette] rather than from the normalised copy the frames share.
+ *
+ * An alpha plane the decoder dropped because every byte of it was 0xff is written back as 0xff:
+ * that is what "no transparency" means in the file, and the flag is what says the plane is there.
  */
-class GraphicEncoder : OpcodeEncoder<GraphicDefinition>() {
+class GraphicEncoder {
 
-    override fun opcodes(definition: GraphicDefinition): IntArray {
-        val opcodes = IntArrayList()
-        if (definition.modelId != 0) {
-            opcodes.add(1)
+    fun Writer.encode(definition: GraphicDefinition) {
+        val graphics = definition.graphics ?: error("Graphic ${definition.id} has no frames to encode.")
+        for (graphic in graphics) {
+            writeByte(graphic.flags)
+            val area = graphic.width * graphic.height
+            require(graphic.raster.size == area) {
+                "Graphic ${definition.id} frame is ${graphic.width}x${graphic.height} but holds ${graphic.raster.size} pixels."
+            }
+            if (graphic.flags and 0x1 == 0) {
+                writeBytes(graphic.raster)
+            } else {
+                for (x in 0 until graphic.width) {
+                    for (y in 0 until graphic.height) {
+                        writeByte(graphic.raster[x + y * graphic.width].toInt())
+                    }
+                }
+            }
+            if (graphic.flags and 0x2 == 0) {
+                continue
+            }
+            val alpha = graphic.alpha
+            if (alpha == null) {
+                for (pixel in 0 until area) {
+                    writeByte(OPAQUE)
+                }
+            } else {
+                require(alpha.size == area) {
+                    "Graphic ${definition.id} frame has ${alpha.size} alpha bytes for $area pixels."
+                }
+                if (graphic.flags and 0x1 == 0) {
+                    writeBytes(alpha)
+                } else {
+                    for (x in 0 until graphic.width) {
+                        for (y in 0 until graphic.height) {
+                            writeByte(alpha[x + y * graphic.width].toInt())
+                        }
+                    }
+                }
+            }
         }
-        if (definition.animationId != -1) {
-            opcodes.add(2)
+
+        val palette = definition.rawPalette
+        require(palette.isNotEmpty()) { "Graphic ${definition.id} has no palette; entry 0 is always present." }
+        require(palette.size <= PALETTE_LIMIT) {
+            "Graphic ${definition.id} has ${palette.size} palette entries; the size is a byte plus one."
         }
-        if (definition.sizeXY != 128) {
-            opcodes.add(4)
+        if (definition.paletteZeroEntry) {
+            writeMedium(palette[0])
         }
-        if (definition.sizeZ != 128) {
-            opcodes.add(5)
+        for (index in 1 until palette.size) {
+            writeMedium(palette[index])
         }
-        if (definition.rotation != 0) {
-            opcodes.add(6)
+
+        writeShort(definition.width)
+        writeShort(definition.height)
+        writeByte(palette.size - 1)
+        for (graphic in graphics) {
+            writeShort(graphic.offsetX)
         }
-        if (definition.ambience != 0) {
-            opcodes.add(7)
+        for (graphic in graphics) {
+            writeShort(graphic.offsetY)
         }
-        if (definition.contrast != 0) {
-            opcodes.add(8)
+        for (graphic in graphics) {
+            writeShort(graphic.width)
         }
-        when (definition.aByte2381.toInt()) {
-            1 -> opcodes.add(11)
-            2 -> opcodes.add(14)
-            3 -> opcodes.add(if (definition.anInt2385 == 8224) 9 else if (definition.anInt2385 in 0..65535) 15 else 16)
-            4 -> opcodes.add(12)
-            5 -> opcodes.add(13)
+        for (graphic in graphics) {
+            writeShort(graphic.height)
         }
-        if (definition.aBoolean2402) {
-            opcodes.add(10)
-        }
-        if (definition.originalColours != null && definition.modifiedColours != null) {
-            opcodes.add(40)
-        }
-        if (definition.originalTextureColours != null && definition.modifiedTextureColours != null) {
-            opcodes.add(41)
-        }
-        val array = opcodes.toIntArray()
-        array.sort()
-        return array
+        writeShort(graphics.size)
     }
 
-    override fun Writer.encodeOpcode(definition: GraphicDefinition, members: GraphicDefinition, opcode: Int, occurrence: Int) {
-        when (opcode) {
-            1 -> writeBigSmart(definition.modelId)
-            2 -> writeBigSmart(definition.animationId)
-            4 -> writeShort(definition.sizeXY)
-            5 -> writeShort(definition.sizeZ)
-            6 -> writeShort(definition.rotation)
-            7 -> writeByte(definition.ambience)
-            8 -> writeByte(definition.contrast)
-            9, 10, 11, 12, 13 -> Unit
-            14 -> writeByte(definition.anInt2385 / 256)
-            15 -> writeShort(definition.anInt2385)
-            16 -> writeInt(definition.anInt2385)
-            40 -> writeColours(definition.originalColours, definition.modifiedColours)
-            41 -> writeColours(definition.originalTextureColours, definition.modifiedTextureColours)
-            else -> error("Unhandled graphic definition opcode: $opcode for def ${definition.id}")
-        }
+    private companion object {
+        /** The alpha byte of a fully opaque pixel, which is what a dropped alpha plane was made of. */
+        private const val OPAQUE = 0xff
+
+        /** The palette size is stored as `size - 1` in one byte. */
+        private const val PALETTE_LIMIT = 256
     }
 }

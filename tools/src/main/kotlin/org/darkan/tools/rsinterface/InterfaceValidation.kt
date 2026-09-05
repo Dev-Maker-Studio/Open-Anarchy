@@ -39,13 +39,13 @@ data class InterfaceIssue(
 /**
  * The cache-side existence questions validation needs to answer.
  *
- * Kept as lambdas so validation stays headless: the viewer's [SpriteCache] and
+ * Kept as lambdas so validation stays headless: the viewer's [GraphicCache] and
  * [FontCache] upload GL textures on lookup, which is exactly what a background
  * validation pass must not do. [of] answers the same questions straight from the
  * index tables, which is a map lookup per call.
  */
 class InterfaceAssets(
-    val spriteExists: (Int) -> Boolean,
+    val graphicExists: (Int) -> Boolean,
     val fontExists: (Int) -> Boolean,
     val scriptExists: (Int) -> Boolean,
     val interfaceExists: (Int) -> Boolean
@@ -57,12 +57,12 @@ class InterfaceAssets(
 
         /**
          * Existence probes backed by the index tables read at cache load:
-         * sprite groups are archives of index 8, font metrics archives of index 13,
+         * graphic groups are archives of index 8, font metrics archives of index 13,
          * clientscripts archives of index 12 and interfaces archives of index 3.
          * Nothing is decompressed or decoded.
          */
         fun of(cache: Cache) = InterfaceAssets(
-            spriteExists = { id -> id >= 0 && cache.files(Index.SPRITES, id).isNotEmpty() },
+            graphicExists = { id -> id >= 0 && cache.files(Index.GRAPHICS, id).isNotEmpty() },
             fontExists = { id -> id >= 0 && cache.files(Index.FONT_METRICS, id).isNotEmpty() },
             scriptExists = { id -> id >= 0 && cache.files(Index.CLIENT_SCRIPTS, id).isNotEmpty() },
             interfaceExists = { id -> id >= 0 && cache.files(Index.INTERFACES, id).isNotEmpty() }
@@ -176,21 +176,21 @@ object InterfaceValidator {
         issues: MutableList<InterfaceIssue>
     ) {
         when (component.type) {
-            ComponentType.SPRITE -> {
+            ComponentType.GRAPHIC -> {
                 if (component.defaultImage < 0) {
                     issues.add(
                         InterfaceIssue(
-                            IssueSeverity.INFO, index, "SPRITE_UNSET",
-                            "sprite component with no image. Common and usually deliberate - most " +
+                            IssueSeverity.INFO, index, "GRAPHIC_UNSET",
+                            "graphic component with no image. Common and usually deliberate - most " +
                                 "cache interfaces leave the graphic at -1 and let a load script set " +
                                 "it - but a hand authored component that stays -1 draws nothing"
                         )
                     )
-                } else if (!assets.spriteExists(component.defaultImage)) {
+                } else if (!assets.graphicExists(component.defaultImage)) {
                     issues.add(
                         InterfaceIssue(
-                            IssueSeverity.WARNING, index, "SPRITE_MISSING",
-                            "sprite ${component.defaultImage} is not in cache index 8"
+                            IssueSeverity.WARNING, index, "GRAPHIC_MISSING",
+                            "graphic ${component.defaultImage} is not in cache index 8"
                         )
                     )
                 }
@@ -399,9 +399,9 @@ object InterfaceValidator {
     private const val MAX_ENCODED_MOUSE_ICONS = 2
 
     private val COLOUR_TYPES = intArrayOf(
-        ComponentType.FIGURE, ComponentType.TEXT, ComponentType.SPRITE, ComponentType.LINE
+        ComponentType.FIGURE, ComponentType.TEXT, ComponentType.GRAPHIC, ComponentType.LINE
     )
     private val ALPHA_TYPES = intArrayOf(
-        ComponentType.FIGURE, ComponentType.TEXT, ComponentType.SPRITE
+        ComponentType.FIGURE, ComponentType.TEXT, ComponentType.GRAPHIC
     )
 }

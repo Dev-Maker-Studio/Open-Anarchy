@@ -116,7 +116,7 @@ reference data, not a catalog: nothing loads it, and `core` does not bundle it.
 
 ## Indices with names still unrecovered
 
-`loading_sprites` (32), `loading_sprites_raw` (34) and `game_tips` (33) carry archive name hashes
+`loading_graphics` (32), `loading_graphics_raw` (34) and `game_tips` (33) carry archive name hashes
 that no rule and no search has resolved - 29, 29 and 31 archives respectively. They are recorded
-here as a known gap, not an oversight. Nothing in the server needs them; both loading-sprite
+here as a known gap, not an oversight. Nothing in the server needs them; both loading-graphic
 indices are addressed by id.

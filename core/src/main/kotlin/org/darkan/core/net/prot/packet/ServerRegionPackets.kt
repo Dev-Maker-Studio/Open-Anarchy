@@ -110,7 +110,7 @@ data class MinimapFlag(val x: Int, val y: Int) : ServerProt
 data class HintArrow(
     val iconIndex: Int,
     val targetType: Int,
-    val arrowSprite: Int = 0,
+    val arrowGraphic: Int = 0,
     val plane: Int = 0,
     val x: Int = 0,
     val y: Int = 0,

@@ -98,7 +98,7 @@ object TextureOpFormat {
         intArrayOf(BYTE, BYTE, SHORT, BYTE, BYTE, BYTE, BYTE), // 15 voronoi noise
         intArrayOf(BYTE, BYTE, SHORT), // 16 herringbone
         intArrayOf(SHORT, BYTE, BYTE), // 17 hsl adjust
-        intArrayOf(SHORT), // 18 tiled sprite, which is a sprite
+        intArrayOf(SHORT), // 18 tiled graphic, which is a graphic
         intArrayOf(SHORT, BYTE), // 19 polar distortion
         intArrayOf(BYTE, BYTE), // 20 tile
         intArrayOf(BYTE), // 21 interpolate
@@ -119,7 +119,7 @@ object TextureOpFormat {
         intArrayOf(SHORT), // 36 texture, i.e. a nested material
         intArrayOf(SHORT, SHORT, SHORT, SHORT, SHORT, SHORT, SHORT), // 37 diagonal waves
         intArrayOf(BYTE, SHORT, BYTE, SHORT, SHORT), // 38 line noise
-        intArrayOf(SHORT) // 39 sprite
+        intArrayOf(SHORT) // 39 graphic
     )
 
     /** How many operation types the client implements. */

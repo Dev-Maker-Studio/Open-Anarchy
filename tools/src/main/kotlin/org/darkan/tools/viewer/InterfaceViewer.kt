@@ -22,6 +22,7 @@ import org.darkan.tools.rsinterface.ComponentState
 import org.darkan.tools.rsinterface.ComponentTemplates
 import org.darkan.tools.rsinterface.ComponentType
 import org.darkan.tools.rsinterface.FontCache
+import org.darkan.tools.rsinterface.GraphicCache
 import org.darkan.tools.rsinterface.InterfaceAssets
 import org.darkan.tools.rsinterface.InterfaceCs2Host
 import org.darkan.tools.rsinterface.InterfaceDocument
@@ -33,7 +34,6 @@ import org.darkan.tools.rsinterface.InterfacePointer
 import org.darkan.tools.rsinterface.InterfaceRenderer
 import org.darkan.tools.rsinterface.InterfaceStore
 import org.darkan.tools.rsinterface.InterfaceViewport
-import org.darkan.tools.rsinterface.SpriteCache
 import org.darkan.tools.ui.AssetPicker
 import org.darkan.tools.ui.CommandPalette
 import org.darkan.tools.ui.Cs2HookPanel
@@ -142,7 +142,7 @@ enum class EditorMode {
  * ### Why the load scripts keep re-running
  *
  * [InterfaceDocument] re-seeds every [ComponentState] from its definition after
- * any edit, which throws away everything the CS2 load scripts did - the sprites
+ * any edit, which throws away everything the CS2 load scripts did - the graphics
  * they set, the text they wrote. Re-running them is the only way to put it back,
  * so any edit sets [scriptsDirty] and the next frame re-runs them before
  * anything is drawn. The cost is one dispatch per component that has a load
@@ -158,7 +158,7 @@ class InterfaceViewer(
 
     private lateinit var imGui: ImGuiLayer
     private lateinit var canvas: Canvas2D
-    private lateinit var sprites: SpriteCache
+    private lateinit var graphics: GraphicCache
     private lateinit var fonts: FontCache
     private lateinit var modelRenderer: InterfaceModelRenderer
     private lateinit var renderer: InterfaceRenderer
@@ -243,10 +243,10 @@ class InterfaceViewer(
         imGui.applyEditorTheme()
 
         canvas = Canvas2D(loadShaderSource("/shaders/ui.vert"), loadShaderSource("/shaders/ui.frag"))
-        sprites = SpriteCache(cache)
-        fonts = FontCache(cache, sprites)
+        graphics = GraphicCache(cache)
+        fonts = FontCache(cache, graphics)
         modelRenderer = InterfaceModelRenderer(cache, window, renderSystem, colorShader, texturedShader)
-        renderer = InterfaceRenderer(canvas, sprites, fonts, modelRenderer)
+        renderer = InterfaceRenderer(canvas, graphics, fonts, modelRenderer)
         stagePanel = StagePanel(stageTarget)
 
         decoder = InterfaceDecoder()
@@ -305,13 +305,13 @@ class InterfaceViewer(
 
     /**
      * Points the "add component" templates at ids that exist in this cache.
-     * Guessing one that does not makes every new sprite or text component draw
+     * Guessing one that does not makes every new graphic or text component draw
      * nothing, which reads as the editor being broken rather than as a default.
      */
     private fun seedTemplateDefaults() {
-        for (id in 0 until minOf(sprites.count, TEMPLATE_SCAN)) {
-            if (sprites.definition(id) != null) {
-                ComponentTemplates.defaultSpriteId = id
+        for (id in 0 until minOf(graphics.count, TEMPLATE_SCAN)) {
+            if (graphics.definition(id) != null) {
+                ComponentTemplates.defaultGraphicId = id
                 break
             }
         }
@@ -326,7 +326,7 @@ class InterfaceViewer(
 
     private fun buildPanels() {
         val itemCount = ItemDecoder().size(cache) + 1
-        picker = AssetPicker(sprites, fonts, { id -> modelRenderer.item(id) }, itemCount)
+        picker = AssetPicker(graphics, fonts, { id -> modelRenderer.item(id) }, itemCount)
 
         library = InterfaceLibraryPanel(definitions.size) { id -> definitionOf(id) }
         library.onOpen = { id -> openInterface(id) }
@@ -1264,7 +1264,7 @@ class InterfaceViewer(
         reload.close()
         modelRenderer.cleanup()
         fonts.cleanup()
-        sprites.cleanup()
+        graphics.cleanup()
         canvas.cleanup()
         stageTarget.cleanup()
         imGui.cleanup()

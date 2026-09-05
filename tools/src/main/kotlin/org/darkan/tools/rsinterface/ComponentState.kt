@@ -20,7 +20,7 @@ import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
  * - **Single-field setters assign the property directly.** `IF_SETHIDE` is
  *   `state.hidden = value`, `IF_SETTEXT` is `state.text = value`,
  *   `IF_SETCOLOUR` is `state.colour = rgb`, `IF_SETTRANS` is
- *   `state.transparency = value`, `IF_SETGRAPHIC` is `state.spriteId = id`,
+ *   `state.transparency = value`, `IF_SETGRAPHIC` is `state.graphicId = id`,
  *   and so on. Nothing else needs to be called.
  * - **The methods below exist for the ops that move more than one field, or
  *   that change the box model.** Everything that feeds the layout pass
@@ -152,23 +152,23 @@ class ComponentState(
     var maxTextLines: Int = definition.lineCount
     var shadow: Boolean = definition.shaded
 
-    // --- Sprite (type 5) --------------------------------------------------
+    // --- Graphic (type 5) -------------------------------------------------
 
-    var spriteId: Int = definition.defaultImage
+    var graphicId: Int = definition.defaultImage
 
     /** 2D rotation; the cache stores 65536 units per full turn. */
-    var spriteAngle: Int = definition.imageRotation
+    var graphicAngle: Int = definition.imageRotation
 
-    /** The cache's sprite flag bit 0: repeat the sprite instead of stretching. */
+    /** The cache's graphic flag bit 0: repeat the graphic instead of stretching. */
     var tiling: Boolean = definition.aBoolean4861
     var flipVertical: Boolean = definition.flipVertical
     var flipHorizontal: Boolean = definition.flipHorizontal
 
-    /** Outline thickness added around the sprite by the client's `draw`. */
+    /** Outline thickness added around the graphic by the client's `draw`. */
     var borderThickness: Int = definition.rotation
 
-    /** Drop-shadow colour baked into the sprite by the client's `draw`. */
-    var spriteShadow: Int = definition.backgroundColour
+    /** Drop-shadow colour baked into the graphic by the client's `draw`. */
+    var graphicShadow: Int = definition.backgroundColour
 
     // --- Model (type 6) ---------------------------------------------------
 
@@ -178,10 +178,10 @@ class ComponentState(
     var modelOriginX: Int = definition.viewportX
     var modelOriginY: Int = definition.viewportY
     var modelOriginZ: Int = definition.viewportZ
-    var modelPitch: Int = definition.spritePitch
-    var modelRoll: Int = definition.spriteRoll
-    var modelYaw: Int = definition.spriteYaw
-    var modelScale: Int = definition.spriteScale
+    var modelPitch: Int = definition.graphicPitch
+    var modelRoll: Int = definition.graphicRoll
+    var modelYaw: Int = definition.graphicYaw
+    var modelScale: Int = definition.graphicScale
 
     /** Model viewport aspect, the client's `aspectWidth` / `aspectHeight`. */
     var modelAspectWidth: Int = definition.viewportWidth
@@ -197,8 +197,8 @@ class ComponentState(
     // --- Item slot --------------------------------------------------------
 
     /**
-     * Item occupying this component, or -1. Sprite, text and model components
-     * all change behaviour when an item is set: sprites and models draw the
+     * Item occupying this component, or -1. Graphic, text and model components
+     * all change behaviour when an item is set: graphics and models draw the
      * item's icon, text draws the item's name.
      */
     var itemId: Int = -1
@@ -732,23 +732,23 @@ class ComponentState(
         lineSpacing = definition.lineHeight
         maxTextLines = definition.lineCount
         shadow = definition.shaded
-        spriteId = definition.defaultImage
-        spriteAngle = definition.imageRotation
+        graphicId = definition.defaultImage
+        graphicAngle = definition.imageRotation
         tiling = definition.aBoolean4861
         flipVertical = definition.flipVertical
         flipHorizontal = definition.flipHorizontal
         borderThickness = definition.rotation
-        spriteShadow = definition.backgroundColour
+        graphicShadow = definition.backgroundColour
         mediaType = definition.defaultMediaType
         mediaId = definition.defaultMediaId
         animation = definition.animation
         modelOriginX = definition.viewportX
         modelOriginY = definition.viewportY
         modelOriginZ = definition.viewportZ
-        modelPitch = definition.spritePitch
-        modelRoll = definition.spriteRoll
-        modelYaw = definition.spriteYaw
-        modelScale = definition.spriteScale
+        modelPitch = definition.graphicPitch
+        modelRoll = definition.graphicRoll
+        modelYaw = definition.graphicYaw
+        modelScale = definition.graphicScale
         modelAspectWidth = definition.viewportWidth
         modelAspectHeight = definition.viewportHeight
         lineWidth = definition.lineWidth

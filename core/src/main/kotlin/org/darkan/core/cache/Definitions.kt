@@ -5,7 +5,7 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.AnimationDefinition
 import world.gregs.voidps.cache.definition.data.BASDefinition
 import world.gregs.voidps.cache.definition.data.EnumDefinition
-import world.gregs.voidps.cache.definition.data.GraphicDefinition
+import world.gregs.voidps.cache.definition.data.SpotAnimDefinition
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 import world.gregs.voidps.cache.definition.data.NPCDefinition
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
@@ -128,5 +128,5 @@ object BASDefinitions {
 
 object SpotAnimDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): GraphicDefinition = lookup(Cache.graphics, id, GraphicDefinition.EMPTY)
+    fun getDefs(id: Int): SpotAnimDefinition = lookup(Cache.spotAnims, id, SpotAnimDefinition.EMPTY)
 }

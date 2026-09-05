@@ -51,7 +51,7 @@ data class FontDefinition(
         return glyphWidths[glyph].toInt() and 0xff
     }
 
-    fun textWidth(input: String, icons: Array<IndexedSprite>? = null): Int {
+    fun textWidth(input: String, icons: Array<IndexedGraphic>? = null): Int {
         var tagStart = -1
         var lastChar = -1
         var totalWidth = 0
@@ -66,7 +66,7 @@ data class FontDefinition(
                 tagStart = -1
                 val tagChar = htmlEntityToChar(tag)
                 if (tagChar == null) {
-                    totalWidth += spriteWidth(tag, icons) ?: continue
+                    totalWidth += graphicWidth(tag, icons) ?: continue
                     lastChar = -1
                     continue
                 }
@@ -83,7 +83,7 @@ data class FontDefinition(
         return totalWidth
     }
 
-    fun truncateText(input: String, maxWidth: Int, icons: Array<IndexedSprite>? = emptyArray()): String {
+    fun truncateText(input: String, maxWidth: Int, icons: Array<IndexedGraphic>? = emptyArray()): String {
         var maximumWidth = maxWidth
         if (maximumWidth >= textWidth(input, icons)) {
             return input
@@ -104,7 +104,7 @@ data class FontDefinition(
                 tagStart = -1
                 val tagChar = htmlEntityToChar(tag)
                 if (tagChar == null) {
-                    totalWidth += spriteWidth(tag, icons) ?: continue
+                    totalWidth += graphicWidth(tag, icons) ?: continue
                     lastChar = -1
                     if (totalWidth > maximumWidth) {
                         return "$prefix..."
@@ -133,9 +133,9 @@ data class FontDefinition(
         return input
     }
 
-    fun splitLines(input: String, width: Int, icons: Array<IndexedSprite>? = null) = splitLines(input, intArrayOf(width), icons)
+    fun splitLines(input: String, width: Int, icons: Array<IndexedGraphic>? = null) = splitLines(input, intArrayOf(width), icons)
 
-    fun splitLines(input: String, widths: IntArray? = null, icons: Array<IndexedSprite>? = null): List<String> {
+    fun splitLines(input: String, widths: IntArray? = null, icons: Array<IndexedGraphic>? = null): List<String> {
         val output = mutableListOf<String>()
         var totalWidth = 0
         var lineStart = 0
@@ -191,7 +191,7 @@ data class FontDefinition(
                     "copy" -> addKernelWidth(169)
                     "reg" -> addKernelWidth(174)
                     else -> {
-                        totalWidth += spriteWidth(tag, icons) ?: continue
+                        totalWidth += graphicWidth(tag, icons) ?: continue
                         lastChar = -1
                     }
                 }
@@ -286,7 +286,7 @@ data class FontDefinition(
     }
 
     companion object {
-        private fun spriteWidth(tag: String, icons: Array<IndexedSprite>?): Int? {
+        private fun graphicWidth(tag: String, icons: Array<IndexedGraphic>?): Int? {
             if (!tag.startsWith("img=") || icons == null) {
                 return null
             }

@@ -30,7 +30,7 @@ object UiTextures {
     /**
      * Uploads an ARGB pixel array as an RGBA texture.
      *
-     * @param repeat wrap mode; tiled component sprites rely on GL_REPEAT so a
+     * @param repeat wrap mode; tiled component graphics rely on GL_REPEAT so a
      *   whole tiled fill is a single quad instead of one quad per tile.
      */
     fun createArgb(pixels: IntArray, width: Int, height: Int, repeat: Boolean = false): Int {

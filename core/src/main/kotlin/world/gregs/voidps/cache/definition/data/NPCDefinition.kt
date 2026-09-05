@@ -39,7 +39,7 @@ data class NPCDefinition(
     var secondaryShadowModifier: Byte = -16,
     var walkMask: Byte = 0,
     var translations: Array<IntArray?>? = null,
-    var hitbarSprite: Int = -1,
+    var hitbarGraphic: Int = -1,
     var height: Int = -1,
     var respawnDirection: Byte = 4,
     var renderEmote: Int = -1,
@@ -54,7 +54,7 @@ data class NPCDefinition(
     var secondaryCursor: Int = -1,
     var attackCursor: Int = -1,
     var armyIcon: Int = -1,
-    var spriteId: Int = -1,
+    var graphicId: Int = -1,
     var ambientSoundVolume: Int = 255,
     var visiblePriority: Boolean = false,
     var mapFunction: Int = -1,
@@ -167,7 +167,7 @@ data class NPCDefinition(
             if (other.translations == null) return false
             if (!translations.contentDeepEquals(other.translations)) return false
         } else if (other.translations != null) return false
-        if (hitbarSprite != other.hitbarSprite) return false
+        if (hitbarGraphic != other.hitbarGraphic) return false
         if (height != other.height) return false
         if (respawnDirection != other.respawnDirection) return false
         if (renderEmote != other.renderEmote) return false
@@ -182,7 +182,7 @@ data class NPCDefinition(
         if (secondaryCursor != other.secondaryCursor) return false
         if (attackCursor != other.attackCursor) return false
         if (armyIcon != other.armyIcon) return false
-        if (spriteId != other.spriteId) return false
+        if (graphicId != other.graphicId) return false
         if (ambientSoundVolume != other.ambientSoundVolume) return false
         if (visiblePriority != other.visiblePriority) return false
         if (mapFunction != other.mapFunction) return false
@@ -246,7 +246,7 @@ data class NPCDefinition(
         result = 31 * result + secondaryShadowModifier
         result = 31 * result + walkMask
         result = 31 * result + (translations?.contentDeepHashCode() ?: 0)
-        result = 31 * result + hitbarSprite
+        result = 31 * result + hitbarGraphic
         result = 31 * result + height
         result = 31 * result + respawnDirection
         result = 31 * result + renderEmote
@@ -261,7 +261,7 @@ data class NPCDefinition(
         result = 31 * result + secondaryCursor
         result = 31 * result + attackCursor
         result = 31 * result + armyIcon
-        result = 31 * result + spriteId
+        result = 31 * result + graphicId
         result = 31 * result + ambientSoundVolume
         result = 31 * result + visiblePriority.hashCode()
         result = 31 * result + mapFunction

@@ -67,16 +67,16 @@ public class RunecraftingAltar {
 
 		private final int buttonId;
 		private final int runeId;
-		private final int spriteComp;
-		private final int spriteId;
+		private final int graphicComp;
+		private final int graphicId;
 		private final int talismanId;
 		private final int tiaraId;
 
-		WickedHoodRune(int runeId, int componentId, int spriteComp, int spriteId, int talismanId, int tiaraId) {
+		WickedHoodRune(int runeId, int componentId, int graphicComp, int graphicId, int talismanId, int tiaraId) {
 			buttonId = componentId;
 			this.runeId = runeId;
-			this.spriteComp = spriteComp;
-			this.spriteId = spriteId;
+			this.graphicComp = graphicComp;
+			this.graphicId = graphicId;
 			this.talismanId = talismanId;
 			this.tiaraId = tiaraId;
 		}
@@ -101,12 +101,12 @@ public class RunecraftingAltar {
 			return buttonId;
 		}
 
-		public int getSpriteComp() {
-			return spriteComp;
+		public int getGraphicComp() {
+			return graphicComp;
 		}
 
-		public int getSpriteId() {
-			return spriteId;
+		public int getGraphicId() {
+			return graphicId;
 		}
 
 		public int getTalismanId() {
@@ -132,7 +132,7 @@ public class RunecraftingAltar {
 		player.getPackets().setIFText(WICKED_HOOD_INTER, 143, "" + player.getDailySubI("wickedRunes", wickedRunesCapacity));
 		for (WickedHoodRune rune : WickedHoodRune.values())
 			if (player.hasWickedHoodTalisman(rune) || player.hasWickedHoodTalisman(rune))
-				player.getPackets().setIFGraphic(WICKED_HOOD_INTER, rune.getSpriteComp(), rune.getSpriteId());
+				player.getPackets().setIFGraphic(WICKED_HOOD_INTER, rune.getGraphicComp(), rune.getGraphicId());
 	}
 
 	public static ItemClickHandler handleWickedHood = new ItemClickHandler(new Object[] { WICKED_HOOD }, new String[] { "Activate", "Teleport" }, e -> {

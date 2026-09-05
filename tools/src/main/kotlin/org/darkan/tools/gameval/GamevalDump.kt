@@ -24,7 +24,6 @@ import world.gregs.voidps.cache.definition.decoder.BASDecoder
 import world.gregs.voidps.cache.definition.decoder.ClanVarDecoder
 import world.gregs.voidps.cache.definition.decoder.EnumDecoder
 import world.gregs.voidps.cache.definition.decoder.FontDecoder
-import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
 import world.gregs.voidps.cache.definition.decoder.InterfaceDecoder
 import world.gregs.voidps.cache.definition.decoder.ItemDecoder
 import world.gregs.voidps.cache.definition.decoder.MaterialDecoder
@@ -33,6 +32,7 @@ import world.gregs.voidps.cache.definition.decoder.ObjectDecoder
 import world.gregs.voidps.cache.definition.decoder.ParamDecoder
 import world.gregs.voidps.cache.definition.decoder.QuickChatOptionDecoder
 import world.gregs.voidps.cache.definition.decoder.QuickChatPhraseDecoder
+import world.gregs.voidps.cache.definition.decoder.SpotAnimDecoder
 import world.gregs.voidps.cache.definition.decoder.StructDecoder
 import world.gregs.voidps.cache.definition.decoder.VarBitDecoder
 import java.io.File
@@ -125,7 +125,7 @@ object GamevalDump {
             definitions("npc", "index ${Index.NPCS}", NPCDecoder())
             definitions("loc", "index ${Index.OBJECTS}", ObjectDecoder())
             definitions("seq", "index ${Index.ANIMATIONS}", AnimationDecoder())
-            definitions("spotanim", "index ${Index.SPOTANIMS}", GraphicDecoder())
+            definitions("spotanim", "index ${Index.SPOTANIMS}", SpotAnimDecoder())
             definitions("enum", "index ${Index.ENUMS}", EnumDecoder())
             definitions("struct", "config archive ${Config.STRUCTS}", StructDecoder())
             definitions("param", "config archive ${Config.PARAMS}", ParamDecoder())
@@ -149,7 +149,7 @@ object GamevalDump {
             fontMetrics()
             interfaces()
             models()
-            sprites()
+            graphics()
             rawArchives("sound", Index.SYNTH_SOUNDS)
             rawArchives("midi", Index.MIDI_SONGS)
             for ((name, archive) in RAW_CONFIG_ARCHIVES) {
@@ -346,14 +346,14 @@ object GamevalDump {
         }
 
         /**
-         * Sprites are dumped from the trailer only: frame count, canvas size, palette size and
+         * Graphics are dumped from the trailer only: frame count, canvas size, palette size and
          * each frame's placement. The pixel rasters are skipped, so nothing decompresses twice.
          */
-        private fun sprites() {
-            write("sprite", "index ${Index.SPRITES}") { lines, _ ->
-                for (id in archiveIds(Index.SPRITES)) {
-                    val data = cache.data(Index.SPRITES, id, 0)
-                    lines.write(id, null, rawFacts(data) + spriteHeader(data))
+        private fun graphics() {
+            write("graphic", "index ${Index.GRAPHICS}") { lines, _ ->
+                for (id in archiveIds(Index.GRAPHICS)) {
+                    val data = cache.data(Index.GRAPHICS, id, 0)
+                    lines.write(id, null, rawFacts(data) + graphicHeader(data))
                 }
             }
         }
@@ -427,14 +427,14 @@ object GamevalDump {
         }
 
         /**
-         * Frame layout from a sprite trailer.
+         * Frame layout from a graphic trailer.
          *
          * The trailer is `7 + 8 * frames` bytes: the canvas size, the palette size, then four
          * shorts per frame, then the frame count itself as the final two bytes. Reading it is
-         * the same walk the core sprite decoder makes
+         * the same walk the core graphic decoder makes
          * before it touches any pixels.
          */
-        private fun spriteHeader(data: ByteArray?): List<Pair<String, Any?>> {
+        private fun graphicHeader(data: ByteArray?): List<Pair<String, Any?>> {
             if (data == null || data.size < 9) {
                 return listOf("headerRead" to false)
             }

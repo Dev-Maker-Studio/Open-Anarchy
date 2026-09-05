@@ -33,7 +33,7 @@ class QuestDecoder(
             13 -> questRequirements = IntArray(buffer.readUnsignedByte()) { buffer.readShort() }
             14 -> skillRequirements = Array(buffer.readUnsignedByte()) { IntArray(2) { buffer.readUnsignedByte() } }
             15 -> questPointRequirement = buffer.readUnsignedShort()
-            17 -> itemSprite = buffer.readBigSmart()
+            17 -> itemGraphic = buffer.readBigSmart()
             249 -> readParameters(buffer, parameters)
             else -> error("Unhandled quest definition opcode: $opcode for def $id")
         }

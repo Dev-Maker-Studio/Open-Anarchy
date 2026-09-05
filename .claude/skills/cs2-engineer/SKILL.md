@@ -1,6 +1,6 @@
 ---
 name: cs2-engineer
-description: How to author and change 727 clientscripts, interface components and sprites in the cache-source tree - the edit/pack/verify loop, id and name registration, the client rules that make scripts crash, hook and tooltip patterns, and where to read the client. Load before touching cache-source/clientscripts, interfaces, sprites or the gamevals those edits register. Maintained as we learn.
+description: How to author and change 727 clientscripts, interface components and graphics in the cache-source tree - the edit/pack/verify loop, id and name registration, the client rules that make scripts crash, hook and tooltip patterns, and where to read the client. Load before touching cache-source/clientscripts, interfaces, graphics or the gamevals those edits register. Maintained as we learn.
 ---
 
 # CS2 engineering in the cache source tree
@@ -14,13 +14,13 @@ id, real names for what we author, no comments, no attribution.
 
 ## 1. The loop
 
-1. Edit the `.ts` (or interface JSON / sprite PNG) in `cache-source/`.
+1. Edit the `.ts` (or interface JSON / graphic PNG) in `cache-source/`.
 2. Pack: `tools/build/install/tools/bin/tools cache build cache-source data/cache` (the local
    `installDist` of the tools module; ~45 s for a full pack, seconds incrementally). It compiles
    every clientscript, so a type or name error fails here.
 3. Read it back from the packed cache, never trust the source alone:
    `CACHE_PATH=$PWD/data/cache/ tools cs2 decompile <id>` must print exactly what you wrote.
-   Sprites and components: decode them with the core decoders (`SpriteDecoder`, `InterfaceDecoder`)
+   Graphics and components: decode them with the core decoders (`GraphicDecoder`, `InterfaceDecoder`)
    through `jshell --class-path "$(ls tools/build/install/tools/lib/*.jar | tr '\n' ':')"` with
    `CACHE_PATH` set (`kotlinc -script` rejects JDK 25).
 4. Commit in `cache-source` (branch `dev`), push, bump the submodule pointer in the server commit.
@@ -32,7 +32,7 @@ id, real names for what we author, no comments, no attribution.
 Gradle never runs on the desktop (remote build host, one build at a time); the local tools install
 and `jshell` are fine.
 
-## 2. Registering a new script, sprite or component
+## 2. Registering a new script, graphic or component
 
 Ids are allocated by hand, next free at the end of the index. Everything is registered in the same
 commit or the build fails with a coverage mismatch:
@@ -40,13 +40,13 @@ commit or the build fails with a coverage mismatch:
 | Adding | Files |
 |---|---|
 | a script | `clientscripts/<proc\|clientscript>/<name>.ts` whose header comment is `// [proc,<name>]`; `clientscripts/index.json` entry `{"version": 1, "compression": "gzip", "nameHash": <hash of "[proc,<name>]">}`; `gamevals/clientscript.json` entry + `coverage.cache_ids` and `coverage.named` +1 |
-| a sprite | `sprites/<id>/0.png` at the canvas size (one RGBA PNG per frame, nothing else, <= 256 colours); `sprites/index.json` entry `{"compression": "gzip", "nameHash": <hash of the name>}`; `gamevals/graphic.json` entry + coverage; a `/** graphic <id> */ const <name>: number;` line in `clientscripts/gamevals.d.ts` under `namespace Graphic` |
+| a graphic | `graphics/<id>/0.png` at the canvas size (one RGBA PNG per frame, nothing else, <= 256 colours); `graphics/index.json` entry `{"compression": "gzip", "nameHash": <hash of the name>}`; `gamevals/graphic.json` entry + coverage; a `/** graphic <id> */ const <name>: number;` line in `clientscripts/gamevals.d.ts` under `namespace Graphic` |
 | a component | `interfaces/<iface>/<n>.json` (copy a sibling of the same type); `gamevals/component.json` entry `"<iface>:<n>": "interface_<iface>:<purpose>"` + coverage; the `Component.interface_<iface>` declaration in `gamevals.d.ts` |
 | a varbit | see `darkan-code-standards` rule 5; plus `declare let varbit_<name>: number;` in `vars.d.ts` |
 
 The name hash is Jagex's: `h = h * 31 + byte` over the name, as a signed 32-bit int
 (`"symbol_lock"` -> -329922702, `"[proc,bank_placeholder_button]"` -> 834915639). Scripts are hashed
-with their bracketed category; sprites and other archives with the bare name.
+with their bracketed category; graphics and other archives with the bare name.
 
 Names follow the identified names around them (`world_select_stars_0` -> `world_select_bots`,
 `symbol_lock` -> `symbol_lock_open`, `lobby_worldswitcher_drawlist` -> `lobby_worldswitcher_bots_icon`).
@@ -68,7 +68,7 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
 - **Hover hooks fire for every component under the cursor**, not just the topmost, so an icon under
   a full-row overlay still gets its own `ccHookMouseEnter`/`Exit`. Ops are collected the same way.
 - **Graphics draw at the component's origin, unscaled.** Size the component (or the cc) to the
-  sprite's canvas and position it; do not expect centring. Sprites are drawn as the whole canvas,
+  graphic's canvas and position it; do not expect centring. Graphics are drawn as the whole canvas,
   so a frame's placement is where its pixels are.
 - **`cc_add_graphic` / `cc_add_text` / `cc_add_rect` leave the new cc active**; `ccSetPosition`,
   `ccSetHide`, `ccHook*` right after them apply to it. `ccSetPosition(x, y, xmode, ymode)`: mode 0
@@ -95,7 +95,7 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
 - **Per-row extras in the world list**: one proc that creates the cc, positions it and hides or
   hooks it by flag, called from both `lobby_worldswitcher_timer` (list rows) and `cs2_3118`
   (favourite rows) - keep the two renderers in step.
-- **Pixel art**: derive new icons from existing sprites' own pixels (copy regions with plain
+- **Pixel art**: derive new icons from existing graphics' own pixels (copy regions with plain
   `paste`, never a masked paste - it squares partial alpha), keep the palette, render at 6-10x next
   to neighbours to judge, then compare the decoded frame with the PNG on every visible pixel.
 

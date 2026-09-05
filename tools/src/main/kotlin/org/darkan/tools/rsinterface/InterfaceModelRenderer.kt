@@ -30,7 +30,7 @@ import kotlin.math.atan
  * projection from first principles:
  *
  * - RS projects with a focal length of 512 units, so the vertical field of view
- *   is `2 * atan(256 / 512)` and the model sits `spriteScale * 4` RS units in
+ *   is `2 * atan(256 / 512)` and the model sits `graphicScale * 4` RS units in
  *   front of the camera - the same distance the client's model matrix pushes it.
  * - Pitch, roll and yaw are the cache's 0..2047 turn units.
  * - The model is centred on its bounding box, which is what the client achieves
@@ -190,12 +190,12 @@ class InterfaceModelRenderer(
             val definition = item(state.itemId) ?: return null
             return ModelRequest(
                 modelId = definition.modelId,
-                pitch = definition.spritePitch,
-                roll = definition.spriteCameraRoll,
-                yaw = definition.spriteCameraYaw,
-                scale = definition.spriteScale,
-                translateX = definition.spriteTranslateX,
-                translateY = definition.spriteTranslateY
+                pitch = definition.graphicPitch,
+                roll = definition.graphicCameraRoll,
+                yaw = definition.graphicCameraYaw,
+                scale = definition.graphicScale,
+                translateX = definition.graphicTranslateX,
+                translateY = definition.graphicTranslateY
             )
         }
         // Only raw models can be resolved from the cache; player and NPC media

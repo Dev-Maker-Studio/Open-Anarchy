@@ -612,13 +612,13 @@ public class DungeonConstants {
 		MAP_19(2790, false, EAST_DOOR);
 
 		private final int[] doorsDirections;
-		private final int spriteId;
+		private final int graphicId;
 		private final boolean open;
 
-		MapRoomIcon(int spriteId, boolean open, int... doorsDirections) {
+		MapRoomIcon(int graphicId, boolean open, int... doorsDirections) {
 			this.doorsDirections = doorsDirections;
 			this.open = open;
-			this.spriteId = spriteId;
+			this.graphicId = graphicId;
 		}
 
 		public int[] getDoorDirections() {
@@ -648,8 +648,8 @@ public class DungeonConstants {
 			return false;
 		}
 
-		public int getSpriteId() {
-			return spriteId;
+		public int getGraphicId() {
+			return graphicId;
 		}
 
 		public boolean isOpen() {

@@ -1620,7 +1620,7 @@ public class DungeonManager {
 				if (visibleMap[x][y] != null) { //means exists
 					Room room = getRoom(new RoomReference(x, y));
 					boolean highLight = party.isGuideMode() && room.isCritPath();
-					player.getPackets().sendRunScriptReverse(3278, protocol, getMapIconSprite(room, highLight), y, x);
+					player.getPackets().sendRunScriptReverse(3278, protocol, getMapIconGraphic(room, highLight), y, x);
 					if (room.getRoom() instanceof StartRoom)
 						player.getPackets().sendRunScriptReverse(3280, protocol, y, x);
 					else if (room.getRoom() instanceof BossRoom)
@@ -1628,22 +1628,22 @@ public class DungeonManager {
 					if (room.hasNorthDoor() && visibleMap[x][y + 1] == null) {
 						Room unknownR = getRoom(new RoomReference(x, y + 1));
 						highLight = party.isGuideMode() && unknownR.isCritPath();
-						player.getPackets().sendRunScriptReverse(3278, protocol, getMapIconSprite(DungeonConstants.SOUTH_DOOR, highLight), y + 1, x);
+						player.getPackets().sendRunScriptReverse(3278, protocol, getMapIconGraphic(DungeonConstants.SOUTH_DOOR, highLight), y + 1, x);
 					}
 					if (room.hasSouthDoor() && visibleMap[x][y - 1] == null) {
 						Room unknownR = getRoom(new RoomReference(x, y - 1));
 						highLight = party.isGuideMode() && unknownR.isCritPath();
-						player.getPackets().sendRunScriptReverse(3278, protocol, getMapIconSprite(DungeonConstants.NORTH_DOOR, highLight), y - 1, x);
+						player.getPackets().sendRunScriptReverse(3278, protocol, getMapIconGraphic(DungeonConstants.NORTH_DOOR, highLight), y - 1, x);
 					}
 					if (room.hasEastDoor() && visibleMap[x + 1][y] == null) {
 						Room unknownR = getRoom(new RoomReference(x + 1, y));
 						highLight = party.isGuideMode() && unknownR.isCritPath();
-						player.getPackets().sendRunScriptReverse(3278, protocol, getMapIconSprite(DungeonConstants.WEST_DOOR, highLight), y, x + 1);
+						player.getPackets().sendRunScriptReverse(3278, protocol, getMapIconGraphic(DungeonConstants.WEST_DOOR, highLight), y, x + 1);
 					}
 					if (room.hasWestDoor() && visibleMap[x - 1][y] == null) {
 						Room unknownR = getRoom(new RoomReference(x - 1, y));
 						highLight = party.isGuideMode() && unknownR.isCritPath();
-						player.getPackets().sendRunScriptReverse(3278, protocol, getMapIconSprite(DungeonConstants.EAST_DOOR, highLight), y, x - 1);
+						player.getPackets().sendRunScriptReverse(3278, protocol, getMapIconGraphic(DungeonConstants.EAST_DOOR, highLight), y, x - 1);
 					}
 				}
 		int index = 1;
@@ -1653,22 +1653,22 @@ public class DungeonManager {
 		}
 	}
 
-	public int getMapIconSprite(int direction, boolean highLight) {
+	public int getMapIconGraphic(int direction, boolean highLight) {
 		for (MapRoomIcon icon : MapRoomIcon.values()) {
 			if (icon.isOpen())
 				continue;
 			if (icon.hasDoor(direction))
-				return icon.getSpriteId() + (highLight ? MapRoomIcon.values().length : 0);
+				return icon.getGraphicId() + (highLight ? MapRoomIcon.values().length : 0);
 		}
 		return 2879;
 	}
 
-	public int getMapIconSprite(Room room, boolean highLight) {
+	public int getMapIconGraphic(Room room, boolean highLight) {
 		for (MapRoomIcon icon : MapRoomIcon.values()) {
 			if (!icon.isOpen())
 				continue;
 			if (icon.hasNorthDoor() == room.hasNorthDoor() && icon.hasSouthDoor() == room.hasSouthDoor() && icon.hasWestDoor() == room.hasWestDoor() && icon.hasEastDoor() == room.hasEastDoor())
-				return icon.getSpriteId() + (highLight ? MapRoomIcon.values().length : 0);
+				return icon.getGraphicId() + (highLight ? MapRoomIcon.values().length : 0);
 		}
 		return 2878;
 	}

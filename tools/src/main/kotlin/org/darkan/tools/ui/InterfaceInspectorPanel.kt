@@ -257,7 +257,7 @@ class InterfaceInspectorPanel(
     // ----------------------------------------------------------------- types
 
     private fun hasTypeSection(type: Int): Boolean = when (type) {
-        ComponentType.FIGURE, ComponentType.TEXT, ComponentType.SPRITE,
+        ComponentType.FIGURE, ComponentType.TEXT, ComponentType.GRAPHIC,
         ComponentType.MODEL, ComponentType.LINE -> true
         else -> false
     }
@@ -304,11 +304,11 @@ class InterfaceInspectorPanel(
                     warn("lineCount is neither read nor written by the if3 codec; it becomes 0 on save.")
                 }
             }
-            ComponentType.SPRITE -> {
-                val sprite = ImInt(definition.defaultImage)
-                if (assets.spriteField("Sprite", sprite)) {
-                    val value = sprite.get()
-                    context.editSelection("Sprite", "sprite@$index") { it.defaultImage = value }
+            ComponentType.GRAPHIC -> {
+                val graphic = ImInt(definition.defaultImage)
+                if (assets.graphicField("Graphic", graphic)) {
+                    val value = graphic.get()
+                    context.editSelection("Graphic", "graphic@$index") { it.defaultImage = value }
                 }
                 intRow("Angle", definition.imageRotation, "angle", index) { target, value ->
                     target.imageRotation = value
@@ -344,12 +344,12 @@ class InterfaceInspectorPanel(
                     target.defaultMediaId = value
                 }
                 intRow("Animation", definition.animation, "anim", index) { target, value -> target.animation = value }
-                intRow("Pitch", definition.spritePitch, "pitch", index) { target, value -> target.spritePitch = value }
+                intRow("Pitch", definition.graphicPitch, "pitch", index) { target, value -> target.graphicPitch = value }
                 ImGui.sameLine()
-                intRow("Yaw", definition.spriteYaw, "yaw", index) { target, value -> target.spriteYaw = value }
-                intRow("Roll", definition.spriteRoll, "roll", index) { target, value -> target.spriteRoll = value }
+                intRow("Yaw", definition.graphicYaw, "yaw", index) { target, value -> target.graphicYaw = value }
+                intRow("Roll", definition.graphicRoll, "roll", index) { target, value -> target.graphicRoll = value }
                 ImGui.sameLine()
-                intRow("Zoom", definition.spriteScale, "zoom", index) { target, value -> target.spriteScale = value }
+                intRow("Zoom", definition.graphicScale, "zoom", index) { target, value -> target.graphicScale = value }
                 intRow("Origin X", definition.viewportX, "vpx", index) { target, value -> target.viewportX = value }
                 ImGui.sameLine()
                 intRow("Origin Y", definition.viewportY, "vpy", index) { target, value -> target.viewportY = value }
@@ -386,7 +386,7 @@ class InterfaceInspectorPanel(
      */
     private fun itemRow(index: Int) {
         val state = context.state(index) ?: return
-        if (state.type != ComponentType.SPRITE && state.type != ComponentType.MODEL &&
+        if (state.type != ComponentType.GRAPHIC && state.type != ComponentType.MODEL &&
             state.type != ComponentType.TEXT
         ) {
             return

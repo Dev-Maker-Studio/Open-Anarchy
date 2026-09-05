@@ -9,13 +9,13 @@ import world.gregs.voidps.cache.definition.decoder.FontDecoder
  * Lazily builds [RsFont] atlases on demand.
  *
  * A font id addresses two indices at once: the metrics live in index 13
- * (`FONT_METRICS`) and the glyph bitmaps live in the sprite group of the same
- * id in index 8, which is why this shares the viewer's [SpriteCache] rather than
- * decoding sprites itself.
+ * (`FONT_METRICS`) and the glyph bitmaps live in the graphic group of the same
+ * id in index 8, which is why this shares the viewer's [GraphicCache] rather than
+ * decoding graphics itself.
  */
 class FontCache(
     private val cache: Cache,
-    private val sprites: SpriteCache
+    private val graphics: GraphicCache
 ) {
     private val decoder = FontDecoder()
     private val definitions: Array<FontDefinition> = decoder.create(decoder.size(cache) + 1)
@@ -53,7 +53,7 @@ class FontCache(
         if (definition.glyphWidths.isEmpty()) {
             return null
         }
-        val glyphs = sprites.definition(id)?.sprites ?: return null
+        val glyphs = graphics.definition(id)?.graphics ?: return null
         return RsFont.buildAtlas(id, definition, glyphs)
     }
 

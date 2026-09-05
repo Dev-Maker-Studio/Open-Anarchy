@@ -57,7 +57,7 @@ class QuestEncoder : OpcodeEncoder<QuestDefinition>() {
         if (definition.questPointRequirement != 0) {
             opcodes.add(15)
         }
-        if (definition.itemSprite != -1) {
+        if (definition.itemGraphic != -1) {
             opcodes.add(17)
         }
         if (definition.extras != null) {
@@ -101,7 +101,7 @@ class QuestEncoder : OpcodeEncoder<QuestDefinition>() {
                 }
             }
             15 -> writeShort(definition.questPointRequirement)
-            17 -> writeBigSmart(definition.itemSprite)
+            17 -> writeBigSmart(definition.itemGraphic)
             249 -> writeExtras(definition.id, definition.extras)
             else -> error("Unhandled quest opcode $opcode for definition ${definition.id}")
         }

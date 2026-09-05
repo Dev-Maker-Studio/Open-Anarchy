@@ -95,7 +95,7 @@ class NPCEncoder : OpcodeEncoder<NPCDefinition>() {
         if (definition.translations != null) {
             opcodes.add(121)
         }
-        if (definition.hitbarSprite != -1) {
+        if (definition.hitbarGraphic != -1) {
             opcodes.add(122)
         }
         if (definition.height != -1) {
@@ -127,7 +127,7 @@ class NPCEncoder : OpcodeEncoder<NPCDefinition>() {
         if (definition.armyIcon != -1) {
             opcodes.add(138)
         }
-        if (definition.spriteId != -1) {
+        if (definition.graphicId != -1) {
             opcodes.add(139)
         }
         if (definition.ambientSoundVolume != 255) {
@@ -244,7 +244,7 @@ class NPCEncoder : OpcodeEncoder<NPCDefinition>() {
                     writeByte(translation[2])
                 }
             }
-            122 -> writeShort(definition.hitbarSprite)
+            122 -> writeShort(definition.hitbarGraphic)
             123 -> writeShort(definition.height)
             125 -> writeByte(definition.respawnDirection.toInt())
             127 -> writeShort(definition.renderEmote)
@@ -266,7 +266,7 @@ class NPCEncoder : OpcodeEncoder<NPCDefinition>() {
             }
             137 -> writeShort(definition.attackCursor)
             138 -> writeBigSmart(definition.armyIcon)
-            139 -> writeShort(definition.spriteId)
+            139 -> writeShort(definition.graphicId)
             140 -> writeByte(definition.ambientSoundVolume)
             142 -> writeShort(definition.mapFunction)
             in 150..154 -> writeString(definition.rawOptions?.get(5 + opcode - 150) ?: members.options.getOrNull(opcode - 150))

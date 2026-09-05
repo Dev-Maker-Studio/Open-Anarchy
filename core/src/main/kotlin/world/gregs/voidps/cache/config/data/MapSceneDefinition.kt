@@ -5,7 +5,7 @@ import world.gregs.voidps.cache.definition.OpcodeOrdered
 
 data class MapSceneDefinition(
     override var id: Int = -1,
-    var sprite: Int = 0,
+    var graphic: Int = 0,
     var colour: Int = 0,
     var aBoolean1741: Boolean = false
 ) : Definition, OpcodeOrdered {

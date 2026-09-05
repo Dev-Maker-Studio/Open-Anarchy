@@ -2,10 +2,10 @@ package world.gregs.voidps.cache.source.codec
 
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.buffer.write.BufferWriter
-import world.gregs.voidps.cache.definition.data.IndexedSprite
-import world.gregs.voidps.cache.definition.data.SpriteDefinition
-import world.gregs.voidps.cache.definition.decoder.SpriteDecoder
-import world.gregs.voidps.cache.definition.encoder.SpriteEncoder
+import world.gregs.voidps.cache.definition.data.GraphicDefinition
+import world.gregs.voidps.cache.definition.data.IndexedGraphic
+import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
+import world.gregs.voidps.cache.definition.encoder.GraphicEncoder
 import world.gregs.voidps.cache.source.ArchiveMetadata
 import world.gregs.voidps.cache.source.SourceFiles
 import java.awt.image.BufferedImage
@@ -17,11 +17,11 @@ import javax.imageio.ImageIO
 import kotlin.io.path.name
 
 /**
- * A sprite index as standard images: **exactly one PNG per frame and nothing else**.
+ * A graphic index as standard images: **exactly one PNG per frame and nothing else**.
  *
  * ```
- * sprites/1234/0.png     frame 0, RGBA at the group's canvas size
- * sprites/1234/1.png     frame 1
+ * graphics/1234/0.png     frame 0, RGBA at the group's canvas size
+ * graphics/1234/1.png     frame 1
  * ```
  *
  * Every frame is an 8 bit RGBA truecolour PNG the size of the group's canvas - the canvas the client
@@ -34,33 +34,33 @@ import kotlin.io.path.name
  *
  * What the pixels *under*-determine - the palette's order, a frame box wider than the drawing in it,
  * the column major storage bit, an alpha plane that is entirely opaque - rides in three private
- * ancillary PNG chunks in the same file, `rsPL`, `rsFR` and `rsIX`. See [SpriteImage] for their
+ * ancillary PNG chunks in the same file, `rsPL`, `rsFR` and `rsIX`. See [GraphicImage] for their
  * layout. They are what makes an untouched frame pack back to the cache's own bytes; an editor that
  * strips them (most do) costs only that exactness, never the picture.
  *
- * **JPEG archives are not sprites.** Index 32 holds 29 of its 34 loading screen images as four
- * component JPEG containers rather than palette sprites - the client hands them to
+ * **JPEG archives are not graphics.** Index 32 holds 29 of its 34 loading screen images as four
+ * component JPEG containers rather than palette graphics - the client hands them to
  * `Toolkit.createImage` - so they are stored as one ordinary three component JPEG each, with the
  * fourth component's codestream inside the same file as `APP11` segments:
  *
  * ```
- * loading_sprites/3770.jpg      Y, Cb and Cr as a baseline JPEG; alpha in APP11 `JagexAlpha`
+ * loading_graphics/3770.jpg      Y, Cb and Cr as a baseline JPEG; alpha in APP11 `JagexAlpha`
  * ```
  *
  * [JagexJpeg] splits and joins them at the DCT coefficient level, so the file opens in any viewer and
  * comes back as the archive's own bytes. A `<id>.png` with an alpha channel is accepted in its place
  * and encoded into the four component file, for painting transparency in an ordinary editor. See
- * `docs/cache-source.md`, "loading sprites".
+ * `docs/cache-source.md`, "loading graphics".
  */
-object SpriteCodec : SourceCodec {
+object GraphicCodec : SourceCodec {
 
-    /** One frame of a sprite group, or a whole JPEG archive painted as RGBA. */
+    /** One frame of a graphic group, or a whole JPEG archive painted as RGBA. */
     const val EXTENSION = ".png"
 
     /** A JPEG archive: the colour image, with its alpha component in `APP11` segments. */
     const val JPEG_EXTENSION = ".jpg"
 
-    /** The private PNG chunk carrying the group's palette; [SpriteImage] has the layout. */
+    /** The private PNG chunk carrying the group's palette; [GraphicImage] has the layout. */
     const val PALETTE_CHUNK = "rsPL"
 
     /** The private PNG chunk carrying the frame's placement and format byte. */
@@ -78,12 +78,12 @@ object SpriteCodec : SourceCodec {
      */
     const val PRISTINE = "group"
 
-    private val decoder = SpriteDecoder()
+    private val decoder = GraphicDecoder()
 
-    private val encoder = SpriteEncoder()
+    private val encoder = GraphicEncoder()
 
     override val id: String
-        get() = "sprite-png"
+        get() = "graphic-png"
 
     override fun fileIdsFromMetadata(archive: Int): Boolean = true
 
@@ -98,7 +98,7 @@ object SpriteCodec : SourceCodec {
 
     override fun unpack(directory: Path, archive: SourceArchive): UnpackedArchive {
         check(archive.files.size == 1) {
-            "Index ${archive.index} archive ${archive.archive} has ${archive.files.size} files; a sprite group is one."
+            "Index ${archive.index} archive ${archive.archive} has ${archive.files.size} files; a graphic group is one."
         }
         val data = archive.files[0]
         if (jpeg(data)) {
@@ -122,7 +122,7 @@ object SpriteCodec : SourceCodec {
 
     override fun pack(directory: Path, archive: Int, metadata: ArchiveMetadata): PackedArchive {
         val ids = metadata.fileIds()
-        check(ids.size == 1) { "Archive $archive is one sprite group but its metadata lists ${ids.size} files." }
+        check(ids.size == 1) { "Archive $archive is one graphic group but its metadata lists ${ids.size} files." }
         val jpeg = directory.resolve("$archive$JPEG_EXTENSION")
         if (Files.isRegularFile(jpeg)) {
             return PackedArchive(JagexJpeg.archive(Files.readAllBytes(jpeg)), ids)
@@ -189,24 +189,24 @@ object SpriteCodec : SourceCodec {
         }
     }
 
-    /** Whether [data] is a JPEG container rather than a palette sprite group. */
+    /** Whether [data] is a JPEG container rather than a palette graphic group. */
     fun jpeg(data: ByteArray): Boolean = JagexJpeg.isJpeg(data)
 
-    private fun decode(archive: Int, data: ByteArray): SpriteDefinition {
-        val definition = SpriteDefinition(archive)
+    private fun decode(archive: Int, data: ByteArray): GraphicDefinition {
+        val definition = GraphicDefinition(archive)
         decoder.readLoop(definition, BufferReader(data))
         return definition
     }
 
     /** [definition] as the files it is stored in: one PNG per frame, in frame order. */
-    private fun write(archive: Int, definition: SpriteDefinition): List<SourceFile> {
-        val sprites = definition.sprites ?: error("Sprite $archive decoded to no frames.")
-        val files = ArrayList<SourceFile>(sprites.size)
-        for (frame in sprites.indices) {
+    private fun write(archive: Int, definition: GraphicDefinition): List<SourceFile> {
+        val graphics = definition.graphics ?: error("Graphic $archive decoded to no frames.")
+        val files = ArrayList<SourceFile>(graphics.size)
+        for (frame in graphics.indices) {
             files.add(
                 SourceFile(
                     "$archive/$frame$EXTENSION",
-                    SpriteImage.write(archive, frame, definition, sprites[frame])
+                    GraphicImage.write(archive, frame, definition, graphics[frame])
                 )
             )
         }
@@ -226,7 +226,7 @@ object SpriteCodec : SourceCodec {
                     continue
                 }
                 if (!name.endsWith(EXTENSION)) {
-                    throw IOException("Archive $archive has a $name; a sprite group is $EXTENSION frames only.")
+                    throw IOException("Archive $archive has a $name; a graphic group is $EXTENSION frames only.")
                 }
                 val frame = name.dropLast(EXTENSION.length).toIntOrNull()
                     ?: throw IOException("Archive $archive has a $name, whose name is not a frame number.")
@@ -269,7 +269,7 @@ object SpriteCodec : SourceCodec {
         if (files.isEmpty()) {
             throw IOException("Archive $archive has no frames.")
         }
-        val images = files.map { SpriteImage.read(it.bytes, "Archive $archive's ${it.path.substringAfterLast('/')}") }
+        val images = files.map { GraphicImage.read(it.bytes, "Archive $archive's ${it.path.substringAfterLast('/')}") }
         val width = images[0].width
         val height = images[0].height
         for (frame in images.indices) {
@@ -285,27 +285,27 @@ object SpriteCodec : SourceCodec {
         val canvasHeight = declared?.canvasHeight ?: height
         val boxes = Array(images.size) { box(images[it]) }
         val colours = Colours(archive, images.firstNotNullOfOrNull { it.palette }?.entries)
-        val sprites = Array(images.size) { frame -> sprite(images[frame], boxes[frame], colours) }
-        val definition = SpriteDefinition(archive)
+        val graphics = Array(images.size) { frame -> graphic(images[frame], boxes[frame], colours) }
+        val definition = GraphicDefinition(archive)
         definition.width = canvasWidth
         definition.height = canvasHeight
         definition.paletteZeroEntry = images.firstNotNullOfOrNull { it.palette }?.zeroEntry ?: false
         definition.rawPalette = colours.entries()
-        val palette = SpriteImage.normalise(definition.rawPalette)
-        for (sprite in sprites) {
-            sprite.palette = palette
-            sprite.deltaWidth = canvasWidth - sprite.width - sprite.offsetX
-            sprite.deltaHeight = canvasHeight - sprite.height - sprite.offsetY
+        val palette = GraphicImage.normalise(definition.rawPalette)
+        for (graphic in graphics) {
+            graphic.palette = palette
+            graphic.deltaWidth = canvasWidth - graphic.width - graphic.offsetX
+            graphic.deltaHeight = canvasHeight - graphic.height - graphic.offsetY
         }
-        definition.sprites = sprites
-        val writer = BufferWriter(capacity(definition, sprites))
+        definition.graphics = graphics
+        val writer = BufferWriter(capacity(definition, graphics))
         with(encoder) { writer.encode(definition) }
         return writer.toArray()
     }
 
     /** One frame: its pixels inside [box], as palette indices, an alpha plane and a format byte. */
-    private fun sprite(image: SpriteImage.Image, box: Box, colours: Colours): IndexedSprite {
-        val sprite = IndexedSprite(box.minX, box.minY, box.width, box.height)
+    private fun graphic(image: GraphicImage.Image, box: Box, colours: Colours): IndexedGraphic {
+        val graphic = IndexedGraphic(box.minX, box.minY, box.width, box.height)
         val area = box.width * box.height
         val alpha = ByteArray(area)
         var partial = false
@@ -320,25 +320,25 @@ object SpriteCodec : SourceCodec {
         }
         // A partly transparent pixel can only be an alpha plane, whatever a chunk says; without one
         // the format byte is what says the plane was there at all.
-        val kind = if (partial) SpriteImage.PLANE else image.frame?.alpha ?: SpriteImage.NO_PLANE
-        val plane = if (kind == SpriteImage.PLANE) alpha else null
-        sprite.raster = ByteArray(area)
+        val kind = if (partial) GraphicImage.PLANE else image.frame?.alpha ?: GraphicImage.NO_PLANE
+        val plane = if (kind == GraphicImage.PLANE) alpha else null
+        graphic.raster = ByteArray(area)
         val raster = image.indices
         if (raster != null && raster.width == box.width && raster.height == box.height &&
             agrees(raster.values, image, box, colours, plane)
         ) {
-            raster.values.copyInto(sprite.raster)
+            raster.values.copyInto(graphic.raster)
         } else {
-            derive(sprite.raster, image, box, colours)
+            derive(graphic.raster, image, box, colours)
         }
-        sprite.flags = ((image.frame?.flags ?: 0) and ALPHA_FLAG.inv()) or
-            if (kind == SpriteImage.NO_PLANE) 0 else ALPHA_FLAG
-        sprite.alpha = plane
-        return sprite
+        graphic.flags = ((image.frame?.flags ?: 0) and ALPHA_FLAG.inv()) or
+            if (kind == GraphicImage.NO_PLANE) 0 else ALPHA_FLAG
+        graphic.alpha = plane
+        return graphic
     }
 
     /** Palette index by colour: 0 where the pixel is fully transparent, the palette's entry otherwise. */
-    private fun derive(raster: ByteArray, image: SpriteImage.Image, box: Box, colours: Colours) {
+    private fun derive(raster: ByteArray, image: GraphicImage.Image, box: Box, colours: Colours) {
         for (y in 0 until box.height) {
             for (x in 0 until box.width) {
                 val pixel = image.pixels[(box.minX + x) + (box.minY + y) * image.width]
@@ -358,7 +358,7 @@ object SpriteCodec : SourceCodec {
      */
     private fun agrees(
         raster: ByteArray,
-        image: SpriteImage.Image,
+        image: GraphicImage.Image,
         box: Box,
         colours: Colours,
         plane: ByteArray?
@@ -391,7 +391,7 @@ object SpriteCodec : SourceCodec {
     }
 
     /** The frame's box: `rsFR`'s where it still holds every drawn pixel, else the drawing's own. */
-    private fun box(image: SpriteImage.Image): Box {
+    private fun box(image: GraphicImage.Image): Box {
         var minX = image.width
         var minY = image.height
         var maxX = -1
@@ -472,10 +472,10 @@ object SpriteCodec : SourceCodec {
         /**
          * [colour]'s index, appending an entry for a colour the palette does not hold yet.
          *
-         * A sprite group is 255 colours and a transparent index, which is the format and not a
+         * A graphic group is 255 colours and a transparent index, which is the format and not a
          * limit this could lift, so a colour that arrives once the palette is full is quantised to
          * the nearest entry already in it rather than failing the build. Two things reach that
-         * branch: a picture an editor made with more colours than a sprite can hold, and - one
+         * branch: a picture an editor made with more colours than a graphic can hold, and - one
          * level of blue away - a frame drawing the transparent index *opaque*, which the client
          * renders as black and which a group with a full palette therefore has no entry for. The
          * `rsIX` chunk is what keeps the second exact while it survives; see [compile].
@@ -523,12 +523,12 @@ object SpriteCodec : SourceCodec {
             ?: throw IOException("${path.toAbsolutePath()} is not an image this build can read.")
 
     /** Exactly what the group will be: pixels, planes, palette and the fixed trailer. */
-    private fun capacity(definition: SpriteDefinition, sprites: Array<IndexedSprite>): Int {
-        var size = TRAILER + sprites.size * FRAME_TRAILER
+    private fun capacity(definition: GraphicDefinition, graphics: Array<IndexedGraphic>): Int {
+        var size = TRAILER + graphics.size * FRAME_TRAILER
         size += definition.rawPalette.size * COLOUR
-        for (sprite in sprites) {
-            val area = sprite.width * sprite.height
-            size += 1 + area + if (sprite.flags and ALPHA_FLAG != 0) area else 0
+        for (graphic in graphics) {
+            val area = graphic.width * graphic.height
+            size += 1 + area + if (graphic.flags and ALPHA_FLAG != 0) area else 0
         }
         return size
     }

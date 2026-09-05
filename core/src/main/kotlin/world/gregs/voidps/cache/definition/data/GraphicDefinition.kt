@@ -1,39 +1,39 @@
 package world.gregs.voidps.cache.definition.data
 
 import world.gregs.voidps.cache.Definition
-import world.gregs.voidps.cache.definition.Extra
-import world.gregs.voidps.cache.definition.OpcodeOrdered
-import world.gregs.voidps.cache.definition.Recolourable
 
+/**
+ * One graphic group of index 8 (or of the loading graphic indices 32 and 34): a shared palette and
+ * one to 256 frames indexed into it.
+ *
+ * The fields after [graphics] are what the client throws away and a byte exact encoder needs back -
+ * see `docs/cache-source.md`, "graphics". [rawPalette] is the palette exactly as the file carries
+ * it, beside the normalised copy every frame holds in [IndexedGraphic.palette]; the client rewrites
+ * a palette entry of 0 to 1 because 0 is its transparent sentinel, and 5,264 of the 727 cache's
+ * groups have at least one such entry, so the normalised palette cannot be written back.
+ */
 data class GraphicDefinition(
     override var id: Int = -1,
-    var modelId: Int = 0,
-    var animationId: Int = -1,
-    var sizeXY: Int = 128,
-    var sizeZ: Int = 128,
-    var rotation: Int = 0,
-    var ambience: Int = 0,
-    var contrast: Int = 0,
-    var aByte2381: Byte = 0,
-    var anInt2385: Int = -1,
-    var aBoolean2402: Boolean = false,
-    override var originalColours: ShortArray? = null,
-    override var modifiedColours: ShortArray? = null,
-    override var originalTextureColours: ShortArray? = null,
-    override var modifiedTextureColours: ShortArray? = null,
-    override var stringId: String = "",
-    override var extras: Map<String, Any>? = null
-) : Definition, Recolourable, Extra, OpcodeOrdered {
-
+    var graphics: Array<IndexedGraphic>? = null,
     /**
-     * @see OpcodeOrdered
+     * The palette as the file holds it: entry 0 first (always 0, the transparent index) and the
+     * rest the 3 byte colours, unmodified. [IndexedGraphic.palette] is the client's normalised
+     * view of the same array.
      */
-    override var opcodeOrder: IntArray? = null
-
+    var rawPalette: IntArray = IntArray(0),
     /**
-     * @see OpcodeOrdered
+     * Whether the file writes an explicit `000000` for palette entry 0 before entry 1.
+     *
+     * The client never reads it - it seeks past it to entry 1 - so it is three bytes of padding
+     * that only 29 of the 727 cache's 12,071 groups carry, and they are the last 29 ids, packed by
+     * a different tool than the rest.
      */
-    override var shadowedPayloads: Array<ByteArray?>? = null
+    var paletteZeroEntry: Boolean = false,
+    /** The group canvas width every frame is padded into; the client's `biggestWidth`. */
+    var width: Int = 0,
+    /** The group canvas height every frame is padded into; the client's `biggestHeight`. */
+    var height: Int = 0
+) : Definition {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -41,59 +41,25 @@ data class GraphicDefinition(
         other as GraphicDefinition
 
         if (id != other.id) return false
-        if (modelId != other.modelId) return false
-        if (animationId != other.animationId) return false
-        if (sizeXY != other.sizeXY) return false
-        if (sizeZ != other.sizeZ) return false
-        if (rotation != other.rotation) return false
-        if (ambience != other.ambience) return false
-        if (contrast != other.contrast) return false
-        if (aByte2381 != other.aByte2381) return false
-        if (anInt2385 != other.anInt2385) return false
-        if (aBoolean2402 != other.aBoolean2402) return false
-        if (originalColours != null) {
-            if (other.originalColours == null) return false
-            if (!originalColours.contentEquals(other.originalColours)) return false
-        } else if (other.originalColours != null) return false
-        if (modifiedColours != null) {
-            if (other.modifiedColours == null) return false
-            if (!modifiedColours.contentEquals(other.modifiedColours)) return false
-        } else if (other.modifiedColours != null) return false
-        if (originalTextureColours != null) {
-            if (other.originalTextureColours == null) return false
-            if (!originalTextureColours.contentEquals(other.originalTextureColours)) return false
-        } else if (other.originalTextureColours != null) return false
-        if (modifiedTextureColours != null) {
-            if (other.modifiedTextureColours == null) return false
-            if (!modifiedTextureColours.contentEquals(other.modifiedTextureColours)) return false
-        } else if (other.modifiedTextureColours != null) return false
-        if (stringId != other.stringId) return false
-        if (extras != other.extras) return false
+        if (graphics != null) {
+            if (other.graphics == null) return false
+            if (!graphics.contentEquals(other.graphics)) return false
+        } else if (other.graphics != null) return false
+        if (!rawPalette.contentEquals(other.rawPalette)) return false
+        if (paletteZeroEntry != other.paletteZeroEntry) return false
+        if (width != other.width) return false
+        if (height != other.height) return false
 
         return true
     }
 
     override fun hashCode(): Int {
         var result = id
-        result = 31 * result + modelId
-        result = 31 * result + animationId
-        result = 31 * result + sizeXY
-        result = 31 * result + sizeZ
-        result = 31 * result + rotation
-        result = 31 * result + ambience
-        result = 31 * result + contrast
-        result = 31 * result + aByte2381
-        result = 31 * result + anInt2385
-        result = 31 * result + aBoolean2402.hashCode()
-        result = 31 * result + (originalColours?.contentHashCode() ?: 0)
-        result = 31 * result + (modifiedColours?.contentHashCode() ?: 0)
-        result = 31 * result + (originalTextureColours?.contentHashCode() ?: 0)
-        result = 31 * result + (modifiedTextureColours?.contentHashCode() ?: 0)
-        result = 31 * result + stringId.hashCode()
-        result = 31 * result + extras.hashCode()
+        result = 31 * result + (graphics?.contentHashCode() ?: 0)
+        result = 31 * result + rawPalette.contentHashCode()
+        result = 31 * result + paletteZeroEntry.hashCode()
+        result = 31 * result + width
+        result = 31 * result + height
         return result
-    }
-    companion object {
-        val EMPTY = GraphicDefinition()
     }
 }

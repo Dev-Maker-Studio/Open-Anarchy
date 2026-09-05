@@ -739,7 +739,7 @@ private fun runObjectDiagnostic(cache: Cache, objectId: Int) {
 
 /**
  * Run a texture diagnostic without requiring OpenGL.
- * Loads the texture type from cache, decodes its operations, loads sprites,
+ * Loads the texture type from cache, decodes its operations, loads graphics,
  * generates pixels, and prints detailed information about each step.
  */
 private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
@@ -786,8 +786,8 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
         val labelStr = if (labels.isNotEmpty()) " <== ${labels.joinToString(", ")}" else ""
 
         val extra = when (op) {
-            is TextureOpTiledSprite -> " (TiledSprite) spriteId=${op.spriteId}"
-            is TextureOpSprite -> " spriteId=${op.spriteId}"
+            is TextureOpTiledGraphic -> " (TiledGraphic) graphicId=${op.graphicId}"
+            is TextureOpGraphic -> " graphicId=${op.graphicId}"
             is TextureOpTexture -> " materialId=${op.getMaterialId()}"
             else -> ""
         }
@@ -801,51 +801,51 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
         println("  [$i] ${op::class.simpleName} monochrome=${op.monochrome} cache=${op.imageCacheCapacity}$extra$childStr$labelStr")
     }
 
-    println("\n  textureFileIds (sprites): ${textureType.textureFileIds.toList()}")
+    println("\n  textureFileIds (graphics): ${textureType.textureFileIds.toList()}")
     println("  materialFileIds (nested textures): ${textureType.materialFileIds.toList()}")
 
-    // Step 4: Load sprites
-    println("\n--- SPRITE LOADING ---")
+    // Step 4: Load graphics
+    println("\n--- GRAPHIC LOADING ---")
     for (op in textureType.textureOperations) {
-        if (op is TextureOpSprite && op.spriteId >= 0) {
-            val spriteId = op.spriteId
-            val spriteData = cache.data(Index.SPRITES, spriteId)
-            if (spriteData == null) {
-                println("  Sprite $spriteId: cache.data(SPRITES, $spriteId) returned NULL")
+        if (op is TextureOpGraphic && op.graphicId >= 0) {
+            val graphicId = op.graphicId
+            val graphicData = cache.data(Index.GRAPHICS, graphicId)
+            if (graphicData == null) {
+                println("  Graphic $graphicId: cache.data(GRAPHICS, $graphicId) returned NULL")
                 // Try alternate addressing
-                val altData = cache.data(Index.SPRITES, 0, spriteId)
-                println("  Sprite $spriteId: alternate cache.data(SPRITES, 0, $spriteId) returned ${if (altData != null) "${altData.size} bytes" else "NULL"}")
+                val altData = cache.data(Index.GRAPHICS, 0, graphicId)
+                println("  Graphic $graphicId: alternate cache.data(GRAPHICS, 0, $graphicId) returned ${if (altData != null) "${altData.size} bytes" else "NULL"}")
                 continue
             }
-            println("  Sprite $spriteId: ${spriteData.size} bytes raw data")
+            println("  Graphic $graphicId: ${graphicData.size} bytes raw data")
 
-            // Decode sprite header
+            // Decode graphic header
             try {
-                val buf = BufferReader(spriteData)
-                buf.position(spriteData.size - 2)
-                val spriteCount = buf.readShort() and 0xFFFF
-                println("    spriteCount: $spriteCount")
+                val buf = BufferReader(graphicData)
+                buf.position(graphicData.size - 2)
+                val graphicCount = buf.readShort() and 0xFFFF
+                println("    graphicCount: $graphicCount")
 
-                if (spriteCount > 0) {
-                    buf.position(spriteData.size - 7 - spriteCount * 8)
+                if (graphicCount > 0) {
+                    buf.position(graphicData.size - 7 - graphicCount * 8)
                     val biggestWidth = buf.readShort()
                     val biggestHeight = buf.readShort()
                     val paletteSize = buf.readUnsignedByte() + 1
                     println("    biggestWidth=$biggestWidth, biggestHeight=$biggestHeight, paletteSize=$paletteSize")
 
-                    val minX = IntArray(spriteCount) { buf.readShort() }
+                    val minX = IntArray(graphicCount) { buf.readShort() }
                     // skip minY, widths, heights
-                    buf.position(spriteData.size - 7 - spriteCount * 8 + 5 + spriteCount)
-                    val minY = IntArray(spriteCount) { buf.readShort() }
-                    val widths = IntArray(spriteCount) { buf.readShort() }
-                    val heights = IntArray(spriteCount) { buf.readShort() }
+                    buf.position(graphicData.size - 7 - graphicCount * 8 + 5 + graphicCount)
+                    val minY = IntArray(graphicCount) { buf.readShort() }
+                    val widths = IntArray(graphicCount) { buf.readShort() }
+                    val heights = IntArray(graphicCount) { buf.readShort() }
 
                     // Re-read correctly: after palette size, we have minX[N], minY[N], widths[N], heights[N]
-                    buf.position(spriteData.size - 7 - spriteCount * 8 + 5)
-                    for (j in 0 until spriteCount) { minX[j] = buf.readShort() }
-                    for (j in 0 until spriteCount) { minY[j] = buf.readShort() }
-                    for (j in 0 until spriteCount) { widths[j] = buf.readShort() }
-                    for (j in 0 until spriteCount) { heights[j] = buf.readShort() }
+                    buf.position(graphicData.size - 7 - graphicCount * 8 + 5)
+                    for (j in 0 until graphicCount) { minX[j] = buf.readShort() }
+                    for (j in 0 until graphicCount) { minY[j] = buf.readShort() }
+                    for (j in 0 until graphicCount) { widths[j] = buf.readShort() }
+                    for (j in 0 until graphicCount) { heights[j] = buf.readShort() }
 
                     println("    sub[0]: minX=${minX[0]}, minY=${minY[0]}, width=${widths[0]}, height=${heights[0]}")
 
@@ -861,7 +861,7 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
                     println("    fullCanvas: ${fullWidth}x${fullHeight}")
 
                     // Try full decode
-                    val decoded = TextureLoader.decodeSpriteToDataPublic(spriteData, 0)
+                    val decoded = TextureLoader.decodeGraphicToDataPublic(graphicData, 0)
                     if (decoded != null) {
                         val nonZero = decoded.pixels.count { it != 0 }
                         val nonBlackRgb = decoded.pixels.count { (it and 0xFFFFFF) != 0 }
@@ -873,7 +873,7 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
                     }
                 }
             } catch (e: Exception) {
-                println("    ERROR parsing sprite header: ${e.message}")
+                println("    ERROR parsing graphic header: ${e.message}")
             }
         }
     }
@@ -882,16 +882,16 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
     println("\n--- PIXEL GENERATION ---")
     TextureRaster.calculateTable()
 
-    // Load sprites into operations
+    // Load graphics into operations
     for (op in textureType.textureOperations) {
-        if (op is TextureOpSprite && op.spriteId >= 0) {
-            val spriteRawData = cache.data(Index.SPRITES, op.spriteId) ?: continue
-            val decoded = TextureLoader.decodeSpriteToDataPublic(spriteRawData, 0)
+        if (op is TextureOpGraphic && op.graphicId >= 0) {
+            val graphicRawData = cache.data(Index.GRAPHICS, op.graphicId) ?: continue
+            val decoded = TextureLoader.decodeGraphicToDataPublic(graphicRawData, 0)
             if (decoded != null) {
-                op.loadSprite(decoded.pixels, decoded.width, decoded.height)
-                println("  Loaded sprite ${op.spriteId} into ${op::class.simpleName}: ${decoded.width}x${decoded.height}")
+                op.loadGraphic(decoded.pixels, decoded.width, decoded.height)
+                println("  Loaded graphic ${op.graphicId} into ${op::class.simpleName}: ${decoded.width}x${decoded.height}")
             } else {
-                println("  FAILED to decode sprite ${op.spriteId} for ${op::class.simpleName}")
+                println("  FAILED to decode graphic ${op.graphicId} for ${op::class.simpleName}")
             }
         }
     }
@@ -904,19 +904,19 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
             if (nestedData != null) {
                 try {
                     val nestedType = TextureType(nestedData)
-                    // Load sprites for nested texture
+                    // Load graphics for nested texture
                     for (nestedOp in nestedType.textureOperations) {
-                        if (nestedOp is TextureOpSprite && nestedOp.spriteId >= 0) {
-                            val spriteRawData = cache.data(Index.SPRITES, nestedOp.spriteId) ?: continue
-                            val decoded = TextureLoader.decodeSpriteToDataPublic(spriteRawData, 0)
+                        if (nestedOp is TextureOpGraphic && nestedOp.graphicId >= 0) {
+                            val graphicRawData = cache.data(Index.GRAPHICS, nestedOp.graphicId) ?: continue
+                            val decoded = TextureLoader.decodeGraphicToDataPublic(graphicRawData, 0)
                             if (decoded != null) {
-                                nestedOp.loadSprite(decoded.pixels, decoded.width, decoded.height)
+                                nestedOp.loadGraphic(decoded.pixels, decoded.width, decoded.height)
                             }
                         }
                     }
                     val nestedPixels = nestedType.getPixelsArgb(128, 128, { sid ->
-                        val sData = cache.data(Index.SPRITES, sid) ?: return@getPixelsArgb null
-                        TextureLoader.decodeSpriteToDataPublic(sData, 0)
+                        val sData = cache.data(Index.GRAPHICS, sid) ?: return@getPixelsArgb null
+                        TextureLoader.decodeGraphicToDataPublic(sData, 0)
                     })
                     op.texturePixels = nestedPixels
                     op.textureWidth = 128
@@ -937,8 +937,8 @@ private fun runTextureDiagnostic(cache: Cache, textureId: Int) {
     val h = 128
     try {
         val pixels = textureType.getPixelsArgb(w, h, { sid ->
-            val sData = cache.data(Index.SPRITES, sid) ?: return@getPixelsArgb null
-            TextureLoader.decodeSpriteToDataPublic(sData, 0)
+            val sData = cache.data(Index.GRAPHICS, sid) ?: return@getPixelsArgb null
+            TextureLoader.decodeGraphicToDataPublic(sData, 0)
         })
 
         val nonTransparent = pixels.count { (it shr 24) and 0xFF > 0 }
@@ -1361,7 +1361,7 @@ private fun indexLabel(index: Int): String = when (index) {
     Index.MAPS -> "maps"
     Index.MIDI_SONGS -> "midi_songs"
     Index.MODELS -> "models"
-    Index.SPRITES -> "sprites"
+    Index.GRAPHICS -> "graphics"
     Index.TEXTURES -> "textures"
     Index.HUFFMAN -> "huffman"
     Index.MIDI_JINGLES -> "midi_jingles"
@@ -1385,9 +1385,9 @@ private fun indexLabel(index: Int): String = when (index) {
     Index.BILLBOARDS -> "billboards"
     Index.NATIVE_LIBRARIES -> "native_libraries"
     Index.SHADERS -> "shaders"
-    Index.LOADING_SPRITES -> "loading_sprites"
+    Index.LOADING_GRAPHICS -> "loading_graphics"
     Index.GAME_TIPS -> "game_tips"
-    Index.LOADING_SPRITES_RAW -> "loading_sprites_raw"
+    Index.LOADING_GRAPHICS_RAW -> "loading_graphics_raw"
     Index.CUTSCENES -> "cutscenes"
     Index.INDEX_36 -> "index36"
     else -> "?"

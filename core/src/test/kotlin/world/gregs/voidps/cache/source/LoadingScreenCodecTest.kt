@@ -4,11 +4,11 @@ import org.darkan.core.EnvVars
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
-import world.gregs.voidps.cache.definition.data.SpriteDefinition
-import world.gregs.voidps.cache.definition.decoder.SpriteDecoder
+import world.gregs.voidps.cache.definition.data.GraphicDefinition
+import world.gregs.voidps.cache.definition.decoder.GraphicDecoder
 import world.gregs.voidps.cache.source.codec.BaselineJpeg
+import world.gregs.voidps.cache.source.codec.GraphicCodec
 import world.gregs.voidps.cache.source.codec.JagexJpeg
-import world.gregs.voidps.cache.source.codec.SpriteCodec
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -35,7 +35,7 @@ import kotlin.test.assertTrue
  *    with no `.pristine` copy and no second file.
  * 2. **It is an ordinary JPEG.** `javax.imageio` reads it as a three band sRGB image at the right
  *    size; the only application segment in it is the alpha, which every standard decoder skips.
- * 3. **The decode rules are the client's.** Index 34 holds the same 34 pictures as palette sprites -
+ * 3. **The decode rules are the client's.** Index 34 holds the same 34 pictures as palette graphics -
  *    it is the branch the client takes when AWT will not decode these files - so it is an
  *    independent copy of the same art to measure against, and [JagexJpeg.decode] lands within a few
  *    levels of it. Nothing in this test asserts "the colours look plausible": it asserts they are
@@ -56,14 +56,14 @@ class LoadingScreenCodecTest {
     fun `every four component loading screen is one ordinary JPEG that joins back to the cache`() {
         val cache = cache() ?: return
         var jpegs = 0
-        var sprites = 0
+        var graphics = 0
         var fileBytes = 0L
         var originalBytes = 0L
         println("%-8s %-10s %8s %8s %8s %9s".format("archive", "size", "file", "alpha", "cache", "overhead"))
-        for (archive in cache.archiveIds(Index.LOADING_SPRITES)) {
-            val group = cache.data(Index.LOADING_SPRITES, archive) ?: continue
+        for (archive in cache.archiveIds(Index.LOADING_GRAPHICS)) {
+            val group = cache.data(Index.LOADING_GRAPHICS, archive) ?: continue
             if (!JagexJpeg.isJpeg(group)) {
-                sprites++
+                graphics++
                 continue
             }
             jpegs++
@@ -133,30 +133,30 @@ class LoadingScreenCodecTest {
             )
         }
         println(
-            "$jpegs JPEG archives, $sprites palette sprite groups; $originalBytes cache bytes became " +
+            "$jpegs JPEG archives, $graphics palette graphic groups; $originalBytes cache bytes became " +
                 "$fileBytes on disk (${"%.1f".format(100.0 * (fileBytes - originalBytes) / originalBytes)}%)"
         )
         assertTrue(jpegs >= 21, "only $jpegs JPEG archives were found in index 32")
-        // The rest of the index is the pre-cache fonts, which are palette sprite groups.
-        assertTrue(sprites > 0, "index 32 has no palette sprite groups")
+        // The rest of the index is the pre-cache fonts, which are palette graphic groups.
+        assertTrue(graphics > 0, "index 32 has no palette graphic groups")
     }
 
     @Test
     fun `the decoded pixels are the ones Jagex shipped in index 34`() {
         val cache = cache() ?: return
-        val decoder = SpriteDecoder()
+        val decoder = GraphicDecoder()
         var compared = 0
         var withAlpha = 0
         println("%-8s %-10s %8s %8s %8s %9s".format("archive", "size", "colour", "solid", "clear", "pixels"))
-        for (archive in cache.archiveIds(Index.LOADING_SPRITES)) {
-            val group = cache.data(Index.LOADING_SPRITES, archive) ?: continue
+        for (archive in cache.archiveIds(Index.LOADING_GRAPHICS)) {
+            val group = cache.data(Index.LOADING_GRAPHICS, archive) ?: continue
             if (!JagexJpeg.isJpeg(group)) {
                 continue
             }
-            val raw = cache.data(Index.LOADING_SPRITES_RAW, archive) ?: continue
-            val definition = SpriteDefinition(archive)
+            val raw = cache.data(Index.LOADING_GRAPHICS_RAW, archive) ?: continue
+            val definition = GraphicDefinition(archive)
             decoder.readLoop(definition, BufferReader(raw))
-            val frames = definition.sprites ?: continue
+            val frames = definition.graphics ?: continue
             if (frames.size != 1) {
                 continue
             }
@@ -343,7 +343,7 @@ class LoadingScreenCodecTest {
 
     /**
      * Every loading screen written out where somebody can look at it: the one file exactly as
-     * `SpriteCodec` puts it in the source tree, plus a PNG of what any viewer shows and a PNG of
+     * `GraphicCodec` puts it in the source tree, plus a PNG of what any viewer shows and a PNG of
      * what the client's rules read, alpha included.
      *
      * Not a parity check - that is the first test - but it is how anybody sees whether the colours
@@ -355,13 +355,13 @@ class LoadingScreenCodecTest {
         val directory = File(OUTPUT)
         directory.mkdirs()
         var written = 0
-        for (archive in cache.archiveIds(Index.LOADING_SPRITES)) {
-            val group = cache.data(Index.LOADING_SPRITES, archive) ?: continue
+        for (archive in cache.archiveIds(Index.LOADING_GRAPHICS)) {
+            val group = cache.data(Index.LOADING_GRAPHICS, archive) ?: continue
             if (!JagexJpeg.isJpeg(group)) {
                 continue
             }
             val file = JagexJpeg.editable(group)
-            File(directory, "$archive${SpriteCodec.JPEG_EXTENSION}").writeBytes(file)
+            File(directory, "$archive${GraphicCodec.JPEG_EXTENSION}").writeBytes(file)
             val preview = File(directory, "loading-$archive.png")
             // Exactly what a standard reader makes of the stored file, APP11 segments and all.
             ImageIO.write(ImageIO.read(ByteArrayInputStream(file)), "png", preview)
@@ -371,7 +371,7 @@ class LoadingScreenCodecTest {
                 val proof = File(PROOFS, "loading-proof.png")
                 proof.parentFile.mkdirs()
                 proof.writeBytes(preview.readBytes())
-                println("wrote loading_sprites/$PROOF${SpriteCodec.JPEG_EXTENSION} to ${proof.absolutePath}")
+                println("wrote loading_graphics/$PROOF${GraphicCodec.JPEG_EXTENSION} to ${proof.absolutePath}")
             }
             written++
         }
@@ -380,9 +380,9 @@ class LoadingScreenCodecTest {
 
     @Test
     fun `a JPEG archive maps its file back to its archive`() {
-        assertEquals(3770, SpriteCodec.archiveOf("3770${SpriteCodec.JPEG_EXTENSION}"))
-        assertEquals(3770, SpriteCodec.archiveOf("3770${SpriteCodec.EXTENSION}"))
-        assertEquals(null, SpriteCodec.archiveOf("3770.dat"))
+        assertEquals(3770, GraphicCodec.archiveOf("3770${GraphicCodec.JPEG_EXTENSION}"))
+        assertEquals(3770, GraphicCodec.archiveOf("3770${GraphicCodec.EXTENSION}"))
+        assertEquals(null, GraphicCodec.archiveOf("3770.dat"))
     }
 
     /** Mean absolute channel difference between two decodings of the same picture. */
@@ -409,8 +409,8 @@ class LoadingScreenCodecTest {
     private fun largest(cache: Cache): Pair<Int, ByteArray>? {
         var best: Pair<Int, ByteArray>? = null
         var area = 0
-        for (archive in cache.archiveIds(Index.LOADING_SPRITES)) {
-            val group = cache.data(Index.LOADING_SPRITES, archive) ?: continue
+        for (archive in cache.archiveIds(Index.LOADING_GRAPHICS)) {
+            val group = cache.data(Index.LOADING_GRAPHICS, archive) ?: continue
             if (!JagexJpeg.isJpeg(group)) {
                 continue
             }

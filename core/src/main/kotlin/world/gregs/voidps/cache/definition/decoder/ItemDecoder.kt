@@ -23,19 +23,19 @@ class ItemDecoder : DefinitionDecoder<ItemDefinition>(ITEMS) {
             // Opcode 1: model ID (bigSmart for rev 727)
             1 -> modelId = buffer.readBigSmart()
             2 -> name = buffer.readString()
-            4 -> spriteScale = buffer.readUnsignedShort()
-            5 -> spritePitch = buffer.readUnsignedShort()
-            6 -> spriteCameraRoll = buffer.readUnsignedShort()
+            4 -> graphicScale = buffer.readUnsignedShort()
+            5 -> graphicPitch = buffer.readUnsignedShort()
+            6 -> graphicCameraRoll = buffer.readUnsignedShort()
             7 -> {
-                spriteTranslateX = buffer.readUnsignedShort()
-                if (spriteTranslateX > 32767) {
-                    spriteTranslateX -= 65536
+                graphicTranslateX = buffer.readUnsignedShort()
+                if (graphicTranslateX > 32767) {
+                    graphicTranslateX -= 65536
                 }
             }
             8 -> {
-                spriteTranslateY = buffer.readUnsignedShort()
-                if (spriteTranslateY > 32767) {
-                    spriteTranslateY -= 65536
+                graphicTranslateY = buffer.readUnsignedShort()
+                if (graphicTranslateY > 32767) {
+                    graphicTranslateY -= 65536
                 }
             }
             11 -> stackable = 1
@@ -66,7 +66,7 @@ class ItemDecoder : DefinitionDecoder<ItemDefinition>(ITEMS) {
             91 -> primaryFemaleDialogueHead = buffer.readBigSmart()
             92 -> secondaryMaleDialogueHead = buffer.readBigSmart()
             93 -> secondaryFemaleDialogueHead = buffer.readBigSmart()
-            95 -> spriteCameraYaw = buffer.readUnsignedShort()
+            95 -> graphicCameraYaw = buffer.readUnsignedShort()
             96 -> dummyItem = buffer.readUnsignedByte()
             97 -> noteId = buffer.readUnsignedShort()
             98 -> notedTemplateId = buffer.readUnsignedShort()

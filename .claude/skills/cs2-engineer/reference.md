@@ -13,7 +13,7 @@ clientscripts/proc/bank_placeholder_button.ts           reads the varbit, ifSetG
 clientscripts/index.json                                6567, 6568 with nameHash of "[clientscript,...]" / "[proc,...]"
 gamevals/clientscript.json                              the two names, coverage cache_ids +2, named +2
 interfaces/762/124.json                                 onLoadScript + onVarpTransmit (varps [1248]) -> the clientscript
-interfaces/762/125.json, 127.json                       icon components: defaultImage, size = sprite canvas, offset to centre
+interfaces/762/125.json, 127.json                       icon components: defaultImage, size = graphic canvas, offset to centre
 gamevals/component.json                                 762:124..127 named interface_762:placeholder_*
 ```
 
@@ -27,8 +27,8 @@ pixels with the shackle lifted and the raised leg capped, bottom-aligned so the 
 Goal: rows whose flags carry bit 2 show a bot icon with a tooltip, in the list and in favourites.
 
 ```
-sprites/12072/0.png                                     world_select_bots, 16x16 robot head
-sprites/index.json                                      "12072": {"compression": "gzip", "nameHash": -1385813054}
+graphics/12072/0.png                                     world_select_bots, 16x16 robot head
+graphics/index.json                                      "12072": {"compression": "gzip", "nameHash": -1385813054}
 gamevals/graphic.json + clientscripts/gamevals.d.ts     name + Graphic declaration
 clientscripts/proc/lobby_worldswitcher_bots_icon.ts     (comp, id, x, y, xmode, flags): cc_add_graphic, ccSetPosition,
                                                         hide when testBit(flags, 2) == 0, else enter/exit tooltip hooks

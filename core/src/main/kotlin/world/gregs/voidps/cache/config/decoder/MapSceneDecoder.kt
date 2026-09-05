@@ -16,10 +16,10 @@ class MapSceneDecoder : ConfigDecoder<MapSceneDefinition>(MAP_SCENES) {
 
     override fun MapSceneDefinition.read(opcode: Int, buffer: Reader) {
         when (opcode) {
-            1 -> sprite = buffer.readBigSmart()
+            1 -> graphic = buffer.readBigSmart()
             2 -> colour = buffer.readUnsignedMedium()
             3 -> aBoolean1741 = true
-            4 -> sprite = -1
+            4 -> graphic = -1
             else -> error("Unhandled map scene definition opcode: $opcode for def $id")
         }
     }

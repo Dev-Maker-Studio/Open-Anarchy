@@ -14,11 +14,11 @@ data class ItemDefinition(
     override var id: Int = -1,
     var modelId: Int = 0,
     var name: String = "null",
-    var spriteScale: Int = 2000,
-    var spritePitch: Int = 0,
-    var spriteCameraRoll: Int = 0,
-    var spriteTranslateX: Int = 0,
-    var spriteTranslateY: Int = 0,
+    var graphicScale: Int = 2000,
+    var graphicPitch: Int = 0,
+    var graphicCameraRoll: Int = 0,
+    var graphicTranslateX: Int = 0,
+    var graphicTranslateY: Int = 0,
     var stackable: Int = 0,
     var cost: Int = 1,
     var members: Boolean = false,
@@ -44,7 +44,7 @@ data class ItemDefinition(
     var primaryFemaleDialogueHead: Int = -1,
     var secondaryMaleDialogueHead: Int = -1,
     var secondaryFemaleDialogueHead: Int = -1,
-    var spriteCameraYaw: Int = 0,
+    var graphicCameraYaw: Int = 0,
     var dummyItem: Int = 0,
     var noteId: Int = -1,
     var notedTemplateId: Int = -1,
@@ -329,8 +329,8 @@ data class ItemDefinition(
     /** Gets the secondary female worn model id. Legacy `getFemaleWornModelId2()`. */
     fun getFemaleWornModelId2(): Int = secondaryFemaleModel
 
-    /** Legacy `isOverSized()` - a sprite scale above 5000. */
-    fun isOverSized(): Boolean = spriteScale > 5000
+    /** Legacy `isOverSized()` - a graphic scale above 5000. */
+    fun isOverSized(): Boolean = graphicScale > 5000
 
     /** The general store sell price. Legacy `getSellPrice()` - three tenths of [cost]. */
     fun getSellPrice(): Int = (cost / (10.0 / 3.0)).toInt()
@@ -459,11 +459,11 @@ data class ItemDefinition(
         if (id != other.id) return false
         if (modelId != other.modelId) return false
         if (name != other.name) return false
-        if (spriteScale != other.spriteScale) return false
-        if (spritePitch != other.spritePitch) return false
-        if (spriteCameraRoll != other.spriteCameraRoll) return false
-        if (spriteTranslateX != other.spriteTranslateX) return false
-        if (spriteTranslateY != other.spriteTranslateY) return false
+        if (graphicScale != other.graphicScale) return false
+        if (graphicPitch != other.graphicPitch) return false
+        if (graphicCameraRoll != other.graphicCameraRoll) return false
+        if (graphicTranslateX != other.graphicTranslateX) return false
+        if (graphicTranslateY != other.graphicTranslateY) return false
         if (stackable != other.stackable) return false
         if (cost != other.cost) return false
         if (members != other.members) return false
@@ -504,7 +504,7 @@ data class ItemDefinition(
         if (primaryFemaleDialogueHead != other.primaryFemaleDialogueHead) return false
         if (secondaryMaleDialogueHead != other.secondaryMaleDialogueHead) return false
         if (secondaryFemaleDialogueHead != other.secondaryFemaleDialogueHead) return false
-        if (spriteCameraYaw != other.spriteCameraYaw) return false
+        if (graphicCameraYaw != other.graphicCameraYaw) return false
         if (dummyItem != other.dummyItem) return false
         if (noteId != other.noteId) return false
         if (notedTemplateId != other.notedTemplateId) return false
@@ -557,11 +557,11 @@ data class ItemDefinition(
         var result = id
         result = 31 * result + modelId
         result = 31 * result + name.hashCode()
-        result = 31 * result + spriteScale
-        result = 31 * result + spritePitch
-        result = 31 * result + spriteCameraRoll
-        result = 31 * result + spriteTranslateX
-        result = 31 * result + spriteTranslateY
+        result = 31 * result + graphicScale
+        result = 31 * result + graphicPitch
+        result = 31 * result + graphicCameraRoll
+        result = 31 * result + graphicTranslateX
+        result = 31 * result + graphicTranslateY
         result = 31 * result + stackable
         result = 31 * result + cost
         result = 31 * result + members.hashCode()
@@ -587,7 +587,7 @@ data class ItemDefinition(
         result = 31 * result + primaryFemaleDialogueHead
         result = 31 * result + secondaryMaleDialogueHead
         result = 31 * result + secondaryFemaleDialogueHead
-        result = 31 * result + spriteCameraYaw
+        result = 31 * result + graphicCameraYaw
         result = 31 * result + dummyItem
         result = 31 * result + noteId
         result = 31 * result + notedTemplateId
@@ -643,27 +643,27 @@ data class ItemDefinition(
         modifiedTextureColours = item.modifiedTextureColours
         maleWieldZ = item.maleWieldZ
         secondaryFemaleModel = item.secondaryFemaleModel
-        spriteCameraYaw = template.spriteCameraYaw
+        graphicCameraYaw = template.graphicCameraYaw
         floorOptions = item.floorOptions
         secondaryFemaleDialogueHead = item.secondaryFemaleDialogueHead
         recolourPalette = item.recolourPalette
         femaleWieldZ = item.femaleWieldZ
-        spritePitch = template.spritePitch
+        graphicPitch = template.graphicPitch
         primaryFemaleModel = item.primaryFemaleModel
         modelId = template.modelId
         options = arrayOfNulls(5)
-        spriteCameraRoll = template.spriteCameraRoll
-        spriteTranslateY = template.spriteTranslateY
+        graphicCameraRoll = template.graphicCameraRoll
+        graphicTranslateY = template.graphicTranslateY
         originalTextureColours = item.originalTextureColours
         femaleWieldX = item.femaleWieldX
         secondaryMaleModel = item.secondaryMaleModel
         cost = 0
         maleWieldY = item.maleWieldY
         originalColours = item.originalColours
-        spriteTranslateX = template.spriteTranslateX
+        graphicTranslateX = template.graphicTranslateX
         femaleWieldY = item.femaleWieldY
         primaryFemaleDialogueHead = item.primaryFemaleDialogueHead
-        spriteScale = template.spriteScale
+        graphicScale = template.graphicScale
         name = item.name
         tertiaryFemaleModel = item.tertiaryFemaleModel
         primaryMaleModel = item.primaryMaleModel
@@ -676,20 +676,20 @@ data class ItemDefinition(
         if (item == null || template == null) {
             return
         }
-        spriteTranslateY = template.spriteTranslateY
+        graphicTranslateY = template.graphicTranslateY
         originalColours = template.originalColours
         cost = item.cost
         name = item.name
         modifiedTextureColours = template.modifiedTextureColours
-        spriteCameraRoll = template.spriteCameraRoll
-        spriteCameraYaw = template.spriteCameraYaw
+        graphicCameraRoll = template.graphicCameraRoll
+        graphicCameraYaw = template.graphicCameraYaw
         originalTextureColours = template.originalTextureColours
         modelId = template.modelId
-        spriteScale = template.spriteScale
+        graphicScale = template.graphicScale
         recolourPalette = template.recolourPalette
         stackable = 1
-        spritePitch = template.spritePitch
-        spriteTranslateX = template.spriteTranslateX
+        graphicPitch = template.graphicPitch
+        graphicTranslateX = template.graphicTranslateX
         members = item.members
         modifiedColours = template.modifiedColours
     }
@@ -706,7 +706,7 @@ data class ItemDefinition(
         wearPos2 = item.wearPos2
         wearPos3 = item.wearPos3
         recolourPalette = item.recolourPalette
-        spriteTranslateY = template.spriteTranslateY
+        graphicTranslateY = template.graphicTranslateY
         team = item.team
         secondaryMaleModel = item.secondaryMaleModel
         options = arrayOfNulls(5)
@@ -715,13 +715,13 @@ data class ItemDefinition(
         primaryMaleDialogueHead = item.primaryMaleDialogueHead
         femaleWieldZ = item.femaleWieldZ
         name = item.name
-        spriteScale = template.spriteScale
+        graphicScale = template.graphicScale
         originalColours = item.originalColours
         secondaryFemaleDialogueHead = item.secondaryFemaleDialogueHead
         params = item.params
         primaryFemaleModel = item.primaryFemaleModel
-        spritePitch = template.spritePitch
-        spriteCameraRoll = template.spriteCameraRoll
+        graphicPitch = template.graphicPitch
+        graphicCameraRoll = template.graphicCameraRoll
         femaleWieldX = item.femaleWieldX
         secondaryMaleDialogueHead = item.secondaryMaleDialogueHead
         tertiaryFemaleModel = item.tertiaryFemaleModel
@@ -731,8 +731,8 @@ data class ItemDefinition(
         modelId = template.modelId
         modifiedColours = item.modifiedColours
         secondaryFemaleModel = item.secondaryFemaleModel
-        spriteTranslateX = template.spriteTranslateX
-        spriteCameraYaw = template.spriteCameraYaw
+        graphicTranslateX = template.graphicTranslateX
+        graphicCameraYaw = template.graphicCameraYaw
         primaryMaleModel = item.primaryMaleModel
         femaleWieldY = item.femaleWieldY
         maleWieldY = item.maleWieldY

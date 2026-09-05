@@ -538,7 +538,7 @@ object Utils {
 
     @JvmStatic fun getObjectDefinitionsSize(): Int = Cache.objects.size
 
-    @JvmStatic fun getSpotAnimDefinitionsSize(): Int = Cache.graphics.size
+    @JvmStatic fun getSpotAnimDefinitionsSize(): Int = Cache.spotAnims.size
 
     @JvmStatic fun getAnimationDefinitionsSize(): Int = Cache.animations.size
 

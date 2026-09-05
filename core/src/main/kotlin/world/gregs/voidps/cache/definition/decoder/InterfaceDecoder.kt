@@ -114,18 +114,18 @@ class InterfaceDecoder : DefinitionDecoder<InterfaceDefinition>(INTERFACES) {
             if (bool) {
                 viewportX = buffer.readUnsignedShort()
                 viewportY = buffer.readUnsignedShort()
-                spritePitch = buffer.readShort()
-                spriteRoll = buffer.readShort()
-                spriteYaw = buffer.readShort()
-                spriteScale = buffer.readShort()
+                graphicPitch = buffer.readShort()
+                graphicRoll = buffer.readShort()
+                graphicYaw = buffer.readShort()
+                graphicScale = buffer.readShort()
             } else if (centreType) {
                 viewportX = buffer.readUnsignedShort()
                 viewportY = buffer.readUnsignedShort()
                 viewportZ = buffer.readUnsignedShort()
-                spritePitch = buffer.readShort()
-                spriteRoll = buffer.readShort()
-                spriteYaw = buffer.readShort()
-                spriteScale = buffer.readUnsignedShort()
+                graphicPitch = buffer.readShort()
+                graphicRoll = buffer.readShort()
+                graphicYaw = buffer.readShort()
+                graphicScale = buffer.readUnsignedShort()
             }
             animation = buffer.readBigSmart()
             if (horizontalSizeMode.toInt() != 0) {

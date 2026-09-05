@@ -47,7 +47,7 @@ data class IfOpenSubActivePlayer(
     }
 }
 
-data class IfSetGraphic(val interfaceId: Int, val componentId: Int, val spriteId: Int) : ServerProt
+data class IfSetGraphic(val interfaceId: Int, val componentId: Int, val graphicId: Int) : ServerProt
 
 data class IfSetTextAntiMacro(val interfaceId: Int, val componentId: Int, val enabled: Boolean) : ServerProt
 

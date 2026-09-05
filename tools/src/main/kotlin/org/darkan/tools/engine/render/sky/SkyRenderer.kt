@@ -48,7 +48,7 @@ import world.gregs.voidps.cache.Cache
  * Draws the RS727 sky.
  *
  * Appearance is taken from the reference client's `graphics/light/Skybox.kt`,
- * the implementation is not: the client blits a CPU sprite across the whole
+ * the implementation is not: the client blits a CPU graphic across the whole
  * viewport every frame, this builds one texture per material and then costs a
  * single attribute-less draw call.
  *
@@ -282,7 +282,7 @@ class SkyRenderer(private val cache: Cache? = null) {
 
         val buffer = MemoryUtil.memAlloc(width * height * 4)
         try {
-            // Row 0 stays at v = 0: the fragment shader addresses the sprite in
+            // Row 0 stays at v = 0: the fragment shader addresses the graphic in
             // top-down window space, matching the client's blit.
             for (i in 0 until (width * height)) {
                 val pixel = argb[i]

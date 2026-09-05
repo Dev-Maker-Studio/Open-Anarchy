@@ -22,7 +22,7 @@ what changes on the servers and in CI.
    original bytes next to its editable form (the *pristine* fallback, below) until that form is
    edited.
 2. **Git without LFS.** One file per asset, deterministic output, stable names keyed by id, no
-   churn on re-unpack. Binary assets (models, sounds, textures, sprites) stay binary; they are
+   churn on re-unpack. Binary assets (models, sounds, textures, graphics) stay binary; they are
    incompressible either way.
 3. **Feature branches.** Anyone can branch the source tree, add or change assets, and run a
    server on it: the server builds the cache from whatever tree it is pointed at.
@@ -65,9 +65,9 @@ Index directories use Jagex's own names:
 | 3 | `interfaces` | 16 | `config_loc` | 29 | `config_billboard` |
 | 4 | `synth_sounds` | 17 | `config_enum` | 30 | `dlls` |
 | 5 | `maps` | 18 | `config_npc` | 31 | `shaders` |
-| 6 | `midi_songs` | 19 | `config_obj` | 32 | `loading_sprites` |
+| 6 | `midi_songs` | 19 | `config_obj` | 32 | `loading_graphics` |
 | 7 | `models` | 20 | `config_seq` | 33 | `loading_screens` |
-| 8 | `sprites` | 21 | `config_spotanim` | 34 | `loading_sprites_raw` |
+| 8 | `graphics` | 21 | `config_spotanim` | 34 | `loading_graphics_raw` |
 | 9 | `textures` | 22 | `config_varbit` | 35 | `cutscenes` |
 | 10 | `binary` | 23 | `worldmapdata` | 36 | `index36` (empty in 727) |
 | 11 | `midi_jingles` | 24 | `quickchat` | | |
@@ -144,7 +144,7 @@ the JS5 multi-file layout.
 | `ConfigCodec` | index 2 | one sub-directory per config archive, named by `Config` (`inv`, `param`, `varp`...), each with its own codec |
 | `ArchiveDirectoryCodec` | indices 23, 24, 25 and 28 | the generalisation of `ConfigCodec`: a name and a codec per archive, either in a directory of its own (`worldmapdata/main_staticelements/`) or as one named file (`defaults/equipment.json`) |
 | `MapCodec` | index 5 | one directory per map square, `<x>_<y>/terrain.json` and friends - see *maps* below |
-| `SpriteCodec` | indices 8, 32 and 34 | one RGBA PNG per frame, `<archive>/<frame>.png`, or one `<archive>.jpg` for a JPEG archive - see *sprites* |
+| `GraphicCodec` | indices 8, 32 and 34 | one RGBA PNG per frame, `<archive>/<frame>.png`, or one `<archive>.jpg` for a JPEG archive - see *graphics* |
 | `MaterialCodec` | index 26 | `<id>.json` per material of the index's one blob - see *materials* |
 | `ModelCodec` | index 7 | `<archive>.glb` - one glTF 2.0 binary per model, which is a whole archive; see *models* below |
 | `AnimationFrameCodec` | index 0 | `<archive>.glb` - one glTF 2.0 animation per frame set, with the three chunk group rebuilt from the frames - see *anims* below |
@@ -170,14 +170,14 @@ bytes:
 | 5 | `maps` | `map-json` | | 24 | `quickchat` | `quickchat` |
 | 6 | `midi_songs` | `midi` | | 25 | `quickchat_global` | `quickchat` |
 | 7 | `models` | `gltf-model` | | 26 | `materials` | `json-material` |
-| 8 | `sprites` | `sprite-png` | | 27 | `config_particle` | `particle` (`json-particle-producer`, `json-particle`) |
+| 8 | `graphics` | `graphic-png` | | 27 | `config_particle` | `particle` (`json-particle-producer`, `json-particle`) |
 | 9 | `textures` | `json-texture` | | 28 | `defaults` | `defaults` |
 | 10 | `binary` | `json-huffman` | | 29 | `config_billboard` | `json-billboard` |
 | 11 | `midi_jingles` | `midi` | | 30 | `dlls` | `dlls` |
 | 12 | `clientscripts` | `cs2-source`, from the `cs2` module | | 31 | `shaders` | `shaders` |
-| 13 | `fontmetrics` | `json-fontmetrics` | | 32 | `loading_sprites` | `sprite-png` |
+| 13 | `fontmetrics` | `json-fontmetrics` | | 32 | `loading_graphics` | `graphic-png` |
 | 14 | `vorbis` | `vorbis` | | 33 | `loading_screens` | `json-gametip` |
-| 15 | `midi_instruments` | `jagpatch` | | 34 | `loading_sprites_raw` | `sprite-png` |
+| 15 | `midi_instruments` | `jagpatch` | | 34 | `loading_graphics_raw` | `graphic-png` |
 | 16 | `config_loc` | `json-loc` | | 35 | `cutscenes` | `json-cutscene` |
 | 17 | `config_enum` | `json-enum` | | 36 | `index36` | `raw-archive` (empty in 727) |
 | 18 | `config_npc` | `json-npc` | | | | |
@@ -235,8 +235,8 @@ nothing that is not a field (60 keys for this one):
   "id": 4151,
   "modelId": 5412,
   "name": "Abyssal whip",
-  "spriteScale": 840,
-  "spritePitch": 280,
+  "graphicScale": 840,
+  "graphicPitch": 280,
   ...
   "floorOptions": [null, null, "Take", null, null, "Examine"],
   "options": [null, "Wield", null, null, "Drop"],
@@ -257,7 +257,7 @@ nothing that is not a field (60 keys for this one):
 
 `DefinitionCodecs` is the one list of the twenty-two opcode keyed and interface types and what registers
 them, and `ImageCodecs` is the same list for the two 2D definition types (index 9's textures and index 13's
-font metrics) plus the three sprite indices and the materials blob - each of those has a subsection of its
+font metrics) plus the three graphic indices and the materials blob - each of those has a subsection of its
 own below. `DefinitionJson` is the mapping both use, and it derives these rules from the data class rather
 than being told them:
 
@@ -474,15 +474,15 @@ is a script header - and `unpack`/`pack` take the hash from the `ArchiveMetadata
 `MapSquare.of(hash)` is the way back, by hashing all 5 x 256 x 256 possible names once; no two of
 them collide, which is checked rather than assumed.
 
-### sprites
+### graphics
 
-Index 8 is 12,071 sprite *groups*: a shared palette and one to 256 frames indexed into it, each frame
+Index 8 is 12,071 graphic *groups*: a shared palette and one to 256 frames indexed into it, each frame
 trimmed and given its position in a common canvas. It is stored as **exactly one standard PNG per
 frame and nothing else** - no metadata file, no second image, no sidecar:
 
 ```
-sprites/316/0.png     frame 0, 8 bit RGBA at the group's canvas size
-sprites/316/1.png     frame 1
+graphics/316/0.png     frame 0, 8 bit RGBA at the group's canvas size
+graphics/316/1.png     frame 1
 ```
 
 The ids stay the directory names. Index 8's reference table does carry archive name hashes, and they are
@@ -533,7 +533,7 @@ forward. Each carries a version byte, so a future shape is refused rather than m
 `rsFR` are written for every frame; `rsIX` only where it is needed, which is 4,247 of the 21,679
 frames.
 
-Measured over the three sprite indices, this is how much of the tree actually depends on a chunk:
+Measured over the three graphic indices, this is how much of the tree actually depends on a chunk:
 
 | chunk | needed by | why |
 |---|---|---|
@@ -541,7 +541,7 @@ Measured over the three sprite indices, this is how much of the tree actually de
 | `rsFR` | 9,910 of 21,679 frames | 7,778 store their pixels column major, 3,035 have a box wider than the drawing in it, 302 carry an alpha plane the client drops as opaque, and a zero sized frame keeps its offsets |
 | `rsIX` | 4,247 of 21,679 frames | a pixel whose colour cannot recover its index: an index other than 0 at alpha 0, or index 0 drawn *opaque*, which the client renders as black |
 
-#### editing a sprite in any editor
+#### editing a graphic in any editor
 
 Open a frame in anything, paint, save. **Most editors strip unknown chunks**, and that is the case the
 layout is built for: with no chunk at all the whole group is rebuilt from the pixels, by the rules
@@ -562,7 +562,7 @@ longer contains every drawn pixel and an `rsIX` raster that would not render wha
 both discarded in favour of the derivation. So a tool that keeps unknown chunks and edits the image
 cannot silently clip or recolour it.
 
-Two limits are the format's rather than the codec's. A sprite group holds 255 colours and a
+Two limits are the format's rather than the codec's. A graphic group holds 255 colours and a
 transparent index, so a picture with more than that has its extra colours quantised to the nearest
 entry the palette already holds - `ImageCodecTest` measures the whole cache through stripped PNGs and
 7 of 5,402 frames move at all, by one level of one channel, in the 81 groups whose palette is already
@@ -576,9 +576,9 @@ read back through `javax.imageio` and re-encoded, and the archive demanded ident
 
 | index | directory | groups | byte identical | pristine | frame PNGs |
 |---|---|---|---|---|---|
-| 8 | `sprites` | 12,071 | 12,071 | 0 | 19,090 |
-| 32 | `loading_sprites` | 5 | 5 | 0 | 1,280 |
-| 34 | `loading_sprites_raw` | 34 | 34 | 0 | 1,309 |
+| 8 | `graphics` | 12,071 | 12,071 | 0 | 19,090 |
+| 32 | `loading_graphics` | 5 | 5 | 0 | 1,280 |
+| 34 | `loading_graphics_raw` | 34 | 34 | 0 | 1,309 |
 | **total** | | **12,110** | **12,110** | **0** | **21,679** |
 
 **All 12,110 groups are byte identical and none needs a pristine copy.** The frames are 80 MB of PNG
@@ -586,30 +586,30 @@ against the 33,756 files and 54 MB the old three-file-per-frame layout cost, whi
 every frame being a full RGBA canvas instead of a trimmed palette raster - 12,075 fewer files, and one
 of them per image.
 
-### loading sprites
+### loading graphics
 
 Indices 32 and 34 are the loading screen and the fonts the client draws before it has a cache: 34
 archives each, the same ids in both. Which one the client reads is decided at startup -
 `Resource.USING_JAGEX_IMAGE_FORMAT` picks index 34 when `Toolkit.createImage` cannot be used and index 32
 otherwise - so the two are the same pictures in two formats.
 
-They get `SpriteCodec`, the same codec as index 8, because five of index 32's archives and all of index
-34 *are* the palette sprite format:
+They get `GraphicCodec`, the same codec as index 8, because five of index 32's archives and all of index
+34 *are* the palette graphic format:
 
 | index | archives | what they are |
 |---|---|---|
-| 34 `loading_sprites_raw` | 34 | all palette sprite groups - this is the "Jagex image format" path |
-| 32 `loading_sprites` | 29 | four component JPEGs, which the client hands to `Toolkit.createImage` |
-| 32 `loading_sprites` | 5 | palette sprite groups: 494, 495, 496, 3793 and 3794, the pre-cache fonts |
+| 34 `loading_graphics_raw` | 34 | all palette graphic groups - this is the "Jagex image format" path |
+| 32 `loading_graphics` | 29 | four component JPEGs, which the client hands to `Toolkit.createImage` |
+| 32 `loading_graphics` | 5 | palette graphic groups: 494, 495, 496, 3793 and 3794, the pre-cache fonts |
 
-The sprite archives are laid out exactly as index 8's - one RGBA PNG per frame, `<id>/<frame>.png` - and
+The graphic archives are laid out exactly as index 8's - one RGBA PNG per frame, `<id>/<frame>.png` - and
 the five font groups are 256 frames each, most of them zero sized. The codec sniffs the `ff d8` magic
 rather than being told which archives are which, so a tree of either index reads the same way, and index
 8's and 34's archives never take the JPEG path because none of them is one.
 
 #### the four component JPEGs
 
-Index 32's 29 image archives are not sprites and not ordinary JPEGs either. They are **baseline JPEGs
+Index 32's 29 image archives are not graphics and not ordinary JPEGs either. They are **baseline JPEGs
 with four components and no Adobe APP14 marker**, and all 29 have the same frame:
 
 ```
@@ -643,7 +643,7 @@ confirmed against it:
 - components 1 to 3 are `Y`, `Cb`, `Cr` with the usual 128 offset on the chroma planes, converted by
   the standard JFIF (ITU-R BT.601) matrix;
 - component 4 is **straight alpha**: 255 opaque, no inversion, no offset. 27 of the 29 are a constant
-  255; 3764 and 3765 hold the sprite's silhouette at 255 on a 0 ground, which would be inside out were
+  255; 3764 and 3765 hold the graphic's silhouette at 255 on a 0 ground, which would be inside out were
   it `255 - v`;
 - no colour transform applies, because with no Adobe marker there is no transform flag to apply one.
 
@@ -652,7 +652,7 @@ confirmed against it:
 A JPEG archive is **one file, which any viewer or editor opens**:
 
 ```
-loading_sprites/3770.jpg    Y, Cb and Cr as a three component baseline JPEG,
+loading_graphics/3770.jpg    Y, Cb and Cr as a three component baseline JPEG,
                             with the fourth component inside it as APP11 segments
 ```
 
@@ -780,7 +780,7 @@ it are load bearing and were established by reading all 2,591 files rather than 
 `trailer` is the honest residual, and the only part of index 9 that is stored as opaque bytes. 2,562 of
 the 2,591 textures carry **ten more bytes** after the three output indices which this revision's client
 never reads: it stops at the third index. The other 29 - ids 2562 to 2590, the newest in the cache, and
-the same 29 whose sprites carry an explicit palette entry 0 - carry no trailer at all, so it is not even a
+the same 29 whose graphics carry an explicit palette entry 0 - carry no trailer at all, so it is not even a
 fixed part of the format. Its bytes are not random (byte 7 of the ten is 0x22 in 2,554 of them and bytes
 2 and 3 are 0/1 flags), but nothing in the 727 client gives them a meaning, so they are kept verbatim as
 hex rather than guessed at and given wrong names.
@@ -981,7 +981,7 @@ payload. 1.4 MB of raw archives becomes 0.1 MB of JSON.
 ### fontmetrics
 
 Index 13 is 27 fonts' metrics - the advance of each of the 256 cp1252 glyphs, the line spacing and the
-padding - as `fontmetrics/<id>.json`, `json-fontmetrics`. The glyph *bitmaps* are the sprite group of the
+padding - as `fontmetrics/<id>.json`, `json-fontmetrics`. The glyph *bitmaps* are the graphic group of the
 same id in index 8, so a font is one file in each index.
 
 ```json
@@ -1032,12 +1032,12 @@ pristine.
 
 | index | directory | codec | archives | byte identical | pristine | files written |
 |---|---|---|---|---|---|---|
-| 8 | `sprites` | `sprite-png` | 12,071 | 12,071 | 0 | 19,090 |
+| 8 | `graphics` | `graphic-png` | 12,071 | 12,071 | 0 | 19,090 |
 | 9 | `textures` | `json-texture` | 2,591 | 2,591 | 0 | 2,591 |
 | 13 | `fontmetrics` | `json-fontmetrics` | 27 | 27 | 0 | 27 |
 | 26 | `materials` | `json-material` | 1 | 1 | 0 | 2,591 |
-| 32 | `loading_sprites` | `sprite-png` | 34 | 34 | 0 | 1,309 |
-| 34 | `loading_sprites_raw` | `sprite-png` | 34 | 34 | 0 | 1,309 |
+| 32 | `loading_graphics` | `graphic-png` | 34 | 34 | 0 | 1,309 |
+| 34 | `loading_graphics_raw` | `graphic-png` | 34 | 34 | 0 | 1,309 |
 | **total** | | | **14,758** | **14,758** | **0** | **26,917** |
 
 **14,758 archives, all byte identical, no residuals and no pristine copies anywhere.** The codecs' own
@@ -1045,8 +1045,8 @@ cost over the whole cache, single threaded, is about 25 s of unpack *and* pack t
 it the 21,679 PNG encodes and the 21,679 decodes back, since a frame is now a full RGBA canvas rather
 than a trimmed palette raster.
 
-In the tree the three sprite indices are **21,711 files and 82 MB**, where the earlier layout of a
-`sprite.json`, an indexed colour PNG and sometimes an alpha PNG per frame cost 35,813 files and 56 MB.
+In the tree the three graphic indices are **21,711 files and 82 MB**, where the earlier layout of a
+`graphic.json`, an indexed colour PNG and sometimes an alpha PNG per frame cost 35,813 files and 56 MB.
 One file per image is 14,102 fewer files for 26 MB more, which is the whole trade: RGBA at canvas size
 rather than one byte per pixel at frame size, and every editor in the world able to open it. Timings
 vary by a factor of two with machine load and disk cache state and should be read as an order of
@@ -1371,13 +1371,13 @@ of screens it may show with their durations - and archives 2 to 37 are one scree
 render type byte and a body per element. `GameTipDefinition` carries both shapes and which one a file is is
 whether it is archive 0.
 
-The ten element types are implemented from the client; **three of them occur in 727** - `SPRITE` 548 times,
+The ten element types are implemented from the client; **three of them occur in 727** - `GRAPHIC` 548 times,
 `ANCHORED_TEXT` 145 and `ANIMATED_LOADING_BAR` 30, 723 elements in all - so the other seven rest on the
 client code rather than on the bytes, and are called out here rather than left to be discovered.
 
 Everything the client checks and then folds is kept raw: the version and the render type signature (the two
 values it bails out on), `hasUpdates` and `drawOutline` as bytes rather than booleans, the anchors and
-alignments as ordinals, and `SPRITE_LOADING_BAR`'s fill colour, which the client reads and then passes its
+alignments as ordinals, and `GRAPHIC_LOADING_BAR`'s fill colour, which the client reads and then passes its
 background colour twice instead. `wideFileIds` records a big smart the file packed wide when narrow would
 have held it; no element in 727 has one.
 
@@ -1701,9 +1701,9 @@ stored as JSON:
 ```json
 {
   "header": 4,
-  "name": "Sprite",
+  "name": "Graphic",
   "variables": [
-    {"type": 45, "elementType": null, "arraySize": null, "name": "SpriteSampler",
+    {"type": 45, "elementType": null, "arraySize": null, "name": "GraphicSampler",
      "alias": "", "program": [-1, -1, -1], "slot": [0, 0, 0]}
   ],
   "optionalVariables": [],
@@ -2061,7 +2061,7 @@ everything above included:
 | 0 | `anims` | 514 MB |
 | 3 | `interfaces` | 262 MB |
 | 14 | `vorbis` | 252 MB |
-| 8 | `sprites` | 183 MB |
+| 8 | `graphics` | 183 MB |
 | 2 | `config` | 144 MB |
 | 12 | `clientscripts` | 54 MB |
 | 4 | `synth_sounds` | 53 MB |
@@ -2178,7 +2178,7 @@ archives of index 2, index 3's interface components, and the eleven types of the
 that hold records rather than assets - animation frames and skeletons, the huffman table, the world map's
 areas and static elements, both quick chat types, the six client defaults, the loading screens and the
 cutscenes. Two more join them from the 2D indices - index 9's textures and index 13's font metrics -
-and the sprite and material codecs clear the same bar without being `DefinitionJsonCodec`s; see
+and the graphic and material codecs clear the same bar without being `DefinitionJsonCodec`s; see
 *What the 2D indices cost*.
 
 Three more encoders reach it outside that mechanism, because their formats are a fixed sequence
@@ -2200,9 +2200,9 @@ a decoder's `size`, which rounds up to whole archives and invents ids that have 
 with the decoder's `readLoop`, encode into a fresh `BufferWriter` and compare byte for byte, and they
 skip with a message when `../cache/` is absent.
 
-The 2D encoders - sprites, textures, materials and font metrics - are measured the same way by
+The 2D encoders - graphics, textures, materials and font metrics - are measured the same way by
 `core/src/test/kotlin/world/gregs/voidps/cache/source/ImageCodecTest.kt`, which goes one step further and
-writes the files to disk before reading them back, because a sprite's pixels make the trip through a PNG
+writes the files to disk before reading them back, because a graphic's pixels make the trip through a PNG
 and `javax.imageio` is half of that round trip. See *What the 2D indices cost*.
 
 ### One mechanism
@@ -2225,7 +2225,7 @@ whether to write a record at all. Three things make that exact:
    120 of 15,662 npcs, 7,231 of 25,355 objs, 7 of 1,220 map elements and none of the 48 hitmarks are
    in the order an encoder derives on its own. Two opcodes also routinely write the same field - a
    hitmark's fade is either the bare opcode 11 or opcode 14 with a cycle, a loc's contoured ground
-   mode has six spellings, a mapscene with no sprite is either opcode 4 or opcode 1 with a sentinel -
+   mode has six spellings, a mapscene with no graphic is either opcode 4 or opcode 1 with a sentinel -
    so which opcodes a file carried cannot be derived from the values either.
    `OpcodeOrdered.opcodeOrder` records the opcodes exactly as the file had them and the encoder
    replays that list.
@@ -2338,10 +2338,10 @@ to either side shows up as a byte difference rather than only as a field differe
 | idk | `unknown3` | opcode 3, which the client's `IdkType` does not have at all, in 13 files |
 | varclan, varp | `typeChar` | the cp1252 type descriptor; `CS2Type.forJagexDesc` is many to one |
 | bas | the whole lower half of `BASDefinition` | the model box, camera easing, random stand table and per slot transforms (opcodes 26-56), all previously read and dropped |
-| sprite | `IndexedSprite.flags` | the frame's format byte: which storage order it used and whether it carried an alpha plane (302 frames carry an entirely opaque one, which the client drops) |
-| sprite | `SpriteDefinition.rawPalette` | the palette before the client rewrites a black entry to 1; 5,264 of 12,071 groups have one |
-| sprite | `SpriteDefinition.paletteZeroEntry` | the explicit `000000` entry 0 that 29 groups write and the client seeks past |
-| sprite | `SpriteDefinition.width`, `height` | the group canvas, which the client only keeps as each frame's derived border |
+| graphic | `IndexedGraphic.flags` | the frame's format byte: which storage order it used and whether it carried an alpha plane (302 frames carry an entirely opaque one, which the client drops) |
+| graphic | `GraphicDefinition.rawPalette` | the palette before the client rewrites a black entry to 1; 5,264 of 12,071 groups have one |
+| graphic | `GraphicDefinition.paletteZeroEntry` | the explicit `000000` entry 0 that 29 groups write and the client seeks past |
+| graphic | `GraphicDefinition.width`, `height` | the group canvas, which the client only keeps as each frame's derived border |
 | fontmetrics | `version`, `unusedByte1`, `unusedByte2` | the format byte, and the two bytes the client reads and discards before the padding |
 | fontmetrics | `variableWidth`, `glyphCoverageWidths`, `glyphCoverageHeights`, `horizontalOffsets`, `verticalOffsets` | the variable width form's coverage tables and offset profiles, from which the client derives the kerning table it keeps instead |
 | material | `defined` | the blob's presence byte, which is the only thing that says a material exists |
@@ -2354,7 +2354,7 @@ to either side shows up as a byte difference rather than only as a field differe
 | quick chat option | `unusedFlag4` | opcode 4, a bare flag this revision's client does nothing with, and the first record of one file |
 | quick chat phrase | `searchable` | opcode 4, which hides a phrase from the quick chat search |
 | defaults | `inputs` entries for opcodes 8, 9 and 10 | three input bindings the client decodes and discards |
-| game tip | `version`, `renderTypes`, `hasUpdates`, `drawOutline`, `fillColour`, `wideFileIds` | the two values the client checks and then bails out on; two booleans that are bytes in the file; the fill colour of a sprite loading bar, which the client reads and then overwrites with its background colour; and the width a big smart was written in |
+| game tip | `version`, `renderTypes`, `hasUpdates`, `drawOutline`, `fillColour`, `wideFileIds` | the two values the client checks and then bails out on; two booleans that are bytes in the file; the fill colour of a graphic loading bar, which the client reads and then overwrites with its background colour; and the width a big smart was written in |
 | cutscene | `label`, `hitmarkFlags`, raw camera keyframes | an actor's dev label, read and discarded by the client; the hitmark flag byte, of which one bit selects two values the client throws away; and the keyframe coordinates before the client's `- 5120` |
 | model | `footerFlags`, `modelPriority`, `alphaFlag`, `faceSkinFlag`, `textureFlag`, `vertexSkinFlag` | the footer's own bytes, of which the decoder read only the bits it drew with |
 | model | `vertexFlags`, `faceIndexTypes` | the two per element layout arrays, previously read into locals and dropped |
@@ -2378,8 +2378,8 @@ is the default for every decoder here.
 | decoder | bug | effect before |
 |---|---|---|
 | `IdentityKitDecoder` | model ids (opcode 2) and head models (60-69) are big smarts, not shorts | 29 of 652 files ran off the end of the buffer, and 8 more left trailing bytes |
-| `HitSplatDecoder` | the placement string (opcode 8) is a `gjstr2`, and the font and four sprites are big smarts | 47 of 48 files desynced - every opcode after the string was garbage |
-| `MapSceneDecoder`, `WorldMapInfoDecoder`, `QuestDecoder` | sprite ids (mapscene 1, mapelement 1/2/18, quest 17) are big smarts | correct only because every shipped value fits in two bytes |
+| `HitSplatDecoder` | the placement string (opcode 8) is a `gjstr2`, and the font and four graphics are big smarts | 47 of 48 files desynced - every opcode after the string was garbage |
+| `MapSceneDecoder`, `WorldMapInfoDecoder`, `QuestDecoder` | graphic ids (mapscene 1, mapelement 1/2/18, quest 17) are big smarts | correct only because every shipped value fits in two bytes |
 | `QuestDecoder` | opcodes 6 and 15 were read and discarded | `type` lost on 9 quests; `questPointRequirement` never populated |
 | `Transforms.writeTransforms` | loc transform ids (opcodes 77 and 92) are big smarts, npc's are shorts | the shared writer wrote a loc's `-1` as `0xffff`, which reads back as a 4 byte smart; the helper is gone and each encoder writes its own |
 | `FontDecoder` | the variable width form's second glyph offset profile is `widths[glyph]` bytes long, as the first one is, not `heights[glyph]` | latent: it would desync every byte after the profiles for any font whose two tables differ, and none of the 27 fonts in 727 is variable width at all |

@@ -6,16 +6,16 @@ import imgui.flag.ImGuiInputTextFlags
 import imgui.type.ImInt
 import imgui.type.ImString
 import org.darkan.tools.rsinterface.FontCache
-import org.darkan.tools.rsinterface.SpriteCache
+import org.darkan.tools.rsinterface.GraphicCache
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 
 /**
  * Visual pickers for the cache ids an interface component points at.
  *
- * Typing a sprite id into a number box means holding the whole sprite index in
+ * Typing a graphic id into a number box means holding the whole graphic index in
  * your head, so this offers the alternative the job actually needs: a scrollable
  * grid of thumbnails to click. The grid is built lazily and only for the rows
- * currently on screen - the cache holds tens of thousands of sprite groups, and
+ * currently on screen - the cache holds tens of thousands of graphic groups, and
  * uploading every one to find the button art would cost hundreds of megabytes of
  * texture memory and a long stall.
  *
@@ -26,16 +26,16 @@ import world.gregs.voidps.cache.definition.data.ItemDefinition
  * property sheet without any extra state handling at the call site.
  */
 class AssetPicker(
-    private val sprites: SpriteCache,
+    private val graphics: GraphicCache,
     private val fonts: FontCache,
     /** Resolves an item definition for the item picker; supplied by the viewer. */
     private val items: (Int) -> ItemDefinition?,
     /** One past the highest item id, for the item picker to bound its scan. */
     private val itemCount: Int,
 ) {
-    private val spriteFilter = ImString(64)
+    private val graphicFilter = ImString(64)
     private val itemFilter = ImString(64)
-    private val spriteJump = ImInt(0)
+    private val graphicJump = ImInt(0)
 
     /** Which popup is open, so only one grid is scanned per frame. */
     private var open: String? = null
@@ -46,10 +46,10 @@ class AssetPicker(
     // ------------------------------------------------------------------ fields
 
     /**
-     * A sprite id field: number box, live thumbnail, and a "..." button opening
+     * A graphic id field: number box, live thumbnail, and a "..." button opening
      * the grid. Returns true when [value] changed this frame.
      */
-    fun spriteField(label: String, value: ImInt): Boolean {
+    fun graphicField(label: String, value: ImInt): Boolean {
         var changed = false
         ImGui.pushID(label)
         ImGui.setNextItemWidth(90f)
@@ -58,15 +58,15 @@ class AssetPicker(
         }
         ImGui.sameLine()
         if (ImGui.button("...")) {
-            open = SPRITE_POPUP
+            open = GRAPHIC_POPUP
             pending = { picked -> value.set(picked) }
-            ImGui.openPopup(SPRITE_POPUP)
+            ImGui.openPopup(GRAPHIC_POPUP)
         }
         ImGui.sameLine()
         thumbnail(value.get(), THUMBNAIL)
         ImGui.sameLine()
         ImGui.text(label)
-        if (drawSpritePopup()) {
+        if (drawGraphicPopup()) {
             changed = true
         }
         ImGui.popID()
@@ -137,44 +137,44 @@ class AssetPicker(
     }
 
     /**
-     * Draws a sprite at up to [size] pixels, letterboxed to its aspect ratio, or
+     * Draws a graphic at up to [size] pixels, letterboxed to its aspect ratio, or
      * a placeholder when the id resolves to nothing.
      */
     fun thumbnail(id: Int, size: Float) {
-        val sprite = if (id < 0) null else sprites.sprite(id)
-        if (sprite == null || sprite.width <= 0 || sprite.height <= 0) {
+        val graphic = if (id < 0) null else graphics.graphic(id)
+        if (graphic == null || graphic.width <= 0 || graphic.height <= 0) {
             ImGui.pushStyleColor(ImGuiCol.Button, 0.16f, 0.16f, 0.18f, 1f)
             ImGui.button("##empty", size, size)
             ImGui.popStyleColor()
             return
         }
-        val scale = size / maxOf(sprite.width, sprite.height).toFloat()
-        ImGui.image(sprite.textureId, sprite.width * scale, sprite.height * scale)
+        val scale = size / maxOf(graphic.width, graphic.height).toFloat()
+        ImGui.image(graphic.textureId, graphic.width * scale, graphic.height * scale)
     }
 
     // ------------------------------------------------------------------ popups
 
-    private fun drawSpritePopup(): Boolean {
-        if (open != SPRITE_POPUP) {
+    private fun drawGraphicPopup(): Boolean {
+        if (open != GRAPHIC_POPUP) {
             return false
         }
         var picked = false
         ImGui.setNextWindowSize(560f, 520f)
-        if (ImGui.beginPopup(SPRITE_POPUP)) {
+        if (ImGui.beginPopup(GRAPHIC_POPUP)) {
             ImGui.setNextItemWidth(200f)
-            ImGui.inputTextWithHint("##filter", "id, or id range like 1000-1200", spriteFilter)
+            ImGui.inputTextWithHint("##filter", "id, or id range like 1000-1200", graphicFilter)
             ImGui.sameLine()
             ImGui.setNextItemWidth(90f)
-            if (ImGui.inputInt("go to", spriteJump, 0, 0, ImGuiInputTextFlags.EnterReturnsTrue)) {
-                spriteFilter.set(spriteJump.get().toString())
+            if (ImGui.inputInt("go to", graphicJump, 0, 0, ImGuiInputTextFlags.EnterReturnsTrue)) {
+                graphicFilter.set(graphicJump.get().toString())
             }
             ImGui.sameLine()
-            ImGuiText.disabled("${sprites.count} groups")
+            ImGuiText.disabled("${graphics.count} groups")
             ImGui.separator()
 
-            val range = parseRange(spriteFilter.get(), sprites.count)
+            val range = parseRange(graphicFilter.get(), graphics.count)
             if (ImGui.beginChild("grid", 0f, 0f, false)) {
-                picked = drawSpriteGrid(range)
+                picked = drawGraphicGrid(range)
             }
             ImGui.endChild()
             ImGui.endPopup()
@@ -191,9 +191,9 @@ class AssetPicker(
      * laid out from a fixed cell size so the visible row span can be computed from
      * the scroll offset without touching the cache, and the rows above and below
      * are replaced with a single spacer of the right height. Without that, opening
-     * the picker would decode every sprite in the cache.
+     * the picker would decode every graphic in the cache.
      */
-    private fun drawSpriteGrid(range: IntRange): Boolean {
+    private fun drawGraphicGrid(range: IntRange): Boolean {
         val available = ImGui.getContentRegionAvailX()
         val columns = ((available + CELL_SPACING) / (CELL + CELL_SPACING)).toInt().coerceAtLeast(1)
         val total = range.last - range.first + 1
@@ -224,7 +224,7 @@ class AssetPicker(
                     ImGui.sameLine()
                 }
                 val id = range.first + index
-                if (spriteCell(id)) {
+                if (graphicCell(id)) {
                     pending?.invoke(id)
                     picked = true
                     ImGui.closeCurrentPopup()
@@ -241,23 +241,23 @@ class AssetPicker(
     }
 
     /** One grid cell: a clickable thumbnail with the id underneath as a tooltip. */
-    private fun spriteCell(id: Int): Boolean {
-        val sprite = sprites.sprite(id)
+    private fun graphicCell(id: Int): Boolean {
+        val graphic = graphics.graphic(id)
         ImGui.pushID(id)
-        val clicked = if (sprite == null || sprite.width <= 0 || sprite.height <= 0) {
+        val clicked = if (graphic == null || graphic.width <= 0 || graphic.height <= 0) {
             ImGui.pushStyleColor(ImGuiCol.Button, 0.14f, 0.14f, 0.15f, 1f)
             val hit = ImGui.button("##cell", CELL, CELL)
             ImGui.popStyleColor()
             hit
         } else {
-            val scale = (CELL - 6f) / maxOf(sprite.width, sprite.height).toFloat()
-            ImGui.imageButton(sprite.textureId, sprite.width * scale, sprite.height * scale)
+            val scale = (CELL - 6f) / maxOf(graphic.width, graphic.height).toFloat()
+            ImGui.imageButton(graphic.textureId, graphic.width * scale, graphic.height * scale)
         }
         if (ImGui.isItemHovered()) {
             ImGui.beginTooltip()
-            ImGui.text("sprite $id")
-            if (sprite != null) {
-                ImGuiText.disabled("${sprite.width} x ${sprite.height}")
+            ImGui.text("graphic $id")
+            if (graphic != null) {
+                ImGuiText.disabled("${graphic.width} x ${graphic.height}")
             } else {
                 ImGuiText.disabled("not in the cache")
             }
@@ -281,7 +281,7 @@ class AssetPicker(
             }
             for (id in 0 until fonts.count) {
                 // Only fonts that actually built are offered; the metrics index has
-                // ids with no glyph sprites behind them.
+                // ids with no glyph graphics behind them.
                 if (fonts.font(id) == null) {
                     continue
                 }
@@ -358,7 +358,7 @@ class AssetPicker(
     }
 
     /**
-     * Reads the sprite filter as either a single id, an inclusive `from-to` range,
+     * Reads the graphic filter as either a single id, an inclusive `from-to` range,
      * or nothing at all, which means the whole index.
      */
     private fun parseRange(text: String, limit: Int): IntRange {
@@ -377,7 +377,7 @@ class AssetPicker(
         val single = trimmed.toIntOrNull()
         if (single != null) {
             // A bare id shows a window around it rather than one lonely cell, so the
-            // neighbouring art in the same group is visible - sprite ids cluster.
+            // neighbouring art in the same group is visible - graphic ids cluster.
             val from = (single - 8).coerceAtLeast(0)
             val to = (single + 120).coerceAtMost(limit - 1)
             return from..to
@@ -386,7 +386,7 @@ class AssetPicker(
     }
 
     companion object {
-        private const val SPRITE_POPUP = "pick sprite"
+        private const val GRAPHIC_POPUP = "pick graphic"
         private const val FONT_POPUP = "pick font"
         private const val ITEM_POPUP = "pick item"
 

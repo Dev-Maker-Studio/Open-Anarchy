@@ -21,19 +21,19 @@ class ItemEncoder : OpcodeEncoder<ItemDefinition>() {
         if (definition.name != "null") {
             opcodes.add(2)
         }
-        if (definition.spriteScale != 2000) {
+        if (definition.graphicScale != 2000) {
             opcodes.add(4)
         }
-        if (definition.spritePitch != 0) {
+        if (definition.graphicPitch != 0) {
             opcodes.add(5)
         }
-        if (definition.spriteCameraRoll != 0) {
+        if (definition.graphicCameraRoll != 0) {
             opcodes.add(6)
         }
-        if (definition.spriteTranslateX != 0) {
+        if (definition.graphicTranslateX != 0) {
             opcodes.add(7)
         }
-        if (definition.spriteTranslateY != 0) {
+        if (definition.graphicTranslateY != 0) {
             opcodes.add(8)
         }
         if (definition.stackable == 1) {
@@ -109,7 +109,7 @@ class ItemEncoder : OpcodeEncoder<ItemDefinition>() {
         if (definition.secondaryFemaleDialogueHead != -1) {
             opcodes.add(93)
         }
-        if (definition.spriteCameraYaw != 0) {
+        if (definition.graphicCameraYaw != 0) {
             opcodes.add(95)
         }
         if (definition.dummyItem != 0) {
@@ -194,11 +194,11 @@ class ItemEncoder : OpcodeEncoder<ItemDefinition>() {
         when (opcode) {
             1 -> writeBigSmart(definition.modelId)
             2 -> writeString(definition.name)
-            4 -> writeShort(definition.spriteScale)
-            5 -> writeShort(definition.spritePitch)
-            6 -> writeShort(definition.spriteCameraRoll)
-            7 -> writeShort(definition.spriteTranslateX)
-            8 -> writeShort(definition.spriteTranslateY)
+            4 -> writeShort(definition.graphicScale)
+            5 -> writeShort(definition.graphicPitch)
+            6 -> writeShort(definition.graphicCameraRoll)
+            7 -> writeShort(definition.graphicTranslateX)
+            8 -> writeShort(definition.graphicTranslateY)
             11 -> Unit
             12 -> writeInt(definition.cost)
             13 -> writeByte(definition.wearPos)
@@ -222,7 +222,7 @@ class ItemEncoder : OpcodeEncoder<ItemDefinition>() {
             91 -> writeBigSmart(definition.primaryFemaleDialogueHead)
             92 -> writeBigSmart(definition.secondaryMaleDialogueHead)
             93 -> writeBigSmart(definition.secondaryFemaleDialogueHead)
-            95 -> writeShort(definition.spriteCameraYaw)
+            95 -> writeShort(definition.graphicCameraYaw)
             96 -> writeByte(definition.dummyItem)
             97 -> writeShort(definition.noteId)
             98 -> writeShort(definition.notedTemplateId)

@@ -13,7 +13,7 @@ import world.gregs.voidps.cache.Definition
  * [trailer] is the honest residual. 2,562 of the 727 cache's 2,591 textures carry ten more bytes
  * after the three output indices, and this revision's client reads none of them: it stops at the
  * third index. The remaining 29 - ids 2562 to 2590, the newest in the cache and the same 29 whose
- * sprites carry an explicit palette entry 0 - carry no trailer at all, so it is not even a fixed
+ * graphics carry an explicit palette entry 0 - carry no trailer at all, so it is not even a fixed
  * part of the format. It is kept verbatim as hex rather than guessed at.
  */
 data class TextureDefinition(

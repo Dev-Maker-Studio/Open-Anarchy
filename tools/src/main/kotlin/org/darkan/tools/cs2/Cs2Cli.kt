@@ -728,7 +728,7 @@ private fun cs2Interface(cache: Cache, interfaceId: Int?, extra: List<String> = 
 
     // Snapshot the fields scripts most often change, so the report can show
     // what running the interface actually did rather than just that it ran.
-    val before = instance.components.map { Triple(it.hidden, it.text, it.spriteId) }
+    val before = instance.components.map { Triple(it.hidden, it.text, it.graphicId) }
 
     // The client only ever runs a load hook on an interface it has already drawn,
     // so the box model has to exist before the scripts that read it do.
@@ -744,8 +744,8 @@ private fun cs2Interface(cache: Cache, interfaceId: Int?, extra: List<String> = 
     current = instance
 
     val changed = instance.components.filterIndexed { index, state ->
-        val (hidden, text, sprite) = before[index]
-        state.hidden != hidden || state.text != text || state.spriteId != sprite
+        val (hidden, text, graphic) = before[index]
+        state.hidden != hidden || state.text != text || state.graphicId != graphic
     }
 
     println("interface $interfaceId: ${instance.components.size} components")
@@ -755,11 +755,11 @@ private fun cs2Interface(cache: Cache, interfaceId: Int?, extra: List<String> = 
     println("  hooks bound by scripts: ${host.boundHooks.values.sumOf { it.size }}")
 
     changed.take(10).forEach { state ->
-        val (hidden, text, sprite) = before[state.index]
+        val (hidden, text, graphic) = before[state.index]
         val parts = ArrayList<String>()
         if (state.hidden != hidden) parts.add("hidden $hidden -> ${state.hidden}")
         if (state.text != text) parts.add("text \"$text\" -> \"${state.text}\"")
-        if (state.spriteId != sprite) parts.add("sprite $sprite -> ${state.spriteId}")
+        if (state.graphicId != graphic) parts.add("graphic $graphic -> ${state.graphicId}")
         println("    component ${state.index}: ${parts.joinToString(", ")}")
     }
     host.boundHooks.entries.take(6).forEach { (hash, events) ->
@@ -876,7 +876,7 @@ private fun printResolvedTree(instance: InterfaceInstance) {
             val slot = if (state.slotId < 0) "-" else "s${state.slotId}"
             val label = buildList {
                 if (state.text.isNotEmpty()) add("text \"${state.text}\"")
-                if (state.spriteId != -1) add("sprite ${state.spriteId}")
+                if (state.graphicId != -1) add("graphic ${state.graphicId}")
                 if (state.hidden) add("hidden")
                 if (state.scrollHeight != 0) add("scrollH ${state.scrollHeight}")
                 if (state.scrollY != 0) add("scrollY ${state.scrollY}")
@@ -1012,7 +1012,7 @@ private fun cs2InterfaceSweep(cache: Cache) {
                 params = { Cache.params.getOrNull(it) },
             )
             val dispatcher = Cs2HookDispatcher(analyzer, host)
-            val before = instance.components.map { Triple(it.hidden, it.text, it.spriteId) }
+            val before = instance.components.map { Triple(it.hidden, it.text, it.graphicId) }
             instance.layoutDeclared()
 
             for (component in instance.components) {
@@ -1022,8 +1022,8 @@ private fun cs2InterfaceSweep(cache: Cache) {
                 scriptsRun++
             }
             componentsChanged += instance.components.count { state ->
-                val (hidden, text, sprite) = before[state.index]
-                state.hidden != hidden || state.text != text || state.spriteId != sprite
+                val (hidden, text, graphic) = before[state.index]
+                state.hidden != hidden || state.text != text || state.graphicId != graphic
             }
             hooksBound += host.boundHooks.values.sumOf { it.size }
             // An error the machine reports is not an exception - it logs and carries

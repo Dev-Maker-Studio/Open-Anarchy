@@ -44,7 +44,7 @@ import kotlin.math.roundToInt
  * The alpha reaches the GPU as `GL_BGRA` straight from those ints, un-premultiplied. The client even
  * knows the path is unreliable: `NativeSprite.supportsGzippedSprites` decodes one embedded 1x1 file
  * of exactly this shape at startup and, when AWT throws, sets `Resource.USING_JAGEX_IMAGE_FORMAT` and
- * reads index 34 - the same 34 pictures as palette sprites - instead. On any modern JVM that probe
+ * reads index 34 - the same 34 pictures as palette graphics - instead. On any modern JVM that probe
  * fails, which makes index 34 a ready made cross check for [decode] and is what
  * `LoadingScreenCodecTest` measures against.
  *
@@ -53,14 +53,14 @@ import kotlin.math.roundToInt
  * - components 1..3 are `Y`, `Cb`, `Cr` with the usual 128 offset on the two chroma planes, and the
  *   standard JFIF (ITU-R BT.601) matrix converts them;
  * - component 4 is **straight alpha**, 255 opaque, no inversion and no offset - 27 of the 29 files
- *   are a constant 255 and the two that are not (3764, 3765) hold the sprite's silhouette at 255 on
+ *   are a constant 255 and the two that are not (3764, 3765) hold the graphic's silhouette at 255 on
  *   a 0 ground, which would be inside out were it `255 - v`;
  * - no colour transform of any kind applies, because with no Adobe marker there is no transform flag
  *   to apply one.
  *
  * ## How the source tree stores them
  *
- * **One file per image**: `loading_sprites/<id>.jpg`, an ordinary three component baseline JPEG of
+ * **One file per image**: `loading_graphics/<id>.jpg`, an ordinary three component baseline JPEG of
  * `Y`, `Cb` and `Cr` that opens in any viewer or editor, with the fourth component's own
  * entropy coded stream riding inside the same file as one or more `APP11` segments -
  * `JagexAlpha\0`, a sequence number and a count, then a slice of the greyscale codestream. Every

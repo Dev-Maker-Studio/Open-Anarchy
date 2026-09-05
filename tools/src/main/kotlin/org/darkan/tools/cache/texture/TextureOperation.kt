@@ -183,7 +183,7 @@ abstract class TextureOperation(
     }
 
     /**
-     * Gets the texture/sprite ID for this operation.
+     * Gets the texture/graphic ID for this operation.
      *
      * @return The texture ID, or -1 if not applicable
      */

@@ -1,7 +1,7 @@
 package world.gregs.voidps.cache.source.codec
 
-import world.gregs.voidps.cache.definition.data.IndexedSprite
-import world.gregs.voidps.cache.definition.data.SpriteDefinition
+import world.gregs.voidps.cache.definition.data.GraphicDefinition
+import world.gregs.voidps.cache.definition.data.IndexedGraphic
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -12,14 +12,14 @@ import javax.imageio.stream.MemoryCacheImageInputStream
 import javax.imageio.stream.MemoryCacheImageOutputStream
 
 /**
- * One sprite frame as one standard PNG, and everything a byte exact encoder needs written inside
+ * One graphic frame as one standard PNG, and everything a byte exact encoder needs written inside
  * the same file.
  *
  * The picture is **8 bit RGBA truecolour at the group's canvas size** - the canvas the client
  * composes every frame of the group onto - with the frame painted at its own offset and the rest
  * fully transparent. So the pixels alone say where the frame is (trim the transparent border), what
  * colours it uses and how opaque each one is, which is what makes a PNG dropped in by any image
- * editor packable: see [SpriteCodec] for the derivation. The colours are the palette entries the
+ * editor packable: see [GraphicCodec] for the derivation. The colours are the palette entries the
  * *client* renders - the normalised ones, entry 0 apart - and the alpha is the client's own rule:
  * the frame's alpha plane where it has one, else opaque for every pixel whose palette index is not
  * 0 and transparent for index 0, which is the client's transparent colour.
@@ -37,20 +37,20 @@ import javax.imageio.stream.MemoryCacheImageOutputStream
  * letter, which is PNG's "unsafe to copy": an editor that rewrites the pixels is told by the type
  * itself to drop them rather than carry a stale one forward. An editor that strips them entirely -
  * which is most of them - loses nothing but the byte exactness of frames the pixels under-determine;
- * see `docs/cache-source.md`, "sprites".
+ * see `docs/cache-source.md`, "graphics".
  *
  * The PNG is written through an in-memory stream rather than `ImageIO.write`, which otherwise spills
  * to a temporary file per image and is process-wide state to turn off, and the chunks are spliced in
  * straight after `IHDR` so the file stays a fixed, deterministic byte sequence for a given frame -
  * re-unpacking an unchanged cache must rewrite nothing.
  */
-internal object SpriteImage {
+internal object GraphicImage {
 
     /** The group's palette, as `rsPL` carries it. */
     class Palette(
-        /** The entries exactly as the sprite file spells them, entry 0 first. */
+        /** The entries exactly as the graphic file spells them, entry 0 first. */
         val entries: IntArray,
-        /** Whether the file writes an explicit `000000` for entry 0; [SpriteDefinition.paletteZeroEntry]. */
+        /** Whether the file writes an explicit `000000` for entry 0; [GraphicDefinition.paletteZeroEntry]. */
         val zeroEntry: Boolean
     )
 
@@ -64,7 +64,7 @@ internal object SpriteImage {
         val minY: Int,
         val width: Int,
         val height: Int,
-        /** The frame's format byte; [IndexedSprite.flags]. */
+        /** The frame's format byte; [IndexedGraphic.flags]. */
         val flags: Int,
         /** [NO_PLANE], [PLANE] or [OPAQUE_PLANE]. */
         val alpha: Int
@@ -98,39 +98,39 @@ internal object SpriteImage {
      */
     const val OPAQUE_PLANE = 2
 
-    /** [sprite] as the one PNG the source tree stores it in. */
-    fun write(archive: Int, index: Int, definition: SpriteDefinition, sprite: IndexedSprite): ByteArray {
+    /** [graphic] as the one PNG the source tree stores it in. */
+    fun write(archive: Int, index: Int, definition: GraphicDefinition, graphic: IndexedGraphic): ByteArray {
         val canvasWidth = maxOf(definition.width, 1)
         val canvasHeight = maxOf(definition.height, 1)
         val palette = normalise(definition.rawPalette)
-        val plane = sprite.alpha
+        val plane = graphic.alpha
         val kind = when {
-            sprite.flags and ALPHA_FLAG == 0 -> NO_PLANE
+            graphic.flags and ALPHA_FLAG == 0 -> NO_PLANE
             plane != null -> PLANE
             else -> OPAQUE_PLANE
         }
         val image = BufferedImage(canvasWidth, canvasHeight, BufferedImage.TYPE_INT_ARGB)
         val lookup = lookup(definition.rawPalette, palette)
         var raster: ByteArray? = null
-        for (y in 0 until sprite.height) {
-            for (x in 0 until sprite.width) {
-                val offset = x + y * sprite.width
-                val entry = sprite.raster[offset].toInt() and 0xff
+        for (y in 0 until graphic.height) {
+            for (x in 0 until graphic.width) {
+                val offset = x + y * graphic.width
+                val entry = graphic.raster[offset].toInt() and 0xff
                 val alpha = if (plane != null) plane[offset].toInt() and 0xff else if (entry == 0) 0 else OPAQUE
-                image.setRGB(x + sprite.offsetX, y + sprite.offsetY, (alpha shl 24) or palette[entry])
+                image.setRGB(x + graphic.offsetX, y + graphic.offsetY, (alpha shl 24) or palette[entry])
                 // The index the colours alone would recover; where that is not the index the frame
                 // actually holds, rsIX has to carry the raster.
                 val recovered = if (alpha == 0) 0 else lookup.getOrDefault(palette[entry], -1)
                 if (recovered != entry && raster == null) {
-                    raster = sprite.raster
+                    raster = graphic.raster
                 }
             }
         }
         val chunks = ArrayList<ByteArray>(3)
         chunks.add(chunk(PALETTE_CHUNK, palette(definition)))
-        chunks.add(chunk(FRAME_CHUNK, frame(archive, index, definition, sprite, kind)))
+        chunks.add(chunk(FRAME_CHUNK, frame(archive, index, definition, graphic, kind)))
         if (raster != null) {
-            chunks.add(chunk(INDEX_CHUNK, indices(sprite, raster)))
+            chunks.add(chunk(INDEX_CHUNK, indices(graphic, raster)))
         }
         return splice(png(image), chunks)
     }
@@ -185,7 +185,7 @@ internal object SpriteImage {
         return out
     }
 
-    private fun palette(definition: SpriteDefinition): ByteArray {
+    private fun palette(definition: GraphicDefinition): ByteArray {
         val entries = definition.rawPalette
         val out = ByteArray(4 + entries.size * COLOUR)
         out[0] = VERSION
@@ -222,8 +222,8 @@ internal object SpriteImage {
     private fun frame(
         archive: Int,
         index: Int,
-        definition: SpriteDefinition,
-        sprite: IndexedSprite,
+        definition: GraphicDefinition,
+        graphic: IndexedGraphic,
         kind: Int
     ): ByteArray {
         val out = ByteArray(FRAME_SIZE)
@@ -232,11 +232,11 @@ internal object SpriteImage {
         write16(out, 5, index)
         write16(out, 7, definition.width)
         write16(out, 9, definition.height)
-        write16(out, 11, sprite.offsetX)
-        write16(out, 13, sprite.offsetY)
-        write16(out, 15, sprite.width)
-        write16(out, 17, sprite.height)
-        out[19] = sprite.flags.toByte()
+        write16(out, 11, graphic.offsetX)
+        write16(out, 13, graphic.offsetY)
+        write16(out, 15, graphic.width)
+        write16(out, 17, graphic.height)
+        out[19] = graphic.flags.toByte()
         out[20] = kind.toByte()
         return out
     }
@@ -259,11 +259,11 @@ internal object SpriteImage {
         )
     }
 
-    private fun indices(sprite: IndexedSprite, raster: ByteArray): ByteArray {
+    private fun indices(graphic: IndexedGraphic, raster: ByteArray): ByteArray {
         val out = ByteArray(5 + raster.size)
         out[0] = VERSION
-        write16(out, 1, sprite.width)
-        write16(out, 3, sprite.height)
+        write16(out, 1, graphic.width)
+        write16(out, 3, graphic.height)
         raster.copyInto(out, 5)
         return out
     }
@@ -382,14 +382,14 @@ internal object SpriteImage {
         ((bytes[offset].toInt() and 0xff) shl 24) or ((bytes[offset + 1].toInt() and 0xff) shl 16) or
             ((bytes[offset + 2].toInt() and 0xff) shl 8) or (bytes[offset + 3].toInt() and 0xff)
 
-    /** The group's palette, entry 0 first, exactly as the sprite file spells it. */
-    private const val PALETTE_CHUNK = SpriteCodec.PALETTE_CHUNK
+    /** The group's palette, entry 0 first, exactly as the graphic file spells it. */
+    private const val PALETTE_CHUNK = GraphicCodec.PALETTE_CHUNK
 
     /** The frame's placement in the group canvas, and its format byte. */
-    private const val FRAME_CHUNK = SpriteCodec.FRAME_CHUNK
+    private const val FRAME_CHUNK = GraphicCodec.FRAME_CHUNK
 
     /** The frame's palette index raster, where the colours alone cannot recover it. */
-    private const val INDEX_CHUNK = SpriteCodec.INDEX_CHUNK
+    private const val INDEX_CHUNK = GraphicCodec.INDEX_CHUNK
 
     private val CHUNKS = setOf(PALETTE_CHUNK, FRAME_CHUNK, INDEX_CHUNK)
 
