@@ -34,8 +34,9 @@ id, real names for what we author, no comments, no attribution.
    and the dev lobby after its restart shows what players get (`10.69.69.22 43593` from the LAN; the
    `dev.darkan.org` proxy refuses that port from here). A fresh client home starts on the
    first-run graphics popup: `INPUT="mousemove 386 320 mousedown 1 sleep 0.3 mouseup 1"` clicks
-   Auto Setup and the login screen follows. Ask for a client check only for what a screenshot cannot
-   show: hover, tooltips, timing.
+   Auto Setup and the login screen follows; `JAVA_EXTRA="-Dautologin=user:pass -Dautologin.world=1"`
+   logs in and enters a world for lobby and gameframe captures (`testes`/`testes` on the dev database).
+   Ask for a client check only for what a screenshot cannot show: hover, tooltips, timing.
 
 Gradle never runs on the desktop (remote build host, one build at a time); the local tools install
 and `jshell` are fine.
@@ -98,6 +99,13 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
 
 ## 4. Patterns worth copying
 
+- **Gameframes**: the lobby screen 906, resizable frame 746 and fixed frame 548 each had a 50 px
+  Home/Support/Forums/Clans bar as a root layer (906:1, 746:239, 548:2; buttons 509/517/525/533,
+  244/252/260/268, 209/217/225/233) above a content root layer (906:0 and 335, 746:48, 548:204).
+  The bar is hidden with height 0 since 2026-09-05 - `cc_gety_absolute_toplevel` subtracts its
+  height, so hiding alone is not enough - and the content layers start at y 0. The fixed canvas
+  size is `defaults/entity.json` `gameWidth`/`gameHeight` (765x503 now), read by the client at
+  startup as `GAME_WIDTH`/`GAME_HEIGHT`; nothing in the client or server hard-codes it.
 - **Login screen (interface 596, layer 4, 266x305)**: title 35 y11, username 38/39 y41-86, password
   40/41 y87-132, separators 42/43 y142, Log In 44 y149 (180x26: caps 54/56 graphic 8701 flipped,
   middle 55 graphic 8699 stretched, shadow text 57 colour 8082707 at (1,-2), text 58 at (0,-3), font
