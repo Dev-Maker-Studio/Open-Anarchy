@@ -38,6 +38,14 @@ id, real names for what we author, no comments, no attribution.
    logs in and enters a world for lobby and gameframe captures (`testes`/`testes` on the dev database).
    Ask for a client check only for what a screenshot cannot show: hover, tooltips, timing.
 
+Local end-to-end loop (the only real test, 2026-09-06): `java -jar lobby/build/libs/lobby-server-3.0.0.jar`
+and `world/build/libs/world-server-3.0.0.jar` from the server root (`.env` with `CACHE_SOURCE_PATH`;
+jars from the remote build host, `scp` them back), then the client on a private Xvfb
+(`Xvfb :90 -extension GLX`, `-Dautologin=user:pass`, click Play at (386,503) - `-Dautologin.world`
+stalls) and `xdotool` clicks. **Restart the world as well as the lobby after every cache pack**: the
+world's cache CRCs are read at startup and a stale world answers the login with "Darkan has been
+updated". Never `pkill -f` a pattern that also appears in your own shell command line.
+
 Gradle never runs on the desktop (remote build host, one build at a time); the local tools install
 and `jshell` are fine.
 
@@ -91,6 +99,68 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
 - **World list flags**: bit 0 members, 1 quickchat, 2 bots allowed (Jagex's PvP bit; the client
   never drew it and its PvP login warning keys off bit 10), 3 lootshare, 4 highlight.
 
+- **The minimap and compass components (`contentType` 1338/1339) must match their mask graphic's size.**
+  `ComponentMinimap.drawMinimap` throws `IllegalStateException` on the first draw if the component's
+  width/height differ from the sprite built from its graphic (`mapmask` 154 vs `graphic_8728` 152):
+  change the graphic and `ifSetSize` in the same script, for 548:153 as well as 746:190.
+- **`ifGetGraphic` on any component id 0..count-1 is safe** (returns -1 for layers and text), so a
+  loop over an interface can re-map every static graphic without a per-component list; scripts that
+  set graphics later still need their constants wrapped (`gameframe_skin_graphic(Graphic.x)`), and a
+  `case Graphic.x:` label cannot be wrapped.
+- **Components draw in id order within a parent**: a text under later graphic siblings is hidden
+  (the settings dropdown value had to be the last child of its layer).
+- **Hover and click fall through to whatever lies under a component that has no op of its own**, so a
+  dropdown list drawn over buttons shows their tooltips; give overlays an op or keep them clear.
+- **Never resize a component to fit a different graphic - author the graphic at the component's
+  size.** A type-5 component scales its graphic to its own size, so a 22x22 icon in a 30x37
+  component is blown up, and every layout script that touches the component (`cs2_722` on each
+  resize) fights the size change. The 2011 tab icons are 30x37 canvases (`toplevel_tab_icons_2011_*`)
+  and no gameframe component changes size for the skin except the minimap ones the client forces.
+- **A skin apply must never rewrite state it did not change.** Restores run only when the component
+  still shows the 2011 graphic (`if (ifGetGraphic(c) == Graphic.x_2011)`), geometry only when the
+  component still has the 2011 size; otherwise a varp transmit of the settings varp (any chat colour
+  change) would reset script-driven state (deselected tab backgrounds, the xp token variant).
+- **Wrap every script that names a mapped graphic, not just the gameframe's own.** The combat tab's
+  boxes are set by `cs2_1134`/`cs2_1140` through `event_com` hooks and name no interface, so a
+  scope of "scripts that mention gameframe components" missed them; hover states are JSON hook
+  arguments to `graphic_swapper`/`cs2_299` (the 2012 tile 9179, the options button 9195, the worn
+  button 3030, the slot 9167) and family siblings of mapped graphics (`*_1`/`*_2` hover and pressed
+  variants) - map every sibling of a mapped family or the 2012 art leaks on hover.
+- **1123 is a filled corner, not a frame corner**: the 2011 panel frame is 1121 across and 1122 down,
+  overlapping at the corners; 1123 puts a dark stone block in each corner.
+- **Verify against the stock cache, not against memory**: `git -C cache-source checkout dev`, pack,
+  run, capture the same window sizes, and diff the chrome regions; the map and world content differ
+  between sessions, so read the diff images, not the percentages.
+- **Never call another interface's scripts from a gameframe load or var hook.** Calling `cs2_178`
+  (the chat filter bar's own load script) and the orb updaters from the 746 hook left interface 751
+  closed for the whole session - the bar under the chatbox vanished in both layouts. Re-run an
+  interface's own script by adding the varp to that component's `varps` list (751:3, the world map
+  button) or by giving the interface its own hook and case (the orbs, the chatbox frame).
+- **The resizable tab bar in one picture**: 746:75-90 are the button backgrounds (8548, cleared to
+  -1 on deselect by `cs2_1309`), 91-106 the always-on overlay that *is* the button's normal look
+  (8547, `cs2_1292` swaps 8549 on hover), 59-74 the icons, 152-183 the selected-tab frames in
+  pairs (8551 orange under 8550 white, both cleared to -1 by `cs2_1309` when a tab deselects). In
+  the fixed frame and in 667 the same roles are 1835 (normal), 1837 (hover), 1836 (pressed) and the
+  48x48 1841/1840 frames; both revisions clear the pair on every tab but the selected one, and the
+  strip's rim is nothing more than the tiles' own bevelled edges.
+- **Interface 746's sidestone frame in the resizable layout is a set of ccs on 746:108** built by
+  `cs2_2968` from the `aif_window3_*` graphics on load; the chat frame is `cs2_5392` on 752:2.
+  The 2011 panel frame is the classic stone set every 2011 window uses - 1123 corner with the
+  bracket (flipped for the other three corners), 1121 tiled along the top and bottom, 1122 down the
+  sides - built by `gameframe_skin_panel_frame` inside `cs2_2968`'s 2011 branch, corners 10 px in
+  from the panel layer so the band sits against the tab content. The tab strip itself has no slab
+  or frame in 667: the tiles are the whole strip.
+- **Read the 667 interface definitions, not a render, for what 667 drew**: 667's stats tab has its
+  own tile graphic (667 id 3030, now `stats_background_button_0_2011`) under every skill with
+  yellow (0xFFFF00) level text where 727 uses 0xFF8C00. Its worn tab draws five connector lines as
+  components of graphics 821 (vertical, 32 wide) and 822 (horizontal, 32 high) with 667's own
+  geometry - 727's pieces are shorter and sit elsewhere, so the 2011 apply hides 387's connectors
+  (3, 48-64) and creates the five as ccs on 387:2 (821 tiled 32x160 centred; 821 32x85 at x -56 and,
+  hflipped, +56; 822 vflipped 80x32 at y 43 and 110x32 at y 82). The slot silhouettes are not in the
+  JSON at all: `wornitems_slot` looks them up in `Enum.enum_796` (slot -> graphic 156-166/6301), so
+  an enum lookup that yields a graphic needs `gameframe_skin_graphic(enumOp(...))` like any constant;
+  667's silhouettes are darker (`worn_slot_<slot>_2011`) and are what makes the tab read as 2011.
+
 - **Components can be re-typed in place.** Every `interfaces/<iface>/<n>.json` carries the full
   field superset, so turning a rect (type 3) into a graphic (type 5) or a text (4) is `type` plus the
   fields the new type reads; copy them from a sibling of that type. Repurposing dead components this
@@ -113,6 +183,16 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
   45/53 y178, separators 46/47 y198, Create Account caption 52 y218 and button 59 y246 (parts 49/50/51,
   texts 48/60, click `login_register`). Layout is static: no script repositions these.
 
+- **Gameframe skin (2026-09-06)**: `varbit_option_gameframe_skin` (varp 1438 bits 17-19, 0 = 2012,
+  1 = 2011) drives `[proc,gameframe_skin_graphic]` (2012 -> 2011 graphic id, identity otherwise) and
+  `[proc,gameframe_skin_apply]` (loop over an interface's components, `ifGetGraphic` ->
+  `gameframe_skin_graphic_2012` -> `gameframe_skin_graphic`, then per-interface geometry, hides and
+  the orb/chat/tab re-runs), hooked as `[clientscript,gameframe_skin_update]` on one hook-free layer of
+  every gameframe interface (`onLoadScript` + `onVarpTransmit [1438]`). Scripts that pick 2012 art by
+  `getWindowMode() >= 2` use `gameframe_skin_new()` instead. The 2011 graphics are the 667 cache's
+  same-name versions, named `<name>_2011` (12073-12324), deduplicated pixel-for-pixel against the 727
+  set first (`mapmask`/`compassmask` 2011 already existed as 8728/8729). Settings dropdown: 261:32-42,
+  `[clientscript,options_gameframe_dropdown*]`, rows 41/42 click through to the server.
 - **Var-driven interface state**: `onLoadScript` + `onVarpTransmit` (`varps: [parent varp]`) on the
   component, running a `[clientscript,x]` that calls `[proc,x]`; the proc reads `varbit_x` and sets
   graphic, op text and tooltip (`clientscripts/proc/bank_placeholder_button.ts`, modelled on
