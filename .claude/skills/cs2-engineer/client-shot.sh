@@ -16,7 +16,7 @@ Xvfb :$DISP -screen 0 1280x960x24 -extension GLX -nolisten tcp >/dev/null 2>&1 &
 XPID=$!
 sleep 1.5
 mkdir -p "$S/clienthome"
-DISPLAY=:$DISP java -Duser.home="$S/clienthome" -Dprod=false -Xmx2g -jar "$JAR" "$HOST" "$PORT" > "$S/client.log" 2>&1 &
+DISPLAY=:$DISP java -Duser.home="$S/clienthome" -Dprod=false ${JAVA_EXTRA:-} -Xmx2g -jar "$JAR" "$HOST" "$PORT" > "$S/client.log" 2>&1 &
 JPID=$!
 sleep "$SETTLE"
 if [ -n "${INPUT:-}" ]; then DISPLAY=:$DISP xdotool $INPUT; sleep "${SETTLE2:-8}"; fi
