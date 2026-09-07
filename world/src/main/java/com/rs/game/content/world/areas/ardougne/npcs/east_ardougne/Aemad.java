@@ -16,11 +16,11 @@ public class Aemad extends Conversation {
     private static final int npcId = 590;
 
     public static NPCClickHandler Aemad = new NPCClickHandler(new Object[]{npcId}, e -> {
-    	switch (e.getOption()) {
-        
-        case "Talk-to" -> e.getPlayer().startConversation(new Aemad(e.getPlayer()));
-        case "Trade-General-Store" -> ShopsHandler.openShop(e.getPlayer(), "aemads_adventuring_supplies");
-    	}
+        switch (e.getOption()) {
+
+            case "Talk-to" -> e.getPlayer().startConversation(new Aemad(e.getPlayer()));
+            case "Trade" -> ShopsHandler.openShop(e.getPlayer(), "aemads_adventuring_supplies");
+        }
     });
 
     public Aemad(Player player) {
