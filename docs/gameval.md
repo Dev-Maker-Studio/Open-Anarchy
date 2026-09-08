@@ -291,8 +291,7 @@ The generator lives in `buildSrc/src/main/kotlin/org/darkan/build/gameval/`:
 | `GamevalCodegen.kt` | the emitters (simple, clientscript, component) and the shard chain |
 | `GenerateGamevalConstants.kt` | the Gradle task |
 
-`buildSrc`'s own tests are wired to run whenever its jar is rebuilt, so a broken generator can
-never generate: `./gradlew :buildSrc:test` runs them on demand. `GamevalConstantsTest` in `core`
+`./gradlew :buildSrc:test` runs `buildSrc`'s own tests on demand; no build runs them for you. `GamevalConstantsTest` in `core`
 then cross-checks the *generated classes* against the catalogs on the classpath - every constant
 is an id of its catalog, every id has a constant, unnamed ids resolve under their placeholder, and
 every component is packed `(iface shl 16) or comp` under a class whose `IFACE` is its interface.

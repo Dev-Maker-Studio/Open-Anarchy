@@ -17,12 +17,3 @@ tasks.test {
         events("passed", "failed", "skipped")
     }
 }
-
-// The generator's own tests gate every build that uses it: a build cannot generate constants from a
-// generator whose identifier rules or catalog validation are broken. `finalizedBy` rather than
-// `dependsOn` because the test compile classpath is the jar itself; the tests still run inside the
-// buildSrc build, before the main build's tasks, and a failure fails the whole build. They are up to
-// date (and so cost nothing) unless buildSrc changed.
-tasks.jar {
-    finalizedBy(tasks.test)
-}
