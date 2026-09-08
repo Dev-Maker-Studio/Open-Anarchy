@@ -14,7 +14,9 @@ import com.rs.utils.Utils
 import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.gameval.gen.Varbit
+import org.darkan.core.gameval.gen.Varp
 import org.darkan.core.model.Animation
+import org.darkan.core.model.IFEvents
 import org.darkan.world.server.WorldServer
 import java.text.NumberFormat
 import java.util.Locale
@@ -130,6 +132,11 @@ fun mapGameFrameButtons() {
                 e.player.setNextAnimation(Animation(-1))
             }
             Component.interface_755.component_755_42 -> closeWorldMapHint(e.player)
+            Component.interface_755.component_755_49 -> worldMapKeyOption(e)
+            Component.interface_755.component_755_54 -> {
+                val vars = e.player.vars
+                vars.saveVarBit(Varbit.worldmap_keysort, (vars.getVarBit(Varbit.worldmap_keysort) + 1) % 3)
+            }
         }
     }
 
@@ -166,7 +173,24 @@ private fun rest(player: Player) {
 
 private fun closeWorldMapHint(player: Player) {
     player.hintIconsManager.removeAll()
-    player.vars.setVar(1159, 1)
+    player.vars.setVar(Varp.varp_1159, -1)
+}
+
+private fun worldMapKeyOption(e: ButtonClickEvent) {
+    if (e.opNum != 1) return
+    val vars = e.player.vars
+    val varbit = when (e.slotId) {
+        0, 1 -> Varbit.worldmap_yah_hidden
+        3, 4 -> Varbit.worldmap_samemaplinks_hidden
+        11, 12 -> Varbit.worldmap_textlabels_hidden
+        14, 16 -> Varbit.worldmap_tooltips_hidden
+        18, 19 -> {
+            closeWorldMapHint(e.player)
+            return
+        }
+        else -> return
+    }
+    vars.saveVarBit(varbit, 1 - vars.getVarBit(varbit))
 }
 
 private fun moneyPouch(e: ButtonClickEvent) {
@@ -198,6 +222,7 @@ private fun worldMap(e: ButtonClickEvent) {
         return
     }
     player.interfaceManager.setTopInterface(Interface.interface_755, false)
+    player.packets.setIFEvents(IFEvents(Component.interface_755.component_755_49, 0, 19).enableRightClickOption(0))
     player.setNextAnimation(Animation(840))
     val posHash = player.x shl 14 or player.y
     player.packets.sendVarc(622, posHash)

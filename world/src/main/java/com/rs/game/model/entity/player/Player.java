@@ -1221,7 +1221,7 @@ public class Player extends Entity {
 		getPoison().refresh();
 		getVars().setVar(Varp.tutorial, 1000); // unlock can't do this on tutorial
 		getVars().setVar(Varp.lore_incubators_var, -1); // unlock summoning orb
-		getVars().setVar(1159, 1);
+		getVars().setVar(Varp.varp_1159, -1);
 		getVars().setVarBit(Varbit.lore_incubator_var_2, 0); //unlock incubator
 		getVars().setVarBit(1766, 1); //unlock killerwatt portal
 		getVars().setVarBit(Varbit.ra3_quest, 45); //chaos dwarf area
