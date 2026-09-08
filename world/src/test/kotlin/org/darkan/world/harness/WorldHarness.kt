@@ -24,9 +24,6 @@ import org.darkan.core.net.prot.handler.PacketHandlers
 import org.darkan.core.net.prot.revision.rev727.register727
 import org.darkan.world.server.WorldServer
 import world.gregs.voidps.cache.Cache
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 import java.util.concurrent.Executors
 import java.util.logging.Level
 
@@ -63,9 +60,6 @@ object WorldHarness {
         JsonFileManager.setGSON(WorldGson.create())
 
         Settings.loadConfig()
-        // Startup hooks (the penguin daily reset, notably) write ./data/world.json, which is a
-        // tracked file. Put it back when the test JVM exits so running tests never dirties the tree.
-        protectWorldPersistentData()
         Cache.init(Settings.getConfig().cachePath)
         MapXTEAs.loadKeys()
         MapXteas.load("./data/map/xteaKeys.json")
@@ -171,17 +165,6 @@ object WorldHarness {
 
     private fun startedPlayers(): List<Player> =
         World.players.filterNotNull().filter { it.hasStarted() && !it.hasFinished() }
-
-    private fun protectWorldPersistentData() {
-        val live = File("./data/world.json")
-        if (!live.isFile) return
-        val backup = Files.createTempFile("darkan-world-json", ".bak").toFile()
-        Files.copy(live.toPath(), backup.toPath(), StandardCopyOption.REPLACE_EXISTING)
-        Runtime.getRuntime().addShutdownHook(Thread {
-            runCatching { Files.copy(backup.toPath(), live.toPath(), StandardCopyOption.REPLACE_EXISTING) }
-            backup.delete()
-        })
-    }
 
     private fun installWorldServerDispatcher() {
         val dispatcher: ExecutorCoroutineDispatcher =

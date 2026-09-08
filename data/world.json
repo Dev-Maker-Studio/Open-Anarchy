@@ -1,15 +1,15 @@
 {
   "counters": {
     "attribs": {
-      "OpenguinHAS_LastReset": "2026-08-26T00:00:00Z",
-      "OpenguinHAS_Penguins": "[{\"npcId\":8104,\"name\":\"BARREL_1\",\"location\":{\"id\":46042423},\"points\":1,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_12\",\"location\":{\"id\":48974897},\"points\":1,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_8\",\"location\":{\"id\":39095678},\"points\":1,\"spotters\":[]},{\"npcId\":8109,\"name\":\"ROCK_7\",\"location\":{\"id\":47009211},\"points\":1,\"spotters\":[]},{\"npcId\":8108,\"name\":\"CRATE_1\",\"location\":{\"id\":51055881},\"points\":1,\"spotters\":[]},{\"npcId\":8107,\"name\":\"CACTUS_6\",\"location\":{\"id\":56331150},\"points\":2,\"spotters\":[]},{\"npcId\":8105,\"name\":\"BUSH_19\",\"location\":{\"id\":41520927},\"points\":2,\"spotters\":[]},{\"npcId\":8110,\"name\":\"TOADSTOOL_6\",\"location\":{\"id\":35736676},\"points\":2,\"spotters\":[]},{\"npcId\":8109,\"name\":\"ROCK_19\",\"location\":{\"id\":50925309},\"points\":2,\"spotters\":[]},{\"npcId\":8109,\"name\":\"ROCK_11\",\"location\":{\"id\":39947242},\"points\":2,\"spotters\":[]}]",
-      "OpenguinHAS_PolarBear": "{\"location\":\"FALADOR\",\"points\":1,\"previousLocations\":[\"RIMMINGTON\",\"RELLEKKA\",\"MUSA_POINT\",\"FALADOR\"],\"spotters\":[]}",
+      "OpenguinHAS_LastReset": "2026-09-02T00:00:00Z",
+      "OpenguinHAS_Penguins": "[\n  {\n    \"npcId\": 8109,\n    \"name\": \"ROCK_1\",\n    \"location\": {\n      \"x\": 2867,\n      \"y\": 3606,\n      \"plane\": 0\n    },\n    \"points\": 1,\n    \"spotters\": []\n  },\n  {\n    \"npcId\": 8105,\n    \"name\": \"BUSH_2\",\n    \"location\": {\n      \"x\": 2739,\n      \"y\": 3233,\n      \"plane\": 0\n    },\n    \"points\": 1,\n    \"spotters\": []\n  },\n  {\n    \"npcId\": 8105,\n    \"name\": \"BUSH_14\",\n    \"location\": {\n      \"x\": 3112,\n      \"y\": 3151,\n      \"plane\": 0\n    },\n    \"points\": 1,\n    \"spotters\": []\n  },\n  {\n    \"npcId\": 8105,\n    \"name\": \"BUSH_9\",\n    \"location\": {\n      \"x\": 2949,\n      \"y\": 3509,\n      \"plane\": 0\n    },\n    \"points\": 1,\n    \"spotters\": []\n  },\n  {\n    \"npcId\": 8110,\n    \"name\": \"TOADSTOOL_2\",\n    \"location\": {\n      \"x\": 2420,\n      \"y\": 4473,\n      \"plane\": 0\n    },\n    \"points\": 1,\n    \"spotters\": []\n  },\n  {\n    \"npcId\": 8109,\n    \"name\": \"ROCK_14\",\n    \"location\": {\n      \"x\": 3545,\n      \"y\": 3439,\n      \"plane\": 0\n    },\n    \"points\": 2,\n    \"spotters\": []\n  },\n  {\n    \"npcId\": 8109,\n    \"name\": \"ROCK_21\",\n    \"location\": {\n      \"x\": 3169,\n      \"y\": 3650,\n      \"plane\": 0\n    },\n    \"points\": 2,\n    \"spotters\": []\n  },\n  {\n    \"npcId\": 8104,\n    \"name\": \"BARREL_5\",\n    \"location\": {\n      \"x\": 3738,\n      \"y\": 3001,\n      \"plane\": 0\n    },\n    \"points\": 2,\n    \"spotters\": []\n  },\n  {\n    \"npcId\": 8109,\n    \"name\": \"ROCK_13\",\n    \"location\": {\n      \"x\": 2117,\n      \"y\": 3942,\n      \"plane\": 0\n    },\n    \"points\": 2,\n    \"spotters\": []\n  },\n  {\n    \"npcId\": 8105,\n    \"name\": \"BUSH_15\",\n    \"location\": {\n      \"x\": 2802,\n      \"y\": 2806,\n      \"plane\": 0\n    },\n    \"points\": 2,\n    \"spotters\": []\n  }\n]",
+      "OpenguinHAS_PolarBear": "{\n  \"location\": \"VARROCK\",\n  \"points\": 1,\n  \"previousLocations\": [\n    \"RELLEKKA\",\n    \"MUSA_POINT\",\n    \"FALADOR\",\n    \"VARROCK\"\n  ],\n  \"spotters\": []\n}",
       "OshootingStarDiscoveries": {
-        "2960334001": "Not discovered yet...",
-        "2960322000": "Not discovered yet...",
-        "2959926000": "Not discovered yet...",
-        "2959662002": "Not discovered yet...",
-        "2959650001": "Not discovered yet..."
+        "2981502022": "Not discovered yet...",
+        "2981490021": "Not discovered yet...",
+        "2981478020": "Not discovered yet...",
+        "2981466019": "Not discovered yet...",
+        "2981454018": "Not discovered yet..."
       }
     }
   }
