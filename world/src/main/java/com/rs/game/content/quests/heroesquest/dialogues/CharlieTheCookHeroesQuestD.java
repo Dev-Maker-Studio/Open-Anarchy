@@ -24,13 +24,13 @@ public class CharlieTheCookHeroesQuestD extends Conversation {
 					addPlayer(HeadE.HAPPY_TALKING, "I want to steal Scareface Pete's candlesticks.");
 					addNPC(NPC, HeadE.CALM_TALK, "Ah yes, of course. The candlesticks. Well, I have to be honest with you compadre, we haven't " +
 							"made much progress in that task ourselves so far. We can however offer a little assistance.");
-					addNPC(NPC, HeadE.CALM_TALK, "We have our own gaurd in their ranks who is willing to take a bribe.", () -> player.getQuestManager().getAttribs(Quest.HEROES_QUEST).setB("phoenix_trick", true));
+					addNPC(NPC, HeadE.CALM_TALK, "We have our own guard in their ranks who is willing to take a bribe.", () -> player.getQuestManager().getAttribs(Quest.HEROES_QUEST).setB("phoenix_trick", true));
 					addPlayer(HeadE.HAPPY_TALKING, "Okay thanks!");
 				}
 			}
 			default -> {
 				addPlayer(HeadE.HAPPY_TALKING, "Hello");
-				addNPC(NPC, HeadE.CALM_TALK, "What are you doing back here? You should be back here.");
+				addNPC(NPC, HeadE.CALM_TALK, "What are you doing back here? You shouldn't be back here.");
 				addPlayer(HeadE.HAPPY_TALKING, "Okay, I'll leave...");
 			}
 		}
