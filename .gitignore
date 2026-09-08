@@ -89,3 +89,5 @@ world-server.jar
 /cache-source/gamevals/work/
 # The packed cache built from the cache source tree on startup (CACHE_BUILD_PATH); see docs/cache-source.md
 /data/cache/
+# Runtime state the world server writes on every save (penguin spots, shooting stars); recreated when absent
+/data/world.json
