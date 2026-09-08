@@ -9,13 +9,3 @@ dependencies {
     implementation(project(":core"))
     testImplementation(kotlin("test"))
 }
-
-tasks.test {
-    // Cache paths (CACHE_PATH, default "../cache/") and the .env file are resolved relative to the
-    // repository root, not the module directory.
-    workingDir = rootDir
-    maxHeapSize = "4g"
-    testLogging {
-        showStandardStreams = true
-    }
-}

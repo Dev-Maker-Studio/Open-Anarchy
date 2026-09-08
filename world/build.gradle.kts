@@ -28,15 +28,6 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
-tasks.test {
-    // Cache paths, .env and data/ are resolved relative to the repository root, not the module dir.
-    workingDir = rootDir
-    maxHeapSize = "4g"
-    testLogging {
-        showStandardStreams = true
-    }
-}
-
 tasks.withType<Jar> {
     manifest {
         attributes["Main-Class"] = "org.darkan.world.MainKt"

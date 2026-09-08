@@ -2189,11 +2189,11 @@ files), `ShaderProgramEncoder` (index 31, 24 files) and `JagexMidi.toCompact` (i
 
 Five tests measure it, each against the shipped bytes rather than against a re-decode:
 
-- `core/src/test/kotlin/world/gregs/voidps/cache/definition/DefinitionEncoderParityTest.kt` (indices 16-22)
-- `core/src/test/kotlin/world/gregs/voidps/cache/config/ConfigEncoderParityTest.kt` (index 2)
-- `core/src/test/kotlin/world/gregs/voidps/cache/definition/InterfaceEncoderParityTest.kt` (index 3)
-- `core/src/test/kotlin/world/gregs/voidps/cache/definition/MiscEncoderParityTest.kt` (indices 0, 1, 10, 23, 24, 25, 28, 33, 35)
-- `core/src/test/kotlin/world/gregs/voidps/cache/definition/ModelEncoderParityTest.kt` (indices 7, 27 and 29)
+- `core/src/cacheTest/kotlin/world/gregs/voidps/cache/definition/DefinitionEncoderParityTest.kt` (indices 16-22)
+- `core/src/cacheTest/kotlin/world/gregs/voidps/cache/config/ConfigEncoderParityTest.kt` (index 2)
+- `core/src/cacheTest/kotlin/world/gregs/voidps/cache/definition/InterfaceEncoderParityTest.kt` (index 3)
+- `core/src/cacheTest/kotlin/world/gregs/voidps/cache/definition/MiscEncoderParityTest.kt` (indices 0, 1, 10, 23, 24, 25, 28, 33, 35)
+- `core/src/cacheTest/kotlin/world/gregs/voidps/cache/definition/ModelEncoderParityTest.kt` (indices 7, 27 and 29)
 
 Each enumerates files through the reference table (`Cache.archives` / `Cache.files`), not through
 a decoder's `size`, which rounds up to whole archives and invents ids that have no file. They decode
@@ -2201,7 +2201,7 @@ with the decoder's `readLoop`, encode into a fresh `BufferWriter` and compare by
 skip with a message when `../cache/` is absent.
 
 The 2D encoders - graphics, textures, materials and font metrics - are measured the same way by
-`core/src/test/kotlin/world/gregs/voidps/cache/source/ImageCodecTest.kt`, which goes one step further and
+`core/src/cacheTest/kotlin/world/gregs/voidps/cache/source/ImageCodecTest.kt`, which goes one step further and
 writes the files to disk before reading them back, because a graphic's pixels make the trip through a PNG
 and `javax.imageio` is half of that round trip. See *What the 2D indices cost*.
 

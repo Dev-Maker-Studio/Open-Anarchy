@@ -1,3 +1,8 @@
+import org.gradle.api.plugins.jvm.JvmTestSuite
+import org.gradle.testing.base.TestingExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
+import javax.xml.parsers.DocumentBuilderFactory
+
 plugins {
     kotlin("jvm") version "2.3.0" apply false
     kotlin("plugin.serialization") version "2.3.0" apply false
@@ -13,6 +18,8 @@ allprojects {
     }
 }
 
+val testBudgetSeconds = (findProperty("darkan.testBudgetSeconds") as String?)?.toDouble() ?: 20.0
+
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "java-library")
@@ -20,6 +27,57 @@ subprojects {
     configure<JavaPluginExtension> {
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(25))
+        }
+    }
+
+    // Two suites per module. `test` is the fast one every build runs, held to a time budget of
+    // test time (the JUnit XML sum, JVM start-up excluded). `cacheTest` (src/cacheTest) holds
+    // everything that opens the packed cache or a source tree: whole-cache round trips, encoder and
+    // codec parity. Minutes long, opt-in only - nothing in build, check or CI runs it.
+    tasks.withType<Test>().configureEach {
+        workingDir = rootDir
+        maxHeapSize = "4g"
+        testLogging.showStandardStreams = true
+    }
+
+    if (file("src/cacheTest").isDirectory) {
+        configure<TestingExtension> {
+            suites.register<JvmTestSuite>("cacheTest") {
+                useJUnit()
+                dependencies {
+                    implementation(project())
+                }
+                val unit = project.the<SourceSetContainer>()["test"]
+                configurations[sources.implementationConfigurationName].extendsFrom(configurations[unit.implementationConfigurationName])
+                configurations[sources.runtimeOnlyConfigurationName].extendsFrom(configurations[unit.runtimeOnlyConfigurationName])
+                project.dependencies.add(sources.implementationConfigurationName, unit.output)
+            }
+        }
+        configure<KotlinJvmProjectExtension> {
+            target.compilations.named("cacheTest") {
+                associateWith(target.compilations.getByName("main"))
+                associateWith(target.compilations.getByName("test"))
+            }
+        }
+    }
+
+    tasks.named<Test>("test") {
+        val budget = testBudgetSeconds
+        val results = reports.junitXml.outputLocation
+        doLast {
+            val suites = results.get().asFile.listFiles { f -> f.extension == "xml" }.orEmpty().map { file ->
+                val suite = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file).documentElement
+                suite.getAttribute("name") to suite.getAttribute("time").toDouble()
+            }
+            val total = suites.sumOf { it.second }
+            if (total > budget) {
+                val slowest = suites.sortedByDescending { it.second }.take(5)
+                    .joinToString("\n") { (name, seconds) -> "  %6.1fs  %s".format(seconds, name) }
+                throw GradleException(
+                    "$path ran for %.1fs of test time; the budget is %.0fs (-Pdarkan.testBudgetSeconds). ".format(total, budget) +
+                        "Make the slow tests fast or move them to src/cacheTest, the opt-in suite:\n$slowest",
+                )
+            }
         }
     }
 

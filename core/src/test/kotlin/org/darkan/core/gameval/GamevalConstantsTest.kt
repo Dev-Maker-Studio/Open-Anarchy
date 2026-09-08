@@ -1,6 +1,10 @@
 package org.darkan.core.gameval
 
-import java.lang.reflect.Modifier
+import java.lang.classfile.Attributes
+import java.lang.classfile.ClassFile
+import java.lang.classfile.ClassModel
+import java.lang.classfile.constantpool.IntegerEntry
+import java.lang.reflect.AccessFlag
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -11,8 +15,8 @@ import kotlin.test.assertTrue
  * must agree with the runtime catalog they were generated from, and must now cover it completely:
  * every id of every type has a constant, an unnamed one under its placeholder.
  *
- * The classes are reached by reflection so the test still runs (and says what is missing) when a
- * catalog or a class is not there.
+ * The constants are read from the generated class files so the test still runs (and says what is
+ * missing) when a catalog or a class is not there.
  */
 class GamevalConstantsTest {
 
@@ -45,31 +49,41 @@ class GamevalConstantsTest {
         null
     }
 
+    private val constantsByClass = HashMap<String, Map<String, Int>?>()
+
     /** `<Class>.<field>` walked up the generated superclass chain, or `null` when either is absent. */
-    private fun constant(cls: String, field: String): Int? {
-        var current: Class<*>? = generatedClass(cls) ?: return null
-        while (current != null) {
-            val f = current.declaredFields.firstOrNull { it.name == field && Modifier.isStatic(it.modifiers) }
-            if (f != null) return f.also { it.isAccessible = true }.getInt(null)
-            current = current.superclass
-        }
-        return null
+    private fun constant(cls: String, field: String): Int? = constants(cls)?.get(field)
+
+    /**
+     * Every static int constant reachable through the class, superclass chain included, read from
+     * the class files' ConstantValue attributes. Reflection is out: resolving a field makes the JVM
+     * scan the class's field table, which over 290,000 constants in shards of 65,000 took 40 s.
+     */
+    private fun constants(cls: String): Map<String, Int>? {
+        val name = "$genPackage.$cls"
+        if (name !in constantsByClass) constantsByClass[name] = readConstants(name)
+        return constantsByClass[name]
     }
 
-    /** Every public static int constant reachable through the class, superclass chain included. */
-    private fun constants(cls: String): Map<String, Int>? {
-        var current: Class<*>? = generatedClass(cls) ?: return null
+    private fun readConstants(name: String): Map<String, Int>? {
+        var current = classFile(name) ?: return null
         val out = LinkedHashMap<String, Int>()
-        while (current != null) {
-            for (f in current.declaredFields) {
-                if (Modifier.isStatic(f.modifiers) && f.type == Int::class.javaPrimitiveType) {
-                    f.isAccessible = true // the overflow shards (Loc2, Loc3 ...) are package-private classes
-                    out.putIfAbsent(f.name, f.getInt(null))
-                }
+        while (true) {
+            for (field in current.fields()) {
+                if (!field.flags().has(AccessFlag.STATIC)) continue
+                val value = field.findAttribute(Attributes.constantValue()).orElse(null)?.constant() as? IntegerEntry ?: continue
+                out.putIfAbsent(field.fieldName().stringValue(), value.intValue())
             }
-            current = current.superclass
+            val parent = current.superclass().orElse(null)?.asInternalName()?.replace('/', '.')
+                ?.takeIf { it.startsWith(genPackage) } ?: break
+            current = classFile(parent) ?: break
         }
         return out
+    }
+
+    private fun classFile(name: String): ClassModel? {
+        val bytes = javaClass.classLoader.getResourceAsStream(name.replace('.', '/') + ".class")?.use { it.readBytes() } ?: return null
+        return ClassFile.of().parse(bytes)
     }
 
     @Test

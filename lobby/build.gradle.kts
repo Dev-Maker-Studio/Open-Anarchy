@@ -65,6 +65,3 @@ publishing {
         }
     }
 }
-tasks.test {
-    workingDir = rootDir
-}

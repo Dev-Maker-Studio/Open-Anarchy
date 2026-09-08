@@ -22,16 +22,6 @@ dependencies {
     }
 }
 
-tasks.test {
-    // Cache paths (CACHE_PATH, default "../cache/") and the .env file are resolved relative to the
-    // repository root, not the module directory.
-    workingDir = rootDir
-    maxHeapSize = "4g"
-    testLogging {
-        showStandardStreams = true
-    }
-}
-
 // Typed gameval constants (org.darkan.core.gameval.gen.*): one Java class of public static final
 // int per <cache source tree>/gamevals/<type>.json, generated into build/generated/sources/gameval/java
 // by the buildSrc task and compiled as part of this module. Nothing is committed and no python is

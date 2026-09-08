@@ -279,8 +279,11 @@ Shared code used by both lobby and world servers.
 # Run world server (blocking, requires lobby running)
 ./gradlew :world:run
 
-# Run tests
-./gradlew :core:test
+# Run the fast test suites (every build runs these; budgeted to 20 s of test time per module)
+./gradlew test
+
+# Run the whole-cache and parity tests (opt-in; minutes, need the packed cache at CACHE_PATH)
+./gradlew :core:cacheTest :cs2:cacheTest
 
 # Build shadow JAR (lobby)
 ./gradlew :lobby:shadowJar
@@ -592,13 +595,18 @@ Various account management endpoints (see `lobby/src/main/kotlin/org/darkan/lobb
 
 ## Testing
 
-Currently minimal test coverage. Run tests with:
+Two suites per module:
 
-```bash
-./gradlew :core:test
-```
+- `test` (`src/test`): fast unit and harness tests. `./gradlew build` runs them, and the root build
+  fails a module whose suite exceeds `darkan.testBudgetSeconds` (default 20) of test time.
+- `cacheTest` (`src/cacheTest`, core and cs2): everything that opens the packed cache or a source
+  tree - whole-cache round trips, encoder parity, codec parity. Minutes long, opt-in only:
+  `./gradlew :core:cacheTest :cs2:cacheTest`. Nothing in `build`, `check` or CI runs them; run them
+  when a change touches what they cover.
 
-Key test file: `core/src/test/kotlin/org/darkan/core/net/login/WorldLoginTokenTest.kt`
+A test that opens the cache or runs for more than a few seconds goes in `cacheTest`, never in
+`test`, and nothing gets wired to run on every build. `./gradlew :buildSrc:test` runs the gameval
+generator's tests on demand.
 
 ---
 
