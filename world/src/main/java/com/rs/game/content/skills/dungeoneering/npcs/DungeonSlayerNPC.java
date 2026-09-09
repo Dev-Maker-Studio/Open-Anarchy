@@ -22,6 +22,8 @@ import com.rs.game.content.skills.dungeoneering.DungeonManager;
 import com.rs.game.content.skills.dungeoneering.DungeonPartyManager;
 import com.rs.game.model.entity.player.Player;
 import org.darkan.core.Constants;
+import org.darkan.core.gameval.gen.Npc;
+import org.darkan.core.gameval.gen.Obj;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
 import com.rs.utils.drop.DropSet;
@@ -41,8 +43,8 @@ public class DungeonSlayerNPC extends DungeonNPC {
 		SPIRITUAL_GUARDIAN(10700, 63, 15, new DropTable(1, 10, 17285, 1), new DropTable(1, 10, 17287, 1)),
 		SEEKER(10701, 71, new DungeonConstants.FloorType[] { DungeonConstants.FloorType.Abandoned, DungeonConstants.FloorType.Occult, DungeonConstants.FloorType.Warped }, 10, new DropTable(1, 10, 17289, 1)),
 		NECHRYAEL(10702, 80, new DungeonConstants.FloorType[] { DungeonConstants.FloorType.Abandoned, DungeonConstants.FloorType.Occult, DungeonConstants.FloorType.Warped }, 15, new DropTable(1, 30, 17283, 1)),
-		EDIMMU(10703, 90, new DungeonConstants.FloorType[] { DungeonConstants.FloorType.Occult, DungeonConstants.FloorType.Warped }, 5, new DropTable(1, 20, 17291, 1)), //40 damage every 15 seconds
-		SOULGAZER(10704, 99, new DungeonConstants.FloorType[] { DungeonConstants.FloorType.Occult, DungeonConstants.FloorType.Warped }, 5, new DropTable(1, 20, 17295, 1));
+		EDIMMU(Npc.rand_edimmu, 90, new DungeonConstants.FloorType[] { DungeonConstants.FloorType.Occult, DungeonConstants.FloorType.Warped }, 5, new DropTable(1, 20, Obj.rand_blood_necklace, 1)),
+		SOULGAZER(Npc.slug3_rand_soulgazer, 99, new DungeonConstants.FloorType[] { DungeonConstants.FloorType.Occult, DungeonConstants.FloorType.Warped }, 5, new DropTable(1, 20, Obj.rand_mage_slayer_bow, 1));
 
 		private static final Map<Integer, DungeonSlayerType> MAP = new HashMap<>();
 
