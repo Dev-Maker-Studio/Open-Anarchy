@@ -65,7 +65,7 @@ class KreeArra(id: Int, tile: Tile, spawned: Boolean) : GWDBoss(id, tile, spawne
     }
 
     override fun canBeAttackedBy(player: Player): Boolean {
-        if (!isRanging(player)) {
+        if (!isRanging(player) && !isMaging(player)) {
             player.sendMessage("Kree'arra is flying too high for you to attack using melee.")
             return false
         }
