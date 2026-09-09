@@ -61,7 +61,7 @@ public class Cooking extends PlayerAction {
 		RAW_UGTHANKI_MEAT(1859, 2146, new int[] {1861}, 1, 100, 40),
 		RAW_KARAMBWANJI(3150, 592, new int[] {3151}, 1, 28, 10),
 		RAW_HERRING(345, 357, new int[] {347}, 5, 41, 50),
-		RAW_POTATO(1942, 6699, new int[] {6701}, 7, 41, 15),
+		RAW_POTATO(1942, 6699, new int[] {6701}, 1, 41, 15),
 		RAW_MACKEREL(353, 357, new int[] {355}, 10, 45, 60),
 		RAW_REDBERRY_PIE(2321, 2329, new int[] {2325}, 10, 45, 78),
 		RAW_BIRD_MEAT(9978, 9982, new int[] {23060}, 11, 99, 62),
