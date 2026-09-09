@@ -23,6 +23,7 @@ data class WorldListEntry(
     val highlighted: Boolean,
     /** Players currently online, or -1 when the world is offline. */
     val playersOnline: Int,
+    val customCache: Boolean = false,
 )
 
 /**
