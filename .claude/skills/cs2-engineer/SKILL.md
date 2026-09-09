@@ -14,6 +14,22 @@ id, real names for what we author, no comments, no attribution.
 
 ## 1. The loop
 
+0. **Preview without packing.** The interface editor reads the tree directly - components from
+   `interfaces/<id>/*.json`, clientscripts compiled from their `.ts` - so an edit is visible in a
+   render seconds later, with no pack and no restart:
+
+   ```bash
+   EXTRA="-Ddarkan.capture=/tmp/out.png -Ddarkan.captureAfter=30" \
+     CACHE_PATH=$PWD/data/cache/ tools/capture-headless.sh /tmp/root.png 110 -- \
+     interface 499 --source cache-source --var varbit_skill_guide_skill_v2=11 --stat all=99
+   ```
+
+   `--source cache-source` is the default when the tree is beside the working directory. `--var`,
+   `--stat` and `--run` supply the game state an interface needs before it draws anything (the
+   skill guide builds its list from `varbit_skill_guide_skill_v2` and `statBase`); in the GUI the
+   same three live in the **State** panel, saving a `.ts` reloads it, and F7 re-reads everything.
+   Graphics, fonts and models still come from the packed cache, so a *new* graphic needs step 2.
+   See `docs/cs2-editor.md`, "Live source mode". Pack when you are ready to ship, not to look.
 1. Edit the `.ts` (or interface JSON / graphic PNG) in `cache-source/`.
 2. Pack: `tools/build/install/tools/bin/tools cache build cache-source data/cache` (the local
    `installDist` of the tools module; ~45 s for a full pack, seconds incrementally). It compiles

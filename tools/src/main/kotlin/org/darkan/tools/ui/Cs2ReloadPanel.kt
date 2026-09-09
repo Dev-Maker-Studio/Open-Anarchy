@@ -34,6 +34,7 @@ class Cs2ReloadPanel(
      * supplies the real provider.
      */
     private val hookScripts: () -> List<Int> = { emptyList() },
+    private val liveSource: () -> String = { "" },
 ) {
     var visible: Boolean = true
 
@@ -105,6 +106,12 @@ class Cs2ReloadPanel(
     // ------------------------------------------------------------------- source
 
     private fun renderSource() {
+        val live = liveSource()
+        if (live.isEmpty()) {
+            ImGuiText.disabled("Reading the packed cache. File > Open cache-source tree to edit without packing.")
+        } else {
+            ok(live)
+        }
         ImGui.text("Source folder")
         ImGui.inputText("##cs2folder", folderInput)
         ImGui.sameLine()

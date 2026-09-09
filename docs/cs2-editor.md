@@ -259,6 +259,68 @@ component, slot, clicked option, typed key - into a hook's bound arguments befor
 Both kinds of hook are listed: the ones baked into the component definitions, and the ones
 scripts bind at runtime with `IF_SETON*` / `CC_SETON*`.
 
+## Live source mode
+
+The editor can read a **cache source tree** directly, so a change to a `.ts` or a component JSON
+shows up in the render without packing a cache. This is the fast loop; a pack is what ships it.
+
+```bash
+tools interface 499 --source cache-source
+```
+
+`--source` is optional: a `cache-source/` beside the working directory is used automatically, and
+`--source none` reads only the packed cache. The stage's status line says which
+(`live: cache-source, 12 reloads, last 0.4 s ago`), as does the top of the CS2 Hot Reload panel.
+In the GUI, **File > Open cache-source tree...** and **File > Use the packed cache** switch at any
+time.
+
+What comes from where:
+
+| asset | source |
+|---|---|
+| the interface's components | `<tree>/interfaces/<id>/*.json`, through index 3's own tree codec |
+| clientscripts | `<tree>/clientscripts/<category>/<name>.ts`, through `Cs2Compiler` |
+| graphics, fonts, models, enums, structs, params | the packed cache the viewer opened |
+
+The tree half goes through exactly what a build does - `SourceCodecs.codec(Index.INTERFACES).pack`
+then the cache's own `InterfaceDecoder` - so a component reads the way the packed cache would read
+it, pristine sidecars included. **Nothing is written to the tree or to the cache.**
+
+Opening an interface compiles from the tree every script the interface can reach: its hooks, and
+everything those call, walked over `GOSUB` targets. Without that a fresh session would run the
+*cache's* bytecode for anything nobody had touched yet, and an edit made before launch would be
+invisible.
+
+### Watching
+
+Both halves are watched. A saved `.ts` recompiles and swaps in ([Cs2HotReload]); a saved component
+JSON re-reads the interface and re-runs its load scripts. A compile error never disturbs the
+render - the last good version stays live and the failure is listed in the panel's Errors as
+`file:line:col: message`, with a button that opens it there. **F7** re-reads everything on demand.
+
+### Driving the interface
+
+Most interfaces draw nothing without game state. The **State** panel supplies it:
+
+- **Variables** by their `vars.d.ts` spelling - `varbit_skill_guide_skill_v2`, `varp_1249`,
+  `varcstr_x` - or by id (`varbit_3288`). Writing one fires the transmit hooks, exactly as a
+  client varp write would.
+- **Stats**: one level per stat id, plus an "every stat" default for the unset ones.
+- **Run after every load**: clientscripts by name (`cs2_23`, `cs2_23:1,2`), re-run after every
+  load-script pass, since a reload re-seeds every component and would otherwise throw away what
+  the driving script did.
+
+The same three from the command line, which with `--capture` is a whole headless render:
+
+```bash
+tools interface 499 --source cache-source \
+    --var varbit_skill_guide_skill_v2=11 --var varbit_skill_guide_subsection_v2=4 \
+    --stat all=99 --run cs2_23 --capture /tmp/guide.png --settle 30
+```
+
+`--capture` and `--settle` set `-Ddarkan.capture` / `-Ddarkan.captureAfter`, so this works under
+`tools/capture-headless.sh` with no GUI interaction.
+
 ## Running scripts
 
 `Cs2Vm` implements the core instruction set — the three operand stacks, locals, the global
