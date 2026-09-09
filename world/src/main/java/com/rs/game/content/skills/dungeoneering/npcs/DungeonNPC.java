@@ -21,6 +21,7 @@ import com.rs.game.content.skills.dungeoneering.DungeonConstants;
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
 import com.rs.game.content.skills.dungeoneering.DungeonUtils;
 import com.rs.game.content.skills.dungeoneering.RoomReference;
+import com.rs.game.content.skills.dungeoneering.VisibleRoom;
 import com.rs.game.content.skills.dungeoneering.npcs.bosses.DungeonBoss;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.npc.NPC;
@@ -98,6 +99,10 @@ public class DungeonNPC extends NPC {
 			getManager().removeMark();
 			marked = false;
 		}
+		RoomReference reference = getManager().getCurrentRoomReference(getTile());
+		VisibleRoom room = getManager().getVisibleRoom(reference);
+		if (room != null && room.isGuardian(this))
+			getManager().updateGuardian(reference);
 	}
 
 	@Override

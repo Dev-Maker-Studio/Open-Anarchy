@@ -17,24 +17,13 @@
 package com.rs.game.content.skills.dungeoneering.npcs;
 
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
-import com.rs.game.content.skills.dungeoneering.RoomReference;
-import com.rs.game.model.entity.Entity;
 import world.gregs.voidps.type.Tile;
 
 public class Guardian extends DungeonNPC {
 
-	private final RoomReference reference;
-
-	public Guardian(int id, Tile tile, DungeonManager manager, RoomReference reference) {
+	public Guardian(int id, Tile tile, DungeonManager manager) {
 		super(id, tile, manager);
-		this.reference = reference;
 		setForceAgressive(true);
-	}
-
-	@Override
-	public void sendDeath(Entity source) {
-		super.sendDeath(source);
-		getManager().updateGuardian(reference);
 	}
 
 }

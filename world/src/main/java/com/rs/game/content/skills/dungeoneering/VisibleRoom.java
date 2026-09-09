@@ -74,6 +74,10 @@ public class VisibleRoom {
 		guardianCount++;
 	}
 
+	public boolean isGuardian(NPC n) {
+		return guardians != null && guardians.contains(n);
+	}
+
 	public boolean removeGuardians() {
 		if (roomCleared()) {
 			guardians = null;
