@@ -16,8 +16,6 @@
 //
 package com.rs.net.encoders
 
-import world.gregs.voidps.cache.Cache
-import world.gregs.voidps.cache.definition.cs2.CS2Type
 import com.rs.game.Account
 import com.rs.game.World
 import com.rs.game.map.Chunk
@@ -26,24 +24,29 @@ import com.rs.game.model.WorldProjectile
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub
-import com.rs.net.update.EntitySnapshotFactory
-import org.darkan.core.net.prot.update.NpcUpdateTrackingState
-import org.darkan.core.net.prot.update.PlayerUpdateTrackingState
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.model.gameobject.ObjectMeshModifier
 import com.rs.game.model.item.ItemsContainer
+import com.rs.net.update.EntitySnapshotFactory
 import com.rs.utils.MapXTEAs
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
+import java.io.ByteArrayOutputStream
 import org.darkan.core.Utils
+import org.darkan.core.gameval.gen.Varp
 import org.darkan.core.model.Animation
 import org.darkan.core.model.ChatMessageType
 import org.darkan.core.model.GroundItem
 import org.darkan.core.model.HintIcon
+import org.darkan.core.model.IFEvents as IFEventsModel
 import org.darkan.core.model.Item
 import org.darkan.core.model.RegionSize
 import org.darkan.core.model.Sound
+import org.darkan.core.model.SoundType
 import org.darkan.core.model.SpotAnim
 import org.darkan.core.net.Session
+import org.darkan.core.net.prot.dto.GrandExchangeOffer
+import org.darkan.core.net.prot.dto.InstanceLoadType
+import org.darkan.core.net.prot.dto.InvSlotUpdate
 import org.darkan.core.net.prot.packet.BlockMinimapState
 import org.darkan.core.net.prot.packet.BuildInstancedRegion
 import org.darkan.core.net.prot.packet.BuildRegion
@@ -65,15 +68,14 @@ import org.darkan.core.net.prot.packet.GroundItemCount
 import org.darkan.core.net.prot.packet.HintArrow
 import org.darkan.core.net.prot.packet.HintTrail
 import org.darkan.core.net.prot.packet.IfCloseSub
-import org.darkan.core.net.prot.packet.TriggerOnDialogAbort
 import org.darkan.core.net.prot.packet.IfOpenSub
 import org.darkan.core.net.prot.packet.IfOpenSubActiveGroundItem
 import org.darkan.core.net.prot.packet.IfOpenSubActiveNpc
 import org.darkan.core.net.prot.packet.IfOpenSubActiveObject
 import org.darkan.core.net.prot.packet.IfOpenSubActivePlayer
 import org.darkan.core.net.prot.packet.IfOpenTop
-import org.darkan.core.net.prot.packet.IfSetAnim
 import org.darkan.core.net.prot.packet.IfSetAngle
+import org.darkan.core.net.prot.packet.IfSetAnim
 import org.darkan.core.net.prot.packet.IfSetEvents
 import org.darkan.core.net.prot.packet.IfSetGraphic
 import org.darkan.core.net.prot.packet.IfSetHide
@@ -96,6 +98,8 @@ import org.darkan.core.net.prot.packet.MessageQuickChatClanChannel
 import org.darkan.core.net.prot.packet.MessageQuickChatFriendsChat
 import org.darkan.core.net.prot.packet.MessageQuickChatPrivate
 import org.darkan.core.net.prot.packet.MessageQuickChatPrivateEcho
+import org.darkan.core.net.prot.packet.MusicEffect
+import org.darkan.core.net.prot.packet.MusicTrack
 import org.darkan.core.net.prot.packet.NpcUpdate
 import org.darkan.core.net.prot.packet.NpcUpdateLarge
 import org.darkan.core.net.prot.packet.ObjAnim
@@ -109,8 +113,10 @@ import org.darkan.core.net.prot.packet.RunEnergy
 import org.darkan.core.net.prot.packet.RunScript
 import org.darkan.core.net.prot.packet.SetCursor
 import org.darkan.core.net.prot.packet.SetDrawOrder
+import org.darkan.core.net.prot.packet.SoundSynth
 import org.darkan.core.net.prot.packet.SpotAnimSpecific
 import org.darkan.core.net.prot.packet.TileMessage
+import org.darkan.core.net.prot.packet.TriggerOnDialogAbort
 import org.darkan.core.net.prot.packet.UpdateGESlot
 import org.darkan.core.net.prot.packet.UpdateInvFull
 import org.darkan.core.net.prot.packet.UpdateInvPartial
@@ -122,22 +128,21 @@ import org.darkan.core.net.prot.packet.VarclanSetInt
 import org.darkan.core.net.prot.packet.VarclanSetLong
 import org.darkan.core.net.prot.packet.VarclanSetString
 import org.darkan.core.net.prot.packet.VorbisSound
+import org.darkan.core.net.prot.packet.VorbisSpeechSound
 import org.darkan.core.net.prot.packet.setVarbitPacket
 import org.darkan.core.net.prot.packet.setVarcPacket
 import org.darkan.core.net.prot.packet.setVarcStrPacket
 import org.darkan.core.net.prot.packet.setVarpPacket
+import org.darkan.core.net.prot.update.NpcUpdateTrackingState
+import org.darkan.core.net.prot.update.PlayerUpdateTrackingState
 import org.darkan.core.social.ChatMessage
 import org.darkan.core.social.PublicChatMessage
 import org.darkan.core.social.QuickChatMessage
 import org.darkan.core.util.MapUtils
 import org.darkan.core.util.Structure
-import org.darkan.core.model.IFEvents as IFEventsModel
+import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.definition.cs2.CS2Type
 import world.gregs.voidps.type.Tile
-import org.darkan.core.net.prot.dto.GrandExchangeOffer
-import org.darkan.core.net.prot.dto.InstanceLoadType
-import org.darkan.core.net.prot.dto.InvSlotUpdate
-import java.io.ByteArrayOutputStream
-import org.darkan.core.gameval.gen.Varp
 
 class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
@@ -814,7 +819,15 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     }
 
     fun sendSound(sound: Sound) {
-        session.queuePacket(VorbisSound(sound.id, sound.repeat, sound.delay, sound.volume, sound.sampleRate))
+        session.queuePacket(
+            when (sound.type) {
+                SoundType.EFFECT -> SoundSynth(sound.id, sound.repeat, sound.delay, sound.volume, sound.sampleRate)
+                SoundType.VORB_EFFECT -> VorbisSound(sound.id, sound.repeat, sound.delay, sound.volume, sound.sampleRate)
+                SoundType.VOICE -> VorbisSpeechSound(sound.id, sound.repeat, sound.delay, sound.volume)
+                SoundType.JINGLE -> MusicEffect(0, sound.volume, sound.id)
+                SoundType.MUSIC -> MusicTrack(sound.delay, sound.volume, sound.id)
+            }
+        )
     }
 
     fun resetSounds() {

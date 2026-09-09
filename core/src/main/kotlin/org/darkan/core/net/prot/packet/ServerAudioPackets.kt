@@ -7,13 +7,13 @@ import org.darkan.core.net.prot.ServerProt
 
 data class VorbisSound(val soundId: Int, val repeat: Int, val delay: Int, val volume: Int, val sampleRate: Int) : ServerProt
 
-data class VorbisSpeechSound(val soundId: Int, val soundType: Int, val delay: Int, val volume: Int) : ServerProt
+data class VorbisSpeechSound(val soundId: Int, val repeat: Int, val delay: Int, val volume: Int) : ServerProt
 
-data class SoundSynth(val soundId: Int, val flags: Int, val unknown: Int, val delay: Int, val unknown2: Int) : ServerProt
+data class SoundSynth(val soundId: Int, val repeat: Int, val delay: Int, val volume: Int, val sampleRate: Int) : ServerProt
 
-data class MusicEffect(val key: Int, val volume: Int, val musicId: Int) : ServerProt
+data class MusicEffect(val unused: Int, val volume: Int, val musicId: Int) : ServerProt
 
-data class MusicTrack(val key: Int, val flags: Int, val musicId: Int) : ServerProt
+data class MusicTrack(val delay: Int, val volume: Int, val musicId: Int) : ServerProt
 
 @JvmInline value class PreloadSong(val songId: Int) : ServerProt
 
