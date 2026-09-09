@@ -121,7 +121,7 @@ fun onItemOnPlayer(vararg itemNamesOrIds: Any, eventHandler: (ItemOnPlayerEvent)
 //TODO allow mapping by item names and ids
 fun onItemOnNpc(vararg npcNamesOrIds: Any, checkDistance: Boolean = true, eventHandler: (ItemOnNPCEvent) -> Unit) {
     npcNamesOrIds.forEach { require(it is String || it is Int) { "npcNamesOrIds must contain only String or Int types" } }
-    ItemOnNPCEvent.registerMethod(IFOnNPCEvent::class.java, ItemOnNPCHandler(checkDistance, npcNamesOrIds) { eventHandler(it) })
+    ItemOnNPCEvent.registerMethod(ItemOnNPCEvent::class.java, ItemOnNPCHandler(checkDistance, npcNamesOrIds) { eventHandler(it) })
 }
 
 fun onItemOnObject(objectNamesOrIds: Array<Any>, itemNamesOrIds: Array<Any>? = null, tiles: Array<Tile>? = null, checkDistance: Boolean = true, eventHandler: (ItemOnObjectEvent) -> Unit) {
