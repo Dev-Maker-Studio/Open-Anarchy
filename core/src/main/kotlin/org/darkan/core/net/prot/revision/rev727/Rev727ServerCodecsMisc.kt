@@ -17,6 +17,8 @@ import kotlin.io.use
  */
 private const val DEFAULT_WORLD_PORT = 43595
 
+private const val WORLD_FLAG_CUSTOM_CACHE = 0x20
+
 internal fun Codec.registerRev727MiscPackets() {
     // Reflection/clientwatch
     serverProt<ReflectionRequest>(opcode = 98, size = ProtSize.VarShort) { out ->
@@ -201,6 +203,7 @@ internal fun Codec.registerRev727MiscPackets() {
                 if (world.botsAllowed) flags = flags or 0x4
                 if (world.lootShare) flags = flags or 0x8
                 if (world.highlighted) flags = flags or 0x10
+                if (world.customCache) flags = flags or WORLD_FLAG_CUSTOM_CACHE
                 val customPort = world.port != DEFAULT_WORLD_PORT
                 if (customPort) flags = flags or 0x40000000
 

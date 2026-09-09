@@ -126,6 +126,7 @@ data class GatewayWorldInfo(
     val lootShare: Boolean = true,
     val country: String = "USA",
     val highlighted: Boolean = false,
+    val cacheCrcs: List<Int> = emptyList(),
 ) {
     fun toWorldMetadata(): WorldMetadata = WorldMetadata(
         number = worldId,
@@ -141,7 +142,7 @@ data class GatewayWorldInfo(
     )
 
     companion object {
-        fun fromEnv(): GatewayWorldInfo = GatewayWorldInfo(
+        fun fromEnv(cacheCrcs: List<Int> = emptyList()): GatewayWorldInfo = GatewayWorldInfo(
             worldId = EnvVars.worldId,
             worldName = EnvVars.worldName,
             host = EnvVars.worldHost,
@@ -154,6 +155,7 @@ data class GatewayWorldInfo(
             lootShare = EnvVars.worldLootShare,
             country = EnvVars.worldCountry,
             highlighted = EnvVars.worldHighlighted,
+            cacheCrcs = cacheCrcs,
         )
     }
 }

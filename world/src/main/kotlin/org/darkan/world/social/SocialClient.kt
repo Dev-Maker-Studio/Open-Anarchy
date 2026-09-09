@@ -20,6 +20,7 @@ import org.darkan.core.social.gateway.SocialGatewayWireJson
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import org.darkan.core.social.gateway.WorldHello
 import org.darkan.core.social.gateway.WorldHelloAck
+import world.gregs.voidps.cache.Cache
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -125,7 +126,7 @@ class SocialClient(
 
                 client.webSocket(urlString = url) {
                     val hello = WorldHello(
-                        world = GatewayWorldInfo.fromEnv(),
+                        world = GatewayWorldInfo.fromEnv(cacheCrcs = Cache.get().indexCrcs().toList()),
                         token = EnvVars.socialGatewayToken,
                     )
                     send(Frame.Text(SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), hello)))

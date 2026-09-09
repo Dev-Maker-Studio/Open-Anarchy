@@ -553,7 +553,19 @@ object SocialGateway {
         worldsById[session.worldId]?.markClosed()
         worldsById[session.worldId] = session
         worldInfoById[session.worldId] = info
-        Lobby.worldList.put(World(info.toWorldMetadata()))
+        val world = World(info.toWorldMetadata())
+        world.customCache = servesDifferentCache(info)
+        Lobby.worldList.put(world)
+    }
+
+    private fun servesDifferentCache(info: GatewayWorldInfo): Boolean {
+        val lobby = Lobby.cacheCrcs
+        if (info.cacheCrcs.isEmpty() || lobby.isEmpty()) return false
+        val differing = (0 until maxOf(lobby.size, info.cacheCrcs.size))
+            .filter { lobby.getOrNull(it) != info.cacheCrcs.getOrNull(it) }
+        if (differing.isNotEmpty())
+            logInfo("SocialGateway: world ${info.worldId} serves its own cache (indices ${differing.joinToString()} differ)")
+        return differing.isNotEmpty()
     }
 
     /**

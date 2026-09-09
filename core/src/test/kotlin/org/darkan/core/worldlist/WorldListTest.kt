@@ -72,4 +72,13 @@ class WorldListTest {
         assertNull(list.markOffline(300))
         assertEquals(0, list.snapshot().entries.single().playersOnline)
     }
+
+    @Test
+    fun `snapshot carries the custom cache flag`() {
+        val list = WorldList(300, localWorldId = 0)
+        list.put(World(metadata(1, "live.darkan.org")))
+        list.put(World(metadata(2, "custom.darkan.org")).apply { customCache = true })
+        val flags = list.snapshot().entries.associate { it.number to it.customCache }
+        assertEquals(mapOf(1 to false, 2 to true), flags)
+    }
 }

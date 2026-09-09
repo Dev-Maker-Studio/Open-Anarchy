@@ -29,6 +29,8 @@ import org.darkan.core.net.prot.Codec
 import org.darkan.core.net.prot.packet.WorldLoginDetails
 import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.file.FileProvider
+import world.gregs.voidps.cache.file.prefetchKeys
 import world.gregs.voidps.cache.secure.RSA
 import world.gregs.voidps.cache.secure.decryptXtea
 import org.darkan.core.Logger
@@ -66,7 +68,11 @@ object WorldServer {
 
     private val pendingLogins = ConcurrentHashMap.newKeySet<String>()
 
+    private lateinit var js5: JS5Server
+
     fun start(port: Int): Job {
+        val cache = Cache.get()
+        js5 = JS5Server(FileProvider.load(cache), prefetchKeys(cache))
         val executor = Executors.newCachedThreadPool()
         dispatcher = executor.asCoroutineDispatcher()
         selectorManager = ActorSelectorManager(dispatcher)
@@ -122,6 +128,7 @@ object WorldServer {
             socket.use { socket ->
                 when (val reqOpcode = input.readByte().toInt()) {
                     RequestOpcode.CONNECT_LOGIN -> initWorldLogin(input, output, ip)
+                    RequestOpcode.JS5_INIT -> js5.init(input, output, ip)
                     else -> {
                         logTrace("Invalid request opcode for world: $reqOpcode")
                         output.finish(ResponseOpcode.INVALID_LOGIN_SERVER)

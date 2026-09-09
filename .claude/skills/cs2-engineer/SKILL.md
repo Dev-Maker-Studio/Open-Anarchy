@@ -143,7 +143,11 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
   scrolled layers are not accounted for by anything - subtract `ifGetScrollX/Y` yourself (see the
   world list tooltip fix in `reference.md`).
 - **World list flags**: bit 0 members, 1 quickchat, 2 bots allowed (Jagex's PvP bit; the client
-  never drew it and its PvP login warning keys off bit 10), 3 lootshare, 4 highlight.
+  never drew it and its PvP login warning keys off bit 10), 3 lootshare, 4 highlight, 5 the world
+  serves its own cache (the lobby sets it when a world's JS5 index CRCs differ from its own;
+  `lobby_worldswitcher_customcache_icon` draws it, the client switches JS5 endpoint on it).
+- **Three children per row in a world list column**: `3n`, `3n+1`, `3n+2` (the flag graphic, the
+  bots icon, the own-cache icon in `lobby_worldswitcher_timer`), created in that order every row.
 
 - **The minimap and compass components (`contentType` 1338/1339) must match their mask graphic's size.**
   `ComponentMinimap.drawMinimap` throws `IllegalStateException` on the first draw if the component's
