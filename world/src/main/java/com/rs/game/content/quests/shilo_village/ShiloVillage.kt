@@ -98,10 +98,6 @@ fun mapShiloVillage() {
     val STONE_PLAQUE_ID = 606
     val CHISEL_ID = 1755
     val Z_CORPSE_ID = 610
-    val LIT_CANDLE_ID = 33
-    val UNLIT_CANDLE_ID = 36
-    val LIT_TORCH_ID = 594
-    val UNLIT_TORCH_ID = 596
     val TATTERED_SCROLL_ID = 607
     val CRUMPLED_SCROLL_ID = 608
     val BURIED_MOUND_ID = 2217
@@ -363,16 +359,6 @@ fun mapShiloVillage() {
                     simple("You hear a ghostly wailing sound coming from the corpse and a whispering voice says,'Let me rest in a sacred place and assist you I will'.")
                 }
             }
-        }
-    }
-
-    onItemClick(LIT_CANDLE_ID, LIT_TORCH_ID, options = arrayOf("Extinguish")) { e ->
-        e.player.inventory.removeItems(Item(e.item.id, 1))
-        if(e.item.id == LIT_CANDLE_ID){ //lit candle
-            e.player.inventory.addItem(UNLIT_CANDLE_ID, 1) //unlit candle
-        }
-        if(e.item.id == LIT_TORCH_ID){ //lit torch
-            e.player.inventory.addItem(UNLIT_TORCH_ID, 1) //unlit torch
         }
     }
 

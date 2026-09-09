@@ -164,10 +164,7 @@ public class MerlinsCrystal extends QuestOutline {
 	});
 
 	final static int LIT_BLACK_CANDLE = 32;
-	final static int UNLIT_BLACK_CANDLE = 38;
 	final static int TINDERBOX = 590;
-
-	public static ItemClickHandler handleLitCandle = new ItemClickHandler(new Object[] { LIT_BLACK_CANDLE }, new String[] { "Extinguish" }, e -> e.getPlayer().getInventory().replaceItem(UNLIT_BLACK_CANDLE, 1, e.getItem().getSlot()));
 
 	private static final int MERLIN_FREE_VAR = 14;
 	private static final int MERLINS_CRYSTAL_OBJ = 62;
