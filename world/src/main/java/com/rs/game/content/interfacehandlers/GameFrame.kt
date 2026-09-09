@@ -89,8 +89,7 @@ fun mapGameFrameButtons() {
             Component.interface_261.component_261_14 -> player.switchMouseButtons()
             Component.interface_261.component_261_24 -> player.interfaceManager.sendSub(Sub.TAB_SETTINGS, Interface.interface_429)
             Component.interface_261.component_261_16 -> player.interfaceManager.sendSub(Sub.TAB_SETTINGS, Interface.interface_398)
-            Component.interface_261.gameframe_dropdown_2012 -> player.vars.saveVarBit(Varbit.option_gameframe_skin, 0)
-            Component.interface_261.gameframe_dropdown_2011 -> player.vars.saveVarBit(Varbit.option_gameframe_skin, 1)
+            Component.interface_261.game_settings_button_text -> GameSettings.open(player)
         }
     }
 
