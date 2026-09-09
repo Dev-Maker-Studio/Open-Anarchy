@@ -441,10 +441,7 @@ public class InventoryOptionsHandler {
 		if (player.isLocked() || player.getEmotesManager().isAnimating() || PluginManager.handle(new ItemClickEvent(player, item, slotId, item.getDefinitions().getInventoryOption(2))))
 			return;
 		player.stopAll(false);
-		// TODO: isBindItem() not available on ItemDefinition - needs dungeoneering param check
-		if (false)
-			player.getDungManager().bind(item, slotId);
-		else if (item.getDefinitions().containsOption("Teleport") && ItemTeleports.transportationDialogue(player, item))
+		if (item.getDefinitions().containsOption("Teleport") && ItemTeleports.transportationDialogue(player, item))
 			return;
 		if (player.hasRights(Rights.DEVELOPER))
 			player.sendMessage("ItemOption3: item: " + itemId + ", slotId: " + slotId);

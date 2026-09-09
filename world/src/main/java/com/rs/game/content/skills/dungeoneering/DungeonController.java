@@ -363,6 +363,18 @@ public class DungeonController extends Controller {
 
 	@Override
 	public boolean canTakeItem(GroundItem item) {
+		if (player.getDungManager().isBoundAmmo(item.getItem())) {
+			Item bound = new Item(player.getDungManager().getBindedAmmo().getId(), item.getAmount());
+			if (!player.getInventory().hasRoomFor(bound)) {
+				player.sendMessage("Not enough space in your inventory.");
+				return false;
+			}
+			if (World.removeGroundItem(player, item, false)) {
+				player.getInventory().addItem(bound);
+				player.getDungManager().addBoundAmmo(bound.getAmount());
+			}
+			return false;
+		}
 		for (KeyDoors key : DungeonConstants.KeyDoors.values())
 			if (item.getId() == key.getKeyId()) {
 				dungeon.setKey(key, true);
