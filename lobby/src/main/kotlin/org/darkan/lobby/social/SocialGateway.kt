@@ -557,13 +557,13 @@ object SocialGateway {
     }
 
     /**
-     * Drops a world and everybody who was on it: the world leaves the world list and each of its
-     * players stops being present, which their friends have to be told about the same way an
-     * individual [PlayerOffline] tells them.
+     * Drops a world and everybody who was on it: the world is listed as offline until
+     * [WorldList.expireOffline] drops it, and each of its players stops being present, which their
+     * friends have to be told about the same way an individual [PlayerOffline] tells them.
      */
     internal suspend fun detachWorld(session: WorldSession) {
         session.markClosed()
-        Lobby.worldList.remove(session.worldId)
+        Lobby.worldList.markOffline(session.worldId)
         worldsById.remove(session.worldId, session)
         worldInfoById.remove(session.worldId)
 
