@@ -617,7 +617,7 @@ public final class Familiar extends NPC {
 	}
 
 	public void sendFollowerDetails() {
-		owner.getInterfaceManager().sendSub(Sub.TAB_FOLLOWER, 662);
+		owner.getInterfaceManager().sendSubDefault(Sub.TAB_FOLLOWER);
 		owner.getInterfaceManager().openTab(Sub.TAB_FOLLOWER);
 	}
 
@@ -629,7 +629,7 @@ public final class Familiar extends NPC {
 
 	public static void confirmLeftOption(Player player) {
 		player.getInterfaceManager().openTab(Sub.TAB_INVENTORY);
-		player.getInterfaceManager().removeSub(Sub.TAB_FOLLOWER);
+		player.getInterfaceManager().sendSubDefault(Sub.TAB_FOLLOWER);
 		sendLeftClickOption(player);
 	}
 

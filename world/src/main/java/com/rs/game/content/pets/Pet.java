@@ -21,6 +21,7 @@ import com.rs.game.model.entity.actions.EntityFollow;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
+import org.darkan.core.gameval.gen.Interface;
 import org.darkan.core.gameval.gen.Varbit;
 import org.darkan.core.gameval.gen.Varp;
 import world.gregs.voidps.type.Tile;
@@ -131,7 +132,7 @@ public final class Pet extends NPC {
 			return;
 		owner.getVars().setVarBit(Varbit.lore_animal_size_percent, (int) details.getGrowth());
 		owner.getVars().setVarBit(Varbit.lore_animal_hunger_percent, (int) details.getHunger());
-		owner.getInterfaceManager().sendSub(Sub.TAB_FOLLOWER, 662);
+		owner.getInterfaceManager().sendSub(Sub.TAB_FOLLOWER, Interface.interface_662);
 		owner.getInterfaceManager().openTab(Sub.TAB_FOLLOWER);
 	}
 

@@ -23,6 +23,7 @@ import com.rs.game.content.achievements.Achievement;
 import com.rs.game.content.achievements.AchievementInterface;
 import com.rs.game.model.entity.player.Inventory;
 import com.rs.game.model.entity.player.Player;
+import org.darkan.core.gameval.gen.Interface;
 import org.darkan.core.Utils;
 
 import java.util.HashMap;
@@ -113,7 +114,12 @@ public class InterfaceManager {
 								return p.getCombatDefinitions().getSpellbook().interfaceId;
 							}
 						},
-		/* CONFIRMED */	TAB_FOLLOWER(120, 184),
+		/* CONFIRMED */	TAB_FOLLOWER(120, 184) {
+			@Override
+			public int getDefaultInterfaceId(Player player) {
+				return player.getFamiliar() != null || player.getPet() != null ? Interface.interface_662 : -1;
+			}
+		},
 		/* CONFIRMED */	TAB_FRIENDS(121, 185, 550),
 		/* CONFIRMED */	TAB_FRIENDS_CHAT(122, 186, 1109),
 		/* CONFIRMED */	TAB_CLAN_CHAT(123, 187, 1110),
