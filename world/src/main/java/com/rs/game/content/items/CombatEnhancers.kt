@@ -1,5 +1,6 @@
 package com.rs.game.content.items
 
+import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.cache.ItemDefinitions
 import com.rs.game.content.combat.AmmoType
 import com.rs.game.content.combat.AttackType
@@ -116,10 +117,9 @@ fun mapCombatEnhancingItems() {
 
     onCombatFormulaAdjust hexhunterBowPlugin@ { player, target, offensiveBonus, combatStyle ->
         if (combatStyle != CombatStyle.RANGE || player !is Player || target !is NPC) return@hexhunterBowPlugin CombatMod()
-        if (player.equipment.weaponId == 15836 || player.equipment.weaponId == 17295 || player.equipment.weaponId == 21332) {
-            val mageLvl = clampI(target.magicLevel, 0, 350)
-            if (player.controllerManager.isIn(DungeonController::class.java) && target.combatDefinitions.attackStyle == CombatStyle.MAGIC)
-                mageLvl * 2
+        if (player.equipment.weaponId == Obj.rand_mage_slayer_bow_b || player.equipment.weaponId == Obj.rand_mage_slayer_bow || player.equipment.weaponId == Obj.slug3_hex_bow) {
+            val dungeonMage = player.controllerManager.isIn(DungeonController::class.java) && target.combatDefinitions.attackStyle == CombatStyle.MAGIC
+            val mageLvl = clampI(if (dungeonMage) target.magicLevel * 2 else target.magicLevel, 0, 350)
             val atkMul = (140.0 + floor((3 * mageLvl.toDouble() - 10.0) / 100.0) - floor((0.3 * mageLvl.toDouble() - 100.0).pow(2.0) / 100.0)) / 100.0
             val strMul = (250.0 + floor((3 * mageLvl.toDouble() - 14.0) / 100.0) - floor((0.3 * mageLvl.toDouble() - 140.0).pow(2.0) / 100.0)) / 100.0
             return@hexhunterBowPlugin CombatMod(
