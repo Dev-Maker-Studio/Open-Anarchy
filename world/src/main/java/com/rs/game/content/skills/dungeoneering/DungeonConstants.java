@@ -969,8 +969,6 @@ public class DungeonConstants {
 	public static final int FARMING_PATCH_BEGINING = 50040, FARMING_PATCH_END = 50189;
 	public static final int EMPTY_FARMING_PATCH = 50038;
 
-	public static final int ESSENCE = 17776;
-
 	public static final int NORMAL_NPC = 0, GUARDIAN_NPC = 1, FISH_SPOT_NPC = 2, BOSS_NPC = 3, FORGOTTEN_WARRIOR = 4, SLAYER_NPC = 5, HUNTER_NPC = 6, PUZZLE_NPC = 7;
 
 	public static int[] GROUP_GATESTONE_RUNES = { 17792, 3 };
