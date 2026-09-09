@@ -44,9 +44,10 @@ public class LogManager extends DBItemManager {
 
 	@Override
 	public void initCollection() {
-		getDocs().createIndex(Indexes.text("type"));
-		getDocs().createIndex(Indexes.descending("hash"));
+		getDocs().createIndex(Indexes.ascending("hash"));
 		getDocs().createIndex(Indexes.ascending("date"), new IndexOptions().expireAfter(180L, TimeUnit.DAYS));
+		dropIndexIfPresent("type_text");
+		dropIndexIfPresent("hash_-1");
 	}
 
 	public void save(LogEntry entry) {

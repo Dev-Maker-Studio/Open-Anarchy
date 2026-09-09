@@ -6,8 +6,8 @@ import com.mongodb.client.model.Filters.eq
 import com.mongodb.client.model.Filters.`in`
 import com.mongodb.client.model.Filters.or
 import com.mongodb.client.model.IndexOptions
+import com.mongodb.client.model.Indexes.ascending
 import com.mongodb.client.model.ReplaceOptions
-import com.mongodb.client.model.Sorts.ascending
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
@@ -16,6 +16,7 @@ import org.darkan.core.formatPlayerNameForDisplay
 import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.model.Account
 import org.darkan.core.mongo.MongoDB.database
+import org.darkan.core.mongo.dropIndexIfPresent
 import org.darkan.core.net.web.AccountCreateRequest
 import org.darkan.core.net.web.ConflictException
 
@@ -32,14 +33,14 @@ interface AccountStore {
 }
 
 private val collection by lazy {
-        val col = database.getCollection<Account>("accounts")
-        runBlocking {
-            col.createIndex(ascending(Account::username.name), IndexOptions().unique(true))
-            col.createIndex(ascending(Account::email.name), IndexOptions().unique(true))
-            col.createIndex(ascending(Account::recoveryEmail.name), IndexOptions().sparse(true))
-            col.createIndex(ascending(Account::displayName.name))
-        }
-    return@lazy col
+    val col = database.getCollection<Account>("accounts")
+    runBlocking {
+        col.createIndex(ascending(Account::username.name), IndexOptions().unique(true))
+        col.createIndex(ascending(Account::email.name), IndexOptions().unique(true))
+        col.createIndex(ascending(Account::displayName.name))
+        col.dropIndexIfPresent("recoveryEmail_1")
+    }
+    col
 }
 
 /** The real store: the Mongo `accounts` collection. */

@@ -39,7 +39,8 @@ public class PlayerManager extends DBItemManager {
 
 	@Override
 	public void initCollection() {
-		getDocs().createIndex(Indexes.text("username"));
+		getDocs().createIndex(Indexes.ascending("username"));
+		dropIndexIfPresent("username_text");
 	}
 
 	public void getByUsername(String username, Consumer<Player> func) {

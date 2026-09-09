@@ -2,13 +2,14 @@ package org.darkan.core.mongo.collections
 
 import com.mongodb.client.model.Filters.eq
 import com.mongodb.client.model.IndexOptions
+import com.mongodb.client.model.Indexes.ascending
 import com.mongodb.client.model.ReplaceOptions
-import com.mongodb.client.model.Sorts.ascending
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.darkan.core.model.Clan
 import org.darkan.core.mongo.MongoDB.database
+import org.darkan.core.mongo.dropIndexIfPresent
 
 /**
  * The clan reads and writes the lobby performs, behind an interface so a test can put an
@@ -18,7 +19,6 @@ import org.darkan.core.mongo.MongoDB.database
  */
 interface ClanStore {
     suspend fun find(name: String): Clan?
-    suspend fun findByLeader(username: String): Clan?
     suspend fun save(clan: Clan)
     suspend fun delete(name: String)
     suspend fun findAll(): List<Clan>
@@ -28,18 +28,15 @@ private val clanCollection by lazy {
     val col = database.getCollection<Clan>("clans")
     runBlocking {
         col.createIndex(ascending(Clan::name.name), IndexOptions().unique(true))
-        col.createIndex(ascending(Clan::leaderUsername.name))
+        col.dropIndexIfPresent("leaderUsername_1")
     }
-    return@lazy col
+    col
 }
 
 /** The real store: the Mongo `clans` collection. */
 private object MongoClans : ClanStore {
     override suspend fun find(name: String): Clan? =
         clanCollection.find(eq(Clan::name.name, name)).firstOrNull()
-
-    override suspend fun findByLeader(username: String): Clan? =
-        clanCollection.find(eq(Clan::leaderUsername.name, username)).firstOrNull()
 
     override suspend fun save(clan: Clan) {
         clanCollection.replaceOne(eq(Clan::name.name, clan.name), clan, ReplaceOptions().upsert(true))
@@ -59,8 +56,6 @@ object Clans : ClanStore {
     var store: ClanStore = MongoClans
 
     override suspend fun find(name: String): Clan? = store.find(name)
-
-    override suspend fun findByLeader(username: String): Clan? = store.findByLeader(username)
 
     override suspend fun save(clan: Clan) = store.save(clan)
 

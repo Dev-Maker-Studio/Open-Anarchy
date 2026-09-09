@@ -42,11 +42,13 @@ public class GEManager extends DBItemManager {
 
 	@Override
 	public void initCollection() {
-		getDocs().createIndex(Indexes.text("owner"));
-		getDocs().createIndex(Indexes.compoundIndex(Indexes.ascending("itemId"), Indexes.ascending("completedAmount")));
-		getDocs().createIndex(Indexes.compoundIndex(Indexes.ascending("itemId"), Indexes.ascending("state")));
-		getDocs().createIndex(Indexes.compoundIndex(Indexes.ascending("itemId"), Indexes.ascending("price")));
-		getDocs().createIndex(Indexes.compoundIndex(Indexes.ascending("itemId"), Indexes.ascending("selling")));
+		getDocs().createIndex(Indexes.ascending("owner", "box"));
+		getDocs().createIndex(Indexes.ascending("state", "selling", "itemId", "price"));
+		dropIndexIfPresent("owner_text");
+		dropIndexIfPresent("itemId_1_completedAmount_1");
+		dropIndexIfPresent("itemId_1_state_1");
+		dropIndexIfPresent("itemId_1_price_1");
+		dropIndexIfPresent("itemId_1_selling_1");
 	}
 
 	public void get(String username, Consumer<List<Offer>> func) {
