@@ -1,17 +1,17 @@
 {
-  "names": [
-    "Ogress warrior"
+  "ids": [
+    7082
   ],
-  "attackAnim": -1,
+  "attackAnim": 8637,
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": 8639,
   "defendSound": -1,
-  "deathAnim": -1,
+  "deathAnim": 8641,
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,
-  "hitpoints": 800,
-  "maxHit": 120,
+  "hitpoints": 710,
+  "maxHit": 80,
   "attackStyle": "MELEE",
   "combatLevels": {
     "ATTACK": 0,
