@@ -23,10 +23,16 @@ id, real names for what we author, no comments, no attribution.
    Graphics and components: decode them with the core decoders (`GraphicDecoder`, `InterfaceDecoder`)
    through `jshell --class-path "$(ls tools/build/install/tools/lib/*.jar | tr '\n' ':')"` with
    `CACHE_PATH` set (`kotlinc -script` rejects JDK 25).
-4. Commit in `cache-source` (branch `dev`), push, bump the submodule pointer in the server commit.
+4. **Look at it before handing it over.** The tools interface viewer renders any interface with its
+   fonts and load scripts: `EXTRA="-Ddarkan.capture=<out.png> -Ddarkan.captureAfter=10"
+   tools/capture-headless.sh <root.png> 100 -- interface <id>` (private Xvfb, llvmpipe; the
+   viewer takes ~60 s to load, so settle 100). Crop the stage at 4x and judge text colour, size
+   and centring there - cream on the gold login-button art read as "trash" on the user's GPU,
+   dark brown (`0x2E1B08`) reads; verdana labels need the preset buttons' `-3` y nudge.
+5. Commit in `cache-source` (branch `dev`), push, bump the submodule pointer in the server commit.
    The dev lobby and bleeding-edge world rebuild the cache from the tree on their next restart and
    log `cache build: clientscripts: n archives repacked`.
-5. The only real test is the client. Screenshot it yourself with `client-shot.sh` beside this skill:
+6. The only real test is the client. Screenshot it yourself with `client-shot.sh` beside this skill:
    it runs `~/darkan/darkan-bot/build/libs/darkan-client-shaded-*-all.jar` on a private Xvfb (GLX
    off, or Auto Setup chooses OpenGL and captures are black), with a scratch client home, against
    any lobby - a local one from the remote-built `lobby-server.jar` with `CACHE_SOURCE_PATH` in
@@ -75,7 +81,9 @@ Read the client at `~/darkan/darkan-bot` (Kotlin) for anything below you are uns
 ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and click dispatch in
 `graphics/ifcomponent/InterfaceRenderer.kt`.
 
-- **cc ids are contiguous from 0 per component.** `cc_create` grows the slot array to `id + 1` and
+- **cc ids are contiguous from 0 per component - so create them in id order.** `cs2_3118` called
+  the bots icon (id 15) right after cc 10 and threw `RuntimeException:14` on every favourites
+  redraw; it is created last now. `cc_create` grows the slot array to `id + 1` and
   throws `RuntimeException("<id-1>")` if the slot before is empty; the whole script dies and the
   interface hangs (the world list stuck on "Please wait..." with `CS2 Error: RuntimeException:999`).
   Never offset ids (`1000 + row`). For a second child per row in a column, interleave (`2n`, `2n+1`)
@@ -167,7 +175,50 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
   way (the login screen's Facebook block became the Create Account button) leaves no gaps in the
   archive and nothing hidden.
 
+- **One function per script file.** A `.ts` is exactly one `[proc,...]`/`[clientscript,...]`; a helper
+  is its own registered script (`Unknown opcode function 'x'` otherwise). The compiler has no
+  ternary `?:` and no `!bool`: use `if`/`else` and `x == false`. Locals are renumbered on read-back
+  when you delete some, so after a pack copy the decompiled body over the source.
+- **A layer (type 0) never gets a server op, and blank `' '` ops swallow clicks.** The right-click
+  menu showed only Cancel with "Game Settings" on 261:32. Put the op on a full-size child
+  (261:37, the text) with the click mask `setting.setting = 2` (bit 1 = op 1; 1026 on the graphics
+  buttons); children copied from the login screen carry `' '` ops that consume the click - clear
+  them. Ops on ccs need the server to send `IFEvents(layer, 0, n).enableRightClickOption(0)` after
+  the interface opens, or the cc click never reaches the server.
+- **Toolkit ids (client, 2026-09-08)**: 0 safe mode, 1 legacy OpenGL, 3 modern OpenGL (DirectX's
+  old id, so `param_682` bitmasks and every script already treat it as hardware); software (2) and
+  DirectX are gone. `DETAILCANSET_RENDERER` answers 3 for anything else.
+
 ## 4. Patterns worth copying
+- **Game Settings window (interface 1321 `game_settings`, 2026-09-08)**: 742's frame (0-22 copied,
+  18 the close X with op "Close", 19 the title), `interface_caption` 24, the `rows` layer 23
+  (`onLoadScript`/`onVarpTransmit [1438]` -> `[clientscript,game_settings_init]`) and the hidden
+  `dropdown` layer 25 with its background/border 26-27. `[proc,game_settings_rebuild]` draws one row
+  per `game_settings_count()`: p12 label, a 140x16 value box (fill rect whose click hooks
+  `game_settings_dropdown_open(row)`, border, p11 text from
+  `game_settings_value_text(row, game_settings_current(row))`, the 2554 arrow; hover through
+  `cs2_2691` on the fill), then sizes the window with room for the tallest list
+  (`game_settings_values`). `[proc,game_settings_dropdown]` positions 25 under the box (`ifGetX/Y`
+  of a sibling are parent-relative here), creates one p11 text cc per value with
+  `ccSetOp(row + 1, "Select")` - the op index carries the row, the cc id the value - and the layer's
+  `onMouseLeaveScript` closes it. The server (`GameSettings.kt`) opens the window from the Options
+  tab button (261:32-37: login-button art 8699/8701, verdana 11 shaded cream label, the op on the
+  full-size text 37), enables ops 0..rows-1 on the dropdown layer, and on a click sets
+  `GameSetting.entries[opNum - 1]` to `slotId`; the var transmit redraws. Adding a setting = a case
+  in `game_settings_label`, `game_settings_values`, `game_settings_value_text` and
+  `game_settings_current`, `+1` in `game_settings_count`, and an enum entry in the same order.
+- **Graphics Options renderer row** (`[proc,graphics_options_renderer_buttons]`, 977:52-54): the
+  preset-button recipe (`set_but_*` tiles + verdana text, `stringWidth + 30`, uniform width, 16 px
+  gaps, centred in 977:51) for Safe Mode / Legacy OpenGL / Modern OpenGL, `cs2_2697(toolkit,
+  screen)` on click, the active toolkit drawn with the pressed tiles; the baked-text 3093-3122
+  buttons are unused.
+- **2011 skin, any window that shows worn slots**: give the interface the `gameframe_skin_update`
+  hook on a hook-free layer (667:64), wrap its `enum_796` silhouette lookup
+  (`cs2_2373`), and in `gameframe_skin_apply` hide its 2012 connector graphics and draw the five
+  821/822 pieces as ccs on the connector layer (667:4, y one less than 387's). Hover art is per
+  state: `cs2_5644` swaps 9208/9209 for the profanity button, so those needed wrapping and a 2011
+  hover graphic (12417, the 12148 hover tile with the icon pixels both 2011 states share).
+
 
 - **Gameframes**: the lobby screen 906, resizable frame 746 and fixed frame 548 each had a 50 px
   Home/Support/Forums/Clans bar as a root layer (906:1, 746:239, 548:2; buttons 509/517/525/533,
