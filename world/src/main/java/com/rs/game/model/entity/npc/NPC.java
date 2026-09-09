@@ -84,6 +84,8 @@ import static com.rs.utils.KtExtensionsKt.getAttackDelay;
 
 public class NPC extends Entity {
 
+	public static final String FACING_INTERACTING_PLAYER = "npcFacingInteractingPlayer";
+
 	private int id;
 	private Tile respawnTile;
 	private boolean randomWalk;
@@ -215,6 +217,16 @@ public class NPC extends Entity {
 		setNextFaceTile(null);
 		setNextFaceEntity(null);
 		setFaceAngle(getRespawnDirection());
+	}
+
+	public void faceInteracting(Player player) {
+		setNextFaceEntity(player);
+		player.getTempAttribs().setO(FACING_INTERACTING_PLAYER, this);
+	}
+
+	public void stopFacingInteracting(Player player) {
+		if (getLastFaceEntity() == player.getClientIndex() && !getCombat().hasTarget())
+			stopFaceEntity();
 	}
 
 	@Override
