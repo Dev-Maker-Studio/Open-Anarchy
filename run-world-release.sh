@@ -10,10 +10,10 @@ export DARKAN_GITLAB_PROJECT_ID="$PROJECT_ID"
 
 while :
 do
-  git pull origin dev 2>/dev/null || true
+  git pull origin dev || echo "git pull failed; running the checkout as is"
   # The cache source tree (cache-source/, a submodule) carries the gameval catalogs the server reads and, when
   # CACHE_SOURCE_PATH points at it, the cache it builds and serves; keep it at the commit this checkout pins.
-  git submodule update --init --depth 1 cache-source 2>/dev/null || true
+  git submodule update --init --depth 1 cache-source || echo "cache-source submodule update failed; building the tree as is"
 
   RELEASE=$(curl -s --header "PRIVATE-TOKEN: ${GITLAB_ACCESS_TOKEN}" "${GITLAB_API_URL}/projects/${PROJECT_ID}/releases?order_by=released_at&sort=desc&per_page=1")
   TAG=$(echo "$RELEASE" | jq -r '.[0].tag_name // empty')
