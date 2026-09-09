@@ -855,7 +855,7 @@ public class DungeonConstants {
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10128, 6, 8, false, DungeonConstants.BOSS_NPC), 786, 33, 26, 642),
 
 			//Shadow-forger Ihlakhizan
-			// new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10143, 6, 6, false, BOSS_NPC), 783, 30, 28, 640),
+			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10143, 6, 6, false, DungeonConstants.BOSS_NPC), 783, 30, 28, 640),
 
 			//Unholy cursebearer
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 10111, 6, 8, false, DungeonConstants.BOSS_NPC), 784, 15, 26, 640),
@@ -914,11 +914,9 @@ public class DungeonConstants {
 
 		},
 		//
-		//201 5513 0 for blink
 		{
-
 			// Warmonger
-			// new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12752, 6, 9, false, DungeonConstants.BOSS_NPC), 924, 57, 24, 690),
+			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12752, 6, 9, false, DungeonConstants.BOSS_NPC), 924, 57, 24, 690),
 
 			// World Gorger
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12478, 5, 6, false, DungeonConstants.BOSS_NPC), 937, 54, 26, 690),
@@ -927,7 +925,7 @@ public class DungeonConstants {
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12886, 8, 6, false, DungeonConstants.BOSS_NPC), 916, 51, 30, 688),
 
 			// Blink
-			// new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12865, 5, 6, false, BOSS_NPC), 940, 48, 24, 688),
+			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12865, 5, 6, false, DungeonConstants.BOSS_NPC), 940, 48, 24, 688),
 
 			// Dreadnaut
 			new BossRoom((dungeon, reference) -> dungeon.spawnNPC(reference, 12848, 7, 5, false, DungeonConstants.BOSS_NPC), 913, 48, 28, 688),
