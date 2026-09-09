@@ -2349,6 +2349,18 @@ public class Interactions {
 						player.getSkills().set(Skills.FARMING, player.getSkills().getLevel(Skills.FARMING) + boostAmount);
 				}));
 				break;
+			case STRANGER_PLANT:
+				ops.add("Boost Farming", new Dialogue().addNext(() -> {
+					int base = player.getSkills().getLevelForXp(Skills.FARMING);
+					int boosted = base + 1 + (int) (base * 0.04);
+					if (player.getSkills().getLevel(Skills.FARMING) >= boosted) {
+						player.sendMessage("Your Farming level is already boosted.");
+						return;
+					}
+					player.getSkills().set(Skills.FARMING, boosted);
+					player.sendMessage("The stranger plant boosts your Farming level.");
+				}));
+				break;
 		default:
 			break;
 		}
