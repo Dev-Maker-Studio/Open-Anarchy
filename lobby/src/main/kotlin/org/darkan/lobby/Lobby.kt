@@ -44,6 +44,10 @@ object Lobby : CoroutineScope {
     private lateinit var lobbyServer: LobbyServer
 
     val worldList = WorldList(300)
+
+    @Volatile
+    var cacheCrcs: IntArray = IntArray(0)
+        private set
     private val accountCreationSessions = ConcurrentHashMap.newKeySet<AccountCreationSession>()
     private val lobbyPlayers = ConcurrentHashMap<String, LobbyPlayer>()
     private lateinit var lobbyEngineLoop: EngineLoop
@@ -82,6 +86,7 @@ object Lobby : CoroutineScope {
     fun start() {
         logInfo("Starting application services...")
         cache = Cache.get()
+        cacheCrcs = cache.indexCrcs()
         cacheProvider = FileProvider.load(cache)
         js5Server = JS5Server(cacheProvider, prefetchKeys(cache))
         PacketHandlers.loadHandlersFromPackage("org.darkan.lobby.server.packet")
