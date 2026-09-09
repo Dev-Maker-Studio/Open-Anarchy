@@ -35,6 +35,8 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.actions.PlayerAction
 import org.darkan.core.Constants
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.model.Animation
 import org.darkan.core.model.Item
 import world.gregs.voidps.type.Tile
@@ -807,9 +809,10 @@ fun addXp(player: Player, target: Entity, xpType: XPType?, hit: Hit) {
 }
 
 fun getWeaponAttackEmote(weaponId: Int, attackStyle: AttackStyle): Int {
-    if (weaponId == -1) return if (attackStyle.index == 1) 423 else 422
-    if (weaponId == 22358) return if (attackStyle.index == 1) 14307 else 14393
-    return ItemConfig.get(weaponId).getAttackAnim(attackStyle.index)
+    val unarmed = if (attackStyle.index == 1) Seq.seq_423 else Seq.seq_422
+    if (weaponId == -1) return unarmed
+    if (weaponId == Obj.dom_gloves_melee_col1) return if (attackStyle.index == 1) Seq.dom_player_gloves_melee_attack_a else Seq.dom_player_gloves_melee_attack_b
+    return ItemConfig.get(weaponId).getAttackAnim(attackStyle.index).takeIf { it != -1 } ?: unarmed
 }
 
 fun getMeleeCombatDelay(weaponId: Int): Int {
