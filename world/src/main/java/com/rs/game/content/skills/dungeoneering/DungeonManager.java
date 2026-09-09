@@ -1014,10 +1014,10 @@ public class DungeonManager {
 			else
 				n = new DungeonBoss(id, tile, this, reference);
 		} else if (type == DungeonConstants.GUARDIAN_NPC) {
-			n = new Guardian(id, tile, this, reference);
+			n = new Guardian(id, tile, this);
 			visibleMap[reference.getRoomX()][reference.getRoomY()].addGuardian(n);
 		} else if (type == DungeonConstants.FORGOTTEN_WARRIOR) {
-			n = new ForgottenWarrior(id, tile, this, reference);
+			n = new ForgottenWarrior(id, tile, this);
 			visibleMap[reference.getRoomX()][reference.getRoomY()].addGuardian(n);
 		} else if (type == DungeonConstants.FISH_SPOT_NPC){
 						int maxtier = 1;
@@ -1048,8 +1048,10 @@ public class DungeonManager {
 								.random(DungeoneeringFishing.Fish.values().length - 1)]);
 			}
 		}
-		else if (type == DungeonConstants.SLAYER_NPC)
+		else if (type == DungeonConstants.SLAYER_NPC) {
 			n = new DungeonSlayerNPC(id, tile, this);
+			visibleMap[reference.getRoomX()][reference.getRoomY()].addGuardian(n);
+		}
 		else if (type == DungeonConstants.HUNTER_NPC)
 			n = new DungeonHunterNPC(id, tile, this);
 		else if (type == DungeonConstants.PUZZLE_NPC) {

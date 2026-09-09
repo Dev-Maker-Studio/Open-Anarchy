@@ -20,7 +20,6 @@ import com.rs.game.World;
 import com.rs.game.content.skills.dungeoneering.DungeonConstants.GuardianMonster;
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
 import com.rs.game.content.skills.dungeoneering.DungeonUtils;
-import com.rs.game.content.skills.dungeoneering.RoomReference;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
 import org.darkan.core.Utils;
@@ -29,8 +28,8 @@ import java.util.ArrayList;
 
 public class ForgottenWarrior extends Guardian {
 
-	public ForgottenWarrior(int id, Tile tile, DungeonManager manager, RoomReference reference) {
-		super(id, tile, manager, reference);
+	public ForgottenWarrior(int id, Tile tile, DungeonManager manager) {
+		super(id, tile, manager);
 	}
 
 	@Override
