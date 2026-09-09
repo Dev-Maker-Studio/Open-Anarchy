@@ -292,7 +292,8 @@ Shared code used by both lobby and world servers.
 ./gradlew :tools:run --args="gameval dump cache-source/gamevals/work/727"
 
 # The cache source tree (docs/cache-source.md): unpack, pack, build, verify, status.
-# 'verify' exits 1 unless packing the tree reproduces the packed cache byte for byte.
+# 'verify' exits 1 unless packing the tree reproduces the packed cache byte for byte, bar the
+# clientscripts it compiles back to equivalent bytecode and the two tables derived from them.
 ./gradlew :tools:run --args="cache unpack cache-source"
 ./gradlew :tools:run --args="cache verify cache-source ../cache"
 ./gradlew :tools:run --args="cache build cache-source data/cache"

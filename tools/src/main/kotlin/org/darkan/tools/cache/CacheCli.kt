@@ -139,15 +139,28 @@ private fun verify(args: List<String>) {
     println("Verifying $tree against ${File(packed).absolutePath}")
     val report = Verifier.verify(tree, File(packed), report = { println("  $it") })
     println()
-    println("  containers   : ${report.identical} identical, ${report.different} different, " +
-        "${report.missing} missing, ${report.extra} extra")
-    println("  tables       : ${report.tables}/${report.indices.size} identical")
-    println("  version table: ${if (report.versionTablesMatch) "matches" else "DIFFERS"}")
+    println("  containers   : ${report.identical} identical, ${report.recompiled} recompiled, " +
+        "${report.different} different, ${report.missing} missing, ${report.extra} extra")
+    println("  tables       : ${report.tables}/${report.indices.size} identical" +
+        if (report.tablesRecompiled > 0) ", ${report.tablesRecompiled} recompiled" else "")
+    println("  version table: " + when {
+        report.versionTablesMatch -> "matches"
+        report.versionTableAccountedFor -> "recompiled"
+        else -> "DIFFERS"
+    })
     println("  time         : ${report.millis} ms")
     if (report.parity) {
-        val total = report.identical + report.indices.size
+        val total = report.identical + report.recompiled + report.indices.size
         println()
-        println("Parity: every one of the $total containers came out byte for byte identical.")
+        if (report.recompiled == 0) {
+            println("Parity: every one of the $total containers came out byte for byte identical.")
+        } else {
+            println(
+                "Parity: $total containers and tables, byte for byte except the ${report.recompiled} " +
+                    "clientscripts the compiler reproduces equivalently, the reference table carrying " +
+                    "their CRCs and the version table derived from it."
+            )
+        }
         return
     }
     println()
@@ -159,10 +172,11 @@ private fun verify(args: List<String>) {
  * `cache status <tree>` - what the tree holds and what it is still keeping original bytes for.
  *
  * The pristine count is the number of editable files whose codec could not reproduce the shipped
- * bytes, so a `.pristine` sidecar is carrying them; the goal is zero. A *stale* sidecar is one
- * whose editable file no longer hashes to the value `index.json` recorded, which is how a pack
- * knows to compile the edit rather than emit the original - it is reported here so an edit that
- * has not been packed yet is visible.
+ * bytes, so a `.pristine` sidecar is carrying them; the goal is zero, and index 12 - which is
+ * compiled from its TypeScript on every pack and keeps no sidecar - contributes none. A *stale*
+ * sidecar is one whose editable file no longer hashes to the value `index.json` recorded, which is
+ * how a pack knows to compile the edit rather than emit the original - it is reported here so an
+ * edit that has not been packed yet is visible.
  */
 private fun status(args: List<String>) {
     val treePath = args.getOrNull(0)

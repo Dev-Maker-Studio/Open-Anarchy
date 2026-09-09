@@ -1,8 +1,6 @@
 package org.darkan.cs2
 
 import java.io.File
-import org.darkan.cs2.compile.Cs2CodeGen
-import org.darkan.cs2.compile.Cs2Parser
 import org.darkan.cs2.ir.AndAll
 import org.darkan.cs2.ir.ArrayAssign
 import org.darkan.cs2.ir.ArrayDefine
@@ -49,9 +47,9 @@ import world.gregs.voidps.cache.Cache
  * Whole-corpus work - return signatures by fixpoint across calls, the type inference behind the
  * constant names - is done once by [Cs2Analyzer] and shared, so nothing here pays for it twice.
  *
- * Once [analyzer] and [types] are warm, [decompileScript] and [compileSource] hold no state and
- * may be called from any number of threads at once, which is what lets a source tree unpack and
- * pack index 12 an archive per core.
+ * Once [analyzer] and [types] are warm, [decompileScript] holds no state and may be called from
+ * any number of threads at once, which is what lets a source tree unpack index 12 an archive per
+ * core.
  */
 class Cs2Corpus(private val cache: Cache) {
 
@@ -189,28 +187,6 @@ class Cs2Corpus(private val cache: Cache) {
         val structurer = Cs2Structurer(script, scriptId, analyzer, faithful)
         val function = types.apply(structurer.structure())
         return Decompiled(scriptId, Cs2Emitter(function).emit(), function, structurer.deadCode)
-    }
-
-    /**
-     * Compiles source text that is not on disk.
-     *
-     * The folder's own declarations bind renamed identifiers ([Cs2SymbolTable]), so this is for
-     * source that has just been decompiled and therefore carries the catalogs' own names and
-     * nothing else - the round-trip check a codec does while it unpacks. Anything read off disk
-     * goes through [Cs2Compiler] instead, which reads the folder's bindings.
-     *
-     * @param relativePath the path the source would sit at, which is one of the two ways a file
-     *   says which script it is; the other, its header, is in the text.
-     */
-    fun compileSource(source: String, relativePath: String? = null): ByteArray {
-        val function = Cs2Parser(
-            source,
-            analyzer::paramIsString,
-            Cs2SymbolTable.EMPTY,
-            relativePath,
-            analyzer::returnTypes
-        ).parse()
-        return Cs2Codec.encode(Cs2CodeGen(function, analyzer).generate())
     }
 
     // ------------------------------------------------------------------ project files

@@ -16,11 +16,19 @@ what changes on the servers and in CI.
 ## Goals and guarantees
 
 1. **Parity.** Unpacking a cache and packing the result with no edits reproduces every JS5
-   container byte for byte, every reference table byte for byte, and therefore the same CRCs,
-   whirlpools and version table the client already trusts. `cache verify` proves it and is run
-   in tests. Parity is *by construction*: a codec that cannot reproduce a file exactly keeps the
-   original bytes next to its editable form (the *pristine* fallback, below) until that form is
-   edited.
+   container byte for byte, and with it every reference table, every CRC and whirlpool and the
+   signed version table the client already trusts - with one stated exception. Index 12 is compiled
+   from its TypeScript on every pack (*clientscripts*, below), so the scripts the decompiler
+   normalises come back equivalent rather than identical, and `cache verify` counts those as
+   **recompiled** rather than different. A recompiled container carries its own CRC, so index 12's
+   reference table and the version table derived from it cannot match the shipped cache either -
+   and that is the whole of the divergence. Parity therefore means: every container byte for byte
+   except a recompiled clientscript, every reference table byte for byte except index 12's, whose
+   difference is explained by exactly those recompiled archives and nothing else, and the version
+   table differing only because index 12's table does. `cache verify` proves that and exits 1 on
+   anything more; it is run in tests. Everywhere else parity is *by construction*: a codec that
+   cannot reproduce a file exactly keeps the original bytes next to its editable form (the
+   *pristine* fallback, below) until that form is edited.
 2. **Git without LFS.** One file per asset, deterministic output, stable names keyed by id, no
    churn on re-unpack. Binary assets (models, sounds, textures, graphics) stay binary; they are
    incompressible either way.
@@ -1765,15 +1773,19 @@ guarded file no longer hashes to the recorded value - is `status`'s way of showi
 has not been packed yet.
 
 `SourceCodec.exact(archive)` says whether packing what the codec wrote reproduces the group, and
-`unpack` packs the archive again to count the ones that do not. A codec that installs its own
-fallback while it unpacks - `Cs2SourceCodec` does, because it has to compile each script anyway to
-find out - is `exact` and reports its count through `UnpackedArchive.pristine` instead;
-`UnpackReport.inexact` only ever sees a codec that leaves the decision to the framework, so
-`cache unpack`'s pristine line reads 0 for such an index and `cache status` is the number to read.
+`unpack` packs the archive again to count the ones that do not, reporting them as
+`UnpackReport.inexact`.
 
-This is what lets a normalising compiler (the CS2 decompiler drops dead code by design, so 1,066
-of the 6,567 clientscripts recompile to different but equivalent bytes) and a not-yet-exact
-encoder coexist with the parity guarantee.
+This is what lets a not-yet-exact encoder coexist with byte for byte parity: the shipped bytes are
+served until somebody edits the file the encoder cannot yet reproduce.
+
+**Index 12 does not use any of it.** `SourceCodec.functional` is the other answer a codec can give:
+the index is reproduced *functionally* rather than byte for byte, so an archive whose packed bytes
+differ from the shipped ones is recompiled and not wrong. `Cs2SourceCodec` is the one codec that
+says so - every clientscript is compiled from its `.ts` on every pack - and it keeps no sidecar and
+records no guard, so index 12 contributes nothing to the pristine or stale counts and `cache
+verify` classifies its differing containers as *recompiled* by asking the codec. See
+*clientscripts*.
 
 `DefinitionJsonCodec` checks itself file by file rather than archive by archive, because a definition
 *is* a file: on the way out it decodes the shipped bytes, writes the JSON, reads that JSON straight
@@ -1805,7 +1817,6 @@ clientscripts/
   proc/quicksort.ts                one file per script, at its gameval name's path
   clientscript/<name>.ts
   cs2/cs2_1620.ts                  a script with no proven name, under the catalog's placeholder prefix
-  proc/<name>.ts.pristine          the shipped bytes of a script the compiler normalises
 ```
 
 A script's identity is its gameval name, not a number: the path and the `// [proc,quicksort]`
@@ -1815,23 +1826,28 @@ and relocates the file - and nothing else may move it.
 
 The five project files are a property of the *corpus*, not of any one archive: `vars.d.ts` only
 knows a variable exists because some script uses it, and `cs2.d.ts` carries argument kinds and param
-types learned from all 6,567 scripts at once. `SourceCodec.unpackIndex` is the hook they come out
+types learned from all 6,569 scripts at once. `SourceCodec.unpackIndex` is the hook they come out
 of - it runs once after the index's archives and claims what it returns, so nothing under
 `clientscripts/` is carried out of an archive that has no business producing it - and `owner`
 answers `Owner.Index` for all five, so editing one repacks nothing and is handed to `packIndex`
 instead (see *The `SourceCodec` interface*).
 
-**1,066 of the 6,567 scripts are pristine.** The decompiler normalises by design - it drops
-unreachable code, folds initialisers into declarations, lays branches out canonically - so those
-scripts compile back to equivalent but different bytes and their originals are kept in
-`<name>.ts.pristine`. The other 5,501 compile back to the cache's own bytes exactly. Either way
-the tree reproduces index 12 byte for byte until a script is actually edited.
+**Index 12 is reproduced functionally, not byte for byte.** Every script is compiled from its
+`.ts` on every pack, always - what ships is the compiler's output and nothing else. 5,504 of the
+6,569 compile back to the cache's own bytes exactly; the decompiler normalises by design - it
+drops unreachable code, folds initialisers into declarations, lays branches out canonically - so
+the other 1,065 come back equivalent but different. Nothing is kept beside a script to paper over
+that: there is no `<name>.ts.pristine` sidecar and no `pristine` guard in `index.json`, an unpack
+writes the `.ts` and nothing else, and a leftover sidecar from an older tree is an input of nothing
+(`files`, `owner`) that no build reads. The parity is declared instead - `Cs2SourceCodec.functional`
+is `true` - and `cache verify` counts those 1,065 as `recompiled` rather than `different`, with
+parity holding at `recompiled > 0`.
 
-**Editing a script.** Edit the `.ts` and restart the server (or run `tools cache build`). The
-edited file no longer hashes to the guard `index.json` recorded, so the pack compiles it instead of
-emitting the shipped bytes; a compile error names the file and the diagnostic as
-`file:line:col: what went wrong` and fails the build rather than serving stale bytecode. Only the
-archives whose files changed are recompiled, so an edit to one script costs one compile. Renaming
+**Editing a script.** Edit the `.ts` and restart the server (or run `tools cache build`). The next
+pack compiles what is there, as it does for every script; a compile error names the file and the
+diagnostic as `file:line:col: what went wrong` and fails the build rather than serving stale
+bytecode. Only the archives whose files changed are packed, so an edit to one script costs one
+compile. Renaming
 an identifier in `vars.d.ts` or `gamevals.d.ts` is a rename, not an edit: run `cs2 sync-names` to
 write it back into the catalogs, which is where the names live.
 
@@ -1854,8 +1870,8 @@ compiler over it. It lexes each script's declaration line and nothing else - par
 be circular, since parsing is what needs the answers - so the whole corpus's signatures cost about
 0.3 s against roughly 7 s for the analysis. It is the same `Cs2Context` the analyzer implements, so
 nothing downstream can tell which one it was handed, and the parity proof is that it produces the
-cache's own bytes: `Cs2SourceCodecTest` packs all 6,567 archives with the codec's cache seam wired
-to throw, and gets 5,501 exact compiles and 1,066 sidecars back.
+cache's own bytes: `Cs2SourceCodecTest` packs all 6,569 archives with the codec's cache seam wired
+to throw, and gets 5,504 exact compiles and 1,065 equivalent ones back, with nothing failing.
 
 Only the param types needed writing down, because a param's type belongs to its param definition
 rather than to any script and a lookup's bytecode does not say which stack it used. They go into
@@ -1875,7 +1891,7 @@ hand-edited script reading a string param would be compiled against the wrong st
 `tools cs2 declarations <dir>` or a re-unpack writes it.
 
 **What a pack of index 12 costs.** The signature scan is about 0.3 s, done once per build and
-shared; after it a compile is well under a millisecond, and all 6,567 scripts compile in 1.3 s. A
+shared; after it a compile is well under a millisecond, and all 6,569 scripts compile in 1.3 s. A
 build that changes no clientscript never constructs the compiler and pays none of it. `packIndex`
 is where the context is set up, and it also *drops* the previous one, so a second build in the same
 process reads a tree that has moved rather than a stale scan of it.
@@ -1990,10 +2006,11 @@ Each command prints one line per index as it goes and then its totals:
   how many stale ones it deleted, and the opaque, pristine and missing counts.
 - **pack** replaces whatever cache is in `<outDir>`; **build** patches it and falls back to a full
   pack when there is nothing usable to patch, saying which it did and why.
-- **verify** prints, per index, how many containers came out identical, different, missing or extra,
-  whether the reference table matched, and the first few differing archives with what differs about
-  them; then the totals and whether the derived version table matches. **It exits 1 on any
-  difference**, so it works as a test.
+- **verify** prints, per index, how many containers came out identical, recompiled, different,
+  missing or extra, whether the reference table matched, and the first few differing archives with
+  what differs about them; then the totals and what became of the derived version table. A
+  recompiled clientscript, index 12's table and the version table that follows from it are the
+  allowance; **it exits 1 on any other difference**, so it works as a test.
 - **status** is read-only: per index its codec, archive count, file count, pristine count, opaque
   count and how many `.pristine` sidecars are *stale* - the guarded file no longer hashes to the
   value `index.json` recorded, so the next pack will compile the edit rather than emit the original.
@@ -2010,7 +2027,7 @@ unpacker runs an archive per thread), and the tree grows by 1,042 MB - see *mode
 
 Against the 727 cache on one 12-core machine, on the tree at `cache-source/`: unpack 12.8 s when the
 tree is already right and 44 s when every file has to be written (140,692 archives, 397,041 files,
-1.9 GB, 8 opaque, 1,066 pristine - all of them clientscripts), pack 22 s, verify 20 s at full parity,
+1.9 GB, 8 opaque, 0 pristine), pack 22 s, verify 20 s at parity,
 a no-op build 3.2 s and a one-archive build 7.4 s. Index 5 is 654 MB and 14 s of that. Unpacking
 costs the time it does because every one of the 245,751 definition files and 7,260 map files is
 decoded, written as JSON, read back and re-encoded on the way out to prove it survives the trip; the
@@ -2022,13 +2039,13 @@ unpack of the whole cache measured 23 s, a pack 17 s and a verify 17 s at full p
 move by a factor of two with machine load and disk cache state; the codecs' own cost, measured on its own
 and single threaded, is 9.8 s for all 14,758 archives - see *What the 2D indices cost*.
 
-With index 12 as TypeScript the same runs cost about 8 s more to unpack (the CS2 corpus analysis
-and a round-trip compile of every script) and 1.6 s more to pack (the folder's signature scan, then
-5,501 compiles). Measured on the tree at `cache-source/`, building it into an empty directory and
+With index 12 as TypeScript the same runs cost the CS2 corpus analysis on top of an unpack and
+about 2.6 s on top of a pack (the folder's signature scan, then 6,569 compiles). Measured on the tree at `cache-source/`, building it into an empty directory and
 opening the result takes **16 s** end to end; a second run with nothing changed is **2.7 s**, of
 which the build itself is a stat walk; editing one clientscript and rebuilding is **4.4 s** and
 repacks exactly that one archive. `cache verify` of the built cache against the tree is 12 s at
-full parity: 140,692 containers, 37 reference tables and the derived version table, all identical.
+parity: 140,692 containers and 37 reference tables, everything byte identical bar the recompiled
+clientscripts, index 12's table and the version table derived from it.
 
 **Those whole-tree numbers predate the nine record indices above and have not been re-measured.** They
 add 10,268 files and 553 MB to the tree, of which index 0 alone is 4,085 files and 530 MB, so the tree's
@@ -2087,6 +2104,7 @@ codec in core.
 | **`files(directory, archive)`** | per archive | every file that makes up the archive, sidecars included |
 | `pristineFiles(directory, archive)` | per archive | the archive's `.pristine` sidecars; by default the ones `files` returns whose name says so |
 | `exact(archive)` | per archive | whether packing what `unpack` wrote reproduces the group; false makes the unpacker check, archive by archive |
+| `functional` | once per index | whether the index is reproduced functionally rather than byte for byte, so a container that differs is recompiled and not wrong; only `Cs2SourceCodec` says true |
 | `fileIdsFromMetadata(archive)` | per archive | whether the file ids have to be carried in `index.json` because the layout cannot spell them out |
 | `unpackIndex(directory, index, archives)` | once per index | files that belong to the index rather than to any archive - *and* the claim that keeps them |
 | `packIndex(directory, index, archives, changedIndexFiles)` | once per index | shared state to set up before the archives are packed, and the index level files that moved |

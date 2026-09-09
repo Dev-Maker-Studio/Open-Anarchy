@@ -19,6 +19,12 @@ class IndexVerification(
     val index: Int,
     /** Containers that came out of the tree byte for byte as the packed cache holds them. */
     val identical: Int,
+    /**
+     * Containers of a [functional][world.gregs.voidps.cache.source.codec.SourceCodec.functional]
+     * index that differ from what shipped: index 12's clientscripts, which are compiled from their
+     * TypeScript on every pack. See `docs/cache-source.md`, "clientscripts".
+     */
+    val recompiled: Int,
     val different: Int,
     /** Archives the tree has and the packed cache does not. */
     val missing: Int,
@@ -28,10 +34,26 @@ class IndexVerification(
     /** The first few differences, as `archive: what differs`. */
     val examples: List<String>
 ) {
+    /**
+     * Whether a reference table that is not identical differs for exactly one reason: it carries
+     * the CRCs and whirlpools of this index's [recompiled] containers, and nothing else about the
+     * index diverged.
+     */
+    val tableAccountedFor: Boolean
+        get() = !tableIdentical && recompiled > 0 && different == 0 && missing == 0 && extra == 0
+
     override fun toString(): String =
-        "${IndexNames.name(index)}: $identical identical, $different different, $missing missing, " +
-            "$extra extra, table ${if (tableIdentical) "identical" else "DIFFERS"}" +
+        "${IndexNames.name(index)}: $identical identical, " +
+            (if (recompiled > 0) "$recompiled recompiled, " else "") +
+            "$different different, $missing missing, " +
+            "$extra extra, table ${tableState(tableIdentical, tableAccountedFor)}" +
             if (examples.isEmpty()) "" else " (${examples.joinToString("; ")})"
+}
+
+private fun tableState(identical: Boolean, accountedFor: Boolean) = when {
+    identical -> "identical"
+    accountedFor -> "recompiled"
+    else -> "DIFFERS"
 }
 
 /** Container level parity between a source tree and a packed cache. */
@@ -42,6 +64,9 @@ class VerifyReport(
 ) {
     val identical: Int
         get() = indices.sumOf { it.identical }
+
+    val recompiled: Int
+        get() = indices.sumOf { it.recompiled }
 
     val different: Int
         get() = indices.sumOf { it.different }
@@ -55,23 +80,50 @@ class VerifyReport(
     val tables: Int
         get() = indices.count { it.tableIdentical }
 
-    /** Whether every container, every reference table and the version table came out identical. */
+    /** Indices whose reference table differs only because their containers were [recompiled]. */
+    val tablesRecompiled: Int
+        get() = indices.count { it.tableAccountedFor }
+
+    private val tablesUnexplained: Int
+        get() = indices.count { !it.tableIdentical && !it.tableAccountedFor }
+
+    /** Whether the version table differs only because a recompiled index's table does. */
+    val versionTableAccountedFor: Boolean
+        get() = !versionTablesMatch && tablesRecompiled > 0 && tablesUnexplained == 0
+
+    /**
+     * Whether the tree reproduces the cache: every container byte for byte except a functional
+     * index's, every reference table byte for byte except the ones whose divergence those
+     * [recompiled] containers account for, and the derived version table matching unless one of
+     * those tables changed it.
+     */
     val parity: Boolean
-        get() = different == 0 && missing == 0 && extra == 0 && tables == indices.size && versionTablesMatch
+        get() = different == 0 && missing == 0 && extra == 0 && tablesUnexplained == 0 &&
+            (if (versionTablesMatch) tablesRecompiled == 0 else versionTableAccountedFor)
 
     override fun toString(): String =
-        "$identical identical containers, $different different, $missing missing, $extra extra, " +
-            "$tables/${indices.size} tables identical, version table ${if (versionTablesMatch) "matches" else "DIFFERS"}, " +
+        "$identical identical containers, " +
+            (if (recompiled > 0) "$recompiled recompiled, " else "") +
+            "$different different, $missing missing, $extra extra, " +
+            "$tables/${indices.size} tables identical" +
+            (if (tablesRecompiled > 0) ", $tablesRecompiled recompiled" else "") +
+            ", version table ${tableState(versionTablesMatch, versionTableAccountedFor)}, " +
             "in ${millis}ms"
 }
 
 /**
- * Proves that packing a source tree reproduces a packed cache exactly.
+ * Proves that packing a source tree reproduces a packed cache.
  *
  * Nothing is written: each archive is rebuilt in memory and compared against the container the
  * packed cache holds, and each reference table the same way. The version table - which is derived
  * and signed rather than stored - is built from both sides and compared too, because that is the
  * one thing the client checks with a signature rather than a CRC.
+ *
+ * Everything is byte for byte except index 12, which is compiled from its TypeScript on every pack
+ * and so hands back equivalent rather than identical bytes for the scripts the decompiler
+ * normalises. Those carry their own CRCs, so index 12's reference table and the version table
+ * derived from it cannot match either; [VerifyReport.parity] is exactly that allowance and nothing
+ * more.
  *
  * `unpack` then `verify` against the cache that was unpacked is the parity guarantee in
  * `docs/cache-source.md`, and is what the whole-cache test runs.
@@ -125,6 +177,7 @@ object Verifier {
         val entries = ArrayList<ArchiveEntry>(ids.size)
         val examples = ArrayList<String>()
         var identical = 0
+        var recompiled = 0
         var different = 0
         var missing = 0
         if (ids.isNotEmpty()) {
@@ -156,6 +209,8 @@ object Verifier {
                 }
             } else if (stored.contentEquals(built.bytes)) {
                 identical++
+            } else if (codec.functional) {
+                recompiled++
             } else {
                 different++
                 if (examples.size < EXAMPLES) {
@@ -182,6 +237,7 @@ object Verifier {
         return IndexVerification(
             index = index,
             identical = identical,
+            recompiled = recompiled,
             different = different,
             missing = missing,
             extra = extra,

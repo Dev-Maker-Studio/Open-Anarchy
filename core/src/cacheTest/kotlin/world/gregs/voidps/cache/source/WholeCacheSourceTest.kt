@@ -20,7 +20,11 @@ import kotlin.test.assertTrue
 
 /**
  * The source tree against the real 727 cache: unpack it, pack the tree back, and demand that
- * every container and every reference table comes out byte for byte as it went in.
+ * every container and every reference table comes out byte for byte as it went in, bar a
+ * clientscript the compiler only reproduces functionally - the one allowance `parity` makes, which
+ * its index's reference table and the derived version table then follow. The `cs2` codec is not on
+ * this suite's classpath, so index 12 is raw bytes here and nothing is recompiled;
+ * `Cs2SourceTreeParityTest` is where that half is proved.
  *
  * This is the parity guarantee `docs/cache-source.md` makes, and the only place it can actually
  * be proved. It also checks the two properties everything downstream leans on: unpacking the same
@@ -71,10 +75,21 @@ class WholeCacheSourceTest {
             assertEquals(0, report.different, "no container may differ")
             assertEquals(0, report.missing)
             assertEquals(0, report.extra)
-            assertEquals(report.indices.size, report.tables, "every reference table must be identical")
-            assertTrue(report.versionTablesMatch, "the derived version tables must match")
-            assertTrue(report.parity, "the tree must reproduce the cache exactly")
-            assertEquals(unpacked.archives, report.identical)
+            assertEquals(
+                unpacked.archives,
+                report.identical + report.recompiled,
+                "every archive must come back identical or as a guarded recompile"
+            )
+            assertEquals(
+                report.indices.size,
+                report.tables + report.tablesRecompiled,
+                "a reference table may only differ where its recompiled containers explain it"
+            )
+            assertTrue(
+                report.versionTablesMatch || report.versionTableAccountedFor,
+                "the derived version table may only differ through a recompiled index's table"
+            )
+            assertTrue(report.parity, "the tree must reproduce the cache: $report")
 
             val build = Builder.build(SourceTree.open(tree), output) { println("  build $it") }
             println("no-op build: $build")
