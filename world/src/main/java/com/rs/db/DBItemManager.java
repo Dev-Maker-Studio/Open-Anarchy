@@ -33,6 +33,14 @@ public abstract class DBItemManager {
         return DBConnection.getCollection(collectionName);
     }
 
+    protected void dropIndexIfPresent(String name) {
+        for (Document index : getDocs().listIndexes())
+            if (name.equals(index.getString("name"))) {
+                getDocs().dropIndex(name);
+                return;
+            }
+    }
+
     public void execute(Runnable task) {
         // Wrapped so a failing save is logged instead of vanishing into the ignored Future
         // returned by submit(). Matches legacy com.rs.lib.db.DBItemManager#execute (line 61).

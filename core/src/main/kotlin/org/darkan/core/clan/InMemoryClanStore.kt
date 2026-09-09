@@ -10,8 +10,6 @@ class InMemoryClanStore : ClanStore {
 
     override suspend fun find(name: String): Clan? = clans[name]
 
-    override suspend fun findByLeader(username: String): Clan? = clans.values.firstOrNull { it.leaderUsername == username }
-
     override suspend fun save(clan: Clan) {
         clans[clan.name] = clan
     }

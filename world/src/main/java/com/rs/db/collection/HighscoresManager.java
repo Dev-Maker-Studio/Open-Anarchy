@@ -39,8 +39,9 @@ public class HighscoresManager extends DBItemManager {
 
 	@Override
 	public void initCollection() {
-		getDocs().createIndex(Indexes.compoundIndex(Indexes.text("displayName"), Indexes.text("username")));
+		getDocs().createIndex(Indexes.ascending("username"));
 		getDocs().createIndex(Indexes.descending("totalLevel", "totalXp"));
+		dropIndexIfPresent("displayName_text_username_text");
 	}
 
 	public void save(Player player) {
