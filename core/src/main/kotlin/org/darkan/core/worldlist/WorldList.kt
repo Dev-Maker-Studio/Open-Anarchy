@@ -3,13 +3,18 @@ package org.darkan.core.worldlist
 import org.darkan.core.EnvVars
 import org.darkan.core.net.prot.dto.WorldListEntry
 import org.darkan.core.net.prot.dto.WorldListSnapshot
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 
 /**
  * [localWorldId], when above 0, pins a "localhost" entry under that number so developers can reach a
  * world on their own machine through this lobby. The pinned entry is permanent: a world registering
  * under the same number cannot replace it, and a disconnect cannot remove it.
+ *
+ * A world that disconnects stays listed as offline (the client shows -1 players) and is only
+ * dropped by [expireOffline] once it has been gone for [offlineTtl].
  */
-class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.localWorldId) {
+class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.localWorldId, private val offlineTtl: Duration = OFFLINE_TTL) {
     private val worlds = sortedMapOf<Int, World>()
     private var _revision = 10
 
@@ -36,6 +41,27 @@ class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.loca
             _revision++
         }
         return orig
+    }
+
+    fun markOffline(number: Int): World? = synchronized(worlds) {
+        if (isPinned(number)) return null
+        val world = worlds[number] ?: return null
+        if (!world.offline) {
+            world.offline = true
+            world.playersOnline = -1
+            _revision++
+        }
+        return world
+    }
+
+    fun expireOffline(): List<World> = synchronized(worlds) {
+        val expired = worlds.values.filter { it.offline && it.timeOffline >= offlineTtl.inWholeMilliseconds && !isPinned(it.metadata.number) }
+        if (expired.isNotEmpty()) {
+            expired.forEach { worlds.remove(it.metadata.number) }
+            updateIndices()
+            _revision++
+        }
+        return expired
     }
 
     fun put(world: World) {
@@ -96,5 +122,9 @@ class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.loca
         var index = 0
         for (key in worlds.keys)
             worlds[key]?.index = index++
+    }
+
+    companion object {
+        val OFFLINE_TTL = 12.hours
     }
 }

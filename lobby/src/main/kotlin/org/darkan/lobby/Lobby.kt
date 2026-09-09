@@ -92,7 +92,8 @@ object Lobby : CoroutineScope {
         lobbyEngineLoop = EngineLoop(
             arrayOf(
                 processInput,
-                flushOutgoingNetworkSessions
+                flushOutgoingNetworkSessions,
+                expireOfflineWorlds
             ),
             ::reportTickConcern
         )
@@ -143,6 +144,10 @@ object Lobby : CoroutineScope {
             lobbyPlayers.values.forEach { it.handleDecodedPackets() }
             accountCreationSessions.forEach { it.handleDecodedPackets() }
         }
+    }
+
+    val expireOfflineWorlds = Runnable {
+        worldList.expireOffline().forEach { logInfo("Removed world ${it.metadata.number} (${it.metadata.activity}) after ${WorldList.OFFLINE_TTL} offline") }
     }
 
     val flushOutgoingNetworkSessions = Runnable {

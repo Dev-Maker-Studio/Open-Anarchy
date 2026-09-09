@@ -12,12 +12,10 @@ class World(val metadata: WorldMetadata) {
     var playersOnline: Int = 0
         set(value) {
             if (offlineSince >= 0) {
-                if (field >= 0)
+                if (value >= 0)
                     offlineSince = -1
-            } else {
-                if (field < 0)
-                    offlineSince = currentTimeMillis()
-            }
+            } else if (value < 0)
+                offlineSince = currentTimeMillis()
             field = value
         }
 

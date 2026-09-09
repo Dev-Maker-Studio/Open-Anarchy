@@ -4,6 +4,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.hours
 
 class WorldListTest {
     private fun metadata(number: Int, host: String) =
@@ -35,5 +37,39 @@ class WorldListTest {
         val list = WorldList(300, localWorldId = 0)
         assertNull(list.get(300))
         assertNull(list.getDefault())
+    }
+
+    @Test
+    fun `a disconnected world stays listed as offline until the ttl passes`() {
+        val list = WorldList(300, localWorldId = 0, offlineTtl = 12.hours)
+        list.put(World(metadata(1, "xmr.darkan.org")))
+        val revision = list.revision
+
+        val world = assertNotNull(list.markOffline(1))
+        assertTrue(world.offline)
+        assertEquals(-1, list.snapshot().entries.single().playersOnline)
+        assertEquals(revision + 1, list.revision)
+        assertTrue(list.expireOffline().isEmpty())
+
+        world.offlineSince -= 12.hours.inWholeMilliseconds
+        assertEquals(listOf(1), list.expireOffline().map { it.metadata.number })
+        assertNull(list.get(1))
+    }
+
+    @Test
+    fun `a world that reconnects replaces its offline entry`() {
+        val list = WorldList(300, localWorldId = 0)
+        list.put(World(metadata(1, "xmr.darkan.org")))
+        list.markOffline(1)
+        list.put(World(metadata(1, "xmr.darkan.org")))
+        assertEquals(0, list.snapshot().entries.single().playersOnline)
+        assertTrue(list.expireOffline().isEmpty())
+    }
+
+    @Test
+    fun `the pinned local world is never marked offline`() {
+        val list = WorldList(300, localWorldId = 300)
+        assertNull(list.markOffline(300))
+        assertEquals(0, list.snapshot().entries.single().playersOnline)
     }
 }
