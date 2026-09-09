@@ -210,6 +210,13 @@ class RsFont(
 
     fun textWidth(text: String): Int = definition.textWidth(text, null)
 
+    /** How many lines [text] wraps to in [width] pixels, which is what `PARAHEIGHT` answers. */
+    fun lineCount(text: String, width: Int): Int {
+        if (text.isEmpty()) return 1
+        if (width <= 0) return 1
+        return definition.splitLines(text, widths = intArrayOf(width), icons = null).size.coerceAtLeast(1)
+    }
+
     companion object {
         private const val ALIGN_START = 0
         private const val ALIGN_CENTRE = 1

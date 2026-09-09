@@ -20,12 +20,14 @@ import org.darkan.tools.cache.texture.*
 import org.darkan.tools.cache.texture.ops.*
 import org.darkan.tools.cache.terrain.TerrainLoader
 import org.darkan.tools.util.runTileMapDump
+import org.darkan.tools.viewer.InterfaceStartup
 import org.darkan.tools.viewer.InterfaceViewer
 import org.darkan.tools.viewer.MapViewer
 import org.darkan.tools.viewer.ModelViewer
 import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
+import java.io.File
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -66,7 +68,7 @@ fun main(args: Array<String>) {
         "interface", "interfaces", "ui" -> {
             val interfaceId = args.getOrNull(1)?.toIntOrNull() ?: 0
             println("Starting Interface Editor with interface $interfaceId...")
-            InterfaceViewer(cache, interfaceId).run()
+            InterfaceViewer(cache, interfaceId, interfaceStartup(args.drop(1))).run()
         }
         "diagnose", "debug" -> {
             // Diagnostic mode: diagnose <regionX> <regionY> <localX> <localY> [plane]
@@ -122,6 +124,9 @@ fun main(args: Array<String>) {
             val texId = args.getOrNull(1)?.toIntOrNull() ?: 725
             runTextureDiagnostic(cache, texId)
         }
+        "icon", "icons" -> {
+            runIcon(cache, args.drop(1))
+        }
         "texdump" -> {
             val texId = args.getOrNull(1)?.toIntOrNull() ?: 725
             val outputPath = args.getOrNull(2) ?: "texture_$texId.png"
@@ -149,9 +154,6 @@ fun main(args: Array<String>) {
         }
         "env", "environment", "lighting" -> {
             runEnvironmentDiagnostic(cache, args.drop(1))
-        }
-        "icon", "icons" -> {
-            runIcon(cache, args.drop(1))
         }
         "help", "-h", "--help" -> {
             printHelp()
@@ -1403,6 +1405,48 @@ private fun indexLabel(index: Int): String = when (index) {
     else -> "?"
 }
 
+private fun interfaceStartup(args: List<String>): InterfaceStartup {
+    var source: File? = null
+    var packedOnly = false
+    val vars = ArrayList<String>()
+    val stats = ArrayList<String>()
+    val runs = ArrayList<String>()
+    var index = 0
+    while (index < args.size) {
+        val flag = args[index]
+        val value = args.getOrNull(index + 1)
+        when (flag) {
+            "--source" -> {
+                if (value == null) error("--source needs a cache source tree, or 'none'")
+                if (value == "none") packedOnly = true else source = File(value)
+                index++
+            }
+            "--var" -> {
+                vars.add(value ?: error("--var needs <name>=<value>"))
+                index++
+            }
+            "--stat" -> {
+                stats.add(value ?: error("--stat needs <stat>=<level> or all=<level>"))
+                index++
+            }
+            "--run" -> {
+                runs.add(value ?: error("--run needs a clientscript name or id"))
+                index++
+            }
+            "--capture" -> {
+                System.setProperty("darkan.capture", value ?: error("--capture needs an output PNG path"))
+                index++
+            }
+            "--settle" -> {
+                System.setProperty("darkan.captureAfter", value ?: error("--settle needs seconds"))
+                index++
+            }
+        }
+        index++
+    }
+    return InterfaceStartup(source, packedOnly, vars, stats, runs)
+}
+
 private fun printHelp() {
     println("""
         Darkan Tools - Game Asset Viewer
@@ -1413,7 +1457,14 @@ private fun printHelp() {
           model [id]  - View 3D models from the cache (default)
                         Optional: specify a model ID to load on startup
           map        - View terrain/map regions with full scene rendering
-          interface  - View UI interfaces and components
+          interface  - View UI interfaces and components. Live source mode reads
+                        components and clientscripts straight from a cache source
+                        tree, so an edit shows up without packing:
+                          interface <id> [--source <tree>|none] [--var <name>=<value>]
+                                         [--stat <id|all>=<level>] [--run <script>]
+                                         [--capture <out.png>] [--settle <seconds>]
+                        A cache-source tree beside the working directory is used
+                        automatically; --source none reads only the packed cache.
           faces [id] - Print face geometry diagnostic for a model
                         Shows untextured face positions, normals, and
                         nearby textured faces for coplanarity analysis
@@ -1490,6 +1541,7 @@ private fun printHelp() {
           ./gradlew :tools:run --args="model 12345"
           ./gradlew :tools:run --args="map"
           ./gradlew :tools:run --args="interface"
+          ./gradlew :tools:run --args="interface 499 --source cache-source --var varbit_skill_guide_skill_v2=11 --run cs2_23"
           ./gradlew :tools:run --args="lookup hash water"
           ./gradlew :tools:run --args="lookup scan"
           ./gradlew :tools:run --args="lookup 9 725"

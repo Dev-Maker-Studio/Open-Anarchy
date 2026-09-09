@@ -12,7 +12,10 @@ import imgui.type.ImInt
 import imgui.type.ImString
 import org.darkan.cs2.Cs2Analyzer
 import org.darkan.cs2.Cs2HotReload
+import org.darkan.cs2.OpKind
 import org.darkan.cs2.vm.Cs2Event
+import org.darkan.cs2.vm.Cs2Hook
+import org.darkan.cs2.vm.Cs2Values
 import org.darkan.cs2.vm.Cs2HookDispatcher
 import org.darkan.tools.engine.Engine
 import org.darkan.tools.engine.render.Canvas2D
@@ -32,8 +35,11 @@ import org.darkan.tools.rsinterface.InterfaceInteraction
 import org.darkan.tools.rsinterface.InterfaceModelRenderer
 import org.darkan.tools.rsinterface.InterfacePointer
 import org.darkan.tools.rsinterface.InterfaceRenderer
+import org.darkan.tools.rsinterface.InterfaceSourceTree
+import org.darkan.tools.rsinterface.InterfaceState
 import org.darkan.tools.rsinterface.InterfaceStore
 import org.darkan.tools.rsinterface.InterfaceViewport
+import org.darkan.tools.rsinterface.SourceWatch
 import org.darkan.tools.ui.AssetPicker
 import org.darkan.tools.ui.CommandPalette
 import org.darkan.tools.ui.Cs2HookPanel
@@ -47,6 +53,7 @@ import org.darkan.tools.ui.InterfaceEventPanel
 import org.darkan.tools.ui.InterfaceInspectorPanel
 import org.darkan.tools.ui.InterfaceLibraryPanel
 import org.darkan.tools.ui.InterfaceMenuOverlay
+import org.darkan.tools.ui.InterfaceStatePanel
 import org.darkan.tools.ui.InterfaceValidationPanel
 import org.darkan.tools.ui.SelectionGizmo
 import org.darkan.tools.ui.StagePanel
@@ -60,6 +67,7 @@ import org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE
 import org.lwjgl.glfw.GLFW.GLFW_KEY_F1
 import org.lwjgl.glfw.GLFW.GLFW_KEY_F5
 import org.lwjgl.glfw.GLFW.GLFW_KEY_F6
+import org.lwjgl.glfw.GLFW.GLFW_KEY_F7
 import org.lwjgl.glfw.GLFW.GLFW_KEY_L
 import org.lwjgl.glfw.GLFW.GLFW_KEY_N
 import org.lwjgl.glfw.GLFW.GLFW_KEY_P
@@ -151,7 +159,8 @@ enum class EditorMode {
  */
 class InterfaceViewer(
     private val cache: Cache,
-    startInterfaceId: Int = 0
+    startInterfaceId: Int = 0,
+    private val startup: InterfaceStartup = InterfaceStartup(),
 ) : Engine(WindowConfig(title = "Darkan Interface Editor", width = 1600, height = 900)) {
 
     // --- Rendering ---------------------------------------------------------
@@ -177,10 +186,27 @@ class InterfaceViewer(
     private var scriptsDirty = false
     private var loadScriptMillis = 0L
 
+    // --- Live source -------------------------------------------------------
+
+    // Components and clientscripts only. Graphics, fonts and models always come from the packed
+    // cache, which is the form a pack turns the tree's copies back into.
+    private var source: InterfaceSourceTree? = null
+    private val sourceWatch = SourceWatch()
+
+    // A save arrives as a burst of events around a half-written file, so the re-read waits for
+    // the writes to stop rather than parsing the first one. 0 is nothing pending.
+    private var sourceChangedAt = 0L
+    private var sourceReloads = 0
+
+    private val compiledScripts = HashSet<Int>()
+    private var scriptReloads = 0
+    private var lastLiveReload = 0L
+
     // --- CS2 ---------------------------------------------------------------
 
     private lateinit var scripts: Cs2Analyzer
     private lateinit var reload: Cs2HotReload
+    private lateinit var state: InterfaceState
     private lateinit var cs2Host: InterfaceCs2Host
     private lateinit var dispatcher: Cs2HookDispatcher
     private lateinit var interaction: InterfaceInteraction
@@ -193,6 +219,7 @@ class InterfaceViewer(
     private lateinit var eventPanel: InterfaceEventPanel
     private lateinit var hookPanel: Cs2HookPanel
     private lateinit var reloadPanel: Cs2ReloadPanel
+    private lateinit var statePanel: InterfaceStatePanel
     private lateinit var validation: InterfaceValidationPanel
     private lateinit var picker: AssetPicker
     private lateinit var menuOverlay: InterfaceMenuOverlay
@@ -222,6 +249,8 @@ class InterfaceViewer(
     private var dockFrames = 0
     private val dockNodes = HashMap<String, Int>()
     private var showDialog = false
+    private var showSourceDialog = false
+    private val sourcePath = ImString(320)
     private val dialogId = ImInt(0)
     private val dialogPath = ImString(320)
     private var dialogSource = 0
@@ -270,14 +299,20 @@ class InterfaceViewer(
             structs = { id -> Cache.structs.getOrNull(id) },
             params = { id -> Cache.params.getOrNull(id) },
         )
+        cs2Host.paragraphLines = { text, width, fontId -> fonts.font(fontId)?.lineCount(text, width) ?: 1 }
         dispatcher = Cs2HookDispatcher(reload, cs2Host)
         interaction = InterfaceInteraction({ frameInstance }, dispatcher, cs2Host)
         interaction.liveMode = false
+        state = InterfaceState(cs2Host)
         reload.onReload = { event ->
             // Hooks a previous run bound with IF_SETON* survive a reload, so the
             // interface has to be rebuilt for the edit to be visible at all.
             if (event.ok) {
                 scriptsDirty = true
+                if (event.scriptId >= 0) {
+                    scriptReloads++
+                    lastLiveReload = System.currentTimeMillis()
+                }
             }
             status = event.message
             if (event.staleCallers.isNotEmpty()) {
@@ -294,13 +329,143 @@ class InterfaceViewer(
         // having to press Start every launch is the whole friction the feature
         // exists to remove. A missing folder just leaves the watcher stopped, which
         // the panel reports.
+        useSource(startupTree(), announce = false)
         if (reload.project.folder.isDirectory && !reload.start()) {
             status = reload.watcherError ?: "could not watch ${reload.project.folder.path}"
         }
 
         buildPanels()
         registerCommands()
+        applyStartup()
         openInterface(currentId)
+    }
+
+    // ----------------------------------------------------------- live source
+
+    private fun startupTree(): File? = when {
+        startup.packedOnly -> null
+        startup.source != null -> startup.source
+        else -> InterfaceSourceTree.discover()
+    }
+
+    private fun useSource(root: File?, announce: Boolean = true) {
+        if (root == null) {
+            source = null
+            sourceWatch.stop()
+            if (announce) {
+                status = "live source off; reading the packed cache"
+                openInterface(currentId)
+            }
+            return
+        }
+        val tree = try {
+            InterfaceSourceTree.open(root)
+        } catch (e: Exception) {
+            status = "not a cache source tree: ${root.path} (${e.message})"
+            return
+        }
+        source = tree
+        if (!reload.useFolder(tree.clientscripts)) {
+            status = reload.watcherError ?: "cannot compile from ${tree.clientscripts.path}"
+        }
+        sourcePath.set(tree.root.path)
+        if (announce) {
+            status = "live source: ${tree.root.path}"
+            openInterface(currentId)
+        }
+    }
+
+    private fun watchSource() {
+        val tree = source ?: return
+        val directory = tree.directory(currentId)
+        if (sourceWatch.directories != listOf(directory)) {
+            sourceWatch.watch(listOf(directory))
+        }
+    }
+
+    private fun reloadFromSource(): String {
+        val tree = source ?: return "not in live source mode"
+        if (!tree.has(currentId)) return "${tree.name} has no interface $currentId"
+        val selection = context.primary
+        return try {
+            tree.invalidate()
+            attach(InterfaceDocument(currentId, tree.components(currentId)))
+            if (selection in 0 until context.componentCount) {
+                context.setSelection(listOf(selection))
+            }
+            sourceReloads++
+            lastLiveReload = System.currentTimeMillis()
+            "interface $currentId re-read from ${tree.name}"
+        } catch (e: Exception) {
+            "interface $currentId: ${e.message ?: e::class.simpleName}"
+        }
+    }
+
+    private fun pollSource() {
+        val tree = source ?: return
+        val directory = tree.directory(currentId)
+        if (sourceWatch.poll().any { it.parentFile == directory }) {
+            sourceChangedAt = System.currentTimeMillis()
+        }
+        if (sourceChangedAt != 0L && System.currentTimeMillis() - sourceChangedAt >= SOURCE_DEBOUNCE) {
+            sourceChangedAt = 0L
+            status = reloadFromSource()
+        }
+    }
+
+    /**
+     * Without this a fresh session would run the *cache's* bytecode for every script nobody has
+     * saved yet, so an edit made before launch would be invisible until it was touched again. The
+     * closure is re-read after each install, because compiling a script can add a call its cached
+     * bytecode never had.
+     */
+    private fun compileInterfaceScripts(): Int {
+        source ?: return 0
+        val pending = ArrayDeque<Int>()
+        val seen = HashSet<Int>()
+        hookPanel.scripts().forEach { if (seen.add(it)) pending.add(it) }
+        var compiled = 0
+        while (pending.isNotEmpty() && seen.size <= SCRIPT_CLOSURE_LIMIT) {
+            val id = pending.removeFirst()
+            if (reload.project.hasSource(id) && compiledScripts.add(id) && reload.reload(id).ok) {
+                compiled++
+            }
+            val script = scripts.script(id) ?: continue
+            for (instruction in script.instructions) {
+                if (instruction.op.kind == OpKind.GOSUB && seen.add(instruction.intOperand)) {
+                    pending.add(instruction.intOperand)
+                }
+            }
+        }
+        return compiled
+    }
+
+    private fun applyStartup() {
+        val reports = ArrayList<String>()
+        startup.vars.forEach { reports.add(state.set(it)) }
+        startup.stats.forEach { reports.add(state.setStat(it)) }
+        startup.runs.forEach { reports.add(state.addRun(it)) }
+        if (reports.isNotEmpty()) {
+            reports.forEach { println("interface state: $it") }
+            status = reports.last()
+        }
+    }
+
+    private fun runStateScript(script: InterfaceState.ScriptRun): String = try {
+        dispatcher.dispatch(Cs2Hook(script.scriptId, Cs2Values(script.ints, script.strings)), Cs2Event())
+        "ran ${script.label}"
+    } catch (e: Exception) {
+        "${script.label} failed: ${e.message ?: e::class.simpleName}"
+    }
+
+    private fun liveStatus(): String {
+        val tree = source ?: return ""
+        val reloads = sourceReloads + scriptReloads
+        if (reloads == 0 || lastLiveReload == 0L) {
+            return "live: ${tree.name}"
+        }
+        val seconds = (System.currentTimeMillis() - lastLiveReload) / 1000.0
+        return "live: ${tree.name}, $reloads reloads, last ${"%.1f".format(seconds)} s ago"
     }
 
     /**
@@ -335,12 +500,13 @@ class InterfaceViewer(
         inspector = InterfaceInspectorPanel(context, picker, ::runHook, ::openScript)
         eventPanel = InterfaceEventPanel(context, interaction, cs2Host)
         hookPanel = Cs2HookPanel(context, cs2Host, ::runHook, ::openScript) { scriptsDirty = true }
-        reloadPanel = Cs2ReloadPanel(reload) { hookPanel.scripts() }
+        reloadPanel = Cs2ReloadPanel(reload, { hookPanel.scripts() }, ::liveStatus)
         // The panel no longer forces its own position, so it docks like any other
         // and belongs in the default layout: editing a script in VS Code and seeing
         // the interface pick it up is a headline feature, not something to go
         // looking for in a menu.
         reloadPanel.visible = true
+        statePanel = InterfaceStatePanel(state, { scriptsDirty = true }, ::runStateScript)
         validation = InterfaceValidationPanel(context, store, assets)
         menuOverlay = InterfaceMenuOverlay(interaction)
 
@@ -366,13 +532,26 @@ class InterfaceViewer(
     // ----------------------------------------------------------- open / save
 
     private fun openInterface(id: Int) {
-        val document = try {
-            store.open(id)
-        } catch (e: Exception) {
-            status = "could not decode interface $id: ${e.message}"
-            InterfaceDocument.empty(id)
+        val tree = source
+        val document = if (tree != null && tree.has(id)) {
+            try {
+                InterfaceDocument(id, tree.components(id))
+            } catch (e: Exception) {
+                status = "${tree.name} interface $id: ${e.message}; falling back to the packed cache"
+                fromCache(id)
+            }
+        } else {
+            fromCache(id)
         }
         attach(document)
+        watchSource()
+    }
+
+    private fun fromCache(id: Int): InterfaceDocument = try {
+        store.open(id)
+    } catch (e: Exception) {
+        status = "could not decode interface $id: ${e.message}"
+        InterfaceDocument.empty(id)
     }
 
     private fun attach(document: InterfaceDocument) {
@@ -389,13 +568,15 @@ class InterfaceViewer(
         interaction.reset()
         cs2Host.clearHooks()
         cs2Host.log.clear()
+        val compiled = compileInterfaceScripts()
         frameInstance?.let { runLoadScripts(it) }
         scriptsDirty = false
         library.currentId = document.id
         library.noteOpened(document.id)
         gizmo.cancel()
         updateTitle()
-        status = "interface ${document.id}: ${document.componentCount} components, last id ${store.lastInterfaceId()}"
+        status = "interface ${document.id}: ${document.componentCount} components, last id ${store.lastInterfaceId()}" +
+            if (compiled > 0) "; $compiled scripts compiled from source" else ""
     }
 
     /**
@@ -427,6 +608,7 @@ class InterfaceViewer(
         } finally {
             interaction.liveMode = previous
         }
+        state.runs.forEach { runStateScript(it) }
         loadScriptMillis = (System.nanoTime() - started) / 1_000_000
     }
 
@@ -496,6 +678,7 @@ class InterfaceViewer(
         glClearColor(BACKGROUND, BACKGROUND, BACKGROUND, 1f)
         glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT)
 
+        pollSource()
         frameInstance = context.document?.instance()
         if (scriptsDirty) {
             frameInstance?.let { runLoadScripts(it) }
@@ -537,6 +720,8 @@ class InterfaceViewer(
         validation.render()
         dock("CS2 Hot Reload")
         reloadPanel.render(window.height)
+        dock("State")
+        statePanel.render(window.height)
         menuOverlay.render(stagePanel::screenX, stagePanel::screenY)
         drawDialog()
         palette.render()
@@ -884,6 +1069,14 @@ class InterfaceViewer(
                 }
             }
             ImGui.separator()
+            if (ImGui.menuItem("Open cache-source tree...")) {
+                sourcePath.set(source?.root?.path ?: InterfaceSourceTree.discover()?.path ?: "cache-source")
+                showSourceDialog = true
+            }
+            if (ImGui.menuItem("Use the packed cache", "", false, source != null)) {
+                useSource(null)
+            }
+            ImGui.separator()
             if (ImGui.menuItem("Reveal sidecar path") && document != null) {
                 ImGui.setClipboardText(store.jsonFile(document.id).absolutePath)
                 status = "copied ${store.jsonFile(document.id).absolutePath}"
@@ -911,6 +1104,7 @@ class InterfaceViewer(
             panelToggle("Interaction") { eventPanel.visible = !eventPanel.visible }
             panelToggle("CS2 Hooks") { hookPanel.visible = !hookPanel.visible }
             panelToggle("CS2 Hot Reload") { reloadPanel.visible = !reloadPanel.visible }
+            panelToggle("State") { statePanel.visible = !statePanel.visible }
             panelToggle("Validation") { validation.visible = !validation.visible }
             ImGui.separator()
             menuCommand("view.resetLayout")
@@ -920,6 +1114,7 @@ class InterfaceViewer(
         if (ImGui.beginMenu("Run")) {
             menuCommand("run.mode")
             menuCommand("run.load")
+            menuCommand("run.source")
             menuCommand("run.reset")
             menuCommand("run.clearTrace")
             ImGui.endMenu()
@@ -957,6 +1152,10 @@ class InterfaceViewer(
 
         stagePanel.status = buildString {
             append("interface $currentId")
+            val live = liveStatus()
+            if (live.isNotEmpty()) {
+                append("   ").append(live)
+            }
             if (loadScriptMillis > 0) {
                 append("   load scripts ${loadScriptMillis}ms")
             }
@@ -989,6 +1188,7 @@ class InterfaceViewer(
      * same id field.
      */
     private fun drawDialog() {
+        drawSourceDialog()
         if (showDialog) {
             ImGui.openPopup(DIALOG)
             showDialog = false
@@ -1031,6 +1231,39 @@ class InterfaceViewer(
         ImGui.separator()
         if (ImGui.button("Create", DIALOG_BUTTON, 0f)) {
             createFromDialog(id)
+            ImGui.closeCurrentPopup()
+        }
+        ImGui.sameLine()
+        if (ImGui.button("Cancel", DIALOG_BUTTON, 0f)) {
+            ImGui.closeCurrentPopup()
+        }
+        ImGui.endPopup()
+    }
+
+    private fun drawSourceDialog() {
+        if (showSourceDialog) {
+            ImGui.openPopup(SOURCE_DIALOG)
+            showSourceDialog = false
+        }
+        if (!ImGui.beginPopupModal(SOURCE_DIALOG)) {
+            return
+        }
+        ImGuiText.wrapped(
+            "Components come from <tree>/interfaces/<id>/*.json and clientscripts from " +
+                "<tree>/clientscripts; graphics, fonts and models stay with the packed cache. " +
+                "Nothing is written to the tree.",
+        )
+        ImGui.setNextItemWidth(-1f)
+        ImGui.inputTextWithHint("##sourcepath", "path to a cache source tree", sourcePath)
+        val candidate = File(sourcePath.get().trim())
+        if (InterfaceSourceTree.rootOf(candidate) == null) {
+            ImGuiText.coloured(1f, 0.78f, 0.35f, "No cache.json there; that is not a cache source tree.")
+        } else {
+            ImGuiText.disabled("Ready.")
+        }
+        ImGui.separator()
+        if (ImGui.button("Use", DIALOG_BUTTON, 0f)) {
+            useSource(candidate)
             ImGui.closeCurrentPopup()
         }
         ImGui.sameLine()
@@ -1177,6 +1410,19 @@ class InterfaceViewer(
             scriptsDirty = true
             status = "interface reset"
         }
+        palette.register(
+            "run.source", "Reload from cache-source", "Run", GLFW_KEY_F7, 0,
+            "Re-reads the interface's component JSON and re-compiles every edited script, without packing.",
+            enabled = { source != null },
+        ) {
+            val components = reloadFromSource()
+            val events = reload.reloadAll()
+            status = if (events.isEmpty()) {
+                components
+            } else {
+                "$components; ${events.size} scripts recompiled, ${events.count { !it.ok }} failed"
+            }
+        }
         palette.register("run.clearTrace", "Clear the event trace", "Run", 0, 0, "") {
             interaction.clearTrace()
         }
@@ -1240,6 +1486,7 @@ class InterfaceViewer(
         dockNodes["Stage"] = stage.get()
         dockNodes["Interaction"] = bottom.get()
         dockNodes["CS2 Hot Reload"] = bottom.get()
+        dockNodes["State"] = bottom.get()
         dockNodes["Inspector"] = rightUpper.get()
         dockNodes["CS2 Hooks"] = rightLower.get()
         dockNodes["Validation"] = rightLower.get()
@@ -1261,6 +1508,7 @@ class InterfaceViewer(
     // ---------------------------------------------------------------- cleanup
 
     override fun onCleanup() {
+        sourceWatch.close()
         reload.close()
         modelRenderer.cleanup()
         fonts.cleanup()
@@ -1285,6 +1533,13 @@ class InterfaceViewer(
         private const val STATUS_WIDTH = 560f
         private const val STATUS_CHARS = 72
         private const val DIALOG = "New interface"
+        private const val SOURCE_DIALOG = "Live source"
+
+        /** How long a component file has to stay unwritten before it is re-read. */
+        private const val SOURCE_DEBOUNCE = 150L
+
+        /** Ceiling on the call closure compiled when an interface opens in live source mode. */
+        private const val SCRIPT_CLOSURE_LIMIT = 512
         private const val DIALOG_BUTTON = 110f
         private const val DOCK_FRAMES = 4
 

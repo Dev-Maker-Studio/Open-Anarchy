@@ -1,6 +1,7 @@
 package org.darkan.tools.rsinterface
 
 import org.darkan.cs2.Cs2Op
+import org.darkan.cs2.ir.VarSpace
 import org.darkan.cs2.vm.Cs2Hook
 import org.darkan.cs2.vm.Cs2Host
 import org.darkan.cs2.vm.Cs2Values
@@ -89,6 +90,10 @@ class InterfaceCs2Host(
 
     /** Client key codes currently held, answered by the `KEYHELD_*` opcodes. */
     val heldKeys: MutableSet<Int> = LinkedHashSet()
+
+    // `PARAHEIGHT`. Scripts size a row from it, so the 0 an unimplemented opcode answers leaves
+    // every wrapped label present but zero pixels tall.
+    var paragraphLines: ((String, Int, Int) -> Int)? = null
 
     fun setActive(slot: Int, component: ComponentState?) {
         activeComponents[slot.coerceIn(0, 1)] = component
@@ -264,7 +269,19 @@ class InterfaceCs2Host(
             "KEYHELD_SHIFT" -> ints(if (heldKeys.contains(KEY_CTRL)) 1 else 0)
             "KEYHELD_ALT" -> ints(if (heldKeys.contains(KEY_SHIFT)) 1 else 0)
 
+            "STAT", "STAT_BASE" -> ints(stat(args.ints.firstOrNull() ?: -1))
+
+            "PARAHEIGHT" -> ints(
+                paragraphLines?.invoke(
+                    args.strings.firstOrNull() ?: "",
+                    args.ints.getOrElse(0) { 0 },
+                    args.ints.getOrElse(1) { -1 },
+                ) ?: 1,
+            )
+
             "ENUM" -> enumLookup(args.ints)
+            "ENUM_STRING" -> strings(enums(args.ints.firstOrNull() ?: -1)?.getString(args.ints.getOrElse(1) { 0 }) ?: "")
+            "ENUM_GETOUTPUTCOUNT" -> ints(enums(args.ints.firstOrNull() ?: -1)?.length ?: 0)
             "STRUCT_PARAM" -> structParam(args.ints)
 
             "MES", "WRITECONSOLE" -> {
@@ -478,6 +495,33 @@ class InterfaceCs2Host(
         if (event == InterfaceEvent.OPTION.boundKey) {
             state?.optionHook = hook != null || state.definition.params != null
         }
+    }
+
+    val stats: MutableMap<Int, Int> = LinkedHashMap()
+
+    var defaultStat: Int = 0
+
+    fun stat(id: Int): Int = stats[id] ?: defaultStat
+
+    fun clearStats() {
+        stats.clear()
+        defaultStat = 0
+    }
+
+    fun variables(space: VarSpace): Map<Int, Int> = when (space) {
+        VarSpace.VARP -> varps
+        VarSpace.VARBIT -> varbits
+        VarSpace.VARC -> varcs
+        else -> emptyMap()
+    }
+
+    fun variableStrings(): Map<Int, String> = varcStrings
+
+    fun clearVariables() {
+        varps.clear()
+        varbits.clear()
+        varcs.clear()
+        varcStrings.clear()
     }
 
     override fun varp(id: Int) = varps[id] ?: 0
