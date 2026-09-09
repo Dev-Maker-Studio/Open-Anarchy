@@ -148,9 +148,8 @@ import kotlin.test.assertTrue
  * ### Field names are not wire semantics
  *
  * Several packets carry the same bytes under different field names in the two stacks (legacy
- * `Sound.repeat` is the modern `SoundSynth.flags`, legacy `TileMessage.delay` is the modern
- * `priority`, and so on). Those cases pin the *wire* value on both sides and say so in a comment;
- * they are still genuine byte-equality checks.
+ * `TileMessage.delay` is the modern `priority`, and so on). Those cases pin the *wire* value on
+ * both sides and say so in a comment; they are still genuine byte-equality checks.
  *
  * ### What is not compared
  *
@@ -544,7 +543,7 @@ class Rev727LegacyEncoderDifferentialTest {
         case(
             "SOUND_SYNTH",
             LegacySound(2677, 40, 200, 8192, LegacySoundType.EFFECT).repeat(3),
-            SoundSynth(soundId = 2677, flags = 3, unknown = 40, delay = 200, unknown2 = 8192),
+            SoundSynth(soundId = 2677, repeat = 3, delay = 40, volume = 200, sampleRate = 8192),
         )
         case(
             "VORBIS_SOUND",
@@ -554,18 +553,18 @@ class Rev727LegacyEncoderDifferentialTest {
         case(
             "VORBIS_SPEECH_SOUND",
             LegacySound(2677, 40, 200, 8192, LegacySoundType.VOICE).repeat(3),
-            VorbisSpeechSound(soundId = 2677, soundType = 3, delay = 40, volume = 200),
+            VorbisSpeechSound(soundId = 2677, repeat = 3, delay = 40, volume = 200),
         )
-        // Legacy hard-codes the leading 3-byte key to zero.
+        // The client reads the leading 3 bytes and discards them; legacy hard-codes them to zero.
         case(
             "MUSIC_EFFECT",
             LegacySound(1234, 40, 200, 8192, LegacySoundType.JINGLE),
-            MusicEffect(key = 0, volume = 200, musicId = 1234),
+            MusicEffect(unused = 0, volume = 200, musicId = 1234),
         )
         case(
             "MUSIC_TRACK",
             LegacySound(1234, 40, 200, 8192, LegacySoundType.MUSIC),
-            MusicTrack(key = 40, flags = 200, musicId = 1234),
+            MusicTrack(delay = 40, volume = 200, musicId = 1234),
         )
     }
 

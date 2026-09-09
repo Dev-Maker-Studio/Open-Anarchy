@@ -385,28 +385,28 @@ internal fun Codec.registerRev727MiscPackets() {
 
     serverProt<VorbisSpeechSound>(opcode = 104, size = 6) { out ->
         out.writeShort(if (soundId == -1) 65535 else soundId)
-        out.writeByte(soundType)
+        out.writeByte(repeat)
         out.writeShort(delay)
         out.writeByte(volume)
     }
 
     serverProt<SoundSynth>(opcode = 136, size = 8) { out ->
         out.writeShort(if (soundId == -1) 65535 else soundId)
-        out.writeByte(flags)
-        out.writeShort(unknown)
-        out.writeByte(delay)
-        out.writeShort(unknown2)
+        out.writeByte(repeat)
+        out.writeShort(delay)
+        out.writeByte(volume)
+        out.writeShort(sampleRate)
     }
 
     serverProt<MusicEffect>(opcode = 60, size = 6) { out ->
-        out.writeMediumReverseEnd(key)
+        out.writeMediumReverseEnd(unused)
         out.writeByteSubtract(volume)
         out.writeShortLittle(if (musicId == -1) 65535 else musicId)
     }
 
     serverProt<MusicTrack>(opcode = 63, size = 4) { out ->
-        out.writeByteAdd(key)
-        out.writeByteAdd(flags)
+        out.writeByteAdd(delay)
+        out.writeByteAdd(volume)
         out.writeShortAdd(if (musicId == -1) 65535 else musicId)
     }
 
