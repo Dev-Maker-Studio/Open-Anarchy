@@ -9,6 +9,8 @@ class World(val metadata: WorldMetadata) {
     var offline = false
     var offlineSince = -1L
 
+    var customCache = false
+
     var playersOnline: Int = 0
         set(value) {
             if (offlineSince >= 0) {
