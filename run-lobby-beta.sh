@@ -22,10 +22,10 @@ get_latest_version() {
 
 while :
 do
-  git pull origin dev 2>/dev/null || true
+  git pull origin dev || echo "git pull failed; running the checkout as is"
   # The cache source tree (cache-source/, a submodule) carries the gameval catalogs the server reads and, when
   # CACHE_SOURCE_PATH points at it, the cache it builds and serves; keep it at the commit this checkout pins.
-  git submodule update --init --depth 1 cache-source 2>/dev/null || true
+  git submodule update --init --depth 1 cache-source || echo "cache-source submodule update failed; building the tree as is"
 
   PACKAGE_VERSION=$(get_latest_version)
   if [ -n "$PACKAGE_VERSION" ]; then
