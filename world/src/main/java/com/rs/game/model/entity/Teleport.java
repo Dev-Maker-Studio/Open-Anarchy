@@ -20,6 +20,7 @@ public record Teleport(Tile start, Tile destination, TeleType type, Supplier<Boo
         if (teleport.begin != null)
             teleport.begin.run();
         player.getTasks().schedule(delay, () -> {
+            player.stopAll();
             player.getControllerManager().onTeleported(teleport.type);
             player.tele(teleport.destination);
             if (teleport.end != null)
