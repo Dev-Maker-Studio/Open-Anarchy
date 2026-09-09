@@ -2442,5 +2442,8 @@ payload only, never the opcode and never a presence decision.
   streams are the one case where there is nothing to reach for: an `.ogg` of them would be mostly
   invented and could not be checked back.
 - Gameval-named file layouts (`config_obj/abyssal_whip.json`) with rename sync, as `cs2` has.
+- Porting more RS3 assets through `tools rs3port` (`docs/rs3-port.md`): the model converter,
+  material crosswalk and calibration gate exist; every new family needs its projection template
+  learned or the planar fallback checked.
 - Handing a codec the cache a tree is being *unpacked from*, the last thing `SourceCodec` does not
   offer - see *The `SourceCodec` interface* above. Packing needs no cache any more.

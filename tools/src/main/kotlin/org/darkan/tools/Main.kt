@@ -6,6 +6,8 @@ import org.darkan.tools.cache.NameLookup
 import org.darkan.tools.cache.runCache
 import org.darkan.tools.cs2.runCs2
 import org.darkan.tools.gameval.runGameval
+import org.darkan.tools.rs3port.runIcon
+import org.darkan.tools.rs3port.runRs3Port
 import org.darkan.tools.cache.map.DisplaceProbe
 import org.darkan.tools.cache.map.ObjectRenderer
 import org.darkan.tools.cache.map.TiltProbe
@@ -39,6 +41,11 @@ fun main(args: Array<String>) {
     // the directory it is pointed at rather than the one Cache.get() would.
     if (mode.lowercase() == "cache") {
         runCache(args.drop(1))
+        return
+    }
+
+    if (mode.lowercase() == "rs3port") {
+        runRs3Port(args.drop(1))
         return
     }
 
@@ -142,6 +149,9 @@ fun main(args: Array<String>) {
         }
         "env", "environment", "lighting" -> {
             runEnvironmentDiagnostic(cache, args.drop(1))
+        }
+        "icon", "icons" -> {
+            runIcon(cache, args.drop(1))
         }
         "help", "-h", "--help" -> {
             printHelp()

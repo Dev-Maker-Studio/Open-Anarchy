@@ -58,7 +58,7 @@ import java.nio.ByteOrder
  * The `.glb` container itself, the accessor reader and the JSON writers are [Gltf], which
  * [AnimationGltf] shares.
  */
-internal object ModelGltf {
+object ModelGltf {
 
     /** [model] as the exact bytes of its `.glb`. */
     fun write(model: ModelDefinition): ByteArray {

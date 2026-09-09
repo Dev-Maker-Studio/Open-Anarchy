@@ -97,5 +97,7 @@ written as the developer's own.
   Anything that opens the packed cache or a source tree, or runs for more than a few seconds, goes
   in the opt-in `cacheTest` suite (`src/cacheTest`), which no build, `check` or pipeline runs; run
   it only when the change touches what it covers. Never wire a test into every build.
+- Game content follows `content-development` (world plugins, dialogues, cache definitions,
+  imported assets, harness tests, the hand-off to the user); clientscripts follow `cs2-engineer`.
 - `cache-source` is a submodule: cache-side changes are a commit there, pushed, and the pointer
   bumped in the server commit.
