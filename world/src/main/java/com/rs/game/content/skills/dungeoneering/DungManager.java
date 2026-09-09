@@ -45,6 +45,7 @@ import org.darkan.core.gameval.gen.Varbit;
 @PluginEventHandler
 public class DungManager {
 
+	private static final int MAX_BOUND_AMMO = 255;
 	private static final int[] UPGRADE_COSTS = { 135, 175, 335, 660, 1360, 3400, 6800, 18750, 58600, 233000 };
 
 	private int tokens;
@@ -305,6 +306,8 @@ public class DungManager {
 		return KinshipPerk.values()[idx];
 	}
 
+	public static ItemClickHandler handleBind = new ItemClickHandler(new String[] { "Bind" }, e -> e.getPlayer().getDungManager().bind(e.getItem(), e.getSlotId()));
+
 	public static ItemClickHandler handleKinship = new ItemClickHandler(Utils.streamObjects(15707, Utils.range(18817, 18828)), new String[] { "Customise", "Quick-switch", "Teleport to Daemonheim", "Open party interface" }, e -> {
 		switch (e.getOption()) {
 		case "Teleport to Daemonheim":
@@ -364,11 +367,8 @@ public class DungManager {
 			item.setId(bindId);
 			player.getInventory().addItem(item);
 			if (bindedAmmo == null)
-				bindedAmmo = new Item(item.getId(), item.getAmount());
-			else
-				bindedAmmo.setAmount(bindedAmmo.getAmount() + item.getAmount());
-			if (bindedAmmo.getAmount() > 255)
-				bindedAmmo.setAmount(255);
+				bindedAmmo = new Item(item.getId(), 0);
+			addBoundAmmo(item.getAmount());
 		} else {
 			if (bindedItems.getUsedSlots() >= DungeonUtils.getMaxBindItems(player.getSkills().getLevelForXp(Constants.DUNGEONEERING))) {
 				player.sendMessage("A currently bound item must be destroyed before another item may be bound.");
@@ -379,6 +379,14 @@ public class DungManager {
 			bindedItems.add(new Item(item.getId(), item.getAmount()));
 		}
 		player.sendMessage("You bind the " + defs.getName() + " to you. Check in the smuggler to manage your bound items.");
+	}
+
+	public void addBoundAmmo(int amount) {
+		bindedAmmo.setAmount(Math.min(bindedAmmo.getAmount() + amount, MAX_BOUND_AMMO));
+	}
+
+	public boolean isBoundAmmo(Item item) {
+		return bindedAmmo != null && DungeonUtils.isBindAmmo(item) && DungeonUtils.getBindedId(item) == bindedAmmo.getId();
 	}
 
 	public void unbind(Item item) {
