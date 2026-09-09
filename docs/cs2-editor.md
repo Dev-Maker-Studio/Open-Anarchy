@@ -294,7 +294,7 @@ according to the param's declared type - and a decompiled folder states every on
 `Cs2SourceContext.read(folder)` is that reading, and it is the same `Cs2Context` interface
 `Cs2Analyzer` implements, so nothing downstream can tell which one it got. It lexes each script's
 declaration line and nothing else - parsing a body would be circular, since parsing is what needs
-the answers - which is 0.3 s for all 6,567 signatures against about 7 s for the corpus analysis.
+the answers - which is 0.3 s for all 6,569 signatures against about 7 s for the corpus analysis.
 
 `Cs2Compiler(cache, folder)` is the other construction, for a tool that is *also* decompiling out
 of a cache: it analyses the corpus instead, which is what recovers those same facts from bytecode
@@ -348,14 +348,12 @@ Open `<tree>/clientscripts` in an editor and every command here works on it as i
 `org.darkan.cs2.source.Cs2SourceCodec` is the two directions. It claims index 12 by being on the
 classpath (a `SourceCodecProvider` in `META-INF/services/`), so nothing has to register it.
 
-- **Unpacking** decompiles each script and compiles the result straight back. 5,501 of the 6,567
-  come out as the cache's own bytes; the other 1,066 are the ones the decompiler normalises, and
-  their shipped bytes are kept beside the source as `<name>.ts.pristine` with the source's SHA-256
-  recorded in `index.json`.
-- **Packing** emits those shipped bytes while the source still hashes to the recorded value, and
-  compiles the source once it does not. So an untouched tree reproduces index 12 byte for byte, and
-  the first edit to a normalised script is what makes its bytes change. `tools cache status` shows
-  the pristine count and any sidecar whose guard has gone stale.
+- **Unpacking** decompiles each script and writes its `.ts`, and nothing else - no sidecar, no
+  guard hash in `index.json`.
+- **Packing** compiles every script from its source, always. 5,504 of the 6,569 come out as the
+  cache's own bytes; the other 1,065 are the ones the decompiler normalises and come out
+  equivalent but different, which is why the codec declares `SourceCodec.functional` and
+  `tools cache verify` counts them as *recompiled* rather than different.
 
 `Cs2Corpus` is the single implementation of the folder layout, shared by `decompile-all` and the
 codec: two implementations of it would show up as a tree that churns depending on which tool wrote

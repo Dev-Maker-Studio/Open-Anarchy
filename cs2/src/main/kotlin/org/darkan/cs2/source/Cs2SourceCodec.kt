@@ -31,20 +31,18 @@ import world.gregs.voidps.cache.source.codec.UnpackedArchive
  * Editing a script therefore means editing the TypeScript, and the server compiles it back to
  * bytecode when it rebuilds the cache; see `docs/cache-source.md` and `docs/cs2-editor.md`.
  *
- * ### Parity, and the pristine fallback
+ * ### Parity is functional
  *
- * The decompiler normalises - it drops unreachable code, folds initialisers into declarations and
- * lays branches out canonically - so 1,066 of the 6,567 scripts compile back to *equivalent* but
- * different bytes. [unpack] compiles every script it decompiles straight back and compares:
- * where the bytes differ it writes the original ones beside the source as `<name>.ts.pristine`
- * and records the source's SHA-256 under `pristine` in `index.json`. [pack] emits those original
- * bytes while the source still hashes to the recorded value, and compiles the source once it does
- * not, which is what lets a normalising compiler live inside the tree's byte-for-byte parity
- * guarantee. `cache status` reports the count, and it can only shrink.
+ * Every script is compiled from its `.ts` on every pack: what the tree ships for index 12 is the
+ * compiler's output and nothing else. The decompiler normalises - it drops unreachable code, folds
+ * initialisers into declarations and lays branches out canonically - so 1,065 of the 6,569 scripts
+ * compile back to *equivalent* but different bytes, and the other 5,504 come back exactly. That is
+ * what [functional] declares, and it is why `cache verify` counts those 1,065 as *recompiled*
+ * rather than different.
  *
- * [exact] is therefore `true`: this codec assembles its own fallback while it unpacks, so packing
- * what it wrote *does* reproduce the group. Saying `false` would only make the unpacker compile
- * all 6,567 scripts a second time to rediscover the same answer.
+ * Nothing is kept beside a script to make up the difference: [unpack] writes the `.ts` and nothing
+ * else, no archive records a `pristine` guard, and a `<name>.ts.pristine` left in a tree by an
+ * older unpack is an input of nothing ([files], [owner]) - deleting one changes no build.
  *
  * ### The two directions do not need the same things
  *
@@ -82,8 +80,16 @@ object Cs2SourceCodec : SourceCodec {
         get() = "cs2-source"
 
     /**
-     * True: see the class comment. The pristine fallback is assembled inside [unpack], so what
-     * this codec leaves on disk always packs back to the bytes it came from.
+     * Index 12 is reproduced functionally rather than byte for byte, which is a property of the
+     * whole index and not of one archive.
+     */
+    override val functional: Boolean
+        get() = true
+
+    /**
+     * True, because the framework's check only counts the archives a pristine sidecar had to
+     * rescue and this codec keeps none. Saying false would compile all 6,569 scripts a second
+     * time during an unpack to rediscover what [functional] already states.
      */
     override fun exact(archive: Int): Boolean = true
 
@@ -102,24 +108,7 @@ object Cs2SourceCodec : SourceCodec {
         val decompiled = state.corpus.decompileScript(archive.archive, bytes, state.types)
             ?: throw IOException("Clientscript ${archive.archive} could not be decompiled from its ${bytes.size} bytes.")
         val path = Cs2Layout.pathOf(archive.archive)
-        val source = decompiled.source.toByteArray(Charsets.UTF_8)
-
-        val files = ArrayList<SourceFile>(2)
-        files.add(SourceFile(path, source))
-
-        // Compiled through the corpus rather than the folder: the folder is still being written,
-        // and freshly decompiled source carries the catalogs' own names and no renames, so there
-        // is nothing in the folder's declarations for it to resolve through yet.
-        val rebuilt = try {
-            state.corpus.compileSource(decompiled.source, path)
-        } catch (e: Exception) {
-            null
-        }
-        if (rebuilt != null && rebuilt.contentEquals(bytes)) {
-            return UnpackedArchive(files)
-        }
-        files.add(SourceFile(SourceFiles.pristine(path), bytes))
-        return UnpackedArchive(files, mapOf(FILE to SourceFiles.sha256(source)))
+        return UnpackedArchive(listOf(SourceFile(path, decompiled.source.toByteArray(Charsets.UTF_8))))
     }
 
     /**
@@ -127,7 +116,7 @@ object Cs2SourceCodec : SourceCodec {
      *
      * None of them is a function of one archive: `vars.d.ts` only knows a variable exists because
      * some script uses it, `cs2.d.ts` carries argument kinds and param types learned from all
-     * 6,567 scripts at once, and `dead-code.md` is a report over the corpus. Returning them here
+     * 6,569 scripts at once, and `dead-code.md` is a report over the corpus. Returning them here
      * is also how they are *claimed*, so the unpacker's prune leaves them alone.
      */
     override fun unpackIndex(directory: Path, index: Int, archives: IntArray): List<SourceFile> {
@@ -151,10 +140,8 @@ object Cs2SourceCodec : SourceCodec {
      * must not pay for it three times - and it has to be *re*done when the tree has moved since
      * the last build in this process: a changed signature, a renamed variable in `vars.d.ts` or a
      * new script all change what the next compile resolves. So the folder's state is dropped here
-     * and rebuilt lazily by the first archive that actually compiles something.
-     *
-     * Lazily, because a pack of archives that all turn out to be pristine compiles nothing and
-     * must pay nothing; the framework already only calls this when there is something to do.
+     * and rebuilt lazily by the first archive that actually compiles something; the framework only
+     * calls this when there is something to pack.
      */
     override fun packIndex(directory: Path, index: Int, archives: IntArray, changedIndexFiles: List<String>) {
         state(directory).invalidateCompiler()
@@ -165,27 +152,9 @@ object Cs2SourceCodec : SourceCodec {
         if (!Files.isRegularFile(file)) {
             throw IOException("Clientscript $archive has no source at ${file.toAbsolutePath()}.")
         }
-        val source = Files.readAllBytes(file)
         val ids = metadata.fileIds()
         check(ids.size == 1 && ids[FILE] == FILE) {
             "Clientscript $archive is one file on disk but its metadata lists ${ids.joinToString()}."
-        }
-
-        // An unedited script the compiler cannot reproduce is served from the bytes kept beside
-        // it. The guard is the whole point: the moment the source is edited it stops matching and
-        // the edit is compiled instead.
-        val guard = metadata.pristine[FILE]
-        if (guard != null && guard == SourceFiles.sha256(source)) {
-            val sidecar = SourceFiles.pristine(file)
-            if (!Files.isRegularFile(sidecar)) {
-                throw IOException(
-                    "Clientscript $archive is recorded as pristine in index.json but " +
-                        "${sidecar.toAbsolutePath()} is missing, so its original bytes are gone; " +
-                        "restore the sidecar or drop the archive's \"pristine\" entry to compile " +
-                        "${file.fileName} instead."
-                )
-            }
-            return PackedArchive(Files.readAllBytes(sidecar), ids)
         }
 
         val handle = file.toFile()
@@ -237,9 +206,14 @@ object Cs2SourceCodec : SourceCodec {
      * Which script the file at [path] under [directory] is, header first.
      *
      * The header survives a file being copied or moved, so it is the binding [Cs2Layout] trusts;
-     * this is [archiveOf] with the one thing the interface cannot pass it.
+     * this is [archiveOf] with the one thing the interface cannot pass it. A `.ts.pristine` left
+     * behind by an older unpack is bytecode rather than source and belongs to no archive, so it is
+     * not read for a header.
      */
     override fun archiveOf(directory: Path, path: String): Int? {
+        if (SourceFiles.isPristine(path)) {
+            return null
+        }
         val file = directory.resolve(path)
         if (Files.isRegularFile(file)) {
             Cs2Layout.scriptIdOf(Files.readString(file), path)?.let { return it }
@@ -262,13 +236,13 @@ object Cs2SourceCodec : SourceCodec {
         return if (archive == null) Owner.None else Owner.Archive(archive)
     }
 
+    /**
+     * The `.ts` alone. A `.ts.pristine` left behind by an older unpack is an input of nothing, so
+     * a build must neither be triggered by one nor read one.
+     */
     override fun files(directory: Path, archive: Int): List<Path> {
         val file = sourceFile(directory, archive)
-        if (!Files.exists(file)) {
-            return emptyList()
-        }
-        val sidecar = SourceFiles.pristine(file)
-        return if (Files.exists(sidecar)) listOf(file, sidecar) else listOf(file)
+        return if (Files.exists(file)) listOf(file) else emptyList()
     }
 
     /**
@@ -332,7 +306,7 @@ object Cs2SourceCodec : SourceCodec {
          * The whole-corpus decompile, done once, for the files no single script can produce.
          *
          * The pass is what fills in `vars.d.ts`: a variable is only known to be used because some
-         * script uses it, so the file is a function of all 6,567 of them.
+         * script uses it, so the file is a function of all 6,569 of them.
          */
         val projectFiles: Map<String, String> by lazy {
             val decompiled = corpus.decompile()

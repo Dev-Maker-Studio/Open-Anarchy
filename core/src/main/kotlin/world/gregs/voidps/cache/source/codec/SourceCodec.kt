@@ -103,6 +103,13 @@ interface SourceCodec {
     val id: String
 
     /**
+     * Whether the codec reproduces its index functionally rather than byte for byte: an archive
+     * whose packed bytes differ from the shipped ones is recompiled, not wrong.
+     */
+    val functional: Boolean
+        get() = false
+
+    /**
      * Whether packing what [unpack] wrote for [archive] reproduces the group byte for byte.
      *
      * True for the raw codecs, which keep the bytes. A codec that normalises - a decompiler that

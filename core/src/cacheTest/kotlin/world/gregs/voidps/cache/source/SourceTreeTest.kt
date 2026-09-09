@@ -129,6 +129,8 @@ class SourceTreeTest {
         val report = Verifier.verify(SourceTree.open(tree), packed)
         assertTrue(report.parity, "the tree should reproduce the cache exactly: $report")
         assertEquals(0, report.different)
+        assertEquals(0, report.recompiled, "nothing here is compiled rather than stored")
+        assertEquals(8, report.identical)
         assertEquals(3, report.tables)
     }
 
