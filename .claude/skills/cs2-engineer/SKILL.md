@@ -66,6 +66,11 @@ commit or the build fails with a coverage mismatch:
 | a graphic | `graphics/<id>/0.png` at the canvas size (one RGBA PNG per frame, nothing else, <= 256 colours); `graphics/index.json` entry `{"compression": "gzip", "nameHash": <hash of the name>}`; `gamevals/graphic.json` entry + coverage; a `/** graphic <id> */ const <name>: number;` line in `clientscripts/gamevals.d.ts` under `namespace Graphic` |
 | a component | `interfaces/<iface>/<n>.json` (copy a sibling of the same type); `gamevals/component.json` entry `"<iface>:<n>": "interface_<iface>:<purpose>"` + coverage; the `Component.interface_<iface>` declaration in `gamevals.d.ts` |
 | a varbit | see `darkan-code-standards` rule 5; plus `declare let varbit_<name>: number;` in `vars.d.ts` |
+| an obj | `config_obj/<id>.json` (copy the same-role sibling; drop its `opcodeOrder` - see §3); no `index.json` change while the id lands in an existing archive (`id shr 8`); `gamevals/obj.json` entry + coverage; `/** obj <id> */` line under `namespace Obj` |
+| a seq | `config_seq/<id>.json` (archive `id shr 7`, same rules); `gamevals/seq.json`; `namespace Seq` |
+| a struct | `config/struct/<id>.json` - the FILENAME is the id, the `id` field inside is wrong for most files and is never read; `gamevals/struct.json`; `namespace Struct` |
+| a model | `models/<id>.glb` written by `ModelGltf.write` + its own line `"<id>": {"compression": "gzip"}` in `models/index.json` (every model is its own archive, so the index line is mandatory); `gamevals/model.json`; `namespace Model` |
+| an enum row | append `"<key>": <value>` to `config_enum/<id>.json` `map` and bump `length` |
 
 The name hash is Jagex's: `h = h * 31 + byte` over the name, as a signed 32-bit int
 (`"symbol_lock"` -> -329922702, `"[proc,bank_placeholder_button]"` -> 834915639). Scripts are hashed
@@ -76,6 +81,23 @@ Names follow the identified names around them (`world_select_stars_0` -> `world_
 `gamevals.d.ts` and `vars.d.ts` are hand-maintained alongside the catalogs; keep ids sorted.
 
 ## 3. Client rules that crash or silently break a script
+
+- **Instruction cap.** The client aborts a hook after 200,000 instructions and a load script
+  after 2,000,000 (`CS2Executor.executeScript` in darkan-bot); the abort is silent and leaves
+  whatever the script drew so far. A per-row lookup that rescans a 300-entry enum is enough to
+  hit it - index rows by enum position and skip, never search (the old skill guide's
+  `[proc,skillguide_tab_row]` is the pattern).
+- **`cc_create` ids are contiguous per layer.** Creating id n when n-1 does not exist throws and
+  aborts the script (see the bank placeholder work); derive cc ids from a drawn-slot counter, not
+  from a data index that has gaps.
+- **`opcodeOrder` is a whitelist.** A definition JSON that carries `opcodeOrder` (every unpacked file
+  does) is encoded with exactly those opcodes; a field you set whose opcode is not in the list is
+  silently dropped at pack time (an inventory option added to an obj whose order lacks 35 never
+  reaches the client). Delete `opcodeOrder` from any file you edit; the encoder then writes its
+  canonical order with every non-default field.
+- **JSON formatting is the writer's.** `DefinitionJson` writes keys in field order, arrays and
+  maps inline while `column + compact length <= 100`, else one entry per line at two-space indent;
+  write edited files the same way or the next unpack churns them.
 
 Read the client at `~/darkan/darkan-bot` (Kotlin) for anything below you are unsure of; the CS2
 ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and click dispatch in
@@ -244,6 +266,22 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
   same-name versions, named `<name>_2011` (12073-12324), deduplicated pixel-for-pixel against the 727
   set first (`mapmask`/`compassmask` 2011 already existed as 8728/8729). Settings dropdown: 261:32-42,
   `[clientscript,options_gameframe_dropdown*]`, rows 41/42 click through to the server.
+- **Skill guides - one data source (2026-09-09)**: `Enum.skillguide_skills[skill 1-25]` -> the
+  skill's row enum (Crafting = 5465), one struct per row: `skillguide_name`, `skillguide_level`,
+  `skillguide_item` (or `param_2214` graphic when there is no item), `skillguide_skill`,
+  `skillguide_filter` (index into `Enum.skillguide_skill_filters[skill]`, whose names are the tabs:
+  Crafting = Everything, Milestones, Armour, Jewellery, Objects, Other, Dungeoneering), and the
+  optional `skillguide_members`, `skillguide_is_milestone` (also shown on tab 1), `skillguide_extrareq`,
+  `skillguide_info`, `show_on_levelup`. The row enums are kept **sorted by level** (stable); the new
+  guide (1218, `skillguide_initialise`) re-sorts anyway, the old parchment guide (499, `cs2_23`) and
+  its level-up popup (741, `cs2_973`) read the enum in order through `cs2_12`/`cs2_13`/`cs2_14`/
+  `cs2_1566`/`cs2_1567`, which now wrap `[proc,skillguide_tab_row]`, `[proc,skillguide_row_in_tab]`,
+  `[proc,skillguide_legacy_name]` ("Members: " prefix, extrareq line) and
+  `[proc,skillguide_legacy_unlock]` (the popup text). The 52 hard-coded per-skill table scripts they
+  used to dispatch to (`cs2_2`, `cs2_3`, `cs2_977`-`cs2_1022`, `cs2_2787`, `cs2_2788`, `cs2_3354`,
+  `cs2_3355`) are unreferenced and left in place. Adding a guide row = one struct + one enum entry at
+  the right level position; never a script edit. The RS3 urn port (`docs/rs3-port.md`) is the worked
+  example of adding objs, seqs, structs, models and guide rows together.
 - **Var-driven interface state**: `onLoadScript` + `onVarpTransmit` (`varps: [parent varp]`) on the
   component, running a `[clientscript,x]` that calls `[proc,x]`; the proc reads `varbit_x` and sets
   graphic, op text and tooltip (`clientscripts/proc/bank_placeholder_button.ts`, modelled on

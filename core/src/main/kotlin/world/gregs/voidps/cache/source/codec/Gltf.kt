@@ -35,7 +35,7 @@ import java.nio.ByteOrder
  * types - rather than assuming this writer's layout, so a file that has been through Blender or
  * another glTF tool still reads.
  */
-internal object Gltf {
+object Gltf {
 
     /** Fixed, because a generator string that moved would rewrite every `.glb` in the tree. */
     const val GENERATOR = "darkan cache-source"

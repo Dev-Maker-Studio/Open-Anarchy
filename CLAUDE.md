@@ -68,7 +68,9 @@ In short:
    in the player save.
 6. **No AI attribution** in commits, merge requests or code - ever.
 
-Clientscript, interface and graphic work in `cache-source/` also follows
+Game content - world-module plugins and dialogues, cache definitions, imported assets - follows
+`.claude/skills/content-development/SKILL.md` (the same hook injects it for `world/src` and the
+definition, model and catalog paths of `cache-source/`). Clientscript, interface and graphic work in `cache-source/` also follows
 `.claude/skills/cs2-engineer/SKILL.md` (the same hook injects it for those paths); add what you learn
 about the client to it in the same change.
 
@@ -778,6 +780,7 @@ Configure `STAFF_WEBHOOK_URL` for tick performance warnings and error notificati
 - `docs/legacy-baseline.md` - Which legacy commits the modern tree is synced to
 - `docs/gameval.md` - Gameval name catalogs: runtime API, typed constants, regeneration
 - `docs/cs2-editor.md` - The CS2 clientscript toolchain (`cs2/`), its CLI, and compiling from server code
+- `docs/rs3-port.md` - Porting RS3 assets into the 727 cache: `tools rs3port`, the material crosswalk, the calibration gate
 - `docs/cache-source.md` - The unpacked cache: layout, parity guarantees, codecs, build and `CACHE_SOURCE_PATH`
 - `cache-source/gamevals/CONTRACT.md` - The evidence rules under which every gameval name was proven
 
