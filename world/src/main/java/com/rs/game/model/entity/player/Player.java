@@ -3515,6 +3515,9 @@ public class Player extends Entity {
 
 	public void endConversation() {
 		conversation = null;
+		NPC facingNpc = getTempAttribs().removeO(NPC.FACING_INTERACTING_PLAYER);
+		if (facingNpc != null)
+			facingNpc.stopFacingInteracting(this);
 		if (getInterfaceManager().containsChatBoxInter())
 			getInterfaceManager().closeChatBoxInterface();
 		if (finishConversationEvent != null) {
