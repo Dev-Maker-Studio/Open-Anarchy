@@ -16,11 +16,11 @@ public class Kortan extends Conversation {
     private static final int npcId = 591;
 
     public static NPCClickHandler Aemad = new NPCClickHandler(new Object[]{npcId}, e -> {
-    	switch (e.getOption()) {
-        
-        case "Talk-to" -> e.getPlayer().startConversation(new Kortan(e.getPlayer()));
-        case "Trade-General-Store" -> ShopsHandler.openShop(e.getPlayer(), "aemads_adventuring_supplies");
-    	}
+        switch (e.getOption()) {
+
+            case "Talk-to" -> e.getPlayer().startConversation(new Kortan(e.getPlayer()));
+            case "Trade" -> ShopsHandler.openShop(e.getPlayer(), "aemads_adventuring_supplies");
+        }
     });
 
     public Kortan(Player player) {
