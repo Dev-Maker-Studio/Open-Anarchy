@@ -93,6 +93,11 @@ format; measure on the shared assets.
   flow test that drives the handlers through `PluginManager.handle(ItemClickEvent(...))`,
   `skills.addXp`, and asserts inventory and xp (`Settings.getConfig().xpRate` applies to lamps).
   Known flaky and unrelated: `SocialGatewayTest` friends-chat tests fail on `dev` too.
+  Map-dependent behaviour (locs, collision, line of sight) is testable in the fast suite:
+  `ChunkManager.getChunk(tile.getChunkId())` loads that region's map, base locs and clipping, then
+  `World.getObjectWithId(tile, Loc.x)` returns the real loc for an `ObjectClickEvent` and
+  `World.hasLineOfSight` reads the real flags (`ReportedBugFixesTest`). Prove such a test
+  is not vacuous by running it once against the old code and watching it fail.
 - **Verify signature**: `cache verify` already differs from `../cache` (authored graphics,
   scripts, obj 25358); save its per-index lines before you start and diff after - the only lines
   that may change are the archives your ids land in.

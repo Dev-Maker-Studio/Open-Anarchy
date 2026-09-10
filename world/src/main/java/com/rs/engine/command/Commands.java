@@ -97,6 +97,7 @@ public final class Commands {
 			if (player.getRights().ordinal() < Rights.values()[i].ordinal())
 				continue;
 			if (executeCommand(Rights.values()[i], player, cmd[0].toLowerCase(), args)) {
+				player.refreshIdleTime();
 				if (Rights.values()[i] != Rights.PLAYER)
 					WorldDB.getLogs().logCommand(player.getUsername(), commandStr);
 				return true;

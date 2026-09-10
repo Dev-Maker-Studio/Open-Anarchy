@@ -687,31 +687,26 @@ public final class Equipment {
 		}
 		if (e.getOpNum() == 1 && PluginManager.handle(new ItemClickEvent(e.getPlayer(), item, e.getSlotId(), "Remove", true)))
 			return;
-		if (e.getComponentId() == 12) {
-			if (e.getOpNum() == 2)
-				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 0, true);
-			else if (e.getOpNum() == 3)
-				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 1, true);
-			else if (e.getOpNum() == 4)
-				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 2, true);
-			else if (e.getOpNum() == 5)
-				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 3, true);
-		} else if (e.getComponentId() == 15) {
+		if (e.getComponentId() == 12 || e.getComponentId() == 33)
+			wornItemTeleport(e.getPlayer(), item, e.getOpNum());
+		else if (e.getComponentId() == 15) {
 			if (e.getOpNum() == 2) {
 				int weaponId = e.getPlayer().getEquipment().getWeaponId();
 				if (weaponId == 15484)
 					e.getPlayer().getInterfaceManager().gazeOrbOfOculus();
 			}
-		} else if (e.getComponentId() == 33)
-			if (e.getOpNum() == 2)
-				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 0, true);
-			else if (e.getOpNum() == 3)
-				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 1, true);
-			else if (e.getOpNum() == 4)
-				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 2, true);
-			else if (e.getOpNum() == 5)
-				ItemTeleports.sendTeleport(e.getPlayer(), e.getPlayer().getEquipment().getItem(Equipment.getItemSlot(e.getSlotId2())), 3, true);
+		}
 	});
+
+	private static void wornItemTeleport(Player player, Item item, int opNum) {
+		int option = getOptionForPacket(opNum);
+		if (option < 0 || option > 3)
+			return;
+		if ("Rub".equals(item.getDefinitions().getEquipmentOption(option)))
+			ItemTeleports.wornTransportationDialogue(player, item);
+		else
+			ItemTeleports.sendTeleport(player, item, option, true);
+	}
 
 	public static void remove(Player player, int slotId, boolean stopAll) {
 		if (slotId >= 15)
