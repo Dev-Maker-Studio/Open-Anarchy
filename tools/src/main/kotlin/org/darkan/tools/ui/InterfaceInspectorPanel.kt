@@ -394,7 +394,7 @@ class InterfaceInspectorPanel(
         ImGui.separator()
         ImGuiText.disabled("item preview (live only, IF_SETOBJECT)")
         val item = ImInt(state.itemId)
-        if (assets.itemField("Item", item)) {
+        if (assets.itemField("Item", item, state.itemAmount)) {
             state.setObject(item.get(), state.itemAmount.coerceAtLeast(1))
         }
         val amount = ImInt(state.itemAmount)

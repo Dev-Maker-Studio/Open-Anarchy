@@ -33,7 +33,7 @@ rs3port materials <rs3-tree> <727-tree> [spec.json]
 rs3port model <rs3-tree> <727-tree> <rs3Id> --id <727Id> --role <role> [--out <dir>]
 rs3port calibrate <rs3-tree> <727-tree> [spec.json] [--out <dir>]
 rs3port urns <rs3-tree> <727-tree> [spec.json]
-icon <objId>[,<objId>...] <out.png> [--sheet] [--wiki <dir>] [--glb <id>=<path>]
+icon <objId>[,<objId>...] <out.png> [--sheet] [--amount n] [--outline n] [--wiki <dir>] [--glb <dir>]
 ```
 
 - `materials` learns `docs/reference/rs3-material-crosswalk.json` from the corpus: per-face
