@@ -79,7 +79,7 @@ the looking.
 5. **The local world on the dev lobby is the test, and the user does the looking.** Since the
    own-cache world list flag (2026-09-09) no local lobby is needed: `dev-world.sh start` runs the
    world jar from the server root with `CACHE_SOURCE_PATH` (it packs the tree incrementally on
-   start), the dev lobby at `10.69.69.22` flags it own-cache because its index CRCs differ, the
+   start), the dev lobby (`dev.darkan.org`: gateway `ws://dev.darkan.org:4040/social/ws`, client port 43594) flags it own-cache because its index CRCs differ, the
    client fetches JS5 from the world, and `dev-world.sh client` launches the client on the user's
    display against the dev lobby. `.env` needs `SOCIAL_GATEWAY_URL`, the dev lobby's
    `SOCIAL_GATEWAY_TOKEN` and `WORLD_LOGIN_TOKEN_SECRET` and its `MONGO_URI` (the header of
