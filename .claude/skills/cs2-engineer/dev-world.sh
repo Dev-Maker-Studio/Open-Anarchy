@@ -2,7 +2,7 @@
 # The local world (own cache from cache-source) on the DEV lobby, and the client for the user to look.
 # usage: dev-world.sh start|stop|restart|status|client
 #   .env in the server root: CACHE_SOURCE_PATH=./cache-source, a WORLD_ID nobody else uses,
-#   SOCIAL_GATEWAY_URL=ws://10.69.69.22:4039/social/ws, SOCIAL_GATEWAY_TOKEN and WORLD_LOGIN_TOKEN_SECRET
+#   SOCIAL_GATEWAY_URL=ws://dev.darkan.org:4040/social/ws, SOCIAL_GATEWAY_TOKEN and WORLD_LOGIN_TOKEN_SECRET
 #   copied from root@10.69.69.22:/home/trent/dev-lobby/.env, MONGO_URI the dev database.
 #   The lobby flags the world as own-cache when its index CRCs differ, and the client fetches JS5 from it.
 # Restart after every pack: the world reads its cache CRCs at startup.
@@ -10,7 +10,7 @@ set -uo pipefail
 ROOT=$(cd "$(dirname "$0")/../../.." && pwd)
 JAR=${JAR:-$ROOT/world/build/libs/world-server-3.0.0.jar}
 LOG=${LOG:-$ROOT/data/dev-world.log}
-LOBBY_HOST=${LOBBY_HOST:-10.69.69.22}; LOBBY_PORT=${LOBBY_PORT:-43593}; LOBBY_API=${LOBBY_API:-4039}
+LOBBY_HOST=${LOBBY_HOST:-dev.darkan.org}; LOBBY_PORT=${LOBBY_PORT:-43594}; LOBBY_API=${LOBBY_API:-4040}
 WORLD_ID=$(sed -n 's/^WORLD_ID=//p' "$ROOT/.env" | tail -1)
 pid() { pgrep -f "^java -jar .*$(basename "$JAR")" || true; }
 listed() {
