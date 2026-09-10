@@ -1,6 +1,7 @@
 package org.darkan.tools.ui
 
 import imgui.ImGui
+import imgui.flag.ImGuiChildFlags
 import imgui.flag.ImGuiCol
 import imgui.flag.ImGuiTreeNodeFlags
 import imgui.type.ImBoolean
@@ -218,7 +219,7 @@ class InterfaceValidationPanel(
         } else {
             coloured(1f, 0.45f, 0.4f, "${lossy.size} field(s) would not survive a cache save")
         }
-        if (!ImGui.beginChild("differences", 0f, DIFF_HEIGHT, true)) {
+        if (!ImGui.beginChild("differences", 0f, DIFF_HEIGHT, ImGuiChildFlags.Borders)) {
             ImGui.endChild()
             return
         }

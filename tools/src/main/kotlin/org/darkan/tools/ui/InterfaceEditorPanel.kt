@@ -104,7 +104,7 @@ class InterfaceEditorPanel(private val context: InterfaceEditContext) {
         honourReveal()
 
         ImGui.separator()
-        if (ImGui.beginChild("rows", 0f, 0f, false)) {
+        if (ImGui.beginChild("rows", 0f, 0f)) {
             drawRows(document)
             handleKeys()
         }

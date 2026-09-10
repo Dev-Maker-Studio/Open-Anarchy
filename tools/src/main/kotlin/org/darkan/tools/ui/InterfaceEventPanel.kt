@@ -1,6 +1,7 @@
 package org.darkan.tools.ui
 
 import imgui.ImGui
+import imgui.flag.ImGuiChildFlags
 import imgui.flag.ImGuiCol
 import imgui.flag.ImGuiTableColumnFlags
 import imgui.flag.ImGuiTableFlags
@@ -333,7 +334,7 @@ class InterfaceEventPanel(
         }
 
         val filter = traceFilter.get().trim().lowercase()
-        if (!ImGui.beginChild("tracelist", 0f, TRACE_HEIGHT, true)) {
+        if (!ImGui.beginChild("tracelist", 0f, TRACE_HEIGHT, ImGuiChildFlags.Borders)) {
             ImGui.endChild()
             return
         }

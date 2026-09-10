@@ -1,6 +1,7 @@
 package org.darkan.tools.ui
 
 import imgui.ImGui
+import imgui.flag.ImGuiChildFlags
 import imgui.flag.ImGuiCol
 import imgui.flag.ImGuiCond
 import imgui.flag.ImGuiTreeNodeFlags
@@ -232,7 +233,7 @@ class Cs2ReloadPanel(
         }
         if (ImGui.smallButton("Clear log##errors")) reload.clearLog()
 
-        if (ImGui.beginChild("Cs2ReloadErrors", 0f, 140f, true)) {
+        if (ImGui.beginChild("Cs2ReloadErrors", 0f, 140f, ImGuiChildFlags.Borders)) {
             for ((index, event) in errors.withIndex()) {
                 val diagnostic = event.diagnostic
                 // Bound to a local: `Diagnostic.file` lives in the :cs2 module now, and a public
@@ -271,7 +272,7 @@ class Cs2ReloadPanel(
             ImGuiText.disabled("No scripts are running from source.")
             return
         }
-        if (ImGui.beginChild("Cs2ReloadOverrides", 0f, 120f, true)) {
+        if (ImGui.beginChild("Cs2ReloadOverrides", 0f, 120f, ImGuiChildFlags.Borders)) {
             for (id in ids) {
                 ImGui.text("script $id")
                 ImGui.sameLine()
@@ -294,7 +295,7 @@ class Cs2ReloadPanel(
             ImGuiText.disabled("Nothing yet.")
             return
         }
-        if (ImGui.beginChild("Cs2ReloadLog", 0f, 160f, true)) {
+        if (ImGui.beginChild("Cs2ReloadLog", 0f, 160f, ImGuiChildFlags.Borders)) {
             for (event in events) {
                 if (event.ok) {
                     ImGuiText.disabled("${event.time}  ${event.scriptId}")
@@ -325,7 +326,7 @@ class Cs2ReloadPanel(
                 .map { reload.project.exportSource(it) }
             status = "exported ${exported.count { it.ok }} of ${exported.size} missing scripts"
         }
-        if (ImGui.beginChild("Cs2ReloadHooks", 0f, 140f, true)) {
+        if (ImGui.beginChild("Cs2ReloadHooks", 0f, 140f, ImGuiChildFlags.Borders)) {
             for (id in ids) {
                 val present = reload.project.hasSource(id)
                 if (present) ImGui.text("script $id") else ImGuiText.disabled("script $id (not exported)")
