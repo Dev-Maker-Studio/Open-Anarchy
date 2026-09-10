@@ -18,7 +18,6 @@ package com.rs.net.encoders
 
 import com.rs.game.Account
 import com.rs.game.World
-import com.rs.game.map.Chunk
 import com.rs.game.map.ChunkManager
 import com.rs.game.model.WorldProjectile
 import com.rs.game.model.entity.npc.NPC
@@ -29,7 +28,6 @@ import com.rs.game.model.gameobject.ObjectMeshModifier
 import com.rs.game.model.item.ItemsContainer
 import com.rs.net.update.EntitySnapshotFactory
 import com.rs.utils.MapXTEAs
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import java.io.ByteArrayOutputStream
 import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Varp
@@ -45,7 +43,6 @@ import org.darkan.core.model.SoundType
 import org.darkan.core.model.SpotAnim
 import org.darkan.core.net.Session
 import org.darkan.core.net.prot.dto.GrandExchangeOffer
-import org.darkan.core.net.prot.dto.InstanceLoadType
 import org.darkan.core.net.prot.dto.InvSlotUpdate
 import org.darkan.core.net.prot.packet.BlockMinimapState
 import org.darkan.core.net.prot.packet.BuildInstancedRegion
@@ -148,6 +145,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     val playerTrackingState = PlayerUpdateTrackingState()
     val npcTrackingState = NpcUpdateTrackingState()
+    private var localPlayerBlockSent = false
 
     fun resetNpcTrackingState() {
         npcTrackingState.localCount = 0
@@ -619,85 +617,55 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     // ======================== Map region packets ========================
 
-    fun sendDynamicMapRegion(sendLSWP: Boolean) {
-        val mapHash = player.mapSize.size shr 4
-        val chunkDescriptors = mutableListOf<Int>()
-        val realRegionIds = IntOpenHashSet()
-
-        var plane = 0
-        while (plane < 4 * Chunk.PLANE_INC) {
-            var cx = (player.chunkX - mapHash) * Chunk.X_INC
-            while (cx <= (player.chunkX + mapHash) * Chunk.X_INC) {
-                var cy = player.chunkY - mapHash
-                while (cy <= player.chunkY + mapHash) {
-                    val chunk = ChunkManager.getChunk(cx + cy + plane)
-                    if (chunk.renderChunkX == 0 || chunk.renderChunkY == 0) {
-                        chunkDescriptors.add(-1)
-                    } else {
-                        chunkDescriptors.add(
-                            (chunk.rotation shl 1) or (chunk.renderPlane shl 24) or (chunk.renderChunkX shl 14) or (chunk.renderChunkY shl 3)
-                        )
-                        realRegionIds.add(chunk.renderRegionId)
-                    }
-                    cy++
-                }
-                cx += Chunk.X_INC
-            }
-            plane += Chunk.PLANE_INC
-        }
-
-        val xteas = Array(realRegionIds.size) { i ->
-            val regionId = realRegionIds.toIntArray()[i]
-            MapXTEAs.getMapKeys(regionId) ?: intArrayOf(0, 0, 0, 0)
-        }
-
-        if (sendLSWP) {
-            initPlayerTrackingState()
-        }
-
+    fun sendDynamicMapRegion() {
+        val chunks = BuildInstancedRegion.chunks(player.chunkX, player.chunkY, player.mapSize, ::instancedChunkDescriptor)
+        val withLocalPlayer = takeLocalPlayerBlock()
         session.queuePacket(
             BuildInstancedRegion(
                 mapSize = player.mapSize,
-                chunks = chunkDescriptors.toIntArray(),
-                xteas = xteas,
+                chunks = chunks,
+                xteas = MapRegionKeys.forChunks(chunks, MapXTEAs::getMapKeys),
                 chunkX = player.chunkX,
                 chunkY = player.chunkY,
                 forceMapRefresh = player.isForceNextMapLoadRefresh,
-                localPlayerPid = if (sendLSWP) player.index else null,
-                localPlayerBaseTileHash = if (sendLSWP) player.tile.id else null,
-                otherPlayerRegionIds = if (sendLSWP) buildOtherPlayerRegionIds() else null,
+                localPlayerPid = if (withLocalPlayer) player.index else null,
+                localPlayerBaseTileHash = if (withLocalPlayer) player.tile.id else null,
+                otherPlayerRegionIds = if (withLocalPlayer) buildOtherPlayerRegionIds() else null,
             )
         )
     }
 
-    fun sendMapRegion(sendLSWP: Boolean) {
-        val mapRegionIds = IntOpenHashSet()
-        for (chunkId in player.mapChunkIds) {
-            val coords = MapUtils.decode(Structure.CHUNK, chunkId)
-            mapRegionIds.add(MapUtils.encode(Structure.REGION, coords[0] shr 3, coords[1] shr 3))
-        }
-        val sortedRegionIds = mapRegionIds.toIntArray().also { it.sort() }
-        val xteas = Array(sortedRegionIds.size) { i ->
-            MapXTEAs.getMapKeys(sortedRegionIds[i]) ?: intArrayOf(0, 0, 0, 0)
-        }
+    private fun instancedChunkDescriptor(chunkX: Int, chunkY: Int, plane: Int): Int {
+        val chunk = ChunkManager.getChunk(Structure.CHUNK.encode(chunkX, chunkY, plane))
+        if (chunk.renderChunkX == 0 || chunk.renderChunkY == 0)
+            return BuildInstancedRegion.ABSENT_CHUNK
+        return BuildInstancedRegion.chunkDescriptor(chunk.renderChunkX, chunk.renderChunkY, chunk.renderPlane, chunk.rotation)
+    }
 
-        if (sendLSWP) {
-            initPlayerTrackingState()
-        }
-
+    fun sendMapRegion() {
+        val regionIds = BuildRegion.regionIds(player.chunkX, player.chunkY, player.mapSize)
+        val withLocalPlayer = takeLocalPlayerBlock()
         session.queuePacket(
             BuildRegion(
-                regionIds = sortedRegionIds,
+                regionIds = regionIds,
                 mapSize = player.mapSize,
-                xteas = xteas,
+                xteas = MapRegionKeys.forRegions(regionIds, MapXTEAs::getMapKeys),
                 chunkX = player.chunkX,
                 chunkY = player.chunkY,
                 forceMapRefresh = player.isForceNextMapLoadRefresh,
-                localPlayerPid = if (sendLSWP) player.index else null,
-                localPlayerBaseTileHash = if (sendLSWP) player.tile.id else null,
-                otherPlayerRegionIds = if (sendLSWP) buildOtherPlayerRegionIds() else null,
+                localPlayerPid = if (withLocalPlayer) player.index else null,
+                localPlayerBaseTileHash = if (withLocalPlayer) player.tile.id else null,
+                otherPlayerRegionIds = if (withLocalPlayer) buildOtherPlayerRegionIds() else null,
             )
         )
+    }
+
+    private fun takeLocalPlayerBlock(): Boolean {
+        if (localPlayerBlockSent)
+            return false
+        localPlayerBlockSent = true
+        initPlayerTrackingState()
+        return true
     }
 
     private fun buildOtherPlayerRegionIds(): IntArray {

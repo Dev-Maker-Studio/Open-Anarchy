@@ -100,7 +100,7 @@ internal fun Codec.registerRev727MiscPackets() {
         out.writeShort(chunkX)
         out.bitAccess {
             chunks.forEach {
-                if (it == -1) writeBit(false)
+                if (it == BuildInstancedRegion.ABSENT_CHUNK) writeBit(false)
                 else {
                     writeBit(true)
                     writeBits(26, it)
