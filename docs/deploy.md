@@ -40,22 +40,23 @@ keys) is what `darkan-worlds` uses.
   data/  plugins/                         # world only - the repo's data/ and plugins/ trees
 ```
 
-The unit puts a JDK 25 first on `PATH` for that unit only, so the machine default (and every other
-unit) is unaffected:
+The unit pins the JDK the build targets (Java 26) first on `PATH` for that unit only, so it never
+depends on the machine's sdkman default:
 
 ```ini
 [Service]
 Environment=DARKAN_JAVA_VM_ARGS="..."
 Environment=GITLAB_ACCESS_TOKEN=...
 Environment=DARKAN_GITLAB_PROJECT_ID=67255206
-Environment=PATH=/home/trent/.sdkman/candidates/java/25.0.4-tem/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/home/trent/.sdkman/candidates/java/26.0.2-tem/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/home/trent/<name>/run-<lobby|world>-beta.sh
 WorkingDirectory=/home/trent/<name>
 User=trent
 ```
 
-JDK 25 was installed with sdkman as `trent` (`yes n | sdk install java 25.0.4-tem` - the `n`
-declines making it the default; verify `readlink ~/.sdkman/candidates/java/current` is unchanged).
+JDK 26 was installed with sdkman as `trent` (`sdk install java 26.0.2-tem`). Moving a unit to a new
+JDK means editing that `PATH` line, `systemctl daemon-reload` and `systemctl restart <unit>`: the
+auto-update restarts java inside the unit's own loop, so it keeps the unit's old environment.
 
 ## `.env` - lobby
 
