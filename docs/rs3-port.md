@@ -70,5 +70,5 @@ icon <objId>[,<objId>...] <out.png> [--sheet] [--amount n] [--outline n] [--wiki
 4. Run the importer (or `rs3port model` per model), pack, `cache verify`, and compare the
    per-index lines against the tree's baseline: the only lines that may change are the archives
    the new ids land in.
-5. Register the server side against the generated constants; `UrnTableTest` is the shape of the
-   test that proves names, options, guide rows and animations against the cache.
+5. Register the server side against the generated constants and hand it to the user to check in
+   the client; content gets no tests.
