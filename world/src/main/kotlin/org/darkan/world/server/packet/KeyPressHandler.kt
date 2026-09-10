@@ -6,7 +6,8 @@ import org.darkan.core.net.prot.handler.PacketHandler
 
 class KeyPressHandler : PacketHandler<Player, KeyPress> {
     override suspend fun handle(player: Player, packet: KeyPress) {
-        if (packet.keyCode == 13) { // Enter key
+        player.refreshIdleTime()
+        if (packet.keyCode == 13) {
             if (player.interfaceManager.containsScreenInter())
                 player.closeInterfaces()
             if (player.tempAttribs.getB("worldMap"))
