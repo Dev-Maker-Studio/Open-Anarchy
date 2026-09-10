@@ -1,8 +1,8 @@
 plugins {
     application
     `maven-publish`
-    id("com.gradleup.shadow") version "9.3.0"
-    kotlin("plugin.serialization") version "2.3.0"
+    id("com.gradleup.shadow") version "9.6.1"
+    kotlin("plugin.serialization")
 }
 
 application {
@@ -21,9 +21,9 @@ dependencies {
     // The cache source tree stores index 12 as TypeScript; :cs2 carries the codec that
     // compiles it back (docs/cache-source.md). Headless - no LWJGL, GLFW or ImGui.
     implementation(project(":cs2"))
-    implementation("com.google.code.gson:gson:2.12.1")
-    implementation("com.google.guava:guava:33.4.0-jre")
-    implementation("it.unimi.dsi:fastutil:8.5.15")
+    implementation("com.google.code.gson:gson:2.14.0")
+    implementation("com.google.guava:guava:33.7.1-jre")
+    implementation("it.unimi.dsi:fastutil:8.5.19")
 
     testImplementation(kotlin("test"))
 }
@@ -34,9 +34,13 @@ tasks.withType<Jar> {
     }
 }
 
-tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
+tasks.shadowJar {
     isZip64 = true
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
     mergeServiceFiles()
+    filesNotMatching(listOf("META-INF/services/**", "META-INF/*.kotlin_module")) {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
     archiveBaseName.set("world-server")
     // Published and downloaded as <name>-<version>.jar; no "-all" classifier.
     archiveClassifier.set("")

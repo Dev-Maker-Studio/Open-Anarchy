@@ -200,12 +200,9 @@ class StagePanel(private val target: RenderTarget) {
         ImGui.invisibleButton("##stage", availableWidth, availableHeight)
         val panelHovered = ImGui.isItemHovered()
 
-        // The image is emitted as a draw-list command rather than as a widget so it
-        // sits underneath the invisible button that owns the input. The vertical UV
-        // is inverted because a framebuffer's first row is its bottom one, while
-        // ImGui reads (0, 0) as the top-left of the image.
+        // Drawn under the input-owning invisible button; V is flipped since framebuffer rows start at the bottom.
         drawList.addImage(
-            target.textureId,
+            target.textureId.toLong(),
             imageX, imageY,
             imageX + drawWidth, imageY + drawHeight,
             0f, 1f,

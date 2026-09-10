@@ -13,6 +13,7 @@ import io.ktor.util.network.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.CancellationException
 import io.ktor.utils.io.core.*
+import kotlin.use
 import kotlinx.coroutines.*
 import kotlinx.io.readByteArray
 import kotlinx.io.readUByte

@@ -1,8 +1,8 @@
 plugins {
     application
     `maven-publish`
-    id("com.gradleup.shadow") version "9.3.0"
-    kotlin("plugin.serialization") version "2.3.0"
+    id("com.gradleup.shadow") version "9.6.1"
+    kotlin("plugin.serialization")
 }
 
 application {
@@ -24,9 +24,13 @@ tasks.withType<Jar> {
     }
 }
 
-tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
+tasks.shadowJar {
     isZip64 = true
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
     mergeServiceFiles()
+    filesNotMatching(listOf("META-INF/services/**", "META-INF/*.kotlin_module")) {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    }
     archiveBaseName.set("lobby-server")
     // Published and downloaded as <name>-<version>.jar; no "-all" classifier.
     archiveClassifier.set("")

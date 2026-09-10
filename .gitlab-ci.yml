@@ -1,4 +1,4 @@
-image: eclipse-temurin:25-jdk-alpine
+image: eclipse-temurin:26-jdk-alpine
 
 # Branch model: `dev` is the only long-lived branch. Every push to it publishes dev packages that the
 # bleeding-edge world and the dev lobby pull automatically. Releases are tags cut from `dev`: a tag

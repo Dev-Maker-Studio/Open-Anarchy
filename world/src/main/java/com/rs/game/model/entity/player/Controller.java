@@ -32,8 +32,6 @@ import com.rs.utils.music.Music;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
-
 public abstract class Controller {
 
 	@SuppressWarnings("NotNullFieldNotInitialized")

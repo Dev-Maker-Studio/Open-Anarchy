@@ -1,6 +1,7 @@
 package org.darkan.tools.ui
 
 import imgui.ImGui
+import imgui.flag.ImGuiChildFlags
 import imgui.flag.ImGuiCol
 import imgui.flag.ImGuiTableColumnFlags
 import imgui.flag.ImGuiTableFlags
@@ -224,7 +225,7 @@ class Cs2HookPanel(
             host.log.clear()
             return
         }
-        if (!ImGui.beginChild("hooklog", 0f, LOG_HEIGHT, true)) {
+        if (!ImGui.beginChild("hooklog", 0f, LOG_HEIGHT, ImGuiChildFlags.Borders)) {
             ImGui.endChild()
             return
         }

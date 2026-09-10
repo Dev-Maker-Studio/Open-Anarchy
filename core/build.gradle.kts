@@ -1,16 +1,16 @@
 import org.darkan.build.gameval.GenerateGamevalConstants
 
 plugins {
-    kotlin("plugin.serialization") version "2.3.0"
+    kotlin("plugin.serialization")
     idea
 }
 
 dependencies {
-    implementation("com.google.code.gson:gson:2.12.1")
-    implementation("com.google.guava:guava:33.4.0-jre")
+    implementation("com.google.code.gson:gson:2.14.0")
+    implementation("com.google.guava:guava:33.7.1-jre")
     // Two reference tables in the 727 cache (255/2 and 255/9) were bzip2ed by commons-compress
     // rather than libbzip2, so reproducing them byte for byte needs its encoder as well as ours.
-    implementation("org.apache.commons:commons-compress:1.27.1")
+    implementation("org.apache.commons:commons-compress:1.28.0")
     testImplementation(kotlin("test"))
 
     // The battle-tested legacy server library, for the differential codec tests only. Kept out of

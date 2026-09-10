@@ -154,7 +154,7 @@ class AssetPicker(
             return
         }
         val scale = size / maxOf(graphic.width, graphic.height).toFloat()
-        ImGui.image(graphic.textureId, graphic.width * scale, graphic.height * scale)
+        ImGui.image(graphic.textureId.toLong(), graphic.width * scale, graphic.height * scale)
     }
 
     fun objThumbnail(obj: Int, amount: Int = 1) {
@@ -165,7 +165,7 @@ class AssetPicker(
             ImGui.popStyleColor()
             return
         }
-        ImGui.image(icon.textureId, ObjIcons.WIDTH.toFloat(), ObjIcons.HEIGHT.toFloat())
+        ImGui.image(icon.textureId.toLong(), ObjIcons.WIDTH.toFloat(), ObjIcons.HEIGHT.toFloat())
     }
 
     // ------------------------------------------------------------------ popups
@@ -189,7 +189,7 @@ class AssetPicker(
             ImGui.separator()
 
             val range = parseRange(graphicFilter.get(), graphics.count)
-            if (ImGui.beginChild("grid", 0f, 0f, false)) {
+            if (ImGui.beginChild("grid", 0f, 0f)) {
                 picked = drawGraphicGrid(range)
             }
             ImGui.endChild()
@@ -256,7 +256,6 @@ class AssetPicker(
         return picked
     }
 
-    /** One grid cell: a clickable thumbnail with the id underneath as a tooltip. */
     private fun graphicCell(id: Int): Boolean {
         val graphic = graphics.graphic(id)
         ImGui.pushID(id)
@@ -267,7 +266,7 @@ class AssetPicker(
             hit
         } else {
             val scale = (CELL - 6f) / maxOf(graphic.width, graphic.height).toFloat()
-            ImGui.imageButton(graphic.textureId, graphic.width * scale, graphic.height * scale)
+            ImGui.imageButton("##graphic", graphic.textureId.toLong(), graphic.width * scale, graphic.height * scale)
         }
         if (ImGui.isItemHovered()) {
             ImGui.beginTooltip()
@@ -328,7 +327,7 @@ class AssetPicker(
             val filter = itemFilter.get().trim()
             if (filter.isEmpty()) {
                 ImGuiText.disabled("Type to search ${itemCount} items.")
-            } else if (ImGui.beginChild("items", 0f, 0f, false)) {
+            } else if (ImGui.beginChild("items", 0f, 0f)) {
                 // Item names are only known once decoded, so a name search has to
                 // walk the index. It is capped rather than paged: a developer types
                 // enough of a name to narrow it, and an uncapped scan of every item
