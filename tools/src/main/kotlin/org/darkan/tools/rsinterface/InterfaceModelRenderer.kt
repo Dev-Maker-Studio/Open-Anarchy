@@ -191,8 +191,8 @@ class InterfaceModelRenderer(
             return ModelRequest(
                 modelId = definition.modelId,
                 pitch = definition.graphicPitch,
-                roll = definition.graphicCameraRoll,
-                yaw = definition.graphicCameraYaw,
+                roll = definition.graphicCameraYaw,
+                yaw = definition.graphicCameraRoll,
                 scale = definition.graphicScale,
                 translateX = definition.graphicTranslateX,
                 translateY = definition.graphicTranslateY
