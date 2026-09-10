@@ -21,6 +21,7 @@ import com.rs.game.model.entity.player.Player;
 import org.darkan.core.Constants;
 import org.darkan.core.model.Animation;
 import org.darkan.core.Utils;
+import org.darkan.core.gameval.gen.Seq;
 import com.rs.utils.DropSets;
 import com.rs.utils.drop.DropSet;
 import com.rs.utils.drop.DropTable;
@@ -181,7 +182,7 @@ public enum PickPocketableNPC {
 			new short[] { 2109, 2110, 2111, 2112, 2113, 2114, 2115, 2116, 2117, 2118, 2119, 2120, 2121, 2122, 2123, 2124, 2125, 2126, 8824, 8827 },
 			new byte[] { 90, 100, 110, 120 },
 			new byte[] { 1, 90, 100, 110 },
-			556.5, 6, 10,
+			556.5, new Animation(Seq.seq_99), 6, 10,
 			"pp_dwarftrader");
 
 	private static final Map<Short, PickPocketableNPC> NPCS = new HashMap<>();
