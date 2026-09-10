@@ -14,7 +14,30 @@ id, real names for what we author, no comments, no attribution.
 
 ## 1. The loop
 
-0. **Preview without packing.** The interface editor reads the tree directly - components from
+Every step has a helper beside this skill or a one-line command; the whole loop for a script fix
+is minutes, and nothing in it runs Gradle on the desktop (the tools install and the jars come from
+the remote build host, `scratchpad/remote-build.sh :tools:installDist :world:shadowJar`).
+
+| step | command | takes |
+|---|---|---|
+| 0 compile one script | `CACHE_PATH=$PWD/data/cache/ tools cs2 compile cache-source/clientscripts <id>` | 5 s |
+| 1 preview live, no pack | `tools/capture-headless.sh ... -- interface <id> --var v=n --stat all=99` | 100 s |
+| 2 pack | `tools cache build cache-source data/cache` | 35 s full, seconds incremental |
+| 3 read back | `.claude/skills/cs2-engineer/readback.sh <id\|name>...` | 10 s per script |
+| 4 render the packed result | step 1 with `--source none` | 100 s |
+| 5 local world on the dev lobby | `.claude/skills/cs2-engineer/dev-world.sh restart` then `client` | 40 s |
+| 6 commit | `cache-source` first, push, bump the submodule pointer in the server commit | |
+
+`tools` is `tools/build/install/tools/bin/tools`. Do steps 0 and 3 for every script you touched; do
+step 4 for everything a render can show - text, graphics, layout and obj icons (`ObjIcons` in the
+engine draws the client's 36x32 item sprite, amount and outline included; `tools icon 4151,995
+out.png --amount 1000` renders them standalone); step 5 is the only real test and the user does
+the looking.
+
+0. **Compile before you pack.** `tools cs2 compile <dir> <id>` compiles one edited script against
+   the packed cache and says `identical to the cached script` or prints the divergence; a type or
+   name error surfaces here in seconds instead of 35 s into a pack.
+1. **Preview without packing.** The interface editor reads the tree directly - components from
    `interfaces/<id>/*.json`, clientscripts compiled from their `.ts` - so an edit is visible in a
    render seconds later, with no pack and no restart:
 
@@ -24,52 +47,56 @@ id, real names for what we author, no comments, no attribution.
      interface 499 --source cache-source --var varbit_skill_guide_skill_v2=11 --stat all=99
    ```
 
-   `--source cache-source` is the default when the tree is beside the working directory. `--var`,
-   `--stat` and `--run` supply the game state an interface needs before it draws anything (the
-   skill guide builds its list from `varbit_skill_guide_skill_v2` and `statBase`); in the GUI the
-   same three live in the **State** panel, saving a `.ts` reloads it, and F7 re-reads everything.
-   Graphics, fonts and models still come from the packed cache, so a *new* graphic needs step 2.
-   See `docs/cs2-editor.md`, "Live source mode". Pack when you are ready to ship, not to look.
-1. Edit the `.ts` (or interface JSON / graphic PNG) in `cache-source/`.
-2. Pack: `tools/build/install/tools/bin/tools cache build cache-source data/cache` (the local
-   `installDist` of the tools module; ~45 s for a full pack, seconds incrementally). It compiles
-   every clientscript, so a type or name error fails here.
-3. Read it back from the packed cache, never trust the source alone:
-   `CACHE_PATH=$PWD/data/cache/ tools cs2 decompile <id>` must print exactly what you wrote.
-   Graphics and components: decode them with the core decoders (`GraphicDecoder`, `InterfaceDecoder`)
-   through `jshell --class-path "$(ls tools/build/install/tools/lib/*.jar | tr '\n' ':')"` with
-   `CACHE_PATH` set (`kotlinc -script` rejects JDK 25).
-4. **Look at it before handing it over.** The tools interface viewer renders any interface with its
-   fonts and load scripts: `EXTRA="-Ddarkan.capture=<out.png> -Ddarkan.captureAfter=10"
-   tools/capture-headless.sh <root.png> 100 -- interface <id>` (private Xvfb, llvmpipe; the
-   viewer takes ~60 s to load, so settle 100). Crop the stage at 4x and judge text colour, size
-   and centring there - cream on the gold login-button art read as "trash" on the user's GPU,
-   dark brown (`0x2E1B08`) reads; verdana labels need the preset buttons' `-3` y nudge.
-5. Commit in `cache-source` (branch `dev`), push, bump the submodule pointer in the server commit.
+   `--source cache-source` is the default when the tree is beside the working directory. `--var`
+   (repeatable), `--stat` and `--run` supply the game state an interface needs before it draws
+   anything (the skill guide builds its list from `varbit_skill_guide_skill_v2`,
+   `varbit_skill_guide_subsection_v2` and `statBase`); in the GUI the same three live in the
+   **State** panel, saving a `.ts` reloads it, and F7 re-reads everything. Graphics, fonts and
+   models still come from the packed cache, so a *new* graphic needs step 2. `tools cs2 interface
+   <id>` runs the load scripts on the VM in seconds but takes no `--var` and reports no ccs, so it
+   is no use for a var-driven interface. See `docs/cs2-editor.md`, "Live source mode".
+   Loop over several states with a bash script (`while read -r name skill tab; do ...; done`), not
+   a zsh one-liner: the Bash tool's shell is zsh and `set -- $spec` does not split there.
+2. **Pack**: `tools cache build cache-source data/cache` compiles every clientscript, so a type or
+   name error fails here. A `data/cache` written by an older tools build gets a full pack once
+   (`the manifest was built from ...`), incremental after that.
+3. **Read it back, never trust the source alone.** `readback.sh` decompiles each script from the
+   packed cache with `--source none` and diffs it against the tree's `.ts`, blank lines ignored.
+   A diff that is only typing - a parameter printed `graphic` where the source says `obj`, a bare
+   `18637` for `Obj.obj_18637`, `Graphic.emotes_40` for `0`, renumbered locals - is the decompiler's
+   inference and not the bytecode: keep the source, it carries the gameval names. A structural
+   diff is a real mismatch. Graphics and components: decode them with the core decoders
+   (`GraphicDecoder`, `InterfaceDecoder`) through `jshell --class-path "$(ls
+   tools/build/install/tools/lib/*.jar | tr '\n' ':')"` with `CACHE_PATH` set (`kotlinc -script`
+   rejects JDK 25).
+4. **Look at it before handing it over.** Step 1 with `--source none` renders what the packed cache
+   will ship (private Xvfb, llvmpipe; the viewer takes ~60 s to load, so settle 100). Crop the stage
+   at 4x (`magick in.png -crop WxH+X+Y +repage -filter point -resize 400% out.png`) and judge text
+   colour, size and centring there - cream on the gold login-button art read as "trash" on the
+   user's GPU, dark brown (`0x2E1B08`) reads; verdana labels need the preset buttons' `-3` y nudge.
+   Render a control state next to the changed one (a tab that was already right) so a viewer
+   limitation is not mistaken for a regression.
+5. **The local world on the dev lobby is the test, and the user does the looking.** Since the
+   own-cache world list flag (2026-09-09) no local lobby is needed: `dev-world.sh start` runs the
+   world jar from the server root with `CACHE_SOURCE_PATH` (it packs the tree incrementally on
+   start), the dev lobby at `10.69.69.22` flags it own-cache because its index CRCs differ, the
+   client fetches JS5 from the world, and `dev-world.sh client` launches the client on the user's
+   display against the dev lobby. `.env` needs `SOCIAL_GATEWAY_URL`, the dev lobby's
+   `SOCIAL_GATEWAY_TOKEN` and `WORLD_LOGIN_TOKEN_SECRET` and its `MONGO_URI` (the header of
+   `dev-world.sh` says where they live) and a `WORLD_ID` nobody else uses. **Restart the world after
+   every pack** - it reads its cache CRCs at startup and a stale one answers the login with
+   "Darkan has been updated". Then stop: tell the user which interface, tab and account to look at
+   and wait; never drive the client yourself (no xdotool, no console commands - the user checks in
+   seconds). `dev-world.sh stop` when they are done; do not start it again unless asked. Launch the
+   client without `-Dautologin` when `~/.darkan_login` exists: a saved login plus the flag enters
+   the world as the wrong account ("LoginToken for X presented by Y"). `client-shot.sh` beside this
+   skill still screenshots the client on a private Xvfb for what a passive frame can show.
+6. Commit in `cache-source` (branch `dev`), push, bump the submodule pointer in the server commit.
    The dev lobby and bleeding-edge world rebuild the cache from the tree on their next restart and
    log `cache build: clientscripts: n archives repacked`.
-6. The only real test is the client. Screenshot it yourself with `client-shot.sh` beside this skill:
-   it runs `~/darkan/darkan-bot/build/libs/darkan-client-shaded-*-all.jar` on a private Xvfb (GLX
-   off, or Auto Setup chooses OpenGL and captures are black), with a scratch client home, against
-   any lobby - a local one from the remote-built `lobby-server.jar` with `CACHE_SOURCE_PATH` in
-   `.env` serves the tree you just edited (restart it after every edit; it repacks incrementally),
-   and the dev lobby after its restart shows what players get (`10.69.69.22 43593` from the LAN; the
-   `dev.darkan.org` proxy refuses that port from here). A fresh client home starts on the
-   first-run graphics popup: `INPUT="mousemove 386 320 mousedown 1 sleep 0.3 mouseup 1"` clicks
-   Auto Setup and the login screen follows; `JAVA_EXTRA="-Dautologin=user:pass -Dautologin.world=1"`
-   logs in and enters a world for lobby and gameframe captures (`testes`/`testes` on the dev database).
-   Ask for a client check only for what a screenshot cannot show: hover, tooltips, timing.
 
-Local end-to-end loop (the only real test, 2026-09-06): `java -jar lobby/build/libs/lobby-server-3.0.0.jar`
-and `world/build/libs/world-server-3.0.0.jar` from the server root (`.env` with `CACHE_SOURCE_PATH`;
-jars from the remote build host, `scp` them back), then the client on a private Xvfb
-(`Xvfb :90 -extension GLX`, `-Dautologin=user:pass`, click Play at (386,503) - `-Dautologin.world`
-stalls) and `xdotool` clicks. **Restart the world as well as the lobby after every cache pack**: the
-world's cache CRCs are read at startup and a stale world answers the login with "Darkan has been
-updated". Never `pkill -f` a pattern that also appears in your own shell command line.
-
-Gradle never runs on the desktop (remote build host, one build at a time); the local tools install
-and `jshell` are fine.
+Never `pkill -f` or wait on `pgrep -f` with a pattern that also appears in your own shell command line (a background `until pgrep -f x.sh` loop matched itself and waited forever). Gradle never runs on
+the desktop (remote build host, one build at a time); the local tools install and `jshell` are fine.
 
 ## 2. Registering a new script, graphic or component
 
@@ -217,6 +244,10 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
   way (the login screen's Facebook block became the Create Account button) leaves no gaps in the
   archive and nothing hidden.
 
+- **The decompiler types a multi-value return by the first caller it sees**, so a proc returning
+  `[level, item, graphic, name, unlock]` reads back as `[number, graphic, graphic, ...]` and its
+  callers' obj compares become bare numbers. Bytecode is unaffected; keep the hand-typed source
+  (`readback.sh` shows the diff as type-only).
 - **One function per script file.** A `.ts` is exactly one `[proc,...]`/`[clientscript,...]`; a helper
   is its own registered script (`Unknown opcode function 'x'` otherwise). The compiler has no
   ternary `?:` and no `!bool`: use `if`/`else` and `x == false`. Locals are renumbered on read-back
@@ -297,7 +328,12 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
   its level-up popup (741, `cs2_973`) read the enum in order through `cs2_12`/`cs2_13`/`cs2_14`/
   `cs2_1566`/`cs2_1567`, which now wrap `[proc,skillguide_tab_row]`, `[proc,skillguide_row_in_tab]`,
   `[proc,skillguide_legacy_name]` ("Members: " prefix, extrareq line) and
-  `[proc,skillguide_legacy_unlock]` (the popup text). The 52 hard-coded per-skill table scripts they
+  `[proc,skillguide_legacy_unlock]` (the popup text). `cs2_14` returns level, item, graphic
+  (`param_2214`, -1 when the row has none), name and unlock in one fetch, and the row drawers
+  (`cs2_24` for 499, `cs2_974` for 741) choose **per row**: the graphic when it is not -1, else the
+  item; the old per-skill switch `cs2_1566` ("Magic and Prayer are graphic skills") threw away the
+  item on Magic's Armour/Weapons/Other and Prayer's Equipment tabs once the rows came from the RS3
+  tables, and is unreferenced now along with `cs2_1567`. The 52 hard-coded per-skill table scripts they
   used to dispatch to (`cs2_2`, `cs2_3`, `cs2_977`-`cs2_1022`, `cs2_2787`, `cs2_2788`, `cs2_3354`,
   `cs2_3355`) are unreferenced and left in place. Adding a guide row = one struct + one enum entry at
   the right level position; never a script edit. The RS3 urn port (`docs/rs3-port.md`) is the worked

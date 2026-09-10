@@ -19,6 +19,7 @@ import org.darkan.cs2.vm.Cs2Values
 import org.darkan.cs2.vm.Cs2HookDispatcher
 import org.darkan.tools.engine.Engine
 import org.darkan.tools.engine.render.Canvas2D
+import org.darkan.tools.engine.render.ObjIcons
 import org.darkan.tools.engine.render.RenderTarget
 import org.darkan.tools.engine.window.WindowConfig
 import org.darkan.tools.rsinterface.ComponentState
@@ -39,6 +40,7 @@ import org.darkan.tools.rsinterface.InterfaceSourceTree
 import org.darkan.tools.rsinterface.InterfaceState
 import org.darkan.tools.rsinterface.InterfaceStore
 import org.darkan.tools.rsinterface.InterfaceViewport
+import org.darkan.tools.rsinterface.RsObjIconFont
 import org.darkan.tools.rsinterface.SourceWatch
 import org.darkan.tools.ui.AssetPicker
 import org.darkan.tools.ui.CommandPalette
@@ -170,6 +172,7 @@ class InterfaceViewer(
     private lateinit var graphics: GraphicCache
     private lateinit var fonts: FontCache
     private lateinit var modelRenderer: InterfaceModelRenderer
+    private lateinit var icons: ObjIcons
     private lateinit var renderer: InterfaceRenderer
     private val stageTarget = RenderTarget()
     private lateinit var stagePanel: StagePanel
@@ -275,7 +278,8 @@ class InterfaceViewer(
         graphics = GraphicCache(cache)
         fonts = FontCache(cache, graphics)
         modelRenderer = InterfaceModelRenderer(cache, window, renderSystem, colorShader, texturedShader)
-        renderer = InterfaceRenderer(canvas, graphics, fonts, modelRenderer)
+        icons = ObjIcons(cache, RsObjIconFont(fonts))
+        renderer = InterfaceRenderer(canvas, graphics, fonts, modelRenderer, icons)
         stagePanel = StagePanel(stageTarget)
 
         decoder = InterfaceDecoder()
@@ -491,7 +495,7 @@ class InterfaceViewer(
 
     private fun buildPanels() {
         val itemCount = ItemDecoder().size(cache) + 1
-        picker = AssetPicker(graphics, fonts, { id -> modelRenderer.item(id) }, itemCount)
+        picker = AssetPicker(graphics, fonts, { id -> icons.definition(id) }, itemCount, icons)
 
         library = InterfaceLibraryPanel(definitions.size) { id -> definitionOf(id) }
         library.onOpen = { id -> openInterface(id) }
@@ -1511,6 +1515,7 @@ class InterfaceViewer(
         sourceWatch.close()
         reload.close()
         modelRenderer.cleanup()
+        icons.cleanup()
         fonts.cleanup()
         graphics.cleanup()
         canvas.cleanup()

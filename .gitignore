@@ -91,3 +91,5 @@ world-server.jar
 /data/cache/
 # Runtime state the world server writes on every save (penguin spots, shooting stars); recreated when absent
 /data/world.json
+/data/dev-world.log
+/data/dev-client.log
