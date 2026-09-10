@@ -93,11 +93,14 @@ written as the developer's own.
 - One Gradle build at a time, on the remote build host, never on the user's desktop.
 - Imports at the top of the file; never an inline fully-qualified reference.
 - Tests are code: the same comment rule applies; test names carry the intent.
+- Tests are for the engine only: a focused test in a class named for the engine part it covers
+  (collision, line of sight, dispatch, codecs), failing on the old code. Content - plugins,
+  dialogues, shops, drops, definitions, bug-ticket fixes - gets no tests.
 - The default `test` suite stays fast: 20 s of test time per module, enforced by the root build.
   Anything that opens the packed cache or a source tree, or runs for more than a few seconds, goes
   in the opt-in `cacheTest` suite (`src/cacheTest`), which no build, `check` or pipeline runs; run
   it only when the change touches what it covers. Never wire a test into every build.
 - Game content follows `content-development` (world plugins, dialogues, cache definitions,
-  imported assets, harness tests, the hand-off to the user); clientscripts follow `cs2-engineer`.
+  imported assets, the hand-off to the user); clientscripts follow `cs2-engineer`.
 - `cache-source` is a submodule: cache-side changes are a commit there, pushed, and the pointer
   bumped in the server commit.

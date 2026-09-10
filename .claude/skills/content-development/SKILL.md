@@ -1,12 +1,12 @@
 ---
 name: content-development
-description: How server content is developed and proven in Darkan - the world module's plugin and dialogue patterns, cache-side definitions (objs, seqs, structs, enums, models) and their registration, importing assets from another revision, the harness tests, the pack/verify/read-back loop, and how the user checks it in the client. Load before writing or porting any game content. Maintained as we learn.
+description: How server content is developed and proven in Darkan - the world module's plugin and dialogue patterns, cache-side definitions (objs, seqs, structs, enums, models) and their registration, importing assets from another revision, the pack/verify/read-back loop, and how the user checks it in the client. Load before writing or porting any game content. Maintained as we learn.
 ---
 
 # Content development
 
 Content is a server half (the `world` module) and a cache half (`cache-source/`), and neither is
-done until the other agrees with it and a test proves the pair. Code standards
+done until the other agrees with it. Code standards
 (`darkan-code-standards`) apply unchanged; clientscript, interface and graphic work follows
 `cs2-engineer`. The RS3 urn port (`docs/rs3-port.md`, `docs/reference/rs3-urns.json`) is the
 worked example of everything below.
@@ -23,9 +23,8 @@ worked example of everything below.
 3. Cache side: write the files, register them, pack, **read back** with the decoders (`jshell`
    against the tools install, `tools cs2 decompile <id>`), and `cache verify` against the
    baseline signature (§5).
-4. Server side: Kotlin against the generated gameval constants; a fast harness test per
-   behaviour; `scratchpad/remote-build.sh build` (never Gradle on the desktop; one build at a
-   time).
+4. Server side: Kotlin against the generated gameval constants; `scratchpad/remote-build.sh
+   build` (never Gradle on the desktop; one build at a time). No content tests (§5).
 5. Hand it to the user: local lobby + world + client on their display (§6). Never drive the
    client yourself to validate content; use the tools viewer for interface visuals.
 
@@ -88,11 +87,14 @@ format; measure on the shared assets.
 
 ## 5. Proving it
 
-- **Tests** (`world/src/test`, fast suite, `WorldHarness`): a table test that reads every entry
-  back from the cache (names, options, stackable, guide row level, seq `rightHandItem`) and a
-  flow test that drives the handlers through `PluginManager.handle(ItemClickEvent(...))`,
-  `skills.addXp`, and asserts inventory and xp (`Settings.getConfig().xpRate` applies to lamps).
-  Known flaky and unrelated: `SocialGatewayTest` friends-chat tests fail on `dev` too.
+- **Tests**: content gets none - no table, flow or per-ticket tests for plugins, dialogues,
+  shops, drops or definitions. Content is proven by the cache read-back and by the user in the
+  client (§6). The fast suite (`world/src/test`, `WorldHarness`) is for engine-tier behaviour
+  only (collision, line of sight, packet dispatch, containers), in a class named for the engine
+  part it covers, and such a test must fail against the broken code before the fix.
+  `ChunkManager.getChunk(tile.getChunkId())` loads a region's map, base locs and clipping for one
+  (`LineOfSightTest`). Known flaky and unrelated: `SocialGatewayTest` friends-chat tests fail on
+  `dev` too.
 - **Verify signature**: `cache verify` already differs from `../cache` (authored graphics,
   scripts, obj 25358); save its per-index lines before you start and diff after - the only lines
   that may change are the archives your ids land in.

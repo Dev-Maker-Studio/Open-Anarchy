@@ -112,6 +112,24 @@ public class ItemTeleports {
 		return true;
 	}
 
+	public static void wornTransportationDialogue(Player player, Item item) {
+		int index = getIndex(item);
+		if (!checkAll(player, item, index, 0, 1))
+			return;
+		int slot = Equipment.getItemSlot(item.getId());
+		String[] locations = TELEPORT_NAMES[index];
+		player.startConversation(new Dialogue().addOptions("Where would you like to teleport to?", ops -> {
+			for (int i = 0; i < locations.length; i++) {
+				int option = i;
+				ops.add(locations[i], () -> {
+					Item worn = player.getEquipment().getItem(slot);
+					if (worn != null && worn.getId() == item.getId())
+						sendTeleport(player, worn, option, true, locations.length);
+				});
+			}
+		}));
+	}
+
 	public static boolean transportationDialogue(Player player, int itemId) {
 		int index = getIndex(new Item(itemId, 1));
 		if (index == -1)

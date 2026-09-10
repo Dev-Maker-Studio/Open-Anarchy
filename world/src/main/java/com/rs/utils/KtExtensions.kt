@@ -71,17 +71,9 @@ fun Tile.getYInScene(sceneBaseChunkId: Int): Int = y - (sceneBaseChunkId and 204
  */
 fun ObjectDefinition.getOption(index: Int): String? = options?.getOrNull(index)
 
-/**
- * Gets the clip type (solid field) of the object definition.
- * 0 = no clip, 1 = blocks walk, 2 = blocks walk + projectiles.
- * Accessible as both property (clipType) and function (getClipType()) from Java.
- */
 val ObjectDefinition.clipType: Int get() = solid
 
-/**
- * Whether this object blocks projectiles (solid type 2).
- */
-fun ObjectDefinition.blocks(): Boolean = solid == 2
+fun ObjectDefinition.blocks(): Boolean = (block and ObjectDefinition.PROJECTILE) != 0
 
 /**
  * Whether this object should be ignored by the pathfinder.

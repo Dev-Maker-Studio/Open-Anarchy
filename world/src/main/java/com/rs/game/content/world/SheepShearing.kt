@@ -42,10 +42,11 @@ private fun shear(player: Player, npc: NPC) {
         player.sendMessage("You need a pair of shears to shear the sheep.")
         return
     }
+    val black = npcId == Npc.sheep_black
     player.soundEffect(Sound.sound_761, true)
-    player.inventory.addItem(Obj.wool, 1)
+    player.inventory.addItem(if (black) Obj.black_wool else Obj.wool, 1)
     player.sendMessage("You shear the sheep of it's fleece.")
     player.anim(Seq.human_shearing)
-    npc.transformIntoNPC(Npc.npc_5149)
+    npc.transformIntoNPC(if (black) Npc.npc_8877 else Npc.npc_5149)
     WorldTasks.delay(Ticks.fromSeconds(10)) { npc.transformIntoNPC(npcId) }
 }
