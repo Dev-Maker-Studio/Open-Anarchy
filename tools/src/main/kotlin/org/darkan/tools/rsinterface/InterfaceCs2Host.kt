@@ -5,6 +5,7 @@ import org.darkan.cs2.ir.VarSpace
 import org.darkan.cs2.vm.Cs2Hook
 import org.darkan.cs2.vm.Cs2Host
 import org.darkan.cs2.vm.Cs2Values
+import org.darkan.tools.engine.render.ObjIconStack
 import world.gregs.voidps.cache.definition.data.EnumDefinition
 import world.gregs.voidps.cache.definition.data.ParamDefinition
 import world.gregs.voidps.cache.definition.data.StructDefinition
@@ -154,8 +155,14 @@ class InterfaceCs2Host(
                 mutate(component) { it.setScrollSize(values[0], values[1]) }
             "IF_SETSCROLLPOS", "CC_SETSCROLLPOS" ->
                 mutate(component) { it.setScrollPos(values[0], values[1]) }
-            "IF_SETOBJECT", "CC_SETOBJECT" ->
+            "IF_SETOBJECT", "CC_SETOBJECT", "IF_SETOBJECT_WEARCOL", "CC_SETOBJECT_WEARCOL" ->
                 mutate(component) { it.setObject(values[0], values[1]) }
+            "IF_SETOBJECT_NONUM", "CC_SETOBJECT_NONUM",
+            "IF_SETOBJECT_WEARCOL_NONUM", "CC_SETOBJECT_WEARCOL_NONUM" ->
+                mutate(component) { it.setObject(values[0], values[1], ObjIconStack.NONE) }
+            "IF_SETOBJECT_ALWAYSNUM", "CC_SETOBJECT_ALWAYSNUM",
+            "IF_SETOBJECT_WEARCOL_ALWAYSNUM", "CC_SETOBJECT_WEARCOL_ALWAYSNUM" ->
+                mutate(component) { it.setObject(values[0], values[1], ObjIconStack.ALWAYS) }
             "IF_SETMODEL", "CC_SETMODEL" -> mutate(component) { it.setModel(values[0]) }
             "IF_SETMODELANGLE", "CC_SETMODELANGLE" ->
                 mutate(component) { it.setModelAngle(values[0], values[1], values[2], values[3]) }

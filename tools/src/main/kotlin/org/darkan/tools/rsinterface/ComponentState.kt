@@ -1,5 +1,6 @@
 package org.darkan.tools.rsinterface
 
+import org.darkan.tools.engine.render.ObjIconStack
 import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
 
 /**
@@ -203,6 +204,8 @@ class ComponentState(
      */
     var itemId: Int = -1
     var itemAmount: Int = 0
+
+    var stackNumbers: ObjIconStack = ObjIconStack.WHEN_MULTIPLE
 
     // --- Interaction metadata ---------------------------------------------
 
@@ -594,9 +597,10 @@ class ComponentState(
     }
 
     /** `IF_SETOBJECT`: puts an item in the component; -1 clears it. */
-    fun setObject(itemId: Int, amount: Int) {
+    fun setObject(itemId: Int, amount: Int, stackNumbers: ObjIconStack = ObjIconStack.WHEN_MULTIPLE) {
         this.itemId = itemId
         this.itemAmount = amount
+        this.stackNumbers = stackNumbers
     }
 
     fun setTextAlign(horizontal: Int, vertical: Int, lineSpacing: Int) {
@@ -755,6 +759,7 @@ class ComponentState(
         lineMirrored = definition.lineMirrored
         itemId = -1
         itemAmount = 0
+        stackNumbers = ObjIconStack.WHEN_MULTIPLE
         events = definition.setting.setting
         options = optionArray(definition.options)
         opBase = definition.name

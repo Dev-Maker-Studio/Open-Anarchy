@@ -1,6 +1,9 @@
 package org.darkan.tools.rsinterface
 
 import org.darkan.tools.engine.render.Canvas2D
+import org.darkan.tools.engine.render.ObjIcon
+import org.darkan.tools.engine.render.ObjIconRequest
+import org.darkan.tools.engine.render.ObjIcons
 import kotlin.math.PI
 
 /**
@@ -27,7 +30,8 @@ class InterfaceRenderer(
     private val canvas: Canvas2D,
     private val graphics: GraphicCache,
     private val fonts: FontCache,
-    private val models: InterfaceModelRenderer?
+    private val models: InterfaceModelRenderer?,
+    private val icons: ObjIcons? = null
 ) {
     /** Font used when a text component's own font is missing from the cache. */
     var fallbackFontId: Int = -1
@@ -168,41 +172,63 @@ class InterfaceRenderer(
      * texels, and a colour of 0 with no transparency means "draw the art as-is".
      */
     private fun drawGraphic(state: ComponentState, startX: Int, startY: Int) {
+        val textureId: Int
+        val graphicWidth: Int
+        val graphicHeight: Int
         if (state.itemId != -1) {
-            // The client swaps in a generated item icon here; the tool renders the
-            // item's model into the same box instead.
-            drawModel(state, startX, startY)
-            return
-        }
-        val graphic = graphics.graphic(state.graphicId, state.flipVertical, state.flipHorizontal) ?: return
-        if (graphic.width <= 0 || graphic.height <= 0) {
-            return
+            val icon = objIcon(state) ?: return
+            textureId = icon.textureId
+            graphicWidth = ObjIcons.WIDTH
+            graphicHeight = ObjIcons.HEIGHT
+        } else {
+            val graphic = graphics.graphic(state.graphicId, state.flipVertical, state.flipHorizontal) ?: return
+            if (graphic.width <= 0 || graphic.height <= 0) {
+                return
+            }
+            textureId = graphic.textureId
+            graphicWidth = graphic.width
+            graphicHeight = graphic.height
         }
         val argb = graphicTint(state)
         val angle = state.graphicAngle and 0xffff
 
         if (state.tiling) {
-            drawTiledGraphic(state, graphic, startX, startY, argb, angle)
+            drawTiledGraphic(state, textureId, graphicWidth, graphicHeight, startX, startY, argb, angle)
             return
         }
         if (angle != 0) {
             // Rotation is uniformly scaled by width / graphicWidth, the client's
             // `component.width * 4096 / spriteWidth` zoom.
-            val scale = state.width.toFloat() / graphic.width
+            val scale = state.width.toFloat() / graphicWidth
             canvas.drawTextureRotated(
-                graphic.textureId,
+                textureId,
                 startX + state.width / 2f, startY + state.height / 2f,
-                graphic.width * scale, graphic.height * scale,
+                graphicWidth * scale, graphicHeight * scale,
                 radians(angle), argb
             )
             return
         }
         canvas.drawTexture(
-            graphic.textureId,
+            textureId,
             startX.toFloat(), startY.toFloat(),
             state.width.toFloat(), state.height.toFloat(),
             argb
         )
+    }
+
+    private fun objIcon(state: ComponentState): ObjIcon? {
+        val icons = icons ?: return null
+        val request = ObjIconRequest(
+            state.itemId, state.itemAmount, state.borderThickness,
+            OPAQUE or (state.graphicShadow and 0xffffff), state.stackNumbers
+        )
+        if (icons.isCached(request)) {
+            return icons.icon(request)
+        }
+        canvas.flush()
+        val icon = icons.icon(request)
+        canvas.restoreState()
+        return icon
     }
 
     /**
@@ -210,9 +236,12 @@ class InterfaceRenderer(
      * full (untrimmed) size. Un-rotated tiles fall out of a single GL_REPEAT quad;
      * rotated ones have to be emitted per tile, as the client does.
      */
+    @Suppress("LongParameterList")
     private fun drawTiledGraphic(
         state: ComponentState,
-        graphic: LoadedGraphic,
+        textureId: Int,
+        graphicWidth: Int,
+        graphicHeight: Int,
         startX: Int,
         startY: Int,
         argb: Int,
@@ -221,28 +250,28 @@ class InterfaceRenderer(
         val visible = canvas.pushClip(startX, startY, startX + state.width, startY + state.height)
         if (visible) {
             if (angle != 0) {
-                val columns = (state.width + graphic.width - 1) / graphic.width
-                val rows = (state.height + graphic.height - 1) / graphic.height
+                val columns = (state.width + graphicWidth - 1) / graphicWidth
+                val rows = (state.height + graphicHeight - 1) / graphicHeight
                 for (row in 0 until rows) {
                     for (column in 0 until columns) {
                         canvas.drawTextureRotated(
-                            graphic.textureId,
-                            startX + column * graphic.width + graphic.width / 2f,
-                            startY + row * graphic.height + graphic.height / 2f,
-                            graphic.width.toFloat(), graphic.height.toFloat(),
+                            textureId,
+                            startX + column * graphicWidth + graphicWidth / 2f,
+                            startY + row * graphicHeight + graphicHeight / 2f,
+                            graphicWidth.toFloat(), graphicHeight.toFloat(),
                             radians(angle), argb
                         )
                     }
                 }
             } else {
                 canvas.drawTexture(
-                    graphic.textureId,
+                    textureId,
                     startX.toFloat(), startY.toFloat(),
                     state.width.toFloat(), state.height.toFloat(),
                     argb,
                     0f, 0f,
-                    state.width.toFloat() / graphic.width,
-                    state.height.toFloat() / graphic.height
+                    state.width.toFloat() / graphicWidth,
+                    state.height.toFloat() / graphicHeight
                 )
             }
         }

@@ -5,6 +5,8 @@ import imgui.flag.ImGuiCol
 import imgui.flag.ImGuiInputTextFlags
 import imgui.type.ImInt
 import imgui.type.ImString
+import org.darkan.tools.engine.render.ObjIconRequest
+import org.darkan.tools.engine.render.ObjIcons
 import org.darkan.tools.rsinterface.FontCache
 import org.darkan.tools.rsinterface.GraphicCache
 import world.gregs.voidps.cache.definition.data.ItemDefinition
@@ -32,6 +34,7 @@ class AssetPicker(
     private val items: (Int) -> ItemDefinition?,
     /** One past the highest item id, for the item picker to bound its scan. */
     private val itemCount: Int,
+    private val icons: ObjIcons? = null,
 ) {
     private val graphicFilter = ImString(64)
     private val itemFilter = ImString(64)
@@ -107,9 +110,11 @@ class AssetPicker(
     }
 
     /** An item id field, with the item's name resolved from the cache. */
-    fun itemField(label: String, value: ImInt): Boolean {
+    fun itemField(label: String, value: ImInt, amount: Int = 1): Boolean {
         var changed = false
         ImGui.pushID(label)
+        objThumbnail(value.get(), amount)
+        ImGui.sameLine()
         ImGui.setNextItemWidth(90f)
         if (ImGui.inputInt("##id", value)) {
             changed = true
@@ -150,6 +155,17 @@ class AssetPicker(
         }
         val scale = size / maxOf(graphic.width, graphic.height).toFloat()
         ImGui.image(graphic.textureId, graphic.width * scale, graphic.height * scale)
+    }
+
+    fun objThumbnail(obj: Int, amount: Int = 1) {
+        val icon = if (obj < 0) null else icons?.icon(ObjIconRequest(obj, amount.coerceAtLeast(1)))
+        if (icon == null) {
+            ImGui.pushStyleColor(ImGuiCol.Button, 0.16f, 0.16f, 0.18f, 1f)
+            ImGui.button("##noicon", ObjIcons.WIDTH.toFloat(), ObjIcons.HEIGHT.toFloat())
+            ImGui.popStyleColor()
+            return
+        }
+        ImGui.image(icon.textureId, ObjIcons.WIDTH.toFloat(), ObjIcons.HEIGHT.toFloat())
     }
 
     // ------------------------------------------------------------------ popups
