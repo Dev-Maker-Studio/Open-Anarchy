@@ -116,7 +116,6 @@ import org.darkan.core.net.prot.dto.CheckEmailReplyOpcode
 import org.darkan.core.net.prot.dto.CreateAccountReplyOpcode
 import org.darkan.core.net.prot.dto.GrandExchangeOffer
 import org.darkan.core.net.prot.dto.IgnoreEntry
-import org.darkan.core.net.prot.dto.InstanceLoadType
 import org.darkan.core.net.prot.dto.InvSlotUpdate
 import org.darkan.core.net.prot.packet.*
 import org.darkan.core.social.QuickChatMessage
@@ -283,6 +282,21 @@ class Rev727LegacyEncoderDifferentialTest {
         GroundItem(Item(id, amount), legacyTile(x, y, plane))
 
     private fun zeroXteas() = intArrayOf(0, 0, 0, 0)
+
+    private fun legacyChunkBits(chunks: IntArray): ByteArray {
+        val stream = LegacyStream(BUFFER_CAPACITY)
+        stream.initBitAccess()
+        for (chunk in chunks) {
+            if (chunk == BuildInstancedRegion.ABSENT_CHUNK) {
+                stream.writeBits(1, 0)
+            } else {
+                stream.writeBits(1, 1)
+                stream.writeBits(26, chunk)
+            }
+        }
+        stream.finishBitAccess()
+        return stream.toByteArray()
+    }
 
     private fun cases(): List<Case> = CaseBuilder().apply {
         accountCases()
@@ -458,33 +472,37 @@ class Rev727LegacyEncoderDifferentialTest {
     private fun CaseBuilder.regionCases() {
         // `MapXTEAs` is unpopulated in a test JVM, so the legacy encoder writes zeroed keys for
         // every region; the modern packet is handed the same zeros.
-        val regionIds = intArrayOf(12850, 12851)
+        val regionIds = BuildRegion.regionIds(400, 402, RegionSize.SIZE_104)
         case(
             "REGION",
             LegacyMapRegion(null, LegacyRegionSize.SIZE_104, 400, 402, true, regionIds.toSortedSet()),
             BuildRegion(
                 regionIds = regionIds,
                 mapSize = RegionSize.SIZE_104,
-                xteas = arrayOf(zeroXteas(), zeroXteas()),
+                xteas = Array(regionIds.size) { zeroXteas() },
                 chunkX = 400,
                 chunkY = 402,
                 forceMapRefresh = true,
             ),
         )
-        // The legacy packet takes the dynamic-chunk bit block pre-encoded and hard-codes the load
-        // type to 2; the modern one packs the bits from the chunk list. Four "absent chunk"
-        // entries are four zero bits, i.e. one zero byte.
+        val instancedChunks = intArrayOf(
+            BuildInstancedRegion.chunkDescriptor(416, 392, 0, 0),
+            BuildInstancedRegion.ABSENT_CHUNK,
+            BuildInstancedRegion.chunkDescriptor(400, 400, 1, 3),
+            BuildInstancedRegion.chunkDescriptor(400, 424, 2, 1),
+            BuildInstancedRegion.chunkDescriptor(401, 401, 3, 2),
+        )
+        val instancedRegionIds = BuildInstancedRegion.regionIds(instancedChunks)
         case(
             "DYNAMIC_MAP_REGION",
-            LegacyDynamicMapRegion(null, LegacyRegionSize.SIZE_104, 400, 402, true, byteArrayOf(0), intArrayOf(12850)),
+            LegacyDynamicMapRegion(null, LegacyRegionSize.SIZE_104, 400, 402, true, legacyChunkBits(instancedChunks), instancedRegionIds),
             BuildInstancedRegion(
                 mapSize = RegionSize.SIZE_104,
-                chunks = intArrayOf(-1, -1, -1, -1),
-                xteas = arrayOf(zeroXteas()),
+                chunks = instancedChunks,
+                xteas = Array(instancedRegionIds.size) { zeroXteas() },
                 chunkX = 400,
                 chunkY = 402,
                 forceMapRefresh = true,
-                instanceLoadType = InstanceLoadType.STANDARD_NO_ENTITY_RESET,
             ),
         )
         case("MINIMAP_FLAG", LegacyMinimapFlag(40, 55), MinimapFlag(40, 55))

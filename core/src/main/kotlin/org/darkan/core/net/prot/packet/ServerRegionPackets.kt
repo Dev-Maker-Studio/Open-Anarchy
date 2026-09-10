@@ -50,6 +50,20 @@ data class BuildRegion(
         result = 31 * result + (otherPlayerRegionIds?.contentHashCode() ?: 0)
         return result
     }
+
+    companion object {
+        fun regionIds(chunkX: Int, chunkY: Int, mapSize: RegionSize): IntArray {
+            val radius = mapSize.size shr 4
+            val regionXs = (chunkX - radius) / 8..(chunkX + radius) / 8
+            val regionYs = (chunkY - radius) / 8..(chunkY + radius) / 8
+            val ids = IntArray((regionXs.last - regionXs.first + 1) * (regionYs.last - regionYs.first + 1))
+            var index = 0
+            for (regionX in regionXs)
+                for (regionY in regionYs)
+                    ids[index++] = regionY + (regionX shl 8)
+            return ids
+        }
+    }
 }
 
 data class BuildInstancedRegion(
@@ -59,7 +73,7 @@ data class BuildInstancedRegion(
     val chunkX: Int,
     val chunkY: Int,
     val forceMapRefresh: Boolean = false,
-    val instanceLoadType: InstanceLoadType = InstanceLoadType.STANDARD,
+    val instanceLoadType: InstanceLoadType = InstanceLoadType.STANDARD_NO_ENTITY_RESET,
     val localPlayerPid: Int? = null,
     val localPlayerBaseTileHash: Int? = null,
     val otherPlayerRegionIds: IntArray? = null
@@ -93,6 +107,35 @@ data class BuildInstancedRegion(
         result = 31 * result + instanceLoadType.hashCode()
         result = 31 * result + (otherPlayerRegionIds?.contentHashCode() ?: 0)
         return result
+    }
+
+    companion object {
+        const val ABSENT_CHUNK = -1
+        private const val PLANES = 4
+
+        fun chunkDescriptor(chunkX: Int, chunkY: Int, plane: Int, rotation: Int): Int =
+            ((rotation and 0x3) shl 1) or ((plane and 0x3) shl 24) or ((chunkX and 0x3ff) shl 14) or ((chunkY and 0x7ff) shl 3)
+
+        fun chunks(chunkX: Int, chunkY: Int, mapSize: RegionSize, descriptorAt: (chunkX: Int, chunkY: Int, plane: Int) -> Int): IntArray {
+            val radius = mapSize.size shr 4
+            val span = radius * 2 + 1
+            val chunks = IntArray(PLANES * span * span)
+            var index = 0
+            for (plane in 0 until PLANES)
+                for (x in chunkX - radius..chunkX + radius)
+                    for (y in chunkY - radius..chunkY + radius)
+                        chunks[index++] = descriptorAt(x, y, plane)
+            return chunks
+        }
+
+        fun regionIds(chunks: IntArray): IntArray =
+            chunks.filter { it != ABSENT_CHUNK }.map(::regionId).distinct().toIntArray()
+
+        private fun regionId(descriptor: Int): Int {
+            val regionX = (descriptor shr 14 and 0x3ff) / 8
+            val regionY = (descriptor shr 3 and 0x7ff) / 8
+            return (regionX shl 8) + regionY
+        }
     }
 }
 

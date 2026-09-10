@@ -921,12 +921,12 @@ public class Player extends Entity {
 		super.loadMapRegions();
 		setClientHasntLoadedMapRegion();
 		if (isHasNearbyInstancedChunks()) {
-			getPackets().sendDynamicMapRegion(!started);
+			getPackets().sendDynamicMapRegion();
 			if (!wasAtDynamicRegion) {
 				getPackets().resetNpcTrackingState();
 			}
 		} else {
-			getPackets().sendMapRegion(!started);
+			getPackets().sendMapRegion();
 			if (wasAtDynamicRegion) {
 				getPackets().resetNpcTrackingState();
 			}
