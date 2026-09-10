@@ -1,6 +1,5 @@
 package org.darkan.world
 
-import com.rs.engine.command.Commands
 import com.rs.game.World
 import com.rs.game.content.skills.thieving.PickPocketableNPC
 import com.rs.game.map.ChunkManager
@@ -21,9 +20,20 @@ import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.gameval.gen.Obj
+import kotlinx.coroutines.runBlocking
 import org.darkan.core.model.Item
+import org.darkan.core.net.prot.packet.ClientFocus
+import org.darkan.core.net.prot.packet.KeyPress
+import org.darkan.core.net.prot.packet.MouseButtonClick
+import org.darkan.core.net.prot.packet.MouseClick
+import org.darkan.core.net.prot.packet.MoveMouseData
 import org.darkan.world.harness.HarnessPlayer
 import org.darkan.world.harness.WorldHarness
+import org.darkan.world.server.packet.ClientFocusHandler
+import org.darkan.world.server.packet.KeyPressHandler
+import org.darkan.world.server.packet.MouseButtonClickHandler
+import org.darkan.world.server.packet.MouseClickHandler
+import org.darkan.world.server.packet.MoveMouseHandler
 import world.gregs.voidps.type.Tile
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -67,12 +77,21 @@ class ReportedBugFixesTest {
     }
 
     @Test
-    fun anyExecutedCommandRefreshesTheIdleTimer() {
-        val player = login("idlecommand")
-        player.idleTime = 0
-        assertTrue(player.isIdle)
-        assertTrue(Commands.processCommand(player, "coords", false, false))
-        assertFalse(player.isIdle)
+    fun keyPressesMouseClicksAndFocusRefreshTheIdleTimer() {
+        val player = login("idleinput")
+        val inputs = listOf<suspend () -> Unit>(
+            { KeyPressHandler().handle(player, KeyPress(keyCode = 0, time = 0)) },
+            { MouseClickHandler().handle(player, MouseClick(mouseButton = 0, time = 0, x = 10, y = 10)) },
+            { MouseButtonClickHandler().handle(player, MouseButtonClick(mouseButton = 0, time = 0, x = 10, y = 10, hw = true)) },
+            { ClientFocusHandler().handle(player, ClientFocus(true)) },
+            { MoveMouseHandler().handle(player, MoveMouseData(frameCount = 0, frameSteps = 0, steps = emptyArray())) },
+        )
+        for (input in inputs) {
+            player.idleTime = 0
+            assertTrue(player.isIdle)
+            runBlocking { input() }
+            assertFalse(player.isIdle)
+        }
     }
 
     @Test
