@@ -1,6 +1,7 @@
 package org.darkan.tools.viewer
 
 import imgui.ImGui
+import imgui.flag.ImGuiChildFlags
 import imgui.flag.ImGuiCol
 import imgui.flag.ImGuiCond
 import imgui.flag.ImGuiHoveredFlags
@@ -5300,7 +5301,7 @@ class MapViewer(
 
             // Scrollable results list
             val listHeight = ImGui.getContentRegionAvailY().coerceAtLeast(100f).coerceAtMost(300f)
-            if (ImGui.beginChild("obj_search_results", 0f, listHeight, true)) {
+            if (ImGui.beginChild("obj_search_results", 0f, listHeight, ImGuiChildFlags.Borders)) {
                 val query = editorObjectSearchQuery.get().trim()
                 if (query.length < 2) {
                     ImGuiText.coloured(0.5f, 0.5f, 0.5f, 1f, "Type 2+ characters to search...")

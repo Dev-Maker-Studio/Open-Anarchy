@@ -1,9 +1,9 @@
 plugins {
     application
-    kotlin("plugin.serialization") version "2.3.0"
+    kotlin("plugin.serialization")
 }
 
-val lwjglVersion = "3.3.3"
+val lwjglVersion = "3.4.3"
 val lwjglNatives = Pair(
     System.getProperty("os.name")!!,
     System.getProperty("os.arch")!!
@@ -44,10 +44,10 @@ dependencies {
     runtimeOnly("org.lwjgl:lwjgl-stb::$lwjglNatives")
 
     // Math library
-    implementation("org.joml:joml:1.10.5")
+    implementation("org.joml:joml:1.10.9")
 
     // ImGui for debug UI
-    implementation("io.github.spair:imgui-java-binding:1.86.11")
-    implementation("io.github.spair:imgui-java-lwjgl3:1.86.11")
-    runtimeOnly("io.github.spair:imgui-java-natives-linux:1.86.11")
+    implementation("io.github.spair:imgui-java-binding:1.92.7.1")
+    implementation("io.github.spair:imgui-java-lwjgl3:1.92.7.1")
+    runtimeOnly("io.github.spair:imgui-java-natives-linux:1.92.7.1")
 }

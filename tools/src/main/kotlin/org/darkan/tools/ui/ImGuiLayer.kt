@@ -9,14 +9,10 @@ import imgui.gl3.ImGuiImplGl3
 import imgui.glfw.ImGuiImplGlfw
 import org.darkan.tools.engine.window.Window
 
-/**
- * ImGui integration layer for debug and editor UI.
- */
 class ImGuiLayer(private val window: Window) {
     private val imGuiGlfw = ImGuiImplGlfw()
     private val imGuiGl3 = ImGuiImplGl3()
 
-    /** Id of the dockspace opened by [beginDockspace], or 0 when none is open. */
     private var dockspaceId = 0
 
     fun init() {
@@ -25,10 +21,6 @@ class ImGuiLayer(private val window: Window) {
         val io = ImGui.getIO()
         io.addConfigFlags(ImGuiConfigFlags.NavEnableKeyboard)
         io.addConfigFlags(ImGuiConfigFlags.DockingEnable)
-
-        io.setFontGlobalScale(1.0f)
-        // Panel layouts are worth keeping between runs: an editor whose windows
-        // reset every launch costs the developer the same arrangement work daily.
         io.setIniFilename("darkan-tools-layout.ini")
 
         imGuiGlfw.init(window.handle, true)
@@ -36,20 +28,15 @@ class ImGuiLayer(private val window: Window) {
     }
 
     fun beginFrame() {
+        imGuiGl3.newFrame()
         imGuiGlfw.newFrame()
         ImGui.newFrame()
     }
 
-    /**
-     * Opens a full-window dockspace that panels can dock into, leaving the centre
-     * node empty so whatever the engine drew into the back buffer stays visible
-     * through it.
-     *
-     * Must be paired with [endDockspace] before [endFrame].
-     */
     fun beginDockspace() {
         ImGui.pushStyleVar(ImGuiStyleVar.WindowRounding, 0f)
         dockspaceId = ImGui.dockSpaceOverViewport(
+            0,
             ImGui.getMainViewport(),
             ImGuiDockNodeFlags.PassthruCentralNode,
         )
@@ -60,7 +47,6 @@ class ImGuiLayer(private val window: Window) {
         dockspaceId = 0
     }
 
-    /** The dockspace id, for docking a window into it explicitly. */
     fun dockspace(): Int = dockspaceId
 
     fun endFrame() {
@@ -69,8 +55,8 @@ class ImGuiLayer(private val window: Window) {
     }
 
     fun cleanup() {
-        imGuiGl3.dispose()
-        imGuiGlfw.dispose()
+        imGuiGl3.shutdown()
+        imGuiGlfw.shutdown()
         ImGui.destroyContext()
     }
 
@@ -78,15 +64,6 @@ class ImGuiLayer(private val window: Window) {
 
     fun wantCaptureMouse(): Boolean = ImGui.getIO().wantCaptureMouse
 
-    /**
-     * A restrained dark theme with tight padding.
-     *
-     * The default ImGui theme spends a lot of vertical space on padding, which
-     * matters here because the editor's panels are dense lists - a component tree
-     * of several hundred rows and a property sheet of several dozen fields. The
-     * accent is the same cyan the viewport uses for its selection outline, so a
-     * selected row and the selected component read as the same thing.
-     */
     fun applyEditorTheme() {
         val style = ImGui.getStyle()
         style.setWindowPadding(8f, 6f)
@@ -140,9 +117,9 @@ class ImGuiLayer(private val window: Window) {
         colour(ImGuiCol.ResizeGripActive, ACCENT_R, ACCENT_G, ACCENT_B, 1.00f)
         colour(ImGuiCol.Tab, 0.15f, 0.16f, 0.18f, 1.00f)
         colour(ImGuiCol.TabHovered, 0.26f, 0.33f, 0.39f, 1.00f)
-        colour(ImGuiCol.TabActive, 0.20f, 0.26f, 0.31f, 1.00f)
-        colour(ImGuiCol.TabUnfocused, 0.13f, 0.14f, 0.15f, 1.00f)
-        colour(ImGuiCol.TabUnfocusedActive, 0.17f, 0.18f, 0.20f, 1.00f)
+        colour(ImGuiCol.TabSelected, 0.20f, 0.26f, 0.31f, 1.00f)
+        colour(ImGuiCol.TabDimmed, 0.13f, 0.14f, 0.15f, 1.00f)
+        colour(ImGuiCol.TabDimmedSelected, 0.17f, 0.18f, 0.20f, 1.00f)
         colour(ImGuiCol.DockingPreview, ACCENT_R, ACCENT_G, ACCENT_B, 0.35f)
         colour(ImGuiCol.DockingEmptyBg, 0.09f, 0.09f, 0.10f, 0.00f)
         colour(ImGuiCol.TableHeaderBg, 0.17f, 0.18f, 0.20f, 1.00f)
@@ -151,7 +128,7 @@ class ImGuiLayer(private val window: Window) {
         colour(ImGuiCol.TableRowBg, 0.00f, 0.00f, 0.00f, 0.00f)
         colour(ImGuiCol.TableRowBgAlt, 1.00f, 1.00f, 1.00f, 0.03f)
         colour(ImGuiCol.TextSelectedBg, ACCENT_R, ACCENT_G, ACCENT_B, 0.35f)
-        colour(ImGuiCol.NavHighlight, ACCENT_R, ACCENT_G, ACCENT_B, 1.00f)
+        colour(ImGuiCol.NavCursor, ACCENT_R, ACCENT_G, ACCENT_B, 1.00f)
     }
 
     private fun colour(target: Int, red: Float, green: Float, blue: Float, alpha: Float) {
@@ -159,7 +136,6 @@ class ImGuiLayer(private val window: Window) {
     }
 
     companion object {
-        /** The viewport selection outline's cyan, as normalised components. */
         private const val ACCENT_R = 0.18f
         private const val ACCENT_G = 0.82f
         private const val ACCENT_B = 1.00f

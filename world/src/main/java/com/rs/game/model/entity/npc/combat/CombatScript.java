@@ -32,8 +32,7 @@ import com.rs.game.model.entity.player.Player;
 import org.darkan.core.Constants;
 import org.darkan.core.model.SpotAnim;
 import org.darkan.core.Utils;
-
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 public abstract class CombatScript {
 
@@ -109,7 +108,7 @@ public abstract class CombatScript {
 		return getMaxHit(npc, maxHit, attackBonus, attackStyle, target, 1.0D);
 	}
 
-	public static int getMaxHit(NPC npc, int maxHit, @Nonnull Bonus attackBonus, CombatStyle attackStyle, Entity target, double accuracyModifier) {
+	public static int getMaxHit(NPC npc, int maxHit, @NotNull Bonus attackBonus, CombatStyle attackStyle, Entity target, double accuracyModifier) {
 		return CombatFormulaKt.calculateHit(npc, target, 1, maxHit, attackBonus, attackStyle, true, accuracyModifier).getDamage();
 	}
 }
