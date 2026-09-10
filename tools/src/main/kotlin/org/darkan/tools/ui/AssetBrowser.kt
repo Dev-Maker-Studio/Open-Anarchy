@@ -1,6 +1,7 @@
 package org.darkan.tools.ui
 
 import imgui.ImGui
+import imgui.flag.ImGuiChildFlags
 import imgui.flag.ImGuiInputTextFlags
 import imgui.flag.ImGuiWindowFlags
 import imgui.type.ImInt
@@ -147,7 +148,7 @@ class AssetBrowser(private val cache: Cache) {
         ImGui.separator()
         ImGui.text("${filteredItems.size} items found")
 
-        ImGui.beginChild("ItemList", 0f, 350f, true)
+        ImGui.beginChild("ItemList", 0f, 350f, ImGuiChildFlags.Borders)
         for ((id, name) in filteredItems.take(100)) {
             if (ImGui.selectable("$id: $name##item$id")) {
                 itemDefs?.get(id)?.let { onItemSelected?.invoke(id, it) }
@@ -176,7 +177,7 @@ class AssetBrowser(private val cache: Cache) {
         ImGui.separator()
         ImGui.text("${filteredNpcs.size} NPCs found")
 
-        ImGui.beginChild("NpcList", 0f, 350f, true)
+        ImGui.beginChild("NpcList", 0f, 350f, ImGuiChildFlags.Borders)
         for ((id, name) in filteredNpcs.take(100)) {
             if (ImGui.selectable("$id: $name##npc$id")) {
                 npcDefs?.get(id)?.let { onNpcSelected?.invoke(id, it) }
@@ -205,7 +206,7 @@ class AssetBrowser(private val cache: Cache) {
         ImGui.separator()
         ImGui.text("${filteredObjects.size} objects found")
 
-        ImGui.beginChild("ObjectList", 0f, 350f, true)
+        ImGui.beginChild("ObjectList", 0f, 350f, ImGuiChildFlags.Borders)
         for ((id, name) in filteredObjects.take(100)) {
             if (ImGui.selectable("$id: $name##obj$id")) {
                 objectDefs?.get(id)?.let { onObjectSelected?.invoke(id, it) }

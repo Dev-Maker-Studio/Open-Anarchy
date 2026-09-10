@@ -6,10 +6,10 @@ This document provides comprehensive guidance for AI assistants working with the
 
 Darkan is a multiplayer game server emulator implementing **revision 727** of the RuneScape protocol. It consists of a multi-server architecture with a centralized lobby server handling authentication and social features, and multiple world servers handling gameplay.
 
-**Language**: Kotlin 2.3.0
-**Build System**: Gradle 9.3
-**Runtime**: Java 25
-**Database**: MongoDB 5.3.1
+**Language**: Kotlin 2.4.20
+**Build System**: Gradle 9.7.1
+**Runtime**: Java 26
+**Database**: MongoDB 5.11.1
 
 ---
 
@@ -265,7 +265,7 @@ Shared code used by both lobby and world servers.
 
 ### Prerequisites
 
-- Java 23+
+- Java 26
 - MongoDB instance
 - Game cache at `../cache/` (relative to server root)
 
@@ -738,16 +738,16 @@ fun Application.configureRoutes() {
 
 | Library | Version | Purpose |
 |---------|---------|---------|
-| Kotlin | 2.3.0 | Language |
-| Kotlin Coroutines | 1.10.1 | Async/await |
-| Ktor | 3.3.3 | HTTP server/client, WebSockets |
-| MongoDB Driver | 5.3.1 | Database |
+| Kotlin | 2.4.20 | Language |
+| Kotlin Coroutines | 1.11.0 | Async/await |
+| Ktor | 3.5.2 | HTTP server/client, WebSockets |
+| MongoDB Driver | 5.11.1 | Database |
 | Kotlinx Serialization | — | JSON serialization |
 | Argon2 | 2.12 | Password hashing |
-| dotenv-kotlin | 6.5.0 | Environment config |
+| dotenv-kotlin | 6.5.1 | Environment config |
 | LZMA | 1.3 | Compression |
-| FastUtil | 8.5.15 | Optimized collections |
-| ClassGraph | 4.8.179 | Classpath scanning |
+| FastUtil | 8.5.19 | Optimized collections |
+| ClassGraph | 4.8.195 | Classpath scanning |
 
 ---
 

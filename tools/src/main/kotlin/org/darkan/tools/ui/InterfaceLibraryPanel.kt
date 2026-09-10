@@ -130,7 +130,7 @@ class InterfaceLibraryPanel(
         ImGui.text("${matches.size} interfaces")
         ImGui.separator()
 
-        if (ImGui.beginChild("results", 0f, 0f, false)) {
+        if (ImGui.beginChild("results", 0f, 0f)) {
             if (drawTable()) {
                 opened = true
             }

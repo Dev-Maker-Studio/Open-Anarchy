@@ -4,8 +4,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import javax.xml.parsers.DocumentBuilderFactory
 
 plugins {
-    kotlin("jvm") version "2.3.0" apply false
-    kotlin("plugin.serialization") version "2.3.0" apply false
+    kotlin("jvm") version "2.4.20" apply false
+    kotlin("plugin.serialization") version "2.4.20" apply false
 }
 
 allprojects {
@@ -26,7 +26,7 @@ subprojects {
 
     configure<JavaPluginExtension> {
         toolchain {
-            languageVersion.set(JavaLanguageVersion.of(25))
+            languageVersion.set(JavaLanguageVersion.of(26))
         }
     }
 
@@ -93,7 +93,7 @@ subprojects {
     }
 
     dependencies {
-        val implementation by configurations
+        val implementation = configurations["implementation"]
 
         //Kotlin
         implementation("org.jetbrains.kotlin:kotlin-stdlib:${findProperty("ktVersion")}")
@@ -103,7 +103,7 @@ subprojects {
         implementation("org.jetbrains.kotlin:kotlin-scripting-jvm-host:${findProperty("ktVersion")}")
         implementation("org.jetbrains.kotlin:kotlin-main-kts:${findProperty("ktVersion")}")
         implementation("org.jetbrains.kotlin:kotlin-script-runtime:${findProperty("ktVersion")}")
-        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
         //Ktor
         implementation("io.ktor:ktor-server-core-jvm:${findProperty("ktorVersion")}")
@@ -121,15 +121,15 @@ subprojects {
         implementation("io.ktor:ktor-client-content-negotiation:${findProperty("ktorVersion")}")
 
         implementation("de.mkammerer:argon2-jvm:2.12")
-        implementation("io.github.cdimascio:dotenv-kotlin:6.5.0")
-        implementation("org.mongodb:mongodb-driver-kotlin-coroutine:5.3.1")
+        implementation("io.github.cdimascio:dotenv-kotlin:6.5.1")
+        implementation("org.mongodb:mongodb-driver-kotlin-coroutine:5.11.1")
         implementation("com.github.jponge:lzma-java:1.3")
 
-        implementation("org.mongodb:mongodb-driver-sync:5.3.1")
-        implementation("org.mongodb:mongodb-driver-core:5.3.1")
-        implementation("it.unimi.dsi:fastutil:8.5.15")
-        implementation("com.trivago:fastutil-concurrent-wrapper:0.2.2")
+        implementation("org.mongodb:mongodb-driver-sync:5.11.1")
+        implementation("org.mongodb:mongodb-driver-core:5.11.1")
+        implementation("it.unimi.dsi:fastutil:8.5.19")
+        implementation("com.trivago:fastutil-concurrent-wrapper:0.3.0")
 
-        implementation("io.github.classgraph:classgraph:4.8.179")
+        implementation("io.github.classgraph:classgraph:4.8.195")
     }
 }
