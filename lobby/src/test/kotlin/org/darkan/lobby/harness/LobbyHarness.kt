@@ -164,17 +164,18 @@ object LobbyHarness {
         SocialGateway.handleClientPacket(account.username, packet)
     }
 
-    fun world(worldId: Int, worldName: String = "Test $worldId"): FakeWorld = FakeWorld(worldId, worldName)
+    fun world(worldId: Int, worldName: String = "Test $worldId", community: Boolean = false): FakeWorld =
+        FakeWorld(worldId, worldName, community)
 
     /**
      * A connected world with a recording transport. Messages are handed to the gateway through the
      * same `handleWorldMessage` the real socket loop calls, wrapped in a `coroutineScope` so the
      * branches that launch background work have finished by the time the call returns.
      */
-    class FakeWorld(val worldId: Int, val worldName: String) {
+    class FakeWorld(val worldId: Int, val worldName: String, community: Boolean = false) {
         private val received = mutableListOf<SocialGatewayWireMessage>()
 
-        val session = WorldSession(worldId, worldName) { text ->
+        val session = WorldSession(worldId, worldName, community) { text ->
             synchronized(received) {
                 received += SocialGatewayWireJson.json.decodeFromString(SocialGatewayWireMessage.serializer(), text)
             }
@@ -193,6 +194,8 @@ object LobbyHarness {
             SocialGateway.attachWorld(session, info)
             return this
         }
+
+        fun tryConnect(): Boolean = SocialGateway.attachWorld(session, info)
 
         /** Drops the socket, the way the gateway's `finally` block does. */
         suspend fun disconnect() {

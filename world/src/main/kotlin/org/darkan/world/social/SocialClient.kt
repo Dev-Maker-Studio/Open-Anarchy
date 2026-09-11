@@ -12,15 +12,19 @@ import java.net.ConnectException
 import org.darkan.core.social.gateway.FcSettingsUpdate
 import org.darkan.core.social.gateway.GatewayPlayerPresence
 import org.darkan.core.social.gateway.GatewayWorldInfo
+import org.darkan.core.social.gateway.LoginTokenVerdict
 import org.darkan.core.social.gateway.PlayerOffline
 import org.darkan.core.social.gateway.PlayerOnline
 import org.darkan.core.social.gateway.PresenceSyncReason
+import org.darkan.core.social.gateway.VerifyLoginToken
 import org.darkan.core.social.gateway.WorldPresenceSnapshot
 import org.darkan.core.social.gateway.SocialGatewayWireJson
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import org.darkan.core.social.gateway.WorldHello
 import org.darkan.core.social.gateway.WorldHelloAck
 import world.gregs.voidps.cache.Cache
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -54,6 +58,9 @@ class SocialClient(
     }
 
     private val state = AtomicReference<State>(State.Stopped)
+
+    private val pendingVerdicts = ConcurrentHashMap<Int, CompletableDeferred<LoginTokenVerdict>>()
+    private val nextRequestId = AtomicInteger()
 
     sealed interface State {
         data object Stopped : State
@@ -101,6 +108,19 @@ class SocialClient(
 
     suspend fun sendFcSettingsUpdate(username: String, name: String?, rankToEnter: Int, rankToSpeak: Int, rankToKick: Int, rankToLS: Int) {
         send(FcSettingsUpdate(username = username, name = name, rankToEnter = rankToEnter, rankToSpeak = rankToSpeak, rankToKick = rankToKick, rankToLS = rankToLS))
+    }
+
+    /** The lobby's answer for a community world's login, or null when the lobby could not be asked. */
+    suspend fun verifyLoginToken(username: String, token: String): LoginTokenVerdict? {
+        val requestId = nextRequestId.incrementAndGet()
+        val verdict = CompletableDeferred<LoginTokenVerdict>()
+        pendingVerdicts[requestId] = verdict
+        try {
+            if (!send(VerifyLoginToken(requestId = requestId, username = username, token = token))) return null
+            return withTimeoutOrNull(VERDICT_TIMEOUT) { verdict.await() }
+        } finally {
+            pendingVerdicts.remove(requestId)
+        }
     }
 
     /**
@@ -164,6 +184,10 @@ class SocialClient(
                             continue
                         }
                         logInfo("SocialClient received: ${msg::class.simpleName}")
+                        if (msg is LoginTokenVerdict) {
+                            pendingVerdicts.remove(msg.requestId)?.complete(msg)
+                            continue
+                        }
                         onMessage(msg)
                     }
                     resync.cancel()
@@ -186,6 +210,8 @@ class SocialClient(
             delay(backoff)
         }
     }
+
+    private companion object {
+        val VERDICT_TIMEOUT = 10.seconds
+    }
 }
-
-

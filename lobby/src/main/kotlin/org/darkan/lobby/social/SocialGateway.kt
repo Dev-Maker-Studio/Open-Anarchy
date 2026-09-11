@@ -6,7 +6,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import org.darkan.core.EnvVars
 import org.darkan.core.Logger
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logTrace
@@ -509,28 +508,22 @@ object SocialGateway {
                 }
 
                 if (msg is WorldHello) {
-                    if (msg.token != EnvVars.socialGatewayToken) {
-                        val resp = WorldHelloAck(ok = false, message = "Unauthorized")
-                        socket.send(Frame.Text(SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), resp)))
-                        socket.close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Unauthorized"))
-                        return@coroutineScope
-                    }
-
+                    val tier = communityWorlds.tierFor(msg.token)
+                        ?: return@coroutineScope refuseWorld(socket, msg.world, "Unauthorized")
                     val metadata = msg.world.toWorldMetadata()
-                    if (!metadata.isValid) {
-                        logWarn("SocialGateway: rejecting world registration worldId=${msg.world.worldId} host=${msg.world.publicHost}:${msg.world.port}")
-                        val resp = WorldHelloAck(ok = false, message = "Invalid world registration")
-                        socket.send(Frame.Text(SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), resp)))
-                        socket.close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Invalid world registration"))
-                        return@coroutineScope
-                    }
+                    if (!metadata.isValid)
+                        return@coroutineScope refuseWorld(socket, msg.world, "Invalid world registration")
+                    val community = tier == CommunityWorlds.Tier.COMMUNITY
+                    if (community)
+                        communityWorlds.refusalFor(metadata)?.let { return@coroutineScope refuseWorld(socket, msg.world, it) }
 
                     val worldId = msg.world.worldId
-                    val session = WorldSession(worldId, msg.world.worldName, socket)
-                    attachWorld(session, msg.world)
+                    val session = WorldSession(worldId, msg.world.worldName, socket, community)
+                    if (!attachWorld(session, msg.world))
+                        return@coroutineScope refuseWorld(socket, msg.world, "World $worldId is already online")
                     worldSession = session
 
-                    logInfo("SocialGateway: world connected worldId=${worldId} name=${msg.world.worldName} host=${msg.world.publicHost}:${msg.world.port}")
+                    logInfo("SocialGateway: ${tier.name.lowercase()} world connected worldId=${worldId} name=${msg.world.worldName} host=${msg.world.publicHost}:${msg.world.port}")
                     val resp = WorldHelloAck(ok = true, message = null)
                     socket.send(Frame.Text(SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), resp)))
                     continue
@@ -548,14 +541,27 @@ object SocialGateway {
         }
     }
 
+    internal var communityWorlds = CommunityWorlds()
+
+    private suspend fun refuseWorld(socket: WebSocketSession, world: GatewayWorldInfo, reason: String) {
+        logWarn("SocialGateway: refused world ${world.worldId} (${world.worldName}) at ${world.publicHost}:${world.port}: $reason")
+        val resp = WorldHelloAck(ok = false, message = reason)
+        socket.send(Frame.Text(SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), resp)))
+        socket.close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, reason))
+    }
+
     /** Records a world that has just finished its [WorldHello] handshake. */
-    internal fun attachWorld(session: WorldSession, info: GatewayWorldInfo) {
-        worldsById[session.worldId]?.markClosed()
-        worldsById[session.worldId] = session
+    internal fun attachWorld(session: WorldSession, info: GatewayWorldInfo): Boolean {
+        if (session.community) {
+            if (worldsById.putIfAbsent(session.worldId, session) != null) return false
+        } else {
+            worldsById.put(session.worldId, session)?.markClosed()
+        }
         worldInfoById[session.worldId] = info
         val world = World(info.toWorldMetadata())
         world.customCache = servesDifferentCache(info)
         Lobby.worldList.put(world)
+        return true
     }
 
     private fun servesDifferentCache(info: GatewayWorldInfo): Boolean {
@@ -588,6 +594,7 @@ object SocialGateway {
         }
 
         ClanService.onWorldDetached(session.worldId)
+        communityWorlds.forgetWorld(session.worldId)
         logInfo("SocialGateway: world disconnected worldId=${session.worldId}")
     }
 
@@ -598,9 +605,15 @@ object SocialGateway {
      * the read loop.
      */
     internal suspend fun handleWorldMessage(scope: CoroutineScope, session: WorldSession, msg: SocialGatewayWireMessage) {
+        if (session.community && !communityMayDeliver(session, msg)) {
+            logTrace("SocialGateway: community world ${session.worldId} may not send ${msg::class.simpleName}")
+            return
+        }
         when (msg) {
             is PlayerOnline -> {
-                markOnline(session, GatewayPlayerPresence(msg.username, msg.displayName, msg.rightsCrown, msg.privateStatus))
+                val claimed = GatewayPlayerPresence(msg.username, msg.displayName, msg.rightsCrown, msg.privateStatus)
+                val player = if (session.community) communityWorlds.admitted(session.worldId, claimed) ?: return else claimed
+                markOnline(session, player)
                 scope.launch {
                     try {
                         val acc = Accounts.find(msg.username.formatPlayerNameForProtocol()) ?: return@launch
@@ -614,11 +627,18 @@ object SocialGateway {
             is PlayerOffline -> {
                 val username = msg.username.formatPlayerNameForProtocol()
                 markOffline(username, session.worldId)
+                communityWorlds.forget(username, session.worldId)
                 scope.launch { logoutSocialIfGone(username) }
             }
 
             is WorldPresenceSnapshot -> {
-                scope.launch { reconcileWorldPresence(session, msg) }
+                val snapshot = if (!session.community) msg
+                    else msg.copy(players = msg.players.mapNotNull { communityWorlds.admitted(session.worldId, it) })
+                scope.launch { reconcileWorldPresence(session, snapshot) }
+            }
+
+            is VerifyLoginToken -> {
+                scope.launch { sendToWorld(session.worldId, communityWorlds.verify(session.worldId, msg)) }
             }
 
             is ClientPacketEnvelope -> {
@@ -650,6 +670,17 @@ object SocialGateway {
             }
         }
     }
+
+    private fun communityMayDeliver(session: WorldSession, msg: SocialGatewayWireMessage): Boolean = when (msg) {
+        is ClientPacketEnvelope -> isOnWorld(msg.username, session.worldId)
+        is FcSettingsUpdate -> isOnWorld(msg.username, session.worldId)
+        is ClanCommand -> isOnWorld(msg.username, session.worldId)
+        is AnnouncementBroadcast -> false
+        else -> true
+    }
+
+    private fun isOnWorld(username: String, worldId: Int) =
+        presenceByUsername[username.formatPlayerNameForProtocol()]?.worldId == worldId
 
     private suspend fun sendToUser(username: String, packet: ServerProt) {
         val lobby = lobbyByUsername[username]

@@ -215,6 +215,22 @@ data class WorldHelloAck(
 ) : SocialGatewayWireMessage
 
 @Serializable
+@SerialName("VerifyLoginToken")
+data class VerifyLoginToken(
+    val requestId: Int,
+    val username: String,
+    val token: String,
+) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("LoginTokenVerdict")
+data class LoginTokenVerdict(
+    val requestId: Int,
+    val username: String? = null,
+    val displayName: String? = null,
+) : SocialGatewayWireMessage
+
+@Serializable
 @SerialName("PlayerOnline")
 data class PlayerOnline(
     val username: String,

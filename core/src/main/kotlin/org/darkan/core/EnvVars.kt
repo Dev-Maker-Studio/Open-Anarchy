@@ -2,11 +2,14 @@ package org.darkan.core
 
 import io.github.cdimascio.dotenv.Dotenv
 import io.github.cdimascio.dotenv.dotenv
+import java.io.File
 
 object EnvVars {
     private val dotenv: Dotenv = dotenv {
         ignoreIfMissing = true
     }
+
+    private const val CACHE_SOURCE_SUBMODULE = "./cache-source"
 
     //server settings
     val debug: Boolean = dotenv.get("DEBUG", "false").toBooleanStrict()
@@ -33,19 +36,21 @@ object EnvVars {
     // and, while DEBUG is on, the only account allowed any administrative lobby feature at all: a dev
     // environment lets people grant themselves rights on their own worlds, so rights alone are no gate.
     val lobbyOwner: String = dotenv.get("LOBBY_OWNER", "trent").lowercase().replace(" ", "_")
-    // A cache source tree (docs/cache-source.md). When set, the server builds it into CACHE_BUILD_PATH on
-    // startup and serves that; when unset, CACHE_PATH names a prepacked cache.
-    val cacheSourcePath: String? = dotenv.get("CACHE_SOURCE_PATH", null)?.takeIf { it.isNotBlank() }
-    val cacheBuildPath: String = dotenv.get("CACHE_BUILD_PATH", "./data/cache")
     // The prepacked cache named in the environment; only served when no source tree is configured.
     val prepackedCachePath: String = dotenv.get("CACHE_PATH", "../cache/")
+    // A cache source tree (docs/cache-source.md). When set, the server builds it into CACHE_BUILD_PATH on
+    // startup and serves that; when unset, CACHE_PATH names a prepacked cache, and a clone with the
+    // cache-source submodule but no prepacked cache serves the submodule.
+    val cacheSourcePath: String? = dotenv.get("CACHE_SOURCE_PATH", null)?.takeIf { it.isNotBlank() }
+        ?: CACHE_SOURCE_SUBMODULE.takeIf { !File(prepackedCachePath).isDirectory && File(it, "cache.json").isFile }
+    val cacheBuildPath: String = dotenv.get("CACHE_BUILD_PATH", "./data/cache")
     // The packed cache the server actually opens: the build of the source tree when one is configured
     // (org.darkan.core.cache.CacheSource builds it before Cache.get() opens it), else the prepacked one.
     val cachePath: String = if (cacheSourcePath != null) cacheBuildPath else prepackedCachePath
     val memCache: Boolean = dotenv.get("MEM_CACHE", (!debug).toString()).toBooleanStrict()
     // Folder of gamevals/<type>.json name catalogs (see docs/gameval.md): the source tree's gamevals/, which
     // is the only copy. Defaults to the tree named by CACHE_SOURCE_PATH, else the cache-source submodule.
-    val gamevalPath: String = dotenv.get("GAMEVAL_PATH", (cacheSourcePath ?: "./cache-source") + "/gamevals")
+    val gamevalPath: String = dotenv.get("GAMEVAL_PATH", (cacheSourcePath ?: CACHE_SOURCE_SUBMODULE) + "/gamevals")
     val majorVersion: Int = dotenv.get("MAJOR_VERSION", "727").toInt()
     val minorVersion: Int = dotenv.get("MINOR_VERSION", "1").toInt()
     val packetSizeLimit: Int = dotenv.get("PACKET_SIZE_LIMIT", "7500").toInt()
@@ -73,13 +78,18 @@ object EnvVars {
     //mongo settings
     val mongoUri: String = dotenv.get("MONGO_URI", "mongodb://localhost:27017/darkan-server?retryWrites=true&w=majority")
 
-    // SocialGateway (world <-> lobby) settings
-    val socialGatewayUrl: String = dotenv.get("SOCIAL_GATEWAY_URL", "ws://localhost:${lobbyApiPort}/social/ws")
-    val socialGatewayToken: String = dotenv.get("SOCIAL_GATEWAY_TOKEN", "CHANGE_ME")
+    // SocialGateway (world <-> lobby) settings. The defaults join the dev lobby as a community world
+    // (docs/community-worlds.md); the lobby and official worlds set SOCIAL_GATEWAY_TOKEN to their private one.
+    val socialGatewayUrl: String = dotenv.get("SOCIAL_GATEWAY_URL", "ws://dev.darkan.org:4040/social/ws")
+    val communityWorldToken: String = dotenv.get("COMMUNITY_WORLD_TOKEN", "darkan-community-world")
+    val socialGatewayToken: String = dotenv.get("SOCIAL_GATEWAY_TOKEN", communityWorldToken)
+    val communityWorld: Boolean = socialGatewayToken == communityWorldToken
+    // Worlds 1 to OFFICIAL_WORLD_MAX are official; the lobby refuses them to community worlds.
+    val officialWorldMax: Int = dotenv.get("OFFICIAL_WORLD_MAX", "99").toInt()
     // How often a world re-announces everyone it has in game, so lobby-side presence cannot drift
     // for longer than one interval after a dropped message or a restart on either side.
     val socialPresenceResyncSeconds: Long = dotenv.get("SOCIAL_PRESENCE_RESYNC_SECONDS", "120").toLong()
-    val worldId: Int = dotenv.get("WORLD_ID", "300").toInt()
+    val worldId: Int = dotenv.get("WORLD_ID", (officialWorldMax + 1).toString()).toInt()
 
     //Automatic updates from the CI package registry (dev servers only). BUILD_VERSION is exported by the
     //run scripts from the package they downloaded; a blank version means "not a CI build" and updates

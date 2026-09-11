@@ -29,6 +29,8 @@ The lobby HTTP server exposes a persistent WebSocket endpoint for world-servers:
 - `ws://<lobby-host>:<LOBBY_API_PORT>/social/ws`
 
 World-servers connect and authenticate with `SOCIAL_GATEWAY_TOKEN`, then send presence + social events.
+With no configuration a world joins the dev lobby at `dev.darkan.org` as a community world; see
+`docs/community-worlds.md` to run your own.
 
 ### Environment variables
 
@@ -39,10 +41,10 @@ LOBBY_API_PORT=4040
 API_KEY=TEST_API_KEY
 SERVER_NAME=Darkan
 
-# New (world <-> lobby)
-SOCIAL_GATEWAY_URL=ws://localhost:4040/social/ws
-SOCIAL_GATEWAY_TOKEN=CHANGE_ME
-WORLD_ID=300
+# World <-> lobby (defaults shown)
+SOCIAL_GATEWAY_URL=ws://dev.darkan.org:4040/social/ws
+SOCIAL_GATEWAY_TOKEN=darkan-community-world
+WORLD_ID=100
 ```
 
 ### Admin announcements API
