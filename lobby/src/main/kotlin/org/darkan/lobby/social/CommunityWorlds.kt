@@ -1,0 +1,74 @@
+package org.darkan.lobby.social
+
+import org.darkan.core.EnvVars
+import org.darkan.core.formatPlayerNameForProtocol
+import org.darkan.core.mongo.collections.Accounts
+import org.darkan.core.net.login.LoginToken
+import org.darkan.core.social.gateway.GatewayPlayerPresence
+import org.darkan.core.social.gateway.LoginTokenVerdict
+import org.darkan.core.social.gateway.VerifyLoginToken
+import org.darkan.core.worldlist.WorldMetadata
+import java.util.concurrent.ConcurrentHashMap
+
+/**
+ * Worlds anyone can run against the dev lobby with the public [communityToken] (docs/community-worlds.md).
+ *
+ * A community world never holds the login-token secret: it hands each token a player presents to
+ * [verify], which spends it and admits that account to that world. Everything the world later says
+ * about a player is only believed for players it was admitted, and with the lobby's own display name
+ * and crown, so a community world can speak for its own players and nobody else.
+ */
+class CommunityWorlds(
+    private val enabled: Boolean = EnvVars.debug,
+    private val communityToken: String = EnvVars.communityWorldToken,
+    private val officialToken: String = EnvVars.socialGatewayToken,
+    private val officialWorldMax: Int = EnvVars.officialWorldMax,
+    private val localWorldId: Int = EnvVars.localWorldId,
+    private val loginTokenSecret: String = EnvVars.worldLoginTokenSecret,
+) {
+    enum class Tier { OFFICIAL, COMMUNITY }
+
+    private data class Admission(val worldId: Int, val displayName: String, val rightsCrown: Int)
+
+    private val admissions = ConcurrentHashMap<String, Admission>()
+    private val spentTokens = ConcurrentHashMap<String, Long>()
+
+    fun tierFor(token: String): Tier? = when {
+        token == officialToken && officialToken != communityToken -> Tier.OFFICIAL
+        enabled && token == communityToken -> Tier.COMMUNITY
+        else -> null
+    }
+
+    fun refusalFor(world: WorldMetadata): String? = when {
+        world.number <= officialWorldMax -> "Worlds 1-$officialWorldMax are reserved for official worlds"
+        world.number == localWorldId -> "World ${world.number} is reserved for the local development world"
+        world.isLobby -> "World ${world.number} is a lobby number"
+        else -> null
+    }
+
+    suspend fun verify(worldId: Int, request: VerifyLoginToken): LoginTokenVerdict {
+        val refused = LoginTokenVerdict(request.requestId)
+        val now = System.currentTimeMillis()
+        spentTokens.values.removeIf { it < now }
+        val verified = LoginToken.verify(request.token, now, loginTokenSecret) ?: return refused
+        if (spentTokens.putIfAbsent(request.token, verified.expiresAtMs) != null) return refused
+        val account = Accounts.find(request.username) ?: return refused
+        if (account.username != verified.username || account.checkBanned()) return refused
+        admissions[account.username] = Admission(worldId, account.displayName, account.rights.crown)
+        return LoginTokenVerdict(request.requestId, account.username, account.displayName)
+    }
+
+    fun admitted(worldId: Int, player: GatewayPlayerPresence): GatewayPlayerPresence? {
+        val username = player.username.formatPlayerNameForProtocol()
+        val admission = admissions[username]?.takeIf { it.worldId == worldId } ?: return null
+        return player.copy(username = username, displayName = admission.displayName, rightsCrown = admission.rightsCrown)
+    }
+
+    fun forget(username: String, worldId: Int) {
+        admissions.computeIfPresent(username) { _, admission -> admission.takeUnless { it.worldId == worldId } }
+    }
+
+    fun forgetWorld(worldId: Int) {
+        admissions.values.removeIf { it.worldId == worldId }
+    }
+}

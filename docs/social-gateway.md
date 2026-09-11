@@ -26,8 +26,11 @@ id the way legacy did: `> 1100` renders as `Lobby n`, anything else as `World n`
 ### World WebSocket handshake
 
 1. World → `WorldHello(world: GatewayWorldInfo, token)`.
-2. Lobby → `WorldHelloAck(ok, message?)`. A bad token or an unroutable world (blank host, port
-   `<= 0`) is rejected and the socket closed.
+2. Lobby → `WorldHelloAck(ok, message?)`. The token decides the world's tier: the lobby's private
+   `SOCIAL_GATEWAY_TOKEN` makes an official world, and the public `COMMUNITY_WORLD_TOKEN`, accepted
+   only while the lobby runs with `DEBUG=true`, a community world (`docs/community-worlds.md`). A bad
+   token, an unroutable world (blank host, port `<= 0`), or a community world on an official, local,
+   lobby or already-online number is rejected with the reason and the socket closed.
 3. World → `WorldPresenceSnapshot(players, reason = CONNECT)`, immediately.
 
 ### Presence: the world is the authority, and it says so repeatedly
@@ -158,8 +161,10 @@ many. Lobby-resident players are written straight to their own session instead.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `SOCIAL_GATEWAY_URL` | `ws://localhost:4040/social/ws` | Where a world connects |
-| `SOCIAL_GATEWAY_TOKEN` | `CHANGE_ME` | Shared secret checked in `WorldHello` |
+| `SOCIAL_GATEWAY_URL` | `ws://dev.darkan.org:4040/social/ws` | Where a world connects |
+| `SOCIAL_GATEWAY_TOKEN` | `COMMUNITY_WORLD_TOKEN` | Private secret of the lobby and its official worlds; a world left on the default joins as a community world |
+| `COMMUNITY_WORLD_TOKEN` | `darkan-community-world` | Public token of community worlds, accepted only while the lobby runs with `DEBUG=true` |
+| `OFFICIAL_WORLD_MAX` | `99` | Worlds `1`-`OFFICIAL_WORLD_MAX` are refused to community worlds |
 | `SOCIAL_PRESENCE_RESYNC_SECONDS` | `120` | How often a world re-announces its online list |
 
 ### Testing

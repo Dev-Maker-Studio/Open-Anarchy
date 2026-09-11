@@ -240,31 +240,13 @@ object WorldServer {
         if (!pendingLogins.add(username))
             return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
 
-        val verified = LoginToken.verify(lobbyAuthToken, System.currentTimeMillis(), EnvVars.worldLoginTokenSecret)
-        if (verified == null) {
-            logError("LoginToken verify failed for $username")
-            pendingLogins.remove(username)
-            return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
-        }
-
-        // The lobby signs the token for the account's username, but the client sends whatever the
-        // player typed - an email address just as often. Load by the login name and hold the token
-        // to the account it resolved to rather than to the typed string.
-        val account = try {
-            Accounts.find(username)
-        } catch (e: Exception) {
-            logError("Error loading account for $username", e)
-            pendingLogins.remove(username)
-            return output.finish(ResponseOpcode.LOGIN_SERVER_OFFLINE)
-        }
-        if (account == null || account.username.isEmpty()) {
-            pendingLogins.remove(username)
-            return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
-        }
-        if (verified.username != account.username) {
-            logError("LoginToken for ${verified.username} presented by $username (account ${account.username})")
-            pendingLogins.remove(username)
-            return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+        val admission = if (EnvVars.communityWorld) admitThroughLobby(username, lobbyAuthToken) else admitWithSecret(username, lobbyAuthToken)
+        val account = when (admission) {
+            is Admission.Admitted -> admission.account
+            is Admission.Refused -> {
+                pendingLogins.remove(username)
+                return output.finish(admission.response)
+            }
         }
         if (account.checkBanned()) {
             pendingLogins.remove(username)
@@ -335,6 +317,53 @@ object WorldServer {
             return output.finish(ResponseOpcode.COULD_NOT_COMPLETE_LOGIN)
         }
         session.readPackets(input)
+    }
+
+    private sealed interface Admission {
+        data class Admitted(val account: Account) : Admission
+        data class Refused(val response: Int) : Admission
+    }
+
+    private suspend fun admitWithSecret(username: String, lobbyAuthToken: String): Admission {
+        val verified = LoginToken.verify(lobbyAuthToken, System.currentTimeMillis(), EnvVars.worldLoginTokenSecret)
+        if (verified == null) {
+            logError("LoginToken verify failed for $username")
+            return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
+        }
+
+        // The lobby signs the token for the account's username, but the client sends whatever the
+        // player typed - an email address just as often. Load by the login name and hold the token
+        // to the account it resolved to rather than to the typed string.
+        val account = try {
+            Accounts.find(username)
+        } catch (e: Exception) {
+            logError("Error loading account for $username", e)
+            return Admission.Refused(ResponseOpcode.LOGIN_SERVER_OFFLINE)
+        }
+        if (account == null || account.username.isEmpty())
+            return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
+        if (verified.username != account.username) {
+            logError("LoginToken for ${verified.username} presented by $username (account ${account.username})")
+            return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
+        }
+        return Admission.Admitted(account)
+    }
+
+    private suspend fun admitThroughLobby(username: String, lobbyAuthToken: String): Admission {
+        val verdict = socialClient.verifyLoginToken(username, lobbyAuthToken)
+            ?: return Admission.Refused(ResponseOpcode.LOGIN_SERVER_OFFLINE)
+        val admitted = verdict.username ?: return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
+        val displayName = verdict.displayName ?: return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
+        return try {
+            // accounts.email is unique and a community world has no address, so it stores the username there
+            val account = Accounts.find(admitted) ?: Account(admitted, admitted, "", displayName)
+            account.displayName = displayName
+            Accounts.save(account)
+            Admission.Admitted(account)
+        } catch (e: Exception) {
+            logError("Error loading account for $admitted", e)
+            Admission.Refused(ResponseOpcode.LOGIN_SERVER_OFFLINE)
+        }
     }
 
     /**

@@ -371,16 +371,18 @@ CACHE_PATH=../cache/
 
 ### Gamevals
 ```env
-CACHE_SOURCE_PATH=        # unset: serve the prepacked CACHE_PATH. Set to a cache source tree: build it into CACHE_BUILD_PATH on startup and serve that
+CACHE_SOURCE_PATH=        # unset: serve the prepacked CACHE_PATH, or the cache-source submodule when CACHE_PATH does not exist. Set to a cache source tree: build it into CACHE_BUILD_PATH on startup and serve that
 CACHE_BUILD_PATH=./data/cache
 GAMEVAL_PATH=             # folder of <type>.json name catalogs; default <CACHE_SOURCE_PATH>/gamevals, else ./cache-source/gamevals (the only copy)
 ```
 
 ### Social Gateway (World Server)
 ```env
-SOCIAL_GATEWAY_URL=ws://localhost:4040/social/ws
-SOCIAL_GATEWAY_TOKEN=<shared-secret>
-WORLD_ID=300
+SOCIAL_GATEWAY_URL=ws://dev.darkan.org:4040/social/ws   # default: the dev lobby
+SOCIAL_GATEWAY_TOKEN=<shared-secret>   # default: COMMUNITY_WORLD_TOKEN, i.e. a community world (docs/community-worlds.md)
+COMMUNITY_WORLD_TOKEN=darkan-community-world   # public; the lobby accepts it only with DEBUG=true
+OFFICIAL_WORLD_MAX=99         # worlds 1..99 are official; the lobby refuses them to community worlds
+WORLD_ID=100
 WORLD_NAME=Darkan
 WORLD_HOST=localhost
 WORLD_PUBLIC_HOST=localhost
@@ -773,6 +775,7 @@ Configure `STAFF_WEBHOOK_URL` for tick performance warnings and error notificati
 ## Documentation
 
 - `docs/social-gateway.md` - Comprehensive social gateway architecture
+- `docs/community-worlds.md` - Running your own world against the dev lobby: the public community token, what the lobby enforces, the token-replay limit
 - `docs/clans.md` - The clan system: lobby-authoritative `ClanService`, typed `ClanAction` commands over the gateway, world `ClanRegistry`, shared `ClanRules`/`ClanPackets`
 - `README.md` - Quick start guide
 - `docs/migration.md` - Legacy database migration tooling and runbook

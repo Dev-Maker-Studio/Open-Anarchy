@@ -11,10 +11,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 class WorldSession(
     val worldId: Int,
     val worldName: String,
+    val community: Boolean = false,
     private val transport: suspend (String) -> Unit,
 ) {
-    constructor(worldId: Int, worldName: String, socket: WebSocketSession) :
-        this(worldId, worldName, { text -> socket.send(Frame.Text(text)) })
+    constructor(worldId: Int, worldName: String, socket: WebSocketSession, community: Boolean) :
+        this(worldId, worldName, community, { text -> socket.send(Frame.Text(text)) })
 
     private val closed = AtomicBoolean(false)
 
