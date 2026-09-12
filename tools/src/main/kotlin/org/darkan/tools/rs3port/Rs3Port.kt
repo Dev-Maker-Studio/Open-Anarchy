@@ -58,6 +58,7 @@ fun runRs3Port(args: List<String>) {
         "calibrate-attachments" -> attachments(args.drop(1))
         "urns" -> urns(args.drop(1))
         "spotanims" -> spotanims(args.drop(1))
+        "opacity" -> AlphaSpriteImporter(Path.of(args[1]), AlphaSpriteSpec.read(Path.of(args[2]))).run()
         else -> usage()
     }
 }
@@ -74,6 +75,7 @@ private fun usage() {
         rs3port calibrate-attachments <rs3-tree> <727-tree> [--ids <file>] [--limit <n>] [--urns]
         rs3port urns <rs3-tree> <727-tree> [spec.json]
         rs3port spotanims <rs3-tree> <727-tree> <spec.json>
+        rs3port opacity <727-tree> <spec.json>
         """.trimIndent()
     )
 }

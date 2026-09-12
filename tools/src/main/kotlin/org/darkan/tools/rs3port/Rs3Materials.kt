@@ -86,7 +86,7 @@ object Rs3Materials {
         return Sprites(colour, if (partial) opacity else null)
     }
 
-    fun texture(template: JsonObject, id: Int, colour: Int, opacity: Int?): TextureDefinition {
+    fun texture(template: JsonObject, id: Int, colour: Int, opacity: Int?, trailer: String? = template["trailer"]?.jsonPrimitive?.content): TextureDefinition {
         val operations = template["operations"]!!.jsonArray.map { element ->
             val operation = element.jsonObject
             TextureOp(
@@ -114,7 +114,7 @@ object Rs3Materials {
             opaque = opaque,
             opacity = alpha,
             hdr = template["hdr"]!!.jsonPrimitive.int,
-            trailer = template["trailer"]?.jsonPrimitive?.content
+            trailer = trailer
         )
     }
 

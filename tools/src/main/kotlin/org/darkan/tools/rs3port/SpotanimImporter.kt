@@ -6,7 +6,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import world.gregs.voidps.cache.definition.data.AnimationBaseDefinition
 import world.gregs.voidps.cache.definition.data.MaterialDefinition
 import world.gregs.voidps.cache.definition.decoder.AnimationFrameDecoder
-import world.gregs.voidps.cache.source.codec.SourceFile
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -62,11 +61,9 @@ class SpotanimImporter(
         "spotanim" to "config_spotanim"
     )
 
-    private val pending = ArrayList<SourceFile>()
+    private val writer = TreeWriter(sourceTree)
 
-    private val findings = ArrayList<String>()
-
-    private var checked = 0
+    private val findings = GrammarFindings()
 
     private val graphicNames = LinkedHashMap<Int, String>()
 
@@ -105,12 +102,8 @@ class SpotanimImporter(
         particles()
         models()
         spotanims()
-        if (findings.isNotEmpty()) {
-            findings.forEach { println("  client grammar: $it") }
-            throw IllegalStateException("The 727 client grammar rejects ${findings.size} findings in $checked records; nothing was written.")
-        }
-        println("client grammar: $checked records re-read, no findings")
-        val written = pending.map { file -> file.path to write(file) }
+        findings.refuse()
+        val written = writer.flush()
         indices()
         catalogs()
         for ((path, state) in written) {
@@ -222,9 +215,9 @@ class SpotanimImporter(
             val converted = frames.map { Rs3Anims.convert(it, base.types, entry.anim, base.id) }
             frameFiles[entry.anim] = converted.map { it.id and ((1 shl AnimationFrameDecoder.BITS) - 1) }.toSet()
             val files = SourceCodecFiles.frames(sourceTree, entry.anim, converted, base)
-            pending.addAll(files.files)
+            writer.add(files)
             for ((index, frame) in converted.withIndex()) {
-                check("frame ${entry.anim}/${frame.id and 0xffff}", ClientGrammar.frame(frame, files.packed[index], context))
+                findings.check("frame ${entry.anim}/${frame.id and 0xffff}", ClientGrammar.frame(frame, files.packed[index], context))
             }
         }
     }
@@ -294,13 +287,8 @@ class SpotanimImporter(
     }
 
     private fun accept(record: String, converted: Converted, grammar: (ByteArray) -> List<String>) {
-        pending.addAll(converted.files)
-        check(record, grammar(converted.packed.single()))
-    }
-
-    private fun check(record: String, found: List<String>) {
-        checked++
-        found.forEach { findings.add("$record: $it") }
+        writer.add(converted)
+        findings.check(record, grammar(converted.packed.single()))
     }
 
     private fun indices() {
@@ -327,20 +315,6 @@ class SpotanimImporter(
         SourceEdits.declarations(sourceTree, "Model", "model", modelNames)
         SourceEdits.declarations(sourceTree, "Spotanim", "spotanim", spotanimNames)
         println("catalog entries added: " + added.joinToString { "${it.first} ${it.second}" })
-    }
-
-    private fun write(file: SourceFile): String {
-        val path = sourceTree.resolve(file.path)
-        val state = when {
-            !Files.exists(path) -> "new"
-            Files.readAllBytes(path).contentEquals(file.bytes) -> "same"
-            else -> "changed"
-        }
-        if (state != "same") {
-            Files.createDirectories(path.parent)
-            Files.write(path, file.bytes)
-        }
-        return state
     }
 
     private companion object {
