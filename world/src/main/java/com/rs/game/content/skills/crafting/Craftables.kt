@@ -2,6 +2,7 @@ package com.rs.game.content.skills.crafting
 
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.dialogue.statements.MakeXStatement
+import com.rs.game.content.containsTool
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.actions.PlayerAction
 import org.darkan.core.Constants

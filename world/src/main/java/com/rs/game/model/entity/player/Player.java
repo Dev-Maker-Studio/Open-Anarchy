@@ -3648,6 +3648,8 @@ public class Player extends Entity {
 	}
 
 	public Map<Tools, Integer> getToolbelt() {
+		if (toolbelt == null)
+			toolbelt = new HashMap<>();
 		return toolbelt;
 	}
 
@@ -3688,37 +3690,8 @@ public class Player extends Entity {
 	}
 
 	public void clearToolbelt() {
-		toolbelt.clear();
-	}
-
-	public boolean addToolbelt(int itemId) {
-		if (toolbelt == null)
-			toolbelt = new HashMap<>();
-		Tools tool = Tools.forId(itemId);
-		if (tool == null)
-			return false;
-		if (toolbelt.get(tool) != null && toolbelt.get(tool) >= tool.getValue(itemId)) {
-			sendMessage("You already have this tool on your belt.");
-			return false;
-		}
-		toolbelt.put(tool, tool.getValue(itemId));
-		sendMessage("You add the " + ItemDefinitions.getDefs(itemId).getName() + " to your toolbelt.");
-		return true;
-	}
-
-	public boolean containsTool(int itemId) {
-		if (toolbelt == null)
-			return false;
-		Tools tool = Tools.forId(itemId);
-		if (tool == null)
-			return false;
-        return tool.contains(getToolValue(tool), itemId);
-    }
-
-	public int getToolValue(Tools tool) {
-		if ((toolbelt == null) || (toolbelt.get(tool) == null))
-			return 0;
-		return toolbelt.get(tool);
+		getToolbelt().clear();
+		Toolbelt.refreshToolbelt(this);
 	}
 
 	public void setJadinkoFavor(int jadinkoFavor) {
