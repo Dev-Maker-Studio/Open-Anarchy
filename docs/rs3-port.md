@@ -177,6 +177,15 @@ model <id> --glb <dir>
   whole import before anything is written. It refuses to run unless every
   allocated id is exactly next-free from the spec's ceiling in spec order and the tree's highest
   id is either that ceiling or the last allocated one, and a re-run rewrites nothing.
+- `opacity` repairs an import that gave a texture no alpha source, driven by a spec such as
+  `docs/reference/master-cape-opacity.json`: for each material it takes the colour sprite's own
+  alpha channel as a new grey sprite, rewires the texture to the three op shape above with
+  `opacity` pointing at it, and registers the sprite like any other new id. The master capes
+  needed it - each was a lone sprite op with all three outputs on it, so the client's alpha was the
+  colour's red channel (dark where the cape was coloured). A partly transparent RS3 texture is not
+  imported until its material is `effectCombiner` 2 and its texture has a real opacity output; the
+  two halves are useless apart. It keeps the texture's own trailer - the capes carry none, the only
+  29 textures in the tree that do not, and the client never reads those bytes.
 - `icon` renders inventory icons; `model <id> --glb <dir>` opens the model viewer on a `.glb` from
   a directory before the cache, which is how a converted model is looked at before packing.
 
