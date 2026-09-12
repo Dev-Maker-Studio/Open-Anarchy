@@ -1,56 +1,49 @@
 {
-  "source": "learned by matching the faces of every urn model present in both the 727 and the RS3 949 tree",
+  "source": "learned by matching the faces of every urn model present in both the 727 and the RS3 949 tree; keyed by RS3 material id, which is the glb submesh material field minus one",
   "corpus": {
     "models": 135,
     "matchedFaces": 33463
   },
   "materials": {
-    "0": {
-      "material": -1,
-      "source": "learned",
-      "counts": {
-        "-1": 724
-      }
-    },
-    "899": {
+    "898": {
       "material": -1,
       "source": "override",
       "counts": {}
     },
-    "1586": {
+    "1585": {
       "material": 213,
       "source": "learned",
       "counts": {
         "213": 284
       }
     },
-    "1880": {
+    "1879": {
       "material": 518,
       "source": "learned",
       "counts": {
         "518": 1860
       }
     },
-    "2313": {
+    "2312": {
       "material": 200,
       "source": "learned",
       "counts": {
         "200": 6486
       }
     },
-    "2315": {
+    "2314": {
       "material": 87,
       "source": "override",
       "counts": {}
     },
-    "2316": {
+    "2315": {
       "material": 96,
       "source": "learned",
       "counts": {
         "96": 24
       }
     },
-    "2325": {
+    "2324": {
       "material": 87,
       "source": "learned",
       "counts": {

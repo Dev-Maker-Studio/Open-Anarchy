@@ -52,7 +52,12 @@ fun runRs3Port(args: List<String>) {
         "materials" -> materials(args.drop(1))
         "model" -> model(args.drop(1))
         "calibrate" -> calibrate(args.drop(1))
+        "calibrate-frames" -> FrameCalibration.run(Path.of(args[1]), Path.of(args[2]))
+        "calibrate-particles" -> ParticleCalibration.run(Path.of(args[1]), Path.of(args[2]))
+        "calibrate-materials" -> MaterialCalibration.run(Path.of(args[1]), Path.of(args[2]), crosswalkOrNull())
+        "calibrate-attachments" -> attachments(args.drop(1))
         "urns" -> urns(args.drop(1))
+        "spotanims" -> spotanims(args.drop(1))
         else -> usage()
     }
 }
@@ -63,7 +68,12 @@ private fun usage() {
         rs3port materials <rs3-tree> <727-tree> [spec.json]
         rs3port model <rs3-tree> <727-tree> <rs3Id> --id <727Id> --role <role> [--out <dir>]
         rs3port calibrate <rs3-tree> <727-tree> [spec.json] [--out <dir>]
+        rs3port calibrate-frames <rs3-tree> <727-tree>
+        rs3port calibrate-particles <rs3-tree> <727-tree>
+        rs3port calibrate-materials <rs3-tree> <727-tree>
+        rs3port calibrate-attachments <rs3-tree> <727-tree> [--ids <file>] [--limit <n>] [--urns]
         rs3port urns <rs3-tree> <727-tree> [spec.json]
+        rs3port spotanims <rs3-tree> <727-tree> <spec.json>
         """.trimIndent()
     )
 }
@@ -73,10 +83,11 @@ private fun flag(args: List<String>, name: String): String? {
     return if (index >= 0 && index + 1 < args.size) args[index + 1] else null
 }
 
-private fun crosswalk(): Crosswalk {
+private fun crosswalk(): Crosswalk = crosswalkOrNull() ?: throw IllegalStateException("$CROSSWALK is missing; run `rs3port materials` first.")
+
+private fun crosswalkOrNull(): Crosswalk? {
     val path = Path.of(CROSSWALK)
-    check(Files.exists(path)) { "$CROSSWALK is missing; run `rs3port materials` first." }
-    return Crosswalk.read(path)
+    return if (Files.exists(path)) Crosswalk.read(path) else null
 }
 
 private fun materials(args: List<String>) {
@@ -116,6 +127,19 @@ private fun model(args: List<String>) {
     println("rs3 $rs3Id -> model $id: ${converted.vertexCount} vertices, ${converted.faceCount} faces")
 }
 
+private fun attachments(args: List<String>) {
+    val rs3Tree = Path.of(args[0])
+    val sourceTree = Path.of(args[1])
+    val listed = flag(args, "--ids")?.let { file -> Files.readAllLines(Path.of(file)).mapNotNull { it.trim().toIntOrNull() } }
+    val ids = when {
+        listed != null -> listed
+        args.contains("--urns") -> UrnCorpus.shared(UrnSpec.read(UrnSpec.DEFAULT), sourceTree, rs3Tree).map { it.sourceId }
+        else -> AttachmentCalibration.corpus(rs3Tree, sourceTree)
+    }
+    val limit = flag(args, "--limit")?.toInt() ?: ids.size
+    AttachmentCalibration.run(rs3Tree, sourceTree, ids.take(limit))
+}
+
 private class Row(
     val id: Int,
     val worn: Boolean,
@@ -136,7 +160,7 @@ private class Row(
 private fun calibrate(args: List<String>) {
     val rs3Tree = Path.of(args[0])
     val sourceTree = Path.of(args[1])
-    val spec = UrnSpec.read(Path.of(args.getOrNull(2) ?: UrnSpec.DEFAULT.toString()))
+    val spec = UrnSpec.read(Path.of(args.getOrNull(2)?.takeIf { !it.startsWith("--") } ?: UrnSpec.DEFAULT.toString()))
     val table = crosswalk()
     val out = flag(args, "--out")?.let { Path.of(it) }
     out?.let { Files.createDirectories(it) }
@@ -202,11 +226,6 @@ private fun compare(rs3: Rs3Model, shipped: ModelDefinition, converted: ModelDef
     )
 }
 
-/**
- * A face's three vertex positions as a cycle starting at the smallest, so two models wind a face
- * the same way exactly when this is equal - the vertex indices themselves are not comparable
- * because the two revisions number their vertices differently.
- */
 private fun wound(model: ModelDefinition, face: Int): List<List<Int>> {
     val corners = listOf(model.faceA[face], model.faceB[face], model.faceC[face]).map {
         listOf(model.vertexX[it], model.vertexY[it], model.vertexZ[it])
@@ -350,5 +369,8 @@ private fun urns(args: List<String>) {
     UrnImporter(rs3Tree, sourceTree, spec, crosswalk()).run()
 }
 
-private fun percent(part: Int, whole: Int): String =
-    if (whole == 0) "-" else "%.2f%%".format(part * 100.0 / whole)
+private fun spotanims(args: List<String>) {
+    val rs3Tree = Path.of(args[0])
+    val sourceTree = Path.of(args[1])
+    SpotanimImporter(rs3Tree, sourceTree, SpotanimSpec.read(Path.of(args[2])), crosswalk()).run()
+}

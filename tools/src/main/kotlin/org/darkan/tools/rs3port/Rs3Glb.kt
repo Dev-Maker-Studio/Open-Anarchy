@@ -1,32 +1,42 @@
 package org.darkan.tools.rs3port
 
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.float
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import world.gregs.voidps.cache.source.codec.Gltf
+import java.lang.Float.float16ToFloat
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.math.roundToInt
 
 class Rs3Submesh(val flags: Int, val priority: Int, val material: Int, val indices: IntArray)
 
-/**
- * A revision 949 `models_rt7/<id>.glb`, read with nothing but the glTF container.
- *
- * RS3 keeps its own per model data on the first node as `extras.rs`, like the 727 source tree,
- * but every entry there is an *accessor index* rather than the values, and the faces are a list
- * of submeshes rather than one face order. What the streams hold, measured against the models
- * that exist in both trees:
- *
- * - `positions` are the RS integers with **y negated** - the whole of the coordinate difference.
- *   Vertices are split per normal and per UV, so several carry the same position.
- * - `streamB` is the 727 HSL16 face colour, on every vertex of the face.
- * - `streamA` is the 727 vertex skin label and `streamC` the face skin label; both are absent
- *   unless the model is worn. `bones` and `weights` are the RT7 skeleton and have no 727 form.
- * - `submeshes` are `[flags, priority, material, unused, indicesAccessor]`, where `priority` is
- *   the 727 face priority and `material` an RS3 material id that needs the crosswalk.
- */
+class Rs3Point(val x: Int, val y: Int, val z: Int, val label: Int)
+
+class Rs3Emitter(val producer: Int, val points: List<Rs3Point>)
+
+class Rs3Effector(val effector: Int, val point: Rs3Point)
+
+class Rs3Billboard(
+    val priority: Int,
+    val material: Int,
+    val x: Float,
+    val y: Float,
+    val z: Float,
+    val size2d: Int,
+    val size3d: Int,
+    val colour: Int,
+    val opacity: Int,
+    val faceLabel: Int,
+    val vertexLabel: Int,
+    val depth: Int,
+    val distance: Int
+)
+
 class Rs3Model(val id: Int, private val root: JsonObject, private val binary: ByteArray) {
 
     private val rs: JsonObject = root["nodes"]?.jsonArray?.firstOrNull()?.jsonObject
@@ -46,25 +56,76 @@ class Rs3Model(val id: Int, private val root: JsonObject, private val binary: By
 
     val faceSkins: IntArray? = stream("streamC")
 
-    val textureCoordinates: IntArray? = stream("textures")
+    val opacities: IntArray? = stream("byteStream")
+
+    val normals: IntArray? = stream("normals")
+
+    val uvs: FloatArray? = stream("textures")?.let { raw -> FloatArray(raw.size) { float16ToFloat(raw[it].toShort()) } }
 
     val submeshes: List<Rs3Submesh> = rs["submeshes"]?.jsonArray.orEmpty().map { entry ->
         val parts = entry.jsonArray
         Rs3Submesh(
             flags = parts[0].jsonPrimitive.int,
             priority = parts[1].jsonPrimitive.int,
-            material = parts[2].jsonPrimitive.int,
+            material = parts[2].jsonPrimitive.int - 1,
             indices = accessor(parts[4].jsonPrimitive.int)
         )
     }
 
     val faceCount: Int = submeshes.sumOf { it.indices.size } / 3
 
+    val emitters: List<Rs3Emitter> = rs["attachmentsB"]?.jsonArray.orEmpty().map { entry ->
+        val emitter = entry.jsonObject
+        Rs3Emitter(emitter.int("id"), emitter["points"]!!.jsonArray.map { point(it) })
+    }
+
+    val effectors: List<Rs3Effector> = rs["attachmentsC"]?.jsonArray.orEmpty().map { entry ->
+        val effector = entry.jsonObject
+        Rs3Effector(effector.int("id"), point(effector["point"]!!))
+    }
+
+    val billboards: List<Rs3Billboard> = rs["attachmentsA"]?.jsonArray.orEmpty().flatMap { entry ->
+        val group = entry.jsonObject
+        group["records"]!!.jsonArray.map { element ->
+            val record = element.jsonObject
+            val ids = record["ids"]!!.jsonArray.map { it.jsonPrimitive.int }
+            Rs3Billboard(
+                priority = group.int("a"),
+                material = group.int("b") - 1,
+                x = record.float("x"),
+                y = -record.float("y"),
+                z = record.float("z"),
+                size2d = record.float("d").roundToInt(),
+                size3d = record.float("e").roundToInt(),
+                colour = record.int("f"),
+                opacity = record.int("g"),
+                faceLabel = ids[0],
+                vertexLabel = ids[1],
+                depth = ids[3] and 0xff,
+                distance = record.int("h")
+            )
+        }
+    }
+
     fun vertexX(vertex: Int): Int = positions[vertex * 3]
 
     fun vertexY(vertex: Int): Int = positions[vertex * 3 + 1]
 
     fun vertexZ(vertex: Int): Int = positions[vertex * 3 + 2]
+
+    private fun point(element: JsonElement): Rs3Point {
+        val point = element.jsonObject
+        return Rs3Point(
+            point.float("x").roundToInt(),
+            -point.float("y").roundToInt(),
+            point.float("z").roundToInt(),
+            point.int("a")
+        )
+    }
+
+    private fun JsonObject.int(key: String): Int = this[key]!!.jsonPrimitive.int
+
+    private fun JsonObject.float(key: String): Float = this[key]!!.jsonPrimitive.float
 
     private fun stream(name: String): IntArray? {
         val index = rs[name]?.jsonPrimitive?.int ?: return null

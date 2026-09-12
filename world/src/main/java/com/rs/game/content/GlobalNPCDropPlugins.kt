@@ -24,7 +24,8 @@ fun mapDrops() {
     onNpcDrop(null, null) { e ->
         if (yellDrop(e.item.id))
             broadcastLoot("${e.player.displayName} has just received a ${e.item.name} drop from ${e.npc.definitions.name}!")
-        if (e.item.shouldLootbeam(e.player)) {
+        val beam = LootBeam.of(e.player)
+        if (beam != null && e.item.shouldLootbeam(e.player)) {
             e.player.packets.sendSound(Sound(307, 0, SoundType.JINGLE))
             e.enableTasks().schedule {
                 e.player.packets.sendGroundItemMessage(
@@ -33,11 +34,11 @@ fun mapDrops() {
                     e.item,
                     "<shad=000000><col=cc0033>You received: ${e.item.amount} ${e.item.definitions.name}"
                 )
-                while(true) {
-                    val owner = e.item.getOwner() ?: break
-                    owner.packets.sendSpotAnim(SpotAnim(owner.getI("lootbeamAnim")), e.item.tile)
+                val tile = e.item.tile
+                e.player.packets.sendSpotAnim(SpotAnim(beam.spotAnimId), tile)
+                while (e.item.getOwner() != null)
                     wait(2)
-                }
+                e.player.packets.sendSpotAnim(SpotAnim(LootBeam.NONE), tile)
             }
         }
     }
@@ -103,11 +104,10 @@ fun bonecrush(player: Player, item: Item): Boolean {
 }
 
 fun GroundItem.shouldLootbeam(player: Player) =
-    player.getI("lootbeamAnim", -1) != -1 && (
-    definitions.getValue() * amount > player.getI("lootbeamThreshold", 90000) ||
+    definitions.getValue() * amount > player.getI(LootBeam.THRESHOLD, LootBeam.DEFAULT_THRESHOLD) ||
     definitions.name.contains("Scroll box") ||
     definitions.name.contains(" defender") ||
-    yellDrop(id))
+    yellDrop(id)
 
 fun yellDrop(itemId: Int): Boolean {
     //Revenants

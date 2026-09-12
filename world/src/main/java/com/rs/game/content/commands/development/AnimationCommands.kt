@@ -13,6 +13,7 @@ import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
 import org.darkan.core.model.Animation
 import org.darkan.core.model.Rights
+import org.darkan.core.model.SpotAnim
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Logger
 import org.darkan.core.Utils
@@ -26,6 +27,11 @@ fun loadAnimationCommands() {
     Commands.add(Rights.DEVELOPER, "spotanim,gfx [id height]", "Creates a spot animation on top of the player.") { p, args ->
         val height = if (args.size == 1) 0 else args[1].toInt()
         p.spotAnim(args[0].toInt(), 0, height)
+    }
+
+    Commands.add(Rights.DEVELOPER, "tilespotanim,tilegfx [id height]", "Creates a spot animation on the tile south of the player.") { p, args ->
+        val height = if (args.size == 1) 0 else args[1].toInt()
+        World.sendSpotAnim(p.tile.transform(0, -1), SpotAnim(args[0].toInt(), 0, height))
     }
 
     Commands.add(animRights, "anim,emote [id]", "Animates the player with specified ID.") { p, args ->

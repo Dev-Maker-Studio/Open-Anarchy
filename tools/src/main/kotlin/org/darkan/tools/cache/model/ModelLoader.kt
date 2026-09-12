@@ -10,6 +10,9 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.ModelDefinition
 import world.gregs.voidps.cache.definition.decoder.BillboardTypeLoader
 import world.gregs.voidps.cache.definition.decoder.ModelDecoder
+import world.gregs.voidps.cache.source.codec.ModelGltf
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.abs
@@ -247,9 +250,12 @@ object ModelLoader {
         return loadTexturedModel(cache, modelId)?.mesh
     }
 
+    var glbDirectory: Path? = null
+
     fun loadDefinition(cache: Cache, modelId: Int): ModelDefinition? {
         val result = definitionCache.computeIfAbsent(modelId) {
-            val def = ModelDecoder.decode(cache, modelId)
+            val glb = glbDirectory?.resolve("$modelId.glb")?.takeIf { Files.exists(it) }
+            val def = if (glb != null) ModelGltf.read(Files.readAllBytes(glb), modelId) else ModelDecoder.decode(cache, modelId)
             if (def != null) CacheResult.Found(def) else CacheResult.NotFound
         }
         return when (result) {
