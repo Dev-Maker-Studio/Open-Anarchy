@@ -1,10 +1,12 @@
 package com.rs.game.content.quests.heroesquest.icequeenlair;
 
+import com.rs.game.content.Toolbelt;
 import com.rs.game.content.skills.mining.Pickaxe;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.Constants;
+import org.darkan.core.gameval.gen.Obj;
 import org.darkan.core.model.Animation;
 import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
@@ -14,7 +16,7 @@ import com.rs.plugin.handlers.ObjectClickHandler;
 @PluginEventHandler
 public class IceQueenDungeon {
 	public static ObjectClickHandler handleRockSlide = new ObjectClickHandler(new Object[]{2634}, e -> {
-		if (!e.getPlayer().containsTool(1265) && Pickaxe.getBest(e.getPlayer()) == null) {
+		if (!Toolbelt.containsTool(e.getPlayer(), Obj.bronze_pickaxe) && Pickaxe.getBest(e.getPlayer()) == null) {
 			e.getPlayer().sendMessage("You do not have a pickaxe...");
 			return;
 		}

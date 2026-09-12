@@ -3,6 +3,7 @@ package com.rs.game.content.quests.death_plateau.dialogue.npcs.burthorpe
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
+import com.rs.game.content.containsTool
 import com.rs.game.content.quests.death_plateau.utils.*
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player

@@ -2,7 +2,6 @@ package com.rs.game.content.minigames.allfiredup
 
 import com.rs.engine.quest.Quest
 import com.rs.game.World.getServerTicks
-import com.rs.game.content.Toolbelt
 import com.rs.game.content.minigames.allfiredup.Beacons.getBeaconByTile
 import com.rs.game.content.minigames.allfiredup.Beacons.lightBeacon
 import com.rs.game.model.entity.player.Player
@@ -13,6 +12,7 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
+import org.darkan.core.gameval.gen.Obj
 
 fun Player.isBeaconEmpty(beacon: Beacon) = vars.getVarBit(beacon.varBit) == 0
 fun Player.isBeaconFilled(beacon: Beacon) = vars.getVarBit(beacon.varBit) == 1
@@ -322,9 +322,7 @@ fun Player.tryFillBeacon(beacon: Beacon): Boolean {
 }
 
 fun Player.hasTinderbox(): Boolean {
-    if (inventory.containsItem(590)) return true
-    val tb = toolbelt
-    return tb != null && (tb.entries as? Set<*>)?.contains(Toolbelt.Tools.TINDERBOX) == true
+    return inventory.containsItem(Obj.tinderbox)
 }
 
 private const val MAX_BEACON_BURN_TICKS = 1177 // Magic logs (1077) + generous buffer

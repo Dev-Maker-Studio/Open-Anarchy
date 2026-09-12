@@ -23,6 +23,7 @@ import org.darkan.core.model.IFEvents;
 import org.darkan.core.model.UseFlag;
 import com.rs.game.World;
 import com.rs.game.content.ItemConstants;
+import com.rs.game.content.Toolbelt;
 import com.rs.game.content.pets.Pet;
 import com.rs.game.content.skills.slayer.npcs.ConditionalDeath;
 import com.rs.game.content.skills.summoning.Familiar;
@@ -362,7 +363,7 @@ public final class Inventory {
 
 	public int getNumberOf(int itemId, boolean checkToolbelt) {
 		int amount = items.getNumberOf(itemId);
-		if (checkToolbelt && player.containsTool(itemId))
+		if (checkToolbelt && Toolbelt.containsTool(player, itemId))
 			amount++;
 		return amount;
 	}
@@ -457,7 +458,7 @@ public final class Inventory {
 	}
 
 	public boolean containsItem(int itemId, int amount, boolean checkToolbelt) {
-        return items.contains(new Item(itemId, amount)) || (checkToolbelt && player.containsTool(itemId));
+        return items.contains(new Item(itemId, amount)) || (checkToolbelt && Toolbelt.containsTool(player, itemId));
     }
 
 	public boolean missingItems(int... itemIds) {
@@ -481,7 +482,7 @@ public final class Inventory {
 
 	public boolean containsOneItem(boolean checkToolbelt, int... itemIds) {
 		for (int itemId : itemIds)
-			if (items.containsOne(new Item(itemId, 1)) || (checkToolbelt && player.containsTool(itemId)))
+			if (items.containsOne(new Item(itemId, 1)) || (checkToolbelt && Toolbelt.containsTool(player, itemId)))
 				return true;
 		return false;
 	}
