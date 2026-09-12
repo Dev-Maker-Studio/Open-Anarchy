@@ -1,5 +1,6 @@
 package com.rs.game.content.items
 
+import com.rs.game.content.containsTool
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.Constants

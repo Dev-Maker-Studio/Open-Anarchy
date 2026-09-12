@@ -6,6 +6,7 @@ import com.rs.engine.quest.Quest
 import com.rs.engine.quest.QuestHandler
 import com.rs.engine.quest.QuestOutline
 import com.rs.game.content.achievements.Achievement
+import com.rs.game.content.containsTool
 import com.rs.game.content.quests.death_plateau.utils.*
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
