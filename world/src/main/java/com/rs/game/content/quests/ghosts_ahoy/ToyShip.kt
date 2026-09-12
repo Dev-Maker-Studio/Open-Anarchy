@@ -1,6 +1,7 @@
 package com.rs.game.content.quests.ghosts_ahoy
 
 import com.rs.engine.dialogue.Options
+import com.rs.game.content.containsTool
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnItem

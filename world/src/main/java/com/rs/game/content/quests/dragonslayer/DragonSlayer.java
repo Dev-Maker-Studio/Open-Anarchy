@@ -7,6 +7,7 @@ import com.rs.engine.quest.Quest;
 import com.rs.engine.quest.QuestHandler;
 import com.rs.engine.quest.QuestOutline;
 import com.rs.game.World;
+import com.rs.game.content.Toolbelt;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
@@ -223,7 +224,7 @@ public class DragonSlayer extends QuestOutline {
     public static ObjectClickHandler handleBoatFix = new ObjectClickHandler(new Object[]{25036}, e -> {
         Player p = e.getPlayer();
         if (p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER).getB(OWNS_BOAT_ATTR) || p.isQuestComplete(Quest.DRAGON_SLAYER)) {
-            if (p.getInventory().containsItem(new Item(HAMMER, 1)) || p.containsTool(HAMMER)) {
+            if (p.getInventory().containsItem(new Item(HAMMER, 1)) || Toolbelt.containsTool(p, HAMMER)) {
                 if (p.getQuestManager().getAttribs(Quest.DRAGON_SLAYER).getI(BOAT_FIX_NUM_ATTR) <= 2)
                     if (p.getInventory().containsItem(STEEL_NAILS, 30) && p.getInventory().containsItem(PLANKS, 1)) {
                         p.setNextAnimation(new Animation(HAMMER_HITTING_REPAIR_ANIM));
