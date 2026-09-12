@@ -83,11 +83,8 @@ class Crosswalk(
     fun material(rs3: Int): Int = materials[rs3]
         ?: throw IllegalArgumentException("RS3 material $rs3 has no 727 mapping; add it to the overrides file.")
 
-    fun projection(worn: Boolean, material: Int): Projection {
-        val scope = if (worn) "worn" else "inventory"
-        return projections["$scope:$material"]
-            ?: throw IllegalArgumentException("No $scope projection template for 727 material $material.")
-    }
+    fun projectionOrNull(worn: Boolean, material: Int): Projection? =
+        projections["${if (worn) "worn" else "inventory"}:$material"]
 
     fun write(path: Path, corpusModels: Int, corpusFaces: Int) {
         val table = materials.keys.sorted().associate { rs3 ->
@@ -122,7 +119,8 @@ class Crosswalk(
     companion object {
 
         private const val SOURCE =
-            "learned by matching the faces of every urn model present in both the 727 and the RS3 949 tree"
+            "learned by matching the faces of every urn model present in both the 727 and the RS3 949 tree; " +
+                "keyed by RS3 material id, which is the glb submesh material field minus one"
 
         private val json = Json { prettyPrint = true; prettyPrintIndent = "  " }
 
@@ -176,8 +174,10 @@ class CrosswalkLearner(private val rs3Tree: Path, private val sourceTree: Path) 
                 for (face in pairs.faces(submesh)) {
                     matched++
                     val material = target.faceTextures?.get(face.target)?.toInt() ?: -1
-                    counts.getOrPut(rs3.submeshes[submesh].material) { HashMap() }
-                        .merge(material, 1, Int::plus)
+                    val rs3Material = rs3.submeshes[submesh].material
+                    if (rs3Material >= 0) {
+                        counts.getOrPut(rs3Material) { HashMap() }.merge(material, 1, Int::plus)
+                    }
                     val projection = projectionOf(target, face.target) ?: continue
                     val scope = if (entry.worn) "worn" else "inventory"
                     val bucket = projections.getOrPut("$scope:$material") { HashMap() }

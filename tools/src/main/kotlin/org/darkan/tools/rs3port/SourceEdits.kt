@@ -5,8 +5,16 @@ import java.nio.file.Path
 
 object SourceEdits {
 
-    fun modelIndex(tree: Path, ids: List<Int>): Int {
-        val path = tree.resolve("models").resolve("index.json")
+    const val GZIP = "{\"compression\": \"gzip\"}"
+
+    const val VERSIONED_GZIP = "{\"version\": 1, \"compression\": \"gzip\"}"
+
+    fun named(hash: Int): String = "{\"compression\": \"gzip\", \"nameHash\": $hash}"
+
+    fun modelIndex(tree: Path, ids: List<Int>): Int = archiveIndex(tree, "models", ids.associateWith { GZIP })
+
+    fun archiveIndex(tree: Path, directory: String, entries: Map<Int, String>): Int {
+        val path = tree.resolve(directory).resolve("index.json")
         val lines = ArrayList(Files.readAllLines(path))
         val present = HashSet<Int>()
         var last = -1
@@ -15,18 +23,18 @@ object SourceEdits {
             present.add(id)
             last = index
         }
-        check(last >= 0) { "models/index.json has no archives." }
-        val missing = ids.filter { it !in present }.sorted()
+        check(last >= 0) { "$directory/index.json has no archives." }
+        val missing = entries.keys.filter { it !in present }.sorted()
         if (missing.isEmpty()) {
             return 0
         }
         check(missing.first() > present.max()) {
-            "model ${missing.first()} is below the highest archive ${present.max()}; ids only ever append."
+            "$directory ${missing.first()} is below the highest archive ${present.max()}; ids only ever append."
         }
         lines[last] = lines[last] + ","
         val indent = lines[last].takeWhile { it == ' ' }
         val added = missing.mapIndexed { index, id ->
-            "$indent\"$id\": {\"compression\": \"gzip\"}" + if (index == missing.size - 1) "" else ","
+            "$indent\"$id\": ${entries.getValue(id)}" + if (index == missing.size - 1) "" else ","
         }
         lines.addAll(last + 1, added)
         Files.writeString(path, lines.joinToString("\n") + "\n")
@@ -41,7 +49,7 @@ object SourceEdits {
         return trimmed.substringAfter('"').substringBefore('"').toIntOrNull()
     }
 
-    fun catalog(tree: Path, type: String, names: Map<Int, String>): Int {
+    fun catalog(tree: Path, type: String, names: Map<Int, String>, channel: String? = null): Int {
         val path = tree.resolve("gamevals").resolve("$type.json")
         val text = Files.readString(path)
         val entries = Regex("\"(\\d+)\": \"([^\"]*)\"").findAll(text.substringAfter("\"entries\""))
@@ -56,16 +64,20 @@ object SourceEdits {
         val closing = text.lastIndexOf("\n  }")
         check(closing > 0) { "gamevals/$type.json has no entry block to append to." }
         val added = missing.joinToString("") { ",\n    \"$it\": \"${names.getValue(it)}\"" }
-        val bumped = bump(text.substring(0, closing) + added, missing.size)
+        var bumped = bump(text.substring(0, closing) + added, listOf("cache_ids", "named"), missing.size, 0)
+        if (channel != null) {
+            val block = bumped.indexOf("\"by_channel\"")
+            check(block >= 0) { "gamevals/$type.json has no by_channel block for channel $channel." }
+            bumped = bump(bumped, listOf(channel), missing.size, block)
+        }
         Files.writeString(path, bumped + text.substring(closing))
         return missing.size
     }
 
-    private fun bump(text: String, added: Int): String {
+    private fun bump(text: String, fields: List<String>, added: Int, from: Int): String {
         var out = text
-        for (field in listOf("cache_ids", "named")) {
-            val pattern = Regex("(\"$field\": )(\\d+)")
-            val match = pattern.find(out) ?: continue
+        for (field in fields) {
+            val match = Regex("(\"$field\": )(\\d+)").find(out, from) ?: continue
             out = out.substring(0, match.range.first) +
                 match.groupValues[1] + (match.groupValues[2].toInt() + added) +
                 out.substring(match.range.last + 1)

@@ -85,6 +85,54 @@ ceiling. Facts that only calibration found: RS3 negates y and reverses winding, 
 colour in a vertex stream, re-mapped every material id. Do not trust a plan's claims about a
 format; measure on the shared assets.
 
+- **Find the whole dependency closure first.** A spotanim is a model + seq, the seq is frames in
+  one or more anim archives on a base, and the model can carry a material (-> texture -> sprite),
+  particle emitters (-> producer -> its material), effectors and billboards (-> billboard config
+  -> material). RS3 has no spotanim catalog: find spotanims through the seq/model names
+  (`njloot_2013_*` is the golden loot beam) and grep `config_spotanim` for those ids.
+- **Reuse before you append**, but only on proof: an RS3 id maps to an existing 727 one when every
+  asset both caches share agrees (3131 -> 1168 on all 9 shared billboards); anything without a
+  precedent is appended. Record each decision and its evidence in the spec.
+- **Learn cross-revision maps from same-id pairs**: producers, effectors and billboards keep their
+  ids across revisions, so a field or material crosswalk is a vote over every shared id.
+  Frame archives do not keep their ids (RS3 renumbered them); pair them through seqs whose
+  durations and frame file ids match.
+- **RS3 formats (949)**: glb submesh material = material id + 1, 0 = none; model
+  `attachmentsA/B/C` = billboards (config inlined, `b` = material + 1) / emitters (producer id +
+  three positions) / effectors (particle id + one position) - 727 needs a real face or vertex for
+  each; v2 frames hold a rotation as a (sin, cos) x 16384 pair per axis where 727 holds one smart
+  at 4096 per turn; RS3 billboard sizes are 727's minus one; producer opcodes 29/35/36 and
+  spotanim opcode 46 do not exist in 727 and would desync its reader - strip them. RS3 seq opcode
+  13 bytes are already 727's sound grammar.
+- **727 textures** are op graphs; an imported image becomes a sprite in `graphics/` read by op 39.
+  Op 39 hands over RGB only: a texture with any partial alpha needs a second sprite holding the
+  alpha as grey (`<material>_alpha`, like `xmas09_snow_alpha`) wired to the texture's `opacity`
+  output, so allocate two graphic ids per imported texture. RS3 texture PNGs are left-right
+  mirrors of 727 sprites (`roof` = graphic 453 once flipped); RS3 `TEXCOORD_0` are half-floats in
+  ushorts; material repeat S/T come from RS3 `packed` bits 0x1/0x8, brightness from `unknown31`
+  and alpha from `unknown32` as signed bytes, effectId/effectParam1 from `unknown23`/`unknown24`.
+- **The RS3 face colour on a textured face is faithful even when it looks wrong in the tools
+  viewer.** The viewer multiplies it in; the 727 client (`ModelSM.getMaterialColor`) mixes it
+  towards grey by `material.alpha & 0xff`, so under an alpha -1 material only its lightness shows
+  (a green ring in `tools model` is golden in game). Shipped 727 models do the same (model 45771).
+- **Emitter faces are real faces and 727 usually hides them with alpha 255**; a converted emitter
+  is only visible when the RS3 source drew it (`byteStream` 255 -> alpha 0). Carry the source.
+- **Prove imported records against the 727 client's reader, not only the server decoder**: the
+  server decoders read what Jagex's tools wrote, and the client can read the same bytes
+  differently (`rs3port`'s `ClientGrammar` re-reads every record with the darkan-bot grammar and
+  fails the import on a desync, leftover bytes or an out-of-range table index).
+- **The rs3port calibrations are the gate**, one per converted kind: `calibrate` (urn models),
+  `calibrate-frames`, `calibrate-particles`, `calibrate-materials`, and the attachment pass over
+  the 1,858 shared models with emitters or billboards. Rerun them after any converter change.
+- **Save the verify signature before the importer writes anything** - once the tree has changed
+  there is no clean baseline left to diff against. Afterwards the only lines that may move are
+  the new archives and the one config archive each new id lands in (config archives hold 128
+  seqs, 256 spotanims; materials and both particle kinds are single archives).
+- **Look at the result from a packed build**: `tools cache build cache-source data/cache`, then
+  run `texdump`/`capture-headless.sh -- model <id>` with `CACHE_PATH=./data/cache/` and an empty
+  `CACHE_SOURCE_PATH`. The tools install built on the remote host needs `JAVA_HOME` pointed at
+  JDK 26 (`/usr/lib/jvm/java-26-openjdk`); the desktop default java is older.
+
 ## 5. Proving it
 
 - **Tests**: content gets none - no table, flow or per-ticket tests for plugins, dialogues,

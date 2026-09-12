@@ -28,6 +28,7 @@ import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
 import java.io.File
+import java.nio.file.Path
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -58,6 +59,7 @@ fun main(args: Array<String>) {
     when (mode.lowercase()) {
         "model", "models" -> {
             val modelId = args.getOrNull(1)?.toIntOrNull()
+            args.indexOf("--glb").takeIf { it >= 0 && it + 1 < args.size }?.let { ModelLoader.glbDirectory = Path.of(args[it + 1]) }
             println("Starting Model Viewer..." + (modelId?.let { " with model ID $it" } ?: ""))
             ModelViewer(cache, modelId).run()
         }
