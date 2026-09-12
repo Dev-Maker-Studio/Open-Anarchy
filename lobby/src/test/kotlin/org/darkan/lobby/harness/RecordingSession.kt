@@ -2,7 +2,9 @@ package org.darkan.lobby.harness
 
 import io.ktor.utils.io.ByteChannel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.runBlocking
 import org.darkan.core.net.Isaac
 import org.darkan.core.net.Session
 import org.darkan.core.net.prot.ClientProt
@@ -14,9 +16,11 @@ import org.darkan.core.net.prot.ServerProt
  * (`world/src/test/kotlin/org/darkan/world/harness/RecordingSession.kt`).
  *
  * The real session hands every outgoing packet to a private writer coroutine that encodes it onto
- * a [io.ktor.utils.io.ByteWriteChannel]. The harness cancels that coroutine, so everything the
- * server queues piles up in the session's outbound queue where the test can read it back as the
- * original [ServerProt] objects rather than as bytes. Nothing in the production session is
+ * a [io.ktor.utils.io.ByteWriteChannel]. The harness cancels that coroutine and waits for it to
+ * die before anything is queued - a bare `cancel()` returns while the writer is still draining, and
+ * whatever it swallowed in that window is lost to the recorder - so everything the server queues
+ * piles up in the session's outbound queue where the test can read it back as the original
+ * [ServerProt] objects rather than as bytes. Nothing in the production session is
  * modified or subclassed away - `queuePacket`, `requestFlush` and `flush` all take their normal
  * path, they just never reach a socket.
  *
@@ -47,7 +51,7 @@ class RecordingSession(codec: Codec) : Session(
 
     init {
         val writerJobField = Session::class.java.getDeclaredField("writerJob").apply { isAccessible = true }
-        (writerJobField.get(this) as Job).cancel()
+        runBlocking { (writerJobField.get(this@RecordingSession) as Job).cancelAndJoin() }
         val outboundField = Session::class.java.getDeclaredField("outbound").apply { isAccessible = true }
         @Suppress("UNCHECKED_CAST")
         outbound = outboundField.get(this) as Channel<Any>
