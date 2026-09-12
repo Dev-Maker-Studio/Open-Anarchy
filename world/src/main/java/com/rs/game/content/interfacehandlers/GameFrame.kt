@@ -23,6 +23,10 @@ import java.util.Locale
 
 private fun component(hash: Int) = Utils.componentIdFromHash(hash)
 
+private fun toggleVarBit(player: Player, varbit: Int) {
+    player.vars.saveVarBit(varbit, 1 - player.vars.getVarBit(varbit))
+}
+
 private fun busy(player: Player, message: String): Boolean {
     if (player.interfaceManager.containsScreenInter() || player.inCombat(10000) || player.hasBeenHit(10000)) {
         player.sendMessage(message)
@@ -84,9 +88,13 @@ fun mapGameFrameButtons() {
                 player.stopAll()
                 player.interfaceManager.sendInterface(Interface.interface_742)
             }
+            Component.interface_261.component_261_6 -> toggleVarBit(player, Varbit.snapshot_right_click_enabled)
+            Component.interface_261.component_261_11 -> toggleVarBit(player, Varbit.option_chat_filter_off)
             Component.interface_261.component_261_12 -> player.switchAllowChatEffects()
             Component.interface_261.component_261_13 -> player.interfaceManager.sendSub(Sub.TAB_SETTINGS, Interface.interface_982)
             Component.interface_261.component_261_14 -> player.switchMouseButtons()
+            Component.interface_261.component_261_15 -> player.vars.saveVar(Varp.varp_427, 1 - player.vars.getVar(Varp.varp_427))
+            Component.interface_261.component_261_26 -> AdventurersLog.openSettings(player)
             Component.interface_261.component_261_24 -> player.interfaceManager.sendSub(Sub.TAB_SETTINGS, Interface.interface_429)
             Component.interface_261.component_261_16 -> player.interfaceManager.sendSub(Sub.TAB_SETTINGS, Interface.interface_398)
             Component.interface_261.game_settings_button_text -> GameSettings.open(player)
@@ -127,7 +135,7 @@ fun mapGameFrameButtons() {
     onButtonClick(Interface.interface_755) { e ->
         when (e.component) {
             Component.interface_755.component_755_44 -> {
-                e.player.interfaceManager.setWindowsPane(if (e.player.resizeable()) InterfaceManager.RESIZEABLE_TOP else InterfaceManager.FIXED_TOP)
+                e.player.interfaceManager.setWindowsPane(e.player.interfaceManager.defaultTopInterface())
                 e.player.setNextAnimation(Animation(-1))
             }
             Component.interface_755.component_755_42 -> closeWorldMapHint(e.player)

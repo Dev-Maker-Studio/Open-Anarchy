@@ -23,6 +23,7 @@ import com.rs.game.content.achievements.Achievement;
 import com.rs.game.content.achievements.AchievementInterface;
 import com.rs.game.model.entity.player.Inventory;
 import com.rs.game.model.entity.player.Player;
+import org.darkan.core.gameval.gen.Component;
 import org.darkan.core.gameval.gen.Interface;
 import org.darkan.core.Utils;
 
@@ -432,7 +433,15 @@ public class InterfaceManager {
 	}
 
 	public void setDefaultTopInterface() {
-		setTopInterface(player.resizeable() ? RESIZEABLE_TOP : FIXED_TOP, false);
+		setTopInterface(defaultTopInterface(), false);
+	}
+
+	public int defaultTopInterface() {
+		return player.resizeable() ? RESIZEABLE_TOP : FIXED_TOP;
+	}
+
+	public boolean isDefaultTopOpen() {
+		return top == defaultTopInterface();
 	}
 
 	public void setTopInterface(int rootInterface, boolean gc) {
@@ -488,9 +497,9 @@ public class InterfaceManager {
 	}
 
 	public void gazeOrbOfOculus() {
-		setTopInterface(475, false);
-		sendSubSpecific(true, 475, 57, 751);
-		sendSubSpecific(true, 475, 55, 752);
+		setTopInterface(Interface.interface_475, false);
+		sendSubSpecific(true, Interface.interface_475, Utils.componentIdFromHash(Component.interface_475.component_475_57), Interface.interface_751);
+		sendSubSpecific(true, Interface.interface_475, Utils.componentIdFromHash(Component.interface_475.component_475_55), Interface.interface_752);
 		player.setCloseInterfacesEvent(() -> {
 			setDefaultTopInterface();
 			player.getPackets().sendResetCamera();
