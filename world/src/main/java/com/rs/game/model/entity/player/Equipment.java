@@ -44,6 +44,7 @@ import com.rs.utils.ItemConfig;
 import com.rs.utils.KtExtensionsKt;
 import java.util.Arrays;
 import java.util.List;
+import org.darkan.core.gameval.gen.Obj;
 import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
@@ -692,7 +693,7 @@ public final class Equipment {
 		else if (e.getComponentId() == 15) {
 			if (e.getOpNum() == 2) {
 				int weaponId = e.getPlayer().getEquipment().getWeaponId();
-				if (weaponId == 15484)
+				if (weaponId == Obj.machinima_camera)
 					e.getPlayer().getInterfaceManager().gazeOrbOfOculus();
 			}
 		}
