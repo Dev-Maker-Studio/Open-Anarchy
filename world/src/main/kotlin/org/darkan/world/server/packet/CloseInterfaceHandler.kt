@@ -10,7 +10,7 @@ class CloseInterfaceHandler : PacketHandler<Player, CloseInterface> {
             player.run()
             return
         }
-        if (player.interfaceManager.containsScreenInter())
+        if (player.interfaceManager.containsScreenInter() || !player.interfaceManager.isDefaultTopOpen())
             player.stopAll()
     }
 }
