@@ -8,7 +8,7 @@ import com.rs.engine.pathfinder.RouteEvent
 import com.rs.game.content.world.areas.wilderness.WildernessController
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.game.model.entity.player.managers.InterfaceManager.Sub.ALL_GAME_TABS
+import com.rs.game.model.entity.player.managers.InterfaceManager.Sub.Companion.ALL_GAME_TABS
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.model.gameobject.OwnedObject
 import org.darkan.core.Constants
