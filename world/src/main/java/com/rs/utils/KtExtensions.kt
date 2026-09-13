@@ -192,10 +192,7 @@ val ItemDefinition.value: Int get() = cost
 
 // --- Additional NPCDefinition extensions for Appearance compat ---
 
-/**
- * Legacy field: whether NPC visually walks half-speed. Maps to `slowWalk`.
- */
-val NPCDefinition.aBool4872: Boolean get() = slowWalk
+val NPCDefinition.aBool4872: Boolean get() = aBoolean2883
 
 /**
  * Legacy field: NPC walking animation. Maps to renderEmote lookup via BAS.
@@ -252,12 +249,8 @@ fun NPCDefinition.getAttackDelay(): Int {
     return params?.get(14) as? Int ?: 4
 }
 
-/**
- * Gets the NPC's movement type.
- * Maps slowWalk=true to HALF_WALK, otherwise NORMAL.
- */
 val NPCDefinition.movementType: MovementType get() =
-    if (slowWalk) MovementType.HALF_WALK else MovementType.NORMAL
+    if (unusedMovementType == 0) MovementType.HALF_WALK else MovementType.NORMAL
 
 // getSize(), getKeyForValue(), getValues() are now member functions on EnumDefinition
 

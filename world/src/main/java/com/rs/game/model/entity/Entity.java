@@ -746,7 +746,7 @@ public abstract class Entity {
 		}
 
 		if (npc != null)
-			if (npc.getDefinitions().getSlowWalk())
+			if (KtExtensionsKt.getMovementType(npc.getDefinitions()) == MovementType.HALF_WALK)
 				if (npc.switchWalkStep())
 					return;
 
