@@ -155,9 +155,23 @@ Use `_` for the parts you skip: `{ (player, _, option) -> }`. Use `it` for one-l
    Name the startup function `map<Feature>()` (292 of ~370 existing hooks), one per file.
 4. **Translate each handler into a DSL call** and simplify while you do (§5). Several fields that
    differ only by id collapse into one call with more keys, or a loop over a table.
-5. **Every id becomes a gameval constant** (`Loc`, `Npc`, `Obj`, `Seq`, `SpotAnim`, `Interface`,
-   `Component`, `Varbit`, ...). Look names up in `cache-source/gamevals/<type>.json`; placeholders
-   (`Loc.loc_69558`) count. Literal coordinates stay `Tile.of(x, y, plane)`.
+5. **Every id anywhere in the refactored code becomes a gameval constant**, not only the handler
+   keys. That covers:
+   - anims (`Seq`), graphics (`SpotAnim`), sounds (`Sound`);
+   - items given, checked or deleted (`Obj`), NPC transforms and spawns (`Npc`);
+   - locs spawned or swapped (`Loc`);
+   - interfaces and components (`Interface`, `Component`), vars (`Varp`, `Varbit`, `Varc`),
+     inventories (`Inv`), enums and structs (`Enum`, `Struct`);
+   - ids inside tables, `const val`s, helper functions and other classes the code calls into
+     with a literal.
+
+   Look names up in `cache-source/gamevals/<type>.json`; placeholders (`Loc.loc_69558`,
+   `Seq.seq_883`) count.
+
+   Before you finish, grep the new file for bare numbers. What may stay literal: coordinates
+   (`Tile.of(x, y, plane)`), tick counts and delays, levels and xp, damage, skill indices from
+   `Constants`, `-1` meaning "none", and loop or offset arithmetic. A `private const val FOO_ID = 1234`
+   is still a magic number: use the gameval directly.
 6. **Delete the Java file** (`git rm`). Keep behaviour identical unless you are fixing the ticket;
    the conversion is not a licence to change content silently.
 7. **Build on the remote host** (`scratchpad/remote-build.sh :world:build`). An unregistered or
