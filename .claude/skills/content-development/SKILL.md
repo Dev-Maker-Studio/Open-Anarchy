@@ -141,8 +141,11 @@ format; measure on the shared assets.
   only (collision, line of sight, packet dispatch, containers), in a class named for the engine
   part it covers, and such a test must fail against the broken code before the fix.
   `ChunkManager.getChunk(tile.getChunkId())` loads a region's map, base locs and clipping for one
-  (`LineOfSightTest`). Known flaky and unrelated: `SocialGatewayTest` friends-chat tests fail on
-  `dev` too.
+  (`LineOfSightTest`). **No test in this repo is "known flaky".** An intermittent failure is a bug
+  in the code or the harness and is fixed, never re-run until green or annotated away - the
+  `SocialGatewayTest` presence failures were `RecordingSession` calling `Job.cancel()`, which
+  returns while the writer coroutine is still draining the outbound channel, so whatever it
+  swallowed never reached the recorder.
 - **Verify signature**: `cache verify` already differs from `../cache` (authored graphics,
   scripts, obj 25358); save its per-index lines before you start and diff after - the only lines
   that may change are the archives your ids land in.
