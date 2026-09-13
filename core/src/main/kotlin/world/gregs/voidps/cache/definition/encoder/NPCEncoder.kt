@@ -107,7 +107,7 @@ class NPCEncoder : OpcodeEncoder<NPCDefinition>() {
         if (definition.renderEmote != -1) {
             opcodes.add(127)
         }
-        if (definition.unusedMovementType != -1) {
+        if (definition.moveSpeed != -1) {
             opcodes.add(128)
         }
         if (definition.walkSound != -1 || definition.crawlSound != -1 || definition.idleSound != -1 ||
@@ -248,7 +248,7 @@ class NPCEncoder : OpcodeEncoder<NPCDefinition>() {
             123 -> writeShort(definition.height)
             125 -> writeByte(definition.respawnDirection.toInt())
             127 -> writeShort(definition.renderEmote)
-            128 -> writeByte(definition.unusedMovementType)
+            128 -> writeByte(definition.moveSpeed)
             134 -> {
                 writeShort(definition.walkSound)
                 writeShort(definition.crawlSound)

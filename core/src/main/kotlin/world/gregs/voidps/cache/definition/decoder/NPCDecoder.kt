@@ -100,7 +100,7 @@ class NPCDecoder(val members: Boolean = true) : DefinitionDecoder<NPCDefinition>
             123 -> height = buffer.readUnsignedShort()
             125 -> respawnDirection = buffer.readByte().toByte()
             127 -> renderEmote = buffer.readUnsignedShort()
-            128 -> unusedMovementType = buffer.readUnsignedByte()
+            128 -> moveSpeed = buffer.readUnsignedByte()
             134 -> {
                 // Order per client: walk, crawl(teleport), idle, run
                 walkSound = buffer.readUnsignedShort()

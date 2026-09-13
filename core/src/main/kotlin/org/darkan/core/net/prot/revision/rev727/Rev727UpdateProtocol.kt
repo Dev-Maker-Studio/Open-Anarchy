@@ -385,7 +385,7 @@ object Rev727UpdateProtocol : UpdateProtocol {
                         stream.writeBits(2, 1)
                         stream.writeBits(cfg.walkDirectionBits, npc.nextWalkDirection)
                     }
-                    MoveType.HALF_WALK -> {
+                    MoveType.CRAWL -> {
                         stream.writeBits(2, 2)
                         stream.writeBits(1, 0)
                         stream.writeBits(cfg.walkDirectionBits, npc.nextWalkDirection)
