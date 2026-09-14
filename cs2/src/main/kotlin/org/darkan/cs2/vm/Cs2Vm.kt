@@ -191,10 +191,10 @@ class Cs2Vm(
             "PUSH_VARBIT", "GET_VARPBIT_OLD" -> intStack.add(host.varbit(operand))
             "POP_VARBIT" -> host.setVarbit(operand, popInt())
             "GET_VARN_OLD", "GET_VARNBIT_OLD" -> intStack.add(0)
-            "LOAD_VARC" -> intStack.add(host.varc(operand))
-            "STORE_VARC" -> host.setVarc(operand, popInt())
-            "LOAD_VARC_STRING" -> stringStack.add(host.varcString(operand))
-            "STORE_VARC_STRING" -> host.setVarcString(operand, popString())
+            "PUSH_VARC_INT" -> intStack.add(host.varc(operand))
+            "POP_VARC_INT" -> host.setVarc(operand, popInt())
+            "PUSH_VARC_STRING" -> stringStack.add(host.varcString(operand))
+            "POP_VARC_STRING" -> host.setVarcString(operand, popString())
 
             "JOIN_STRING" -> stringStack.add(popStrings(operand).joinToString(""))
 

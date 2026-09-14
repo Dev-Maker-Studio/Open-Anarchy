@@ -79,6 +79,20 @@ brace-aware, so `if`/`else` arms count once rather than twice and an early `retu
 treated as an alternative to the rest of the handler.
 `tools/scripts/gen_cs2_opcodes.py` turns that into `Cs2Opcodes.kt`.
 
+The names are Jagex's. `docs/reference/cs2-opcodes-727.txt` is zwyz's list of the 727
+clientscript opcodes (`name,opcode`, 712 rows), from
+<https://raw.githubusercontent.com/zwyz/rs3-cache/refs/heads/master/data/opcodes-727-309.txt>,
+and every opcode it lists takes its name from it; the client enum's names are not trusted, and a
+good number of them sit on the wrong opcode. The other 294 opcodes, which no 727 script uses, keep
+the client's name unless the list gives that name to a different opcode - those nine are named
+from what their handler does (`KEYHELD_ALT` on 290, `IF_SETONOPT` on 508, `WORLDMAP_GETCONFIGSIZE`
+on 306, ...). The TypeScript name is the camelCase split of the name, with `Op` appended where it
+would be a TypeScript keyword or a clientscript's own name (`userflowflagsOp`).
+
+A rename changes every call site in a cache source tree's `clientscripts/`: rewrite the calls over
+the token stream, applying the whole old-to-new map at once so names that trade places swap rather
+than collapse, and prove the tree compiles to the same bytes before and after.
+
 Rerun both after changing the client's CS2 engine:
 
 ```bash

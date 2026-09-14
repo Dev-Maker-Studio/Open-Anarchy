@@ -247,7 +247,7 @@ object Cs2Declarations {
         "popIntLocal", "popStringLocal", "popLongLocal",
         "popIntDiscard", "popStringDiscard", "popLongDiscard",
         "pushVar", "popVar", "pushVarbit", "popVarbit",
-        "loadVarc", "storeVarc", "loadVarcString", "storeVarcString",
+        "pushVarcInt", "popVarcInt", "pushVarcString", "popVarcString",
         "getVarpOld", "getVarpbitOld", "getVarnOld", "getVarnbitOld",
         "defineArray", "pushArrayInt", "popArrayInt", "joinString",
         "branch", "branchNot", "branchEquals", "branchLessThan", "branchGreaterThan",
