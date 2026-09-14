@@ -6,7 +6,6 @@ import org.darkan.cs2.Cs2Layout
 import org.darkan.cs2.Cs2Names
 import org.darkan.cs2.Cs2Op
 import org.darkan.cs2.ArgType
-import org.darkan.cs2.Cs2Opcodes
 import org.darkan.cs2.Cs2SymbolTable
 import org.darkan.cs2.Cs2Events
 import org.darkan.cs2.Cs2Symbols
@@ -381,7 +380,7 @@ class Cs2Parser(
      */
     private fun opResultType(op: Cs2Op, args: List<Expr>): Cs2Type {
         if (op.kind == OpKind.PARAM) {
-            val yieldsString = if (op.opName == "ENUM") {
+            val yieldsString = if (op == Cs2Op.ENUM) {
                 (args.getOrNull(1) as? IntConst)?.value == 's'.code
             } else {
                 val paramId = (args.lastOrNull { it.type == Cs2Type.INT } as? IntConst)?.value
@@ -583,7 +582,7 @@ class Cs2Parser(
             }
         }
         expectPunct(";")
-        if (target is OpCall && target.op.opName == "DEFINE_ARRAY") {
+        if (target is OpCall && target.op == Cs2Op.DEFINE_ARRAY) {
             val array = constantValue(target.args[0])
             val elementType = constantValue(target.args[1])
             return ArrayDefine(array, elementType, target.args[2])
@@ -647,23 +646,21 @@ class Cs2Parser(
         }
 
         val left = parseExpression()
-        if (left is OpCall && left.op.opName in setOf("BRANCH_IF_TRUE", "BRANCH_IF_FALSE")) {
+        if (left is OpCall && (left.op == Cs2Op.BRANCH_IF_TRUE || left.op == Cs2Op.BRANCH_IF_FALSE)) {
             return Compare(left.op, left.args.first(), IntConst(0), negated = false)
         }
         val symbol = expect(TokenKind.PUNCT).text
         val right = parseExpression()
         val longs = left.type == Cs2Type.LONG || right.type == Cs2Type.LONG
-        val name = when (symbol) {
-            "==", "===" -> "BRANCH_EQUALS"
-            "!=", "!==" -> "BRANCH_NOT"
-            "<" -> "BRANCH_LESS_THAN"
-            ">" -> "BRANCH_GREATER_THAN"
-            "<=" -> "BRANCH_LESS_THAN_OR_EQUALS"
-            ">=" -> "BRANCH_GREATER_THAN_OR_EQUALS"
+        val op = when (symbol) {
+            "==", "===" -> if (longs) Cs2Op.LONG_BRANCH_EQUALS else Cs2Op.BRANCH_EQUALS
+            "!=", "!==" -> if (longs) Cs2Op.LONG_BRANCH_NOT else Cs2Op.BRANCH_NOT
+            "<" -> if (longs) Cs2Op.LONG_BRANCH_LESS_THAN else Cs2Op.BRANCH_LESS_THAN
+            ">" -> if (longs) Cs2Op.LONG_BRANCH_GREATER_THAN else Cs2Op.BRANCH_GREATER_THAN
+            "<=" -> if (longs) Cs2Op.LONG_BRANCH_LESS_THAN_OR_EQUALS else Cs2Op.BRANCH_LESS_THAN_OR_EQUALS
+            ">=" -> if (longs) Cs2Op.LONG_BRANCH_GREATER_THAN_OR_EQUALS else Cs2Op.BRANCH_GREATER_THAN_OR_EQUALS
             else -> error("Unsupported comparison '$symbol'")
         }
-        val op = Cs2Opcodes.byName(if (longs) "LONG_$name" else name)
-            ?: error("No opcode for comparison '$symbol'")
         return Compare(op, left, right, negated = false)
     }
 
@@ -856,7 +853,7 @@ class Cs2Parser(
         // Where a helper shares a name with an opcode, the number of arguments
         // says which is meant: `coord()` is the opcode that reads the player's
         // position, `coord(x, y, level)` is a coordinate written out.
-        val named = Cs2Opcodes.byTsName(name)
+        val named = Cs2Op.byTsName(name)
         val arity = named?.let { it.popInt + it.popStr + it.popLong }
         if (arity != args.size) packedConstant(name, args)?.let { return it }
         if (name == "discard") return args.first()
@@ -864,19 +861,17 @@ class Cs2Parser(
             return Callback(-1, (args.firstOrNull() as? StrConst)?.value ?: "", emptyList(), emptyList())
         }
         if (name == "defineArray") {
-            return OpCall(Cs2Opcodes.byName("DEFINE_ARRAY")!!, args, Cs2Type.INT)
+            return OpCall(Cs2Op.DEFINE_ARRAY, args, Cs2Type.INT)
         }
         if (name == "isTruthy") {
-            val op = Cs2Opcodes.byName("BRANCH_IF_TRUE")!!
-            return OpCall(op, args, Cs2Type.INT)
+            return OpCall(Cs2Op.BRANCH_IF_TRUE, args, Cs2Type.INT)
         }
         if (name == "isFalsy") {
-            val op = Cs2Opcodes.byName("BRANCH_IF_FALSE")!!
-            return OpCall(op, args, Cs2Type.INT)
+            return OpCall(Cs2Op.BRANCH_IF_FALSE, args, Cs2Type.INT)
         }
         val callee = Cs2Symbols.scriptOf(name) ?: symbols.script(name)
         if (callee != null) return ScriptCall(callee, args, Cs2Type.INT)
-        val op = Cs2Opcodes.byTsName(name) ?: error("Unknown opcode function '$name'")
+        val op = Cs2Op.byTsName(name) ?: error("Unknown opcode function '$name'")
         return OpCall(op, args, opResultType(op, args), operand)
     }
 

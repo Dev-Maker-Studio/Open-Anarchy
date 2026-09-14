@@ -34,20 +34,28 @@ class Cs2Cfg private constructor(
     companion object {
 
         private val CONDITIONAL_BRANCHES = setOf(
-            "BRANCH_NOT", "BRANCH_EQUALS", "BRANCH_LESS_THAN", "BRANCH_GREATER_THAN",
-            "BRANCH_LESS_THAN_OR_EQUALS", "BRANCH_GREATER_THAN_OR_EQUALS",
-            "LONG_BRANCH_NOT", "LONG_BRANCH_EQUALS", "LONG_BRANCH_LESS_THAN",
-            "LONG_BRANCH_GREATER_THAN", "LONG_BRANCH_LESS_THAN_OR_EQUALS",
-            "LONG_BRANCH_GREATER_THAN_OR_EQUALS", "BRANCH_IF_TRUE", "BRANCH_IF_FALSE",
+            Cs2Op.BRANCH_NOT, Cs2Op.BRANCH_EQUALS, Cs2Op.BRANCH_LESS_THAN, Cs2Op.BRANCH_GREATER_THAN,
+            Cs2Op.BRANCH_LESS_THAN_OR_EQUALS, Cs2Op.BRANCH_GREATER_THAN_OR_EQUALS,
+            Cs2Op.LONG_BRANCH_NOT, Cs2Op.LONG_BRANCH_EQUALS, Cs2Op.LONG_BRANCH_LESS_THAN,
+            Cs2Op.LONG_BRANCH_GREATER_THAN, Cs2Op.LONG_BRANCH_LESS_THAN_OR_EQUALS,
+            Cs2Op.LONG_BRANCH_GREATER_THAN_OR_EQUALS, Cs2Op.BRANCH_IF_TRUE, Cs2Op.BRANCH_IF_FALSE,
         )
 
-        fun isConditionalBranch(op: Cs2Op) = op.opName in CONDITIONAL_BRANCHES
+        private val LONG_BRANCHES = setOf(
+            Cs2Op.LONG_BRANCH_NOT, Cs2Op.LONG_BRANCH_EQUALS, Cs2Op.LONG_BRANCH_LESS_THAN,
+            Cs2Op.LONG_BRANCH_GREATER_THAN, Cs2Op.LONG_BRANCH_LESS_THAN_OR_EQUALS,
+            Cs2Op.LONG_BRANCH_GREATER_THAN_OR_EQUALS,
+        )
 
-        fun isUnconditionalBranch(op: Cs2Op) = op.opName == "BRANCH"
+        fun isConditionalBranch(op: Cs2Op) = op in CONDITIONAL_BRANCHES
 
-        fun isSwitch(op: Cs2Op) = op.opName == "SWITCH"
+        fun isLongBranch(op: Cs2Op) = op in LONG_BRANCHES
 
-        fun isReturn(op: Cs2Op) = op.opName == "RETURN"
+        fun isUnconditionalBranch(op: Cs2Op) = op == Cs2Op.BRANCH
+
+        fun isSwitch(op: Cs2Op) = op == Cs2Op.SWITCH
+
+        fun isReturn(op: Cs2Op) = op == Cs2Op.RETURN
 
         /** Where control goes after `index`, ignoring fallthrough. */
         fun jumpTargets(script: Cs2Script, index: Int): List<Int> {

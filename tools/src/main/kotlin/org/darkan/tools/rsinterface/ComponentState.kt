@@ -303,9 +303,9 @@ class ComponentState(
     /**
      * Component a drag of this one is confined to, or null.
      *
-     * This is the client's `depthChildOverride`, set by opcode 68/899 - which the
-     * generated opcode table names `CC_SETDRAGGABLE` / `IF_SETDRAGGABLE` but the
-     * client calls `SETDEPTHCHILD`. It does two things:
+     * This is the client's `depthChildOverride`, set by opcode 68/899 - which Jagex
+     * names `CC_SETDRAGGABLE` / `IF_SETDRAGGABLE` but the client calls
+     * `SETDEPTHCHILD`. It does two things:
      *
      * - it makes the component [draggable] at all, which is the only route a
      *   `CC_CREATE` component has: the drag depth lives in the [events] bitmask and
@@ -501,7 +501,7 @@ class ComponentState(
     /**
      * Label the client would show for option [index] (0-based), or null when the
      * option is absent or disabled. Transcribes `Component.componentMenuOption`:
-     * a disabled option is still offered when the component has an `IF_SETONOPT`
+     * a disabled option is still offered when the component has an `IF_SETONOP`
      * hook, because that hook is the only handler such options ever had.
      */
     fun optionAt(index: Int): String? {

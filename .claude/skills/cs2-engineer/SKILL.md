@@ -144,7 +144,14 @@ Names follow the identified names around them (`world_select_stars_0` -> `world_
 
 Read the client at `~/darkan/darkan-bot` (Kotlin) for anything below you are unsure of; the CS2
 ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and click dispatch in
-`graphics/ifcomponent/InterfaceRenderer.kt`.
+`graphics/ifcomponent/InterfaceRenderer.kt`. Read it for what an opcode does, never for what it is
+called: opcode names are Jagex's 727 names, and the client enum's names are often wrong. A new or
+corrected opcode is added to the `Cs2Op` enum by hand.
+
+- **Hook setters, by when the client fires them**: `ccSetOnMouseOver` once as the pointer enters,
+  `ccSetOnMouseRepeat` every cycle it stays, `ccSetOnMouseLeave` as it leaves; `ccSetOnOp` when an
+  op is chosen, `ccSetOnTargetLeave` when a use-on selection is cancelled, `ccSetOnOpt` on the
+  target a selection is used on. The `ifSetOn*` forms take the component last.
 
 - **cc ids are contiguous from 0 per component - so create them in id order.** `cs2_3118` called
   the bots icon (id 15) right after cc 10 and threw `RuntimeException:14` on every favourites
@@ -156,7 +163,7 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
 - **A `CS2 Error` trace ends with the script call stack, innermost first**, then the opcode index:
   `2994 / 6569 / 3115 / 113` = `cc_add_graphic` <- our proc <- `lobby_worldswitcher_timer`, op 113.
 - **Hover hooks fire for every component under the cursor**, not just the topmost, so an icon under
-  a full-row overlay still gets its own `ccHookMouseEnter`/`Exit`. Ops are collected the same way.
+  a full-row overlay still gets its own `ccSetOnMouseOver`/`ccSetOnMouseLeave`. Ops are collected the same way.
 - **Graphics draw at the component's origin, unscaled.** Size the component (or the cc) to the
   graphic's canvas and position it; do not expect centring. Graphics are drawn as the whole canvas,
   so a frame's placement is where its pixels are.
@@ -260,7 +267,7 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
   the interface opens, or the cc click never reaches the server.
 - **Toolkit ids (client, 2026-09-08)**: 0 safe mode, 1 legacy OpenGL, 3 modern OpenGL (DirectX's
   old id, so `param_682` bitmasks and every script already treat it as hardware); software (2) and
-  DirectX are gone. `DETAILCANSET_RENDERER` answers 3 for anything else.
+  DirectX are gone. `DETAILCANSET_TOOLKIT_DEFAULT` answers 3 for anything else.
 
 ## 4. Patterns worth copying
 - **Game Settings window (interface 1321 `game_settings`, 2026-09-08)**: 742's frame (0-22 copied,
@@ -343,8 +350,8 @@ ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and cli
   graphic, op text and tooltip (`clientscripts/proc/bank_placeholder_button.ts`, modelled on
   `proc_bank_cert_button`). The server only writes the var.
 - **Lobby tooltips (interface 910)**: box `910:14` (rect 15, fill 16, text 17); attach with
-  `ccHookMouseEnter(hook(cs2_3149, "Iis", [comp, id, text]))` and
-  `ccHookMouseExit(hook(cs2_3153, "Ii", [comp, id]))`; `cs2_3152` positions it. In the game frame
+  `ccSetOnMouseOver(hook(cs2_3149, "Iis", [comp, id, text]))` and
+  `ccSetOnMouseLeave(hook(cs2_3153, "Ii", [comp, id]))`; `cs2_3152` positions it. In the game frame
   the generic tooltip is `cs2_38` -> `cs2_569` -> `cs2_5335`.
 - **Per-row extras in the world list**: one proc that creates the cc, positions it and hides or
   hooks it by flag, called from both `lobby_worldswitcher_timer` (list rows) and `cs2_3118`

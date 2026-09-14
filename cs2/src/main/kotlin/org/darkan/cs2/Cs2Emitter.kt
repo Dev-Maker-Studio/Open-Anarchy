@@ -379,9 +379,9 @@ class Cs2Emitter(private val function: Cs2Function) {
     private fun condition(condition: Condition, parentBinds: Boolean = false): String = when (condition) {
         is Compare -> {
             val subject = expr(condition.left, COMPARISON)
-            when (condition.comparison.opName) {
-                "BRANCH_IF_TRUE" -> if (condition.negated) "isFalsy($subject)" else "isTruthy($subject)"
-                "BRANCH_IF_FALSE" -> if (condition.negated) "isTruthy($subject)" else "isFalsy($subject)"
+            when (condition.comparison) {
+                Cs2Op.BRANCH_IF_TRUE -> if (condition.negated) "isFalsy($subject)" else "isTruthy($subject)"
+                Cs2Op.BRANCH_IF_FALSE -> if (condition.negated) "isTruthy($subject)" else "isFalsy($subject)"
                 // A branch taken when the comparison fails reads as the opposite
                 // operator; the opcode it compiles back to is chosen from that.
                 else -> "$subject ${condition.symbol} ${expr(condition.right, COMPARISON)}"

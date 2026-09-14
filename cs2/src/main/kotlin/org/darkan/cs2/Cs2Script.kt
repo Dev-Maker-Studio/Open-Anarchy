@@ -16,9 +16,9 @@ data class Cs2Instruction(
     val longOperand: Long = 0,
 ) {
     override fun toString(): String = when {
-        strOperand != null -> "${op.opName} \"${Cs2Strings.escape(strOperand)}\""
-        op.opName == "PUSH_LONG_CONSTANT" -> "${op.opName} $longOperand"
-        else -> "${op.opName} $intOperand"
+        strOperand != null -> "${op.name} \"${Cs2Strings.escape(strOperand)}\""
+        op == Cs2Op.PUSH_LONG_CONSTANT -> "${op.name} $longOperand"
+        else -> "${op.name} $intOperand"
     }
 }
 

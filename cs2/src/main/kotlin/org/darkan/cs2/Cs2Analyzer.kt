@@ -274,7 +274,7 @@ class Cs2Analyzer(private val cache: Cache) : Cs2Context {
             if (script[index].op.kind != OpKind.PARAM) continue
             for (back in index - 1 downTo maxOf(0, index - 4)) {
                 val candidate = script[back]
-                if (candidate.op.opName == "PUSH_CONSTANT_INT") {
+                if (candidate.op == Cs2Op.PUSH_CONSTANT_INT) {
                     out.add(candidate.intOperand)
                     break
                 }
@@ -413,7 +413,7 @@ class Cs2Analyzer(private val cache: Cache) : Cs2Context {
                 } catch (e: Exception) {
                     return Walk(
                         cfg, entryStates, returns ?: ReturnSignature.EMPTY,
-                        "instruction $index (${instruction.op.opName}): ${e.message}",
+                        "instruction $index (${instruction.op.name}): ${e.message}",
                     )
                 }
             }
@@ -575,8 +575,8 @@ class Cs2Analyzer(private val cache: Cache) : Cs2Context {
 
     private fun step(instruction: Cs2Instruction, stacks: SymbolicStacks) {
         val effect = effectiveSignature(instruction, this, stacks)
-        val constant = when (instruction.op.opName) {
-            "PUSH_CONSTANT_INT" -> instruction.intOperand
+        val constant = when (instruction.op) {
+            Cs2Op.PUSH_CONSTANT_INT -> instruction.intOperand
             else -> null
         }
         stacks.apply(effect, pushedIntConstant = constant, pushedString = instruction.strOperand)

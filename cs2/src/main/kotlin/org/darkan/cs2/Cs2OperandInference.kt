@@ -141,19 +141,19 @@ object Cs2OperandInference {
         // cheap pre-filter: anything that fails to parse cleanly is a candidate.
         while (at + 2 <= headerStart) {
             val opcodeId = ((raw[at].toInt() and 0xFF) shl 8) or (raw[at + 1].toInt() and 0xFF)
-            val op = Cs2Opcodes.find(opcodeId) ?: return true
+            val op = Cs2Op.find(opcodeId) ?: return true
             at += 2 + operandBytes(op, raw, at + 2)
         }
         return at != headerStart
     }
 
     private fun operandBytes(op: Cs2Op, raw: ByteArray, at: Int): Int = when {
-        op.opName == "PUSH_CONSTANT_STRING" -> {
+        op == Cs2Op.PUSH_CONSTANT_STRING -> {
             var i = at
             while (i < raw.size && raw[i] != 0.toByte()) i++
             i - at + 1
         }
-        op.opName == "PUSH_LONG_CONSTANT" -> 8
+        op == Cs2Op.PUSH_LONG_CONSTANT -> 8
         op.largeOperand -> 4
         else -> 1
     }
@@ -180,7 +180,7 @@ object Cs2OperandInference {
             if (at > headerStart || count > instructionCount || at + 2 > headerStart) return
 
             val opcodeId = ((raw[at].toInt() and 0xFF) shl 8) or (raw[at + 1].toInt() and 0xFF)
-            val op = Cs2Opcodes.find(opcodeId)
+            val op = Cs2Op.find(opcodeId)
             if (op != null) {
                 walk(at + 2 + operandBytes(op, raw, at + 2), count + 1)
                 return
@@ -214,7 +214,7 @@ object Cs2OperandInference {
         var at = instructionStart(raw)
         while (at + 2 <= headerStart) {
             val opcodeId = ((raw[at].toInt() and 0xFF) shl 8) or (raw[at + 1].toInt() and 0xFF)
-            val op = Cs2Opcodes.find(opcodeId)
+            val op = Cs2Op.find(opcodeId)
             if (op != null) {
                 at += 2 + operandBytes(op, raw, at + 2)
             } else {

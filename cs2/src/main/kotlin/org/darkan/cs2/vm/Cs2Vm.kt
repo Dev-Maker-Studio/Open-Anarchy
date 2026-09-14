@@ -59,7 +59,7 @@ class Cs2Vm(
     private val random = Random(SEED)
 
     /** Opcodes that have already reported a zero divisor during this [execute]. */
-    private val zeroDivisorsReported = HashSet<String>()
+    private val zeroDivisorsReported = HashSet<Cs2Op>()
 
     /** Instructions executed by the last [execute] call. */
     var instructionsRun: Int = 0
@@ -169,46 +169,46 @@ class Cs2Vm(
 
     /** Runs one instruction. Returns false to stop the whole script. */
     private fun step(frame: Frame, op: Cs2Op, operand: Int, text: String?, long: Long): Boolean {
-        when (op.opName) {
-            "PUSH_CONSTANT_INT" -> intStack.add(operand)
-            "PUSH_CONSTANT_STRING" -> stringStack.add(text ?: "")
-            "PUSH_LONG_CONSTANT" -> longStack.add(long)
+        when (op) {
+            Cs2Op.PUSH_CONSTANT_INT -> intStack.add(operand)
+            Cs2Op.PUSH_CONSTANT_STRING -> stringStack.add(text ?: "")
+            Cs2Op.PUSH_LONG_CONSTANT -> longStack.add(long)
 
-            "PUSH_INT_LOCAL" -> intStack.add(frame.ints.getOrElse(operand) { 0 })
-            "PUSH_STRING_LOCAL" -> stringStack.add(frame.strings.getOrElse(operand) { "" })
-            "PUSH_LONG_LOCAL" -> longStack.add(frame.longs.getOrElse(operand) { 0L })
+            Cs2Op.PUSH_INT_LOCAL -> intStack.add(frame.ints.getOrElse(operand) { 0 })
+            Cs2Op.PUSH_STRING_LOCAL -> stringStack.add(frame.strings.getOrElse(operand) { "" })
+            Cs2Op.PUSH_LONG_LOCAL -> longStack.add(frame.longs.getOrElse(operand) { 0L })
 
-            "POP_INT_LOCAL" -> frame.ints.setIfPresent(operand, popInt())
-            "POP_STRING_LOCAL" -> if (operand in frame.strings.indices) frame.strings[operand] = popString()
-            "POP_LONG_LOCAL" -> if (operand in frame.longs.indices) frame.longs[operand] = popLong()
+            Cs2Op.POP_INT_LOCAL -> frame.ints.setIfPresent(operand, popInt())
+            Cs2Op.POP_STRING_LOCAL -> if (operand in frame.strings.indices) frame.strings[operand] = popString()
+            Cs2Op.POP_LONG_LOCAL -> if (operand in frame.longs.indices) frame.longs[operand] = popLong()
 
-            "POP_INT_DISCARD" -> popInt()
-            "POP_STRING_DISCARD" -> popString()
-            "POP_LONG_DISCARD" -> popLong()
+            Cs2Op.POP_INT_DISCARD -> popInt()
+            Cs2Op.POP_STRING_DISCARD -> popString()
+            Cs2Op.POP_LONG_DISCARD -> popLong()
 
-            "PUSH_VAR", "GET_VARP_OLD" -> intStack.add(host.varp(operand))
-            "POP_VAR" -> host.setVarp(operand, popInt())
-            "PUSH_VARBIT", "GET_VARPBIT_OLD" -> intStack.add(host.varbit(operand))
-            "POP_VARBIT" -> host.setVarbit(operand, popInt())
-            "GET_VARN_OLD", "GET_VARNBIT_OLD" -> intStack.add(0)
-            "LOAD_VARC" -> intStack.add(host.varc(operand))
-            "STORE_VARC" -> host.setVarc(operand, popInt())
-            "LOAD_VARC_STRING" -> stringStack.add(host.varcString(operand))
-            "STORE_VARC_STRING" -> host.setVarcString(operand, popString())
+            Cs2Op.PUSH_VAR, Cs2Op.GET_VARP_OLD -> intStack.add(host.varp(operand))
+            Cs2Op.POP_VAR -> host.setVarp(operand, popInt())
+            Cs2Op.PUSH_VARBIT, Cs2Op.GET_VARPBIT_OLD -> intStack.add(host.varbit(operand))
+            Cs2Op.POP_VARBIT -> host.setVarbit(operand, popInt())
+            Cs2Op.GET_VARN_OLD, Cs2Op.GET_VARNBIT_OLD -> intStack.add(0)
+            Cs2Op.PUSH_VARC_INT -> intStack.add(host.varc(operand))
+            Cs2Op.POP_VARC_INT -> host.setVarc(operand, popInt())
+            Cs2Op.PUSH_VARC_STRING -> stringStack.add(host.varcString(operand))
+            Cs2Op.POP_VARC_STRING -> host.setVarcString(operand, popString())
 
-            "JOIN_STRING" -> stringStack.add(popStrings(operand).joinToString(""))
+            Cs2Op.JOIN_STRING -> stringStack.add(popStrings(operand).joinToString(""))
 
-            "DEFINE_ARRAY" -> defineArray(operand)
-            "PUSH_ARRAY_INT" -> intStack.add(readArray(operand, popInt()))
-            "POP_ARRAY_INT" -> {
+            Cs2Op.DEFINE_ARRAY -> defineArray(operand)
+            Cs2Op.PUSH_ARRAY_INT -> intStack.add(readArray(operand, popInt()))
+            Cs2Op.POP_ARRAY_INT -> {
                 val value = popInt()
                 writeArray(operand, popInt(), value)
             }
 
-            "BRANCH" -> frame.pointer += operand
-            "SWITCH" -> switch(frame, operand)
-            "RETURN" -> return returnFromFrame()
-            "GOSUB_WITH_PARAMS" -> return call(operand)
+            Cs2Op.BRANCH -> frame.pointer += operand
+            Cs2Op.SWITCH -> switch(frame, operand)
+            Cs2Op.RETURN -> return returnFromFrame()
+            Cs2Op.GOSUB_WITH_PARAMS -> return call(operand)
 
             else -> when {
                 Cs2Cfg.isConditionalBranch(op) -> branch(frame, op, operand)
@@ -239,24 +239,24 @@ class Cs2Vm(
      */
     @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun primitive(op: Cs2Op): Boolean {
-        when (op.opName) {
+        when (op) {
             // Two ints in, one out. The first operand pushed is the left-hand side.
-            "ADD" -> binaryInt { left, right -> left + right }
-            "SUB" -> binaryInt { left, right -> left - right }
-            "MULTIPLY" -> binaryInt { left, right -> left * right }
-            "DIVIDE" -> divideBy("DIVIDE") { left, right -> left / right }
-            "MODULO" -> divideBy("MODULO") { left, right -> left % right }
-            "AND" -> binaryInt { left, right -> left and right }
-            "OR" -> binaryInt { left, right -> left or right }
-            "MIN" -> binaryInt { left, right -> minOf(left, right) }
-            "MAX" -> binaryInt { left, right -> maxOf(left, right) }
-            "SETBIT" -> binaryInt { value, bit -> value or (1 shl bit) }
-            "CLEARBIT" -> binaryInt { value, bit -> value and (1 shl bit).inv() }
-            "TESTBIT" -> binaryInt { value, bit -> if ((value and (1 shl bit)) != 0) 1 else 0 }
-            "POW" -> binaryInt { base, exponent ->
+            Cs2Op.ADD -> binaryInt { left, right -> left + right }
+            Cs2Op.SUB -> binaryInt { left, right -> left - right }
+            Cs2Op.MULTIPLY -> binaryInt { left, right -> left * right }
+            Cs2Op.DIVIDE -> divideBy(Cs2Op.DIVIDE) { left, right -> left / right }
+            Cs2Op.MODULO -> divideBy(Cs2Op.MODULO) { left, right -> left % right }
+            Cs2Op.AND -> binaryInt { left, right -> left and right }
+            Cs2Op.OR -> binaryInt { left, right -> left or right }
+            Cs2Op.MIN -> binaryInt { left, right -> minOf(left, right) }
+            Cs2Op.MAX -> binaryInt { left, right -> maxOf(left, right) }
+            Cs2Op.SETBIT -> binaryInt { value, bit -> value or (1 shl bit) }
+            Cs2Op.CLEARBIT -> binaryInt { value, bit -> value and (1 shl bit).inv() }
+            Cs2Op.TESTBIT -> binaryInt { value, bit -> if ((value and (1 shl bit)) != 0) 1 else 0 }
+            Cs2Op.POW -> binaryInt { base, exponent ->
                 if (base == 0) 0 else base.toDouble().pow(exponent.toDouble()).toInt()
             }
-            "INVPOW" -> binaryInt { base, exponent ->
+            Cs2Op.INVPOW -> binaryInt { base, exponent ->
                 when {
                     base == 0 -> 0
                     exponent == 0 -> Int.MAX_VALUE
@@ -265,17 +265,17 @@ class Cs2Vm(
             }
             // Widened to long before dividing, as the client does, so a large
             // numerator does not wrap on the way through.
-            "ADDPERCENT" -> binaryInt { value, percent ->
+            Cs2Op.ADDPERCENT -> binaryInt { value, percent ->
                 (value + value.toLong() * percent.toLong() / 100L).toInt()
             }
-            "NOT" -> intStack.add(popInt().inv())
+            Cs2Op.NOT -> intStack.add(popInt().inv())
 
             // `scale(numerator, denominator, value)` is `value * numerator / denominator`.
-            "SCALE" -> {
+            Cs2Op.SCALE -> {
                 val (numerator, denominator, value) = popInts(3)
                 intStack.add(
                     if (denominator == 0) {
-                        reportZeroDivisor("SCALE")
+                        reportZeroDivisor(Cs2Op.SCALE)
                         0
                     } else {
                         (value.toLong() * numerator.toLong() / denominator.toLong()).toInt()
@@ -283,76 +283,76 @@ class Cs2Vm(
                 )
             }
 
-            "INTERPOLATE" -> {
+            Cs2Op.INTERPOLATE -> {
                 val values = popInts(5)
                 val (fromY, toY, fromX, toX) = values
                 val at = values[4]
                 if (toX == fromX) {
-                    reportZeroDivisor("INTERPOLATE")
+                    reportZeroDivisor(Cs2Op.INTERPOLATE)
                     intStack.add(fromY)
                 } else {
                     intStack.add(fromY + (at - fromX) * (toY - fromY) / (toX - fromX))
                 }
             }
 
-            "RANDOM" -> intStack.add(popInt().let { if (it <= 0) 0 else random.nextInt(it) })
-            "RANDOMINC" -> intStack.add(popInt().let { if (it < 0) 0 else random.nextInt(it + 1) })
+            Cs2Op.RANDOM -> intStack.add(popInt().let { if (it <= 0) 0 else random.nextInt(it) })
+            Cs2Op.RANDOMINC -> intStack.add(popInt().let { if (it < 0) 0 else random.nextInt(it + 1) })
 
-            "CHAR_ISPRINTABLE" -> intStack.add(boolean(!Character.isISOControl(popInt().toChar())))
-            "CHAR_ISALPHANUMERIC" -> intStack.add(boolean(popInt().toChar().isLetterOrDigit()))
-            "CHAR_ISALPHA" -> intStack.add(boolean(popInt().toChar().isLetter()))
-            "CHAR_ISNUMERIC" -> intStack.add(boolean(popInt().toChar().isDigit()))
-            "CHAR_TOLOWERCASE" -> intStack.add(popInt().toChar().lowercaseChar().code)
-            "CHAR_TOUPPERCASE" -> intStack.add(popInt().toChar().uppercaseChar().code)
+            Cs2Op.CHAR_ISPRINTABLE -> intStack.add(boolean(!Character.isISOControl(popInt().toChar())))
+            Cs2Op.CHAR_ISALPHANUMERIC -> intStack.add(boolean(popInt().toChar().isLetterOrDigit()))
+            Cs2Op.CHAR_ISALPHA -> intStack.add(boolean(popInt().toChar().isLetter()))
+            Cs2Op.CHAR_ISNUMERIC -> intStack.add(boolean(popInt().toChar().isDigit()))
+            Cs2Op.CHAR_TOLOWERCASE -> intStack.add(popInt().toChar().lowercaseChar().code)
+            Cs2Op.CHAR_TOUPPERCASE -> intStack.add(popInt().toChar().uppercaseChar().code)
 
-            "STRING_LENGTH" -> intStack.add(popString().length)
-            "TOSTRING" -> stringStack.add(popInt().toString())
-            "LOWERCASE" -> stringStack.add(popString().lowercase())
-            "APPEND" -> stringStack.add(popStrings(2).joinToString(""))
-            "APPEND_NUM" -> {
+            Cs2Op.STRING_LENGTH -> intStack.add(popString().length)
+            Cs2Op.TOSTRING -> stringStack.add(popInt().toString())
+            Cs2Op.LOWERCASE -> stringStack.add(popString().lowercase())
+            Cs2Op.APPEND -> stringStack.add(popStrings(2).joinToString(""))
+            Cs2Op.APPEND_NUM -> {
                 val text = popString()
                 stringStack.add(text + popInt())
             }
-            "APPEND_SIGNNUM" -> {
+            Cs2Op.APPEND_SIGNNUM -> {
                 val text = popString()
                 stringStack.add(text + signed(popInt()))
             }
-            "APPEND_CHAR" -> {
+            Cs2Op.APPEND_CHAR -> {
                 val text = popString()
                 val char = popInt()
                 // -1 is the client's "no character", which it treats as fatal.
                 stringStack.add(if (char == -1) text else text + char.toChar())
             }
-            "SUBSTRING" -> {
+            Cs2Op.SUBSTRING -> {
                 val text = popString()
                 val (start, end) = popInts(2)
                 val from = start.coerceIn(0, text.length)
                 val to = end.coerceIn(from, text.length)
                 if (from != start || to != end) {
-                    host.onError("SUBSTRING $start..$end clamped to $from..$to of \"$text\"")
+                    host.onError("$op $start..$end clamped to $from..$to of \"$text\"")
                 }
                 stringStack.add(text.substring(from, to))
             }
-            "REMOVETAGS" -> stringStack.add(removeTags(popString()))
-            "ESCAPE" -> stringStack.add(popString().replace("<", "<lt>").replace(">", "<gt>"))
-            "GET_COL_TAG" -> stringStack.add("<col=" + Integer.toHexString(popInt()) + ">")
+            Cs2Op.REMOVETAGS -> stringStack.add(removeTags(popString()))
+            Cs2Op.ESCAPE -> stringStack.add(popString().replace("<", "<lt>").replace(">", "<gt>"))
+            Cs2Op.GET_COL_TAG -> stringStack.add("<col=" + Integer.toHexString(popInt()) + ">")
             // The client compares locale-aware, treating embedded digit runs as
             // numbers; a plain lexicographic compare is close enough for a tool and
             // agrees on the sign for the ASCII text interfaces actually hold.
-            "COMPARE" -> {
+            Cs2Op.COMPARE -> {
                 val (left, right) = popStrings(2)
                 intStack.add(left.compareTo(right))
             }
-            "TEXT_SWITCH" -> {
+            Cs2Op.TEXT_SWITCH -> {
                 val (whenTrue, whenFalse) = popStrings(2)
                 stringStack.add(if (popInt() == 1) whenTrue else whenFalse)
             }
-            "STRING_INDEXOF_CHAR" -> {
+            Cs2Op.STRING_INDEXOF_CHAR -> {
                 val text = popString()
                 val (char, from) = popInts(2)
                 intStack.add(text.indexOf(char.toChar(), from))
             }
-            "STRING_INDEXOF_STRING" -> {
+            Cs2Op.STRING_INDEXOF_STRING -> {
                 val (text, search) = popStrings(2)
                 intStack.add(text.indexOf(search, popInt()))
             }
@@ -371,11 +371,11 @@ class Cs2Vm(
     }
 
     /** `DIVIDE` and `MODULO`, yielding 0 rather than throwing on a zero divisor. */
-    private inline fun divideBy(name: String, combine: (Int, Int) -> Int) {
+    private inline fun divideBy(op: Cs2Op, combine: (Int, Int) -> Int) {
         val right = popInt()
         val left = popInt()
         if (right == 0) {
-            reportZeroDivisor(name)
+            reportZeroDivisor(op)
             intStack.add(0)
         } else {
             intStack.add(combine(left, right))
@@ -387,9 +387,9 @@ class Cs2Vm(
      * otherwise fill the log with the same line hundreds of times and bury whatever
      * else the script reported.
      */
-    private fun reportZeroDivisor(name: String) {
-        if (zeroDivisorsReported.add(name)) {
-            host.onError("$name divided by zero; the divisor is 0 because some opcode this host does not implement returned it")
+    private fun reportZeroDivisor(op: Cs2Op) {
+        if (zeroDivisorsReported.add(op)) {
+            host.onError("$op divided by zero; the divisor is 0 because some opcode this host does not implement returned it")
         }
     }
 
@@ -438,21 +438,21 @@ class Cs2Vm(
     }
 
     private fun branch(frame: Frame, op: Cs2Op, operand: Int) {
-        val taken = when (op.opName) {
-            "BRANCH_IF_TRUE" -> popInt() == 1
-            "BRANCH_IF_FALSE" -> popInt() == 0
-            "BRANCH_EQUALS" -> compareInts() == 0
-            "BRANCH_NOT" -> compareInts() != 0
-            "BRANCH_LESS_THAN" -> compareInts() < 0
-            "BRANCH_GREATER_THAN" -> compareInts() > 0
-            "BRANCH_LESS_THAN_OR_EQUALS" -> compareInts() <= 0
-            "BRANCH_GREATER_THAN_OR_EQUALS" -> compareInts() >= 0
-            "LONG_BRANCH_EQUALS" -> compareLongs() == 0
-            "LONG_BRANCH_NOT" -> compareLongs() != 0
-            "LONG_BRANCH_LESS_THAN" -> compareLongs() < 0
-            "LONG_BRANCH_GREATER_THAN" -> compareLongs() > 0
-            "LONG_BRANCH_LESS_THAN_OR_EQUALS" -> compareLongs() <= 0
-            "LONG_BRANCH_GREATER_THAN_OR_EQUALS" -> compareLongs() >= 0
+        val taken = when (op) {
+            Cs2Op.BRANCH_IF_TRUE -> popInt() == 1
+            Cs2Op.BRANCH_IF_FALSE -> popInt() == 0
+            Cs2Op.BRANCH_EQUALS -> compareInts() == 0
+            Cs2Op.BRANCH_NOT -> compareInts() != 0
+            Cs2Op.BRANCH_LESS_THAN -> compareInts() < 0
+            Cs2Op.BRANCH_GREATER_THAN -> compareInts() > 0
+            Cs2Op.BRANCH_LESS_THAN_OR_EQUALS -> compareInts() <= 0
+            Cs2Op.BRANCH_GREATER_THAN_OR_EQUALS -> compareInts() >= 0
+            Cs2Op.LONG_BRANCH_EQUALS -> compareLongs() == 0
+            Cs2Op.LONG_BRANCH_NOT -> compareLongs() != 0
+            Cs2Op.LONG_BRANCH_LESS_THAN -> compareLongs() < 0
+            Cs2Op.LONG_BRANCH_GREATER_THAN -> compareLongs() > 0
+            Cs2Op.LONG_BRANCH_LESS_THAN_OR_EQUALS -> compareLongs() <= 0
+            Cs2Op.LONG_BRANCH_GREATER_THAN_OR_EQUALS -> compareLongs() >= 0
             else -> false
         }
         if (taken) frame.pointer += operand
@@ -547,7 +547,7 @@ class Cs2Vm(
         if (op.kind != OpKind.PARAM) {
             return ReturnSignature(op.pushInt, op.pushStr, op.pushLong)
         }
-        val yieldsString = if (op.opName == "ENUM") {
+        val yieldsString = if (op == Cs2Op.ENUM) {
             intArgs.getOrNull(1) == 's'.code
         } else {
             intArgs.lastOrNull()?.let { context.paramIsString(it) } ?: false

@@ -39,7 +39,7 @@ class InterfaceCs2Host(
     /**
      * Hooks the running scripts have bound, keyed by component hash then by the
      * event suffix of the opcode that bound them - `IF_SETONCLICK` stores under
-     * `CLICK`, `HOOK_MOUSE_ENTER` under `MOUSE_ENTER`.
+     * `CLICK`, `CC_SETONMOUSEOVER` under `MOUSEOVER`.
      *
      * The suffix is not the hook's meaning. Use [boundHook] to look one up by the
      * definition field it corresponds to; [HOOK_SUFFIX_BY_FIELD] documents the
@@ -117,119 +117,116 @@ class InterfaceCs2Host(
     }
 
     override fun invoke(op: Cs2Op, operand: Int, args: Cs2Values): Cs2Values {
-        val name = op.opName
         // The runtime-component opcodes name their target by hash *and* move the
         // active register, so neither half of the split below fits them. They are
         // resolved first and the rest of this method never sees them.
-        runtimeComponentOp(name, operand, args)?.let { return it }
+        runtimeComponentOp(op, operand, args)?.let { return it }
 
+        val activeTarget = op.name.startsWith("CC_")
         val component = when {
-            name.startsWith("CC_") -> activeComponents[if (operand == 1) 1 else 0]
+            activeTarget -> activeComponents[if (operand == 1) 1 else 0]
             args.ints.isNotEmpty() -> componentOf(args.ints.last())
             else -> null
         }
 
         // Setters take the component id last, so the value arguments come first.
-        val values = if (name.startsWith("CC_")) args.ints else args.ints.dropLast(1)
+        val values = if (activeTarget) args.ints else args.ints.dropLast(1)
 
-        return when (name) {
-            "IF_SETHIDE", "CC_SETHIDE" -> mutate(component) { it.hidden = values.first() != 0 }
-            "IF_SETCOLOUR", "CC_SETCOLOUR" -> mutate(component) { it.colour = values.first() }
-            "IF_SETTRANS", "CC_SETTRANS" -> mutate(component) { it.transparency = values.first() }
-            "IF_SETGRAPHIC", "CC_SETGRAPHIC" -> mutate(component) { it.graphicId = values.first() }
-            "IF_SETTEXT", "CC_SETTEXT" -> mutate(component) { it.text = args.strings.firstOrNull() ?: "" }
-            // `*_SETFILL` is the name the client's opcode table uses; the `*_SETFILLED`
-            // spelling is kept so a rename in the opcode table cannot silently drop
-            // the handler.
-            "IF_SETFILLED", "CC_SETFILLED", "IF_SETFILL", "CC_SETFILL" ->
+        return when (op) {
+            Cs2Op.IF_SETHIDE, Cs2Op.CC_SETHIDE -> mutate(component) { it.hidden = values.first() != 0 }
+            Cs2Op.IF_SETCOLOUR, Cs2Op.CC_SETCOLOUR -> mutate(component) { it.colour = values.first() }
+            Cs2Op.IF_SETTRANS, Cs2Op.CC_SETTRANS -> mutate(component) { it.transparency = values.first() }
+            Cs2Op.IF_SETGRAPHIC, Cs2Op.CC_SETGRAPHIC -> mutate(component) { it.graphicId = values.first() }
+            Cs2Op.IF_SETTEXT, Cs2Op.CC_SETTEXT -> mutate(component) { it.text = args.strings.firstOrNull() ?: "" }
+            Cs2Op.IF_SETFILL, Cs2Op.CC_SETFILL ->
                 mutate(component) { it.filled = values.first() != 0 }
             // These three re-resolve the component's box straight away; see
             // [InterfaceInstance.resolve] for why waiting for the next frame breaks
             // every script that builds a list.
-            "IF_SETSIZE", "CC_SETSIZE" ->
+            Cs2Op.IF_SETSIZE, Cs2Op.CC_SETSIZE ->
                 reshape(component) { it.setSize(values[0], values[1], values[2], values[3]) }
-            "IF_SETPOSITION", "CC_SETPOSITION" ->
+            Cs2Op.IF_SETPOSITION, Cs2Op.CC_SETPOSITION ->
                 reshape(component) { it.setPosition(values[0], values[1], values[2], values[3]) }
-            "IF_SETASPECT", "CC_SETASPECT" -> reshape(component) { it.setAspect(values[0], values[1]) }
-            "IF_SETSCROLLSIZE", "CC_SETSCROLLSIZE" ->
+            Cs2Op.IF_SETASPECT, Cs2Op.CC_SETASPECT -> reshape(component) { it.setAspect(values[0], values[1]) }
+            Cs2Op.IF_SETSCROLLSIZE, Cs2Op.CC_SETSCROLLSIZE ->
                 mutate(component) { it.setScrollSize(values[0], values[1]) }
-            "IF_SETSCROLLPOS", "CC_SETSCROLLPOS" ->
+            Cs2Op.IF_SETSCROLLPOS, Cs2Op.CC_SETSCROLLPOS ->
                 mutate(component) { it.setScrollPos(values[0], values[1]) }
-            "IF_SETOBJECT", "CC_SETOBJECT", "IF_SETOBJECT_WEARCOL", "CC_SETOBJECT_WEARCOL" ->
+            Cs2Op.IF_SETOBJECT, Cs2Op.CC_SETOBJECT, Cs2Op.IF_SETOBJECT_WEARCOL, Cs2Op.CC_SETOBJECT_WEARCOL ->
                 mutate(component) { it.setObject(values[0], values[1]) }
-            "IF_SETOBJECT_NONUM", "CC_SETOBJECT_NONUM",
-            "IF_SETOBJECT_WEARCOL_NONUM", "CC_SETOBJECT_WEARCOL_NONUM" ->
+            Cs2Op.IF_SETOBJECT_NONUM, Cs2Op.CC_SETOBJECT_NONUM,
+            Cs2Op.IF_SETOBJECT_WEARCOL_NONUM, Cs2Op.CC_SETOBJECT_WEARCOL_NONUM ->
                 mutate(component) { it.setObject(values[0], values[1], ObjIconStack.NONE) }
-            "IF_SETOBJECT_ALWAYSNUM", "CC_SETOBJECT_ALWAYSNUM",
-            "IF_SETOBJECT_WEARCOL_ALWAYSNUM", "CC_SETOBJECT_WEARCOL_ALWAYSNUM" ->
+            Cs2Op.IF_SETOBJECT_ALWAYSNUM, Cs2Op.CC_SETOBJECT_ALWAYSNUM,
+            Cs2Op.IF_SETOBJECT_WEARCOL_ALWAYSNUM, Cs2Op.CC_SETOBJECT_WEARCOL_ALWAYSNUM ->
                 mutate(component) { it.setObject(values[0], values[1], ObjIconStack.ALWAYS) }
-            "IF_SETMODEL", "CC_SETMODEL" -> mutate(component) { it.setModel(values[0]) }
-            "IF_SETMODELANGLE", "CC_SETMODELANGLE" ->
+            Cs2Op.IF_SETMODEL, Cs2Op.CC_SETMODEL -> mutate(component) { it.setModel(values[0]) }
+            Cs2Op.IF_SETMODELANGLE, Cs2Op.CC_SETMODELANGLE ->
                 mutate(component) { it.setModelAngle(values[0], values[1], values[2], values[3]) }
-            "IF_SETTEXTALIGN", "CC_SETTEXTALIGN" ->
+            Cs2Op.IF_SETTEXTALIGN, Cs2Op.CC_SETTEXTALIGN ->
                 mutate(component) { it.setTextAlign(values[0], values[1], values[2]) }
-            "IF_SETTEXTFONT", "CC_SETTEXTFONT" -> mutate(component) { it.fontId = values.first() }
-            "IF_SETTEXTSHADOW", "CC_SETTEXTSHADOW" -> mutate(component) { it.shadow = values.first() == 1 }
-            "IF_SETMAXLINES", "CC_SETMAXLINES" -> mutate(component) { it.maxTextLines = values.first() }
+            Cs2Op.IF_SETTEXTFONT, Cs2Op.CC_SETTEXTFONT -> mutate(component) { it.fontId = values.first() }
+            Cs2Op.IF_SETTEXTSHADOW, Cs2Op.CC_SETTEXTSHADOW -> mutate(component) { it.shadow = values.first() == 1 }
+            Cs2Op.IF_SETMAXLINES, Cs2Op.CC_SETMAXLINES -> mutate(component) { it.maxTextLines = values.first() }
 
-            "IF_SETHFLIP", "CC_SETHFLIP" -> mutate(component) { it.flipHorizontal = values.first() == 1 }
-            "IF_SETVFLIP", "CC_SETVFLIP" -> mutate(component) { it.flipVertical = values.first() == 1 }
-            "IF_SETTILING", "CC_SETTILING" -> mutate(component) { it.tiling = values.first() == 1 }
-            "IF_SETOUTLINE", "CC_SETOUTLINE" -> mutate(component) { it.borderThickness = values.first() }
-            "IF_SETGRAPHICSHADOW", "CC_SETGRAPHICSHADOW" ->
+            Cs2Op.IF_SETHFLIP, Cs2Op.CC_SETHFLIP -> mutate(component) { it.flipHorizontal = values.first() == 1 }
+            Cs2Op.IF_SETVFLIP, Cs2Op.CC_SETVFLIP -> mutate(component) { it.flipVertical = values.first() == 1 }
+            Cs2Op.IF_SETTILING, Cs2Op.CC_SETTILING -> mutate(component) { it.tiling = values.first() == 1 }
+            Cs2Op.IF_SETOUTLINE, Cs2Op.CC_SETOUTLINE -> mutate(component) { it.borderThickness = values.first() }
+            Cs2Op.IF_SETGRAPHICSHADOW, Cs2Op.CC_SETGRAPHICSHADOW ->
                 mutate(component) { it.graphicShadow = values.first() }
-            "IF_SETLINEWID", "CC_SETLINEWID" -> mutate(component) { it.lineWidth = values.first() }
+            Cs2Op.IF_SETLINEWID, Cs2Op.CC_SETLINEWID -> mutate(component) { it.lineWidth = values.first() }
 
-            "IF_SETDRAGRENDERBEHAVIOUR", "CC_SETDRAGRENDERBEHAVIOUR" ->
+            Cs2Op.IF_SETDRAGRENDERBEHAVIOUR, Cs2Op.CC_SETDRAGRENDERBEHAVIOUR ->
                 mutate(component) { it.dragType = values.first() }
 
-            // Opcode 68/899. The generated table calls it `SETDRAGGABLE` after the
-            // official name list; the client calls it `SETDEPTHCHILD` and it assigns
+            // Opcode 68/899. Jagex's name is `SETDRAGGABLE`; the client calls it
+            // `SETDEPTHCHILD` and it assigns
             // `Component.depthChildOverride` from a (component hash, slot) pair. It has
             // nothing to do with the drag dead zone or dead time - those are the two
             // opcodes below - and reading it that way is what left every scrollbar
             // thumb undraggable: the override is the only thing that makes a
             // runtime-created component pass the client's `hasDepthFlags`.
-            "IF_SETDRAGGABLE", "CC_SETDRAGGABLE" -> mutate(component) {
+            Cs2Op.IF_SETDRAGGABLE, Cs2Op.CC_SETDRAGGABLE -> mutate(component) {
                 it.depthChild = depthChildOf(values[0], values[1])
             }
 
             // Options are addressed 1-based by every opcode that touches them.
-            "IF_SETOP", "CC_SETOP" ->
+            Cs2Op.IF_SETOP, Cs2Op.CC_SETOP ->
                 mutate(component) { it.setOption(values.first() - 1, args.strings.firstOrNull() ?: "") }
-            "IF_CLEAROPS", "CC_CLEAROPS" -> mutate(component) { it.clearOptions() }
-            "IF_SETOPBASE", "CC_SETOPBASE" ->
+            Cs2Op.IF_CLEAROPS, Cs2Op.CC_CLEAROPS -> mutate(component) { it.clearOptions() }
+            Cs2Op.IF_SETOPBASE, Cs2Op.CC_SETOPBASE ->
                 mutate(component) { it.opBase = args.strings.firstOrNull() ?: "" }
-            "IF_SETOPCURSOR", "CC_SETOPCURSOR" ->
+            Cs2Op.IF_SETOPCURSOR, Cs2Op.CC_SETOPCURSOR ->
                 mutate(component) { it.setOptionCursor(values[0] - 1, values[1]) }
-            "IF_SETMOUSEOVERCURSOR", "CC_SETMOUSEOVERCURSOR" ->
+            Cs2Op.IF_SETMOUSEOVERCURSOR, Cs2Op.CC_SETMOUSEOVERCURSOR ->
                 mutate(component) { it.hoverCursor = values.first() }
-            "IF_SETTARGETOPCURSOR", "CC_SETTARGETOPCURSOR" ->
+            Cs2Op.IF_SETTARGETOPCURSOR, Cs2Op.CC_SETTARGETOPCURSOR ->
                 mutate(component) { it.targetCursor = values.first() }
-            "IF_SETOPCHAR", "CC_SETOPCHAR" ->
+            Cs2Op.IF_SETOPCHAR, Cs2Op.CC_SETOPCHAR ->
                 mutate(component) { it.setOptionKeyChar(values[0] - 1, values[1]) }
-            "IF_SETOPTCHAR", "CC_SETOPTCHAR" ->
+            Cs2Op.IF_SETOPTCHAR, Cs2Op.CC_SETOPTCHAR ->
                 mutate(component) { it.setOptionKeyChar(ComponentState.OPTION_COUNT, values.first()) }
 
-            "IF_SETNOCLICKTHROUGH", "CC_SETNOCLICKTHROUGH" ->
+            Cs2Op.IF_SETNOCLICKTHROUGH, Cs2Op.CC_SETNOCLICKTHROUGH ->
                 mutate(component) { it.noClickThrough = values.first() == 1 }
-            "IF_SETDRAGDEADZONE", "CC_SETDRAGDEADZONE" ->
+            Cs2Op.IF_SETDRAGDEADZONE, Cs2Op.CC_SETDRAGDEADZONE ->
                 mutate(component) { it.dragDeadzone = values.first() }
-            "IF_SETDRAGDEADTIME", "CC_SETDRAGDEADTIME" ->
+            Cs2Op.IF_SETDRAGDEADTIME, Cs2Op.CC_SETDRAGDEADTIME ->
                 mutate(component) { it.dragDeadTime = values.first() }
 
             // `CC_DRAGPICKUP` starts a drag of the active component from a grab offset
             // the script chooses, rather than from wherever the pointer happens to be.
             // A scrollbar's track uses it to hand the drag to the thumb, which is how
             // clicking the gutter pages the list.
-            "IF_DRAGPICKUP", "CC_DRAGPICKUP" -> {
+            Cs2Op.IF_DRAGPICKUP, Cs2Op.CC_DRAGPICKUP -> {
                 if (component != null) {
                     onDragPickup?.invoke(component, values.getOrElse(0) { 0 }, values.getOrElse(1) { 0 })
                 }
                 Cs2Values.EMPTY
             }
 
-            "IF_CLEARSCRIPTHOOKS", "CC_CLEARSCRIPTHOOKS" -> {
+            Cs2Op.IF_CLEARSCRIPTHOOKS, Cs2Op.CC_CLEARSCRIPTHOOKS -> {
                 component?.let {
                     boundHooks.remove(it.hash)
                     it.scripted = false
@@ -238,47 +235,43 @@ class InterfaceCs2Host(
                 Cs2Values.EMPTY
             }
 
-            "IF_GETWIDTH", "CC_GETWIDTH" -> ints(component?.width ?: 0)
-            "IF_GETHEIGHT", "CC_GETHEIGHT" -> ints(component?.height ?: 0)
+            Cs2Op.IF_GETWIDTH, Cs2Op.CC_GETWIDTH -> ints(component?.width ?: 0)
+            Cs2Op.IF_GETHEIGHT, Cs2Op.CC_GETHEIGHT -> ints(component?.height ?: 0)
             // The client returns `Component.x`/`.y`, which is the position the layout
             // pass computed *relative to the parent's content box* - not a screen
             // coordinate. Scripts feed the value straight back to `IF_SETPOSITION`
             // with position mode 0, so answering with [ComponentState.screenX] moves
             // the component by the whole interface's origin every time one asks.
-            "IF_GETX", "CC_GETX" -> ints(component?.x ?: 0)
-            "IF_GETY", "CC_GETY" -> ints(component?.y ?: 0)
-            "IF_GETHIDE", "CC_GETHIDE" -> ints(if (component?.hidden == true) 1 else 0)
-            "IF_GETTRANS", "CC_GETTRANS" -> ints(component?.transparency ?: 0)
-            "IF_GETCOLOUR", "CC_GETCOLOUR" -> ints(component?.colour ?: 0)
-            "IF_GETSCROLLX", "CC_GETSCROLLX" -> ints(component?.scrollX ?: 0)
-            "IF_GETSCROLLY", "CC_GETSCROLLY" -> ints(component?.scrollY ?: 0)
-            "IF_GETSCROLLWIDTH", "CC_GETSCROLLWIDTH" -> ints(component?.scrollWidth ?: 0)
-            "IF_GETSCROLLHEIGHT", "CC_GETSCROLLHEIGHT" -> ints(component?.scrollHeight ?: 0)
-            "IF_GETGRAPHIC", "CC_GETGRAPHIC" -> ints(component?.graphicId ?: -1)
-            "IF_GETTEXT", "CC_GETTEXT" -> strings(component?.text ?: "")
-            "IF_GETOP", "CC_GETOP" -> strings(component?.options?.getOrNull(values.first() - 1) ?: "")
-            "IF_GETOPBASE", "CC_GETOPBASE" -> strings(component?.opBase ?: "")
-            "IF_GETTARGETMASK", "CC_GETTARGETMASK" -> ints(component?.useOptionFlags ?: 0)
+            Cs2Op.IF_GETX, Cs2Op.CC_GETX -> ints(component?.x ?: 0)
+            Cs2Op.IF_GETY, Cs2Op.CC_GETY -> ints(component?.y ?: 0)
+            Cs2Op.IF_GETHIDE, Cs2Op.CC_GETHIDE -> ints(if (component?.hidden == true) 1 else 0)
+            Cs2Op.IF_GETTRANS, Cs2Op.CC_GETTRANS -> ints(component?.transparency ?: 0)
+            Cs2Op.IF_GETCOLOUR, Cs2Op.CC_GETCOLOUR -> ints(component?.colour ?: 0)
+            Cs2Op.IF_GETSCROLLX, Cs2Op.CC_GETSCROLLX -> ints(component?.scrollX ?: 0)
+            Cs2Op.IF_GETSCROLLY, Cs2Op.CC_GETSCROLLY -> ints(component?.scrollY ?: 0)
+            Cs2Op.IF_GETSCROLLWIDTH, Cs2Op.CC_GETSCROLLWIDTH -> ints(component?.scrollWidth ?: 0)
+            Cs2Op.IF_GETSCROLLHEIGHT, Cs2Op.CC_GETSCROLLHEIGHT -> ints(component?.scrollHeight ?: 0)
+            Cs2Op.IF_GETGRAPHIC, Cs2Op.CC_GETGRAPHIC -> ints(component?.graphicId ?: -1)
+            Cs2Op.IF_GETTEXT, Cs2Op.CC_GETTEXT -> strings(component?.text ?: "")
+            Cs2Op.IF_GETOP, Cs2Op.CC_GETOP -> strings(component?.options?.getOrNull(values.first() - 1) ?: "")
+            Cs2Op.IF_GETOPBASE, Cs2Op.CC_GETOPBASE -> strings(component?.opBase ?: "")
+            Cs2Op.IF_GETTARGETMASK, Cs2Op.CC_GETTARGETMASK -> ints(component?.useOptionFlags ?: 0)
 
-            "GET_MOUSEX" -> ints(mouseX)
-            "GET_MOUSEY" -> ints(mouseY)
-            "GET_MOUSEBUTTONS" -> ints(
+            Cs2Op.GET_MOUSEX -> ints(mouseX)
+            Cs2Op.GET_MOUSEY -> ints(mouseY)
+            Cs2Op.GET_MOUSEBUTTONS -> ints(
                 if (mouseLeft) 1 else 0,
                 if (mouseRight) 1 else 0,
                 if (mouseMiddle) 1 else 0,
             )
 
-            // The opcode names disagree with the key codes the client checks, and
-            // the codes win: 86 is Alt, 82 is Ctrl and 81 is Shift in the client's
-            // key table, so KEYHELD_CTRL really reports Alt. Kept verbatim so a
-            // script behaves the way it does in the client.
-            "KEYHELD_CTRL" -> ints(if (heldKeys.contains(KEY_ALT)) 1 else 0)
-            "KEYHELD_SHIFT" -> ints(if (heldKeys.contains(KEY_CTRL)) 1 else 0)
-            "KEYHELD_ALT" -> ints(if (heldKeys.contains(KEY_SHIFT)) 1 else 0)
+            Cs2Op.KEYHELD_ALT -> ints(if (heldKeys.contains(KEY_ALT)) 1 else 0)
+            Cs2Op.KEYHELD_CTRL -> ints(if (heldKeys.contains(KEY_CTRL)) 1 else 0)
+            Cs2Op.KEYHELD_SHIFT -> ints(if (heldKeys.contains(KEY_SHIFT)) 1 else 0)
 
-            "STAT", "STAT_BASE" -> ints(stat(args.ints.firstOrNull() ?: -1))
+            Cs2Op.STAT, Cs2Op.STAT_BASE -> ints(stat(args.ints.firstOrNull() ?: -1))
 
-            "PARAHEIGHT" -> ints(
+            Cs2Op.PARAHEIGHT -> ints(
                 paragraphLines?.invoke(
                     args.strings.firstOrNull() ?: "",
                     args.ints.getOrElse(0) { 0 },
@@ -286,12 +279,12 @@ class InterfaceCs2Host(
                 ) ?: 1,
             )
 
-            "ENUM" -> enumLookup(args.ints)
-            "ENUM_STRING" -> strings(enums(args.ints.firstOrNull() ?: -1)?.getString(args.ints.getOrElse(1) { 0 }) ?: "")
-            "ENUM_GETOUTPUTCOUNT" -> ints(enums(args.ints.firstOrNull() ?: -1)?.length ?: 0)
-            "STRUCT_PARAM" -> structParam(args.ints)
+            Cs2Op.ENUM -> enumLookup(args.ints)
+            Cs2Op.ENUM_STRING -> strings(enums(args.ints.firstOrNull() ?: -1)?.getString(args.ints.getOrElse(1) { 0 }) ?: "")
+            Cs2Op.ENUM_GETOUTPUTCOUNT -> ints(enums(args.ints.firstOrNull() ?: -1)?.length ?: 0)
+            Cs2Op.STRUCT_PARAM -> structParam(args.ints)
 
-            "MES", "WRITECONSOLE" -> {
+            Cs2Op.MES, Cs2Op.WRITECONSOLE -> {
                 args.strings.forEach { log.add(it) }
                 Cs2Values.EMPTY
             }
@@ -302,7 +295,7 @@ class InterfaceCs2Host(
 
     /**
      * The opcodes that create, destroy and re-target runtime components, or null
-     * when [name] is not one of them.
+     * when [op] is not one of them.
      *
      * A great many RS widgets are not in the cache at all: the cache holds an empty
      * layer and a load script fills it with `CC_CREATE` children - the nine graphics
@@ -317,10 +310,10 @@ class InterfaceCs2Host(
      * [invoke]. The register is chosen by the instruction's operand, exactly as the
      * client picks between its two `CS2Interface` slots.
      */
-    private fun runtimeComponentOp(name: String, operand: Int, args: Cs2Values): Cs2Values? {
+    private fun runtimeComponentOp(op: Cs2Op, operand: Int, args: Cs2Values): Cs2Values? {
         val slot = if (operand == 1) 1 else 0
-        return when (name) {
-            "CC_CREATE" -> {
+        return when (op) {
+            Cs2Op.CC_CREATE -> {
                 val container = args.ints.getOrElse(0) { -1 }
                 val child = instanceOf(container)?.let { instance ->
                     val parent = instance.stateByHash(container) ?: return@let null
@@ -340,7 +333,7 @@ class InterfaceCs2Host(
 
             // Despite the `CC_` prefix this one names its container by hash rather
             // than using the active register, as the client's `clearCompChildren` does.
-            "CC_DELETEALL" -> {
+            Cs2Op.CC_DELETEALL -> {
                 val container = args.ints.getOrElse(0) { -1 }
                 instanceOf(container)?.let { instance ->
                     instance.stateByHash(container)?.let { instance.deleteChildren(it.index) }
@@ -349,7 +342,7 @@ class InterfaceCs2Host(
                 Cs2Values.EMPTY
             }
 
-            "CC_DELETE" -> {
+            Cs2Op.CC_DELETE -> {
                 activeComponents[slot]?.let { target ->
                     instanceOf(target.hash)?.deleteChild(target)
                     activeComponents[slot] = null
@@ -362,7 +355,7 @@ class InterfaceCs2Host(
             // `IF_GETSUBCOUNT` and counts the filled slots. Both descriptions agree,
             // because the count is also the index of the next free slot, which is
             // exactly what every caller passes straight to `CC_CREATE`.
-            "IF_GETNEXTSUBID" -> {
+            Cs2Op.IF_GETNEXTSUBID -> {
                 val container = args.ints.getOrElse(0) { -1 }
                 val count = instanceOf(container)?.let { instance ->
                     instance.stateByHash(container)?.let { instance.slotCount(it.index) }
@@ -373,13 +366,13 @@ class InterfaceCs2Host(
             // `IF_FIND` / `CC_FIND` are the client's `CC_SETCHILD` / `CC_SETCHILD_SLOT`:
             // they point the active register at a component so the `CC_*` setters can
             // work on something other than the last thing created.
-            "IF_FIND" -> {
+            Cs2Op.IF_FIND -> {
                 val found = componentOf(args.ints.getOrElse(0) { -1 })
                 activeComponents[slot] = found
                 ints(if (found == null) 0 else 1)
             }
 
-            "CC_FIND" -> {
+            Cs2Op.CC_FIND -> {
                 val container = args.ints.getOrElse(0) { -1 }
                 val childSlot = args.ints.getOrElse(1) { -1 }
                 val found = instanceOf(container)?.let { instance ->
@@ -392,7 +385,7 @@ class InterfaceCs2Host(
 
             // The client returns `Component.parentId`, which is the parent's packed
             // hash and -1 at the root of the interface.
-            "IF_GETLAYER" -> {
+            Cs2Op.IF_GETLAYER -> {
                 val hash = args.ints.getOrElse(0) { -1 }
                 val parent = instanceOf(hash)?.let { instance ->
                     instance.stateByHash(hash)?.let { instance.parentOf(it) }
@@ -405,7 +398,7 @@ class InterfaceCs2Host(
             // how a script walks all the way up to the game frame to test whether a
             // component is really on screen. It has to bottom out at -1, because a
             // script that walks with it loops forever otherwise.
-            "IF_GETPARENTLAYER" -> {
+            Cs2Op.IF_GETPARENTLAYER -> {
                 val hash = args.ints.getOrElse(0) { -1 }
                 val parent = instanceOf(hash)?.let { instance ->
                     instance.stateByHash(hash)?.let { instance.enclosing(it) }
@@ -482,9 +475,10 @@ class InterfaceCs2Host(
     }
 
     override fun setHook(op: Cs2Op, component: Int, hook: Cs2Hook?) {
-        val state = if (op.opName.startsWith("CC_")) activeComponents[0] else componentOf(component)
-        val target = if (op.opName.startsWith("CC_")) state?.hash ?: return else component
-        val event = eventSuffix(op.opName)
+        val activeTarget = op.name.startsWith("CC_")
+        val state = if (activeTarget) activeComponents[0] else componentOf(component)
+        val target = if (activeTarget) state?.hash ?: return else component
+        val event = eventSuffix(op.name)
         val events = boundHooks.getOrPut(target) { LinkedHashMap() }
         if (hook == null) events.remove(event) else events[event] = hook
         // Mark the component itself so the interaction runtime's interactive test
@@ -577,32 +571,31 @@ class InterfaceCs2Host(
 
         /**
          * The event suffix [setHook] files an opcode under: the opcode name minus
-         * its `IF_`/`CC_` form prefix. `CC_HOOK_MOUSE_ENTER` and `HOOK_MOUSE_ENTER`
-         * both reduce to `MOUSE_ENTER`, which is what makes the two forms of a hook
+         * its `IF_SETON`/`CC_SETON` prefix. `CC_SETONMOUSEOVER` and `IF_SETONMOUSEOVER`
+         * both reduce to `MOUSEOVER`, which is what makes the two forms of a hook
          * setter interchangeable.
          */
-        fun eventSuffix(opName: String): String = opName
+        fun eventSuffix(name: String): String = name
             .removePrefix("CC_")
             .removePrefix("IF_")
             .removePrefix("SETON")
-            .removePrefix("HOOK_")
 
         /**
          * Definition hook field to the event suffix of the opcode that overrides it.
          *
          * Recovered by following each `IF_SETON*` opcode through the client's
-         * dispatch table to the `Component` field it assigns. The pairing is not
-         * guessable from the names: `IF_SETONMOUSEOVER` writes `popupScript` while
-         * the field actually called `onMouseOver` is written by `HOOK_MOUSE_ENTER`,
-         * and `IF_SETONINVTRANSMIT` writes the field the cache decoder calls
-         * `mouseLeaveScript` rather than the similarly named `onMouseLeaveScript`.
+         * dispatch table to the `Component` field it assigns. The decoder's field
+         * names do not follow Jagex's: `IF_SETONMOUSEREPEAT` writes `popupScript`,
+         * `IF_SETONTARGETLEAVE` writes `hookParams`, `IF_SETONOP` writes `params`,
+         * `IF_SETONOPT` writes `onTargetLeave`, and `IF_SETONINVTRANSMIT` writes the
+         * field the cache decoder calls `mouseLeaveScript` rather than `onMouseLeaveScript`.
          * The definition field is the stable identity, so it is the key.
          */
         val HOOK_SUFFIX_BY_FIELD: Map<String, String> = mapOf(
-            "onMouseOver" to "MOUSE_ENTER",
-            "onMouseLeaveScript" to "MOUSE_EXIT",
+            "onMouseOver" to "MOUSEOVER",
+            "onMouseLeaveScript" to "MOUSELEAVE",
             "onClick" to "CLICK",
-            "popupScript" to "MOUSEOVER",
+            "popupScript" to "MOUSEREPEAT",
             "mouseLeaveScript" to "INVTRANSMIT",
             "onClickRepeat" to "CLICKREPEAT",
             "onRelease" to "RELEASE",
@@ -616,9 +609,9 @@ class InterfaceCs2Host(
             "onStatTransmit" to "STATTRANSMIT",
             "onTimer" to "TIMER",
             "onTargetEnter" to "TARGETENTER",
-            "onTargetLeave" to "TARGETLEAVE",
-            "hookParams" to "OP",
-            "params" to "OPT",
+            "onTargetLeave" to "OPT",
+            "hookParams" to "TARGETLEAVE",
+            "params" to "OP",
             // The cache has no field for typed keys; `IF_SETONKEY` is the only way
             // to bind one, so the client field name is carried here for symmetry.
             "onKeyType" to "KEY",
