@@ -2343,7 +2343,7 @@ to either side shows up as a byte difference rather than only as a field differe
 | loc | `rawPercents` | opcode 106's animation odds, rescaled to 65535ths of their sum on read |
 | loc, npc | `rawOptions` | which opcode an option came from - 30 to 34 and 150 to 154 share one array |
 | loc, npc, obj, struct | `paramRecords` | opcode 249 records when a file lists a param id twice (60 objs, 62 npcs, 37 structs) |
-| npc | `unusedMovementType` | opcode 128, read and discarded by both client and decoder (named unused because the world module derives a `movementType` of its own from `slowWalk`) |
+| npc | `moveSpeed` | opcode 128, the npc's move speed (-1 stationary or none, 0 crawl, 1 walk, 2 run), which the decoder used to discard; the world crawls npcs whose value is 0 |
 | enum | `arraySize` | the array capacity of the opcode 7 and 8 forms |
 | enum | `entries` | entry records when a file lists a key twice; the map is now insertion ordered |
 | seq | `soundVolumeRecords`, `soundSpeedRecords` | which frame each opcode 19 and 20 record set |

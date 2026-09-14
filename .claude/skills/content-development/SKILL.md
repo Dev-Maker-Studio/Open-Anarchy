@@ -30,13 +30,14 @@ worked example of everything below.
 
 ## 2. Server content in the world module
 
-- **Plugin handlers**: a `@PluginEventHandler object` (or a class's `companion object`) with
-  `@JvmField val x = ItemClickHandler(keys, options) { e -> ... }`; `PluginManager` finds public
-  static fields of `PluginHandler` type. Handlers: `ItemClickHandler(Array<Any> ids, Array<String>
-  options)`, `ItemOnItemHandler(IntArray)`, `NPCDropHandler(npcs, Array<Any> items)`,
-  `XPGainHandler { e -> }` (fires on every `Skills.addXp` with the raw xp, before rates),
-  `ObjectClickHandler`, `ButtonClickHandler(Interface.x)`. `.plugin.kts` scripts get the same
-  through `PluginGlobals` (`onItemClick`, `onItemOnItem`, `onXpDrop`, ...).
+- **Plugin handlers** follow `kotlin-plugins` (load it):
+  - Register them from a top-level `@ServerStartupEvent fun mapFeature()` in a compiled `.kt` file,
+    calling the `com.rs.plugin.kts` DSL (`onObjectClick`, `onNpcClick`, `onItemClick`,
+    `onItemOnItem`, `onButtonClick(Interface.x)`, `onNpcDrop`, ...).
+  - `onXpDrop { }` fires on every `Skills.addXp` with the raw xp, before rates.
+  - Static `new XHandler(...)` fields and `@JvmField val x = XHandler(...)` are deprecated; convert
+    any file using them when you touch it.
+  - Never put content in a `.plugin.kts` script. Those are for content added outside the build.
 - **Ids** are `Obj.x`, `Seq.x`, `Interface.x`, `Component.interface_x.y`; a `Urn`-style table is
   an `enum class` with explicit fields per state (never `base + n` arithmetic) and
   `entries.associateBy` lookups in the companion.

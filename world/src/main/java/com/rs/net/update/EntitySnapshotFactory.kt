@@ -6,9 +6,8 @@ import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.HitBar
 import com.rs.game.model.entity.npc.NPC
-import com.rs.game.model.entity.npc.combat.MovementType
 import com.rs.game.model.entity.player.Player
-import com.rs.utils.movementType
+import com.rs.utils.crawls
 import org.darkan.core.Utils
 import org.darkan.core.model.MoveType
 import org.darkan.core.net.prot.update.NpcUpdateNpc
@@ -89,7 +88,7 @@ object EntitySnapshotFactory {
             nextRunDirection = n.nextRunDirection?.id,
             movementType = when {
                 n.nextRunDirection != null -> MoveType.RUN
-                n.definitions.movementType == MovementType.HALF_WALK -> MoveType.HALF_WALK
+                n.definitions.crawls -> MoveType.CRAWL
                 else -> MoveType.WALK
             },
             faceAngle = n.faceAngle,
