@@ -8,7 +8,7 @@ import com.rs.game.map.ChunkManager
 import com.rs.game.model.entity.player.Player
 import com.rs.game.tasks.WorldTasks
 import com.rs.plugin.PluginManager
-import com.rs.utils.MachineInformation
+import org.darkan.core.model.MachineInformation
 import com.rs.utils.MapXTEAs
 import com.rs.utils.json.WorldGson
 import kotlinx.coroutines.ExecutorCoroutineDispatcher

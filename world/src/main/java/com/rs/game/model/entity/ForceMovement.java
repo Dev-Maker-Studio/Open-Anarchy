@@ -19,7 +19,6 @@ package com.rs.game.model.entity;
 import org.darkan.core.map.pathfinder.Direction;
 import world.gregs.voidps.type.Tile;
 import org.darkan.core.Utils;
-import com.rs.utils.WorldUtil;
 
 public class ForceMovement {
 	private final Tile start;
@@ -41,7 +40,7 @@ public class ForceMovement {
 	}
 
 	public ForceMovement(Tile start, Tile destination, int startClientCycles, int speedClientCycles, Direction direction) {
-		this(start, destination, startClientCycles, speedClientCycles, WorldUtil.getAngleTo(direction));
+		this(start, destination, startClientCycles, speedClientCycles, direction.getAngle());
 	}
 
 	public ForceMovement(Tile start, Tile destination, int startClientCycles, int speedClientCycles) {

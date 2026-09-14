@@ -232,11 +232,11 @@ public class Karamja  {
 				public void run() {
 					if (ticks == 0) {
 						if (p.getX() == 2845) {
-							p.setFaceAngle(Direction.getAngleTo(Direction.EAST));
+							p.setFaceAngle(Direction.EAST.getAngle());
 							p.setNextAnimation(new Animation(839));
 							goingEast = true;
 						} else if (p.getX() == 2847) {
-							p.setFaceAngle(Direction.getAngleTo(Direction.WEST));
+							p.setFaceAngle(Direction.WEST.getAngle());
 							p.setNextAnimation(new Animation(839));
 							goingEast = false;
 						} else return;

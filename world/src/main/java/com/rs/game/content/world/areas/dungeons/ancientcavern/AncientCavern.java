@@ -21,7 +21,6 @@ import org.darkan.core.model.Animation;
 import world.gregs.voidps.type.Tile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
-import com.rs.utils.WorldUtil;
 
 @PluginEventHandler
 public class AncientCavern {
@@ -77,7 +76,7 @@ public class AncientCavern {
 		e.getPlayer().lock();
 		e.getPlayer().setRunHidden(false);
 		e.getPlayer().walkToAndExecute(Tile.of(2512, 3516, 0), () -> {
-			e.getPlayer().setFaceAngle(WorldUtil.getAngleTo(Direction.SOUTH));
+			e.getPlayer().setFaceAngle(Direction.SOUTH.getAngle());
 			e.getPlayer().forceMove(Tile.of(2512, 3508, 0), 6723, 30, 7*30, () -> {
 				e.getPlayer().anim(-1);
 				e.getPlayer().tele(Tile.of(1764, 5365, 1));

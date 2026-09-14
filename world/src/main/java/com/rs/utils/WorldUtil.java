@@ -67,10 +67,6 @@ public class WorldUtil {
 		return Direction.forDelta(delta.getX(), delta.getY());
 	}
 
-	public static int getAngleTo(Direction dir) {
-		return ((int) (Math.atan2(-dir.dx, -dir.dy) * 2607.5945876176133)) & 0x3fff;
-	}
-
 	public static Direction getFaceDirection(Tile faceTile, Player player) {
 		if (player.getX() < faceTile.getX())
 			return Direction.EAST;

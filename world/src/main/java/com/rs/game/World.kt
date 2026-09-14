@@ -52,7 +52,6 @@ import org.darkan.core.model.Rights
 import org.darkan.core.model.GroundItem
 import org.darkan.core.model.GroundItemType
 import org.darkan.core.model.WorldObject
-import org.darkan.core.model.Hit
 import org.darkan.core.model.HintIcon
 import org.darkan.core.model.Projectile
 import org.darkan.core.model.Sound

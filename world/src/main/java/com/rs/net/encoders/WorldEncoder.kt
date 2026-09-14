@@ -16,7 +16,6 @@
 //
 package com.rs.net.encoders
 
-import com.rs.game.Account
 import com.rs.game.World
 import com.rs.game.map.ChunkManager
 import com.rs.game.model.WorldProjectile
@@ -86,15 +85,9 @@ import org.darkan.core.net.prot.packet.IfSetText
 import org.darkan.core.net.prot.packet.LogoutFull
 import org.darkan.core.net.prot.packet.LogoutLobby
 import org.darkan.core.net.prot.packet.MapProjAnim
-import org.darkan.core.net.prot.packet.MessageClanChannel
-import org.darkan.core.net.prot.packet.MessageFriendsChat
 import org.darkan.core.net.prot.packet.MessagePrivate
-import org.darkan.core.net.prot.packet.MessagePrivateEcho
 import org.darkan.core.net.prot.packet.MessagePublic
-import org.darkan.core.net.prot.packet.MessageQuickChatClanChannel
-import org.darkan.core.net.prot.packet.MessageQuickChatFriendsChat
 import org.darkan.core.net.prot.packet.MessageQuickChatPrivate
-import org.darkan.core.net.prot.packet.MessageQuickChatPrivateEcho
 import org.darkan.core.net.prot.packet.MusicEffect
 import org.darkan.core.net.prot.packet.MusicTrack
 import org.darkan.core.net.prot.packet.NpcUpdate
@@ -579,32 +572,8 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(MessagePrivate(player.account.rights.crown, player.displayName, player.displayName, message))
     }
 
-    fun receivePrivateMessage(account: Account, message: String) {
-        session.queuePacket(MessagePrivateEcho(account.displayName, message))
-    }
-
-    fun receivePrivateChatQuickMessage(account: Account, message: QuickChatMessage) {
-        session.queuePacket(MessageQuickChatPrivateEcho(account.displayName, message))
-    }
-
     fun sendPrivateQuickMessage(username: String, message: QuickChatMessage) {
         session.queuePacket(MessageQuickChatPrivate(player.account.rights.crown, player.displayName, player.displayName, message))
-    }
-
-    fun sendFriendsChatMessage(account: Account, chatName: String, message: String) {
-        session.queuePacket(MessageFriendsChat(account.rights.crown, account.displayName, account.displayName, chatName, message))
-    }
-
-    fun receiveFriendChatQuickMessage(account: Account, chatName: String, message: QuickChatMessage) {
-        session.queuePacket(MessageQuickChatFriendsChat(chatName, account.rights.crown, account.displayName, account.displayName, message))
-    }
-
-    fun receiveClanChatMessage(account: Account, message: String, guest: Boolean) {
-        session.queuePacket(MessageClanChannel(guest, account.rights.crown, account.displayName, message))
-    }
-
-    fun receiveClanChatQuickMessage(account: Account, message: QuickChatMessage, guest: Boolean) {
-        session.queuePacket(MessageQuickChatClanChannel(guest, account.rights.crown, account.displayName, message))
     }
 
     fun sendChatFilterSettings() {

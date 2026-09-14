@@ -110,6 +110,7 @@ import org.darkan.core.model.WorldObject;
 import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
 import org.darkan.core.model.Account;
+import org.darkan.core.model.MachineInformation;
 import org.darkan.core.model.Social;
 import org.darkan.core.model.Clan;
 import org.darkan.core.social.ChatMessage;
@@ -131,10 +132,8 @@ import com.rs.net.encoders.WorldEncoder;
 import com.rs.plugin.PluginManager;
 import com.rs.plugin.events.*;
 import com.rs.utils.AccountLimiter;
-import com.rs.utils.MachineInformation;
 import com.rs.utils.Ticks;
 import com.rs.utils.record.Recorder;
-import com.rs.utils.reflect.ReflectionAnalysis;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import kotlin.Pair;
@@ -149,7 +148,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import org.darkan.core.gameval.gen.Varbit;
 import org.darkan.core.gameval.gen.Varp;
-// Hit class from com.rs.game.model.entity.Hit (not core module)
 
 public class Player extends Entity {
 
@@ -165,8 +163,6 @@ public class Player extends Entity {
 	private long timePlayed = 0;
 	private transient long timePlayedThisSession = 0;
 	private long timeLoggedOut;
-
-	private transient HashMap<Integer, ReflectionAnalysis> reflectionAnalyses = new HashMap<>();
 
 	private long docileTimer;
 
@@ -522,7 +518,6 @@ public class Player extends Entity {
 
 	// Used for storing recent ips
 	private Set<String> ipList = new HashSet<>();
-	private Map<Integer, MachineInformation> machineMap = new HashMap<>();
 
 	// honor
 	private int killCount, deathCount;
@@ -593,7 +588,6 @@ public class Player extends Entity {
 		prayerBook = new boolean[PrayerBooks.BOOKS.length];
 		herbicideSettings = new HashSet<>();
 		ipList = new HashSet<>();
-		machineMap = new HashMap<>();
         long creationDate = System.currentTimeMillis();
 		resetLodestones();
 	}
@@ -625,7 +619,6 @@ public class Player extends Entity {
 		if (notes == null)
 			notes = new Notes();
 		recorder = new Recorder(this);
-		reflectionAnalyses = new HashMap<>();
 		attackedBy = new ArrayList<>();
 		interfaceManager = new InterfaceManager(this);
 		hintIconsManager = new HintIconsManager(this);
@@ -674,8 +667,6 @@ public class Player extends Entity {
 			prayerBook = new boolean[PrayerBooks.BOOKS.length];
 		if (ipList == null)
 			ipList = new HashSet<>();
-		if (machineMap == null)
-			machineMap = new HashMap<>();
 		updateMachineIPs();
 	}
 
@@ -683,10 +674,6 @@ public class Player extends Entity {
 		if (ipList.size() > 50)
 			ipList.remove(new ArrayList<>(ipList).get(Utils.random(ipList.size())));
 		ipList.add(getLastIP());
-		if (machineMap.size() > 15)
-			machineMap.remove(new ArrayList<>(machineMap.keySet()).get(Utils.random(machineMap.keySet().size())));
-		if (machineInformation != null)
-			machineMap.put(machineInformation.hashCode(), machineInformation);
     }
 
 	public boolean[] getPrayerBook() {
@@ -1259,9 +1246,6 @@ public class Player extends Entity {
 		controllerManager.login(); // checks what to do on login after welcome
 		//unlock robust glass
 		getVars().setVarBit(Varbit.afr_complete, 1);
-		// screen
-		if (machineInformation != null)
-			machineInformation.sendSuggestions(this);
 		notes.init();
 
 		double farmingTicksMissed = Math.floor(getTicksSinceLastLogout() / (double) FarmPatch.FARMING_TICK);
@@ -3591,22 +3575,6 @@ public class Player extends Entity {
 		return wickedHoodTalismans[rune.ordinal()];
 	}
 
-	public ReflectionAnalysis getReflectionAnalysis(int id) {
-		return reflectionAnalyses.get(id);
-	}
-
-	public void queueReflectionAnalysis(ReflectionAnalysis reflectionCheck) {
-		if (!reflectionCheck.isBuilt())
-			throw new RuntimeException("Cannot queue an unbuilt reflection analysis.");
-		reflectionAnalyses.put(reflectionCheck.getId(), reflectionCheck);
-		// TODO: send the request. org.darkan.core.net.prot.packet.ReflectionRequest (opcode 98) and its
-		// encoder now exist and are verified against the client, and ReflectionResponse (opcode 36) decodes,
-		// but the legacy com.rs.utils.reflect types still carry their own duplicate encode/decode. Wiring
-		// this up means mapping ReflectionAnalysis onto org.darkan.core.clientwatch.ReflectionCheck and
-		// correlating responses back by id in ReflectionResponseHandler; until the response side is handled
-		// there is no point sending requests.
-	}
-
 	public void unlockWickedHoodRune(WickedHoodRune rune) {
 		wickedHoodTalismans[rune.ordinal()] = true;
 	}
@@ -4053,10 +4021,6 @@ public class Player extends Entity {
 
 	public void musicTrack(int trackId) {
 		musicTrack(trackId, 100);
-	}
-
-	public Map<Integer, MachineInformation> getMachineMap() {
-		return machineMap;
 	}
 
 	public MachineInformation getMachineInfo() {
