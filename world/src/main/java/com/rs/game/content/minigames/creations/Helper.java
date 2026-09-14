@@ -17,7 +17,6 @@
 package com.rs.game.content.minigames.creations;
 
 import com.rs.game.World;
-import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Equipment;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
@@ -347,19 +346,6 @@ public class Helper {
 			return Tile.of(gate.getX(), gate.getY() - 1, gate.getPlane());
 		else
 			return null;
-	}
-
-	public static Direction getFaceDirection(Tile faceTile, Player player) {
-		if (player.getX() < faceTile.getX())
-			return Direction.EAST;
-		if (player.getX() > faceTile.getX())
-			return Direction.WEST;
-		if (player.getY() < faceTile.getY())
-			return Direction.NORTH;
-		else if (player.getY() > faceTile.getY())
-			return Direction.SOUTH;
-		else
-			return Direction.NORTH;
 	}
 
 	public static void displayClayStatus(GameArea area, Player player) {

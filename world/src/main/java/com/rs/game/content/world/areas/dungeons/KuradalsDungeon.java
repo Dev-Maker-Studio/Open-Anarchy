@@ -87,11 +87,11 @@ public class KuradalsDungeon {
 			public void run() {
 				if (ticks == 0) {
 					if (p.getX() == 1633 && p.getY() == 5294) {
-						p.setFaceAngle(Direction.getAngleTo(Direction.SOUTH));
+						p.setFaceAngle(Direction.SOUTH.getAngle());
 						p.setNextAnimation(new Animation(839));
 						isPlayerNorth = true;
 					} else if (p.getX() == 1633 && p.getY() == 5292) {
-						p.setFaceAngle(Direction.getAngleTo(Direction.NORTH));
+						p.setFaceAngle(Direction.NORTH.getAngle());
 						p.setNextAnimation(new Animation(839));
 						isPlayerNorth = false;
 					} else

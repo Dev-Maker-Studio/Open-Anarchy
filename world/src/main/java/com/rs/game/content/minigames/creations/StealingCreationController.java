@@ -42,11 +42,11 @@ import org.darkan.core.model.SpotAnim;
 import org.darkan.core.model.Rights;
 import org.darkan.core.model.GroundItem;
 import org.darkan.core.model.WorldObject;
-import org.darkan.core.model.Hit;
 import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
 import org.darkan.core.Utils;
-import com.rs.utils.WorldUtil;
+import org.darkan.core.gameval.gen.Loc;
+import org.darkan.core.gameval.gen.Seq;
 import org.darkan.core.gameval.gen.Varbit;
 import org.darkan.core.gameval.gen.Varp;
 
@@ -547,7 +547,7 @@ public class StealingCreationController extends Controller {
 			}
 			final Tile toTile = Tile.of(player.getX() + xExtra, player.getY() + yExtra, player.getPlane());
 			final Direction finalDir = direction;
-			player.forceMove(toTile, object.getId() == 39602 ? 6132 : 10590, 5, 60, () -> player.setFaceAngle(WorldUtil.getAngleTo(finalDir)));
+			player.forceMove(toTile, object.getId() == Loc.sc_jump_loc ? Seq.wild_ditch_jump : Seq.sc_climb_over_wall, 5, 60, () -> player.setFaceAngle(finalDir.getAngle()));
 		} else {
 			final String name = object.getDefinitions().getName().toLowerCase();
 			final int clayQuality = Integer.parseInt(name.substring(name.indexOf("(class")).replace("(class ", "").replace(")", "")) - 1;

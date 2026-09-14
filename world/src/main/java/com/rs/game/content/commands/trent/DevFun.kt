@@ -1,16 +1,16 @@
 package com.rs.game.content.commands.trent
 
 import com.rs.engine.command.Commands
-import org.darkan.core.map.pathfinder.Direction
-import com.rs.engine.pathfinder.getFaceDirection
 import com.rs.game.World
 import com.rs.game.content.bosses.qbd.rollQbdKillAndAddToChest
 import com.rs.game.model.entity.Hit
+import org.darkan.core.gameval.gen.Spotanim
 import org.darkan.core.model.Rights
 import org.darkan.core.model.SpotAnim
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.utils.WorldUtil
 
 @ServerStartupEvent
 fun addTrentCommands() {
@@ -44,8 +44,8 @@ fun addTrentCommands() {
             val endTile = startTile.transform(x, y)
             val distanceDelay = (Utils.getDistance(startTile, endTile) * 22).toInt()
 
-            World.sendProjectile(startTile, endTile, 2204, heights = 20 to 5, delay, speed = 22, angle = 30)
-            World.sendSpotAnim(endTile, SpotAnim(2258, delay + distanceDelay, 0, Direction.getFaceDirection(endTile, p).id))
+            World.sendProjectile(startTile, endTile, Spotanim.mah4_light_projectile_a, heights = 20 to 5, delay, speed = 22, angle = 30)
+            World.sendSpotAnim(endTile, SpotAnim(Spotanim.mah4_reward_spot_leech_impact_7, delay + distanceDelay, 0, WorldUtil.getFaceDirection(endTile, p).id))
 
             delay += 5
         }

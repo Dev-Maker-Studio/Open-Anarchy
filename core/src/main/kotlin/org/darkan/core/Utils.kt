@@ -15,7 +15,6 @@ import java.util.*
 import kotlin.math.*
 
 object Utils {
-
     @JvmField
     val ROTATION_DIR_X = intArrayOf(-1, 0, 1, 0)
     @JvmField
@@ -28,8 +27,6 @@ object Utils {
         byteArrayOf(-1, 1), byteArrayOf(0, 1), byteArrayOf(1, 1),
         byteArrayOf(1, 0), byteArrayOf(1, -1)
     )
-
-    // --- Random ---
 
     @JvmStatic
     fun random(maxValue: Int): Int = if (maxValue <= 0) 0 else secureRandom.nextInt(maxValue)
@@ -78,8 +75,6 @@ object Utils {
         return IntArray(size) { min + it * step }
     }
 
-    // --- Math ---
-
     @JvmStatic
     fun clampD(value: Double, min: Double, max: Double): Double = max(min, min(max, value))
 
@@ -100,29 +95,19 @@ object Utils {
     fun isWithinInclusive(i: Int, min: Int, max: Int): Boolean = i in min..max
 
     @JvmStatic
-    fun skillSuccess(level: Int, rate1: Int, rate99: Int): Boolean {
-        val d = Math.random() * 256.0
-        return d <= interpolate(level, rate1, rate99, 1, 99)
-    }
+    fun skillSuccess(level: Int, rate1: Int, rate99: Int): Boolean = skillSuccess(level, 1.0, rate1, rate99)
 
     @JvmStatic
-    fun skillSuccess(level: Int, percModifier: Double, rate1: Int, rate99: Int): Boolean {
-        val d = Math.random() * 256.0
-        return d <= interpolate(level, rate1, rate99, 1, 99) * percModifier
-    }
+    fun skillSuccess(level: Int, percModifier: Double, rate1: Int, rate99: Int): Boolean =
+        skillSuccess(level, percModifier, rate1, rate99, 256)
 
     @JvmStatic
     fun skillSuccess(level: Int, percModifier: Double, rate1: Int, rate99: Int, maxSuccess: Int): Boolean {
-        val d = Math.random() * maxSuccess.toDouble()
-        return d <= interpolate(level, rate1, rate99, 1, 99) * percModifier
+        val low = percModifier * rate1
+        val high = percModifier * rate99
+        val chance = floor(low * (99 - level) / 98.0).toInt() + floor(high * (level - 1) / 98.0).toInt() + 1
+        return random(maxSuccess) < chance
     }
-
-    @JvmStatic
-    fun interpolate(level: Int, lowValue: Int, highValue: Int, lowLevel: Int, highLevel: Int): Double {
-        return lowValue + (highValue - lowValue) * ((level - lowLevel).toDouble() / (highLevel - lowLevel).toDouble())
-    }
-
-    // --- GCD / LCM ---
 
     @JvmStatic
     fun gcm(a: Long, b: Long): Long = if (b == 0L) a else gcm(b, a % b)
@@ -132,8 +117,6 @@ object Utils {
 
     @JvmStatic
     fun leastCommonMultiple(a: Int, b: Int): Int = a / greatestCommonDenominator(a, b) * b
-
-    // --- Distance / Angle ---
 
     @JvmStatic
     fun getDistance(t1: Tile, t2: Tile): Double = getDistance(t1.x, t1.y, t2.x, t2.y)
@@ -213,8 +196,6 @@ object Utils {
         return intArrayOf(front[0] * -1, front[1] * -1)
     }
 
-    // --- String / Name formatting ---
-
     @JvmStatic
     fun formatPlayerNameForDisplay(name: String): String = name.formatPlayerNameForDisplay()
 
@@ -291,8 +272,6 @@ object Utils {
     @JvmStatic
     fun getDateString(): String = SimpleDateFormat("yyyy-MM-dd").format(Date())
 
-    // --- Validity ---
-
     @JvmStatic
     fun invalidAccountName(name: String): Boolean = !name.isValidAccountName()
 
@@ -310,8 +289,6 @@ object Utils {
 
     @JvmStatic
     fun validEmail(emailStr: String): Boolean = emailStr.isValidEmail()
-
-    // --- RS name↔long encoding ---
 
     @JvmStatic
     fun stringToLong(s: String): Long {
@@ -362,8 +339,6 @@ object Utils {
         return hash
     }
 
-    // --- Interface helpers ---
-
     @JvmStatic
     fun interfaceIdFromHash(hash: Int): Int = hash shr 16
 
@@ -373,8 +348,6 @@ object Utils {
     @JvmStatic
     fun toInterfaceHash(interfaceId: Int, componentId: Int): Int = (interfaceId shl 16) or componentId
 
-    // --- Projectile helpers ---
-
     @JvmStatic
     fun calcProjectileInAirTime(start: Tile, end: Tile, presetInAirClientCycles: Int): Int {
         val dist = getDistance(start, end)
@@ -382,13 +355,11 @@ object Utils {
     }
 
     @JvmStatic
-    fun projInAirToTicks(inAirClientCycles: Int): Int = (inAirClientCycles / 30) + 1
+    fun projInAirToTicks(inAirClientCycles: Int): Int = projInAirToTicks(0, inAirClientCycles)
 
     @JvmStatic
     fun projInAirToTicks(startDelayClientCycles: Int, inAirClientCycles: Int): Int =
-        ((startDelayClientCycles + inAirClientCycles) / 30) + 1
-
-    // --- Crypto ---
+        ceil((startDelayClientCycles + inAirClientCycles) / 30.0).toInt()
 
     @JvmStatic
     fun cryptRSA(data: ByteArray, exponent: BigInteger, modulus: BigInteger): ByteArray =
@@ -397,8 +368,6 @@ object Utils {
     @JvmStatic
     fun encryptUsingMD5(buffer: ByteArray): ByteArray =
         MessageDigest.getInstance("MD5").digest(buffer)
-
-    // --- Color ---
 
     @JvmStatic
     fun getRSColor(red: Int, green: Int, blue: Int): Int {
@@ -430,8 +399,6 @@ object Utils {
         val lc = if (li > 255) 255 else li
         return (hc shl 10) + (sc shl 7) + lc
     }
-
-    // --- Misc ---
 
     @JvmStatic
     fun djb2(str: String): Int {
@@ -499,8 +466,6 @@ object Utils {
             k to if (v is Map<*, *>) cloneMap(v as Map<String, Any>) else v
         }
 
-    // --- CP1252 encoding ---
-
     @JvmField
     val CP_1252_CHARACTERS = charArrayOf(
         '\u20ac', '\u0000', '\u201a', '\u0192', '\u201e', '\u2026', '\u2020', '\u2021',
@@ -530,8 +495,6 @@ object Utils {
         return '?'.code.toByte()
     }
 
-    // --- Definition counts: the id space the loaded cache holds, one past the highest id ---
-
     @JvmStatic fun getItemDefinitionsSize(): Int = Cache.items.size
 
     @JvmStatic fun getNPCDefinitionsSize(): Int = Cache.npcs.size
@@ -544,11 +507,6 @@ object Utils {
 
     @JvmStatic fun getBASAnimDefSize(): Int = Cache.bas.size
 
-    /**
-     * Legacy `com.rs.lib.util.Utils#getConfigDefinitionsSize` (core Utils.java:976-979):
-     * `lastArchiveId(VARBITS) * 256 + validFilesCount(lastArchiveId)`. Varbit configs are
-     * packed 256 per archive in index 22, so this is one past the highest packed config id.
-     */
     @JvmStatic fun getConfigDefinitionsSize(): Int {
         val cache = Cache.get()
         val lastArchive = cache.lastArchiveId(Index.VAR_BIT)
@@ -556,16 +514,7 @@ object Utils {
         return lastArchive * 256 + cache.fileCount(Index.VAR_BIT, lastArchive)
     }
 
-    /**
-     * Legacy used `lastArchiveId(VARBITS) * 0x3ff` (core Utils.java:1003-1005), an estimate from
-     * before the varbit table was decoded. The decoded table is exact and is what
-     * [org.darkan.core.model.Vars.getVarBit] already bounds itself by, so use its length.
-     */
     @JvmStatic fun getVarbitDefinitionsSize(): Int = Cache.varbits.size
-
-    // One past the highest id, matching every "size" here and the `id >= size` / `size <= id`
-    // guards that call them - lastArchiveId/lastFileId are the highest id, not the count, and a
-    // component archive is sparse so its file count is not its last file id either.
 
     @JvmStatic fun getInterfaceDefinitionsSize(): Int =
         Cache.get().lastArchiveId(Index.INTERFACES) + 1
@@ -573,14 +522,6 @@ object Utils {
     @JvmStatic fun getInterfaceDefinitionsComponentsSize(interfaceId: Int): Int =
         Cache.get().lastFileId(Index.INTERFACES, interfaceId) + 1
 
-    /**
-     * Which item ids the cache actually holds a definition for, indexed by id.
-     *
-     * Index 19 is sparse - the decoded [Cache.items] array is dense over the whole id space, so a
-     * hole in the cache is indistinguishable from a real definition there. The authority is the
-     * reference table: an item exists when index 19 has file `id and 0xff` in archive `id ushr 8`.
-     * Built once because [itemExists] is on the path of every single item added to a container.
-     */
     private val itemIdExists: BooleanArray by lazy {
         val size = getItemDefinitionsSize()
         val exists = BooleanArray(size)
@@ -598,12 +539,6 @@ object Utils {
 
     @JvmStatic fun itemExists(id: Int): Boolean = id >= 0 && id < itemIdExists.size && itemIdExists[id]
 
-    // --- Legacy compatibility methods ---
-
-    /**
-     * Flattens varargs of objects and arrays into a single Object[].
-     * Arrays are expanded element by element.
-     */
     @JvmStatic
     fun streamObjects(vararg objects: Any): Array<Any> {
         val list = mutableListOf<Any>()
@@ -620,10 +555,6 @@ object Utils {
         return list.toTypedArray()
     }
 
-    /**
-     * Gets classes annotated with the given annotation from the specified package.
-     * Uses ClassGraph for classpath scanning.
-     */
     @JvmStatic
     @Throws(ClassNotFoundException::class, java.io.IOException::class)
     fun getClassesWithAnnotation(packageName: String, annotation: Class<out Annotation>): List<Class<*>> {
@@ -640,27 +571,17 @@ object Utils {
         return classes
     }
 
-    /**
-     * Stub: splits text into lines based on font metrics.
-     * TODO: wire to modern cache (FontMetrics)
-     */
     @JvmStatic
     fun splitTextIntoLines(text: String, fontId: Int, width: Int): Array<String> {
-        return arrayOf(text)
+        val fonts = Cache.fonts
+        if (fontId !in fonts.indices) return arrayOf(text)
+        return fonts[fontId].splitLines(text, width).toTypedArray()
     }
 
-    /**
-     * Stub: gets the height of a string rendered at the given font and width.
-     * TODO: wire to modern cache (FontMetrics)
-     */
     @JvmStatic
-    fun getIFStringHeightAbs(text: String, fontId: Int, width: Int): Int {
-        return 0
-    }
+    fun getIFStringHeightAbs(text: String, fontId: Int, width: Int): Int =
+        splitTextIntoLines(text, fontId, width).size * 15 + 3
 
-    /**
-     * Adds all elements from an array to an ArrayList.
-     */
     @JvmStatic
     fun <T> add(list: java.util.ArrayList<T>, items: Array<T>?) {
         if (items != null) {
@@ -670,18 +591,12 @@ object Utils {
         }
     }
 
-    /**
-     * Gets the value of a field via reflection.
-     */
     @JvmStatic
     fun getFieldValue(obj: Any, field: java.lang.reflect.Field): Any? {
         field.isAccessible = true
         return field.get(obj)
     }
 
-    /**
-     * Gets subclasses of the given class from the given package via classpath scanning.
-     */
     @JvmStatic
     @Suppress("UNCHECKED_CAST")
     fun <T> getSubClasses(packageName: String, superClass: Class<T>): List<Class<T>> {

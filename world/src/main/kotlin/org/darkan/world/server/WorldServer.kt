@@ -6,7 +6,6 @@ import com.rs.game.World
 import com.rs.game.tasks.WorldTasks
 import com.rs.game.model.entity.player.Player
 import com.rs.utils.AccountLimiter
-import com.rs.utils.MachineInformation
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.util.network.*
@@ -24,7 +23,7 @@ import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.formatPlayerNameForProtocol
-import org.darkan.core.model.MachineInformation as CoreMachineInformation
+import org.darkan.core.model.MachineInformation
 import org.darkan.core.net.*
 import org.darkan.core.net.prot.Codec
 import org.darkan.core.net.prot.packet.WorldLoginDetails
@@ -198,7 +197,7 @@ object WorldServer {
             xtea.readUByte() // prefs
 
         // parse() consumes the machine-info version byte itself; reading it here too shifted every field.
-        val machineInfo = CoreMachineInformation.parse(xtea)
+        val machineInfo = MachineInformation.parse(xtea)
         if (machineInfo.version != 6)
             logError("Unexpected machine info version for $username (version=${machineInfo.version})")
 
@@ -275,7 +274,7 @@ object WorldServer {
         // whatever init() already registered.
         try {
             // init() calls World.addPlayer() which assigns player.index
-            player.init(session, account, displayMode, screenWidth, screenHeight, MachineInformation.from(machineInfo))
+            player.init(session, account, displayMode, screenWidth, screenHeight, machineInfo)
 
             // Send WorldLoginDetails before ISAAC is active (noIsaac=true)
             session.send(

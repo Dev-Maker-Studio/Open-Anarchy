@@ -17,7 +17,6 @@
 package org.darkan.core.map.pathfinder
 
 import org.darkan.core.Utils
-import kotlin.math.atan2
 
 enum class Direction(@JvmField val id: Int, @JvmField val dx: Int, @JvmField val dy: Int) {
     NORTH(0, 0, 1),
@@ -78,11 +77,6 @@ enum class Direction(@JvmField val id: Int, @JvmField val dx: Int, @JvmField val
             else if (dy <= -1) SOUTH
             else if (dx <= -1) WEST
             else null
-        }
-
-        @JvmStatic
-		fun getAngleTo(dir: Direction): Int {
-            return ((atan2(-dir.dx.toDouble(), -dir.dy.toDouble()) * 2607.5945876176133).toInt()) and 0x3fff
         }
     }
 }

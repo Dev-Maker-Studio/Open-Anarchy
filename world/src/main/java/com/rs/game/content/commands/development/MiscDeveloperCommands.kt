@@ -27,18 +27,13 @@ import org.darkan.core.model.Item
 import org.darkan.core.model.Rights
 import org.darkan.core.model.SpotAnim
 import world.gregs.voidps.type.Tile
-// TODO: net.packets.decoders.ReflectionCheckResponse
-// TODO: RSColor
 import org.darkan.core.Utils
-// TODO: ReflectionCheck
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.PluginScriptHost
 import com.rs.plugin.kts.PluginScriptHost.Companion.loadAndExecuteScripts
 import com.rs.tools.MapSearcher
 import com.rs.tools.NPCDropDumper
 import com.rs.utils.DropSets
-import com.rs.utils.reflect.ReflectionAnalysis
-import com.rs.utils.reflect.ReflectionTest
 import com.rs.utils.shop.ShopsHandler
 import com.rs.utils.spawns.ItemSpawns
 import com.rs.utils.spawns.NPCSpawns
@@ -433,9 +428,6 @@ fun loadDeveloperCommands() {
         val index = if (args.size == 1) 0 else args[1].toInt()
         p.tele(npcs[index].tile)
     }
-
-    // TODO: migrate to modern ReflectionCheck system
-    // Commands.add(Rights.DEVELOPER, "checkclient [player name]", "Verifies the user's client.") { ... }
 
     Commands.add(Rights.DEVELOPER, "getip [player name]", "Gets the player's IP addresses.") { p, args ->
         val playerName = Utils.concat(args)

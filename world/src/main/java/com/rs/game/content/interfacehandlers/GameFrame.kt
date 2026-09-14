@@ -10,7 +10,7 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.ButtonClickEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.utils.ReportsManager
-import com.rs.utils.Utils
+import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.gameval.gen.Varbit
