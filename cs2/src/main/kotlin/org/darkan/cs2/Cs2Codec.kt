@@ -71,13 +71,13 @@ object Cs2Codec {
         val instructions = ArrayList<Cs2Instruction>(instructionCount)
         while (reader.position() < headerStart) {
             val opcodeId = reader.readUnsignedShort()
-            val op = Cs2Opcodes.find(opcodeId)
+            val op = Cs2Op.find(opcodeId)
                 ?: error("Unknown CS2 opcode $opcodeId at byte ${reader.position() - 2}")
             instructions.add(
                 when {
-                    op.opName == "PUSH_CONSTANT_STRING" ->
+                    op == Cs2Op.PUSH_CONSTANT_STRING ->
                         Cs2Instruction(op, strOperand = reader.readString())
-                    op.opName == "PUSH_LONG_CONSTANT" ->
+                    op == Cs2Op.PUSH_LONG_CONSTANT ->
                         Cs2Instruction(op, longOperand = reader.readLong())
                     op.largeOperand -> Cs2Instruction(op, intOperand = reader.readInt())
                     else -> Cs2Instruction(op, intOperand = reader.readUnsignedByte())
@@ -114,8 +114,8 @@ object Cs2Codec {
             val op = instruction.op
             writer.writeShort(op.id)
             when {
-                op.opName == "PUSH_CONSTANT_STRING" -> writer.writeString(instruction.strOperand ?: "")
-                op.opName == "PUSH_LONG_CONSTANT" -> writer.writeLong(instruction.longOperand)
+                op == Cs2Op.PUSH_CONSTANT_STRING -> writer.writeString(instruction.strOperand ?: "")
+                op == Cs2Op.PUSH_LONG_CONSTANT -> writer.writeLong(instruction.longOperand)
                 op.largeOperand -> writer.writeInt(instruction.intOperand)
                 else -> writer.writeByte(instruction.intOperand)
             }
@@ -149,8 +149,8 @@ object Cs2Codec {
         for (instruction in script.instructions) {
             val op = instruction.op
             size += 2 + when {
-                op.opName == "PUSH_CONSTANT_STRING" -> (instruction.strOperand?.length ?: 0) + 1
-                op.opName == "PUSH_LONG_CONSTANT" -> 8
+                op == Cs2Op.PUSH_CONSTANT_STRING -> (instruction.strOperand?.length ?: 0) + 1
+                op == Cs2Op.PUSH_LONG_CONSTANT -> 8
                 op.largeOperand -> 4
                 else -> 1
             }

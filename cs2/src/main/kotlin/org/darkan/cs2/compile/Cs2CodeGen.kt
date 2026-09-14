@@ -3,7 +3,6 @@ package org.darkan.cs2.compile
 import org.darkan.cs2.Cs2Instruction
 import org.darkan.cs2.Cs2Op
 import org.darkan.cs2.Cs2Context
-import org.darkan.cs2.Cs2Opcodes
 import org.darkan.cs2.Cs2Script
 import org.darkan.cs2.Cs2SwitchCase
 import org.darkan.cs2.ReturnSignature
@@ -115,34 +114,31 @@ class Cs2CodeGen(
         if (function.body.lastOrNull() is Return) return
         for (type in function.returns) {
             when (type) {
-                Cs2Type.INT -> emit("PUSH_CONSTANT_INT", 0)
+                Cs2Type.INT -> emit(Cs2Op.PUSH_CONSTANT_INT, 0)
                 Cs2Type.STRING -> emitString("")
                 Cs2Type.LONG -> emitLong(0L)
             }
         }
-        emit("RETURN")
+        emit(Cs2Op.RETURN)
     }
 
     // ---------------------------------------------------------------- output
 
-    private fun op(name: String): Cs2Op =
-        Cs2Opcodes.byName(name) ?: error("Missing opcode $name")
-
-    private fun emit(name: String, operand: Int = 0) {
-        instructions.add(Cs2Instruction(op(name), intOperand = operand))
+    private fun emit(op: Cs2Op, operand: Int = 0) {
+        instructions.add(Cs2Instruction(op, intOperand = operand))
     }
 
     private fun emitString(value: String) {
-        instructions.add(Cs2Instruction(op("PUSH_CONSTANT_STRING"), strOperand = value))
+        instructions.add(Cs2Instruction(Cs2Op.PUSH_CONSTANT_STRING, strOperand = value))
     }
 
     private fun emitLong(value: Long) {
-        instructions.add(Cs2Instruction(op("PUSH_LONG_CONSTANT"), longOperand = value))
+        instructions.add(Cs2Instruction(Cs2Op.PUSH_LONG_CONSTANT, longOperand = value))
     }
 
-    private fun emitJump(name: String, label: String) {
+    private fun emitJump(op: Cs2Op, label: String) {
         fixups.add(Fixup(instructions.size, label))
-        emit(name)
+        emit(op)
     }
 
     private fun newLabel(prefix: String) = "$prefix${labelCounter++}"
@@ -201,12 +197,12 @@ class Cs2CodeGen(
             is ArrayAssign -> {
                 emitExpr(statement.index)
                 emitExpr(statement.value)
-                emit("POP_ARRAY_INT", statement.array)
+                emit(Cs2Op.POP_ARRAY_INT, statement.array)
             }
 
             is ArrayDefine -> {
                 emitExpr(statement.size)
-                emit("DEFINE_ARRAY", (statement.array shl 16) or statement.elementType)
+                emit(Cs2Op.DEFINE_ARRAY, (statement.array shl 16) or statement.elementType)
             }
 
             is MultiAssign -> emitExpr(statement.call)
@@ -233,7 +229,7 @@ class Cs2CodeGen(
 
             is Return -> {
                 statement.values.forEach(::emitExpr)
-                emit("RETURN")
+                emit(Cs2Op.RETURN)
             }
 
             is If -> emitIf(statement)
@@ -241,9 +237,9 @@ class Cs2CodeGen(
             is Switch -> emitSwitch(statement)
 
             is Label -> placeLabel(statement.name)
-            is Goto -> emitJump("BRANCH", statement.label)
-            is Break -> emitJump("BRANCH", statement.label ?: breakLabels.last())
-            is Continue -> emitJump("BRANCH", statement.label ?: continueLabels.last())
+            is Goto -> emitJump(Cs2Op.BRANCH, statement.label)
+            is Break -> emitJump(Cs2Op.BRANCH, statement.label ?: breakLabels.last())
+            is Continue -> emitJump(Cs2Op.BRANCH, statement.label ?: continueLabels.last())
         }
     }
 
@@ -252,34 +248,34 @@ class Cs2CodeGen(
         body.lastOrNull().let { it is Goto || it is Break || it is Continue }
 
     private fun storeLocalOpcode(type: Cs2Type) = when (type) {
-        Cs2Type.INT -> "POP_INT_LOCAL"
-        Cs2Type.STRING -> "POP_STRING_LOCAL"
-        Cs2Type.LONG -> "POP_LONG_LOCAL"
+        Cs2Type.INT -> Cs2Op.POP_INT_LOCAL
+        Cs2Type.STRING -> Cs2Op.POP_STRING_LOCAL
+        Cs2Type.LONG -> Cs2Op.POP_LONG_LOCAL
     }
 
-    private fun storeOpcode(target: VarRef): String = when (target.space) {
-        VarSpace.VARP -> "POP_VAR"
-        VarSpace.VARBIT -> "POP_VARBIT"
-        VarSpace.VARC -> "STORE_VARC"
-        VarSpace.VARC_STRING -> "STORE_VARC_STRING"
+    private fun storeOpcode(target: VarRef): Cs2Op = when (target.space) {
+        VarSpace.VARP -> Cs2Op.POP_VAR
+        VarSpace.VARBIT -> Cs2Op.POP_VARBIT
+        VarSpace.VARC -> Cs2Op.POP_VARC_INT
+        VarSpace.VARC_STRING -> Cs2Op.POP_VARC_STRING
         else -> error("${target.space} is read-only")
     }
 
-    private fun loadOpcode(target: VarRef): String = when {
+    private fun loadOpcode(target: VarRef): Cs2Op = when {
         target.variant == "old" -> when (target.space) {
-            VarSpace.VARP -> "GET_VARP_OLD"
-            VarSpace.VARBIT -> "GET_VARPBIT_OLD"
-            VarSpace.VARN -> "GET_VARN_OLD"
-            VarSpace.VARNBIT -> "GET_VARNBIT_OLD"
+            VarSpace.VARP -> Cs2Op.GET_VARP_OLD
+            VarSpace.VARBIT -> Cs2Op.GET_VARPBIT_OLD
+            VarSpace.VARN -> Cs2Op.GET_VARN_OLD
+            VarSpace.VARNBIT -> Cs2Op.GET_VARNBIT_OLD
             else -> error("No 'old' accessor for ${target.space}")
         }
         else -> when (target.space) {
-            VarSpace.VARP -> "PUSH_VAR"
-            VarSpace.VARBIT -> "PUSH_VARBIT"
-            VarSpace.VARC -> "LOAD_VARC"
-            VarSpace.VARC_STRING -> "LOAD_VARC_STRING"
-            VarSpace.CLAN -> "LOAD_CLAN_VAR"
-            VarSpace.CLAN_SETTING -> "LOAD_CLAN_SETTING_VAR"
+            VarSpace.VARP -> Cs2Op.PUSH_VAR
+            VarSpace.VARBIT -> Cs2Op.PUSH_VARBIT
+            VarSpace.VARC -> Cs2Op.PUSH_VARC_INT
+            VarSpace.VARC_STRING -> Cs2Op.PUSH_VARC_STRING
+            VarSpace.CLAN -> Cs2Op.PUSH_VARCLAN
+            VarSpace.CLAN_SETTING -> Cs2Op.PUSH_VARCLANSETTING
             else -> error("No accessor for ${target.space}")
         }
     }
@@ -290,9 +286,9 @@ class Cs2CodeGen(
      */
     private fun discardResults(value: Expr) {
         val (ints, strings, longs) = resultCounts(value)
-        repeat(ints) { emit("POP_INT_DISCARD") }
-        repeat(strings) { emit("POP_STRING_DISCARD") }
-        repeat(longs) { emit("POP_LONG_DISCARD") }
+        repeat(ints) { emit(Cs2Op.POP_INT_DISCARD) }
+        repeat(strings) { emit(Cs2Op.POP_STRING_DISCARD) }
+        repeat(longs) { emit(Cs2Op.POP_LONG_DISCARD) }
     }
 
     private fun resultCounts(value: Expr): Triple<Int, Int, Int> = when (value) {
@@ -337,7 +333,7 @@ class Cs2CodeGen(
                 // chain would branch where its own trampoline does, which reads
                 // back as the opposite test.
                 emitBranch(test, next)
-                emitJump("BRANCH", next)
+                emitJump(Cs2Op.BRANCH, next)
             }
             placeLabel(next)
             return
@@ -351,7 +347,7 @@ class Cs2CodeGen(
             return
         }
         val endLabel = newLabel("end")
-        emitJump("BRANCH", endLabel)
+        emitJump(Cs2Op.BRANCH, endLabel)
         placeLabel(elseLabel)
         emitAll(statement.otherwise)
         placeLabel(endLabel)
@@ -369,7 +365,7 @@ class Cs2CodeGen(
         continueLabels.removeLast()
         breakLabels.removeLast()
 
-        emitJump("BRANCH", testLabel)
+        emitJump(Cs2Op.BRANCH, testLabel)
         placeLabel(exitLabel)
     }
 
@@ -386,7 +382,7 @@ class Cs2CodeGen(
             } else {
                 val bodyLabel = newLabel("body")
                 emitComparison(condition, bodyLabel)
-                emitJump("BRANCH", skipLabel)
+                emitJump(Cs2Op.BRANCH, skipLabel)
                 placeLabel(bodyLabel)
             }
             // Each term guards the rest, so failing any one skips the body.
@@ -407,7 +403,7 @@ class Cs2CodeGen(
                 // The opcode branches when the term is *false*, so hop over the jump.
                 val skip = newLabel("skip")
                 emitComparison(condition, skip)
-                emitJump("BRANCH", target)
+                emitJump(Cs2Op.BRANCH, target)
                 placeLabel(skip)
             } else {
                 emitComparison(condition, target)
@@ -420,7 +416,7 @@ class Cs2CodeGen(
             is AndAll -> {
                 val skip = newLabel("skip")
                 condition.terms.forEach { emitBranch(it, skip) }
-                emitJump("BRANCH", target)
+                emitJump(Cs2Op.BRANCH, target)
                 placeLabel(skip)
             }
         }
@@ -437,7 +433,7 @@ class Cs2CodeGen(
             is Compare -> if (condition.negated) {
                 val next = newLabel("or")
                 emitComparison(condition, next)
-                emitJump("BRANCH", bodyLabel)
+                emitJump(Cs2Op.BRANCH, bodyLabel)
                 placeLabel(next)
             } else {
                 emitComparison(condition, bodyLabel)
@@ -478,20 +474,20 @@ class Cs2CodeGen(
             placeLabel(next)
         }
         if (!close) return
-        emitJump("BRANCH", skipLabel)
+        emitJump(Cs2Op.BRANCH, skipLabel)
         placeLabel(bodyLabel)
     }
 
     /** Pushes a comparison's operands and branches to [target] when it holds. */
     private fun emitComparison(condition: Compare, target: String) {
-        when (condition.comparison.opName) {
-            "BRANCH_IF_TRUE", "BRANCH_IF_FALSE" -> emitExpr(condition.left)
+        when (condition.comparison) {
+            Cs2Op.BRANCH_IF_TRUE, Cs2Op.BRANCH_IF_FALSE -> emitExpr(condition.left)
             else -> {
                 emitExpr(condition.left)
                 emitExpr(condition.right)
             }
         }
-        emitJump(condition.comparison.opName, target)
+        emitJump(condition.comparison, target)
     }
 
     /** True for the jump-table shape the literal block rendering produces. */
@@ -506,7 +502,7 @@ class Cs2CodeGen(
         val tableIndex = switchTables.size
         switchTables.add(table)
         val switchAt = instructions.size
-        emit("SWITCH", tableIndex)
+        emit(Cs2Op.SWITCH, tableIndex)
 
         val defaultLabel = newLabel("switchDefault")
         val endLabel = newLabel("switchEnd")
@@ -530,7 +526,7 @@ class Cs2CodeGen(
             // default arm at all it simply falls through to what follows.
             emitAll(statement.default)
             if (statement.default.isNotEmpty() && !leaves(statement.default)) {
-                emitJump("BRANCH", endLabel)
+                emitJump(Cs2Op.BRANCH, endLabel)
             }
             for ((index, case) in statement.cases.withIndex()) {
                 // An arm that is nothing but a jump is really a table entry
@@ -548,11 +544,11 @@ class Cs2CodeGen(
                 emitAll(case.body)
                 // The final arm falls straight into the join point.
                 if (index != statement.cases.lastIndex && !leaves(case.body)) {
-                    emitJump("BRANCH", endLabel)
+                    emitJump(Cs2Op.BRANCH, endLabel)
                 }
             }
         } else {
-            emitJump("BRANCH", defaultLabel)
+            emitJump(Cs2Op.BRANCH, defaultLabel)
             for ((index, case) in statement.cases.withIndex()) {
                 val start = instructions.size
                 case.keys.forEach { table.add(Cs2SwitchCase(it, start - switchAt - 1)) }
@@ -560,7 +556,7 @@ class Cs2CodeGen(
                 if (!leaves(case.body) &&
                     (index != statement.cases.lastIndex || statement.default.isNotEmpty())
                 ) {
-                    emitJump("BRANCH", endLabel)
+                    emitJump(Cs2Op.BRANCH, endLabel)
                 }
             }
             placeLabel(defaultLabel)
@@ -575,17 +571,17 @@ class Cs2CodeGen(
 
     private fun emitExpr(value: Expr) {
         when (value) {
-            is IntConst -> emit("PUSH_CONSTANT_INT", value.value)
+            is IntConst -> emit(Cs2Op.PUSH_CONSTANT_INT, value.value)
             // A typed constant only reads differently; it is the same integer.
-            is TypedConst -> emit("PUSH_CONSTANT_INT", value.value)
+            is TypedConst -> emit(Cs2Op.PUSH_CONSTANT_INT, value.value)
             is StrConst -> emitString(value.value)
             is LongConst -> emitLong(value.value)
 
             is LocalRef -> emit(
                 when (value.type) {
-                    Cs2Type.INT -> "PUSH_INT_LOCAL"
-                    Cs2Type.STRING -> "PUSH_STRING_LOCAL"
-                    Cs2Type.LONG -> "PUSH_LONG_LOCAL"
+                    Cs2Type.INT -> Cs2Op.PUSH_INT_LOCAL
+                    Cs2Type.STRING -> Cs2Op.PUSH_STRING_LOCAL
+                    Cs2Type.LONG -> Cs2Op.PUSH_LONG_LOCAL
                 },
                 value.slot,
             )
@@ -600,7 +596,7 @@ class Cs2CodeGen(
 
             is ArrayRef -> {
                 emitExpr(value.index)
-                emit("PUSH_ARRAY_INT", value.array)
+                emit(Cs2Op.PUSH_ARRAY_INT, value.array)
             }
 
             is Binary -> {
@@ -611,12 +607,12 @@ class Cs2CodeGen(
 
             is Join -> {
                 value.parts.forEach(::emitExpr)
-                emit("JOIN_STRING", value.parts.size)
+                emit(Cs2Op.JOIN_STRING, value.parts.size)
             }
 
             is ScriptCall -> {
                 value.args.forEach(::emitExpr)
-                emit("GOSUB_WITH_PARAMS", value.scriptId)
+                emit(Cs2Op.GOSUB_WITH_PARAMS, value.scriptId)
             }
 
             is Callback -> emitCallback(value)
@@ -629,13 +625,13 @@ class Cs2CodeGen(
     }
 
     private fun binaryOpcode(symbol: String) = when (symbol) {
-        "+" -> "ADD"
-        "-" -> "SUB"
-        "*" -> "MULTIPLY"
-        "/" -> "DIVIDE"
-        "%" -> "MODULO"
-        "&" -> "AND"
-        "|" -> "OR"
+        "+" -> Cs2Op.ADD
+        "-" -> Cs2Op.SUB
+        "*" -> Cs2Op.MULTIPLY
+        "/" -> Cs2Op.DIVIDE
+        "%" -> Cs2Op.MODULO
+        "&" -> Cs2Op.AND
+        "|" -> Cs2Op.OR
         else -> error("No opcode for operator '$symbol'")
     }
 
@@ -645,15 +641,15 @@ class Cs2CodeGen(
      */
     private fun emitCallback(value: Callback) {
         if (value.scriptId == -1) {
-            emit("PUSH_CONSTANT_INT", -1)
+            emit(Cs2Op.PUSH_CONSTANT_INT, -1)
             emitString(value.format)
             return
         }
-        emit("PUSH_CONSTANT_INT", value.scriptId)
+        emit(Cs2Op.PUSH_CONSTANT_INT, value.scriptId)
         value.args.forEach(::emitExpr)
         if (value.hasTriggerList) {
             value.triggers.forEach(::emitExpr)
-            emit("PUSH_CONSTANT_INT", value.triggers.size)
+            emit(Cs2Op.PUSH_CONSTANT_INT, value.triggers.size)
         }
         emitString(value.format)
     }
