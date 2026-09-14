@@ -501,7 +501,7 @@ class ComponentState(
     /**
      * Label the client would show for option [index] (0-based), or null when the
      * option is absent or disabled. Transcribes `Component.componentMenuOption`:
-     * a disabled option is still offered when the component has an `IF_SETONOPT`
+     * a disabled option is still offered when the component has an `IF_SETONOP`
      * hook, because that hook is the only handler such options ever had.
      */
     fun optionAt(index: Int): String? {

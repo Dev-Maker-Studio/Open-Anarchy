@@ -13,14 +13,16 @@ import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
  * cache field, because neither of those survived the client's own renaming. The
  * mapping was recovered by following each `IF_SETON*` opcode through the
  * client's dispatch table to the field it writes, and each field from there to
- * the branch of `InterfaceRenderer.processInterfaceCycle` that fires it. Two
- * pairs in particular are the opposite of what their names suggest:
+ * the branch of `InterfaceRenderer.processInterfaceCycle` that fires it. The
+ * decoder's field names are the misleading half:
  *
- * - `HOOK_MOUSE_ENTER` writes `onMouseOver` ([MOUSE_ENTER]) while
- *   `IF_SETONMOUSEOVER` writes `popupScript` ([MOUSE_OVER]).
+ * - `IF_SETONMOUSEOVER` writes `onMouseOver` ([MOUSE_ENTER]) while
+ *   `IF_SETONMOUSEREPEAT` writes `popupScript` ([MOUSE_OVER]).
  * - `IF_SETONINVTRANSMIT` writes `mouseLeaveScript`, which the client fires off
  *   inventory updates ([INV_TRANSMIT]); the hover-leave hook is
- *   `onMouseLeaveScript`, written by `HOOK_MOUSE_EXIT` ([MOUSE_EXIT]).
+ *   `onMouseLeaveScript`, written by `IF_SETONMOUSELEAVE` ([MOUSE_EXIT]).
+ * - `IF_SETONTARGETLEAVE` writes `hookParams` ([DESELECT]) and `IF_SETONOPT`
+ *   writes `onTargetLeave` ([TARGET_LEAVE]).
  *
  * [field] is the [InterfaceComponentDefinition] property the cache decodes the
  * hook into, and [boundKey] is the key a runtime-bound hook is filed under in
@@ -37,13 +39,13 @@ enum class InterfaceEvent(
     LOAD("onLoadScript", "LOAD", { it.onLoadScript }),
 
     /** The pointer entered the component. */
-    MOUSE_ENTER("onMouseOver", "MOUSE_ENTER", { it.onMouseOver }),
+    MOUSE_ENTER("onMouseOver", "MOUSEOVER", { it.onMouseOver }),
 
     /** Fires every client cycle the pointer stays inside the component. */
-    MOUSE_OVER("popupScript", "MOUSEOVER", { it.popupScript }),
+    MOUSE_OVER("popupScript", "MOUSEREPEAT", { it.popupScript }),
 
     /** The pointer left the component. */
-    MOUSE_EXIT("onMouseLeaveScript", "MOUSE_EXIT", { it.onMouseLeaveScript }),
+    MOUSE_EXIT("onMouseLeaveScript", "MOUSELEAVE", { it.onMouseLeaveScript }),
 
     /**
      * The left button went down over the component. This is the client's "click":
@@ -74,20 +76,16 @@ enum class InterfaceEvent(
     MOUSE_WHEEL("onMouseMove", "SCROLLWHEEL", { it.onMouseMove }),
 
     /** A right-click option was chosen; the event carries the option and its label. */
-    OPTION("params", "OPT", { it.params }),
+    OPTION("params", "OP", { it.params }),
 
     /** The component was selected as the source of a "use on" interaction. */
     TARGET_ENTER("onTargetEnter", "TARGETENTER", { it.onTargetEnter }),
 
-    /** The use-on selection was cancelled. */
-    TARGET_LEAVE("onTargetLeave", "TARGETLEAVE", { it.onTargetLeave }),
+    /** A use-on selection was used on this component; the client fires it on the target. */
+    TARGET_LEAVE("onTargetLeave", "OPT", { it.onTargetLeave }),
 
-    /**
-     * Also fires when a use-on selection is cancelled. The client runs this one
-     * from `cancelInterfaceSelection` and never reaches [TARGET_LEAVE], so both
-     * are fired here to keep either hook testable.
-     */
-    DESELECT("hookParams", "OP", { it.hookParams }),
+    /** The use-on selection was cancelled; the client fires it from `cancelInterfaceSelection`. */
+    DESELECT("hookParams", "TARGETLEAVE", { it.hookParams }),
 
     /** Fires every client cycle. */
     TIMER("onTimer", "TIMER", { it.onTimer }),
@@ -1170,8 +1168,8 @@ class InterfaceInteraction(
 
     /**
      * Cancels the use-on selection. The client runs the `hookParams` hook here
-     * ([InterfaceEvent.DESELECT]); [InterfaceEvent.TARGET_LEAVE] is fired as well
-     * so the hook the cache calls `onTargetLeave` is reachable at all.
+     * ([InterfaceEvent.DESELECT]); the editor has no use-on-target step, so
+     * [InterfaceEvent.TARGET_LEAVE] is fired as well to keep that hook reachable.
      */
     fun cancelSelection() {
         val component = selected ?: return

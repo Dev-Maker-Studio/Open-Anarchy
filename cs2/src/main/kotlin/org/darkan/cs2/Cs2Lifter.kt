@@ -176,8 +176,8 @@ class Cs2Lifter(
 
     /** The stack a single-value store consumes, or null when it is not one. */
     private fun storeType(opName: String): Cs2Type? = when (opName) {
-        "POP_INT_LOCAL", "POP_VAR", "POP_VARBIT", "STORE_VARC" -> Cs2Type.INT
-        "POP_STRING_LOCAL", "STORE_VARC_STRING" -> Cs2Type.STRING
+        "POP_INT_LOCAL", "POP_VAR", "POP_VARBIT", "POP_VARC_INT" -> Cs2Type.INT
+        "POP_STRING_LOCAL", "POP_VARC_STRING" -> Cs2Type.STRING
         "POP_LONG_LOCAL" -> Cs2Type.LONG
         else -> null
     }
@@ -189,8 +189,8 @@ class Cs2Lifter(
                 LocalRef(instruction.intOperand, type)
             "POP_VAR" -> VarRef(VarSpace.VARP, instruction.intOperand, Cs2Type.INT)
             "POP_VARBIT" -> VarRef(VarSpace.VARBIT, instruction.intOperand, Cs2Type.INT)
-            "STORE_VARC" -> VarRef(VarSpace.VARC, instruction.intOperand, Cs2Type.INT)
-            "STORE_VARC_STRING" -> VarRef(VarSpace.VARC_STRING, instruction.intOperand, Cs2Type.STRING)
+            "POP_VARC_INT" -> VarRef(VarSpace.VARC, instruction.intOperand, Cs2Type.INT)
+            "POP_VARC_STRING" -> VarRef(VarSpace.VARC_STRING, instruction.intOperand, Cs2Type.STRING)
             else -> error("Not a store: ${instruction.op.opName}")
         }
 
@@ -256,10 +256,10 @@ class Cs2Lifter(
             "POP_VAR" -> statements.add(VarAssign(VarRef(VarSpace.VARP, operand, Cs2Type.INT), pop(Cs2Type.INT)))
             "PUSH_VARBIT" -> push(VarRef(VarSpace.VARBIT, operand, Cs2Type.INT))
             "POP_VARBIT" -> statements.add(VarAssign(VarRef(VarSpace.VARBIT, operand, Cs2Type.INT), pop(Cs2Type.INT)))
-            "LOAD_VARC" -> push(VarRef(VarSpace.VARC, operand, Cs2Type.INT))
-            "STORE_VARC" -> statements.add(VarAssign(VarRef(VarSpace.VARC, operand, Cs2Type.INT), pop(Cs2Type.INT)))
-            "LOAD_VARC_STRING" -> push(VarRef(VarSpace.VARC_STRING, operand, Cs2Type.STRING))
-            "STORE_VARC_STRING" ->
+            "PUSH_VARC_INT" -> push(VarRef(VarSpace.VARC, operand, Cs2Type.INT))
+            "POP_VARC_INT" -> statements.add(VarAssign(VarRef(VarSpace.VARC, operand, Cs2Type.INT), pop(Cs2Type.INT)))
+            "PUSH_VARC_STRING" -> push(VarRef(VarSpace.VARC_STRING, operand, Cs2Type.STRING))
+            "POP_VARC_STRING" ->
                 statements.add(VarAssign(VarRef(VarSpace.VARC_STRING, operand, Cs2Type.STRING), pop(Cs2Type.STRING)))
             "GET_VARP_OLD" -> push(VarRef(VarSpace.VARP, operand, Cs2Type.INT, "old"))
             "GET_VARPBIT_OLD" -> push(VarRef(VarSpace.VARBIT, operand, Cs2Type.INT, "old"))

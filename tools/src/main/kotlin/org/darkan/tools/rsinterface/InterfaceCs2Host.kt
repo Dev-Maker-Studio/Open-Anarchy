@@ -39,7 +39,7 @@ class InterfaceCs2Host(
     /**
      * Hooks the running scripts have bound, keyed by component hash then by the
      * event suffix of the opcode that bound them - `IF_SETONCLICK` stores under
-     * `CLICK`, `HOOK_MOUSE_ENTER` under `MOUSE_ENTER`.
+     * `CLICK`, `CC_SETONMOUSEOVER` under `MOUSEOVER`.
      *
      * The suffix is not the hook's meaning. Use [boundHook] to look one up by the
      * definition field it corresponds to; [HOOK_SUFFIX_BY_FIELD] documents the
@@ -268,13 +268,9 @@ class InterfaceCs2Host(
                 if (mouseMiddle) 1 else 0,
             )
 
-            // The opcode names disagree with the key codes the client checks, and
-            // the codes win: 86 is Alt, 82 is Ctrl and 81 is Shift in the client's
-            // key table, so KEYHELD_CTRL really reports Alt. Kept verbatim so a
-            // script behaves the way it does in the client.
-            "KEYHELD_CTRL" -> ints(if (heldKeys.contains(KEY_ALT)) 1 else 0)
-            "KEYHELD_SHIFT" -> ints(if (heldKeys.contains(KEY_CTRL)) 1 else 0)
-            "KEYHELD_ALT" -> ints(if (heldKeys.contains(KEY_SHIFT)) 1 else 0)
+            "KEYHELD_ALT" -> ints(if (heldKeys.contains(KEY_ALT)) 1 else 0)
+            "KEYHELD_CTRL" -> ints(if (heldKeys.contains(KEY_CTRL)) 1 else 0)
+            "KEYHELD_SHIFT" -> ints(if (heldKeys.contains(KEY_SHIFT)) 1 else 0)
 
             "STAT", "STAT_BASE" -> ints(stat(args.ints.firstOrNull() ?: -1))
 
@@ -577,32 +573,31 @@ class InterfaceCs2Host(
 
         /**
          * The event suffix [setHook] files an opcode under: the opcode name minus
-         * its `IF_`/`CC_` form prefix. `CC_HOOK_MOUSE_ENTER` and `HOOK_MOUSE_ENTER`
-         * both reduce to `MOUSE_ENTER`, which is what makes the two forms of a hook
+         * its `IF_SETON`/`CC_SETON` prefix. `CC_SETONMOUSEOVER` and `IF_SETONMOUSEOVER`
+         * both reduce to `MOUSEOVER`, which is what makes the two forms of a hook
          * setter interchangeable.
          */
         fun eventSuffix(opName: String): String = opName
             .removePrefix("CC_")
             .removePrefix("IF_")
             .removePrefix("SETON")
-            .removePrefix("HOOK_")
 
         /**
          * Definition hook field to the event suffix of the opcode that overrides it.
          *
          * Recovered by following each `IF_SETON*` opcode through the client's
-         * dispatch table to the `Component` field it assigns. The pairing is not
-         * guessable from the names: `IF_SETONMOUSEOVER` writes `popupScript` while
-         * the field actually called `onMouseOver` is written by `HOOK_MOUSE_ENTER`,
-         * and `IF_SETONINVTRANSMIT` writes the field the cache decoder calls
-         * `mouseLeaveScript` rather than the similarly named `onMouseLeaveScript`.
+         * dispatch table to the `Component` field it assigns. The decoder's field
+         * names do not follow Jagex's: `IF_SETONMOUSEREPEAT` writes `popupScript`,
+         * `IF_SETONTARGETLEAVE` writes `hookParams`, `IF_SETONOP` writes `params`,
+         * `IF_SETONOPT` writes `onTargetLeave`, and `IF_SETONINVTRANSMIT` writes the
+         * field the cache decoder calls `mouseLeaveScript` rather than `onMouseLeaveScript`.
          * The definition field is the stable identity, so it is the key.
          */
         val HOOK_SUFFIX_BY_FIELD: Map<String, String> = mapOf(
-            "onMouseOver" to "MOUSE_ENTER",
-            "onMouseLeaveScript" to "MOUSE_EXIT",
+            "onMouseOver" to "MOUSEOVER",
+            "onMouseLeaveScript" to "MOUSELEAVE",
             "onClick" to "CLICK",
-            "popupScript" to "MOUSEOVER",
+            "popupScript" to "MOUSEREPEAT",
             "mouseLeaveScript" to "INVTRANSMIT",
             "onClickRepeat" to "CLICKREPEAT",
             "onRelease" to "RELEASE",
@@ -616,9 +611,9 @@ class InterfaceCs2Host(
             "onStatTransmit" to "STATTRANSMIT",
             "onTimer" to "TIMER",
             "onTargetEnter" to "TARGETENTER",
-            "onTargetLeave" to "TARGETLEAVE",
-            "hookParams" to "OP",
-            "params" to "OPT",
+            "onTargetLeave" to "OPT",
+            "hookParams" to "TARGETLEAVE",
+            "params" to "OP",
             // The cache has no field for typed keys; `IF_SETONKEY` is the only way
             // to bind one, so the client field name is carried here for symmetry.
             "onKeyType" to "KEY",

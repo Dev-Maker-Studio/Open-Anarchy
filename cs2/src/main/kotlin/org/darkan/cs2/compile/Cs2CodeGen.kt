@@ -260,8 +260,8 @@ class Cs2CodeGen(
     private fun storeOpcode(target: VarRef): String = when (target.space) {
         VarSpace.VARP -> "POP_VAR"
         VarSpace.VARBIT -> "POP_VARBIT"
-        VarSpace.VARC -> "STORE_VARC"
-        VarSpace.VARC_STRING -> "STORE_VARC_STRING"
+        VarSpace.VARC -> "POP_VARC_INT"
+        VarSpace.VARC_STRING -> "POP_VARC_STRING"
         else -> error("${target.space} is read-only")
     }
 
@@ -276,10 +276,10 @@ class Cs2CodeGen(
         else -> when (target.space) {
             VarSpace.VARP -> "PUSH_VAR"
             VarSpace.VARBIT -> "PUSH_VARBIT"
-            VarSpace.VARC -> "LOAD_VARC"
-            VarSpace.VARC_STRING -> "LOAD_VARC_STRING"
-            VarSpace.CLAN -> "LOAD_CLAN_VAR"
-            VarSpace.CLAN_SETTING -> "LOAD_CLAN_SETTING_VAR"
+            VarSpace.VARC -> "PUSH_VARC_INT"
+            VarSpace.VARC_STRING -> "PUSH_VARC_STRING"
+            VarSpace.CLAN -> "PUSH_VARCLAN"
+            VarSpace.CLAN_SETTING -> "PUSH_VARCLANSETTING"
             else -> error("No accessor for ${target.space}")
         }
     }
