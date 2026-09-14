@@ -74,12 +74,7 @@ data class NPCDefinition(
     override var params: Map<Int, Any>? = null,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null,
-    /**
-     * Opcode 128, the movement type index this npc walks with, which the client of this revision reads and
-     * discards. Named unused rather than `movementType` because the world module already derives a movement
-     * type of its own from [slowWalk].
-     */
-    var unusedMovementType: Int = -1,
+    var moveSpeed: Int = -1,
     /**
      * The option records as the file held them: indices 0 to 4 are opcodes 30 to 34, indices 5 to 9 are the
      * members only opcodes 150 to 154. Null when the file had no option record. [options] is the merged view
@@ -205,7 +200,7 @@ data class NPCDefinition(
         if (params != other.params) return false
         if (stringId != other.stringId) return false
         if (extras != other.extras) return false
-        if (unusedMovementType != other.unusedMovementType) return false
+        if (moveSpeed != other.moveSpeed) return false
         if (rawOptions != null) {
             if (other.rawOptions == null) return false
             if (!rawOptions.contentEquals(other.rawOptions)) return false
@@ -281,7 +276,7 @@ data class NPCDefinition(
         result = 31 * result + (params?.hashCode() ?: 0)
         result = 31 * result + stringId.hashCode()
         result = 31 * result + (extras?.hashCode() ?: 0)
-        result = 31 * result + unusedMovementType
+        result = 31 * result + moveSpeed
         result = 31 * result + (rawOptions?.contentHashCode() ?: 0)
         result = 31 * result + (paramRecords?.hashCode() ?: 0)
         return result

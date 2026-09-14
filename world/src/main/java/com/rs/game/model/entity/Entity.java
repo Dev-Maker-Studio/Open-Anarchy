@@ -18,7 +18,6 @@ package com.rs.game.model.entity;
 
 import com.rs.Settings;
 import org.darkan.core.model.Bonus;
-import com.rs.game.model.entity.npc.combat.MovementType;
 import org.darkan.core.model.ObjectShape;
 import org.darkan.core.cache.AnimationDefinitions;
 import org.darkan.core.model.RegionSize;
@@ -746,7 +745,7 @@ public abstract class Entity {
 		}
 
 		if (npc != null)
-			if (npc.getDefinitions().getSlowWalk())
+			if (KtExtensionsKt.getCrawls(npc.getDefinitions()))
 				if (npc.switchWalkStep())
 					return;
 

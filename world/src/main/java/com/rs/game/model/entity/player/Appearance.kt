@@ -17,7 +17,6 @@
 package com.rs.game.model.entity.player
 
 import com.rs.game.World
-import com.rs.utils.aBool4872
 import com.rs.utils.basId
 import com.rs.utils.rotate180Animation
 import com.rs.utils.rotate90LeftAnimation
@@ -112,7 +111,7 @@ class Appearance {
 
         val appearance = PlayerAppearanceData(
             male = isMale,
-            npcTransformSizeFlag = npcDefs != null && npcDefs.aBool4872,
+            npcTransformSizeFlag = npcDefs != null && npcDefs.aBoolean2883,
             showSkillTotal = showSkillTotal,
             title = if (hasTitle) AppearanceTitle(player.formattedTitle, isTitleAfter(title) || player.isTitleAfter) else null,
             skullIcon = if (player.hasSkull()) player.skullId else -1,

@@ -102,5 +102,8 @@ written as the developer's own.
   it only when the change touches what it covers. Never wire a test into every build.
 - Game content follows `content-development` (world plugins, dialogues, cache definitions,
   imported assets, the hand-off to the user); clientscripts follow `cs2-engineer`.
+- Plugin hooks follow `kotlin-plugins`: top-level `@ServerStartupEvent` functions using the
+  `com.rs.plugin.kts` DSL. A file still using static `XHandler` fields (Java or `@JvmField`) is
+  converted properly, the whole file, whenever it is touched.
 - `cache-source` is a submodule: cache-side changes are a commit there, pushed, and the pointer
   bumped in the server commit.

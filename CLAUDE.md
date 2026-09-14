@@ -70,7 +70,11 @@ In short:
 
 Game content - world-module plugins and dialogues, cache definitions, imported assets - follows
 `.claude/skills/content-development/SKILL.md` (the same hook injects it for `world/src` and the
-definition, model and catalog paths of `cache-source/`). Clientscript, interface and graphic work in `cache-source/` also follows
+definition, model and catalog paths of `cache-source/`). Plugin hooks follow
+`.claude/skills/kotlin-plugins/SKILL.md` (injected for `world/src/main`): top-level
+`@ServerStartupEvent` functions using the `com.rs.plugin.kts` DSL, in compiled Kotlin, never
+`.plugin.kts` scripts. Static `new XHandler(...)` / `@JvmField` handler fields are deprecated, and a
+file using them is converted properly whenever it is touched. Clientscript, interface and graphic work in `cache-source/` also follows
 `.claude/skills/cs2-engineer/SKILL.md` (the same hook injects it for those paths); add what you learn
 about the client to it in the same change.
 

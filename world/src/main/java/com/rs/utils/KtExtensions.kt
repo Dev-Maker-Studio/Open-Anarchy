@@ -15,7 +15,7 @@ import world.gregs.voidps.type.Tile
 import org.darkan.core.model.Bonus
 import org.darkan.core.model.Item
 import org.darkan.core.Utils.getDistance
-import com.rs.game.model.entity.npc.combat.MovementType
+import org.darkan.core.model.MoveType
 
 fun Set<Entity>.closestOrNull(tile: Tile): Entity? = this.minByOrNull { entity -> getDistance(entity.tile, tile) }
 
@@ -192,10 +192,6 @@ val ItemDefinition.value: Int get() = cost
 
 // --- Additional NPCDefinition extensions for Appearance compat ---
 
-/**
- * Legacy field: whether NPC visually walks half-speed. Maps to `slowWalk`.
- */
-val NPCDefinition.aBool4872: Boolean get() = slowWalk
 
 /**
  * Legacy field: NPC walking animation. Maps to renderEmote lookup via BAS.
@@ -252,12 +248,7 @@ fun NPCDefinition.getAttackDelay(): Int {
     return params?.get(14) as? Int ?: 4
 }
 
-/**
- * Gets the NPC's movement type.
- * Maps slowWalk=true to HALF_WALK, otherwise NORMAL.
- */
-val NPCDefinition.movementType: MovementType get() =
-    if (slowWalk) MovementType.HALF_WALK else MovementType.NORMAL
+val NPCDefinition.crawls: Boolean get() = moveSpeed == MoveType.CRAWL.id
 
 // getSize(), getKeyForValue(), getValues() are now member functions on EnumDefinition
 
