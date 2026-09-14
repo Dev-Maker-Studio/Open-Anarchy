@@ -145,8 +145,8 @@ Names follow the identified names around them (`world_select_stars_0` -> `world_
 Read the client at `~/darkan/darkan-bot` (Kotlin) for anything below you are unsure of; the CS2
 ops live in `com/jagex/game/runetek5/config/rsinterface/cs2/ops/`, hover and click dispatch in
 `graphics/ifcomponent/InterfaceRenderer.kt`. Read it for what an opcode does, never for what it is
-called: opcode names are Jagex's 727 names from `docs/reference/cs2-opcodes-727.txt`, and the
-client enum's names are often wrong.
+called: opcode names are Jagex's 727 names, and the client enum's names are often wrong. A new or
+corrected opcode is added to the `Cs2Op` enum by hand.
 
 - **Hook setters, by when the client fires them**: `ccSetOnMouseOver` once as the pointer enters,
   `ccSetOnMouseRepeat` every cycle it stays, `ccSetOnMouseLeave` as it leaves; `ccSetOnOp` when an

@@ -117,18 +117,18 @@ private class TypeCodeRule(
     val resultChar: Int? = null,
 )
 
-private val TYPE_CODE_RULES: Map<String, TypeCodeRule> = mapOf(
+private val TYPE_CODE_RULES: Map<Cs2Op, TypeCodeRule> = mapOf(
     // enumOp(keyType, valueType, enum, key) -> value
-    "ENUM" to TypeCodeRule(mapOf(3 to 0), resultChar = 1),
+    Cs2Op.ENUM to TypeCodeRule(mapOf(3 to 0), resultChar = 1),
     // enumGetreversecount(valueType, enum, value) -> count
-    "ENUM_GETREVERSECOUNT" to TypeCodeRule(mapOf(2 to 0)),
+    Cs2Op.ENUM_GETREVERSECOUNT to TypeCodeRule(mapOf(2 to 0)),
     // enumGetreverseindex(valueType, keyType, enum, value, index) -> key
-    "ENUM_GETREVERSEINDEX" to TypeCodeRule(mapOf(3 to 0), resultChar = 1),
+    Cs2Op.ENUM_GETREVERSEINDEX to TypeCodeRule(mapOf(3 to 0), resultChar = 1),
     // enumGetreverseindexString(keyType, enum, index, text) -> key
-    "ENUM_GETREVERSEINDEX_STRING" to TypeCodeRule(emptyMap(), resultChar = 0),
+    Cs2Op.ENUM_GETREVERSEINDEX_STRING to TypeCodeRule(emptyMap(), resultChar = 0),
     // enumHasoutput(valueType, enum, key) -> flag; the key's own type is the
     // enum's key type, which the call does not say.
-    "ENUM_HASOUTPUT" to TypeCodeRule(emptyMap()),
+    Cs2Op.ENUM_HASOUTPUT to TypeCodeRule(emptyMap()),
 )
 
 /**
@@ -586,7 +586,7 @@ class Cs2Types private constructor(
                 if (target.type != Cs2Type.INT) return@forEachIndexed
                 val produced = when (call) {
                     is ScriptCall -> returnSymbol(call.scriptId, index)
-                    is OpCall -> resultSymbol(call.op.opName, index)
+                    is OpCall -> resultSymbol(call.op.name, index)
                     else -> null
                 }
                 unify(symbolOf(target), produced)
@@ -647,7 +647,7 @@ class Cs2Types private constructor(
 
         private fun opCall(value: OpCall): OpCall {
             val op = value.op
-            val rule = TYPE_CODE_RULES[op.opName]
+            val rule = TYPE_CODE_RULES[op]
             val ints = value.args.filter { it.type == Cs2Type.INT }
             var intIndex = 0
             val args = value.args.map { argument ->
@@ -660,12 +660,12 @@ class Cs2Types private constructor(
                     // An enum lookup says what its key is in one of its own
                     // arguments, which is better than anything guessed.
                     described != null -> described
-                    else -> learnedArguments[argumentSlot(op.opName, index)] ?: ArgType.INT
+                    else -> learnedArguments[argumentSlot(op.name, index)] ?: ArgType.INT
                 }
                 // A slot a type code already describes is not one to guess at.
                 val describable = rule?.typedArgs?.containsKey(index) == true
                 if (learning && declared == ArgType.INT && kind == ArgType.INT && !describable) {
-                    noteArgument(op.opName, index, argument)
+                    noteArgument(op.name, index, argument)
                 }
                 val source = when {
                     declared != ArgType.INT -> "opcode argument"
@@ -676,7 +676,7 @@ class Cs2Types private constructor(
             }
             // What the call leaves behind: a param's own type, the type code an
             // enum lookup was given, or whatever the corpus learned.
-            val result = resultSymbol(op.opName, 0)
+            val result = resultSymbol(op.name, 0)
             val described = rule?.resultChar?.let { typeCharAt(ints, it) }
             when {
                 described != null -> declare(result, described)
@@ -764,7 +764,7 @@ class Cs2Types private constructor(
                 is LocalRef -> localOf(value.slot, value.type)
                 is VarRef -> if (tracked(value.space)) varSymbol(value.space, value.id) else null
                 is TempRef -> tempSymbol(fn.scriptId, value.name)
-                is OpCall -> resultSymbol(value.op.opName, 0)
+                is OpCall -> resultSymbol(value.op.name, 0)
                 is ScriptCall -> returnSymbol(value.scriptId, 0)
                 else -> null
             }
@@ -807,7 +807,7 @@ class Cs2Types private constructor(
         private fun noteResult(value: Expr, kind: ArgType, source: String) {
             val call = value as? OpCall ?: return
             if (call.op.kind == OpKind.PARAM || source !in AUTHORITATIVE) return
-            val slot = resultSymbol(call.op.opName, 0)
+            val slot = resultSymbol(call.op.name, 0)
             if (global.kindOf(slot) != null || slot in global.conflicts) return
             vote(resultEvidence, slot, kind)
         }

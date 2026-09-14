@@ -493,7 +493,7 @@ object Cs2Names {
     /** Names that already mean something at the top level of a decompiled file. */
     private val reservedGlobals: Set<String> by lazy {
         val out = HashSet<String>()
-        Cs2Opcodes.all.mapTo(out) { it.tsName }
+        Cs2Op.entries.mapTo(out) { it.tsName }
         out.addAll(Cs2Declarations.HELPERS)
         out.addAll(NAMESPACES.values)
         out.addAll(Cs2Identifiers.RESERVED_WORDS)

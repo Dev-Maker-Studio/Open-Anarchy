@@ -18,7 +18,6 @@ import org.darkan.cs2.Cs2Layout
 import org.darkan.cs2.Cs2NameSync
 import org.darkan.cs2.Cs2Names
 import org.darkan.cs2.Cs2Op
-import org.darkan.cs2.Cs2Opcodes
 import org.darkan.cs2.Cs2OperandInference
 import org.darkan.cs2.Cs2Script
 import org.darkan.cs2.Cs2SourceProject
@@ -418,8 +417,8 @@ private fun cs2Analyse(cache: Cache) {
 private fun printSuspectOpcodes(cache: Cache, report: Cs2Analyzer.Report) {
     val scripts = Cs2Cache(cache)
     val failing = report.problems.map { it.scriptId }.toSet()
-    val inFailing = HashMap<String, Int>()
-    val inPassing = HashMap<String, Int>()
+    val inFailing = HashMap<Cs2Op, Int>()
+    val inPassing = HashMap<Cs2Op, Int>()
 
     for (id in scripts.scriptIds()) {
         val script = try {
@@ -427,7 +426,7 @@ private fun printSuspectOpcodes(cache: Cache, report: Cs2Analyzer.Report) {
         } catch (e: Exception) {
             continue
         }
-        val used = script.instructions.mapTo(HashSet()) { it.op.opName }
+        val used = script.instructions.mapTo(HashSet()) { it.op }
         val into = if (id in failing) inFailing else inPassing
         used.forEach { into[it] = (into[it] ?: 0) + 1 }
     }
@@ -436,23 +435,22 @@ private fun printSuspectOpcodes(cache: Cache, report: Cs2Analyzer.Report) {
     val passCount = (report.analysed - failing.size).coerceAtLeast(1)
     val ranked = inFailing.entries
         .filter { it.value >= 3 }
-        .map { (name, count) ->
+        .map { (op, count) ->
             val failRate = count.toDouble() / failCount
-            val passRate = (inPassing[name] ?: 0).toDouble() / passCount
-            Triple(name, failRate / (passRate + 1e-6), count)
+            val passRate = (inPassing[op] ?: 0).toDouble() / passCount
+            Triple(op, failRate / (passRate + 1e-6), count)
         }
         .sortedByDescending { it.second }
         .take(15)
 
     println()
     println("Opcodes enriched in failing scripts (likely wrong signatures):")
-    ranked.forEach { (name, enrichment, count) ->
-        val op = Cs2Opcodes.byName(name)
+    ranked.forEach { (op, enrichment, count) ->
         println(
             "  %-32s x%-8.1f in %d failing   pop(%d,%d,%d) push(%d,%d,%d)".format(
-                name, enrichment, count,
-                op?.popInt ?: 0, op?.popStr ?: 0, op?.popLong ?: 0,
-                op?.pushInt ?: 0, op?.pushStr ?: 0, op?.pushLong ?: 0,
+                op.name, enrichment, count,
+                op.popInt, op.popStr, op.popLong,
+                op.pushInt, op.pushStr, op.pushLong,
             ),
         )
     }
@@ -592,7 +590,7 @@ private fun cs2Diff(cache: Cache, scriptId: Int?) {
         // Jump distances shift as soon as anything else differs, so only flag
         // places where the actual opcode sequence diverges.
         val jump = left?.op?.let { Cs2Cfg.isConditionalBranch(it) || Cs2Cfg.isUnconditionalBranch(it) } == true
-        val same = if (jump) left?.op?.opName == right?.op?.opName else left?.toString() == right?.toString()
+        val same = if (jump) left?.op == right?.op else left?.toString() == right?.toString()
         if (same) continue
         println("%-4d %-40s %-40s".format(index, left?.toString() ?: "", right?.toString() ?: ""))
         if (++shown > 12) {
@@ -652,14 +650,14 @@ private fun cs2Run(cache: Cache, scriptId: Int?, args: List<String>) {
     val calls = ArrayList<String>()
     val host = object : NoOpCs2Host() {
         override fun invoke(op: Cs2Op, operand: Int, values: Cs2Values): Cs2Values {
-            calls.add("${op.opName}(${values.ints.joinToString(", ")}${
+            calls.add("${op.name}(${values.ints.joinToString(", ")}${
                 if (values.strings.isEmpty()) "" else ", " + values.strings.joinToString(", ") { "\"$it\"" }
             })")
             return Cs2Host.defaults(op)
         }
 
         override fun setHook(op: Cs2Op, component: Int, hook: Cs2Hook?) {
-            calls.add("${op.opName} on $component -> ${hook?.scriptId ?: "none"} args=${hook?.args?.ints}")
+            calls.add("${op.name} on $component -> ${hook?.scriptId ?: "none"} args=${hook?.args?.ints}")
         }
 
         override fun onError(message: String) = println("  error: $message")
@@ -1155,7 +1153,7 @@ private fun cs2Hotswap(cache: Cache, directory: String?, scriptId: Int?, args: L
     val calls = ArrayList<String>()
     val host = object : NoOpCs2Host() {
         override fun invoke(op: Cs2Op, operand: Int, values: Cs2Values): Cs2Values {
-            calls.add("${op.opName}(${(values.ints.map { it.toString() } + values.strings.map { "\"$it\"" }).joinToString(", ")})")
+            calls.add("${op.name}(${(values.ints.map { it.toString() } + values.strings.map { "\"$it\"" }).joinToString(", ")})")
             return Cs2Host.defaults(op)
         }
 

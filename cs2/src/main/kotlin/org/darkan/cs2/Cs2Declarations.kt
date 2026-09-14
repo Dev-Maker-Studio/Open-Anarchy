@@ -179,8 +179,8 @@ object Cs2Declarations {
         out.append(stringParams(stringParams))
         out.appendLine()
 
-        for (op in Cs2Opcodes.all.sortedBy { it.tsName }) {
-            if (op.tsName in HANDWRITTEN) continue
+        for (op in Cs2Op.entries.sortedBy { it.tsName }) {
+            if (op in HANDWRITTEN) continue
             appendOpcode(out, op, learnedArguments)
         }
         return out.toString()
@@ -242,20 +242,20 @@ object Cs2Declarations {
 
     /** Opcodes whose shape is declared by hand below rather than derived. */
     private val HANDWRITTEN = setOf(
-        "pushConstantInt", "pushConstantString", "pushLongConstant",
-        "pushIntLocal", "pushStringLocal", "pushLongLocal",
-        "popIntLocal", "popStringLocal", "popLongLocal",
-        "popIntDiscard", "popStringDiscard", "popLongDiscard",
-        "pushVar", "popVar", "pushVarbit", "popVarbit",
-        "pushVarcInt", "popVarcInt", "pushVarcString", "popVarcString",
-        "getVarpOld", "getVarpbitOld", "getVarnOld", "getVarnbitOld",
-        "defineArray", "pushArrayInt", "popArrayInt", "joinString",
-        "branch", "branchNot", "branchEquals", "branchLessThan", "branchGreaterThan",
-        "branchLessThanOrEquals", "branchGreaterThanOrEquals",
-        "branchIfTrue", "branchIfFalse", "switchOp", "returnOp", "gosubWithParams",
-        "longBranchNot", "longBranchEquals", "longBranchLessThan", "longBranchGreaterThan",
-        "longBranchLessThanOrEquals", "longBranchGreaterThanOrEquals",
-        "add", "sub", "multiply", "divide", "modulo", "and", "or",
+        Cs2Op.PUSH_CONSTANT_INT, Cs2Op.PUSH_CONSTANT_STRING, Cs2Op.PUSH_LONG_CONSTANT,
+        Cs2Op.PUSH_INT_LOCAL, Cs2Op.PUSH_STRING_LOCAL, Cs2Op.PUSH_LONG_LOCAL,
+        Cs2Op.POP_INT_LOCAL, Cs2Op.POP_STRING_LOCAL, Cs2Op.POP_LONG_LOCAL,
+        Cs2Op.POP_INT_DISCARD, Cs2Op.POP_STRING_DISCARD, Cs2Op.POP_LONG_DISCARD,
+        Cs2Op.PUSH_VAR, Cs2Op.POP_VAR, Cs2Op.PUSH_VARBIT, Cs2Op.POP_VARBIT,
+        Cs2Op.PUSH_VARC_INT, Cs2Op.POP_VARC_INT, Cs2Op.PUSH_VARC_STRING, Cs2Op.POP_VARC_STRING,
+        Cs2Op.GET_VARP_OLD, Cs2Op.GET_VARPBIT_OLD, Cs2Op.GET_VARN_OLD, Cs2Op.GET_VARNBIT_OLD,
+        Cs2Op.DEFINE_ARRAY, Cs2Op.PUSH_ARRAY_INT, Cs2Op.POP_ARRAY_INT, Cs2Op.JOIN_STRING,
+        Cs2Op.BRANCH, Cs2Op.BRANCH_NOT, Cs2Op.BRANCH_EQUALS, Cs2Op.BRANCH_LESS_THAN, Cs2Op.BRANCH_GREATER_THAN,
+        Cs2Op.BRANCH_LESS_THAN_OR_EQUALS, Cs2Op.BRANCH_GREATER_THAN_OR_EQUALS,
+        Cs2Op.BRANCH_IF_TRUE, Cs2Op.BRANCH_IF_FALSE, Cs2Op.SWITCH, Cs2Op.RETURN, Cs2Op.GOSUB_WITH_PARAMS,
+        Cs2Op.LONG_BRANCH_NOT, Cs2Op.LONG_BRANCH_EQUALS, Cs2Op.LONG_BRANCH_LESS_THAN, Cs2Op.LONG_BRANCH_GREATER_THAN,
+        Cs2Op.LONG_BRANCH_LESS_THAN_OR_EQUALS, Cs2Op.LONG_BRANCH_GREATER_THAN_OR_EQUALS,
+        Cs2Op.ADD, Cs2Op.SUB, Cs2Op.MULTIPLY, Cs2Op.DIVIDE, Cs2Op.MODULO, Cs2Op.AND, Cs2Op.OR,
     )
 
     private fun appendPreamble(out: StringBuilder) {
@@ -379,7 +379,7 @@ object Cs2Declarations {
     }
 
     private fun appendOpcode(out: StringBuilder, op: Cs2Op, learned: Map<String, ArgType>) {
-        out.appendLine("/** `${op.opName}` (opcode ${op.id}) */")
+        out.appendLine("/** `${op.name}` (opcode ${op.id}) */")
         // The type parameter is what lets an instruction's own operand ride along
         // as `ccCreate<1>(...)`; it is never used as a type.
         out.appendLine("declare function ${op.tsName}<Operand = void>(${parameters(op, learned)}): ${returnType(op)};")
@@ -401,7 +401,7 @@ object Cs2Declarations {
         val names = ArrayList<String>()
         repeat(op.popInt) {
             val kind = op.argTypes.getOrNull(names.size)?.takeIf { it != ArgType.INT }
-                ?: learned["${op.opName}:${names.size}"]
+                ?: learned["${op.name}:${names.size}"]
             // The alias says what the argument means; `boolean` rides along
             // because a flag is still an int underneath and `true`/`false` is
             // only a nicer spelling for its two values.

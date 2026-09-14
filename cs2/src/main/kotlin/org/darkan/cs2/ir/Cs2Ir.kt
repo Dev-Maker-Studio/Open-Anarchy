@@ -221,16 +221,16 @@ data class Compare(
     /** The operator the opcode itself means, ignoring [negated]. */
     val naturalSymbol: String
         get() {
-            return when (comparison.opName.removePrefix("LONG_")) {
-                "BRANCH_EQUALS" -> "=="
-                "BRANCH_NOT" -> "!="
-                "BRANCH_LESS_THAN" -> "<"
-                "BRANCH_GREATER_THAN" -> ">"
-                "BRANCH_LESS_THAN_OR_EQUALS" -> "<="
-                "BRANCH_GREATER_THAN_OR_EQUALS" -> ">="
-                "BRANCH_IF_TRUE" -> "=="
-                "BRANCH_IF_FALSE" -> "=="
-                else -> error("Not a comparison: ${comparison.opName}")
+            return when (comparison) {
+                Cs2Op.BRANCH_EQUALS, Cs2Op.LONG_BRANCH_EQUALS -> "=="
+                Cs2Op.BRANCH_NOT, Cs2Op.LONG_BRANCH_NOT -> "!="
+                Cs2Op.BRANCH_LESS_THAN, Cs2Op.LONG_BRANCH_LESS_THAN -> "<"
+                Cs2Op.BRANCH_GREATER_THAN, Cs2Op.LONG_BRANCH_GREATER_THAN -> ">"
+                Cs2Op.BRANCH_LESS_THAN_OR_EQUALS, Cs2Op.LONG_BRANCH_LESS_THAN_OR_EQUALS -> "<="
+                Cs2Op.BRANCH_GREATER_THAN_OR_EQUALS, Cs2Op.LONG_BRANCH_GREATER_THAN_OR_EQUALS -> ">="
+                Cs2Op.BRANCH_IF_TRUE -> "=="
+                Cs2Op.BRANCH_IF_FALSE -> "=="
+                else -> error("Not a comparison: ${comparison.name}")
             }
         }
 

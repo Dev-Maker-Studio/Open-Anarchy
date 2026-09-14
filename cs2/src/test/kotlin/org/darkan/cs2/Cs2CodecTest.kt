@@ -13,8 +13,6 @@ import kotlin.test.assertTrue
  */
 class Cs2CodecTest {
 
-    private fun op(name: String) = Cs2Opcodes.byName(name) ?: error("no opcode $name")
-
     private fun script(
         name: String?,
         instructions: List<Cs2Instruction>,
@@ -38,10 +36,10 @@ class Cs2CodecTest {
         val original = script(
             name = "test_script",
             instructions = listOf(
-                Cs2Instruction(op("PUSH_CONSTANT_STRING"), strOperand = "hello \"world\""),
-                Cs2Instruction(op("PUSH_LONG_CONSTANT"), longOperand = -1234567890123L),
-                Cs2Instruction(op("PUSH_CONSTANT_INT"), intOperand = Int.MIN_VALUE),
-                Cs2Instruction(op("RETURN"), intOperand = 0),
+                Cs2Instruction(Cs2Op.PUSH_CONSTANT_STRING, strOperand = "hello \"world\""),
+                Cs2Instruction(Cs2Op.PUSH_LONG_CONSTANT, longOperand = -1234567890123L),
+                Cs2Instruction(Cs2Op.PUSH_CONSTANT_INT, intOperand = Int.MIN_VALUE),
+                Cs2Instruction(Cs2Op.RETURN, intOperand = 0),
             ),
         )
 
@@ -64,7 +62,7 @@ class Cs2CodecTest {
         )
         val original = script(
             name = null,
-            instructions = listOf(Cs2Instruction(op("RETURN"))),
+            instructions = listOf(Cs2Instruction(Cs2Op.RETURN)),
             switchTables = tables,
         )
 
@@ -79,17 +77,16 @@ class Cs2CodecTest {
     fun `an absent name decodes as null`() {
         // A bare 0 byte and an empty string are the same bytes on the wire, so an
         // empty name has to come back as null or re-encoding would not be exact.
-        val bytes = Cs2Codec.encode(script("", listOf(Cs2Instruction(op("RETURN")))))
+        val bytes = Cs2Codec.encode(script("", listOf(Cs2Instruction(Cs2Op.RETURN))))
         assertNull(Cs2Codec.decode(bytes).name)
     }
 
     @Test
     fun `the opcode table is complete and self-consistent`() {
-        assertEquals(1006, Cs2Opcodes.all.size)
-        for (entry in Cs2Opcodes.all) {
-            assertEquals(entry, Cs2Opcodes[entry.id], "id lookup disagrees for ${entry.opName}")
-            assertEquals(entry, Cs2Opcodes.byName(entry.opName), "name lookup disagrees for ${entry.opName}")
-            assertEquals(entry, Cs2Opcodes.byTsName(entry.tsName), "TS name lookup disagrees for ${entry.opName}")
+        assertEquals(1006, Cs2Op.entries.size)
+        for (entry in Cs2Op.entries) {
+            assertEquals(entry, Cs2Op[entry.id], "id lookup disagrees for $entry")
+            assertEquals(entry, Cs2Op.byTsName(entry.tsName), "TS name lookup disagrees for $entry")
         }
     }
 }
