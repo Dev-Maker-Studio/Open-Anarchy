@@ -63,8 +63,8 @@ class Cs2Lifter(
     private var tempCounter = 0
 
     private val binaryOperators = mapOf(
-        "ADD" to "+", "SUB" to "-", "MULTIPLY" to "*", "DIVIDE" to "/",
-        "MODULO" to "%", "AND" to "&", "OR" to "|",
+        Cs2Op.ADD to "+", Cs2Op.SUB to "-", Cs2Op.MULTIPLY to "*", Cs2Op.DIVIDE to "/",
+        Cs2Op.MODULO to "%", Cs2Op.AND to "&", Cs2Op.OR to "|",
     )
 
     fun lift(block: Cs2Cfg.Block, entry: StackState): LiftedBlock {
@@ -129,7 +129,7 @@ class Cs2Lifter(
                 val popped = ArrayList<Expr>(run)
                 for (offset in 0 until run) {
                     val store = script[index + offset]
-                    val type = storeType(store.op.opName)!!
+                    val type = storeType(store.op)!!
                     stores.add(storeTarget(store, type))
                     popped.add(pop(type))
                 }
@@ -175,23 +175,23 @@ class Cs2Lifter(
     }
 
     /** The stack a single-value store consumes, or null when it is not one. */
-    private fun storeType(opName: String): Cs2Type? = when (opName) {
-        "POP_INT_LOCAL", "POP_VAR", "POP_VARBIT", "POP_VARC_INT" -> Cs2Type.INT
-        "POP_STRING_LOCAL", "POP_VARC_STRING" -> Cs2Type.STRING
-        "POP_LONG_LOCAL" -> Cs2Type.LONG
+    private fun storeType(op: Cs2Op): Cs2Type? = when (op) {
+        Cs2Op.POP_INT_LOCAL, Cs2Op.POP_VAR, Cs2Op.POP_VARBIT, Cs2Op.POP_VARC_INT -> Cs2Type.INT
+        Cs2Op.POP_STRING_LOCAL, Cs2Op.POP_VARC_STRING -> Cs2Type.STRING
+        Cs2Op.POP_LONG_LOCAL -> Cs2Type.LONG
         else -> null
     }
 
     /** Where a single-value store puts its value. */
     private fun storeTarget(instruction: Cs2Instruction, type: Cs2Type): Expr =
-        when (instruction.op.opName) {
-            "POP_INT_LOCAL", "POP_STRING_LOCAL", "POP_LONG_LOCAL" ->
+        when (instruction.op) {
+            Cs2Op.POP_INT_LOCAL, Cs2Op.POP_STRING_LOCAL, Cs2Op.POP_LONG_LOCAL ->
                 LocalRef(instruction.intOperand, type)
-            "POP_VAR" -> VarRef(VarSpace.VARP, instruction.intOperand, Cs2Type.INT)
-            "POP_VARBIT" -> VarRef(VarSpace.VARBIT, instruction.intOperand, Cs2Type.INT)
-            "POP_VARC_INT" -> VarRef(VarSpace.VARC, instruction.intOperand, Cs2Type.INT)
-            "POP_VARC_STRING" -> VarRef(VarSpace.VARC_STRING, instruction.intOperand, Cs2Type.STRING)
-            else -> error("Not a store: ${instruction.op.opName}")
+            Cs2Op.POP_VAR -> VarRef(VarSpace.VARP, instruction.intOperand, Cs2Type.INT)
+            Cs2Op.POP_VARBIT -> VarRef(VarSpace.VARBIT, instruction.intOperand, Cs2Type.INT)
+            Cs2Op.POP_VARC_INT -> VarRef(VarSpace.VARC, instruction.intOperand, Cs2Type.INT)
+            Cs2Op.POP_VARC_STRING -> VarRef(VarSpace.VARC_STRING, instruction.intOperand, Cs2Type.STRING)
+            else -> error("Not a store: ${instruction.op.name}")
         }
 
     /**
@@ -202,20 +202,20 @@ class Cs2Lifter(
      * order cannot be recovered positionally, so it is left as separate stores.
      */
     private fun storeRunLength(index: Int, end: Int): Int {
-        val type = storeType(script[index].op.opName) ?: return 0
+        val type = storeType(script[index].op) ?: return 0
         var length = 0
-        while (index + length < end && storeType(script[index + length].op.opName) == type) length++
+        while (index + length < end && storeType(script[index + length].op) == type) length++
         return length
     }
 
     private fun liftCondition(op: Cs2Op, pop: (Cs2Type) -> Expr): Compare {
         // `BRANCH_IF_TRUE` / `BRANCH_IF_FALSE` compare a single value against a
         // literal; everything else pops both sides.
-        val longs = op.opName.startsWith("LONG_")
+        val longs = Cs2Cfg.isLongBranch(op)
         val type = if (longs) Cs2Type.LONG else Cs2Type.INT
-        return when (op.opName) {
-            "BRANCH_IF_TRUE" -> Compare(op, pop(type), IntConst(1), negated = false)
-            "BRANCH_IF_FALSE" -> Compare(op, pop(type), IntConst(0), negated = false)
+        return when (op) {
+            Cs2Op.BRANCH_IF_TRUE -> Compare(op, pop(type), IntConst(1), negated = false)
+            Cs2Op.BRANCH_IF_FALSE -> Compare(op, pop(type), IntConst(0), negated = false)
             else -> {
                 val right = pop(type)
                 val left = pop(type)
@@ -235,49 +235,49 @@ class Cs2Lifter(
         val op = instruction.op
         val operand = instruction.intOperand
 
-        when (op.opName) {
-            "PUSH_CONSTANT_INT" -> push(IntConst(operand))
-            "PUSH_CONSTANT_STRING" -> push(StrConst(instruction.strOperand ?: ""))
-            "PUSH_LONG_CONSTANT" -> push(LongConst(instruction.longOperand))
+        when (op) {
+            Cs2Op.PUSH_CONSTANT_INT -> push(IntConst(operand))
+            Cs2Op.PUSH_CONSTANT_STRING -> push(StrConst(instruction.strOperand ?: ""))
+            Cs2Op.PUSH_LONG_CONSTANT -> push(LongConst(instruction.longOperand))
 
-            "PUSH_INT_LOCAL" -> push(LocalRef(operand, Cs2Type.INT))
-            "PUSH_STRING_LOCAL" -> push(LocalRef(operand, Cs2Type.STRING))
-            "PUSH_LONG_LOCAL" -> push(LocalRef(operand, Cs2Type.LONG))
+            Cs2Op.PUSH_INT_LOCAL -> push(LocalRef(operand, Cs2Type.INT))
+            Cs2Op.PUSH_STRING_LOCAL -> push(LocalRef(operand, Cs2Type.STRING))
+            Cs2Op.PUSH_LONG_LOCAL -> push(LocalRef(operand, Cs2Type.LONG))
 
-            "POP_INT_LOCAL" -> statements.add(LocalAssign(operand, Cs2Type.INT, pop(Cs2Type.INT), false))
-            "POP_STRING_LOCAL" -> statements.add(LocalAssign(operand, Cs2Type.STRING, pop(Cs2Type.STRING), false))
-            "POP_LONG_LOCAL" -> statements.add(LocalAssign(operand, Cs2Type.LONG, pop(Cs2Type.LONG), false))
+            Cs2Op.POP_INT_LOCAL -> statements.add(LocalAssign(operand, Cs2Type.INT, pop(Cs2Type.INT), false))
+            Cs2Op.POP_STRING_LOCAL -> statements.add(LocalAssign(operand, Cs2Type.STRING, pop(Cs2Type.STRING), false))
+            Cs2Op.POP_LONG_LOCAL -> statements.add(LocalAssign(operand, Cs2Type.LONG, pop(Cs2Type.LONG), false))
 
-            "POP_INT_DISCARD" -> statements.add(ExprStmt(pop(Cs2Type.INT)))
-            "POP_STRING_DISCARD" -> statements.add(ExprStmt(pop(Cs2Type.STRING)))
-            "POP_LONG_DISCARD" -> statements.add(ExprStmt(pop(Cs2Type.LONG)))
+            Cs2Op.POP_INT_DISCARD -> statements.add(ExprStmt(pop(Cs2Type.INT)))
+            Cs2Op.POP_STRING_DISCARD -> statements.add(ExprStmt(pop(Cs2Type.STRING)))
+            Cs2Op.POP_LONG_DISCARD -> statements.add(ExprStmt(pop(Cs2Type.LONG)))
 
-            "PUSH_VAR" -> push(VarRef(VarSpace.VARP, operand, Cs2Type.INT))
-            "POP_VAR" -> statements.add(VarAssign(VarRef(VarSpace.VARP, operand, Cs2Type.INT), pop(Cs2Type.INT)))
-            "PUSH_VARBIT" -> push(VarRef(VarSpace.VARBIT, operand, Cs2Type.INT))
-            "POP_VARBIT" -> statements.add(VarAssign(VarRef(VarSpace.VARBIT, operand, Cs2Type.INT), pop(Cs2Type.INT)))
-            "PUSH_VARC_INT" -> push(VarRef(VarSpace.VARC, operand, Cs2Type.INT))
-            "POP_VARC_INT" -> statements.add(VarAssign(VarRef(VarSpace.VARC, operand, Cs2Type.INT), pop(Cs2Type.INT)))
-            "PUSH_VARC_STRING" -> push(VarRef(VarSpace.VARC_STRING, operand, Cs2Type.STRING))
-            "POP_VARC_STRING" ->
+            Cs2Op.PUSH_VAR -> push(VarRef(VarSpace.VARP, operand, Cs2Type.INT))
+            Cs2Op.POP_VAR -> statements.add(VarAssign(VarRef(VarSpace.VARP, operand, Cs2Type.INT), pop(Cs2Type.INT)))
+            Cs2Op.PUSH_VARBIT -> push(VarRef(VarSpace.VARBIT, operand, Cs2Type.INT))
+            Cs2Op.POP_VARBIT -> statements.add(VarAssign(VarRef(VarSpace.VARBIT, operand, Cs2Type.INT), pop(Cs2Type.INT)))
+            Cs2Op.PUSH_VARC_INT -> push(VarRef(VarSpace.VARC, operand, Cs2Type.INT))
+            Cs2Op.POP_VARC_INT -> statements.add(VarAssign(VarRef(VarSpace.VARC, operand, Cs2Type.INT), pop(Cs2Type.INT)))
+            Cs2Op.PUSH_VARC_STRING -> push(VarRef(VarSpace.VARC_STRING, operand, Cs2Type.STRING))
+            Cs2Op.POP_VARC_STRING ->
                 statements.add(VarAssign(VarRef(VarSpace.VARC_STRING, operand, Cs2Type.STRING), pop(Cs2Type.STRING)))
-            "GET_VARP_OLD" -> push(VarRef(VarSpace.VARP, operand, Cs2Type.INT, "old"))
-            "GET_VARPBIT_OLD" -> push(VarRef(VarSpace.VARBIT, operand, Cs2Type.INT, "old"))
-            "GET_VARN_OLD" -> push(VarRef(VarSpace.VARN, operand, Cs2Type.INT, "old"))
-            "GET_VARNBIT_OLD" -> push(VarRef(VarSpace.VARNBIT, operand, Cs2Type.INT, "old"))
+            Cs2Op.GET_VARP_OLD -> push(VarRef(VarSpace.VARP, operand, Cs2Type.INT, "old"))
+            Cs2Op.GET_VARPBIT_OLD -> push(VarRef(VarSpace.VARBIT, operand, Cs2Type.INT, "old"))
+            Cs2Op.GET_VARN_OLD -> push(VarRef(VarSpace.VARN, operand, Cs2Type.INT, "old"))
+            Cs2Op.GET_VARNBIT_OLD -> push(VarRef(VarSpace.VARNBIT, operand, Cs2Type.INT, "old"))
 
-            "DEFINE_ARRAY" ->
+            Cs2Op.DEFINE_ARRAY ->
                 statements.add(ArrayDefine(operand shr 16, operand and 0xFFFF, pop(Cs2Type.INT)))
-            "PUSH_ARRAY_INT" -> push(ArrayRef(operand, pop(Cs2Type.INT)))
-            "POP_ARRAY_INT" -> {
+            Cs2Op.PUSH_ARRAY_INT -> push(ArrayRef(operand, pop(Cs2Type.INT)))
+            Cs2Op.POP_ARRAY_INT -> {
                 val value = pop(Cs2Type.INT)
                 val index = pop(Cs2Type.INT)
                 statements.add(ArrayAssign(operand, index, value))
             }
 
-            "JOIN_STRING" -> push(Join(popMany(Cs2Type.STRING, operand)))
+            Cs2Op.JOIN_STRING -> push(Join(popMany(Cs2Type.STRING, operand)))
 
-            "GOSUB_WITH_PARAMS" -> {
+            Cs2Op.GOSUB_WITH_PARAMS -> {
                 val callee = context.script(operand) ?: error("GOSUB to missing script $operand")
                 val args = argumentsInPushOrder(
                     callee.intArgsCount + callee.stringArgsCount + callee.longArgsCount,
@@ -311,7 +311,7 @@ class Cs2Lifter(
             return
         }
 
-        val symbol = binaryOperators[op.opName]
+        val symbol = binaryOperators[op]
         if (symbol != null && op.popInt == 2 && op.pushInt == 1) {
             val right = pop(Cs2Type.INT)
             val left = pop(Cs2Type.INT)
@@ -368,11 +368,11 @@ class Cs2Lifter(
         if (op.kind != OpKind.PARAM) {
             return ReturnSignature(op.pushInt, op.pushStr, op.pushLong)
         }
-        val yieldsString = if (op.opName == "ENUM") {
+        val yieldsString = if (op == Cs2Op.ENUM) {
             (intArgs.getOrNull(1) as? IntConst)?.value == 's'.code
         } else {
             val paramId = (intArgs.lastOrNull() as? IntConst)?.value
-                ?: error("${op.opName} needs a constant param id")
+                ?: error("${op.name} needs a constant param id")
             context.paramIsString(paramId)
         }
         return if (yieldsString) ReturnSignature(0, 1, 0) else ReturnSignature(1, 0, 0)
@@ -437,14 +437,14 @@ class Cs2Lifter(
         val component = if (op.popInt == 1) pop(Cs2Type.INT) else null
         val formatExpr = pop(Cs2Type.STRING)
         val format = (formatExpr as? StrConst)?.value
-            ?: error("${op.opName} needs a constant format string")
+            ?: error("${op.name} needs a constant format string")
 
         var spec = format
         var triggers = emptyList<Expr>()
         if (op.hasTriggerArray && spec.endsWith("Y")) {
             spec = spec.dropLast(1)
             val count = (pop(Cs2Type.INT) as? IntConst)?.value
-                ?: error("${op.opName} needs a constant trigger-list size")
+                ?: error("${op.name} needs a constant trigger-list size")
             triggers = popMany(Cs2Type.INT, count)
         }
 

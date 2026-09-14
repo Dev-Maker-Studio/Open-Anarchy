@@ -213,8 +213,8 @@ private fun reachableInstructions(script: Cs2Script): Set<Int> {
 
 /** Opcodes whose operand is a local slot, which declaration order renumbers. */
 private val LOCAL_SLOTS = setOf(
-    "PUSH_INT_LOCAL", "PUSH_STRING_LOCAL", "PUSH_LONG_LOCAL",
-    "POP_INT_LOCAL", "POP_STRING_LOCAL", "POP_LONG_LOCAL",
+    Cs2Op.PUSH_INT_LOCAL, Cs2Op.PUSH_STRING_LOCAL, Cs2Op.PUSH_LONG_LOCAL,
+    Cs2Op.POP_INT_LOCAL, Cs2Op.POP_STRING_LOCAL, Cs2Op.POP_LONG_LOCAL,
 )
 
 /**
@@ -240,7 +240,7 @@ private fun census(script: Cs2Script): MutableMap<String, Int> {
         ) {
             continue
         }
-        val key = if (op.opName in LOCAL_SLOTS) op.opName else instruction.toString()
+        val key = if (op in LOCAL_SLOTS) op.name else instruction.toString()
         out[key] = (out[key] ?: 0) + 1
     }
     return out
@@ -249,22 +249,20 @@ private fun census(script: Cs2Script): MutableMap<String, Int> {
 /** The instructions a folded-away declaration used to be. */
 private fun eliminatedInstructions(store: LocalAssign): List<String> {
     val push = when (val value = store.value) {
-        is IntConst -> Cs2Instruction(opcode("PUSH_CONSTANT_INT"), intOperand = value.value)
-        is TypedConst -> Cs2Instruction(opcode("PUSH_CONSTANT_INT"), intOperand = value.value)
-        is StrConst -> Cs2Instruction(opcode("PUSH_CONSTANT_STRING"), strOperand = value.value)
-        is LongConst -> Cs2Instruction(opcode("PUSH_LONG_CONSTANT"), longOperand = value.value)
+        is IntConst -> Cs2Instruction(Cs2Op.PUSH_CONSTANT_INT, intOperand = value.value)
+        is TypedConst -> Cs2Instruction(Cs2Op.PUSH_CONSTANT_INT, intOperand = value.value)
+        is StrConst -> Cs2Instruction(Cs2Op.PUSH_CONSTANT_STRING, strOperand = value.value)
+        is LongConst -> Cs2Instruction(Cs2Op.PUSH_LONG_CONSTANT, longOperand = value.value)
         else -> return emptyList()
     }
-    val name = when (store.type) {
-        Cs2Type.INT -> "POP_INT_LOCAL"
-        Cs2Type.STRING -> "POP_STRING_LOCAL"
-        Cs2Type.LONG -> "POP_LONG_LOCAL"
+    val pop = when (store.type) {
+        Cs2Type.INT -> Cs2Op.POP_INT_LOCAL
+        Cs2Type.STRING -> Cs2Op.POP_STRING_LOCAL
+        Cs2Type.LONG -> Cs2Op.POP_LONG_LOCAL
     }
     // The store side is counted by opcode alone, like every other local access.
-    return listOf(push.toString(), name)
+    return listOf(push.toString(), pop.name)
 }
-
-private fun opcode(name: String) = Cs2Opcodes.byName(name) ?: error("Missing opcode $name")
 
 /**
  * Null when the rebuilt script does exactly the original's reachable work, or a
@@ -315,9 +313,9 @@ private class RecordingHost(private val trace: MutableList<String>) : NoOpCs2Hos
     private val varcStrings = HashMap<Int, String>()
 
     override fun invoke(op: Cs2Op, operand: Int, args: Cs2Values): Cs2Values {
-        val ordinal = ordinals.merge(op.opName, 1, Int::plus) ?: 1
-        trace.add("${op.opName}<$operand>(${args.ints}, ${args.strings}, ${args.longs})")
-        val seed = mix(op.opName.hashCode(), ordinal, args)
+        val ordinal = ordinals.merge(op.name, 1, Int::plus) ?: 1
+        trace.add("${op.name}<$operand>(${args.ints}, ${args.strings}, ${args.longs})")
+        val seed = mix(op.name.hashCode(), ordinal, args)
         return Cs2Values(
             ints = List(maxOf(op.pushInt, 1)) { pseudo(seed, it) },
             strings = List(maxOf(op.pushStr, 1)) { "v${pseudo(seed, 64 + it)}" },
@@ -326,7 +324,7 @@ private class RecordingHost(private val trace: MutableList<String>) : NoOpCs2Hos
     }
 
     override fun setHook(op: Cs2Op, component: Int, hook: Cs2Hook?) {
-        trace.add("${op.opName} hook on $component -> ${hook?.scriptId} ${hook?.args} ${hook?.triggers}")
+        trace.add("${op.name} hook on $component -> ${hook?.scriptId} ${hook?.args} ${hook?.triggers}")
     }
 
     override fun varp(id: Int) = varps.getOrPut(id) { read("varp", id) }

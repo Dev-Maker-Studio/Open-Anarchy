@@ -84,9 +84,9 @@ fun effectiveSignature(
         }
 
         OpKind.PARAM -> {
-            val yieldsString = if (op.opName == "ENUM") enumYieldsString(stacks) else {
+            val yieldsString = if (op == Cs2Op.ENUM) enumYieldsString(stacks) else {
                 val paramId = stacks.topInt()
-                    ?: error("${op.opName} needs a constant param id to resolve its result type")
+                    ?: error("${op.name} needs a constant param id to resolve its result type")
                 context.paramIsString(paramId)
             }
             if (yieldsString) {
@@ -113,7 +113,7 @@ private fun enumYieldsString(stacks: SymbolicStacks): Boolean {
 
 private fun hookSignature(op: Cs2Op, stacks: SymbolicStacks): StackEffect {
     val format = stacks.topString()
-        ?: error("${op.opName} needs a constant format string")
+        ?: error("${op.name} needs a constant format string")
 
     var popInt = op.popInt + 1 // component id (IF_ forms) plus the callback script id
     var popStr = 1 // the format string itself
@@ -125,7 +125,7 @@ private fun hookSignature(op: Cs2Op, stacks: SymbolicStacks): StackEffect {
         // The trigger list is `count` ints preceded by the count itself. It sits
         // under the component id for the IF_ forms, and on top for the CC_ ones.
         val count = stacks.intBelowTop(op.popInt)
-            ?: error("${op.opName} needs a constant trigger-list size")
+            ?: error("${op.name} needs a constant trigger-list size")
         popInt += 1 + count
     }
     for (char in spec) {

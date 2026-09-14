@@ -30,7 +30,7 @@ All of these run through the tools CLI:
 | `types [OP:slot]` | What the corpus says constants mean; with a slot, why it says so |
 | `diff <id>` | Shows where one script's re-compiled bytecode diverges |
 | `verify` | Decodes and re-encodes every script, asserting byte identity |
-| `analyse` | Stack-simulates every script; confirms all 1006 opcode signatures |
+| `analyse` | Stack-simulates every script; confirms every opcode's stack effect balances |
 | `dump <id>` / `info <id>` | Raw instruction listing / header |
 | `run <id> [args]` | Executes a script on the VM against a no-op host |
 | `interface <id>` | Runs one interface's load scripts and reports what changed |
@@ -71,38 +71,23 @@ a decompiled folder instead - see *Compiling from server code*.
 the run of pure tests and lone jumps with exactly two ways out - into the body, or past it -
 reads back as one `&&`/`||` expression, which is what leaves the corpus with no `goto` at all.
 
-## Where the opcode table comes from
+## The opcode table
 
-It is generated, not hand-written. `tools/scripts/extract_cs2_sigs.py` reads the
-deobfuscated client's opcode handlers and derives each opcode's stack effect; the scan is
-brace-aware, so `if`/`else` arms count once rather than twice and an early `return` is
-treated as an alternative to the rest of the handler.
-`tools/scripts/gen_cs2_opcodes.py` turns that into `Cs2Opcodes.kt`.
+`Cs2Op.kt` is the table: one enum entry per opcode with its id, TypeScript name, operand size,
+stack effect, hook trigger flag and argument types. It is edited by hand, and a new or corrected
+opcode is a change to its entry.
 
-The names are Jagex's. `docs/reference/cs2-opcodes-727.txt` is zwyz's list of the 727
-clientscript opcodes (`name,opcode`, 712 rows), from
-<https://raw.githubusercontent.com/zwyz/rs3-cache/refs/heads/master/data/opcodes-727-309.txt>,
-and every opcode it lists takes its name from it; the client enum's names are not trusted, and a
-good number of them sit on the wrong opcode. The other 294 opcodes, which no 727 script uses, keep
-the client's name unless the list gives that name to a different opcode - those nine are named
-from what their handler does (`KEYHELD_ALT` on 290, `IF_SETONOPT` on 508, `WORLDMAP_GETCONFIGSIZE`
-on 306, ...). The TypeScript name is the camelCase split of the name, with `Op` appended where it
-would be a TypeScript keyword or a clientscript's own name (`userflowflagsOp`).
+The names are Jagex's 727 names, checked against zwyz's list
+<https://raw.githubusercontent.com/zwyz/rs3-cache/refs/heads/master/data/opcodes-727-309.txt>;
+the client enum's names are not trusted, and a good number of them sit on the wrong opcode. An
+opcode the list does not cover is named from what its handler does. The stack effects come from
+reading the opcode's handler in the client. The TypeScript name is the camelCase split of the name,
+with `Op` appended where it would be a TypeScript keyword or a clientscript's own name
+(`userflowflagsOp`).
 
 A rename changes every call site in a cache source tree's `clientscripts/`: rewrite the calls over
 the token stream, applying the whole old-to-new map at once so names that trade places swap rather
 than collapse, and prove the tree compiles to the same bytes before and after.
-
-Rerun both after changing the client's CS2 engine:
-
-```bash
-python3 tools/scripts/extract_cs2_sigs.py /tmp/sigs.json
-python3 tools/scripts/gen_cs2_opcodes.py /tmp/sigs.json \
-    cs2/src/main/kotlin/org/darkan/cs2/Cs2Opcodes.kt
-```
-
-There are **1006** opcodes. The client's enum carried 44 of them as unnamed `instrNNNN`
-entries; those now have real names.
 
 ## What the decompiler changes, and what it never changes
 
