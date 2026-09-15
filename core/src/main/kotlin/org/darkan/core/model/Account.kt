@@ -2,6 +2,7 @@ package org.darkan.core.model
 
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
+import org.bson.codecs.pojo.annotations.BsonIgnore
 import org.darkan.core.formatPlayerNameForDisplay
 import org.darkan.core.formatPlayerNameForProtocol
 import java.text.SimpleDateFormat
@@ -56,6 +57,7 @@ class Account {
     fun muteDays(days: Int) = muteSpecific(days * (24 * 60 * 60 * 1000L))
     fun mutePerm() { muted = Long.MAX_VALUE }
     fun unmute() { muted = 0 }
+    @BsonIgnore
     fun getUnmuteDate() = SimpleDateFormat("dd MMM yyyy HH:mm:ss:SSS Z").format(Date(muted))
 
     fun checkBanned() = System.currentTimeMillis() < banned
@@ -63,6 +65,7 @@ class Account {
     fun banDays(days: Int) = banSpecific(days * (24 * 60 * 60 * 1000L))
     fun banPerm() { banned = Long.MAX_VALUE }
     fun unban() { banned = 0 }
+    @BsonIgnore
     fun getUnbanDate() = SimpleDateFormat("dd MMM yyyy HH:mm:ss:SSS Z").format(Date(banned))
 
     fun copyPunishments(account: Account) {

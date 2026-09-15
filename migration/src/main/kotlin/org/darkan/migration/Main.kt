@@ -16,6 +16,10 @@ Legacy -> modern database migration.
   verify --target <uri>
       Decode every target document through the modern code paths. Run with MONGO_URI=<target uri>.
 
+  roundtrip --target <uri>
+      Decode every target document, encode it back the way the servers write it, and report every
+      field that would be lost, changed or retyped. Run with MONGO_URI=<target uri>.
+
 URIs must name a database, e.g. mongodb://user:pass@host:27017/darkan-dev?authSource=admin
 """
 
@@ -51,6 +55,7 @@ fun main(args: Array<String>) {
             }
         }
         "verify" -> MongoTarget(option(options, "target")).use { verify(it) }
+        "roundtrip" -> MongoTarget(option(options, "target")).use { roundtrip(it) }
         else -> usage("Unknown command: $command")
     }
     println(if (ok) "Finished with no problems." else "Finished WITH PROBLEMS - see report above.")

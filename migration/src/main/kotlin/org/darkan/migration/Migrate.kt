@@ -6,6 +6,7 @@ import com.mongodb.client.MongoClients
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.InsertManyOptions
 import org.bson.Document
+import org.bson.types.ObjectId
 import org.darkan.core.model.ClanSetting
 import java.util.Date
 
@@ -15,7 +16,7 @@ val COLLECTIONS: Map<String, Transform> = linkedMapOf(
     "clans" to ClansTransform,
     "players" to PlayersTransform,
     "highscores" to CopyTransform,
-    "grandexchange" to CopyTransform,
+    "grandexchange" to OffersTransform,
     "logs" to LogsTransform,
 )
 
@@ -120,7 +121,15 @@ fun inspect(source: MongoTarget) {
         if (doc.containsKey("displayName") && doc["displayName"] == null) nullDisplay++
     }
     val duplicates = byEmail.filterValues { it.size > 1 }
+    val byUsername = HashMap<String, MutableList<Document>>()
+    for (doc in accounts.find().projection(Document("username", 1).append("email", 1).append("displayName", 1).append("rights", 1).append("lastIp", 1).append("banned", 1).append("passwordHash", 1)))
+        byUsername.getOrPut(doc.getString("username") ?: "<no username>") { mutableListOf() }.add(doc)
+    val duplicateUsernames = byUsername.filterValues { it.size > 1 }
     println("== accounts")
+    println("   duplicate usernames: ${duplicateUsernames.size}")
+    for ((username, docs) in duplicateUsernames)
+        for (doc in docs)
+            println("        $username -> _id=${doc["_id"]} (${(doc["_id"] as? ObjectId)?.date}) email=${doc["email"]} displayName=${doc["displayName"]} rights=${doc["rights"]} lastIp=${doc["lastIp"]} banned=${doc["banned"]} argon2=${doc.getString("passwordHash")?.startsWith("\$argon2") == true}")
     println("   argon2 hashes: $argon2, still on legacy credentials: $legacyPasswordOnly")
     println("   null email: $nullEmail, empty email: $emptyEmail, null displayName: $nullDisplay")
     println("   duplicate emails (case-insensitive): ${duplicates.size}")
