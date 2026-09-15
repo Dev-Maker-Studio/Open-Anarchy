@@ -1,5 +1,6 @@
 package org.darkan.lobby.web
 
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -11,6 +12,7 @@ import org.darkan.core.EnvVars
 import org.darkan.core.social.gateway.AnnouncementBroadcast
 import org.darkan.lobby.social.SocialGateway
 import org.darkan.lobby.web.controller.AccountsController
+import org.darkan.lobby.web.controller.SocialController
 import org.darkan.lobby.web.controller.WorldListController
 
 fun Application.configureRouting() {
@@ -28,11 +30,8 @@ fun Application.configureRouting() {
         }
 
         post("/admin/announcements") {
-            val auth = call.request.headers["Authorization"]
-            val apiKey = call.request.headers["X-API-Key"]
-            val ok = auth == "Bearer ${EnvVars.apiKey}" || apiKey == EnvVars.apiKey
-            if (!ok) {
-                return@post call.respond(buildJsonObject { put("error", "Unauthorized") })
+            if (!call.apiKeyPresented()) {
+                return@post call.respond(HttpStatusCode.Unauthorized, buildJsonObject { put("error", "Unauthorized") })
             }
             val req = call.receive<AnnouncementBroadcast>()
             SocialGateway.broadcastAnnouncement(req)
@@ -41,5 +40,11 @@ fun Application.configureRouting() {
 
         AccountsController.registerRoutes(this)
         WorldListController.registerRoutes(this)
+        SocialController.registerRoutes(this)
     }
+}
+
+fun ApplicationCall.apiKeyPresented(): Boolean {
+    val key = EnvVars.apiKey
+    return request.headers["X-API-Key"] == key || request.headers["key"] == key || request.headers["Authorization"] == "Bearer $key"
 }

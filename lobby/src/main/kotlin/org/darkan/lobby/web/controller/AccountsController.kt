@@ -11,6 +11,7 @@ import kotlinx.serialization.json.jsonObject
 import org.darkan.core.model.Account
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.web.AccountCreateRequest
+import org.darkan.lobby.web.apiKeyPresented
 
 private val passwordFields = arrayOf(Account::passwordHash.name, Account::password.name, Account::legacyPass.name)
 
@@ -21,14 +22,17 @@ object AccountsController {
                 val username = call.parameters["username"] ?: throw IllegalArgumentException("Invalid username")
                 val account = Accounts.find(username)
                     ?: return@get call.respond(HttpStatusCode.NotFound)
-                call.respond(JsonObject(Json.encodeToJsonElement(account).jsonObject.filterNot { passwordFields.contains(it.key) }))
+                call.respond(account.withoutPasswords())
             }
 
             post {
+                if (!call.apiKeyPresented()) return@post call.respond(HttpStatusCode.Unauthorized)
                 val req = call.receive<AccountCreateRequest>()
                 val account = Accounts.create(req) ?: return@post call.respond(HttpStatusCode.Conflict)
-                call.respond(HttpStatusCode.OK, account)
+                call.respond(account.withoutPasswords())
             }
         }
     }
 }
+
+private fun Account.withoutPasswords() = JsonObject(Json.encodeToJsonElement(this).jsonObject.filterNot { passwordFields.contains(it.key) })
