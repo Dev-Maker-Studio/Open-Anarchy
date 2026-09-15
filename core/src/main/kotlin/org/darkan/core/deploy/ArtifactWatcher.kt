@@ -10,9 +10,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logWarn
+import java.io.File
+import java.security.DigestInputStream
+import java.security.MessageDigest
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -23,8 +30,7 @@ import kotlin.time.Duration.Companion.seconds
  * What happens next is the caller's business - the servers use it to start the same system-update
  * countdown an admin's `::update` triggers, after which the run script's restart loop pulls the build.
  *
- * Only runs when `AUTO_UPDATE=true`; production units carry the registry token too and must never
- * self-update.
+ * Only runs when `AUTO_UPDATE=true`. Production units follow the `release` channel.
  */
 class ArtifactWatcher(
     private val artifact: String,
@@ -33,6 +39,8 @@ class ArtifactWatcher(
 ) {
     private val client = HttpClient(CIO)
     private var job: Job? = null
+    private var ignored: String? = null
+    private val runningJarSha256: String? by lazy { runningJarSha256() }
 
     fun start() {
         if (!EnvVars.autoUpdate) return
@@ -51,7 +59,12 @@ class ArtifactWatcher(
                     logWarn("Could not check for a new $artifact build: ${e.message}")
                     continue
                 } ?: continue
-                if (latest == EnvVars.buildVersion) continue
+                if (latest == EnvVars.buildVersion || latest == ignored) continue
+                if (changesNothingHere(latest)) {
+                    logInfo("Build $latest carries the same $artifact jar, cache and data as $running; not restarting for it")
+                    ignored = latest
+                    continue
+                }
                 logInfo("New $artifact build $latest detected (running $running)")
                 onNewBuild(latest)
                 break
@@ -85,6 +98,36 @@ class ArtifactWatcher(
         return if (EnvVars.autoUpdateChannel == RELEASE_CHANNEL) newestReleaseTag(body) else newestOnChannel(body, EnvVars.autoUpdateChannel)
     }
 
+    /**
+     * A release that rebuilt this artifact from the same inputs is not worth a restart: the jar
+     * checksum the registry published, the cache-source commit and (for a world) the data tree at
+     * that ref all match what this process was started from.
+     */
+    private suspend fun changesNothingHere(version: String): Boolean {
+        val running = runningJarSha256 ?: return false
+        val project = "$GITLAB_API/projects/${EnvVars.gitlabProjectId}"
+        val published = fetch("$project/packages/maven/org/darkan/$artifact/$version/$artifact-$version.jar.sha256")?.trim()?.take(64) ?: return false
+        if (!published.equals(running, ignoreCase = true)) return false
+        val ref = if (EnvVars.autoUpdateChannel == RELEASE_CHANNEL) version else EnvVars.autoUpdateChannel
+        val tree = fetch("$project/repository/tree?ref=$ref&per_page=100") ?: return false
+        if (EnvVars.cacheSourceCommit.isEmpty() || treeEntryId(tree, "cache-source") != EnvVars.cacheSourceCommit) return false
+        if (artifact == "world-server" && (EnvVars.dataTree.isEmpty() || treeEntryId(tree, "data") != EnvVars.dataTree)) return false
+        return true
+    }
+
+    private suspend fun fetch(url: String): String? {
+        val response = client.get(url) { header("PRIVATE-TOKEN", EnvVars.gitlabAccessToken) }
+        return if (response.status.isSuccess()) response.bodyAsText() else null
+    }
+
+    private fun runningJarSha256(): String? {
+        val jar = File(ArtifactWatcher::class.java.protectionDomain.codeSource.location.toURI())
+        if (!jar.isFile) return null
+        val digest = MessageDigest.getInstance("SHA-256")
+        jar.inputStream().use { input -> DigestInputStream(input, digest).use { it.readAllBytes() } }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
     companion object {
         private const val GITLAB_API = "https://gitlab.com/api/v4"
         private val VERSION = Regex("<version>([^<]+)</version>")
@@ -94,6 +137,12 @@ class ArtifactWatcher(
 
         /** The tag of the first (newest) release in a GitLab releases listing. */
         fun newestReleaseTag(releasesJson: String): String? = TAG_NAME.find(releasesJson)?.groupValues?.get(1)
+
+        /** The object id of the entry called [name] in a GitLab repository tree listing. */
+        fun treeEntryId(treeJson: String, name: String): String? =
+            Json.parseToJsonElement(treeJson).jsonArray.map { it.jsonObject }
+                .firstOrNull { it["name"]?.jsonPrimitive?.content == name }
+                ?.get("id")?.jsonPrimitive?.content
 
         /** Picks the highest-pipeline version tagged `-<channel>-` out of a maven-metadata document. */
         fun newestOnChannel(metadataXml: String, channel: String): String? =

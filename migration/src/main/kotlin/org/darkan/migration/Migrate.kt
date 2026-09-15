@@ -73,7 +73,9 @@ fun migrate(source: MongoTarget, target: MongoTarget, only: Set<String>, dryRun:
             batch.clear()
         }
 
-        for (doc in source.database.getCollection(name).find()) {
+        val sourceCollection = source.database.getCollection(name)
+        transform.prepare(sourceCollection)
+        for (doc in sourceCollection.find()) {
             report.scanned++
             val out = try {
                 transform.apply(doc, report)

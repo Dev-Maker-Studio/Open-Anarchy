@@ -18,45 +18,42 @@ CI (`.gitlab-ci.yml`) - `dev` is the only branch; releases are tags cut from it:
   the channel the beta scripts and the servers' auto-update follow (`AUTO_UPDATE_CHANNEL`, default
   `dev`, highest pipeline id wins).
 - `deploy` on a tag publishes the same two packages under the tag, and `release` creates a GitLab
-  Release named after the tag with a download link per component. The `run-*-release.sh` scripts pull
-  the newest release's jar; `AUTO_UPDATE_CHANNEL=release` makes a server restart onto new releases
-  automatically, through the same countdown.
+  Release named after the tag with a download link per component. A server on the `release`
+  channel checks the tag out and runs its jar, restarting onto new releases through the same countdown.
 
 ## Layout of a server directory
 
-Each directory is a shallow checkout of `dev` (`git clone --depth 1 -b dev git@gitlab.com:darkanrs/server.git <name>`)
-plus the untracked `.env` and jar; the run script's `git pull origin dev` keeps scripts and `data/`
-current. The repository is private, so the `trent` user on the VM needs read access: a per-host
-read-only deploy key (`ssh-keygen -t ed25519` as `trent`, registered under the project's deploy
-keys) is what `darkan-worlds` uses.
+Everything a host needs is in the repo under `deploy/`; a server is one directory plus two untracked
+env files:
 
+```bash
+deploy/install.sh <name> <lobby|world> <release|dev> [git-url] [gitlab-project-id]
+```
+
+That clones the repo (shallow, `dev`) into `/home/trent/<name>`, copies `deploy/env.<kind>.example`
+to `.env`, writes `.env.unit`, installs `deploy/darkan@.service` as `darkan@<name>` and enables it.
+Fill in the two files, then `systemctl start darkan@<name>`. A fork (the anarchy and rsps worlds) is
+installed the same way with its own git URL and project id.
 
 ```
 /home/trent/<name>/
-  run-lobby-beta.sh | run-world-beta.sh   # from the repo root; -release variants follow tagged releases
-  .env                                    # all configuration (see below); chmod 600
-  lobby-server.jar | world-server.jar     # replaced by the script on restart
+  deploy/run.sh        # tracked: the restart loop the unit runs
+  .env                 # game configuration; secrets; chmod 600
+  .env.unit            # DARKAN_KIND, AUTO_UPDATE_CHANNEL, DARKAN_GITLAB_PROJECT_ID, GITLAB_ACCESS_TOKEN, JAVA_HOME, DARKAN_JAVA_VM_ARGS
+  lobby-server.jar | world-server.jar   # downloaded by run.sh
+  .jar.version         # which build that jar is
   mainlog.txt
-  data/  plugins/                         # world only - the repo's data/ and plugins/ trees
+  data/  cache-source/ # from the checkout; data/worldConfig.json and data/world.json stay local
 ```
 
-The unit pins the JDK the build targets (Java 26) first on `PATH` for that unit only, so it never
-depends on the machine's sdkman default:
+`run.sh` on every start: for the `release` channel it fetches the newest GitLab Release's tag and
+checks it out, so `data/` and the `cache-source` pointer are exactly the release's; for a `dev`
+channel it fast-forwards to the branch head and takes the highest-pipeline package. It then
+updates the cache-source submodule, downloads that build's jar if it is not already the one on
+disk, and runs it with `BUILD_VERSION`, `CACHE_SOURCE_COMMIT` and `DATA_TREE` in the environment.
 
-```ini
-[Service]
-Environment=DARKAN_JAVA_VM_ARGS="..."
-Environment=GITLAB_ACCESS_TOKEN=...
-Environment=DARKAN_GITLAB_PROJECT_ID=67255206
-Environment=PATH=/home/trent/.sdkman/candidates/java/26.0.2-tem/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/home/trent/<name>/run-<lobby|world>-beta.sh
-WorkingDirectory=/home/trent/<name>
-User=trent
-```
-
-JDK 26 was installed with sdkman as `trent` (`sdk install java 26.0.2-tem`). Moving a unit to a new
-JDK means editing that `PATH` line, `systemctl daemon-reload` and `systemctl restart <unit>`: the
-auto-update restarts java inside the unit's own loop, so it keeps the unit's old environment.
+The JDK comes from `JAVA_HOME` in `.env.unit` (`sdk install java 26.0.2-tem` as `trent`); nothing
+in the unit depends on the machine's default `java`.
 
 ## `.env` - lobby
 
@@ -131,10 +128,12 @@ constants the legacy servers compiled in), so they need no entries unless they c
 Stop the unit, restore the backed-up unit file, `mv` the legacy directory back, `daemon-reload`,
 start. The legacy database was never modified.
 
-## Automatic updates (dev servers)
+## Automatic updates
 
-The `run-*-beta.sh` scripts start the server with `AUTO_UPDATE=true` (set `AUTO_UPDATE=false` in the unit's environment to opt out; the release scripts never set it). With it on, a server polls the registry (`AUTO_UPDATE_POLL_SECONDS`, default
-60) for a `latest` newer than the `BUILD_VERSION` the run script started it with. When one appears:
+`run.sh` starts every server with `AUTO_UPDATE=true` (put `AUTO_UPDATE=false` in `.env.unit` to opt
+out). The server polls the registry (`AUTO_UPDATE_POLL_SECONDS`, default 60) for a build newer than
+its `BUILD_VERSION` on its channel: the newest Release's tag on `release`, the highest-pipeline
+package on a branch channel. When one appears:
 
 - **world** - the same countdown an admin's `::update` starts: `SystemUpdate` timer on every client
   for `AUTO_UPDATE_COUNTDOWN_MINUTES` (default 5), then every player is saved and logged out and the
@@ -142,9 +141,12 @@ The `run-*-beta.sh` scripts start the server with `AUTO_UPDATE=true` (set `AUTO_
 - **lobby** - logins are refused with "server being updated" for the final 20 ticks, then a clean stop;
   worlds reconnect to it automatically.
 
-The run script's loop then downloads the new jar and restarts. So a deploy to dev is just: push to
-`dev`, wait for the pipeline. A server started from a local jar (blank `BUILD_VERSION`) updates to
-the first published build. Production units run the release scripts, which never enable it; they restart on purpose.
+A build that would change nothing for this server is skipped: the watcher compares the registry's
+published jar checksum with the running jar, the ref's `cache-source` commit with
+`CACHE_SOURCE_COMMIT`, and for a world the ref's `data` tree with `DATA_TREE`. A release cut for a
+world-only change therefore never restarts the lobby, and vice versa. The run loop then downloads
+the new jar and restarts. So a deploy is: push to `dev` for the dev servers, or cut a tag for
+production.
 
 ## Notes from the dev cut-over
 
@@ -227,8 +229,10 @@ lines are logged without the password.
 
 ## Production
 
-Same steps against `prod-lobby` and each production world, with the production database as the
-source and a new database as the target - after the dev pair has soaked. Do worlds one at a time;
-each one's `SOCIAL_GATEWAY_URL` points at the production lobby's API port and shares its tokens.
-Re-run `migrate`/`verify` immediately before starting the new lobby so nothing written in between
-is lost.
+The lobby and every world run on the `release` channel; a tag cut from `dev` deploys to all of them
+through the countdown, and the anarchy and rsps forks tag their own releases
+(`v<version>-anarchy.<n>`, `v<version>-rsps.<n>`) which their units follow. A world's `MONGO_URI` is
+its own database (players, highscores, grand exchange, logs); only the lobby opens the accounts and
+clans database. Cut-over from legacy: stop the legacy units, migrate every database into a new one,
+`verify` and `roundtrip` them, install the directories with `deploy/install.sh`, start the lobby,
+then the worlds one at a time.

@@ -1,7 +1,9 @@
 package org.darkan.migration
 
 import com.rs.utils.json.DateAdapter
+import com.mongodb.client.MongoCollection
 import org.bson.Document
+import org.bson.types.ObjectId
 import org.darkan.core.model.Account
 import org.darkan.core.model.Clan
 import org.darkan.core.model.ClanSetting
@@ -13,7 +15,8 @@ import java.util.Date
  * Rewrites one legacy document into the shape the modern Kotlin classes persist. Returns null to
  * drop the document, having recorded why on the [Report].
  */
-fun interface Transform {
+interface Transform {
+    fun prepare(source: MongoCollection<Document>) {}
     fun apply(doc: Document, report: Report): Document?
 }
 
@@ -72,7 +75,16 @@ object AccountsTransform : Transform {
         }
     }
 
-    private val seenUsernames = HashMap<String, String>()
+    private val newestByUsername = HashMap<String, ObjectId>()
+
+    /** Two documents with one username: the newest survives, since a re-registration superseded the first. */
+    override fun prepare(source: MongoCollection<Document>) {
+        for (doc in source.find().projection(Document("username", 1))) {
+            val username = doc.getString("username") ?: continue
+            val id = doc["_id"] as? ObjectId ?: continue
+            newestByUsername.merge(username, id) { a, b -> if (b.date.after(a.date)) b else a }
+        }
+    }
 
     override fun apply(doc: Document, report: Report): Document? {
         val username = doc.getString("username")
@@ -80,8 +92,10 @@ object AccountsTransform : Transform {
             report.problem("missing username (dropped)", doc.idKey())
             return null
         }
-        seenUsernames.putIfAbsent(username, doc.idKey())?.let { first ->
-            report.problem("duplicate username (this later document dropped, decide which one is right)", "$username: kept $first, dropped ${doc.idKey()}")
+        val newest = newestByUsername[username]
+        if (newest != null && newest != doc["_id"]) {
+            report.count("older duplicate username dropped", 1)
+            println("   duplicate username $username: dropped ${doc.idKey()}, keeping $newest")
             return null
         }
 
