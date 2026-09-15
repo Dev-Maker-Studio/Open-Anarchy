@@ -140,6 +140,13 @@ object Rev727UpdateProtocol : UpdateProtocol {
         }
     }
 
+    private fun regionHash18Of(tileHash30: Int): Int {
+        val x = (tileHash30 shr 14) and 0x3fff
+        val y = tileHash30 and 0x3fff
+        val plane = (tileHash30 shr 28) and 0x3
+        return (plane shl 16) or ((x shr 6) shl 8) or (y shr 6)
+    }
+
     private fun skipPlayers(stream: BufferWriter, amount: Int) {
         val cfg = playerBitConfig
         for (i in cfg.skipThresholds.indices.reversed()) {
@@ -229,14 +236,25 @@ object Rev727UpdateProtocol : UpdateProtocol {
                 continue
             }
 
-            val p = state.localPlayers[playerIndex] ?: continue
-            if (needsRemove(local, p, largeSceneView)) {
+            val p = state.localPlayers[playerIndex]
+            if (p == null || needsRemove(local, p, largeSceneView)) {
                 stream.writeBits(1, 1)
                 stream.writeBits(1, 0)
-                stream.writeBits(2, 3)
-                state.regionHashes[playerIndex] = p.regionHash18
+                stream.writeBits(2, 0)
+                if (p == null) {
+                    stream.writeBits(1, 0)
+                } else {
+                    state.regionHashes[playerIndex] = regionHash18Of(p.lastTileHash30)
+                    val hash = p.regionHash18
+                    if (hash == state.regionHashes[playerIndex]) {
+                        stream.writeBits(1, 0)
+                    } else {
+                        stream.writeBits(1, 1)
+                        updateRegionHash(stream, state.regionHashes[playerIndex], hash)
+                        state.regionHashes[playerIndex] = hash
+                    }
+                }
                 state.localPlayers[playerIndex] = null
-                state.slotFlags[playerIndex] = (state.slotFlags[playerIndex].toInt() or 2).toByte()
                 continue
             }
 
@@ -277,18 +295,16 @@ object Rev727UpdateProtocol : UpdateProtocol {
                     stream.writeBits(2, 1)
                     stream.writeBits(cfg.walkDirectionBits, p.nextWalkDirection)
                 }
-                state.slotFlags[playerIndex] = (state.slotFlags[playerIndex].toInt() or 2).toByte()
             } else if (needUpdate) {
                 stream.writeBits(1, 1)
                 stream.writeBits(1, 1)
                 stream.writeBits(2, 0)
-                state.slotFlags[playerIndex] = (state.slotFlags[playerIndex].toInt() or 2).toByte()
             } else {
                 stream.writeBits(1, 0)
                 for (i2 in i + 1 until state.localIndexCount) {
                     val p2Index = state.localIndexes[i2]
                     if (nsn0 == ((state.slotFlags[p2Index].toInt() and 0x1) != 0)) continue
-                    val p2 = state.localPlayers[p2Index] ?: continue
+                    val p2 = state.localPlayers[p2Index] ?: break
                     val p2Need = needsRemove(local, p2, largeSceneView) || p2.hasTeleported || p2.nextWalkDirection != null || needsUpdateBlock(p2)
                     if (p2Need) break
                     skip++

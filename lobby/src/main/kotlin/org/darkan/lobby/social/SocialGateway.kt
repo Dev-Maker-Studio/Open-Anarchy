@@ -1051,7 +1051,11 @@ object SocialGateway {
         val ownerUsername = fcOwnerByMember[fromUsername] ?: return
         val room = fcRoomsByOwner[ownerUsername] ?: return
         if (!room.members.contains(fromUsername)) return
+        sayInFriendsChat(fromUsername, ownerUsername, message)
+    }
 
+    suspend fun sayInFriendsChat(fromUsername: String, ownerUsername: String, message: String) {
+        val room = fcRoomsByOwner[ownerUsername.formatPlayerNameForProtocol()] ?: return
         val owner = Accounts.find(ownerUsername) ?: return
         val fromAccount = Accounts.find(fromUsername) ?: return
         if (fromAccount.checkMuted()) return
@@ -1076,6 +1080,7 @@ object SocialGateway {
                 message = message,
             )
         )
+        SocialSubscribers.publish(FriendsChatMessageEvent(owner.displayName, fromAccount.displayName, fromAccount.rights, message))
     }
 
     // ─── QuickChat Handlers ─────────────────────────────────────────────

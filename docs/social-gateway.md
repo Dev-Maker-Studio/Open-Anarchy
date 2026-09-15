@@ -123,6 +123,21 @@ actor's own rights or against someone who out-ranks them), persists, and answers
 `DisplayNameLookup` / `DisplayNameResult` fetch another player's display name for interfaces such
 as the clan member list.
 
+### External social API (the website)
+
+The lobby's HTTP port also serves the website, authenticated with the lobby's `API_KEY` in an
+`X-API-Key` header (`key` and `Authorization: Bearer` are accepted too):
+
+- `WS /social/subscribe` pushes `{"type": "FriendsChatMessage", "data": {fcOwner, srcName, srcRights, message}}`
+  for every friends-chat line the lobby delivers, whether it came from a game client or the site.
+- `POST /social/friends-chat {username, chatOwner, message}` says a line as `username` into the
+  channel owned by `chatOwner` (display name or username); the lobby applies its own mute and
+  rank-to-speak rules, so the site sends names, never account documents.
+- `POST /social/broadcast {username?, message}` announces on every world, prefixed with the
+  sender's display name when `username` is given.
+- `POST /accounts` and `GET /accounts/{username}` create and read accounts with password fields
+  stripped from the reply.
+
 ### Private messages
 
 World forwards `PrivateMessage`; the lobby resolves the target by display name across lobby and

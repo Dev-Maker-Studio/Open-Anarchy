@@ -594,7 +594,16 @@ Body: { "message": "...", "type": "AllWorlds|World|User|FriendsChat", ... }
 
 ### World List
 ```
-GET /worlds
+GET /worldlist
+```
+
+### Website social API (X-API-Key)
+```
+WS   /social/subscribe          # pushes FriendsChatMessage events
+POST /social/friends-chat       # { username, chatOwner, message }
+POST /social/broadcast          # { username?, message }
+POST /accounts                  # AccountCreateRequest; reply has no password fields
+GET  /accounts/{username}
 ```
 
 ### Account Routes
