@@ -5,17 +5,19 @@
 # or from the environment when there is none. Game configuration stays in .env.
 set -u
 cd "$(dirname "$0")/.." || exit 1
-if [ -f .env.unit ]; then set -a; . ./.env.unit; set +a; fi
-
-KIND="${DARKAN_KIND:?DARKAN_KIND must be lobby or world}"
-CHANNEL="${AUTO_UPDATE_CHANNEL:-release}"
-PROJECT_ID="${DARKAN_GITLAB_PROJECT_ID:-67255206}"
-TOKEN="${GITLAB_ACCESS_TOKEN:?GITLAB_ACCESS_TOKEN must be set}"
 API="https://gitlab.com/api/v4"
-ARTIFACT="$KIND-server"
-JAR="$ARTIFACT.jar"
-JAVA="${JAVA_HOME:+$JAVA_HOME/bin/}java"
-export AUTO_UPDATE="${AUTO_UPDATE:-true}" AUTO_UPDATE_CHANNEL="$CHANNEL" DARKAN_GITLAB_PROJECT_ID="$PROJECT_ID"
+
+configure() {
+  if [ -f .env.unit ]; then set -a; . ./.env.unit; set +a; fi
+  KIND="${DARKAN_KIND:?DARKAN_KIND must be lobby or world}"
+  CHANNEL="${AUTO_UPDATE_CHANNEL:-release}"
+  PROJECT_ID="${DARKAN_GITLAB_PROJECT_ID:-67255206}"
+  TOKEN="${GITLAB_ACCESS_TOKEN:?GITLAB_ACCESS_TOKEN must be set}"
+  ARTIFACT="$KIND-server"
+  JAR="$ARTIFACT.jar"
+  JAVA="${JAVA_HOME:+$JAVA_HOME/bin/}java"
+  export AUTO_UPDATE="${AUTO_UPDATE:-true}" AUTO_UPDATE_CHANNEL="$CHANNEL" DARKAN_GITLAB_PROJECT_ID="$PROJECT_ID"
+}
 
 api() { curl -fsS --header "PRIVATE-TOKEN: $TOKEN" "$@"; }
 
@@ -36,6 +38,7 @@ checkout_branch() {
 }
 
 while :; do
+  configure
   VERSION=""; URL=""
   if [ "$CHANNEL" = release ]; then checkout_release; else checkout_branch; fi \
     || echo "Could not update the checkout for channel $CHANNEL; running it as is"
