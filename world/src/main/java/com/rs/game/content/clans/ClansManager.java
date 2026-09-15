@@ -368,12 +368,12 @@ public class ClansManager {
 		ClanMemberData member = clan.getMembers().get(username);
 		if (member == null)
 			return;
-		WorldServer.INSTANCE.getAccountAsync(username, acc -> {
-			if (acc == null) {
+		WorldServer.INSTANCE.displayNameAsync(username, displayName -> {
+			if (displayName == null) {
 				player.sendMessage("Error finding player profile for target character.");
 				return;
 			}
-			viewClanmateDetails(player, acc.getDisplayName(), member);
+			viewClanmateDetails(player, displayName, member);
 			player.getTempAttribs().removeI("editClanMateRank");
 			player.getTempAttribs().removeI("editClanMateJob");
 			if (clan.hasPermissions(player.getUsername(), ClanRank.ADMIN))

@@ -10,6 +10,8 @@ import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logWarn
 import java.net.ConnectException
 import org.darkan.core.social.gateway.FcSettingsUpdate
+import org.darkan.core.social.gateway.DisplayNameResult
+import org.darkan.core.social.gateway.DisplayNameLookup
 import org.darkan.core.social.gateway.GatewayPlayerPresence
 import org.darkan.core.social.gateway.GatewayWorldInfo
 import org.darkan.core.social.gateway.LoginTokenVerdict
@@ -60,6 +62,7 @@ class SocialClient(
     private val state = AtomicReference<State>(State.Stopped)
 
     private val pendingVerdicts = ConcurrentHashMap<Int, CompletableDeferred<LoginTokenVerdict>>()
+    private val pendingDisplayNames = ConcurrentHashMap<Int, CompletableDeferred<DisplayNameResult>>()
     private val nextRequestId = AtomicInteger()
 
     sealed interface State {
@@ -120,6 +123,18 @@ class SocialClient(
             return withTimeoutOrNull(VERDICT_TIMEOUT) { verdict.await() }
         } finally {
             pendingVerdicts.remove(requestId)
+        }
+    }
+
+    suspend fun lookupDisplayName(username: String): String? {
+        val requestId = nextRequestId.incrementAndGet()
+        val result = CompletableDeferred<DisplayNameResult>()
+        pendingDisplayNames[requestId] = result
+        try {
+            if (!send(DisplayNameLookup(requestId = requestId, username = username))) return null
+            return withTimeoutOrNull(VERDICT_TIMEOUT) { result.await() }?.displayName
+        } finally {
+            pendingDisplayNames.remove(requestId)
         }
     }
 
@@ -186,6 +201,10 @@ class SocialClient(
                         logInfo("SocialClient received: ${msg::class.simpleName}")
                         if (msg is LoginTokenVerdict) {
                             pendingVerdicts.remove(msg.requestId)?.complete(msg)
+                            continue
+                        }
+                        if (msg is DisplayNameResult) {
+                            pendingDisplayNames.remove(msg.requestId)?.complete(msg)
                             continue
                         }
                         onMessage(msg)

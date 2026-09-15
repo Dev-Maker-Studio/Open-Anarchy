@@ -110,6 +110,19 @@ always kick, as legacy patched it to.
 `FcSettingsUpdate` from a world (the FC setup interface lives on the world) applies the new settings
 and refreshes the channel, or dissolves it when the name is cleared.
 
+### Account state
+
+Worlds have no access to the accounts collection. At login the lobby hands the world an
+`AccountView` (username, display name, rights, ban and mute expiry, social settings) inside the
+`LoginTokenVerdict`, and the world keeps it in memory on the player for the session. Anything a
+world wants changed on an account is an `AccountCommand` carrying an `AccountAction` - `SetRights`,
+`Ban`, `Mute` (`until` in epoch millis, `PERMANENT` or `LIFTED`) or `SetFcStatus` - which the lobby
+judges against the actor's own account (`MOD` for bans and mutes, `ADMIN` for rights, never above the
+actor's own rights or against someone who out-ranks them), persists, and answers with an
+`AccountUpdate` to the world the target is on. Community worlds may not send account commands.
+`DisplayNameLookup` / `DisplayNameResult` fetch another player's display name for interfaces such
+as the clan member list.
+
 ### Private messages
 
 World forwards `PrivateMessage`; the lobby resolves the target by display name across lobby and

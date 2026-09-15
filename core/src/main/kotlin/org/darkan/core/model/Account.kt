@@ -75,6 +75,8 @@ class Account {
 
     fun hasRights(checkRights: Rights) = rights.ordinal >= checkRights.ordinal
 
+    fun view() = AccountView(username, displayName, rights, banned, muted, social)
+
     fun onlineTo(other: Account) =
         !(other.social.status.toInt() == 2 || (other.social.status.toInt() == 1 && !other.social.friends.contains(username)))
 

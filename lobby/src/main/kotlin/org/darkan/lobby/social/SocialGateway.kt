@@ -654,6 +654,14 @@ object SocialGateway {
                 scope.launch { handleFcSettingsUpdate(msg) }
             }
 
+            is AccountCommand -> {
+                scope.launch { handleAccountCommand(session, msg) }
+            }
+
+            is DisplayNameLookup -> {
+                scope.launch { sendToWorld(session.worldId, DisplayNameResult(msg.requestId, Accounts.find(msg.username)?.displayName)) }
+            }
+
             is ClanCommand -> {
                 scope.launch {
                     val result = ClanService.handle(msg.username, msg.action, msg.requestId)
@@ -675,6 +683,7 @@ object SocialGateway {
         is ClientPacketEnvelope -> isOnWorld(msg.username, session.worldId)
         is FcSettingsUpdate -> isOnWorld(msg.username, session.worldId)
         is ClanCommand -> isOnWorld(msg.username, session.worldId)
+        is AccountCommand -> false
         is AnnouncementBroadcast -> false
         else -> true
     }
@@ -1141,6 +1150,30 @@ object SocialGateway {
     }
 
     // ─── FC Settings Update Handler ─────────────────────────────────────
+
+    private suspend fun handleAccountCommand(session: WorldSession, msg: AccountCommand) {
+        val actorName = msg.username.formatPlayerNameForProtocol()
+        if (!isOnWorld(actorName, session.worldId)) return
+        val actor = Accounts.find(actorName) ?: return
+        val target = when (val action = msg.action) {
+            is AccountAction.SetFcStatus -> actor.apply { social.fcStatus = action.fcStatus.toByte() }
+            is AccountAction.SetRights -> moderated(actor, action.target, Rights.ADMIN)?.takeIf { actor.hasRights(action.rights) }?.apply { rights = action.rights }
+            is AccountAction.Ban -> moderated(actor, action.target, Rights.MOD)?.apply { banned = action.until }
+            is AccountAction.Mute -> moderated(actor, action.target, Rights.MOD)?.apply { muted = action.until }
+        }
+        if (target == null) {
+            logWarn("SocialGateway: refused ${msg.action::class.simpleName} by $actorName from world ${session.worldId}")
+            return
+        }
+        Accounts.save(target)
+        presenceByUsername[target.username]?.let { sendToWorld(it.worldId, AccountUpdate(target.view())) }
+    }
+
+    private suspend fun moderated(actor: Account, targetName: String, required: Rights): Account? {
+        if (!actor.hasRights(required)) return null
+        val target = Accounts.find(targetName.formatPlayerNameForProtocol()) ?: return null
+        return target.takeIf { it.username == actor.username || !it.hasRights(actor.rights) || actor.hasRights(Rights.OWNER) }
+    }
 
     private suspend fun handleFcSettingsUpdate(msg: FcSettingsUpdate) {
         val account = Accounts.find(msg.username) ?: return

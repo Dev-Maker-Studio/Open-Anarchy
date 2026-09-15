@@ -9,7 +9,9 @@ import kotlinx.serialization.modules.polymorphic
 import org.darkan.core.EnvVars
 import org.darkan.core.clan.ClanAction
 import org.darkan.core.clan.ClanChannelState
+import org.darkan.core.model.AccountView
 import org.darkan.core.model.Clan
+import org.darkan.core.model.Rights
 import org.darkan.core.net.prot.*
 import org.darkan.core.net.prot.packet.*
 import org.darkan.core.social.ChatMessage
@@ -228,7 +230,58 @@ data class LoginTokenVerdict(
     val requestId: Int,
     val username: String? = null,
     val displayName: String? = null,
+    val account: AccountView? = null,
 ) : SocialGatewayWireMessage
+
+/**
+ * World → lobby: [username] wants [action] applied to an account. Worlds never read or write the
+ * accounts collection; the lobby judges the actor's rights, persists the change and answers every
+ * world the target is on with an [AccountUpdate].
+ */
+@Serializable
+@SerialName("AccountCommand")
+data class AccountCommand(
+    val username: String,
+    val action: AccountAction,
+) : SocialGatewayWireMessage
+
+@Serializable
+sealed interface AccountAction {
+    @Serializable
+    @SerialName("SetRights")
+    data class SetRights(val target: String, val rights: Rights) : AccountAction
+
+    @Serializable
+    @SerialName("Ban")
+    data class Ban(val target: String, val until: Long) : AccountAction
+
+    @Serializable
+    @SerialName("Mute")
+    data class Mute(val target: String, val until: Long) : AccountAction
+
+    @Serializable
+    @SerialName("SetFcStatus")
+    data class SetFcStatus(val fcStatus: Int) : AccountAction
+
+    companion object {
+        const val PERMANENT = Long.MAX_VALUE
+        const val LIFTED = 0L
+        @JvmStatic
+        fun days(days: Int): Long = System.currentTimeMillis() + days * 24L * 60 * 60 * 1000
+    }
+}
+
+@Serializable
+@SerialName("AccountUpdate")
+data class AccountUpdate(val account: AccountView) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("DisplayNameLookup")
+data class DisplayNameLookup(val requestId: Int, val username: String) : SocialGatewayWireMessage
+
+@Serializable
+@SerialName("DisplayNameResult")
+data class DisplayNameResult(val requestId: Int, val displayName: String? = null) : SocialGatewayWireMessage
 
 @Serializable
 @SerialName("PlayerOnline")

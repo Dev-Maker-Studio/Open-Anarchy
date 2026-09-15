@@ -55,7 +55,7 @@ class CommunityWorlds(
         val account = Accounts.find(request.username) ?: return refused
         if (account.username != verified.username || account.checkBanned()) return refused
         admissions[account.username] = Admission(worldId, account.displayName, account.rights.crown)
-        return LoginTokenVerdict(request.requestId, account.username, account.displayName)
+        return LoginTokenVerdict(request.requestId, account.username, account.displayName, account.view())
     }
 
     fun admitted(worldId: Int, player: GatewayPlayerPresence): GatewayPlayerPresence? {

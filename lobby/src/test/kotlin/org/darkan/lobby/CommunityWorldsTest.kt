@@ -86,7 +86,10 @@ class CommunityWorldsTest {
         val world = LobbyHarness.world(150, community = true).connect()
         val token = tokenFor(player)
 
-        assertEquals(LoginTokenVerdict(7, player.username, player.displayName), world.verify(player.username, token))
+        val verdict = world.verify(player.username, token)
+        assertEquals(player.username, verdict.username)
+        assertEquals(player.displayName, verdict.displayName)
+        assertEquals(player.username, verdict.account?.username, "the world gets a credential-free view of the account")
         assertNull(world.verify(player.username, token).username, "a spent token admits nobody")
     }
 

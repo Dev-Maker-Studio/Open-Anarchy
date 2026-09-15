@@ -109,7 +109,8 @@ import com.rs.game.GroundItemHelper;
 import org.darkan.core.model.WorldObject;
 import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
-import org.darkan.core.model.Account;
+import org.darkan.core.model.AccountView;
+import org.darkan.core.social.gateway.AccountAction;
 import org.darkan.core.model.MachineInformation;
 import org.darkan.core.model.Social;
 import org.darkan.core.model.Clan;
@@ -317,7 +318,7 @@ public class Player extends Entity {
 	private transient double hpBoostMultiplier;
 	private transient boolean largeSceneView;
 	private transient String lastNpcInteractedName = null;
-	private transient Account account;
+	private transient AccountView account;
 
 	private transient boolean tileMan;
 	private transient int tilesAvailable;
@@ -547,7 +548,7 @@ public class Player extends Entity {
 	private House house;
 
 	// creates Player and saved classes
-	public Player(Account account) {
+	public Player(AccountView account) {
 		super(TileHelper.of(Settings.getConfig().getPlayerStartTile()));
 		this.account = account;
 		username = account.getUsername();
@@ -592,7 +593,7 @@ public class Player extends Entity {
 		resetLodestones();
 	}
 
-	public void init(Session session, Account account, int screenMode, int screenWidth, int screenHeight, MachineInformation machineInformation) {
+	public void init(Session session, AccountView account, int screenMode, int screenWidth, int screenHeight, MachineInformation machineInformation) {
 		if (mapChunksNeedInit == null)
 			mapChunksNeedInit = IntSets.synchronize(new IntOpenHashSet());
 		if (getTile() == null)
@@ -1174,10 +1175,6 @@ public class Player extends Entity {
 	}
 
 	public void run() {
-		if (getAccount().getRights() == null) {
-			setRights(Rights.PLAYER);
-			WorldServer.INSTANCE.saveAccountAsync(account);
-		}
 		WorldServer.INSTANCE.notifyPlayerOnline(account);
 		getClan(clan -> appearence.generateAppearanceData());
 		getGuestClan();
@@ -3765,7 +3762,15 @@ public class Player extends Entity {
 
 	public void setRights(Rights staffRights) {
 		getAccount().setRights(staffRights);
-		WorldServer.INSTANCE.saveAccountAsync(account);
+		WorldServer.INSTANCE.accountAction(this, new AccountAction.SetRights(getUsername(), staffRights));
+	}
+
+	public void ban(long until) {
+		getAccount().setBanned(until);
+	}
+
+	public void mute(long until) {
+		getAccount().setMuted(until);
 	}
 
 	public Map<PatchLocation, FarmPatch> getPatches() {
@@ -3811,11 +3816,11 @@ public class Player extends Entity {
 		return getAccount().getSocial();
 	}
 
-	public Account getAccount() {
+	public AccountView getAccount() {
 		return account;
 	}
 
-	public void setAccount(Account account) {
+	public void setAccount(AccountView account) {
 		this.account = account;
 	}
 

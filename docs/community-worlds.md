@@ -31,16 +31,18 @@ gateway token is that public one is a community world.
 - A community world may not use an official number (`1`-`OFFICIAL_WORLD_MAX`, 99 by default), the
   lobby's `LOCAL_WORLD_ID`, a lobby number (1000+), or a number that is already online. The
   handshake is refused with the reason, and the world logs it.
-- A community world never holds the login-token secret. For each login it sends the player's token
-  to the lobby (`VerifyLoginToken`); the lobby checks it, spends it (a token works once), and
-  answers with the account's username and display name (`LoginTokenVerdict`). The world creates a
-  local account from that answer on the player's first login.
+- No world holds the login-token secret or reads the accounts collection. For each login a world
+  sends the player's token to the lobby (`VerifyLoginToken`); the lobby checks it, spends it (a
+  token works once), and answers with a credential-free `AccountView` - username, display name,
+  rights, ban and mute expiry and the social settings (`LoginTokenVerdict`). That view is all the
+  world ever holds about the account; passwords and emails never leave the lobby.
 - The lobby only believes a community world about players it admitted there: presence,
   friends/ignores, private and friends chat, friends chat settings and clan commands for anyone
   else are dropped, and the display name and crown always come from the lobby's own account, not
   from the world. Community worlds cannot send announcements.
-- Official worlds use the private `SOCIAL_GATEWAY_TOKEN` and `WORLD_LOGIN_TOKEN_SECRET` and none of
-  these rules apply to them.
+- Official worlds use the private `SOCIAL_GATEWAY_TOKEN`; the presence and admission rules above do
+  not apply to them. `WORLD_LOGIN_TOKEN_SECRET` is a lobby-only secret: every world, official or not,
+  has its logins verified by the lobby.
 
 ## Limits
 
