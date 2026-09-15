@@ -93,3 +93,6 @@ world-server.jar
 /data/world.json
 /data/dev-world.log
 /data/dev-client.log
+
+.env.unit
+.jar.version
