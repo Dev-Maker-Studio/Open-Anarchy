@@ -7,9 +7,11 @@ import world.gregs.voidps.cache.compress.DecompressionContext
 import world.gregs.voidps.cache.secure.CRC
 import world.gregs.voidps.cache.secure.VersionTableBuilder
 import world.gregs.voidps.cache.secure.Whirlpool
+import world.gregs.voidps.cache.store.ArchiveGroup
 import java.io.File
 import java.io.RandomAccessFile
 import java.math.BigInteger
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * [Cache] that holds all data in memory
@@ -26,6 +28,9 @@ class MemoryCache(indexCount: Int) : ReadOnlyCache(indexCount) {
     val data: Array<Array<Array<ByteArray?>?>?> = arrayOfNulls(indexCount)
     val sectors: Array<Array<ByteArray?>?> = arrayOfNulls(indexCount)
     val index255: Array<ByteArray?> = arrayOfNulls(indexCount)
+
+    private val keyed = ConcurrentHashMap<Int, Array<ByteArray?>>()
+    private val context = ThreadLocal.withInitial { DecompressionContext() }
 
     private val indexCrcs by lazy {
         indices.map {
@@ -61,11 +66,43 @@ class MemoryCache(indexCount: Int) : ReadOnlyCache(indexCount) {
         if (archives == null || archive >= archives.size) {
             return null
         }
-        val files = archives[archive]
-        if (files == null || file >= files.size) {
+        val loaded = archives[archive]
+        if (xtea != null && index == Index.MAPS) {
+            decipher(index, archive, xtea)?.let { return it.getOrNull(file) }
+        }
+        if (loaded == null || file >= loaded.size) {
             return null
         }
-        return files[file]
+        return loaded[file]
+    }
+
+    private fun decipher(index: Int, archive: Int, xtea: IntArray): Array<ByteArray?>? {
+        val key = index + (archive shl 6) + xtea.contentHashCode()
+        keyed[key]?.let { return it }
+        val fileIds = files.getOrNull(index)?.getOrNull(archive) ?: return null
+        if (fileIds.isEmpty()) {
+            return null
+        }
+        val sector = sector(index, archive) ?: return null
+        val result = try {
+            // Deciphering is in place, so the loaded sector is copied rather than consumed.
+            val decompressed = context.get().decompress(sector.copyOf(), xtea) ?: return null
+            val files = arrayOfNulls<ByteArray>(fileIds.last() + 1)
+            if (fileIds.size == 1) {
+                files[fileIds.last()] = decompressed
+            } else {
+                val group = ArchiveGroup.split(decompressed, fileIds)
+                for ((position, id) in fileIds.withIndex()) {
+                    files[id] = group.files[position]
+                }
+            }
+            files
+        } catch (e: Exception) {
+            logWarn("Failed to decrypt index $index archive $archive.", e)
+            return null
+        }
+        keyed[key] = result
+        return result
     }
 
     companion object : CacheLoader {

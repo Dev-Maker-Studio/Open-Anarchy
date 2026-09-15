@@ -47,7 +47,7 @@ object EnvVars {
     // The packed cache the server actually opens: the build of the source tree when one is configured
     // (org.darkan.core.cache.CacheSource builds it before Cache.get() opens it), else the prepacked one.
     val cachePath: String = if (cacheSourcePath != null) cacheBuildPath else prepackedCachePath
-    val memCache: Boolean = dotenv.get("MEM_CACHE", (!debug).toString()).toBooleanStrict()
+    val memCache: Boolean = dotenv.get("MEM_CACHE", "false").toBooleanStrict()
     // Folder of gamevals/<type>.json name catalogs (see docs/gameval.md): the source tree's gamevals/, which
     // is the only copy. Defaults to the tree named by CACHE_SOURCE_PATH, else the cache-source submodule.
     val gamevalPath: String = dotenv.get("GAMEVAL_PATH", (cacheSourcePath ?: CACHE_SOURCE_SUBMODULE) + "/gamevals")

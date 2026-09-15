@@ -369,7 +369,7 @@ CRYPTO_ARGON2_PARALLELISM=4
 ### Database
 ```env
 MONGO_URI=mongodb://localhost:27017/darkan-server
-MEM_CACHE=false
+MEM_CACHE=false            # true only on a lobby: holds the packed cache in memory for JS5 serving; worlds read it from disk
 CACHE_PATH=../cache/
 ```
 
