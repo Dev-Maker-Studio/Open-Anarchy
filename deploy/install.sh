@@ -20,7 +20,7 @@ AUTO_UPDATE=true
 DARKAN_GITLAB_PROJECT_ID=$PROJECT_ID
 GITLAB_ACCESS_TOKEN=
 JAVA_HOME=$HOME/.sdkman/candidates/java/26.0.2-tem
-DARKAN_JAVA_VM_ARGS=-Xms1G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+DARKAN_JAVA_VM_ARGS="-Xms1G -Xmx4G -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 UNIT
   chmod 600 .env.unit
 fi
