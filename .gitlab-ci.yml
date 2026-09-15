@@ -23,9 +23,11 @@ default:
     - apk add --no-cache --quiet git
     # cache-source/ is a submodule holding the whole unpacked cache (GBs). The build needs only its
     # gamevals/ catalogs (the typed constants are generated from them), so fetch just that directory
-    # at the pinned commit with a blob-less sparse clone instead of a submodule checkout.
+    # at the pinned commit with a blob-less sparse clone instead of a submodule checkout. The repo
+    # comes from .gitmodules so a fork with its own cache repo clones that one.
     - CACHE_SOURCE_SHA="$(git rev-parse HEAD:cache-source)"
-    - CACHE_SOURCE_URL="${CI_SERVER_PROTOCOL}://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_NAMESPACE}/cache-unpacked.git"
+    - CACHE_SOURCE_REPO="$(git config -f .gitmodules submodule.cache-source.url | sed 's#^\.\./##')"
+    - CACHE_SOURCE_URL="${CI_SERVER_PROTOCOL}://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_NAMESPACE}/${CACHE_SOURCE_REPO}"
     - rm -rf cache-source && git clone --quiet --filter=blob:none --no-checkout --sparse "$CACHE_SOURCE_URL" cache-source
     - git -C cache-source sparse-checkout set gamevals
     - git -C cache-source checkout --quiet "$CACHE_SOURCE_SHA"
