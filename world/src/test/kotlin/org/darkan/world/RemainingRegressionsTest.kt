@@ -21,7 +21,8 @@ import org.darkan.core.net.prot.packet.GameMessage
 import org.darkan.core.net.prot.packet.IfOnGroundItem
 import org.darkan.core.net.prot.packet.TriggerOnDialogAbort
 import org.darkan.world.harness.HarnessPlayer
-import org.darkan.core.social.gateway.ClientPacketEnvelope
+import org.darkan.core.social.SocialAction
+import org.darkan.core.social.gateway.SocialCommand
 import org.darkan.world.harness.WorldHarness
 import org.darkan.world.server.WorldServer
 import org.darkan.world.server.packet.IfOnGroundItemHandler
@@ -188,7 +189,7 @@ class RemainingRegressionsTest {
 
     /**
      * `SocialClient.send` returned Unit and dropped the message with no log when the gateway was
-     * down. It now reports failure, and `WorldServer.forwardToLobby` tells the player, the way
+     * down. It now reports failure, and `WorldServer.act` tells the player, the way
      * legacy `LobbyCommunicator.forwardPackets` did (world-server LobbyCommunicator.java:88-93).
      */
     @Test
@@ -196,17 +197,17 @@ class RemainingRegressionsTest {
         val harness = login("gatewaydown")
         val client = unstartedSocialClient()
         assertFalse(
-            runBlocking { client.send(ClientPacketEnvelope(harness.player.username, AddFriend("someone"))) },
+            client.send(SocialCommand(harness.player.username, SocialAction.AddFriend("someone"))),
             "SocialClient.send claimed success with no gateway connection"
         )
 
         setSocialClient(client)
         harness.clearSent()
-        runBlocking { WorldServer.forwardToLobby(harness.player.username, AddFriend("someone")) }
+        WorldServer.act(harness.player.username, SocialAction.AddFriend("someone"))
         WorldHarness.tick()
 
         assertTrue(
-            harness.sent.any { it is GameMessage && it.message == "Error forwarding packet to lobby." },
+            harness.sent.any { it is GameMessage && it.message == WorldServer.FRIEND_SERVER_UNAVAILABLE },
             "the player was never told the packet could not be forwarded; sent=${harness.sent}"
         )
     }

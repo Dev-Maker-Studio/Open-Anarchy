@@ -26,8 +26,6 @@ import org.darkan.core.social.gateway.ClanMembership
 import org.darkan.core.social.gateway.ClanQuickChatMessage
 import org.darkan.core.social.gateway.ClanSnapshot
 import org.darkan.core.social.gateway.PresenceSyncReason
-import org.darkan.core.social.gateway.ServerPacketBatch
-import org.darkan.core.social.gateway.ServerPacketEnvelope
 import org.darkan.lobby.harness.LobbyHarness
 import org.darkan.lobby.harness.LobbyHarness.FakeWorld
 import org.darkan.lobby.social.ClanService
@@ -440,11 +438,6 @@ class ClanServiceTest {
         assertEquals(clanName, toA.single().clanName)
         assertEquals(1, worldB.messagesOf<ClanChatMessage>().size, "the member's world gets the line once")
         assertTrue(idle.messagesOf<ClanChatMessage>().isEmpty(), "a world with no chatter hears nothing")
-        val forwarded = worldA.sent().mapNotNull { (it as? ServerPacketEnvelope)?.packet ?: (it as? ServerPacketBatch)?.packet }
-        assertTrue(
-            forwarded.none { it is MessageClanChannel || it is ClanChannelFull || it is ClanSettingsFull || it is VarclanEnable },
-            "clan state is never a forwarded client packet",
-        )
 
         val toMember = assertNotNull(memberSession.sent.filterIsInstance<MessageClanChannel>().lastOrNull())
         assertFalse(toMember.guest, "a member hears their own clan as affined")

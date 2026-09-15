@@ -35,7 +35,7 @@ import org.darkan.core.social.gateway.ClanFetch
 import org.darkan.core.social.gateway.ClanMembership
 import org.darkan.core.social.gateway.ClanQuickChatMessage
 import org.darkan.core.social.gateway.ClanSnapshot
-import org.darkan.core.social.gateway.ClientPacketEnvelope
+import org.darkan.core.social.gateway.SocialCommand
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import org.darkan.world.clan.ClanRegistry
 import org.darkan.world.harness.HarnessPlayer
@@ -60,7 +60,7 @@ import kotlin.test.assertTrue
  * becomes exactly one typed [ClanAction] on the gateway, a denial the world can already see
  * produces a message and no traffic at all, and every clan packet the player sees comes from a
  * lobby event rather than a local mutation. Nothing clan-shaped may leave as a
- * [ClientPacketEnvelope] - that is the design this replaced, and a regression to it would quietly
+ * [SocialCommand] - the social path is not the clan path, and a regression to it would quietly
  * give the two servers two different rule sets.
  *
  * The seam is [ClanRegistry.transport]: a recorder in place of the social client, driven on an
@@ -442,11 +442,11 @@ class ClanFlowTest {
 
     /**
      * Clan chat is a typed action, not a forwarded `Chat` packet. The control is
-     * [friendsChatIsStillForwardedAsAClientPacket]: chat type 1 does still forward and, with no
-     * gateway attached in the harness, says so - clan chat must not produce that.
+     * [friendsChatIsASocialAction]: chat type 1 goes out as a social action and, with no gateway
+     * attached in the harness, says so - clan chat must not produce that.
      */
     @Test
-    fun clanChatIsNotForwardedAsAClientPacket() {
+    fun clanChatIsNotASocialAction() {
         val owner = member(CLAN, ClanRank.OWNER)
         joinChannel(CLAN, owner.player.username, ClanRank.OWNER)
         owner.clearSent()
@@ -458,18 +458,18 @@ class ClanFlowTest {
 
         assertEquals(ClanAction.Chat(guest = false, message = PublicChatMessage("hello clan", 0)), action())
         assertFalse(
-            wire.any { it is ClientPacketEnvelope },
-            "clan chat left as a forwarded client packet: ${wire.map { it::class.simpleName }}",
+            wire.any { it is SocialCommand },
+            "clan chat left as a social action: ${wire.map { it::class.simpleName }}",
         )
         assertFalse(
-            messages(owner).any { it.contains("Error forwarding packet to lobby") },
-            "clan chat took the client-packet forward path",
+            messages(owner).any { it.contains(WorldServer.FRIEND_SERVER_UNAVAILABLE) },
+            "clan chat took the social action path",
         )
     }
 
     /** The control: friends chat does still forward, so the assertion above can fail. */
     @Test
-    fun friendsChatIsStillForwardedAsAClientPacket() {
+    fun friendsChatIsASocialAction() {
         val player = login("fcline")
         player.clearSent()
         player.player.chatType = 1
@@ -479,8 +479,8 @@ class ClanFlowTest {
         WorldHarness.tick()
 
         assertTrue(
-            messages(player).any { it.contains("Error forwarding packet to lobby") },
-            "friends chat no longer takes the client-packet forward path: ${messages(player)}",
+            messages(player).any { it.contains(WorldServer.FRIEND_SERVER_UNAVAILABLE) },
+            "friends chat no longer goes out as a social action: ${messages(player)}",
         )
     }
 

@@ -90,7 +90,6 @@ import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.managers.*;
 import com.rs.game.model.entity.player.managers.InterfaceManager.ScreenMode;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
-import com.rs.game.model.entity.player.social.FCManager;
 import com.rs.game.model.item.ItemsContainer;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
@@ -815,6 +814,7 @@ public class Player extends Entity {
 	 */
 	public void setStarted() {
 		started = true;
+		WorldServer.INSTANCE.notifyPlayerOnline(account);
 	}
 
 	public void stopAll() {
@@ -1175,7 +1175,6 @@ public class Player extends Entity {
 	}
 
 	public void run() {
-		WorldServer.INSTANCE.notifyPlayerOnline(account);
 		getClan(clan -> appearence.generateAppearanceData());
 		getGuestClan();
 		int updateTimer = (int) World.getTicksTillUpdate();

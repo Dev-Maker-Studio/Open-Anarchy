@@ -1,6 +1,5 @@
 package org.darkan.lobby.harness
 
-import kotlinx.coroutines.coroutineScope
 import org.darkan.core.clan.ClanAction
 import org.darkan.core.clan.ClanVarKind
 import org.darkan.core.clan.InMemoryClanStore
@@ -12,22 +11,23 @@ import org.darkan.core.model.Rights
 import org.darkan.core.mongo.collections.AccountStore
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.mongo.collections.Clans
-import org.darkan.core.net.prot.ClientProt
 import org.darkan.core.net.prot.Codec
-import org.darkan.core.net.prot.ServerProt
+import org.darkan.core.social.SocialAction
+import org.darkan.core.social.SocialEvent
 import org.darkan.core.social.gateway.ClanCommand
 import org.darkan.core.social.gateway.GatewayPlayerPresence
 import org.darkan.core.social.gateway.GatewayWorldInfo
 import org.darkan.core.social.gateway.PlayerOffline
 import org.darkan.core.social.gateway.PlayerOnline
 import org.darkan.core.social.gateway.PresenceSyncReason
-import org.darkan.core.social.gateway.ServerPacketBatch
-import org.darkan.core.social.gateway.ServerPacketEnvelope
+import org.darkan.core.social.gateway.SocialCommand
 import org.darkan.core.social.gateway.SocialGatewayWireJson
+import org.darkan.core.social.gateway.SocialNotification
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import org.darkan.core.social.gateway.WorldPresenceSnapshot
 import org.darkan.lobby.social.ClanService
 import org.darkan.lobby.social.SocialGateway
+import org.darkan.lobby.social.SocialSink
 import org.darkan.lobby.social.WorldSession
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -56,6 +56,8 @@ object LobbyHarness {
     private val ids = AtomicInteger()
 
     val accounts = InMemoryAccounts()
+
+    private val lobbySessions = ConcurrentHashMap<String, RecordingSession>()
 
     /** The clan store behind [Clans]; a fresh one per [reset] so no clan outlives its test. */
     var clans = InMemoryClanStore()
@@ -86,6 +88,7 @@ object LobbyHarness {
         clearMaps(SocialGateway)
         clearMaps(ClanService)
         accounts.clear()
+        lobbySessions.clear()
         clans = InMemoryClanStore()
         Clans.store = clans
     }
@@ -151,17 +154,42 @@ object LobbyHarness {
      */
     suspend fun lobbyLogin(account: Account): RecordingSession {
         val session = RecordingSession(codec)
+        lobbySessions[account.username] = session
         SocialGateway.registerLobbyPlayerSession(account, session)
         return session
     }
 
     suspend fun lobbyLogout(account: Account) {
-        SocialGateway.unregisterLobbyPlayerSession(account.username)
+        val session = lobbySessions.remove(account.username) ?: return
+        SocialGateway.unregisterLobbyPlayerSession(account.username, session)
     }
 
-    /** Feeds [packet] to the gateway as if [account]'s lobby client had sent it. */
-    suspend fun clientPacket(account: Account, packet: ClientProt) {
-        SocialGateway.handleClientPacket(account.username, packet)
+    /** [account] asks for [action], from whichever of their connections. */
+    suspend fun act(account: Account, action: SocialAction) {
+        SocialGateway.act(account.username, action)
+    }
+
+    /** A website-style listener on [account]: no presence, just the events. */
+    suspend fun listen(account: Account): RecordingSink {
+        val sink = RecordingSink()
+        SocialGateway.attachListener(account, sink)
+        return sink
+    }
+
+    suspend fun stopListening(account: Account, sink: RecordingSink) {
+        SocialGateway.detachListener(account.username, sink)
+    }
+
+    class RecordingSink : SocialSink {
+        private val received = mutableListOf<SocialEvent>()
+
+        override suspend fun deliver(usernames: List<String>, event: SocialEvent) {
+            synchronized(received) { received += event }
+        }
+
+        val events: List<SocialEvent> get() = synchronized(received) { received.toList() }
+
+        fun clear() = synchronized(received) { received.clear() }
     }
 
     fun world(worldId: Int, worldName: String = "Test $worldId", community: Boolean = false): FakeWorld =
@@ -190,21 +218,22 @@ object LobbyHarness {
         )
 
         /** Completes the handshake, i.e. what the gateway does once a [WorldHello] checks out. */
-        fun connect(): FakeWorld {
+        suspend fun connect(): FakeWorld {
             SocialGateway.attachWorld(session, info)
             return this
         }
 
-        fun tryConnect(): Boolean = SocialGateway.attachWorld(session, info)
+        suspend fun tryConnect(): Boolean = SocialGateway.attachWorld(session, info)
 
         /** Drops the socket, the way the gateway's `finally` block does. */
         suspend fun disconnect() {
             SocialGateway.detachWorld(session)
         }
 
-        suspend fun deliver(msg: SocialGatewayWireMessage) = coroutineScope {
-            SocialGateway.handleWorldMessage(this, session, msg)
-        }
+        suspend fun deliver(msg: SocialGatewayWireMessage) = SocialGateway.handleWorldMessage(session, msg)
+
+        /** [account] asks for [action] from this world, the way `WorldServer.act` does. */
+        suspend fun act(account: Account, action: SocialAction) = deliver(SocialCommand(account.username, action))
 
         suspend fun playerOnline(account: Account) = deliver(
             PlayerOnline(
@@ -237,14 +266,11 @@ object LobbyHarness {
         /** Everything the lobby has pushed at this world, oldest first. */
         fun sent(): List<SocialGatewayWireMessage> = synchronized(received) { received.toList() }
 
-        /** The [ServerProt]s the lobby addressed to [account], envelopes and batches alike. */
-        fun packetsFor(account: Account): List<ServerProt> = sent().mapNotNull { msg ->
-            when {
-                msg is ServerPacketEnvelope && msg.username == account.username -> msg.packet
-                msg is ServerPacketBatch && account.username in msg.usernames -> msg.packet
-                else -> null
-            }
-        }
+        /** The [SocialEvent]s the lobby addressed to [account] through this world. */
+        fun eventsFor(account: Account): List<SocialEvent> = sent()
+            .filterIsInstance<SocialNotification>()
+            .filter { account.username in it.usernames }
+            .map { it.event }
 
         fun clear() = synchronized(received) { received.clear() }
     }

@@ -31,22 +31,22 @@ import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.model.AccountView
 import org.darkan.core.model.MachineInformation
 import org.darkan.core.net.*
-import org.darkan.core.net.prot.ClientProt
 import org.darkan.core.net.prot.Codec
-import org.darkan.core.net.prot.ServerProt
-import org.darkan.core.net.prot.packet.FcJoin
 import org.darkan.core.net.prot.packet.WorldLoginDetails
+import org.darkan.core.social.SocialAction
+import org.darkan.core.social.SocialEvent
+import org.darkan.core.social.SocialPackets
 import org.darkan.core.social.gateway.AccountAction
 import org.darkan.core.social.gateway.AccountCommand
 import org.darkan.core.social.gateway.AccountUpdate
 import org.darkan.core.social.gateway.AnnouncementBroadcast
-import org.darkan.core.social.gateway.ClientPacketEnvelope
 import org.darkan.core.social.gateway.GatewayPlayerPresence
-import org.darkan.core.social.gateway.ServerPacketBatch
-import org.darkan.core.social.gateway.ServerPacketEnvelope
+import org.darkan.core.social.gateway.SocialCommand
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
+import org.darkan.core.social.gateway.SocialNotification
 import org.darkan.world.clan.ClanRegistry
 import org.darkan.world.social.SocialClient
+import org.darkan.world.social.SocialSync
 import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.file.FileProvider
@@ -55,6 +55,8 @@ import world.gregs.voidps.cache.secure.RSA
 import world.gregs.voidps.cache.secure.decryptXtea
 
 object WorldServer {
+    const val FRIEND_SERVER_UNAVAILABLE = "Unable to reach the friend server."
+
     private lateinit var job: Job
     private lateinit var dispatcher: ExecutorCoroutineDispatcher
 
@@ -331,13 +333,8 @@ object WorldServer {
         return Admission.Admitted(account)
     }
 
-    /**
-     * Hands [msg] to the gateway socket.
-     *
-     * @return false when there is no gateway attached at all (headless tools, the test harness)
-     *         or the write failed, so the caller can tell the player rather than lose the intent.
-     */
-    suspend fun sendToGateway(msg: SocialGatewayWireMessage): Boolean {
+    /** False when no gateway is attached (headless tools, the test harness) or it is down. */
+    fun sendToGateway(msg: SocialGatewayWireMessage): Boolean {
         if (!::socialClient.isInitialized) {
             logWarn("No social gateway client attached; dropping ${msg::class.simpleName}")
             return false
@@ -345,10 +342,11 @@ object WorldServer {
         return socialClient.send(msg)
     }
 
-    suspend fun forwardToLobby(username: String, packet: ClientProt) {
-        if (!sendToGateway(ClientPacketEnvelope(username = username, packet = packet))) {
-            logWarn("Failed to forward ${packet::class.simpleName} to lobby for $username: social gateway unavailable")
-            onWorldThread(username) { it.sendMessage("Error forwarding packet to lobby.") }
+    @JvmStatic
+    fun act(username: String, action: SocialAction) {
+        if (!sendToGateway(SocialCommand(username, action))) {
+            logWarn("Could not send ${action::class.simpleName} for $username: social gateway unavailable")
+            onWorldThread(username) { it.sendMessage(FRIEND_SERVER_UNAVAILABLE) }
         }
     }
 
@@ -365,14 +363,7 @@ object WorldServer {
         // builds the client packets itself, so nothing clan-shaped reaches the dispatch below.
         if (ClanRegistry.handle(msg)) return
         when (msg) {
-            is ServerPacketEnvelope -> {
-                logInfo("handleSocialMessage: ServerPacketEnvelope username=${msg.username} packet=${msg.packet::class.simpleName}")
-                deliverToPlayer(msg.username, msg.packet)
-            }
-            is ServerPacketBatch -> {
-                logInfo("handleSocialMessage: ServerPacketBatch usernames=${msg.usernames} packet=${msg.packet::class.simpleName}")
-                msg.usernames.forEach { deliverToPlayer(it, msg.packet) }
-            }
+            is SocialNotification -> msg.usernames.forEach { deliverEvent(it, msg.event) }
             is AnnouncementBroadcast -> announceToEveryone(msg)
             is AccountUpdate -> onWorldThread(msg.account.username) { it.account = msg.account }
             else -> logInfo("Ignoring gateway message: ${msg::class.simpleName}")
@@ -393,27 +384,17 @@ object WorldServer {
         }
     }
 
-    private fun deliverToPlayer(username: String, packet: ServerProt) {
-        val player = World.getPlayerByUsername(username)
-        if (player == null) {
-            logTrace("deliverToPlayer: player not found username=$username packet=${packet::class.simpleName}")
-            return
+    private fun deliverEvent(username: String, event: SocialEvent) {
+        onWorldThread(username) { player ->
+            SocialSync.apply(player, event)
+            for (packet in SocialPackets.render(username, event)) player.session.queuePacket(packet)
         }
-        if (!player.hasStarted()) {
-            logTrace("deliverToPlayer: player not started username=$username packet=${packet::class.simpleName}")
-            return
-        }
-        if (player.hasFinished()) {
-            logTrace("deliverToPlayer: player finished username=$username packet=${packet::class.simpleName}")
-            return
-        }
-        player.session.queuePacket(packet)
     }
 
     /**
      * Everyone this world currently has in game, for the presence snapshots the lobby reconciles
-     * against. The gate is the same one [deliverToPlayer] uses - a player still logging in or
-     * already finishing is not somebody the lobby can route packets to.
+     * against. The gate is the same one [onWorldThread] uses - a player still logging in or
+     * already finishing is not somebody the lobby can route events to.
      */
     private fun onlinePresence(): List<GatewayPlayerPresence> =
         World.players.mapNotNull { player ->
@@ -427,75 +408,36 @@ object WorldServer {
             )
         }
 
+    /**
+     * Called once the player can receive packets. A world with no gateway client at all (headless
+     * tools, the test harness) is not a lobby rejection, so nobody is logged out for it; a
+     * gateway that will not take the player is, because they are not online as far as anybody's
+     * friends list is concerned.
+     */
     fun notifyPlayerOnline(account: AccountView) {
-        // No gateway client at all means this process never started the world socket server
-        // (headless tools, the test harness). That is not a lobby rejection, so it must not
-        // log anybody out; only an attached client that refuses the player does.
         if (!::socialClient.isInitialized) {
             logWarn("No social gateway client attached; skipping online notify for ${account.username}")
             return
         }
-        CoroutineScope(dispatcher).launch {
-            val ok = try {
-                socialClient.sendPlayerOnline(
-                    username = account.username,
-                    displayName = account.displayName,
-                    rightsCrown = account.rights.crown,
-                    privateStatus = account.social.status.toInt()
-                )
-            } catch (e: Exception) {
-                logError("Failed to notify lobby of player online: ${account.username}", e)
-                false
-            }
-            // Legacy Player#run -> LobbyCommunicator.addWorldPlayer(account, response -> {
-            //   if (response == null || !response) forceLogout(); })
-            // (world-server Player.java:1186-1189). A player the lobby will not register is
-            // not logged in as far as social/presence is concerned, so drop them.
-            if (!ok) {
-                logWarn("Lobby did not accept ${account.username} as online; forcing logout")
-                onWorldThread(account.username) { it.forceLogout() }
-            }
+        val ok = socialClient.sendPlayerOnline(
+            username = account.username,
+            displayName = account.displayName,
+            rightsCrown = account.rights.crown,
+            privateStatus = account.social.status.toInt(),
+        )
+        if (!ok) {
+            logWarn("Lobby did not accept ${account.username} as online; forcing logout")
+            onWorldThread(account.username) { it.forceLogout() }
         }
     }
 
     fun notifyPlayerOffline(username: String) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendPlayerOffline(username)
-            } catch (e: Exception) {
-                logError("Failed to notify lobby of player offline: $username", e)
-            }
-        }
-    }
-
-    fun syncFcSettings(username: String, name: String?, rankToEnter: Int, rankToSpeak: Int, rankToKick: Int, rankToLS: Int) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.sendFcSettingsUpdate(username, name, rankToEnter, rankToSpeak, rankToKick, rankToLS)
-            } catch (e: Exception) {
-                logError("Failed to sync FC settings for $username", e)
-            }
-        }
-    }
-
-    fun forwardFcJoin(username: String, fcName: String?) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                forwardToLobby(username, FcJoin(fcName))
-            } catch (e: Exception) {
-                logError("Failed to forward FC join for $username", e)
-            }
-        }
+        if (!::socialClient.isInitialized) return
+        socialClient.sendPlayerOffline(username)
     }
 
     fun accountAction(actor: Player, action: AccountAction) {
-        CoroutineScope(dispatcher).launch {
-            try {
-                socialClient.send(AccountCommand(actor.username, action))
-            } catch (e: Exception) {
-                logError("Failed to send ${action::class.simpleName} for ${actor.username}", e)
-            }
-        }
+        sendToGateway(AccountCommand(actor.username, action))
     }
 
     fun displayNameAsync(username: String, callback: Consumer<String?>) {

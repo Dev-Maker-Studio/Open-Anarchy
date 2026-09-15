@@ -171,6 +171,6 @@ from this server family.
   the world can already see produces the message and nothing on the wire, snapshots, channel
   updates and channel lines produce the right client packets with the right `guest` flag per
   recipient, a membership push updates the player's `Social`, a result's message is shown, a
-  reconnect drops the replica, and no clan traffic goes out as a `ClientPacketEnvelope` - with
+  reconnect drops the replica, and no clan traffic goes out as a `SocialCommand` - with
   friends chat (chat type 1), which does still forward, as the control that keeps that last
   assertion honest.
