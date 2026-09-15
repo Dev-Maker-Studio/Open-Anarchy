@@ -50,7 +50,7 @@ installed the same way with its own git URL and project id.
 checks it out, so `data/` and the `cache-source` pointer are exactly the release's; for a `dev`
 channel it fast-forwards to the branch head and takes the highest-pipeline package. It then
 updates the cache-source submodule, downloads that build's jar if it is not already the one on
-disk, and runs it with `BUILD_VERSION`, `CACHE_SOURCE_COMMIT` and `DATA_TREE` in the environment.
+disk, and runs it with `BUILD_VERSION` and `CHECKOUT_COMMIT` in the environment.
 
 The JDK comes from `JAVA_HOME` in `.env.unit` (`sdk install java 26.0.2-tem` as `trent`); nothing
 in the unit depends on the machine's default `java`.
@@ -141,10 +141,11 @@ package on a branch channel. When one appears:
 - **lobby** - logins are refused with "server being updated" for the final 20 ticks, then a clean stop;
   worlds reconnect to it automatically.
 
-A build that would change nothing for this server is skipped: the watcher compares the registry's
-published jar checksum with the running jar, the ref's `cache-source` commit with
-`CACHE_SOURCE_COMMIT`, and for a world the ref's `data` tree with `DATA_TREE`. A release cut for a
-world-only change therefore never restarts the lobby, and vice versa. The run loop then downloads
+A build that would change nothing for this server is skipped: the watcher compares, between the
+new ref and the running checkout (`CHECKOUT_COMMIT`), the git tree ids of every path that feeds the
+artifact - `core`, the build files, `cache-source`, plus `lobby` for a lobby or `world` and `data`
+for a world. A release cut for a world-only change therefore never restarts the lobby, and vice
+versa; the jar itself is never compared because it embeds its version. The run loop then downloads
 the new jar and restarts. So a deploy is: push to `dev` for the dev servers, or cut a tag for
 production.
 

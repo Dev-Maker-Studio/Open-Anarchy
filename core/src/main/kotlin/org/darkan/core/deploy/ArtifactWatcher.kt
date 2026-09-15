@@ -17,9 +17,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logWarn
-import java.io.File
-import java.security.DigestInputStream
-import java.security.MessageDigest
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -40,7 +37,6 @@ class ArtifactWatcher(
     private val client = HttpClient(CIO)
     private var job: Job? = null
     private var ignored: String? = null
-    private val runningJarSha256: String? by lazy { runningJarSha256() }
 
     fun start() {
         if (!EnvVars.autoUpdate) return
@@ -61,7 +57,7 @@ class ArtifactWatcher(
                 } ?: continue
                 if (latest == EnvVars.buildVersion || latest == ignored) continue
                 if (changesNothingHere(latest)) {
-                    logInfo("Build $latest carries the same $artifact jar, cache and data as $running; not restarting for it")
+                    logInfo("Build $latest changes nothing that $artifact runs with; staying on $running")
                     ignored = latest
                     continue
                 }
@@ -99,33 +95,22 @@ class ArtifactWatcher(
     }
 
     /**
-     * A release that rebuilt this artifact from the same inputs is not worth a restart: the jar
-     * checksum the registry published, the cache-source commit and (for a world) the data tree at
-     * that ref all match what this process was started from.
+     * A release whose inputs for this artifact are the same as the running checkout's is not worth a
+     * restart: the git tree ids of every path that feeds the jar, the cache and (for a world) the
+     * data tree are compared between the two refs, since the jar itself embeds its version.
      */
     private suspend fun changesNothingHere(version: String): Boolean {
-        val running = runningJarSha256 ?: return false
+        if (EnvVars.checkoutCommit.isEmpty()) return false
         val project = "$GITLAB_API/projects/${EnvVars.gitlabProjectId}"
-        val published = fetch("$project/packages/maven/org/darkan/$artifact/$version/$artifact-$version.jar.sha256")?.trim()?.take(64) ?: return false
-        if (!published.equals(running, ignoreCase = true)) return false
         val ref = if (EnvVars.autoUpdateChannel == RELEASE_CHANNEL) version else EnvVars.autoUpdateChannel
-        val tree = fetch("$project/repository/tree?ref=$ref&per_page=100") ?: return false
-        if (EnvVars.cacheSourceCommit.isEmpty() || treeEntryId(tree, "cache-source") != EnvVars.cacheSourceCommit) return false
-        if (artifact == "world-server" && (EnvVars.dataTree.isEmpty() || treeEntryId(tree, "data") != EnvVars.dataTree)) return false
-        return true
+        val candidate = treeIds(fetch("$project/repository/tree?ref=$ref&per_page=100") ?: return false)
+        val running = treeIds(fetch("$project/repository/tree?ref=${EnvVars.checkoutCommit}&per_page=100") ?: return false)
+        return inputsOf(artifact).all { candidate[it] != null && candidate[it] == running[it] }
     }
 
     private suspend fun fetch(url: String): String? {
         val response = client.get(url) { header("PRIVATE-TOKEN", EnvVars.gitlabAccessToken) }
         return if (response.status.isSuccess()) response.bodyAsText() else null
-    }
-
-    private fun runningJarSha256(): String? {
-        val jar = File(ArtifactWatcher::class.java.protectionDomain.codeSource.location.toURI())
-        if (!jar.isFile) return null
-        val digest = MessageDigest.getInstance("SHA-256")
-        jar.inputStream().use { input -> DigestInputStream(input, digest).use { it.readAllBytes() } }
-        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     companion object {
@@ -138,11 +123,18 @@ class ArtifactWatcher(
         /** The tag of the first (newest) release in a GitLab releases listing. */
         fun newestReleaseTag(releasesJson: String): String? = TAG_NAME.find(releasesJson)?.groupValues?.get(1)
 
-        /** The object id of the entry called [name] in a GitLab repository tree listing. */
-        fun treeEntryId(treeJson: String, name: String): String? =
+        private val SHARED_INPUTS = listOf("core", "buildSrc", "gradle", "build.gradle.kts", "settings.gradle.kts", "gradle.properties", "cache-source")
+
+        /** The repository paths whose content decides what [artifact] runs with. */
+        fun inputsOf(artifact: String): List<String> = SHARED_INPUTS + when (artifact) {
+            "world-server" -> listOf("world", "data")
+            else -> listOf(artifact.removeSuffix("-server"))
+        }
+
+        /** Entry name to object id of a GitLab repository tree listing. */
+        fun treeIds(treeJson: String): Map<String, String> =
             Json.parseToJsonElement(treeJson).jsonArray.map { it.jsonObject }
-                .firstOrNull { it["name"]?.jsonPrimitive?.content == name }
-                ?.get("id")?.jsonPrimitive?.content
+                .associate { it.getValue("name").jsonPrimitive.content to it.getValue("id").jsonPrimitive.content }
 
         /** Picks the highest-pipeline version tagged `-<channel>-` out of a maven-metadata document. */
         fun newestOnChannel(metadataXml: String, channel: String): String? =
