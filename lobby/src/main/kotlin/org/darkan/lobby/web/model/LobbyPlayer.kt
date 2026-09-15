@@ -36,6 +36,7 @@ class LobbyPlayer(val session: Session, val account: Account) {
     suspend fun message(text: String) = session.sendLobbyMessage(text)
 
     val vars = Vars().setSession(session)
+    var chatType = 0
     val worldLoginToken: String = LoginToken.issue(
         username = account.username,
         nowMs = System.currentTimeMillis(),
@@ -73,7 +74,7 @@ class LobbyPlayer(val session: Session, val account: Account) {
             session.readPackets(read)
         } finally {
             try {
-                SocialGateway.unregisterLobbyPlayerSession(account.username)
+                SocialGateway.unregisterLobbyPlayerSession(account.username, session)
             } catch (_: Throwable) {
             }
             session.exit()

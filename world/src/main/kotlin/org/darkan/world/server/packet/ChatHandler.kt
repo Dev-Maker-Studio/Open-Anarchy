@@ -7,6 +7,7 @@ import org.darkan.core.clan.ClanAction
 import org.darkan.core.net.prot.packet.Chat
 import org.darkan.core.net.prot.handler.PacketHandler
 import org.darkan.core.social.PublicChatMessage
+import org.darkan.core.social.SocialAction
 import org.darkan.world.clan.ClanRegistry
 import org.darkan.world.server.WorldServer
 
@@ -36,12 +37,12 @@ class ChatHandler : PacketHandler<Player, Chat> {
             )
             return
         }
+        if (message.isBlank()) return
         if (chatType == 1) {
-            WorldServer.forwardToLobby(player.username, packet.copy(type = chatType))
+            val effects = (packet.color shl 8) or (packet.effect and 0xff)
+            WorldServer.act(player.username, SocialAction.SayInFriendsChat(PublicChatMessage(message, effects)))
             return
         }
-
-        if (message.isBlank()) return
 
         if (player.account.checkMuted()) {
             player.sendMessage("You are muted. The mute will be lifted at ${player.account.getUnmuteDate()}")

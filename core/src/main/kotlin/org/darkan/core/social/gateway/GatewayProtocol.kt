@@ -1,66 +1,31 @@
 package org.darkan.core.social.gateway
 
-import kotlinx.serialization.Polymorphic
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
 import org.darkan.core.EnvVars
 import org.darkan.core.clan.ClanAction
 import org.darkan.core.clan.ClanChannelState
 import org.darkan.core.model.AccountView
 import org.darkan.core.model.Clan
 import org.darkan.core.model.Rights
-import org.darkan.core.net.prot.*
-import org.darkan.core.net.prot.packet.*
 import org.darkan.core.social.ChatMessage
-import org.darkan.core.social.PublicChatMessage
 import org.darkan.core.social.QuickChatMessage
+import org.darkan.core.social.SocialAction
+import org.darkan.core.social.SocialEvent
+import org.darkan.core.social.SocialJson
 import org.darkan.core.worldlist.Country
 import org.darkan.core.worldlist.WorldMetadata
 
 /**
- * SocialGateway WebSocket wire protocol.
- *
- * Requirement: user-originated communications are forwarded in the same decoded packet format
- * (ClientProt/ServerProt data classes), JSON-serialized over the websocket.
+ * SocialGateway WebSocket wire protocol: the one multiplexed socket between a world and the lobby.
+ * Nothing on it is revision-specific - social traffic is a [SocialAction] or [SocialEvent] with the
+ * player it concerns, and each side renders its own client packets from the events.
  */
 object SocialGatewayWireJson {
     val serializersModule: SerializersModule = SerializersModule {
-        polymorphic(ClientProt::class) {
-            subclass(AddFriend::class, AddFriend.serializer())
-            subclass(RemoveFriend::class, RemoveFriend.serializer())
-            subclass(AddIgnoreReq::class, AddIgnoreReq.serializer())
-            subclass(RemoveIgnore::class, RemoveIgnore.serializer())
-            subclass(ChatSetFilter::class, ChatSetFilter.serializer())
-            subclass(ChatType::class, ChatType.serializer())
-            subclass(Chat::class, Chat.serializer())
-            subclass(PrivateMessage::class, PrivateMessage.serializer())
-            subclass(FcJoin::class, FcJoin.serializer())
-            subclass(FcKick::class, FcKick.serializer())
-            subclass(FcSetRank::class, FcSetRank.serializer())
-            subclass(QuickChatPublic::class, QuickChatPublic.serializer())
-            subclass(QuickChatPrivate::class, QuickChatPrivate.serializer())
-        }
-        polymorphic(ServerProt::class) {
-            subclass(FriendStatus::class, FriendStatus.serializer())
-            subclass(FriendlistLoaded::class, FriendlistLoaded.serializer())
-            subclass(UpdateIgnoreList::class, UpdateIgnoreList.serializer())
-            subclass(FriendsChatChannel::class, FriendsChatChannel.serializer())
-            subclass(MessagePrivate::class, MessagePrivate.serializer())
-            subclass(MessagePrivateEcho::class, MessagePrivateEcho.serializer())
-            subclass(MessageFriendsChat::class, MessageFriendsChat.serializer())
-            subclass(GameMessage::class, GameMessage.serializer())
-            subclass(ChatFilterSettingsPrivateChat::class, ChatFilterSettingsPrivateChat.serializer())
-            subclass(MessageQuickChatPrivate::class, MessageQuickChatPrivate.serializer())
-            subclass(MessageQuickChatPrivateEcho::class, MessageQuickChatPrivateEcho.serializer())
-            subclass(MessageQuickChatFriendsChat::class, MessageQuickChatFriendsChat.serializer())
-        }
-        polymorphic(ChatMessage::class) {
-            subclass(PublicChatMessage::class, PublicChatMessage.serializer())
-            subclass(QuickChatMessage::class, QuickChatMessage.serializer())
-        }
+        include(SocialJson.serializersModule)
     }
 
     val json: Json = Json {
@@ -70,8 +35,6 @@ object SocialGatewayWireJson {
         isLenient = true
         encodeDefaults = true
         explicitNulls = false
-        // IMPORTANT: cannot use "type" because some decoded packets contain a "type" field (e.g. ClientProt ChatType),
-        // which collides with kotlinx-serialization polymorphism discriminator.
         classDiscriminator = "_type"
         serializersModule = SocialGatewayWireJson.serializersModule
     }
@@ -298,38 +261,20 @@ data class PlayerOffline(
     val username: String,
 ) : SocialGatewayWireMessage
 
+/** World → lobby: the player [username] asks for [action]. */
 @Serializable
-@SerialName("ClientPacket")
-data class ClientPacketEnvelope(
+@SerialName("SocialCommand")
+data class SocialCommand(
     val username: String,
-    @Polymorphic val packet: ClientProt,
+    val action: SocialAction,
 ) : SocialGatewayWireMessage
 
+/** Lobby → world: [event] happened to each of [usernames]; the world renders it for each of them. */
 @Serializable
-@SerialName("ServerPacket")
-data class ServerPacketEnvelope(
-    val username: String,
-    @Polymorphic val packet: ServerProt,
-) : SocialGatewayWireMessage
-
-@Serializable
-@SerialName("ServerPacketBatch")
-data class ServerPacketBatch(
+@SerialName("SocialNotification")
+data class SocialNotification(
     val usernames: List<String>,
-    @Polymorphic val packet: ServerProt,
-) : SocialGatewayWireMessage
-
-// ─── FC Settings Update ─────────────────────────────────────────────
-
-@Serializable
-@SerialName("FcSettingsUpdate")
-data class FcSettingsUpdate(
-    val username: String,
-    val name: String?,
-    val rankToEnter: Int,
-    val rankToSpeak: Int,
-    val rankToKick: Int,
-    val rankToLS: Int,
+    val event: SocialEvent,
 ) : SocialGatewayWireMessage
 
 // ─── Clans (docs/clans.md) ───────────────────────────────────────────

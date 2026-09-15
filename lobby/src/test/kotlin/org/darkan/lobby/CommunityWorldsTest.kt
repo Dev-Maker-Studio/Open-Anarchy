@@ -4,11 +4,11 @@ import kotlinx.coroutines.runBlocking
 import org.darkan.core.model.Account
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.login.LoginToken
-import org.darkan.core.net.prot.packet.AddFriend
 import org.darkan.core.net.prot.packet.GameMessage
 import org.darkan.core.social.gateway.AnnouncementBroadcast
 import org.darkan.core.social.gateway.AnnouncementChannel
-import org.darkan.core.social.gateway.ClientPacketEnvelope
+import org.darkan.core.social.SocialAction
+import org.darkan.core.social.gateway.SocialCommand
 import org.darkan.core.social.gateway.LoginTokenVerdict
 import org.darkan.core.social.gateway.PlayerOnline
 import org.darkan.core.social.gateway.VerifyLoginToken
@@ -74,7 +74,7 @@ class CommunityWorldsTest {
     }
 
     @Test
-    fun `a community world cannot displace a world that is online`() {
+    fun `a community world cannot displace a world that is online`() = runBlocking<Unit> {
         LobbyHarness.world(150, community = true).connect()
         assertFalse(LobbyHarness.world(150, community = true).tryConnect())
         assertTrue(LobbyHarness.world(151, community = true).tryConnect())
@@ -126,7 +126,7 @@ class CommunityWorldsTest {
         val lobby = LobbyHarness.lobbyLogin(target)
         lobby.clearSent()
 
-        world.deliver(ClientPacketEnvelope(victim.username, AddFriend(target.displayName)))
+        world.deliver(SocialCommand(victim.username, SocialAction.AddFriend(target.displayName)))
         world.deliver(AnnouncementBroadcast(AnnouncementChannel.GAME, "Free bonds on world 150"))
 
         assertTrue(assertNotNull(Accounts.find(victim.username)).social.friends.isEmpty())

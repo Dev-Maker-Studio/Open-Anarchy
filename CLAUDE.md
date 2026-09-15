@@ -508,16 +508,20 @@ JSON messages over WebSocket between world servers and lobby:
 
 ```kotlin
 // World → Lobby
-data class WorldHello(val worldId: Int, val token: String)
-data class PlayerOnline(val username: String, val displayName: String, val worldId: Int)
+data class WorldHello(val world: GatewayWorldInfo, val token: String)
+data class PlayerOnline(val username: String, val displayName: String, val rightsCrown: Int, val privateStatus: Int)
 data class PlayerOffline(val username: String)
-data class PrivateMessage(val from: String, val to: String, val message: ChatMessage)
+data class SocialCommand(val username: String, val action: SocialAction)   // AddFriend, JoinFriendsChat, SendPrivateMessage, ...
 
 // Lobby → World
-data class UpdateFriend(val player: String, val friend: String, val worldId: Int?)
-data class ReceivePrivateMessage(val from: String, val to: String, val message: ChatMessage)
-data class Announcement(val message: String, val type: AnnouncementType)
+data class SocialNotification(val usernames: List<String>, val event: SocialEvent)   // Snapshot, FriendUpdated, FriendsChatChanged, ...
+data class AnnouncementBroadcast(val channel: AnnouncementChannel, val message: String, val target: AnnouncementTarget)
 ```
+
+Nothing revision-specific crosses the socket: `SocialAction` and `SocialEvent`
+(`core/.../social/SocialProtocol.kt`) are the whole vocabulary, and each side renders its own
+client packets from the events with `SocialPackets`. The same vocabulary is served per player to
+the website over `WS /social/players/{username}` (see `docs/social-gateway.md`).
 
 ---
 
@@ -583,6 +587,11 @@ GET /health
 ```
 WS /social/ws
 Header: Authorization: Bearer <SOCIAL_GATEWAY_TOKEN>
+```
+
+### Per-player social socket (website, X-API-Key)
+```
+WS /social/players/{username}     # out: SocialEvent JSON (a Snapshot first), in: SocialAction JSON
 ```
 
 ### Admin Announcements

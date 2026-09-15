@@ -2,10 +2,12 @@ package org.darkan.lobby
 
 import kotlinx.coroutines.runBlocking
 import org.darkan.core.model.ChatMessageType
-import org.darkan.core.net.prot.packet.FcJoin
+import org.darkan.core.model.FriendsChatRank
 import org.darkan.core.net.prot.packet.FriendStatus
 import org.darkan.core.net.prot.packet.FriendsChatChannel
 import org.darkan.core.net.prot.packet.GameMessage
+import org.darkan.core.social.SocialAction
+import org.darkan.core.social.SocialEvent
 import org.darkan.core.social.gateway.PresenceSyncReason
 import org.darkan.lobby.harness.LobbyHarness
 import org.darkan.lobby.harness.RecordingSession
@@ -14,6 +16,7 @@ import org.darkan.lobby.web.model.sendLobbyMessage
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -157,7 +160,7 @@ class SocialGatewayTest {
 
         LobbyHarness.lobbyLogin(owner)
         val first = LobbyHarness.lobbyLogin(member)
-        LobbyHarness.clientPacket(member, FcJoin(owner.displayName))
+        LobbyHarness.act(member, SocialAction.JoinFriendsChat(owner.displayName))
         assertTrue(first.sent.filterIsInstance<FriendsChatChannel>().any { !it.clear }, "the join itself failed")
 
         LobbyHarness.lobbyLogout(member)
@@ -176,8 +179,8 @@ class SocialGatewayTest {
 
         LobbyHarness.lobbyLogin(owner)
         LobbyHarness.lobbyLogin(member)
-        LobbyHarness.clientPacket(member, FcJoin(owner.displayName))
-        LobbyHarness.clientPacket(member, FcJoin(null))
+        LobbyHarness.act(member, SocialAction.JoinFriendsChat(owner.displayName))
+        LobbyHarness.act(member, SocialAction.LeaveFriendsChat)
 
         assertNull(member.social.currentFriendsChat, "an explicit leave must forget the channel")
 
@@ -196,10 +199,10 @@ class SocialGatewayTest {
         val member = LobbyHarness.account("member")
 
         val ownerSession = LobbyHarness.lobbyLogin(owner)
-        LobbyHarness.clientPacket(owner, FcJoin(owner.displayName))
+        LobbyHarness.act(owner, SocialAction.JoinFriendsChat(owner.displayName))
         LobbyHarness.lobbyLogin(member)
         ownerSession.clearSent()
-        LobbyHarness.clientPacket(member, FcJoin(owner.displayName))
+        LobbyHarness.act(member, SocialAction.JoinFriendsChat(owner.displayName))
 
         val channel = assertNotNull(ownerSession.lastChannel())
         val listed = assertNotNull(channel.memberList().firstOrNull { it.username == member.username })
@@ -281,10 +284,10 @@ class SocialGatewayTest {
         val world = LobbyHarness.world(52).connect()
         world.presenceSnapshot(PresenceSyncReason.CONNECT, member)
 
-        val packets = world.packetsFor(member)
-        assertTrue(packets.any { it is FriendStatus }, "the friend list was not re-sent")
+        val events = world.eventsFor(member)
+        assertTrue(events.any { it is SocialEvent.Snapshot }, "the friend list was not re-sent")
         assertTrue(
-            packets.filterIsInstance<FriendsChatChannel>().any { !it.clear },
+            events.filterIsInstance<SocialEvent.FriendsChatChanged>().any { it.channel != null },
             "the remembered friends chat was not restored after the reconnect",
         )
     }
@@ -326,5 +329,116 @@ class SocialGatewayTest {
             assertNotNull(watcherSession.lastStatusOf(mover.displayName)).world,
             "a player who moved world -> lobby was reported offline",
         )
+    }
+
+    // ─── Many connections on one player ──────────────────────────────
+
+    @Test
+    fun `a world player's first event is the whole snapshot`() = runBlocking {
+        val friend = LobbyHarness.account("friend")
+        val player = LobbyHarness.account("player", friends = setOf(friend.username))
+        LobbyHarness.lobbyLogin(friend)
+
+        val world = LobbyHarness.world(60).connect()
+        world.playerOnline(player)
+
+        val first = assertNotNull(world.eventsFor(player).firstOrNull(), "nothing was sent to the player")
+        val snapshot = assertIs<SocialEvent.Snapshot>(first, "the snapshot must come before any other event")
+        assertEquals(SocialGateway.LOBBY_WORLD_ID, snapshot.friends.single { it.username == friend.username }.worldId)
+    }
+
+    @Test
+    fun `every connection of a player gets the snapshot and then the same events`() = runBlocking {
+        val friend = LobbyHarness.account("friend")
+        val player = LobbyHarness.account("player", friends = setOf(friend.username))
+
+        val world = LobbyHarness.world(61).connect()
+        world.playerOnline(player)
+        val site = LobbyHarness.listen(player)
+        assertIs<SocialEvent.Snapshot>(site.events.first(), "a new connection starts from the snapshot")
+        world.clear()
+        site.clear()
+
+        LobbyHarness.lobbyLogin(friend)
+
+        val onWorld = assertNotNull(world.eventsFor(player).filterIsInstance<SocialEvent.FriendUpdated>().lastOrNull())
+        val onSite = assertNotNull(site.events.filterIsInstance<SocialEvent.FriendUpdated>().lastOrNull())
+        assertEquals(onWorld, onSite, "the world and the website must see the same event")
+        assertEquals(SocialGateway.LOBBY_WORLD_ID, onSite.friend.worldId)
+    }
+
+    @Test
+    fun `a website connection is not presence, and the last connection is the logout`() = runBlocking {
+        val watcher = LobbyHarness.account("watcher")
+        val player = LobbyHarness.account("player")
+        LobbyHarness.befriend(watcher, player)
+        val watcherSession = LobbyHarness.lobbyLogin(watcher)
+        assertEquals(0, assertNotNull(watcherSession.lastStatusOf(player.displayName)).world)
+        watcherSession.clearSent()
+
+        val site = LobbyHarness.listen(player)
+        assertNull(watcherSession.lastStatusOf(player.displayName), "a website connection alone must not read as online")
+
+        val world = LobbyHarness.world(62).connect()
+        world.playerOnline(player)
+        assertEquals(62, assertNotNull(watcherSession.lastStatusOf(player.displayName)).world)
+        watcherSession.clearSent()
+
+        LobbyHarness.stopListening(player, site)
+        assertNull(watcherSession.lastStatusOf(player.displayName), "closing the website socket must not change presence")
+
+        world.playerOffline(player)
+        assertEquals(0, assertNotNull(watcherSession.lastStatusOf(player.displayName)).world)
+    }
+
+    @Test
+    fun `a player on two worlds stays online until both are gone`() = runBlocking {
+        val watcher = LobbyHarness.account("watcher")
+        val player = LobbyHarness.account("player")
+        LobbyHarness.befriend(watcher, player)
+        val watcherSession = LobbyHarness.lobbyLogin(watcher)
+
+        val first = LobbyHarness.world(63).connect()
+        val second = LobbyHarness.world(64).connect()
+        first.playerOnline(player)
+        second.playerOnline(player)
+        assertEquals(64, assertNotNull(watcherSession.lastStatusOf(player.displayName)).world, "the newest world is the one shown")
+        watcherSession.clearSent()
+
+        second.playerOffline(player)
+        assertEquals(63, assertNotNull(watcherSession.lastStatusOf(player.displayName)).world)
+
+        first.playerOffline(player)
+        assertEquals(0, assertNotNull(watcherSession.lastStatusOf(player.displayName)).world)
+    }
+
+    @Test
+    fun `a website connection can join a friends chat and is listed as on the web`() = runBlocking {
+        val owner = LobbyHarness.account("owner")
+        LobbyHarness.openFriendsChat(owner, "Helpers")
+        val member = LobbyHarness.account("member")
+        LobbyHarness.lobbyLogin(owner)
+        LobbyHarness.act(owner, SocialAction.JoinFriendsChat(owner.displayName))
+
+        val site = LobbyHarness.listen(member)
+        LobbyHarness.act(member, SocialAction.JoinFriendsChat(owner.displayName))
+
+        val channel = assertNotNull(site.events.filterIsInstance<SocialEvent.FriendsChatChanged>().lastOrNull()?.channel, "the join failed")
+        val listed = assertNotNull(channel.members.firstOrNull { it.username == member.username })
+        assertEquals(0, listed.worldId)
+        assertEquals("Web", listed.worldName)
+    }
+
+    @Test
+    fun `changing a friend's rank updates the owner's own list`() = runBlocking {
+        val owner = LobbyHarness.account("owner")
+        val friend = LobbyHarness.account("friend")
+        LobbyHarness.befriend(owner, friend)
+        val session = LobbyHarness.lobbyLogin(owner)
+        session.clearSent()
+
+        LobbyHarness.act(owner, SocialAction.SetFriendsChatRank(friend.displayName, FriendsChatRank.CAPTAIN))
+
+        assertEquals(FriendsChatRank.CAPTAIN.id, assertNotNull(session.lastStatusOf(friend.displayName)).friendsChatRank)
     }
 }

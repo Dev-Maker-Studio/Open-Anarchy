@@ -15,6 +15,7 @@ import kotlinx.serialization.json.put
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.social.gateway.AnnouncementBroadcast
 import org.darkan.core.social.gateway.AnnouncementChannel
+import org.darkan.lobby.social.PlayerSocket
 import org.darkan.lobby.social.SocialGateway
 import org.darkan.lobby.social.SocialSubscribers
 import org.darkan.lobby.web.apiKeyPresented
@@ -33,6 +34,14 @@ object SocialController {
             webSocket("/subscribe") {
                 if (!call.apiKeyPresented()) return@webSocket close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
                 SocialSubscribers.serve(this)
+            }
+
+            webSocket("/players/{username}") {
+                if (!call.apiKeyPresented()) return@webSocket close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Unauthorized"))
+                val name = call.parameters["username"].orEmpty()
+                val account = Accounts.find(name) ?: Accounts.findByDisplayName(name)
+                    ?: return@webSocket close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No such account"))
+                PlayerSocket.serve(account, this)
             }
 
             post("/friends-chat") {

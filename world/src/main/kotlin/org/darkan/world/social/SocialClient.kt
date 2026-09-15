@@ -5,11 +5,12 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logWarn
 import java.net.ConnectException
-import org.darkan.core.social.gateway.FcSettingsUpdate
+import org.darkan.core.social.SocialAction
 import org.darkan.core.social.gateway.DisplayNameResult
 import org.darkan.core.social.gateway.DisplayNameLookup
 import org.darkan.core.social.gateway.GatewayPlayerPresence
@@ -18,6 +19,7 @@ import org.darkan.core.social.gateway.LoginTokenVerdict
 import org.darkan.core.social.gateway.PlayerOffline
 import org.darkan.core.social.gateway.PlayerOnline
 import org.darkan.core.social.gateway.PresenceSyncReason
+import org.darkan.core.social.gateway.SocialCommand
 import org.darkan.core.social.gateway.VerifyLoginToken
 import org.darkan.core.social.gateway.WorldPresenceSnapshot
 import org.darkan.core.social.gateway.SocialGatewayWireJson
@@ -34,21 +36,15 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * The world's end of the social gateway socket.
  *
+ * Outgoing messages are queued in the order [send] is called and written by one coroutine, so a
+ * player's online, actions and offline reach the lobby in the order the world produced them.
  * Presence is pushed, not asked for: [onlinePlayers] is sent as a [WorldPresenceSnapshot] the
  * moment the socket comes up and again every [EnvVars.socialPresenceResyncSeconds], so the lobby
- * can always rebuild its picture of this world from the world's own. That is what makes a restart
- * on either side recoverable - a world that outlived a lobby restart re-announces its players and
- * gets their whole social state pushed back without anybody relogging, and a lobby that never saw
- * a `PlayerOffline` (because the socket was down) drops those players at the next snapshot.
+ * can always rebuild its picture of this world from the world's own.
  */
 class SocialClient(
     private val scope: CoroutineScope,
     private val onlinePlayers: () -> List<GatewayPlayerPresence> = { emptyList() },
-    /**
-     * Told whenever the socket comes up or goes down. Replicas the world only holds because the
-     * lobby pushed them - the clan registry - are dropped here, so a reconnect starts from the
-     * lobby's resync rather than from stale copies.
-     */
     private val onConnectionChange: (connected: Boolean) -> Unit = {},
     private val onMessage: suspend (SocialGatewayWireMessage) -> Unit,
 ) {
@@ -60,6 +56,7 @@ class SocialClient(
     }
 
     private val state = AtomicReference<State>(State.Stopped)
+    private val outbound = Channel<String>(Channel.UNLIMITED)
 
     private val pendingVerdicts = ConcurrentHashMap<Int, CompletableDeferred<LoginTokenVerdict>>()
     private val pendingDisplayNames = ConcurrentHashMap<Int, CompletableDeferred<DisplayNameResult>>()
@@ -68,7 +65,7 @@ class SocialClient(
     sealed interface State {
         data object Stopped : State
         data class Connecting(val attempt: Int) : State
-        data class Connected(val session: DefaultClientWebSocketSession) : State
+        data object Connected : State
     }
 
     fun start() {
@@ -76,44 +73,26 @@ class SocialClient(
         scope.launch(Dispatchers.IO + SupervisorJob()) { connectLoop() }
     }
 
-    /**
-     * @return true if the message was handed to the gateway socket, false if it was dropped
-     *         because the gateway is down (or the write failed). Callers that can reach a player
-     *         should tell them, the way legacy LobbyCommunicator.forwardPackets did.
-     */
-    suspend fun send(msg: SocialGatewayWireMessage): Boolean {
-        val st = state.get()
-        val session = (st as? State.Connected)?.session
-        if (session == null) {
-            logWarn("SocialClient dropped ${msg::class.simpleName}: gateway not connected (state=${st::class.simpleName})")
+    /** False when the gateway is down, so the caller can tell the player rather than lose the intent. */
+    fun send(msg: SocialGatewayWireMessage): Boolean {
+        val current = state.get()
+        if (current !is State.Connected) {
+            logWarn("SocialClient dropped ${msg::class.simpleName}: gateway not connected (state=${current::class.simpleName})")
             return false
         }
-        val text = SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), msg)
-        return try {
-            session.send(Frame.Text(text))
-            true
-        } catch (e: Exception) {
-            logWarn("SocialClient send failed type=${msg::class.simpleName}", e)
-            false
-        }
+        return outbound.trySend(SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), msg)).isSuccess
     }
 
-    suspend fun sendPlayerOnline(username: String, displayName: String, rightsCrown: Int, privateStatus: Int): Boolean =
+    fun sendPlayerOnline(username: String, displayName: String, rightsCrown: Int, privateStatus: Int): Boolean =
         send(PlayerOnline(username = username, displayName = displayName, rightsCrown = rightsCrown, privateStatus = privateStatus))
 
-    suspend fun sendPlayerOffline(username: String) {
-        send(PlayerOffline(username = username))
-    }
+    fun sendPlayerOffline(username: String): Boolean = send(PlayerOffline(username = username))
 
-    /** Tells the lobby exactly who this world has in game right now. */
-    suspend fun sendPresenceSnapshot(reason: PresenceSyncReason): Boolean =
+    fun act(username: String, action: SocialAction): Boolean = send(SocialCommand(username, action))
+
+    fun sendPresenceSnapshot(reason: PresenceSyncReason): Boolean =
         send(WorldPresenceSnapshot(players = onlinePlayers(), reason = reason))
 
-    suspend fun sendFcSettingsUpdate(username: String, name: String?, rankToEnter: Int, rankToSpeak: Int, rankToKick: Int, rankToLS: Int) {
-        send(FcSettingsUpdate(username = username, name = name, rankToEnter = rankToEnter, rankToSpeak = rankToSpeak, rankToKick = rankToKick, rankToLS = rankToLS))
-    }
-
-    /** The lobby's answer for a community world's login, or null when the lobby could not be asked. */
     suspend fun verifyLoginToken(username: String, token: String): LoginTokenVerdict? {
         val requestId = nextRequestId.incrementAndGet()
         val verdict = CompletableDeferred<LoginTokenVerdict>()
@@ -138,17 +117,22 @@ class SocialClient(
         }
     }
 
-    /**
-     * Re-sends the online list on a timer. Nothing is expected to be wrong; this exists so that
-     * drift - a dropped `PlayerOnline`, a socket that died mid-logout - cannot outlive one
-     * interval.
-     */
     private suspend fun resyncLoop() {
         val interval = EnvVars.socialPresenceResyncSeconds.seconds
         while (true) {
             delay(interval)
             if (!sendPresenceSnapshot(PresenceSyncReason.PERIODIC)) return
         }
+    }
+
+    private suspend fun DefaultClientWebSocketSession.writeLoop() {
+        for (text in outbound) send(Frame.Text(text))
+    }
+
+    private fun dropQueued() {
+        do {
+            val next = outbound.tryReceive()
+        } while (next.isSuccess)
     }
 
     private suspend fun connectLoop() {
@@ -166,7 +150,6 @@ class SocialClient(
                     )
                     send(Frame.Text(SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), hello)))
 
-                    // Wait for ack (best-effort)
                     val first = incoming.receiveCatching().getOrNull()
                     val ack = (first as? Frame.Text)?.readText()?.let { txt ->
                         try {
@@ -181,12 +164,12 @@ class SocialClient(
                         return@webSocket
                     }
 
-                    state.set(State.Connected(this))
+                    dropQueued()
+                    val writer = launch { writeLoop() }
+                    state.set(State.Connected)
                     onConnectionChange(true)
                     logInfo("SocialClient connected")
 
-                    // The handshake is only half the story: the lobby cannot know who is already
-                    // in game here, so hand it the full list before anything else.
                     sendPresenceSnapshot(PresenceSyncReason.CONNECT)
                     val resync = launch { resyncLoop() }
 
@@ -198,7 +181,6 @@ class SocialClient(
                             logWarn("SocialClient received invalid JSON: $txt", e)
                             continue
                         }
-                        logInfo("SocialClient received: ${msg::class.simpleName}")
                         if (msg is LoginTokenVerdict) {
                             pendingVerdicts.remove(msg.requestId)?.complete(msg)
                             continue
@@ -210,6 +192,7 @@ class SocialClient(
                         onMessage(msg)
                     }
                     resync.cancel()
+                    writer.cancel()
                 }
             } catch (_: CancellationException) {
                 return

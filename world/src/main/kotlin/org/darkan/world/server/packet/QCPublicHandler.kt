@@ -5,6 +5,7 @@ import org.darkan.core.clan.ClanAction
 import org.darkan.core.net.prot.packet.QuickChatPublic
 import org.darkan.core.net.prot.handler.PacketHandler
 import org.darkan.core.social.QuickChatMessage
+import org.darkan.core.social.SocialAction
 import org.darkan.world.clan.ClanRegistry
 import org.darkan.world.server.WorldServer
 
@@ -24,9 +25,11 @@ class QCPublicHandler : PacketHandler<Player, QuickChatPublic> {
             )
             return
         }
-        // Friends chat is still the lobby's own packet handling.
         if (packet.chatType == 1) {
-            WorldServer.forwardToLobby(player.username, packet)
+            WorldServer.act(
+                player.username,
+                SocialAction.SayInFriendsChat(QuickChatMessage(message = "", fileId = packet.qcId, data = packet.messageData)),
+            )
             return
         }
         // TODO: Quick chat public message handling

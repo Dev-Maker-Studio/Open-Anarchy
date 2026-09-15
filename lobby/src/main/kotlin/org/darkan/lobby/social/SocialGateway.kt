@@ -3,205 +3,230 @@ package org.darkan.lobby.social
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import org.darkan.core.Logger
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.formatPlayerNameForDisplay
 import org.darkan.core.formatPlayerNameForProtocol
-import org.darkan.core.model.*
+import org.darkan.core.model.Account
+import org.darkan.core.model.ChatMessageType
+import org.darkan.core.model.FriendsChatRank
+import org.darkan.core.model.Rights
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.Session
-import org.darkan.core.net.prot.*
-import org.darkan.core.net.prot.packet.*
-import org.darkan.core.net.prot.dto.*
+import org.darkan.core.net.prot.ServerProt
+import org.darkan.core.net.prot.packet.GameMessage
+import org.darkan.core.social.ChatMessage
+import org.darkan.core.social.FriendEntry
+import org.darkan.core.social.FriendsChatMember
+import org.darkan.core.social.FriendsChatState
+import org.darkan.core.social.IgnoredPlayer
+import org.darkan.core.social.NoticeKind
+import org.darkan.core.social.PublicChatMessage
 import org.darkan.core.social.QuickChatMessage
-import org.darkan.core.social.gateway.*
+import org.darkan.core.social.SocialAction
+import org.darkan.core.social.SocialEvent
+import org.darkan.core.social.SocialPackets
+import org.darkan.core.social.Speaker
+import org.darkan.core.social.gateway.AccountAction
+import org.darkan.core.social.gateway.AccountCommand
+import org.darkan.core.social.gateway.AccountUpdate
+import org.darkan.core.social.gateway.AnnouncementBroadcast
+import org.darkan.core.social.gateway.AnnouncementTarget
+import org.darkan.core.social.gateway.ClanCommand
+import org.darkan.core.social.gateway.ClanFetch
+import org.darkan.core.social.gateway.DisplayNameLookup
+import org.darkan.core.social.gateway.DisplayNameResult
+import org.darkan.core.social.gateway.GatewayPlayerPresence
+import org.darkan.core.social.gateway.GatewayWorldInfo
+import org.darkan.core.social.gateway.PlayerOffline
+import org.darkan.core.social.gateway.PlayerOnline
+import org.darkan.core.social.gateway.PresenceSyncReason
+import org.darkan.core.social.gateway.SocialCommand
+import org.darkan.core.social.gateway.SocialGatewayWireJson
+import org.darkan.core.social.gateway.SocialGatewayWireMessage
+import org.darkan.core.social.gateway.VerifyLoginToken
+import org.darkan.core.social.gateway.WorldHello
+import org.darkan.core.social.gateway.WorldHelloAck
+import org.darkan.core.social.gateway.WorldPresenceSnapshot
 import org.darkan.core.worldlist.World
 import org.darkan.lobby.Lobby
 import java.util.concurrent.ConcurrentHashMap
-import org.darkan.core.net.prot.dto.FriendStatusUpdate
-import org.darkan.core.net.prot.dto.FriendsChatPlayer
-import org.darkan.core.net.prot.dto.IgnoreEntry
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicLong
 
+/** Somewhere a player's social events are delivered: a world, a lobby-screen session, a website socket. */
+interface SocialSink {
+    suspend fun deliver(usernames: List<String>, event: SocialEvent)
+}
+
+/**
+ * The lobby's social service. A player has any number of attachments - one per world they are
+ * on, per lobby-screen session, per website socket - and every attachment gets the same
+ * [SocialEvent]s and may send [SocialAction]s. Presence is derived from the attachments that
+ * carry a world: a player is online while any of those exists, and reads as being on the newest
+ * game world, else the lobby screen. Per-player work is serialised so a late goodbye from one
+ * connection can never undo a fresh hello from another.
+ */
 object SocialGateway {
-    private data class Presence(
+    const val LOBBY_WORLD_ID = 1115
+    private const val LISTENER_WORLD_NAME = "Web"
+    private const val FRIENDS_CHAT_CAPACITY = 100
+    private const val KICK_BAN_MS = 3_600_000L
+
+    private class Attachment(
         val username: String,
         val displayName: String,
-        val rightsCrown: Int,
-        val privateStatus: Int,
-        val worldId: Int,
-        val worldName: String,
-        val lastSeenMs: Long,
+        val worldId: Int?,
+        val sink: SocialSink,
+        val order: Long,
     )
 
-    private data class LobbyUser(
-        val username: String,
-        val displayName: String,
-        val rightsCrown: Int,
-        val privateStatus: Int,
-        val session: Session,
-        val lastSeenMs: Long,
+    private class LobbySink(val session: Session, private val username: String) : SocialSink {
+        override suspend fun deliver(usernames: List<String>, event: SocialEvent) {
+            for (packet in SocialPackets.render(username, event)) session.send(packet)
+        }
+    }
+
+    private data class Location(val worldId: Int, val worldName: String)
+
+    private class FcRoom(
+        val ownerUsername: String,
+        val members: MutableSet<String> = ConcurrentHashMap.newKeySet(),
+        val tempBans: ConcurrentHashMap<String, Long> = ConcurrentHashMap(),
     )
 
     private val worldsById = ConcurrentHashMap<Int, WorldSession>()
     private val worldInfoById = ConcurrentHashMap<Int, GatewayWorldInfo>()
-
-    private val presenceByUsername = ConcurrentHashMap<String, Presence>()
-    private val lobbyByUsername = ConcurrentHashMap<String, LobbyUser>()
-    private val usernameByDisplayLower = ConcurrentHashMap<String, String>()
-
-    private val chatTypeByUsername = ConcurrentHashMap<String, Int>()
-
+    private val attachmentsByUsername = ConcurrentHashMap<String, CopyOnWriteArrayList<Attachment>>()
+    private val locks = ConcurrentHashMap<String, Mutex>()
+    private val attachmentOrder = AtomicLong()
+    private val friendWatchers = ConcurrentHashMap<String, MutableSet<String>>()
     private val fcRoomsByOwner = ConcurrentHashMap<String, FcRoom>()
     private val fcOwnerByMember = ConcurrentHashMap<String, String>()
 
-    private data class FcRoom(
-        val ownerUsername: String,
-        val members: MutableSet<String>,
-        val tempBans: ConcurrentHashMap<String, Long> = ConcurrentHashMap(),
-    )
+    internal var communityWorlds = CommunityWorlds()
 
-    private fun rankAllowed(rankId: Int, requiredId: Int): Boolean {
-        if (requiredId <= FriendsChatRank.UNRANKED.id) return true
-        return rankId >= requiredId
+    // ─── Attachments ─────────────────────────────────────────────────
+
+    suspend fun registerLobbyPlayerSession(account: Account, session: Session) =
+        attach(Attachment(account.username, account.displayName, LOBBY_WORLD_ID, LobbySink(session, account.username), attachmentOrder.incrementAndGet()))
+
+    suspend fun unregisterLobbyPlayerSession(username: String, session: Session) {
+        LobbyClanScreen.forget(username)
+        detach(username) { (it.sink as? LobbySink)?.session === session }
     }
 
-    private suspend fun getFcOwnerUsername(fromUsername: String, ownerDisplayNameOrNull: String?): String? {
-        val name = ownerDisplayNameOrNull?.takeIf { it.isNotBlank() }
-            ?: Accounts.find(fromUsername)?.social?.currentFriendsChat?.takeIf { it.isNotBlank() }
-            ?: return null
-        val owner = Accounts.findByDisplayName(name) ?: return null
-        return owner.username
+    suspend fun attachListener(account: Account, sink: SocialSink) =
+        attach(Attachment(account.username, account.displayName, null, sink, attachmentOrder.incrementAndGet()))
+
+    suspend fun detachListener(username: String, sink: SocialSink) = detach(username) { it.sink === sink }
+
+    private suspend fun attachWorldPlayer(session: WorldSession, player: GatewayPlayerPresence) =
+        attach(Attachment(player.username.formatPlayerNameForProtocol(), player.displayName, session.worldId, session, attachmentOrder.incrementAndGet()))
+
+    private suspend fun <T> locked(username: String, block: suspend () -> T): T =
+        locks.computeIfAbsent(username) { Mutex() }.withLock { block() }
+
+    private suspend fun attach(attachment: Attachment) = locked(attachment.username) {
+        val username = attachment.username
+        val account = Accounts.find(username) ?: return@locked
+        val list = attachmentsByUsername.computeIfAbsent(username) { CopyOnWriteArrayList() }
+        val before = locationOf(username)
+        val first = list.isEmpty()
+        val replaced = list.removeIf { it.sink === attachment.sink }
+        list += attachment
+        if (!replaced) countOnline(attachment, +1)
+        if (first) registerFriendWatcher(username, account.social.friends)
+        attachment.sink.deliver(listOf(username), snapshotOf(account))
+        if (attachment.worldId != null) ClanService.onLogin(account)
+        if (first) rejoinFriendsChat(account)
+        if (locationOf(username) != before) locationChanged(username, account)
     }
 
-    /**
-     * A member's rank in [owner]'s channel. Staff outrank everything and the owner is always the
-     * owner, exactly as legacy `ActiveFC.getRank` had it.
-     */
-    private fun fcRankOf(owner: Account, member: Account): Int {
-        if (member.hasRights(Rights.ADMIN)) return FriendsChatRank.JMOD.id
-        if (member.username == owner.username) return FriendsChatRank.OWNER.id
-        return owner.social.friendsChat.getRank(member.username).id
-    }
-
-    private suspend fun getOrCreateRoom(ownerUsername: String): FcRoom {
-        return fcRoomsByOwner.computeIfAbsent(ownerUsername) {
-            FcRoom(ownerUsername = ownerUsername, members = ConcurrentHashMap.newKeySet())
+    private suspend fun detach(username: String, matches: (Attachment) -> Boolean) = locked(username) {
+        val list = attachmentsByUsername[username] ?: return@locked
+        val before = locationOf(username)
+        val removed = list.filter(matches)
+        if (removed.isEmpty()) return@locked
+        list.removeAll(removed)
+        removed.forEach { countOnline(it, -1) }
+        val account = Accounts.find(username)
+        if (list.isNotEmpty()) {
+            if (locationOf(username) != before) locationChanged(username, account)
+            return@locked
         }
+        attachmentsByUsername.remove(username)
+        notifyWatchers(username, account)
+        if (account != null) deregisterFriendWatcher(username, account.social.friends)
+        leaveFriendsChat(username, forget = false)
+        ClanService.onLogout(username)
     }
 
-    /**
-     * The channel block for [room]. [minRankCanKick] is per-recipient in legacy
-     * `ActiveFC.refreshChannel`, which patched a 0 into the byte for the owner so the owner can
-     * always kick; everybody else sees the channel's configured kick rank.
-     */
-    private suspend fun buildFriendsChatChannel(owner: Account, room: FcRoom, forUsername: String): FriendsChatChannel {
-        val minRankKick = if (forUsername == owner.username) 0 else owner.social.friendsChat.rankToKick.id
-        // 727 encodes chatName as a base37 long; use a protocol-safe name (not displayName casing/spaces).
-        val chatName = (owner.social.friendsChat.name ?: owner.username).formatPlayerNameForProtocol()
-
-        val memberAccounts = Accounts.findByUsernames(room.members)
-        val accByUser = memberAccounts.associateBy { it.username }
-
-        val members = room.members.mapNotNull { memberUsername ->
-            val acc = accByUser[memberUsername] ?: return@mapNotNull null
-            val location = locationOf(memberUsername)
-            FriendsChatPlayer(
-                displayName = acc.displayName,
-                username = acc.username,
-                worldId = location?.worldId ?: 0,
-                rank = fcRankOf(owner, acc),
-                worldName = location?.worldName ?: "",
-            )
-        }.toTypedArray()
-
-        return FriendsChatChannel(
-            clear = false,
-            ownerDisplayName = owner.displayName,
-            ownerUsername = owner.username,
-            chatName = chatName,
-            minRankCanKick = minRankKick,
-            players = members,
-        )
+    private suspend fun locationChanged(username: String, account: Account?) {
+        notifyWatchers(username, account)
+        refreshRoomOf(username)
     }
 
-    private suspend fun broadcastFcChannel(owner: Account, room: FcRoom) {
-        // The block differs for the owner, so the owner is sent their own copy and the rest share.
-        val others = room.members.filter { it != owner.username }
-        if (others.isNotEmpty()) sendBatchToUsers(others, buildFriendsChatChannel(owner, room, others.first()))
-        if (room.members.contains(owner.username)) {
-            sendToUser(owner.username, buildFriendsChatChannel(owner, room, owner.username))
-        }
+    private fun countOnline(attachment: Attachment, delta: Int) {
+        if (attachment.sink !is WorldSession) return
+        val world = Lobby.worldList.get(attachment.sink.worldId) ?: return
+        world.playersOnline = maxOf(0, world.playersOnline + delta)
     }
 
-    /**
-     * Takes [username] out of whatever friends chat they are in. [notify] means "they left on
-     * purpose": legacy `ActiveFC.removePlayer(player, logout = false)` both told the client the
-     * channel is gone and cleared the remembered channel, while a logout deliberately kept it so
-     * the next login re-joins.
-     */
-    private suspend fun leaveFriendsChat(username: String, notify: Boolean) {
-        if (notify) forgetCurrentFriendsChat(username)
-        val ownerUsername = fcOwnerByMember.remove(username) ?: return
-        val room = fcRoomsByOwner[ownerUsername] ?: return
-        room.members.remove(username)
-        if (notify) {
-            sendToUser(username, FriendsChatChannel(clear = true))
-        }
-        val owner = Accounts.find(ownerUsername) ?: return
-        broadcastFcChannel(owner, room)
-        if (room.members.isEmpty()) {
-            fcRoomsByOwner.remove(ownerUsername, room)
-        }
-    }
+    private fun attachmentsOf(username: String): List<Attachment> = attachmentsByUsername[username].orEmpty()
 
-    // ─── Friend Status ───────────────────────────────────────────────
+    private fun isOnline(username: String): Boolean = attachmentsOf(username).isNotEmpty()
 
-    /**
-     * The world id the lobby itself reports as, so a friend sitting on the lobby screen reads as
-     * online rather than offline. The legacy lobby registered itself as a world exactly this way
-     * (`Lobby.WORLD_INFO`, lobby-server `com/rs/lobby/Lobby.java:51`).
-     */
-    const val LOBBY_WORLD_ID = 1115
-
-    /**
-     * The world label the client shows next to a friend or a friends chat member. Legacy derived
-     * it from the world number rather than the world's own name (`FriendStatus.encodePlayer` and
-     * `ActiveFC.refreshChannel`), which is what makes lobby-resident players read as "Lobby n".
-     */
     private fun worldTextFor(worldId: Int): String =
         if (worldId > 1100) "Lobby ${worldId - 1100}" else "World $worldId"
 
-    /** Where a player currently is: the lobby screen, or a game world. */
-    private data class Location(val worldId: Int, val worldName: String)
-
-    /**
-     * Resolves [username] to the world the client should be shown, or null when they are offline.
-     * The lobby is checked first and wins, matching legacy `Lobby.getSocial`: a player moving to a
-     * world drops their lobby entry, so the two can never both be live for long.
-     */
     private fun locationOf(username: String): Location? {
-        lobbyByUsername[username]?.let { return Location(LOBBY_WORLD_ID, worldTextFor(LOBBY_WORLD_ID)) }
-        presenceByUsername[username]?.let { return Location(it.worldId, worldTextFor(it.worldId)) }
-        return null
+        val located = attachmentsOf(username).filter { it.worldId != null }
+        val best = located.filter { it.worldId != LOBBY_WORLD_ID }.maxByOrNull { it.order }
+            ?: located.maxByOrNull { it.order }
+            ?: return null
+        val worldId = best.worldId ?: return null
+        return Location(worldId, worldTextFor(worldId))
     }
 
-    /** True while [username] is online anywhere the gateway knows about. */
-    private fun isOnline(username: String): Boolean =
-        lobbyByUsername.containsKey(username) || presenceByUsername.containsKey(username)
+    private fun onLobby(username: String): Boolean = attachmentsOf(username).any { it.sink is LobbySink }
 
-    /**
-     * Who has to be told when a player's status changes: for each username, everyone currently
-     * online who has them on their friends list. This mirrors legacy `FriendsToNotify`
-     * (lobby-server `com/rs/lobby/model/FriendsToNotify.java`) and exists because friendship is
-     * one-directional - B can watch A without A watching B, so walking A's own friends would miss
-     * exactly the people who need the update.
-     */
-    private val friendWatchers = ConcurrentHashMap<String, MutableSet<String>>()
+    private fun isOnWorld(username: String, session: WorldSession): Boolean =
+        attachmentsOf(username.formatPlayerNameForProtocol()).any { it.sink === session }
+
+    private fun worldsOf(username: String): List<WorldSession> =
+        attachmentsOf(username).mapNotNull { it.sink as? WorldSession }.distinct()
+
+    private suspend fun emit(usernames: Collection<String>, event: SocialEvent) {
+        val bySink = LinkedHashMap<SocialSink, LinkedHashSet<String>>()
+        for (username in usernames) {
+            for (attachment in attachmentsOf(username)) bySink.getOrPut(attachment.sink) { LinkedHashSet() }.add(username)
+        }
+        for ((sink, names) in bySink) {
+            try {
+                sink.deliver(names.toList(), event)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logWarn("SocialGateway: failed delivering ${event::class.simpleName} to $names", e)
+            }
+        }
+    }
+
+    private suspend fun emit(username: String, event: SocialEvent) = emit(listOf(username), event)
+
+    private suspend fun notice(username: String, kind: NoticeKind, text: String) = emit(username, SocialEvent.Notice(kind, text))
+
+    // ─── Friends ─────────────────────────────────────────────────────
 
     private fun registerFriendWatcher(username: String, friends: Collection<String>) {
         for (friend in friends) {
@@ -217,240 +242,148 @@ object SocialGateway {
         }
     }
 
-    private fun friendStatusUpdateFor(viewer: Account, friend: Account): FriendStatusUpdate {
-        // `viewer.onlineTo(friend)` reads the *friend's* private-chat setting: "nobody" always
-        // hides them, "friends only" hides them unless they have the viewer added back. Legacy
-        // applied the same check at encode time (core FriendStatus.encodePlayer), which is why an
-        // update is still pushed - it just carries world 0.
-        val canSeeFriend = viewer.onlineTo(friend)
-        val location = if (canSeeFriend) locationOf(friend.username) else null
-        val rank = viewer.social.friendsChat.getRank(friend.username).id
-        return FriendStatusUpdate(
-            warnMessage = false,
+    private fun friendEntryFor(viewer: Account, friend: Account): FriendEntry {
+        val location = if (viewer.onlineTo(friend)) locationOf(friend.username) else null
+        return FriendEntry(
+            username = friend.username,
             displayName = friend.displayName,
             previousDisplayName = friend.prevDisplayName,
-            world = location?.worldId ?: 0,
-            friendsChatRank = rank,
-            referrer = false,
-            worldName = location?.worldName,
+            worldId = location?.worldId ?: 0,
+            worldName = location?.worldName ?: "",
+            rank = viewer.social.friendsChat.getRank(friend.username),
         )
     }
 
-    private fun ignoreDisplayName(username: String, accountsByUsername: Map<String, Account>): String {
-        return accountsByUsername[username]?.displayName ?: username.formatPlayerNameForDisplay()
-    }
-
-    private suspend fun sendIgnoreListFull(toUsername: String) {
-        val account = Accounts.find(toUsername) ?: return
-        val ignoreAccounts = Accounts.findByUsernames(account.social.ignores)
-        val ignoreMap = ignoreAccounts.associateBy { it.username }
-        val ignores = account.social.ignores.map { ign ->
-            IgnoreEntry(username = ign, displayName = ignoreDisplayName(ign, ignoreMap))
-        }.toTypedArray()
-        sendToUser(account.username, UpdateIgnoreList(ignores))
-    }
-
-    /**
-     * Pushes [username]'s current status to everyone online who has them on their friends list,
-     * the way legacy `SocialPlayer.updateOnlineStatus` did. Call it *after* the presence maps have
-     * been updated - [friendStatusUpdateFor] reads them, so a logout notifies correctly only once
-     * the player is already gone from them.
-     */
-    private suspend fun notifyFriendsOfStatusChange(username: String, subject: Account? = null) {
-        val watchers = friendWatchers[username]?.toList().orEmpty()
+    private suspend fun notifyWatchers(username: String, subject: Account?) {
+        val watchers = friendWatchers[username]?.toSet().orEmpty()
         if (watchers.isEmpty()) return
         val account = subject ?: Accounts.find(username) ?: return
         for (watcher in Accounts.findByUsernames(watchers)) {
-            // The index can lag a friend removal made from another session; legacy re-checked too.
-            if (!watcher.social.friends.contains(account.username)) continue
-            sendToUser(watcher.username, FriendStatus(arrayOf(friendStatusUpdateFor(watcher, account))))
+            if (!watcher.social.friends.contains(username)) continue
+            emit(watcher.username, SocialEvent.FriendUpdated(friendEntryFor(watcher, account)))
         }
     }
 
-    /**
-     * Sends the full friend list, ignore list and chat filter, then tells everyone watching this
-     * player that they are online. One batch DB query covers the friends and ignores instead of
-     * 6+N individual lookups.
-     */
-    private suspend fun initializeSocial(account: Account) {
-        val username = account.username
+    private fun ignoresOf(account: Account, related: Map<String, Account>): List<IgnoredPlayer> =
+        account.social.ignores.map { IgnoredPlayer(it, related[it]?.displayName ?: it.formatPlayerNameForDisplay()) }
 
-        // ONE batch DB query for all friends + ignores
-        val allRelated = account.social.friends + account.social.ignores
-        val relatedAccounts = if (allRelated.isNotEmpty()) Accounts.findByUsernames(allRelated) else emptyList()
-        val accountsByUsername = relatedAccounts.associateBy { it.username }
-
-        // Build + send friend list
-        // FriendlistLoaded must come FIRST (sets client LOADED=1, "ready for data"),
-        // then FriendStatus populates the list and sets LOADED=2 ("fully loaded").
-        val friendUpdates = account.social.friends.mapNotNull { friendUsername ->
-            val friendAccount = accountsByUsername[friendUsername] ?: return@mapNotNull null
-            friendStatusUpdateFor(account, friendAccount)
-        }.toTypedArray()
-        sendToUser(username, FriendlistLoaded())
-        sendToUser(username, FriendStatus(friendUpdates))
-
-        // Build + send ignore list
-        val ignores = account.social.ignores.map { ign ->
-            IgnoreEntry(
-                username = ign,
-                displayName = ignoreDisplayName(ign, accountsByUsername),
-            )
-        }.toTypedArray()
-        sendToUser(username, UpdateIgnoreList(ignores))
-
-        // Send chat filter echo
-        sendToUser(username, ChatFilterSettingsPrivateChat(account.social.status.toInt()))
-
-        notifyFriendsOfStatusChange(username, account)
-    }
-
-    /**
-     * Everything a player is given when they appear - on the lobby screen or on a world - in
-     * legacy `SocialPlayer.loginSocial` order (lobby-server `com/rs/lobby/model/SocialPlayer.java`):
-     * register them in the watcher index, send the friend list, ignore list and chat filter, tell
-     * their watchers they are online, then put them back in the friends chat and clan chat they
-     * were last in. The lobby used to skip the last two, which is why a lobby login never restored
-     * the channel the player had joined.
-     */
-    private suspend fun loginSocial(account: Account) {
-        registerFriendWatcher(account.username, account.social.friends)
-        initializeSocial(account)
-        ClanService.onLogin(account)
-        val savedFc = account.social.currentFriendsChat
-        if (!savedFc.isNullOrBlank()) handleClientPacket(account.username, FcJoin(savedFc))
-    }
-
-    /**
-     * Everything a player loses when they stop being present anywhere. Mirrors legacy
-     * `SocialPlayer.logoutSocial`: tell the watchers first (the presence maps must already be
-     * clear), then drop out of the watcher index and the channels. The friends chat is left
-     * without clearing `currentFriendsChat`, which is what makes it re-join on the next login.
-     */
-    private suspend fun logoutSocial(username: String) {
-        val account = Accounts.find(username)
-        notifyFriendsOfStatusChange(username, account)
-        if (account != null) deregisterFriendWatcher(username, account.social.friends)
-        leaveFriendsChat(username, notify = false)
-        ClanService.onLogout(username)
-    }
-
-    suspend fun registerLobbyPlayerSession(account: Account, session: Session) {
-        lobbyByUsername[account.username] = LobbyUser(
-            username = account.username,
-            displayName = account.displayName,
-            rightsCrown = account.rights.crown,
+    private suspend fun snapshotOf(account: Account): SocialEvent.Snapshot {
+        val related = Accounts.findByUsernames(account.social.friends + account.social.ignores).associateBy { it.username }
+        val friends = account.social.friends.mapNotNull { related[it] }.map { friendEntryFor(account, it) }
+        return SocialEvent.Snapshot(
+            friends = friends,
+            ignores = ignoresOf(account, related),
             privateStatus = account.social.status.toInt(),
-            session = session,
-            lastSeenMs = System.currentTimeMillis(),
+            friendsChat = roomStateOf(account.username),
         )
-        usernameByDisplayLower[account.displayName.lowercase()] = account.username
-        loginSocial(account)
     }
 
-    suspend fun unregisterLobbyPlayerSession(username: String) {
-        LobbyClanScreen.forget(username)
-        val prior = lobbyByUsername.remove(username) ?: return
-        usernameByDisplayLower.remove(prior.displayName.lowercase(), username)
-        // A player who clicked "play" is on a world by now; they have not logged out at all, so
-        // nothing about them may be torn down.
-        if (presenceByUsername.containsKey(username)) return
-        logoutSocial(username)
+    private suspend fun addFriend(username: String, name: String) {
+        val from = Accounts.find(username) ?: return
+        val target = Accounts.findByDisplayName(name) ?: return notice(username, NoticeKind.FRIEND, "Player not found.")
+        if (from.social.friends.add(target.username)) Accounts.save(from)
+        registerFriendWatcher(username, listOf(target.username))
+        notifyWatchers(username, from)
+        emit(username, SocialEvent.FriendUpdated(friendEntryFor(from, target)))
     }
 
-    // ─── Presence Reconciliation ─────────────────────────────────────
+    private suspend fun removeFriend(username: String, name: String) {
+        val from = Accounts.find(username) ?: return
+        val target = Accounts.findByDisplayName(name) ?: return
+        if (from.social.friends.remove(target.username)) Accounts.save(from)
+        deregisterFriendWatcher(username, listOf(target.username))
+        notifyWatchers(username, from)
+        emit(username, SocialEvent.FriendRemoved(target.username))
+    }
 
-    /**
-     * Records that [player] is in game on [session]'s world and answers whether that is news.
-     * The lobby entry is dropped on the way: a player who reached a world is no longer on the
-     * lobby screen, and leaving the entry behind would route their packets at a dead session.
-     */
-    private fun markOnline(session: WorldSession, player: GatewayPlayerPresence): Boolean {
-        val username = player.username.formatPlayerNameForProtocol()
-        lobbyByUsername.remove(username)
-        val prior = presenceByUsername.put(
-            username,
-            Presence(
-                username = username,
-                displayName = player.displayName,
-                rightsCrown = player.rightsCrown,
-                privateStatus = player.privateStatus,
-                worldId = session.worldId,
-                worldName = session.worldName,
-                lastSeenMs = System.currentTimeMillis(),
-            ),
+    private suspend fun addIgnore(username: String, name: String, untilLogout: Boolean) {
+        val from = Accounts.find(username) ?: return
+        val target = Accounts.findByDisplayName(name) ?: Accounts.find(name)
+            ?: return notice(username, NoticeKind.IGNORE, "Player not found.")
+        from.social.ignores.add(target.username)
+        if (untilLogout) {
+            val temporary = from.social.tillLogoutIgnores ?: mutableSetOf<String>().also { from.social.tillLogoutIgnores = it }
+            temporary.add(target.username)
+        }
+        Accounts.save(from)
+        emitIgnores(from)
+    }
+
+    private suspend fun removeIgnore(username: String, name: String) {
+        val from = Accounts.find(username) ?: return
+        val target = Accounts.findByDisplayName(name) ?: Accounts.find(name) ?: return
+        from.social.ignores.remove(target.username)
+        from.social.tillLogoutIgnores?.remove(target.username)
+        Accounts.save(from)
+        emitIgnores(from)
+    }
+
+    private suspend fun emitIgnores(account: Account) {
+        val related = Accounts.findByUsernames(account.social.ignores).associateBy { it.username }
+        emit(account.username, SocialEvent.IgnoresChanged(ignoresOf(account, related)))
+    }
+
+    private suspend fun setPrivateStatus(username: String, status: Int) {
+        val account = Accounts.find(username) ?: return
+        account.social.status = status.toByte()
+        Accounts.save(account)
+        emit(username, SocialEvent.PrivateStatusChanged(status))
+        notifyWatchers(username, account)
+    }
+
+    // ─── Friends chat ────────────────────────────────────────────────
+
+    private fun fcRankOf(owner: Account, member: Account): FriendsChatRank = when {
+        member.hasRights(Rights.ADMIN) -> FriendsChatRank.JMOD
+        member.username == owner.username -> FriendsChatRank.OWNER
+        else -> owner.social.friendsChat.getRank(member.username)
+    }
+
+    private fun rankAllowed(rank: FriendsChatRank, required: FriendsChatRank): Boolean =
+        required.id <= FriendsChatRank.UNRANKED.id || rank.id >= required.id
+
+    private suspend fun stateOf(owner: Account, room: FcRoom): FriendsChatState {
+        val members = Accounts.findByUsernames(room.members).map { member ->
+            val location = locationOf(member.username)
+            FriendsChatMember(
+                username = member.username,
+                displayName = member.displayName,
+                worldId = location?.worldId ?: 0,
+                worldName = location?.worldName ?: LISTENER_WORLD_NAME,
+                rank = fcRankOf(owner, member),
+            )
+        }
+        return FriendsChatState(
+            ownerUsername = owner.username,
+            ownerDisplayName = owner.displayName,
+            chatName = owner.social.friendsChat.name ?: owner.username,
+            kickRank = owner.social.friendsChat.rankToKick,
+            members = members,
         )
-        usernameByDisplayLower[player.displayName.lowercase()] = username
-        if (prior != null && prior.worldId == session.worldId) return false
-        Lobby.worldList.get(session.worldId)?.let { it.playersOnline++ }
-        prior?.let { old -> Lobby.worldList.get(old.worldId)?.let { if (it.playersOnline > 0) it.playersOnline-- } }
-        return true
     }
 
-    /**
-     * Drops [username]'s presence, but only while they are still recorded on [worldId] - a player
-     * who has already turned up somewhere else must not be removed by their old world's late
-     * goodbye. Answers whether anything was actually removed.
-     */
-    private fun markOffline(username: String, worldId: Int): Boolean {
-        val prior = presenceByUsername[username] ?: return false
-        if (prior.worldId != worldId) return false
-        if (!presenceByUsername.remove(username, prior)) return false
-        usernameByDisplayLower.remove(prior.displayName.lowercase(), username)
-        Lobby.worldList.get(prior.worldId)?.let { if (it.playersOnline > 0) it.playersOnline-- }
-        return true
+    private suspend fun roomStateOf(username: String): FriendsChatState? {
+        val ownerUsername = fcOwnerByMember[username] ?: return null
+        val room = fcRoomsByOwner[ownerUsername] ?: return null
+        val owner = Accounts.find(ownerUsername) ?: return null
+        return stateOf(owner, room)
     }
 
-    /**
-     * Runs the logout half of the social state - unless the player turns out to still be online.
-     * Hopping from a world back to the lobby can land the new lobby session before the old world's
-     * [PlayerOffline], and that player has not logged out at all; they have just moved, so their
-     * watchers get a fresh status instead of a teardown.
-     */
-    private suspend fun logoutSocialIfGone(username: String) {
-        if (isOnline(username)) {
-            notifyFriendsOfStatusChange(username)
-            return
-        }
-        logoutSocial(username)
+    private suspend fun broadcastRoom(owner: Account, room: FcRoom) =
+        emit(room.members.toList(), SocialEvent.FriendsChatChanged(stateOf(owner, room)))
+
+    private suspend fun refreshRoomOf(username: String) {
+        val ownerUsername = fcOwnerByMember[username] ?: return
+        val room = fcRoomsByOwner[ownerUsername] ?: return
+        val owner = Accounts.find(ownerUsername) ?: return
+        broadcastRoom(owner, room)
     }
 
-    /**
-     * Makes the lobby's picture of [session]'s world match the world's own. The world is the
-     * authority for who is on it: anybody it lists is online there, anybody it does not list is
-     * gone. That is what lets either process restart without stranding "online" friends, and what
-     * a periodic snapshot uses to erase drift.
-     *
-     * On [PresenceSyncReason.CONNECT] every listed player is also re-sent their whole social state,
-     * because a world that outlived a lobby restart is full of players whose client still shows an
-     * empty friend list and no channel; nobody should have to relog for that.
-     */
-    private suspend fun reconcileWorldPresence(session: WorldSession, msg: WorldPresenceSnapshot) {
-        val listed = LinkedHashMap<String, GatewayPlayerPresence>()
-        for (player in msg.players) listed[player.username.formatPlayerNameForProtocol()] = player
-
-        val stale = presenceByUsername.values
-            .filter { it.worldId == session.worldId && it.username !in listed }
-            .map { it.username }
-        for (username in stale) {
-            if (markOffline(username, session.worldId)) logoutSocialIfGone(username)
-        }
-
-        val full = msg.reason == PresenceSyncReason.CONNECT
-        for ((username, player) in listed) {
-            val existing = presenceByUsername[username]
-            // Another world already claims this player; its own snapshot decides, not this one.
-            if (existing != null && existing.worldId != session.worldId) continue
-            val appeared = markOnline(session, player)
-            if (!appeared && !full) continue
-            val account = Accounts.find(username) ?: continue
-            loginSocial(account)
-        }
-
-        logInfo("SocialGateway: reconciled world=${session.worldId} reason=${msg.reason} online=${listed.size} dropped=${stale.size}")
+    private suspend fun rejoinFriendsChat(account: Account) {
+        val saved = account.social.currentFriendsChat?.takeIf { it.isNotBlank() } ?: return
+        joinFriendsChat(account.username, saved)
     }
 
-    /** Forgets the channel [username] is remembered as being in, so a later login re-joins nothing. */
     private suspend fun forgetCurrentFriendsChat(username: String) {
         val account = Accounts.find(username) ?: return
         if (account.social.currentFriendsChat == null) return
@@ -458,44 +391,189 @@ object SocialGateway {
         Accounts.save(account)
     }
 
-    /**
-     * Lobby-resident players never reach a world, so an announcement fanned out to the worlds
-     * alone would skip them. Legacy `ChatManager.sendBroadcast` messaged both, and used
-     * FC_NOTIFICATION for lobby players because that is the only text the lobby's chat window
-     * renders.
-     */
-    private suspend fun deliverAnnouncementToLobby(msg: AnnouncementBroadcast) {
-        val recipients: Collection<String> = when (val target = msg.target) {
-            is AnnouncementTarget.AllWorlds -> lobbyByUsername.keys.toList()
-            is AnnouncementTarget.World ->
-                if (target.worldId == LOBBY_WORLD_ID) lobbyByUsername.keys.toList() else emptyList()
-            is AnnouncementTarget.User ->
-                listOf(target.username.formatPlayerNameForProtocol()).filter { lobbyByUsername.containsKey(it) }
-            is AnnouncementTarget.FriendsChat ->
-                fcRoomsByOwner[target.ownerUsername.formatPlayerNameForProtocol()]
-                    ?.members
-                    ?.filter { lobbyByUsername.containsKey(it) }
-                    .orEmpty()
+    private suspend fun refuseJoin(username: String, text: String) {
+        notice(username, NoticeKind.FRIENDS_CHAT, text)
+        emit(username, SocialEvent.FriendsChatChanged(null))
+    }
+
+    private suspend fun joinFriendsChat(username: String, ownerName: String) {
+        val owner = Accounts.findByDisplayName(ownerName) ?: Accounts.find(ownerName)
+            ?: return refuseJoin(username, "Unable to find that friends chat.")
+        if (owner.social.friendsChat.name == null)
+            return refuseJoin(username, "The friends chat you are trying to join is not set up yet.")
+        val from = Accounts.find(username) ?: return
+        if (owner.social.ignores.contains(username))
+            return refuseJoin(username, "You are not allowed to join this user's friends chat channel.")
+        if (!rankAllowed(fcRankOf(owner, from), owner.social.friendsChat.rankToEnter))
+            return refuseJoin(username, "You are not allowed to join that friends chat.")
+        val existing = fcRoomsByOwner[owner.username]
+        if (existing != null && username !in existing.members && existing.members.size >= FRIENDS_CHAT_CAPACITY)
+            return refuseJoin(username, "The channel you tried to join is currently full.")
+        val banExpiry = existing?.tempBans?.get(username)
+        if (banExpiry != null) {
+            if (System.currentTimeMillis() < banExpiry)
+                return refuseJoin(username, "You have been temporarily banned from this friends chat.")
+            existing.tempBans.remove(username)
         }
-        for (username in recipients) {
-            sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, msg.message))
+        if (from.social.currentFriendsChat != owner.displayName) {
+            from.social.currentFriendsChat = owner.displayName
+            Accounts.save(from)
+        }
+        val previousOwner = fcOwnerByMember[username]
+        if (previousOwner != null && previousOwner != owner.username) leaveRoom(username, previousOwner)
+        val room = fcRoomsByOwner.computeIfAbsent(owner.username) { FcRoom(it) }
+        room.members.add(username)
+        fcOwnerByMember[username] = owner.username
+        broadcastRoom(owner, room)
+    }
+
+    private suspend fun leaveFriendsChat(username: String, forget: Boolean) {
+        if (forget) forgetCurrentFriendsChat(username)
+        val ownerUsername = fcOwnerByMember.remove(username)
+        if (ownerUsername != null) leaveRoom(username, ownerUsername)
+        if (forget) emit(username, SocialEvent.FriendsChatChanged(null))
+    }
+
+    private suspend fun leaveRoom(username: String, ownerUsername: String) {
+        val room = fcRoomsByOwner[ownerUsername] ?: return
+        room.members.remove(username)
+        if (room.members.isEmpty()) {
+            fcRoomsByOwner.remove(ownerUsername, room)
+            return
+        }
+        val owner = Accounts.find(ownerUsername) ?: return
+        broadcastRoom(owner, room)
+    }
+
+    private suspend fun kickFromFriendsChat(username: String, name: String) {
+        val target = Accounts.findByDisplayName(name) ?: Accounts.find(name)
+            ?: return notice(username, NoticeKind.FRIENDS_CHAT, "Target player does not exist.")
+        if (target.username == username) return notice(username, NoticeKind.FRIENDS_CHAT, "You can't kick yourself!")
+        val ownerUsername = fcOwnerByMember[username]
+            ?: return notice(username, NoticeKind.FRIENDS_CHAT, "You are not currently connected to a friend's chat.")
+        val room = fcRoomsByOwner[ownerUsername] ?: return
+        if (target.username !in room.members) return notice(username, NoticeKind.FRIENDS_CHAT, "Target player does not exist.")
+        val owner = Accounts.find(ownerUsername) ?: return
+        val kicker = Accounts.find(username) ?: return
+        val kickerRank = fcRankOf(owner, kicker)
+        val targetRank = fcRankOf(owner, target)
+        if (targetRank.id >= FriendsChatRank.OWNER.id)
+            return notice(username, NoticeKind.FRIENDS_CHAT, "You cannot kick the owner of a channel.")
+        if (!rankAllowed(kickerRank, owner.social.friendsChat.rankToKick))
+            return notice(username, NoticeKind.FRIENDS_CHAT, "You do not have permission to kick from this friends chat.")
+        if (username != owner.username && targetRank.id >= kickerRank.id)
+            return notice(username, NoticeKind.FRIENDS_CHAT, "You cannot kick that user.")
+        room.tempBans[target.username] = System.currentTimeMillis() + KICK_BAN_MS
+        fcOwnerByMember.remove(target.username, ownerUsername)
+        forgetCurrentFriendsChat(target.username)
+        emit(target.username, SocialEvent.FriendsChatChanged(null))
+        leaveRoom(target.username, ownerUsername)
+    }
+
+    private suspend fun setFriendsChatRank(username: String, name: String, rank: FriendsChatRank) {
+        val owner = Accounts.find(username) ?: return
+        val target = Accounts.findByDisplayName(name) ?: Accounts.find(name) ?: return
+        owner.social.friendsChat.setRank(target.username, rank.takeIf { it != FriendsChatRank.UNRANKED })
+        Accounts.save(owner)
+        fcRoomsByOwner[username]?.let { broadcastRoom(owner, it) }
+        if (target.username in owner.social.friends) emit(username, SocialEvent.FriendUpdated(friendEntryFor(owner, target)))
+    }
+
+    private suspend fun updateFriendsChatSettings(username: String, action: SocialAction.UpdateFriendsChatSettings) {
+        val account = Accounts.find(username) ?: return
+        with(account.social.friendsChat) {
+            name = action.name
+            rankToEnter = action.rankToEnter
+            rankToSpeak = action.rankToSpeak
+            rankToKick = action.rankToKick
+            rankToLS = action.rankToLootShare
+        }
+        Accounts.save(account)
+        val room = fcRoomsByOwner[username] ?: return
+        if (action.name == null) dissolveRoom(room) else broadcastRoom(account, room)
+    }
+
+    private suspend fun dissolveRoom(room: FcRoom) {
+        fcRoomsByOwner.remove(room.ownerUsername, room)
+        for (member in room.members.toList()) {
+            fcOwnerByMember.remove(member, room.ownerUsername)
+            forgetCurrentFriendsChat(member)
+            emit(member, SocialEvent.FriendsChatChanged(null))
+            notice(member, NoticeKind.FRIENDS_CHAT, "The channel has been disabled.")
+        }
+        room.members.clear()
+    }
+
+    private suspend fun sayInOwnFriendsChat(username: String, message: ChatMessage) {
+        val ownerUsername = fcOwnerByMember[username]
+            ?: return notice(username, NoticeKind.FRIENDS_CHAT, "You are not currently connected to a friend's chat.")
+        speakInFriendsChat(username, ownerUsername, message, requireMembership = true)
+    }
+
+    /** The website's way of saying a line into [ownerUsername]'s channel without being a member of it. */
+    suspend fun sayInFriendsChat(fromUsername: String, ownerUsername: String, message: String) =
+        speakInFriendsChat(
+            fromUsername.formatPlayerNameForProtocol(),
+            ownerUsername.formatPlayerNameForProtocol(),
+            PublicChatMessage(message),
+            requireMembership = false,
+        )
+
+    private suspend fun speakInFriendsChat(fromUsername: String, ownerUsername: String, message: ChatMessage, requireMembership: Boolean) {
+        val room = fcRoomsByOwner[ownerUsername] ?: return
+        if (requireMembership && fromUsername !in room.members) return
+        val owner = Accounts.find(ownerUsername) ?: return
+        val from = Accounts.find(fromUsername) ?: return
+        if (from.checkMuted()) return notice(fromUsername, NoticeKind.FRIENDS_CHAT, "You are muted.")
+        if (!rankAllowed(fcRankOf(owner, from), owner.social.friendsChat.rankToSpeak))
+            return notice(fromUsername, NoticeKind.FRIENDS_CHAT, "You are not allowed to speak in that friends chat.")
+        val chatName = owner.social.friendsChat.name ?: owner.username
+        emit(room.members.toList(), SocialEvent.FriendsChatLine(chatName, speakerOf(from), message))
+        if (message !is QuickChatMessage)
+            SocialSubscribers.publish(FriendsChatMessageEvent(owner.displayName, from.displayName, from.rights, message.message))
+    }
+
+    private fun speakerOf(account: Account) = Speaker(account.username, account.displayName, account.rights.crown)
+
+    // ─── Private messages ────────────────────────────────────────────
+
+    private suspend fun sendPrivateMessage(username: String, to: String, message: ChatMessage) {
+        val from = Accounts.find(username) ?: return
+        if (from.checkMuted()) return notice(username, NoticeKind.FRIEND, "You are muted.")
+        val target = Accounts.findByDisplayName(to) ?: return notice(username, NoticeKind.FRIEND, "Unable to find $to.")
+        if (!isOnline(target.username) || !target.onlineTo(from))
+            return notice(username, NoticeKind.FRIEND, "${target.displayName} is offline.")
+        emit(username, SocialEvent.PrivateMessageSent(target.displayName, message))
+        if (target.social.ignores.contains(from.username)) return
+        emit(target.username, SocialEvent.PrivateMessageReceived(speakerOf(from), message))
+    }
+
+    // ─── Actions ─────────────────────────────────────────────────────
+
+    suspend fun act(username: String, action: SocialAction) = locked(username) { apply(username, action) }
+
+    private suspend fun apply(username: String, action: SocialAction) {
+        when (action) {
+            is SocialAction.AddFriend -> addFriend(username, action.name)
+            is SocialAction.RemoveFriend -> removeFriend(username, action.name)
+            is SocialAction.AddIgnore -> addIgnore(username, action.name, action.untilLogout)
+            is SocialAction.RemoveIgnore -> removeIgnore(username, action.name)
+            is SocialAction.SetPrivateStatus -> setPrivateStatus(username, action.status)
+            is SocialAction.JoinFriendsChat -> joinFriendsChat(username, action.owner)
+            is SocialAction.LeaveFriendsChat -> leaveFriendsChat(username, forget = true)
+            is SocialAction.KickFromFriendsChat -> kickFromFriendsChat(username, action.name)
+            is SocialAction.SetFriendsChatRank -> setFriendsChatRank(username, action.name, action.rank)
+            is SocialAction.UpdateFriendsChatSettings -> updateFriendsChatSettings(username, action)
+            is SocialAction.SayInFriendsChat -> sayInOwnFriendsChat(username, action.message)
+            is SocialAction.SendPrivateMessage -> sendPrivateMessage(username, action.to, action.message)
         }
     }
 
-    suspend fun broadcastAnnouncement(msg: AnnouncementBroadcast) {
-        deliverAnnouncementToLobby(msg)
-        val text = SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), msg)
-        for (session in worldsById.values) {
-            try {
-                session.sendText(text)
-            } catch (e: Exception) {
-                logWarn("Failed sending announcement to world=${session.worldId}", e)
-            }
-        }
-    }
+    // ─── Worlds ──────────────────────────────────────────────────────
 
     suspend fun handleWorldSocket(socket: DefaultWebSocketServerSession) = coroutineScope {
         var worldSession: WorldSession? = null
+        var inbox: Job? = null
 
         try {
             for (frame in socket.incoming) {
@@ -522,26 +600,30 @@ object SocialGateway {
                     if (!attachWorld(session, msg.world))
                         return@coroutineScope refuseWorld(socket, msg.world, "World $worldId is already online")
                     worldSession = session
+                    inbox = launch { session.processInbox() }
 
                     logInfo("SocialGateway: ${tier.name.lowercase()} world connected worldId=${worldId} name=${msg.world.worldName} host=${msg.world.publicHost}:${msg.world.port}")
-                    val resp = WorldHelloAck(ok = true, message = null)
-                    socket.send(Frame.Text(SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), resp)))
+                    session.send(WorldHelloAck(ok = true, message = null))
                     continue
                 }
 
                 val world = worldSession ?: continue
-                handleWorldMessage(this, world, msg)
+                world.post { handleWorldMessage(world, msg) }
             }
         } catch (_: CancellationException) {
             // ignore
         } catch (e: Exception) {
             Logger.logError("SocialGateway socket error", e)
         } finally {
-            worldSession?.let { detachWorld(it) }
+            worldSession?.let { world ->
+                world.closeInbox()
+                withContext(NonCancellable) {
+                    inbox?.join()
+                    detachWorld(world)
+                }
+            }
         }
     }
-
-    internal var communityWorlds = CommunityWorlds()
 
     private suspend fun refuseWorld(socket: WebSocketSession, world: GatewayWorldInfo, reason: String) {
         logWarn("SocialGateway: refused world ${world.worldId} (${world.worldName}) at ${world.publicHost}:${world.port}: $reason")
@@ -550,12 +632,14 @@ object SocialGateway {
         socket.close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, reason))
     }
 
-    /** Records a world that has just finished its [WorldHello] handshake. */
-    internal fun attachWorld(session: WorldSession, info: GatewayWorldInfo): Boolean {
+    internal suspend fun attachWorld(session: WorldSession, info: GatewayWorldInfo): Boolean {
         if (session.community) {
             if (worldsById.putIfAbsent(session.worldId, session) != null) return false
         } else {
-            worldsById.put(session.worldId, session)?.markClosed()
+            worldsById.put(session.worldId, session)?.let { old ->
+                old.markClosed()
+                dropAttachmentsOf(old)
+            }
         }
         worldInfoById[session.worldId] = info
         val world = World(info.toWorldMetadata())
@@ -574,37 +658,24 @@ object SocialGateway {
         return differing.isNotEmpty()
     }
 
-    /**
-     * Drops a world and everybody who was on it: the world is listed as offline until
-     * [WorldList.expireOffline] drops it, and each of its players stops being present, which their
-     * friends have to be told about the same way an individual [PlayerOffline] tells them.
-     */
     internal suspend fun detachWorld(session: WorldSession) {
         session.markClosed()
-        Lobby.worldList.markOffline(session.worldId)
-        worldsById.remove(session.worldId, session)
-        worldInfoById.remove(session.worldId)
-
-        val toRemove = presenceByUsername
-            .filterValues { it.worldId == session.worldId }
-            .keys
-            .toList()
-        for (username in toRemove) {
-            if (markOffline(username, session.worldId)) logoutSocialIfGone(username)
+        if (worldsById.remove(session.worldId, session)) {
+            Lobby.worldList.markOffline(session.worldId)
+            worldInfoById.remove(session.worldId)
         }
-
+        dropAttachmentsOf(session)
         ClanService.onWorldDetached(session.worldId)
         communityWorlds.forgetWorld(session.worldId)
         logInfo("SocialGateway: world disconnected worldId=${session.worldId}")
     }
 
-    /**
-     * Everything a registered world can tell the gateway. Split out of [handleWorldSocket] so a
-     * test can feed a [WorldSession] messages with no socket behind it; [scope] is the socket's
-     * scope, which the slower database-backed branches launch into so one message never holds up
-     * the read loop.
-     */
-    internal suspend fun handleWorldMessage(scope: CoroutineScope, session: WorldSession, msg: SocialGatewayWireMessage) {
+    private suspend fun dropAttachmentsOf(session: WorldSession) {
+        val usernames = attachmentsByUsername.filterValues { list -> list.any { it.sink === session } }.keys.toList()
+        for (username in usernames) detach(username) { it.sink === session }
+    }
+
+    internal suspend fun handleWorldMessage(session: WorldSession, msg: SocialGatewayWireMessage) {
         if (session.community && !communityMayDeliver(session, msg)) {
             logTrace("SocialGateway: community world ${session.worldId} may not send ${msg::class.simpleName}")
             return
@@ -613,135 +684,79 @@ object SocialGateway {
             is PlayerOnline -> {
                 val claimed = GatewayPlayerPresence(msg.username, msg.displayName, msg.rightsCrown, msg.privateStatus)
                 val player = if (session.community) communityWorlds.admitted(session.worldId, claimed) ?: return else claimed
-                markOnline(session, player)
-                scope.launch {
-                    try {
-                        val acc = Accounts.find(msg.username.formatPlayerNameForProtocol()) ?: return@launch
-                        loginSocial(acc)
-                    } catch (e: Exception) {
-                        logWarn("SocialGateway: failed initial snapshots user=${msg.username}", e)
-                    }
-                }
+                attachWorldPlayer(session, player)
             }
 
             is PlayerOffline -> {
                 val username = msg.username.formatPlayerNameForProtocol()
-                markOffline(username, session.worldId)
                 communityWorlds.forget(username, session.worldId)
-                scope.launch { logoutSocialIfGone(username) }
+                detach(username) { it.sink === session }
             }
 
             is WorldPresenceSnapshot -> {
                 val snapshot = if (!session.community) msg
                     else msg.copy(players = msg.players.mapNotNull { communityWorlds.admitted(session.worldId, it) })
-                scope.launch { reconcileWorldPresence(session, snapshot) }
+                reconcileWorldPresence(session, snapshot)
             }
 
-            is VerifyLoginToken -> {
-                scope.launch { sendToWorld(session.worldId, communityWorlds.verify(session.worldId, msg)) }
-            }
+            is VerifyLoginToken -> sendToWorld(session.worldId, communityWorlds.verify(session.worldId, msg))
 
-            is ClientPacketEnvelope -> {
-                handleClientPacket(msg.username.formatPlayerNameForProtocol(), msg.packet)
-            }
+            is SocialCommand -> act(msg.username.formatPlayerNameForProtocol(), msg.action)
 
-            is AnnouncementBroadcast -> {
-                // Allow worlds to rebroadcast if needed.
-                broadcastAnnouncement(msg)
-            }
+            is AnnouncementBroadcast -> broadcastAnnouncement(msg)
 
-            is FcSettingsUpdate -> {
-                scope.launch { handleFcSettingsUpdate(msg) }
-            }
+            is AccountCommand -> handleAccountCommand(session, msg)
 
-            is AccountCommand -> {
-                scope.launch { handleAccountCommand(session, msg) }
-            }
+            is DisplayNameLookup -> sendToWorld(session.worldId, DisplayNameResult(msg.requestId, Accounts.find(msg.username)?.displayName))
 
-            is DisplayNameLookup -> {
-                scope.launch { sendToWorld(session.worldId, DisplayNameResult(msg.requestId, Accounts.find(msg.username)?.displayName)) }
-            }
+            is ClanCommand -> sendToWorld(session.worldId, ClanService.handle(msg.username, msg.action, msg.requestId))
 
-            is ClanCommand -> {
-                scope.launch {
-                    val result = ClanService.handle(msg.username, msg.action, msg.requestId)
-                    sendToWorld(session.worldId, result)
-                }
-            }
+            is ClanFetch -> sendToWorld(session.worldId, ClanService.fetch(msg.clanName))
 
-            is ClanFetch -> {
-                scope.launch { sendToWorld(session.worldId, ClanService.fetch(msg.clanName)) }
-            }
-
-            else -> {
-                logTrace("SocialGateway ignoring message type=${msg::class.simpleName}")
-            }
+            else -> logTrace("SocialGateway ignoring message type=${msg::class.simpleName}")
         }
     }
 
+    /**
+     * The world is the authority for who is on it: anybody it lists is attached through it,
+     * anybody it does not list is detached. On [PresenceSyncReason.CONNECT] every listed player is
+     * re-sent their whole state, because a world that outlived a lobby restart is full of players
+     * whose client still shows an empty friend list.
+     */
+    private suspend fun reconcileWorldPresence(session: WorldSession, msg: WorldPresenceSnapshot) {
+        val listed = LinkedHashMap<String, GatewayPlayerPresence>()
+        for (player in msg.players) listed[player.username.formatPlayerNameForProtocol()] = player
+        val present = attachmentsByUsername.filterValues { list -> list.any { it.sink === session } }.keys.toSet()
+
+        val stale = present.filter { it !in listed }
+        for (username in stale) detach(username) { it.sink === session }
+
+        val full = msg.reason == PresenceSyncReason.CONNECT
+        for ((username, player) in listed) {
+            if (username in present && !full) continue
+            attachWorldPlayer(session, player)
+        }
+
+        logInfo("SocialGateway: reconciled world=${session.worldId} reason=${msg.reason} online=${listed.size} dropped=${stale.size}")
+    }
+
     private fun communityMayDeliver(session: WorldSession, msg: SocialGatewayWireMessage): Boolean = when (msg) {
-        is ClientPacketEnvelope -> isOnWorld(msg.username, session.worldId)
-        is FcSettingsUpdate -> isOnWorld(msg.username, session.worldId)
-        is ClanCommand -> isOnWorld(msg.username, session.worldId)
+        is SocialCommand -> isOnWorld(msg.username, session)
+        is ClanCommand -> isOnWorld(msg.username, session)
         is AccountCommand -> false
         is AnnouncementBroadcast -> false
         else -> true
     }
 
-    private fun isOnWorld(username: String, worldId: Int) =
-        presenceByUsername[username.formatPlayerNameForProtocol()]?.worldId == worldId
-
-    private suspend fun sendToUser(username: String, packet: ServerProt) {
-        val lobby = lobbyByUsername[username]
-        if (lobby != null) {
-            try {
-                lobby.session.send(packet)
-            } catch (e: Exception) {
-                logWarn("Failed sending packet to lobby user=$username type=${packet::class.simpleName}", e)
-            }
-            return
-        }
-        val presence = presenceByUsername[username] ?: return
-        sendToWorld(presence.worldId, ServerPacketEnvelope(username = username, packet = packet))
-    }
-
-    private suspend fun sendBatchToUsers(usernames: Collection<String>, packet: ServerProt) {
-        val worldBuckets = mutableMapOf<Int, MutableList<String>>()
-        for (username in usernames) {
-            val lobby = lobbyByUsername[username]
-            if (lobby != null) {
-                try {
-                    lobby.session.send(packet)
-                } catch (e: Exception) {
-                    logWarn("Failed sending packet to lobby user=$username type=${packet::class.simpleName}", e)
-                }
-                continue
-            }
-            val presence = presenceByUsername[username] ?: continue
-            worldBuckets.getOrPut(presence.worldId) { mutableListOf() }.add(username)
-        }
-        for ((worldId, users) in worldBuckets) {
-            if (users.size == 1) {
-                sendToWorld(worldId, ServerPacketEnvelope(username = users[0], packet = packet))
-            } else {
-                sendToWorld(worldId, ServerPacketBatch(usernames = users, packet = packet))
-            }
-        }
-    }
-
     internal suspend fun sendToWorld(worldId: Int, msg: SocialGatewayWireMessage) {
         val session = worldsById[worldId] ?: return
-        val text = SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), msg)
         try {
-            session.sendText(text)
+            session.send(msg)
         } catch (e: Exception) {
             logWarn("Failed sending message to world=$worldId type=${msg::class.simpleName}", e)
         }
     }
 
-    // ─── Seams for ClanService ───────────────────────────────────────
-
-    /** Sends [msg] to every connected world. */
     internal suspend fun broadcastToWorlds(msg: SocialGatewayWireMessage) {
         val text = SocialGatewayWireJson.json.encodeToString(SocialGatewayWireMessage.serializer(), msg)
         for (session in worldsById.values) {
@@ -753,412 +768,29 @@ object SocialGateway {
         }
     }
 
-    /** Where [username] is: [LOBBY_WORLD_ID] on the lobby screen, a world id, or null when offline. */
+    // ─── Seams for ClanService ───────────────────────────────────────
+
     internal fun worldIdOf(username: String): Int? = locationOf(username)?.worldId
 
-    /** The display name [username] is online under, or null when they are not online anywhere. */
-    internal fun displayNameOf(username: String): String? =
-        lobbyByUsername[username]?.displayName ?: presenceByUsername[username]?.displayName
+    internal fun displayNameOf(username: String): String? = attachmentsOf(username).maxByOrNull { it.order }?.displayName
 
-    /** Sends [packet] to [username]'s lobby-screen session; false when they are not on the lobby. */
     internal suspend fun sendToLobbyPlayer(username: String, packet: ServerProt): Boolean {
-        val lobby = lobbyByUsername[username] ?: return false
-        try {
-            lobby.session.send(packet)
-        } catch (e: Exception) {
-            logWarn("Failed sending packet to lobby user=$username type=${packet::class.simpleName}", e)
+        val sessions = attachmentsOf(username).mapNotNull { (it.sink as? LobbySink)?.session }
+        for (session in sessions) {
+            try {
+                session.send(packet)
+            } catch (e: Exception) {
+                logWarn("Failed sending packet to lobby user=$username type=${packet::class.simpleName}", e)
+            }
         }
-        return true
+        return sessions.isNotEmpty()
     }
 
-    /** The channel a `Chat` goes to: the packet's own type, else the one the client last announced. */
-    internal fun chatTypeOf(username: String, packetType: Int): Int =
-        if (packetType != -1) packetType else (chatTypeByUsername[username] ?: 0)
-
-    /** As [chatTypeOf] for `QuickChatPublic`, whose "unset" is 0 rather than -1. */
-    internal fun quickChatTypeOf(username: String, packetType: Int): Int =
-        if (packetType != 0) packetType else (chatTypeByUsername[username] ?: 0)
-
-    suspend fun handleClientPacket(username: String, packet: ClientProt) {
-        when (packet) {
-            is ChatType -> {
-                chatTypeByUsername[username] = packet.type
-            }
-
-            is ChatSetFilter -> {
-                val account = Accounts.find(username) ?: return
-                account.social.status = packet.privateFilter.toByte()
-                Accounts.save(account)
-                presenceByUsername.computeIfPresent(username) { _, p ->
-                    p.copy(privateStatus = packet.privateFilter, lastSeenMs = System.currentTimeMillis())
-                }
-                sendToUser(username, ChatFilterSettingsPrivateChat(packet.privateFilter))
-                notifyFriendsOfStatusChange(username, account)
-            }
-
-            is AddFriend -> {
-                val from = Accounts.find(username) ?: return
-                val target = Accounts.findByDisplayName(packet.name)
-                if (target == null) {
-                    sendToUser(username, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "Player not found."))
-                    return
-                }
-                if (from.social.friends.add(target.username)) Accounts.save(from)
-                // Legacy SocialAddRemoveHandler: register the new watch, push my own status to
-                // everyone watching me, then send myself the new friend's status.
-                registerFriendWatcher(from.username, listOf(target.username))
-                notifyFriendsOfStatusChange(from.username, from)
-                val targetAcc = Accounts.find(target.username) ?: target
-                sendToUser(from.username, FriendStatus(arrayOf(friendStatusUpdateFor(from, targetAcc))))
-            }
-
-            is RemoveFriend -> {
-                val from = Accounts.find(username) ?: return
-                val target = Accounts.findByDisplayName(packet.name) ?: return
-                if (from.social.friends.remove(target.username)) Accounts.save(from)
-                deregisterFriendWatcher(from.username, listOf(target.username))
-                notifyFriendsOfStatusChange(from.username, from)
-            }
-
-            is AddIgnoreReq -> {
-                val from = Accounts.find(username) ?: return
-                val target = Accounts.findByDisplayName(packet.username) ?: Accounts.find(packet.username)
-                if (target == null) {
-                    sendToUser(username, GameMessage(ChatMessageType.IGNORE_NOTIFICATION, "Player not found."))
-                    return
-                }
-                from.social.ignores.add(target.username)
-                if (packet.temporary) {
-                    val set = from.social.tillLogoutIgnores ?: mutableSetOf<String>().also { from.social.tillLogoutIgnores = it }
-                    set.add(target.username)
-                }
-                Accounts.save(from)
-                sendIgnoreListFull(from.username)
-            }
-
-            is RemoveIgnore -> {
-                val from = Accounts.find(username) ?: return
-                val target = Accounts.findByDisplayName(packet.name) ?: Accounts.find(packet.name) ?: return
-                from.social.ignores.remove(target.username)
-                from.social.tillLogoutIgnores?.remove(target.username)
-                Accounts.save(from)
-                sendIgnoreListFull(from.username)
-            }
-
-            is FcJoin -> {
-                if (packet.fcName == null) {
-                    leaveFriendsChat(username, notify = true)
-                    return
-                }
-
-                val ownerUsername = getFcOwnerUsername(username, packet.fcName)
-                if (ownerUsername == null) {
-                    sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "Unable to find that friends chat."))
-                    sendToUser(username, FriendsChatChannel(clear = true))
-                    return
-                }
-
-                val owner = Accounts.find(ownerUsername)
-                if (owner == null) {
-                    sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "Unable to find that friends chat."))
-                    sendToUser(username, FriendsChatChannel(clear = true))
-                    return
-                }
-
-                // FC not set up check
-                if (owner.social.friendsChat.name == null) {
-                    sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "The friends chat you are trying to join is not set up yet."))
-                    sendToUser(username, FriendsChatChannel(clear = true))
-                    return
-                }
-
-                val from = Accounts.find(username) ?: return
-
-                // Ignore check: owner has joiner on ignore list
-                if (owner.social.ignores.contains(from.username)) {
-                    sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "You are not allowed to join this user's friends chat channel."))
-                    sendToUser(username, FriendsChatChannel(clear = true))
-                    return
-                }
-
-                val fromRank = fcRankOf(owner, from)
-                val required = owner.social.friendsChat.rankToEnter.id
-                if (!rankAllowed(fromRank, required)) {
-                    sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "You are not allowed to join that friends chat."))
-                    sendToUser(username, FriendsChatChannel(clear = true))
-                    return
-                }
-
-                val room = getOrCreateRoom(owner.username)
-
-                // Capacity check
-                if (room.members.size >= 100) {
-                    sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "The channel you tried to join is currently full."))
-                    sendToUser(username, FriendsChatChannel(clear = true))
-                    return
-                }
-
-                // Temp ban check
-                val banExpiry = room.tempBans[username]
-                if (banExpiry != null) {
-                    if (System.currentTimeMillis() < banExpiry) {
-                        sendToUser(username, GameMessage(ChatMessageType.FC_NOTIFICATION, "You have been temporarily banned from this friends chat."))
-                        sendToUser(username, FriendsChatChannel(clear = true))
-                        return
-                    }
-                    room.tempBans.remove(username)
-                }
-
-                // Legacy `ActiveFC.addPlayer` remembered the owner's display name here; both the
-                // rejoin on login and `Accounts.findByDisplayName` accept it.
-                from.social.currentFriendsChat = owner.displayName
-                Accounts.save(from)
-
-                val existingOwner = fcOwnerByMember[username]
-                if (existingOwner != null && existingOwner != owner.username) {
-                    leaveFriendsChat(username, notify = false)
-                }
-
-                room.members.add(username)
-                fcOwnerByMember[username] = owner.username
-                broadcastFcChannel(owner, room)
-            }
-
-            is FcKick -> {
-                val fromUsername = username
-                val targetUsername = packet.username.formatPlayerNameForProtocol()
-
-                // Self-kick check
-                if (targetUsername == fromUsername) {
-                    sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You can't kick yourself!"))
-                    return
-                }
-
-                val ownerUsername = fcOwnerByMember[fromUsername] ?: return
-                val room = fcRoomsByOwner[ownerUsername] ?: return
-                if (!room.members.contains(targetUsername)) return
-
-                val owner = Accounts.find(ownerUsername) ?: return
-                val fromRank = if (fromUsername == owner.username) FriendsChatRank.OWNER.id else owner.social.friendsChat.getRank(fromUsername).id
-                val targetRank = if (targetUsername == owner.username) FriendsChatRank.OWNER.id else owner.social.friendsChat.getRank(targetUsername).id
-                val required = owner.social.friendsChat.rankToKick.id
-
-                // Owner kick check
-                if (targetRank >= FriendsChatRank.OWNER.id) {
-                    sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You cannot kick the owner of a channel."))
-                    return
-                }
-
-                if (!rankAllowed(fromRank, required)) {
-                    sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You do not have permission to kick from this friends chat."))
-                    return
-                }
-                if (fromUsername != owner.username && targetRank >= fromRank) {
-                    sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You cannot kick that user."))
-                    return
-                }
-
-                // Apply 1-hour temp ban
-                room.tempBans[targetUsername] = System.currentTimeMillis() + 3600000L
-
-                room.members.remove(targetUsername)
-                fcOwnerByMember.remove(targetUsername, ownerUsername)
-                // Legacy kicked with `removePlayer(target, logout = false)`, so the kicked player
-                // is not put straight back into the channel by their next login.
-                forgetCurrentFriendsChat(targetUsername)
-                sendToUser(targetUsername, FriendsChatChannel(clear = true))
-                broadcastFcChannel(owner, room)
-            }
-
-            is FcSetRank -> {
-                val ownerUsername = username
-                val targetUsername = packet.username.formatPlayerNameForProtocol()
-                val owner = Accounts.find(ownerUsername) ?: return
-                val desired = FriendsChatRank.fromId(packet.rank)
-                owner.social.friendsChat.setRank(targetUsername, desired)
-                Accounts.save(owner)
-                val room = fcRoomsByOwner[ownerUsername]
-                if (room != null) broadcastFcChannel(owner, room)
-            }
-
-            is Chat -> {
-                // Types 2 and 3 are clan chat: a world sends those as a ClanCommand and the
-                // lobby's own ChatHandler goes to ClanService, never through here.
-                if (chatTypeOf(username, packet.type) == 1) handleFriendsChatMessage(username, packet.message)
-            }
-
-            is PrivateMessage -> {
-                handlePrivateMessage(username, packet.toDisplayName, packet.message)
-            }
-
-            is QuickChatPrivate -> {
-                handleQuickChatPrivate(username, packet)
-            }
-
-            is QuickChatPublic -> {
-                // Types 2 and 3 are clan chat: a world sends those as a ClanCommand and the
-                // lobby's own QuickChatPublicHandler goes to ClanService, never through here.
-                if (quickChatTypeOf(username, packet.chatType) == 1) handleQuickChatFriendsChat(username, packet)
-            }
-
-            else -> {
-                // ignore
-            }
-        }
-    }
-
-    private suspend fun handlePrivateMessage(fromUsername: String, toDisplayName: String, message: String) {
-        val fromAccount = Accounts.find(fromUsername) ?: return
-        if (fromAccount.checkMuted()) {
-            sendToUser(fromUsername, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "You are muted."))
-            return
-        }
-
-        val toAccount = Accounts.findByDisplayName(toDisplayName)
-        if (toAccount == null) {
-            sendToUser(fromUsername, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "Unable to find $toDisplayName."))
-            return
-        }
-
-        if (presenceByUsername[toAccount.username] == null && lobbyByUsername[toAccount.username] == null) {
-            sendToUser(fromUsername, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "${toAccount.displayName} is offline."))
-            return
-        }
-
-        if (!toAccount.onlineTo(fromAccount)) return
-        if (toAccount.social.ignores.contains(fromAccount.username)) return
-
-        sendToUser(
-            toAccount.username,
-            MessagePrivate(
-                crown = fromAccount.rights.crown,
-                displayName = fromAccount.displayName,
-                // Make sure the client can resolve the sender's protocol username when displayName differs.
-                quickResponseName = fromAccount.username,
-                message = message,
-            )
-        )
-        sendToUser(
-            fromAccount.username,
-            MessagePrivateEcho(
-                senderDisplayName = toAccount.displayName,
-                message = message,
-            )
-        )
-    }
-
-    private suspend fun handleFriendsChatMessage(fromUsername: String, message: String) {
-        val ownerUsername = fcOwnerByMember[fromUsername] ?: return
-        val room = fcRoomsByOwner[ownerUsername] ?: return
-        if (!room.members.contains(fromUsername)) return
-        sayInFriendsChat(fromUsername, ownerUsername, message)
-    }
-
-    suspend fun sayInFriendsChat(fromUsername: String, ownerUsername: String, message: String) {
-        val room = fcRoomsByOwner[ownerUsername.formatPlayerNameForProtocol()] ?: return
-        val owner = Accounts.find(ownerUsername) ?: return
-        val fromAccount = Accounts.find(fromUsername) ?: return
-        if (fromAccount.checkMuted()) return
-
-        val fromRank = if (fromUsername == owner.username) FriendsChatRank.OWNER.id else owner.social.friendsChat.getRank(fromUsername).id
-        val required = owner.social.friendsChat.rankToSpeak.id
-        if (!rankAllowed(fromRank, required)) {
-            sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You are not allowed to speak in that friends chat."))
-            return
-        }
-
-        // 727 encodes chatName as a base37 long; use protocol-safe name.
-        val chatName = (owner.social.friendsChat.name ?: owner.username).formatPlayerNameForProtocol()
-        sendBatchToUsers(
-            room.members,
-            MessageFriendsChat(
-                crown = fromAccount.rights.crown,
-                displayName = fromAccount.displayName,
-                // Make sure the client can resolve the sender's protocol username when displayName differs.
-                quickResponseName = fromAccount.username,
-                chatName = chatName,
-                message = message,
-            )
-        )
-        SocialSubscribers.publish(FriendsChatMessageEvent(owner.displayName, fromAccount.displayName, fromAccount.rights, message))
-    }
-
-    // ─── QuickChat Handlers ─────────────────────────────────────────────
-
-    private suspend fun handleQuickChatPrivate(fromUsername: String, packet: QuickChatPrivate) {
-        val fromAccount = Accounts.find(fromUsername) ?: return
-        if (fromAccount.checkMuted()) {
-            sendToUser(fromUsername, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "You are muted."))
-            return
-        }
-
-        val toAccount = Accounts.findByDisplayName(packet.toUsername)
-        if (toAccount == null) {
-            sendToUser(fromUsername, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "Unable to find ${packet.toUsername}."))
-            return
-        }
-
-        if (presenceByUsername[toAccount.username] == null && lobbyByUsername[toAccount.username] == null) {
-            sendToUser(fromUsername, GameMessage(ChatMessageType.FRIEND_NOTIFICATION, "${toAccount.displayName} is offline."))
-            return
-        }
-
-        if (!toAccount.onlineTo(fromAccount)) return
-        if (toAccount.social.ignores.contains(fromAccount.username)) return
-
-        val qcMessage = QuickChatMessage(message = "", fileId = packet.qcId, data = packet.messageData)
-        sendToUser(
-            toAccount.username,
-            MessageQuickChatPrivate(
-                crown = fromAccount.rights.crown,
-                displayName = fromAccount.displayName,
-                quickResponseName = fromAccount.username,
-                message = qcMessage,
-            )
-        )
-        sendToUser(
-            fromAccount.username,
-            MessageQuickChatPrivateEcho(
-                senderDisplayName = toAccount.displayName,
-                message = qcMessage,
-            )
-        )
-    }
-
-    private suspend fun handleQuickChatFriendsChat(fromUsername: String, packet: QuickChatPublic) {
-        val ownerUsername = fcOwnerByMember[fromUsername] ?: return
-        val room = fcRoomsByOwner[ownerUsername] ?: return
-        if (!room.members.contains(fromUsername)) return
-
-        val owner = Accounts.find(ownerUsername) ?: return
-        val fromAccount = Accounts.find(fromUsername) ?: return
-        if (fromAccount.checkMuted()) return
-
-        val fromRank = if (fromUsername == owner.username) FriendsChatRank.OWNER.id else owner.social.friendsChat.getRank(fromUsername).id
-        if (!rankAllowed(fromRank, owner.social.friendsChat.rankToSpeak.id)) {
-            sendToUser(fromUsername, GameMessage(ChatMessageType.FC_NOTIFICATION, "You are not allowed to speak in that friends chat."))
-            return
-        }
-
-        val chatName = (owner.social.friendsChat.name ?: owner.username).formatPlayerNameForProtocol()
-        val qcMessage = QuickChatMessage(message = "", fileId = packet.qcId, data = packet.messageData)
-        sendBatchToUsers(
-            room.members,
-            MessageQuickChatFriendsChat(
-                chatName = chatName,
-                crown = fromAccount.rights.crown,
-                displayName = fromAccount.displayName,
-                quickResponseName = fromAccount.username,
-                message = qcMessage,
-            )
-        )
-    }
-
-    // ─── FC Settings Update Handler ─────────────────────────────────────
+    // ─── Accounts ────────────────────────────────────────────────────
 
     private suspend fun handleAccountCommand(session: WorldSession, msg: AccountCommand) {
         val actorName = msg.username.formatPlayerNameForProtocol()
-        if (!isOnWorld(actorName, session.worldId)) return
+        if (!isOnWorld(actorName, session)) return
         val actor = Accounts.find(actorName) ?: return
         val target = when (val action = msg.action) {
             is AccountAction.SetFcStatus -> actor.apply { social.fcStatus = action.fcStatus.toByte() }
@@ -1171,7 +803,8 @@ object SocialGateway {
             return
         }
         Accounts.save(target)
-        presenceByUsername[target.username]?.let { sendToWorld(it.worldId, AccountUpdate(target.view())) }
+        val update = AccountUpdate(target.view())
+        for (world in worldsOf(target.username)) sendToWorld(world.worldId, update)
     }
 
     private suspend fun moderated(actor: Account, targetName: String, required: Rights): Account? {
@@ -1180,32 +813,24 @@ object SocialGateway {
         return target.takeIf { it.username == actor.username || !it.hasRights(actor.rights) || actor.hasRights(Rights.OWNER) }
     }
 
-    private suspend fun handleFcSettingsUpdate(msg: FcSettingsUpdate) {
-        val account = Accounts.find(msg.username) ?: return
-        account.social.friendsChat.name = msg.name
-        account.social.friendsChat.rankToEnter = FriendsChatRank.fromId(msg.rankToEnter)
-        account.social.friendsChat.rankToSpeak = FriendsChatRank.fromId(msg.rankToSpeak)
-        account.social.friendsChat.rankToKick = FriendsChatRank.fromId(msg.rankToKick)
-        account.social.friendsChat.rankToLS = FriendsChatRank.fromId(msg.rankToLS)
-        Accounts.save(account)
+    // ─── Announcements ───────────────────────────────────────────────
 
-        val room = fcRoomsByOwner[msg.username]
-        if (msg.name == null && room != null) {
-            // FC dissolved — kick all members
-            for (member in room.members.toList()) {
-                fcOwnerByMember.remove(member, msg.username)
-                // Legacy `ChatManager.updateFC` closed the channel with `leaveFC(chatter, false)`,
-                // which forgets it, so nobody's next login re-joins a channel that is gone.
-                forgetCurrentFriendsChat(member)
-                sendToUser(member, FriendsChatChannel(clear = true))
-                sendToUser(member, GameMessage(ChatMessageType.FC_NOTIFICATION, "The channel has been disabled."))
-            }
-            room.members.clear()
-            fcRoomsByOwner.remove(msg.username, room)
-        } else if (room != null) {
-            broadcastFcChannel(account, room)
+    private suspend fun deliverAnnouncementToLobby(msg: AnnouncementBroadcast) {
+        val recipients: Collection<String> = when (val target = msg.target) {
+            is AnnouncementTarget.AllWorlds -> lobbyUsernames()
+            is AnnouncementTarget.World -> if (target.worldId == LOBBY_WORLD_ID) lobbyUsernames() else emptyList()
+            is AnnouncementTarget.User -> listOf(target.username.formatPlayerNameForProtocol()).filter { onLobby(it) }
+            is AnnouncementTarget.FriendsChat ->
+                fcRoomsByOwner[target.ownerUsername.formatPlayerNameForProtocol()]?.members?.filter { onLobby(it) }.orEmpty()
         }
+        for (username in recipients) sendToLobbyPlayer(username, GameMessage(ChatMessageType.FC_NOTIFICATION, msg.message))
+    }
+
+    private fun lobbyUsernames(): List<String> =
+        attachmentsByUsername.filterValues { list -> list.any { it.sink is LobbySink } }.keys.toList()
+
+    suspend fun broadcastAnnouncement(msg: AnnouncementBroadcast) {
+        deliverAnnouncementToLobby(msg)
+        broadcastToWorlds(msg)
     }
 }
-
-
