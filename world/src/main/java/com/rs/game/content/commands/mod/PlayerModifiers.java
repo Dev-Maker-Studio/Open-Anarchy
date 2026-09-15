@@ -25,6 +25,7 @@ import org.darkan.world.server.WorldServer;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.utils.record.Recorder;
+import org.darkan.core.social.gateway.AccountAction;
 
 @PluginEventHandler
 public class PlayerModifiers {
@@ -57,9 +58,10 @@ public class PlayerModifiers {
 
 		Commands.add(Rights.MOD, "ban [player name]", "Bans a player for 2 days.", (p, args) -> World.forceGetPlayerByDisplay(Utils.concat(args), target -> {
             if (target != null) {
-                target.getAccount().banDays(2);
+                long until = AccountAction.days(2);
+                target.ban(until);
                 p.sendMessage("You have banned " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + " for 2 days.");
-                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
+                WorldServer.INSTANCE.accountAction(p, new AccountAction.Ban(target.getUsername(), until));
                 if (target.hasStarted())
                     target.getSession().close();
             } else
@@ -102,9 +104,10 @@ public class PlayerModifiers {
 
 		Commands.add(Rights.MOD, "mute [player name]", "Mutes a player for 2 days.", (p, args) -> World.forceGetPlayerByDisplay(Utils.concat(args), target -> {
             if (target != null) {
-                target.getAccount().muteDays(2);
+                long until = AccountAction.days(2);
+                target.mute(until);
                 p.sendMessage("You have muted " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + " for 2 days.");
-                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
+                WorldServer.INSTANCE.accountAction(p, new AccountAction.Mute(target.getUsername(), until));
             } else
                 p.sendMessage("Unable to find player.");
         }));

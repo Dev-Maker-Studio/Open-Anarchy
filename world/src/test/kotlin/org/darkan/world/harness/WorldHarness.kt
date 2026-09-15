@@ -101,7 +101,7 @@ object WorldHarness {
         boot()
         val account = Account(username, "$username@test.invalid", "hash").apply {
             this.rights = rights
-        }
+        }.view()
         val session = RecordingSession(codec)
         val player = Player(account)
         player.init(session, account, screenMode, 1024, 768, MachineInformation())

@@ -3,8 +3,8 @@ package org.darkan.world.server
 import com.rs.Settings
 import com.rs.db.WorldDB
 import com.rs.game.World
-import com.rs.game.tasks.WorldTasks
 import com.rs.game.model.entity.player.Player
+import com.rs.game.tasks.WorldTasks
 import com.rs.utils.AccountLimiter
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
@@ -12,34 +12,33 @@ import io.ktor.util.network.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.CancellationException
 import io.ktor.utils.io.core.*
+import java.math.BigInteger
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.function.Consumer
 import kotlin.use
 import kotlinx.coroutines.*
 import kotlinx.io.readByteArray
 import kotlinx.io.readUByte
 import kotlinx.io.readUShort
 import org.darkan.core.EnvVars
+import org.darkan.core.Logger
 import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.formatPlayerNameForProtocol
+import org.darkan.core.model.AccountView
 import org.darkan.core.model.MachineInformation
 import org.darkan.core.net.*
-import org.darkan.core.net.prot.Codec
-import org.darkan.core.net.prot.packet.WorldLoginDetails
-import world.gregs.voidps.buffer.*
-import world.gregs.voidps.cache.Cache
-import world.gregs.voidps.cache.file.FileProvider
-import world.gregs.voidps.cache.file.prefetchKeys
-import world.gregs.voidps.cache.secure.RSA
-import world.gregs.voidps.cache.secure.decryptXtea
-import org.darkan.core.Logger
-import org.darkan.core.model.Account
-import org.darkan.core.mongo.collections.Accounts
-import org.darkan.core.net.login.LoginToken
 import org.darkan.core.net.prot.ClientProt
+import org.darkan.core.net.prot.Codec
 import org.darkan.core.net.prot.ServerProt
 import org.darkan.core.net.prot.packet.FcJoin
+import org.darkan.core.net.prot.packet.WorldLoginDetails
+import org.darkan.core.social.gateway.AccountAction
+import org.darkan.core.social.gateway.AccountCommand
+import org.darkan.core.social.gateway.AccountUpdate
 import org.darkan.core.social.gateway.AnnouncementBroadcast
 import org.darkan.core.social.gateway.ClientPacketEnvelope
 import org.darkan.core.social.gateway.GatewayPlayerPresence
@@ -48,10 +47,12 @@ import org.darkan.core.social.gateway.ServerPacketEnvelope
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import org.darkan.world.clan.ClanRegistry
 import org.darkan.world.social.SocialClient
-import java.math.BigInteger
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.function.Consumer
+import world.gregs.voidps.buffer.*
+import world.gregs.voidps.cache.Cache
+import world.gregs.voidps.cache.file.FileProvider
+import world.gregs.voidps.cache.file.prefetchKeys
+import world.gregs.voidps.cache.secure.RSA
+import world.gregs.voidps.cache.secure.decryptXtea
 
 object WorldServer {
     private lateinit var job: Job
@@ -239,7 +240,7 @@ object WorldServer {
         if (!pendingLogins.add(username))
             return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
 
-        val admission = if (EnvVars.communityWorld) admitThroughLobby(username, lobbyAuthToken) else admitWithSecret(username, lobbyAuthToken)
+        val admission = admitThroughLobby(username, lobbyAuthToken)
         val account = when (admission) {
             is Admission.Admitted -> admission.account
             is Admission.Refused -> {
@@ -319,50 +320,15 @@ object WorldServer {
     }
 
     private sealed interface Admission {
-        data class Admitted(val account: Account) : Admission
+        data class Admitted(val account: AccountView) : Admission
         data class Refused(val response: Int) : Admission
-    }
-
-    private suspend fun admitWithSecret(username: String, lobbyAuthToken: String): Admission {
-        val verified = LoginToken.verify(lobbyAuthToken, System.currentTimeMillis(), EnvVars.worldLoginTokenSecret)
-        if (verified == null) {
-            logError("LoginToken verify failed for $username")
-            return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
-        }
-
-        // The lobby signs the token for the account's username, but the client sends whatever the
-        // player typed - an email address just as often. Load by the login name and hold the token
-        // to the account it resolved to rather than to the typed string.
-        val account = try {
-            Accounts.find(username)
-        } catch (e: Exception) {
-            logError("Error loading account for $username", e)
-            return Admission.Refused(ResponseOpcode.LOGIN_SERVER_OFFLINE)
-        }
-        if (account == null || account.username.isEmpty())
-            return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
-        if (verified.username != account.username) {
-            logError("LoginToken for ${verified.username} presented by $username (account ${account.username})")
-            return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
-        }
-        return Admission.Admitted(account)
     }
 
     private suspend fun admitThroughLobby(username: String, lobbyAuthToken: String): Admission {
         val verdict = socialClient.verifyLoginToken(username, lobbyAuthToken)
             ?: return Admission.Refused(ResponseOpcode.LOGIN_SERVER_OFFLINE)
-        val admitted = verdict.username ?: return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
-        val displayName = verdict.displayName ?: return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
-        return try {
-            // accounts.email is unique and a community world has no address, so it stores the username there
-            val account = Accounts.find(admitted) ?: Account(admitted, admitted, "", displayName)
-            account.displayName = displayName
-            Accounts.save(account)
-            Admission.Admitted(account)
-        } catch (e: Exception) {
-            logError("Error loading account for $admitted", e)
-            Admission.Refused(ResponseOpcode.LOGIN_SERVER_OFFLINE)
-        }
+        val account = verdict.account ?: return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
+        return Admission.Admitted(account)
     }
 
     /**
@@ -408,6 +374,7 @@ object WorldServer {
                 msg.usernames.forEach { deliverToPlayer(it, msg.packet) }
             }
             is AnnouncementBroadcast -> announceToEveryone(msg)
+            is AccountUpdate -> onWorldThread(msg.account.username) { it.account = msg.account }
             else -> logInfo("Ignoring gateway message: ${msg::class.simpleName}")
         }
     }
@@ -460,7 +427,7 @@ object WorldServer {
             )
         }
 
-    fun notifyPlayerOnline(account: Account) {
+    fun notifyPlayerOnline(account: AccountView) {
         // No gateway client at all means this process never started the world socket server
         // (headless tools, the test harness). That is not a lobby rejection, so it must not
         // log anybody out; only an attached client that refuses the player does.
@@ -521,22 +488,22 @@ object WorldServer {
         }
     }
 
-    fun saveAccountAsync(account: Account) {
+    fun accountAction(actor: Player, action: AccountAction) {
         CoroutineScope(dispatcher).launch {
             try {
-                Accounts.save(account)
+                socialClient.send(AccountCommand(actor.username, action))
             } catch (e: Exception) {
-                logError("Failed to save account ${account.username}", e)
+                logError("Failed to send ${action::class.simpleName} for ${actor.username}", e)
             }
         }
     }
 
-    fun getAccountAsync(username: String, callback: Consumer<Account?>) {
+    fun displayNameAsync(username: String, callback: Consumer<String?>) {
         CoroutineScope(dispatcher).launch {
             try {
-                callback.accept(Accounts.find(username))
+                callback.accept(socialClient.lookupDisplayName(username))
             } catch (e: Exception) {
-                logError("Failed to load account $username", e)
+                logError("Failed to look up the display name of $username", e)
                 callback.accept(null)
             }
         }

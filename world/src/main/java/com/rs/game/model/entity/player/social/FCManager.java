@@ -35,13 +35,11 @@ public class FCManager {
 			switch (e.getOpNum()) {
 			case 1 -> e.getPlayer().sendInputName("Enter chat prefix:", str -> {
 				e.getPlayer().getSocial().getFriendsChat().setName(str);
-				WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
 				syncFcSettingsToGateway(e.getPlayer());
 				refreshFC(e.getPlayer());
 			});
 			case 2 -> {
 				e.getPlayer().getSocial().getFriendsChat().setName(null);
-				WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
 				syncFcSettingsToGateway(e.getPlayer());
 				refreshFC(e.getPlayer());
 			}
@@ -53,7 +51,6 @@ public class FCManager {
 		case 4 -> e.getPlayer().getSocial().getFriendsChat().setRankToKick(getRankFromPacket(e.getOpNum()));
 		case 5 -> e.getPlayer().getSocial().getFriendsChat().setRankToLS(getRankFromPacket(e.getOpNum()));
 		}
-		WorldServer.INSTANCE.saveAccountAsync(e.getPlayer().getAccount());
 		syncFcSettingsToGateway(e.getPlayer());
 		refreshFC(e.getPlayer());
 	});

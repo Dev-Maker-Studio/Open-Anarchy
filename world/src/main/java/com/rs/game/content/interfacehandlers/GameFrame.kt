@@ -20,6 +20,7 @@ import org.darkan.core.model.IFEvents
 import org.darkan.world.server.WorldServer
 import java.text.NumberFormat
 import java.util.Locale
+import org.darkan.core.social.gateway.AccountAction
 
 private fun component(hash: Int) = Utils.componentIdFromHash(hash)
 
@@ -122,7 +123,7 @@ fun mapGameFrameButtons() {
                     else -> return@onButtonClick
                 }
                 player.social.fcStatus = status.toByte()
-                WorldServer.saveAccountAsync(player.account)
+                WorldServer.accountAction(player, AccountAction.SetFcStatus(status))
             }
             Component.interface_751.component_751_17 -> when (e.opNum) {
                 2 -> player.setAssistStatus(0)

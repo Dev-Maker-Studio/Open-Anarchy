@@ -70,7 +70,7 @@ MONGO_URI=mongodb://dkadmin:<pw>@10.69.69.11:27017/<db>?authSource=<db>&retryWri
 LEGACY_CRYPTO_SECRET=<from the legacy lobby's data/crypt.json "secret">
 LEGACY_CRYPTO_SALT="<crypt.json "salt" ints, comma separated>"
 SOCIAL_GATEWAY_TOKEN=<shared with the worlds>
-WORLD_LOGIN_TOKEN_SECRET=<shared with the worlds>
+WORLD_LOGIN_TOKEN_SECRET=<lobby only; worlds verify logins through the gateway>
 API_KEY=<admin API key>
 LOCAL_WORLD_ID=300              # dev lobby only: lists world 300 as localhost:43595 for developers' own worlds
 ```
@@ -81,7 +81,7 @@ LOCAL_WORLD_ID=300              # dev lobby only: lists world 300 as localhost:4
 DEBUG=true
 SERVER_NAME=Darkan BE
 CACHE_PATH=../cache/
-MONGO_URI=<same database as the lobby>
+MONGO_URI=<the world's own database: players, highscores, grandexchange, logs - never the accounts>
 WORLD_ID=1
 WORLD_NAME=Darkan BE
 WORLD_PORT=43601                 # must match worldInfo.port in data/worldConfig.json (the bind port)
@@ -94,7 +94,6 @@ WORLD_LOOTSHARE=true
 WORLD_COUNTRY=USA
 SOCIAL_GATEWAY_URL=ws://10.69.69.22:4039/social/ws
 SOCIAL_GATEWAY_TOKEN=<same as lobby>
-WORLD_LOGIN_TOKEN_SECRET=<same as lobby>
 ```
 
 `data/worldConfig.json` keeps the world's gameplay settings (name, world info, start tiles, xp

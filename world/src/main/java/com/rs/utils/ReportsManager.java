@@ -24,6 +24,7 @@ import org.darkan.world.server.WorldServer;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.darkan.core.social.gateway.AccountAction;
 
 public class ReportsManager {
 
@@ -53,9 +54,10 @@ public class ReportsManager {
 		if (reported == null)
 			return;
 		if (mute) {
-			reported.getAccount().muteDays(2);
+			long until = AccountAction.days(2);
+			reported.mute(until);
 			reported.sendMessage("You've been muted for 2 days by " + player.getDisplayName() + ".");
-			WorldServer.INSTANCE.saveAccountAsync(reported.getAccount());
+			WorldServer.INSTANCE.accountAction(player, new AccountAction.Mute(reported.getUsername(), until));
 		}
 		player.sendMessage("Thank-you, your abuse report has been received.");
 		try {

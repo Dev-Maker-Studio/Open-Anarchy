@@ -30,6 +30,7 @@ import org.darkan.core.Utils;
 import org.darkan.world.server.WorldServer;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
+import org.darkan.core.social.gateway.AccountAction;
 
 @PluginEventHandler
 public class PlayerModifiers {
@@ -100,9 +101,10 @@ public class PlayerModifiers {
 
 		Commands.add(Rights.ADMIN, "ban [player_name banDurationDays]", "Bans a player for specified number of days.", (p, args) -> World.forceGetPlayerByDisplay(args[0], target -> {
             if (target != null) {
-                target.getAccount().banDays(Integer.valueOf(args[1]));
-                p.sendMessage("You have banned " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + " for "+Integer.valueOf(args[1])+" days.");
-                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
+                long until = AccountAction.days(Integer.parseInt(args[1]));
+                target.ban(until);
+                p.sendMessage("You have banned " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + " for "+Integer.parseInt(args[1])+" days.");
+                WorldServer.INSTANCE.accountAction(p, new AccountAction.Ban(target.getUsername(), until));
                 if (target.hasStarted())
                     target.getSession().close();
             } else
@@ -111,45 +113,48 @@ public class PlayerModifiers {
 
 		Commands.add(Rights.ADMIN, "permban [player name]", "Bans a player permanently.", (p, args) -> World.forceGetPlayerByDisplay(Utils.concat(args), target -> {
             if (target != null) {
-                target.getAccount().banPerm();
+                target.ban(AccountAction.PERMANENT);
                 p.sendMessage("You have permanently banned " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + ".");
                 if (target.hasStarted())
                     target.forceLogout();
-                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
+                WorldServer.INSTANCE.accountAction(p, new AccountAction.Ban(target.getUsername(), AccountAction.PERMANENT));
             } else
                 p.sendMessage("Unable to find player.");
         }));
 
 		Commands.add(Rights.ADMIN, "mute [player_name muteDurationDays]", "Mutes a player for specified number of days.", (p, args) -> World.forceGetPlayerByDisplay(args[0], target -> {
             if (target != null) {
-                target.getAccount().muteDays(Integer.valueOf(args[1]));
-                p.sendMessage("You have muted " + Utils.formatPlayerNameForDisplay(args[0]) + " for "+Integer.valueOf(args[1])+" days.");
-                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
+                long until = AccountAction.days(Integer.parseInt(args[1]));
+                target.mute(until);
+                p.sendMessage("You have muted " + Utils.formatPlayerNameForDisplay(args[0]) + " for "+Integer.parseInt(args[1])+" days.");
+                WorldServer.INSTANCE.accountAction(p, new AccountAction.Mute(target.getUsername(), until));
             } else
                 p.sendMessage("Unable to find player.");
         }));
 
 		Commands.add(Rights.ADMIN, "permmute [player name]", "Bans a player permanently.", (p, args) -> World.forceGetPlayerByDisplay(Utils.concat(args), target -> {
             if (target != null) {
-                target.getAccount().mutePerm();
+                target.mute(AccountAction.PERMANENT);
                 p.sendMessage("You have permanently muted " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + ".");
-                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
+                WorldServer.INSTANCE.accountAction(p, new AccountAction.Mute(target.getUsername(), AccountAction.PERMANENT));
             } else
                 p.sendMessage("Unable to find player.");
         }));
 
 		Commands.add(Rights.ADMIN, "unban [player name]", "Unbans a player.", (p, args) -> World.forceGetPlayerByDisplay(Utils.concat(args), target -> {
-            if (target != null)
+            if (target != null) {
+                target.ban(AccountAction.LIFTED);
                 p.sendMessage("You have unbanned " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + ".");
-            else
+                WorldServer.INSTANCE.accountAction(p, new AccountAction.Ban(target.getUsername(), AccountAction.LIFTED));
+            } else
                 p.sendMessage("Unable to find player.");
         }));
 
 		Commands.add(Rights.ADMIN, "unmute [player name]", "Unmutes a player.", (p, args) -> World.forceGetPlayerByDisplay(Utils.concat(args), target -> {
             if (target != null) {
-                target.getAccount().unmute();
+                target.mute(AccountAction.LIFTED);
                 p.sendMessage("You have unmuted " + Utils.formatPlayerNameForDisplay(Utils.concat(args)) + ".");
-                WorldServer.INSTANCE.saveAccountAsync(target.getAccount());
+                WorldServer.INSTANCE.accountAction(p, new AccountAction.Mute(target.getUsername(), AccountAction.LIFTED));
             } else
                 p.sendMessage("Unable to find player.");
         }));
