@@ -114,6 +114,6 @@ private fun verifyPlayers(target: MongoTarget): Boolean {
 private fun describe(e: Throwable): String {
     var root: Throwable = e
     while (root.cause != null && root.cause !== root) root = root.cause!!
-    val message = (root.message ?: "").lineSequence().firstOrNull().orEmpty().take(160)
+    val message = (root.message ?: "").lineSequence().firstOrNull().orEmpty().take(400)
     return "${root::class.simpleName}: $message"
 }

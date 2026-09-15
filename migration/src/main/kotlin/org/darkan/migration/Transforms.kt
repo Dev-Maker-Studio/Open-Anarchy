@@ -72,10 +72,16 @@ object AccountsTransform : Transform {
         }
     }
 
+    private val seenUsernames = HashMap<String, String>()
+
     override fun apply(doc: Document, report: Report): Document? {
         val username = doc.getString("username")
         if (username.isNullOrEmpty()) {
             report.problem("missing username (dropped)", doc.idKey())
+            return null
+        }
+        seenUsernames.putIfAbsent(username, doc.idKey())?.let { first ->
+            report.problem("duplicate username (this later document dropped, decide which one is right)", "$username: kept $first, dropped ${doc.idKey()}")
             return null
         }
 
@@ -222,8 +228,50 @@ object PlayersTransform : Transform {
         }
         // An unreadable join date is not worth losing a character over: drop the field, keep the save.
         convertDate(doc, "dateJoined", username, report, dropDocument = false)
+        rename(doc.get("appearence", Document::class.java), "male", "isMale", report)
+        rename(doc.get("prayer", Document::class.java), "curses", "isCurses", report)
+        doc.get("combatDefinitions", Document::class.java)?.let { combat ->
+            rename(combat, "autoRetaliate", "isAutoRetaliate", report)
+            rename(combat, "defensiveCasting", "isDefensiveCasting", report)
+            rename(combat, "showMiscallaneousSpells", "showMiscSpells", report)
+            if (combat.containsKey("spellBook") && !combat.containsKey("spellbook")) {
+                val book = LEGACY_SPELLBOOKS.getOrNull((combat.remove("spellBook") as? Number)?.toInt() ?: -1)
+                if (book != null) combat["spellbook"] = book
+                report.count("combatDefinitions.spellBook index -> spellbook name", 1)
+            }
+        }
+        report.count("item metaData renamed metadata", renameItemMetadata(doc))
         return doc
     }
+
+    private val LEGACY_SPELLBOOKS = listOf("MODERN", "ANCIENT", "LUNAR", "DUNGEONEERING")
+
+    private fun rename(doc: Document?, from: String, to: String, report: Report) {
+        if (doc == null || !doc.containsKey(from) || doc.containsKey(to)) return
+        doc[to] = doc.remove(from)
+        report.count("$from renamed $to", 1)
+    }
+}
+
+/** `grandexchange`: offers embed items, whose metadata key the modern [org.darkan.core.model.Item] spells differently. */
+object OffersTransform : Transform {
+    override fun apply(doc: Document, report: Report): Document {
+        report.count("item metaData renamed metadata", renameItemMetadata(doc))
+        return doc
+    }
+}
+
+private fun renameItemMetadata(value: Any?): Int = when (value) {
+    is Document -> {
+        var renamed = 0
+        if (value.containsKey("metaData") && value.containsKey("id") && !value.containsKey("metadata")) {
+            value["metadata"] = value.remove("metaData")
+            renamed++
+        }
+        renamed + value.values.sumOf { renameItemMetadata(it) }
+    }
+    is List<*> -> value.sumOf { renameItemMetadata(it) }
+    else -> 0
 }
 
 /** `logs`: the entry date becomes a BSON date, which also makes the 180 day TTL index effective. */
@@ -260,4 +308,4 @@ private fun convertDate(doc: Document, field: String, key: String, report: Repor
     return true
 }
 
-private fun Document.idKey() = this["_id"]?.toString() ?: "<no _id>"
+internal fun Document.idKey() = this["_id"]?.toString() ?: "<no _id>"
