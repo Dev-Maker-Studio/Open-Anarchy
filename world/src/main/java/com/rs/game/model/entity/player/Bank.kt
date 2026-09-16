@@ -84,6 +84,7 @@ class Bank {
     fun getItemSlot(id: Int) = findSlot { it.id == id && !isPlaceholder(it) }
     fun getSlot(id: Int) = getItemSlot(id)
     fun getPlaceholderSlot(id: Int) = findSlot { it.id == id && isPlaceholder(it) }
+    private fun fillablePlaceholderSlot(item: Item) = findSlot { it.id == item.id && isPlaceholder(it) && it.containsMetaData() == item.containsMetaData() }
     fun getItem(slot: IntArray?): Item? = slot?.let { bankTabs[it[0]][it[1]] }
     fun getItem(id: Int): Item? = getItem(getItemSlot(id))
 
@@ -521,7 +522,7 @@ class Bank {
                 item.setAmount(Int.MAX_VALUE - banked.amount)
                 player.sendMessage("Not enough space in your bank.")
             }
-        } else if (getPlaceholderSlot(item.id) == null && !hasBankSpace()) {
+        } else if (fillablePlaceholderSlot(item) == null && !hasBankSpace()) {
             player.sendMessage("Not enough space in your bank.")
             return false
         }
@@ -544,7 +545,7 @@ class Bank {
         val event = ItemAddedToBankEvent(player, item)
         PluginManager.handle(event)
         if (event.isCancelled) return false
-        val placeholder = getPlaceholderSlot(item.id)
+        val placeholder = fillablePlaceholderSlot(item)
         if (placeholder != null) {
             bankTabs[placeholder[0]][placeholder[1]] = item
             if (refresh) {
@@ -577,8 +578,8 @@ class Bank {
             tab[slot[1]] = Item(item.id, item.amount - quantity, item.metadata)
         } else if (isPlaceholder(item) && !forceDestroy) {
             return false
-        } else if (!forceDestroy && item.metadata == null && placeholdersEnabled) {
-            tab[slot[1]] = Item(item.id, 0, true)
+        } else if (!forceDestroy && placeholdersEnabled) {
+            tab[slot[1]] = Item(item.id, 0, true).apply { metadata = item.metadata?.toMutableMap() }
         } else if (slot[0] != 0 && tab.size == 1 && bankTabs.size != 1) {
             destroyTab(slot[0])
             if (refresh) refreshTabs()

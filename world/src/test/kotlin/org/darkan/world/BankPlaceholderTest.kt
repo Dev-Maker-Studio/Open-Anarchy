@@ -94,10 +94,10 @@ class BankPlaceholderTest {
         get() = vars.getVarBit(Varbit.bank_placeholders) == 1
         set(value) = vars.saveVarBit(Varbit.bank_placeholders, if (value) 1 else 0)
 
-    private fun Player.givePlaceholder(id: Int, tab: Int = 0) {
+    private fun Player.givePlaceholder(id: Int, tab: Int = 0, combatCharges: Int? = null) {
         val was = placeholders
         placeholders = true
-        bank.addItem(Item(id, 1), tab, false)
+        bank.addItem(Item(id, 1).apply { if (combatCharges != null) addMetaData("combatCharges", combatCharges) }, tab, false)
         bank.removeItem(bank.getItemSlot(id), 1, false, false)
         placeholders = was
     }
@@ -268,25 +268,25 @@ class BankPlaceholderTest {
     }
 
     @Test
-    fun depositingAMetadataItemReplacesThePlaceholder() {
+    fun depositingAMetadataItemReplacesTheMetadataPlaceholder() {
         val harness = login("phmeta")
         val player = harness.player
         val bank = player.bank
         bank.clear()
-        player.givePlaceholder(Obj.abyssal_whip)
+        player.givePlaceholder(Obj.abyssal_whip, 0, combatCharges = 30)
         player.inventory.items.clear()
-        player.inventory.items.set(0, Item(Obj.abyssal_whip, 1).apply { addMetaData("combatCharges", 30) })
+        player.inventory.items.set(0, Item(Obj.abyssal_whip, 1).apply { addMetaData("combatCharges", 12) })
         player.inventory.refresh()
 
         assertTrue(bank.depositItem(0, Int.MAX_VALUE, true), "the deposit was refused")
 
         assertEquals(1, bank.bankTabs[0].size, "the charged whip did not take the placeholder's slot")
         assertEquals(1, bank.bankTabs[0][0].amount, "a metadata item must bank as a single")
-        assertEquals(30, bank.bankTabs[0][0].getMetaDataI("combatCharges"), "the bank dropped the metadata")
+        assertEquals(12, bank.bankTabs[0][0].getMetaDataI("combatCharges"), "the deposited charges did not replace the placeholder's")
     }
 
     @Test
-    fun aMetadataItemLeavesNoPlaceholder() {
+    fun aMetadataItemLeavesAPlaceholder() {
         val harness = login("phmetaout")
         val player = harness.player
         val bank = player.bank
@@ -299,7 +299,10 @@ class BankPlaceholderTest {
 
         player.clickBank(BANK_SLOTS, 0, 6)
 
-        assertEquals(1, bank.bankTabs[0].size, "a charged item left a placeholder behind")
+        assertEquals(2, bank.bankTabs[0].size, "a charged item left no placeholder behind")
+        val placeholder = bank.bankTabs[0][0]
+        assertTrue(Bank.isPlaceholder(placeholder), "the charged item's slot is not a placeholder")
+        assertEquals(30, placeholder.getMetaDataI("combatCharges"), "the placeholder lost the metadata contents")
         assertEquals(30, assertNotNull(player.inventory.getItem(0)).getMetaDataI("combatCharges"), "the whip lost its charges")
     }
 
@@ -515,6 +518,41 @@ class BankPlaceholderTest {
 
         assertEquals(0, bank.bankTabs[0][0].amount, "a negative amount was left in the bank")
         assertTrue(Bank.isPlaceholder(bank.bankTabs[0][0]))
+    }
+
+    @Test
+    fun aMetadataItemFillsTheMetadataPlaceholderNotThePlainOne() {
+        val harness = login("phmetafill")
+        val player = harness.player
+        val bank = player.bank
+        bank.clear()
+        player.placeholders = true
+        bank.addItem(Item(Obj.abyssal_whip, 1), false)
+        bank.addItem(Item(Obj.abyssal_whip, 1).apply { addMetaData("combatCharges", 30) }, false)
+        bank.removeItem(intArrayOf(0, 0), 1, false, false)
+        bank.removeItem(intArrayOf(0, 1), 1, false, false)
+
+        bank.addItem(Item(Obj.abyssal_whip, 1).apply { addMetaData("combatCharges", 12) }, false)
+
+        assertTrue(Bank.isPlaceholder(bank.bankTabs[0][0]), "the metadata item filled the plain placeholder")
+        assertEquals(12, bank.bankTabs[0][1].getMetaDataI("combatCharges"), "the metadata placeholder was not filled")
+        assertEquals(2, bank.bankSize, "a new slot was used instead of the placeholder")
+    }
+
+    @Test
+    fun aPlainItemDoesNotFillAMetadataPlaceholder() {
+        val harness = login("phmetaplain")
+        val player = harness.player
+        val bank = player.bank
+        bank.clear()
+        player.placeholders = true
+        bank.addItem(Item(Obj.abyssal_whip, 1).apply { addMetaData("combatCharges", 30) }, false)
+        bank.removeItem(bank.getItemSlot(Obj.abyssal_whip), 1, false, false)
+
+        bank.addItem(Item(Obj.abyssal_whip, 1), false)
+
+        assertTrue(Bank.isPlaceholder(bank.bankTabs[0][0]), "a plain item consumed the metadata placeholder")
+        assertEquals(2, bank.bankSize, "the plain item did not take its own slot")
     }
 
     private fun Bank.getRealSlotIndexOf(id: Int): Int {
