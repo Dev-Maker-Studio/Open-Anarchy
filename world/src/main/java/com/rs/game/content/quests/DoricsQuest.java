@@ -189,7 +189,7 @@ public class DoricsQuest extends QuestOutline {
 	public static ObjectClickHandler handleDoricsAnvil = new ObjectClickHandler(new Object[] { 2782, 10641 }, e -> {
 		if (!e.getPlayer().isQuestComplete(Quest.DORICS_QUEST))
 			e.getPlayer().startConversation(new DoricD(e.getPlayer()));
-		else if (e.getObj().getDefinitions().containsOption(0, "Smith"))
+		else if (e.getObj().getDefinitions().hasOption(1, "Smith"))
 			ForgingInterfaceKt.openSmithingInterfaceForHighestBar(e.getPlayer(), e.getObj());
 	});
 }

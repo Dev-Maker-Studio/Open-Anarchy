@@ -121,10 +121,10 @@ data class ObjectDefinition(
 
     var block: Int = PROJECTILE or ROUTE
 
-    fun optionsIndex(option: String): Int = if (options != null) {
-        options!!.indexOf(option)
-    } else {
-        -1
+    /** The op number of [option], 1-based - op1 is 1 - or -1 when absent. */
+    fun optionsIndex(option: String): Int {
+        val index = options?.indexOf(option) ?: return -1
+        return if (index == -1) -1 else index + 1
     }
 
     fun containsOption(option: String): Boolean = if (options != null) {
@@ -133,11 +133,8 @@ data class ObjectDefinition(
         false
     }
 
-    fun containsOption(index: Int, option: String): Boolean = if (options != null) {
-        options!![index] == option
-    } else {
-        false
-    }
+    /** [op] is the op number, 1-based - op1 is 1. */
+    fun hasOption(op: Int, option: String): Boolean = getOption(op) == option
 
     fun containsOptionIgnoreCase(option: String): Boolean = if (options != null) {
         options!!.any { it != null && it.equals(option, ignoreCase = true) }
@@ -145,11 +142,10 @@ data class ObjectDefinition(
         false
     }
 
-    /** Gets the option at the given index. */
-    fun getOption(index: Int): String? = options?.getOrNull(index)
+    /** [op] is the op number, 1-based - op1 is 1. */
+    fun getOption(op: Int): String? = if (op < 1) null else options?.getOrNull(op - 1)
 
-    /** Gets the first non-null option (index 0). */
-    fun getFirstOption(): String? = options?.getOrNull(0)
+    fun getFirstOption(): String? = getOption(1)
 
     /**
      * The id this object presents as for a player with the given [vars].

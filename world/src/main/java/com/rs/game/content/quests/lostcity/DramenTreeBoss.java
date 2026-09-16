@@ -31,7 +31,7 @@ public class DramenTreeBoss {
 				spirit.forceTalk("You must defeat me before touching the tree!");
 			}
 		}else if(e.getPlayer().isQuestComplete(Quest.LOST_CITY) || e.getPlayer().getQuestManager().getStage(Quest.LOST_CITY) >= LostCity.FIND_ZANARIS) {
-			if (e.getObj().getDefinitions().containsOption(0, "Chop down"))
+			if (e.getObj().getDefinitions().hasOption(1, "Chop down"))
 				e.getPlayer().getActionManager().setAction(new Woodcutting(e.getObj(), TreeType.DRAMEN) {
 					@Override
 					public void fellTree() {

@@ -12,7 +12,7 @@ public class Chests {
     public static ObjectClickHandler handleClosedChest = new ObjectClickHandler(new Object[] { "Closed chest" }, e -> {
         GameObject object = e.getObj();
 
-        if (object.getDefinitions().containsOption(0, "Open")) {
+        if (object.getDefinitions().hasOption(1, "Open")) {
             GameObject openedChest = new GameObject(
                 object.getId() + 1,
                 object.getType(),
@@ -32,7 +32,7 @@ public class Chests {
     });
 
     public static ObjectClickHandler handleOpenChest = new ObjectClickHandler(new Object[] { "Open chest" }, e -> {
-        if (e.getObj().getDefinitions().containsOption(0, "Search")) {
+        if (e.getObj().getDefinitions().hasOption(1, "Search")) {
             e.getPlayer().sendMessage("You search the chest but find nothing.");
         }
     });

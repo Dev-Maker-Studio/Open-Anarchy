@@ -69,7 +69,6 @@ fun Tile.getYInScene(sceneBaseChunkId: Int): Int = y - (sceneBaseChunkId and 204
  * Gets the option at the given index (1-based) from the object definition.
  * Returns null if the index is out of bounds or options are null.
  */
-fun ObjectDefinition.getOption(index: Int): String? = options?.getOrNull(index)
 
 val ObjectDefinition.clipType: Int get() = solid
 

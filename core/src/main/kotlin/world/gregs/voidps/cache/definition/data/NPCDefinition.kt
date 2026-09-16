@@ -333,8 +333,8 @@ data class NPCDefinition(
         return if (speed <= 0) 4 else speed
     }
 
-    /** Gets the option at the given index. */
-    fun getOption(index: Int): String? = options.getOrNull(index)
+    /** [op] is the op number, 1-based - op1 is 1. */
+    fun getOption(op: Int): String? = if (op < 1) null else options.getOrNull(op - 1)
 
     /**
      * The id this NPC presents as for a player with the given [vars].

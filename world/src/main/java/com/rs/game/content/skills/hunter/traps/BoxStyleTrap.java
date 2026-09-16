@@ -78,7 +78,8 @@ public class BoxStyleTrap extends OwnedObject {
 
 	public void expire(Player player) {
 		World.addGroundItem(new Item(type.getId(), 1), Tile.of(this.getTile()), player, true, 60);
-		player.sendMessage("The " + type.getName() + " trap that you set has collapsed.");
+		if (player != null)
+			player.sendMessage("The " + type.getName() + " trap that you set has collapsed.");
 		if (bait != -1)
 			World.addGroundItem(new Item(bait, 1), Tile.of(this.getTile()), player, true, 60);
 	}
@@ -88,11 +89,11 @@ public class BoxStyleTrap extends OwnedObject {
 		if (npcType == null)
 			return;
 		if (type == BoxTrapType.BIRD_SNARE) {
-			setId(success ? npcType.getObjectCatch() : 19176);
+			changeId(success ? npcType.getObjectCatch() : 19176);
 		} else if (type == BoxTrapType.DEAD_FALL)
-			setId(success ? npcType.getObjectCatch() : 19219);
+			changeId(success ? npcType.getObjectCatch() : 19219);
 		else
-			setId(npcType.getObjectCatch());
+			changeId(npcType.getObjectCatch());
 		WorldTasks.schedule(new Task() {
 			@Override
 			public void run() {
@@ -101,7 +102,7 @@ public class BoxStyleTrap extends OwnedObject {
 					return;
 				}
 				setNpcTrapped(npcType);
-				setId(success ? npcType.getObjectSuccess() : npcType.getObjectFail());
+				changeId(success ? npcType.getObjectSuccess() : npcType.getObjectFail());
 				setStatus(success ? Status.SUCCESS : Status.FAIL);
 				if (success) {
 					npc.anim(new Animation(-1));

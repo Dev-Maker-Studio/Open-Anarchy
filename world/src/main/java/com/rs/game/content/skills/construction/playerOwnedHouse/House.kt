@@ -297,7 +297,7 @@ class House {
                     @Suppress("SENSELESS_COMPARISON")
                     if (`object` == null) continue
                     val defs = `object`.definitions
-                    if (reference.plane.toInt() == 0 || defs.containsOption(4, "Build")) {
+                    if (reference.plane.toInt() == 0 || defs.hasOption(5, "Build")) {
                         val objectR = GameObject(`object`)
                         val coords: IntArray = InstancedChunk.transform(
                             x,
@@ -1206,7 +1206,7 @@ class House {
      * Handles individual objects within a room, managing doors and build slots.
      ****/
     private fun handleIndividualObjects(reference: RoomReference, obj: GameObject) {
-        if (obj.definitions.containsOption(4, "Build") ||
+        if (obj.definitions.hasOption(5, "Build") ||
             (reference.room == HouseRooms.MENAGERIE && obj.definitions.name.contains("space"))
         ) {
             if (isDoor(obj)) {
