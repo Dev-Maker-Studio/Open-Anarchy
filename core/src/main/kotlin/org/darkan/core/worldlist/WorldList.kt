@@ -13,6 +13,9 @@ import kotlin.time.Duration.Companion.hours
  *
  * A world that disconnects stays listed as offline (the client shows -1 players) and is only
  * dropped by [expireOffline] once it has been gone for [offlineTtl].
+ *
+ * [maxWorlds] is the baseline upper world number advertised to the client. A snapshot raises that
+ * bound when necessary so every registered world can be indexed by the client's descriptor table.
  */
 class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.localWorldId, private val offlineTtl: Duration = OFFLINE_TTL) {
     private val worlds = sortedMapOf<Int, World>()
@@ -82,6 +85,7 @@ class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.loca
      * existed.
      */
     fun snapshot(): WorldListSnapshot = synchronized(worlds) {
+        val advertisedMaxWorld = if (worlds.isEmpty()) maxWorlds else maxOf(maxWorlds, worlds.lastKey())
         WorldListSnapshot(
             entries = worlds.values.map { world ->
                 val meta = world.metadata
@@ -101,7 +105,7 @@ class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.loca
                     customCache = world.customCache,
                 )
             },
-            maxWorlds = maxWorlds,
+            maxWorlds = advertisedMaxWorld,
             revision = _revision,
         )
     }
