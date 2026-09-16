@@ -38,11 +38,11 @@ public class MarasamawPlant extends BoxStyleTrap {
 		if (npcType == null)
 			return;
 		if (success) {
-			setId(npcType.getObjectCatch());
+			changeId(npcType.getObjectCatch());
 			npc.anim(-1);
 			npc.setRespawnTask();
 		} else
-			setId(npcType.getObjectFail());
+			changeId(npcType.getObjectFail());
 		setStatus(Status.CATCHING);
 		if (success)
 			WorldTasks.schedule(new Task() {
@@ -55,7 +55,7 @@ public class MarasamawPlant extends BoxStyleTrap {
 			@Override
 			public void run() {
 				if (success)
-					setId(npcType.getObjectSuccess());
+					changeId(npcType.getObjectSuccess());
 				setNpcTrapped(npcType);
 				setStatus(success ? Status.SUCCESS : Status.FAIL);
 			}
