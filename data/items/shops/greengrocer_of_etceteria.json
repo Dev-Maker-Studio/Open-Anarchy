@@ -1,8 +1,8 @@
 {
-  "name": "Inventory 220",
+  "name": "Greengrocer of Etceteria",
   "generalStore": false,
   "buyOnly": false,
-  "currency": -1,
+  "currency": 995,
   "items": [
     {
       "item": {
@@ -34,5 +34,8 @@
         "amount": 0
       }
     }
+  ],
+  "npcIds": [
+    1370
   ]
 }
