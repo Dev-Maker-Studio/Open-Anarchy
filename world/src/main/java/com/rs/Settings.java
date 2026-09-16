@@ -141,11 +141,11 @@ public final class Settings {
 	}
 
 	public int getXpRate() {
-		return 1; // TODO: add XP_RATE to .env if needed
+		return EnvVars.INSTANCE.getWorldXpRate();
 	}
 
 	public double getDropModifier() {
-		return 1.0; // TODO: add DROP_MODIFIER to .env if needed
+		return EnvVars.INSTANCE.getWorldDropModifier();
 	}
 
 	public String getCachePath() {

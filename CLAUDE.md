@@ -393,6 +393,8 @@ WORLD_PUBLIC_HOST=localhost
 WORLD_MEMBERS=true
 WORLD_BOTS_ALLOWED=false      # the world list's flag 0x4 (PvP in Jagex's client): worlds that let bot clients in
 WORLD_LOOTSHARE=true
+WORLD_XP_RATE=1               # skill xp multiplier: 5 on the 5x remake world, 25 on the RSPS world
+WORLD_DROP_MODIFIER=1.0
 ```
 
 ### Rate Limiting

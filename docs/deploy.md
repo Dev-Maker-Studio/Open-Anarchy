@@ -89,12 +89,14 @@ WORLD_MEMBERS=true
 WORLD_BOTS_ALLOWED=false
 WORLD_LOOTSHARE=true
 WORLD_COUNTRY=USA
+WORLD_XP_RATE=1                  # 5 on the 5x remake world, 25 on the RSPS world
+WORLD_DROP_MODIFIER=1.0
 SOCIAL_GATEWAY_URL=ws://10.69.69.22:4039/social/ws
 SOCIAL_GATEWAY_TOKEN=<same as lobby>
 ```
 
-`data/worldConfig.json` keeps the world's gameplay settings (name, world info, start tiles, xp
-rate, start items). Its old `mongo*` keys are unused; `MONGO_URI` is the only database setting.
+`data/worldConfig.json` is legacy and unread; every world setting, the xp rate and drop modifier
+included, comes from `.env`.
 
 RSA keys and the JS5/world tokens default to the values the client was built with (the same
 constants the legacy servers compiled in), so they need no entries unless they change.
