@@ -39,7 +39,7 @@ public class NPCClickEvent implements PluginEvent {
 		this.npc = npc;
 		this.opNum = opNum;
 		this.atNPC = atNPC;
-		option = npc.getDefinitions(player).getOptions()[opNum-1];
+		option = npc.getDefinitions(player).getOption(opNum);
 	}
 
 	public Player getPlayer() {

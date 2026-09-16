@@ -47,7 +47,6 @@ import org.darkan.core.model.Item
 import world.gregs.voidps.type.Tile
 
 import com.rs.plugin.events.InputIntegerEvent
-import com.rs.utils.getOption
 
 class HouseController(@field:Transient val house: House?) : Controller() {
     override fun start() {
@@ -118,7 +117,7 @@ class HouseController(@field:Transient val house: House?) : Controller() {
     }
 
     override fun processObjectClick5(`object`: GameObject): Boolean {
-        if (`object`.definitions.containsOption(4, "Build")) {
+        if (`object`.definitions.hasOption(5, "Build")) {
             if (!house!!.isOwner(player)) {
                 player.sendMessage("You can only do that in your own house.")
                 return false
@@ -128,7 +127,7 @@ class HouseController(@field:Transient val house: House?) : Controller() {
                 house.openBuildInterface(`object`, build)
                 return false
             }
-        } else if (`object`.definitions.containsOption(4, "Remove")) {
+        } else if (`object`.definitions.hasOption(5, "Remove")) {
             if (!house!!.isOwner(player)) {
                 player.sendMessage("You can only do that in your own house.")
                 return false

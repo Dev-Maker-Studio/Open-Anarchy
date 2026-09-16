@@ -614,7 +614,7 @@ public class DungeonController extends Controller {
 				openSkillDoor(s, object, room, floorType);
 				return false;
 			}
-		if (object.getId() >= 54439 && object.getId() <= 54456 && object.getDefinitions().containsOption(0, "Cleanse")) {
+		if (object.getId() >= 54439 && object.getId() <= 54456 && object.getDefinitions().hasOption(1, "Cleanse")) {
 			@SuppressWarnings("deprecation")
 			NPC boss = dungeon.getTemporaryBoss();//getNPC(player, 11708);
 			if (!(boss instanceof Gravecreeper))
@@ -693,7 +693,7 @@ public class DungeonController extends Controller {
 			room.setDoor(index, null);
 			World.removeObject(object);
 			return false;
-		} else if (object.getId() == DungeonConstants.DUNGEON_DOORS[floorType.ordinal()] || object.getId() == DungeonConstants.DUNGEON_GUARDIAN_DOORS[floorType.ordinal()] || object.getId() == DungeonConstants.DUNGEON_BOSS_DOORS[floorType.ordinal()] || DungeonUtils.isOpenSkillDoor(object.getId(), floorType) || (object.getId() >= KeyDoors.getLowestDoorId(floorType) && object.getId() <= KeyDoors.getMaxDoorId(floorType)) || (object.getDefinitions().getName().equals("Door") && object.getDefinitions().containsOption(0, "Enter")) // there's many ids for challenge doors
+		} else if (object.getId() == DungeonConstants.DUNGEON_DOORS[floorType.ordinal()] || object.getId() == DungeonConstants.DUNGEON_GUARDIAN_DOORS[floorType.ordinal()] || object.getId() == DungeonConstants.DUNGEON_BOSS_DOORS[floorType.ordinal()] || DungeonUtils.isOpenSkillDoor(object.getId(), floorType) || (object.getId() >= KeyDoors.getLowestDoorId(floorType) && object.getId() <= KeyDoors.getMaxDoorId(floorType)) || (object.getDefinitions().getName().equals("Door") && object.getDefinitions().hasOption(1, "Enter")) // there's many ids for challenge doors
 				) {
 			if (object.getId() == DungeonConstants.DUNGEON_BOSS_DOORS[floorType.ordinal()] && player.inCombat()) {
 				player.sendMessage("This door is too complex to unlock while in combat.");
