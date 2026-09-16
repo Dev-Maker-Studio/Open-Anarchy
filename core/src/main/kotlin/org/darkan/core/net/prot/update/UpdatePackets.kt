@@ -48,6 +48,7 @@ data class PlayerUpdatePlayer(
     val xInRegion: Int,
     val yInRegion: Int,
     val finished: Boolean,
+    val hidden: Boolean,
     val hasTeleported: Boolean,
     val nextWalkDirection: Int?,
     val nextRunDirectionOrOpcode: Int?,
