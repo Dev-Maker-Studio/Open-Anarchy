@@ -437,6 +437,7 @@ object EntitySnapshotFactory {
             xInRegion = p.xInRegion,
             yInRegion = p.yInRegion,
             finished = p.hasFinished(),
+            hidden = p.isTrulyHidden,
             hasTeleported = p.hasTeleported(),
             nextWalkDirection = walkOpcode,
             nextRunDirectionOrOpcode = runOpcode,

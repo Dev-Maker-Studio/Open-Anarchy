@@ -88,6 +88,7 @@ object Rev727UpdateProtocol : UpdateProtocol {
     }
 
     private fun withinDistance(local: PlayerUpdatePlayer, other: PlayerUpdatePlayer, largeSceneView: Boolean): Boolean {
+        if (other.hidden && other.index != local.index) return false
         val radius = if (largeSceneView) 126 else 14
         val localX = (local.tileHash30 shr 14) and 0x3fff
         val localY = local.tileHash30 and 0x3fff
