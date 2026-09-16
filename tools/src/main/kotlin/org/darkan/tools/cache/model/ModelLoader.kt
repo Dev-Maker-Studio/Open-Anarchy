@@ -1213,7 +1213,12 @@ object ModelLoader {
      * @param ambient Ambient lightness factor (default 64, matching RS client base).
      *   The RS client computes this as 64 + objectDef.ambient.
      */
-    fun createTexturedModel(def: ModelDefinition, ambient: Int = ModelModifications.DEFAULT_AMBIENT, cache: Cache? = null): TexturedModel? {
+    fun createTexturedModel(
+        def: ModelDefinition,
+        ambient: Int = ModelModifications.DEFAULT_AMBIENT,
+        cache: Cache? = null,
+        hideMarkerFaces: Boolean = hideUntexturedMarkerFaces
+    ): TexturedModel? {
         if (def.faceCount == 0) return null
 
 
@@ -1263,7 +1268,7 @@ object ModelLoader {
         // A "mixed" model has both textured and untextured faces. When hideUntexturedMarkerFaces
         // is enabled, untextured faces on mixed models are skipped (they are likely backing panels
         // or marker geometry that serves no visual purpose without text overlays).
-        val modelHasTexturedFaces = if (hideUntexturedMarkerFaces) {
+        val modelHasTexturedFaces = if (hideMarkerFaces) {
             def.faceTextures?.any { it.toInt() != -1 } == true
         } else {
             false

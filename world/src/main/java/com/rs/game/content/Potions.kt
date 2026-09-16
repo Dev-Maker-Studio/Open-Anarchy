@@ -248,30 +248,30 @@ enum class Potion(val emptyId: Int, val ids: IntArray, val effect: (Player) -> U
     PRAYER_RENEWAL(VIAL, intArrayOf(21630, 21632, 21634, 21636), { it.addEffect(Effect.PRAYER_RENEWAL, 500) }),
     PRAYER_RENEWAL_FLASK(-1, intArrayOf(23609, 23611, 23613, 23615, 23617, 23619), { it.addEffect(Effect.PRAYER_RENEWAL, 500) }),
 
-    ANTIPOISON(VIAL, intArrayOf(2446, 175, 177, 179), { it.addEffect(Effect.ANTIPOISON, Ticks.fromSeconds(90).toLong()) }),
-    ANTIPOISON_FLASK(-1, intArrayOf(23315, 23317, 23319, 23321, 23323, 23325), { it.addEffect(Effect.ANTIPOISON, Ticks.fromSeconds(90).toLong()) }),
+    ANTIPOISON(VIAL, intArrayOf(2446, 175, 177, 179), { it.applyAntipoison(AntipoisonTier.REGULAR) }),
+    ANTIPOISON_FLASK(-1, intArrayOf(23315, 23317, 23319, 23321, 23323, 23325), { it.applyAntipoison(AntipoisonTier.REGULAR) }),
     ANTIPOISON_MIX(VIAL, intArrayOf(11433, 11435), { p ->
-        p.addEffect(Effect.ANTIPOISON, Ticks.fromSeconds(90).toLong())
+        p.applyAntipoison(AntipoisonTier.REGULAR)
         p.heal(30)
     }),
 
-    SUPER_ANTIPOISON(VIAL, intArrayOf(2448, 181, 183, 185), { it.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(6).toLong()) }),
-    SUPER_ANTIPOISON_FLASK(-1, intArrayOf(23327, 23329, 23331, 23333, 23335, 23337), { it.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(6).toLong()) }),
-    DOM_SUPER_ANTIPOISON(-1, intArrayOf(22377, 22378), { it.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(6).toLong()) }),
+    SUPER_ANTIPOISON(VIAL, intArrayOf(2448, 181, 183, 185), { it.applyAntipoison(AntipoisonTier.SUPER) }),
+    SUPER_ANTIPOISON_FLASK(-1, intArrayOf(23327, 23329, 23331, 23333, 23335, 23337), { it.applyAntipoison(AntipoisonTier.SUPER) }),
+    DOM_SUPER_ANTIPOISON(-1, intArrayOf(22377, 22378), { it.applyAntipoison(AntipoisonTier.SUPER) }),
     ANTI_P_SUPERMIX(VIAL, intArrayOf(11473, 11475), { p ->
-        p.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(6).toLong())
+        p.applyAntipoison(AntipoisonTier.SUPER)
         p.heal(30)
     }),
 
-    ANTIPOISONP(VIAL, intArrayOf(5943, 5945, 5947, 5949), { it.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(9).toLong()) }),
-    ANTIPOISONP_FLASK(-1, intArrayOf(23579, 23581, 23583, 23585, 23587, 23589), { it.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(9).toLong()) }),
+    ANTIPOISONP(VIAL, intArrayOf(5943, 5945, 5947, 5949), { it.applyAntipoison(AntipoisonTier.ANTIDOTE_PLUS) }),
+    ANTIPOISONP_FLASK(-1, intArrayOf(23579, 23581, 23583, 23585, 23587, 23589), { it.applyAntipoison(AntipoisonTier.ANTIDOTE_PLUS) }),
     ANTIDOTEP_MIX(VIAL, intArrayOf(11501, 11503), { p ->
-        p.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(9).toLong())
+        p.applyAntipoison(AntipoisonTier.ANTIDOTE_PLUS)
         p.heal(30)
     }),
 
-    ANTIPOISONPP(VIAL, intArrayOf(5952, 5954, 5956, 5958), { it.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(12).toLong()) }),
-    ANTIPOISONPP_FLASK(-1, intArrayOf(23591, 23593, 23595, 23597, 23599, 23601), { it.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(12).toLong()) }),
+    ANTIPOISONPP(VIAL, intArrayOf(5952, 5954, 5956, 5958), { it.applyAntipoison(AntipoisonTier.ANTIDOTE_PLUS_PLUS) }),
+    ANTIPOISONPP_FLASK(-1, intArrayOf(23591, 23593, 23595, 23597, 23599, 23601), { it.applyAntipoison(AntipoisonTier.ANTIDOTE_PLUS_PLUS) }),
 
     RELICYMS_BALM(VIAL, intArrayOf(4842, 4844, 4846, 4848), { /* TODO */ }),
     RELICYMS_BALM_FLASK(-1, intArrayOf(23537, 23539, 23541, 23543, 23545, 23547), { /* TODO */ }),
@@ -378,12 +378,12 @@ enum class Potion(val emptyId: Int, val ids: IntArray, val effect: (Player) -> U
     SANFEW_SERUM(VIAL, intArrayOf(10925, 10927, 10929, 10931), { p ->
         p.skills.adjustStat(8, 0.25, false, *Utils.range(0, Skills.SIZE - 1))
         p.prayer.restorePrayer((p.skills.getLevelForXp(PRAYER) * 0.33 * 10).toInt().toDouble())
-        p.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(6).toLong())
+        p.applyAntipoison(AntipoisonTier.SUPER)
     }),
     SANFEW_SERUM_FLASK(-1, intArrayOf(23567, 23569, 23571, 23573, 23575, 23577), { p ->
         p.skills.adjustStat(8, 0.25, false, *Utils.range(0, Skills.SIZE - 1))
         p.prayer.restorePrayer((p.skills.getLevelForXp(PRAYER) * 0.33 * 10).toInt().toDouble())
-        p.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(6).toLong())
+        p.applyAntipoison(AntipoisonTier.SUPER)
     }),
 
     SUMMONING_POTION(VIAL, intArrayOf(12140, 12142, 12144, 12146), { p ->
@@ -561,15 +561,15 @@ enum class Potion(val emptyId: Int, val ids: IntArray, val effect: (Player) -> U
     STRONG_STAT_RESTORE_POTION(17490, 17614, { it.skills.adjustStat(10, 0.24, false, *Skills.allExcept(PRAYER, SUMMONING)) }),
 
     WEAK_CURE_POTION(17490, 17568, { p ->
-        p.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(5).toLong())
+        p.applyAntipoison(AntipoisonTier.REGULAR, Ticks.fromMinutes(5).toLong())
         p.addEffect(Effect.ANTIFIRE, Ticks.fromMinutes(5).toLong())
     }),
     CURE_POTION(17490, 17592, { p ->
-        p.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(10).toLong())
+        p.applyAntipoison(AntipoisonTier.REGULAR, Ticks.fromMinutes(10).toLong())
         p.addEffect(Effect.ANTIFIRE, Ticks.fromMinutes(10).toLong())
     }),
     STRONG_CURE_POTION(17490, 17616, { p ->
-        p.addEffect(Effect.ANTIPOISON, Ticks.fromMinutes(20).toLong())
+        p.applyAntipoison(AntipoisonTier.REGULAR, Ticks.fromMinutes(20).toLong())
         p.addEffect(Effect.SUPER_ANTIFIRE, Ticks.fromMinutes(20).toLong())
     }),
 

@@ -45,6 +45,10 @@ object UrnCorpus {
 
 private const val CROSSWALK = "docs/reference/rs3-material-crosswalk.json"
 
+private const val DEFAULT_RS3_TREE = "../darkan-3-undercut/unpacked-cache"
+
+private const val DEFAULT_SOURCE_TREE = "cache-source"
+
 private const val OVERRIDES = "docs/reference/rs3-material-overrides.json"
 
 fun runRs3Port(args: List<String>) {
@@ -59,6 +63,7 @@ fun runRs3Port(args: List<String>) {
         "urns" -> urns(args.drop(1))
         "spotanims" -> spotanims(args.drop(1))
         "opacity" -> AlphaSpriteImporter(Path.of(args[1]), AlphaSpriteSpec.read(Path.of(args[2]))).run()
+        "sprite" -> sprite(args.drop(1))
         else -> usage()
     }
 }
@@ -76,6 +81,8 @@ private fun usage() {
         rs3port urns <rs3-tree> <727-tree> [spec.json]
         rs3port spotanims <rs3-tree> <727-tree> <spec.json>
         rs3port opacity <727-tree> <spec.json>
+        rs3port sprite <rs3Graphic> <727Graphic> <gameval> [--size <px>] [--background none|roundel|keyed] [--rs3 <rs3-tree>] [--tree <727-tree>] [--rename]
+        rs3port sprite --obj <rs3Obj> <727Graphic> <gameval> [--size <px>] [--overrides <materials.json>] [--rs3 <rs3-tree>] [--tree <727-tree>] [--rename]
         """.trimIndent()
     )
 }
@@ -83,6 +90,44 @@ private fun usage() {
 private fun flag(args: List<String>, name: String): String? {
     val index = args.indexOf(name)
     return if (index >= 0 && index + 1 < args.size) args[index + 1] else null
+}
+
+private val SPRITE_VALUED_FLAGS = setOf("--obj", "--size", "--background", "--rs3", "--tree", "--overrides")
+
+private fun positionals(args: List<String>, valued: Set<String>): List<String> {
+    val out = ArrayList<String>()
+    var index = 0
+    while (index < args.size) {
+        when {
+            args[index] in valued -> index += 2
+            args[index].startsWith("--") -> index++
+            else -> out.add(args[index++])
+        }
+    }
+    return out
+}
+
+private fun sprite(args: List<String>) {
+    val obj = flag(args, "--obj")?.toInt()
+    val positional = positionals(args, SPRITE_VALUED_FLAGS)
+    val expected = if (obj != null) 2 else 3
+    if (positional.size != expected) {
+        usage()
+        return
+    }
+    val rest = if (obj != null) positional else positional.drop(1)
+    val import = SpriteImport(
+        source = if (obj != null) SpriteSource.ObjIcon(obj) else SpriteSource.Graphic(positional[0].toInt()),
+        graphic = rest[0].toInt(),
+        gameval = rest[1],
+        size = flag(args, "--size")?.toInt() ?: SpriteImport.DEFAULT_SIZE,
+        background = flag(args, "--background")?.let { SpriteBackground.valueOf(it.uppercase()) } ?: SpriteBackground.NONE,
+        rename = args.contains("--rename")
+    )
+    val rs3Tree = Path.of(flag(args, "--rs3") ?: DEFAULT_RS3_TREE)
+    val sourceTree = Path.of(flag(args, "--tree") ?: DEFAULT_SOURCE_TREE)
+    val overrides = flag(args, "--overrides")?.let { Crosswalk.overrides(Path.of(it)) }.orEmpty()
+    SpriteImporter(rs3Tree, sourceTree) { crosswalk().with(overrides) }.run(import)
 }
 
 private fun crosswalk(): Crosswalk = crosswalkOrNull() ?: throw IllegalStateException("$CROSSWALK is missing; run `rs3port materials` first.")

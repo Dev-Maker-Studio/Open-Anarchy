@@ -133,6 +133,12 @@ Names follow the identified names around them (`world_select_stars_0` -> `world_
 - **`cc_create` ids are contiguous per layer.** Creating id n when n-1 does not exist throws and
   aborts the script (see the bank placeholder work); derive cc ids from a drawn-slot counter, not
   from a data index that has gaps.
+- **Renumbering a gameval does not recompile the scripts that name it.** The incremental pack
+  rebuilds a clientscript only when its source text changes, so moving `varbit_x` to another id
+  leaves every script naming it with the old number in its bytecode (the buff bar's seconds field
+  kept reading the sprite bit). Never renumber; if you must, touch every script that names the
+  constant or delete `data/cache/manifest.json`, then decompile one (`tools cs2 decompile <id>`) -
+  `cs2 compile` reports "identical" even when the constant moved underneath.
 - **`opcodeOrder` is a whitelist.** A definition JSON that carries `opcodeOrder` (every unpacked file
   does) is encoded with exactly those opcodes; a field you set whose opcode is not in the list is
   silently dropped at pack time (an inventory option added to an obj whose order lacks 35 never
@@ -153,6 +159,12 @@ corrected opcode is added to the `Cs2Op` enum by hand.
   op is chosen, `ccSetOnTargetLeave` when a use-on selection is cancelled, `ccSetOnOpt` on the
   target a selection is used on. The `ifSetOn*` forms take the component last.
 
+- **A hidden component runs no hooks.** `processInterfaceCycle` skips hidden components
+  (`InterfaceRenderer.kt:99`), their `onVarpTransmit` and `onTimer` included, so a component that
+  hides itself from a var hook can never show itself again - only reopening the interface reruns
+  its load script. Servers send vars after opening the gameframe at login, so a load hook reads a
+  setting as 0 first: keep var-driven visibility on components that stay visible (empty them
+  instead of hiding) or on a parent that is never hidden.
 - **cc ids are contiguous from 0 per component - so create them in id order.** `cs2_3118` called
   the bots icon (id 15) right after cc 10 and threw `RuntimeException:14` on every favourites
   redraw; it is created last now. `cc_create` grows the slot array to `id + 1` and
@@ -287,6 +299,25 @@ corrected opcode is added to the `Cs2Op` enum by hand.
   `GameSetting.entries[opNum - 1]` to `slotId`; the var transmit redraws. Adding a setting = a case
   in `game_settings_label`, `game_settings_values`, `game_settings_value_text` and
   `game_settings_current`, `+1` in `game_settings_count`, and an enum entry in the same order.
+  An on/off setting is a **toggle row** instead: a case in `game_settings_toggle` (returns true)
+  and in `game_settings_label`/`game_settings_current`, no values. The row draws the label and a
+  14x14 `check_box_2_*` box (`game_settings_checkbox(row, hovered)`, skin-wrapped) against the
+  right edge, both ccs carrying `ccSetOp(row + 1, "Toggle")` and the
+  `game_settings_toggle_hover` hook (box graphic, label 0xFAFAFA); the server enables those ops on
+  the `rows` layer and flips the varbit (`GameSetting` with `isToggle = true`). The rows layer
+  already redraws on varp 1438, so a setting's varbit belongs there (`option_buff_bar` is bit 20).
+- **Buff bar (interface 1322 `buff_bar`)**: 28 slots in two rows of 14, hosted by 746:458 and
+  548:425 (519x68, bottom-anchored above the chatbox; `chatbox_resize`/`chatbox_resize_window` move
+  the resizable host with the chat). Each slot has an obj component (1-28), a 24x24 graphic
+  component (29-56) and a timer text (57-84); its varp packs `buff_bar_slot_n_icon` (0-14),
+  `_sprite` (15, obj or graphic) and `_seconds` (16-27), the hover text is a varcstr. The countdown
+  runs on the client from `clientClock()` when the slot loads, so every (re)load starts from the
+  seconds last written: the server resends the time left whenever the bar is reopened
+  (`BuffBar.refresh`, the `Sub.BUFF_BAR` procedure) or shown again. `option_buff_bar` (varp 1438,
+  default 0) is checked by `buff_bar_slot_draw` and the tooltip, and every slot's icon component
+  lists varp 1438 beside its slot varp, so the setting redraws the bar; the server publishes
+  nothing while it is off. Sprite icons are authored at 24x24 -
+  `tools rs3port sprite` imports RS3 buff art at that size.
 - **Graphics Options renderer row** (`[proc,graphics_options_renderer_buttons]`, 977:52-54): the
   preset-button recipe (`set_but_*` tiles + verdana text, `stringWidth + 30`, uniform width, 16 px
   gaps, centred in 977:51) for Safe Mode / Legacy OpenGL / Modern OpenGL, `cs2_2697(toolkit,
