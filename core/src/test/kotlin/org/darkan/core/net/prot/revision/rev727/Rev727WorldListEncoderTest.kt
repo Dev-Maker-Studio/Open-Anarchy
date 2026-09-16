@@ -6,6 +6,10 @@ import org.darkan.core.net.prot.Codec
 import org.darkan.core.net.prot.dto.WorldListEntry
 import org.darkan.core.net.prot.dto.WorldListSnapshot
 import org.darkan.core.net.prot.packet.WorldListPacket
+import org.darkan.core.worldlist.Country
+import org.darkan.core.worldlist.World
+import org.darkan.core.worldlist.WorldList
+import org.darkan.core.worldlist.WorldMetadata
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -45,6 +49,24 @@ class Rev727WorldListEncoderTest {
         }
         assertEquals(0x1 or 0x8, flagsByWorld[1])
         assertEquals(0x1 or 0x8 or 0x20, flagsByWorld[2])
+    }
+
+    @Test
+    fun `a high numbered registered world is inside the encoded descriptor range`() {
+        val list = WorldList(300, localWorldId = 0)
+        list.put(World(WorldMetadata(999, "community.darkan.org", 43595, "Community", Country.USA, false, true, true, false, false)))
+        val reader = BufferReader(encode(WorldListPacket(list.snapshot(), refreshOnClient = true, refreshOnlyPlayerCounts = false)))
+
+        assertEquals(1, reader.readUnsignedByte())
+        assertEquals(2, reader.readUnsignedByte())
+        assertEquals(1, reader.readUnsignedByte())
+        assertEquals(1, reader.readSmart())
+        reader.readSmart()
+        reader.readJagString()
+        assertEquals(0, reader.readSmart())
+        assertEquals(1000, reader.readSmart())
+        assertEquals(1, reader.readSmart())
+        assertEquals(999, reader.readSmart())
     }
 
     private fun BufferReader.readJagString(): String {
