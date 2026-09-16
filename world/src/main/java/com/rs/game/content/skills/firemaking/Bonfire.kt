@@ -176,7 +176,7 @@ fun mapBonfireInteractions() {
     onObjectClick("Fire") { (player, obj, option) -> if (option == "Add-logs") addLogs(player, obj) }
 
     onItemOnObject(arrayOf("Fire"), Log.entries.map { it.logId }.toTypedArray()) { e ->
-        if (e.`object`.getDefinitions(e.player).containsOption(4, "Add-logs")) {
+        if (e.`object`.getDefinitions(e.player).hasOption(5, "Add-logs")) {
             addLog(e.player, e.`object`, e.item)
         }
     }

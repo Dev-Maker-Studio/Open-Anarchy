@@ -51,6 +51,11 @@ worked example of everything below.
   `item.id = ...` then `inventory.refresh()` to transform in place; `inventory.getNumberOf`,
   `containsOneItem`, `hasFreeSlots`, `deleteItem(id, n)`, `addItem(Item(id, n))` (non-stackable
   n > 1 fills n slots). `player.getItemFromInv(id)` is the first match.
+- **Options** on a definition are addressed by **op number, 1-based**: `getOption(1)` is op1,
+  `hasOption(5, "Build")` is op5, and `optionsIndex` answers in op numbers too. Never write 0 for
+  the first option - the underlying array is an implementation detail. `hasOption` is named apart
+  from the legacy 0-based `containsOption(int, ...)` on purpose, so a re-synced legacy call fails
+  to compile instead of quietly reading the option next door.
 - **Animation**: `entity.anim(Animation)`; `setNextAnimation` is deprecated. XP: `skills.addXp`
   fires the event chain, `addXpLamp` does not.
 - **Messages** use the definition names (`ItemDefinitions.getDefs(id).name.lowercase()`,

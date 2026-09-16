@@ -69,15 +69,15 @@ public class OwnedObject extends GameObject {
 	}
 
 	public static void processAll() {
-		try {
-            for (Integer key : OBJECTS.keySet()) {
-                OwnedObject o = OBJECTS.get(key);
-                if (o == null || o.destroyed)
-                    continue;
-                o.tick(World.getPlayerByUsername(o.owner));
-            }
-		} catch(Throwable e) {
-			Logger.handle(OwnedObject.class, "process", e);
+		for (Integer key : OBJECTS.keySet()) {
+			OwnedObject o = OBJECTS.get(key);
+			if (o == null || o.destroyed)
+				continue;
+			try {
+				o.tick(World.getPlayerByUsername(o.owner));
+			} catch(Throwable e) {
+				Logger.handle(OwnedObject.class, "process", e);
+			}
 		}
 	}
 

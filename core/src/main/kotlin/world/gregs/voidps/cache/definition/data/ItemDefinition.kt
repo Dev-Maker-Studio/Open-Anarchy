@@ -172,12 +172,12 @@ data class ItemDefinition(
     /** Legacy `containsOption(String)` - an exact-match scan of the inventory options. */
     fun containsOption(option: String): Boolean = options.any { it == option }
 
-    /** Legacy `containsOption(int, String)`. */
-    fun containsOption(index: Int, option: String): Boolean = options.getOrNull(index) == option
+    /** [op] is the op number, 1-based - op1 is 1. */
+    fun hasOption(op: Int, option: String): Boolean = if (op < 1) false else options.getOrNull(op - 1) == option
 
-    /** Legacy `containsInventoryOption(int, String)`. */
-    fun containsInventoryOption(index: Int, option: String): Boolean =
-        options.getOrNull(index)?.equals(option, ignoreCase = true) == true
+    /** [op] is the op number, 1-based - op1 is 1. */
+    fun hasInventoryOption(op: Int, option: String): Boolean =
+        if (op < 1) false else options.getOrNull(op - 1)?.equals(option, ignoreCase = true) == true
 
     /** Whether this item can be worn at all. Legacy `isWearItem()`. */
     fun isWearItem(): Boolean = wearPos != -1

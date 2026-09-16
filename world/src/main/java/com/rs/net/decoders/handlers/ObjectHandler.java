@@ -36,7 +36,7 @@ public final class ObjectHandler {
 
 	public static void handleOption1(final Player player, final GameObject object) {
 		final ObjectDefinition objectDef = object.getDefinitions(player);
-		if (objectDef.getOption(0) == null || PluginManager.handle(new ObjectClickEvent(player, object, 1, false)))
+		if (objectDef.getOption(1) == null || PluginManager.handle(new ObjectClickEvent(player, object, 1, false)))
 			return;
 
 		player.setRouteEvent(new RouteEvent(object, () -> {
@@ -52,7 +52,7 @@ public final class ObjectHandler {
 	public static void handleOption2(final Player player, final GameObject object) {
 		final ObjectDefinition def = object.getDefinitions(player);
 
-		if (def.getOption(1) == null || PluginManager.handle(new ObjectClickEvent(player, object, 2, false)))
+		if (def.getOption(2) == null || PluginManager.handle(new ObjectClickEvent(player, object, 2, false)))
 			return;
 
 		player.setRouteEvent(new RouteEvent(object, () -> {
@@ -68,7 +68,7 @@ public final class ObjectHandler {
 	public static void handleOption3(final Player player, final GameObject object) {
 		final ObjectDefinition def = object.getDefinitions(player);
 
-		if (def.getOption(2) == null || PluginManager.handle(new ObjectClickEvent(player, object, 3, false)))
+		if (def.getOption(3) == null || PluginManager.handle(new ObjectClickEvent(player, object, 3, false)))
 			return;
 
 		player.setRouteEvent(new RouteEvent(object, () -> {
@@ -84,7 +84,7 @@ public final class ObjectHandler {
 	public static void handleOption4(final Player player, final GameObject object) {
 		final ObjectDefinition def = object.getDefinitions(player);
 
-		if (def.getOption(3) == null || PluginManager.handle(new ObjectClickEvent(player, object, 4, false)))
+		if (def.getOption(4) == null || PluginManager.handle(new ObjectClickEvent(player, object, 4, false)))
 			return;
 
 		player.setRouteEvent(new RouteEvent(object, () -> {
@@ -98,7 +98,7 @@ public final class ObjectHandler {
 	}
 
 	public static void handleOption5(final Player player, final GameObject object) {
-		if (object.getDefinitions(player).getOption(4) == null || PluginManager.handle(new ObjectClickEvent(player, object, 5, false)))
+		if (object.getDefinitions(player).getOption(5) == null || PluginManager.handle(new ObjectClickEvent(player, object, 5, false)))
 			return;
 
 		player.setRouteEvent(new RouteEvent(object, () -> {

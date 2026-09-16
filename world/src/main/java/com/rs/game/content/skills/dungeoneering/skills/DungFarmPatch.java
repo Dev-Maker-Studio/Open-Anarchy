@@ -47,7 +47,7 @@ public class DungFarmPatch extends OwnedObject {
 		if (time >= 50 && stage < 3) {
 			time = 0;
 			stage++;
-			setId(DungeonConstants.EMPTY_FARMING_PATCH + 1 + stage + (harvest.ordinal() * 3));
+			changeId(DungeonConstants.EMPTY_FARMING_PATCH + 1 + stage + (harvest.ordinal() * 3));
 		}
 	}
 }

@@ -288,7 +288,7 @@ public final class BarrowsController extends Controller {
 			}
 			if (!player.getKilledBarrowBrothers()[player.getHiddenBrother()])
 				sendTarget(2025 + player.getHiddenBrother(), Tile.of(player.getTile()));
-			if (object.getDefinitions(player).getOption(1).equals("Search")) {
+			if ("Search".equals(object.getDefinitions(player).getOption(1))) {
 				player.incrementCount("Barrows chests looted");
 				sendReward();
 				player.getPackets().sendCameraShake(3, 12, 25, 12, 25);

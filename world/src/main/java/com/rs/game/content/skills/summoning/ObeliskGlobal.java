@@ -27,7 +27,7 @@ public class ObeliskGlobal {
 	});
 
 	public static ObjectClickHandler handleSmallObelisk = new ObjectClickHandler(new Object[] { "Small obelisk" }, e -> {
-		if (e.getObj().getDefinitions().containsOption(0, "Renew-points")) {
+		if (e.getObj().getDefinitions().hasOption(1, "Renew-points")) {
 			int summonLevel = e.getPlayer().getSkills().getLevelForXp(Constants.SUMMONING);
 			if (e.getPlayer().getSkills().getLevel(Constants.SUMMONING) < summonLevel) {
 				e.getPlayer().lock(3);
