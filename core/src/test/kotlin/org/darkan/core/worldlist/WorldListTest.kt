@@ -81,4 +81,12 @@ class WorldListTest {
         val flags = list.snapshot().entries.associate { it.number to it.customCache }
         assertEquals(mapOf(1 to false, 2 to true), flags)
     }
+
+    @Test
+    fun `snapshot range includes a registered world above the configured minimum`() {
+        val list = WorldList(300, localWorldId = 0)
+        list.put(World(metadata(999, "community.darkan.org")))
+
+        assertEquals(999, list.snapshot().maxWorlds)
+    }
 }
