@@ -44,7 +44,7 @@ public class ObjectClickEvent implements PluginEvent {
 		this.opNum = opNum;
 		this.atObject = atObject;
 		objectId = object.getId();
-		option = com.rs.utils.KtExtensionsKt.getOption(object.getDefinitions(player), getOpIndex(opNum));
+		option = object.getDefinitions(player).getOption(opNum);
 	}
 
 	public String getOption() {
@@ -141,14 +141,4 @@ public class ObjectClickEvent implements PluginEvent {
 		return option;
 	}
 
-	private static int getOpIndex(int op) {
-		return switch (op) {
-			case 1 -> 0;
-			case 2 -> 1;
-			case 3 -> 2;
-			case 4 -> 3;
-			case 5 -> 4;
-			default -> -1;
-		};
-	}
 }

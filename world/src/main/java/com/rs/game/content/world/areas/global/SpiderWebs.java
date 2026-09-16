@@ -36,7 +36,7 @@ public class SpiderWebs {
                 }
             }
             case "Web" -> {
-                if (objectDef.containsOption(0, "Slash")) {
+                if (objectDef.hasOption(1, "Slash")) {
                     player.anim(
                         PlayerCombatKt.getWeaponAttackEmote(
                             player.getEquipment().getWeaponId(),

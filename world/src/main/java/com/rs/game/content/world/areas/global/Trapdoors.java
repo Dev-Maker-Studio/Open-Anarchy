@@ -11,7 +11,7 @@ public class Trapdoors {
 
     public static ObjectClickHandler handleTrapdoor = new ObjectClickHandler(new Object[] { "Trapdoor" }, e -> {
         GameObject object = e.getObj();
-        if (object.getDefinitions().containsOption(0, "Open")) {
+        if (object.getDefinitions().hasOption(1, "Open")) {
             GameObject openedTrapdoor = new GameObject(
                 object.getId() + 1,
                 object.getType(),
