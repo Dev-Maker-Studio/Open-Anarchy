@@ -135,8 +135,10 @@ class ObjIcons(
         canvas = null
     }
 
-    private fun sprite(request: ObjIconRequest): IntArray? {
-        val definition = stackAlternate(definition(request.obj) ?: return null, request.amount)
+    private fun sprite(request: ObjIconRequest): IntArray? = pixels(definition(request.obj) ?: return null, request)
+
+    fun pixels(base: ItemDefinition, request: ObjIconRequest): IntArray? {
+        val definition = stackAlternate(base, request.amount)
         val model = iconModel(definition) ?: return null
 
         var pixels = render(model, request) ?: return null
@@ -283,7 +285,7 @@ class ObjIcons(
         if (!target.resize(WIDTH, HEIGHT)) {
             return null
         }
-        val mesh = ModelLoader.createTexturedModel(substitute(definition, model), model.ambient, cache)
+        val mesh = ModelLoader.createTexturedModel(substitute(definition, model), model.ambient, cache, hideMarkerFaces = false)
             ?: return null
 
         val zoom = zoom(model.zoom, request)

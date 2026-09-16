@@ -19,6 +19,7 @@ package com.rs.game.model.entity.player.managers
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
 import com.google.common.collect.Maps
+import com.rs.game.content.BuffBar
 import com.rs.game.content.achievements.Achievement
 import com.rs.game.content.achievements.AchievementInterface
 import com.rs.game.model.entity.player.Player
@@ -62,6 +63,7 @@ class InterfaceManager(private val player: Player) {
         MINIGAME_HUD(12, 47),
         FADING(13, 48),
         ABOVE_CHATBOX(27, 43),
+        BUFF_BAR(458, 425, Interface.buff_bar, BuffBar::refresh),
         LEVEL_UP(35, 46),
         ACHIEVEMENT_NOTIF(41, 271),
         FULLSCREEN_BG(42, 15),
