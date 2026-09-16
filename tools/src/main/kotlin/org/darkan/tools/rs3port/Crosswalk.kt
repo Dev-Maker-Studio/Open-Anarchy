@@ -83,6 +83,8 @@ class Crosswalk(
     fun material(rs3: Int): Int = materials[rs3]
         ?: throw IllegalArgumentException("RS3 material $rs3 has no 727 mapping; add it to the overrides file.")
 
+    fun with(extra: Map<Int, Int>): Crosswalk = Crosswalk(materials + extra, counts, overrides + extra, projections)
+
     fun projectionOrNull(worn: Boolean, material: Int): Projection? =
         projections["${if (worn) "worn" else "inventory"}:$material"]
 

@@ -41,6 +41,36 @@ object SourceEdits {
         return missing.size
     }
 
+    fun renameArchive(tree: Path, directory: String, id: Int, hash: Int) {
+        val path = tree.resolve(directory).resolve("index.json")
+        val lines = ArrayList(Files.readAllLines(path))
+        val index = lines.indexOfFirst { archiveId(it) == id }
+        check(index >= 0) { "$directory/index.json has no archive $id." }
+        val pattern = Regex("(\"nameHash\": )-?\\d+")
+        check(pattern.containsMatchIn(lines[index])) { "$directory archive $id carries no name hash: ${lines[index]}" }
+        lines[index] = lines[index].replace(pattern, "$1$hash")
+        Files.writeString(path, lines.joinToString("\n") + "\n")
+    }
+
+    fun renameEntry(tree: Path, type: String, namespace: String, id: Int, from: String, to: String) {
+        val catalog = tree.resolve("gamevals").resolve("$type.json")
+        val entry = "\"$id\": \"$from\""
+        val text = Files.readString(catalog)
+        check(text.split(entry).size == 2) { "gamevals/$type.json does not hold $entry exactly once." }
+        check(!text.contains(": \"$to\"")) { "gamevals/$type.json already names another id $to." }
+        Files.writeString(catalog, text.replace(entry, "\"$id\": \"$to\""))
+
+        val declarations = tree.resolve("clientscripts").resolve("gamevals.d.ts")
+        val lines = ArrayList(Files.readAllLines(declarations))
+        val start = lines.indexOfFirst { it.startsWith("declare namespace $namespace {") }
+        check(start >= 0) { "gamevals.d.ts has no $namespace namespace." }
+        val declaration = "    /** $type $id */ const $from: number;"
+        val index = lines.subList(start, lines.size).indexOf(declaration)
+        check(index >= 0) { "the $namespace namespace does not declare $from as $type $id." }
+        lines[start + index] = "    /** $type $id */ const $to: number;"
+        Files.writeString(declarations, lines.joinToString("\n") + "\n")
+    }
+
     private fun archiveId(line: String): Int? {
         val trimmed = line.trim()
         if (!trimmed.startsWith("\"") || !trimmed.contains("{")) {
