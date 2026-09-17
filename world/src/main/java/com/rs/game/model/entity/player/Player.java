@@ -802,11 +802,25 @@ public class Player extends Entity {
 	 * cannot interleave writes on the same channel.
 	 */
 	public void start() {
+		checkWasInDynamicRegion();
 		loadMapRegions();
 		getMapChunksNeedInit().addAll(getMapChunkIds());
 		run();
 		if (isDead())
-			sendDeath(null);
+			recoverInterruptedDeath();
+	}
+
+	/** A controller that takes over the death sequence may never finish it; nothing else clears 0 hitpoints. */
+	private void recoverInterruptedDeath() {
+		sendDeath(null);
+		WorldTasks.schedule(Ticks.fromSeconds(10), () -> {
+			if (hasFinished() || !isDead())
+				return;
+			dyingTime = 0;
+			setHitpoints(getMaxHitpoints());
+			reset();
+			tele(Settings.getConfig().getPlayerRespawnTile());
+		});
 	}
 
 	/**
@@ -1242,8 +1256,7 @@ public class Player extends Entity {
 		updateMovementType = true;
 		pvpCombatLevelThreshhold = -1;
 		appearence.generateAppearanceData();
-		checkWasInDynamicRegion();
-		controllerManager.login(); // checks what to do on login after welcome
+		controllerManager.login();
 		//unlock robust glass
 		getVars().setVarBit(Varbit.afr_complete, 1);
 		notes.init();
@@ -1608,17 +1621,15 @@ public class Player extends Entity {
 
 	public void finish(final int tryCount) {
 		disconnected = true;
-		if (hasFinished())
+		if (hasFinished() || finishing)
 			return;
 		stopAll(false, true, !(getInteractionManager().getInteraction() instanceof PlayerCombatInteraction));
 		if ((inCombat(10000) || hasBeenHit(10000) || getEmotesManager().isAnimating() || isLocked()) && tryCount < 6) {
+			finishing = true;
 			WorldTasks.schedule(Ticks.fromSeconds(10), () -> {
 				try {
 					finishing = false;
-					if (isDead() || isDying())
-						finish(tryCount);
-					else
-						finish(tryCount + 1);
+					finish(tryCount + 1);
 				} catch (Throwable e) {
 					Logger.handle(Player.class, "finish", e);
 				}
@@ -1630,11 +1641,16 @@ public class Player extends Entity {
 
 	public void realFinish() {
 		getTempAttribs().setB("realFinished", true);
-		if (isDead() || isDying())
+		if (hasFinished())
 			return;
+		if (isDead() || isDying()) {
+			dyingTime = 0;
+			setHitpoints(getMaxHitpoints());
+			setTile(Settings.getConfig().getPlayerRespawnTile());
+		}
 		stopAll();
 		cutsceneManager.logout();
-		controllerManager.logout(); // checks what to do on before logout for
+		controllerManager.logout();
 		house.finish();
 		dungManager.finish();
 		running = false;
@@ -1644,12 +1660,11 @@ public class Player extends Entity {
 			pet.finish();
 		lastLoggedIn = System.currentTimeMillis();
 		setFinished(true);
-		AccountLimiter.remove(getSession().getIp());
-		// session.setDecoder(null); // TODO: Modern session doesn't support decoders
+		if (getSession() != null)
+			AccountLimiter.remove(getSession().getIp());
+		WorldServer.INSTANCE.notifyPlayerOffline(getUsername());
+		World.removePlayer(this);
 		WorldDB.getPlayers().save(this, () -> {
-			WorldServer.INSTANCE.notifyPlayerOffline(getUsername());
-			World.removePlayer(this);
-			ChunkManager.updateChunks(this);
 			WorldDB.getHighscores().save(this);
 			Logger.info(Player.class, "realFinish", "Finished Player: " + getUsername());
 		});
@@ -4036,16 +4051,16 @@ public class Player extends Entity {
 	}
 
 	private void checkWasInDynamicRegion() {
-		if (instancedArea != null) {
-			Instance prevInstance = Instance.get(instancedArea.getId());
-			if (prevInstance != null && prevInstance.isPersistent()) {
-				prevInstance.teleportTo(this);
-				setForceNextMapLoadRefresh(true);
-				return;
-			}
-			tele(instancedArea.getReturnTo());
-			instancedArea = null;
+		if (instancedArea == null)
+			return;
+		Instance prevInstance = Instance.get(instancedArea.getId());
+		if (prevInstance != null && prevInstance.isPersistent()) {
+			prevInstance.teleportTo(this);
+			setForceNextMapLoadRefresh(true);
+			return;
 		}
+		setTile(instancedArea.getReturnTo());
+		instancedArea = null;
 	}
 
 	public Map<StorableItem, Item> getLeprechaunStorage() {

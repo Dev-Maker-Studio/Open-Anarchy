@@ -2,6 +2,7 @@ package com.rs.game.model.entity.player;
 
 import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.map.instance.Instance;
+import org.darkan.core.Logger;
 
 public abstract class InstancedController extends Controller {
     private final Instance instance;
@@ -29,7 +30,19 @@ public abstract class InstancedController extends Controller {
         instance.requestChunkBound().thenAccept(b -> {
             onBuild.run();
             onBuildInstance();
+        }).exceptionally(e -> {
+            Logger.handle(InstancedController.class, "_buildInstance", e);
+            abandonInstance();
+            return null;
         });
+    }
+
+    private void abandonInstance() {
+        if (player == null)
+            return;
+        player.unlock();
+        player.tele(instance.getReturnTo());
+        removeController();
     }
 
     public abstract void onBuildInstance();
