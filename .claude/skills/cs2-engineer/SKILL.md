@@ -394,6 +394,8 @@ corrected opcode is added to the `Cs2Op` enum by hand.
   the exact cc slot when it holds the entry's obj, else the first slot holding it, so static worn
   slots resolve too. `invGetTooltip`/`invOtherGetTooltip` (1006/1007) return the server text, sent
   per slot in UPDATE_INV_FULL/PARTIAL (flags 0x2/0x4); without it the box shows op + name.
+  The inv slot drawers' mouseover hooks (`inventory_init`, `wornitems_slot`, the bank's) set
+  `varc_1691` to the obj, so any check on it must come after the tooltip lookup, not before it.
 - **Text tags**: `<col>`, `<shad=rrggbb>`, `<str=>`, `<u=>`, `<argb=>`, `<br>`, `<img=n>` (name
   icons), plus the client's own `<sprite=graphic[,frame]>` and `<obj=id[,amount]>` inline icons,
   scaled down to the font's line height (`InlineSprites` in darkan-bot); an obj icon that is not
