@@ -20,6 +20,8 @@ class IfOnPlayerHandler : PacketHandler<Player, IfOnPlayer> {
         if (packet.forceRun)
             player.setRun(true)
         player.stopAll(false)
+        if (PluginManager.handle(IFOnPlayerEvent(player, target, packet.interfaceId, packet.componentId, packet.slotId, packet.itemId, false)))
+            return
         player.setRouteEvent(RouteEvent(target) {
             PluginManager.handle(IFOnPlayerEvent(player, target, packet.interfaceId, packet.componentId, packet.slotId, packet.itemId, true))
         })
