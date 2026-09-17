@@ -40,11 +40,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 
 import static org.darkan.core.net.prot.revision.rev727.Rev727CodecKt.register727;
 
 public final class Launcher {
+
+	private static final long WORLD_DRAIN_TIMEOUT_MS = 10000;
+	private static final AtomicBoolean SHUTTING_DOWN = new AtomicBoolean();
 
     public static void main(String[] args) throws Exception {
 		Logger.setupFormat();
@@ -85,27 +89,7 @@ public final class Launcher {
 		Logger.info(Launcher.class, "main", "Player will be directed to "+Settings.getConfig().getWorldInfo()+"...");
 		Logger.info(Launcher.class, "main", "World registration handled by SocialClient via gateway.");
 		addCleanMemoryTask();
-//		Runtime.getRuntime().addShutdownHook(new Thread() {
-//			@Override
-//			public void run() {
-//				try {
-//					for (Player player : World.getPlayers()) {
-//						if (player == null || !player.hasStarted())
-//							continue;
-//						try {
-//							player.getPackets().sendLogout(player, true);
-//							player.realFinish();
-//						} catch(Throwable e) {
-//							
-//						}
-//					}
-//					PartyRoom.save();
-//					Launcher.shutdown();
-//				} catch (Throwable e) {
-//					Logger.handle(this, e);
-//				}
-//			}
-//		});
+		Runtime.getRuntime().addShutdownHook(new Thread(Launcher::gracefulShutdown, "Shutdown Hook"));
 	}
 
 	private static void addCleanMemoryTask() {
@@ -147,9 +131,46 @@ public final class Launcher {
 
 	public static void shutdown() {
 		try {
-			closeServices();
+			gracefulShutdown();
 		} finally {
 			System.exit(0);
+		}
+	}
+
+	/**
+	 * Safe to call from a shutdown hook, so it must never call {@link System#exit}. Everything that
+	 * ends the process routes through here, so it runs at most once.
+	 */
+	public static void gracefulShutdown() {
+		if (!SHUTTING_DOWN.compareAndSet(false, true))
+			return;
+		try {
+			WorldThread.requestStop();
+			if (!WorldThread.isTicking() && !WorldThread.awaitStop(WORLD_DRAIN_TIMEOUT_MS))
+				Logger.warn(Launcher.class, "gracefulShutdown", "World thread did not stop in " + WORLD_DRAIN_TIMEOUT_MS + "ms; saving anyway");
+			logoutAndSaveAll();
+			WorldPersistentData.save();
+		} catch (Throwable e) {
+			Logger.handle(Launcher.class, "gracefulShutdown", e);
+		}
+		closeServices();
+	}
+
+	private static void logoutAndSaveAll() {
+		for (Player player : World.getPlayers()) {
+			if (player == null || !player.hasStarted())
+				continue;
+			try {
+				player.getPackets().sendLogout(true);
+				player.realFinish();
+			} catch (Throwable e) {
+				Logger.handle(Launcher.class, "logoutAndSaveAll", e);
+			}
+			try {
+				WorldDB.getPlayers().saveSync(player);
+			} catch (Throwable e) {
+				Logger.handle(Launcher.class, "logoutAndSaveAll", e);
+			}
 		}
 	}
 
