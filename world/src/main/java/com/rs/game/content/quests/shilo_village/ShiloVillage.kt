@@ -634,7 +634,7 @@ fun mapShiloVillage() {
                 player.tele(2928, 9521, 0)
             }
             WorldTasks.schedule(1) {
-                if (player.equipment.getNeckId() != BEADS_OF_THE_DEAD_ID) {
+                if (player.equipment.neckId != BEADS_OF_THE_DEAD_ID) {
                     player.sendMessage("Rashiliyia appears!")
                     WorldTasks.schedule(5) {
                         player.sendMessage("You feel invisible hands starting to choke you...")
@@ -746,7 +746,7 @@ fun mapShiloVillage() {
                 simple("There is an ancient symbol on the gate. It looks like a human figure with something around its neck. It looks pretty scary.")
             }
         }else{
-            if (player.equipment.getNeckId() == BEADS_OF_THE_DEAD_ID) {
+            if (player.equipment.neckId == BEADS_OF_THE_DEAD_ID) {
                 player.sendMessage("The Beads of the Dead start to glow...")
                 Doors.handleDoubleDoor(player, obj)
             }

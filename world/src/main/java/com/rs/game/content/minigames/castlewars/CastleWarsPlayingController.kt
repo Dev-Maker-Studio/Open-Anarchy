@@ -10,13 +10,13 @@ import com.rs.game.model.entity.Teleport
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.entity.player.Equipment
-import com.rs.game.model.entity.player.Inventory
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
 import org.darkan.core.model.Item
 import world.gregs.voidps.type.Tile
+import org.darkan.core.gameval.gen.Interface
 
 
 class CastleWarsPlayingController(private val team: Int) : Controller() {
@@ -59,7 +59,7 @@ class CastleWarsPlayingController(private val team: Int) : Controller() {
                     }
                 }
             }
-            Inventory.INVENTORY_INTERFACE -> {
+            Interface.inventory -> {
                 val item = player.inventory.getItem(slotId)
                 if (item != null) {
                     if (item.id == 4053) {

@@ -21,8 +21,8 @@ class IfDragOntoIfHandler : PacketHandler<Player, IfDragOntoIf> {
         val invSize = player.inventory.itemsContainerSize
         when {
             // Inventory tab. The client numbers this interface's slots from 28.
-            packet.fromInter == Inventory.INVENTORY_INTERFACE && packet.fromComp == 0 &&
-                packet.toInter == Inventory.INVENTORY_INTERFACE && packet.toComp == 0 -> {
+            packet.fromInter == Interface.inventory && packet.fromComp == 0 &&
+                packet.toInter == Interface.inventory && packet.toComp == 0 -> {
                 player.closeInterfaces()
                 val to = packet.toSlot - 28
                 if (to < 0 || to >= invSize || packet.fromSlot < 0 || packet.fromSlot >= invSize)

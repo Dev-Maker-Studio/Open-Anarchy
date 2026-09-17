@@ -1,10 +1,10 @@
 package org.darkan.world
 
 import com.rs.game.World
-import com.rs.game.model.entity.player.Inventory
 import com.rs.game.model.gameobject.GameObject
 import com.rs.plugin.events.ItemOnObjectEvent
 import com.rs.plugin.handlers.ItemOnObjectHandler
+import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.model.ObjectShape
 import org.darkan.core.model.Rights
 import org.darkan.core.net.prot.packet.Chat
@@ -70,7 +70,7 @@ class PacketDispatchTest {
         player.inventory.addItem(1511, 1)
         assertEquals(1, player.inventory.getNumberOf(1511), "test setup: logs never entered the inventory")
 
-        harness.push(IfOnObject(Inventory.INVENTORY_INTERFACE, 0, 0, 1511, objectId, tile.x, tile.y, false))
+        harness.push(IfOnObject(Interface.inventory, 0, 0, 1511, objectId, tile.x, tile.y, false))
         WorldHarness.tick()
 
         assertTrue(fired.isNotEmpty(), "ItemOnObjectEvent never fired for item 1511 on object $objectId")
@@ -94,7 +94,7 @@ class PacketDispatchTest {
 
         // Slot 0 holds coins; the packet claims a dragon platebody.
         player.inventory.addItem(995, 100)
-        harness.push(IfOnObject(Inventory.INVENTORY_INTERFACE, 0, 0, 1127, objectId, tile.x, tile.y, false))
+        harness.push(IfOnObject(Interface.inventory, 0, 0, 1127, objectId, tile.x, tile.y, false))
         WorldHarness.tick()
 
         assertTrue(fired.isEmpty(), "an item the player does not hold was accepted: $fired")
@@ -155,7 +155,7 @@ class PacketDispatchTest {
         assertEquals(1521, inv.getItem(1)?.id, "test setup: slot 1")
 
         // The inventory tab numbers its slots from 28, so slot 1 arrives as toSlot 29.
-        harness.push(IfDragOntoIf(Inventory.INVENTORY_INTERFACE, 0, 0, 1511, Inventory.INVENTORY_INTERFACE, 0, 29, 1521))
+        harness.push(IfDragOntoIf(Interface.inventory, 0, 0, 1511, Interface.inventory, 0, 29, 1521))
         WorldHarness.tick()
 
         assertEquals(1521, inv.getItem(0)?.id, "slots were not swapped")
@@ -180,7 +180,7 @@ class PacketDispatchTest {
         val inv = harness.player.inventory
         inv.addItem(1511, 1)
         inv.addItem(1521, 1)
-        harness.push(IfDragOntoIf(Inventory.INVENTORY_INTERFACE, 0, 0, 1511, Inventory.INVENTORY_INTERFACE, 0, 29, 1521))
+        harness.push(IfDragOntoIf(Interface.inventory, 0, 0, 1511, Interface.inventory, 0, 29, 1521))
         WorldHarness.tick()
 
         assertEquals(1511, inv.getItem(0)?.id, "the gate is meant to drop this packet")

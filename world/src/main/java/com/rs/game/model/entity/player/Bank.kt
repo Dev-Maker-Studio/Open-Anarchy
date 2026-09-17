@@ -4,6 +4,7 @@ import com.rs.Settings
 import com.rs.game.content.Potion
 import com.rs.game.content.skills.cooking.Foods
 import com.rs.game.content.skills.runecrafting.Runecrafting
+import com.rs.game.content.skills.runecrafting.fillPouchesFromBank
 import com.rs.game.content.skills.summoning.Familiar
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub
 import com.rs.plugin.PluginManager
@@ -477,7 +478,7 @@ class Bank {
         }
         if ((noted || defs.isStackable()) && item.metadata == null) {
             if (player.inventory.items.containsOne(item)) {
-                val invItem = player.inventory.items.get(player.inventory.items.getThisItemSlot(item))
+                val invItem = player.inventory.items[player.inventory.items.getThisItemSlot(item)]!!
                 if (invItem.amount + item.amount <= 0) {
                     item.setAmount(Int.MAX_VALUE - invItem.amount)
                     player.sendMessage("Not enough space in your inventory.")
@@ -501,7 +502,7 @@ class Bank {
         removeItem(bankSlot, item.amount, true, false)
         player.inventory.addItem(item)
         refreshOpVars()
-        if (item.id == Runecrafting.RUNE_ESS || item.id == Runecrafting.PURE_ESS) Runecrafting.fillPouchesFromBank(player, item.id)
+        if (item.id == Runecrafting.RUNE_ESS || item.id == Runecrafting.PURE_ESS) player.fillPouchesFromBank(item.id)
     }
 
     fun sendExamine(fakeSlot: Int) {

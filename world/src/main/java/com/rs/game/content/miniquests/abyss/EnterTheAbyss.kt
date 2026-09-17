@@ -9,6 +9,8 @@ import com.rs.game.content.skills.runecrafting.teleportRCAbyss
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
+import com.rs.game.model.item.ItemTooltips
+import com.rs.game.model.item.TooltipSection
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onNpcClick
@@ -121,5 +123,14 @@ fun mapMageDialogue(player: Player, npc: NPC) {
                 npc(npc, HeadE.FRUSTRATED, "This is no place to talk! If you need help getting out of my sight I can send you to the Abyss?")
             }
         }
+    }
+}
+
+private const val SCRYING_ORB_LOCATIONS = 3
+
+@ServerStartupEvent
+fun mapScryingOrbTooltip() {
+    ItemTooltips.metadata("visited", TooltipSection.CONTENTS) { _, _, value ->
+        ItemTooltips.count("Locations", (value as? Collection<*>)?.size ?: 0, SCRYING_ORB_LOCATIONS)
     }
 }

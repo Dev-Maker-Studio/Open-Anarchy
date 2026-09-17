@@ -874,7 +874,7 @@ enum class Potion(val emptyId: Int, val ids: IntArray, val effect: (Player) -> U
     }
 
     fun drink(player: Player, itemId: Int, slot: Int) {
-        if (player.inventory.getItem(slot) == null || player.inventory.getItem(slot).id != itemId || !player.canPot() || !player.controllerManager.canPot(this)) return
+        if (player.inventory.getItem(slot)?.id != itemId || !player.canPot() || !player.controllerManager.canPot(this)) return
         if (wildernessBlacklisted.contains(this) && player.controllerManager.controller is WildernessController) {
             player.sendMessage("You cannot drink this potion here.")
             return

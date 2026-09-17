@@ -16,7 +16,7 @@ fun honourGuardInit() {
 }
 
 fun HonourGuardDialogue(player: Player, npc: NPC, location: String) {
-    if (player.equipment.getHatId() == 10836) {
+    if (player.equipment.hatId == 10836) {
         player.startConversation {
             when (location) {
                 "Location.TOWN", "Location.OUTSIDE" -> {

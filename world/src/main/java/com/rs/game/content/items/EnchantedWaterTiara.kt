@@ -8,6 +8,7 @@ import com.rs.game.model.entity.player.Player
 import org.darkan.core.model.Item
 import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.game.model.item.ItemTooltips
 import com.rs.plugin.kts.onDestroyItem
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnItem
@@ -210,4 +211,9 @@ class EnchantedWaterTiara(val player: Player) {
         }
     }
 
+}
+
+@ServerStartupEvent
+fun mapEnchantedWaterTiaraTooltip() {
+    ItemTooltips.metadata("enchantedWaterTiaraCharges") { _, item, _ -> ItemTooltips.count("Charges", item.getMetaDataI("enchantedWaterTiaraCharges", 0), 500000) }
 }

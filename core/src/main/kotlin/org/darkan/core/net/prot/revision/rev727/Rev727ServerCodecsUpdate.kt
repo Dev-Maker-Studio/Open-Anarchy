@@ -2,9 +2,21 @@ package org.darkan.core.net.prot.revision.rev727
 
 import io.ktor.utils.io.*
 import org.darkan.core.net.prot.*
+import org.darkan.core.net.prot.dto.InvSlotUpdate
+import org.darkan.core.net.prot.dto.InvTooltip
 import org.darkan.core.net.prot.packet.*
 import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.secure.CRC
+
+private const val INV_FLAG_NEGATIVE_KEY = 0x1
+private const val INV_FLAG_TOOLTIPS = 0x2
+private const val INV_FLAG_SPARSE_TOOLTIPS = 0x4
+private const val MAX_TOOLTIP_SLOT = 0x7FFF shr 2
+
+private fun smartSize(value: Int) = if (value < 128) 1 else 2
+
+private val InvSlotUpdate.effectiveTooltip: InvTooltip
+    get() = if (itemId == -1) InvTooltip.Clear else tooltip
 
 internal fun Codec.registerRev727UpdatePackets() {
     serverProt<PlayerUpdate>(opcode = 43, size = ProtSize.VarShort) { out ->
@@ -20,10 +32,22 @@ internal fun Codec.registerRev727UpdatePackets() {
     }
 
     serverProt<UpdateInvPartial>(opcode = 4, size = ProtSize.VarShort) { out ->
+        val hasTooltips = updates.any { it.effectiveTooltip != InvTooltip.Clear }
         out.writeShort(containerId)
-        out.writeByte(if (negativeKey) 1 else 0)
+        out.writeByte((if (negativeKey) INV_FLAG_NEGATIVE_KEY else 0) or (if (hasTooltips) INV_FLAG_TOOLTIPS else 0))
         for (update in updates) {
-            out.writeSmart(update.slot)
+            val tooltip = update.effectiveTooltip
+            if (hasTooltips) {
+                require(update.slot <= MAX_TOOLTIP_SLOT) { "slot ${update.slot} too large for tooltip mode" }
+                val mode = when (tooltip) {
+                    InvTooltip.Keep -> 0
+                    InvTooltip.Clear -> 1
+                    is InvTooltip.Set -> 2
+                }
+                out.writeSmart((update.slot shl 2) or mode)
+            } else {
+                out.writeSmart(update.slot)
+            }
             if (update.itemId == -1) {
                 out.writeShort(0)
             } else {
@@ -35,13 +59,25 @@ internal fun Codec.registerRev727UpdatePackets() {
                     out.writeByte(update.amount)
                 }
             }
+            if (hasTooltips && tooltip is InvTooltip.Set) {
+                out.writeRSString(tooltip.text)
+            }
         }
     }
 
     serverProt<UpdateInvFull>(opcode = 5, size = ProtSize.VarShort) { out ->
+        val size = itemIds.size
+        val tooltipSlots = tooltips?.let { texts -> (0 until size).filter { texts[it] != null && itemIds[it] != -1 } }.orEmpty()
+        val bitmaskCost = (size + 7) shr 3
+        val sparseCost = smartSize(tooltipSlots.size) + tooltipSlots.sumOf { smartSize(it) }
+        val tooltipFlag = when {
+            tooltipSlots.isEmpty() -> 0
+            bitmaskCost <= sparseCost -> INV_FLAG_TOOLTIPS
+            else -> INV_FLAG_SPARSE_TOOLTIPS
+        }
         out.writeShort(containerId)
-        out.writeByte(if (negativeKey) 1 else 0)
-        out.writeShort(itemIds.size)
+        out.writeByte((if (negativeKey) INV_FLAG_NEGATIVE_KEY else 0) or tooltipFlag)
+        out.writeShort(size)
         for (i in itemIds.indices) {
             val amount = amounts[i]
             if (amount >= 255) {
@@ -51,6 +87,26 @@ internal fun Codec.registerRev727UpdatePackets() {
                 out.writeByteSubtract(amount)
             }
             out.writeShortAddLittle(itemIds[i] + 1)
+        }
+        val texts = tooltips ?: return@serverProt
+        when (tooltipFlag) {
+            INV_FLAG_TOOLTIPS -> {
+                val mask = ByteArray(bitmaskCost)
+                for (slot in tooltipSlots) {
+                    mask[slot shr 3] = (mask[slot shr 3].toInt() or (1 shl (slot and 7))).toByte()
+                }
+                out.writeBytes(mask)
+                for (slot in tooltipSlots) {
+                    out.writeRSString(texts[slot]!!)
+                }
+            }
+            INV_FLAG_SPARSE_TOOLTIPS -> {
+                out.writeSmart(tooltipSlots.size)
+                for (slot in tooltipSlots) {
+                    out.writeSmart(slot)
+                    out.writeRSString(texts[slot]!!)
+                }
+            }
         }
     }
 

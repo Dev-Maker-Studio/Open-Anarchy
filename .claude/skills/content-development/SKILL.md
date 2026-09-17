@@ -51,6 +51,17 @@ worked example of everything below.
   `item.id = ...` then `inventory.refresh()` to transform in place; `inventory.getNumberOf`,
   `containsOneItem`, `hasFreeSlots`, `deleteItem(id, n)`, `addItem(Item(id, n))` (non-stackable
   n > 1 fills n slots). `player.getItemFromInv(id)` is the first match.
+- **Obj tooltips**: `ItemTooltips.metadata("key", TooltipSection.X) { player, item, value -> "line" }`
+  adds a line under the obj's name for every item carrying that metadata key;
+  `register(objs) { player, item -> }` does the same per obj. Lines sort by section (CHARGES,
+  CONTENTS, STATE, FOOTER; an item's own `tooltip` metadata string is the footer), and
+  `ItemTooltips.count("Charges", n, max)` / `value(x)` keep the formatting uniform. The text takes
+  the client's tags (`<col>`, `<br>`, `<sprite=graphic>`, `<obj=id,amount>`). Nothing needs
+  refreshing: an item in an `ItemsContainer` marks its own slot dirty on any metadata,
+  `setAmount` or `changeId` write, and the once-per-tick flush (`WorldEncoder.sendDirtyItems`)
+  sends only the slots whose obj, amount or tooltip differ from what the client last got. A value
+  that changes every tick but shows coarsely (degrade charges) writes the map silently and calls
+  `item.markChanged()` only when the shown text changes (`DegradeCharges.drain`).
 - **Options** on a definition are addressed by **op number, 1-based**: `getOption(1)` is op1,
   `hasOption(5, "Build")` is op5, and `optionsIndex` answers in op numbers too. Never write 0 for
   the first option - the underlying array is an implementation detail. `hasOption` is named apart
