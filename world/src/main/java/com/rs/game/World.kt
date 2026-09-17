@@ -274,13 +274,6 @@ object World {
         }
         WorldTasks.schedule(delay) {
             try {
-                for (player in players) {
-                    if (player == null || !player.hasStarted()) continue
-                    player.packets.sendLogout(true)
-                    player.realFinish()
-                    WorldDB.getPlayers().saveSync(player)
-                }
-                WorldPersistentData.save()
                 Launcher.shutdown()
             } catch (e: Throwable) {
                 Logger.handle(World::class.java, "safeShutdown", e)

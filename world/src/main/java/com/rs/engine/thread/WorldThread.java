@@ -36,6 +36,8 @@ import java.nio.file.Paths;
 import java.text.ParseException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public final class WorldThread extends Thread {
 
@@ -52,9 +54,31 @@ public final class WorldThread extends Thread {
 		setUncaughtExceptionHandler((th, ex) -> Logger.handle(WorldThread.class, "uncaughtExceptionHandler", ex));
 	}
 
+	private static volatile boolean running = true;
+	private static volatile Thread ticking;
+	private static final CountDownLatch STOPPED = new CountDownLatch(1);
+
 	public static void init() {
 		WORLD_CYCLE = START_CYCLE = System.currentTimeMillis() / 600L;
 		AsyncTaskExecutor.getWorldThreadExecutor().execute(new WorldThread());
+	}
+
+	public static void requestStop() {
+		running = false;
+	}
+
+	public static boolean isTicking() {
+		return Thread.currentThread() == ticking;
+	}
+
+	/** False when the tick did not finish in time; the caller drains anyway rather than hang a shutdown. */
+	public static boolean awaitStop(long timeoutMs) {
+		try {
+			return STOPPED.await(timeoutMs, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return false;
+		}
 	}
 
 	public static Set<String> NAMES = new HashSet<>();
@@ -76,7 +100,8 @@ public final class WorldThread extends Thread {
 			}
 		}
 		Logger.debug(WorldThread.class, "run", "WorldThread initialized...");
-		while(true) {
+		ticking = Thread.currentThread();
+		while(running) {
 			long startTime = System.currentTimeMillis();
 			Recording tickRecording = Settings.getConfig().isEnableJFR() ? new Recording(config) : null;
 			try {
@@ -236,5 +261,7 @@ public final class WorldThread extends Thread {
 			} catch (InterruptedException e) { }
 			WORLD_CYCLE++;
 		}
+		Logger.info(WorldThread.class, "run", "WorldThread stopped.");
+		STOPPED.countDown();
 	}
 }
