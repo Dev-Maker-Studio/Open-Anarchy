@@ -81,7 +81,7 @@ class CommunityWorldsTest {
     }
 
     @Test
-    fun `a login token admits its own account once`() = runBlocking<Unit> {
+    fun `a login token admits its own account on every world it is presented to`() = runBlocking<Unit> {
         val player = LobbyHarness.account("player")
         val world = LobbyHarness.world(150, community = true).connect()
         val token = tokenFor(player)
@@ -90,7 +90,7 @@ class CommunityWorldsTest {
         assertEquals(player.username, verdict.username)
         assertEquals(player.displayName, verdict.displayName)
         assertEquals(player.username, verdict.account?.username, "the world gets a credential-free view of the account")
-        assertNull(world.verify(player.username, token).username, "a spent token admits nobody")
+        assertEquals(player.username, world.verify(player.username, token).username, "the client re-presents its one token on every world")
     }
 
     @Test

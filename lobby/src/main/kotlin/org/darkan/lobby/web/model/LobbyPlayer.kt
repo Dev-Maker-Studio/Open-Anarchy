@@ -17,6 +17,7 @@ import org.darkan.core.net.prot.packet.Ping
 import org.darkan.core.net.prot.packet.WorldListPacket
 import org.darkan.lobby.Lobby
 import org.darkan.lobby.social.SocialGateway
+import java.util.concurrent.TimeUnit
 
 /**
  * Chatbox text for somebody sitting in the lobby.
@@ -40,7 +41,7 @@ class LobbyPlayer(val session: Session, val account: Account) {
     val worldLoginToken: String = LoginToken.issue(
         username = account.username,
         nowMs = System.currentTimeMillis(),
-        ttlMs = 5 * 60 * 1000L,
+        ttlMs = TimeUnit.HOURS.toMillis(EnvVars.worldLoginTokenTtlHours),
         secret = EnvVars.worldLoginTokenSecret,
     )
 

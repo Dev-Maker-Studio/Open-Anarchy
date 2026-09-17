@@ -353,6 +353,7 @@ RSA_JS5_EXPONENT=<bigint>
 RSA_WORLD_MODULUS=<bigint>
 RSA_WORLD_EXPONENT=<bigint>
 WORLD_LOGIN_TOKEN_SECRET=<secret>
+WORLD_LOGIN_TOKEN_TTL_HOURS=12   # the lobby issues one reusable token per lobby session; it must outlast a play session
 API_KEY=<admin-api-key>
 LOBBY_OWNER=trent           # the only account allowed owner-tier lobby commands (and, with DEBUG=true, any administrative lobby command)
 ```

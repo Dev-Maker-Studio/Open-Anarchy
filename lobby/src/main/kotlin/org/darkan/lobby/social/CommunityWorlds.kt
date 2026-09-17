@@ -31,7 +31,6 @@ class CommunityWorlds(
     private data class Admission(val worldId: Int, val displayName: String, val rightsCrown: Int)
 
     private val admissions = ConcurrentHashMap<String, Admission>()
-    private val spentTokens = ConcurrentHashMap<String, Long>()
 
     fun tierFor(token: String): Tier? = when {
         token == officialToken && officialToken != communityToken -> Tier.OFFICIAL
@@ -46,12 +45,15 @@ class CommunityWorlds(
         else -> null
     }
 
+    /**
+     * A token is the client's whole lobby session, not a nonce: it is issued once and re-presented
+     * on every world the player enters. Spending it on first use locked the player out of every
+     * later world with a credentials failure, so admission is rebound per world instead.
+     */
     suspend fun verify(worldId: Int, request: VerifyLoginToken): LoginTokenVerdict {
         val refused = LoginTokenVerdict(request.requestId)
         val now = System.currentTimeMillis()
-        spentTokens.values.removeIf { it < now }
         val verified = LoginToken.verify(request.token, now, loginTokenSecret) ?: return refused
-        if (spentTokens.putIfAbsent(request.token, verified.expiresAtMs) != null) return refused
         val account = Accounts.find(request.username) ?: return refused
         if (account.username != verified.username || account.checkBanned()) return refused
         admissions[account.username] = Admission(worldId, account.displayName, account.rights.crown)
