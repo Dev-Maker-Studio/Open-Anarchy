@@ -2,9 +2,9 @@
   "names": [
     "Slug Prince"
   ],
-  "attackAnim": -1,
+  "attackAnim": 4829,
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": 4831,
   "defendSound": -1,
   "deathAnim": -1,
   "deathDelay": 6,

@@ -1,0 +1,23 @@
+{
+  "names": [
+    "Cyclossus"
+  ],
+  "attackAnim": 15083,
+  "attackSound": -1,
+  "defenceAnim": 15084,
+  "defendSound": -1,
+  "deathAnim": 15085,
+  "deathDelay": 6,
+  "deathSound": -1,
+  "respawnDelay": 59,
+  "hitpoints": 3280,
+  "maxHit": 94,
+  "attackStyle": "MELEE",
+  "attackRange": -1,
+  "attackGfx": -1,
+  "attackProjectile": -1,
+  "agressivenessType": "PASSIVE",
+  "aggroDistance": 4,
+  "deAggroDistance": -1,
+  "maxDistFromSpawn": -1
+}
