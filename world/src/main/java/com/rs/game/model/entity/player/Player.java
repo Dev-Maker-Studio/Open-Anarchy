@@ -829,6 +829,7 @@ public class Player extends Entity {
 	 */
 	public void setStarted() {
 		started = true;
+		checkMultiArea();
 		WorldServer.INSTANCE.notifyPlayerOnline(account);
 	}
 
