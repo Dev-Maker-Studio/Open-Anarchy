@@ -30,6 +30,12 @@ class CommunityWorlds(
 
     private data class Admission(val worldId: Int, val displayName: String, val rightsCrown: Int)
 
+    /**
+     * Outlives a world's gateway socket: the players are still on the world while it reconnects,
+     * and dropping their admissions left every one of them unbelievable - and so friendless and
+     * offline to the lobby - until they relogged. An entry ends when the player goes offline or is
+     * admitted somewhere else.
+     */
     private val admissions = ConcurrentHashMap<String, Admission>()
 
     fun tierFor(token: String): Tier? = when {
@@ -68,9 +74,5 @@ class CommunityWorlds(
 
     fun forget(username: String, worldId: Int) {
         admissions.computeIfPresent(username) { _, admission -> admission.takeUnless { it.worldId == worldId } }
-    }
-
-    fun forgetWorld(worldId: Int) {
-        admissions.values.removeIf { it.worldId == worldId }
     }
 }

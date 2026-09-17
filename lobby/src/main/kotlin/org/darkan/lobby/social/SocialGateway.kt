@@ -666,7 +666,6 @@ object SocialGateway {
         }
         dropAttachmentsOf(session)
         ClanService.onWorldDetached(session.worldId)
-        communityWorlds.forgetWorld(session.worldId)
         logInfo("SocialGateway: world disconnected worldId=${session.worldId}")
     }
 
