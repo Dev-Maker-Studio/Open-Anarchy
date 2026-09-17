@@ -25,6 +25,7 @@ object EnvVars {
     val worldRsaModulus: String = dotenv.get("RSA_WORLD_MODULUS", js5RsaModulus)
     val worldRsaExponent: String = dotenv.get("RSA_WORLD_EXPONENT", js5RsaExponent)
     val worldLoginTokenSecret: String = dotenv.get("WORLD_LOGIN_TOKEN_SECRET", loginServerToken)
+    val worldLoginTokenTtlHours: Long = dotenv.get("WORLD_LOGIN_TOKEN_TTL_HOURS", "12").toLong()
     //val js5PrefetchKeys: String = dotenv.get("JS5_PREFETCH_KEYS", "1441,78700,44880,39771,363186,44375,0,16140,7316,271148,810710,216189,379672,454149,933950,21006,25367,17247,1244,1,14856,1494,119,882901,1818764,3963,3618")
     val lobbyPort: Int = dotenv.get("LOBBY_PORT", "43594").toInt()
     val worldPort: Int = dotenv.get("WORLD_PORT", "43595").toInt()

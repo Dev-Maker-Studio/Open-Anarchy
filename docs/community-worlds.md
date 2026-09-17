@@ -46,9 +46,13 @@ gateway token is that public one is a community world.
 
 ## Limits
 
-- A player's login token lasts five minutes and is not tied to a world: the lobby issues it at lobby
-  login, before the player picks a world, and the RSA login block has no room for more. A modified
-  community world can therefore replay the token of a player who joins it on another world inside
-  that window. Only join community worlds you trust; staff accounts should not join them at all.
+- A player's login token is not tied to a world and is not single use: the lobby issues one at lobby
+  login, before the player picks a world, the RSA login block has no room for more, and the client
+  re-presents that same token on every world it enters. It lasts `WORLD_LOGIN_TOKEN_TTL_HOURS`
+  (default 12) - long enough to cover a whole play session, because a token that expires or is spent
+  under a player mid-session locks them out of every world with a "your password has been updated"
+  failure they cannot clear. A modified community world can therefore replay the token of a player
+  who joins it, on another world, for the rest of that token's life. Only join community worlds you
+  trust; staff accounts should not join them at all.
 - The lobby forgets a community world's admissions when its gateway socket drops, so its players
   lose friends and chat until they relog.
