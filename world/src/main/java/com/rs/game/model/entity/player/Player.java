@@ -40,6 +40,7 @@ import com.rs.game.World;
 import com.rs.game.World.DropMethod;
 import com.rs.game.content.*;
 import com.rs.game.content.ItemConstants.ItemDegrade;
+import com.rs.game.content.items.DegradeCharges;
 import com.rs.game.content.Toolbelt.Tools;
 import com.rs.game.content.achievements.AchievementInterface;
 import com.rs.game.content.bosses.godwars.GodwarsController;
@@ -1022,7 +1023,7 @@ public class Player extends Entity {
 						break;
 					}
 				if (item.getMetaData("combatCharges") != null) {
-					item.addMetaData("combatCharges", item.getMetaDataI("combatCharges") - 1);
+					DegradeCharges.drain(this, i, item);
 					if (item.getMetaDataI("combatCharges") <= 0) {
 						ItemDegrade deg = null;
 						for (ItemDegrade d : ItemDegrade.values())

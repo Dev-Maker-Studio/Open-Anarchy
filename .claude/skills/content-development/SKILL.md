@@ -51,6 +51,11 @@ worked example of everything below.
   `item.id = ...` then `inventory.refresh()` to transform in place; `inventory.getNumberOf`,
   `containsOneItem`, `hasFreeSlots`, `deleteItem(id, n)`, `addItem(Item(id, n))` (non-stackable
   n > 1 fills n slots). `player.getItemFromInv(id)` is the first match.
+- **Obj tooltips**: `ItemTooltips.register(objs, ItemTooltip { player, item -> "line" })` (or
+  without `objs` for every obj) adds a line under the obj's name in its hover tooltip, in every
+  inv; the text takes the client's tags (`<col>`, `<br>`, `<sprite=graphic>`, `<obj=id>`). The
+  encoder resolves it on every inv send and only resends what changed, so a value that changes
+  over time just refreshes the slot when it changes (`DegradeCharges.drain`).
 - **Options** on a definition are addressed by **op number, 1-based**: `getOption(1)` is op1,
   `hasOption(5, "Build")` is op5, and `optionsIndex` answers in op numbers too. Never write 0 for
   the first option - the underlying array is an implementation detail. `hasOption` is named apart
