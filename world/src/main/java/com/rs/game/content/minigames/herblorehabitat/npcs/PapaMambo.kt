@@ -408,7 +408,7 @@ private fun Player.openHabitatBuildDialogue(player: Player, npc: NPC) {
         options {
             HabitatFeature.entries.forEach { feature ->
                 op("${feature.name.replace('_', ' ')} - ${feature.mamboCost} coins") {
-                    if (inventory.coins < feature.mamboCost) {
+                    if (inventory.getCoins() < feature.mamboCost) {
                         player(ANGRY, "I don't have enough coins.")
                         npc(npc, NO_EXPRESSION, "Come back when you do.")
                     } else {

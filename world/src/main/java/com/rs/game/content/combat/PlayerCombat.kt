@@ -576,7 +576,7 @@ fun getRangeCombatDelay(player: Player): Int {
 @JvmOverloads
 fun dropAmmo(player: Player, target: Entity, slot: Int = Equipment.AMMO, quantity: Int = 1) {
     if (player.equipment.getItem(slot) == null) return
-    val ammoId = player.equipment.getItem(slot).id
+    val ammoId = player.equipment.getItem(slot)!!.id
     when (ammoId) {
         15243, 25202, 10033, 10034, 19152, 19157, 19162, 10142, 10143, 10144, 10145 -> {
             player.equipment.removeAmmo(slot, quantity) //delete 100% of the time
@@ -860,7 +860,7 @@ fun chargeDragonfireShield(target: Entity) {
             if (dfs != null) {
                 val charges = dfs.getMetaDataI("dfsCharges")
                 if (charges < 50) {
-                    p.equipment.getItem(Equipment.SHIELD).addMetaData("dfsCharges", charges + 1)
+                    dfs.addMetaData("dfsCharges", charges + 1)
                     p.sync(6695, 1164)
                     p.sendMessage("Your shield becomes a little stronger as it absorbs the dragonfire.", true)
                     p.soundEffect(3740, true)

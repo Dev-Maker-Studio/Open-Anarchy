@@ -6,6 +6,7 @@ import com.rs.game.model.entity.player.Player
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.game.model.item.ItemTooltips
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.Ticks
@@ -116,4 +117,9 @@ fun mapPolypore() {
 			"Check" -> e.player.sendMessage("This jug contains " + Utils.formatNumber(e.item.getMetaDataI("neemCharges", 0)) + " ounces of oil.")
         }
 	}
+}
+
+@ServerStartupEvent
+fun mapNeemOilTooltip() {
+    ItemTooltips.metadata("neemCharges") { _, item, _ -> "Neem oil: ${ItemTooltips.value(item.getMetaDataI("neemCharges", 0))} oz" }
 }

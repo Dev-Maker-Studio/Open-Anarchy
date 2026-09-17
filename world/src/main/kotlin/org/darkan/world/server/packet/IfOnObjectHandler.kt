@@ -2,11 +2,11 @@ package org.darkan.world.server.packet
 
 import com.rs.engine.pathfinder.RouteEvent
 import com.rs.game.World
-import com.rs.game.model.entity.player.Inventory
 import com.rs.game.model.entity.player.Player
 import com.rs.net.decoders.handlers.ObjectHandler
 import com.rs.plugin.PluginManager
 import com.rs.plugin.events.InterfaceOnObjectEvent
+import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.net.prot.packet.IfOnObject
 import org.darkan.core.net.prot.handler.PacketHandler
 import world.gregs.voidps.type.Tile
@@ -32,7 +32,7 @@ class IfOnObjectHandler : PacketHandler<Player, IfOnObject> {
             // Item on object. The item has to come out of the player's own container and be
             // checked against the id the client claims - trusting packet.itemId here both routed
             // every "use X on Y" to the wrong event and let a client name an item it does not hold.
-            Inventory.INVENTORY_INTERFACE -> {
+            Interface.inventory -> {
                 val item = player.inventory.getItem(packet.slotId) ?: return
                 if (item.id != packet.itemId)
                     return

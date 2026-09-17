@@ -40,6 +40,7 @@ import org.darkan.core.gameval.gen.Spotanim
 import org.darkan.core.gameval.gen.Varp
 import world.gregs.voidps.type.Tile
 
+// TODO: top-level and Player extension functions once RunecraftingAltar and the Runespan code are Kotlin
 object Runecrafting {
     const val RUNE_ESS = Obj.blankrune
     const val PURE_ESS = Obj.blankrune_high
@@ -194,7 +195,7 @@ object Runecrafting {
     @JvmStatic
     fun craftZMIAltar(player: Player) {
         var essence = player.inventory.items.getNumberOf(PURE_ESS)
-        essence += RunecraftingPouches.takeEssence(player, false)
+        essence += player.takePouchEssence(false)
         essence += takeFamiliarEssence(player, false)
         if (essence == 0) {
             player.simpleDialogue("You don't have pure essence.")
@@ -230,7 +231,7 @@ object Runecrafting {
         }
         var essence = player.inventory.items.getNumberOf(PURE_ESS)
         if (!span) {
-            essence += RunecraftingPouches.takeEssence(player, !rune.isPureEss)
+            essence += player.takePouchEssence(!rune.isPureEss)
             essence += takeFamiliarEssence(player, !rune.isPureEss)
         }
         if (essence > 0) {

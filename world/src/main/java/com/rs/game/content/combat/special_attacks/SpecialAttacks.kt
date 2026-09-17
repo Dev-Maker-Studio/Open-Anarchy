@@ -334,7 +334,7 @@ fun mapSpecials() {
             target.runEnergy = if (target.runEnergy > 25.0) target.runEnergy - 25.0 else 0.0
         delayNormalHit(target, calculateHit(player, target, CombatStyle.MELEE, true, 1.25, 1.0))
         player.soundEffect(target, 2713, true)
-        return@SpecialAttack getMeleeCombatDelay(player.equipment.getWeaponId())
+        return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
     //Saradomin sword
@@ -372,7 +372,7 @@ fun mapSpecials() {
             target.freeze(Ticks.fromSeconds(3), false)
             player.soundEffect(target, 2544, true)
         }
-        return@SpecialAttack getMeleeCombatDelay(player.equipment.getWeaponId());
+        return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId);
     })
 
 

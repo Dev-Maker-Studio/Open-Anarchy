@@ -42,11 +42,11 @@ fun mapHandlers() {
     )
 
     onNpcClick(11290, 11292, 11288, 11296, options = arrayOf("Knock-out")) { e ->
-        if(e.player.equipment.getWeaponId() !in validCoshIds){
+        if(e.player.equipment.weaponId !in validCoshIds){
             e.player.sendMessage("I'll need a cosh to knock them out.")
             return@onNpcClick
         }
-        if (e.npcId in validTrainingNPC && e.player.equipment.getWeaponId() != 18644) {
+        if (e.npcId in validTrainingNPC && e.player.equipment.weaponId != 18644) {
             e.player.sendMessage("I'll need a training cosh to practise my technique with.")
             return@onNpcClick
         }
@@ -95,11 +95,11 @@ fun mapHandlers() {
     }
 
     onNpcClick(1903, options = arrayOf("Knock-Out")) { e ->
-        if(e.player.equipment.getWeaponId() !in validCoshIds){
+        if(e.player.equipment.weaponId !in validCoshIds){
             e.player.sendMessage("I'll need a cosh to knock them out.")
             return@onNpcClick
         }
-        if (e.player.equipment.getWeaponId() == 18644) {
+        if (e.player.equipment.weaponId == 18644) {
             e.player.sendMessage("A training cosh will not be enough to knock them out.")
             return@onNpcClick
         }

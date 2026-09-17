@@ -6,6 +6,7 @@ import com.rs.game.model.entity.player.Inventory
 import org.darkan.core.model.Item
 import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.game.model.item.ItemTooltips
 import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onItemClick
 
@@ -188,4 +189,9 @@ fun mapResourceLocators() {
             }
         }
     }
+}
+
+@ServerStartupEvent
+fun mapResourceLocatorTooltip() {
+    ItemTooltips.metadata("locateCharges") { _, item, _ -> ItemTooltips.count("Charges", item.getMetaDataI("locateCharges", DEFAULT_CHARGES), DEFAULT_CHARGES) }
 }

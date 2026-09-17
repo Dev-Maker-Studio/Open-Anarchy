@@ -2,6 +2,8 @@ package com.rs.game.content
 
 import com.rs.game.content.items.LootInterface
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.game.model.item.ItemTooltips
+import com.rs.game.model.item.TooltipSection
 import com.rs.plugin.kts.onItemAddedToBank
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.utils.WorldUtil.gsonTreeMapToItemContainer
@@ -29,5 +31,18 @@ fun mapTrophyBones() {
             }
             LootInterface.open((item.getMetaDataO("trophyBoneOriginator") ?: "Unknown") + "'s Corpse", e.player, items)
         }
+    }
+}
+
+private const val TROPHY_BONE_ICONS = 8
+
+@ServerStartupEvent
+fun mapTrophyBonesTooltip() {
+    ItemTooltips.metadata("trophyBoneOriginator", TooltipSection.STATE) { _, _, value -> "Corpse of ${ItemTooltips.value(value)}" }
+    ItemTooltips.metadata("trophyBoneItems", TooltipSection.CONTENTS) { _, _, value ->
+        val items = gsonTreeMapToItemContainer(value)?.itemsNoNull ?: return@metadata null
+        if (items.isEmpty()) return@metadata "Empty"
+        items.take(TROPHY_BONE_ICONS).joinToString(" ") { "<obj=${it.id},${it.amount}>" } +
+            if (items.size > TROPHY_BONE_ICONS) " +${items.size - TROPHY_BONE_ICONS} more" else ""
     }
 }

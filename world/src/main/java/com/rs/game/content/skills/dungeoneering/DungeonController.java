@@ -58,7 +58,6 @@ import com.rs.game.model.entity.Teleport;
 import com.rs.game.model.entity.npc.NPC;
 import org.darkan.core.map.pathfinder.Direction;
 import com.rs.game.model.entity.player.Controller;
-import com.rs.game.model.entity.player.Inventory;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.Task;
@@ -78,6 +77,7 @@ import com.rs.utils.WorldUtil;
 import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
 import org.darkan.core.gameval.gen.Varbit;
+import org.darkan.core.gameval.gen.Interface;
 // Hit class from com.rs.game.model.entity.Hit (not core module)
 
 public class DungeonController extends Controller {
@@ -1126,7 +1126,7 @@ public class DungeonController extends Controller {
 			dungeon.openMap(player);
 			return false;
 		}
-		if (interfaceId == Inventory.INVENTORY_INTERFACE) {
+		if (interfaceId == Interface.inventory) {
 			Item item = player.getInventory().getItem(slotId);
 			if (item == null || item.getId() != slotId2)
 				return false;
