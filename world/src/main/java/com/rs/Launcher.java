@@ -144,19 +144,34 @@ public final class Launcher {
 	public static void gracefulShutdown() {
 		if (!SHUTTING_DOWN.compareAndSet(false, true))
 			return;
+		long start = System.currentTimeMillis();
+		shutdownLog("draining world");
+		int saved = 0;
 		try {
 			WorldThread.requestStop();
 			if (!WorldThread.isTicking() && !WorldThread.awaitStop(WORLD_DRAIN_TIMEOUT_MS))
-				Logger.warn(Launcher.class, "gracefulShutdown", "World thread did not stop in " + WORLD_DRAIN_TIMEOUT_MS + "ms; saving anyway");
-			logoutAndSaveAll();
+				shutdownLog("world thread did not stop in " + WORLD_DRAIN_TIMEOUT_MS + "ms; saving anyway");
+			saved = logoutAndSaveAll();
 			WorldPersistentData.save();
 		} catch (Throwable e) {
-			Logger.handle(Launcher.class, "gracefulShutdown", e);
+			shutdownLog("drain failed: " + e);
+			e.printStackTrace();
 		}
 		closeServices();
+		shutdownLog("drained " + saved + " player(s) in " + (System.currentTimeMillis() - start) + "ms");
 	}
 
-	private static void logoutAndSaveAll() {
+	/**
+	 * The logger is gone by now: java.util.logging closes its handlers from its own shutdown hook,
+	 * concurrently with this one, so anything logged here is silently dropped.
+	 */
+	private static void shutdownLog(String message) {
+		System.out.println("[shutdown] " + message);
+		System.out.flush();
+	}
+
+	private static int logoutAndSaveAll() {
+		int saved = 0;
 		for (Player player : World.getPlayers()) {
 			if (player == null || !player.hasStarted())
 				continue;
@@ -164,14 +179,17 @@ public final class Launcher {
 				player.getPackets().sendLogout(true);
 				player.realFinish();
 			} catch (Throwable e) {
-				Logger.handle(Launcher.class, "logoutAndSaveAll", e);
+				shutdownLog("logout failed for " + player.getUsername() + ": " + e);
 			}
 			try {
 				WorldDB.getPlayers().saveSync(player);
+				saved++;
+				shutdownLog("saved " + player.getUsername());
 			} catch (Throwable e) {
-				Logger.handle(Launcher.class, "logoutAndSaveAll", e);
+				shutdownLog("save failed for " + player.getUsername() + ": " + e);
 			}
 		}
+		return saved;
 	}
 
 	public static void closeServices() {
