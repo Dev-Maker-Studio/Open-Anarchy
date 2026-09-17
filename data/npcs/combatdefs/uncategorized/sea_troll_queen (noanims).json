@@ -2,9 +2,9 @@
   "names": [
     "Sea Troll Queen"
   ],
-  "attackAnim": -1,
+  "attackAnim": 3991,
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": 3990,
   "defendSound": -1,
   "deathAnim": -1,
   "deathDelay": 6,

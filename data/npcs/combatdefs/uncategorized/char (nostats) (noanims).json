@@ -2,9 +2,9 @@
   "names": [
     "Char"
   ],
-  "attackAnim": -1,
+  "attackAnim": 15725,
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": 15737,
   "defendSound": -1,
   "deathAnim": -1,
   "deathDelay": 6,

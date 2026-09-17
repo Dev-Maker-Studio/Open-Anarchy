@@ -6,7 +6,7 @@
   "attackSound": -1,
   "defenceAnim": -1,
   "defendSound": -1,
-  "deathAnim": -1,
+  "deathAnim": 1022,
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,
