@@ -20,6 +20,8 @@ class IfOnNpcHandler : PacketHandler<Player, IfOnNpc> {
         if (packet.forceRun)
             player.setRun(true)
         player.stopAll(false)
+        if (PluginManager.handle(IFOnNPCEvent(player, npc, packet.interfaceId, packet.componentId, packet.slotId, packet.itemId, false)))
+            return
         player.setRouteEvent(RouteEvent(npc) {
             PluginManager.handle(IFOnNPCEvent(player, npc, packet.interfaceId, packet.componentId, packet.slotId, packet.itemId, true))
         })
