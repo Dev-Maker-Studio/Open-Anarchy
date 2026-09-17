@@ -1225,7 +1225,7 @@ public class DungeonController extends Controller {
 				player.getSkills().addXp(Constants.MAGIC, 43.5);
 				player.sync(713, 113);
 			} else
-				Magic.processDungSpell(player, componentId, packet);
+				DungeoneeringSpellbook.handleButton(player, componentId, packet);
 			return false;
 		}
 		return true;
