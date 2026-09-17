@@ -105,8 +105,7 @@ object RunecraftingPouches {
     internal fun tooltip(player: Player, pouch: RunecraftingPouch): String {
         val stored = pouch.stored(player)
         if (stored <= 0) return "Empty"
-        val essence = pouch.essence(player)
-        return "<obj=$essence,$stored> ${ItemDefinitions.getDefs(essence).name} x $stored"
+        return "<obj=${pouch.essence(player)},$stored>"
     }
 
     internal fun check(player: Player, pouch: RunecraftingPouch) {
