@@ -19,7 +19,7 @@ class Dummies(player: Player) {
                 player.sendMessage("You can't hit a dummy with that attack style.")
                 return@run
             }
-            player.anim(getWeaponAttackEmote(player.equipment.getWeaponId(), player.combatDefinitions.getAttackStyle()))
+            player.anim(getWeaponAttackEmote(player.equipment.weaponId, player.combatDefinitions.getAttackStyle()))
             player.lock(2)
             player.skills.addXp(Constants.ATTACK, 5.0)
         }

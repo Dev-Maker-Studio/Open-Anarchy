@@ -83,7 +83,7 @@ class Cs2CodecTest {
 
     @Test
     fun `the opcode table is complete and self-consistent`() {
-        assertEquals(1006, Cs2Op.entries.size)
+        assertEquals(1010, Cs2Op.entries.size)
         for (entry in Cs2Op.entries) {
             assertEquals(entry, Cs2Op[entry.id], "id lookup disagrees for $entry")
             assertEquals(entry, Cs2Op.byTsName(entry.tsName), "TS name lookup disagrees for $entry")

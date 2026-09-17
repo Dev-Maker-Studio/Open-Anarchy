@@ -17,7 +17,6 @@
 package com.rs.game.content.skills.magic;
 
 import com.rs.engine.quest.Quest;
-import com.rs.game.model.entity.player.Inventory;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
 import org.darkan.core.Constants;
@@ -29,6 +28,7 @@ import com.rs.plugin.handlers.InterfaceOnInterfaceHandler;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.darkan.core.gameval.gen.Interface;
 
 @PluginEventHandler
 public class Enchanting {
@@ -225,7 +225,7 @@ public class Enchanting {
 		}
 	}
 
-	public static InterfaceOnInterfaceHandler handleEnchantSpells = new InterfaceOnInterfaceHandler(192, new int[] { 29, 41, 53, 61, 76, 88 }, Inventory.INVENTORY_INTERFACE, null, e -> {
+	public static InterfaceOnInterfaceHandler handleEnchantSpells = new InterfaceOnInterfaceHandler(192, new int[] { 29, 41, 53, 61, 76, 88 }, Interface.inventory, null, e -> {
 		Item item = e.getPlayer().getInventory().getItem(e.getToSlotId());
 		if (item == null)
 			return;

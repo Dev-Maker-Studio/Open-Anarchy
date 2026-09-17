@@ -2,6 +2,7 @@ package com.rs.game.content.combat.special_attacks
 
 import com.rs.game.World
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.game.model.item.ItemTooltips
 import com.rs.plugin.kts.onItemClick
 
 @ServerStartupEvent
@@ -35,4 +36,9 @@ fun handleDFSSpec() {
             }
         }
     }
+}
+
+@ServerStartupEvent
+fun mapDragonfireShieldTooltip() {
+    ItemTooltips.metadata("dfsCharges") { _, item, _ -> ItemTooltips.count("Charges", item.getMetaDataI("dfsCharges").coerceAtLeast(0), 50) }
 }

@@ -90,12 +90,9 @@ private fun Player.take(item: PolyporeStorableItem, req: Int) {
             sendMessage("You have no neem oil stored.")
             return
         }
-        val slot = inventory.getItemById(item.itemId)
-        val jug = inventory.items[slot.slot]
-        val haveCharges = jug.getMetaDataI("neemCharges", 0)
-        jug.addMetaData("neemCharges", haveCharges + 1)
+        val jug = inventory.getItemById(item.itemId) ?: return
+        jug.addMetaData("neemCharges", jug.getMetaDataI("neemCharges", 0) + 1)
         item.setStored(this, stored - 1)
-        inventory.refresh(jug.id)
         sendMessage("You withdraw 1 dose of neem oil.")
     } else {
         val stored = item.getStored(this)

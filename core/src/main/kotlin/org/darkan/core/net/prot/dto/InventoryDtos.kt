@@ -3,7 +3,13 @@
  */
 package org.darkan.core.net.prot.dto
 
-data class InvSlotUpdate(val slot: Int, val itemId: Int, val amount: Int)
+sealed interface InvTooltip {
+    data object Keep : InvTooltip
+    data object Clear : InvTooltip
+    data class Set(val text: String) : InvTooltip
+}
+
+data class InvSlotUpdate(val slot: Int, val itemId: Int, val amount: Int, val tooltip: InvTooltip = InvTooltip.Clear)
 
 data class GrandExchangeOffer(
     val progress: Int,

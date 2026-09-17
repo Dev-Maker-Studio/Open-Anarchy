@@ -205,7 +205,7 @@ class House {
             player?.sendMessage("You need a Construction level of " + room.level + " to build this room.")
             return
         }
-        if (player?.inventory!!.coins < room.price) {
+        if (player?.inventory!!.getCoins() < room.price) {
             player?.sendMessage("You don't have enough coins to build this room.")
             return
         }

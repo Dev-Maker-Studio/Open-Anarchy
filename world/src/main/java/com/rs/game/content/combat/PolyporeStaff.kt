@@ -22,6 +22,7 @@ import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.Constants
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.game.model.item.ItemTooltips
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnItem
 
@@ -157,4 +158,9 @@ fun drainCharge(player: Player) {
             player.sendMessage("<col=FF0000>Your polypore staff has degraded back into a polypore stick!")
         } else staff.addMetaData("polyporeCasts", charges - 1)
     }
+}
+
+@ServerStartupEvent
+fun mapPolyporeStaffTooltip() {
+    ItemTooltips.metadata("polyporeCasts") { _, item, _ -> ItemTooltips.count("Casts", item.getMetaDataI("polyporeCasts"), 3000) }
 }

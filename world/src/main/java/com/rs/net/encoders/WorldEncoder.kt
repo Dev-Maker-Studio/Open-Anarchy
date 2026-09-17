@@ -21,6 +21,7 @@ import com.rs.game.map.ChunkManager
 import com.rs.game.model.WorldProjectile
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
+import com.rs.game.model.item.ItemTooltips
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.model.gameobject.ObjectMeshModifier
@@ -137,6 +138,7 @@ import world.gregs.voidps.type.Tile
 class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     val playerTrackingState = PlayerUpdateTrackingState()
+    private val invSync = InvSyncState()
     val npcTrackingState = NpcUpdateTrackingState()
     private var localPlayerBlockSent = false
 
@@ -713,7 +715,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         val updates = Array(slots.size) { i ->
             val slot = slots[i]
             val item = if (slot in items.indices) items[slot] else null
-            InvSlotUpdate(slot, item?.id ?: -1, item?.amount ?: 0)
+            invSync.update(key, negativeKey, slot, item, ItemTooltips.of(player, item))
         }
         session.queuePacket(UpdateInvPartial(key, negativeKey, updates))
     }
@@ -729,7 +731,9 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     fun sendItems(key: Int, negativeKey: Boolean, items: Array<Item?>) {
         val itemIds = IntArray(items.size) { items[it]?.id ?: -1 }
         val amounts = IntArray(items.size) { items[it]?.amount ?: 0 }
-        session.queuePacket(UpdateInvFull(key, negativeKey, itemIds, amounts))
+        val tooltips = Array(items.size) { ItemTooltips.of(player, items[it]) }
+        invSync.full(key, negativeKey, items, tooltips)
+        session.queuePacket(UpdateInvFull(key, negativeKey, itemIds, amounts, tooltips))
     }
 
     fun sendItems(key: Int, items: ItemsContainer<*>) {
@@ -742,6 +746,28 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     fun sendItems(key: Int, items: Array<Item?>) {
         sendItems(key, key < 0, items)
+    }
+
+    fun sendDirtyItems(key: Int, items: ItemsContainer<*>, negativeKey: Boolean = key < 0): Boolean {
+        if (!items.isDirty) return false
+        val array = items.array()
+        if (!invSync.hasSent(key, negativeKey)) {
+            items.clearDirty()
+            sendItems(key, negativeKey, array)
+            return true
+        }
+        val candidates = if (items.isAllDirty) array.indices.toList().toIntArray() else items.dirtySlots()
+        items.clearDirty()
+        val updates = ArrayList<InvSlotUpdate>()
+        for (slot in candidates) {
+            val item = array[slot]
+            val tooltip = ItemTooltips.of(player, item)
+            if (invSync.differs(key, negativeKey, slot, item, tooltip)) updates += invSync.update(key, negativeKey, slot, item, tooltip)
+        }
+        if (updates.isEmpty()) return false
+        if (updates.size * PARTIAL_SLOT_BYTES >= array.size * FULL_SLOT_BYTES) sendItems(key, negativeKey, array)
+        else session.queuePacket(UpdateInvPartial(key, negativeKey, updates.toTypedArray()))
+        return true
     }
 
     fun sendLogout(lobby: Boolean) {
@@ -955,5 +981,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     companion object {
         private val EMPTY_XTEAS = intArrayOf(0, 0, 0, 0)
+        private const val PARTIAL_SLOT_BYTES = 4
+        private const val FULL_SLOT_BYTES = 3
     }
 }

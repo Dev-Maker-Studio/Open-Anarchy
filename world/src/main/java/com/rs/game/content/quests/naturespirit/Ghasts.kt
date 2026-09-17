@@ -88,7 +88,7 @@ fun mapGhasts() {
                 return@npcCombat npc.attackSpeed
             }
             if (Utils.random(10) < 3) {
-                val foods = target.inventory.items.array().filter { it != null && Foods.isConsumable(it) }
+                val foods = target.inventory.items.array().filterNotNull().filter { Foods.isConsumable(it) }
                 if (foods.isNotEmpty()) {
                     npc.anim(npc.combatDefinitions.attackEmote)
                     val food = foods.random()

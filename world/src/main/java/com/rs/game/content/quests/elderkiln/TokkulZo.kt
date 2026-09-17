@@ -8,6 +8,7 @@ import com.rs.game.model.entity.player.Player
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.game.model.item.ItemTooltips
 import com.rs.plugin.kts.onItemClick
 
 const val TOKKUL = 6529
@@ -73,4 +74,9 @@ fun depleteTokkulZo(player: Player): Boolean {
         return true
     }
     return false
+}
+
+@ServerStartupEvent
+fun mapTokkulZoTooltip() {
+    ItemTooltips.metadata("tzhaarCharges") { _, item, _ -> ItemTooltips.count("Charges", item.getMetaDataI("tzhaarCharges"), 4000) }
 }
