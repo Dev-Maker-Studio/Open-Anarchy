@@ -239,36 +239,24 @@ object WorldServer {
             return output.finish(ResponseOpcode.WORLD_FULL)
         if (AccountLimiter.getSessionsIP(ip) >= 3)
             return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
+        // Everything the world can refuse on its own is checked before the token is presented:
+        // the lobby spends a token the moment it verifies one, so a refusal afterwards would
+        // burn it and report the next attempt as a credentials failure.
+        if (World.containsPlayer(username))
+            return output.finish(ResponseOpcode.ACCOUNT_ONLINE)
         if (!pendingLogins.add(username))
             return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
 
-        val admission = admitThroughLobby(username, lobbyAuthToken)
-        val account = when (admission) {
-            is Admission.Admitted -> admission.account
-            is Admission.Refused -> {
-                pendingLogins.remove(username)
-                return output.finish(admission.response)
+        val admitted = try {
+            when (val admission = admitThroughLobby(username, lobbyAuthToken)) {
+                is Admission.Admitted -> admission
+                is Admission.Refused -> return output.finish(admission.response)
             }
-        }
-        if (account.checkBanned()) {
+        } finally {
             pendingLogins.remove(username)
-            return output.finish(ResponseOpcode.ACCOUNT_DISABLED)
         }
-        if (World.containsPlayer(account.username)) {
-            pendingLogins.remove(username)
-            return output.finish(ResponseOpcode.ACCOUNT_ONLINE)
-        }
-
-        // Load or create player. A decode failure must not fall through to a fresh character -
-        // that would overwrite the real save on the next flush.
-        val loaded = WorldDB.getPlayers().loadForLogin(account.username)
-        if (loaded.loadError()) {
-            logError("Failed to decode player save for ${account.username}; refusing login")
-            pendingLogins.remove(username)
-            return output.finish(ResponseOpcode.COULD_NOT_COMPLETE_LOGIN)
-        }
-        val player = loaded.player() ?: Player(account)
-        pendingLogins.remove(username)
+        val account = admitted.account
+        val player = admitted.player
 
         val session = initSession(output, isaacKeys, ip, codec)
 
@@ -300,17 +288,14 @@ object WorldServer {
             session.onDisconnecting {
                 player.disconnected = true
             }
-            session.onDisconnected {
-                AccountLimiter.remove(ip)
-            }
             player.start()
             session.flush() // Flush WorldLoginDetails + all init packets before reading client input
             player.setStarted() // Mark started AFTER flush so the world thread cannot interleave writes
         } catch (e: CancellationException) {
-            player.disconnected = true
+            abortLogin(player, ip)
             throw e
         } catch (e: Throwable) {
-            player.disconnected = true
+            abortLogin(player, ip)
             if (Session.isExpectedDisconnect(e)) {
                 logTrace("World client disconnected during login for ${account.username}: ${e::class.simpleName}")
                 return
@@ -322,7 +307,7 @@ object WorldServer {
     }
 
     private sealed interface Admission {
-        data class Admitted(val account: AccountView) : Admission
+        data class Admitted(val account: AccountView, val player: Player) : Admission
         data class Refused(val response: Int) : Admission
     }
 
@@ -330,7 +315,30 @@ object WorldServer {
         val verdict = socialClient.verifyLoginToken(username, lobbyAuthToken)
             ?: return Admission.Refused(ResponseOpcode.LOGIN_SERVER_OFFLINE)
         val account = verdict.account ?: return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
-        return Admission.Admitted(account)
+        if (account.checkBanned())
+            return Admission.Refused(ResponseOpcode.ACCOUNT_DISABLED)
+        if (World.containsPlayer(account.username))
+            return Admission.Refused(ResponseOpcode.ACCOUNT_ONLINE)
+
+        // A decode failure must not fall through to a fresh character - that would overwrite the
+        // real save on the next flush.
+        val loaded = WorldDB.getPlayers().loadForLogin(account.username)
+        if (loaded.loadError()) {
+            logError("Failed to decode player save for ${account.username}; refusing login")
+            return Admission.Refused(ResponseOpcode.COULD_NOT_COMPLETE_LOGIN)
+        }
+        return Admission.Admitted(account, loaded.player() ?: Player(account))
+    }
+
+    /**
+     * init() has already registered the player with [World]; a login that dies after that point
+     * never starts, so the world tick will never process it and never finish it.
+     */
+    private fun abortLogin(player: Player, ip: String) {
+        player.disconnected = true
+        if (player.hasStarted() || !World.containsPlayer(player.username)) return
+        World.removePlayer(player)
+        AccountLimiter.remove(ip)
     }
 
     /** False when no gateway is attached (headless tools, the test harness) or it is down. */

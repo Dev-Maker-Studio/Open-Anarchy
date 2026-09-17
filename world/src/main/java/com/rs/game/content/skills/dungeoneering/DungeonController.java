@@ -316,8 +316,11 @@ public class DungeonController extends Controller {
 						player.tele(startRoom);
 						dungeon.playMusic(player, dungeon.getCurrentRoomReference(startRoom));
 						increaseDeaths();
-						player.reset();
+					} else {
+						player.getControllerManager().forceStop();
+						player.tele(Tile.of(DungeonConstants.OUTSIDE, 2));
 					}
+					player.reset();
 					player.setNextAnimation(new Animation(-1));
 					player.getAppearance().setBAS(-1);
 					hideBar();
