@@ -398,8 +398,11 @@ corrected opcode is added to the `Cs2Op` enum by hand.
   `varc_1691` to the obj, so any check on it must come after the tooltip lookup, not before it.
 - **Text tags**: `<col>`, `<shad=rrggbb>`, `<str=>`, `<u=>`, `<argb=>`, `<br>`, `<img=n>` (name
   icons), plus the client's own `<sprite=graphic[,frame]>` and `<obj=id[,amount]>` inline icons,
-  scaled down to the font's line height (`InlineSprites` in darkan-bot); an obj icon that is not
-  rendered yet appears on the next redraw.
+  drawn at full size and centred on their line, which grows to fit them (`InlineSprites` in
+  darkan-bot); `paraheightExtra(text, width, font)` (custom op 1009) is the pixels those lines add
+  on top of `paraheight * line height`, so a box sized for tagged text adds it. An obj icon that is
+  not rendered yet appears on the next redraw. The font code indexes its 256-entry glyph and
+  kerning tables by cp1252 byte, never by `char.code` (`<euro>` used to throw there).
 - **Per-row extras in the world list**: one proc that creates the cc, positions it and hides or
   hooks it by flag, called from both `lobby_worldswitcher_timer` (list rows) and `cs2_3118`
   (favourite rows) - keep the two renderers in step.

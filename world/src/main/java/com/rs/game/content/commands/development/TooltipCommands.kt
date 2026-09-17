@@ -10,24 +10,31 @@ import org.darkan.core.model.Rights
 
 private const val PLAYER_MOD_ICON = 0
 private const val JAGEX_MOD_ICON = 1
-private const val PRAYER_HEADICONS = 8
+private const val PROTECT_FROM_MELEE = 0
+private const val PROTECT_FROM_MISSILES = 1
+private const val PROTECT_FROM_MAGIC = 2
 
 private fun sprite(graphic: Int, frame: Int = 0) = "<sprite=$graphic,$frame>"
 
 private fun obj(id: Int, amount: Int = 1) = "<obj=$id,$amount>"
 
+private fun value(text: String) = "<col=2dc3ff>$text</col>"
+
 private val showcaseTooltip = listOf(
-    "<col=ffb000><shad=5a1a00>${sprite(Graphic.star_8_point)} Tooltip Showcase ${sprite(Graphic.star_8_point)}</shad></col>",
-    "<col=ff3030>Red</col> <col=30ff30>green</col> <col=4090ff>blue</col> <shad=ff00ff>shadowed</shad> <str>struck</str> <u=ffffff>underlined</u>",
-    "Staff: <img=$PLAYER_MOD_ICON> player mod  <img=$JAGEX_MOD_ICON> Jagex mod",
-    "Head icons: ${sprite(Graphic.headicons_pk)}" + (0 until PRAYER_HEADICONS).joinToString("") { sprite(Graphic.headicons_prayer, it) },
-    "Rare drops: ${obj(Obj.red_partyhat)}${obj(Obj.santa_hat)}${obj(Obj.godwars_armadyl_completed_godsword)}${obj(Obj.dragonfire_shield)}${obj(Obj.sum2_spirit_shield_elysian)}",
-    "Supplies: ${obj(Obj.shark, 28)} Shark <times> 28  ${obj(Obj.dragon_bones, 5)} Bones <times> 5",
-    "Value: ${sprite(Graphic.coins_icon)} ${obj(Obj.coins, 1_337_000)} <col=ffff00>1,337,000 gp</col>",
-    "Requires: ${sprite(Graphic.staticons_high_res_0)} <col=00ff80>70 Attack</col>  ${sprite(Graphic.skill_prayer_silver)} <col=00ff80>43 Prayer</col>",
-    "${sprite(Graphic.login_tick)} Tradeable  ${sprite(Graphic.cross)} Members only  ${sprite(Graphic.clan_icon_crown)} Clan approved",
-    "Escapes: <lt>not a tag<gt>  <euro>5  <copy> Jagex  Darkan<reg>",
-    "<col=a0a0a0>\"Whips are ${sprite(Graphic.leftarrow)} fun ${sprite(Graphic.rightarrow)} to swing.\"</col>",
+    "<col=ffb000><shad=5a1a00>Legendary</shad></col> <col=ff981f>Tier 75</col>",
+    obj(Obj.abyssal_whip),
+    "Accuracy: ${value("1,924")}",
+    "Type: ${value("Melee")}   Speed: <col=00ff00>Fast</col>",
+    "Requires: ${sprite(Graphic.staticons_0)} ${value("70")}  ${sprite(Graphic.staticons_2)} ${value("1")}",
+    "Item Level: ${value("10")}",
+    "Item XP: ${value("49,164/57,095")}",
+    sprite(Graphic.headicons_prayer, PROTECT_FROM_MELEE) + " " + sprite(Graphic.headicons_prayer, PROTECT_FROM_MISSILES) + " " + sprite(Graphic.headicons_prayer, PROTECT_FROM_MAGIC),
+    "<col=c8c8c8>Precise 2</col>",
+    "<col=c8c8c8>Eruptive 2</col>",
+    "Drops from: ${obj(Obj.coins, 10_000)} ${obj(Obj.dragon_bones, 5)} ${obj(Obj.shark, 28)}",
+    "${sprite(Graphic.login_tick)} <col=00ff00>Tradeable</col>   ${sprite(Graphic.cross)} <col=ff4040>Degrades</col>",
+    "<col=ff3030>Red</col> <col=30ff30>green</col> <col=4090ff>blue</col> <shad=ff00ff>shadow</shad> <str>struck</str> <u=ffffff>underline</u>",
+    "Crowns: <img=$PLAYER_MOD_ICON> <img=$JAGEX_MOD_ICON>   Escapes: <lt>tag<gt> <euro>5 <copy> <reg> 3 <times> 4",
 ).joinToString("<br>")
 
 @ServerStartupEvent
