@@ -20,6 +20,7 @@ import org.darkan.core.model.Item
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.game.model.item.ItemTooltips
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPlayerStep
 import com.rs.utils.DropSets
@@ -376,4 +377,9 @@ private fun Player.passTrap(obj: GameObject) {
         wait(1)
         unlock()
     }
+}
+
+@ServerStartupEvent
+fun mapSceptreOfTheGodsTooltip() {
+    ItemTooltips.metadata("teleCharges") { _, item, _ -> ItemTooltips.count("Teleports", item.getMetaDataI("teleCharges"), 10) }
 }

@@ -40,7 +40,6 @@ import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.Teleport;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Controller;
-import com.rs.game.model.entity.player.Inventory;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
 import com.rs.game.model.gameobject.GameObject;
@@ -54,6 +53,7 @@ import com.rs.plugin.annotations.ServerStartupEvent.Priority;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.function.Consumer;
 import org.darkan.core.gameval.gen.Varp;
+import org.darkan.core.gameval.gen.Interface;
 
 @PluginEventHandler
 public final class TutorialIslandController extends Controller {
@@ -931,7 +931,7 @@ public final class TutorialIslandController extends Controller {
 
 	@Override
 	public boolean processButtonClick(int interfaceId, int componentId, int slotId, int slotId2, int packet) {
-		if (interfaceId == Inventory.INVENTORY_INTERFACE && packet == 2) {
+		if (interfaceId == Interface.inventory && packet == 2) {
 			Item item = player.getInventory().getItem(slotId);
 			if (item != null && item.getId() == 1511)
 				sendText(true, "Please wait.", "", "Your character is now attempting to light the fire.", "This should only take a few seconds.");

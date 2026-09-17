@@ -4,6 +4,7 @@ import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import org.darkan.core.cache.ItemDefinitions
+import kotlin.jvm.Transient as JvmTransient
 import kotlin.math.floor
 
 /**
@@ -59,6 +60,14 @@ data class Item @JvmOverloads constructor(
     @Transient
     var slot: Int = 0
 
+    @Transient
+    @JvmTransient
+    var owner: ItemSlotOwner? = null
+
+    fun markChanged() {
+        owner?.itemChanged(this)
+    }
+
     init {
         // Legacy Item(int, int) -> Item(int, int, false): a non-positive amount becomes 1.
         if (amount <= 0) amount = 1
@@ -82,7 +91,10 @@ data class Item @JvmOverloads constructor(
      * Java callers can chain.
      */
     fun setAmount(amount: Int): Item {
-        if (amount >= 0) this.amount = amount
+        if (amount >= 0) {
+            this.amount = amount
+            markChanged()
+        }
         return this
     }
 
@@ -103,7 +115,10 @@ data class Item @JvmOverloads constructor(
     val name get() = definitions.name
 
     /** The metadata map, created on demand. Legacy `addMetaData` allocates the map the same way. */
-    private fun meta(): MutableMap<String, Any> = metadata ?: HashMap<String, Any>().also { metadata = it }
+    private fun meta(): MutableMap<String, Any> {
+        markChanged()
+        return metadata ?: HashMap<String, Any>().also { metadata = it }
+    }
 
     @JvmOverloads
     fun getMetaInt(key: String, default: Int = -1): Int = getMetaDataI(key, default)
@@ -151,7 +166,10 @@ data class Item @JvmOverloads constructor(
      */
     fun getMetaData(): MutableMap<String, Any>? = metadata
 
-    fun deleteMetaData() { metadata = null }
+    fun deleteMetaData() {
+        metadata = null
+        markChanged()
+    }
 
     /** Legacy `containsMetaData()` - whether a map has ever been allocated, empty or not. */
     fun containsMetaData(): Boolean = metadata != null
@@ -163,7 +181,10 @@ data class Item @JvmOverloads constructor(
     }
 
     /** Changes this item's ID in-place. */
-    fun changeId(newId: Int) { id = newId }
+    fun changeId(newId: Int) {
+        id = newId
+        markChanged()
+    }
 
     fun decMetaDataI(key: String): Int {
         val newVal = getMetaDataI(key) - 1

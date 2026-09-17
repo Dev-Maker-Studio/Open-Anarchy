@@ -210,7 +210,7 @@ private fun moneyPouch(e: ButtonClickEvent) {
             if (busy(player, "Please finish what you're doing before withdrawing coins.")) return
             player.sendInputInteger("How much would you like to withdraw?") { num -> player.inventory.coinPouchToInventory(num) }
         }
-        3 -> player.sendMessage("Your pouch contains " + NumberFormat.getNumberInstance(Locale.US).format(player.inventory.coins) + " coins.")
+        3 -> player.sendMessage("Your pouch contains " + NumberFormat.getNumberInstance(Locale.US).format(player.inventory.getCoins()) + " coins.")
         4 -> {
             if (busy(player, "Please finish what you're doing before opening the price checker.")) return
             priceChecker(player)

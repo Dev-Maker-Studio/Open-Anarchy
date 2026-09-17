@@ -22,7 +22,6 @@ import com.rs.game.World;
 import com.rs.game.content.ItemConstants;
 import com.rs.game.content.skills.smithing.Smelting.SmeltingBar;
 import com.rs.game.model.entity.player.Equipment;
-import com.rs.game.model.entity.player.Inventory;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
 import org.darkan.core.Constants;
@@ -31,11 +30,12 @@ import org.darkan.core.model.Item;
 import org.darkan.core.model.SpotAnim;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.InterfaceOnInterfaceHandler;
+import org.darkan.core.gameval.gen.Interface;
 
 @PluginEventHandler
 public class Alchemy {
 
-	public static InterfaceOnInterfaceHandler handleAlchSuperheat = new InterfaceOnInterfaceHandler(192, new int[] { 38, 50, 59 }, Inventory.INVENTORY_INTERFACE, null, e -> {
+	public static InterfaceOnInterfaceHandler handleAlchSuperheat = new InterfaceOnInterfaceHandler(192, new int[] { 38, 50, 59 }, Interface.inventory, null, e -> {
 		Item item = e.getPlayer().getInventory().getItem(e.getToSlotId());
 		if (item == null)
 			return;

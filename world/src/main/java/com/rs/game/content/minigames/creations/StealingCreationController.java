@@ -28,7 +28,6 @@ import org.darkan.core.map.pathfinder.Direction;
 import com.rs.engine.pathfinder.RouteEvent;
 import com.rs.game.model.entity.player.Controller;
 import com.rs.game.model.entity.player.Equipment;
-import com.rs.game.model.entity.player.Inventory;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.actions.PlayerAction;
 import com.rs.game.model.gameobject.GameObject;
@@ -49,6 +48,7 @@ import org.darkan.core.gameval.gen.Loc;
 import org.darkan.core.gameval.gen.Seq;
 import org.darkan.core.gameval.gen.Varbit;
 import org.darkan.core.gameval.gen.Varp;
+import org.darkan.core.gameval.gen.Interface;
 
 public class StealingCreationController extends Controller {
 
@@ -393,7 +393,7 @@ public class StealingCreationController extends Controller {
 				player.sendMessage("You can't remove your team's colours.");
 				return false;
 			}
-		} else if (interfaceId == Inventory.INVENTORY_INTERFACE) {
+		} else if (interfaceId == Interface.inventory) {
 			Item item = player.getInventory().getItem(slotId);
 			if (item != null) {
 				String itemName = item.getName().toLowerCase();

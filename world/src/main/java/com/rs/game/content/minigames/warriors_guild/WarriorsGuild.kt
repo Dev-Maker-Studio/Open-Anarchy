@@ -492,7 +492,7 @@ private fun tickDummies() {
 }
 
 private fun submitDummyHit(player: Player, controller: WarriorsGuildController, obj: GameObject) {
-    player.anim(getWeaponAttackEmote(player.equipment.getWeaponId(), player.combatDefinitions.getAttackStyle()))
+    player.anim(getWeaponAttackEmote(player.equipment.weaponId, player.combatDefinitions.getAttackStyle()))
     player.lock()
     player.schedule {
         if (isProperHit(player, obj)) {
@@ -565,7 +565,7 @@ private fun inCatapultArea(player: Player): Boolean {
  * Shotput minigame
  */
 private fun hasEmptyHands(player: Player): Boolean {
-    return player.equipment.getGlovesId() == -1 && player.equipment.getWeaponId() == -1 && player.equipment.getShieldId() == -1
+    return player.equipment.glovesId == -1 && player.equipment.weaponId == -1 && player.equipment.shieldId == -1
 }
 
 private data class ShotPutResult(val success: Boolean, val distance: Int, val runEnergyCost: Double, val experience: Double, val tokens: Int)

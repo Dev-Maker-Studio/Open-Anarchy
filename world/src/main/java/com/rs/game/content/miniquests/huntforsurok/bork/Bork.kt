@@ -66,7 +66,7 @@ class Bork(id: Int, tile: Tile, spawned: Boolean) : NPC(id, tile, spawned) {
 		}
 		if (!killer.getDailyB("borkKilled")) {
 			val diaryReward = SetReward.VARROCK_ARMOR.hasRequirements(killer, AchievementDef.Area.VARROCK, AchievementDef.Difficulty.HARD, false)
-			val row = killer.equipment.getRingId() != -1 && ItemDefinitions.getDefs(killer.equipment.getRingId()).name.lowercase().contains("ring of wealth")
+			val row = killer.equipment.ringId != -1 && ItemDefinitions.getDefs(killer.equipment.ringId).name.lowercase().contains("ring of wealth")
 			killer.setDailyB("borkKilled", true)
 			killer.skills.addXp(Skills.SLAYER, if (diaryReward) 3000.0 else 1500.0)
 

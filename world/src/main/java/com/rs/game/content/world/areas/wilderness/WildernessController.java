@@ -210,7 +210,7 @@ public class WildernessController extends Controller {
 			player.getPackets().sendDrawOrder(false);
 			player.getInterfaceManager().removeOverlay();
 			player.setPvpCombatLevelThreshhold(-1);
-			player.getEquipment().refresh(null);
+			player.getEquipment().refreshAll();
 		}
 	}
 

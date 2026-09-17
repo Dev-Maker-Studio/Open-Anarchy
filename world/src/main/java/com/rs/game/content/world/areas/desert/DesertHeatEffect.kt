@@ -223,8 +223,9 @@ private fun checkAndDrinkWater(player: Player): Boolean {
     }
 
     // If no waterskin is available, try to consume a choc-ice
-    if (player.inventory.containsOneItem(CHOC_ICE.id)) {
-        Foods.eat(player, CHOC_ICE, player.inventory.getItemById(CHOC_ICE.id).slot, null)
+    val chocIce = player.inventory.getItemById(CHOC_ICE.id)
+    if (chocIce != null) {
+        Foods.eat(player, CHOC_ICE, chocIce.slot, null)
         player.sendMessage("And it cools you down.")
         return true
     }

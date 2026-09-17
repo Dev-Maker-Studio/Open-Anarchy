@@ -39,7 +39,6 @@ import com.rs.game.content.skills.magic.Magic
 import com.rs.game.content.skills.magic.Magic.sendLunarTeleportGroupSpell
 import com.rs.game.content.skills.magic.Magic.sendLunarTeleportSpell
 import com.rs.game.model.entity.npc.NPC
-import com.rs.game.model.entity.player.Inventory
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.managers.InterfaceManager
@@ -58,6 +57,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.min
+import org.darkan.core.gameval.gen.Interface
 
 @ServerStartupEvent
 fun registerLunarInventorySpells() {
@@ -105,7 +105,7 @@ fun registerLunarInventorySpells() {
     onInterfaceOnInterface(
         fromInterfaceIds = intArrayOf(430),
         fromComponentIds = intArrayOf(33, 35, 38, 50, 72, 49),
-        toInterfaceIds = intArrayOf(Inventory.INVENTORY_INTERFACE),
+        toInterfaceIds = intArrayOf(Interface.inventory),
         toComponentIds = null,
         biDirectional = true,
     ) { e ->

@@ -30,6 +30,7 @@ import com.rs.game.model.gameobject.GameObject
 import org.darkan.core.Constants
 import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.game.model.item.ItemTooltips
 import com.rs.plugin.kts.onObjectClick
 import org.darkan.core.gameval.gen.Varbit
 
@@ -287,4 +288,9 @@ class GodwarsController : Controller() {
         @JvmStatic
         fun isAtGodwars(teleTile: Tile) = GWD_REGIONS.contains(teleTile.getRegionId())
     }
+}
+
+@ServerStartupEvent
+fun mapFrozenKeyTooltip() {
+    ItemTooltips.metadata("frozenKeyCharges") { _, item, _ -> ItemTooltips.count("Uses", (item.getMetaDataI("frozenKeyCharges") - 1).coerceAtLeast(0), 99) }
 }

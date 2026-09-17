@@ -29,7 +29,6 @@ import com.rs.game.model.entity.actions.EntityFollow;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
 import com.rs.game.model.entity.player.Equipment;
-import com.rs.game.model.entity.player.Inventory;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub;
 import com.rs.game.model.item.ItemsContainer;
@@ -45,6 +44,7 @@ import com.rs.plugin.handlers.InterfaceOnInterfaceHandler;
 import com.rs.plugin.handlers.NPCClickHandler;
 import org.darkan.core.gameval.gen.Varbit;
 import org.darkan.core.gameval.gen.Varp;
+import org.darkan.core.gameval.gen.Interface;
 
 @PluginEventHandler
 public final class Familiar extends NPC {
@@ -130,7 +130,7 @@ public final class Familiar extends NPC {
 			e.getPlayer().getFamiliar().takeInventory();
 	});
 
-	public static InterfaceOnInterfaceHandler orbOnInventory = new InterfaceOnInterfaceHandler(747, Inventory.INVENTORY_INTERFACE, e -> {
+	public static InterfaceOnInterfaceHandler orbOnInventory = new InterfaceOnInterfaceHandler(747, Interface.inventory, e -> {
 		if (e.getPlayer().getFamiliar() == null)
 			return;
 

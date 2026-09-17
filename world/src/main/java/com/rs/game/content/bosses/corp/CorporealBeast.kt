@@ -160,7 +160,7 @@ class CorporealBeast(id: Int, tile: Tile?, spawned: Boolean) : NPC(id, tile, spa
         }
         (hit.source as? Player)?.let { player ->
             if ((hit.look == HitLook.MELEE_DAMAGE || hit.look == HitLook.RANGE_DAMAGE) &&
-                player.equipment.getWeaponId() != -1 && !ItemDefinitions.getDefs(player.equipment.getWeaponId()).name.contains("spear"))
+                player.equipment.weaponId != -1 && !ItemDefinitions.getDefs(player.equipment.weaponId).name.contains("spear"))
                     hit.setDamage(hit.damage / 2)
 
         }

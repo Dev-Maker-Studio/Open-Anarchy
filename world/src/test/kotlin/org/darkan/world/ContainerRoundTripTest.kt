@@ -144,14 +144,14 @@ class ContainerRoundTripTest {
         assertTrue(container.add(Item(COINS, 100)))
         assertTrue(container.add(Item(COINS, 50)))
         assertEquals(1, container.usedSlots, "coins took a second slot instead of merging")
-        assertEquals(150, container.get(0).amount)
+        assertEquals(150, container.get(0)!!.amount)
 
         container.set(1, Item(COINS, Int.MAX_VALUE))
         // Slot 0 is found first, and 150 + MAX_VALUE overflows negative, so the merge is refused.
         container.clear()
         container.set(0, Item(COINS, Int.MAX_VALUE))
         assertFalse(container.add(Item(COINS, 10)), "an overflowing stack merge was allowed")
-        assertEquals(Int.MAX_VALUE, container.get(0).amount, "a refused merge changed the stack")
+        assertEquals(Int.MAX_VALUE, container.get(0)!!.amount, "a refused merge changed the stack")
     }
 
     /**
@@ -164,7 +164,7 @@ class ContainerRoundTripTest {
         val container = ItemsContainer<Item>(28, false)
         assertTrue(container.add(Item(ORE, 5)))
         assertEquals(5, container.usedSlots, "iron ore did not spread over five slots")
-        for (slot in 0 until 5) assertEquals(1, container.get(slot).amount)
+        for (slot in 0 until 5) assertEquals(1, container.get(slot)!!.amount)
     }
 
     /**
@@ -178,7 +178,7 @@ class ContainerRoundTripTest {
         container.set(0, Item(COINS, 100))
 
         assertEquals(40, container.remove(Item(COINS, 40)), "remove misreported the amount taken")
-        assertEquals(60, container.get(0).amount, "the partial stack was not left behind")
+        assertEquals(60, container.get(0)!!.amount, "the partial stack was not left behind")
 
         assertEquals(60, container.remove(Item(COINS, 999)), "remove over-reported when asked for more than there was")
         assertNull(container.get(0), "an exhausted stack must leave the slot empty")
@@ -212,9 +212,9 @@ class ContainerRoundTripTest {
         container.set(7, item)
         assertEquals(7, item.slot, "set did not stamp the slot index onto the item")
 
-        val unstamped = Item(WHIP, 1)
-        container.set2(9, unstamped)
-        assertEquals(0, unstamped.slot, "set2 must not stamp the slot; legacy leaves the field at its 0 default")
+        val placed = Item(WHIP, 1)
+        container.set2(9, placed)
+        assertEquals(9, placed.slot, "set2 did not stamp the slot index onto the item")
 
         container.set(-1, Item(WHIP, 1))
         container.set(28, Item(WHIP, 1))
@@ -236,11 +236,11 @@ class ContainerRoundTripTest {
 
         player.inventory.switchItem(0, 4)
 
-        assertEquals(COINS, player.inventory.getItem(0).id, "slot 0 did not receive the coins")
-        assertEquals(25, player.inventory.getItem(0).amount)
-        assertEquals(WHIP, player.inventory.getItem(4).id, "slot 4 did not receive the whip")
-        assertEquals(0, player.inventory.getItem(0).slot, "the swapped item kept its old slot index")
-        assertEquals(4, player.inventory.getItem(4).slot, "the swapped item kept its old slot index")
+        assertEquals(COINS, player.inventory.getItem(0)?.id, "slot 0 did not receive the coins")
+        assertEquals(25, player.inventory.getItem(0)?.amount)
+        assertEquals(WHIP, player.inventory.getItem(4)?.id, "slot 4 did not receive the whip")
+        assertEquals(0, player.inventory.getItem(0)?.slot, "the swapped item kept its old slot index")
+        assertEquals(4, player.inventory.getItem(4)?.slot, "the swapped item kept its old slot index")
 
         val flushed = harness.settle()
         assertEquals(
@@ -262,7 +262,7 @@ class ContainerRoundTripTest {
 
         container.set(0, Item(WHIP, 1))
         assertEquals(27, container.freeSlots)
-        assertEquals(27, container.getFreeSlots(), "freeSlots() and getFreeSlots() disagree")
+        assertEquals(27, container.freeSlots, "freeSlots() and getFreeSlots() disagree")
         assertEquals(1, container.usedSlots)
         assertEquals(1, container.freeSlot, "freeSlot did not skip the occupied slot")
         assertFalse(container.isEmpty)
@@ -288,7 +288,7 @@ class ContainerRoundTripTest {
 
         container.set(1, Item(COINS, 1))
         assertTrue(container.contains(Item(COINS, 6)), "contains did not sum across slots")
-        assertFalse(container.contains(null), "contains(null) must be false, not a crash")
+        assertFalse((container as ItemsContainer<Item?>).contains(null), "contains(null) must be false, not a crash")
     }
 
     /** `sortByItemId` orders by id and pushes the empty slots to the end. Legacy `ItemsContainer.java:385-392`. */
@@ -302,7 +302,7 @@ class ContainerRoundTripTest {
 
         container.sortByItemId()
 
-        assertEquals(listOf(ORE, COINS, WHIP), (0 until 3).map { container.get(it).id })
+        assertEquals(listOf(ORE, COINS, WHIP), (0 until 3).map { container.get(it)!!.id })
         assertNull(container.get(3))
         assertNull(container.get(4))
     }
@@ -404,7 +404,7 @@ class ContainerRoundTripTest {
         assertEquals(2, container.usedSlots, "a metadata item merged into a plain stack")
         assertEquals(1, container.getNumberOf(charged), "getNumberOf must report 1 for a metadata item")
         assertEquals(100, container.getNumberOf(plain), "the plain stack lost its amount")
-        assertEquals(30, container.get(1).getMetaDataI("combatCharges"), "the metadata was dropped by add")
+        assertEquals(30, container.get(1)!!.getMetaDataI("combatCharges"), "the metadata was dropped by add")
 
         // Legacy quirk worth pinning: a *stackable* item carrying metadata skips the merge branch
         // and falls into the one-slot-per-unit branch, so a stack of more than one is refused
@@ -418,15 +418,15 @@ class ContainerRoundTripTest {
         // Partial removal from a metadata slot keeps the map on the remainder.
         container.set(2, Item(COINS, 100, bigCharged.metadata))
         assertEquals(40, container.remove(2, Item(COINS, 40, bigCharged.metadata)))
-        assertEquals(60, container.get(2).amount)
-        assertEquals(30, container.get(2).getMetaDataI("combatCharges"), "a partial remove dropped the metadata")
+        assertEquals(60, container.get(2)!!.amount)
+        assertEquals(30, container.get(2)!!.getMetaDataI("combatCharges"), "a partial remove dropped the metadata")
 
         // set moves the item without touching the map, and restamps the slot.
         val moved = container.get(2)
         container.set(2, null)
         container.set(20, moved)
-        assertEquals(30, container.get(20).getMetaDataI("combatCharges"))
-        assertEquals(20, container.get(20).slot)
+        assertEquals(30, container.get(20)!!.getMetaDataI("combatCharges"))
+        assertEquals(20, container.get(20)!!.slot)
     }
 
     /** A cloned item gets its own map, so editing the copy cannot reach back into the original. */
@@ -458,7 +458,7 @@ class ContainerRoundTripTest {
         assertTrue(Equipment.sendWear(player, 0, WHIP), "sendWear refused a plain weapon")
 
         assertEquals(WHIP, player.equipment.weaponId, "the whip is not in the weapon slot")
-        assertEquals(1, player.equipment.getItem(Equipment.WEAPON).amount)
+        assertEquals(1, player.equipment.getItem(Equipment.WEAPON)!!.amount)
         assertNull(player.inventory.getItem(0), "the inventory slot was not freed")
 
         val flushed = harness.settle()
@@ -561,7 +561,7 @@ class ContainerRoundTripTest {
         assertTrue(Equipment.sendWear(player, 0, ARROWS), "sendWear refused stackable ammo")
 
         assertEquals(ARROWS, player.equipment.ammoId, "the arrows are not in the ammo slot")
-        assertEquals(150, player.equipment.getItem(Equipment.AMMO).amount, "the worn arrow stack did not merge")
+        assertEquals(150, player.equipment.getItem(Equipment.AMMO)!!.amount, "the worn arrow stack did not merge")
         assertNull(player.inventory.getItem(0), "the inventory arrows were not consumed")
         assertEquals(0, player.inventory.getNumberOf(ARROWS, false), "arrows were duplicated back into the inventory")
     }

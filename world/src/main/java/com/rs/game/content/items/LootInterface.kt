@@ -60,8 +60,8 @@ fun mapLootInterface() {
             }
             10 -> {
                 for (slot in 0 until container.size) {
-                    if (container[slot] == null) continue
-                    if (e.player.inventory.addItemDrop(container[slot])) container[slot] = null
+                    val item = container[slot] ?: continue
+                    if (e.player.inventory.addItemDrop(item)) container[slot] = null
                 }
                 if (!container.isEmpty) e.player.packets.sendItems(100, container)
             }

@@ -34,100 +34,91 @@ enum class RunecraftingPouch(val obj: Int, val capacity: Int, val level: Int) {
     }
 }
 
-object RunecraftingPouches {
-    @JvmStatic
-    fun fill(player: Player, pouch: RunecraftingPouch) {
-        if (player.skills.getLevel(Skills.RUNECRAFTING) < pouch.level) {
-            player.sendMessage("You need a Runecrafting level of ${pouch.level} to use this pouch.", false)
-            return
-        }
-        if (!player.inventory.containsOneItem(Runecrafting.RUNE_ESS) && !player.inventory.containsOneItem(Runecrafting.PURE_ESS)) {
-            player.sendMessage("You don't have any essence with you.", false)
-            return
-        }
-        val space = pouch.capacity - pouch.stored(player)
-        if (space == pouch.capacity) player.pouchesType[pouch.ordinal] = player.inventory.items.getNumberOf(Runecrafting.PURE_ESS) > 0
-        val essence = pouch.essence(player)
-        val added = minOf(space, player.inventory.items.getNumberOf(essence))
-        if (added <= 0) {
-            player.sendMessage("Your pouch is full.", false)
-            return
-        }
-        player.inventory.deleteItem(essence, added)
-        player.pouches[pouch.ordinal] += added
-        refresh(player)
+fun Player.fillPouch(pouch: RunecraftingPouch) {
+    if (skills.getLevel(Skills.RUNECRAFTING) < pouch.level) {
+        sendMessage("You need a Runecrafting level of ${pouch.level} to use this pouch.", false)
+        return
     }
+    if (!inventory.containsOneItem(Runecrafting.RUNE_ESS) && !inventory.containsOneItem(Runecrafting.PURE_ESS)) {
+        sendMessage("You don't have any essence with you.", false)
+        return
+    }
+    val space = pouch.capacity - pouch.stored(this)
+    if (space == pouch.capacity) pouchesType[pouch.ordinal] = inventory.items.getNumberOf(Runecrafting.PURE_ESS) > 0
+    val essence = pouch.essence(this)
+    val added = minOf(space, inventory.items.getNumberOf(essence))
+    if (added <= 0) {
+        sendMessage("Your pouch is full.", false)
+        return
+    }
+    inventory.deleteItem(essence, added)
+    pouches[pouch.ordinal] += added
+    refreshPouches()
+}
 
-    @JvmStatic
-    fun empty(player: Player, pouch: RunecraftingPouch) {
-        val removed = minOf(pouch.stored(player), player.inventory.freeSlots)
-        if (removed <= 0) {
-            player.sendMessage("Your pouch has no essence left in it.", false)
-            return
-        }
-        player.inventory.addItem(pouch.essence(player), removed)
-        player.pouches[pouch.ordinal] -= removed
-        refresh(player)
+fun Player.emptyPouch(pouch: RunecraftingPouch) {
+    val removed = minOf(pouch.stored(this), inventory.freeSlots)
+    if (removed <= 0) {
+        sendMessage("Your pouch has no essence left in it.", false)
+        return
     }
+    inventory.addItem(pouch.essence(this), removed)
+    pouches[pouch.ordinal] -= removed
+    refreshPouches()
+}
 
-    @JvmStatic
-    fun fillFromBank(player: Player, essence: Int) {
-        val pure = essence == Runecrafting.PURE_ESS
-        for (pouch in RunecraftingPouch.carried(player)) {
-            if (pouch.holdsPure(player) != pure || player.skills.getLevel(Skills.RUNECRAFTING) < pouch.level) continue
-            val banked = player.bank.getItem(essence)?.amount ?: 0
-            val added = minOf(pouch.capacity - pouch.stored(player), banked)
-            if (added <= 0) continue
-            player.bank.removeItem(player.bank.getSlot(essence), added, true, false)
-            player.pouches[pouch.ordinal] += added
-            player.pouchesType[pouch.ordinal] = pure
-            player.sendMessage("$added ${ItemDefinitions.getDefs(essence).name} has been placed into your ${ItemDefinitions.getDefs(pouch.obj).name.lowercase()}.")
-        }
-        refresh(player)
-    }
+fun Player.checkPouch(pouch: RunecraftingPouch) {
+    val kind = if (pouch.holdsPure(this)) "pure" else "rune"
+    sendMessage("This pouch has ${pouch.stored(this)} $kind essence in it.", false)
+}
 
-    @JvmStatic
-    fun takeEssence(player: Player, includeRuneEssence: Boolean): Int {
-        val taken = RunecraftingPouch.carried(player)
-            .filter { it.holdsPure(player) || includeRuneEssence }
-            .sumOf { it.take(player) }
-        if (taken > 0) refresh(player)
-        return taken
+fun Player.fillPouchesFromBank(essence: Int) {
+    val pure = essence == Runecrafting.PURE_ESS
+    for (pouch in RunecraftingPouch.carried(this)) {
+        if (pouch.holdsPure(this) != pure || skills.getLevel(Skills.RUNECRAFTING) < pouch.level) continue
+        val banked = bank.getItem(essence)?.amount ?: 0
+        val added = minOf(pouch.capacity - pouch.stored(this), banked)
+        if (added <= 0) continue
+        bank.removeItem(bank.getSlot(essence), added, true, false)
+        pouches[pouch.ordinal] += added
+        pouchesType[pouch.ordinal] = pure
+        sendMessage("$added ${ItemDefinitions.getDefs(essence).name} has been placed into your ${ItemDefinitions.getDefs(pouch.obj).name.lowercase()}.")
     }
+    refreshPouches()
+}
 
-    private fun refresh(player: Player) {
-        val slots = player.inventory.items.array().indices.filter { slot ->
-            player.inventory.items.array()[slot]?.let { RunecraftingPouch.forObj(it.id) } != null
-        }
-        player.inventory.refresh(*slots.toIntArray())
-    }
+fun Player.takePouchEssence(includeRuneEssence: Boolean): Int {
+    val taken = RunecraftingPouch.carried(this)
+        .filter { it.holdsPure(this) || includeRuneEssence }
+        .sumOf { it.take(this) }
+    if (taken > 0) refreshPouches()
+    return taken
+}
 
-    internal fun tooltip(player: Player, pouch: RunecraftingPouch): String {
-        val stored = pouch.stored(player)
-        if (stored <= 0) return "Empty"
-        return "<obj=${pouch.essence(player)},$stored>"
-    }
+private fun Player.refreshPouches() {
+    val items = inventory.items.array()
+    inventory.refresh(*items.indices.filter { slot -> items[slot]?.let { RunecraftingPouch.forObj(it.id) } != null }.toIntArray())
+}
 
-    internal fun check(player: Player, pouch: RunecraftingPouch) {
-        val kind = if (pouch.holdsPure(player)) "pure" else "rune"
-        player.sendMessage("This pouch has ${pouch.stored(player)} $kind essence in it.", false)
-    }
+private fun RunecraftingPouch.tooltip(player: Player): String {
+    val stored = stored(player)
+    return if (stored <= 0) "Empty" else "<obj=${essence(player)},$stored>"
 }
 
 @ServerStartupEvent
 fun mapRunecraftingPouches() {
     val pouches = RunecraftingPouch.entries.map { it.obj }.toIntArray()
     ItemTooltips.register(pouches) { player, item ->
-        RunecraftingPouch.forObj(item.id)?.let { RunecraftingPouches.tooltip(player, it) }
+        RunecraftingPouch.forObj(item.id)?.tooltip(player)
     }
 
     onItemClick(*pouches.toTypedArray(), Obj.rcu_pouch_medium_degrade, Obj.rcu_pouch_large_degrade, options = arrayOf("Fill", "Empty", "Check")) { e ->
         val pouch = RunecraftingPouch.forObj(e.item.id)
         if (pouch != null) {
             when (e.option) {
-                "Fill" -> RunecraftingPouches.fill(e.player, pouch)
-                "Empty" -> RunecraftingPouches.empty(e.player, pouch)
-                "Check" -> RunecraftingPouches.check(e.player, pouch)
+                "Fill" -> e.player.fillPouch(pouch)
+                "Empty" -> e.player.emptyPouch(pouch)
+                "Check" -> e.player.checkPouch(pouch)
             }
         }
         e.player.stopAll(false)

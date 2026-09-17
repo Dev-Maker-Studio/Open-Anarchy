@@ -66,7 +66,7 @@ fun mapPestControlRewards() {
         if (!player.isQuestComplete(Quest.VOID_STARES_BACK, "to buy Korasi's sword")) return@onNpcClick
         player.sendOptionsDialogue("Would you like to buy Korasi's sword for 200,000 coins?") {
             opExec("Yes, that sounds like a fair price.") {
-                if (player.inventory.getCoinsAsInt() < 200000) {
+                if (player.inventory.coinsAsInt < 200000) {
                     player.sendMessage("You don't have enough money for that.")
                     return@opExec
                 }
