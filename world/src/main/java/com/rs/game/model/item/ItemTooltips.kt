@@ -8,6 +8,7 @@ fun interface ItemTooltip {
 }
 
 object ItemTooltips {
+    const val METADATA_KEY = "tooltip"
     private const val NAME_COLOUR = "ff9040"
 
     private val byObj = HashMap<Int, MutableList<ItemTooltip>>()
@@ -26,9 +27,8 @@ object ItemTooltips {
     @JvmStatic
     fun of(player: Player, item: Item?): String? {
         if (item == null) return null
-        val lines = (byObj[item.id].orEmpty().asSequence() + global.asSequence())
-            .mapNotNull { it.text(player, item) }
-            .toList()
+        val lines = listOfNotNull(item.getMetaData(METADATA_KEY) as? String) +
+            (byObj[item.id].orEmpty().asSequence() + global.asSequence()).mapNotNull { it.text(player, item) }
         if (lines.isEmpty()) return null
         return "<col=$NAME_COLOUR>${item.name}</col><br>" + lines.joinToString("<br>")
     }
