@@ -54,5 +54,7 @@ gateway token is that public one is a community world.
   failure they cannot clear. A modified community world can therefore replay the token of a player
   who joins it, on another world, for the rest of that token's life. Only join community worlds you
   trust; staff accounts should not join them at all.
-- The lobby forgets a community world's admissions when its gateway socket drops, so its players
-  lose friends and chat until they relog.
+- A community world's admissions outlive its gateway socket, so its players keep their friends and
+  chat across a world restart or a dropped gateway connection; an admission ends when the player
+  goes offline or is admitted to another world. A world id that never comes back leaves its
+  admissions behind until then.

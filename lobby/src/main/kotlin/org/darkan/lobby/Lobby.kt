@@ -139,7 +139,9 @@ object Lobby : CoroutineScope {
     }
 
     fun addLobbyPlayer(lobbyPlayer: LobbyPlayer) = lobbyPlayers.put(lobbyPlayer.account.username, lobbyPlayer)
-    fun removeLobbyPlayer(username: String) = lobbyPlayers.remove(username)
+
+    /** Only the session that owns the entry may drop it: a stale goodbye must not evict a fresh login. */
+    fun removeLobbyPlayer(lobbyPlayer: LobbyPlayer) = lobbyPlayers.remove(lobbyPlayer.account.username, lobbyPlayer)
 
     fun addAccountCreation(session: AccountCreationSession) = accountCreationSessions.add(session)
     fun removeAccountCreation(session: AccountCreationSession) = accountCreationSessions.remove(session)
