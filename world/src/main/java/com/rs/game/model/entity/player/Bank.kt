@@ -4,6 +4,7 @@ import com.rs.Settings
 import com.rs.game.content.Potion
 import com.rs.game.content.skills.cooking.Foods
 import com.rs.game.content.skills.runecrafting.Runecrafting
+import com.rs.game.content.skills.runecrafting.RunecraftingPouches
 import com.rs.game.content.skills.summoning.Familiar
 import com.rs.game.model.entity.player.managers.InterfaceManager.Sub
 import com.rs.plugin.PluginManager
@@ -501,7 +502,7 @@ class Bank {
         removeItem(bankSlot, item.amount, true, false)
         player.inventory.addItem(item)
         refreshOpVars()
-        if (item.id == Runecrafting.RUNE_ESS || item.id == Runecrafting.PURE_ESS) Runecrafting.fillPouchesFromBank(player, item.id)
+        if (item.id == Runecrafting.RUNE_ESS || item.id == Runecrafting.PURE_ESS) RunecraftingPouches.fillFromBank(player, item.id)
     }
 
     fun sendExamine(fakeSlot: Int) {
