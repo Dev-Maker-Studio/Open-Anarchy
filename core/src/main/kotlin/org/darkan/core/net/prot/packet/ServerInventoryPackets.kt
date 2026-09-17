@@ -36,10 +36,15 @@ data class UpdateInvFull(
     val negativeKey: Boolean,
     val itemIds: IntArray,
     val amounts: IntArray,
+    val tooltips: Array<String?>? = null,
 ) : ServerProt {
     init {
         require(itemIds.size == amounts.size) { "itemIds and amounts must have same length" }
+        require(tooltips == null || tooltips.size == itemIds.size) { "tooltips must match itemIds length" }
     }
+
+    private val presentTooltips: Array<String?>?
+        get() = tooltips?.takeIf { array -> array.any { it != null } }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -49,6 +54,7 @@ data class UpdateInvFull(
         if (negativeKey != other.negativeKey) return false
         if (!itemIds.contentEquals(other.itemIds)) return false
         if (!amounts.contentEquals(other.amounts)) return false
+        if (!presentTooltips.contentEquals(other.presentTooltips)) return false
         return true
     }
 
@@ -57,6 +63,7 @@ data class UpdateInvFull(
         result = 31 * result + negativeKey.hashCode()
         result = 31 * result + itemIds.contentHashCode()
         result = 31 * result + amounts.contentHashCode()
+        result = 31 * result + presentTooltips.contentHashCode()
         return result
     }
 }

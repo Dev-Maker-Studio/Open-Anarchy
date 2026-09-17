@@ -1027,7 +1027,10 @@ enum class Cs2Op(
     CLAN_GETCHATCOUNT(1002, "clanGetChatCount", false, OpKind.NORMAL, 0, 0, 0, 1, 0, 0, false),
     LOGIN_REPLY_WORLD_ALT(1003, "loginReplyWorldAlt", false, OpKind.NORMAL, 0, 0, 0, 1, 0, 0, false),
     IS_GAMESCREEN_STATE(1004, "isGamescreenState", false, OpKind.NORMAL, 0, 0, 0, 1, 0, 0, false),
-    AUTOSETUP_DOSETUP(1005, "autosetupDosetup", false, OpKind.NORMAL, 0, 0, 0, 2, 0, 0, false);
+    AUTOSETUP_DOSETUP(1005, "autosetupDosetup", false, OpKind.NORMAL, 0, 0, 0, 2, 0, 0, false),
+    INV_GETTOOLTIP(1006, "invGetTooltip", false, OpKind.NORMAL, 2, 0, 0, 0, 1, 0, false, listOf(ArgType.INV, ArgType.INT)),
+    INV_OTHER_GETTOOLTIP(1007, "invOtherGetTooltip", false, OpKind.NORMAL, 2, 0, 0, 0, 1, 0, false, listOf(ArgType.INV, ArgType.INT)),
+    GET_ACTIVE_MINIMENU_INVSLOT(1008, "getActiveMinimenuInvslot", false, OpKind.NORMAL, 0, 0, 0, 3, 0, 0, false);
 
     companion object {
         private val byId: Array<Cs2Op> = entries.sortedBy { it.id }.toTypedArray()

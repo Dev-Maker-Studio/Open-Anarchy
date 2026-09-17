@@ -384,6 +384,20 @@ corrected opcode is added to the `Cs2Op` enum by hand.
   `ccSetOnMouseOver(hook(cs2_3149, "Iis", [comp, id, text]))` and
   `ccSetOnMouseLeave(hook(cs2_3153, "Ii", [comp, id]))`; `cs2_3152` positions it. In the game frame
   the generic tooltip is `cs2_38` -> `cs2_569` -> `cs2_5335`.
+- **Hover tooltip on the game frames (obj tooltips, 2026-09-17)**: the `onTimer` of 746:47
+  (resizable) and 548:426 `tooltip_layer` (fixed) runs `cs2_5486`, which reads the active
+  minimenu entry and draws through `cs2_5488` -> `tli_optext_build_tooltip` into the box
+  `tli_optext_host()` returns (548:427 `tooltip` below window mode 2, else 746:215) - a script that
+  names 746:215 directly only works resizable. For an obj in an inv, `getActiveMinimenuInvslot()`
+  (custom op 1008) answers `[inv, slot, other]`: the client walks the hovered component and its
+  parents for inv transmit triggers (the client field is misnamed `mouseLeaveArrayParams`) and takes
+  the exact cc slot when it holds the entry's obj, else the first slot holding it, so static worn
+  slots resolve too. `invGetTooltip`/`invOtherGetTooltip` (1006/1007) return the server text, sent
+  per slot in UPDATE_INV_FULL/PARTIAL (flags 0x2/0x4); without it the box shows op + name.
+- **Text tags**: `<col>`, `<shad=rrggbb>`, `<str=>`, `<u=>`, `<argb=>`, `<br>`, `<img=n>` (name
+  icons), plus the client's own `<sprite=graphic[,frame]>` and `<obj=id[,amount]>` inline icons,
+  scaled down to the font's line height (`InlineSprites` in darkan-bot); an obj icon that is not
+  rendered yet appears on the next redraw.
 - **Per-row extras in the world list**: one proc that creates the cc, positions it and hides or
   hooks it by flag, called from both `lobby_worldswitcher_timer` (list rows) and `cs2_3118`
   (favourite rows) - keep the two renderers in step.
