@@ -30,6 +30,7 @@ interface AccountStore {
     suspend fun findByDisplayName(displayName: String): Account?
     suspend fun findByUsernames(usernames: Collection<String>): List<Account>
     suspend fun save(account: Account)
+    suspend fun rename(previousUsername: String, account: Account)
 }
 
 private val collection by lazy {
@@ -76,6 +77,10 @@ private object MongoAccounts : AccountStore {
     override suspend fun save(account: Account) {
         collection.replaceOne(eq(Account::username.name, account.username), account, ReplaceOptions().upsert(true))
     }
+
+    override suspend fun rename(previousUsername: String, account: Account) {
+        collection.replaceOne(eq(Account::username.name, previousUsername), account)
+    }
 }
 
 object Accounts : AccountStore {
@@ -91,6 +96,8 @@ object Accounts : AccountStore {
     override suspend fun findByUsernames(usernames: Collection<String>): List<Account> = store.findByUsernames(usernames)
 
     override suspend fun save(account: Account) = store.save(account)
+
+    override suspend fun rename(previousUsername: String, account: Account) = store.rename(previousUsername, account)
 
     suspend fun exists(usernameOrEmail: String): Boolean {
         val formatted = usernameOrEmail.formatPlayerNameForProtocol()

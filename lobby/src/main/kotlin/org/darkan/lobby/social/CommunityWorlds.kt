@@ -61,7 +61,7 @@ class CommunityWorlds(
         val now = System.currentTimeMillis()
         val verified = LoginToken.verify(request.token, now, loginTokenSecret) ?: return refused
         val account = Accounts.find(request.username) ?: return refused
-        if (account.username != verified.username || account.checkBanned()) return refused
+        if (account.username != verified.username || account.checkBanned() || account.mustChooseName()) return refused
         admissions[account.username] = Admission(worldId, account.displayName, account.rights.crown)
         return LoginTokenVerdict(request.requestId, account.username, account.displayName, account.view())
     }
