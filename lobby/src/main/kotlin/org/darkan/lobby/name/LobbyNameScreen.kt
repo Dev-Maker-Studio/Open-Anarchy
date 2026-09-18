@@ -68,13 +68,13 @@ object LobbyNameScreen {
         val username = input.formatPlayerNameForProtocol()
         val displayName = username.formatPlayerNameForDisplay()
 
-        if (!username.isValidAccountName()) {
-            refuse(player, "Unfortunately, $displayName is not a valid name.<br>Please follow the constraints listed below.")
-            return
-        }
-        if (!DisplayNameFilter.isAcceptable(displayName) || Accounts.findByDisplayName(displayName) != null) {
-            refuse(player, "Unfortunately, $displayName is already taken.<br>Please try another name.")
-            return
+        when (DisplayNameService.claimable(displayName, account)) {
+            DisplayNameRefusal.INVALID -> return refuse(
+                player,
+                "Unfortunately, $displayName is not a valid name.<br>Please follow the constraints listed below.",
+            )
+            null -> Unit
+            else -> return refuse(player, "Unfortunately, $displayName is already taken.<br>Please try another name.")
         }
         if (pendingConfirmation[account.username] != username) {
             pendingConfirmation[account.username] = username

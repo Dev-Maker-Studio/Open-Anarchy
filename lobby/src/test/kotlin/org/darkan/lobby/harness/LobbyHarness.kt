@@ -308,4 +308,6 @@ class InMemoryAccounts : AccountStore {
         byUsername.remove(previousUsername)
         byUsername[account.username] = account
     }
+
+    override suspend fun findAll(): List<Account> = byUsername.values.toList()
 }
