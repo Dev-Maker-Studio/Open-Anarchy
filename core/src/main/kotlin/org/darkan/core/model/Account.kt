@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import org.bson.codecs.pojo.annotations.BsonIgnore
 import org.darkan.core.formatPlayerNameForDisplay
 import org.darkan.core.formatPlayerNameForProtocol
+import org.darkan.core.isValidAccountName
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -24,6 +25,8 @@ class Account {
     var recoveryEmail: String
     var displayName: String
     var prevDisplayName: String = ""
+    var displayNameChanges: Int = 0
+    var nameChangeRequired: Boolean = false
     var rights: Rights = Rights.PLAYER
     @Contextual
     var previousPasswords: MutableSet<String> = mutableSetOf()
@@ -74,6 +77,26 @@ class Account {
     }
 
     fun hasRights(checkRights: Rights) = rights.ordinal >= checkRights.ordinal
+
+    /**
+     * True until the account holds a name of its own: either it has never picked one - a client
+     * sign-up starts with the email as the username - or a moderator has revoked the one it had.
+     */
+    @BsonIgnore
+    fun mustChooseName() = nameChangeRequired || !username.isValidAccountName()
+
+    /**
+     * Forced renames leave [prevDisplayName] alone so the old name never surfaces again; a rename
+     * the player chose to spend a change on is remembered the usual way.
+     */
+    fun renameTo(newDisplayName: String, forced: Boolean) {
+        if (!forced) {
+            prevDisplayName = displayName
+            displayNameChanges--
+        }
+        displayName = newDisplayName
+        nameChangeRequired = false
+    }
 
     fun view() = AccountView(username, displayName, rights, banned, muted, social)
 
