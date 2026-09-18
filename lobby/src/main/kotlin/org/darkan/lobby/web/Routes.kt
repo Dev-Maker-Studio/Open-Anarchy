@@ -12,6 +12,7 @@ import org.darkan.core.EnvVars
 import org.darkan.core.social.gateway.AnnouncementBroadcast
 import org.darkan.lobby.social.SocialGateway
 import org.darkan.lobby.web.controller.AccountsController
+import org.darkan.lobby.web.controller.DisplayNamesController
 import org.darkan.lobby.web.controller.SocialController
 import org.darkan.lobby.web.controller.WorldListController
 
@@ -39,6 +40,7 @@ fun Application.configureRouting() {
         }
 
         AccountsController.registerRoutes(this)
+        DisplayNamesController.registerRoutes(this)
         WorldListController.registerRoutes(this)
         SocialController.registerRoutes(this)
     }
