@@ -1,5 +1,6 @@
 package org.darkan.migration
 
+import java.io.File
 import kotlin.system.exitProcess
 
 private const val USAGE = """
@@ -12,6 +13,10 @@ Legacy -> modern database migration.
       Transform every collection from source into target. The source is never written.
       --dry-run   run the full transform and print the report, write nothing
       --replace   drop target collections that already contain documents
+
+  displaynames --target <uri> [--approved <file>] [--apply]
+      Report every account whose display name the lobby's filter now refuses. Read-only unless
+      --apply is given, which flags exactly the usernames listed in --approved for a forced rename.
 
   verify --target <uri>
       Decode every target document through the modern code paths. Run with MONGO_URI=<target uri>.
@@ -33,7 +38,7 @@ fun main(args: Array<String>) {
         val arg = args[i]
         if (!arg.startsWith("--")) usage("Unexpected argument: $arg")
         val name = arg.removePrefix("--")
-        if (name in setOf("dry-run", "replace")) {
+        if (name in setOf("dry-run", "replace", "apply")) {
             flags += name
             i++
         } else {
@@ -53,6 +58,9 @@ fun main(args: Array<String>) {
                 only.filter { it !in COLLECTIONS }.forEach { usage("Unknown collection: $it") }
                 migrate(source, target, only, dryRun = "dry-run" in flags, replace = "replace" in flags)
             }
+        }
+        "displaynames" -> MongoTarget(option(options, "target")).use {
+            displayNames(it, options["approved"]?.let(::File), apply = "apply" in flags)
         }
         "verify" -> MongoTarget(option(options, "target")).use { verify(it) }
         "roundtrip" -> MongoTarget(option(options, "target")).use { roundtrip(it) }
