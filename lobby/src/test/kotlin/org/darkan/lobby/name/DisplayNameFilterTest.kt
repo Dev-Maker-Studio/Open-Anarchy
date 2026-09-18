@@ -32,6 +32,7 @@ class DisplayNameFilterTest {
         "Fagus Tree", "Fagotto", "Wig Maker", "Bigger Boat", "Digger",
         "Assist", "Asset", "Assess", "Glass Half", "Brass Monkey",
         "Hoe Down", "Fanny Pack",
+        "Cli Bot 455", "Player 455", "Zezima 1337", "Bot 480", "Bot 717", "Swanky Mongol",
     )
 
     private val profaneNames = listOf(
@@ -69,6 +70,14 @@ class DisplayNameFilterTest {
         assertEquals(DisplayNameVerdict.RESERVED, DisplayNameFilter.match("Mod Trent")?.verdict)
         assertEquals(DisplayNameVerdict.RESERVED, DisplayNameFilter.match("Jagex")?.verdict)
         assertNull(DisplayNameFilter.match("Modern Warfare"))
+    }
+
+    @Test
+    fun `a word of digits is a number, not leetspeak`() {
+        assertNull(DisplayNameFilter.match("455"))
+        assertNull(DisplayNameFilter.match("Iron Man 455"))
+        assertNotNull(DisplayNameFilter.match("A55hole"))
+        assertNotNull(DisplayNameFilter.match("455hole"))
     }
 
     @Test
