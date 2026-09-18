@@ -1,4 +1,4 @@
-package org.darkan.core.name
+package org.darkan.lobby.name
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -65,9 +65,9 @@ class DisplayNameFilterTest {
     }
 
     @Test
-    fun `staff names are reported as impersonation`() {
-        assertEquals(DisplayNameVerdict.IMPERSONATION, DisplayNameFilter.match("Mod Trent")?.verdict)
-        assertEquals(DisplayNameVerdict.IMPERSONATION, DisplayNameFilter.match("Jagex")?.verdict)
+    fun `staff names are reserved`() {
+        assertEquals(DisplayNameVerdict.RESERVED, DisplayNameFilter.match("Mod Trent")?.verdict)
+        assertEquals(DisplayNameVerdict.RESERVED, DisplayNameFilter.match("Jagex")?.verdict)
         assertNull(DisplayNameFilter.match("Modern Warfare"))
     }
 
