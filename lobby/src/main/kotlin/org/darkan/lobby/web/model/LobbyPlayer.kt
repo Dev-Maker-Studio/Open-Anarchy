@@ -12,11 +12,8 @@ import org.darkan.core.net.Session
 import org.darkan.core.net.login.LoginToken
 import org.darkan.core.net.prot.handler.PacketHandlers
 import org.darkan.core.net.prot.packet.GameMessage
-import org.darkan.core.net.prot.packet.IfButton
 import org.darkan.core.net.prot.packet.LobbyLoginDetails
 import org.darkan.core.net.prot.packet.Ping
-import org.darkan.core.net.prot.packet.ResumeNameDialog
-import org.darkan.core.net.prot.packet.ResumeTextDialog
 import org.darkan.core.net.prot.packet.WorldListPacket
 import org.darkan.lobby.Lobby
 import org.darkan.lobby.name.LobbyNameScreen
@@ -34,6 +31,8 @@ import java.util.concurrent.TimeUnit
  * (lobby-server `com/rs/lobby/model/SocialPlayer.java`, `com/rs/lobby/social/ChatManager.java`).
  */
 suspend fun Session.sendLobbyMessage(text: String) = send(GameMessage(ChatMessageType.FC_NOTIFICATION, text))
+
+private const val SOCIAL_HANDLERS = "org.darkan.lobby.server.packet.social"
 
 class LobbyPlayer(val session: Session, val account: Account) {
 
@@ -74,7 +73,7 @@ class LobbyPlayer(val session: Session, val account: Account) {
             vars.setVarBit(11162, 1)
             vars.syncVarsToClient()
 
-            if (LobbyNameScreen.holds(account)) LobbyNameScreen.open(this) else enterLobby()
+            if (LobbyNameScreen.holds(account)) openNameScreenIn = 1 else enterLobby()
             session.flush()
             session.readPackets(read)
         } finally {
@@ -88,18 +87,29 @@ class LobbyPlayer(val session: Session, val account: Account) {
         }
     }
 
+    /**
+     * The client cannot take the name screen on the tick it logs in - the sub-interface is dropped
+     * and the lobby comes up empty - so it is opened a tick later, from the engine loop.
+     */
+    private var openNameScreenIn = -1
+
     suspend fun enterLobby() {
         SocialGateway.registerLobbyPlayerSession(account, session)
     }
 
     suspend fun handleDecodedPackets() {
+        if (openNameScreenIn >= 0) {
+            if (openNameScreenIn == 0) LobbyNameScreen.open(this)
+            openNameScreenIn--
+        }
         for (i in 0 until EnvVars.packetQueueCapacity) {
             val packet = session.readChannel.tryReceive().getOrNull() ?: break
             if (packet !is Ping)
                 logDebug("Handling packet: $packet")
-            if (LobbyNameScreen.holds(account) && packet !is ResumeNameDialog && packet !is ResumeTextDialog && packet !is IfButton && packet !is Ping) continue
             try {
-                PacketHandlers.getHandler<LobbyPlayer>(packet.javaClass)?.handle(this, packet)
+                val handler = PacketHandlers.getHandler<LobbyPlayer>(packet.javaClass) ?: continue
+                if (LobbyNameScreen.holds(account) && handler.javaClass.packageName.startsWith(SOCIAL_HANDLERS)) continue
+                handler.handle(this, packet)
             } catch (e: Throwable) {
                 logError("Failed to handle packet: $packet", e)
             }
