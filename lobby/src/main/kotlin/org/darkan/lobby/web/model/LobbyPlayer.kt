@@ -12,10 +12,14 @@ import org.darkan.core.net.Session
 import org.darkan.core.net.login.LoginToken
 import org.darkan.core.net.prot.handler.PacketHandlers
 import org.darkan.core.net.prot.packet.GameMessage
+import org.darkan.core.net.prot.packet.IfButton
 import org.darkan.core.net.prot.packet.LobbyLoginDetails
 import org.darkan.core.net.prot.packet.Ping
+import org.darkan.core.net.prot.packet.ResumeNameDialog
+import org.darkan.core.net.prot.packet.ResumeTextDialog
 import org.darkan.core.net.prot.packet.WorldListPacket
 import org.darkan.lobby.Lobby
+import org.darkan.lobby.name.LobbyNameScreen
 import org.darkan.lobby.social.SocialGateway
 import java.util.concurrent.TimeUnit
 
@@ -70,11 +74,12 @@ class LobbyPlayer(val session: Session, val account: Account) {
             vars.setVarBit(11162, 1)
             vars.syncVarsToClient()
 
-            SocialGateway.registerLobbyPlayerSession(account, session)
+            if (LobbyNameScreen.holds(account)) LobbyNameScreen.open(this) else enterLobby()
             session.flush()
             session.readPackets(read)
         } finally {
             try {
+                LobbyNameScreen.forget(account.username)
                 SocialGateway.unregisterLobbyPlayerSession(account.username, session)
             } catch (_: Throwable) {
             }
@@ -83,11 +88,16 @@ class LobbyPlayer(val session: Session, val account: Account) {
         }
     }
 
+    suspend fun enterLobby() {
+        SocialGateway.registerLobbyPlayerSession(account, session)
+    }
+
     suspend fun handleDecodedPackets() {
         for (i in 0 until EnvVars.packetQueueCapacity) {
             val packet = session.readChannel.tryReceive().getOrNull() ?: break
             if (packet !is Ping)
                 logDebug("Handling packet: $packet")
+            if (LobbyNameScreen.holds(account) && packet !is ResumeNameDialog && packet !is ResumeTextDialog && packet !is IfButton && packet !is Ping) continue
             try {
                 PacketHandlers.getHandler<LobbyPlayer>(packet.javaClass)?.handle(this, packet)
             } catch (e: Throwable) {

@@ -75,6 +75,6 @@ class DisplayNameFilterTest {
     fun `a squeezed match never collapses a shorter clean word into a term`() {
         assertNull(DisplayNameFilter.match("As Above"))
         assertNull(DisplayNameFilter.match("Ba Na Na"))
-        assertNotNull(DisplayNameFilter.match("Aass"))
+        assertNotNull(DisplayNameFilter.match("Niggger"))
     }
 }
