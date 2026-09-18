@@ -69,7 +69,7 @@ FORCE_WHOLE_WORD = {"wank"}
 
 RESERVED = {
     "mod", "mods", "jmod", "jmods", "jagex", "admin", "admins", "administrator", "moderator",
-    "owner", "staff", "system", "darkan", "support", "console",
+    "owner", "staff", "system", "support", "console",
 }
 
 # Words no dictionary knows that nonetheless contain an in-word term, and words that spell one

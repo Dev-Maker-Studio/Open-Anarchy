@@ -46,17 +46,20 @@ object DisplayNameFilter {
     fun match(name: String): DisplayNameMatch? = matchIn(name, oneAsL = false) ?: matchIn(name, oneAsL = true)
 
     private fun matchIn(name: String, oneAsL: Boolean): DisplayNameMatch? {
-        val words = name.split(separators).map { it.normalize(oneAsL) }.filter { it.isNotEmpty() }
+        val words = name.split(separators).mapNotNull { raw ->
+            val read = raw.normalize(oneAsL)
+            if (read.isEmpty()) null else Word(read, raw.lettersOnly())
+        }
         if (words.isEmpty()) return null
 
         for (word in words) {
-            if (word in allowed) continue
-            if (word in reserved) return DisplayNameMatch(DisplayNameVerdict.RESERVED, word)
-            wholeWordMatch(word)?.let { return it }
-            inWordMatch(word, inWord)?.let { return it }
+            if (word.allowed) continue
+            if (word.read in reserved) return DisplayNameMatch(DisplayNameVerdict.RESERVED, word.read)
+            wholeWordMatch(word.read)?.let { return it }
+            inWordMatch(word.read, inWord)?.let { return it }
         }
 
-        val scannable = words.filterNot { it in allowed }
+        val scannable = words.filterNot { it.allowed }.map { it.read }
         if (scannable.size < 2) return null
         val compact = scannable.joinToString("")
         if (compact in allowed) return null
@@ -83,6 +86,15 @@ object DisplayNameFilter {
     }
 
     private fun profane(term: String) = DisplayNameMatch(DisplayNameVerdict.PROFANE, term)
+
+    /**
+     * [read] is the word with its leetspeak resolved; [bare] is the same word with digits simply
+     * dropped, which is what rescues "Lollipop1994" - resolving its digits spells a word no
+     * allow-list entry covers, while dropping them leaves the ordinary word behind.
+     */
+    private class Word(val read: String, val bare: String) {
+        val allowed: Boolean get() = read in DisplayNameFilter.allowed || bare in DisplayNameFilter.allowed
+    }
 
     private fun squeezedIndex(terms: Set<String>): Map<String, String> = terms
         .filter { it.squeeze().length >= SQUEEZE_MIN_LENGTH }
@@ -116,6 +128,8 @@ object DisplayNameFilter {
         }
         return out.toString()
     }
+
+    private fun String.lettersOnly(): String = lowercase().filter { it in 'a'..'z' }
 
     private fun String.squeeze(): String {
         val out = StringBuilder(length)
