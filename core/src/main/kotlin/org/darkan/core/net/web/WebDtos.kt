@@ -1,6 +1,7 @@
 package org.darkan.core.net.web
 
 import io.ktor.server.plugins.requestvalidation.*
+import kotlinx.serialization.Serializable
 import org.darkan.core.isValidAccountName
 import org.darkan.core.isValidEmail
 import org.darkan.core.isValidPassword
@@ -9,6 +10,7 @@ fun RequestValidationConfig.installCoreValidators() {
     validateAccountCreate()
 }
 
+@Serializable
 data class AccountCreateRequest(val username: String, val email: String, val password: String)
 
 private fun RequestValidationConfig.validateAccountCreate() {
