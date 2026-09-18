@@ -1465,7 +1465,6 @@ admin
 administrator
 admins
 console
-darkan
 jagex
 jmod
 jmods
