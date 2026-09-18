@@ -14,6 +14,9 @@ data class DisplayNameMatch(val verdict: DisplayNameVerdict, val term: String)
  * The separator-stripped form is scanned with the long terms only, because two innocent words run
  * together can spell a short one; the short terms reach it only when the name has a one or
  * two-letter word, which is the only way to split a short term across words.
+ *
+ * A word of digits alone is a number, not disguised text, so it is dropped rather than read through
+ * the leet table - otherwise "Player 455" spells one of the terms.
  */
 object DisplayNameFilter {
 
@@ -104,8 +107,10 @@ object DisplayNameFilter {
     }
 
     private fun String.normalize(oneAsL: Boolean): String {
+        val lowered = lowercase()
+        if (lowered.none { it in 'a'..'z' }) return ""
         val out = StringBuilder(length)
-        for (raw in lowercase()) {
+        for (raw in lowered) {
             val ch = if (raw == '1') (if (oneAsL) 'l' else 'i') else leet[raw] ?: raw
             if (ch in 'a'..'z') out.append(ch)
         }

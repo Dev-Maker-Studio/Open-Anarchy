@@ -329,7 +329,6 @@ violetwand
 vorarephilia
 voyeurweb
 vulva
-wank
 wanker
 wanking
 wetback
@@ -374,6 +373,7 @@ spic
 tit
 twat
 vagina
+wank
 
 [allow]
 abastard
@@ -1279,21 +1279,8 @@ superconsciousness
 superconservativeness
 superconstitutionally
 supraconsciousness
-swank
-swanked
 swanker
-swankest
-swankey
-swankie
-swankier
-swankiest
-swankily
-swankiness
 swanking
-swankness
-swankpot
-swanks
-swanky
 swigger
 swiggers
 swop
@@ -1347,14 +1334,9 @@ trimming
 trimmingly
 trimmings
 turfage
-twank
-twankay
 twanker
-twankies
 twanking
 twankingly
-twankle
-twanky
 twigger
 twopence
 twopences
@@ -1444,11 +1426,6 @@ vulvae
 vulval
 vulvar
 vulvate
-wankapin
-wankel
-wankle
-wankliness
-wankly
 wannigan
 wannigans
 washita

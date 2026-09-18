@@ -64,6 +64,9 @@ SUPPLEMENT = {
     "yiff", "pedo", "paedo", "heil", "arse", "arsed",
 }
 
+# Terms whose innocent container the common-word list does not carry ("swanky" for "wank").
+FORCE_WHOLE_WORD = {"wank"}
+
 RESERVED = {
     "mod", "mods", "jmod", "jmods", "jagex", "admin", "admins", "administrator", "moderator",
     "owner", "staff", "system", "darkan", "support", "console",
@@ -115,7 +118,8 @@ def main():
 
     in_word, whole_word = set(), set()
     for term in sorted(terms):
-        if len({w for w in common - terms - inflections if term in w}) > MAX_COMMON_CONTAINERS:
+        containers = {w for w in common - terms - inflections if term in w}
+        if term in FORCE_WHOLE_WORD or len(containers) > MAX_COMMON_CONTAINERS:
             whole_word.add(term)
         else:
             in_word.add(term)
