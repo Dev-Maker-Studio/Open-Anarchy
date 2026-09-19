@@ -38,6 +38,6 @@ data class VorbisPreloadSound(val soundId: Int, val priority: Int) : ServerProt
  */
 @JvmInline value class SetVorbisSound(val soundId: Int) : ServerProt
 
-data class SoundMixbussSetLevel(val level: Int, val index: Int) : ServerProt
+data class SoundMixbussSetLevel(val index: Int, val level: Int) : ServerProt
 
 @JvmInline value class ResetSounds(val dummy: Int = 0) : ServerProt
