@@ -2,11 +2,11 @@
   "ids": [
     1752
   ],
-  "attackAnim": 6790,
+  "attackAnim": "mounted_terrorbird_attack",
   "attackSound": -1,
-  "defenceAnim": 6792,
+  "defenceAnim": "mounted_terrorbird_defend",
   "defendSound": -1,
-  "deathAnim": 6791,
+  "deathAnim": "mounted_terrorbird_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,20 @@
 {
+  "ids": [
+    88,
+    224,
+    4928,
+    4929,
+    4936,
+    4937
+  ],
   "names": [
     "Dungeon rat"
   ],
-  "attackAnim": 4933,
+  "attackAnim": "giant_rat_update_attack",
   "attackSound": -1,
-  "defenceAnim": 4934,
+  "defenceAnim": "giant_rat_update_defend",
   "defendSound": -1,
-  "deathAnim": 4935,
+  "deathAnim": "giant_rat_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

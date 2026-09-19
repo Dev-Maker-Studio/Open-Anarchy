@@ -1,12 +1,16 @@
 {
+  "ids": [
+    11566,
+    11593
+  ],
   "names": [
     "Pit black demon"
   ],
-  "attackAnim": 64,
+  "attackAnim": "demon_attack",
   "attackSound": -1,
-  "defenceAnim": 65,
+  "defenceAnim": "demon_block",
   "defendSound": -1,
-  "deathAnim": 67,
+  "deathAnim": "demon_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

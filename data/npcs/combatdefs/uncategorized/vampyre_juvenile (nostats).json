@@ -1,12 +1,16 @@
 {
+  "ids": [
+    4774,
+    4775
+  ],
   "names": [
     "Vampyre juvenile"
   ],
-  "attackAnim": 6276,
+  "attackAnim": "myq5_juvenile_attack",
   "attackSound": -1,
-  "defenceAnim": 6652,
+  "defenceAnim": "myq5_juvenile_defend",
   "defendSound": -1,
-  "deathAnim": 6781,
+  "deathAnim": "myq5_juvenile_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,8 +1,12 @@
 {
+  "ids": [
+    11142,
+    11143
+  ],
   "names": [
     "Adept stormbringer"
   ],
-  "attackAnim": 13620,
+  "attackAnim": "rand_mage_familiar_magic_attack",
   "attackSound": -1,
   "defenceAnim": 13674,
   "defendSound": -1,

@@ -1,12 +1,17 @@
 {
+  "ids": [
+    2743,
+    2744,
+    15192
+  ],
   "names": [
     "Ket-Zek"
   ],
   "attackAnim": 16134,
   "attackSound": -1,
-  "defenceAnim": 16135,
+  "defenceAnim": "tzhaar_2011_ket_zek_defend",
   "defendSound": -1,
-  "deathAnim": 16111,
+  "deathAnim": "tzhaar_2011_ket_zek_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

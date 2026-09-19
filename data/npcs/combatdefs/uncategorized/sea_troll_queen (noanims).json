@@ -1,10 +1,13 @@
 {
+  "ids": [
+    3847
+  ],
   "names": [
     "Sea Troll Queen"
   ],
-  "attackAnim": 3991,
+  "attackAnim": "swan_queen_attack",
   "attackSound": -1,
-  "defenceAnim": 3990,
+  "defenceAnim": "swan_queen_defend",
   "defendSound": -1,
   "deathAnim": -1,
   "deathDelay": 6,

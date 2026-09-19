@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2849
+  ],
   "names": [
     "Evil spirit"
   ],
-  "attackAnim": 2804,
+  "attackAnim": "spirit_attack",
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": "spirit_parry",
   "defendSound": -1,
-  "deathAnim": 2805,
+  "deathAnim": "spirit_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,16 @@
 {
+  "ids": [
+    13601,
+    13602
+  ],
   "names": [
     "General malpractitioner"
   ],
-  "attackAnim": 5643,
+  "attackAnim": "brain_sawbones_attack",
   "attackSound": -1,
-  "defenceAnim": 5644,
+  "defenceAnim": "brain_sawbones_defend",
   "defendSound": -1,
-  "deathAnim": 5649,
+  "deathAnim": "brain_zombie_pirate_wanderers_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

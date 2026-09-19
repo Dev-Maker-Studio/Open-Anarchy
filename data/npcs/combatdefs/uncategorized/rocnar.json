@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3594
+  ],
   "names": [
     "Rocnar"
   ],
-  "attackAnim": 3709,
+  "attackAnim": "oub_monster1_attack",
   "attackSound": -1,
-  "defenceAnim": 3710,
+  "defenceAnim": "oub_monster1_block",
   "defendSound": -1,
-  "deathAnim": 3711,
+  "deathAnim": "oub_monster1_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

@@ -1,4 +1,7 @@
 {
+  "ids": [
+    6382
+  ],
   "names": [
     "Pernicious parrot"
   ],
@@ -6,7 +9,7 @@
   "attackSound": -1,
   "defenceAnim": -1,
   "defendSound": -1,
-  "deathAnim": 6778,
+  "deathAnim": "bird_flying_update_death_large_bird",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

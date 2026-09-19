@@ -1,12 +1,15 @@
 {
+  "ids": [
+    8133
+  ],
   "names": [
     "Corporeal Beast"
   ],
-  "attackAnim": 10057,
+  "attackAnim": "sum1_spirit_beast_stamp_attack",
   "attackSound": -1,
-  "defenceAnim": 10386,
+  "defenceAnim": "sum1_spirit_beast_defend",
   "defendSound": -1,
-  "deathAnim": 10385,
+  "deathAnim": "sum1_spirit_beast_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 99,

@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1610,
+    1827
+  ],
   "names": [
     "Gargoyle"
   ],
-  "attackAnim": 9454,
+  "attackAnim": "gargoyle_update_attack",
   "attackSound": 428,
-  "defenceAnim": 9455,
+  "defenceAnim": "gargoyle_update_defend",
   "defendSound": 430,
-  "deathAnim": 9513,
+  "deathAnim": "gargoyle_update_death",
   "deathDelay": 6,
   "deathSound": 429,
   "respawnDelay": 59,

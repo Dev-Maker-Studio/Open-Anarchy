@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3066
+  ],
   "names": [
     "Zombie Champion"
   ],
-  "attackAnim": 5581,
+  "attackAnim": "zombie_update_attack_champion",
   "attackSound": -1,
-  "defenceAnim": 788,
+  "defenceAnim": "zombie_update_defend_normal",
   "defendSound": -1,
-  "deathAnim": 5575,
+  "deathAnim": "zombie_update_death_normal",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

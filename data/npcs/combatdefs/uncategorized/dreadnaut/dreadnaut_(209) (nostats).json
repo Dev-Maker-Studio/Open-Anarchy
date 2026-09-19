@@ -2,11 +2,11 @@
   "ids": [
     12851
   ],
-  "attackAnim": 14973,
+  "attackAnim": "rand_rammernaught_warped_attack",
   "attackSound": -1,
-  "defenceAnim": 14975,
+  "defenceAnim": "rand_rammernaught_warped_defend",
   "defendSound": -1,
-  "deathAnim": 14974,
+  "deathAnim": "rand_rammernaught_warped_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

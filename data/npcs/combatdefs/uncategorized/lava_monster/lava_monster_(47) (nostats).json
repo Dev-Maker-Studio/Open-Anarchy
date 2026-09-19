@@ -2,11 +2,11 @@
   "ids": [
     7772
   ],
-  "attackAnim": 9337,
+  "attackAnim": "dillo_rock_creature_attack",
   "attackSound": -1,
-  "defenceAnim": 9338,
+  "defenceAnim": "dillo_rock_creature_defend",
   "defendSound": -1,
-  "deathAnim": 9340,
+  "deathAnim": "dillo_rock_creature_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

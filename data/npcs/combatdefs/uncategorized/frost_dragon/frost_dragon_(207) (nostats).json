@@ -2,11 +2,11 @@
   "ids": [
     10774
   ],
-  "attackAnim": 13151,
+  "attackAnim": "rand_dragon_attack",
   "attackSound": -1,
-  "defenceAnim": 13154,
+  "defenceAnim": "rand_dragon_defend",
   "defendSound": -1,
-  "deathAnim": 13153,
+  "deathAnim": "rand_dragon_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

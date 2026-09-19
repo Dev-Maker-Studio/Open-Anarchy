@@ -1,14 +1,18 @@
 {
+  "ids": [
+    4789,
+    4790
+  ],
   "names": [
     "Angry vampyre"
   ],
-  "attackAnim": 6016,
-  "attackSound": 879,
-  "defenceAnim": 6063,
-  "defendSound": 884,
-  "deathAnim": 6031,
+  "attackAnim": "vanstrom_klause_stake_attack",
+  "attackSound": -1,
+  "defenceAnim": "human_sword_def",
+  "defendSound": -1,
+  "deathAnim": "human_death",
   "deathDelay": 6,
-  "deathSound": 882,
+  "deathSound": -1,
   "respawnDelay": 59,
   "hitpoints": 1,
   "maxHit": 1,

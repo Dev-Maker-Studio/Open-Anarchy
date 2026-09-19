@@ -1,4 +1,14 @@
 {
+  "ids": [
+    2627,
+    2628,
+    2734,
+    2735,
+    15196,
+    15197,
+    15198,
+    15199
+  ],
   "names": [
     "Tz-Kih"
   ],
@@ -6,7 +16,7 @@
   "attackSound": -1,
   "defenceAnim": 16088,
   "defendSound": -1,
-  "deathAnim": 16109,
+  "deathAnim": "tzhaar_2011_tz_kih_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

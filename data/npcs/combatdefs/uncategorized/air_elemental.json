@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1021
+  ],
   "names": [
     "Air elemental"
   ],
-  "attackAnim": 1040,
+  "attackAnim": "elemental_air_attack",
   "attackSound": 1527,
-  "defenceAnim": 1042,
+  "defenceAnim": "elemental_air_defend",
   "defendSound": 1529,
-  "deathAnim": 1041,
+  "deathAnim": "elemental_air_death",
   "deathDelay": 2,
   "deathSound": 1528,
   "respawnDelay": 50,

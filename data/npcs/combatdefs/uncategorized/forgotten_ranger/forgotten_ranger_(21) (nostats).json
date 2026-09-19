@@ -2,11 +2,11 @@
   "ids": [
     7141
   ],
-  "attackAnim": 426,
+  "attackAnim": "human_bow",
   "attackSound": -1,
-  "defenceAnim": 1666,
+  "defenceAnim": "slayer_granite_maul_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

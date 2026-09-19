@@ -2,11 +2,11 @@
   "ids": [
     10152
   ],
-  "attackAnim": 13029,
+  "attackAnim": "rand_ihlakhizan_magic_attack_launch",
   "attackSound": -1,
-  "defenceAnim": 13016,
+  "defenceAnim": "rand_ihlakhizan_defend",
   "defendSound": -1,
-  "deathAnim": 13017,
+  "deathAnim": "rand_ihlakhizan_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

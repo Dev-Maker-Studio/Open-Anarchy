@@ -1,12 +1,16 @@
 {
+  "ids": [
+    14276,
+    14293
+  ],
   "names": [
     "Hazeel"
   ],
-  "attackAnim": 11132,
+  "attackAnim": "mah5_azzanadra_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 11525,
+  "defenceAnim": "mah5_lucien_raise_ice_block",
   "defendSound": -1,
-  "deathAnim": 11541,
+  "deathAnim": "mah5_lucien_cutscene_death_ready",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,21 @@
 {
+  "ids": [
+    1118,
+    1119,
+    1120,
+    1121,
+    1122,
+    1123,
+    1124
+  ],
   "names": [
     "Troll spectator"
   ],
-  "attackAnim": 13786,
+  "attackAnim": "update_troll_attack_sword",
   "attackSound": -1,
-  "defenceAnim": 9023,
+  "defenceAnim": "update_troll_champion_defend",
   "defendSound": -1,
-  "deathAnim": 13785,
+  "deathAnim": "update_troll_death",
   "deathDelay": 3,
   "deathSound": -1,
   "respawnDelay": 59,

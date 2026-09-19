@@ -2,11 +2,11 @@
   "ids": [
     1219
   ],
-  "attackAnim": 1273,
+  "attackAnim": "leechattack",
   "attackSound": 604,
-  "defenceAnim": 1271,
+  "defenceAnim": "leechblock",
   "defendSound": 603,
-  "deathAnim": 1272,
+  "deathAnim": "leechdeath",
   "deathDelay": 6,
   "deathSound": 602,
   "respawnDelay": 59,

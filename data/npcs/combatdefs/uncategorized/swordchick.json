@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5595
+  ],
   "names": [
     "Swordchick"
   ],
-  "attackAnim": 5387,
+  "attackAnim": "lore_chicken_attack",
   "attackSound": -1,
-  "defenceAnim": 5388,
+  "defenceAnim": "lore_chicken_defend",
   "defendSound": -1,
-  "deathAnim": 5389,
+  "deathAnim": "lore_chicken_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

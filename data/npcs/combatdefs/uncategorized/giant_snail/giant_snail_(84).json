@@ -2,11 +2,11 @@
   "ids": [
     14029
   ],
-  "attackAnim": 8143,
+  "attackAnim": "lore_snail_slime_attack",
   "attackSound": -1,
-  "defenceAnim": 8147,
+  "defenceAnim": "lore_snail_defend",
   "defendSound": -1,
-  "deathAnim": 8144,
+  "deathAnim": "lore_snail_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

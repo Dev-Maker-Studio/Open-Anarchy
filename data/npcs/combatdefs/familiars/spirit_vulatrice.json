@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6888
+  ],
   "names": [
     "Spirit vulatrice"
   ],
-  "attackAnim": 7762,
+  "attackAnim": "lore_cockatrice_attack",
   "attackSound": -1,
-  "defenceAnim": 7761,
+  "defenceAnim": "lore_cockatrice_defend",
   "defendSound": -1,
-  "deathAnim": 7763,
+  "deathAnim": "lore_cockatrice_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

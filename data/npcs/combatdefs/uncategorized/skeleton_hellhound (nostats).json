@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1575
+  ],
   "names": [
     "Skeleton Hellhound"
   ],
-  "attackAnim": 6579,
+  "attackAnim": "dog_update_skeleton_hellhound_attack",
   "attackSound": -1,
-  "defenceAnim": 6578,
+  "defenceAnim": "dog_update_skeleton_hellhound_defend",
   "defendSound": -1,
-  "deathAnim": 6558,
+  "deathAnim": "dog_update_hellhound_godwars_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

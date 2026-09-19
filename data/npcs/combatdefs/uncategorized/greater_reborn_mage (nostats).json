@@ -1,12 +1,16 @@
 {
+  "ids": [
+    8567,
+    8568
+  ],
   "names": [
     "Greater reborn mage"
   ],
-  "attackAnim": 11111,
+  "attackAnim": "phoenix_guardian_mage_attack",
   "attackSound": -1,
-  "defenceAnim": 11113,
+  "defenceAnim": "phoenix_guardian_mage_defend",
   "defendSound": -1,
-  "deathAnim": 11112,
+  "deathAnim": "phoenix_guardian_mage_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

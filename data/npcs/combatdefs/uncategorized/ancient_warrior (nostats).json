@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13456
+  ],
   "names": [
     "Ancient warrior"
   ],
   "attackAnim": 7041,
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_sword_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

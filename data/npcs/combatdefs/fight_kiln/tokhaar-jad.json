@@ -1,12 +1,15 @@
 {
+  "ids": [
+    15208
+  ],
   "names": [
     "TokHaar-Jad"
   ],
   "attackAnim": 16204,
   "attackSound": -1,
-  "defenceAnim": 16201,
+  "defenceAnim": "tzhaar_2011_tor_jad_defend",
   "defendSound": -1,
-  "deathAnim": 16188,
+  "deathAnim": "tzhaar_2011_tor_jad_death",
   "deathDelay": 12,
   "deathSound": -1,
   "respawnDelay": 0,

@@ -2,11 +2,11 @@
   "ids": [
     14246
   ],
-  "attackAnim": 12023,
+  "attackAnim": "mah5_khazard_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 11998,
+  "defenceAnim": "mahjarrat_2010_khazard_giant_defend",
   "defendSound": -1,
-  "deathAnim": 12215,
+  "deathAnim": "mahjarrat_2010_khazard_giant_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

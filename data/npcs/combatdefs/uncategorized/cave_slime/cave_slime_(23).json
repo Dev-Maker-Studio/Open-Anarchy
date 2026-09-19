@@ -2,11 +2,11 @@
   "ids": [
     1831
   ],
-  "attackAnim": 1789,
+  "attackAnim": "cave_slime_attack",
   "attackSound": 784,
-  "defenceAnim": 1791,
+  "defenceAnim": "cave_slime_defend",
   "defendSound": 786,
-  "deathAnim": 1792,
+  "deathAnim": "cave_slime_death",
   "deathDelay": 6,
   "deathSound": 785,
   "respawnDelay": 59,

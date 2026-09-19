@@ -1,12 +1,15 @@
 {
+  "ids": [
+    9172
+  ],
   "names": [
     "Aquanite"
   ],
-  "attackAnim": 12041,
+  "attackAnim": "slayer_aquanite_attack",
   "attackSound": -1,
-  "defenceAnim": 12040,
+  "defenceAnim": "slayer_aquanite_defend",
   "defendSound": -1,
-  "deathAnim": 12039,
+  "deathAnim": "slayer_aquanite_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

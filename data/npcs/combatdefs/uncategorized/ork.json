@@ -1,12 +1,18 @@
 {
+  "ids": [
+    6271,
+    6272,
+    6273,
+    6274
+  ],
   "names": [
     "Ork"
   ],
-  "attackAnim": 13934,
+  "attackAnim": "ft3_shredflesh_general_attack",
   "attackSound": -1,
-  "defenceAnim": 13893,
+  "defenceAnim": "fairykit_orc_ancient_orc01_defend",
   "defendSound": -1,
-  "deathAnim": 13892,
+  "deathAnim": "fairykit_orc_ancient_orc01_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

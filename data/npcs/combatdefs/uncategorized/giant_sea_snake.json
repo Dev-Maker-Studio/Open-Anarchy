@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3943
+  ],
   "names": [
     "Giant Sea Snake"
   ],
-  "attackAnim": 4040,
+  "attackAnim": "royal_sea_snake_mother_ranged_attack",
   "attackSound": -1,
-  "defenceAnim": 4038,
+  "defenceAnim": "royal_sea_snake_mother_defend",
   "defendSound": -1,
-  "deathAnim": 4039,
+  "deathAnim": "royal_sea_snake_mother_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

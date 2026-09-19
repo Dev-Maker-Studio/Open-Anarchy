@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2782
+  ],
   "names": [
     "Shadow"
   ],
-  "attackAnim": 2738,
+  "attackAnim": "shadow_attack",
   "attackSound": -1,
-  "defenceAnim": 2736,
+  "defenceAnim": "shadow_defend",
   "defendSound": -1,
-  "deathAnim": 2739,
+  "deathAnim": "shadow_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

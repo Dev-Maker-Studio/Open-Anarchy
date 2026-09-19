@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13452
+  ],
   "names": [
     "Umbra"
   ],
   "attackAnim": 1979,
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_unarmed_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 149,

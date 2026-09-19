@@ -1,12 +1,15 @@
 {
+  "ids": [
+    997
+  ],
   "names": [
     "Kalrag"
   ],
-  "attackAnim": 5319,
+  "attackAnim": "spider_update_attack_large",
   "attackSound": -1,
-  "defenceAnim": 5320,
+  "defenceAnim": "spider_update_defend_large",
   "defendSound": -1,
-  "deathAnim": 5321,
+  "deathAnim": "spider_update_death_large",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

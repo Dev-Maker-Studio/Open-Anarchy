@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7373
+  ],
   "names": [
     "Ravenous locust"
   ],
-  "attackAnim": 7994,
+  "attackAnim": "lore_locust_attack",
   "attackSound": -1,
-  "defenceAnim": 7995,
+  "defenceAnim": "lore_locust_defend",
   "defendSound": -1,
-  "deathAnim": 7996,
+  "deathAnim": "lore_locust_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -2,11 +2,11 @@
   "ids": [
     5909
   ],
-  "attackAnim": -1,
+  "attackAnim": "sitting_throne_attack",
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": "barbarian_unarmedblock",
   "defendSound": -1,
-  "deathAnim": -1,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

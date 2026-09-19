@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7914
+  ],
   "names": [
     "Corpse Spider"
   ],
-  "attackAnim": 12894,
+  "attackAnim": "lumbcat_spider_attack",
   "attackSound": -1,
-  "defenceAnim": 12895,
+  "defenceAnim": "lumbcat_spider_defend",
   "defendSound": -1,
-  "deathAnim": 12896,
+  "deathAnim": "lumbcat_spider_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

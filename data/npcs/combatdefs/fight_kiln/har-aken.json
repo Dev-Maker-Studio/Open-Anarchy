@@ -1,12 +1,16 @@
 {
+  "ids": [
+    15211,
+    15212
+  ],
   "names": [
     "Har-Aken"
   ],
-  "attackAnim": -1,
+  "attackAnim": "tzhaar2_tokhaar_squid_boss_tentacle_ranged_attack",
   "attackSound": -1,
-  "defenceAnim": 16246,
+  "defenceAnim": "tzhaar2_tokhaar_squid_boss_defend",
   "defendSound": -1,
-  "deathAnim": 16235,
+  "deathAnim": "tzhaar2_tokhaar_squid_boss_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

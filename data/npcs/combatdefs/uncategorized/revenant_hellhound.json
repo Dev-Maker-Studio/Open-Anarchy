@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13476
+  ],
   "names": [
     "Revenant hellhound"
   ],
-  "attackAnim": 7460,
+  "attackAnim": "wilderness_hellhound_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7462,
+  "defenceAnim": "wilderness_hellhound_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7461,
+  "deathAnim": "wilderness_hellhound_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

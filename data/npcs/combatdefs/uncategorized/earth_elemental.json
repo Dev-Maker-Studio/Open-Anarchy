@@ -2,11 +2,11 @@
   "ids": [
     1020
   ],
-  "attackAnim": 4868,
+  "attackAnim": "earth_elemental_rework_attack",
   "attackSound": 1531,
-  "defenceAnim": 4869,
+  "defenceAnim": "earth_elemental_rework_defend",
   "defendSound": 1533,
-  "deathAnim": 4870,
+  "deathAnim": "earth_elemental_rework_death",
   "deathDelay": 5,
   "deathSound": 1532,
   "respawnDelay": 50,

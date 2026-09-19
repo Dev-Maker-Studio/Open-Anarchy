@@ -1,12 +1,17 @@
 {
+  "ids": [
+    138,
+    139,
+    1751
+  ],
   "names": [
     "Terrorbird"
   ],
-  "attackAnim": 1010,
+  "attackAnim": "pog_terror_bird_attack",
   "attackSound": -1,
-  "defenceAnim": 1012,
+  "defenceAnim": "pog_terror_bird_defend",
   "defendSound": -1,
-  "deathAnim": 1013,
+  "deathAnim": "pog_terror_bird_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

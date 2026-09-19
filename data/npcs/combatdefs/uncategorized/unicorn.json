@@ -1,12 +1,16 @@
 {
+  "ids": [
+    89,
+    987
+  ],
   "names": [
     "Unicorn"
   ],
-  "attackAnim": 6376,
+  "attackAnim": "unicorn_rework_attack",
   "attackSound": 369,
-  "defenceAnim": 6375,
+  "defenceAnim": "unicorn_rework_defend",
   "defendSound": 371,
-  "deathAnim": 6377,
+  "deathAnim": "unicorn_rework_death",
   "deathDelay": 4,
   "deathSound": 370,
   "respawnDelay": 39,

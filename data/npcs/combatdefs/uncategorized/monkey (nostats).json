@@ -1,12 +1,19 @@
 {
+  "ids": [
+    132,
+    1463,
+    1464,
+    4344,
+    15505
+  ],
   "names": [
     "Monkey"
   ],
-  "attackAnim": 220,
+  "attackAnim": "monkey_attack",
   "attackSound": -1,
-  "defenceAnim": 221,
+  "defenceAnim": "monkey_block",
   "defendSound": -1,
-  "deathAnim": 223,
+  "deathAnim": "monkey_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 24,

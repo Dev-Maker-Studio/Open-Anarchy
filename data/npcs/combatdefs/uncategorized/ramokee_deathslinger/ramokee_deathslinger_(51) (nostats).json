@@ -2,11 +2,11 @@
   "ids": [
     12984
   ],
-  "attackAnim": 13615,
+  "attackAnim": "rand_mage_familiar_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 13614,
+  "defenceAnim": "rand_ranger_familiar_defend",
   "defendSound": -1,
-  "deathAnim": 13669,
+  "deathAnim": "rand_female_familiar_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

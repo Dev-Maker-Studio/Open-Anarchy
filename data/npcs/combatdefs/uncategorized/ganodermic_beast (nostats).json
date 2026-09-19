@@ -1,12 +1,16 @@
 {
+  "ids": [
+    14696,
+    14697
+  ],
   "names": [
     "Ganodermic beast"
   ],
-  "attackAnim": 15470,
+  "attackAnim": "polypore_ganodermic_beast_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 15468,
+  "defenceAnim": "polypore_ganodermic_beast_defend",
   "defendSound": -1,
-  "deathAnim": 15473,
+  "deathAnim": "polypore_ganodermic_beast_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 59,

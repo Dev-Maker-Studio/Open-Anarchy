@@ -2,7 +2,7 @@
   "ids": [
     14035, 14038
   ],
-  "attackAnim": 9466,
+  "attackAnim": "spectre_update_attack",
   "attackSound": -1,
   "defenceAnim": 9468,
   "defendSound": -1,
@@ -10,7 +10,7 @@
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 40,
-  "respawnAnim": 6782,
+  "respawnAnim": "tt2_ghast_summon",
   "hitpoints": 1150,
   "maxHit": 40,
   "attackStyle": "MELEE",

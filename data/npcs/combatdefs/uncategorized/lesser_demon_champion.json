@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3064
+  ],
   "names": [
     "Lesser Demon Champion"
   ],
-  "attackAnim": 64,
+  "attackAnim": "demon_casting",
   "attackSound": -1,
-  "defenceAnim": 65,
+  "defenceAnim": "demon_block",
   "defendSound": -1,
-  "deathAnim": 67,
+  "deathAnim": "demon_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6203
+  ],
   "names": [
     "K'ril Tsutsaroth"
   ],
-  "attackAnim": -1,
+  "attackAnim": "mah5_cutscene_demon_main_fight_one_swinging_attack",
   "attackSound": -1,
-  "defenceAnim": 14965,
+  "defenceAnim": "rand_boss_demon_ghan_ko_crush_defend",
   "defendSound": -1,
-  "deathAnim": 14369,
+  "deathAnim": "rand_boss_demon_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 149,

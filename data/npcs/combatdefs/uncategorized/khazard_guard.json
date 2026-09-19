@@ -1,12 +1,18 @@
 {
+  "ids": [
+    255,
+    256,
+    257,
+    7528
+  ],
   "names": [
     "Khazard Guard"
   ],
-  "attackAnim": 395,
-  "attackSound": 2498,
-  "defenceAnim": 425,
+  "attackAnim": "human_axe_smash",
+  "attackSound": -1,
+  "defenceAnim": "human_axe_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "fight_arena_general_khazard_giant_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

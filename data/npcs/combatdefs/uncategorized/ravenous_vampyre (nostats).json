@@ -1,14 +1,17 @@
 {
+  "ids": [
+    11264
+  ],
   "names": [
     "Ravenous vampyre"
   ],
-  "attackAnim": 6016,
-  "attackSound": 879,
-  "defenceAnim": 6063,
-  "defendSound": 884,
-  "deathAnim": 6031,
+  "attackAnim": "myq3_vampire_flying_stab_attack",
+  "attackSound": -1,
+  "defenceAnim": "myq3_vampire_flying_defend",
+  "defendSound": -1,
+  "deathAnim": "myq3_vampire_grounded_death",
   "deathDelay": 6,
-  "deathSound": 882,
+  "deathSound": -1,
   "respawnDelay": 59,
   "hitpoints": 1,
   "maxHit": 1,

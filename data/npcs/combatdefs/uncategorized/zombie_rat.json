@@ -1,12 +1,17 @@
 {
+  "ids": [
+    6088,
+    6089,
+    6090
+  ],
   "names": [
     "Zombie rat"
   ],
-  "attackAnim": 7905,
+  "attackAnim": "lore_rat_attack_aggressive",
   "attackSound": -1,
-  "defenceAnim": 4934,
+  "defenceAnim": "giant_rat_update_defend",
   "defendSound": -1,
-  "deathAnim": 4935,
+  "deathAnim": "giant_rat_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

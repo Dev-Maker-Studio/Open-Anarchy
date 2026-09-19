@@ -1,12 +1,16 @@
 {
+  "ids": [
+    3675,
+    3676
+  ],
   "names": [
     "Vulture"
   ],
-  "attackAnim": 2019,
+  "attackAnim": "vulture_ground_attack",
   "attackSound": 890,
-  "defenceAnim": 2020,
+  "defenceAnim": "vulture_ground_block",
   "defendSound": 892,
-  "deathAnim": 2021,
+  "deathAnim": "vulture_ground_death",
   "deathDelay": 6,
   "deathSound": 891,
   "respawnDelay": 59,

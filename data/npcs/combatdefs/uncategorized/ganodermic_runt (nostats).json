@@ -1,12 +1,16 @@
 {
+  "ids": [
+    14698,
+    14699
+  ],
   "names": [
     "Ganodermic runt"
   ],
-  "attackAnim": 14577,
+  "attackAnim": "polypore_ganodermic_runt_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 14578,
+  "defenceAnim": "polypore_ganodermic_runt_defend",
   "defendSound": -1,
-  "deathAnim": 14580,
+  "deathAnim": "polypore_ganodermic_runt_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

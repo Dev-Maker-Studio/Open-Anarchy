@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5861
+  ],
   "names": [
     "Gobby demon"
   ],
-  "attackAnim": 14380,
+  "attackAnim": "mah5_cutscene_demon_main_fight_one_swinging_attack",
   "attackSound": -1,
-  "defenceAnim": 14370,
+  "defenceAnim": "rand_boss_demon_defend",
   "defendSound": -1,
-  "deathAnim": 14369,
+  "deathAnim": "rand_boss_demon_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

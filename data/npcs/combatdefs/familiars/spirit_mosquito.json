@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7332
+  ],
   "names": [
     "Spirit mosquito"
   ],
-  "attackAnim": 8032,
+  "attackAnim": "lore_mosquito_attack",
   "attackSound": -1,
-  "defenceAnim": 8034,
+  "defenceAnim": "lore_mosquito_defend",
   "defendSound": -1,
-  "deathAnim": 8033,
+  "deathAnim": "lore_mosquito_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2264
+  ],
   "names": [
     "Abyssal guardian"
   ],
-  "attackAnim": 2186,
+  "attackAnim": "abyssal_pyramid_ranged_attack",
   "attackSound": 236,
-  "defenceAnim": 2187,
+  "defenceAnim": "abyssal_pyramid_attack",
   "defendSound": 238,
-  "deathAnim": 2189,
+  "deathAnim": "abyssal_pyramid_death",
   "deathDelay": 3,
   "deathSound": 237,
   "respawnDelay": 59,

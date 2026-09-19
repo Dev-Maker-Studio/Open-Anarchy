@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1828
+  ],
   "names": [
     "Giant frog"
   ],
-  "attackAnim": 1793,
+  "attackAnim": "giant_frog_attack",
   "attackSound": 838,
-  "defenceAnim": 1794,
+  "defenceAnim": "giant_frog_block",
   "defendSound": 840,
-  "deathAnim": 1795,
+  "deathAnim": "giant_frog_death",
   "deathDelay": 6,
   "deathSound": 839,
   "respawnDelay": 59,

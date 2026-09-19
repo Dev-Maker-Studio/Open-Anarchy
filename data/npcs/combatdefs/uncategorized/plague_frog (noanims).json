@@ -1,4 +1,7 @@
 {
+  "ids": [
+    1997
+  ],
   "names": [
     "Plague frog"
   ],
@@ -6,7 +9,7 @@
   "attackSound": -1,
   "defenceAnim": -1,
   "defendSound": -1,
-  "deathAnim": 1022,
+  "deathAnim": "chompy_toad_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

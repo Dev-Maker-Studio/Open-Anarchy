@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6993
+  ],
   "names": [
     "Spirit jelly"
   ],
-  "attackAnim": 8569,
+  "attackAnim": "jelly_update_attack",
   "attackSound": -1,
-  "defenceAnim": 8571,
+  "defenceAnim": "jelly_update_defend",
   "defendSound": -1,
-  "deathAnim": 8570,
+  "deathAnim": "jelly_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

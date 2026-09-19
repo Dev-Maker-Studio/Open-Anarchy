@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1540,
+    14489
+  ],
   "names": [
     "Treus Dayth"
   ],
-  "attackAnim": 5540,
+  "attackAnim": "ghost_update_tendrill_attack",
   "attackSound": -1,
-  "defenceAnim": 5541,
+  "defenceAnim": "ghost_update_tendrill_defend",
   "defendSound": -1,
-  "deathAnim": 14766,
+  "deathAnim": "dom_treus_dayth_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

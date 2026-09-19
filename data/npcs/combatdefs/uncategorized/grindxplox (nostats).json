@@ -1,12 +1,16 @@
 {
+  "ids": [
+    8250,
+    8251
+  ],
   "names": [
     "Grindxplox"
   ],
-  "attackAnim": 15071,
-  "attackSound": 2548,
-  "defenceAnim": 15074,
+  "attackAnim": "human_sword_stab",
+  "attackSound": -1,
+  "defenceAnim": "human_sword_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "vkq3_swordsman_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

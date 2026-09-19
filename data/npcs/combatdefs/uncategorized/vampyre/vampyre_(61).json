@@ -2,11 +2,11 @@
   "ids": [
     1223
   ],
-  "attackAnim": 6016,
+  "attackAnim": "myq5_juvenate_rage_attack",
   "attackSound": 879,
-  "defenceAnim": 6063,
+  "defenceAnim": "myq5_juvenate_rage_defend",
   "defendSound": 884,
-  "deathAnim": 6031,
+  "deathAnim": "myq5_juvenate_rage_death",
   "deathDelay": 4,
   "deathSound": 882,
   "respawnDelay": 59,

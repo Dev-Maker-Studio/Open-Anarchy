@@ -1,12 +1,17 @@
 {
+  "ids": [
+    7138,
+    7139,
+    7140
+  ],
   "names": [
     "Dagon'hai Monk"
   ],
   "attackAnim": 422,
   "attackSound": 2566,
-  "defenceAnim": 425,
+  "defenceAnim": "human_unarmed_def",
   "defendSound": 513,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": 512,
   "respawnDelay": 59,

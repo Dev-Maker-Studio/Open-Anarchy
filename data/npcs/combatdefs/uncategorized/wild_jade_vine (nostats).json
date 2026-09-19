@@ -1,12 +1,18 @@
 {
+  "ids": [
+    3409,
+    3410,
+    3411,
+    3412
+  ],
   "names": [
     "Wild jade vine"
   ],
-  "attackAnim": 7246,
+  "attackAnim": "roots_giant_vine_attack",
   "attackSound": -1,
-  "defenceAnim": 7247,
+  "defenceAnim": "roots_giant_vine_defend",
   "defendSound": -1,
-  "deathAnim": 7249,
+  "deathAnim": "roots_giant_vine_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

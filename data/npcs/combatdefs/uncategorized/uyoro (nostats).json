@@ -1,14 +1,17 @@
 {
+  "ids": [
+    1444
+  ],
   "names": [
     "Uyoro"
   ],
-  "attackAnim": 1394,
-  "attackSound": 447,
-  "defenceAnim": 1395,
-  "defendSound": 451,
-  "deathAnim": 1384,
+  "attackAnim": "m_monkey_attack_doublescimitar",
+  "attackSound": -1,
+  "defenceAnim": "m_monkey_block_doublescimitar",
+  "defendSound": -1,
+  "deathAnim": "m_monkey_death",
   "deathDelay": 6,
-  "deathSound": 450,
+  "deathSound": -1,
   "respawnDelay": 59,
   "hitpoints": 1300,
   "maxHit": 140,

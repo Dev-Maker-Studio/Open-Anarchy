@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1994
+  ],
   "names": [
     "Jackal"
   ],
-  "attackAnim": 6568,
+  "attackAnim": "dog_update_jackal_attack",
   "attackSound": 544,
-  "defenceAnim": 6566,
+  "defenceAnim": "dog_update_jackal_defend",
   "defendSound": 546,
-  "deathAnim": 6567,
+  "deathAnim": "dog_update_jackal_death",
   "deathDelay": 6,
   "deathSound": 545,
   "respawnDelay": 59,

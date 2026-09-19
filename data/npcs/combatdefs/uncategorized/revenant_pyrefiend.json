@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13471
+  ],
   "names": [
     "Revenant pyrefiend"
   ],
-  "attackAnim": 7481,
+  "attackAnim": "wilderness_pyrefiend_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7483,
+  "defenceAnim": "wilderness_pyrefiend_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7482,
+  "deathAnim": "wilderness_pyrefiend_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

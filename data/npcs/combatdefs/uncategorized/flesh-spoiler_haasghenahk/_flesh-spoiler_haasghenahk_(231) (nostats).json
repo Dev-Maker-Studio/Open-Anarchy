@@ -2,11 +2,11 @@
   "ids": [
     11899
   ],
-  "attackAnim": 14469,
+  "attackAnim": "rand_eyespine_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 14471,
+  "defenceAnim": "rand_eyespine_defend",
   "defendSound": -1,
-  "deathAnim": 14468,
+  "deathAnim": "rand_eyespine_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

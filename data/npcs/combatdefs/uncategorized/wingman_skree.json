@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6223
+  ],
   "names": [
     "Wingman Skree"
   ],
-  "attackAnim": 6952,
+  "attackAnim": "godwars_armadyl_cannon_attack",
   "attackSound": -1,
-  "defenceAnim": 6955,
+  "defenceAnim": "godwars_armadyl_defend",
   "defendSound": -1,
-  "deathAnim": 6956,
+  "deathAnim": "godwars_armadyl_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

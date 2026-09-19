@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1539
+  ],
   "names": [
     "Skeletal miner"
   ],
-  "attackAnim": 5485,
+  "attackAnim": "skeleton_update_attack_weapon",
   "attackSound": 2498,
-  "defenceAnim": 5489,
+  "defenceAnim": "skeleton_update_defend",
   "defendSound": 779,
-  "deathAnim": 5491,
+  "deathAnim": "skeleton_update_death",
   "deathDelay": 6,
   "deathSound": 777,
   "respawnDelay": 59,

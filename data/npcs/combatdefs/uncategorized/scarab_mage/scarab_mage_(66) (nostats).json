@@ -2,11 +2,11 @@
   "ids": [
     5254
   ],
-  "attackAnim": 7621,
+  "attackAnim": "scab_insectoid_mage_extinguish_light",
   "attackSound": -1,
-  "defenceAnim": 7608,
+  "defenceAnim": "scab_insectoid_defend_archer",
   "defendSound": -1,
-  "deathAnim": 7609,
+  "deathAnim": "scab_insectoid_death_archer",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

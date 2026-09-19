@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2698
+  ],
   "names": [
     "Black knight"
   ],
-  "attackAnim": 422,
+  "attackAnim": "pest_void_knight_casting",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "tutorial2_white_knight_defend_one",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "luc2_elite_black_knight_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

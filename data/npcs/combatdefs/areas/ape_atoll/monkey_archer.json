@@ -1,12 +1,18 @@
 {
+  "ids": [
+    1456,
+    1457,
+    1458,
+    14211
+  ],
   "names": [
     "Monkey Archer"
   ],
-  "attackAnim": 1394,
+  "attackAnim": "m_monkey_attack_bow",
   "attackSound": 447,
-  "defenceAnim": 1395,
+  "defenceAnim": "m_monkey_block_bow",
   "defendSound": 451,
-  "deathAnim": 1384,
+  "deathAnim": "m_monkey_death",
   "deathDelay": 2,
   "deathSound": 450,
   "respawnDelay": 59,

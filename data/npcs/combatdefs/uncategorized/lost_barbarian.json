@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6102
+  ],
   "names": [
     "Lost barbarian"
   ],
-  "attackAnim": 422,
+  "attackAnim": "human_ddagger_lunge",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "barbarian_unarmedblock",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

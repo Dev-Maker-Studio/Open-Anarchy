@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13465
+  ],
   "names": [
     "Revenant imp"
   ],
-  "attackAnim": 7407,
+  "attackAnim": "wilderness_imp_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7404,
+  "defenceAnim": "wilderness_imp_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7408,
+  "deathAnim": "wilderness_imp_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

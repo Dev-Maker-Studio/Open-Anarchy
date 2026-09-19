@@ -1,12 +1,15 @@
 {
+  "ids": [
+    187
+  ],
   "names": [
     "Rogue"
   ],
-  "attackAnim": 433,
+  "attackAnim": "human_farmersfork_stab",
   "attackSound": 2501,
-  "defenceAnim": 434,
+  "defenceAnim": "human_farmersfork_def",
   "defendSound": 24,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": 512,
   "respawnDelay": 59,

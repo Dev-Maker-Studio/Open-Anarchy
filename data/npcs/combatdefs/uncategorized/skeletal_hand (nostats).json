@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7640
+  ],
   "names": [
     "Skeletal hand"
   ],
-  "attackAnim": 9125,
+  "attackAnim": "giant_crawling_hand_update_attack_small",
   "attackSound": -1,
-  "defenceAnim": 9127,
+  "defenceAnim": "giant_crawling_hand_update_defend_small",
   "defendSound": -1,
-  "deathAnim": 9126,
+  "deathAnim": "giant_crawling_hand_update_death_small",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

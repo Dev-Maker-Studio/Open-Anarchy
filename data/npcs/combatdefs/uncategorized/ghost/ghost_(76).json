@@ -2,11 +2,11 @@
   "ids": [
     4388
   ],
-  "attackAnim": 5532,
+  "attackAnim": "ghost_update_normal_attack",
   "attackSound": 436,
-  "defenceAnim": 5533,
+  "defenceAnim": "ghost_update_normal_defend",
   "defendSound": 439,
-  "deathAnim": 5534,
+  "deathAnim": "ghost_update_normal_death",
   "deathDelay": 6,
   "deathSound": 438,
   "respawnDelay": 59,

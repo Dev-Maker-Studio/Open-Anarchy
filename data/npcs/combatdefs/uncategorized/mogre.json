@@ -1,12 +1,15 @@
 {
+  "ids": [
+    114
+  ],
   "names": [
     "Mogre"
   ],
-  "attackAnim": 8577,
+  "attackAnim": "mogre_male_attack",
   "attackSound": -1,
-  "defenceAnim": 8578,
+  "defenceAnim": "mogre_male_defend",
   "defendSound": -1,
-  "deathAnim": 11445,
+  "deathAnim": "mogre_male_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

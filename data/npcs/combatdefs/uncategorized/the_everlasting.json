@@ -1,12 +1,16 @@
 {
+  "ids": [
+    5903,
+    14542
+  ],
   "names": [
     "The Everlasting"
   ],
-  "attackAnim": 6345,
+  "attackAnim": "dream_everlasting_attack",
   "attackSound": -1,
-  "defenceAnim": 6346,
+  "defenceAnim": "dream_everlasting_defend",
   "defendSound": -1,
-  "deathAnim": 14719,
+  "deathAnim": "dream_everlasting_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

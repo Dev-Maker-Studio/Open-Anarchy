@@ -1,8 +1,11 @@
 {
+  "ids": [
+    1615
+  ],
   "names": [
     "Abyssal demon"
   ],
-  "attackAnim": 1537,
+  "attackAnim": "abyssal_attack",
   "attackSound": 276,
   "defenceAnim": -1,
   "defendSound": 278,

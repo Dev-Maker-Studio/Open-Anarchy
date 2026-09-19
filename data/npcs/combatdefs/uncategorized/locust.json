@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1995
+  ],
   "names": [
     "Locust"
   ],
-  "attackAnim": 2015,
+  "attackAnim": "locust_attack",
   "attackSound": 614,
-  "defenceAnim": 2014,
+  "defenceAnim": "locust_parry",
   "defendSound": 617,
-  "deathAnim": 2013,
+  "deathAnim": "locust_death",
   "deathDelay": 6,
   "deathSound": 616,
   "respawnDelay": 59,

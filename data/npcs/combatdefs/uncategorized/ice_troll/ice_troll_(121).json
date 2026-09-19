@@ -1,15 +1,15 @@
 {
   "ids": [
-    1939,
-    1942,
     1563,
-    1566
+    1566,
+    1939,
+    1942
   ],
-  "attackAnim": 13786,
+  "attackAnim": "update_troll_attack_sword",
   "attackSound": -1,
-  "defenceAnim": 13787,
+  "defenceAnim": "update_troll_block_sword",
   "defendSound": -1,
-  "deathAnim": 13785,
+  "deathAnim": "update_troll_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    15178
+  ],
   "names": [
     "TzHaar-Xil (Hardened)"
   ],
-  "attackAnim": 16147,
+  "attackAnim": "tzhaar_2011_xil_disc_attack",
   "attackSound": -1,
-  "defenceAnim": 16146,
+  "defenceAnim": "tzhaar_2011_xil_defend",
   "defendSound": -1,
-  "deathAnim": 16145,
+  "deathAnim": "tzhaar_2011_xil_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

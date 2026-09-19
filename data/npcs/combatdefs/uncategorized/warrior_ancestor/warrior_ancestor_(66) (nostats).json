@@ -2,11 +2,11 @@
   "ids": [
     6659
   ],
-  "attackAnim": 47,
+  "attackAnim": "smithing_burial_armour_attack",
   "attackSound": -1,
-  "defenceAnim": 49,
+  "defenceAnim": "smithing_burial_armour_defend",
   "defendSound": -1,
-  "deathAnim": 48,
+  "deathAnim": "smithing_burial_armour_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

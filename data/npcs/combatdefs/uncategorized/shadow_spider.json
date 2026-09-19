@@ -1,12 +1,15 @@
 {
+  "ids": [
+    58
+  ],
   "names": [
     "Shadow spider"
   ],
-  "attackAnim": 5327,
+  "attackAnim": "spider_update_attack",
   "attackSound": 537,
-  "defenceAnim": 5238,
+  "defenceAnim": "spider_update_defend",
   "defendSound": 539,
-  "deathAnim": 5329,
+  "deathAnim": "spider_update_death",
   "deathDelay": 6,
   "deathSound": 538,
   "respawnDelay": 59,

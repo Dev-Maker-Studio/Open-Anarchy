@@ -1,13 +1,14 @@
 {
   "ids": [
     6174,
-    6388
+    6388,
+    7478
   ],
   "attackAnim": 422,
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_unarmed_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

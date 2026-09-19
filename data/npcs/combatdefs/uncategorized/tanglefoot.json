@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3313
+  ],
   "names": [
     "Tanglefoot"
   ],
-  "attackAnim": 13875,
+  "attackAnim": "fairykit_tanglefoot_large_attack",
   "attackSound": -1,
-  "defenceAnim": 13872,
+  "defenceAnim": "fairykit_tanglefoot_large_defend",
   "defendSound": -1,
-  "deathAnim": 13878,
+  "deathAnim": "fairykit_tanglefoot_large_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

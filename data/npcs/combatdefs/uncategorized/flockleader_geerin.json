@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6225
+  ],
   "names": [
     "Flockleader Geerin"
   ],
-  "attackAnim": 6954,
+  "attackAnim": "godwars_armadyl_sword_attack",
   "attackSound": -1,
-  "defenceAnim": 6955,
+  "defenceAnim": "godwars_armadyl_defend",
   "defendSound": -1,
-  "deathAnim": 6956,
+  "deathAnim": "godwars_armadyl_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

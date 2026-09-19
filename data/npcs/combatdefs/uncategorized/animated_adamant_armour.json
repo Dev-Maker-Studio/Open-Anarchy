@@ -1,12 +1,15 @@
 {
+  "ids": [
+    4283
+  ],
   "names": [
     "Animated Adamant Armour"
   ],
-  "attackAnim": 12311,
+  "attackAnim": "human_sword_slash_metal",
   "attackSound": -1,
-  "defenceAnim": 1156,
+  "defenceAnim": "human_shield_defence",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

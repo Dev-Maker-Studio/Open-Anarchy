@@ -2,11 +2,11 @@
   "ids": [
     282
   ],
-  "attackAnim": 391,
+  "attackAnim": "human_sword_transslash",
   "attackSound": -1,
-  "defenceAnim": 403,
+  "defenceAnim": "human_blunt_block",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

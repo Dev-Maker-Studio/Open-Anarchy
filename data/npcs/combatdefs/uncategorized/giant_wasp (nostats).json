@@ -1,12 +1,16 @@
 {
+  "ids": [
+    6381,
+    6383
+  ],
   "names": [
     "Giant wasp"
   ],
-  "attackAnim": 7242,
+  "attackAnim": "roots_giant_wasp_attack",
   "attackSound": -1,
-  "defenceAnim": 7243,
+  "defenceAnim": "roots_giant_wasp_defend",
   "defendSound": -1,
-  "deathAnim": 7244,
+  "deathAnim": "roots_giant_wasp_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

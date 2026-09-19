@@ -1,12 +1,16 @@
 {
+  "ids": [
+    3494,
+    14438
+  ],
   "names": [
     "Flambeed"
   ],
-  "attackAnim": 1750,
+  "attackAnim": "rock_attack",
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": "rock_parry",
   "defendSound": -1,
-  "deathAnim": 14531,
+  "deathAnim": "dom_flambeed_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

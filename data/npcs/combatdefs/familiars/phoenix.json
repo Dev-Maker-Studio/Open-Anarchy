@@ -3,9 +3,9 @@
     8575,
     8576
   ],
-  "attackAnim": 11093,
+  "attackAnim": "phoenix_phoenix_familiar_attack",
   "attackSound": -1,
-  "defenceAnim": 11107,
+  "defenceAnim": "phoenix_familiar_ready_timer",
   "defendSound": -1,
   "deathAnim": 11108,
   "deathDelay": 6,

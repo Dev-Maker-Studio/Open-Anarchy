@@ -1,12 +1,18 @@
 {
+  "ids": [
+    3068,
+    3069,
+    3070,
+    3071
+  ],
   "names": [
     "Skeletal Wyvern"
   ],
-  "attackAnim": 1590,
+  "attackAnim": "wyvern_skeleton_tail_swipe",
   "attackSound": -1,
-  "defenceAnim": 1587,
+  "defenceAnim": "wyvern_skeleton_block",
   "defendSound": -1,
-  "deathAnim": 1591,
+  "deathAnim": "wyvern_skeleton_death",
   "deathDelay": 3,
   "deathSound": -1,
   "respawnDelay": 59,

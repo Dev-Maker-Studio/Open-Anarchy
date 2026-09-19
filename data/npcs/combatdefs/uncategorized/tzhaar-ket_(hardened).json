@@ -1,12 +1,19 @@
 {
+  "ids": [
+    15168,
+    15169,
+    15170,
+    15171,
+    15177
+  ],
   "names": [
     "TzHaar-Ket (Hardened)"
   ],
-  "attackAnim": 16090,
+  "attackAnim": "tzhaar_2011_ket_attack",
   "attackSound": -1,
-  "defenceAnim": 16096,
+  "defenceAnim": "tzhaar_2011_ket_defend",
   "defendSound": -1,
-  "deathAnim": 16092,
+  "deathAnim": "tzhaar_2011_ket_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

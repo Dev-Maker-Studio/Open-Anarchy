@@ -2,11 +2,11 @@
   "ids": [
     507
   ],
-  "attackAnim": 5581,
+  "attackAnim": "zombie_update_attack_champion",
   "attackSound": 931,
-  "defenceAnim": 5576,
+  "defenceAnim": "zombie_update_ready_dragging",
   "defendSound": 923,
-  "deathAnim": 5575,
+  "deathAnim": "zombie_update_death_weapon",
   "deathDelay": 4,
   "deathSound": 922,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13480
+  ],
   "names": [
     "Revenant knight"
   ],
-  "attackAnim": 7441,
+  "attackAnim": "saradomin_knight1_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7443,
+  "defenceAnim": "saradomin_knight1_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7442,
+  "deathAnim": "saradomin_knight1_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

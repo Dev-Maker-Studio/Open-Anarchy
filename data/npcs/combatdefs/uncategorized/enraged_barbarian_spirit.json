@@ -1,12 +1,15 @@
 {
+  "ids": [
+    750
+  ],
   "names": [
     "Enraged barbarian spirit"
   ],
-  "attackAnim": 6726,
+  "attackAnim": "brut_angry_spirit_attack",
   "attackSound": -1,
-  "defenceAnim": 6728,
+  "defenceAnim": "brut_angry_spirit_defend",
   "defendSound": -1,
-  "deathAnim": 6727,
+  "deathAnim": "brut_angry_spirit_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

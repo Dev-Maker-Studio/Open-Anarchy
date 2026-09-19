@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13478
+  ],
   "names": [
     "Revenant ork"
   ],
-  "attackAnim": 7411,
+  "attackAnim": "wilderness_ork_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7413,
+  "defenceAnim": "wilderness_ork_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7412,
+  "deathAnim": "wilderness_ork_ghost_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 236,

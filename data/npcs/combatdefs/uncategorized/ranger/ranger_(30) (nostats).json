@@ -2,11 +2,11 @@
   "ids": [
     13865
   ],
-  "attackAnim": 4633,
+  "attackAnim": "clan_battlefield_ranger_attack",
   "attackSound": -1,
-  "defenceAnim": 4639,
+  "defenceAnim": "clan_battlefield_ranger_defend",
   "defendSound": -1,
-  "deathAnim": 4637,
+  "deathAnim": "clan_battlefield_ranger_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

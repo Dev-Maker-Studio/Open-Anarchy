@@ -2,11 +2,11 @@
   "ids": [
     4401
   ],
-  "attackAnim": 6249,
+  "attackAnim": "small_spider_update_attack",
   "attackSound": 3604,
-  "defenceAnim": 6250,
+  "defenceAnim": "small_spider_update_defend",
   "defendSound": 3609,
-  "deathAnim": 6251,
+  "deathAnim": "small_spider_update_death",
   "deathDelay": 6,
   "deathSound": 3608,
   "respawnDelay": 59,

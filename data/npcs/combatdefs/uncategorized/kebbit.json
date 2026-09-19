@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5137
+  ],
   "names": [
     "Kebbit"
   ],
-  "attackAnim": 5304,
+  "attackAnim": "uber_kebbit_attack",
   "attackSound": -1,
-  "defenceAnim": 5305,
+  "defenceAnim": "uber_kebbit_defend",
   "defendSound": -1,
-  "deathAnim": 5303,
+  "deathAnim": "uber_kebbit_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

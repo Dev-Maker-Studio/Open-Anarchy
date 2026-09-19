@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6369
+  ],
   "names": [
     "Cave lizard"
   ],
-  "attackAnim": 7207,
+  "attackAnim": "rc_zmi_lizard_attack",
   "attackSound": -1,
-  "defenceAnim": 7208,
+  "defenceAnim": "rc_zmi_lizard_defend",
   "defendSound": -1,
-  "deathAnim": 7205,
+  "deathAnim": "rc_zmi_lizzard_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

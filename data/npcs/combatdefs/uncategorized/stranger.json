@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1919
+  ],
   "names": [
     "Stranger"
   ],
-  "attackAnim": 376,
+  "attackAnim": "human_dagger_slash",
   "attackSound": -1,
-  "defenceAnim": 378,
+  "defenceAnim": "human_dagger_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

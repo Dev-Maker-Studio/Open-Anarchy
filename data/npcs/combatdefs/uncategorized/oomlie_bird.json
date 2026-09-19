@@ -1,14 +1,17 @@
 {
+  "ids": [
+    48
+  ],
   "names": [
     "Oomlie bird"
   ],
-  "attackAnim": 7810,
-  "attackSound": 355,
-  "defenceAnim": 3951,
-  "defendSound": 357,
-  "deathAnim": 7813,
+  "attackAnim": "lore_chicken_attack",
+  "attackSound": -1,
+  "defenceAnim": "lore_chicken_defend",
+  "defendSound": -1,
+  "deathAnim": "lore_chicken_death",
   "deathDelay": 6,
-  "deathSound": 356,
+  "deathSound": -1,
   "respawnDelay": 59,
   "hitpoints": 400,
   "maxHit": 50,

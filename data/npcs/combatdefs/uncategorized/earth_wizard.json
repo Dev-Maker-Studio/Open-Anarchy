@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2711
+  ],
   "names": [
     "Earth wizard"
   ],
-  "attackAnim": 711,
+  "attackAnim": "human_caststrike",
   "attackSound": -1,
-  "defenceAnim": 1156,
+  "defenceAnim": "human_shield_defence",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

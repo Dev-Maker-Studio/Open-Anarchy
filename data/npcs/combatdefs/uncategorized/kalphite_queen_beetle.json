@@ -2,11 +2,11 @@
   "ids": [
     1158
   ],
-  "attackAnim": 6241,
+  "attackAnim": "kalphite_update_queen_jaws_attack",
   "attackSound": -1,
-  "defenceAnim": 6232,
+  "defenceAnim": "kalphite_update_queen_defend",
   "defendSound": -1,
-  "deathAnim": 6242,
+  "deathAnim": "kalphite_update_queen_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 60,
