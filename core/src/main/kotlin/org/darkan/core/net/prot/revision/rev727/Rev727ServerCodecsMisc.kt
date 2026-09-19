@@ -431,8 +431,8 @@ internal fun Codec.registerRev727MiscPackets() {
     }
 
     serverProt<SoundMixbussSetLevel>(opcode = 134, size = 2) { out ->
-        out.writeByte(level)
-        out.writeByteInverse(index)
+        out.writeByte(index)
+        out.writeByteInverse(level)
     }
 
     serverProt<ResetSounds>(opcode = 120)
