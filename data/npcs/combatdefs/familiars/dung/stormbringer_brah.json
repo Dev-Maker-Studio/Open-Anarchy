@@ -1,8 +1,12 @@
 {
+  "ids": [
+    11136,
+    11137
+  ],
   "names": [
     "Brah stormbringer"
   ],
-  "attackAnim": 13620,
+  "attackAnim": "rand_mage_familiar_magic_attack",
   "attackSound": -1,
   "defenceAnim": 13674,
   "defendSound": -1,

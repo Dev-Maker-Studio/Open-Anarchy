@@ -1,12 +1,16 @@
 {
+  "ids": [
+    50,
+    2642
+  ],
   "names": [
     "King Black Dragon"
   ],
-  "attackAnim": 91,
+  "attackAnim": "dragon_head_attack",
   "attackSound": 408,
-  "defenceAnim": 89,
+  "defenceAnim": "dragon_block",
   "defendSound": 410,
-  "deathAnim": 92,
+  "deathAnim": "dragon_death",
   "deathDelay": 6,
   "deathSound": 409,
   "respawnDelay": 59,

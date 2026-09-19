@@ -1,4 +1,7 @@
 {
+  "ids": [
+    1240
+  ],
   "names": [
     "Loar Shadow"
   ],
@@ -6,7 +9,7 @@
   "attackSound": -1,
   "defenceAnim": -1,
   "defendSound": -1,
-  "deathAnim": 1292,
+  "deathAnim": "shadeshadow_rise",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

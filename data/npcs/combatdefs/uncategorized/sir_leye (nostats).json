@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2285
+  ],
   "names": [
     "Sir Leye"
   ],
-  "attackAnim": 428,
+  "attackAnim": "human_spear_lunge",
   "attackSound": -1,
-  "defenceAnim": 430,
+  "defenceAnim": "human_spear_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

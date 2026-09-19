@@ -1,12 +1,15 @@
 {
+  "ids": [
+    862
+  ],
   "names": [
     "City guard"
   ],
-  "attackAnim": 2100,
+  "attackAnim": "ogre_male_attack_club",
   "attackSound": -1,
-  "defenceAnim": 11415,
+  "defenceAnim": "ogre_male_defend_unarmed",
   "defendSound": -1,
-  "deathAnim": 8576,
+  "deathAnim": "ogre_male_death_club",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

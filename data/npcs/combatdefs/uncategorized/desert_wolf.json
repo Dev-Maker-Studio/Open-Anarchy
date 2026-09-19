@@ -1,12 +1,17 @@
 {
+  "ids": [
+    839,
+    6050,
+    6051
+  ],
   "names": [
     "Desert Wolf"
   ],
-  "attackAnim": 6559,
+  "attackAnim": "dog_update_wolf_attack",
   "attackSound": 909,
-  "defenceAnim": 6557,
+  "defenceAnim": "dog_update_wolf_defend",
   "defendSound": 912,
-  "deathAnim": 6558,
+  "deathAnim": "dog_update_wolf_death",
   "deathDelay": 6,
   "deathSound": 911,
   "respawnDelay": 39,

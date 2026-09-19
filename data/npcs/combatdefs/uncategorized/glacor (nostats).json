@@ -1,12 +1,15 @@
 {
+  "ids": [
+    14301
+  ],
   "names": [
     "Glacor"
   ],
-  "attackAnim": 9955,
+  "attackAnim": "mah5_glacor_attack",
   "attackSound": -1,
-  "defenceAnim": 9962,
+  "defenceAnim": "mah5_glacor_defend",
   "defendSound": -1,
-  "deathAnim": 9961,
+  "deathAnim": "mah5_glacor_death",
   "deathDelay": 2,
   "deathSound": -1,
   "respawnDelay": 59,

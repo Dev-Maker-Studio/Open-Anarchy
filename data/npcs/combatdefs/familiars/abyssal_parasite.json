@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6819
+  ],
   "names": [
     "Abyssal parasite"
   ],
-  "attackAnim": 8910,
+  "attackAnim": "lore_abyss_leech_magic_bonus",
   "attackSound": -1,
-  "defenceAnim": 7670,
+  "defenceAnim": "lore_abyss_leech_defend",
   "defendSound": -1,
-  "deathAnim": 7671,
+  "deathAnim": "lore_abyss_leech_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

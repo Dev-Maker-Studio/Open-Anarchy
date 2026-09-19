@@ -2,11 +2,11 @@
   "ids": [
     12323
   ],
-  "attackAnim": 3901,
+  "attackAnim": "shifter_attack",
   "attackSound": -1,
-  "defenceAnim": 3902,
+  "defenceAnim": "shifter_defend",
   "defendSound": -1,
-  "deathAnim": 3903,
+  "deathAnim": "shifter_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 59,

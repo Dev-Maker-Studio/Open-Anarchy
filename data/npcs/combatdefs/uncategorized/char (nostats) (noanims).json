@@ -1,10 +1,15 @@
 {
+  "ids": [
+    14815,
+    14816,
+    14817
+  ],
   "names": [
     "Char"
   ],
-  "attackAnim": 15725,
+  "attackAnim": "fmc_char_giant_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 15737,
+  "defenceAnim": "fmc_char_giant_defend",
   "defendSound": -1,
   "deathAnim": -1,
   "deathDelay": 6,

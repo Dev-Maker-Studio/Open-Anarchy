@@ -1,12 +1,15 @@
 {
+  "ids": [
+    79
+  ],
   "names": [
     "Death wing"
   ],
-  "attackAnim": 4915,
+  "attackAnim": "bat_rework_attack",
   "attackSound": -1,
-  "defenceAnim": 4916,
+  "defenceAnim": "bat_rework_defend",
   "defendSound": -1,
-  "deathAnim": 4917,
+  "deathAnim": "bat_rework_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

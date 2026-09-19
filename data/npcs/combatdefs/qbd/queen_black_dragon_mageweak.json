@@ -2,7 +2,7 @@
   "ids": [
     15507
   ],
-  "attackAnim": -1,
+  "attackAnim": "qbd2_qbd_bite_attack",
   "attackSound": -1,
   "defenceAnim": -1,
   "defendSound": -1,

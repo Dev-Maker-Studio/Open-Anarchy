@@ -1,12 +1,15 @@
 {
+  "ids": [
+    15581
+  ],
   "names": [
     "Party Demon"
   ],
-  "attackAnim": 16990,
+  "attackAnim": "greater_demon_2011_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 16989,
+  "defenceAnim": "greater_demon_2011_defend",
   "defendSound": -1,
-  "deathAnim": 16988,
+  "deathAnim": "greater_demon_2011_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

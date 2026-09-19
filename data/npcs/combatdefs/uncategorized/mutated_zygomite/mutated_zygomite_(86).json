@@ -2,11 +2,11 @@
   "ids": [
     3347
   ],
-  "attackAnim": 2776,
+  "attackAnim": "zygomite_attack",
   "attackSound": -1,
-  "defenceAnim": 2775,
+  "defenceAnim": "zygomite_defend",
   "defendSound": -1,
-  "deathAnim": 2777,
+  "deathAnim": "zygomite_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

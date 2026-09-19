@@ -1,12 +1,16 @@
 {
+  "ids": [
+    4972,
+    14461
+  ],
   "names": [
     "Giant Roc"
   ],
-  "attackAnim": 5024,
+  "attackAnim": "myarm_roc_flap_attack",
   "attackSound": -1,
-  "defenceAnim": 5026,
+  "defenceAnim": "myarm_roc_defend",
   "defendSound": -1,
-  "deathAnim": 14955,
+  "deathAnim": "myarm_roc_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

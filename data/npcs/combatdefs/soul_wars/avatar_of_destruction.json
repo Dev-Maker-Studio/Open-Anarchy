@@ -2,11 +2,11 @@
   "ids": [
     8596
   ],
-  "attackAnim": 11197,
+  "attackAnim": "snp_fire_boss_attack",
   "attackSound": -1,
-  "defenceAnim": 11198,
+  "defenceAnim": "snp_fire_boss_defend",
   "defendSound": -1,
-  "deathAnim": 11199,
+  "deathAnim": "snp_fire_boss_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

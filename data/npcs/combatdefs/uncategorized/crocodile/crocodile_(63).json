@@ -2,11 +2,11 @@
   "ids": [
     1993
   ],
-  "attackAnim": 7588,
+  "attackAnim": "scab_crocodile_attack",
   "attackSound": 386,
-  "defenceAnim": 7590,
+  "defenceAnim": "scab_crocodile_defend",
   "defendSound": 388,
-  "deathAnim": 7591,
+  "deathAnim": "scab_crocodile_death",
   "deathDelay": 6,
   "deathSound": 387,
   "respawnDelay": 59,

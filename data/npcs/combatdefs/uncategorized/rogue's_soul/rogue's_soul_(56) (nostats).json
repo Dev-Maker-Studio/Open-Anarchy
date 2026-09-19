@@ -2,11 +2,11 @@
   "ids": [
     9678
   ],
-  "attackAnim": 16882,
+  "attackAnim": "qbd2_nameless_one_time_stop_attack_start",
   "attackSound": -1,
-  "defenceAnim": 16945,
+  "defenceAnim": "cruc_soul_defend",
   "defendSound": -1,
-  "deathAnim": 9467,
+  "deathAnim": "qbd2_nameless_one_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

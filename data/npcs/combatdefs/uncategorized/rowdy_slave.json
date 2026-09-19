@@ -1,12 +1,15 @@
 {
+  "ids": [
+    827
+  ],
   "names": [
     "Rowdy slave"
   ],
-  "attackAnim": 401,
-  "attackSound": 2508,
-  "defenceAnim": 397,
+  "attackAnim": "human_axe_smash",
+  "attackSound": -1,
+  "defenceAnim": "human_axe_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

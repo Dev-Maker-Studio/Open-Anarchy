@@ -2,11 +2,11 @@
   "ids": [
     1318
   ],
-  "attackAnim": 401,
-  "attackSound": 2504,
-  "defenceAnim": 403,
+  "attackAnim": "cruc_mace_special_attack",
+  "attackSound": -1,
+  "defenceAnim": "parry_anim_mace",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

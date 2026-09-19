@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7823
+  ],
   "names": [
     "Wall beast"
   ],
-  "attackAnim": 1802,
+  "attackAnim": "wall_beast_specialattack_attack",
   "attackSound": -1,
-  "defenceAnim": 1803,
+  "defenceAnim": "wall_beast_specialattack_defend",
   "defendSound": -1,
-  "deathAnim": 1804,
+  "deathAnim": "wall_beast_specialattack_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

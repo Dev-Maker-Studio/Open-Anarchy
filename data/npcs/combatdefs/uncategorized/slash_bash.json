@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2060
+  ],
   "names": [
     "Slash Bash"
   ],
-  "attackAnim": 11458,
+  "attackAnim": "ogre_male_attack_club",
   "attackSound": -1,
-  "defenceAnim": 11459,
+  "defenceAnim": "ogre_male_defend_unarmed",
   "defendSound": -1,
-  "deathAnim": 11457,
+  "deathAnim": "ogre_male_death_club",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

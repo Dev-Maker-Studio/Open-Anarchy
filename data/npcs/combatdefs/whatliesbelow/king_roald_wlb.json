@@ -2,11 +2,11 @@
   "ids": [
     5838
   ],
-  "attackAnim": 6101,
+  "attackAnim": "surok_king_roald_attack",
   "attackSound": -1,
-  "defenceAnim": 6100,
+  "defenceAnim": "surok_king_roald_impact",
   "defendSound": -1,
-  "deathAnim": -1,
+  "deathAnim": "surok_king_roald_collapse",
   "deathDelay": 1,
   "deathSound": -1,
   "respawnDelay": 59,

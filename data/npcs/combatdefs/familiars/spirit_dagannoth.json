@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6805
+  ],
   "names": [
     "Spirit dagannoth"
   ],
-  "attackAnim": 7786,
+  "attackAnim": "lore_dagganoth_attack",
   "attackSound": -1,
-  "defenceAnim": 7785,
+  "defenceAnim": "lore_dagganoth_defend",
   "defendSound": -1,
-  "deathAnim": 7780,
+  "deathAnim": "lore_dagganoth_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

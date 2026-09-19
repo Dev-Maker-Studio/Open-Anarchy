@@ -1,12 +1,17 @@
 {
+  "ids": [
+    5904,
+    14485,
+    14556
+  ],
   "names": [
     "The Untouchable"
   ],
-  "attackAnim": 6329,
+  "attackAnim": "dream_untouchable_attack",
   "attackSound": -1,
-  "defenceAnim": 6330,
+  "defenceAnim": "dream_untouchable_defend",
   "defendSound": -1,
-  "deathAnim": 14555,
+  "deathAnim": "dream_untouchable_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6832
+  ],
   "names": [
     "Desert wyrm"
   ],
-  "attackAnim": 7795,
+  "attackAnim": "lore_wyrm_attk",
   "attackSound": -1,
-  "defenceAnim": 7796,
+  "defenceAnim": "lore_wyrm_defend",
   "defendSound": -1,
-  "deathAnim": 7797,
+  "deathAnim": "lore_wyrm_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

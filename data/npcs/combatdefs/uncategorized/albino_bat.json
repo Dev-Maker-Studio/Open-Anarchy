@@ -1,14 +1,17 @@
 {
+  "ids": [
+    4345
+  ],
   "names": [
     "Albino bat"
   ],
-  "attackAnim": 4915,
-  "attackSound": 292,
-  "defenceAnim": 4916,
-  "defendSound": 294,
-  "deathAnim": 4917,
+  "attackAnim": "bat_rework_attack",
+  "attackSound": -1,
+  "defenceAnim": "bat_rework_defend",
+  "defendSound": -1,
+  "deathAnim": "bat_rework_death",
   "deathDelay": 6,
-  "deathSound": 293,
+  "deathSound": -1,
   "respawnDelay": 59,
   "hitpoints": 330,
   "maxHit": 71,

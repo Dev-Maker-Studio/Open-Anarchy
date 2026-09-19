@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3058
+  ],
   "names": [
     "Giant Champion"
   ],
-  "attackAnim": 6368,
+  "attackAnim": "giant_champion_attack",
   "attackSound": -1,
-  "defenceAnim": 6370,
+  "defenceAnim": "giant_champion_defend",
   "defendSound": -1,
-  "deathAnim": 6369,
+  "deathAnim": "giant_champion_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -2,11 +2,11 @@
   "ids": [
     3760
   ],
-  "attackAnim": 3882,
+  "attackAnim": "torcher_attack",
   "attackSound": -1,
-  "defenceAnim": 3880,
+  "defenceAnim": "torcher_defend",
   "defendSound": -1,
-  "deathAnim": 3881,
+  "deathAnim": "torcher_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 59,

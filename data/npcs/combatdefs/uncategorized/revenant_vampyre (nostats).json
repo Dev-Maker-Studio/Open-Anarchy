@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13473
+  ],
   "names": [
     "Revenant vampyre"
   ],
-  "attackAnim": 7427,
+  "attackAnim": "wilderness_vampire_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7429,
+  "defenceAnim": "wilderness_vampire_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7428,
+  "deathAnim": "wilderness_vampire_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

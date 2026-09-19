@@ -2,11 +2,11 @@
   "ids": [
     1681
   ],
-  "attackAnim": 4658,
+  "attackAnim": "giant_update_moss_attack",
   "attackSound": 449,
-  "defenceAnim": 4657,
+  "defenceAnim": "giant_update_moss_defend",
   "defendSound": 451,
-  "deathAnim": 4659,
+  "deathAnim": "giant_update_moss_death",
   "deathDelay": 6,
   "deathSound": 450,
   "respawnDelay": 59,

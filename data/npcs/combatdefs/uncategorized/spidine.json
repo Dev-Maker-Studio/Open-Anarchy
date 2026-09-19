@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5594
+  ],
   "names": [
     "Spidine"
   ],
-  "attackAnim": 143,
+  "attackAnim": "giantspider_attack",
   "attackSound": -1,
-  "defenceAnim": 144,
+  "defenceAnim": "giantspider_block",
   "defendSound": -1,
-  "deathAnim": 146,
+  "deathAnim": "giantspider_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

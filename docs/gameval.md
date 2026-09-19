@@ -121,6 +121,11 @@ GamevalCatalog.pack(iface, comp) / ifaceOf(packed) / compOf(packed)
 `GamevalCatalog.placeholder(type, key)` builds the placeholder string for an id, for code that
 needs to recognise one outside the catalog (the codegen does).
 
+`SeqGamevalAdapter` is the consuming half of the seq names: a Gson `TypeAdapter` that reads a
+seq field as either the raw id or its gameval name, and writes the name when the catalog has
+one. `NPCCombatDefinitions` annotates its four animation fields with it, which is what lets
+`data/npcs/combatdefs` carry `human_staff_pound` where it used to carry `413`.
+
 ## Typed constants
 
 For code that names an asset directly, every catalog also becomes a class of compile-time

@@ -1,12 +1,16 @@
 {
+  "ids": [
+    879,
+    14578
+  ],
   "names": [
     "Delrith"
   ],
-  "attackAnim": 64,
+  "attackAnim": "demon_attack",
   "attackSound": -1,
-  "defenceAnim": 65,
+  "defenceAnim": "demon_block",
   "defendSound": -1,
-  "deathAnim": 67,
+  "deathAnim": "demon_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,26 @@
 {
+  "ids": [
+    27,
+    1073,
+    1074,
+    1075,
+    13701,
+    15088,
+    15089,
+    15090,
+    15091,
+    15092,
+    15093,
+    15121
+  ],
   "names": [
     "Archer"
   ],
-  "attackAnim": 426,
-  "attackSound": 2700,
-  "defenceAnim": 425,
+  "attackAnim": "vkqc_archer_attack",
+  "attackSound": -1,
+  "defenceAnim": "vkqc_archer_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "vkqc_archer_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

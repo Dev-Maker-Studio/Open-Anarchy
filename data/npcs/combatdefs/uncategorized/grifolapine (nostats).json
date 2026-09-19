@@ -1,12 +1,16 @@
 {
+  "ids": [
+    14688,
+    14689
+  ],
   "names": [
     "Grifolapine"
   ],
-  "attackAnim": 15486,
+  "attackAnim": "polypore_grifolapine_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 15485,
+  "defenceAnim": "polypore_grifolapine_defend",
   "defendSound": -1,
-  "deathAnim": 15488,
+  "deathAnim": "polypore_grifolapine_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

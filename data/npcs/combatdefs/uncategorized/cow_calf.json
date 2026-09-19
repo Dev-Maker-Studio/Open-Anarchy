@@ -1,12 +1,17 @@
 {
+  "ids": [
+    2310,
+    12364,
+    12366
+  ],
   "names": [
     "Cow calf"
   ],
-  "attackAnim": 5332,
+  "attackAnim": "v02_calf_update_attack",
   "attackSound": 366,
-  "defenceAnim": 5330,
+  "defenceAnim": "v02_calf_update_defend",
   "defendSound": 368,
-  "deathAnim": 5331,
+  "deathAnim": "v02_calf_update_death",
   "deathDelay": 5,
   "deathSound": 367,
   "respawnDelay": 59,

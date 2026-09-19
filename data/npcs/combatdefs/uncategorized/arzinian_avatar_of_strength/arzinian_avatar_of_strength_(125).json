@@ -2,11 +2,11 @@
   "ids": [
     1851
   ],
-  "attackAnim": 1840,
+  "attackAnim": "rock_avatar_attack",
   "attackSound": -1,
-  "defenceAnim": 1842,
+  "defenceAnim": "rock_avatar_block",
   "defendSound": -1,
-  "deathAnim": 1841,
+  "deathAnim": "rock_avatar_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

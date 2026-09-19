@@ -1,12 +1,24 @@
 {
+  "ids": [
+    81,
+    397,
+    1767,
+    3309,
+    12362,
+    12363,
+    12365,
+    14997,
+    14998,
+    14999
+  ],
   "names": [
     "Cow"
   ],
-  "attackAnim": 245,
+  "attackAnim": "v02_cow_update_attack",
   "attackSound": 369,
-  "defenceAnim": 150,
+  "defenceAnim": "v02_cow_update_defend",
   "defendSound": 371,
-  "deathAnim": 244,
+  "deathAnim": "v02_cow_update_death",
   "deathDelay": 5,
   "deathSound": 370,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6810
+  ],
   "names": [
     "Karamthulhu overlord"
   ],
-  "attackAnim": 7963,
+  "attackAnim": "lore_karamthulu_attack",
   "attackSound": -1,
-  "defenceAnim": 7962,
+  "defenceAnim": "lore_karamthulu_defend",
   "defendSound": -1,
-  "deathAnim": 7964,
+  "deathAnim": "lore_karamthulu_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

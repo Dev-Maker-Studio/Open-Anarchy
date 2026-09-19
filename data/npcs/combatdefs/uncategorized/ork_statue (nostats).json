@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7084
+  ],
   "names": [
     "Ork statue"
   ],
-  "attackAnim": 11402,
+  "attackAnim": "chosen_statue_ork_double_grip_attack",
   "attackSound": -1,
-  "defenceAnim": 11401,
+  "defenceAnim": "chosen_statue_ork_defend",
   "defendSound": -1,
-  "deathAnim": 11400,
+  "deathAnim": "chosen_statue_ork_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

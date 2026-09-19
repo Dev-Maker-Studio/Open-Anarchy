@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1802
+  ],
   "names": [
     "Slagilith"
   ],
-  "attackAnim": 1750,
+  "attackAnim": "rock_attack",
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": "rock_parry",
   "defendSound": -1,
-  "deathAnim": 1752,
+  "deathAnim": "rock_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

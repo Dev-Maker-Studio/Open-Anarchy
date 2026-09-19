@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7798
+  ],
   "names": [
     "Monstrous cave crawler"
   ],
-  "attackAnim": 9414,
+  "attackAnim": "cave_crawler_update_attack",
   "attackSound": -1,
-  "defenceAnim": 9417,
+  "defenceAnim": "cave_crawler_update_defend",
   "defendSound": -1,
-  "deathAnim": 9418,
+  "deathAnim": "cave_crawler_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

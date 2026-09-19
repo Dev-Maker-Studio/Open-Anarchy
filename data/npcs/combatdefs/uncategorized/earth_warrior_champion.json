@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3057
+  ],
   "names": [
     "Earth Warrior Champion"
   ],
-  "attackAnim": 2951,
+  "attackAnim": "earthwarrior_chop",
   "attackSound": -1,
-  "defenceAnim": 2952,
+  "defenceAnim": "earthwarrior_def",
   "defendSound": -1,
-  "deathAnim": 2946,
+  "deathAnim": "earthwarrior_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

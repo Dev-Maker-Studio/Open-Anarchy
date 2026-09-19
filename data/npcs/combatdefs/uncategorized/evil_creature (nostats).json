@@ -1,12 +1,17 @@
 {
+  "ids": [
+    6302,
+    6312,
+    6333
+  ],
   "names": [
     "Evil creature"
   ],
-  "attackAnim": 4474,
+  "attackAnim": "eyeglo_fluffie_attack",
   "attackSound": -1,
-  "defenceAnim": 4475,
+  "defenceAnim": "eyeglo_fluffie_defend",
   "defendSound": -1,
-  "deathAnim": 4476,
+  "deathAnim": "eyeglo_fluffie_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

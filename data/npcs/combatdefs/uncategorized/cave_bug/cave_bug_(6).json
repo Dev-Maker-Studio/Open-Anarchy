@@ -2,11 +2,11 @@
   "ids": [
     1832
   ],
-  "attackAnim": 6079,
+  "attackAnim": "monalisk_cave_bug_attack",
   "attackSound": 3489,
-  "defenceAnim": 6080,
+  "defenceAnim": "monalisk_cave_bug_defend",
   "defendSound": 3491,
-  "deathAnim": 6081,
+  "deathAnim": "monalisk_giant_cave_bug_death",
   "deathDelay": 6,
   "deathSound": 3490,
   "respawnDelay": 59,

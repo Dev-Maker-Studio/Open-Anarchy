@@ -1,12 +1,17 @@
 {
+  "ids": [
+    8335,
+    14244,
+    14245
+  ],
   "names": [
     "Mercenary mage"
   ],
-  "attackAnim": 422,
+  "attackAnim": "human_staff_pound",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_staff_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "luc2_elite_guard_mage_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

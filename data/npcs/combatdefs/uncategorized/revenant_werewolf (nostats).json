@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13474
+  ],
   "names": [
     "Revenant werewolf"
   ],
-  "attackAnim": 7397,
+  "attackAnim": "wilderness_werewolf_attack",
   "attackSound": -1,
-  "defenceAnim": 7399,
+  "defenceAnim": "wilderness_werewolf_defend",
   "defendSound": -1,
-  "deathAnim": 7398,
+  "deathAnim": "wilderness_werewolf_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

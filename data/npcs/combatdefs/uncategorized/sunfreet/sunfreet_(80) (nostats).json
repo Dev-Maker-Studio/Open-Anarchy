@@ -2,11 +2,11 @@
   "ids": [
     15225
   ],
-  "attackAnim": 16312,
+  "attackAnim": "dom_runefest_boss_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 16316,
+  "defenceAnim": "dom_runefest_boss_defend",
   "defendSound": -1,
-  "deathAnim": 16313,
+  "deathAnim": "dom_runefest_boss_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

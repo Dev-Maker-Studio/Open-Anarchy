@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13477
+  ],
   "names": [
     "Revenant demon"
   ],
-  "attackAnim": 7474,
+  "attackAnim": "wilderness_lesser_demon_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7476,
+  "defenceAnim": "wilderness_lesser_demon_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7475,
+  "deathAnim": "wilderness_lesser_demon_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

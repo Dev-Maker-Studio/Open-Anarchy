@@ -6,7 +6,7 @@
   "attackSound": -1,
   "defenceAnim": -1,
   "defendSound": -1,
-  "deathAnim": 5183,
+  "deathAnim": "hunting_chinchompa_death",
   "deathDelay": 2,
   "deathSound": -1,
   "respawnDelay": 59,

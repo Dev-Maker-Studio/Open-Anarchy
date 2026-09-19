@@ -2,11 +2,11 @@
   "ids": [
     10111
   ],
-  "attackAnim": 13169,
+  "attackAnim": "fremsaga2_cursebearer_final_being_punched",
   "attackSound": -1,
-  "defenceAnim": 13170,
+  "defenceAnim": "rand_boss_guard_defend",
   "defendSound": -1,
-  "deathAnim": 13171,
+  "deathAnim": "rand_boss_guard_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

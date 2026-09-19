@@ -1,12 +1,22 @@
 {
+  "ids": [
+    11348,
+    11349,
+    11350,
+    11351,
+    11359,
+    11360,
+    11361,
+    11362
+  ],
   "names": [
     "Ork warrior"
   ],
-  "attackAnim": 14031,
+  "attackAnim": "fairykit_orc_ancient_orc01_attack",
   "attackSound": -1,
-  "defenceAnim": 14035,
+  "defenceAnim": "fairykit_orc_ancient_orc01_defend",
   "defendSound": -1,
-  "deathAnim": 14019,
+  "deathAnim": "fairykit_orc_ancient_orc01_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6803
+  ],
   "names": [
     "Spirit cobra"
   ],
-  "attackAnim": 8152,
+  "attackAnim": "lore_snake_attack",
   "attackSound": -1,
-  "defenceAnim": 8154,
+  "defenceAnim": "lore_snake_defend",
   "defendSound": -1,
-  "deathAnim": 8153,
+  "deathAnim": "lore_snake_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

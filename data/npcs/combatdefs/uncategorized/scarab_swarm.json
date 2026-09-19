@@ -1,12 +1,16 @@
 {
+  "ids": [
+    2001,
+    4500
+  ],
   "names": [
     "Scarab swarm"
   ],
-  "attackAnim": 1948,
+  "attackAnim": "scarab_attack",
   "attackSound": 1481,
   "defenceAnim": -1,
   "defendSound": 1843,
-  "deathAnim": 1946,
+  "deathAnim": "scarab_parry",
   "deathDelay": 6,
   "deathSound": 1482,
   "respawnDelay": 59,

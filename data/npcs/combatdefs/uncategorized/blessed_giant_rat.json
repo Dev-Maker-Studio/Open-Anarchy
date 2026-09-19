@@ -1,14 +1,18 @@
 {
+  "ids": [
+    978,
+    4941
+  ],
   "names": [
     "Blessed giant rat"
   ],
-  "attackAnim": 15514,
-  "attackSound": 710,
-  "defenceAnim": 14861,
-  "defendSound": 713,
-  "deathAnim": 15518,
+  "attackAnim": "giant_rat_2010_update_attack",
+  "attackSound": -1,
+  "defenceAnim": "giant_rat_2010_update_defend",
+  "defendSound": -1,
+  "deathAnim": "giant_rat_2010_update_death",
   "deathDelay": 6,
-  "deathSound": 711,
+  "deathSound": -1,
   "respawnDelay": 59,
   "hitpoints": 1,
   "maxHit": 1,

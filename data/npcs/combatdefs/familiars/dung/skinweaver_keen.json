@@ -1,8 +1,12 @@
 {
+  "ids": [
+    11172,
+    11173
+  ],
   "names": [
     "Keen skinweaver"
   ],
-  "attackAnim": 13678,
+  "attackAnim": "rand_healer_familiar_heal",
   "attackSound": -1,
   "defenceAnim": 13674,
   "defendSound": -1,

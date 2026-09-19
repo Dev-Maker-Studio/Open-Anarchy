@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1592,
+    3590
+  ],
   "names": [
     "Steel dragon"
   ],
-  "attackAnim": 13158,
+  "attackAnim": "dragon_attack",
   "attackSound": -1,
-  "defenceAnim": 13163,
+  "defenceAnim": "dragon_block",
   "defendSound": -1,
-  "deathAnim": 13159,
+  "deathAnim": "dragon_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

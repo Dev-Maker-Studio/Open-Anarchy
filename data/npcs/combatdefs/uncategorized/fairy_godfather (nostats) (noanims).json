@@ -1,12 +1,19 @@
 {
+  "ids": [
+    11323,
+    11324,
+    11325,
+    11326,
+    11327
+  ],
   "names": [
     "Fairy Godfather"
   ],
   "attackAnim": -1,
   "attackSound": -1,
-  "defenceAnim": 13969,
+  "defenceAnim": "fairykit_fairy_defend",
   "defendSound": -1,
-  "deathAnim": 13849,
+  "deathAnim": "fairykit_fairy_henchman2_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2265
+  ],
   "names": [
     "Abyssal walker"
   ],
-  "attackAnim": 2192,
+  "attackAnim": "abyssal_walker_attack",
   "attackSound": 233,
-  "defenceAnim": 2193,
+  "defenceAnim": "abyssal_walker_defend",
   "defendSound": 235,
-  "deathAnim": 2194,
+  "deathAnim": "abyssal_walker_death",
   "deathDelay": 3,
   "deathSound": 234,
   "respawnDelay": 59,

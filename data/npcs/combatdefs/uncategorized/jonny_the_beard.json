@@ -1,12 +1,15 @@
 {
+  "ids": [
+    645
+  ],
   "names": [
     "Jonny the beard"
   ],
   "attackAnim": 422,
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_unarmed_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

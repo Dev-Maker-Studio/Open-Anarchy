@@ -1,12 +1,15 @@
 {
+  "ids": [
+    15494
+  ],
   "names": [
     "Flying leech"
   ],
-  "attackAnim": 16820,
+  "attackAnim": "qbd1_mynocks_attack",
   "attackSound": -1,
-  "defenceAnim": 16818,
+  "defenceAnim": "qbd1_mynocks_defend",
   "defendSound": -1,
-  "deathAnim": 16817,
+  "deathAnim": "qbd1_mynocks_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

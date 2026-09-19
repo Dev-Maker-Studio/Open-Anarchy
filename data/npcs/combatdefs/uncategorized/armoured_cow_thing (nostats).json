@@ -1,12 +1,16 @@
 {
+  "ids": [
+    5986,
+    6048
+  ],
   "names": [
     "Armoured cow thing"
   ],
-  "attackAnim": 13001,
+  "attackAnim": "rand_behemoth_boulder_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 13000,
+  "defenceAnim": "rand_behemoth_boulder_defend",
   "defendSound": -1,
-  "deathAnim": 13005,
+  "deathAnim": "rand_behemoth_boulder_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6777
+  ],
   "names": [
     "Locust lancer"
   ],
-  "attackAnim": 7584,
+  "attackAnim": "scab_locust_attack",
   "attackSound": -1,
-  "defenceAnim": 7585,
+  "defenceAnim": "scab_locust_defend",
   "defendSound": -1,
-  "deathAnim": 7581,
+  "deathAnim": "scab_locust_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

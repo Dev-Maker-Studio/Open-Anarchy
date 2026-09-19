@@ -2,11 +2,11 @@
   "ids": [
     11931
   ],
-  "attackAnim": 13320,
+  "attackAnim": "rand_eyesplosion_attack",
   "attackSound": -1,
-  "defenceAnim": 14466,
+  "defenceAnim": "rand_eyesplosion_defend",
   "defendSound": -1,
-  "deathAnim": 14467,
+  "deathAnim": "rand_eyesplosion_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

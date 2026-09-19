@@ -1,12 +1,19 @@
 {
+  "ids": [
+    13214,
+    13215,
+    13216,
+    13217,
+    14606
+  ],
   "names": [
     "Leeuni"
   ],
-  "attackAnim": 15053,
+  "attackAnim": "apmeken_leeuni_remove_mask_attack",
   "attackSound": -1,
-  "defenceAnim": 15041,
+  "defenceAnim": "apmeken_ayuni_defend",
   "defendSound": -1,
-  "deathAnim": 14976,
+  "deathAnim": "dom_eruni_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,17 @@
 {
+  "ids": [
+    7355,
+    7356,
+    9487
+  ],
   "names": [
     "Fire titan"
   ],
-  "attackAnim": 7834,
+  "attackAnim": "lore_fire_titan_attack",
   "attackSound": -1,
-  "defenceAnim": 7832,
+  "defenceAnim": "lore_fire_titan_defend",
   "defendSound": -1,
-  "deathAnim": 7833,
+  "deathAnim": "lore_fire_titan_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

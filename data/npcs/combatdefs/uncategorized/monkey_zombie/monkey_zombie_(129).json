@@ -2,11 +2,11 @@
   "ids": [
     1466
   ],
-  "attackAnim": 1383,
+  "attackAnim": "m_zombie_attack",
   "attackSound": -1,
-  "defenceAnim": 1393,
+  "defenceAnim": "m_monkey_block_scimitar",
   "defendSound": -1,
-  "deathAnim": 1384,
+  "deathAnim": "m_monkey_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

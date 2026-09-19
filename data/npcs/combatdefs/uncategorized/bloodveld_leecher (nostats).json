@@ -1,12 +1,15 @@
 {
+  "ids": [
+    14183
+  ],
   "names": [
     "Bloodveld leecher"
   ],
-  "attackAnim": 9675,
+  "attackAnim": "bloodveld_update_attack_claw",
   "attackSound": -1,
-  "defenceAnim": 9686,
+  "defenceAnim": "bloodveld_update_defend",
   "defendSound": -1,
-  "deathAnim": 9685,
+  "deathAnim": "bloodveld_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

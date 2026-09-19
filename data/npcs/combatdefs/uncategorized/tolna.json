@@ -1,12 +1,17 @@
 {
+  "ids": [
+    3658,
+    3659,
+    3660
+  ],
   "names": [
     "Tolna"
   ],
-  "attackAnim": 3829,
+  "attackAnim": "neckattack",
   "attackSound": -1,
-  "defenceAnim": 3832,
+  "defenceAnim": "neckparry",
   "defendSound": -1,
-  "deathAnim": 3833,
+  "deathAnim": "neckdeath",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

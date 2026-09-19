@@ -1,12 +1,17 @@
 {
+  "ids": [
+    2033,
+    4920,
+    4921
+  ],
   "names": [
     "Giant crypt rat"
   ],
-  "attackAnim": 15514,
+  "attackAnim": "polypore_fungal_rodent_attack",
   "attackSound": 710,
-  "defenceAnim": 14861,
+  "defenceAnim": "giant_rat_2010_update_defend",
   "defendSound": 713,
-  "deathAnim": 15518,
+  "deathAnim": "polypore_fungal_rodent_death",
   "deathDelay": 6,
   "deathSound": 711,
   "respawnDelay": 59,

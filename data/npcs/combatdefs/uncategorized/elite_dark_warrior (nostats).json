@@ -1,12 +1,18 @@
 {
+  "ids": [
+    8312,
+    8313,
+    8314,
+    8315
+  ],
   "names": [
     "Elite Dark Warrior"
   ],
-  "attackAnim": 422,
+  "attackAnim": "luc2_elite_guard_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "luc2_elite_guard_melee_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "luc2_elite_guard_melee_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

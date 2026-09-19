@@ -1,12 +1,19 @@
 {
+  "ids": [
+    7500,
+    7501,
+    7502,
+    7503,
+    13231
+  ],
   "names": [
     "Small scarab"
   ],
-  "attackAnim": 11632,
+  "attackAnim": "scab_scarab_boss_attack",
   "attackSound": -1,
-  "defenceAnim": 11633,
+  "defenceAnim": "scab_scarab_boss_defend",
   "defendSound": -1,
-  "deathAnim": 11634,
+  "deathAnim": "scab_scarab_boss_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

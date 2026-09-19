@@ -1,12 +1,15 @@
 {
+  "ids": [
+    9451
+  ],
   "names": [
     "Spectral tender"
   ],
-  "attackAnim": 5532,
+  "attackAnim": "ghost_update_normal_attack",
   "attackSound": -1,
-  "defenceAnim": 5533,
+  "defenceAnim": "ghost_update_normal_defend",
   "defendSound": -1,
-  "deathAnim": 5534,
+  "deathAnim": "ghost_update_normal_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

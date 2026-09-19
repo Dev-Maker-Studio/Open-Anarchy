@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2255
+  ],
   "names": [
     "Thing under the bed"
   ],
-  "attackAnim": 2167,
+  "attackAnim": "wom_bed_attack",
   "attackSound": -1,
-  "defenceAnim": 2168,
+  "defenceAnim": "wom_bed_block",
   "defendSound": -1,
-  "deathAnim": 2169,
+  "deathAnim": "wom_bed_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

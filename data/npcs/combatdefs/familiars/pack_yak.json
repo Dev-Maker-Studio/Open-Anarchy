@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6874
+  ],
   "names": [
     "Pack yak"
   ],
-  "attackAnim": 853,
+  "attackAnim": "v02_lore_yak_update_attack",
   "attackSound": -1,
-  "defenceAnim": 851,
+  "defenceAnim": "v02_lore_yak_update_defend",
   "defendSound": -1,
-  "deathAnim": 852,
+  "deathAnim": "v02_lore_yak_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 0,

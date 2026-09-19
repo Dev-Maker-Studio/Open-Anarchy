@@ -2,11 +2,11 @@
   "ids": [
     9610
   ],
-  "attackAnim": 6562,
+  "attackAnim": "dog_update_small_dog_attack",
   "attackSound": -1,
-  "defenceAnim": 6563,
+  "defenceAnim": "dog_update_medium_dog_defend",
   "defendSound": -1,
-  "deathAnim": 6564,
+  "deathAnim": "dog_update_medium_dog_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

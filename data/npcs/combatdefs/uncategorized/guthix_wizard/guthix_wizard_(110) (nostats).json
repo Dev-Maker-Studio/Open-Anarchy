@@ -2,11 +2,11 @@
   "ids": [
     11638
   ],
-  "attackAnim": 400,
-  "attackSound": 2549,
-  "defenceAnim": 378,
+  "attackAnim": "human_dagger_slash",
+  "attackSound": -1,
+  "defenceAnim": "human_dagger_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

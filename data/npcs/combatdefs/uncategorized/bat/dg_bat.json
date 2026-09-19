@@ -2,11 +2,11 @@
   "ids": [
     412
   ],
-  "attackAnim": 4915,
+  "attackAnim": "bat_rework_attack",
   "attackSound": -1,
-  "defenceAnim": 4916,
+  "defenceAnim": "bat_rework_defend",
   "defendSound": -1,
-  "deathAnim": 4918,
+  "deathAnim": "bat_rework_death_small",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

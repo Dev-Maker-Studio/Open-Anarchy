@@ -2,11 +2,11 @@
   "ids": [
     509
   ],
-  "attackAnim": 5535,
+  "attackAnim": "ghost_update_nazastarool_attack",
   "attackSound": 436,
-  "defenceAnim": 5536,
+  "defenceAnim": "ghost_update_nazastarool_defend",
   "defendSound": 439,
-  "deathAnim": 5537,
+  "deathAnim": "ghost_update_nazastarool_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

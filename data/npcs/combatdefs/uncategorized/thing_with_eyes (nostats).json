@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5852
+  ],
   "names": [
     "Thing with eyes"
   ],
-  "attackAnim": 13029,
+  "attackAnim": "rand_ihlakhizan_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 13016,
+  "defenceAnim": "rand_ihlakhizan_defend",
   "defendSound": -1,
-  "deathAnim": 13017,
+  "deathAnim": "rand_ihlakhizan_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

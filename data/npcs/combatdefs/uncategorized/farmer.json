@@ -1,12 +1,18 @@
 {
+  "ids": [
+    7,
+    1757,
+    1758,
+    1760
+  ],
   "names": [
     "Farmer"
   ],
-  "attackAnim": 422,
+  "attackAnim": "human_farmersfork_stab",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_farmersfork_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

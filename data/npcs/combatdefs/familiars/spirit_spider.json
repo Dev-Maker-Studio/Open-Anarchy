@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6842
+  ],
   "names": [
     "Spirit spider"
   ],
-  "attackAnim": 5327,
+  "attackAnim": "spider_update_attack",
   "attackSound": -1,
-  "defenceAnim": 5328,
+  "defenceAnim": "spider_update_defend",
   "defendSound": -1,
-  "deathAnim": 5329,
+  "deathAnim": "spider_update_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

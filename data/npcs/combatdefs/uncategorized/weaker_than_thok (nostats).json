@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5048
+  ],
   "names": [
     "Weaker than Thok"
   ],
-  "attackAnim": 401,
-  "attackSound": 2504,
-  "defenceAnim": 403,
+  "attackAnim": "barrow_guthan_stab",
+  "attackSound": -1,
+  "defenceAnim": "barrow_guthan_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

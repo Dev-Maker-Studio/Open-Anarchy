@@ -1,12 +1,17 @@
 {
+  "ids": [
+    475,
+    2245,
+    2246
+  ],
   "names": [
     "Khazard trooper"
   ],
-  "attackAnim": 401,
-  "attackSound": 2508,
-  "defenceAnim": 403,
+  "attackAnim": "cruc_mace_special_attack",
+  "attackSound": -1,
+  "defenceAnim": "parry_anim_mace",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "fight_arena_general_khazard_giant_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

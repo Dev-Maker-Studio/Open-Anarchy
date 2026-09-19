@@ -2,11 +2,11 @@
   "ids": [
     6278
   ],
-  "attackAnim": 11402,
+  "attackAnim": "chosen_statue_ork_double_grip_attack",
   "attackSound": -1,
-  "defenceAnim": 7061,
+  "defenceAnim": "godwars_bandos_defend",
   "defendSound": -1,
-  "deathAnim": 7064,
+  "deathAnim": "godwars_ancient_ork_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 29,

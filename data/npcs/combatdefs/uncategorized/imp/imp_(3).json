@@ -2,11 +2,11 @@
   "ids": [
     709
   ],
-  "attackAnim": 169,
+  "attackAnim": "imp_attack",
   "attackSound": 534,
-  "defenceAnim": 170,
+  "defenceAnim": "imp_block",
   "defendSound": 536,
-  "deathAnim": 172,
+  "deathAnim": "imp_death",
   "deathDelay": 4,
   "deathSound": 535,
   "respawnDelay": 59,

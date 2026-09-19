@@ -1,14 +1,18 @@
 {
+  "ids": [
+    1614,
+    10703
+  ],
   "names": [
     "Death spawn"
   ],
-  "attackAnim": 9459,
-  "attackSound": -1,
-  "defenceAnim": 9461,
-  "defendSound": -1,
-  "deathAnim": 9460,
+  "attackAnim": "devil_creature_update_attack",
+  "attackSound": 879,
+  "defenceAnim": "devil_creature_update_defend",
+  "defendSound": 884,
+  "deathAnim": "devil_creature_update_death",
   "deathDelay": 6,
-  "deathSound": -1,
+  "deathSound": 882,
   "respawnDelay": 59,
   "hitpoints": 600,
   "maxHit": 50,

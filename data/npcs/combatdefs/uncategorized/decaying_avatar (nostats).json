@@ -1,12 +1,16 @@
 {
+  "ids": [
+    9437,
+    14494
+  ],
   "names": [
     "Decaying avatar"
   ],
-  "attackAnim": 11202,
+  "attackAnim": "snp_nature_boss_attack",
   "attackSound": -1,
-  "defenceAnim": 11203,
+  "defenceAnim": "snp_nature_boss_defend",
   "defendSound": -1,
-  "deathAnim": 11204,
+  "deathAnim": "snp_nature_boss_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

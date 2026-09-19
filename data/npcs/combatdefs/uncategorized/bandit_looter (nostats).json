@@ -1,12 +1,19 @@
 {
+  "ids": [
+    7492,
+    7493,
+    7494,
+    7495,
+    7496
+  ],
   "names": [
     "Bandit looter"
   ],
-  "attackAnim": 422,
+  "attackAnim": "sitting_throne_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_sword_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

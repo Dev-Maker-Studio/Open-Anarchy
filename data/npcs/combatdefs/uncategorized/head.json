@@ -1,12 +1,16 @@
 {
+  "ids": [
+    3619,
+    3620
+  ],
   "names": [
     "Head"
   ],
-  "attackAnim": 3731,
+  "attackAnim": "templetrek_tentacle_head_attack",
   "attackSound": -1,
-  "defenceAnim": 3732,
+  "defenceAnim": "templetrek_tentacle_head_defend",
   "defendSound": -1,
-  "deathAnim": 3733,
+  "deathAnim": "templetrek_tentacle_head_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

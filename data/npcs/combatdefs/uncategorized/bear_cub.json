@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1326,
+    1327
+  ],
   "names": [
     "Bear Cub"
   ],
-  "attackAnim": 4925,
+  "attackAnim": "bear_rework_attack",
   "attackSound": -1,
-  "defenceAnim": 4927,
+  "defenceAnim": "bear_rework_defend",
   "defendSound": -1,
-  "deathAnim": 4929,
+  "deathAnim": "bear_rework_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

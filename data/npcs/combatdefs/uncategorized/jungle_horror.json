@@ -1,12 +1,19 @@
 {
+  "ids": [
+    4348,
+    4349,
+    4350,
+    4351,
+    4352
+  ],
   "names": [
     "Jungle horror"
   ],
-  "attackAnim": 4235,
+  "attackAnim": "harmless_island_jungle_horror_attackb",
   "attackSound": -1,
-  "defenceAnim": 4232,
+  "defenceAnim": "harmless_island_jungle_horror_block",
   "defendSound": -1,
-  "deathAnim": 4233,
+  "deathAnim": "harmless_island_jungle_horror_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

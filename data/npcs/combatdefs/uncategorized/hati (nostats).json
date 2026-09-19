@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13460
+  ],
   "names": [
     "Hati"
   ],
-  "attackAnim": 15251,
+  "attackAnim": "hati2_skollwolf_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 15253,
+  "defenceAnim": "dog_update_wolf_defend",
   "defendSound": -1,
-  "deathAnim": 15252,
+  "deathAnim": "dog_update_wolf_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

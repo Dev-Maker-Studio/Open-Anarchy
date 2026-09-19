@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13472
+  ],
   "names": [
     "Revenant hobgoblin"
   ],
-  "attackAnim": 7418,
+  "attackAnim": "wilderness_hobgoblin_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7420,
+  "defenceAnim": "wilderness_hobgoblin_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7419,
+  "deathAnim": "wilderness_hobgoblin_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,18 @@
 {
+  "ids": [
+    1822,
+    1823,
+    1824,
+    1825
+  ],
   "names": [
     "Cave goblin"
   ],
-  "attackAnim": 6001,
+  "attackAnim": "dorgesh_goblin_unarmed_attack",
   "attackSound": 465,
-  "defenceAnim": 6002,
+  "defenceAnim": "dorgesh_goblin_unarmed_defend",
   "defendSound": 467,
-  "deathAnim": 6003,
+  "deathAnim": "dorgesh_goblin_death",
   "deathDelay": 6,
   "deathSound": 466,
   "respawnDelay": 59,

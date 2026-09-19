@@ -1,12 +1,16 @@
 {
+  "ids": [
+    14692,
+    14693
+  ],
   "names": [
     "Fungal rodent"
   ],
-  "attackAnim": 14859,
+  "attackAnim": "giant_rat_2010_update_attack",
   "attackSound": -1,
-  "defenceAnim": 14860,
+  "defenceAnim": "giant_rat_2010_update_death",
   "defendSound": -1,
-  "deathAnim": 14861,
+  "deathAnim": "giant_rat_2010_update_defend",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

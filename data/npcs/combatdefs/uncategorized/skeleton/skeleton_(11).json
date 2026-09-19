@@ -2,11 +2,11 @@
   "ids": [
     7921
   ],
-  "attackAnim": 12863,
+  "attackAnim": "lumbcat_tomb_wraiths_unarmed_attack",
   "attackSound": -1,
-  "defenceAnim": 12864,
+  "defenceAnim": "lumbcat_tomb_wraiths_unarmed_defend",
   "defendSound": -1,
-  "deathAnim": 12869,
+  "deathAnim": "lumbcat_tomb_wraiths_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

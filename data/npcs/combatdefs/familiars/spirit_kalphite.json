@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6995
+  ],
   "names": [
     "Spirit kalphite"
   ],
-  "attackAnim": 8519,
+  "attackAnim": "lore_kalphite_ready_timer",
   "attackSound": -1,
-  "defenceAnim": 8518,
+  "defenceAnim": "lore_kalphite_ready",
   "defendSound": -1,
-  "deathAnim": 8517,
+  "deathAnim": "lore_kalphite_sandstorm",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

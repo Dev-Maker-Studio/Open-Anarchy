@@ -2,11 +2,11 @@
   "ids": [
     7078
   ],
-  "attackAnim": 8636,
+  "attackAnim": "afr_ogress_warrior_attack_club",
   "attackSound": -1,
-  "defenceAnim": 8638,
+  "defenceAnim": "afr_ogress_warrior_defend_club",
   "defendSound": -1,
-  "deathAnim": 8640,
+  "deathAnim": "afr_ogress_warrior_death_club",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

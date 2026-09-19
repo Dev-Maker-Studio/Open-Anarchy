@@ -1,12 +1,16 @@
 {
+  "ids": [
+    6712,
+    13577
+  ],
   "names": [
     "Barrelchest Mk II"
   ],
-  "attackAnim": 5894,
+  "attackAnim": "brain_barrelchest_normal_attack",
   "attackSound": -1,
-  "defenceAnim": 5897,
+  "defenceAnim": "brain_barrelchest_defend",
   "defendSound": -1,
-  "deathAnim": 5898,
+  "deathAnim": "brain_barrelchest_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

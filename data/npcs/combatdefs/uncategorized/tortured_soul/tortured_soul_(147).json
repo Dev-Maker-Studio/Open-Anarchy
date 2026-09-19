@@ -2,11 +2,11 @@
   "ids": [
     15510
   ],
-  "attackAnim": 16882,
+  "attackAnim": "cruc_soul_attack",
   "attackSound": -1,
-  "defenceAnim": 16945,
+  "defenceAnim": "cruc_soul_defend",
   "defendSound": -1,
-  "deathAnim": 16946,
+  "deathAnim": "cruc_soul_disappear",
   "deathDelay": 1,
   "deathSound": -1,
   "respawnDelay": 59,

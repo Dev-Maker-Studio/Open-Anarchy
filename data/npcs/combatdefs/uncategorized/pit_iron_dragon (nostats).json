@@ -1,12 +1,16 @@
 {
+  "ids": [
+    11567,
+    11595
+  ],
   "names": [
     "Pit iron dragon"
   ],
-  "attackAnim": 13158,
+  "attackAnim": "dragon_update_09_firebreath_attack",
   "attackSound": -1,
-  "defenceAnim": 13163,
+  "defenceAnim": "dragon_update_09_metal_dragon_defend",
   "defendSound": -1,
-  "deathAnim": 13159,
+  "deathAnim": "dragon_update_09_metal_dragon_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

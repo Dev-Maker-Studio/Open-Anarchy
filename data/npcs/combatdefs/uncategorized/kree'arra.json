@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6222
+  ],
   "names": [
     "Kree'arra"
   ],
-  "attackAnim": 6977,
+  "attackAnim": "godwars_armadyl_avatar_wind_attack",
   "attackSound": -1,
-  "defenceAnim": 6974,
+  "defenceAnim": "godwars_armadyl_avatar_defend",
   "defendSound": -1,
-  "deathAnim": 6975,
+  "deathAnim": "godwars_armadyl_avatar_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 149,

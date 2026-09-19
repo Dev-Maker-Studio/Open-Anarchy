@@ -1,12 +1,18 @@
 {
+  "ids": [
+    1367,
+    1368,
+    1389,
+    1391
+  ],
   "names": [
     "Skraeling"
   ],
-  "attackAnim": 395,
-  "attackSound": 2498,
-  "defenceAnim": 425,
+  "attackAnim": "human_axe_smash",
+  "attackSound": -1,
+  "defenceAnim": "human_axe_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

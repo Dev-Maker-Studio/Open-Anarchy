@@ -1,12 +1,26 @@
 {
+  "ids": [
+    3497,
+    3498,
+    3499,
+    3500,
+    3501,
+    3502,
+    14476,
+    14477,
+    14478,
+    14479,
+    14480,
+    14481
+  ],
   "names": [
     "Gelatinnoth Mother"
   ],
-  "attackAnim": 1341,
+  "attackAnim": "horror_dagannoth_attack",
   "attackSound": -1,
-  "defenceAnim": 1340,
+  "defenceAnim": "horror_dagannoth_defend",
   "defendSound": -1,
-  "deathAnim": 1342,
+  "deathAnim": "evq_dagannoth_mother_death_ready",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

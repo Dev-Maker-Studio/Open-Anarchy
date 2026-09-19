@@ -1,12 +1,15 @@
 {
+  "ids": [
+    15298
+  ],
   "names": [
     "A face only his mum loves"
   ],
-  "attackAnim": 14503,
+  "attackAnim": "zombie_update_attack_normal",
   "attackSound": -1,
-  "defenceAnim": 14501,
+  "defenceAnim": "zombie_update_defend_champion",
   "defendSound": -1,
-  "deathAnim": 14500,
+  "deathAnim": "zombie_update_death_normal",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

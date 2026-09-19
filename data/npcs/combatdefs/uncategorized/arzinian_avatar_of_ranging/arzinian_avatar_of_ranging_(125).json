@@ -2,11 +2,11 @@
   "ids": [
     1854
   ],
-  "attackAnim": 1843,
+  "attackAnim": "rock_avatar_archer_attack",
   "attackSound": -1,
-  "defenceAnim": 1842,
+  "defenceAnim": "rock_avatar_block",
   "defendSound": -1,
-  "deathAnim": 1841,
+  "deathAnim": "dom_arzinian_avatar_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

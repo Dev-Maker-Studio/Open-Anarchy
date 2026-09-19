@@ -1,12 +1,15 @@
 {
+  "ids": [
+    140
+  ],
   "names": [
     "Soulless"
   ],
-  "attackAnim": 338,
+  "attackAnim": "souless_attack",
   "attackSound": -1,
-  "defenceAnim": 339,
+  "defenceAnim": "souless_block",
   "defendSound": -1,
-  "deathAnim": 340,
+  "deathAnim": "souless_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

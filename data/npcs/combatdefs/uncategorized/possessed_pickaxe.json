@@ -1,12 +1,18 @@
 {
+  "ids": [
+    842,
+    1536,
+    5413,
+    14492
+  ],
   "names": [
     "Possessed pickaxe"
   ],
-  "attackAnim": 185,
+  "attackAnim": "magicaxe_attack",
   "attackSound": 2498,
-  "defenceAnim": 186,
+  "defenceAnim": "magicaxe_block",
   "defendSound": 1973,
-  "deathAnim": 188,
+  "deathAnim": "magicaxe_death",
   "deathDelay": 6,
   "deathSound": 1977,
   "respawnDelay": 59,

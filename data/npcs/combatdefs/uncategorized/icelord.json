@@ -1,12 +1,18 @@
 {
+  "ids": [
+    5452,
+    5453,
+    5454,
+    5455
+  ],
   "names": [
     "Icelord"
   ],
-  "attackAnim": 5724,
+  "attackAnim": "peng_icelord_attack",
   "attackSound": -1,
-  "defenceAnim": 5723,
+  "defenceAnim": "peng_icelord_defend",
   "defendSound": -1,
-  "deathAnim": 5726,
+  "deathAnim": "peng_icelord_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

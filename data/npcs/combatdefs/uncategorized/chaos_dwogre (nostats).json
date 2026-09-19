@@ -1,12 +1,15 @@
 {
+  "ids": [
+    8771
+  ],
   "names": [
     "Chaos dwogre"
   ],
-  "attackAnim": 12146,
+  "attackAnim": "ra3_dwogre_attack",
   "attackSound": -1,
-  "defenceAnim": 12147,
+  "defenceAnim": "ra3_dwogre_defend",
   "defendSound": -1,
-  "deathAnim": 12150,
+  "deathAnim": "ra3_dwogre_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

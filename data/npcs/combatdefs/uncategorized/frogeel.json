@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5593
+  ],
   "names": [
     "Frogeel"
   ],
-  "attackAnim": 5842,
+  "attackAnim": "tol_frogeel_attack",
   "attackSound": -1,
-  "defenceAnim": 5843,
+  "defenceAnim": "tol_frogeel_defend",
   "defendSound": -1,
-  "deathAnim": 5841,
+  "deathAnim": "tol_frogeel_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,17 @@
 {
+  "ids": [
+    2050,
+    2056,
+    2057
+  ],
   "names": [
     "Skogre"
   ],
-  "attackAnim": 11438,
+  "attackAnim": "zogre_male_attack",
   "attackSound": -1,
-  "defenceAnim": 11437,
+  "defenceAnim": "zogre_male_defend",
   "defendSound": -1,
-  "deathAnim": 11435,
+  "deathAnim": "zogre_male_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

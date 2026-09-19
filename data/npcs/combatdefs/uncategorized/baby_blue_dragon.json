@@ -1,12 +1,17 @@
 {
+  "ids": [
+    52,
+    4665,
+    4666
+  ],
   "names": [
     "Baby blue dragon"
   ],
-  "attackAnim": 14270,
+  "attackAnim": "dragon_update_09_adolescent_dragon_attack",
   "attackSound": 405,
-  "defenceAnim": 14269,
+  "defenceAnim": "dragon_update_09_adolescent_dragon_defend",
   "defendSound": 407,
-  "deathAnim": 14271,
+  "deathAnim": "dragon_update_09_adolescent_dragon_death",
   "deathDelay": 6,
   "deathSound": 406,
   "respawnDelay": 59,

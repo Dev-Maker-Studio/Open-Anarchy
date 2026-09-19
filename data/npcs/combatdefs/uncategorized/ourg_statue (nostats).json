@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7086
+  ],
   "names": [
     "Ourg statue"
   ],
-  "attackAnim": 11408,
+  "attackAnim": "chosen_statue_ork_double_grip_attack",
   "attackSound": -1,
-  "defenceAnim": 11409,
+  "defenceAnim": "chosen_statue_ork_defend",
   "defendSound": -1,
-  "deathAnim": 11410,
+  "deathAnim": "chosen_statue_ork_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,
