@@ -1,12 +1,18 @@
 {
+  "ids": [
+    13447,
+    13448,
+    13449,
+    13450
+  ],
   "names": [
     "Nex"
   ],
-  "attackAnim": 6354,
+  "attackAnim": "godwars2_zaros_attack",
   "attackSound": -1,
-  "defenceAnim": 6983,
+  "defenceAnim": "godwars2_zaros_defend",
   "defendSound": -1,
-  "deathAnim": 6951,
+  "deathAnim": "godwars2_zaros_death",
   "deathDelay": 7,
   "deathSound": -1,
   "respawnDelay": 149,

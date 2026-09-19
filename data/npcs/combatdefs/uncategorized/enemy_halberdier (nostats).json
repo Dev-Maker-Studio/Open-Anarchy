@@ -1,12 +1,18 @@
 {
+  "ids": [
+    12164,
+    12207,
+    12209,
+    12210
+  ],
   "names": [
     "Enemy Halberdier"
   ],
-  "attackAnim": 422,
+  "attackAnim": "vkqc_halberdier_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "vkqc_halberdier_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "vkqc_halberdier_walk",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

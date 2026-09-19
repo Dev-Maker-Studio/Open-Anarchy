@@ -1,12 +1,18 @@
 {
+  "ids": [
+    742,
+    6087,
+    14548,
+    14554
+  ],
   "names": [
     "Elvarg"
   ],
-  "attackAnim": 12252,
+  "attackAnim": "dragon_update_09_attack",
   "attackSound": -1,
-  "defenceAnim": 12251,
+  "defenceAnim": "dragon_update_09_defend",
   "defendSound": -1,
-  "deathAnim": 14260,
+  "deathAnim": "dragon_update_09_elvarg_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

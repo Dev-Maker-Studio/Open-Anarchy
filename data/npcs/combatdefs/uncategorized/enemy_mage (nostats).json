@@ -1,12 +1,18 @@
 {
+  "ids": [
+    12183,
+    12216,
+    12218,
+    12219
+  ],
   "names": [
     "Enemy Mage"
   ],
-  "attackAnim": 422,
+  "attackAnim": "sum1_mage_attack_beast",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "warguild_mage_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "luc2_elite_guard_mage_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

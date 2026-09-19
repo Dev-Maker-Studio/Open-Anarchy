@@ -1,12 +1,15 @@
 {
+  "ids": [
+    15173
+  ],
   "names": [
     "Odischamp"
   ],
-  "attackAnim": -1,
+  "attackAnim": "human_staff_pound",
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": "human_staff_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

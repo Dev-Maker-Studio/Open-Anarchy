@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6799
+  ],
   "names": [
     "Praying mantis"
   ],
-  "attackAnim": 8069,
+  "attackAnim": "lore_mantis_slash_attack",
   "attackSound": -1,
-  "defenceAnim": 8066,
+  "defenceAnim": "lore_mantis_defend",
   "defendSound": -1,
-  "deathAnim": 8065,
+  "deathAnim": "lore_mantis_death",
   "deathDelay": 3,
   "deathSound": -1,
   "respawnDelay": 59,

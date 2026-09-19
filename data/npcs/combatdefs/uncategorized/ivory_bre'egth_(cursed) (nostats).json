@@ -1,12 +1,16 @@
 {
+  "ids": [
+    11354,
+    11373
+  ],
   "names": [
     "Ivory Bre'egth (cursed)"
   ],
-  "attackAnim": 13926,
+  "attackAnim": "ft3_breegth_general_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 13953,
+  "defenceAnim": "ft3_breegth_general_defend",
   "defendSound": -1,
-  "deathAnim": 13923,
+  "deathAnim": "ft3_breegth_general_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3062
+  ],
   "names": [
     "Imp Champion"
   ],
-  "attackAnim": 2954,
+  "attackAnim": "champions_imp_stab",
   "attackSound": -1,
-  "defenceAnim": 170,
+  "defenceAnim": "imp_block",
   "defendSound": -1,
-  "deathAnim": 172,
+  "deathAnim": "imp_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

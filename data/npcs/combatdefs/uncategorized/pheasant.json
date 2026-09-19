@@ -1,12 +1,22 @@
 {
+  "ids": [
+    101,
+    102,
+    122,
+    123,
+    390,
+    391,
+    392,
+    393
+  ],
   "names": [
     "Pheasant"
   ],
-  "attackAnim": 6184,
+  "attackAnim": "pheasent_attack",
   "attackSound": -1,
-  "defenceAnim": 6183,
+  "defenceAnim": "pheasent_defend",
   "defendSound": -1,
-  "deathAnim": 6182,
+  "deathAnim": "pheasent_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

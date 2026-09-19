@@ -1,12 +1,16 @@
 {
+  "ids": [
+    14690,
+    14691
+  ],
   "names": [
     "Fungal mage"
   ],
-  "attackAnim": 15507,
+  "attackAnim": "polypore_fungal_mage_attack",
   "attackSound": -1,
-  "defenceAnim": 15508,
+  "defenceAnim": "polypore_fungal_mage_defend",
   "defendSound": -1,
-  "deathAnim": 15511,
+  "deathAnim": "polypore_fungal_mage_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

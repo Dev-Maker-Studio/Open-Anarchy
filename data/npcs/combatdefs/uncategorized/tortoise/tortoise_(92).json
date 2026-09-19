@@ -2,11 +2,11 @@
   "ids": [
     3808
   ],
-  "attackAnim": 3960,
+  "attackAnim": "battle_tortoise_attack",
   "attackSound": -1,
-  "defenceAnim": 3961,
+  "defenceAnim": "battle_tortoise_defend",
   "defendSound": -1,
-  "deathAnim": 3962,
+  "deathAnim": "battle_tortoise_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

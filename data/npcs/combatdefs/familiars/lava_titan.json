@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7342
+  ],
   "names": [
     "Lava titan"
   ],
-  "attackAnim": 7980,
+  "attackAnim": "lore_lava_tytn_attack",
   "attackSound": -1,
-  "defenceAnim": 7981,
+  "defenceAnim": "lore_lava_tytn_defend",
   "defendSound": -1,
-  "deathAnim": 7692,
+  "deathAnim": "lore_lava_tytn_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

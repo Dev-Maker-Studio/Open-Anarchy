@@ -1,12 +1,16 @@
 {
+  "ids": [
+    2452,
+    2885
+  ],
   "names": [
     "Giant Rock Crab"
   ],
-  "attackAnim": 1312,
+  "attackAnim": "horror_crab_attack",
   "attackSound": -1,
-  "defenceAnim": 1313,
+  "defenceAnim": "horror_crab_defend",
   "defendSound": -1,
-  "deathAnim": 1314,
+  "deathAnim": "horror_crab_hide",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

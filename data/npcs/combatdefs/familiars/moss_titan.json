@@ -1,12 +1,16 @@
 {
+  "ids": [
+    7357,
+    7358
+  ],
   "names": [
     "Moss titan"
   ],
-  "attackAnim": 7844,
+  "attackAnim": "lore_moss_titan_attack",
   "attackSound": -1,
-  "defenceAnim": 7842,
+  "defenceAnim": "lore_moss_titan_defend",
   "defendSound": -1,
-  "deathAnim": 7843,
+  "deathAnim": "lore_moss_titan_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

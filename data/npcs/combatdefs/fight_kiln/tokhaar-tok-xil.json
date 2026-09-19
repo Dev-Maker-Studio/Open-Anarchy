@@ -1,12 +1,15 @@
 {
+  "ids": [
+    15205
+  ],
   "names": [
     "TokHaar-Tok-Xil"
   ],
-  "attackAnim": 16131,
+  "attackAnim": "tzhaar_2011_tok_xil_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 16130,
+  "defenceAnim": "tzhaar_2011_tok_xil_defend",
   "defendSound": -1,
-  "deathAnim": 16110,
+  "deathAnim": "tzhaar_2011_tok_xil_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,16 @@
 {
+  "ids": [
+    11196,
+    11197
+  ],
   "names": [
     "Brah worldbearer"
   ],
   "attackAnim": 13617,
   "attackSound": -1,
-  "defenceAnim": 13614,
+  "defenceAnim": "rand_ranger_familiar_defend",
   "defendSound": -1,
-  "deathAnim": 13669,
+  "deathAnim": "rand_female_familiar_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6114
+  ],
   "names": [
     "Drake"
   ],
-  "attackAnim": 747,
+  "attackAnim": "duck_land_attack",
   "attackSound": -1,
-  "defenceAnim": 1014,
+  "defenceAnim": "seagull_defend",
   "defendSound": -1,
-  "deathAnim": 750,
+  "deathAnim": "duck_land_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

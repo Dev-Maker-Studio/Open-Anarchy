@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13475
+  ],
   "names": [
     "Revenant cyclops"
   ],
-  "attackAnim": 7453,
+  "attackAnim": "wilderness_cyclops_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7455,
+  "defenceAnim": "wilderness_cyclops_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7454,
+  "deathAnim": "wilderness_cyclops_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

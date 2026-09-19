@@ -1,12 +1,26 @@
 {
+  "ids": [
+    2542,
+    2543,
+    2546,
+    3353,
+    3354,
+    3355,
+    3359,
+    3360,
+    3364,
+    3365,
+    3714,
+    4342
+  ],
   "names": [
     "Zanik"
   ],
-  "attackAnim": 11308,
+  "attackAnim": "dttd_zanik_draw_and_fire_crossbow",
   "attackSound": -1,
-  "defenceAnim": 6002,
+  "defenceAnim": "dorgesh_goblin_unarmed_defend",
   "defendSound": -1,
-  "deathAnim": 6003,
+  "deathAnim": "dorgesh_goblin_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

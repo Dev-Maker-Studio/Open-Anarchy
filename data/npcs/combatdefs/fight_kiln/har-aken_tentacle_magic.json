@@ -1,12 +1,15 @@
 {
+  "ids": [
+    15210
+  ],
   "names": [
     "Har-Aken (Magic Tentacle)"
   ],
-  "attackAnim": 16252,
+  "attackAnim": "tzhaar2_tokhaar_squid_boss_magic_tentacle_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 16253,
+  "defenceAnim": "tzhaar2_tokhaar_squid_boss_tentacle_ranged_attack",
   "defendSound": -1,
-  "deathAnim": 16243,
+  "deathAnim": "tzhaar2_tokhaar_squid_boss_magic_tentacle_submerge",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

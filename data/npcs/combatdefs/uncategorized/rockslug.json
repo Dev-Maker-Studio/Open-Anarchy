@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1631,
+    1632
+  ],
   "names": [
     "Rockslug"
   ],
-  "attackAnim": 9506,
+  "attackAnim": "rockslug_update_attack",
   "attackSound": 729,
-  "defenceAnim": 9508,
+  "defenceAnim": "rockslug_update_defend",
   "defendSound": 731,
-  "deathAnim": 9507,
+  "deathAnim": "rockslug_update_death",
   "deathDelay": 6,
   "deathSound": 730,
   "respawnDelay": 59,

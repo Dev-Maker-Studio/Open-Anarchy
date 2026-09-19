@@ -1,12 +1,16 @@
 {
+  "ids": [
+    5421,
+    14429
+  ],
   "names": [
     "Mutant tarn"
   ],
-  "attackAnim": 5617,
+  "attackAnim": "lotr_tarn_razorlor_mutant_attack",
   "attackSound": -1,
-  "defenceAnim": 5618,
+  "defenceAnim": "lotr_tarn_razorlor_mutant_defend",
   "defendSound": -1,
-  "deathAnim": 5619,
+  "deathAnim": "lotr_tarn_razorlor_mutant_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

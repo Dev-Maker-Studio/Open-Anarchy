@@ -1,12 +1,15 @@
 {
+  "ids": [
+    193
+  ],
   "names": [
     "Chaos druid warrior"
   ],
   "attackAnim": 400,
   "attackSound": -1,
-  "defenceAnim": 424,
+  "defenceAnim": "human_unarmedblock",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,17 @@
 {
+  "ids": [
+    2499,
+    2501,
+    2503
+  ],
   "names": [
     "Broodoo victim"
   ],
-  "attackAnim": 422,
+  "attackAnim": "sitting_throne_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "tbw_broodoo_shield_block",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

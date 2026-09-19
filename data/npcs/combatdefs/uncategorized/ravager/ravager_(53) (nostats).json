@@ -2,11 +2,11 @@
   "ids": [
     3743
   ],
-  "attackAnim": 3915,
+  "attackAnim": "ravager_attack",
   "attackSound": -1,
-  "defenceAnim": 3916,
+  "defenceAnim": "ravager_defend",
   "defendSound": -1,
-  "deathAnim": 3917,
+  "deathAnim": "ravager_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5472
+  ],
   "names": [
     "Ice Troll King"
   ],
-  "attackAnim": 5374,
+  "attackAnim": "troll_treetrunk_attack",
   "attackSound": -1,
-  "defenceAnim": 5375,
+  "defenceAnim": "update_fris_troll_king_block",
   "defendSound": -1,
-  "deathAnim": 5209,
+  "deathAnim": "troll_dynamite_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

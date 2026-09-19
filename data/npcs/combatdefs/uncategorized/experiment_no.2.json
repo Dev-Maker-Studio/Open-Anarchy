@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5993
+  ],
   "names": [
     "Experiment No.2"
   ],
-  "attackAnim": 6513,
+  "attackAnim": "grim_experiment_no2_attack",
   "attackSound": -1,
-  "defenceAnim": 6515,
+  "defenceAnim": "grim_experiment_no2_defend",
   "defendSound": -1,
-  "deathAnim": 6512,
+  "deathAnim": "grim_experiment_no2_death",
   "deathDelay": 2,
   "deathSound": -1,
   "respawnDelay": 59,

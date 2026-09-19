@@ -1,12 +1,21 @@
 {
+  "ids": [
+    8281,
+    8282,
+    8283,
+    8546,
+    14464,
+    14465,
+    14466
+  ],
   "names": [
     "Balance Elemental"
   ],
-  "attackAnim": 10669,
+  "attackAnim": "luc2_eob_rock_attack",
   "attackSound": -1,
-  "defenceAnim": 10666,
+  "defenceAnim": "luc2_eob_water_defend",
   "defendSound": -1,
-  "deathAnim": 10697,
+  "deathAnim": "luc2_eob_death_pt_a",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

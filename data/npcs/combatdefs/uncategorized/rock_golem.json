@@ -1,12 +1,15 @@
 {
+  "ids": [
+    8648
+  ],
   "names": [
     "Rock golem"
   ],
-  "attackAnim": 153,
+  "attackAnim": "golem_attack",
   "attackSound": -1,
-  "defenceAnim": 154,
+  "defenceAnim": "golem_block",
   "defendSound": -1,
-  "deathAnim": 156,
+  "deathAnim": "golem_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

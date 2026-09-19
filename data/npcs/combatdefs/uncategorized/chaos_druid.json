@@ -1,12 +1,18 @@
 {
+  "ids": [
+    181,
+    2547,
+    7105,
+    7966
+  ],
   "names": [
     "Chaos druid"
   ],
   "attackAnim": 422,
   "attackSound": 2566,
-  "defenceAnim": 424,
+  "defenceAnim": "human_unarmedblock",
   "defendSound": 513,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": 512,
   "respawnDelay": 59,

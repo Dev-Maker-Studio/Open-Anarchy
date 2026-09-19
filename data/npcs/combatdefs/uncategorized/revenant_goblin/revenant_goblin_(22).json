@@ -2,11 +2,11 @@
   "ids": [
     13467
   ],
-  "attackAnim": 7449,
+  "attackAnim": "wilderness_goblin_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7450,
+  "defenceAnim": "wilderness_goblin_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7448,
+  "deathAnim": "wilderness_goblin_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

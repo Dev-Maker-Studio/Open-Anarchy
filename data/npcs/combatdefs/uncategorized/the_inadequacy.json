@@ -1,12 +1,17 @@
 {
+  "ids": [
+    5902,
+    14539,
+    14561
+  ],
   "names": [
     "The Inadequacy"
   ],
-  "attackAnim": 6318,
+  "attackAnim": "dream_inadequacy_attack_front",
   "attackSound": -1,
-  "defenceAnim": 6324,
+  "defenceAnim": "dream_inadequacy_defend",
   "defendSound": -1,
-  "deathAnim": 6322,
+  "deathAnim": "dream_inadequacy_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

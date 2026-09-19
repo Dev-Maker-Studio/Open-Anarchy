@@ -1,14 +1,17 @@
 {
+  "ids": [
+    1625
+  ],
   "names": [
     "Smokedevil"
   ],
-  "attackAnim": 1557,
-  "attackSound": 414,
-  "defenceAnim": 1555,
-  "defendSound": 416,
-  "deathAnim": 1558,
+  "attackAnim": "dustdevil_attack",
+  "attackSound": -1,
+  "defenceAnim": "dustdevil_defend",
+  "defendSound": -1,
+  "deathAnim": "dustdevil_death",
   "deathDelay": 6,
-  "deathSound": 415,
+  "deathSound": -1,
   "respawnDelay": 59,
   "hitpoints": 1,
   "maxHit": 1,

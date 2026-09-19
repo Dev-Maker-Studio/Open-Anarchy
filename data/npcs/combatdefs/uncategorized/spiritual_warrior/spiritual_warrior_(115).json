@@ -2,11 +2,11 @@
   "ids": [
     6219
   ],
-  "attackAnim": 14740,
+  "attackAnim": "godwars_spiritual_warrior_attack",
   "attackSound": -1,
-  "defenceAnim": 14741,
+  "defenceAnim": "godwars_spiritual_warrior_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

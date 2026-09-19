@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6252
+  ],
   "names": [
     "Bree"
   ],
-  "attackAnim": 7009,
+  "attackAnim": "godwars_centaur_attack_ranged",
   "attackSound": -1,
-  "defenceAnim": 7010,
+  "defenceAnim": "godwars_centaur_defend",
   "defendSound": -1,
-  "deathAnim": 7011,
+  "deathAnim": "godwars_centaur_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 149,

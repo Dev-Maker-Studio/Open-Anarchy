@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2263
+  ],
   "names": [
     "Abyssal leech"
   ],
-  "attackAnim": 2181,
+  "attackAnim": "abyssal_leech_attack",
   "attackSound": 232,
-  "defenceAnim": 2182,
+  "defenceAnim": "abyssal_leech_defend",
   "defendSound": 231,
-  "deathAnim": 2183,
+  "deathAnim": "abyssal_leech_death",
   "deathDelay": 3,
   "deathSound": 230,
   "respawnDelay": 59,

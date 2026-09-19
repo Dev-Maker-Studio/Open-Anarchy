@@ -2,11 +2,11 @@
   "ids": [
     1678
   ],
-  "attackAnim": 1612,
+  "attackAnim": "waa_ovinocanus_attack",
   "attackSound": -1,
-  "defenceAnim": 1613,
+  "defenceAnim": "waa_ovinocanus_defend",
   "defendSound": -1,
-  "deathAnim": 1611,
+  "deathAnim": "waa_ovinocanus_death",
   "deathDelay": 2,
   "deathSound": -1,
   "respawnDelay": 39,

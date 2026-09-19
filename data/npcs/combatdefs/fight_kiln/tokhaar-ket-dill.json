@@ -1,12 +1,16 @@
 {
+  "ids": [
+    15213,
+    15214
+  ],
   "names": [
     "TokHaar-Ket-Dill"
   ],
-  "attackAnim": 16210,
+  "attackAnim": "tzhaar_2011_ket_dill_stomp",
   "attackSound": -1,
-  "defenceAnim": 16160,
+  "defenceAnim": "tzhaar_2011_ket_dill_defend",
   "defendSound": -1,
-  "deathAnim": 16197,
+  "deathAnim": "tzhaar_2011_ket_dill_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

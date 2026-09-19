@@ -1,12 +1,16 @@
 {
+  "ids": [
+    11218,
+    11219
+  ],
   "names": [
     "Naabe deathslinger"
   ],
-  "attackAnim": 13203,
+  "attackAnim": "rand_ranger_familiar_range_special_attack",
   "attackSound": -1,
-  "defenceAnim": 13614,
+  "defenceAnim": "rand_ranger_familiar_defend",
   "defendSound": -1,
-  "deathAnim": 13669,
+  "deathAnim": "rand_female_familiar_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

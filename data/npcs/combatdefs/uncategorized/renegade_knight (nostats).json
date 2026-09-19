@@ -1,12 +1,15 @@
 {
+  "ids": [
+    237
+  ],
   "names": [
     "Renegade Knight"
   ],
-  "attackAnim": 6896,
+  "attackAnim": "kr_npc_coshing_player",
   "attackSound": -1,
-  "defenceAnim": 388,
+  "defenceAnim": "human_sword_def",
   "defendSound": -1,
-  "deathAnim": 6897,
+  "deathAnim": "kr_player_ko",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

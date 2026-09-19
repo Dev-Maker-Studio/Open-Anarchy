@@ -26,6 +26,8 @@ import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
 import com.rs.plugin.annotations.ServerStartupEvent.Priority;
+import com.google.gson.annotations.JsonAdapter;
+import org.darkan.core.gameval.SeqGamevalAdapter;
 
 import java.io.File;
 import java.util.HashMap;
@@ -62,14 +64,18 @@ public class NPCCombatDefinitions {
 	private transient boolean realStats = true;
 	private int[] ids;
 	private String[] names;
+	@JsonAdapter(SeqGamevalAdapter.class)
 	private int attackAnim;
 	private int attackSound = -1;
+	@JsonAdapter(SeqGamevalAdapter.class)
 	private int defenceAnim;
 	private int defendSound = -1;
+	@JsonAdapter(SeqGamevalAdapter.class)
 	private int deathAnim;
 	private int deathDelay;
 	private int deathSound = -1;
 	private int respawnDelay;
+	@JsonAdapter(SeqGamevalAdapter.class)
 	private int respawnAnim = -1;
 	private int hitpoints;
 	private int maxHit;

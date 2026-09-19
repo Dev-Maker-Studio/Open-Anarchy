@@ -2,11 +2,11 @@
   "ids": [
     12327
   ],
-  "attackAnim": 3908,
+  "attackAnim": "lore_spinner_attack",
   "attackSound": -1,
-  "defenceAnim": 3909,
+  "defenceAnim": "lore_spinner_defend",
   "defendSound": -1,
-  "deathAnim": 3910,
+  "deathAnim": "lore_spinner_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 59,

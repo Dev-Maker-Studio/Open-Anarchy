@@ -1,12 +1,21 @@
 {
+  "ids": [
+    4527,
+    4528,
+    4529,
+    4530,
+    4531,
+    4532,
+    4533
+  ],
   "names": [
     "Suqah"
   ],
-  "attackAnim": 4388,
+  "attackAnim": "suqka_attack_swords",
   "attackSound": 815,
-  "defenceAnim": 4385,
+  "defenceAnim": "suqka_defend_swords",
   "defendSound": 817,
-  "deathAnim": 4389,
+  "deathAnim": "suqka_death",
   "deathDelay": 6,
   "deathSound": 816,
   "respawnDelay": 29,

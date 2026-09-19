@@ -1,14 +1,17 @@
 {
+  "ids": [
+    143
+  ],
   "names": [
     "Jungle Wolf"
   ],
-  "attackAnim": 6559,
-  "attackSound": 909,
-  "defenceAnim": 6557,
-  "defendSound": 912,
-  "deathAnim": 6558,
+  "attackAnim": "dog_update_wolf_attack",
+  "attackSound": -1,
+  "defenceAnim": "dog_update_wolf_defend",
+  "defendSound": -1,
+  "deathAnim": "dog_update_wolf_death",
   "deathDelay": 6,
-  "deathSound": 911,
+  "deathSound": -1,
   "respawnDelay": 59,
   "hitpoints": 690,
   "maxHit": 69,

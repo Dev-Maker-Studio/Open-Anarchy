@@ -1,12 +1,15 @@
 {
+  "ids": [
+    4347
+  ],
   "names": [
     "Giant mosquito"
   ],
-  "attackAnim": 2397,
+  "attackAnim": "tbw_mosquito_attack",
   "attackSound": -1,
-  "defenceAnim": 2399,
+  "defenceAnim": "tbw_mosquito_defend",
   "defendSound": -1,
-  "deathAnim": 2398,
+  "deathAnim": "tbw_mosquito_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

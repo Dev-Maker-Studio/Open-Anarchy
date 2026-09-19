@@ -1,12 +1,18 @@
 {
+  "ids": [
+    12181,
+    12224,
+    12226,
+    12227
+  ],
   "names": [
     "Enemy Champion"
   ],
-  "attackAnim": 422,
+  "attackAnim": "vkqc_champion_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "vkqc_champion_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "vkqc_champion_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

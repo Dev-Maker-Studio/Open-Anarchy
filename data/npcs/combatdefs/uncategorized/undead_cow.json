@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1691,
+    5211
+  ],
   "names": [
     "Undead cow"
   ],
-  "attackAnim": 245,
+  "attackAnim": "v02_cow_update_attack",
   "attackSound": 369,
-  "defenceAnim": 150,
+  "defenceAnim": "v02_cow_update_defend",
   "defendSound": 371,
-  "deathAnim": 244,
+  "deathAnim": "v02_cow_update_death",
   "deathDelay": 5,
   "deathSound": 370,
   "respawnDelay": 59,

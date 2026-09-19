@@ -1,12 +1,16 @@
 {
+  "ids": [
+    5906,
+    14540
+  ],
   "names": [
     "A Doubt"
   ],
-  "attackAnim": 6310,
+  "attackAnim": "dream_razorbeast_attack",
   "attackSound": -1,
-  "defenceAnim": 6313,
+  "defenceAnim": "dream_razorbeast_defend",
   "defendSound": -1,
-  "deathAnim": 6315,
+  "deathAnim": "dream_razorbeast_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

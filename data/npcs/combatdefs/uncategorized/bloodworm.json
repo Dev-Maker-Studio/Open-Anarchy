@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2031
+  ],
   "names": [
     "Bloodworm"
   ],
-  "attackAnim": 2070,
+  "attackAnim": "bloodworm_attack",
   "attackSound": 604,
-  "defenceAnim": 2072,
+  "defenceAnim": "bloodworm_block",
   "defendSound": 603,
-  "deathAnim": 2073,
+  "deathAnim": "bloodworm_death",
   "deathDelay": 6,
   "deathSound": 602,
   "respawnDelay": 59,

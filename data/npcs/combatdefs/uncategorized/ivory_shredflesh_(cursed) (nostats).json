@@ -1,12 +1,16 @@
 {
+  "ids": [
+    11352,
+    11371
+  ],
   "names": [
     "Ivory Shredflesh (cursed)"
   ],
-  "attackAnim": 13934,
+  "attackAnim": "ft3_shredflesh_general_attack",
   "attackSound": -1,
-  "defenceAnim": 13931,
+  "defenceAnim": "ft3_shredflesh_general_defend",
   "defendSound": -1,
-  "deathAnim": 13930,
+  "deathAnim": "ft3_shredflesh_general_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

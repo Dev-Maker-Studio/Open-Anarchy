@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5529
+  ],
   "names": [
     "Yak"
   ],
-  "attackAnim": 245,
+  "attackAnim": "v02_cow_update_attack",
   "attackSound": -1,
-  "defenceAnim": 150,
+  "defenceAnim": "v02_cow_update_defend",
   "defendSound": -1,
-  "deathAnim": 244,
+  "deathAnim": "v02_cow_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,13 +1,13 @@
 {
   "ids": [
-    6814,
-    6813
+    6813,
+    6814
   ],
-  "attackAnim": 7741,
+  "attackAnim": "lore_bunyip_attack",
   "attackSound": -1,
-  "defenceAnim": 7739,
+  "defenceAnim": "lore_bunyip_defend",
   "defendSound": -1,
-  "deathAnim": 7740,
+  "deathAnim": "lore_bunyip_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

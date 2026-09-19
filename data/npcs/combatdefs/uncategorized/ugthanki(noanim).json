@@ -1,12 +1,15 @@
 {
+  "ids": [
+    840
+  ],
   "names": [
     "Ugthanki"
   ],
-  "attackAnim": -1,
+  "attackAnim": "camel_rework_attack",
   "attackSound": 369,
-  "defenceAnim": -1,
+  "defenceAnim": "camel_rework_defend",
   "defendSound": 371,
-  "deathAnim": 9674,
+  "deathAnim": "camel_rework_death",
   "deathDelay": 6,
   "deathSound": 370,
   "respawnDelay": 59,

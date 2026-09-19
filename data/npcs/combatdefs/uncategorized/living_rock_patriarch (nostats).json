@@ -1,10 +1,13 @@
 {
+  "ids": [
+    8834
+  ],
   "names": [
     "Living rock patriarch"
   ],
   "attackAnim": 12205,
   "attackSound": -1,
-  "defenceAnim": 12201,
+  "defenceAnim": "lrc_rock_creature_ranged_defend",
   "defendSound": -1,
   "deathAnim": 12206,
   "deathDelay": 6,

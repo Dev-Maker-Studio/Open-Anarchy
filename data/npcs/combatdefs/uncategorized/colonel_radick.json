@@ -1,12 +1,15 @@
 {
+  "ids": [
+    878
+  ],
   "names": [
     "Colonel Radick"
   ],
-  "attackAnim": 395,
-  "attackSound": 2498,
-  "defenceAnim": 425,
+  "attackAnim": "human_axe_smash",
+  "attackSound": -1,
+  "defenceAnim": "human_axe_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "omge_player_mining_collapsed_mine_hooks1_axe",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

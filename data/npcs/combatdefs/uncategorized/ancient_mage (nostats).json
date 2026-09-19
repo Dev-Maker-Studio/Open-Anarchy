@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13459
+  ],
   "names": [
     "Ancient mage"
   ],
   "attackAnim": 1979,
   "attackSound": -1,
-  "defenceAnim": 6183,
+  "defenceAnim": "warguild_mage_def",
   "defendSound": -1,
-  "deathAnim": 6182,
+  "deathAnim": "luc2_elite_guard_mage_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

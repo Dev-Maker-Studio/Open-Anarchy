@@ -2,11 +2,11 @@
   "ids": [
     6241
   ],
-  "attackAnim": 6953,
+  "attackAnim": "godwars_armadyl_spear_attack",
   "attackSound": -1,
-  "defenceAnim": 6955,
+  "defenceAnim": "godwars_armadyl_defend",
   "defendSound": -1,
-  "deathAnim": 6956,
+  "deathAnim": "godwars_armadyl_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

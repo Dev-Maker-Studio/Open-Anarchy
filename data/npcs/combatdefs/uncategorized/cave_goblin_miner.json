@@ -1,12 +1,22 @@
 {
+  "ids": [
+    2069,
+    2070,
+    2071,
+    2072,
+    2075,
+    2076,
+    2077,
+    2078
+  ],
   "names": [
     "Cave goblin miner"
   ],
-  "attackAnim": 6007,
+  "attackAnim": "dorgesh_goblin_club_attack",
   "attackSound": 465,
-  "defenceAnim": 6008,
+  "defenceAnim": "dorgesh_goblin_spear_block",
   "defendSound": 467,
-  "deathAnim": 6003,
+  "deathAnim": "dorgesh_goblin_death",
   "deathDelay": 6,
   "deathSound": 466,
   "respawnDelay": 39,

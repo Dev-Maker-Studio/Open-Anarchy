@@ -2,11 +2,11 @@
   "ids": [
     13839
   ],
-  "attackAnim": 4692,
+  "attackAnim": "clan_battlefield_mage_attack",
   "attackSound": -1,
-  "defenceAnim": 4686,
+  "defenceAnim": "clan_battlefield_mage_defend",
   "defendSound": -1,
-  "deathAnim": 4682,
+  "deathAnim": "clan_battlefield_mage_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

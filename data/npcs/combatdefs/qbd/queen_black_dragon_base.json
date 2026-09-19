@@ -1,12 +1,17 @@
 {
+  "ids": [
+    15454,
+    15508,
+    15509
+  ],
   "names": [
     "Queen Black Dragon"
   ],
-  "attackAnim": 16719,
+  "attackAnim": "qbd2_qbd_swipe_attack_variant_a",
   "attackSound": -1,
   "defenceAnim": -1,
   "defendSound": -1,
-  "deathAnim": 16732,
+  "deathAnim": "qbd1_final_cutscene_qbd_roar",
   "deathDelay": 10,
   "deathSound": -1,
   "respawnDelay": 59,

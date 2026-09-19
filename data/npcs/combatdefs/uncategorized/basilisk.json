@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1616,
+    1617
+  ],
   "names": [
     "Basilisk"
   ],
-  "attackAnim": 260,
+  "attackAnim": "basilisk_update_attack",
   "attackSound": -1,
-  "defenceAnim": 261,
+  "defenceAnim": "basilisk_update_defend",
   "defendSound": -1,
-  "deathAnim": 264,
+  "deathAnim": "basilisk_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

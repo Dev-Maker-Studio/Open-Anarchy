@@ -1,12 +1,16 @@
 {
+  "ids": [
+    11331,
+    11344
+  ],
   "names": [
     "General Shredflesh"
   ],
-  "attackAnim": 13934,
+  "attackAnim": "ft3_gromblood_general_ranged_attack",
   "attackSound": -1,
-  "defenceAnim": 13931,
+  "defenceAnim": "ft3_gromblood_general_defend",
   "defendSound": -1,
-  "deathAnim": 13930,
+  "deathAnim": "ft3_gromblood_general_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

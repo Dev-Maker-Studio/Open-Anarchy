@@ -1,12 +1,20 @@
 {
+  "ids": [
+    8528,
+    8529,
+    8530,
+    8531,
+    14498,
+    14499
+  ],
   "names": [
     "Nomad"
   ],
-  "attackAnim": 12699,
+  "attackAnim": "nom_nomad_launch_special_attack",
   "attackSound": -1,
-  "defenceAnim": 12693,
+  "defenceAnim": "nom_nomad_defend",
   "defendSound": -1,
-  "deathAnim": 12694,
+  "deathAnim": "nom_nomad_death",
   "deathDelay": 10,
   "deathSound": -1,
   "respawnDelay": 0,

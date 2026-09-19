@@ -2,11 +2,11 @@
   "ids": [
     14981
   ],
-  "attackAnim": 13786,
+  "attackAnim": "update_troll_attack_sword",
   "attackSound": -1,
-  "defenceAnim": 13792,
+  "defenceAnim": "update_troll_block",
   "defendSound": -1,
-  "deathAnim": 13785,
+  "deathAnim": "update_troll_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

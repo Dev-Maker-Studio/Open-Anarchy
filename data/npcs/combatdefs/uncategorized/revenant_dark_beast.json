@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13479
+  ],
   "names": [
     "Revenant dark beast"
   ],
-  "attackAnim": 7467,
+  "attackAnim": "wilderness_dark_beast_ghost_attack",
   "attackSound": -1,
-  "defenceAnim": 7469,
+  "defenceAnim": "wilderness_dark_beast_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 7468,
+  "deathAnim": "wilderness_dark_beast_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

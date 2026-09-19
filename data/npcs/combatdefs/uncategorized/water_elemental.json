@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1022
+  ],
   "names": [
     "Water elemental"
   ],
-  "attackAnim": 1044,
+  "attackAnim": "elemental_water_attack",
   "attackSound": 1543,
-  "defenceAnim": 1046,
+  "defenceAnim": "elemental_water_defend",
   "defendSound": 1546,
-  "deathAnim": 1048,
+  "deathAnim": "elemental_water_death",
   "deathDelay": 2,
   "deathSound": 1544,
   "respawnDelay": 50,

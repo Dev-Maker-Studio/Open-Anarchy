@@ -1,12 +1,18 @@
 {
+  "ids": [
+    8320,
+    8321,
+    8322,
+    8323
+  ],
   "names": [
     "Elite Dark Mage"
   ],
-  "attackAnim": 422,
+  "attackAnim": "sum1_mage_attack_beast",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "warguild_mage_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "luc2_elite_guard_melee_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

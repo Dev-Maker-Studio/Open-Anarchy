@@ -2,11 +2,11 @@
   "ids": [
     5213
   ],
-  "attackAnim": 5097,
+  "attackAnim": "barbassault_penance_fighter_attack",
   "attackSound": -1,
-  "defenceAnim": 5096,
+  "defenceAnim": "barbassault_penance_fighter_defend",
   "defendSound": -1,
-  "deathAnim": 5098,
+  "deathAnim": "barbassault_penance_fighter_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

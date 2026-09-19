@@ -1,12 +1,17 @@
 {
+  "ids": [
+    5473,
+    5521,
+    5525
+  ],
   "names": [
     "Ice troll runt"
   ],
-  "attackAnim": 13786,
+  "attackAnim": "troll_treetrunk_attack",
   "attackSound": -1,
-  "defenceAnim": 13787,
+  "defenceAnim": "troll_dynamite_defend",
   "defendSound": -1,
-  "deathAnim": 5209,
+  "deathAnim": "troll_dynamite_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

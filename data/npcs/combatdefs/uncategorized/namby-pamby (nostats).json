@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5372
+  ],
   "names": [
     "Namby-pamby"
   ],
-  "attackAnim": 426,
-  "attackSound": 2693,
-  "defenceAnim": 425,
+  "attackAnim": "brut_player_firemaking_daganoth_bow",
+  "attackSound": -1,
+  "defenceAnim": "human_sword_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

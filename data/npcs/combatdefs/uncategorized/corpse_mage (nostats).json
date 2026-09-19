@@ -1,12 +1,24 @@
 {
+  "ids": [
+    9612,
+    9613,
+    9614,
+    9615,
+    9616,
+    9617,
+    9618,
+    9619,
+    9620,
+    9621
+  ],
   "names": [
     "Corpse mage"
   ],
-  "attackAnim": 12841,
+  "attackAnim": "lumbcat_tomb_wraiths_mage_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 12868,
+  "defenceAnim": "lumbcat_tomb_wraiths_ranger_defend",
   "defendSound": -1,
-  "deathAnim": 12869,
+  "deathAnim": "lumbcat_tomb_wraiths_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

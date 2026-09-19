@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1265,
+    1267
+  ],
   "names": [
     "Rock Crab"
   ],
-  "attackAnim": 1313,
+  "attackAnim": "horror_crab_defend",
   "attackSound": 717,
-  "defenceAnim": 1312,
+  "defenceAnim": "horror_crab_attack",
   "defendSound": 723,
-  "deathAnim": 1314,
+  "deathAnim": "horror_crab_hide",
   "deathDelay": 2,
   "deathSound": 722,
   "respawnDelay": 59,

@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1153,
+    1156
+  ],
   "names": [
     "Kalphite Worker"
   ],
-  "attackAnim": 6223,
+  "attackAnim": "kalphite_update_jaws_attack",
   "attackSound": 571,
-  "defenceAnim": 6227,
+  "defenceAnim": "kalphite_update_defend",
   "defendSound": 573,
-  "deathAnim": 6228,
+  "deathAnim": "kalphite_update_death",
   "deathDelay": 6,
   "deathSound": 572,
   "respawnDelay": 59,

@@ -2,11 +2,11 @@
   "ids": [
     15391
   ],
-  "attackAnim": 426,
-  "attackSound": 2693,
-  "defenceAnim": 425,
+  "attackAnim": "rand_statue_ranger_magic_attack",
+  "attackSound": -1,
+  "defenceAnim": "luc2_elite_guard_ranger_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "luc2_elite_guard_ranger_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

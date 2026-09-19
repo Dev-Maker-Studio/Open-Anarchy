@@ -2,11 +2,11 @@
   "ids": [
     11410
   ],
-  "attackAnim": 5374,
+  "attackAnim": "update_fris_troll_king_attack",
   "attackSound": -1,
-  "defenceAnim": 5375,
+  "defenceAnim": "update_fris_troll_king_block",
   "defendSound": -1,
-  "deathAnim": 5209,
+  "deathAnim": "update_fris_troll_king_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

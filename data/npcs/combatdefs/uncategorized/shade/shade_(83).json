@@ -2,11 +2,11 @@
   "ids": [
     8645
   ],
-  "attackAnim": 391,
+  "attackAnim": "human_sword_transslash",
   "attackSound": 511,
-  "defenceAnim": 389,
+  "defenceAnim": "human_sword_transdef",
   "defendSound": 439,
-  "deathAnim": 843,
+  "deathAnim": "human_transdeath",
   "deathDelay": 4,
   "deathSound": 438,
   "respawnDelay": 39,

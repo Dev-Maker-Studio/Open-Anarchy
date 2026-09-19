@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6826
+  ],
   "names": [
     "Dreadfowl"
   ],
-  "attackAnim": 7810,
+  "attackAnim": "lore_dreadfowl_special",
   "attackSound": -1,
-  "defenceAnim": 5388,
+  "defenceAnim": "lore_chicken_defend",
   "defendSound": -1,
-  "deathAnim": 5389,
+  "deathAnim": "lore_chicken_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

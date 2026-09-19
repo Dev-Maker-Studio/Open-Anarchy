@@ -1,4 +1,7 @@
 {
+  "ids": [
+    10704
+  ],
   "names": [
     "Edimmu"
   ],
@@ -6,7 +9,7 @@
   "attackSound": -1,
   "defenceAnim": -1,
   "defendSound": -1,
-  "deathAnim": 13733,
+  "deathAnim": "rand_edimmu_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

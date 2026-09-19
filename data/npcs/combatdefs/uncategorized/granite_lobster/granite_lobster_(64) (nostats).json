@@ -2,11 +2,11 @@
   "ids": [
     13685
   ],
-  "attackAnim": 8112,
+  "attackAnim": "lore_lobster_attack",
   "attackSound": -1,
-  "defenceAnim": 8114,
+  "defenceAnim": "lore_lobster_defend",
   "defendSound": -1,
-  "deathAnim": 8113,
+  "deathAnim": "lore_lobster_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -2,11 +2,11 @@
   "ids": [
     1160
   ],
-  "attackAnim": 6235,
+  "attackAnim": "kalphite_update_flying_queen_stinger_attack",
   "attackSound": -1,
-  "defenceAnim": 6237,
+  "defenceAnim": "kalphite_update_flying_queen_defend",
   "defendSound": -1,
-  "deathAnim": 6233,
+  "deathAnim": "kalphite_update_flying_queen_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 60,

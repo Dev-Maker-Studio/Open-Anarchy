@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1613,
+    10702
+  ],
   "names": [
     "Nechryael"
   ],
-  "attackAnim": 9487,
+  "attackAnim": "nechryeal_update_attack",
   "attackSound": 645,
-  "defenceAnim": 9489,
+  "defenceAnim": "nechryeal_update_defend",
   "defendSound": 647,
-  "deathAnim": 9488,
+  "deathAnim": "nechryeal_update_death",
   "deathDelay": 6,
   "deathSound": 646,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    21
+  ],
   "names": [
     "Hero"
   ],
-  "attackAnim": 12311,
+  "attackAnim": "human_sword_slash_metal",
   "attackSound": 2500,
-  "defenceAnim": 1156,
+  "defenceAnim": "human_shield_defence",
   "defendSound": 1973,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": 512,
   "respawnDelay": 59,

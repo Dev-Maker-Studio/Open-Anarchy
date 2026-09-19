@@ -1,12 +1,17 @@
 {
+  "ids": [
+    4540,
+    5460,
+    5461
+  ],
   "names": [
     "Bandos avatar"
   ],
-  "attackAnim": 11300,
+  "attackAnim": "chosen_bandos_avatar_cast_spell",
   "attackSound": -1,
-  "defenceAnim": 11240,
+  "defenceAnim": "chosen_bandos_avatar_defend",
   "defendSound": -1,
-  "deathAnim": 11254,
+  "deathAnim": "chosen_bandos_avatar_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

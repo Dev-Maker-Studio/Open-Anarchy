@@ -1,12 +1,17 @@
 {
+  "ids": [
+    852,
+    5174,
+    8660
+  ],
   "names": [
     "Ogre chieftain"
   ],
-  "attackAnim": 11470,
+  "attackAnim": "chieftan_ogre_attack_staff",
   "attackSound": -1,
-  "defenceAnim": 11473,
+  "defenceAnim": "chieftan_ogre_defend_staff",
   "defendSound": -1,
-  "deathAnim": 11476,
+  "deathAnim": "chieftan_ogre_death_staff",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

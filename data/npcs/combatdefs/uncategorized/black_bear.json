@@ -1,12 +1,15 @@
 {
+  "ids": [
+    106
+  ],
   "names": [
     "Black bear"
   ],
-  "attackAnim": 4925,
+  "attackAnim": "bear_rework_attack",
   "attackSound": 300,
-  "defenceAnim": 4927,
+  "defenceAnim": "bear_rework_defend",
   "defendSound": 302,
-  "deathAnim": 4929,
+  "deathAnim": "bear_rework_death",
   "deathDelay": 6,
   "deathSound": 301,
   "respawnDelay": 59,

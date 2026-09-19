@@ -1,12 +1,15 @@
 {
+  "ids": [
+    4971
+  ],
   "names": [
     "Baby Roc"
   ],
-  "attackAnim": 5031,
+  "attackAnim": "myarm_roc_baby_attack",
   "attackSound": -1,
-  "defenceAnim": 5032,
+  "defenceAnim": "myarm_baby_roc_defend",
   "defendSound": -1,
-  "deathAnim": 5033,
+  "deathAnim": "myarm_roc_baby_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

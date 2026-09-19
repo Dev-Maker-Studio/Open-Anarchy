@@ -1,12 +1,15 @@
 {
   "ids": [
-    14176
+    14176,
+    14177,
+    14178,
+    14179
   ],
-  "attackAnim": 422,
+  "attackAnim": "vanstrom_klause_stake_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "myq3_vanstrom_klaus_defend_from_player",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

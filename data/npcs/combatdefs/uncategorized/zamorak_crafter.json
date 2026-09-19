@@ -1,12 +1,16 @@
 {
+  "ids": [
+    6371,
+    6372
+  ],
   "names": [
     "Zamorak crafter"
   ],
-  "attackAnim": 422,
+  "attackAnim": "brut_player_firemaking_daganoth_bow",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_sword_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

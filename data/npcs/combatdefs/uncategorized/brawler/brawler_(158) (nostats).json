@@ -2,9 +2,9 @@
   "ids": [
     3776
   ],
-  "attackAnim": 3897,
+  "attackAnim": "brawler_attack",
   "attackSound": -1,
-  "defenceAnim": 3895,
+  "defenceAnim": "brawler_defend",
   "defendSound": -1,
   "deathAnim": 3894,
   "deathDelay": 4,

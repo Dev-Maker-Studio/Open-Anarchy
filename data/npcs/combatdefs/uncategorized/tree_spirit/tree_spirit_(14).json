@@ -2,11 +2,11 @@
   "ids": [
     4470
   ],
-  "attackAnim": 94,
+  "attackAnim": "dryhad_attack",
   "attackSound": -1,
-  "defenceAnim": 95,
+  "defenceAnim": "dryhad_block",
   "defendSound": -1,
-  "deathAnim": 97,
+  "deathAnim": "dryhad_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

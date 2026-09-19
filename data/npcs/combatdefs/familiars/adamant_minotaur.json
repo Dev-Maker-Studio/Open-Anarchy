@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6862
+  ],
   "names": [
     "Adamant minotaur"
   ],
-  "attackAnim": 8024,
+  "attackAnim": "lore_minotaur_attack",
   "attackSound": -1,
-  "defenceAnim": 8023,
+  "defenceAnim": "lore_minotaur_defend",
   "defendSound": -1,
-  "deathAnim": 8025,
+  "deathAnim": "lore_minotaur_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

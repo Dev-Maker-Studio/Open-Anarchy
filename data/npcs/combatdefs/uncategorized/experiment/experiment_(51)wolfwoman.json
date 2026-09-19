@@ -2,11 +2,11 @@
   "ids": [
     1676
   ],
-  "attackAnim": 1626,
+  "attackAnim": "homolupus_attack",
   "attackSound": -1,
-  "defenceAnim": 1627,
+  "defenceAnim": "homolupus_defend",
   "defendSound": -1,
-  "deathAnim": 1628,
+  "deathAnim": "homolupus_death",
   "deathDelay": 2,
   "deathSound": -1,
   "respawnDelay": 39,

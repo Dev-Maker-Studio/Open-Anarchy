@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7366
+  ],
   "names": [
     "Spirit kyatt"
   ],
-  "attackAnim": 5229,
+  "attackAnim": "hunter_big_cat_butt",
   "attackSound": -1,
-  "defenceAnim": 5227,
+  "defenceAnim": "hunter_big_cat_defend",
   "defendSound": -1,
-  "deathAnim": 5230,
+  "deathAnim": "hunter_big_cat_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,17 @@
 {
+  "ids": [
+    191,
+    2496,
+    2497
+  ],
   "names": [
     "Tribesman"
   ],
-  "attackAnim": 428,
+  "attackAnim": "human_spear_lunge",
   "attackSound": -1,
-  "defenceAnim": 430,
+  "defenceAnim": "human_spear_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

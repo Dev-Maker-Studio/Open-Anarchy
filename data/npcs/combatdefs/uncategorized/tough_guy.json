@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1906
+  ],
   "names": [
     "Tough Guy"
   ],
-  "attackAnim": 422,
+  "attackAnim": "toughguy_special_arrowrain_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_sword_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "rand_toughguy_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

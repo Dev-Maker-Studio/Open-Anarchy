@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7773
+  ],
   "names": [
     "Fire monster"
   ],
-  "attackAnim": 9341,
+  "attackAnim": "dillo_fire_creature_attack",
   "attackSound": -1,
-  "defenceAnim": 9342,
+  "defenceAnim": "dillo_fire_creature_defend",
   "defendSound": -1,
-  "deathAnim": 9344,
+  "deathAnim": "dillo_fire_creature_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

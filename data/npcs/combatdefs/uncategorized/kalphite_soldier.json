@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1154,
+    3589
+  ],
   "names": [
     "Kalphite Soldier"
   ],
-  "attackAnim": 6223,
+  "attackAnim": "kalphite_update_jaws_attack",
   "attackSound": 567,
-  "defenceAnim": 6227,
+  "defenceAnim": "kalphite_update_defend",
   "defendSound": 569,
-  "deathAnim": 6229,
+  "deathAnim": "kalphite_update_larvae_death",
   "deathDelay": 6,
   "deathSound": 568,
   "respawnDelay": 59,

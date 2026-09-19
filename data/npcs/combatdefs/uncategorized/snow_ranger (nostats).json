@@ -1,12 +1,18 @@
 {
+  "ids": [
+    2269,
+    2273,
+    6747,
+    14207
+  ],
   "names": [
     "Snow ranger"
   ],
-  "attackAnim": 7558,
+  "attackAnim": "xmas07_snowman_ranged_attack",
   "attackSound": -1,
-  "defenceAnim": 7559,
+  "defenceAnim": "xmas07_snowman_defend",
   "defendSound": -1,
-  "deathAnim": 7560,
+  "deathAnim": "xmas07_snowman_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

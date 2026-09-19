@@ -1,12 +1,15 @@
 {
+  "ids": [
+    795
+  ],
   "names": [
     "Ice Queen"
   ],
   "attackAnim": 422,
   "attackSound": -1,
-  "defenceAnim": 424,
+  "defenceAnim": "human_unarmedblock",
   "defendSound": -1,
-  "deathAnim": 843,
+  "deathAnim": "human_transdeath",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

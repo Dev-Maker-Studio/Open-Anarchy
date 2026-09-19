@@ -1,12 +1,16 @@
 {
+  "ids": [
+    3026,
+    14597
+  ],
   "names": [
     "Black golem"
   ],
-  "attackAnim": 2917,
+  "attackAnim": "clay_golem_attack",
   "attackSound": -1,
-  "defenceAnim": 2918,
+  "defenceAnim": "clay_golem_defend",
   "defendSound": -1,
-  "deathAnim": 2919,
+  "deathAnim": "clay_golem_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

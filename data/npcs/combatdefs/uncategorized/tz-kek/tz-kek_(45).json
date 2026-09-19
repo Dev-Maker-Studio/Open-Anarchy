@@ -9,7 +9,7 @@
   "attackSound": -1,
   "defenceAnim": 16165,
   "defendSound": -1,
-  "deathAnim": 16164,
+  "deathAnim": "tzhaar_2011_kek_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

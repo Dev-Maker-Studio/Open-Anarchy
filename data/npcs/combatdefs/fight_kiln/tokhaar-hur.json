@@ -1,12 +1,16 @@
 {
+  "ids": [
+    15183,
+    15201
+  ],
   "names": [
     "TokHaar-Hur"
   ],
-  "attackAnim": 16098,
+  "attackAnim": "tzhaar_2011_hurr_attack",
   "attackSound": -1,
-  "defenceAnim": 16173,
+  "defenceAnim": "tzhaar_2011_hurr_defend",
   "defendSound": -1,
-  "deathAnim": 16178,
+  "deathAnim": "tzhaar_2011_hurr_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

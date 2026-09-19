@@ -2,11 +2,11 @@
   "ids": [
     2028
   ],
-  "attackAnim": 2075,
+  "attackAnim": "barrows_repeating_crossbow_fire",
   "attackSound": 2695,
-  "defenceAnim": 424,
+  "defenceAnim": "human_unarmedblock",
   "defendSound": 1339,
-  "deathAnim": 7197,
+  "deathAnim": "pirate_update_death_crossbow",
   "deathDelay": 6,
   "deathSound": 1338,
   "respawnDelay": 0,

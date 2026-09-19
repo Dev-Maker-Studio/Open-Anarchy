@@ -2,11 +2,11 @@
   "ids": [
     9959
   ],
-  "attackAnim": 13717,
+  "attackAnim": "rand_behemoth_attack",
   "attackSound": -1,
-  "defenceAnim": 13716,
+  "defenceAnim": "rand_behemoth_defend",
   "defendSound": -1,
-  "deathAnim": 13715,
+  "deathAnim": "rand_behemoth_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

@@ -2,11 +2,11 @@
   "ids": [
     13622
   ],
-  "attackAnim": 4388,
+  "attackAnim": "suqka_attack_swords",
   "attackSound": -1,
-  "defenceAnim": 4384,
+  "defenceAnim": "suqka_defend",
   "defendSound": -1,
-  "deathAnim": 4389,
+  "deathAnim": "suqka_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

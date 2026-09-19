@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3061
+  ],
   "names": [
     "Hobgoblin Champion"
   ],
-  "attackAnim": 163,
+  "attackAnim": "rand_hobgoblin_mage_attack",
   "attackSound": -1,
-  "defenceAnim": 164,
+  "defenceAnim": "rand_hobgoblin_mage_defend",
   "defendSound": -1,
-  "deathAnim": 2958,
+  "deathAnim": "rand_hobgoblin_mage_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -2,11 +2,11 @@
   "ids": [
     10217
   ],
-  "attackAnim": 8080,
+  "attackAnim": "lore_pyrefiend_attack",
   "attackSound": -1,
-  "defenceAnim": 8079,
+  "defenceAnim": "lore_pyrefiend_defend",
   "defendSound": -1,
-  "deathAnim": 8078,
+  "deathAnim": "lore_pyrefiend_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

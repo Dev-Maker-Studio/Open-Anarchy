@@ -1,12 +1,15 @@
 {
+  "ids": [
+    247
+  ],
   "names": [
     "Sir Mordred"
   ],
-  "attackAnim": 6489,
+  "attackAnim": "fai_varrock_guard_attack",
   "attackSound": -1,
-  "defenceAnim": 6488,
+  "defenceAnim": "fai_varrock_guard_defend",
   "defendSound": -1,
-  "deathAnim": 6490,
+  "deathAnim": "fai_varrock_guard_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

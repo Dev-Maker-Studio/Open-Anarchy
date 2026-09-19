@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1624
+  ],
   "names": [
     "Dust devil"
   ],
-  "attackAnim": 1557,
+  "attackAnim": "dustdevil_attack",
   "attackSound": 414,
-  "defenceAnim": 1555,
+  "defenceAnim": "dustdevil_defend",
   "defendSound": 416,
-  "deathAnim": 1558,
+  "deathAnim": "dustdevil_death",
   "deathDelay": 6,
   "deathSound": 415,
   "respawnDelay": 59,

@@ -1,12 +1,18 @@
 {
+  "ids": [
+    5905,
+    5907,
+    14524,
+    14525
+  ],
   "names": [
     "The Illusive"
   ],
-  "attackAnim": 6342,
+  "attackAnim": "dream_illusive_attack",
   "attackSound": -1,
-  "defenceAnim": 6340,
+  "defenceAnim": "dream_illusive_defend_p1",
   "defendSound": -1,
-  "deathAnim": 6349,
+  "deathAnim": "dream_illusive_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

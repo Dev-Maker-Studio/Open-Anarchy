@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13458
+  ],
   "names": [
     "Blood reaver"
   ],
-  "attackAnim": 7004,
+  "attackAnim": "vaultraider_guardian_stomp_attack",
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": "vaultraider_guardian_defend",
   "defendSound": -1,
-  "deathAnim": 7000,
+  "deathAnim": "vaultraider_guardian_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

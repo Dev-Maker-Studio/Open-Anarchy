@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6868
+  ],
   "names": [
     "Bull ant"
   ],
-  "attackAnim": 7896,
+  "attackAnim": "lore_ant_attack",
   "attackSound": -1,
-  "defenceAnim": 7900,
+  "defenceAnim": "lore_ant_defend",
   "defendSound": -1,
-  "deathAnim": 7897,
+  "deathAnim": "lore_ant_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

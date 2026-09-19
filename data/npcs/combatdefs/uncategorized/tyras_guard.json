@@ -1,12 +1,18 @@
 {
+  "ids": [
+    1200,
+    1203,
+    1204,
+    4649
+  ],
   "names": [
     "Tyras guard"
   ],
   "attackAnim": 440,
   "attackSound": 2747,
-  "defenceAnim": 430,
+  "defenceAnim": "human_spear_block",
   "defendSound": 29,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": 512,
   "respawnDelay": 59,

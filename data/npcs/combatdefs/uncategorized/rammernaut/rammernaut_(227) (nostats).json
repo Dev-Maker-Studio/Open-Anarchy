@@ -2,11 +2,11 @@
   "ids": [
     9771
   ],
-  "attackAnim": 13703,
+  "attackAnim": "rand_eliteguardian_attack",
   "attackSound": -1,
-  "defenceAnim": 13701,
+  "defenceAnim": "rand_eliteguardian_defend",
   "defendSound": -1,
-  "deathAnim": 13702,
+  "deathAnim": "rand_eliteguardian_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

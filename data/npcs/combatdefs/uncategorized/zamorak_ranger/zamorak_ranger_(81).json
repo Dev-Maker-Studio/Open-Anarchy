@@ -2,11 +2,11 @@
   "ids": [
     6365
   ],
-  "attackAnim": 426,
+  "attackAnim": "human_bow",
   "attackSound": 2693,
-  "defenceAnim": 425,
+  "defenceAnim": "human_unarmed_def",
   "defendSound": 24,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": 512,
   "respawnDelay": 59,

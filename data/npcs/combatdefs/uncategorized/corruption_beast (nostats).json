@@ -1,12 +1,15 @@
 {
+  "ids": [
+    9455
+  ],
   "names": [
     "Corruption beast"
   ],
-  "attackAnim": 9501,
+  "attackAnim": "nom_destruction_beast_attack",
   "attackSound": -1,
-  "defenceAnim": 9505,
+  "defenceAnim": "nom_destruction_beast_defend",
   "defendSound": -1,
-  "deathAnim": 9514,
+  "deathAnim": "nom_destruction_beast_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

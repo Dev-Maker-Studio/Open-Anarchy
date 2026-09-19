@@ -1,12 +1,18 @@
 {
+  "ids": [
+    2611,
+    2614,
+    2615,
+    2616
+  ],
   "names": [
     "TzHaar-Ket"
   ],
-  "attackAnim": 16180,
+  "attackAnim": "tzhaar_2011_ket_champion_attack",
   "attackSound": 254,
-  "defenceAnim": 16096,
+  "defenceAnim": "tzhaar_2011_ket_defend",
   "defendSound": 257,
-  "deathAnim": 16181,
+  "deathAnim": "tzhaar_2011_ket_champion_death",
   "deathDelay": 6,
   "deathSound": 256,
   "respawnDelay": 59,

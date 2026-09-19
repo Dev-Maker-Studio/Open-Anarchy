@@ -1,12 +1,16 @@
 {
+  "ids": [
+    15185,
+    15203
+  ],
   "names": [
     "TokHaar-Mej"
   ],
-  "attackAnim": 16127,
+  "attackAnim": "tzhaar_2011_mej_staff_attack",
   "attackSound": -1,
-  "defenceAnim": 16124,
+  "defenceAnim": "tzhaar_2011_mej_defend",
   "defendSound": -1,
-  "deathAnim": 16123,
+  "deathAnim": "tzhaar_2011_mej_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

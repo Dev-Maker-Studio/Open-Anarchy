@@ -2,11 +2,11 @@
   "ids": [
     2036
   ],
-  "attackAnim": 5485,
+  "attackAnim": "skeleton_update_attack_weapon",
   "attackSound": 776,
-  "defenceAnim": 5489,
+  "defenceAnim": "skeleton_update_defend",
   "defendSound": 779,
-  "deathAnim": 5491,
+  "deathAnim": "skeleton_update_death",
   "deathDelay": 4,
   "deathSound": 777,
   "respawnDelay": 29,

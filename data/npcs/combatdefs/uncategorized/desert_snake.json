@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1874
+  ],
   "names": [
     "Desert snake"
   ],
-  "attackAnim": 275,
+  "attackAnim": "snake_attack",
   "attackSound": 797,
-  "defenceAnim": 276,
+  "defenceAnim": "snake_block",
   "defendSound": 800,
-  "deathAnim": 278,
+  "deathAnim": "snake_death",
   "deathDelay": 6,
   "deathSound": 798,
   "respawnDelay": 59,

@@ -1,12 +1,20 @@
 {
+  "ids": [
+    2591,
+    2592,
+    2594,
+    2595,
+    2596,
+    2597
+  ],
   "names": [
     "TzHaar-Mej"
   ],
-  "attackAnim": 16122,
+  "attackAnim": "tzhaar_2011_mej_magic_attack",
   "attackSound": 262,
-  "defenceAnim": 16124,
+  "defenceAnim": "tzhaar_2011_mej_defend",
   "defendSound": 264,
-  "deathAnim": 16123,
+  "deathAnim": "tzhaar_2011_mej_death",
   "deathDelay": 6,
   "deathSound": 263,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6848
+  ],
   "names": [
     "Albino rat"
   ],
-  "attackAnim": 15514,
+  "attackAnim": "polypore_fungal_rodent_attack",
   "attackSound": -1,
-  "defenceAnim": 14861,
+  "defenceAnim": "giant_rat_2010_update_defend",
   "defendSound": -1,
-  "deathAnim": 15518,
+  "deathAnim": "polypore_fungal_rodent_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

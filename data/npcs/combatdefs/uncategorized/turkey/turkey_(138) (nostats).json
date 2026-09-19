@@ -2,11 +2,11 @@
   "ids": [
     9039
   ],
-  "attackAnim": 11000,
+  "attackAnim": "thksgvg_turkey_attack",
   "attackSound": -1,
-  "defenceAnim": 10999,
+  "defenceAnim": "thksgvg_turkey_defend",
   "defendSound": -1,
-  "deathAnim": 11001,
+  "deathAnim": "thksgvg_turkey_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

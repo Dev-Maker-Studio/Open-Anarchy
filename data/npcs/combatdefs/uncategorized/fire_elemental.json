@@ -1,14 +1,17 @@
 {
+  "ids": [
+    1019
+  ],
   "names": [
     "Fire elemental"
   ],
-  "attackAnim": 1029,
+  "attackAnim": "elemental_fire_attack",
   "attackSound": 1534,
-  "defenceAnim": 1030,
+  "defenceAnim": "elemental_fire_defend",
   "defendSound": 1536,
-  "deathAnim": 1031,
+  "deathAnim": "elemental_fire_death",
   "deathDelay": 2,
-  "deathSound":  1535,
+  "deathSound": 1535,
   "respawnDelay": 50,
   "hitpoints": 300,
   "maxHit": 40,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    18
+  ],
   "names": [
     "Al-Kharid warrior"
   ],
-  "attackAnim": 390,
+  "attackAnim": "human_sword_slash",
   "attackSound": -1,
-  "defenceAnim": 388,
+  "defenceAnim": "human_sword_def",
   "defendSound": 1976,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": 512,
   "respawnDelay": 59,

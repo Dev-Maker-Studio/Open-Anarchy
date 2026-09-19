@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7136
+  ],
   "names": [
     "Surok Magis"
   ],
-  "attackAnim": 422,
+  "attackAnim": "surok_surok_spell_casting",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "dsd_surok_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "surok_king_roald_collapse",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

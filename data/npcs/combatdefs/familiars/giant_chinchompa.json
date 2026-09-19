@@ -1,10 +1,13 @@
 {
+  "ids": [
+    7354
+  ],
   "names": [
     "Giant chinchompa"
   ],
-  "attackAnim": 7755,
+  "attackAnim": "lore_chinchompa_attack",
   "attackSound": -1,
-  "defenceAnim": 7753,
+  "defenceAnim": "lore_chinchompa_defend",
   "defendSound": -1,
   "deathAnim": 7758,
   "deathDelay": 6,

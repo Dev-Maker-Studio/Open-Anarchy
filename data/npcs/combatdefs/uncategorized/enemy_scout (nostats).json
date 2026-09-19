@@ -1,12 +1,18 @@
 {
+  "ids": [
+    12162,
+    12197,
+    12199,
+    12200
+  ],
   "names": [
     "Enemy Scout"
   ],
-  "attackAnim": 422,
+  "attackAnim": "vkq3_scout_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "vkq3_scout_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "vkq3_scout_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

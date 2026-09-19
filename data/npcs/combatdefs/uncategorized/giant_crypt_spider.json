@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2035
+  ],
   "names": [
     "Giant crypt spider"
   ],
-  "attackAnim": 5319,
+  "attackAnim": "spider_update_attack_large",
   "attackSound": 537,
-  "defenceAnim": 5320,
+  "defenceAnim": "spider_update_defend_large",
   "defendSound": 539,
-  "deathAnim": 5321,
+  "deathAnim": "spider_update_death_large",
   "deathDelay": 6,
   "deathSound": 538,
   "respawnDelay": 59,

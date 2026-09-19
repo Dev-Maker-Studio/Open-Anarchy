@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2881
+  ],
   "names": [
     "Dagannoth Supreme"
   ],
-  "attackAnim": 2855,
+  "attackAnim": "dagannoth_meganoth_attack_range",
   "attackSound": -1,
-  "defenceAnim": 2852,
+  "defenceAnim": "dagannoth_meganoth_defend",
   "defendSound": -1,
-  "deathAnim": 2856,
+  "deathAnim": "dagannoth_meganoth_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

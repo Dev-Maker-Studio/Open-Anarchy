@@ -1,10 +1,13 @@
 {
+  "ids": [
+    4890
+  ],
   "names": [
     "Slug Prince"
   ],
-  "attackAnim": 4829,
+  "attackAnim": "slug2_prince_attack",
   "attackSound": -1,
-  "defenceAnim": 4831,
+  "defenceAnim": "slug2_prince_defend",
   "defendSound": -1,
   "deathAnim": -1,
   "deathDelay": 6,

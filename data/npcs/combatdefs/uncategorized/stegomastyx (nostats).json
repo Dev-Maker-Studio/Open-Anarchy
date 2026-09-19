@@ -1,12 +1,15 @@
 {
+  "ids": [
+    11093
+  ],
   "names": [
     "Stegomastyx"
   ],
-  "attackAnim": 13255,
+  "attackAnim": "bovimastyx_attack",
   "attackSound": -1,
-  "defenceAnim": 13259,
+  "defenceAnim": "bovimastyx_defend",
   "defendSound": -1,
-  "deathAnim": 13262,
+  "deathAnim": "bovimastyx_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

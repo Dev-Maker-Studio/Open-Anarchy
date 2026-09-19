@@ -2,11 +2,11 @@
   "ids": [
     9611
   ],
-  "attackAnim": 11398,
+  "attackAnim": "chosen_statue_goblin_armed_attack",
   "attackSound": -1,
   "defenceAnim": 11397,
   "defendSound": -1,
-  "deathAnim": 11396,
+  "deathAnim": "chosen_statue_goblin_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,
