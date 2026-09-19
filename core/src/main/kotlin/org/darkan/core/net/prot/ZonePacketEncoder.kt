@@ -27,7 +27,7 @@ import org.darkan.core.net.prot.packet.*
  * 10 = SoundEffectTile     (MIDI_SONG_LOCATION, 8 bytes)
  * 11 = TileMessage         (TILE_MESSAGE)
  * 12 = ObjAnim             (OBJ_ANIM)
- * 13 = (unused)            (SOUND_AREA, 9 bytes - not sent as zone sub-packet)
+ * 13 = SoundAreaTile       (SOUND_AREA, 9 bytes)
  * 14 = SpotAnim            (SPOT_ANIM)
  * ```
  */
@@ -95,8 +95,10 @@ object ZonePacketEncoder {
                 out.write(12)
                 encodeObjAnim(out, packet)
             }
-            // MusicTrackTile is a standalone packet (opcode 93), not a zone sub-packet.
-            // Client ordinal 13 (SOUND_AREA) has a different 9-byte format.
+            is SoundAreaTile -> {
+                out.write(13)
+                encodeSoundAreaTile(out, packet)
+            }
             is SpotAnim -> {
                 out.write(14)
                 encodeSpotAnim(out, packet)
@@ -224,6 +226,17 @@ object ZonePacketEncoder {
         writeByte(out, p.delay)
         writeByte(out, p.volume)
         writeShort(out, p.sampleRate)
+    }
+
+    // ordinal 13 only, 9 bytes
+    private fun encodeSoundAreaTile(out: ByteArrayOutputStream, p: SoundAreaTile) {
+        writeByte(out, ((p.localX and 0x7) shl 4) or (p.localY and 0x7))
+        writeShort(out, if (p.soundId == -1) 65535 else p.soundId)
+        writeByte(out, ((p.range and 0xF) shl 4) or (p.mode and 0x7))
+        writeByte(out, p.delay)
+        writeByte(out, p.volume)
+        writeShort(out, p.sampleRate)
+        writeByte(out, if (p.voice) 1 else 0)
     }
 
     // opcode 114, VarByte

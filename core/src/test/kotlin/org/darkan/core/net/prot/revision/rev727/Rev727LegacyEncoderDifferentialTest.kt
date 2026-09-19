@@ -716,6 +716,34 @@ class Rev727LegacyEncoderDifferentialTest {
                 delay = 40, volume = 200, sampleRate = 8192,
             ),
         )
+        // SOUND_AREA has no standalone opcode in either stack, so it is pinned enclosed;
+        // the trailing byte is the client's voice-over flag.
+        case(
+            "SOUND_AREA (zone vorbis sound)",
+            LegacyUpdateZonePartialEnclosed(
+                chunkId(400, 402, 0),
+                chunkId(404, 405, 1),
+                LegacyTileSound(hash, LegacySound(2677, 40, 200, 8192, LegacySoundType.VORB_EFFECT).radius(3).repeat(2)),
+                LegacyTileSound(hash, LegacySound(2677, 40, 200, 8192, LegacySoundType.VOICE).radius(3).repeat(2)),
+            ),
+            UpdateZonePartialEnclosed(
+                chunkX = 4,
+                chunkY = 3,
+                plane = 1,
+                data = ZonePacketEncoder.encodeZoneSubPackets(
+                    listOf(
+                        SoundAreaTile(
+                            localX = 5, localY = 6, soundId = 2677, range = 3, mode = 2,
+                            delay = 40, volume = 200, sampleRate = 8192, voice = false,
+                        ),
+                        SoundAreaTile(
+                            localX = 5, localY = 6, soundId = 2677, range = 3, mode = 2,
+                            delay = 40, volume = 200, sampleRate = 8192, voice = true,
+                        ),
+                    ),
+                ),
+            ),
+        )
         // Height units differ by design: the legacy `Projectile` carries the raw wire byte, the
         // modern packet carries world height and divides by 4, which is exactly the multiply the
         // client applies on the way back in. See KNOWN_DIVERGENCES.

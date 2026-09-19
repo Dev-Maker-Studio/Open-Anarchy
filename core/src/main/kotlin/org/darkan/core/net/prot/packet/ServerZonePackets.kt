@@ -143,4 +143,16 @@ data class SoundEffectTile(
     val sampleRate: Int,
 ) : ServerProt
 
+data class SoundAreaTile(
+    val localX: Int,
+    val localY: Int,
+    val soundId: Int,
+    val range: Int,
+    val mode: Int,
+    val delay: Int,
+    val volume: Int,
+    val sampleRate: Int,
+    val voice: Boolean,
+) : ServerProt
+
 data class MusicTrackTile(val plane: Int, val x: Int, val y: Int, val near: Int, val far: Int, val volume: Int, val musicArchive: Int) : ServerProt
