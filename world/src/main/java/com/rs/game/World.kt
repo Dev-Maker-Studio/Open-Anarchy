@@ -763,7 +763,7 @@ object World {
 
     @JvmStatic
     fun musicTrack(source: Tile, trackId: Int, delay: Int, volume: Int) {
-        sound(source, trackId, delay, SoundType.MUSIC).volume(volume)
+        sound(source, Sound(trackId, delay, SoundType.MUSIC).volume(volume))
     }
 
     @JvmOverloads
@@ -786,7 +786,7 @@ object World {
     @JvmOverloads
     @JvmStatic
     fun soundEffect(source: Tile, soundId: Int, delay: Int = 0) {
-        sound(source, soundId, delay, SoundType.EFFECT).radius(10)
+        sound(source, Sound(soundId, delay, SoundType.EFFECT).radius(10))
     }
 
     @JvmOverloads
