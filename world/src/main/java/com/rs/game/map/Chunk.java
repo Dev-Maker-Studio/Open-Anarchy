@@ -34,6 +34,7 @@ import org.darkan.core.net.prot.packet.MapProjAnimHalfSq;
 import org.darkan.core.net.prot.packet.ObjAnim;
 import org.darkan.core.net.prot.packet.RemoveGroundItem;
 import org.darkan.core.net.prot.ServerProt;
+import org.darkan.core.net.prot.packet.SoundAreaTile;
 import org.darkan.core.net.prot.packet.SoundEffectTile;
 import org.darkan.core.net.prot.packet.UpdateZoneFullFollows;
 import org.darkan.core.Logger;
@@ -160,10 +161,19 @@ public class Chunk {
     }
 
     public void addSound(Tile tile, Sound sound) {
-        addChunkUpdate(new SoundEffectTile(
+        if (sound.getType() == SoundType.EFFECT) {
+            addChunkUpdate(new SoundEffectTile(
+                tile.getXInChunk(), tile.getYInChunk(),
+                sound.getId(), sound.getRadius(), sound.getRepeat(),
+                sound.getDelay(), sound.getVolume(), sound.getSampleRate()
+            ));
+            return;
+        }
+        addChunkUpdate(new SoundAreaTile(
             tile.getXInChunk(), tile.getYInChunk(),
             sound.getId(), sound.getRadius(), sound.getRepeat(),
-            sound.getDelay(), sound.getVolume(), sound.getSampleRate()
+            sound.getDelay(), sound.getVolume(), sound.getSampleRate(),
+            sound.getType() == SoundType.VOICE
         ));
     }
 
