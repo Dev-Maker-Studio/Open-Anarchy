@@ -86,6 +86,7 @@ class Bank {
     fun getSlot(id: Int) = getItemSlot(id)
     fun getPlaceholderSlot(id: Int) = findSlot { it.id == id && isPlaceholder(it) }
     private fun fillablePlaceholderSlot(item: Item) = findSlot { it.id == item.id && isPlaceholder(it) && it.containsMetaData() == item.containsMetaData() }
+    private fun stackSlot(item: Item) = if (item.metadata != null) null else findSlot { it.id == item.id && !isPlaceholder(it) && it.metadata == null }
     fun getItem(slot: IntArray?): Item? = slot?.let { bankTabs[it[0]][it[1]] }
     fun getItem(id: Int): Item? = getItem(getItemSlot(id))
 
@@ -165,7 +166,7 @@ class Bank {
         for (i in 0 until inventory.size) {
             val item = inventory.get(i) ?: continue
             val originalId = unnote(item)
-            val banked = getItem(item.id)
+            val banked = getItem(stackSlot(item))
             if (banked != null) {
                 if (banked.amount + item.amount <= 0) {
                     item.setAmount(Int.MAX_VALUE - banked.amount)
@@ -517,7 +518,7 @@ class Bank {
         val amount = minOf(if (invItem.metadata != null) 1 else quantity, player.inventory.items.getNumberOf(invItem))
         val item = Item(invItem.id, amount, invItem.metadata)
         val originalId = unnote(item)
-        val banked = getItem(item.id)
+        val banked = getItem(stackSlot(item))
         if (banked != null) {
             if (banked.amount + item.amount <= 0) {
                 item.setAmount(Int.MAX_VALUE - banked.amount)
@@ -555,8 +556,8 @@ class Bank {
             }
             return true
         }
-        val existing = getItemSlot(item.id)
-        if (existing == null || item.metadata != null || bankTabs[existing[0]][existing[1]].metadata != null) {
+        val existing = stackSlot(item)
+        if (existing == null) {
             val tab = creationTab.coerceIn(0, bankTabs.size - 1)
             bankTabs[tab] += item
             if (refresh) refreshTab(tab)
