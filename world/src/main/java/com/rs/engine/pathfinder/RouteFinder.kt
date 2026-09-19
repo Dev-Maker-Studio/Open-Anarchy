@@ -92,6 +92,6 @@ fun addSteps(entity: Entity, route: Route, forceSteps: Boolean, maxSteps: Int = 
     }
     if (lastStep != null && entity is Player) {
         val tile = Tile.of(lastStep.x, lastStep.y, entity.plane)
-        entity.session.queuePacket(MinimapFlag(entity.getXInScene(entity.getSceneBaseChunkId()), entity.getYInScene(entity.getSceneBaseChunkId())))
+        entity.session.queuePacket(MinimapFlag(tile.getXInScene(entity.getSceneBaseChunkId()), tile.getYInScene(entity.getSceneBaseChunkId())))
     }
 }
