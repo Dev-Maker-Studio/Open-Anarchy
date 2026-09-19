@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2880
+  ],
   "names": [
     "Dagannoth fledgeling"
   ],
-  "attackAnim": 1579,
+  "attackAnim": "slayer_lizard_attack",
   "attackSound": -1,
-  "defenceAnim": 1580,
+  "defenceAnim": "slayer_lizard_defend",
   "defendSound": -1,
-  "deathAnim": 1581,
+  "deathAnim": "slayer_lizard_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

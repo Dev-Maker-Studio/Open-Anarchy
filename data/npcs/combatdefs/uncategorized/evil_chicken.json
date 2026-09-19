@@ -1,12 +1,17 @@
 {
+  "ids": [
+    3375,
+    14522,
+    14559
+  ],
   "names": [
     "Evil Chicken"
   ],
-  "attackAnim": 2302,
+  "attackAnim": "roostermagic",
   "attackSound": -1,
-  "defenceAnim": 2302,
+  "defenceAnim": "roostermagic",
   "defendSound": -1,
-  "deathAnim": 2301,
+  "deathAnim": "roosterdeath",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

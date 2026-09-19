@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6260
+  ],
   "names": [
     "General Graardor"
   ],
-  "attackAnim": 7060,
+  "attackAnim": "godwars_bandos_attack",
   "attackSound": -1,
-  "defenceAnim": 7061,
+  "defenceAnim": "godwars_bandos_defend",
   "defendSound": -1,
-  "deathAnim": 7062,
+  "deathAnim": "godwars_bandos_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 149,

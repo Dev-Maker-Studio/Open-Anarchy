@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7368
+  ],
   "names": [
     "Void shifter"
   ],
-  "attackAnim": 8131,
+  "attackAnim": "lore_shifter_attack",
   "attackSound": -1,
-  "defenceAnim": 8132,
+  "defenceAnim": "lore_shifter_defend",
   "defendSound": -1,
-  "deathAnim": 8133,
+  "deathAnim": "lore_shifter_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

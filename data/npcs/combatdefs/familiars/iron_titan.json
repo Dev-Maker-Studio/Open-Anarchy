@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7376
+  ],
   "names": [
     "Iron titan"
   ],
-  "attackAnim": 7946,
+  "attackAnim": "lore_iron_titan_attack",
   "attackSound": -1,
-  "defenceAnim": 7948,
+  "defenceAnim": "lore_iron_titan_defend",
   "defendSound": -1,
-  "deathAnim": 7947,
+  "deathAnim": "lore_iron_titan_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

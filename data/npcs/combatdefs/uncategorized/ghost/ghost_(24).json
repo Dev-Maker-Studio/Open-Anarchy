@@ -2,11 +2,11 @@
   "ids": [
     491
   ],
-  "attackAnim": 5540,
+  "attackAnim": "ghost_update_tendrill_attack",
   "attackSound": -1,
-  "defenceAnim": 13406,
+  "defenceAnim": "rand_ghost_defend",
   "defendSound": -1,
-  "deathAnim": 13407,
+  "deathAnim": "rand_ghost_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

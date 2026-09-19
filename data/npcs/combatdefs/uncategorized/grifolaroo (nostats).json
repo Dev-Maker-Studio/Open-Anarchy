@@ -1,12 +1,16 @@
 {
+  "ids": [
+    14700,
+    14701
+  ],
   "names": [
     "Grifolaroo"
   ],
-  "attackAnim": 15492,
+  "attackAnim": "polypore_grifolaroo_melee",
   "attackSound": -1,
-  "defenceAnim": 15497,
+  "defenceAnim": "polypore_grifolaroo_ranged",
   "defendSound": -1,
-  "deathAnim": 15499,
+  "deathAnim": "polypore_grifolaroo_death",
   "deathDelay": 10,
   "deathSound": -1,
   "respawnDelay": 119,

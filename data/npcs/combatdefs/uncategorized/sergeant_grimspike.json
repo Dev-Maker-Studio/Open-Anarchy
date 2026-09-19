@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6265
+  ],
   "names": [
     "Sergeant Grimspike"
   ],
-  "attackAnim": 6154,
+  "attackAnim": "slice_surface_goblin_sergent_attack",
   "attackSound": -1,
-  "defenceAnim": 6155,
+  "defenceAnim": "slice_surface_goblin_sergent_defend",
   "defendSound": -1,
-  "deathAnim": 6156,
+  "deathAnim": "slice_surface_goblin_sergent_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 149,

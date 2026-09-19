@@ -1,8 +1,12 @@
 {
+  "ids": [
+    11144,
+    11145
+  ],
   "names": [
     "Sachem stormbringer"
   ],
-  "attackAnim": 13620,
+  "attackAnim": "rand_mage_familiar_magic_attack",
   "attackSound": -1,
   "defenceAnim": 13674,
   "defendSound": -1,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6026
+  ],
   "names": [
     "Boris"
   ],
   "attackAnim": 422,
   "attackSound": 489,
-  "defenceAnim": 425,
+  "defenceAnim": "human_unarmed_def",
   "defendSound": 491,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": 490,
   "respawnDelay": 59,

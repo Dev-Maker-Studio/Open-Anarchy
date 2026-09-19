@@ -1,12 +1,19 @@
 {
+  "ids": [
+    13603,
+    13604,
+    13605,
+    13606,
+    13607
+  ],
   "names": [
     "'Rum'-pumped crab"
   ],
-  "attackAnim": 8104,
+  "attackAnim": "crab_attack",
   "attackSound": -1,
-  "defenceAnim": 8105,
+  "defenceAnim": "crab_block",
   "defendSound": -1,
-  "deathAnim": 8106,
+  "deathAnim": "crab_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

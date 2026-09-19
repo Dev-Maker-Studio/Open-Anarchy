@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3707
+  ],
   "names": [
     "Brine rat"
   ],
-  "attackAnim": 6117,
+  "attackAnim": "olaf2_brine_rat_attack",
   "attackSound": -1,
-  "defenceAnim": 6116,
+  "defenceAnim": "olaf2_brine_rat_defend",
   "defendSound": -1,
-  "deathAnim": 6115,
+  "deathAnim": "olaf2_brine_rat_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    14257
+  ],
   "names": [
     "Enhanced ice titan"
   ],
-  "attackAnim": 8183,
+  "attackAnim": "lore_abyssal_titan_attack",
   "attackSound": -1,
-  "defenceAnim": 8185,
+  "defenceAnim": "lore_abyssal_titan_defend",
   "defendSound": -1,
-  "deathAnim": 8184,
+  "deathAnim": "lore_abyssal_titan_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

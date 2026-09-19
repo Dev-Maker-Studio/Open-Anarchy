@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7922
+  ],
   "names": [
     "Warped bat"
   ],
-  "attackAnim": 12461,
+  "attackAnim": "small_bat_rework_attack",
   "attackSound": -1,
-  "defenceAnim": 12462,
+  "defenceAnim": "small_bat_rework_defend",
   "defendSound": -1,
-  "deathAnim": 8276,
+  "deathAnim": "lore_bat_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

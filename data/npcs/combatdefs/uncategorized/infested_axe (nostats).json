@@ -1,12 +1,16 @@
 {
+  "ids": [
+    14694,
+    14695
+  ],
   "names": [
     "Infested axe"
   ],
-  "attackAnim": 15502,
+  "attackAnim": "polypore_enchanted_axe_attack",
   "attackSound": -1,
-  "defenceAnim": 15503,
+  "defenceAnim": "polypore_enchanted_axe_defend",
   "defendSound": -1,
-  "deathAnim": 15504,
+  "deathAnim": "polypore_enchanted_axe_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

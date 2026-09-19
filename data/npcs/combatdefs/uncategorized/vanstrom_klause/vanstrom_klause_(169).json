@@ -2,11 +2,11 @@
   "ids": [
     4793
   ],
-  "attackAnim": 4715,
+  "attackAnim": "vanstrom_klause_stake_attack",
   "attackSound": -1,
-  "defenceAnim": 7625,
+  "defenceAnim": "myq3_vanstrom_klaus_defend_from_player",
   "defendSound": -1,
-  "deathAnim": 7524,
+  "deathAnim": "myq3_vampire_grounded_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

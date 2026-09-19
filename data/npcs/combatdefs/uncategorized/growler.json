@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6250
+  ],
   "names": [
     "Growler"
   ],
-  "attackAnim": 7019,
+  "attackAnim": "godwars_lion_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 7017,
+  "defenceAnim": "godwars_lion_defend",
   "defendSound": -1,
-  "deathAnim": 7016,
+  "deathAnim": "godwars_lion_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 149,

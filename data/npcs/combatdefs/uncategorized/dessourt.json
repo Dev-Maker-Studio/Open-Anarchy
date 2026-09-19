@@ -1,12 +1,16 @@
 {
+  "ids": [
+    3496,
+    14425
+  ],
   "names": [
     "Dessourt"
   ],
-  "attackAnim": 3508,
+  "attackAnim": "dessourt_tot_attack",
   "attackSound": -1,
-  "defenceAnim": 3505,
+  "defenceAnim": "dessourt_block",
   "defendSound": -1,
-  "deathAnim": 14532,
+  "deathAnim": "dessourt_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

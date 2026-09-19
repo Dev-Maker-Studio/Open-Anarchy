@@ -1,12 +1,18 @@
 {
+  "ids": [
+    12182,
+    12212,
+    12214,
+    12215
+  ],
   "names": [
     "Enemy Archer"
   ],
-  "attackAnim": 422,
+  "attackAnim": "vkqc_archer_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "vkqc_archer_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "vkqc_archer_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

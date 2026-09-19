@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6846
+  ],
   "names": [
     "Honey badger"
   ],
-  "attackAnim": 7928,
+  "attackAnim": "lore_honey_badger_attack",
   "attackSound": -1,
-  "defenceAnim": 7927,
+  "defenceAnim": "lore_honey_badger_defend",
   "defendSound": -1,
-  "deathAnim": 7925,
+  "deathAnim": "lore_honey_badger_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

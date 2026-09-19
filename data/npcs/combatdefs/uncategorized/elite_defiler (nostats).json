@@ -1,12 +1,16 @@
 {
+  "ids": [
+    6344,
+    14450
+  ],
   "names": [
     "Elite defiler"
   ],
-  "attackAnim": 3920,
+  "attackAnim": "defiler_attack",
   "attackSound": -1,
-  "defenceAnim": 3921,
+  "defenceAnim": "defiler_defend",
   "defendSound": -1,
-  "deathAnim": 3922,
+  "deathAnim": "defiler_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

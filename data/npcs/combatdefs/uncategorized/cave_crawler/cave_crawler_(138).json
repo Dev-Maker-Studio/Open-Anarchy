@@ -2,11 +2,11 @@
   "ids": [
     7787
   ],
-  "attackAnim": 266,
+  "attackAnim": "cave_crawler_update_attack",
   "attackSound": -1,
-  "defenceAnim": 267,
+  "defenceAnim": "cave_crawler_update_defend",
   "defendSound": -1,
-  "deathAnim": 265,
+  "deathAnim": "cave_crawler_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

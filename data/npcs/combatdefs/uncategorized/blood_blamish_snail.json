@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1228,
+    1233
+  ],
   "names": [
     "Blood Blamish Snail"
   ],
-  "attackAnim": 8143,
+  "attackAnim": "lore_snail_attack",
   "attackSound": -1,
-  "defenceAnim": 8145,
+  "defenceAnim": "lore_snail_walk",
   "defendSound": -1,
-  "deathAnim": 8144,
+  "deathAnim": "lore_snail_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

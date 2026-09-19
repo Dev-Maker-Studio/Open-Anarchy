@@ -1,10 +1,13 @@
 {
+  "ids": [
+    131
+  ],
   "names": [
     "Penguin"
   ],
-  "attackAnim": 5669,
+  "attackAnim": "peng_gentoo_attack",
   "attackSound": -1,
-  "defenceAnim": 5670,
+  "defenceAnim": "peng_gentoo_defend",
   "defendSound": -1,
   "deathAnim": 5671,
   "deathDelay": 6,

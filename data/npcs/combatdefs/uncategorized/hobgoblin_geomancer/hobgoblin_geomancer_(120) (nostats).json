@@ -2,11 +2,11 @@
   "ids": [
     10064
   ],
-  "attackAnim": 12989,
+  "attackAnim": "rand_hobgoblin_mage_attack",
   "attackSound": -1,
-  "defenceAnim": 12986,
+  "defenceAnim": "rand_hobgoblin_mage_defend",
   "defendSound": -1,
-  "deathAnim": 12987,
+  "deathAnim": "rand_hobgoblin_mage_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

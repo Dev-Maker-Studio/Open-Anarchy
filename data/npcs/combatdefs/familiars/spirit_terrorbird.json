@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6795
+  ],
   "names": [
     "Spirit terrorbird"
   ],
-  "attackAnim": 1010,
+  "attackAnim": "pog_terror_bird_attack",
   "attackSound": -1,
-  "defenceAnim": 1011,
+  "defenceAnim": -1,
   "defendSound": -1,
-  "deathAnim": 1012,
+  "deathAnim": "pog_terror_bird_defend",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

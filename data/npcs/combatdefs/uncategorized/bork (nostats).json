@@ -1,12 +1,16 @@
 {
+  "ids": [
+    7133,
+    7134
+  ],
   "names": [
     "Bork"
   ],
-  "attackAnim": 8754,
+  "attackAnim": "quest_dsd_ork_boss_attack",
   "attackSound": -1,
-  "defenceAnim": 8755,
+  "defenceAnim": "quest_dsd_ork_boss_defend",
   "defendSound": -1,
-  "deathAnim": 8756,
+  "deathAnim": "quest_dsd_ork_boss_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

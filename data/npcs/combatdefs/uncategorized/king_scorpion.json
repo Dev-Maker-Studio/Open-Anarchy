@@ -1,12 +1,15 @@
 {
+  "ids": [
+    144
+  ],
   "names": [
     "King Scorpion"
   ],
-  "attackAnim": 6261,
+  "attackAnim": "small_scorpion_update_attack",
   "attackSound": 3611,
-  "defenceAnim": 6259,
+  "defenceAnim": "small_scorpion_update_defend",
   "defendSound": 3612,
-  "deathAnim": 6260,
+  "deathAnim": "small_scorpion_update_death",
   "deathDelay": 6,
   "deathSound": 3610,
   "respawnDelay": 59,

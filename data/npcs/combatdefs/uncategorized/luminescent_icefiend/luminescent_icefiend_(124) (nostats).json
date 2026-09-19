@@ -2,11 +2,11 @@
   "ids": [
     9919
   ],
-  "attackAnim": 13337,
+  "attackAnim": "rand_icefiend_ranged_attack",
   "attackSound": -1,
-  "defenceAnim": 13335,
+  "defenceAnim": "rand_icefiend_defend",
   "defendSound": -1,
-  "deathAnim": 13336,
+  "deathAnim": "rand_icefiend_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

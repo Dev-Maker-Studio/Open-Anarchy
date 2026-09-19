@@ -1,12 +1,17 @@
 {
+  "ids": [
+    5475,
+    5523,
+    5527
+  ],
   "names": [
     "Ice troll female"
   ],
-  "attackAnim": 10816,
+  "attackAnim": "troll_boss_range_attack",
   "attackSound": -1,
-  "defenceAnim": 10818,
+  "defenceAnim": "update_fris_troll_king_block",
   "defendSound": -1,
-  "deathAnim": 10815,
+  "deathAnim": "update_fris_troll_king_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

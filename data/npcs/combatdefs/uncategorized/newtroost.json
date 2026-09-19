@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5597
+  ],
   "names": [
     "Newtroost"
   ],
-  "attackAnim": 2302,
+  "attackAnim": "roosterattack",
   "attackSound": -1,
-  "defenceAnim": 2302,
+  "defenceAnim": "roosterparry",
   "defendSound": -1,
-  "deathAnim": 2301,
+  "deathAnim": "roosterdeath",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

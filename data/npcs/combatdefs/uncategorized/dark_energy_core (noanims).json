@@ -1,10 +1,13 @@
 {
+  "ids": [
+    8127
+  ],
   "names": [
     "Dark energy core"
   ],
-  "attackAnim": 10393,
+  "attackAnim": -1,
   "attackSound": -1,
-  "defenceAnim": 10390,
+  "defenceAnim": -1,
   "defendSound": -1,
   "deathAnim": -1,
   "deathDelay": 6,

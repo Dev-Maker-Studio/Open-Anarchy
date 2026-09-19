@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7352
+  ],
   "names": [
     "Void torcher"
   ],
-  "attackAnim": 8235,
+  "attackAnim": "lore_torcher_attack",
   "attackSound": -1,
-  "defenceAnim": 8237,
+  "defenceAnim": "lore_torcher_defend",
   "defendSound": -1,
-  "deathAnim": 8236,
+  "deathAnim": "lore_torcher_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

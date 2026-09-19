@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2883
+  ],
   "names": [
     "Dagannoth Rex"
   ],
-  "attackAnim": 2853,
+  "attackAnim": "dagannoth_meganoth_attack_melee",
   "attackSound": -1,
-  "defenceAnim": 2852,
+  "defenceAnim": "dagannoth_meganoth_defend",
   "defendSound": -1,
-  "deathAnim": 2856,
+  "deathAnim": "dagannoth_meganoth_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

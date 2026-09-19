@@ -1,12 +1,18 @@
 {
+  "ids": [
+    4930,
+    4931,
+    4933,
+    4934
+  ],
   "names": [
     "Goat"
   ],
-  "attackAnim": 5338,
+  "attackAnim": "sheep_update_attack",
   "attackSound": 757,
-  "defenceAnim": 5337,
+  "defenceAnim": "sheep_update_defend",
   "defendSound": 759,
-  "deathAnim": 5336,
+  "deathAnim": "sheep_update_death",
   "deathDelay": 3,
   "deathSound": 758,
   "respawnDelay": 59,

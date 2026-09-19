@@ -2,11 +2,11 @@
   "ids": [
     13621
   ],
-  "attackAnim": 3651,
+  "attackAnim": "lunarfarm_pauline_tired_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 8107,
+  "defenceAnim": "lunarfarm_pauline_defend",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

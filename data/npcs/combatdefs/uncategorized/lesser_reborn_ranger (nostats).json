@@ -1,12 +1,16 @@
 {
+  "ids": [
+    8561,
+    8562
+  ],
   "names": [
     "Lesser reborn ranger"
   ],
-  "attackAnim": 11116,
+  "attackAnim": "phoenix_guardian_ranged_attack",
   "attackSound": -1,
-  "defenceAnim": 11117,
+  "defenceAnim": "phoenix_guardian_ranged_defend",
   "defendSound": -1,
-  "deathAnim": 11120,
+  "deathAnim": "phoenix_guardian_ranged_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

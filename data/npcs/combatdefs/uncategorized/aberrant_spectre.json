@@ -1,8 +1,18 @@
 {
+  "ids": [
+    1604,
+    1605,
+    1606,
+    1607,
+    7801,
+    7802,
+    7803,
+    7804
+  ],
   "names": [
     "Aberrant spectre"
   ],
-  "attackAnim": 9466,
+  "attackAnim": "spectre_update_attack",
   "attackSound": 272,
   "defenceAnim": 9468,
   "defendSound": 275,

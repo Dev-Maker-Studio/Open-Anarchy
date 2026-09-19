@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2783
+  ],
   "names": [
     "Dark beast"
   ],
-  "attackAnim": 2731,
+  "attackAnim": "dark_beast_update_attack",
   "attackSound": -1,
-  "defenceAnim": 2732,
+  "defenceAnim": "dark_beast_update_defend",
   "defendSound": -1,
-  "deathAnim": 2733,
+  "deathAnim": "dark_beast_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

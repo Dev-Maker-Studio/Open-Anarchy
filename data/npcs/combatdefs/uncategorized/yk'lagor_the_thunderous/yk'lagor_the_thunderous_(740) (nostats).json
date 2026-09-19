@@ -2,11 +2,11 @@
   "ids": [
     11886
   ],
-  "attackAnim": 14392,
+  "attackAnim": "mah5_cutscene_demon_main_fight_one_swinging_attack",
   "attackSound": -1,
-  "defenceAnim": 14370,
+  "defenceAnim": "rand_boss_demon_defend",
   "defendSound": -1,
-  "deathAnim": 14390,
+  "deathAnim": "rand_boss_demon_yklagor_death_grip",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

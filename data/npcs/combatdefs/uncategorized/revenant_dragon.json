@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13481
+  ],
   "names": [
     "Revenant dragon"
   ],
-  "attackAnim": 14261,
+  "attackAnim": "dragon_update_09_ghost_dragon_attack",
   "attackSound": -1,
-  "defenceAnim": 14264,
+  "defenceAnim": "dragon_update_09_ghost_dragon_defend",
   "defendSound": -1,
-  "deathAnim": 14265,
+  "deathAnim": "dragon_update_09_ghost_dragon_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

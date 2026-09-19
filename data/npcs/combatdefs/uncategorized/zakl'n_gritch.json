@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6206
+  ],
   "names": [
     "Zakl'n Gritch"
   ],
-  "attackAnim": 6945,
+  "attackAnim": "godwars_zamorak_attack",
   "attackSound": -1,
-  "defenceAnim": 65,
+  "defenceAnim": "demon_block",
   "defendSound": -1,
-  "deathAnim": 67,
+  "deathAnim": "demon_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 149,

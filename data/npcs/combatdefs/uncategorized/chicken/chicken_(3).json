@@ -2,11 +2,11 @@
   "ids": [
     951
   ],
-  "attackAnim": 7810,
+  "attackAnim": "lore_dreadfowl_special",
   "attackSound": 355,
-  "defenceAnim": 3951,
+  "defenceAnim": "qip_cook_chicken_lay_egg",
   "defendSound": 357,
-  "deathAnim": 7813,
+  "deathAnim": "lore_dreadfowl_death",
   "deathDelay": 4,
   "deathSound": 356,
   "respawnDelay": 39,

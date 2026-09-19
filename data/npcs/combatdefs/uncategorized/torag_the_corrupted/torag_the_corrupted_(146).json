@@ -2,11 +2,11 @@
   "ids": [
     2029
   ],
-  "attackAnim": 2068,
+  "attackAnim": "barrow_torag_crush",
   "attackSound": 1330,
-  "defenceAnim": 2063,
+  "defenceAnim": "barrow_guthan_defend",
   "defendSound": 1339,
-  "deathAnim": 7197,
+  "deathAnim": "pirate_update_death_crossbow",
   "deathDelay": 6,
   "deathSound": 1338,
   "respawnDelay": 59,

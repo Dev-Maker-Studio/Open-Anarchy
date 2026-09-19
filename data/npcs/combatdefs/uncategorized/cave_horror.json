@@ -1,12 +1,19 @@
 {
+  "ids": [
+    4353,
+    4354,
+    4355,
+    4356,
+    4357
+  ],
   "names": [
     "Cave horror"
   ],
-  "attackAnim": 4234,
+  "attackAnim": "harmless_island_jungle_horror_attack",
   "attackSound": -1,
-  "defenceAnim": 4232,
+  "defenceAnim": "harmless_island_jungle_horror_block",
   "defendSound": -1,
-  "deathAnim": 4233,
+  "deathAnim": "harmless_island_jungle_horror_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

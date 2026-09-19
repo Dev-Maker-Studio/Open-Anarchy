@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5248
+  ],
   "names": [
     "Queen spawn"
   ],
-  "attackAnim": 5092,
+  "attackAnim": "barbassault_penance_queen_spawn_attack",
   "attackSound": -1,
-  "defenceAnim": 5091,
+  "defenceAnim": "barbassault_penance_queen_spawn_defend",
   "defendSound": -1,
-  "deathAnim": 5093,
+  "deathAnim": "barbassault_penance_queen_spawn_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

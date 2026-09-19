@@ -1,12 +1,15 @@
 {
+  "ids": [
+    8993
+  ],
   "names": [
     "Leprechaun Champion"
   ],
-  "attackAnim": 5488,
+  "attackAnim": "champions_imp_stab",
   "attackSound": -1,
-  "defenceAnim": 5492,
+  "defenceAnim": "champions2_leprechaun_defend",
   "defendSound": -1,
-  "deathAnim": 5490,
+  "deathAnim": "champions2_leprechaun_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    13457
+  ],
   "names": [
     "Ancient ranger"
   ],
-  "attackAnim": 426,
+  "attackAnim": "human_bow",
   "attackSound": -1,
-  "defenceAnim": 6183,
+  "defenceAnim": "luc2_elite_guard_ranger_defend",
   "defendSound": -1,
-  "deathAnim": 6182,
+  "deathAnim": "luc2_elite_guard_ranger_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

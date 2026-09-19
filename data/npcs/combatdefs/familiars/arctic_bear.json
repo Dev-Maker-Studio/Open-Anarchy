@@ -1,12 +1,16 @@
 {
+  "ids": [
+    6840,
+    7169
+  ],
   "names": [
     "Arctic bear"
   ],
-  "attackAnim": 5327,
+  "attackAnim": "bear_rework_attack",
   "attackSound": -1,
-  "defenceAnim": 5328,
+  "defenceAnim": "bear_rework_defend",
   "defendSound": -1,
-  "deathAnim": 5329,
+  "deathAnim": "bear_rework_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

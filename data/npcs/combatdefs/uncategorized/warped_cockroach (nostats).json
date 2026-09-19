@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7913
+  ],
   "names": [
     "Warped cockroach"
   ],
-  "attackAnim": 8785,
+  "attackAnim": "sops_cockroach_attack_one_by_one",
   "attackSound": -1,
-  "defenceAnim": 8791,
+  "defenceAnim": "sops_cockroach_defend_one_by_one",
   "defendSound": -1,
-  "deathAnim": 8788,
+  "deathAnim": "sops_cockroach_death_one_by_one",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

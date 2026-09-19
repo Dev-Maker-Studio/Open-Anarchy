@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5414
+  ],
   "names": [
     "Animated spade"
   ],
-  "attackAnim": 5597,
+  "attackAnim": "lotr_spade_attack",
   "attackSound": 2498,
-  "defenceAnim": 5590,
+  "defenceAnim": "lotr_pickaxe_defend",
   "defendSound": 1973,
-  "deathAnim": 5596,
+  "deathAnim": "lotr_spade_death",
   "deathDelay": 6,
   "deathSound": 1977,
   "respawnDelay": 59,

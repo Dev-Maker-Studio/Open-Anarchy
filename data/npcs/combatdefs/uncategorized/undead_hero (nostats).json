@@ -1,12 +1,24 @@
 {
+  "ids": [
+    8286,
+    8287,
+    8288,
+    8289,
+    8290,
+    8291,
+    8292,
+    8293,
+    8294,
+    8295
+  ],
   "names": [
     "Undead hero"
   ],
-  "attackAnim": 10641,
+  "attackAnim": "luc2_skeleton_attack",
   "attackSound": -1,
-  "defenceAnim": 10638,
+  "defenceAnim": "luc2_skeleton_defend",
   "defendSound": -1,
-  "deathAnim": 10661,
+  "deathAnim": "luc2_skeleton_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

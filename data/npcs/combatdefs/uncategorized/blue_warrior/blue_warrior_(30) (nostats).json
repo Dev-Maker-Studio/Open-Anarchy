@@ -2,11 +2,11 @@
   "ids": [
     13852
   ],
-  "attackAnim": 4604,
+  "attackAnim": "clan_battlefield_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 4606,
+  "defenceAnim": "clan_battlefield_melee_defend",
   "defendSound": -1,
-  "deathAnim": 4605,
+  "deathAnim": "clan_battlefield_melee_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

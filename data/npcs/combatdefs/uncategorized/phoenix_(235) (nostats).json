@@ -2,11 +2,11 @@
   "ids": [
     8549
   ],
-  "attackAnim": 11093,
+  "attackAnim": "phoenix_phoenix_boss_attack",
   "attackSound": -1,
-  "defenceAnim": 11107,
+  "defenceAnim": "phoenix_phoenix_boss_defend",
   "defendSound": -1,
-  "deathAnim": 11108,
+  "deathAnim": "phoenix_phoenix_boss_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

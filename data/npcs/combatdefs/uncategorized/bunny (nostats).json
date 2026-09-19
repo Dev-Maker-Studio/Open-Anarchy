@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1320,
+    1321
+  ],
   "names": [
     "Bunny"
   ],
-  "attackAnim": 1245,
+  "attackAnim": "rabbit_attack",
   "attackSound": -1,
-  "defenceAnim": 1244,
+  "defenceAnim": "rabbit_block",
   "defendSound": -1,
-  "deathAnim": 1246,
+  "deathAnim": "rabbit_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

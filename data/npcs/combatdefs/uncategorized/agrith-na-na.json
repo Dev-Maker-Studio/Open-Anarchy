@@ -1,12 +1,16 @@
 {
+  "ids": [
+    3493,
+    14544
+  ],
   "names": [
     "Agrith-Na-Na"
   ],
-  "attackAnim": 3501,
+  "attackAnim": "agrith_nana_attack",
   "attackSound": -1,
-  "defenceAnim": 3500,
+  "defenceAnim": "agrith_nana_block",
   "defendSound": -1,
-  "deathAnim": 14878,
+  "deathAnim": "agrith_nana_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

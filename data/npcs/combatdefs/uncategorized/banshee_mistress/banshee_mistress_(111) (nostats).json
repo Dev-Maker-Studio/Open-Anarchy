@@ -2,11 +2,11 @@
   "ids": [
     7793
   ],
-  "attackAnim": 9449,
+  "attackAnim": "champions2_banshee_attack",
   "attackSound": -1,
-  "defenceAnim": 9451,
+  "defenceAnim": "banshee_update_defend",
   "defendSound": -1,
-  "deathAnim": 9378,
+  "deathAnim": "smki_banshee_boss_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

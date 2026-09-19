@@ -2,11 +2,11 @@
   "ids": [
     1159
   ],
-  "attackAnim": 1184,
+  "attackAnim": "kalphite_attack_mandibles",
   "attackSound": -1,
-  "defenceAnim": 1186,
+  "defenceAnim": "kalphite_block",
   "defendSound": -1,
-  "deathAnim": 1190,
+  "deathAnim": "kalphite_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 60,

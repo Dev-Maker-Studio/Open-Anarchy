@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6772
+  ],
   "names": [
     "Scarab larva"
   ],
-  "attackAnim": 7657,
+  "attackAnim": "lore_bloat_leech_attack",
   "attackSound": -1,
-  "defenceAnim": 7655,
+  "defenceAnim": "lore_bloat_leech_defend",
   "defendSound": -1,
-  "deathAnim": 7656,
+  "deathAnim": "lore_bloat_leech_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

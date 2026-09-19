@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3478
+  ],
   "names": [
     "Cyclossus"
   ],
-  "attackAnim": 15083,
+  "attackAnim": "cyclops_blink_attack",
   "attackSound": -1,
-  "defenceAnim": 15084,
+  "defenceAnim": "cyclops_defend",
   "defendSound": -1,
-  "deathAnim": 15085,
+  "deathAnim": "cyclops_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

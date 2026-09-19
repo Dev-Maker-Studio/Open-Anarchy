@@ -1,12 +1,27 @@
 {
+  "ids": [
+    5175,
+    5176,
+    5177,
+    5180,
+    5181,
+    5183,
+    5184,
+    5186,
+    5187,
+    5189,
+    5190,
+    5192,
+    5193
+  ],
   "names": [
     "Ogre shaman"
   ],
-  "attackAnim": 11471,
+  "attackAnim": "chieftan_ogre_attack_staff",
   "attackSound": -1,
-  "defenceAnim": 11474,
+  "defenceAnim": "chieftan_ogre_defend_staff",
   "defendSound": -1,
-  "deathAnim": 11477,
+  "deathAnim": "chieftan_ogre_death_staff",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

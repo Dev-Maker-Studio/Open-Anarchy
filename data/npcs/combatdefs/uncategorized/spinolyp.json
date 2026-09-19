@@ -1,12 +1,17 @@
 {
+  "ids": [
+    2892,
+    2894,
+    2896
+  ],
   "names": [
     "Spinolyp"
   ],
-  "attackAnim": 2868,
+  "attackAnim": "dagannoth_water_creature_attack",
   "attackSound": -1,
-  "defenceAnim": 2869,
+  "defenceAnim": "dagannoth_water_creature_defend",
   "defendSound": -1,
-  "deathAnim": 2866,
+  "deathAnim": "dagannoth_water_creature_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 49,

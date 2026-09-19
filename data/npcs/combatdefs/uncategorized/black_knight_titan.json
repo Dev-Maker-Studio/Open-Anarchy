@@ -1,12 +1,16 @@
 {
+  "ids": [
+    221,
+    14436
+  ],
   "names": [
     "Black Knight Titan"
   ],
-  "attackAnim": 128,
+  "attackAnim": "giant_attack",
   "attackSound": -1,
-  "defenceAnim": 129,
+  "defenceAnim": "giant_block",
   "defendSound": -1,
-  "deathAnim": 131,
+  "deathAnim": "giant_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 4,

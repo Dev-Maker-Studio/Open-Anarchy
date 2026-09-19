@@ -1,12 +1,17 @@
 {
+  "ids": [
+    2804,
+    2805,
+    2806
+  ],
   "names": [
     "Desert Lizard"
   ],
-  "attackAnim": 1579,
+  "attackAnim": "slayer_lizard_attack",
   "attackSound": 605,
-  "defenceAnim": 1580,
+  "defenceAnim": "slayer_lizard_defend",
   "defendSound": 607,
-  "deathAnim": 1581,
+  "deathAnim": "slayer_lizard_death",
   "deathDelay": 6,
   "deathSound": 606,
   "respawnDelay": 59,

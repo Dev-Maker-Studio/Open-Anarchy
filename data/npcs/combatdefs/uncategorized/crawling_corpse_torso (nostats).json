@@ -1,12 +1,18 @@
 {
+  "ids": [
+    7916,
+    7917,
+    7918,
+    7919
+  ],
   "names": [
     "Crawling corpse torso"
   ],
-  "attackAnim": 12891,
+  "attackAnim": "lumbcat_tomb_wraiths_torso_attack",
   "attackSound": -1,
-  "defenceAnim": 12890,
+  "defenceAnim": "lumbcat_tomb_wraiths_torso_defend",
   "defendSound": -1,
-  "deathAnim": 12893,
+  "deathAnim": "lumbcat_tomb_wraiths_torso_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

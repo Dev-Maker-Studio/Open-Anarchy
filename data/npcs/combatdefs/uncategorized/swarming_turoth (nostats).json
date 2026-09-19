@@ -1,14 +1,17 @@
 {
+  "ids": [
+    1611
+  ],
   "names": [
     "Swarming turoth"
   ],
-  "attackAnim": 9476,
-  "attackSound": 873,
-  "defenceAnim": 9478,
-  "defendSound": 875,
-  "deathAnim": 9477,
+  "attackAnim": "smki_turoth_attack",
+  "attackSound": -1,
+  "defenceAnim": "turoth_update_defend",
+  "defendSound": -1,
+  "deathAnim": "turoth_update_death",
   "deathDelay": 6,
-  "deathSound": 874,
+  "deathSound": -1,
   "respawnDelay": 59,
   "hitpoints": 100,
   "maxHit": 110,

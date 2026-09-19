@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6379
+  ],
   "names": [
     "Giant ant worker"
   ],
-  "attackAnim": 7237,
+  "attackAnim": "giant_ants_attack",
   "attackSound": -1,
-  "defenceAnim": 7239,
+  "defenceAnim": "giant_ants_defend",
   "defendSound": -1,
-  "deathAnim": 7238,
+  "deathAnim": "giant_ants_death",
   "deathDelay": 6,
   "deathSound": -4549,
   "respawnDelay": 59,

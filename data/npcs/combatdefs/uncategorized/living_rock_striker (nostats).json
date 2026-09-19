@@ -1,12 +1,15 @@
 {
+  "ids": [
+    8833
+  ],
   "names": [
     "Living rock striker"
   ],
-  "attackAnim": 12204,
+  "attackAnim": "lrc_rock_creature_ranged_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 12194,
+  "defenceAnim": "lrc_rock_creature_melee_defend",
   "defendSound": -1,
-  "deathAnim": 12199,
+  "deathAnim": "lrc_rock_creature_ranged_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 239,

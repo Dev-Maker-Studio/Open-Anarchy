@@ -2,11 +2,11 @@
   "ids": [
     1627
   ],
-  "attackAnim": 9476,
+  "attackAnim": "turoth_update_attack_baby",
   "attackSound": 873,
-  "defenceAnim": 9478,
+  "defenceAnim": "turoth_update_defend_baby",
   "defendSound": 875,
-  "deathAnim": 9477,
+  "deathAnim": "turoth_update_death_baby",
   "deathDelay": 4,
   "deathSound": 874,
   "respawnDelay": 59,

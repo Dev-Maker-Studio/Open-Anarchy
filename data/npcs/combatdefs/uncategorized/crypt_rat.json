@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2032
+  ],
   "names": [
     "Crypt rat"
   ],
-  "attackAnim": 240,
+  "attackAnim": "rat_attack",
   "attackSound": 710,
-  "defenceAnim": 241,
+  "defenceAnim": "rat_block",
   "defendSound": 713,
-  "deathAnim": 243,
+  "deathAnim": "rat_death",
   "deathDelay": 6,
   "deathSound": 711,
   "respawnDelay": 59,

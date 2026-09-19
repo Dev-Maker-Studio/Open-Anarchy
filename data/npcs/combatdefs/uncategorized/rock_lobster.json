@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2889
+  ],
   "names": [
     "Rock lobster"
   ],
-  "attackAnim": 2859,
+  "attackAnim": "dagannoth_rock_lobster_attack",
   "attackSound": -1,
-  "defenceAnim": 2860,
+  "defenceAnim": "dagannoth_rock_lobster_defend",
   "defendSound": -1,
-  "deathAnim": 2862,
+  "deathAnim": "dagannoth_rock_lobster_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

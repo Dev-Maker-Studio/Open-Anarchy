@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7330
+  ],
   "names": [
     "Swamp titan"
   ],
-  "attackAnim": 8222,
+  "attackAnim": "lore_swamp_titan_attack",
   "attackSound": -1,
-  "defenceAnim": 8224,
+  "defenceAnim": "lore_swamp_titan_defend",
   "defendSound": -1,
-  "deathAnim": 8226,
+  "deathAnim": "lore_swamp_titan_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

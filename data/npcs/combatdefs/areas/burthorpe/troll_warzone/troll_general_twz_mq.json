@@ -3,7 +3,7 @@
     14991,
     14992
   ],
-  "attackAnim": -1,
+  "attackAnim": "troll_treetrunk_attack",
   "attackSound": -1,
   "defenceAnim": 1935,
   "defendSound": -1,

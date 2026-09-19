@@ -2,11 +2,11 @@
   "ids": [
     7382
   ],
-  "attackAnim": 8969,
+  "attackAnim": "glomem_mythical_beast_attack",
   "attackSound": -1,
-  "defenceAnim": 8972,
+  "defenceAnim": "glomem_mythical_beast_defend",
   "defendSound": -1,
-  "deathAnim": 8971,
+  "deathAnim": "glomem_mythical_beast_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

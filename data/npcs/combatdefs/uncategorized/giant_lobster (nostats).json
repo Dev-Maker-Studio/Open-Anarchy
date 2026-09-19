@@ -1,12 +1,15 @@
 {
+  "ids": [
+    4893
+  ],
   "names": [
     "Giant Lobster"
   ],
-  "attackAnim": 6265,
+  "attackAnim": "lobster_update_attack",
   "attackSound": -1,
-  "defenceAnim": 6266,
+  "defenceAnim": "lobster_update_defend",
   "defendSound": -1,
-  "deathAnim": 6267,
+  "deathAnim": "lobster_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

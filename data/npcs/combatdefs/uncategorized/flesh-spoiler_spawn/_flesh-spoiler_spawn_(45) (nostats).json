@@ -2,11 +2,11 @@
   "ids": [
     11910
   ],
-  "attackAnim": 14474,
+  "attackAnim": "rand_eyesquid_attack",
   "attackSound": -1,
-  "defenceAnim": 14476,
+  "defenceAnim": "rand_eyesquid_defend",
   "defendSound": -1,
-  "deathAnim": 14487,
+  "deathAnim": "rand_eyesquid_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

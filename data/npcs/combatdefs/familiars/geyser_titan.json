@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7340
+  ],
   "names": [
     "Geyser titan"
   ],
-  "attackAnim": 7883,
+  "attackAnim": "lore_geyser_titan_spell",
   "attackSound": -1,
-  "defenceAnim": 7878,
+  "defenceAnim": "lore_geyser_titan_defend",
   "defendSound": -1,
-  "deathAnim": 7880,
+  "deathAnim": "lore_geyser_titan_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

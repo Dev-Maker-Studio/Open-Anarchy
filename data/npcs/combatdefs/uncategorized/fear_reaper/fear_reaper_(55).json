@@ -2,11 +2,11 @@
   "ids": [
     3665
   ],
-  "attackAnim": 3812,
+  "attackAnim": "fear_attack",
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": "fear_parry",
   "defendSound": -1,
-  "deathAnim": 3813,
+  "deathAnim": "fear_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

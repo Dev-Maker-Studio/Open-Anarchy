@@ -1,12 +1,16 @@
 {
+  "ids": [
+    9622,
+    9641
+  ],
   "names": [
     "Dragith Nurn"
   ],
-  "attackAnim": 12844,
+  "attackAnim": "lumbcat_dragith_nurn_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 12867,
+  "defenceAnim": "lumbcat_tomb_wraiths_mage_defend",
   "defendSound": -1,
-  "deathAnim": 12870,
+  "deathAnim": "lumbcat_tomb_wraiths_floating_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

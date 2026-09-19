@@ -1,12 +1,16 @@
 {
+  "ids": [
+    7807,
+    7808
+  ],
   "names": [
     "Mummy warrior"
   ],
-  "attackAnim": 5549,
+  "attackAnim": "mummy_update_sword_attack",
   "attackSound": -1,
-  "defenceAnim": 5556,
+  "defenceAnim": "mummy_update_defend",
   "defendSound": -1,
-  "deathAnim": 5555,
+  "deathAnim": "mummy_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

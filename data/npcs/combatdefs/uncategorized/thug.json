@@ -1,12 +1,24 @@
 {
+  "ids": [
+    186,
+    7106,
+    7107,
+    7108,
+    7109,
+    7110,
+    7111,
+    7112,
+    7113,
+    7114
+  ],
   "names": [
     "Thug"
   ],
-  "attackAnim": 386,
+  "attackAnim": "human_sword_stab",
   "attackSound": 2501,
-  "defenceAnim": 388,
+  "defenceAnim": "human_sword_def",
   "defendSound": 513,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": 512,
   "respawnDelay": 39,

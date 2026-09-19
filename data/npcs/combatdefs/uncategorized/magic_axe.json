@@ -1,12 +1,15 @@
 {
+  "ids": [
+    127
+  ],
   "names": [
     "Magic axe"
   ],
-  "attackAnim": 185,
+  "attackAnim": "magicaxe_attack",
   "attackSound": -1,
-  "defenceAnim": 186,
+  "defenceAnim": "magicaxe_block",
   "defendSound": -1,
-  "deathAnim": 188,
+  "deathAnim": "magicaxe_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 29,

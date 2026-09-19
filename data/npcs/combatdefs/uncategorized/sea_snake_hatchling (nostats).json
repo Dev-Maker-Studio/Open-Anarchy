@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3940
+  ],
   "names": [
     "Sea Snake Hatchling"
   ],
-  "attackAnim": 3538,
+  "attackAnim": "royal_sea_snake_attack",
   "attackSound": -1,
-  "defenceAnim": 3539,
+  "defenceAnim": "royal_sea_snake_defend",
   "defendSound": -1,
-  "deathAnim": 3540,
+  "deathAnim": "royal_sea_snake_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

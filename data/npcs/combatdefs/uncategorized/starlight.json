@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6248
+  ],
   "names": [
     "Starlight"
   ],
-  "attackAnim": 6376,
+  "attackAnim": "unicorn_rework_attack",
   "attackSound": -1,
-  "defenceAnim": 6375,
+  "defenceAnim": "unicorn_rework_defend",
   "defendSound": -1,
-  "deathAnim": 6377,
+  "deathAnim": "unicorn_rework_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 149,

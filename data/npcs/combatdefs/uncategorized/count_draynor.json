@@ -1,10 +1,15 @@
 {
+  "ids": [
+    9356,
+    9357,
+    14496
+  ],
   "names": [
     "Count Draynor"
   ],
-  "attackAnim": 3331,
+  "attackAnim": "vampire_attack",
   "attackSound": -1,
-  "defenceAnim": 3332,
+  "defenceAnim": "vampire_defend",
   "defendSound": -1,
   "deathAnim": -1,
   "deathDelay": 6,

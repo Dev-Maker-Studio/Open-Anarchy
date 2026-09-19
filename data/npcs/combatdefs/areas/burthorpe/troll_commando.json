@@ -1,12 +1,15 @@
 {
+  "ids": [
+    14926
+  ],
   "names": [
     "Troll commando"
   ],
-  "attackAnim": 13790,
+  "attackAnim": "update_troll_rock_throw",
   "attackSound": -1,
-  "defenceAnim": 13792,
+  "defenceAnim": "update_troll_block",
   "defendSound": -1,
-  "deathAnim": 13785,
+  "deathAnim": "update_troll_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 30,

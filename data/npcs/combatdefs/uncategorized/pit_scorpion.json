@@ -1,12 +1,15 @@
 {
+  "ids": [
+    109
+  ],
   "names": [
     "Pit Scorpion"
   ],
-  "attackAnim": 6254,
+  "attackAnim": "scorpion_update_attack_tail",
   "attackSound": -1,
-  "defenceAnim": 6255,
+  "defenceAnim": "scorpion_update_defend",
   "defendSound": -1,
-  "deathAnim": 6256,
+  "deathAnim": "scorpion_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

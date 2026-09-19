@@ -1,12 +1,16 @@
 {
+  "ids": [
+    6296,
+    6297
+  ],
   "names": [
     "Warped tortoise"
   ],
-  "attackAnim": 7093,
+  "attackAnim": "pog_mutated_battle_tortoise_attack",
   "attackSound": -1,
-  "defenceAnim": 7092,
+  "defenceAnim": "pog_mutated_battle_tortoise_defend",
   "defendSound": -1,
-  "deathAnim": 7091,
+  "deathAnim": "pog_mutated_battle_tortoise_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 4,

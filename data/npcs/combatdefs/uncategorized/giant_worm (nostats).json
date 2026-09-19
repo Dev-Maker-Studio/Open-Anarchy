@@ -1,12 +1,15 @@
 {
+  "ids": [
+    15464
+  ],
   "names": [
     "Giant worm"
   ],
-  "attackAnim": 16782,
+  "attackAnim": "qbd1_parasite_tier2_acid_attack",
   "attackSound": -1,
-  "defenceAnim": 16779,
+  "defenceAnim": "qbd1_parasite_tier1_defend",
   "defendSound": -1,
-  "deathAnim": 16778,
+  "deathAnim": "qbd1_parasite_tier1_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

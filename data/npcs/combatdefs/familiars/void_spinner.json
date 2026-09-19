@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7334
+  ],
   "names": [
     "Void spinner"
   ],
-  "attackAnim": 8172,
+  "attackAnim": "lore_spinner_attack",
   "attackSound": -1,
-  "defenceAnim": 8173,
+  "defenceAnim": "lore_spinner_defend",
   "defendSound": -1,
-  "deathAnim": 8176,
+  "deathAnim": "lore_spinner_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

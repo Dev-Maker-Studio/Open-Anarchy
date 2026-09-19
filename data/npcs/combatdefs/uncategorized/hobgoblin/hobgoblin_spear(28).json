@@ -4,11 +4,11 @@
     4898
 
   ],
-  "attackAnim": 12405,
+  "attackAnim": "hobgoblin_update_attack_unarmed",
   "attackSound": 3520,
-  "defenceAnim": 12406,
+  "defenceAnim": "hobgoblin_update_defend_unarmed",
   "defendSound": 472,
-  "deathAnim": 2958,
+  "deathAnim": "hobgoblin_update_death",
   "deathDelay": 4,
   "deathSound": 471,
   "respawnDelay": 29,

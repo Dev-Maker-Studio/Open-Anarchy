@@ -2,11 +2,11 @@
   "ids": [
     4398
   ],
-  "attackAnim": 4271,
+  "attackAnim": "catpon_attack",
   "attackSound": 511,
-  "defenceAnim": 4273,
+  "defenceAnim": "catpon_parry",
   "defendSound": 330,
-  "deathAnim": 4270,
+  "deathAnim": "catpon_death",
   "deathDelay": 6,
   "deathSound": 329,
   "respawnDelay": 39,

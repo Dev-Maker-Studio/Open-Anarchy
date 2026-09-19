@@ -1,12 +1,17 @@
 {
+  "ids": [
+    2457,
+    2884,
+    9096
+  ],
   "names": [
     "Wallasalki"
   ],
-  "attackAnim": 2365,
+  "attackAnim": "wallasalki_attack",
   "attackSound": -1,
-  "defenceAnim": 2366,
+  "defenceAnim": "wallasalki_defend",
   "defendSound": -1,
-  "deathAnim": 2367,
+  "deathAnim": "wallasalki_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

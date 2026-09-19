@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3200
+  ],
   "names": [
     "Chaos Elemental"
   ],
-  "attackAnim": 5443,
+  "attackAnim": "elemental_update_chaos_attack",
   "attackSound": -1,
-  "defenceAnim": 5444,
+  "defenceAnim": "elemental_update_chaos_defend",
   "defendSound": -1,
-  "deathAnim": 5446,
+  "deathAnim": "elemental_update_chaos_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 119,

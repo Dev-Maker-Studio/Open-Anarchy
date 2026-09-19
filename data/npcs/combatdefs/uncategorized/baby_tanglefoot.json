@@ -1,12 +1,16 @@
 {
+  "ids": [
+    3319,
+    3320
+  ],
   "names": [
     "Baby tanglefoot"
   ],
-  "attackAnim": 13876,
+  "attackAnim": "fairykit_tanglefoot_large_attack",
   "attackSound": -1,
-  "defenceAnim": 13873,
+  "defenceAnim": "fairykit_tanglefoot_large_defend",
   "defendSound": -1,
-  "deathAnim": 13879,
+  "deathAnim": "fairykit_tanglefoot_large_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

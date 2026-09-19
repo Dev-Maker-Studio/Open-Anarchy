@@ -3,9 +3,9 @@
     15179,
     15180
   ],
-  "attackAnim": 16220,
+  "attackAnim": "tzhaar2_jalyt_gaal_attack",
   "attackSound": -1,
-  "defenceAnim": 16222,
+  "defenceAnim": "tzhaar2_jalyt_gaal_defend",
   "defendSound": -1,
   "deathAnim": 16259,
   "deathDelay": 6,

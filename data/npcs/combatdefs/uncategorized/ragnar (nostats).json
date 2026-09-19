@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1379
+  ],
   "names": [
     "Ragnar"
   ],
-  "attackAnim": 422,
+  "attackAnim": "sitting_throne_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_sword_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

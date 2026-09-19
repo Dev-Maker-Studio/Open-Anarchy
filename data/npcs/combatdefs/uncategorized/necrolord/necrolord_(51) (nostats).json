@@ -2,11 +2,11 @@
   "ids": [
     15395
   ],
-  "attackAnim": 422,
+  "attackAnim": "fremsaga_necrolord_attack",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_sword_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

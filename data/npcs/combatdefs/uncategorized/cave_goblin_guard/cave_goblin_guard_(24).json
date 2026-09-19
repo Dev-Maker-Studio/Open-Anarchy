@@ -2,11 +2,11 @@
   "ids": [
     2074
   ],
-  "attackAnim": 6007,
+  "attackAnim": "dorgesh_goblin_club_attack",
   "attackSound": 465,
-  "defenceAnim": 6008,
+  "defenceAnim": "dorgesh_goblin_spear_block",
   "defendSound": 467,
-  "deathAnim": 6003,
+  "deathAnim": "dorgesh_goblin_death",
   "deathDelay": 6,
   "deathSound": 466,
   "respawnDelay": 59,

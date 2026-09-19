@@ -1,10 +1,14 @@
 {
+  "ids": [
+    6247,
+    14340
+  ],
   "names": [
     "Commander Zilyana"
   ],
-  "attackAnim": 6964,
+  "attackAnim": "godwars_saradomin_attack",
   "attackSound": -1,
-  "defenceAnim": 6966,
+  "defenceAnim": "godwars_saradomin_defend",
   "defendSound": -1,
   "deathAnim": 6965,
   "deathDelay": 4,

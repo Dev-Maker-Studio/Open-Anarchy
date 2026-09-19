@@ -1,12 +1,16 @@
 {
+  "ids": [
+    5994,
+    5995
+  ],
   "names": [
     "Mouse"
   ],
-  "attackAnim": 6519,
+  "attackAnim": "grim_giant_mouse_attack",
   "attackSound": -1,
-  "defenceAnim": 6520,
+  "defenceAnim": "grim_giant_mouse_defend",
   "defendSound": -1,
-  "deathAnim": 6521,
+  "deathAnim": "grim_giant_mouse_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

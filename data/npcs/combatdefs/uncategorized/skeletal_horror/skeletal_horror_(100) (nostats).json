@@ -2,11 +2,11 @@
   "ids": [
     9180
   ],
-  "attackAnim": 12065,
+  "attackAnim": "rag2_skeletal_beast_attack_magic_a",
   "attackSound": -1,
-  "defenceAnim": 12073,
+  "defenceAnim": "rag2_skeletal_beast_defend_a",
   "defendSound": -1,
-  "deathAnim": 12069,
+  "deathAnim": "rag2_skeletal_beast_death_a",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

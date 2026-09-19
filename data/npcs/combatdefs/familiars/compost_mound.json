@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6872
+  ],
   "names": [
     "Compost mound"
   ],
-  "attackAnim": 7769,
+  "attackAnim": "lore_compost_mound_attack",
   "attackSound": -1,
-  "defenceAnim": 7771,
+  "defenceAnim": "lore_compost_mound_defend",
   "defendSound": -1,
-  "deathAnim": 7770,
+  "deathAnim": "lore_compost_mound_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

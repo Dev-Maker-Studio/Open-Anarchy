@@ -1,12 +1,15 @@
 {
+  "ids": [
+    2746
+  ],
   "names": [
     "Yt-HurKot"
   ],
-  "attackAnim": 16087,
+  "attackAnim": "tzhaar_2011_yt_hurkot_attack",
   "attackSound": -1,
-  "defenceAnim": 16086,
+  "defenceAnim": "tzhaar_2011_yt_hurkot_defend",
   "defendSound": -1,
-  "deathAnim": 16108,
+  "deathAnim": "tzhaar_2011_yt_hurkot_death",
   "deathDelay": 12,
   "deathSound": -1,
   "respawnDelay": 59,

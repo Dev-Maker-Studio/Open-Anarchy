@@ -2,11 +2,11 @@
   "ids": [
     13742
   ],
-  "attackAnim": -1,
+  "attackAnim": "sum1_mage_attack_beast",
   "attackSound": -1,
-  "defenceAnim": -1,
+  "defenceAnim": "warguild_mage_def",
   "defendSound": -1,
-  "deathAnim": -1,
+  "deathAnim": "luc2_elite_guard_mage_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -3,7 +3,7 @@
     13979,
     13980
   ],
-  "attackAnim": 9466,
+  "attackAnim": "spectre_update_attack",
   "attackSound": -1,
   "defenceAnim": 9468,
   "defendSound": -1,

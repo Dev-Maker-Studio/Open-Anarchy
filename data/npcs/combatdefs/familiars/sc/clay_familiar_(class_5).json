@@ -1,12 +1,15 @@
 {
+  "ids": [
+    8249
+  ],
   "names": [
     "Clay familiar (class 5)"
   ],
-  "attackAnim": 10591,
+  "attackAnim": "sc_summoning_creature_attack",
   "attackSound": -1,
-  "defenceAnim": 10592,
+  "defenceAnim": "sc_summoning_creature_defend",
   "defendSound": -1,
-  "deathAnim": 10597,
+  "deathAnim": "sc_summoning_creature_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

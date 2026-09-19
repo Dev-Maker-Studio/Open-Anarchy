@@ -1,12 +1,16 @@
 {
+  "ids": [
+    14950,
+    14951
+  ],
   "names": [
     "Magic Stick"
   ],
-  "attackAnim": 15865,
+  "attackAnim": "troll_boss_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 15859,
+  "defenceAnim": "troll_dynamite_defend",
   "defendSound": -1,
-  "deathAnim": 16072,
+  "deathAnim": "troll_dynamite_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

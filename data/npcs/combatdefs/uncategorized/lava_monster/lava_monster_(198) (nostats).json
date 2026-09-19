@@ -2,11 +2,11 @@
   "ids": [
     15188
   ],
-  "attackAnim": 16185,
+  "attackAnim": "tzhaar_2011_lava_monster_magic_attack",
   "attackSound": -1,
-  "defenceAnim": 16140,
+  "defenceAnim": "tzhaar_2011_lava_monster_defend",
   "defendSound": -1,
-  "deathAnim": 16142,
+  "deathAnim": "tzhaar_2011_lava_monster_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

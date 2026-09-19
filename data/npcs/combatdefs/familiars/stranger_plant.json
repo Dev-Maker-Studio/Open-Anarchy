@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6828
+  ],
   "names": [
     "Stranger plant"
   ],
-  "attackAnim": 8292,
+  "attackAnim": "lore_stranger_plant_attack",
   "attackSound": -1,
-  "defenceAnim": 8294,
+  "defenceAnim": "lore_stranger_plant_defend",
   "defendSound": -1,
-  "deathAnim": 8295,
+  "deathAnim": "lore_stranger_plant_death",
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 0,

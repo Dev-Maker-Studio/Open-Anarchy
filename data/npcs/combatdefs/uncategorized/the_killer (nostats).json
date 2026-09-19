@@ -1,12 +1,15 @@
 {
+  "ids": [
+    14624
+  ],
   "names": [
     "The Killer"
   ],
-  "attackAnim": 15425,
+  "attackAnim": "myq5_juvenile_attack",
   "attackSound": -1,
-  "defenceAnim": 6652,
+  "defenceAnim": "myq5_juvenile_defend",
   "defendSound": -1,
-  "deathAnim": 15336,
+  "deathAnim": "myq5_juvenile_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

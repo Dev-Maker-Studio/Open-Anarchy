@@ -2,9 +2,9 @@
   "ids": [
     9077
   ],
-  "attackAnim": 299,
+  "attackAnim": "water_pyrefiend_update_attack",
   "attackSound": 3774,
-  "defenceAnim": 301,
+  "defenceAnim": "water_pyrefiend_update_defend",
   "defendSound": 3773,
   "deathAnim": 300,
   "deathDelay": 6,

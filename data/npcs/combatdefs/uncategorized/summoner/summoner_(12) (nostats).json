@@ -2,11 +2,11 @@
   "ids": [
     13671
   ],
-  "attackAnim": 4332,
+  "attackAnim": "troll_treetrunk_attack",
   "attackSound": -1,
-  "defenceAnim": 13792,
+  "defenceAnim": "troll_dynamite_defend",
   "defendSound": -1,
-  "deathAnim": 13785,
+  "deathAnim": "troll_dynamite_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

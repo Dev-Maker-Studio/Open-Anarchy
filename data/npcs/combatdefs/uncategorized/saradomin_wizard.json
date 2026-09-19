@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1264
+  ],
   "names": [
     "Saradomin wizard"
   ],
-  "attackAnim": 396,
+  "attackAnim": "human_axe_smash",
   "attackSound": -1,
-  "defenceAnim": 387,
+  "defenceAnim": "human_sword_block",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

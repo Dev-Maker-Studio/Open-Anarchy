@@ -1,12 +1,15 @@
 {
+  "ids": [
+    14100
+  ],
   "names": [
     "Vyrewatch guard"
   ],
-  "attackAnim": 36,
+  "attackAnim": "vanstrom_klause_stake_attack",
   "attackSound": -1,
-  "defenceAnim": 4704,
+  "defenceAnim": "myq3_vampire_grounded_defend_female",
   "defendSound": -1,
-  "deathAnim": 4708,
+  "deathAnim": "myq3_vampire_grounded_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

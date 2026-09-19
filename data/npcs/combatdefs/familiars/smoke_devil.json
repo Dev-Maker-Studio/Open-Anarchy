@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6866
+  ],
   "names": [
     "Smoke devil"
   ],
-  "attackAnim": 7816,
+  "attackAnim": "lore_dust_devil_attack",
   "attackSound": -1,
-  "defenceAnim": 7817,
+  "defenceAnim": "lore_dust_devil_defend",
   "defendSound": -1,
-  "deathAnim": 7818,
+  "deathAnim": "lore_dust_devil_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

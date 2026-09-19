@@ -1,14 +1,18 @@
 {
+  "ids": [
+    2489,
+    2490
+  ],
   "names": [
     "Bush snake"
   ],
-  "attackAnim": 275,
-  "attackSound": 797,
-  "defenceAnim": 276,
-  "defendSound": 800,
-  "deathAnim": 278,
+  "attackAnim": "snake_attack",
+  "attackSound": -1,
+  "defenceAnim": "snake_block",
+  "defendSound": -1,
+  "deathAnim": "snake_death",
   "deathDelay": 6,
-  "deathSound": 798,
+  "deathSound": -1,
   "respawnDelay": 59,
   "hitpoints": 250,
   "maxHit": 38,

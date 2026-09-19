@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7336
+  ],
   "names": [
     "Forge regent"
   ],
-  "attackAnim": 7866,
+  "attackAnim": "flaming_prince_fire_attack",
   "attackSound": -1,
-  "defenceAnim": 7865,
+  "defenceAnim": "flaming_prince_defend",
   "defendSound": -1,
-  "deathAnim": 7864,
+  "deathAnim": "flaming_prince_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

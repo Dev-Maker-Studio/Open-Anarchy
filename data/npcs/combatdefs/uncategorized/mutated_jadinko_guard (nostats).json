@@ -1,10 +1,13 @@
 {
+  "ids": [
+    13821
+  ],
   "names": [
     "Mutated jadinko guard"
   ],
   "attackAnim": 3214,
   "attackSound": -1,
-  "defenceAnim": 3209,
+  "defenceAnim": "jaro_jardinko_adult_defend",
   "defendSound": -1,
   "deathAnim": 3232,
   "deathDelay": 6,

@@ -1,8 +1,12 @@
 {
+  "ids": [
+    11168,
+    11169
+  ],
   "names": [
     "Little skinweaver"
   ],
-  "attackAnim": 13678,
+  "attackAnim": "rand_healer_familiar_heal",
   "attackSound": -1,
   "defenceAnim": 13674,
   "defendSound": -1,

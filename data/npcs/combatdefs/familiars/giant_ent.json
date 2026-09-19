@@ -1,12 +1,15 @@
 {
+  "ids": [
+    6801
+  ],
   "names": [
     "Giant ent"
   ],
-  "attackAnim": 7853,
+  "attackAnim": "lore_ent_attack",
   "attackSound": -1,
-  "defenceAnim": 7852,
+  "defenceAnim": "lore_ent_defend",
   "defendSound": -1,
-  "deathAnim": 7854,
+  "deathAnim": "lore_ent_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

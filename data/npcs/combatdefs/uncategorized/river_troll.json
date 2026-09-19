@@ -1,12 +1,22 @@
 {
+  "ids": [
+    8646,
+    11452,
+    11454,
+    11466,
+    11470,
+    11471,
+    12230,
+    12252
+  ],
   "names": [
     "River troll"
   ],
-  "attackAnim": 1158,
+  "attackAnim": "troll_treetrunk_attack",
   "attackSound": -1,
-  "defenceAnim": 5375,
+  "defenceAnim": "update_fris_troll_king_block",
   "defendSound": -1,
-  "deathAnim": 5209,
+  "deathAnim": "update_fris_troll_king_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

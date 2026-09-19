@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5751
+  ],
   "names": [
     "Molanisk"
   ],
-  "attackAnim": 6012,
+  "attackAnim": "monalisk_creature_attack",
   "attackSound": -1,
-  "defenceAnim": 6015,
+  "defenceAnim": "molanisk_creature_on_wall_look_east",
   "defendSound": -1,
-  "deathAnim": 6014,
+  "deathAnim": "monalisk_creature_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

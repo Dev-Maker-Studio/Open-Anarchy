@@ -1,12 +1,18 @@
 {
+  "ids": [
+    13218,
+    13219,
+    13220,
+    14605
+  ],
   "names": [
     "Ayuni"
   ],
-  "attackAnim": 15046,
+  "attackAnim": "bdrag_attack",
   "attackSound": -1,
-  "defenceAnim": 15041,
+  "defenceAnim": "apmeken_ayuni_defend",
   "defendSound": -1,
-  "deathAnim": 15063,
+  "deathAnim": "apmeken_ayuni_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

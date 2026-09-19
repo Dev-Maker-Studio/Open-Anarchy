@@ -2,11 +2,11 @@
   "ids": [
     7643
   ],
-  "attackAnim": 9130,
+  "attackAnim": "bloodveld_update_attack",
   "attackSound": -1,
-  "defenceAnim": 9132,
+  "defenceAnim": "bloodveld_update_defend",
   "defendSound": -1,
-  "deathAnim": 9131,
+  "deathAnim": "bloodveld_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

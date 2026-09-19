@@ -1,12 +1,25 @@
 {
+  "ids": [
+    1637,
+    1638,
+    1639,
+    1640,
+    1641,
+    1642,
+    7459,
+    7460,
+    8599,
+    8617,
+    10699
+  ],
   "names": [
     "Jelly"
   ],
-  "attackAnim": 8569,
+  "attackAnim": "jelly_update_attack",
   "attackSound": 547,
-  "defenceAnim": 8571,
+  "defenceAnim": "jelly_update_defend",
   "defendSound": 550,
-  "deathAnim": 8570,
+  "deathAnim": "jelly_update_death",
   "deathDelay": 6,
   "deathSound": 549,
   "respawnDelay": 59,

@@ -2,11 +2,11 @@
   "ids": [
     10207
   ],
-  "attackAnim": 4300,
+  "attackAnim": "gorak_attack",
   "attackSound": -1,
-  "defenceAnim": 4301,
+  "defenceAnim": "gorak_defend",
   "defendSound": -1,
-  "deathAnim": 4302,
+  "deathAnim": "gorak_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 39,

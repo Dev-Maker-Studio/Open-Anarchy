@@ -2,11 +2,11 @@
   "ids": [
     1677
   ],
-  "attackAnim": 1616,
+  "attackAnim": "waa_homo_arachnus_attack",
   "attackSound": -1,
-  "defenceAnim": 1617,
+  "defenceAnim": "waa_homo_arachnus_defend",
   "defendSound": -1,
-  "deathAnim": 1618,
+  "deathAnim": "waa_homo_arachnus_death",
   "deathDelay": 2,
   "deathSound": -1,
   "respawnDelay": 39,

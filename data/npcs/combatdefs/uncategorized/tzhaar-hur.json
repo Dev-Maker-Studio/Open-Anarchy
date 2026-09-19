@@ -1,12 +1,21 @@
 {
+  "ids": [
+    2600,
+    2601,
+    2602,
+    2603,
+    7767,
+    7768,
+    7769
+  ],
   "names": [
     "TzHaar-Hur"
   ],
-  "attackAnim": 16098,
+  "attackAnim": "tzhaar_2011_hurr_attack",
   "attackSound": 251,
-  "defenceAnim": 16173,
+  "defenceAnim": "tzhaar_2011_hurr_defend",
   "defendSound": 253,
-  "deathAnim": 16178,
+  "deathAnim": "tzhaar_2011_hurr_death",
   "deathDelay": 6,
   "deathSound": 252,
   "respawnDelay": 59,

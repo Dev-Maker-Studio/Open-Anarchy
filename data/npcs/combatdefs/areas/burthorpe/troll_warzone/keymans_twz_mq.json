@@ -2,11 +2,11 @@
   "ids": [
     14988
   ],
-  "attackAnim": 1067,
+  "attackAnim": "d_claws_punch",
   "attackSound": -1,
-  "defenceAnim": 424,
+  "defenceAnim": "human_unarmedblock",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "human_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 30,

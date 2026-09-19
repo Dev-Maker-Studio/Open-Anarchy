@@ -1,12 +1,15 @@
 {
+  "ids": [
+    5860
+  ],
   "names": [
     "H.A.M. Mage"
   ],
-  "attackAnim": 419,
+  "attackAnim": "human_staff_pound",
   "attackSound": -1,
-  "defenceAnim": 420,
+  "defenceAnim": "human_staff_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "luc2_elite_guard_mage_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

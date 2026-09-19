@@ -1,12 +1,18 @@
 {
+  "ids": [
+    12163,
+    12202,
+    12204,
+    12205
+  ],
   "names": [
     "Enemy Foot Soldier"
   ],
-  "attackAnim": 422,
+  "attackAnim": "omge_cutscene_soldier1_attacked",
   "attackSound": -1,
-  "defenceAnim": 425,
+  "defenceAnim": "human_sword_def",
   "defendSound": -1,
-  "deathAnim": 836,
+  "deathAnim": "omge_soldier_wounded_ready",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

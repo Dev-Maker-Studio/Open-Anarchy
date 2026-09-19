@@ -2,11 +2,11 @@
   "ids": [
     3618
   ],
-  "attackAnim": 3618,
+  "attackAnim": "tentacle_monster_attack",
   "attackSound": -1,
-  "defenceAnim": 3619,
+  "defenceAnim": "tentacle_monster_block",
   "defendSound": -1,
-  "deathAnim": 3620,
+  "deathAnim": "tentacle_monster_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

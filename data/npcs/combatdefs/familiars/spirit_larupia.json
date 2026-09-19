@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7338
+  ],
   "names": [
     "Spirit larupia"
   ],
-  "attackAnim": 7018,
+  "attackAnim": "godwars_lion_attack",
   "attackSound": -1,
-  "defenceAnim": 7017,
+  "defenceAnim": "godwars_lion_defend",
   "defendSound": -1,
-  "deathAnim": 7016,
+  "deathAnim": "godwars_lion_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -2,11 +2,11 @@
   "ids": [
     12749
   ],
-  "attackAnim": 15001,
+  "attackAnim": "rand_gulega_warped_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 15000,
+  "defenceAnim": "rand_gulega_warped_defend",
   "defendSound": -1,
-  "deathAnim": 15003,
+  "deathAnim": "rand_gulega_warped_death",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 0,

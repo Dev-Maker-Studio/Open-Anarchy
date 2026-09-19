@@ -1,12 +1,16 @@
 {
+  "ids": [
+    5363,
+    8424
+  ],
   "names": [
     "Mithril dragon"
   ],
-  "attackAnim": 14247,
+  "attackAnim": "dragon_update_09_metal_dragon_attack",
   "attackSound": -1,
-  "defenceAnim": 14249,
+  "defenceAnim": "dragon_update_09_metal_dragon_defend",
   "defendSound": -1,
-  "deathAnim": 14248,
+  "deathAnim": "dragon_update_09_metal_dragon_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,16 @@
 {
+  "ids": [
+    1155,
+    1157
+  ],
   "names": [
     "Kalphite Guardian"
   ],
-  "attackAnim": 6223,
+  "attackAnim": "kalphite_update_jaws_attack",
   "attackSound": 560,
-  "defenceAnim": 6227,
+  "defenceAnim": "kalphite_update_defend",
   "defendSound": 562,
-  "deathAnim": 6230,
+  "deathAnim": "kalphite_update_lord_death",
   "deathDelay": 6,
   "deathSound": 561,
   "respawnDelay": 59,

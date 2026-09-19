@@ -1,12 +1,15 @@
 {
+  "ids": [
+    1248
+  ],
   "names": [
     "Asyn Shade"
   ],
-  "attackAnim": 1284,
+  "attackAnim": "shade_attack_wall",
   "attackSound": -1,
-  "defenceAnim": 1286,
+  "defenceAnim": "shade_block",
   "defendSound": -1,
-  "deathAnim": 1287,
+  "deathAnim": "shade_sink",
   "deathDelay": 4,
   "deathSound": -1,
   "respawnDelay": 59,

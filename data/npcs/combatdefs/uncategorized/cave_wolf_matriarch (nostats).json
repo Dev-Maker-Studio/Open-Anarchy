@@ -1,12 +1,16 @@
 {
+  "ids": [
+    15598,
+    15599
+  ],
   "names": [
     "Cave Wolf Matriarch"
   ],
-  "attackAnim": 16999,
+  "attackAnim": "carni_adult_wolf_attack",
   "attackSound": -1,
-  "defenceAnim": 17000,
+  "defenceAnim": "carni_adult_wolf_defend",
   "defendSound": -1,
-  "deathAnim": 17001,
+  "deathAnim": "carni_adult_wolf_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

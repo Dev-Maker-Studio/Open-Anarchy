@@ -1,15 +1,22 @@
 {
   "ids": [
-    1811
+    1811,
+    1812,
+    1813,
+    8609,
+    8610,
+    8611,
+    14527,
+    14557
   ],
   "names": [
     "The Kendal"
   ],
-  "attackAnim": 1760,
+  "attackAnim": "imp_attack",
   "attackSound": -1,
-  "defenceAnim": 1758,
+  "defenceAnim": "imp_block",
   "defendSound": -1,
-  "deathAnim": 14564,
+  "deathAnim": "imp_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -2,11 +2,11 @@
   "ids": [
     9893
   ],
-  "attackAnim": 13479,
+  "attackAnim": "rand_librarimancer_book_melee_attack",
   "attackSound": -1,
-  "defenceAnim": 13478,
+  "defenceAnim": "rand_librarimancer_book_defend",
   "defendSound": -1,
-  "deathAnim": 13481,
+  "deathAnim": "rand_librarimancer_book_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

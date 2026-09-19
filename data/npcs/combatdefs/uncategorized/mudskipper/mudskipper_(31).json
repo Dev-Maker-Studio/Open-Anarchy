@@ -2,11 +2,11 @@
   "ids": [
     3423
   ],
-  "attackAnim": 3433,
+  "attackAnim": "mudskipper_attack",
   "attackSound": -1,
-  "defenceAnim": 3434,
+  "defenceAnim": "mudskipper_block",
   "defendSound": -1,
-  "deathAnim": 3435,
+  "deathAnim": "mudskipper_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7362
+  ],
   "names": [
     "Spirit Tz-Kih"
   ],
-  "attackAnim": 8257,
+  "attackAnim": "lore_firebat_attack",
   "attackSound": -1,
-  "defenceAnim": 8256,
+  "defenceAnim": "lore_firebat_walk",
   "defendSound": -1,
-  "deathAnim": 8258,
+  "deathAnim": "lore_firebat_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 0,

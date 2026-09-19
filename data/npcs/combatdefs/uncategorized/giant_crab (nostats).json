@@ -1,12 +1,15 @@
 {
+  "ids": [
+    7829
+  ],
   "names": [
     "Giant crab"
   ],
-  "attackAnim": 3428,
+  "attackAnim": "crab_attack",
   "attackSound": -1,
-  "defenceAnim": 3429,
+  "defenceAnim": "crab_block",
   "defendSound": -1,
-  "deathAnim": 3430,
+  "deathAnim": "crab_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

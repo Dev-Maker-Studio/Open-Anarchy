@@ -1,12 +1,15 @@
 {
+  "ids": [
+    3476
+  ],
   "names": [
     "Jubbly bird"
   ],
-  "attackAnim": 6800,
+  "attackAnim": "jubbly_update_attack",
   "attackSound": -1,
-  "defenceAnim": 6802,
+  "defenceAnim": "jubbly_update_defend",
   "defendSound": -1,
-  "deathAnim": 6801,
+  "deathAnim": "jubbly_update_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,

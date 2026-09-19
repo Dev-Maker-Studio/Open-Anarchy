@@ -2,11 +2,11 @@
   "ids": [
     5418
   ],
-  "attackAnim": 5624,
+  "attackAnim": "lotr_terror_dog_attack_large",
   "attackSound": -1,
-  "defenceAnim": 5626,
+  "defenceAnim": "lotr_terror_dog_defend",
   "defendSound": -1,
-  "deathAnim": 5627,
+  "deathAnim": "lotr_terror_dog_death",
   "deathDelay": 6,
   "deathSound": -1,
   "respawnDelay": 59,
