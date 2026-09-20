@@ -1,10 +1,12 @@
 package org.darkan.lobby.social
 
 import org.darkan.core.EnvVars
+import org.darkan.core.Logger.logInfo
 import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.login.LoginToken
 import org.darkan.core.social.gateway.GatewayPlayerPresence
+import org.darkan.core.social.gateway.LoginRefusal
 import org.darkan.core.social.gateway.LoginTokenVerdict
 import org.darkan.core.social.gateway.VerifyLoginToken
 import org.darkan.core.worldlist.WorldMetadata
@@ -14,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Worlds anyone can run against the dev lobby with the public [communityToken] (docs/community-worlds.md).
  *
  * A community world never holds the login-token secret: it hands each token a player presents to
- * [verify], which spends it and admits that account to that world. Everything the world later says
+ * [verify], which admits the account the token was issued for to that world. Everything the world later says
  * about a player is only believed for players it was admitted, and with the lobby's own display name
  * and crown, so a community world can speak for its own players and nobody else.
  */
@@ -55,15 +57,26 @@ class CommunityWorlds(
      * A token is the client's whole lobby session, not a nonce: it is issued once and re-presented
      * on every world the player enters. Spending it on first use locked the player out of every
      * later world with a credentials failure, so admission is rebound per world instead.
+     *
+     * The signed claim is what names the player, never [VerifyLoginToken.username]: the client types
+     * that in, and a sign-up that starts life under an email is renamed by the name screen after its
+     * token was issued, so the two disagree for the whole of a new player's first session.
      */
     suspend fun verify(worldId: Int, request: VerifyLoginToken): LoginTokenVerdict {
-        val refused = LoginTokenVerdict(request.requestId)
         val now = System.currentTimeMillis()
-        val verified = LoginToken.verify(request.token, now, loginTokenSecret) ?: return refused
-        val account = Accounts.find(request.username) ?: return refused
-        if (account.username != verified.username || account.checkBanned() || account.mustChooseName()) return refused
+        val verified = LoginToken.verify(request.token, now, loginTokenSecret)
+            ?: return refuse(worldId, request, LoginRefusal.TOKEN)
+        val account = Accounts.find(verified.username)
+            ?: return refuse(worldId, request, LoginRefusal.NO_ACCOUNT)
+        if (account.checkBanned()) return refuse(worldId, request, LoginRefusal.BANNED)
+        if (account.mustChooseName()) return refuse(worldId, request, LoginRefusal.NAME_REQUIRED)
         admissions[account.username] = Admission(worldId, account.displayName, account.rights.crown)
         return LoginTokenVerdict(request.requestId, account.username, account.displayName, account.view())
+    }
+
+    private fun refuse(worldId: Int, request: VerifyLoginToken, refusal: LoginRefusal): LoginTokenVerdict {
+        logInfo("Refused world $worldId login for ${request.username}: $refusal")
+        return LoginTokenVerdict(request.requestId, refusal = refusal)
     }
 
     fun admitted(worldId: Int, player: GatewayPlayerPresence): GatewayPlayerPresence? {

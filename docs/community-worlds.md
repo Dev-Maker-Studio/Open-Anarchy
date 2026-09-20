@@ -32,10 +32,17 @@ gateway token is that public one is a community world.
   lobby's `LOCAL_WORLD_ID`, a lobby number (1000+), or a number that is already online. The
   handshake is refused with the reason, and the world logs it.
 - No world holds the login-token secret or reads the accounts collection. For each login a world
-  sends the player's token to the lobby (`VerifyLoginToken`); the lobby checks it, spends it (a
-  token works once), and answers with a credential-free `AccountView` - username, display name,
-  rights, ban and mute expiry and the social settings (`LoginTokenVerdict`). That view is all the
-  world ever holds about the account; passwords and emails never leave the lobby.
+  sends the player's token to the lobby (`VerifyLoginToken`); the lobby checks it and answers with a
+  credential-free `AccountView` - username, display name, rights, ban and mute expiry and the social
+  settings (`LoginTokenVerdict`). That view is all the world ever holds about the account; passwords
+  and emails never leave the lobby.
+- The signed token, not the name the player typed, decides which account is admitted. The world
+  passes the typed name along only as a hint, and everything after admission uses the username the
+  lobby returned. A sign-up starts life under its email address and is renamed by the name screen
+  after its token was issued, so on a new account the two disagree for that whole first session.
+- A refusal says which of `TOKEN`, `NO_ACCOUNT`, `BANNED` or `NAME_REQUIRED` it was
+  (`LoginTokenVerdict.refusal`), and the world turns each into its own client response instead of
+  reporting every one of them as "your password has been updated".
 - The lobby only believes a community world about players it admitted there: presence,
   friends/ignores, private and friends chat, friends chat settings and clan commands for anyone
   else are dropped, and the display name and crown always come from the lobby's own account, not
@@ -49,9 +56,9 @@ gateway token is that public one is a community world.
 - A player's login token is not tied to a world and is not single use: the lobby issues one at lobby
   login, before the player picks a world, the RSA login block has no room for more, and the client
   re-presents that same token on every world it enters. It lasts `WORLD_LOGIN_TOKEN_TTL_HOURS`
-  (default 12) - long enough to cover a whole play session, because a token that expires or is spent
-  under a player mid-session locks them out of every world with a "your password has been updated"
-  failure they cannot clear. A modified community world can therefore replay the token of a player
+  (default 12) - long enough to cover a whole play session, because a token that expires under a
+  player mid-session locks them out of every world until they leave the lobby and log in again.
+  A modified community world can therefore replay the token of a player
   who joins it, on another world, for the rest of that token's life. Only join community worlds you
   trust; staff accounts should not join them at all.
 - A community world's admissions outlive its gateway socket, so its players keep their friends and

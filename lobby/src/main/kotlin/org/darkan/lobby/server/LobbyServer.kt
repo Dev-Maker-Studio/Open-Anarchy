@@ -121,7 +121,8 @@ class LobbyServer(val js5: JS5Server) {
     private suspend fun init(input: ByteReadChannel, output: ByteWriteChannel, ip: String) {
         output.respond(ResponseOpcode.JS5_SYNC)
         val opcode = input.readByte().toInt()
-        if (opcode != RequestOpcode.LOBBY || pendingLogins.size > 20) return output.finish(ResponseOpcode.LOGIN_SERVER_REJECTED_SESSION)
+        if (opcode != RequestOpcode.LOBBY) return output.finish(ResponseOpcode.COULD_NOT_COMPLETE_LOGIN)
+        if (pendingLogins.size > MAX_LOGINS_IN_FLIGHT) return output.finish(ResponseOpcode.NO_REPLY_FROM_LOGIN_SERVER)
         if (Lobby.updatingSoon) return output.finish(ResponseOpcode.SERVER_BEING_UPDATED)
         val size = input.readShort().toInt()
         val packet = input.readPacket(size)
@@ -250,7 +251,7 @@ class LobbyServer(val js5: JS5Server) {
     }
 
     private suspend fun initAccountCreation(input: ByteReadChannel, output: ByteWriteChannel, ip: String) {
-        if (pendingLogins.size > 20) return output.finish(ResponseOpcode.LOGIN_SERVER_REJECTED_SESSION)
+        if (pendingLogins.size > MAX_LOGINS_IN_FLIGHT) return output.finish(ResponseOpcode.NO_REPLY_FROM_LOGIN_SERVER)
         val size = input.readShort().toInt()
         val packet = input.readPacket(size)
         val major = packet.readShort().toInt()
@@ -302,6 +303,12 @@ class LobbyServer(val js5: JS5Server) {
         if (randomDat.any { it != (-1).toByte() })
             session.send(UpdateUid192(generateRandom24ByteArray()))
         session.readPackets(input)
+    }
+
+    private companion object {
+        // The client retries NO_REPLY_FROM_LOGIN_SERVER by itself, so a login rush waits its turn
+        // rather than being told its password is insecure, which is what response 11 renders as.
+        const val MAX_LOGINS_IN_FLIGHT = 20
     }
 
     private fun initSession(write: ByteWriteChannel, isaacKeys: IntArray, hostname: String, codec: Codec): Session {

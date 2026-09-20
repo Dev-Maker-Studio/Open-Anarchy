@@ -9,6 +9,7 @@ import org.darkan.core.social.gateway.AnnouncementBroadcast
 import org.darkan.core.social.gateway.AnnouncementChannel
 import org.darkan.core.social.SocialAction
 import org.darkan.core.social.gateway.SocialCommand
+import org.darkan.core.social.gateway.LoginRefusal
 import org.darkan.core.social.gateway.LoginTokenVerdict
 import org.darkan.core.social.gateway.PlayerOnline
 import org.darkan.core.social.gateway.VerifyLoginToken
@@ -94,13 +95,42 @@ class CommunityWorldsTest {
     }
 
     @Test
-    fun `a token admits nobody under another name and a forged one nobody at all`() = runBlocking<Unit> {
+    fun `a token admits the account it was issued for whatever name was typed, and a forged one nobody at all`() = runBlocking<Unit> {
         val player = LobbyHarness.account("player")
         val other = LobbyHarness.account("other")
         val world = LobbyHarness.world(150, community = true).connect()
 
-        assertNull(world.verify(other.username, tokenFor(player)).username)
+        assertEquals(player.username, world.verify(other.username, tokenFor(player)).username)
         assertNull(world.verify(player.username, tokenFor(player, secret = "not-the-lobby-secret")).username)
+    }
+
+    @Test
+    fun `a token issued before the name screen still admits the account it renamed`() = runBlocking<Unit> {
+        val signup = Account("signup@test.invalid", "signup@test.invalid", "hash")
+        LobbyHarness.accounts.put(signup)
+        val world = LobbyHarness.world(150, community = true).connect()
+        val token = tokenFor(signup)
+
+        @Suppress("DEPRECATION")
+        signup.initializeUsername("signup")
+        signup.nameChangeRequired = false
+        LobbyHarness.accounts.rename("signup@test.invalid", signup)
+
+        assertEquals("signup", world.verify("signup", token).username)
+    }
+
+    @Test
+    fun `every refusal names itself so the world can tell the player what is actually wrong`() = runBlocking<Unit> {
+        val world = LobbyHarness.world(150, community = true).connect()
+        val banned = LobbyHarness.account("banned").also { it.banPerm() }
+        val unnamed = Account("unnamed@test.invalid", "unnamed@test.invalid", "hash")
+        LobbyHarness.accounts.put(unnamed)
+        val ghost = LoginToken.issue("ghost", System.currentTimeMillis(), 60_000L, SECRET)
+
+        assertEquals(LoginRefusal.BANNED, world.verify(banned.username, tokenFor(banned)).refusal)
+        assertEquals(LoginRefusal.NAME_REQUIRED, world.verify(unnamed.username, tokenFor(unnamed)).refusal)
+        assertEquals(LoginRefusal.NO_ACCOUNT, world.verify("ghost", ghost).refusal)
+        assertEquals(LoginRefusal.TOKEN, world.verify(banned.username, tokenFor(banned, secret = "not-the-lobby-secret")).refusal)
     }
 
     @Test

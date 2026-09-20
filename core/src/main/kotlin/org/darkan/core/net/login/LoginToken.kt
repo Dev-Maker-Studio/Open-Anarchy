@@ -96,9 +96,31 @@ object LoginToken {
         return "${base64Encoder.encodeToString(payload)}.${base64Encoder.encodeToString(signature)}"
     }
 
+    fun hasTokenShape(candidate: String): Boolean = parse(candidate) != null
+
     fun verify(token: String, nowMs: Long, secret: String): Verified? {
+        val parsed = parse(token) ?: return null
+
+        val expected = computeHmac(parsed.payload, secret).copyOf(SIGNATURE_BYTES)
+        if (!MessageDigest.isEqual(expected, parsed.signature)) return null
+
+        if (parsed.expiresAtMs < nowMs) return null
+
+        return Verified(parsed.username, parsed.issuedAtMs, parsed.expiresAtMs)
+    }
+
+    private class Parsed(
+        val payload: ByteArray,
+        val signature: ByteArray,
+        val username: String,
+        val issuedAtMs: Long,
+        val expiresAtMs: Long,
+    )
+
+    private fun parse(token: String): Parsed? {
         val dotIndex = token.indexOf('.')
         if (dotIndex <= 0 || dotIndex >= token.lastIndex) return null
+        if (token.indexOf('.', dotIndex + 1) != -1) return null
 
         val payload = runCatching { base64Decoder.decode(token.substring(0, dotIndex)) }.getOrNull() ?: return null
         val signature = runCatching { base64Decoder.decode(token.substring(dotIndex + 1)) }.getOrNull() ?: return null
@@ -108,13 +130,6 @@ object LoginToken {
         val minLength = HEADER_BYTES + 1 + NONCE_BYTES  // At least 1 byte for username
         if (payload.size < minLength || signature.size != SIGNATURE_BYTES) return null
 
-        val expected = computeHmac(payload, secret).copyOf(SIGNATURE_BYTES)
-        if (!MessageDigest.isEqual(expected, signature)) return null
-
-        return parsePayload(payload, nowMs)
-    }
-
-    private fun parsePayload(payload: ByteArray, nowMs: Long): Verified? {
         val buffer = ByteBuffer.wrap(payload)
         buffer.get() //version skip
 
@@ -126,14 +141,14 @@ object LoginToken {
 
         val usernameBytes = ByteArray(usernameLen)
         buffer.get(usernameBytes)
-        val username = usernameBytes.toString(StandardCharsets.UTF_8)
 
-        val issuedAtMs = issuedAtSec * 1000
-        val expiresAtMs = expiresAtSec * 1000
-
-        if (expiresAtMs < nowMs) return null
-
-        return Verified(username, issuedAtMs, expiresAtMs)
+        return Parsed(
+            payload = payload,
+            signature = signature,
+            username = usernameBytes.toString(StandardCharsets.UTF_8),
+            issuedAtMs = issuedAtSec * 1000,
+            expiresAtMs = expiresAtSec * 1000,
+        )
     }
 
     private fun computeHmac(data: ByteArray, secret: String): ByteArray {

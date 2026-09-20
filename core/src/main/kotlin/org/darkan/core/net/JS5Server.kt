@@ -44,7 +44,7 @@ class JS5Server(val provider: FileProvider, val prefetchKeys: IntArray) {
             val opcode = input.readByte().toInt()
             if (opcode != RequestOpcode.ACKNOWLEDGE) {
                 logInfo("Incorrect acknowledgement: $opcode")
-                output.writeByte(ResponseOpcode.LOGIN_SERVER_REJECTED_SESSION)
+                output.writeByte(ResponseOpcode.JS5_REJECTED)
                 output.flushAndClose()
                 return
             }
