@@ -1,6 +1,5 @@
 package com.rs.game.map;
 
-import com.google.common.base.Objects;
 import org.darkan.core.model.RegionSize;
 import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
@@ -38,8 +37,9 @@ public class UpdateZone {
         }
     }
 
-    public static int getId(int baseChunkId, RegionSize size) {
-        return Objects.hashCode(baseChunkId, size);
+    /** A key, not a hash: two scene bases colliding here would hand a player another base's zone. */
+    public static long getId(int baseChunkId, RegionSize size) {
+        return ((long) baseChunkId << 8) | size.ordinal();
     }
 
     public void rebuildUpdateZone() {

@@ -34,7 +34,7 @@ public final class ChunkManager {
     private static final Set<Integer> ACTIVE_CHUNKS = IntSets.synchronize(new IntOpenHashSet());
     private static final Set<Integer> UNLOADABLE_REGIONS = IntSets.synchronize(new IntOpenHashSet());
     private static final Set<Integer> PERMANENTLY_LOADED_REGIONS = IntSets.synchronize(new IntOpenHashSet());
-    private static final Map<Integer, UpdateZone> UPDATE_ZONES = new HashMap<>();
+    private static final Map<Long, UpdateZone> UPDATE_ZONES = new HashMap<>();
     private static final Map<Integer, List<UpdateZone>> UPDATE_ZONES_REGION = new HashMap<>();
 
     @ServerStartupEvent(ServerStartupEvent.Priority.FILE_IO)
@@ -272,7 +272,7 @@ public final class ChunkManager {
 
     public static UpdateZone getUpdateZone(int baseChunkId, RegionSize size) {
         synchronized (UPDATE_ZONES) {
-            int id = UpdateZone.getId(baseChunkId, size);
+            long id = UpdateZone.getId(baseChunkId, size);
             UpdateZone zone = UPDATE_ZONES.get(id);
             if (zone == null) {
                 zone = new UpdateZone(baseChunkId, size);
