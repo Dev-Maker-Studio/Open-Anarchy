@@ -266,8 +266,8 @@ public class Player extends Entity {
 
 	private Map<String, Object> savingAttributes;
 
-	private Map<String, Integer> npcKills;
-	private Map<String, Integer> variousCounter;
+	private Map<String, Long> npcKills;
+	private Map<String, Long> variousCounter;
 
 	private Set<Reward> unlockedLoyaltyRewards;
 	private Set<Reward> favoritedLoyaltyRewards;
@@ -1435,10 +1435,7 @@ public class Player extends Entity {
 	}
 
 	public int getI(String key, int def) {
-		Object val = get(key);
-		if (val == Boolean.FALSE)
-			return def;
-		return (int) (val instanceof Integer ? (int) val : (double) val);
+		return Utils.satInt(getL(key, def));
 	}
 
 	public long getL(String key) {
@@ -1446,10 +1443,15 @@ public class Player extends Entity {
 	}
 
 	public long getL(String key, long def) {
-		Object val = get(key);
-		if (val == Boolean.FALSE)
+		if (!(get(key) instanceof Number val))
 			return def;
-		return (val instanceof Long ? (long) val : ((Double) val).longValue());
+		return val.longValue();
+	}
+
+	public long incrementL(String key, long delta) {
+		long value = Utils.satAdd(getL(key, 0L), delta);
+		set(key, value);
+		return value;
 	}
 
 	public boolean getBool(String key) {
@@ -1472,63 +1474,79 @@ public class Player extends Entity {
 	}
 
 	public int getCounterValueContaining(String npcName) {
-		if (variousCounter == null)
-			variousCounter = new ConcurrentHashMap<>();
-		int number = 0;
-		for (String key : variousCounter.keySet())
-			if (key.contains(npcName) || key.contains(npcName.toLowerCase()))
-				number += variousCounter.get(key);
+		return Utils.satInt(getCounterValueContainingL(npcName));
+	}
+
+	public long getCounterValueContainingL(String npcName) {
+		long number = 0L;
+		for (Map.Entry<String, Long> counter : counters().entrySet())
+			if (counter.getKey().contains(npcName) || counter.getKey().contains(npcName.toLowerCase()))
+				number = Utils.satAdd(number, counter.getValue());
 		return number;
 	}
 
 	public int getCounterValue(String npcName) {
-		if (variousCounter == null)
-			variousCounter = new ConcurrentHashMap<>();
+		return Utils.satInt(getCounterValueL(npcName));
+	}
+
+	public long getCounterValueL(String npcName) {
 		if (npcName.startsWith("%"))
-			return getCounterValueContaining(npcName.replace("%", ""));
-		if (variousCounter.containsKey(npcName))
-			return variousCounter.get(npcName);
-		return 0;
+			return getCounterValueContainingL(npcName.replace("%", ""));
+		return counters().getOrDefault(npcName, 0L);
 	}
 
 	public void incrementCount(String string) {
-		incrementCount(string, 1);
+		incrementCount(string, 1L);
 	}
 
 	public void incrementCount(String string, int count) {
-		if (variousCounter == null)
-			variousCounter = new ConcurrentHashMap<>();
-		variousCounter.put(string, variousCounter.getOrDefault(string, 0) + count);
+		incrementCount(string, (long) count);
+	}
+
+	public void incrementCount(String string, long count) {
+		counters().merge(string, count, Utils::satAdd);
 	}
 
 	public int getNumberKilled(String npcName) {
-		if (npcKills == null)
-			npcKills = new ConcurrentHashMap<>();
+		return Utils.satInt(getNumberKilledL(npcName));
+	}
+
+	public long getNumberKilledL(String npcName) {
 		if (npcName.startsWith("%"))
-			return getNumberKilledContaining(npcName.replace("%", ""));
-		if (npcKills.containsKey(npcName))
-			return npcKills.get(npcName);
-		return 0;
+			return getNumberKilledContainingL(npcName.replace("%", ""));
+		return kills().getOrDefault(npcName, 0L);
 	}
 
 	public int getNumberKilledContaining(String regex) {
-		if (npcKills == null)
-			npcKills = new ConcurrentHashMap<>();
-		int number = 0;
-		for (String key : npcKills.keySet())
-			if (key.contains(regex) || key.contains(regex.toLowerCase()))
-				number += npcKills.get(key);
+		return Utils.satInt(getNumberKilledContainingL(regex));
+	}
+
+	public long getNumberKilledContainingL(String regex) {
+		long number = 0L;
+		for (Map.Entry<String, Long> kill : kills().entrySet())
+			if (kill.getKey().contains(regex) || kill.getKey().contains(regex.toLowerCase()))
+				number = Utils.satAdd(number, kill.getValue());
 		return number;
 	}
 
-	public Map<String, Integer> getNPCKills() {
+	private Map<String, Long> counters() {
+		if (variousCounter == null)
+			variousCounter = new ConcurrentHashMap<>();
+		return variousCounter;
+	}
+
+	private Map<String, Long> kills() {
+		if (npcKills == null)
+			npcKills = new ConcurrentHashMap<>();
 		return npcKills;
 	}
 
+	public Map<String, Long> getNPCKills() {
+		return kills();
+	}
+
 	public void sendNPCKill(String string) {
-		if (npcKills == null)
-			npcKills = new ConcurrentHashMap<>();
-		npcKills.put(string, npcKills.getOrDefault(string, 0) + 1);
+		kills().merge(string, 1L, Utils::satAdd);
 	}
 
 	public void sendDefaultPlayersOptions() {

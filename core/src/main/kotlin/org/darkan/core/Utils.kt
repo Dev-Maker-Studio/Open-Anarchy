@@ -82,6 +82,30 @@ object Utils {
     fun clampI(value: Int, min: Int, max: Int): Int = max(min, min(max, value))
 
     @JvmStatic
+    fun satAdd(a: Long, b: Long): Long {
+        val sum = a + b
+        if (((a xor sum) and (b xor sum)) < 0)
+            return if (b > 0) Long.MAX_VALUE else Long.MIN_VALUE
+        return sum
+    }
+
+    @JvmStatic
+    fun satMul(a: Long, b: Long): Long {
+        if (a == 0L || b == 0L)
+            return 0L
+        val product = a * b
+        if (product / a != b || (a == -1L && b == Long.MIN_VALUE))
+            return if ((a xor b) < 0) Long.MIN_VALUE else Long.MAX_VALUE
+        return product
+    }
+
+    @JvmStatic
+    fun satInt(value: Long): Int = value.coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
+
+    @JvmStatic
+    fun satInt(value: Double): Int = if (value.isNaN()) 0 else value.toInt()
+
+    @JvmStatic
     fun diff(a: Int, b: Int): Int = abs(a - b)
 
     @JvmStatic
