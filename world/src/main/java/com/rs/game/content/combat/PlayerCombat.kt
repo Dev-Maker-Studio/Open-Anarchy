@@ -640,13 +640,14 @@ fun delayHit(target: Entity, delay: Int, weaponId: Int, attackStyle: AttackStyle
     } else hitFail?.run()
     (source as? Player)?.let { addXp(source, target, attackStyle?.xpType, hit) }
 
-    // If player equips a (cross)bow, check poison on ammo rather than weapon.
-    // This also prevents (the wrong) poison applying when using a melee or other weapon type with poison ammo equipped.
+    // A weapon fed from the quiver poisons with its ammo; a thrown weapon and anything that is not a
+    // ranged weapon at all poison with themselves, so poisoned ammo in the quiver cannot leak onto a
+    // melee hit.
     var ammoId = -1
     if (weaponId != -1) {
         (source as? Player)?.let {
-            val weaponName = ItemDefinitions.getDefs(weaponId).name.lowercase()
-            if (weaponName.contains("longbow") || weaponName.contains("shortbow") || weaponName.contains("crossbow"))
+            val ranged = RangedWeapon.forId(weaponId)
+            if (ranged != null && !ranged.isThrown && ranged.ammos != null)
                 ammoId = source.equipment.ammoId
         }
     }

@@ -66,10 +66,8 @@ class OpGroundItemHandler : PacketHandler<Player, OpGroundItem> {
                 player.faceTile(groundItem.tile)
                 val e1 = PickupItemEvent(player, groundItem, false)
                 PluginManager.handle(e1)
-                if (!e1.isCancelPickup) {
-                    player.soundEffect(2582, false)
+                if (!e1.isCancelPickup)
                     World.removeGroundItem(player, groundItem, true)
-                }
                 true
             }))
             4 -> player.setRouteEvent(RouteEvent(item) {
