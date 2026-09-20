@@ -12,7 +12,7 @@ object ResponseOpcode {
     const val LOGIN_SERVER_OFFLINE = 8
     const val LOGIN_LIMIT_EXCEEDED = 9
     const val BAD_SESSION_ID = 10
-    const val LOGIN_SERVER_REJECTED_SESSION = 11
+    const val PASSWORD_INSECURE = 11
     const val MEMBERS_ACCOUNT_REQUIRED = 12
     const val COULD_NOT_COMPLETE_LOGIN = 13
     const val SERVER_BEING_UPDATED = 14
@@ -21,4 +21,9 @@ object ResponseOpcode {
     const val MEMBERS_ONLY_AREA = 17
     const val INVALID_LOGIN_SERVER = 20
     const val TRANSFERRING_PROFILE = 21
+    const val NO_REPLY_FROM_LOGIN_SERVER = 23
+    const val DISPLAY_NAME_CHANGE_REQUIRED = 31
+
+    // The JS5 handshake has its own reply table: 0 is accepted, anything else is an error screen.
+    const val JS5_REJECTED = 11
 }

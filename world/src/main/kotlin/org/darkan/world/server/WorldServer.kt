@@ -3,6 +3,7 @@ package org.darkan.world.server
 import com.rs.Settings
 import com.rs.db.WorldDB
 import com.rs.game.World
+import com.rs.game.map.ChunkManager
 import com.rs.game.model.entity.player.Player
 import com.rs.game.tasks.WorldTasks
 import com.rs.utils.AccountLimiter
@@ -32,6 +33,7 @@ import org.darkan.core.model.AccountView
 import org.darkan.core.model.MachineInformation
 import org.darkan.core.net.*
 import org.darkan.core.net.prot.Codec
+import org.darkan.core.net.login.LoginToken
 import org.darkan.core.net.prot.packet.WorldLoginDetails
 import org.darkan.core.social.SocialAction
 import org.darkan.core.social.SocialEvent
@@ -41,6 +43,7 @@ import org.darkan.core.social.gateway.AccountCommand
 import org.darkan.core.social.gateway.AccountUpdate
 import org.darkan.core.social.gateway.AnnouncementBroadcast
 import org.darkan.core.social.gateway.GatewayPlayerPresence
+import org.darkan.core.social.gateway.LoginRefusal
 import org.darkan.core.social.gateway.SocialCommand
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import org.darkan.core.social.gateway.SocialNotification
@@ -70,6 +73,8 @@ object WorldServer {
     private val worldRsaExp = BigInteger(EnvVars.worldRsaExponent)
 
     private val pendingLogins = ConcurrentHashMap.newKeySet<String>()
+
+    private const val MAX_LOGINS_IN_FLIGHT = 20
 
     private lateinit var js5: JS5Server
 
@@ -154,9 +159,9 @@ object WorldServer {
 
         val opcode = input.readByte().toInt()
         if (opcode != RequestOpcode.LOGIN && opcode != RequestOpcode.RECONNECT)
-            return output.finish(ResponseOpcode.LOGIN_SERVER_REJECTED_SESSION)
-        if (pendingLogins.size > 20)
-            return output.finish(ResponseOpcode.LOGIN_SERVER_REJECTED_SESSION)
+            return output.finish(ResponseOpcode.COULD_NOT_COMPLETE_LOGIN)
+        if (pendingLogins.size > MAX_LOGINS_IN_FLIGHT)
+            return output.finish(ResponseOpcode.NO_REPLY_FROM_LOGIN_SERVER)
 
         val update = World.ticksTillUpdate
         if (update != -1L && update < 20)
@@ -180,7 +185,14 @@ object WorldServer {
         if (sensitiveData.readLong().toInt() != 0)
             return output.finish(ResponseOpcode.BAD_SESSION_ID)
 
-        val lobbyAuthToken = sensitiveData.readRSString() // HMAC-signed LoginToken (lobby puts it in RSA block's password slot)
+        // The client puts the lobby's signed token in the slot the lobby login uses for the password.
+        // A world must never hold a plaintext password, so anything that is not shaped like a token is
+        // dropped here, before it can be forwarded to the lobby or reach a log.
+        val lobbyAuthToken = sensitiveData.readRSString()
+        if (!LoginToken.hasTokenShape(lobbyAuthToken)) {
+            logWarn("World login from $ip presented a malformed auth token; refusing")
+            return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+        }
         sensitiveData.readLong()
         sensitiveData.readLong()
 
@@ -239,21 +251,22 @@ object WorldServer {
             return output.finish(ResponseOpcode.WORLD_FULL)
         if (AccountLimiter.getSessionsIP(ip) >= 3)
             return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
-        // Everything the world can refuse on its own is checked before the token is presented:
-        // the lobby spends a token the moment it verifies one, so a refusal afterwards would
-        // burn it and report the next attempt as a credentials failure.
         if (World.containsPlayer(username))
             return output.finish(ResponseOpcode.ACCOUNT_ONLINE)
         if (!pendingLogins.add(username))
             return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
 
+        // World.addPlayer overwrites its username map rather than refusing a duplicate, so this claim
+        // is the only thing serialising two logins of one account - and the client can reach the same
+        // account under its email as well as its name, which is why the lobby's name is claimed too.
+        val claimed = hashSetOf(username)
         val admitted = try {
-            when (val admission = admitThroughLobby(username, lobbyAuthToken)) {
+            when (val admission = admitThroughLobby(username, lobbyAuthToken) { claimed.add(it) && pendingLogins.add(it) }) {
                 is Admission.Admitted -> admission
                 is Admission.Refused -> return output.finish(admission.response)
             }
         } finally {
-            pendingLogins.remove(username)
+            pendingLogins.removeAll(claimed)
         }
         val account = admitted.account
         val player = admitted.player
@@ -311,12 +324,31 @@ object WorldServer {
         data class Refused(val response: Int) : Admission
     }
 
-    private suspend fun admitThroughLobby(username: String, lobbyAuthToken: String): Admission {
-        val verdict = socialClient.verifyLoginToken(username, lobbyAuthToken)
+    /**
+     * On the client's world-entry screen [ResponseOpcode.INVALID_CREDENTIALS] reads "Your password has
+     * been updated. Please leave the lobby and log in again." - the right instruction for a token this
+     * lobby will not honour, and a lie for anything else, which is what every refusal used to report.
+     */
+    private fun responseFor(refusal: LoginRefusal?) = when (refusal) {
+        LoginRefusal.BANNED -> ResponseOpcode.ACCOUNT_DISABLED
+        LoginRefusal.NAME_REQUIRED -> ResponseOpcode.DISPLAY_NAME_CHANGE_REQUIRED
+        LoginRefusal.NO_ACCOUNT -> ResponseOpcode.COULD_NOT_COMPLETE_LOGIN
+        LoginRefusal.TOKEN, null -> ResponseOpcode.INVALID_CREDENTIALS
+    }
+
+    /**
+     * The lobby names the player, not the client: a sign-up is renamed by the name screen after its
+     * token was issued, so the name typed into the login box is only what the lobby looks the token
+     * up by. Everything past this point uses [AccountView.username].
+     */
+    private suspend fun admitThroughLobby(typedName: String, lobbyAuthToken: String, claim: (String) -> Boolean): Admission {
+        val verdict = socialClient.verifyLoginToken(typedName, lobbyAuthToken)
             ?: return Admission.Refused(ResponseOpcode.LOGIN_SERVER_OFFLINE)
-        val account = verdict.account ?: return Admission.Refused(ResponseOpcode.INVALID_CREDENTIALS)
+        val account = verdict.account ?: return Admission.Refused(responseFor(verdict.refusal))
         if (account.checkBanned())
             return Admission.Refused(ResponseOpcode.ACCOUNT_DISABLED)
+        if (account.username != typedName && !claim(account.username))
+            return Admission.Refused(ResponseOpcode.ACCOUNT_ONLINE)
         if (World.containsPlayer(account.username))
             return Admission.Refused(ResponseOpcode.ACCOUNT_ONLINE)
 
@@ -337,6 +369,12 @@ object WorldServer {
     private fun abortLogin(player: Player, ip: String) {
         player.disconnected = true
         if (player.hasStarted() || !World.containsPlayer(player.username)) return
+        // start() has already made this player a chunk and update-zone watcher, both keyed by the
+        // index World.removePlayer is about to hand to somebody else. Left behind, the next player
+        // to take the index inherits an update zone based on wherever this login was standing and
+        // gets every ground item in it at the wrong coordinates.
+        player.setFinished(true)
+        ChunkManager.updateChunks(player)
         World.removePlayer(player)
         AccountLimiter.remove(ip)
     }

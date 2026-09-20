@@ -187,6 +187,18 @@ data class VerifyLoginToken(
     val token: String,
 ) : SocialGatewayWireMessage
 
+/**
+ * Why the lobby would not admit a login token. The world renders each of these as its own response
+ * code, so a refusal the player can act on never reaches them as "your password has been updated".
+ */
+@Serializable
+enum class LoginRefusal {
+    TOKEN,
+    NO_ACCOUNT,
+    BANNED,
+    NAME_REQUIRED,
+}
+
 @Serializable
 @SerialName("LoginTokenVerdict")
 data class LoginTokenVerdict(
@@ -194,6 +206,7 @@ data class LoginTokenVerdict(
     val username: String? = null,
     val displayName: String? = null,
     val account: AccountView? = null,
+    val refusal: LoginRefusal? = null,
 ) : SocialGatewayWireMessage
 
 /**
