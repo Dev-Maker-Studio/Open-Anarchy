@@ -100,6 +100,9 @@ object Utils {
     }
 
     @JvmStatic
+    fun satAdd(a: Int, b: Int): Int = satInt(a.toLong() + b.toLong())
+
+    @JvmStatic
     fun satInt(value: Long): Int = value.coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt()
 
     @JvmStatic
