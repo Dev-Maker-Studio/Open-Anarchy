@@ -103,6 +103,8 @@ public final class Launcher {
 		//}, 0, Ticks.fromSeconds(10));
 	}
 
+	private static final int AUTOSAVE_PERIOD_TICKS = Ticks.fromSeconds(30);
+
 	public static void saveFilesSync() {
 		for (Player player : World.getPlayers()) {
 			if (player == null || !player.hasStarted() || player.hasFinished())
@@ -112,13 +114,17 @@ public final class Launcher {
 		WorldPersistentData.save();
 	}
 
-	public static void saveFilesAsync() {
+	/** Each player saves on the one tick in the period that matches their index, so no tick serializes everybody. */
+	public static void autosaveSlice() {
+		long thisTick = World.getServerTicks() % AUTOSAVE_PERIOD_TICKS;
 		for (Player player : World.getPlayers()) {
 			if (player == null || !player.hasStarted() || player.hasFinished())
 				continue;
-			WorldDB.getPlayers().save(player);
+			if (player.getIndex() % AUTOSAVE_PERIOD_TICKS == thisTick)
+				WorldDB.getPlayers().save(player);
 		}
-		WorldPersistentData.save();
+		if (thisTick == 0)
+			WorldPersistentData.save();
 	}
 
 	public static void cleanMemory(boolean force) {

@@ -16,6 +16,7 @@
 //
 package com.rs.engine.thread;
 
+import com.rs.Launcher;
 import com.rs.Settings;
 import com.rs.game.World;
 import com.rs.game.map.ChunkManager;
@@ -234,6 +235,7 @@ public final class WorldThread extends Thread {
 					npc.resetMasks();
 				}
 				World.processEntityLists();
+				Launcher.autosaveSlice();
 				long time = (System.currentTimeMillis() - startTime);
 				Logger.trace(WorldThread.class, "tick", "Tick finished - Mem: " + (Utils.formatDouble(WorldUtil.getMemUsedPerc())) + "% - " + time + "ms - Players online: " + World.getPlayers().size());
 
