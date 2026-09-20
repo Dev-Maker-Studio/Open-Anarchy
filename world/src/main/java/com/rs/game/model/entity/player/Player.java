@@ -946,7 +946,7 @@ public class Player extends Entity {
 	public void processEntity() {
 		try {
 			if (getSession().getDisconnected())
-				finish(0);
+				finish();
 			processPackets();
 			cutsceneManager.process();
 			cutscenePresenter.tick();
@@ -958,8 +958,8 @@ public class Player extends Entity {
 				} else
 					logout(true);
 			}
-			if (disconnected && !finishing)
-				finish(0);
+			if (disconnected)
+				finish();
 
 			timePlayed++;
 			timePlayedThisSession++;
@@ -1625,7 +1625,8 @@ public class Player extends Entity {
 		finish();
 	}
 
-	private transient boolean finishing;
+	private transient long logoutDeadline;
+	private static final int MAX_LOGOUT_DELAY_TICKS = Ticks.fromSeconds(60);
 
 	private Notes notes;
 
@@ -1633,28 +1634,22 @@ public class Player extends Entity {
 
 	public int scPoints;
 
+	/**
+	 * Held back while the player is still in combat or mid-action, but never past the deadline. The
+	 * world tick retries this every tick, so a logout cannot depend on a scheduled task that may
+	 * never run, and no combination of combat, animation or a stuck lock can strand a player.
+	 */
 	@Override
 	public void finish() {
-		finish(0);
-	}
-
-	public void finish(final int tryCount) {
+		if (hasFinished())
+			return;
 		disconnected = true;
-		if (hasFinished() || finishing)
-			return;
-		stopAll(false, true, !(getInteractionManager().getInteraction() instanceof PlayerCombatInteraction));
-		if ((inCombat(10000) || hasBeenHit(10000) || getEmotesManager().isAnimating() || isLocked()) && tryCount < 6) {
-			finishing = true;
-			WorldTasks.schedule(Ticks.fromSeconds(10), () -> {
-				try {
-					finishing = false;
-					finish(tryCount + 1);
-				} catch (Throwable e) {
-					Logger.handle(Player.class, "finish", e);
-				}
-			});
-			return;
+		if (logoutDeadline == 0) {
+			logoutDeadline = World.getServerTicks() + MAX_LOGOUT_DELAY_TICKS;
+			stopAll(false, true, !(getInteractionManager().getInteraction() instanceof PlayerCombatInteraction));
 		}
+		if (World.getServerTicks() < logoutDeadline && (inCombat(10000) || hasBeenHit(10000) || getEmotesManager().isAnimating() || isLocked()))
+			return;
 		realFinish();
 	}
 

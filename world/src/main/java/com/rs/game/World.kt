@@ -30,7 +30,6 @@ import org.darkan.core.map.WorldCollision.allFlags
 import org.darkan.core.map.WorldCollision.getFlags
 import org.darkan.core.map.pathfinder.collision.CollisionStrategyType
 import org.darkan.core.map.pathfinder.reach.DefaultReachStrategy.reached
-import com.rs.engine.thread.AsyncTaskExecutor
 import com.rs.engine.thread.WorldThread
 import com.rs.game.content.ItemConstants
 import com.rs.game.content.world.areas.wilderness.WildernessController
@@ -64,18 +63,12 @@ import org.darkan.core.util.Structure
 import org.darkan.core.Utils
 import com.rs.plugin.PluginManager
 import com.rs.plugin.annotations.PluginEventHandler
-import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.NPCInstanceEvent
 import com.rs.utils.*
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import java.util.concurrent.ConcurrentHashMap
 import java.util.function.Consumer
-
-@ServerStartupEvent
-fun addSaveFilesTask() {
-    AsyncTaskExecutor.schedule({ Launcher.saveFilesAsync() }, 0, Ticks.fromSeconds(30))
-}
 
 @PluginEventHandler
 object World {

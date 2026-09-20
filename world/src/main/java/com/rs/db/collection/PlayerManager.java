@@ -51,19 +51,43 @@ public class PlayerManager extends DBItemManager {
 		save(player, null);
 	}
 
-	public void save(Player account, Runnable done) {
+	/**
+	 * Serializing on the caller's thread is what makes a save atomic. Handing the live player to the
+	 * DB thread let Gson walk it while the world thread was still moving items, so a save could hold
+	 * an inventory read before a removal and a world that had already been given the items - the
+	 * dropped-and-kept duplication. Callers must be on the world thread; only the write is deferred.
+	 */
+	public void save(Player player, Runnable done) {
+		String username = player.getUsername();
+		String json = snapshot(player);
 		execute(() -> {
-			saveSync(account);
+			if (json != null)
+				write(username, json);
 			if (done != null)
 				done.run();
 		});
 	}
 
 	public void saveSync(Player account) {
+		String json = snapshot(account);
+		if (json != null)
+			write(account.getUsername(), json);
+	}
+
+	private String snapshot(Player player) {
 		try {
-			getDocs().findOneAndReplace(eq("username", account.getUsername()), Document.parse(JsonFileManager.toJson(account)), new FindOneAndReplaceOptions().upsert(true));
+			return JsonFileManager.toJson(player);
+		} catch (Throwable e) {
+			Logger.handle(PlayerManager.class, "snapshot", "Error serializing player: " + player.getUsername(), e);
+			return null;
+		}
+	}
+
+	protected void write(String username, String json) {
+		try {
+			getDocs().findOneAndReplace(eq("username", username), Document.parse(json), new FindOneAndReplaceOptions().upsert(true));
 		} catch(Throwable e) {
-			Logger.handle(PlayerManager.class, "saveSync", "Error saving player: " + account.getUsername(), e);
+			Logger.handle(PlayerManager.class, "write", "Error saving player: " + username, e);
 		}
 	}
 
