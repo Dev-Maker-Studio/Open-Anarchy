@@ -24,6 +24,7 @@ import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.managers.AuraManager
 import com.rs.game.model.entity.player.managers.InterfaceManager
+import org.darkan.core.Utils
 import org.darkan.core.Logger
 import org.darkan.core.gameval.gen.Varbit
 import org.darkan.core.gameval.gen.Varp
@@ -287,7 +288,7 @@ class CombatDefinitions {
             if (item == null) continue
             for (bonus in Bonus.entries) {
                 if (bonus == Bonus.RANGE_STR && getBonus(Bonus.RANGE_STR) != 0) continue
-                bonuses[bonus.ordinal] += Equipment.getBonus(player, item, bonus)
+                bonuses[bonus.ordinal] = Utils.satAdd(bonuses[bonus.ordinal], Equipment.getBonus(player, item, bonus))
             }
         }
     }
