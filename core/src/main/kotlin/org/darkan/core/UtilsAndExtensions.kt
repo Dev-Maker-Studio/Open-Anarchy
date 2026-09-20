@@ -33,6 +33,21 @@ const val PASSWORD_MIN_LENGTH = 8
 val PASSWORD_REGEX = Regex("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{$PASSWORD_MIN_LENGTH,}$")
 fun String.isValidPassword() = matches(PASSWORD_REGEX)
 
+private val SECRET_COMMANDS = setOf("changepass", "changepassother", "setpass", "resetpass")
+
+/**
+ * A command line with its arguments stripped when they are a password. Every server that logs or
+ * persists what a player typed goes through this: the commands only exist on the lobby, but a player
+ * types them wherever they happen to be, and a world - a community world above all - must never end
+ * up holding a plaintext password.
+ */
+fun String.redactedCommand(): String {
+    val parts = trim().split(" ")
+    val name = parts.first().lowercase()
+    if (name !in SECRET_COMMANDS) return this
+    return "$name <${parts.size - 1} args>"
+}
+
 enum class PasswordProblem { TOO_SHORT, NOT_ALPHANUMERIC, TOO_EASY }
 
 fun String.passwordProblem(): PasswordProblem? = when {
