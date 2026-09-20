@@ -5,6 +5,7 @@ import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.crypt.Crypto
 import org.darkan.core.isValidPassword
+import org.darkan.core.redactedCommand
 import org.darkan.core.model.Rights
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.lobby.web.model.LobbyPlayer
@@ -65,7 +66,7 @@ object LobbyCommands {
                 continue
             }
             if (tier != Rights.PLAYER) {
-                val logged = if (name in SECRET_COMMANDS) "$name <${args.size} args>" else line
+                val logged = line.redactedCommand()
                 logInfo("Lobby command by ${player.account.username} (${player.account.rights}): $logged")
             }
             try {
@@ -78,9 +79,6 @@ object LobbyCommands {
         }
         return false
     }
-
-    /** Commands whose arguments are secrets and must never be logged. */
-    private val SECRET_COMMANDS = setOf("changepass", "changepassother", "setpass", "resetpass")
 
     init {
         add(Rights.PLAYER, "commands", "Lists the commands you can use.") { player, _ ->
@@ -117,7 +115,7 @@ object LobbyCommands {
             target.changePassword(Crypto.hashPasswordArgon2(password))
             Accounts.save(target)
             logInfo("Password of ${target.username} changed by ${player.account.username}")
-            player.message("${target.displayName}'s password has been changed to \"$password\".")
+            player.message("${target.displayName}'s password has been changed.")
         }
     }
 }
