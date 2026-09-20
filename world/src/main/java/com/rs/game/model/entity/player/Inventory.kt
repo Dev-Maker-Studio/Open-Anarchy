@@ -303,52 +303,58 @@ class Inventory {
         if (num <= 0) return
         if (getNumberOf(Obj.coins) + num < 0) num = Int.MAX_VALUE - getNumberOf(Obj.coins) - 1
         coins -= num
-        sendPouchCoinsChange(num, false)
+        sendPouchCoinsChange(num.toLong(), false)
         addItemDrop(Obj.coins, num)
     }
 
-    fun addCoins(num: Int) {
-        if (num <= 0) return
-        if (coins + num > 0L) {
-            coins += num
-            sendPouchCoinsChange(num, true)
-            return
-        }
-        addItemDrop(Obj.coins, num)
+    fun addCoins(num: Int) = addCoins(num.toLong())
+
+    fun addCoins(num: Long) {
+        if (num <= 0L) return
+        val added = Utils.satAdd(coins, num) - coins
+        if (added <= 0L) return
+        coins += added
+        sendPouchCoinsChange(added, true)
     }
 
-    fun hasCoins(num: Int): Boolean = coins >= num || coins + getNumberOf(Obj.coins) >= num
+    fun hasCoins(num: Int): Boolean = hasCoins(num.toLong())
+
+    fun hasCoins(num: Long): Boolean = coins >= num || getCoins() >= num
 
     fun getCoins(): Long {
-        val total = coins + getNumberOf(Obj.coins)
+        val total = Utils.satAdd(coins, getNumberOf(Obj.coins).toLong())
         return if (total < 0L) coins else total
     }
 
-    fun removeCoins(num: Int) = removeCoins(num, false)
+    fun removeCoins(num: Int) = removeCoins(num.toLong(), false)
 
-    fun removeCoins(amount: Int, pouchOnly: Boolean) {
+    fun removeCoins(num: Long) = removeCoins(num, false)
+
+    fun removeCoins(amount: Int, pouchOnly: Boolean) = removeCoins(amount.toLong(), pouchOnly)
+
+    fun removeCoins(amount: Long, pouchOnly: Boolean) {
         var num = amount
-        if (num <= 0) return
+        if (num <= 0L) return
         if (coins >= num) {
             coins -= num
             sendPouchCoinsChange(num, false)
             return
         }
         if (pouchOnly) return
-        if (coins > 0) {
-            num -= coins.toInt()
-            sendPouchCoinsChange(coins.toInt(), false)
+        if (coins > 0L) {
+            num -= coins
+            sendPouchCoinsChange(coins, false)
             coins = 0
         }
-        if (getNumberOf(Obj.coins) >= num) deleteItem(Obj.coins, num)
+        if (num <= Int.MAX_VALUE.toLong() && getNumberOf(Obj.coins) >= num) deleteItem(Obj.coins, num.toInt())
         else {
             player.sendMessage("Error removing coins. Please report how you managed to produce this message.")
             Logger.error(Inventory::class.java, "removeCoins (${player.username})", Thread.currentThread().stackTrace.contentToString())
         }
     }
 
-    private fun sendPouchCoinsChange(amount: Int, added: Boolean) {
-        player.packets.sendRunScript(Cs2.cs2_5561, amount, if (added) 1 else 0)
+    private fun sendPouchCoinsChange(amount: Long, added: Boolean) {
+        player.packets.sendRunScript(Cs2.cs2_5561, Utils.satInt(amount), if (added) 1 else 0)
         sendPouchCoins()
     }
 
