@@ -37,6 +37,9 @@ private const val PENDING = "instancePending"
 private const val PENDING_BOSS = "instancePendingBoss"
 private const val REVISION = "instanceRevision"
 
+/** Ops are addressed by cc slot, and every cc a row or button draws needs to be inside the range. */
+private const val SLOT_CEILING = 128
+
 object InstanceInterface {
     fun open(player: Player, def: BossInstanceDef) {
         val settings = InstanceSettings(
@@ -51,8 +54,8 @@ object InstanceInterface {
         player.packets.setIFText(Component.instance_system.boss_name, def.displayName)
         player.packets.setIFText(Component.instance_system.requirements_value, def.entranceRequirements)
         player.packets.setIFNPCHead(Interface.instance_system, Utils.componentIdFromHash(Component.instance_system.portrait), def.bossNpc)
-        player.packets.setIFEvents(IFEvents(Component.instance_system.rows, 0, ROWS.size * 2).enableRightClickOptions(*IntArray(ROWS.size * 2) { it }))
-        player.packets.setIFEvents(IFEvents(Component.instance_system.buttons, 0, 3).enableRightClickOptions(0, 1, 2))
+        player.packets.setIFEvents(IFEvents(Component.instance_system.rows, 0, SLOT_CEILING).enableRightClickOptions(*IntArray(ROWS.size * 2) { it }))
+        player.packets.setIFEvents(IFEvents(Component.instance_system.buttons, 0, SLOT_CEILING).enableRightClickOptions(0, 1, 2))
         refresh(player)
     }
 
@@ -109,7 +112,17 @@ private fun handleAction(player: Player, opNum: Int) {
     player.closeInterfaces()
     when (opNum) {
         1 -> BossInstances.start(player, def, settings)
-        2 -> BossInstances.join(player, player.username)?.let { player.sendMessage(it) }
+        2 -> player.sendInputName("Whose instance would you like to join?") { owner ->
+            val username = Utils.formatPlayerNameForProtocol(owner)
+            val target = BossInstances.owned(username)
+            when {
+                target == null -> player.sendMessage("That instance no longer exists.")
+                target.settings.protection == InstanceProtection.PIN -> player.sendInputInteger("Enter the instance PIN:") { pin ->
+                    BossInstances.join(player, username, pin)?.let { player.sendMessage(it) }
+                }
+                else -> BossInstances.join(player, username)?.let { player.sendMessage(it) }
+            }
+        }
         3 -> BossInstances.rejoin(player)?.let { player.sendMessage(it) }
     }
 }
