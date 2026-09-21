@@ -26,9 +26,10 @@ public class UpdateZone {
     public UpdateZone(int baseChunkId, RegionSize size) {
         this.baseChunkId = baseChunkId;
         this.size = size;
+        // Exactly the scene Entity.loadMapRegions builds: a chunk past it encodes an offset the client has no slot for.
         for (int planeOff = 0;planeOff < 4 * Chunk.PLANE_INC;planeOff += Chunk.PLANE_INC) {
-            for (int chunkXOff = 0; chunkXOff <= (size.getSize() / 8) * Chunk.X_INC; chunkXOff += Chunk.X_INC) {
-                for (int chunkYOff = 0; chunkYOff <= (size.getSize() / 8); chunkYOff++) {
+            for (int chunkXOff = 0; chunkXOff < (size.getSize() / 8) * Chunk.X_INC; chunkXOff += Chunk.X_INC) {
+                for (int chunkYOff = 0; chunkYOff < (size.getSize() / 8); chunkYOff++) {
                     int chunkId = baseChunkId + chunkXOff + chunkYOff + planeOff;
                     chunkIds.add(chunkId);
                     regionIds.add(MapUtils.chunkToRegionId(chunkId));
