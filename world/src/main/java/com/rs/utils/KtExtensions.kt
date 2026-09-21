@@ -51,18 +51,6 @@ val Tile.chunkY: Int get() = y shr 3
  */
 val Tile.chunkLocalHash: Int get() = (x and 7) or ((y and 7) shl 4) or (plane shl 8)
 
-/**
- * Gets the X coordinate relative to the scene base.
- * The sceneBaseChunkId encodes (chunkX, chunkY, plane) via CHUNK structure.
- */
-fun Tile.getXInScene(sceneBaseChunkId: Int): Int = x - ((sceneBaseChunkId shr 11) and 2047) * 8
-
-/**
- * Gets the Y coordinate relative to the scene base.
- * The sceneBaseChunkId encodes (chunkX, chunkY, plane) via CHUNK structure.
- */
-fun Tile.getYInScene(sceneBaseChunkId: Int): Int = y - (sceneBaseChunkId and 2047) * 8
-
 // hasAttackOption() and hasOption() are now member functions on NPCDefinition
 
 /**

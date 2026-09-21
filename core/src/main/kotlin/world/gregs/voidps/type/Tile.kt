@@ -100,28 +100,16 @@ class Tile(val id: Int) : Coordinate3D<Tile> {
     fun getChunkY() = y shr 3
 
     /** Returns the X within scene for a given base chunk id. */
-    fun getXInScene(baseChunkId: Int): Int {
-        val baseX = (baseChunkId shr 14 and 0x3fff) shl 3
-        return x - baseX
-    }
+    fun getXInScene(baseChunkId: Int): Int = (getChunkXInScene(baseChunkId) shl 3) + (x and 7)
 
     /** Returns the Y within scene for a given base chunk id. */
-    fun getYInScene(baseChunkId: Int): Int {
-        val baseY = (baseChunkId and 0x3fff) shl 3
-        return y - baseY
-    }
+    fun getYInScene(baseChunkId: Int): Int = (getChunkYInScene(baseChunkId) shl 3) + (y and 7)
 
     /** Returns the chunk X within scene for a given base chunk id. */
-    fun getChunkXInScene(baseChunkId: Int): Int {
-        val baseChunkX = baseChunkId shr 14 and 0x3fff
-        return (x shr 3) - baseChunkX
-    }
+    fun getChunkXInScene(baseChunkId: Int): Int = (x shr 3) - (baseChunkId shr 11 and 0x7ff)
 
     /** Returns the chunk Y within scene for a given base chunk id. */
-    fun getChunkYInScene(baseChunkId: Int): Int {
-        val baseChunkY = baseChunkId and 0x3fff
-        return (y shr 3) - baseChunkY
-    }
+    fun getChunkYInScene(baseChunkId: Int): Int = (y shr 3) - (baseChunkId and 0x7ff)
 
     /** Returns the region X (x / 64). */
     fun getRegionX() = x shr 6
