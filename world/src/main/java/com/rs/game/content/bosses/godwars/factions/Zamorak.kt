@@ -4,7 +4,7 @@ import com.rs.engine.pathfinder.RouteEvent
 import com.rs.game.World
 import com.rs.game.content.bosses.godwars.GWDBoss
 import com.rs.game.content.bosses.godwars.GWDFactionNPC
-import com.rs.game.content.bosses.godwars.GWDMinion
+import com.rs.game.content.bosses.MinionSpawn
 import com.rs.game.content.bosses.godwars.factions.zaros.ZarosFactionNPC
 import com.rs.game.content.combat.CombatStyle
 import com.rs.game.model.entity.Hit
@@ -16,6 +16,7 @@ import org.darkan.core.Constants
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Utils.getRandomInclusive
 import org.darkan.core.Utils.random
+import org.darkan.core.gameval.gen.Npc
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
@@ -91,12 +92,12 @@ fun mapZamorakGodwars() {
     }
 }
 
-class KrilTstsaroth(id: Int, tile: Tile, spawned: Boolean) : GWDBoss(id, tile, spawned) {
-    init {
-        setMinions(
-            GWDMinion(6204, tile.transform(8, 4), true),
-            GWDMinion(6206, tile.transform(-6, 6), true),
-            GWDMinion(6208, tile.transform(-6, -2), true)
+class KrilTstsaroth(id: Int, tile: Tile, spawned: Boolean) : GWDBoss(id, tile, spawned, MINIONS) {
+    private companion object {
+        private val MINIONS = listOf(
+            MinionSpawn(Npc.godwars_ancient_greater_demon, 8, 4),
+            MinionSpawn(Npc.godwars_ancient_lesser_demon, -6, 6),
+            MinionSpawn(Npc.godwars_ancient_black_demon, -6, -2)
         )
     }
 }
