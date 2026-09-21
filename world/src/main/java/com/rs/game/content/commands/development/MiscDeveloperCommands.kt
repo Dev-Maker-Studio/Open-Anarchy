@@ -21,6 +21,8 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.ModelRotator
 import com.rs.game.model.entity.Rotation
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions
+import com.rs.game.content.bosses.instance.BossInstanceDefs
+import com.rs.game.content.bosses.instance.InstanceInterface
 import com.rs.game.model.entity.player.Bank
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.InstancedController
@@ -458,5 +460,12 @@ fun loadDeveloperCommands() {
         bank.refreshTabs()
         bank.refreshItems()
         p.sendMessage("Bank filled to ${bank.bankSize} slots, $added added.")
+    }
+
+    Commands.add(Rights.DEVELOPER, "instance (boss key)", "Opens the boss instance window, or lists the keys.") { p, args ->
+        val key = args.getOrNull(0)
+        val def = key?.let { BossInstanceDefs[it] }
+        if (def == null) p.sendMessage("Bosses: " + BossInstanceDefs.all.joinToString(", ") { it.key })
+        else InstanceInterface.open(p, def)
     }
 }
