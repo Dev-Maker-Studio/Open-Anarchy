@@ -62,19 +62,19 @@ object Tiles {
 
     /** Get the X coordinate within the scene for the given tile and base chunk id. */
     @JvmStatic
-    fun getXInScene(tile: Any, baseChunkId: Int): Int {
-        val t = tile as Tile
-        val baseX = (baseChunkId shr 14 and 0x3fff) shl 3
-        return t.x - baseX
-    }
+    fun getXInScene(tile: Any, baseChunkId: Int): Int = (tile as Tile).getXInScene(baseChunkId)
 
     /** Get the Y coordinate within the scene for the given tile and base chunk id. */
     @JvmStatic
-    fun getYInScene(tile: Any, baseChunkId: Int): Int {
-        val t = tile as Tile
-        val baseY = (baseChunkId and 0x3fff) shl 3
-        return t.y - baseY
-    }
+    fun getYInScene(tile: Any, baseChunkId: Int): Int = (tile as Tile).getYInScene(baseChunkId)
+
+    /** Get the chunk X within the scene for the given tile and base chunk id. */
+    @JvmStatic
+    fun getChunkXInScene(tile: Any, baseChunkId: Int): Int = (tile as Tile).getChunkXInScene(baseChunkId)
+
+    /** Get the chunk Y within the scene for the given tile and base chunk id. */
+    @JvmStatic
+    fun getChunkYInScene(tile: Any, baseChunkId: Int): Int = (tile as Tile).getChunkYInScene(baseChunkId)
 
     /** Get the chunk X for a tile (x / 8). */
     @JvmStatic
