@@ -5,7 +5,6 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Component
-import org.darkan.core.gameval.gen.Cs2
 import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.gameval.gen.Varc
 import org.darkan.core.gameval.gen.Varcstr
@@ -36,6 +35,7 @@ private val ROWS = listOf(
 
 private const val PENDING = "instancePending"
 private const val PENDING_BOSS = "instancePendingBoss"
+private const val REVISION = "instanceRevision"
 
 object InstanceInterface {
     fun open(player: Player, def: BossInstanceDef) {
@@ -65,7 +65,9 @@ object InstanceInterface {
             player.packets.sendVarcString(Varcstr.instance_row_label_0 + row, spec.label)
             player.packets.sendVarcString(Varcstr.instance_row_value_0 + row, spec.value(settings, def))
         }
-        player.packets.sendRunScript(Cs2.instance_system_init)
+        val revision = player.tempAttribs.getI(REVISION) + 1
+        player.tempAttribs.setI(REVISION, revision)
+        player.packets.sendVarc(Varc.instance_revision, revision)
     }
 
     private fun pending(player: Player): InstanceSettings? = player.tempAttribs.getO<InstanceSettings>(PENDING)
