@@ -7,7 +7,6 @@ import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Cs2
 import org.darkan.core.gameval.gen.Graphic
 import org.darkan.core.gameval.gen.Interface
-import org.darkan.core.isValidAccountName
 import org.darkan.core.model.Account
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.prot.packet.IfCloseSub
@@ -92,14 +91,14 @@ object LobbyNameScreen {
     private suspend fun apply(player: LobbyPlayer, username: String, displayName: String) {
         val account = player.account
         val previousUsername = account.username
-        if (account.username.isValidAccountName()) {
-            account.renameTo(displayName, forced = true)
-            Accounts.save(account)
-        } else {
+        if (account.isUnnamedSignup()) {
             @Suppress("DEPRECATION")
             account.initializeUsername(username)
             account.nameChangeRequired = false
             Accounts.rename(previousUsername, account)
+        } else {
+            account.renameTo(displayName, forced = true)
+            Accounts.save(account)
         }
         pendingConfirmation.remove(previousUsername)
         player.session.send(IfCloseSub(Interface.interface_906, NAME_SCREEN_HOST))

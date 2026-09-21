@@ -27,7 +27,7 @@ fun String.formatPlayerNameForProtocol(): String {
 
 val EMAIL_REGEX = Regex("[A-Za-z0-9._-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}", RegexOption.IGNORE_CASE)
 fun String.isValidEmail() = matches(EMAIL_REGEX)
-val USERNAME_REGEX = Regex("^[a-zA-Z0-9][a-zA-Z0-9_]{0,10}[a-zA-Z0-9]$")
+val USERNAME_REGEX = Regex("^[a-zA-Z0-9](?:[a-zA-Z0-9_]{0,10}[a-zA-Z0-9])?$")
 fun String.isValidAccountName() = this.length in 1..12 && !this.contains("__") && matches(USERNAME_REGEX)
 const val PASSWORD_MIN_LENGTH = 8
 val PASSWORD_REGEX = Regex("^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{$PASSWORD_MIN_LENGTH,}$")
