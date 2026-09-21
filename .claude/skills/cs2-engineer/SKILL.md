@@ -125,11 +125,20 @@ Names follow the identified names around them (`world_select_stars_0` -> `world_
 
 ## 3. Client rules that crash or silently break a script
 
-- **Instruction cap.** The client aborts a hook after 200,000 instructions and a load script
-  after 2,000,000 (`CS2Executor.executeScript` in darkan-bot); the abort is silent and leaves
-  whatever the script drew so far. A per-row lookup that rescans a 300-entry enum is enough to
-  hit it - index rows by enum position and skip, never search (the old skill guide's
-  `[proc,skillguide_tab_row]` is the pattern).
+- **Instruction cap: 200,000 for everything.** Every entry point - hook, timer, var transmit and
+  `onLoadScript` alike - runs through `CS2Executor.executeScript(script, 200000, ...)` in
+  darkan-bot; the count covers the whole call tree from that entry and resets per entry, and the
+  abort is silent, leaving whatever the script drew so far. A per-row lookup that rescans a
+  300-entry enum is enough to hit it - index rows by enum position and skip, never search (the old
+  skill guide's `[proc,skillguide_tab_row]` is the pattern). A per-slot loop over a big container
+  is the other way to hit it: budget the loop body against the trip count off `cs2 dump`'s
+  instruction listing, and split the work across entry points (create and static setup in the load
+  script, dynamic state in the redraw) so each stays well inside one budget - that is what the
+  2000-slot bank does.
+- **Strings are never compared with `==`.** The compiler accepts `ccGetOp(9) == ""` and emits
+  `BRANCH_EQUALS`, which pops the *int* stack: the script underflows and dies at runtime, and
+  `cs2 compile` reports nothing. Use `stringLength(x) == 0`. `cs2 analyse` stack-simulates every
+  script and is what catches it - run it after any edit that touches strings.
 - **`cc_create` ids are contiguous per layer.** Creating id n when n-1 does not exist throws and
   aborts the script (see the bank placeholder work); derive cc ids from a drawn-slot counter, not
   from a data index that has gaps.

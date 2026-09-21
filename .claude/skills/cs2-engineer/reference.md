@@ -43,3 +43,41 @@ contiguous (see rule 3). The fix creates the icon for every row and hides it whe
 Row geometry (interface 910, layer 63, rows 20 high): 68 favourite star (23w), 69/70 world number
 and members star (x25, 53w), 71 players (x80, 73w), 72/73 country name and flag (x154, fills),
 74 Type (right 94, 63w), 75 lootshare (right 52, 40w), 76 ping (right 0, 50w), 77/78 hover overlays.
+
+## 2000-slot bank (capacity + instruction budget, 2026-09-21)
+
+Goal: raise the bank from 800 to 2000 slots without the client aborting the redraw or stalling.
+
+```
+config/inv/95.json                        length 800 -> 2000 (invSize(Inv.bank) everywhere in script)
+config/varp/2715..2718.json               bank_tab_sizes_1..4, + gamevals/varp.json and coverage
+config_varbit/4885..4892.json             the eight tab sizes rehomed to 11 bits, two per new varp
+interfaces/762/95.json                    varps [1246,1247,1248] -> [1248, 2715..2718]
+clientscripts/cs2/cs2_1450.ts             load: cc_create + every static per-slot setter
+clientscripts/cs2/cs2_1453.ts             redraw: obj, transparency, op base, ops that actually differ
+clientscripts/cs2/cs2_1456/1457/1479.ts   each view draws what it shows and hides the rest itself
+clientscripts/cs2/cs2_1467.ts             the all-items range, was a literal [0, 800]
+clientscripts/cs2/cs2_1248/1329/1465/1665 free vs member slot arithmetic, was literal 800 and 713
+world/.../player/Bank.kt                  MAX_BANK_SIZE 2000; depositAllInventory refreshes once
+```
+
+Three things the old code could not survive at 2000, all found by counting the bytecode:
+
+1. **The tab-size varbits were 10 bits** (max 1023), so one tab holding more than 1023 items wrapped.
+   They are ids the scripts name, and the client resolves id -> varp/bits from the cache, so
+   rehoming them to wider bits needs no script edit - only the component's `varps` transmit list.
+   The server writes them with `setVarBit` (transient, never saved), so no save migration.
+2. **The redraw was ~114 instructions per filled slot** (`cs2_1664`'s loop plus `cs2_1453`), i.e.
+   228,000 for a full bank - past the 200,000 cap, which is exactly "the interface stops rendering
+   part way down". The split is: everything that never changes for a slot (size, outline, shadow,
+   drag, the constant ops, the hover hooks) is set once in the create loop; the redraw sets only
+   obj, transparency, op base and the ops that actually differ, guarded by
+   `stringLength(ccGetOp(9)) == 0` so the placeholder/item op swap costs nothing in the common case.
+   Load is now ~68/slot (136k) and the redraw ~67-69/slot (134-138k), each in its own budget.
+3. **`cs2_1456` broke out of a tab's range with `int0 = 1000`**, a sentinel that is no longer past
+   the end at 2000 slots. The views hide the empty tail instead, which also removed the separate
+   `cs2_1455` full-hide pass each redraw paid for.
+
+Still client-side, not fixed here: `ItemContainer.setItemInContainer` in darkan-bot grows the
+container one slot at a time, so a full 2000-slot UPDATE_INV_FULL costs O(n^2) array copies on
+every bank open.
