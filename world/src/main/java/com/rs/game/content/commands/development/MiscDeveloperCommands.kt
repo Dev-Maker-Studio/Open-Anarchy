@@ -21,8 +21,10 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.ModelRotator
 import com.rs.game.model.entity.Rotation
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions
+import com.rs.game.model.entity.player.Bank
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.InstancedController
+import org.darkan.core.cache.ItemDefinitions
 import org.darkan.core.model.Item
 import org.darkan.core.model.Rights
 import org.darkan.core.model.SpotAnim
@@ -441,5 +443,20 @@ fun loadDeveloperCommands() {
                 }
             }
         }
+    }
+
+    Commands.add(Rights.DEVELOPER, "fillbank (slots)", "Fills the bank with random items, up to the bank cap by default.") { p, args ->
+        val target = (args.getOrNull(0)?.toIntOrNull() ?: Bank.MAX_BANK_SIZE).coerceIn(0, Bank.MAX_BANK_SIZE)
+        val bank = p.bank
+        var added = 0
+        for (id in (0 until Utils.getItemDefinitionsSize()).shuffled()) {
+            if (bank.bankSize >= target) break
+            val defs = ItemDefinitions.getDefs(id)
+            if (defs.noted || defs.lent || defs.name == "null") continue
+            if (bank.addItem(Item(id, Utils.randomInclusive(1, 100000)), false)) added++
+        }
+        bank.refreshTabs()
+        bank.refreshItems()
+        p.sendMessage("Bank filled to ${bank.bankSize} slots, $added added.")
     }
 }

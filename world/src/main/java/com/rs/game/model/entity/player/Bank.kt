@@ -153,11 +153,9 @@ class Bank {
             player.sendMessage("Not enough space in your bank.")
             return
         }
-        for (i in 0 until 28) {
-            depositItem(i, Int.MAX_VALUE, true)
-            refreshTab(currentTab)
-            refreshItems()
-        }
+        for (i in 0 until 28) depositItem(i, Int.MAX_VALUE, false)
+        refreshTabs()
+        refreshItems()
     }
 
     fun depositAllBob(banking: Boolean) {
@@ -776,7 +774,7 @@ class Bank {
     }
 
     companion object {
-        const val MAX_BANK_SIZE = 800
+        const val MAX_BANK_SIZE = 2000
         private const val PIN_VALIDITY_TIME = 6 * 60 * 60 * 1000L
 
         private val BLOCKED_BANK_ITEMS: Set<Int> = setOf(
