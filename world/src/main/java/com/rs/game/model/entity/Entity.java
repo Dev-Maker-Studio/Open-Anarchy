@@ -1061,9 +1061,9 @@ public abstract class Entity {
 			}
 		}
 		if (player != null)
-			ChunkManager.getUpdateZone(sceneBaseChunkId, oldSize).addPlayerWatcher(player.getIndex());
+			ChunkManager.getUpdateZone(sceneBaseChunkId, getMapSize()).addPlayerWatcher(player.getIndex());
 		if (npc != null && npc.isLoadsUpdateZones())
-			ChunkManager.getUpdateZone(sceneBaseChunkId, oldSize).addNPCWatcher(npc.getIndex());
+			ChunkManager.getUpdateZone(sceneBaseChunkId, getMapSize()).addNPCWatcher(npc.getIndex());
 	}
 
 	public void setIndex(int index) {
@@ -1089,7 +1089,7 @@ public abstract class Entity {
 	}
 
 	public void setMapSize(RegionSize size) {
-		RegionSize oldSize = regionSize;
+		RegionSize oldSize = getMapSize();
 		regionSize = size;
 		loadMapRegions(oldSize);
 	}
