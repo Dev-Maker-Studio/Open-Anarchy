@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 import org.bson.codecs.pojo.annotations.BsonIgnore
 import org.darkan.core.formatPlayerNameForDisplay
 import org.darkan.core.formatPlayerNameForProtocol
-import org.darkan.core.isValidAccountName
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -83,7 +82,15 @@ class Account {
      * sign-up starts with the email as the username - or a moderator has revoked the one it had.
      */
     @BsonIgnore
-    fun mustChooseName() = nameChangeRequired || !username.isValidAccountName()
+    fun mustChooseName() = nameChangeRequired || isUnnamedSignup()
+
+    /**
+     * A sign-up that has not been through the name screen yet: `Accounts.createLobby` seeds both
+     * the username and the email with the address the client signed up with. Only such an account
+     * may have its username written, so this is also what tells a first naming from a rename.
+     */
+    @BsonIgnore
+    fun isUnnamedSignup() = username == email
 
     /**
      * Forced renames leave [prevDisplayName] alone so the old name never surfaces again; a rename
