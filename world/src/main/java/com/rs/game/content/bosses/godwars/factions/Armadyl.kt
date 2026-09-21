@@ -4,7 +4,7 @@ import com.rs.game.World
 import com.rs.game.World.checkWalkStep
 import com.rs.game.content.bosses.godwars.GWDBoss
 import com.rs.game.content.bosses.godwars.GWDFactionNPC
-import com.rs.game.content.bosses.godwars.GWDMinion
+import com.rs.game.content.bosses.MinionSpawn
 import com.rs.game.content.bosses.godwars.factions.zaros.ZarosFactionNPC
 import com.rs.game.content.combat.CombatStyle
 import com.rs.game.content.combat.isMaging
@@ -16,6 +16,7 @@ import com.rs.game.model.entity.npc.combat.CombatScript.getMaxHit
 import com.rs.game.model.entity.player.Player
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Utils
+import org.darkan.core.gameval.gen.Npc
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
@@ -55,12 +56,12 @@ fun mapArmadylGodwars() {
     instantiateNpc(6222) { npcId, tile -> KreeArra(npcId, tile, false) }
 }
 
-class KreeArra(id: Int, tile: Tile, spawned: Boolean) : GWDBoss(id, tile, spawned) {
-    init {
-        setMinions(
-            GWDMinion(6223, tile.transform(8, 0), spawned),
-            GWDMinion(6225, tile.transform(-4, -2), spawned),
-            GWDMinion(6227, tile.transform(-2, -4), spawned)
+class KreeArra(id: Int, tile: Tile, spawned: Boolean) : GWDBoss(id, tile, spawned, MINIONS) {
+    private companion object {
+        private val MINIONS = listOf(
+            MinionSpawn(Npc.godwars_armadyl_male_armor03_blue, 8, 0),
+            MinionSpawn(Npc.godwars_armadyl_female_armor03_green, -4, -2),
+            MinionSpawn(Npc.godwars_armadyl_female_armor03_red, -2, -4)
         )
     }
 

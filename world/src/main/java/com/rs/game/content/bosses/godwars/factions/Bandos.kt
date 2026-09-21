@@ -3,7 +3,7 @@ package com.rs.game.content.bosses.godwars.factions
 import com.rs.game.World
 import com.rs.game.content.bosses.godwars.GWDBoss
 import com.rs.game.content.bosses.godwars.GWDFactionNPC
-import com.rs.game.content.bosses.godwars.GWDMinion
+import com.rs.game.content.bosses.MinionSpawn
 import com.rs.game.content.bosses.godwars.factions.zaros.ZarosFactionNPC
 import com.rs.game.content.combat.CombatStyle
 import com.rs.game.model.entity.Hit
@@ -13,6 +13,7 @@ import com.rs.game.model.entity.npc.combat.CombatScript.getMaxHit
 import com.rs.game.model.entity.player.Player
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Utils
+import org.darkan.core.gameval.gen.Npc
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
@@ -61,12 +62,12 @@ fun mapBandosGodwars() {
     instantiateNpc(6260) { npcId, tile -> GeneralGraardor(npcId, tile, false) }
 }
 
-class GeneralGraardor(id: Int, tile: Tile, spawned: Boolean) : GWDBoss(id, tile, spawned) {
-    init {
-        setMinions(
-            GWDMinion(6261, tile.transform(-8, 0), spawned),
-            GWDMinion(6263, tile.transform(0, -6), spawned),
-            GWDMinion(6265, tile.transform(-4, 4), spawned)
+class GeneralGraardor(id: Int, tile: Tile, spawned: Boolean) : GWDBoss(id, tile, spawned, MINIONS) {
+    private companion object {
+        private val MINIONS = listOf(
+            MinionSpawn(Npc.godwars_sergeant_goblin1, -8, 0),
+            MinionSpawn(Npc.godwars_sergeant_goblin2, 0, -6),
+            MinionSpawn(Npc.godwars_sergeant_goblin3, -4, 4)
         )
     }
 }

@@ -91,6 +91,7 @@ public class NPC extends Entity {
 	private boolean randomWalk;
 	private Map<Skill, Integer> combatLevels;
 	private boolean spawned;
+	private transient int respawnDelayOverride = -1;
 	private transient NPCCombat combat;
 	private transient boolean ignoreNPCClipping;
 	private Tile forceWalk;
@@ -453,7 +454,15 @@ public class NPC extends Entity {
 			finish();
 		}
 		cancelRespawnTask();
-		respawnTask = WorldTasks.schedule(time < 0 ? getCombatDefinitions().getRespawnDelay() : time, this::spawn);
+		respawnTask = WorldTasks.schedule(time < 0 ? getRespawnDelay() : time, this::spawn);
+	}
+
+	public int getRespawnDelay() {
+		return respawnDelayOverride >= 0 ? respawnDelayOverride : getCombatDefinitions().getRespawnDelay();
+	}
+
+	public void setRespawnDelayOverride(int ticks) {
+		respawnDelayOverride = ticks;
 	}
 
 	public void cancelRespawnTask() {
