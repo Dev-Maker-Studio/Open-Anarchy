@@ -158,7 +158,7 @@ data class AnimationDefinition(
         return result
     }
 
-    /** Returns total duration of all frames in client ticks (50ms). */
+    /** Returns total duration of all frames in client cycles (20ms). */
     fun getEmoteTime(): Int = durations?.sum() ?: 0
 
     companion object {

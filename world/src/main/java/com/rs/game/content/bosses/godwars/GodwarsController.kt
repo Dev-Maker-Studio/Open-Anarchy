@@ -225,7 +225,7 @@ class GodwarsController : Controller() {
         }
 
         if (obj.id == 57225) {
-            val globalInstance: NexArena = NexArena.getGlobalInstance()
+            val globalInstance: NexArena = NexArena.globalInstance
             player.startConversation {
                 simple("The room beyond this point is a prison! There is no way out other than death or teleport. Only those who endure dangerous encounters should proceed.")
                 options("There are currently " + globalInstance.playersCount + " people fighting.<br>Do you wish to join them?") {

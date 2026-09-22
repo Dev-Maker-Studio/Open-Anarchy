@@ -296,6 +296,11 @@ object Rev727UpdateProtocol : UpdateProtocol {
                     stream.writeBits(2, 1)
                     stream.writeBits(cfg.walkDirectionBits, p.nextWalkDirection)
                 }
+            } else if (p.zeroDisplacementWalk) {
+                stream.writeBits(1, 1)
+                stream.writeBits(1, 1)
+                stream.writeBits(2, 0)
+                if (!needUpdate) appendUpdateBlock(updateBlocks, state, p, added = false)
             } else if (needUpdate) {
                 stream.writeBits(1, 1)
                 stream.writeBits(1, 1)
@@ -306,7 +311,7 @@ object Rev727UpdateProtocol : UpdateProtocol {
                     val p2Index = state.localIndexes[i2]
                     if (nsn0 == ((state.slotFlags[p2Index].toInt() and 0x1) != 0)) continue
                     val p2 = state.localPlayers[p2Index] ?: break
-                    val p2Need = needsRemove(local, p2, largeSceneView) || p2.hasTeleported || p2.nextWalkDirection != null || needsUpdateBlock(p2)
+                    val p2Need = needsRemove(local, p2, largeSceneView) || p2.hasTeleported || p2.nextWalkDirection != null || p2.zeroDisplacementWalk || needsUpdateBlock(p2)
                     if (p2Need) break
                     skip++
                 }

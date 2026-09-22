@@ -133,6 +133,10 @@ fun attackMagicSplash(npc: NPC, target: Entity) {
 class CorporealBeast(id: Int, tile: Tile?, spawned: Boolean) : NPC(id, tile, spawned) {
     private var core: DarkEnergyCore? = null
 
+    private companion object {
+        private const val CAVE_EDGE_OFFSET = 14
+    }
+
     init {
         capDamage = 1000
         lureDelay = 3000
@@ -151,7 +155,8 @@ class CorporealBeast(id: Int, tile: Tile?, spawned: Boolean) : NPC(id, tile, spa
     }
 
     override fun getPossibleTargets(): MutableList<Entity> {
-        return super.possibleTargets.filterTo(mutableListOf()) { it.x > 2972 }
+        val caveEdge = respawnTile.x - CAVE_EDGE_OFFSET
+        return super.possibleTargets.filterTo(mutableListOf()) { it.x > caveEdge }
     }
 
     override fun handlePreHit(hit: Hit) {
