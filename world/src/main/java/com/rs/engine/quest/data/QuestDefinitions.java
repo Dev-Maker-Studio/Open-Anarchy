@@ -72,6 +72,12 @@ public class QuestDefinitions {
     public int[] anIntArray2601;
 
     public static final HashMap<Integer, QuestDefinitions> QUESTS = new HashMap<>();
+	/** Handed back for a quest the cache has no file for, so content reads defaults instead of null. */
+	private static final QuestDefinitions BLANK = new QuestDefinitions();
+	static {
+		BLANK.name = "null";
+		BLANK.setExtraInfo(new QuestInformation(-1, "null", -1));
+	}
 	private static final HashMap<String, QuestDefinitions> QUESTS_NAME = new HashMap<>();
 
 	public static void main(String[] args) throws IOException {
@@ -105,6 +111,8 @@ public class QuestDefinitions {
 				QUESTS_NAME.put(def.name, def);
 			}
 		}
+		if (QUESTS.isEmpty())
+			return;
 
 		/*
 		 * Fix invalid values
@@ -369,7 +377,7 @@ public class QuestDefinitions {
 	}
 
 	public static QuestDefinitions getQuestDefinitions(int id) {
-		return QUESTS.get(id);
+		return QUESTS.getOrDefault(id, BLANK);
 	}
 
 	public static QuestDefinitions getQuestDefinitions(String name) {

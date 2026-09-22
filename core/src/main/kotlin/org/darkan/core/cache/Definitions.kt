@@ -25,12 +25,44 @@ import world.gregs.voidps.cache.definition.data.VarBitDefinition
 private inline fun <T> lookup(table: Array<T>, id: Int, blank: T): T =
     if (id in table.indices) table[id] else blank
 
-/** `VarBitDefinition` has no shared blank of its own, so this file keeps one. */
-private val EMPTY_VARBIT = VarBitDefinition()
+/** `VarBitDefinition` has no shared blank of its own; index -1 marks one that resolves to nothing. */
+private val EMPTY_VARBIT = VarBitDefinition(id = -1, index = -1)
+
+/**
+ * Definition tables to read instead of the cache's own. A test installs the handful of definitions
+ * it asserts on and boots a world without a packed cache; a server leaves them unset and the cache
+ * answers every lookup as before.
+ */
+object DefinitionTables {
+    @JvmStatic
+    var items: Array<ItemDefinition>? = null
+
+    @JvmStatic
+    var objects: Array<ObjectDefinition>? = null
+
+    @JvmStatic
+    var npcs: Array<NPCDefinition>? = null
+
+    @JvmStatic
+    var varbits: Array<VarBitDefinition>? = null
+
+    @JvmStatic
+    fun clear() {
+        items = null
+        objects = null
+        npcs = null
+        varbits = null
+    }
+}
+
+private val itemTable: Array<ItemDefinition> get() = DefinitionTables.items ?: Cache.items
+private val objectTable: Array<ObjectDefinition> get() = DefinitionTables.objects ?: Cache.objects
+private val npcTable: Array<NPCDefinition> get() = DefinitionTables.npcs ?: Cache.npcs
+private val varbitTable: Array<VarBitDefinition> get() = DefinitionTables.varbits ?: Cache.varbits
 
 object ItemDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): ItemDefinition = lookup(Cache.items, id, ItemDefinition.EMPTY)
+    fun getDefs(id: Int): ItemDefinition = lookup(itemTable, id, ItemDefinition.EMPTY)
 
     @JvmStatic
     fun getItemDefinitions(id: Int, loadTemplates: Boolean = true): ItemDefinition = getDefs(id)
@@ -38,7 +70,7 @@ object ItemDefinitions {
 
 object NPCDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): NPCDefinition = lookup(Cache.npcs, id, NPCDefinition.EMPTY)
+    fun getDefs(id: Int): NPCDefinition = lookup(npcTable, id, NPCDefinition.EMPTY)
 
     /**
      * The definition this NPC presents as for a player with the given [vars].
@@ -50,7 +82,7 @@ object NPCDefinitions {
      */
     @JvmStatic
     fun getDefs(id: Int, vars: Vars?): NPCDefinition {
-        val npcs = Cache.npcs
+        val npcs = npcTable
         val definition = getDefs(id)
         val realId = definition.getIdForPlayer(vars)
         if (realId == id || realId < 0 || realId >= npcs.size) {
@@ -62,7 +94,7 @@ object NPCDefinitions {
 
 object ObjectDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): ObjectDefinition = lookup(Cache.objects, id, ObjectDefinition.EMPTY)
+    fun getDefs(id: Int): ObjectDefinition = lookup(objectTable, id, ObjectDefinition.EMPTY)
 
     @JvmStatic
     fun getDefs(id: Int, init: Boolean): ObjectDefinition = getDefs(id)
@@ -77,7 +109,7 @@ object ObjectDefinitions {
      */
     @JvmStatic
     fun getDefs(id: Int, vars: Vars?): ObjectDefinition {
-        val objects = Cache.objects
+        val objects = objectTable
         val definition = getDefs(id)
         val realId = definition.getIdForPlayer(vars)
         if (realId == id || realId < 0 || realId >= objects.size) {
@@ -118,7 +150,7 @@ object AnimationDefinitions {
 
 object VarBitDefinitions {
     @JvmStatic
-    fun getDefs(id: Int): VarBitDefinition = lookup(Cache.varbits, id, EMPTY_VARBIT)
+    fun getDefs(id: Int): VarBitDefinition = lookup(varbitTable, id, EMPTY_VARBIT)
 }
 
 object BASDefinitions {

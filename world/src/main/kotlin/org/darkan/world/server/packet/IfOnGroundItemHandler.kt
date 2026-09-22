@@ -22,9 +22,11 @@ import world.gregs.voidps.type.Tile
 
 class IfOnGroundItemHandler : PacketHandler<Player, IfOnGroundItem> {
     override suspend fun handle(player: Player, packet: IfOnGroundItem) {
-        if (Utils.getInterfaceDefinitionsSize() <= packet.interfaceId || player.isDead || !player.interfaceManager.topOpen(packet.interfaceId))
+        val known = Utils.getInterfaceDefinitionsSize()
+        if ((known > 0 && known <= packet.interfaceId) || player.isDead || !player.interfaceManager.topOpen(packet.interfaceId))
             return
-        if (packet.componentId != -1 && Utils.getInterfaceDefinitionsComponentsSize(packet.interfaceId) <= packet.componentId)
+        val components = Utils.getInterfaceDefinitionsComponentsSize(packet.interfaceId)
+        if (packet.componentId != -1 && components > 0 && components <= packet.componentId)
             return
         val tile = Tile.of(packet.x, packet.y, player.plane)
         if (!player.mapChunkIds.contains(tile.getChunkId()))

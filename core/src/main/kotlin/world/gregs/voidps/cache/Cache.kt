@@ -1,6 +1,7 @@
 package world.gregs.voidps.cache
 
 import org.darkan.core.EnvVars
+import org.darkan.core.Logger.logWarn
 import org.darkan.core.cache.CacheSource
 import world.gregs.voidps.cache.definition.data.AnimationDefinition
 import world.gregs.voidps.cache.definition.data.BASDefinition
@@ -126,13 +127,25 @@ interface Cache : Closeable {
     override fun close()
 
     companion object {
+        private const val HUFFMAN_ARCHIVE = 1
+        private const val OPTIONAL_CACHE_PROPERTY = "darkan.cache.optional"
+
         private val singleton: Cache by lazy {
-            CacheSource.ensureBuilt()
-            if (EnvVars.memCache) MemoryCache.load() else FileCache.load()
+            try {
+                CacheSource.ensureBuilt()
+                if (EnvVars.memCache) MemoryCache.load() else FileCache.load()
+            } catch (e: Exception) {
+                if (System.getProperty(OPTIONAL_CACHE_PROPERTY) != "true") {
+                    throw e
+                }
+                logWarn("No cache data at '${EnvVars.cachePath}'; running without cache data - every definition table will be empty.", e)
+                MemoryCache(Index.COUNT).apply { versionTable = ByteArray(0) }
+            }
         }
 
         private val _huffman: Huffman by lazy {
-            Huffman().load(singleton.data(Index.HUFFMAN, 1)!!)
+            val data = singleton.data(Index.HUFFMAN, HUFFMAN_ARCHIVE)
+            if (data == null) Huffman() else Huffman().load(data)
         }
 
         @JvmStatic val varbits: Array<VarBitDefinition> by lazy {

@@ -9,6 +9,7 @@ import org.darkan.core.net.prot.packet.setVarcPacket
 import org.darkan.core.net.prot.packet.setVarcStrPacket
 import org.darkan.core.net.prot.packet.setVarpPacket
 import org.darkan.core.cache.VarBitDefinitions
+import org.darkan.core.gameval.Gameval
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Config
 import world.gregs.voidps.cache.Index
@@ -37,7 +38,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
 
     fun setSession(session: Session): Vars {
         this.session = session
-        varpValues = IntArray(Cache.get().lastFileId(Index.CONFIGS, Config.VARP) + 1)
+        varpValues = IntArray(varpTableSize())
         modified = HashSet()
         vars.forEach { (varId, value) -> setVar(varId, value) }
         return this
@@ -48,10 +49,20 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
      * This allows using getVar/setVar/getVarBit/setVarBit without network sync.
      */
     fun initWithoutSession(): Vars {
-        varpValues = IntArray(Cache.get().lastFileId(Index.CONFIGS, Config.VARP) + 1)
+        varpValues = IntArray(varpTableSize())
         modified = HashSet()
         vars.forEach { (varId, value) -> setVar(varId, value) }
         return this
+    }
+
+    /**
+     * Wide enough for every varp the catalogs name as well as every one the cache holds, so a varp
+     * added to the source tree is writable against a cache packed before it existed.
+     */
+    private fun varpTableSize(): Int {
+        val fromCache = Cache.get().lastFileId(Index.CONFIGS, Config.VARP) + 1
+        val fromCatalog = (Gameval.allEntries(Gameval.VARP).keys.maxOrNull() ?: -1) + 1
+        return maxOf(fromCache, fromCatalog)
     }
 
     @JvmOverloads
@@ -71,6 +82,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
     @JvmOverloads
     fun setVarBit(id: Int, value: Int, forceSend: Boolean = false, save: Boolean = false) {
         val defs = VarBitDefinitions.getDefs(id)
+        if (defs.index < 0 || defs.index >= varpValues.size) return
         val bitLength = defs.endBit - defs.startBit
         val mask = BIT_MASKS[bitLength]
 
@@ -109,9 +121,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
      * reads as, so an unresolvable varbit selects the transform's default.
      */
     fun getVarBit(id: Int): Int {
-        val varbits = Cache.varbits
-        if (id < 0 || id >= varbits.size) return 0
-        val defs = varbits[id] ?: return 0
+        val defs = VarBitDefinitions.getDefs(id)
         if (defs.index < 0 || defs.index >= varpValues.size) return 0
         val bitLength = defs.endBit - defs.startBit
         if (bitLength < 0 || bitLength >= BIT_MASKS.size) return 0

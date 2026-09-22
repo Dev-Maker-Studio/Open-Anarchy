@@ -38,6 +38,9 @@ subprojects {
         workingDir = rootDir
         maxHeapSize = "4g"
         testLogging.showStandardStreams = true
+        // A test never requires a packed cache: without one the world boots on empty definition
+        // tables instead of dying, and `cacheTest` says so itself by failing its own assertions.
+        systemProperty("darkan.cache.optional", "true")
     }
 
     if (file("src/cacheTest").isDirectory) {

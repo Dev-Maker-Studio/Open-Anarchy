@@ -1,5 +1,6 @@
 package org.darkan.core
 
+import org.darkan.core.cache.DefinitionTables
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
 import world.gregs.voidps.type.Tile
@@ -550,6 +551,12 @@ object Utils {
         Cache.get().lastFileId(Index.INTERFACES, interfaceId) + 1
 
     private val itemIdExists: BooleanArray by lazy {
+        DefinitionTables.items?.let { table -> BooleanArray(table.size) { table[it].name != BLANK_ITEM_NAME } } ?: cacheItemIds()
+    }
+
+    private const val BLANK_ITEM_NAME = "null"
+
+    private fun cacheItemIds(): BooleanArray {
         val size = getItemDefinitionsSize()
         val exists = BooleanArray(size)
         val cache = Cache.get()
@@ -561,7 +568,7 @@ object Utils {
             }
             archive++
         }
-        exists
+        return exists
     }
 
     @JvmStatic fun itemExists(id: Int): Boolean = id >= 0 && id < itemIdExists.size && itemIdExists[id]
