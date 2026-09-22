@@ -102,6 +102,20 @@ object InstanceInterface {
 
     private fun pendingBoss(player: Player): BossInstanceDef? = player.tempAttribs.getO<BossInstanceDef>(PENDING_BOSS)
 
+    fun promptJoin(player: Player, def: BossInstanceDef) {
+        player.sendInputName("Whose ${def.displayName} instance would you like to join?") { owner ->
+            val username = Utils.formatPlayerNameForProtocol(owner)
+            val target = BossInstances.owned(username)
+            when {
+                target == null || target.def.key != def.key -> player.sendMessage("They do not have a ${def.displayName} instance.")
+                target.settings.protection == InstanceProtection.PIN -> player.sendInputInteger("Enter the instance PIN:") { pin ->
+                    BossInstances.join(player, username, pin)?.let { player.sendMessage(it) }
+                }
+                else -> BossInstances.join(player, username)?.let { player.sendMessage(it) }
+            }
+        }
+    }
+
     fun step(player: Player, slotId: Int) {
         val settings = pending(player) ?: return
         val def = pendingBoss(player) ?: return
@@ -135,17 +149,7 @@ private fun handleAction(player: Player, button: Int) {
     player.closeInterfaces()
     when (button) {
         0 -> BossInstances.start(player, def, settings)
-        1 -> player.sendInputName("Whose instance would you like to join?") { owner ->
-            val username = Utils.formatPlayerNameForProtocol(owner)
-            val target = BossInstances.owned(username)
-            when {
-                target == null -> player.sendMessage("That instance no longer exists.")
-                target.settings.protection == InstanceProtection.PIN -> player.sendInputInteger("Enter the instance PIN:") { pin ->
-                    BossInstances.join(player, username, pin)?.let { player.sendMessage(it) }
-                }
-                else -> BossInstances.join(player, username)?.let { player.sendMessage(it) }
-            }
-        }
+        1 -> InstanceInterface.promptJoin(player, def)
         2 -> BossInstances.rejoin(player)?.let { player.sendMessage(it) }
     }
 }
