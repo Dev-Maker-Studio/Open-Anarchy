@@ -1,6 +1,7 @@
 package com.rs.game.content.bosses.instance
 
 import com.rs.game.model.entity.player.Player
+import org.darkan.core.Utils
 import java.util.concurrent.ConcurrentHashMap
 
 object BossInstances {
@@ -8,7 +9,12 @@ object BossInstances {
 
     fun owned(username: String): BossInstance? = byOwner[username]?.takeUnless { it.expired }
 
-    fun start(player: Player, def: BossInstanceDef, settings: InstanceSettings): BossInstance {
+    fun start(player: Player, def: BossInstanceDef, settings: InstanceSettings): BossInstance? {
+        if (!player.inventory.hasCoins(def.cost)) {
+            player.sendMessage("You need ${Utils.formatNumber(def.cost)} coins to start a ${def.displayName} instance.")
+            return null
+        }
+        player.inventory.removeCoins(def.cost)
         owned(player.username)?.destroy()
         val created = BossInstance(def, player.username, settings)
         byOwner[player.username] = created

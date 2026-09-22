@@ -39,6 +39,11 @@ private const val REVISION = "instanceRevision"
 
 /** Ops are addressed by cc slot, and every cc a row or button draws needs to be inside the range. */
 private const val SLOT_CEILING = 128
+private const val CCS_PER_ROW = 8
+private const val MINUS_SLOT = 2
+private const val PLUS_SLOT = 7
+private const val CCS_PER_BUTTON = 4
+private const val PORTRAIT_ZOOM = 1800
 
 object InstanceInterface {
     fun open(player: Player, def: BossInstanceDef) {
@@ -52,11 +57,18 @@ object InstanceInterface {
         player.tempAttribs.setO<BossInstanceDef>(PENDING_BOSS, def)
         player.interfaceManager.sendInterface(Interface.instance_system)
         player.packets.setIFText(Component.instance_system.boss_name, def.displayName)
-        player.packets.setIFText(Component.instance_system.requirements_value, def.entranceRequirements)
-        player.packets.setIFNPCHead(Interface.instance_system, Utils.componentIdFromHash(Component.instance_system.portrait), def.bossNpc)
-        player.packets.setIFEvents(IFEvents(Component.instance_system.rows, 0, SLOT_CEILING).enableRightClickOptions(*IntArray(ROWS.size * 2) { it }))
-        player.packets.setIFEvents(IFEvents(Component.instance_system.buttons, 0, SLOT_CEILING).enableRightClickOptions(0, 1, 2))
+        player.packets.setIFText(Component.instance_system.requirements_value, requirementsText(def))
+        player.packets.sendVarc(Varc.instance_boss_npc, def.bossNpc)
+        player.packets.setIFAngle(Interface.instance_system, Utils.componentIdFromHash(Component.instance_system.portrait), 100, 1700, PORTRAIT_ZOOM)
+        player.packets.setIFEvents(IFEvents(Component.instance_system.rows, 0, SLOT_CEILING).enableRightClickOptions(0))
+        player.packets.setIFEvents(IFEvents(Component.instance_system.buttons, 0, SLOT_CEILING).enableRightClickOptions(0))
         refresh(player)
+    }
+
+    private fun requirementsText(def: BossInstanceDef): String {
+        if (def.cost <= 0) return def.entranceRequirements
+        val coins = "${Utils.formatNumber(def.cost)} coins"
+        return if (def.entranceRequirements == "None") coins else "${def.entranceRequirements}, $coins"
     }
 
     private fun refresh(player: Player) {
@@ -77,11 +89,15 @@ object InstanceInterface {
 
     private fun pendingBoss(player: Player): BossInstanceDef? = player.tempAttribs.getO<BossInstanceDef>(PENDING_BOSS)
 
-    fun step(player: Player, opNum: Int) {
+    fun step(player: Player, slotId: Int) {
         val settings = pending(player) ?: return
         val def = pendingBoss(player) ?: return
-        val row = (opNum - 1) / 2
-        val delta = if (opNum % 2 == 1) -1 else 1
+        val row = slotId / CCS_PER_ROW
+        val delta = when (slotId % CCS_PER_ROW) {
+            MINUS_SLOT -> -1
+            PLUS_SLOT -> 1
+            else -> return
+        }
         val spec = ROWS.getOrNull(row) ?: return
         player.tempAttribs.setO<InstanceSettings>(PENDING, spec.step(settings, def, delta))
         refresh(player)
@@ -98,21 +114,21 @@ object InstanceInterface {
 fun mapInstanceInterface() {
     onButtonClick(Interface.instance_system) { e ->
         when (e.component) {
-            Component.instance_system.rows -> InstanceInterface.step(e.player, e.opNum)
+            Component.instance_system.rows -> InstanceInterface.step(e.player, e.slotId)
             Component.instance_system.practice_checkbox -> InstanceInterface.togglePractice(e.player)
             Component.instance_system.close_button -> e.player.closeInterfaces()
-            Component.instance_system.buttons -> handleAction(e.player, e.opNum)
+            Component.instance_system.buttons -> handleAction(e.player, e.slotId / CCS_PER_BUTTON)
         }
     }
 }
 
-private fun handleAction(player: Player, opNum: Int) {
+private fun handleAction(player: Player, button: Int) {
     val settings = player.tempAttribs.getO<InstanceSettings>(PENDING) ?: return
     val def = player.tempAttribs.getO<BossInstanceDef>(PENDING_BOSS) ?: return
     player.closeInterfaces()
-    when (opNum) {
-        1 -> BossInstances.start(player, def, settings)
-        2 -> player.sendInputName("Whose instance would you like to join?") { owner ->
+    when (button) {
+        0 -> BossInstances.start(player, def, settings)
+        1 -> player.sendInputName("Whose instance would you like to join?") { owner ->
             val username = Utils.formatPlayerNameForProtocol(owner)
             val target = BossInstances.owned(username)
             when {
@@ -123,6 +139,6 @@ private fun handleAction(player: Player, opNum: Int) {
                 else -> BossInstances.join(player, username)?.let { player.sendMessage(it) }
             }
         }
-        3 -> BossInstances.rejoin(player)?.let { player.sendMessage(it) }
+        2 -> BossInstances.rejoin(player)?.let { player.sendMessage(it) }
     }
 }
