@@ -9,6 +9,7 @@ fun mapBossInstances() {
     listOf(
         BossInstanceDef(
             key = "king_black_dragon",
+            cost = 200000,
             displayName = "King Black Dragon",
             bossNpc = Npc.king_dragon,
             home = Tile.of(2270, 4701, 0),
@@ -17,6 +18,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "kalphite_queen",
+            cost = 200000,
             displayName = "Kalphite Queen",
             bossNpc = Npc.kalphite_queen,
             home = Tile.of(3484, 9491, 0),
@@ -25,6 +27,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "giant_mole",
+            cost = 100000,
             displayName = "Giant Mole",
             bossNpc = Npc.kalphite_flyingqueen,
             home = Tile.of(1760, 5186, 0),
@@ -34,6 +37,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "corporeal_beast",
+            cost = 500000,
             displayName = "Corporeal Beast",
             bossNpc = Npc.sum2_spirit_beast_corporeal,
             home = Tile.of(2986, 4383, 2),
@@ -42,6 +46,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "general_graardor",
+            cost = 300000,
             displayName = "General Graardor",
             bossNpc = Npc.godwars_bandos_avatar,
             home = Tile.of(2872, 5358, 2),
@@ -50,6 +55,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "kree_arra",
+            cost = 300000,
             displayName = "Kree'arra",
             bossNpc = Npc.godwars_armadyl_avatar,
             home = Tile.of(2832, 5302, 2),
@@ -58,6 +64,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "commander_zilyana",
+            cost = 300000,
             displayName = "Commander Zilyana",
             bossNpc = Npc.godwars_saradomin_avatar,
             home = Tile.of(2900, 5268, 0),
@@ -66,6 +73,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "kril_tsutsaroth",
+            cost = 300000,
             displayName = "K'ril Tsutsaroth",
             bossNpc = Npc.godwars_zamorak_avatar,
             home = Tile.of(2926, 5322, 2),
@@ -74,6 +82,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "nex",
+            cost = 1500000,
             displayName = "Nex",
             bossNpc = Npc.godwars2_zaros_avatar,
             home = Tile.of(2924, 5202, 0),
@@ -84,6 +93,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "dagannoth_kings",
+            cost = 200000,
             displayName = "Dagannoth Kings",
             bossNpc = Npc.dagcave_melee_boss,
             home = Tile.of(2924, 4441, 0),

@@ -20,6 +20,7 @@ data class BossInstanceDef(
     val maxPlayers: Int = 10,
     val minCombatDefault: Int = 3,
     val spawnSpeeds: List<SpawnSpeed> = SpawnSpeed.entries,
+    val cost: Int = 0,
     val entranceRequirements: String = "None",
 ) {
     private val origin: Region = Region(regions.minOf { Region(it).x }, regions.minOf { Region(it).y })

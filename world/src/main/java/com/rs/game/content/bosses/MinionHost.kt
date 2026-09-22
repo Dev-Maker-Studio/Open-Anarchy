@@ -10,11 +10,23 @@ data class MinionSpawn(val npcId: Int, val offsetX: Int, val offsetY: Int, val o
 }
 
 /**
+ * What happens to the minions when the boss dies. Godwars bodyguards outlive their general and are
+ * killed and respawned on their own; Nex's four take their power back with her.
+ */
+enum class MinionPolicy { PERSIST, BOUND }
+
+/**
  * A boss that brings its own minions rather than relying on world spawns: they are placed relative
  * to wherever the boss itself spawned, so the same boss arrives complete in its real arena, in an
  * instance copy of it, or dropped anywhere in the open world.
  */
-open class MinionHost(id: Int, tile: Tile, spawned: Boolean, private val minionSpawns: List<MinionSpawn>) : NPC(id, tile, spawned) {
+open class MinionHost(
+    id: Int,
+    tile: Tile,
+    spawned: Boolean,
+    private val minionSpawns: List<MinionSpawn>,
+    private val policy: MinionPolicy = MinionPolicy.PERSIST,
+) : NPC(id, tile, spawned) {
     private val minions = ArrayList<NPC>(minionSpawns.size)
 
     init {
@@ -24,16 +36,17 @@ open class MinionHost(id: Int, tile: Tile, spawned: Boolean, private val minionS
     val liveMinions: List<NPC> get() = minions.filter { !it.hasFinished() && !it.isDead }
 
     override fun onRespawn() {
-        respawnMinions()
+        reviveMinions()
     }
 
     override fun finish() {
         super.finish()
+        if (policy != MinionPolicy.BOUND) return
         minions.forEach { if (!it.hasFinished()) it.permanentlyDelete() }
         minions.clear()
     }
 
-    fun respawnMinions(delay: Int = 2) {
+    fun reviveMinions(delay: Int = 2) {
         schedule {
             if (minions.isEmpty()) spawnMinions()
             else minions.forEach { if (it.hasFinished() || it.isDead) it.setRespawnTask(delay) }

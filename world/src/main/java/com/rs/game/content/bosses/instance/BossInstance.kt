@@ -85,6 +85,7 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
     fun destroy() {
         expiryTask?.let { WorldTasks.remove(it) }
         expiryTask = null
+        npcsInside().forEach { it.permanentlyDelete() }
         onlineMembers().forEach { it.controllerManager.forceStop() }
         members.clear()
         instance.destroy()
