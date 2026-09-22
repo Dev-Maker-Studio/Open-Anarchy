@@ -53,6 +53,7 @@ data class PlayerUpdatePlayer(
     val nextWalkDirection: Int?,
     val nextRunDirectionOrOpcode: Int?,
     val blocks: PlayerUpdateBlocks,
+    val zeroDisplacementWalk: Boolean = false,
 )
 
 /**
