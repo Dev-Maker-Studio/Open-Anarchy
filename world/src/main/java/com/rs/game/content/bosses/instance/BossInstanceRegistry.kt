@@ -9,6 +9,7 @@ fun mapBossInstances() {
     listOf(
         BossInstanceDef(
             key = "king_black_dragon",
+            portraitZoom = 1000,
             cost = 200000,
             displayName = "King Black Dragon",
             bossNpc = Npc.king_dragon,
@@ -18,6 +19,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "kalphite_queen",
+            portraitZoom = 1500,
             cost = 200000,
             displayName = "Kalphite Queen",
             bossNpc = Npc.kalphite_queen,
@@ -27,9 +29,10 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "giant_mole",
+            portraitZoom = 1500,
             cost = 100000,
             displayName = "Giant Mole",
-            bossNpc = Npc.kalphite_flyingqueen,
+            bossNpc = Npc.npc_3340,
             home = Tile.of(1760, 5186, 0),
             returnTo = Tile.of(2997, 3376, 0),
             regions = listOf(Tile.of(1760, 5186, 0).getRegionId(), Tile.of(1760, 5250, 0).getRegionId()),
@@ -37,6 +40,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "corporeal_beast",
+            portraitZoom = 2000,
             cost = 500000,
             displayName = "Corporeal Beast",
             bossNpc = Npc.sum2_spirit_beast_corporeal,
@@ -46,6 +50,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "general_graardor",
+            portraitZoom = 1500,
             cost = 300000,
             displayName = "General Graardor",
             bossNpc = Npc.godwars_bandos_avatar,
@@ -55,6 +60,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "kree_arra",
+            portraitZoom = 2500,
             cost = 300000,
             displayName = "Kree'arra",
             bossNpc = Npc.godwars_armadyl_avatar,
@@ -64,6 +70,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "commander_zilyana",
+            portraitZoom = 1000,
             cost = 300000,
             displayName = "Commander Zilyana",
             bossNpc = Npc.godwars_saradomin_avatar,
@@ -73,6 +80,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "kril_tsutsaroth",
+            portraitZoom = 2000,
             cost = 300000,
             displayName = "K'ril Tsutsaroth",
             bossNpc = Npc.godwars_zamorak_avatar,
@@ -82,6 +90,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "nex",
+            portraitZoom = 1000,
             cost = 1500000,
             displayName = "Nex",
             bossNpc = Npc.godwars2_zaros_avatar,
@@ -93,6 +102,7 @@ fun mapBossInstances() {
         ),
         BossInstanceDef(
             key = "dagannoth_kings",
+            portraitZoom = 1500,
             cost = 200000,
             displayName = "Dagannoth Kings",
             bossNpc = Npc.dagcave_melee_boss,

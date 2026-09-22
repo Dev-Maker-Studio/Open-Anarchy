@@ -468,4 +468,12 @@ fun loadDeveloperCommands() {
         if (def == null) p.sendMessage("Bosses: " + BossInstanceDefs.all.joinToString(", ") { it.key })
         else InstanceInterface.open(p, def)
     }
+
+    Commands.add(Rights.DEVELOPER, "portrait [zoom] (pitch) (roll)", "Re-frames the open instance window's boss model so values can be tuned live.") { p, args ->
+        val zoom = args[0].toInt()
+        val pitch = args.getOrNull(1)?.toIntOrNull() ?: 0
+        val roll = args.getOrNull(2)?.toIntOrNull() ?: 0
+        InstanceInterface.applyPortrait(p, zoom, pitch, roll)
+        p.sendMessage("portraitZoom = $zoom, pitch = $pitch, roll = $roll")
+    }
 }
