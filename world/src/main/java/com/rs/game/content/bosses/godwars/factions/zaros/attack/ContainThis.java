@@ -51,8 +51,8 @@ public class ContainThis implements NexAttack {
 						final Tile tile = base.transform(x, y, 0);
 						final GameObject object = new GameObject(57262, ObjectShape.SCENERY_INTERACT, 0, tile);
 						if (tile != base && World.floorAndWallsFree(tile, (object.getDefinitions().getSizeX() + object.getDefinitions().getSizeY()) / 2)) {
-							for (Player player : nex.getArena().getPlayers())
-								if (player.getX() == tile.getX() && player.getY() == tile.getY()) {
+							for (Entity target : nex.getPossibleTargets())
+								if (target instanceof Player player && player.getX() == tile.getX() && player.getY() == tile.getY()) {
 									player.setNextAnimation(new Animation(1113));
 									player.applyHit(new Hit(nex, Utils.random(200, 350), HitLook.TRUE_DAMAGE));
 									player.sendMessage("The icicle spikes you to the spot!");

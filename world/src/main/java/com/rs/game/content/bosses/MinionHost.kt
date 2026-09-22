@@ -15,6 +15,11 @@ data class MinionSpawn(val npcId: Int, val offsetX: Int, val offsetY: Int, val o
  */
 enum class MinionPolicy { PERSIST, BOUND }
 
+/** A minion that needs to talk back to the boss that placed it. */
+interface HostedMinion {
+    var host: MinionHost?
+}
+
 /**
  * A boss that brings its own minions rather than relying on world spawns: they are placed relative
  * to wherever the boss itself spawned, so the same boss arrives complete in its real arena, in an
@@ -35,6 +40,8 @@ open class MinionHost(
 
     val liveMinions: List<NPC> get() = minions.filter { !it.hasFinished() && !it.isDead }
 
+    fun minion(npcId: Int): NPC? = minions.firstOrNull { it.id == npcId }
+
     override fun onRespawn() {
         reviveMinions()
     }
@@ -54,6 +61,10 @@ open class MinionHost(
     }
 
     private fun spawnMinions() {
-        minionSpawns.mapTo(minions) { World.spawnNPC(it.npcId, it.tileFrom(respawnTile), isSpawned, true) }
+        minionSpawns.mapTo(minions) { spawn ->
+            World.spawnNPC(spawn.npcId, spawn.tileFrom(respawnTile), isSpawned, true).also {
+                (it as? HostedMinion)?.host = this
+            }
+        }
     }
 }

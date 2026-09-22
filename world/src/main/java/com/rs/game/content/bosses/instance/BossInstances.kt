@@ -35,6 +35,13 @@ object BossInstances {
         return null
     }
 
+    fun extend(player: Player): String? {
+        val instance = owned(player.username) ?: return "You do not have an instance to extend."
+        if (!charge(player, instance.def)) return null
+        instance.renew()
+        return "Your ${instance.def.displayName} instance now has ${instance.minutesLeft} minutes left."
+    }
+
     private fun charge(player: Player, def: BossInstanceDef): Boolean {
         if (!player.inventory.hasCoins(def.cost)) {
             player.sendMessage("You need ${Utils.formatNumber(def.cost)} coins to start a ${def.displayName} instance.")

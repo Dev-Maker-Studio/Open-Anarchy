@@ -17,7 +17,7 @@
 package com.rs.game.content.bosses.godwars.factions.zaros.attack;
 
 import com.rs.game.content.bosses.godwars.factions.zaros.Nex;
-import com.rs.game.content.bosses.godwars.factions.zaros.Nex.Phase;
+import com.rs.game.content.bosses.godwars.factions.zaros.NexPhase;
 import com.rs.game.model.entity.Entity;
 import com.rs.game.model.entity.ForceTalk;
 import com.rs.game.model.entity.player.Player;
@@ -38,7 +38,7 @@ public class EmbraceDarkness implements NexAttack {
 		WorldTasks.scheduleLooping(new Task() {
 			@Override
 			public void run() {
-				if (nex.getPhase() != Phase.SHADOW || nex.hasFinished()) {
+				if (nex.getPhase() != NexPhase.SHADOW || nex.hasFinished()) {
 					for (Entity entity : nex.getPossibleTargets())
 						if (entity instanceof Player player)
 							player.getPackets().sendVarc(1435, 255);
