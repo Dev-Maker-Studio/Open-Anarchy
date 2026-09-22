@@ -4,6 +4,8 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import org.darkan.core.Utils
+import org.darkan.core.cache.BASDefinitions
+import org.darkan.core.cache.NPCDefinitions
 import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.gameval.gen.Varc
@@ -43,7 +45,7 @@ private const val CCS_PER_ROW = 8
 private const val MINUS_SLOT = 2
 private const val PLUS_SLOT = 7
 private const val CCS_PER_BUTTON = 4
-private const val PORTRAIT_ZOOM = 1800
+private const val BASE_PORTRAIT_ZOOM = 1200
 
 object InstanceInterface {
     fun open(player: Player, def: BossInstanceDef) {
@@ -58,12 +60,19 @@ object InstanceInterface {
         player.interfaceManager.sendInterface(Interface.instance_system)
         player.packets.setIFText(Component.instance_system.boss_name, def.displayName)
         player.packets.setIFText(Component.instance_system.requirements_value, requirementsText(def))
+        val portrait = Utils.componentIdFromHash(Component.instance_system.portrait)
+        val npc = NPCDefinitions.getDefs(def.bossNpc)
         player.packets.sendVarc(Varc.instance_boss_npc, def.bossNpc)
-        player.packets.setIFAngle(Interface.instance_system, Utils.componentIdFromHash(Component.instance_system.portrait), 100, 1700, PORTRAIT_ZOOM)
+        player.packets.setIFAngle(Interface.instance_system, portrait, 0, 0, portraitZoom(def, npc.size))
+        val idle = BASDefinitions.getDefs(npc.renderEmote).standAnimation
+        if (idle != -1) player.packets.setIFAnimation(idle, Interface.instance_system, portrait)
         player.packets.setIFEvents(IFEvents(Component.instance_system.rows, 0, SLOT_CEILING).enableRightClickOptions(0))
         player.packets.setIFEvents(IFEvents(Component.instance_system.buttons, 0, SLOT_CEILING).enableRightClickOptions(0))
         refresh(player)
     }
+
+    private fun portraitZoom(def: BossInstanceDef, npcSize: Int): Int =
+        if (def.portraitZoom > 0) def.portraitZoom else BASE_PORTRAIT_ZOOM / npcSize.coerceAtLeast(1)
 
     private fun requirementsText(def: BossInstanceDef): String {
         if (def.cost <= 0) return def.entranceRequirements
