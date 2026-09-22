@@ -42,6 +42,7 @@ import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
+import static com.rs.game.content.bosses.instance.InstanceEntrancesKt.isInstanceOption;
 import com.rs.utils.DropSets;
 
 @PluginEventHandler
@@ -63,6 +64,8 @@ public class Wilderness {
 	public static ObjectClickHandler handleKBDExitLadder = new ObjectClickHandler(new Object[] { 32015 }, new Tile[] { Tile.of(3069, 10256, 0) }, e -> e.getPlayer().useStairs(828, Tile.of(3017, 3848, 0), 1, 2));
 
 	public static ObjectClickHandler handleKBDEnterLever = new ObjectClickHandler(new Object[] { 1816 }, new Tile[] { Tile.of(3067, 10252, 0) }, e -> {
+		if (isInstanceOption(e.getOption()))
+			return;
 		e.getPlayer().stopAll();
 		Magic.pushLeverTeleport(e.getPlayer(), Tile.of(2273, 4681, 0));
 		e.getPlayer().getControllerManager().forceStop();
@@ -162,6 +165,8 @@ public class Wilderness {
 	});
 
 	public static ObjectClickHandler handleCorpCave = new ObjectClickHandler(new Object[] { 38811, 37928, 37929, 38815 }, e -> {
+		if (isInstanceOption(e.getOption()))
+			return;
 		Player player = e.getPlayer();
         switch (e.getObjectId()) {
 			case 38811 -> player.getInterfaceManager().sendInterface(650);

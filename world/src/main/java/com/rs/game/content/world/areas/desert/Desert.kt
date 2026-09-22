@@ -7,6 +7,7 @@ import com.rs.game.content.skills.agility.agilitypyramid.AgilityPyramidControlle
 import com.rs.game.content.world.areas.dungeons.UndergroundDungeonController
 import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.game.content.bosses.instance.isInstanceOption
 import com.rs.plugin.kts.*
 import com.rs.utils.shop.ShopsHandler
 import org.darkan.core.gameval.gen.Varbit
@@ -235,7 +236,8 @@ fun mapDesertInteractions() {
         player.tele(Tile.of(3483, 9510, 2))
     }
 
-    onObjectClick(48803) { (player) ->
+    onObjectClick(48803) { (player, _, option) ->
+        if (isInstanceOption(option)) return@onObjectClick
         player.tele(Tile.of(3508, 9494, 0))
     }
 
