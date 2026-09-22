@@ -29,7 +29,7 @@ public class AgilityShortcuts {
 	}
 
 	public static void climbOver(Player player, Tile toTile, int animId) {
-		player.forceMove(toTile, animId, 33, com.rs.utils.KtExtensionsKt.getEmoteTime(AnimationDefinitions.getDefs(animId)) / 20 - 5);
+		player.forceMove(toTile, animId, 33, AnimationDefinitions.getDefs(animId).getEmoteTime() - 5);
 	}
 
 	public static void sidestep(final Player player, Tile toTile) {

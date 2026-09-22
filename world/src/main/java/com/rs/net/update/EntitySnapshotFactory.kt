@@ -388,6 +388,7 @@ object EntitySnapshotFactory {
     fun buildPlayerUpdatePlayer(p: Player, observer: Player): PlayerUpdatePlayer {
         var walkOpcode: Int? = null
         var runOpcode: Int? = null
+        var zeroDisplacementWalk = false
 
         val walkDir = p.nextWalkDirection
         if (walkDir != null) {
@@ -402,6 +403,7 @@ object EntitySnapshotFactory {
                     // Legacy treats this as a masks-only update (no movement).
                     walkOpcode = null
                     runOpcode = null
+                    zeroDisplacementWalk = true
                 } else {
                     val runOp = Utils.getPlayerRunningDirection(totalDx, totalDy)
                     if (runOp != -1) {
@@ -422,6 +424,7 @@ object EntitySnapshotFactory {
                     // Zero-displacement walk — masks-only update
                     walkOpcode = null
                     runOpcode = null
+                    zeroDisplacementWalk = true
                 } else {
                     walkOpcode = Utils.getPlayerWalkingDirection(dx, dy)
                     runOpcode = null
@@ -442,6 +445,7 @@ object EntitySnapshotFactory {
             nextWalkDirection = walkOpcode,
             nextRunDirectionOrOpcode = runOpcode,
             blocks = buildPlayerBlocks(p, observer, added = false),
+            zeroDisplacementWalk = zeroDisplacementWalk,
         )
     }
 

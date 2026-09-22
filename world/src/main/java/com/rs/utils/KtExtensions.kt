@@ -81,20 +81,10 @@ val ObjectDefinition.types: Array<ObjectShape> get() =
 val Animation.defs: AnimationDefinition get() = AnimationDefinitions.getDefs(primaryId)
 
 /**
- * Calculates the total emote duration in game ticks from the frame durations.
- * Each duration unit is one client frame (30ms), and one game tick is 600ms (20 client frames).
+ * Total emote duration in game ticks. One duration unit is one client cycle (20ms),
+ * and one game tick is 30 client cycles.
  */
-val AnimationDefinition.emoteGameTicks: Int get() {
-    val totalDuration = durations?.sum() ?: 0
-    return (totalDuration + 19) / 20 // ceil division: round up to nearest tick
-}
-
-/**
- * Gets the total emote time in client frames (sum of frame durations).
- * Each duration unit is one client frame (30ms).
- * Legacy compat: callable from Java as AnimationDefinition.getEmoteTime()
- */
-fun AnimationDefinition.getEmoteTime(): Int = durations?.sum() ?: 0
+val AnimationDefinition.emoteGameTicks: Int get() = (durations?.sum() ?: 0) / 30
 
 // Most ItemDefinition extensions have been migrated to member functions on the class.
 // Remaining ones that are only needed from Kotlin:
