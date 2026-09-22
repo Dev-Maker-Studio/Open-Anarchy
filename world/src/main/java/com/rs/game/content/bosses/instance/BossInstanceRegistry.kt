@@ -3,6 +3,7 @@ package com.rs.game.content.bosses.instance
 import com.rs.plugin.annotations.ServerStartupEvent
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Varbit
 import world.gregs.voidps.type.Tile
 
 @ServerStartupEvent
@@ -132,6 +133,7 @@ fun mapBossInstances() {
             entrance = Tile.of(2911, 5204, 0),
             minCombatDefault = 138,
             entranceRequirements = "40 Zarosian kills",
+            insideVarbit = Varbit.godwars2_climbdown_multi,
         ),
         BossInstanceDef(
             key = "dagannoth_kings",

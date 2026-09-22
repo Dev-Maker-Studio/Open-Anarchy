@@ -6,11 +6,7 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.tasks.WorldTasks
 import com.rs.utils.Ticks
 import java.util.Collections
-import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Npc
-import org.darkan.core.gameval.gen.Seq
-import org.darkan.core.gameval.gen.Sound
-import org.darkan.core.gameval.gen.Spotanim
 import world.gregs.voidps.type.Tile
 
 /**
@@ -62,57 +58,12 @@ class NexArena {
         val summoned = World.spawnNPC(Npc.godwars2_zaros_avatar, HOME, true, true) as? Nex ?: return
         summoned.arena = this
         nex = summoned
-        announce(summoned)
     }
-
-    private fun announce(summoned: Nex) {
-        WorldTasks.scheduleTimer { count ->
-            val live = nex ?: return@scheduleTimer false
-            when (count) {
-                1 -> {
-                    live.forceTalk("AT LAST!")
-                    live.anim(Seq.godwars2_zaros_blast_away)
-                    live.spotAnim(Spotanim.zaros_blast_away_dust_spotanim)
-                    live.voiceEffect(Sound.sound_3295, true)
-                }
-                in SUMMONS.keys -> summon(live, SUMMONS.getValue(count))
-                11 -> {
-                    live.forceTalk("Fill my soul with smoke!")
-                    live.minion(Npc.godwars2_smokemage)?.let { World.sendProjectile(it, live, Spotanim.mah4_reward_spot_leech_proj_4, 18 to 18, 60, 10, 0) }
-                    live.voiceEffect(Sound.sound_3310, true)
-                }
-                13 -> {
-                    live.setCantInteract(false)
-                    return@scheduleTimer false
-                }
-            }
-            true
-        }
-    }
-
-    private fun summon(live: Nex, summon: Summon) {
-        val minion = live.minion(summon.npcId) ?: return
-        minion.faceAngle = Utils.getAngleTo(summon.faceX, summon.faceY)
-        live.setNextFaceTile(Tile.of(minion.getCoordFaceX(minion.size), minion.getCoordFaceY(minion.size), 0))
-        live.forceTalk(summon.shout)
-        live.anim(Seq.godwars2_zaros_cast_attack)
-        World.sendProjectile(minion, live, Spotanim.mah4_reward_spot_leech_proj_4, 18 to 18, 60, 10, 0)
-        live.voiceEffect(summon.voice, true)
-    }
-
-    private class Summon(val npcId: Int, val shout: String, val voice: Int, val faceX: Int, val faceY: Int)
 
     companion object {
         @JvmStatic
         val globalInstance = NexArena()
 
         private val HOME = Tile.of(2924, 5202, 0)
-
-        private val SUMMONS = mapOf(
-            3 to Summon(Npc.godwars2_smokemage, "Fumus!", Sound.sound_3325, 1, -1),
-            5 to Summon(Npc.godwars2_shadowmage, "Umbra!", Sound.sound_3313, -1, -1),
-            7 to Summon(Npc.godwars2_bloodmage, "Cruor!", Sound.sound_3299, -1, 1),
-            9 to Summon(Npc.godwars2_icemage, "Glacies!", Sound.sound_3304, 1, 1),
-        )
     }
 }

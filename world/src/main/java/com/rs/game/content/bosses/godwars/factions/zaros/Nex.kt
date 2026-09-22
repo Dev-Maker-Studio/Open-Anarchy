@@ -15,6 +15,7 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.WorldUtil
+import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.gameval.gen.Seq
@@ -40,6 +41,15 @@ private val STAGES = listOf(
     MinionStage(Npc.godwars2_shadowmage, NexPhase.SHADOW, 18000, "Umbra, don't fail me!", Sound.sound_3307),
     MinionStage(Npc.godwars2_bloodmage, NexPhase.BLOOD, 12000, "Cruor, don't fail me!", Sound.sound_3298),
     MinionStage(Npc.godwars2_icemage, NexPhase.ICE, 6000, "Glacies, don't fail me!", Sound.sound_3327),
+)
+
+private class Summon(val npcId: Int, val shout: String, val voice: Int, val faceX: Int, val faceY: Int)
+
+private val SUMMONS = mapOf(
+    3 to Summon(Npc.godwars2_smokemage, "Fumus!", Sound.sound_3325, 1, -1),
+    5 to Summon(Npc.godwars2_shadowmage, "Umbra!", Sound.sound_3313, -1, -1),
+    7 to Summon(Npc.godwars2_bloodmage, "Cruor!", Sound.sound_3299, -1, 1),
+    9 to Summon(Npc.godwars2_icemage, "Glacies!", Sound.sound_3304, 1, 1),
 )
 
 private class PhaseStep(val from: NexPhase, val next: NexPhase, val drawsFrom: Int?, val shout: String, val voice: Int)
@@ -70,6 +80,7 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
         setRun(true)
         isIgnoreDocile = true
         refreshTicksAttacked()
+        summon()
     }
 
     private fun nexMinion(npcId: Int) = minion(npcId) as? NexMinion
@@ -100,6 +111,52 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
         resetWalkSteps()
     }
 
+    override fun onRespawn() {
+        super.onRespawn()
+        phase = NexPhase.SMOKE
+        minionStage = 0
+        attackCount = 1
+        capDamage = 500
+        setCantInteract(true)
+        summon()
+    }
+
+    /** Nex takes her minions' power before she will fight: nothing can touch her until she has. */
+    private fun summon() {
+        WorldTasks.scheduleTimer { tick ->
+            if (hasFinished() || isDead) return@scheduleTimer false
+            when (tick) {
+                1 -> {
+                    forceTalk("AT LAST!")
+                    anim(Seq.godwars2_zaros_blast_away)
+                    spotAnim(Spotanim.zaros_blast_away_dust_spotanim)
+                    voiceEffect(Sound.sound_3295, true)
+                }
+                in SUMMONS.keys -> drawFrom(SUMMONS.getValue(tick))
+                11 -> {
+                    forceTalk("Fill my soul with smoke!")
+                    minion(Npc.godwars2_smokemage)?.let { World.sendProjectile(it, this, Spotanim.mah4_reward_spot_leech_proj_4, 18 to 18, 60, 10, 0) }
+                    voiceEffect(Sound.sound_3310, true)
+                }
+                13 -> {
+                    setCantInteract(false)
+                    return@scheduleTimer false
+                }
+            }
+            true
+        }
+    }
+
+    private fun drawFrom(summon: Summon) {
+        val minion = minion(summon.npcId) ?: return
+        minion.faceAngle = Utils.getAngleTo(summon.faceX, summon.faceY)
+        setNextFaceTile(Tile.of(minion.getCoordFaceX(minion.size), minion.getCoordFaceY(minion.size), plane))
+        forceTalk(summon.shout)
+        anim(Seq.godwars2_zaros_cast_attack)
+        World.sendProjectile(minion, this, Spotanim.mah4_reward_spot_leech_proj_4, 18 to 18, 60, 10, 0)
+        voiceEffect(summon.voice, true)
+    }
+
     override fun sendDeath(source: Entity?) {
         transformIntoNPC(Npc.godwars2_zaros_avatar_dying)
         val defs = combatDefinitions
@@ -108,8 +165,11 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
             else if (tick >= defs.deathDelay) {
                 drop()
                 reset()
-                finish()
-                arena?.endWar()
+                val war = arena
+                if (war != null) {
+                    finish()
+                    war.endWar()
+                } else setRespawnTask()
                 return@scheduleTimer false
             }
             true

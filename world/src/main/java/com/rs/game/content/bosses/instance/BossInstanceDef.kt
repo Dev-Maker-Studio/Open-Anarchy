@@ -28,6 +28,8 @@ data class BossInstanceDef(
     val exitTile: Tile? = null,
     val instanceExitLoc: Int = -1,
     val entranceRequirements: String = "None",
+    /** Flipped while a player stands inside, for an entrance loc that transforms on it. */
+    val insideVarbit: Int = -1,
 ) {
     /** The one the interface draws; a multi-boss arena shows its first. */
     val portraitNpc: Int get() = bossNpcs.first()
