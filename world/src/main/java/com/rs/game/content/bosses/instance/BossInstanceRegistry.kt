@@ -1,5 +1,6 @@
 package com.rs.game.content.bosses.instance
 
+import com.rs.game.content.bosses.godwars.GodwarsController
 import com.rs.plugin.annotations.ServerStartupEvent
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
@@ -79,6 +80,7 @@ fun mapBossInstances() {
             exitLoc = Loc.loc_26425,
             exitTile = Tile.of(2863, 5354, 2),
             instanceExitLoc = Loc.instance_exit_bandos_door,
+            returnController = ::GodwarsController,
         ),
         BossInstanceDef(
             key = "kree_arra",
@@ -93,6 +95,7 @@ fun mapBossInstances() {
             exitLoc = Loc.loc_26426,
             exitTile = Tile.of(2839, 5295, 2),
             instanceExitLoc = Loc.instance_exit_armadyl_door,
+            returnController = ::GodwarsController,
         ),
         BossInstanceDef(
             key = "commander_zilyana",
@@ -107,6 +110,7 @@ fun mapBossInstances() {
             exitLoc = Loc.loc_26427,
             exitTile = Tile.of(2908, 5265, 0),
             instanceExitLoc = Loc.instance_exit_saradomin_door,
+            returnController = ::GodwarsController,
         ),
         BossInstanceDef(
             key = "kril_tsutsaroth",
@@ -121,6 +125,7 @@ fun mapBossInstances() {
             exitLoc = Loc.loc_26428,
             exitTile = Tile.of(2925, 5332, 2),
             instanceExitLoc = Loc.instance_exit_zamorak_door,
+            returnController = ::GodwarsController,
         ),
         BossInstanceDef(
             key = "nex",
@@ -134,6 +139,7 @@ fun mapBossInstances() {
             minCombatDefault = 138,
             entranceRequirements = "40 Zarosian kills",
             insideVarbit = Varbit.godwars2_climbdown_multi,
+            returnController = ::GodwarsController,
         ),
         BossInstanceDef(
             key = "dagannoth_kings",
