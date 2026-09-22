@@ -5,7 +5,6 @@ import com.rs.game.map.instance.Instance
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.game.tasks.TaskInformation
 import com.rs.game.tasks.WorldTasks
 import com.rs.utils.Ticks
 import org.darkan.core.Logger
@@ -20,7 +19,7 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
     private val members = ConcurrentHashMap.newKeySet<String>()
     private var built = false
     private var exhausted = false
-    private var expiryTask: TaskInformation? = null
+    private var destroyed = false
 
     val memberCount: Int get() = members.size
     val millisLeft: Long get() = paidUntil - System.currentTimeMillis()
@@ -87,7 +86,7 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
 
     /** The boss is not waiting when the door opens: it arrives on the timer the owner paid for. */
     private fun stageBoss() {
-        npcsInside().filter { it.id == def.bossNpc }.forEach { it.setRespawnTask(settings.spawnSpeed.ticks) }
+        npcsInside().filter { it.id in def.bossNpcs }.forEach { it.setRespawnTask(settings.spawnSpeed.ticks) }
     }
 
     private fun spawnExit() {
@@ -103,13 +102,15 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
     }
 
     private fun scheduleExpiry() {
-        expiryTask = WorldTasks.scheduleLooping(Ticks.fromMinutes(1), Ticks.fromMinutes(1)) {
+        WorldTasks.scheduleTimer(Ticks.fromMinutes(1), Ticks.fromMinutes(1)) { _ ->
+            if (destroyed) return@scheduleTimer false
             val minutesLeft = (millisLeft / 60000L).toInt()
             if (minutesLeft in WARN_MINUTES) broadcast("Your boss instance expires in $minutesLeft minutes.")
             if (expired && !exhausted) {
                 exhausted = true
                 stopRespawns()
             }
+            true
         }
     }
 
@@ -118,8 +119,7 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
     private fun onlineMembers(): List<Player> = members.mapNotNull { World.getPlayerByUsername(it) }
 
     fun destroy() {
-        expiryTask?.let { WorldTasks.remove(it) }
-        expiryTask = null
+        destroyed = true
         npcsInside().forEach { it.permanentlyDelete() }
         onlineMembers().forEach { it.controllerManager.forceStop() }
         members.clear()

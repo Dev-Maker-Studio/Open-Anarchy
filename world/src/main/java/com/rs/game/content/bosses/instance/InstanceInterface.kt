@@ -61,8 +61,8 @@ object InstanceInterface {
         player.packets.setIFText(Component.instance_system.boss_name, def.displayName)
         player.packets.setIFText(Component.instance_system.requirements_value, requirementsText(def))
         val portrait = Utils.componentIdFromHash(Component.instance_system.portrait)
-        val npc = NPCDefinitions.getDefs(def.bossNpc)
-        player.packets.sendVarc(Varc.instance_boss_npc, def.bossNpc)
+        val npc = NPCDefinitions.getDefs(def.portraitNpc)
+        player.packets.sendVarc(Varc.instance_boss_npc, def.portraitNpc)
         player.packets.setIFAngle(Interface.instance_system, portrait, 0, 0, portraitZoom(def, npc.size))
         val idle = BASDefinitions.getDefs(npc.renderEmote).standAnimation
         if (idle != -1) player.packets.setIFAnimation(idle, Interface.instance_system, portrait)
