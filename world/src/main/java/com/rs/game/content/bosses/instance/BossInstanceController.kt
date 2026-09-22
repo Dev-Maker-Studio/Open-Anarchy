@@ -5,22 +5,10 @@ import com.rs.game.model.entity.player.Controller
 import world.gregs.voidps.type.Tile
 
 class BossInstanceController(@Transient private val instance: BossInstance?) : Controller() {
-    val practiceMode: Boolean get() = instance?.settings?.practiceMode == true
-
     override fun start() {
         val live = instance ?: return leave()
         live.instance.let { player.setInstancedArea(it) }
         player.tele(live.localTile(live.def.entrance))
-    }
-
-    override fun gainXP(skillId: Int, exp: Double): Boolean = !practiceMode
-
-    override fun sendDeath(): Boolean {
-        if (!practiceMode) return true
-        player.reset()
-        player.tele(returnTile())
-        leave()
-        return false
     }
 
     override fun onTeleported(type: TeleType) = leave()

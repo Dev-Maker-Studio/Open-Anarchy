@@ -72,7 +72,12 @@ object InstanceInterface {
     }
 
     private fun portraitZoom(def: BossInstanceDef, npcSize: Int): Int =
-        if (def.portraitZoom > 0) def.portraitZoom else BASE_PORTRAIT_ZOOM / npcSize.coerceAtLeast(1)
+        if (def.portraitZoom > 0) def.portraitZoom else BASE_PORTRAIT_ZOOM * npcSize.coerceAtLeast(1)
+
+    fun applyPortrait(player: Player, zoom: Int, pitch: Int, roll: Int) {
+        val portrait = Utils.componentIdFromHash(Component.instance_system.portrait)
+        player.packets.setIFAngle(Interface.instance_system, portrait, pitch, roll, zoom)
+    }
 
     private fun requirementsText(def: BossInstanceDef): String {
         if (def.cost <= 0) return def.entranceRequirements
@@ -84,7 +89,6 @@ object InstanceInterface {
         val settings = pending(player) ?: return
         val def = pendingBoss(player) ?: return
         player.packets.sendVarc(Varc.instance_row_count, ROWS.size)
-        player.packets.sendVarc(Varc.instance_practice_mode, if (settings.practiceMode) 1 else 0)
         ROWS.forEachIndexed { row, spec ->
             player.packets.sendVarcString(Varcstr.instance_row_label_0 + row, spec.label)
             player.packets.sendVarcString(Varcstr.instance_row_value_0 + row, spec.value(settings, def))
@@ -112,11 +116,6 @@ object InstanceInterface {
         refresh(player)
     }
 
-    fun togglePractice(player: Player) {
-        val settings = pending(player) ?: return
-        player.tempAttribs.setO<InstanceSettings>(PENDING, settings.copy(practiceMode = !settings.practiceMode))
-        refresh(player)
-    }
 }
 
 @ServerStartupEvent
@@ -124,7 +123,6 @@ fun mapInstanceInterface() {
     onButtonClick(Interface.instance_system) { e ->
         when (e.component) {
             Component.instance_system.rows -> InstanceInterface.step(e.player, e.slotId)
-            Component.instance_system.practice_checkbox -> InstanceInterface.togglePractice(e.player)
             Component.instance_system.close_button -> e.player.closeInterfaces()
             Component.instance_system.buttons -> handleAction(e.player, e.slotId / CCS_PER_BUTTON)
         }

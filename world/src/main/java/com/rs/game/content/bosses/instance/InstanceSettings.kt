@@ -39,5 +39,4 @@ data class InstanceSettings(
     val spawnSpeed: SpawnSpeed,
     val protection: InstanceProtection,
     val pin: Int = 0,
-    val practiceMode: Boolean = false,
 )
