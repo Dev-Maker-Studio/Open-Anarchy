@@ -1,6 +1,7 @@
 package com.rs.game.content.bosses.instance
 
 import com.rs.plugin.annotations.ServerStartupEvent
+import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
 import world.gregs.voidps.type.Tile
 
@@ -17,6 +18,9 @@ fun mapBossInstances() {
             returnTo = Tile.of(3067, 10254, 0),
             entrance = Tile.of(2273, 4681, 0),
             minCombatDefault = 140,
+            exitLoc = Loc.loc_1817,
+            exitTile = Tile.of(2273, 4680, 0),
+            instanceExitLoc = Loc.instance_exit_kbd_lever,
         ),
         BossInstanceDef(
             key = "kalphite_queen",
@@ -28,6 +32,9 @@ fun mapBossInstances() {
             returnTo = Tile.of(3509, 9496, 2),
             entrance = Tile.of(3508, 9494, 0),
             minCombatDefault = 120,
+            exitLoc = Loc.kalphite_chamber_exit,
+            exitTile = Tile.of(3508, 9494, 0),
+            instanceExitLoc = Loc.instance_exit_kalphite_rope,
         ),
         BossInstanceDef(
             key = "giant_mole",
@@ -40,6 +47,9 @@ fun mapBossInstances() {
             entrance = Tile.of(1752, 5137, 0),
             regions = listOf(Tile.of(1760, 5186, 0).getRegionId(), Tile.of(1760, 5250, 0).getRegionId()),
             minCombatDefault = 80,
+            exitLoc = Loc.loc_12230,
+            exitTile = Tile.of(1752, 5136, 0),
+            instanceExitLoc = Loc.instance_exit_mole_rope,
         ),
         BossInstanceDef(
             key = "corporeal_beast",
@@ -51,6 +61,9 @@ fun mapBossInstances() {
             returnTo = Tile.of(2970, 4384, 2),
             entrance = Tile.of(2974, 4384, 2),
             minCombatDefault = 130,
+            exitLoc = Loc.sum2_corp_beast_cave_exit_double,
+            exitTile = Tile.of(2971, 4382, 2),
+            instanceExitLoc = Loc.instance_exit_corp_passage,
         ),
         BossInstanceDef(
             key = "general_graardor",
@@ -62,6 +75,9 @@ fun mapBossInstances() {
             returnTo = Tile.of(2863, 5354, 2),
             entrance = Tile.of(2864, 5354, 2),
             minCombatDefault = 100,
+            exitLoc = Loc.loc_26425,
+            exitTile = Tile.of(2863, 5354, 2),
+            instanceExitLoc = Loc.instance_exit_bandos_door,
         ),
         BossInstanceDef(
             key = "kree_arra",
@@ -73,6 +89,9 @@ fun mapBossInstances() {
             returnTo = Tile.of(2839, 5295, 2),
             entrance = Tile.of(2839, 5296, 2),
             minCombatDefault = 100,
+            exitLoc = Loc.loc_26426,
+            exitTile = Tile.of(2839, 5295, 2),
+            instanceExitLoc = Loc.instance_exit_armadyl_door,
         ),
         BossInstanceDef(
             key = "commander_zilyana",
@@ -84,6 +103,9 @@ fun mapBossInstances() {
             returnTo = Tile.of(2908, 5265, 0),
             entrance = Tile.of(2907, 5265, 0),
             minCombatDefault = 100,
+            exitLoc = Loc.loc_26427,
+            exitTile = Tile.of(2908, 5265, 0),
+            instanceExitLoc = Loc.instance_exit_saradomin_door,
         ),
         BossInstanceDef(
             key = "kril_tsutsaroth",
@@ -95,6 +117,9 @@ fun mapBossInstances() {
             returnTo = Tile.of(2925, 5332, 2),
             entrance = Tile.of(2925, 5331, 2),
             minCombatDefault = 100,
+            exitLoc = Loc.loc_26428,
+            exitTile = Tile.of(2925, 5332, 2),
+            instanceExitLoc = Loc.instance_exit_zamorak_door,
         ),
         BossInstanceDef(
             key = "nex",
@@ -118,6 +143,9 @@ fun mapBossInstances() {
             returnTo = Tile.of(1910, 4367, 0),
             entrance = Tile.of(2900, 4449, 0),
             minCombatDefault = 90,
+            exitLoc = Loc.loc_10229,
+            exitTile = Tile.of(2899, 4449, 0),
+            instanceExitLoc = Loc.instance_exit_dagannoth_ladder,
         ),
     ).forEach(BossInstanceDefs::register)
 }

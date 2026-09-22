@@ -4,6 +4,7 @@ import com.rs.game.World
 import com.rs.game.map.instance.Instance
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
+import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.TaskInformation
 import com.rs.game.tasks.WorldTasks
 import com.rs.utils.Ticks
@@ -37,6 +38,7 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
                 Logger.info(BossInstance::class.java, "build", "${def.key} instance built in ${System.currentTimeMillis() - startedAt}ms (${def.widthRegions * 8 * def.heightRegions * 8 * def.planes.size} chunks)")
                 applySpawnSpeed()
                 stageBoss()
+                spawnExit()
                 scheduleExpiry()
                 onReady()
             }
@@ -85,6 +87,13 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
     /** The boss is not waiting when the door opens: it arrives on the timer the owner paid for. */
     private fun stageBoss() {
         npcsInside().filter { it.id == def.bossNpc }.forEach { it.setRespawnTask(settings.spawnSpeed.ticks) }
+    }
+
+    private fun spawnExit() {
+        val tile = def.exitTile ?: return
+        if (def.instanceExitLoc == -1) return
+        val original = World.getObjectWithId(tile, def.exitLoc) ?: return
+        World.spawnObject(GameObject(def.instanceExitLoc, original.type, original.rotation, localTile(tile)))
     }
 
     private fun stopRespawns() {
