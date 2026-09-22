@@ -11,7 +11,7 @@ class NexController(@Transient private var arena: NexArena? = null) : Controller
 
     override fun start() {
         war().addPlayer(player)
-        unseal()
+        seal(1)
         sendInterfaces()
     }
 
@@ -22,7 +22,7 @@ class NexController(@Transient private var arena: NexArena? = null) : Controller
 
     override fun login(): Boolean {
         war().addPlayer(player)
-        unseal()
+        seal(1)
         sendInterfaces()
         return false
     }
@@ -47,10 +47,10 @@ class NexController(@Transient private var arena: NexArena? = null) : Controller
 
     private fun remove() {
         war().removePlayer(player)
-        unseal()
+        seal(0)
         player.interfaceManager.closeFadingInterface()
     }
 
-    /** The public prison keeps its climbable landslide; only an instance seals itself shut. */
-    private fun unseal() = player.vars.setVarBit(Varbit.godwars2_climbdown_multi, 0)
+    /** The landslide is a wall from the inside: the prison has no way out but death or a teleport. */
+    private fun seal(value: Int) = player.vars.setVarBit(Varbit.godwars2_climbdown_multi, value)
 }

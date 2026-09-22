@@ -13,7 +13,8 @@ class BossInstanceController(@Transient private val instance: BossInstance?) : C
         setInside(1)
     }
 
-    override fun onTeleported(type: TeleType) = leave()
+    /** A teleport already took them somewhere of their own choosing: let them keep it. */
+    override fun onTeleported(type: TeleType) = release()
 
     override fun forceClose() {
         setInside(0)
@@ -43,11 +44,15 @@ class BossInstanceController(@Transient private val instance: BossInstance?) : C
     fun leaveInstance() = leave()
 
     private fun leave() {
+        release()
+        player.tele(returnTile())
+        restoreArea()
+    }
+
+    private fun release() {
         setInside(0)
         instance?.remove(player)
-        player.tele(returnTile())
         removeController()
-        restoreArea()
     }
 
     /**
