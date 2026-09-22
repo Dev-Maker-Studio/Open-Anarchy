@@ -30,6 +30,8 @@ class BossInstanceController(@Transient private val instance: BossInstance?) : C
 
     private fun returnTile(): Tile = instance?.def?.returnTo ?: player.tile
 
+    fun leaveInstance() = leave()
+
     private fun leave() {
         instance?.remove(player)
         player.tele(returnTile())

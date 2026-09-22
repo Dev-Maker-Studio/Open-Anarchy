@@ -36,6 +36,7 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
             .thenAccept {
                 Logger.info(BossInstance::class.java, "build", "${def.key} instance built in ${System.currentTimeMillis() - startedAt}ms (${def.widthRegions * 8 * def.heightRegions * 8 * def.planes.size} chunks)")
                 applySpawnSpeed()
+                stageBoss()
                 scheduleExpiry()
                 onReady()
             }
@@ -79,6 +80,11 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
 
     fun applySpawnSpeed() {
         npcsInside().forEach { it.setRespawnDelayOverride(settings.spawnSpeed.ticks) }
+    }
+
+    /** The boss is not waiting when the door opens: it arrives on the timer the owner paid for. */
+    private fun stageBoss() {
+        npcsInside().filter { it.id == def.bossNpc }.forEach { it.setRespawnTask(settings.spawnSpeed.ticks) }
     }
 
     private fun stopRespawns() {
