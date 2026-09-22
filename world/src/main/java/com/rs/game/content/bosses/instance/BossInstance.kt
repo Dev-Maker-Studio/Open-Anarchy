@@ -25,6 +25,7 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
     val memberCount: Int get() = members.size
     val millisLeft: Long get() = paidUntil - System.currentTimeMillis()
     val expired: Boolean get() = millisLeft <= 0
+    val minutesLeft: Int get() = ((millisLeft + 59999L) / 60000L).toInt().coerceAtLeast(0)
 
     fun build(onReady: () -> Unit) {
         if (built) {
