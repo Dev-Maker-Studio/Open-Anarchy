@@ -17,6 +17,9 @@ import com.rs.plugin.kts.onObjectClick
 import com.rs.utils.WorldUtil
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Seq
+import org.darkan.core.gameval.gen.Sound
+import org.darkan.core.gameval.gen.Spotanim
 import org.darkan.core.model.Animation
 import org.darkan.core.model.SpotAnim
 import world.gregs.voidps.type.Tile
@@ -33,19 +36,19 @@ private val MINIONS = listOf(
 private class MinionStage(val npcId: Int, val phase: NexPhase, val hitpoints: Int, val shout: String, val voice: Int)
 
 private val STAGES = listOf(
-    MinionStage(Npc.godwars2_smokemage, NexPhase.SMOKE, 24000, "Fumus, don't fail me!", 3321),
-    MinionStage(Npc.godwars2_shadowmage, NexPhase.SHADOW, 18000, "Umbra, don't fail me!", 3307),
-    MinionStage(Npc.godwars2_bloodmage, NexPhase.BLOOD, 12000, "Cruor, don't fail me!", 3298),
-    MinionStage(Npc.godwars2_icemage, NexPhase.ICE, 6000, "Glacies, don't fail me!", 3327),
+    MinionStage(Npc.godwars2_smokemage, NexPhase.SMOKE, 24000, "Fumus, don't fail me!", Sound.sound_3321),
+    MinionStage(Npc.godwars2_shadowmage, NexPhase.SHADOW, 18000, "Umbra, don't fail me!", Sound.sound_3307),
+    MinionStage(Npc.godwars2_bloodmage, NexPhase.BLOOD, 12000, "Cruor, don't fail me!", Sound.sound_3298),
+    MinionStage(Npc.godwars2_icemage, NexPhase.ICE, 6000, "Glacies, don't fail me!", Sound.sound_3327),
 )
 
 private class PhaseStep(val from: NexPhase, val next: NexPhase, val drawsFrom: Int?, val shout: String, val voice: Int)
 
 private val PHASE_STEPS = listOf(
-    PhaseStep(NexPhase.SMOKE, NexPhase.SHADOW, Npc.godwars2_shadowmage, "Darken my shadow!", 3302),
-    PhaseStep(NexPhase.SHADOW, NexPhase.BLOOD, Npc.godwars2_bloodmage, "Flood my lungs with blood!", 3306),
-    PhaseStep(NexPhase.BLOOD, NexPhase.ICE, Npc.godwars2_icemage, "Infuse me with the power of ice!", 3303),
-    PhaseStep(NexPhase.ICE, NexPhase.ZAROS, null, "NOW, THE POWER OF ZAROS!", 3312),
+    PhaseStep(NexPhase.SMOKE, NexPhase.SHADOW, Npc.godwars2_shadowmage, "Darken my shadow!", Sound.sound_3302),
+    PhaseStep(NexPhase.SHADOW, NexPhase.BLOOD, Npc.godwars2_bloodmage, "Flood my lungs with blood!", Sound.sound_3306),
+    PhaseStep(NexPhase.BLOOD, NexPhase.ICE, Npc.godwars2_icemage, "Infuse me with the power of ice!", Sound.sound_3303),
+    PhaseStep(NexPhase.ICE, NexPhase.ZAROS, null, "NOW, THE POWER OF ZAROS!", Sound.sound_3312),
 )
 
 class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned, MINIONS, MinionPolicy.BOUND) {
@@ -90,7 +93,7 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
             resetWalkSteps()
             if (!WorldUtil.isInRange(x, y, size, target.x, target.y, target.size, 5)) {
                 val tile = target.getNearestTeleTile(this) ?: Tile.of(target.tile)
-                if (World.floorAndWallsFree(tile, size)) forceMove(tile, 6985, 0, 30)
+                if (World.floorAndWallsFree(tile, size)) forceMove(tile, Seq.godwars2_zaros_spin_out, 0, 30)
             } else calcFollow(target, 2, true)
             return
         }
@@ -112,12 +115,12 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
             true
         }
         forceTalk("Taste my wrath!")
-        voiceEffect(3323, true)
+        voiceEffect(Sound.sound_3323, true)
         sendWrath()
     }
 
     fun sendWrath() {
-        spotAnim(2259)
+        spotAnim(Spotanim.mah4_reward_mushroom_cloud_spotanim)
         WRATH_OFFSETS.forEach { (dx, dy) -> sendWrathProj(this, Tile.of(x + dx, y + dy, plane), 15) }
         WorldTasks.schedule(1) { killBloodReavers() }
     }
@@ -133,10 +136,10 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
         if (minionStage != PHASE_STEPS.indexOf(step) + 1) return
         capDamage = 500
         forceTalk(step.shout)
-        step.drawsFrom?.let { id -> nexMinion(id)?.let { World.sendProjectile(it, this, 2244, 18 to 18, 60, 5, 0) } }
+        step.drawsFrom?.let { id -> nexMinion(id)?.let { World.sendProjectile(it, this, Spotanim.mah4_reward_spot_leech_proj_4, 18 to 18, 60, 5, 0) } }
         if (step.drawsFrom == null) {
-            anim(6326)
-            spotAnim(1204)
+            anim(Seq.godwars2_zaros_turmoil)
+            spotAnim(Spotanim.zaros_turmoil_spotanim)
             heal(6000)
         }
         combat.addCombatDelay(1)
@@ -233,8 +236,8 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
         )
 
         private fun sendWrathProj(nex: Nex, tile: Tile, projStepDelay: Int) {
-            World.sendProjectile(nex, tile, 2261, 24 to 0, 0, projStepDelay, 30, 0) {
-                World.sendSpotAnim(tile, SpotAnim(2260))
+            World.sendProjectile(nex, tile, Spotanim.mah4_reward_mushroom_cloud_projanim, 24 to 0, 0, projStepDelay, 30, 0) {
+                World.sendSpotAnim(tile, SpotAnim(Spotanim.mah4_reward_mushroom_cloud_spotanim_small))
             }
         }
     }
