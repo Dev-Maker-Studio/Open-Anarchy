@@ -64,6 +64,11 @@ class MiscCodecTest {
                     )
                 )
                 assertEquals(
+                    cache.archiveIds(index).size,
+                    counts.archives,
+                    "${IndexNames.name(index)} left archives out of the round trip"
+                )
+                assertEquals(
                     counts.archives,
                     counts.identical,
                     "${IndexNames.name(index)} did not pack back byte for byte"
@@ -71,8 +76,11 @@ class MiscCodecTest {
                 assertEquals(0, counts.pristine, "${IndexNames.name(index)} needed a pristine sidecar")
             }
             println("%-20s %-6s %9d %9d %9d %9d %9d".format("total", "", archives, files, archives, pristine, bytes / 1024))
-            assertEquals(EXPECTED_ARCHIVES, archives, "the eight indices hold ${EXPECTED_ARCHIVES} archives in 727")
-            assertEquals(EXPECTED_FILES, files, "the eight indices hold $EXPECTED_FILES files in 727")
+            assertTrue(
+                archives >= VANILLA_ARCHIVES,
+                "$archives archives, fewer than the $VANILLA_ARCHIVES of vanilla 727"
+            )
+            assertTrue(files >= VANILLA_FILES, "$files files, fewer than the $VANILLA_FILES of vanilla 727")
             assertEquals(0, pristine, "no file of any of these indices may need a pristine copy")
         } finally {
             AnimationFrameCodec.reset()
@@ -93,7 +101,8 @@ class MiscCodecTest {
         try {
             var multi = 0
             var singleFile = 0
-            for (archive in cache.archiveIds(Index.ANIMATION_FRAMES)) {
+            val ids = cache.archiveIds(Index.ANIMATION_FRAMES)
+            for (archive in ids) {
                 val ids = cache.files(Index.ANIMATION_FRAMES, archive)
                 val group = Container.decode(cache.container(Index.ANIMATION_FRAMES, archive)!!).data()
                 val split = ArchiveGroup.split(group, ids)
@@ -113,8 +122,11 @@ class MiscCodecTest {
                 }
             }
             println("index 0: $multi three chunk archives, $singleFile single file archives")
-            assertEquals(MULTI_CHUNK_ARCHIVES, multi)
-            assertEquals(SINGLE_FILE_ARCHIVES, singleFile)
+            assertEquals(ids.size, multi + singleFile, "every frame set is either three chunks or one file")
+            assertTrue(
+                multi >= VANILLA_MULTI_CHUNK_ARCHIVES,
+                "$multi three chunk frame sets, fewer than the $VANILLA_MULTI_CHUNK_ARCHIVES of vanilla 727"
+            )
         } finally {
             cache.close()
         }
@@ -131,7 +143,10 @@ class MiscCodecTest {
         val cache = FileCache.load(packed.absolutePath)
         try {
             val hashes = cache.archiveNameHashes(Index.WORLD_MAP)
-            assertEquals(WORLD_MAP_ARCHIVES, hashes.size, "index 23 has $WORLD_MAP_ARCHIVES named archives")
+            assertTrue(
+                hashes.size >= VANILLA_WORLD_MAP_ARCHIVES,
+                "${hashes.size} named archives, fewer than the $VANILLA_WORLD_MAP_ARCHIVES of vanilla 727"
+            )
             for ((archive, hash) in hashes) {
                 val name = WorldMapCodec.name(archive)
                 assertEquals(hash, name.hashCode(), "index 23 archive $archive is not '$name'")
@@ -272,21 +287,20 @@ class MiscCodecTest {
             Index.CUTSCENES
         )
 
-        /** 4,085 + 3,535 + 1 + 86 + 2 + 2 + 6 + 31 + 16. */
-        private const val EXPECTED_ARCHIVES = 7764
+        /** What vanilla 727 shipped: 4,085 + 3,535 + 1 + 86 + 2 + 2 + 6 + 31 + 16. */
+        private const val VANILLA_ARCHIVES = 7764
 
         /**
-         * 4,085 + 3,535 + 1 + 1,181 + 1,372 + 86 + 6 + 31 + 16.
+         * What vanilla 727 shipped: 4,085 + 3,535 + 1 + 1,181 + 1,372 + 86 + 6 + 31 + 16.
          *
          * Index 0 is 4,085 files rather than 490,049 because a frame set is one glTF animation
          * (`anims/<archive>.glb`) rather than a JSON file per frame - see *anims*.
          */
-        private const val EXPECTED_FILES = 10313
+        private const val VANILLA_FILES = 10313
 
         private const val FRAME_CHUNKS = 3
         private const val FRAME_HEADER = 4
-        private const val MULTI_CHUNK_ARCHIVES = 4074
-        private const val SINGLE_FILE_ARCHIVES = 11
-        private const val WORLD_MAP_ARCHIVES = 86
+        private const val VANILLA_MULTI_CHUNK_ARCHIVES = 4074
+        private const val VANILLA_WORLD_MAP_ARCHIVES = 86
     }
 }

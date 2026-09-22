@@ -22,8 +22,8 @@ import kotlin.test.assertTrue
  * Indices 7, 27 and 29 through a real source tree: unpack them, pack the tree back, and demand
  * that every container and every reference table comes out byte for byte as it went in.
  *
- * Heavy: it writes all 73,417 model `.glb` files to disk. Run it deliberately, not as part of a
- * routine `:core:test`.
+ * Heavy: it writes every model in the cache to disk as a `.glb`. Run it deliberately, not as part
+ * of a routine `:core:test`.
  *
  * [ModelCodecParityTest] proves the codecs reproduce every archive in memory; this proves the tree
  * on disk does - the file names map back to their archives, `index.json` carries what the layout
@@ -66,7 +66,11 @@ class ModelSourceTreeTest {
             assertEquals(0, unpacked.opaque, "none of these indices is encrypted")
             assertEquals(0, unpacked.pristine, "no model, particle or billboard may need a pristine copy")
             assertEquals(0, unpacked.inexact, "no archive should have needed a pristine fallback")
-            assertEquals(ARCHIVES, unpacked.archives, "every archive of all three indices must be unpacked")
+            val archives = unpacked.archives
+            assertTrue(
+                archives >= VANILLA_ARCHIVES,
+                "$archives archives unpacked, fewer than the $VANILLA_ARCHIVES of vanilla 727"
+            )
 
             for (index in INDICES) {
                 val size = size(tree.toPath().resolve(IndexNames.name(index)))
@@ -84,7 +88,7 @@ class ModelSourceTreeTest {
             for ((line, millis) in packTimes) {
                 println("  ${line.substringBefore(':')}: ${millis}ms")
             }
-            assertEquals(ARCHIVES, result.archives, "everything unpacked should pack again")
+            assertEquals(archives, result.archives, "everything unpacked should pack again")
 
             val report = Verifier.verify(SourceTree.open(tree), packed) { println("  verify $it") }
             println("verify: $report")
@@ -93,10 +97,9 @@ class ModelSourceTreeTest {
             assertEquals(0, report.extra)
             assertEquals(INDICES.size, report.indices.size, "all three indices must be verified")
             assertEquals(INDICES.size, report.tables, "every reference table must be identical")
-            assertEquals(ARCHIVES, report.identical)
+            assertEquals(archives, report.identical, "every unpacked archive must verify identical")
 
-            // Re-unpacking an unchanged cache must leave every one of the 73,000 files alone.
-            val stamps = timestamps(tree.toPath())
+                val stamps = timestamps(tree.toPath())
             val second = FileCache.load(packed.absolutePath).use { cache ->
                 Unpacker.unpack(PartialCache(cache, INDICES), SourceTree.open(tree))
             }
@@ -116,7 +119,7 @@ class ModelSourceTreeTest {
      * cache must decode the moved vertex.
      *
      * This is the whole point of the codec - a model is a file somebody edits, in a format Blender
-     * opens - and the incremental build is what makes editing one of 73,417 of them cheap, so both
+     * opens - and the incremental build is what makes editing one of tens of thousands of them cheap, so both
      * are checked in one go. The edit goes through [ModelGltf] rather than through a text
      * substitution, which is what an editor would do to a `.glb` too.
      */
@@ -204,8 +207,8 @@ class ModelSourceTreeTest {
         /** Models, the particle configs their footers emit, and the billboard configs they pin. */
         private val INDICES = intArrayOf(Index.MODELS, Index.PARTICLES, Index.BILLBOARDS)
 
-        /** 73,417 models, 2 particle archives and 1 billboard archive. */
-        private const val ARCHIVES = 73_420
+        /** What vanilla 727 shipped: 73,417 models, 2 particle archives and 1 billboard archive. */
+        private const val VANILLA_ARCHIVES = 73_420
 
         /** How many indices the tree describes, so `cache.json` says what the real cache says. */
         private const val INDICES_IN_CACHE = IndexNames.COUNT

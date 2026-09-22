@@ -98,7 +98,7 @@ class ModelEncoderParityTest {
         for (difference in differences) {
             println("  DIFFERS $difference")
         }
-        assertTrue(files > 70_000, "only $files model archives were compared")
+        assertTrue(files >= VANILLA_MODELS, "$files model archives compared, fewer than the $VANILLA_MODELS of vanilla 727")
         assertEquals(EMPTY_PLACEHOLDERS, empty, "the cache has $EMPTY_PLACEHOLDERS models with no geometry")
         assertEquals(ORPHAN_TEXTURE_INDICES, orphanPointers, "only model 73412 declares texture indices with no triangles")
         assertEquals(0, trailing, "no model may have bytes nothing accounts for")
@@ -114,7 +114,7 @@ class ModelEncoderParityTest {
         val encoder = BillboardEncoder()
         val counts = compare(cache, Index.BILLBOARDS, BillboardDecoder.ARCHIVE, decoder, encoder) { BillboardType(id = it) }
         println("index ${Index.BILLBOARDS} archive ${BillboardDecoder.ARCHIVE} (billboard): $counts")
-        assertEquals(BILLBOARDS, counts.files, "the cache has $BILLBOARDS billboards")
+        assertTrue(counts.files >= VANILLA_BILLBOARDS, "${counts.files} billboards, fewer than the $VANILLA_BILLBOARDS of vanilla 727")
         assertEquals(counts.files, counts.identical, "every billboard must re-encode to its own bytes")
     }
 
@@ -127,7 +127,7 @@ class ModelEncoderParityTest {
             ParticleProducerDefinition(id = it)
         }
         println("index ${Index.PARTICLES} archive ${ParticleProducerDecoder.ARCHIVE} (producer): $counts")
-        assertEquals(PRODUCERS, counts.files, "the cache has $PRODUCERS particle producers")
+        assertTrue(counts.files >= VANILLA_PRODUCERS, "${counts.files} particle producers, fewer than the $VANILLA_PRODUCERS of vanilla 727")
         assertEquals(counts.files, counts.identical, "every particle producer must re-encode to its own bytes")
     }
 
@@ -140,7 +140,7 @@ class ModelEncoderParityTest {
             ParticleDefinition(id = it)
         }
         println("index ${Index.PARTICLES} archive ${ParticleDecoder.ARCHIVE} (particle): $counts")
-        assertEquals(PARTICLES, counts.files, "the cache has $PARTICLES particles")
+        assertTrue(counts.files >= VANILLA_PARTICLES, "${counts.files} particles, fewer than the $VANILLA_PARTICLES of vanilla 727")
         assertEquals(counts.files, counts.identical, "every particle must re-encode to its own bytes")
     }
 
@@ -220,8 +220,10 @@ class ModelEncoderParityTest {
         /** Only model 73412 declares a texture index section with no texture triangle behind it. */
         private const val ORPHAN_TEXTURE_INDICES = 1
 
-        private const val BILLBOARDS = 360
-        private const val PRODUCERS = 741
-        private const val PARTICLES = 18
+        /** What vanilla 727 shipped; the cache only ever grows, so these are floors. */
+        private const val VANILLA_MODELS = 73_417
+        private const val VANILLA_BILLBOARDS = 360
+        private const val VANILLA_PRODUCERS = 741
+        private const val VANILLA_PARTICLES = 18
     }
 }
