@@ -17,7 +17,7 @@
 package com.rs.game.content.bosses.godwars.factions.zaros;
 
 import com.rs.game.World;
-import com.rs.game.content.bosses.godwars.factions.zaros.Nex.Phase;
+import com.rs.game.content.bosses.godwars.factions.zaros.NexPhase;
 import com.rs.game.content.bosses.godwars.factions.zaros.attack.*;
 import com.rs.game.content.combat.CombatStyle;
 import com.rs.game.model.entity.Entity;
@@ -135,7 +135,7 @@ public class NexCombat extends CombatScript {
 				break;
 			}
 		}
-		if (nex.getPhase() == Phase.ZAROS && nex.getAttackCount() % 3 == 0)
+		if (nex.getPhase() == NexPhase.ZAROS && nex.getAttackCount() % 3 == 0)
 			nex.switchPrayers();
 		nex.incrementAttack();
 		return nex.getAttackSpeed();
