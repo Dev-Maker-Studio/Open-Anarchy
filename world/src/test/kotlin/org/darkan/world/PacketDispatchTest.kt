@@ -67,6 +67,8 @@ class PacketDispatchTest {
 
         registerItemOnObjectProbe(objectId) { e -> fired.add(e.item.id to e.objectId) }
 
+        player.inventory.items.clear()
+        player.inventory.refresh()
         player.inventory.addItem(1511, 1)
         assertEquals(1, player.inventory.getNumberOf(1511), "test setup: logs never entered the inventory")
 
@@ -93,6 +95,8 @@ class PacketDispatchTest {
         registerItemOnObjectProbe(objectId) { e -> fired.add(e.item.id to e.objectId) }
 
         // Slot 0 holds coins; the packet claims a dragon platebody.
+        player.inventory.items.clear()
+        player.inventory.refresh()
         player.inventory.addItem(995, 100)
         harness.push(IfOnObject(Interface.inventory, 0, 0, 1127, objectId, tile.x, tile.y, false))
         WorldHarness.tick()
@@ -149,6 +153,8 @@ class PacketDispatchTest {
     fun draggingInventorySlotsSwapsThem() {
         val harness = login("dragitems")
         val inv = harness.player.inventory
+        inv.items.clear()
+        inv.refresh()
         inv.addItem(1511, 1)
         inv.addItem(1521, 1)
         assertEquals(1511, inv.getItem(0)?.id, "test setup: slot 0")
@@ -178,6 +184,8 @@ class PacketDispatchTest {
         WorldHarness.tick()
 
         val inv = harness.player.inventory
+        inv.items.clear()
+        inv.refresh()
         inv.addItem(1511, 1)
         inv.addItem(1521, 1)
         harness.push(IfDragOntoIf(Interface.inventory, 0, 0, 1511, Interface.inventory, 0, 29, 1521))
