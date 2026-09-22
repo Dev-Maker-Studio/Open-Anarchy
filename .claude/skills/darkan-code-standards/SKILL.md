@@ -100,6 +100,12 @@ written as the developer's own.
   Anything that opens the packed cache or a source tree, or runs for more than a few seconds, goes
   in the opt-in `cacheTest` suite (`src/cacheTest`), which no build, `check` or pipeline runs; run
   it only when the change touches what it covers. Never wire a test into every build.
+- A test in the default suite never needs a packed cache. `WorldHarness` installs the definitions
+  written down in `TestDefinitions` through the `DefinitionTables` seam and boots on an empty cache,
+  so the suite passes on a machine that has never built one and cannot break when someone's cache is
+  stale. Add the ids a new test needs there; a test whose subject *is* what the cache holds goes in
+  `src/cacheTest` and boots with `WorldHarness.bootWithCacheDefinitions()`. Never assert a fixed
+  census of cache contents - we author into the cache, so those numbers rot.
 - Game content follows `content-development` (world plugins, dialogues, cache definitions,
   imported assets, the hand-off to the user); clientscripts follow `cs2-engineer`.
 - Plugin hooks follow `kotlin-plugins`: top-level `@ServerStartupEvent` functions using the
