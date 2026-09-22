@@ -1,5 +1,6 @@
 package com.rs.game.content.bosses.instance
 
+import com.rs.game.model.entity.player.Controller
 import world.gregs.voidps.type.Region
 import world.gregs.voidps.type.Tile
 
@@ -30,6 +31,8 @@ data class BossInstanceDef(
     val entranceRequirements: String = "None",
     /** Flipped while a player stands inside, for an entrance loc that transforms on it. */
     val insideVarbit: Int = -1,
+    /** The controller that owns the ground the player is put back on, restored when they leave. */
+    val returnController: (() -> Controller)? = null,
 ) {
     /** The one the interface draws; a multi-boss arena shows its first. */
     val portraitNpc: Int get() = bossNpcs.first()
