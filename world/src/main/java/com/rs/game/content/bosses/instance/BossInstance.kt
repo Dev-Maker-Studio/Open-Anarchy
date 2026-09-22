@@ -7,6 +7,7 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.tasks.TaskInformation
 import com.rs.game.tasks.WorldTasks
 import com.rs.utils.Ticks
+import org.darkan.core.Logger
 import world.gregs.voidps.type.Tile
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -14,13 +15,14 @@ import java.util.concurrent.ConcurrentHashMap
 class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var settings: InstanceSettings) {
     val id: UUID = UUID.randomUUID()
     val instance: Instance = Instance.of(def.returnTo, def.widthRegions * 8, def.heightRegions * 8, true)
-    private val createdAt: Long = System.currentTimeMillis()
+    private var paidUntil: Long = System.currentTimeMillis() + LIFETIME_MILLIS
     private val members = ConcurrentHashMap.newKeySet<String>()
     private var built = false
+    private var exhausted = false
     private var expiryTask: TaskInformation? = null
 
     val memberCount: Int get() = members.size
-    val millisLeft: Long get() = LIFETIME_MILLIS - (System.currentTimeMillis() - createdAt)
+    val millisLeft: Long get() = paidUntil - System.currentTimeMillis()
     val expired: Boolean get() = millisLeft <= 0
 
     fun build(onReady: () -> Unit) {
@@ -29,8 +31,10 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
             return
         }
         built = true
-        instance.copyMap(0, 0, PLANES, def.originChunkX, def.originChunkY, PLANES, def.widthRegions * 8, def.heightRegions * 8)
+        val startedAt = System.currentTimeMillis()
+        instance.copyMap(0, 0, def.planes.toIntArray(), def.originChunkX, def.originChunkY, def.planes.toIntArray(), def.widthRegions * 8, def.heightRegions * 8)
             .thenAccept {
+                Logger.info(BossInstance::class.java, "build", "${def.key} instance built in ${System.currentTimeMillis() - startedAt}ms (${def.widthRegions * 8 * def.heightRegions * 8 * def.planes.size} chunks)")
                 applySpawnSpeed()
                 scheduleExpiry()
                 onReady()
@@ -53,6 +57,13 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
         }
     }
 
+    /** A fresh payment buys another hour and wakes the arena back up. */
+    fun renew() {
+        paidUntil = System.currentTimeMillis() + LIFETIME_MILLIS
+        exhausted = false
+        applySpawnSpeed()
+    }
+
     fun add(player: Player) = members.add(player.username)
 
     fun remove(player: Player) {
@@ -70,11 +81,19 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
         npcsInside().forEach { it.setRespawnDelayOverride(settings.spawnSpeed.ticks) }
     }
 
+    private fun stopRespawns() {
+        npcsInside().forEach { it.setRespawnDelayOverride(Int.MAX_VALUE) }
+        broadcast("Your instance has expired. Nothing further will respawn until you pay to renew it.")
+    }
+
     private fun scheduleExpiry() {
         expiryTask = WorldTasks.scheduleLooping(Ticks.fromMinutes(1), Ticks.fromMinutes(1)) {
             val minutesLeft = (millisLeft / 60000L).toInt()
             if (minutesLeft in WARN_MINUTES) broadcast("Your boss instance expires in $minutesLeft minutes.")
-            if (expired) destroy()
+            if (expired && !exhausted) {
+                exhausted = true
+                stopRespawns()
+            }
         }
     }
 
@@ -95,6 +114,5 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
     companion object {
         const val LIFETIME_MILLIS: Long = 60L * 60L * 1000L
         private val WARN_MINUTES = setOf(30, 15, 5)
-        private val PLANES = intArrayOf(0, 1, 2, 3)
     }
 }

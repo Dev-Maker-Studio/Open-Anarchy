@@ -476,4 +476,20 @@ fun loadDeveloperCommands() {
         InstanceInterface.applyPortrait(p, zoom, pitch, roll)
         p.sendMessage("portraitZoom = $zoom, pitch = $pitch, roll = $roll")
     }
+
+    Commands.add(Rights.DEVELOPER, "locsat (radius)", "Lists the locs around you with their ids, names and options.") { p, args ->
+        val radius = args.getOrNull(0)?.toIntOrNull() ?: 1
+        val seen = HashSet<Int>()
+        World.getChunkRadius(p.tile.getChunkId(), radius)
+            .mapNotNull { ChunkManager.getChunk(it) }
+            .flatMap { it.baseObjects + it.spawnedObjects }
+            .filter { seen.add(it.id) }
+            .sortedBy { Utils.getDistance(p.tile, it.tile) }
+            .take(30)
+            .forEach { obj ->
+                val options = obj.definitions.options?.filterNotNull()?.filter { it.isNotBlank() && it != "null" } ?: emptyList()
+                p.packets.sendDevConsoleMessage("${obj.id} ${obj.definitions.name} @ ${obj.tile.x},${obj.tile.y},${obj.tile.plane} [${options.joinToString(", ")}]")
+            }
+        p.sendMessage("Listed ${seen.size} locs within $radius chunk(s) - see the dev console.")
+    }
 }

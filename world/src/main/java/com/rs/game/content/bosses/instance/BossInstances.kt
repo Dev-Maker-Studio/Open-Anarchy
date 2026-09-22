@@ -7,14 +7,10 @@ import java.util.concurrent.ConcurrentHashMap
 object BossInstances {
     private val byOwner = ConcurrentHashMap<String, BossInstance>()
 
-    fun owned(username: String): BossInstance? = byOwner[username]?.takeUnless { it.expired }
+    fun owned(username: String): BossInstance? = byOwner[username]
 
     fun start(player: Player, def: BossInstanceDef, settings: InstanceSettings): BossInstance? {
-        if (!player.inventory.hasCoins(def.cost)) {
-            player.sendMessage("You need ${Utils.formatNumber(def.cost)} coins to start a ${def.displayName} instance.")
-            return null
-        }
-        player.inventory.removeCoins(def.cost)
+        if (!charge(player, def)) return null
         owned(player.username)?.destroy()
         val created = BossInstance(def, player.username, settings)
         byOwner[player.username] = created
@@ -31,8 +27,21 @@ object BossInstances {
 
     fun rejoin(player: Player): String? {
         val instance = owned(player.username) ?: return "You do not have an instance to rejoin."
+        if (instance.expired) {
+            if (!charge(player, instance.def)) return null
+            instance.renew()
+        }
         enter(player, instance)
         return null
+    }
+
+    private fun charge(player: Player, def: BossInstanceDef): Boolean {
+        if (!player.inventory.hasCoins(def.cost)) {
+            player.sendMessage("You need ${Utils.formatNumber(def.cost)} coins to start a ${def.displayName} instance.")
+            return false
+        }
+        player.inventory.removeCoins(def.cost)
+        return true
     }
 
     private fun enter(player: Player, instance: BossInstance) {

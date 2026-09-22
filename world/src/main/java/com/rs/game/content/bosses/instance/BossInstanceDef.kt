@@ -16,6 +16,7 @@ data class BossInstanceDef(
     val home: Tile,
     val returnTo: Tile,
     val regions: List<Int> = listOf(home.getRegionId()),
+    val planes: List<Int> = listOf(home.plane),
     val entrance: Tile = home,
     val maxPlayers: Int = 10,
     val minCombatDefault: Int = 3,
