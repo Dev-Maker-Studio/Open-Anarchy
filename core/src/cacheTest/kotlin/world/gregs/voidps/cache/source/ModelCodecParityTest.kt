@@ -46,10 +46,10 @@ class ModelCodecParityTest {
         SourceCodecs.reset()
         val cache = Cache.get()
         println("%-24s %-6s %9s %9s %9s %9s %9s".format("codec", "index", "files", "exact", "pristine", "raw MB", "tree MB"))
-        val models = count(cache, Index.MODELS, ModelCodec, ModelCodec.id)
-        val producers = count(cache, Index.PARTICLES, ParticleCodec, ModelCodecs.producers.id, archives = intArrayOf(0))
-        val particles = count(cache, Index.PARTICLES, ParticleCodec, ModelCodecs.particles.id, archives = intArrayOf(1))
-        val billboards = count(cache, Index.BILLBOARDS, ModelCodecs.billboards, ModelCodecs.billboards.id)
+        val models = count(cache, Index.MODELS, ModelCodec, ModelCodec.id, VANILLA_MODELS)
+        val producers = count(cache, Index.PARTICLES, ParticleCodec, ModelCodecs.producers.id, VANILLA_PRODUCERS, archives = intArrayOf(0))
+        val particles = count(cache, Index.PARTICLES, ParticleCodec, ModelCodecs.particles.id, VANILLA_PARTICLES, archives = intArrayOf(1))
+        val billboards = count(cache, Index.BILLBOARDS, ModelCodecs.billboards, ModelCodecs.billboards.id, VANILLA_BILLBOARDS)
         val all = listOf(models, producers, particles, billboards)
         println(
             "%-24s %-6s %9d %9d %9d %9d %9d".format(
@@ -57,11 +57,11 @@ class ModelCodecParityTest {
                 all.sumOf { it.pristine }, all.sumOf { it.raw } / 1_000_000, all.sumOf { it.tree } / 1_000_000
             )
         )
-        assertEquals(MODELS, models.files, "the cache has $MODELS models")
-        assertEquals(PRODUCERS, producers.files, "the cache has $PRODUCERS particle producers")
-        assertEquals(PARTICLES, particles.files, "the cache has $PARTICLES particles")
-        assertEquals(BILLBOARDS, billboards.files, "the cache has $BILLBOARDS billboards")
         for (result in all) {
+            assertTrue(
+                result.files >= result.vanilla,
+                "${result.name}: ${result.files} files is fewer than the ${result.vanilla} of vanilla 727"
+            )
             assertEquals(0, result.pristine, "${result.name} files did not survive the JSON round trip")
         }
         assertTrue(models.tree > models.raw, "the editable form is expected to be larger than the bytes it replaces")
@@ -124,7 +124,14 @@ class ModelCodecParityTest {
     }
 
     /** One codec's files, how many needed the shipped bytes beside them, and what they cost. */
-    private class Result(val name: String, val files: Int, val pristine: Int, val raw: Long, val tree: Long)
+    private class Result(
+        val name: String,
+        val vanilla: Int,
+        val files: Int,
+        val pristine: Int,
+        val raw: Long,
+        val tree: Long
+    )
 
     /**
      * Run [codec] over every archive of [index] exactly as an unpack does, and count.
@@ -137,6 +144,7 @@ class ModelCodecParityTest {
         index: Int,
         codec: SourceCodec,
         name: String,
+        vanilla: Int,
         archives: IntArray? = null
     ): Result {
         var files = 0
@@ -148,10 +156,7 @@ class ModelCodecParityTest {
             val ids = cache.files(index, archive)
             val data = ArrayList<ByteArray>(ids.size)
             for (file in ids) {
-                data.add(cache.data(index, archive, file) ?: continue)
-            }
-            if (data.size != ids.size) {
-                continue
+                data.add(assertNotNull(cache.data(index, archive, file), "$name archive $archive has no file $file"))
             }
             files += ids.size
             raw += data.sumOf { it.size.toLong() }
@@ -174,14 +179,15 @@ class ModelCodecParityTest {
                 (System.nanoTime() - start) / 1_000_000
             )
         )
-        return Result(name, files, pristine, raw, tree)
+        return Result(name, vanilla, files, pristine, raw, tree)
     }
 
     private companion object {
-        private const val MODELS = 73_417
-        private const val PRODUCERS = 741
-        private const val PARTICLES = 18
-        private const val BILLBOARDS = 360
+        /** What vanilla 727 shipped; the tree only ever grows, so these are floors. */
+        private const val VANILLA_MODELS = 73_417
+        private const val VANILLA_PRODUCERS = 741
+        private const val VANILLA_PARTICLES = 18
+        private const val VANILLA_BILLBOARDS = 360
 
         /** The model `docs/cache-source.md`'s *models* excerpt quotes. */
         private const val EXAMPLE = 9808

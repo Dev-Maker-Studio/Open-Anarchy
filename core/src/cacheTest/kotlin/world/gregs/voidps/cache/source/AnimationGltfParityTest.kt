@@ -27,8 +27,8 @@ import kotlin.test.assertTrue
  *
  * [world.gregs.voidps.cache.definition.MiscEncoderParityTest] proves `encode(decode(bytes)) ==
  * bytes` frame by frame and [MiscCodecTest] proves the whole trip through a real directory; this is
- * the one that proves the *file format* - `encode(read(write(decode(group)))) == group` for all
- * 4,085 archives, chunk table and all - and it is where the numbers `docs/cache-source.md`'s *anims*
+ * the one that proves the *file format* - `encode(read(write(decode(group)))) == group` for every
+ * archive, chunk table and all - and it is where the numbers `docs/cache-source.md`'s *anims*
  * section quotes are measured: what a `.glb` costs against the group it replaces, and what the two
  * directions cost in time.
  *
@@ -58,8 +58,9 @@ class AnimationGltfParityTest {
         var unpackNanos = 0L
         var packNanos = 0L
         try {
-            for (archive in cache.archiveIds(Index.ANIMATION_FRAMES)) {
-                val source = source(cache, archive) ?: continue
+            val ids = cache.archiveIds(Index.ANIMATION_FRAMES)
+            for (archive in ids) {
+                val source = assertNotNull(source(cache, archive), "frame set $archive is not in the cache")
                 archives++
                 frames += source.fileIds.size
                 raw += source.group.size
@@ -128,10 +129,13 @@ class AnimationGltfParityTest {
                     "${samplers / 1_000_000} MB of samplers"
             )
             println("  unpack ${unpackNanos / 1_000_000} ms, pack ${packNanos / 1_000_000} ms, single threaded")
-            assertEquals(ARCHIVES, archives, "index 0 has $ARCHIVES frame sets in 727")
-            assertEquals(FRAMES, frames, "index 0 has $FRAMES frames in 727")
-            assertEquals(MULTI_CHUNK_ARCHIVES, multi, "$MULTI_CHUNK_ARCHIVES of them are three chunk groups")
-            assertEquals(SINGLE_FRAME_ARCHIVES, single, "$SINGLE_FRAME_ARCHIVES of them hold one frame")
+            assertEquals(ids.size, archives, "every frame set index 0 holds has to be round tripped")
+            assertEquals(archives, multi + single, "every frame set is either a three chunk group or a single frame")
+            assertTrue(
+                archives >= VANILLA_ARCHIVES,
+                "$archives frame sets, fewer than the $VANILLA_ARCHIVES of vanilla 727"
+            )
+            assertTrue(frames >= VANILLA_FRAMES, "$frames frames, fewer than the $VANILLA_FRAMES of vanilla 727")
             assertEquals(archives, identical, "every frame set has to pack back byte for byte")
         } finally {
             close(cache)
@@ -258,10 +262,9 @@ class AnimationGltfParityTest {
     }
 
     private companion object {
-        private const val ARCHIVES = 4_085
-        private const val FRAMES = 490_049
-        private const val MULTI_CHUNK_ARCHIVES = 4_074
-        private const val SINGLE_FRAME_ARCHIVES = 11
+        /** What vanilla 727 shipped; index 0 only ever grows, so these are floors. */
+        private const val VANILLA_ARCHIVES = 4_085
+        private const val VANILLA_FRAMES = 490_049
 
         /** The frame set `docs/cache-source.md`'s *anims* excerpt quotes. */
         private const val EXAMPLE = 99
