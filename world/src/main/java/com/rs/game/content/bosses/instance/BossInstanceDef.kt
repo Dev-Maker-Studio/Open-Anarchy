@@ -12,7 +12,7 @@ import world.gregs.voidps.type.Tile
 data class BossInstanceDef(
     val key: String,
     val displayName: String,
-    val bossNpc: Int,
+    val bossNpcs: List<Int>,
     val home: Tile,
     val returnTo: Tile,
     val regions: List<Int> = listOf(home.getRegionId()),
@@ -29,6 +29,9 @@ data class BossInstanceDef(
     val instanceExitLoc: Int = -1,
     val entranceRequirements: String = "None",
 ) {
+    /** The one the interface draws; a multi-boss arena shows its first. */
+    val portraitNpc: Int get() = bossNpcs.first()
+
     private val origin: Region = Region(regions.minOf { Region(it).x }, regions.minOf { Region(it).y })
 
     val widthRegions: Int get() = regions.maxOf { Region(it).x } - origin.x + 1
@@ -50,7 +53,7 @@ object BossInstanceDefs {
 
     fun register(def: BossInstanceDef) {
         byKey[def.key] = def
-        byBossNpc[def.bossNpc] = def
+        def.bossNpcs.forEach { byBossNpc[it] = def }
     }
 
     operator fun get(key: String): BossInstanceDef? = byKey[key]
