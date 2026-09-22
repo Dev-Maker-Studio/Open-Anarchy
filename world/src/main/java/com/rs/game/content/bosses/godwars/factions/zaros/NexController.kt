@@ -3,15 +3,15 @@ package com.rs.game.content.bosses.godwars.factions.zaros
 import com.rs.game.content.skills.magic.TeleType
 import com.rs.game.model.entity.player.Controller
 import org.darkan.core.gameval.gen.Cs2
-import org.darkan.core.gameval.gen.Varbit
 import org.darkan.core.gameval.gen.Interface
+import org.darkan.core.gameval.gen.Varbit
 
 class NexController(@Transient private var arena: NexArena? = null) : Controller() {
     private fun war() = arena ?: NexArena.globalInstance.also { arena = it }
 
     override fun start() {
         war().addPlayer(player)
-        setInside(1)
+        unseal()
         sendInterfaces()
     }
 
@@ -22,7 +22,7 @@ class NexController(@Transient private var arena: NexArena? = null) : Controller
 
     override fun login(): Boolean {
         war().addPlayer(player)
-        setInside(1)
+        unseal()
         sendInterfaces()
         return false
     }
@@ -47,10 +47,10 @@ class NexController(@Transient private var arena: NexArena? = null) : Controller
 
     private fun remove() {
         war().removePlayer(player)
-        setInside(0)
+        unseal()
         player.interfaceManager.closeFadingInterface()
     }
 
-    /** The landslide only offers its way through from the side the player is standing on. */
-    private fun setInside(value: Int) = player.vars.setVarBit(Varbit.godwars2_climbdown_multi, value)
+    /** The public prison keeps its climbable landslide; only an instance seals itself shut. */
+    private fun unseal() = player.vars.setVarBit(Varbit.godwars2_climbdown_multi, 0)
 }
