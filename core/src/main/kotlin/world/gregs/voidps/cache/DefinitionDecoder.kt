@@ -25,7 +25,8 @@ abstract class DefinitionDecoder<T : Definition>(val index: Int) {
      */
     open fun load(cache: Cache): Array<T> {
         val start = System.currentTimeMillis()
-        val size = size(cache) + 1
+        // A cache with no index at all sizes negative; every table is then simply empty.
+        val size = (size(cache) + 1).coerceAtLeast(0)
         val definitions = create(size)
         for (id in 0 until size) {
             try {

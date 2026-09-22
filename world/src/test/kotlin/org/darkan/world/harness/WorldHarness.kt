@@ -31,6 +31,9 @@ import java.util.logging.Level
  * Boots exactly as much of the world server as content needs, with no socket, no world thread and
  * no database, so dispatch can be driven and asserted from a unit test.
  *
+ * Definitions come from [TestDefinitions], never from a packed cache, so the suite passes on a
+ * machine that has never built one.
+ *
  * What it boots, in [Launcher][com.rs.Launcher] order: config, cache, map XTEAs, the rev727 codec,
  * the async executors, the plugin system (handler registration + `@ServerStartupEvent` hooks, which
  * is where every `Commands.add` lives) and the packet handler registry.
@@ -47,6 +50,12 @@ object WorldHarness {
     @Volatile
     private var booted = false
 
+    @Volatile
+    private var cacheDefinitions = false
+
+    /** Lets the world boot on an empty cache; a server without this dies on a cache it cannot read. */
+    private const val OPTIONAL_CACHE = "darkan.cache.optional"
+
     /** The rev727 codec, available once [boot] has run. */
     lateinit var codec: Codec
         private set
@@ -59,7 +68,9 @@ object WorldHarness {
         Logger.setLevel(Level.WARNING)
         JsonFileManager.setGSON(WorldGson.create())
 
+        System.setProperty(OPTIONAL_CACHE, "true")
         Settings.loadConfig()
+        if (!cacheDefinitions) TestDefinitions.install()
         Cache.init(Settings.getConfig().cachePath)
         MapXTEAs.loadKeys()
         MapXteas.load("./data/map/xteaKeys.json")
@@ -112,6 +123,14 @@ object WorldHarness {
         player.start()
         player.setStarted()
         return HarnessPlayer(player, session)
+    }
+
+    /** For `cacheTest`, whose subject is what the packed cache holds rather than how content behaves. */
+    @Synchronized
+    fun bootWithCacheDefinitions() {
+        check(!booted || cacheDefinitions) { "the harness has already booted on test definitions" }
+        cacheDefinitions = true
+        boot()
     }
 
     /** Removes [player] from the world so a later login of the same name is not rejected. */

@@ -279,7 +279,8 @@ class InterfaceManager(private val player: Player) {
 
     @JvmOverloads
     fun sendInterface(interfaceId: Int, clickThrough: Boolean = false) {
-        if (interfaceId > Utils.getInterfaceDefinitionsSize())
+        val known = Utils.getInterfaceDefinitionsSize()
+        if (known > 0 && interfaceId > known)
             return
         sendSub(Sub.CENTRAL, interfaceId, clickThrough)
     }

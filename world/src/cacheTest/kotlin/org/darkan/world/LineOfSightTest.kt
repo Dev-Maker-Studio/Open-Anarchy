@@ -18,7 +18,7 @@ class LineOfSightTest {
 
     @Test
     fun locThatClearsProjectileBlockingStillBlocksWalking() {
-        WorldHarness.boot()
+        WorldHarness.bootWithCacheDefinitions()
         val bars = ObjectDefinitions.getDefs(Loc.fai_varrock_bank_bars_door)
         assertEquals(2, bars.clipType)
         assertFalse(bars.blocks())
@@ -26,7 +26,7 @@ class LineOfSightTest {
 
     @Test
     fun projectilesPassThroughBarsThatBlockWalking() {
-        WorldHarness.boot()
+        WorldHarness.bootWithCacheDefinitions()
         val outside = Tile.of(3192, 9825, 0)
         val inside = Tile.of(3192, 9822, 0)
         ChunkManager.getChunk(outside.getChunkId())

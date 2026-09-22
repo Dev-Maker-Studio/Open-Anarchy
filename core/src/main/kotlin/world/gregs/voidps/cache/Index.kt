@@ -38,4 +38,6 @@ object Index {
     const val LOADING_GRAPHICS_RAW = 34
     const val CUTSCENES = 35
     const val INDEX_36 = 36 // empty in 727
+
+    const val COUNT = 37
 }

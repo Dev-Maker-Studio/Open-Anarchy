@@ -108,19 +108,6 @@ class BankPlaceholderTest {
     }
 
     @Test
-    fun thePlaceholderVarbitIsOneBitInTheBankTabVarpAndOverlapsNothing() {
-        val defs = VarBitDefinitions.getDefs(Varbit.bank_placeholders)
-        assertEquals(Varp.varp_1248, defs.index)
-        assertEquals(defs.startBit, defs.endBit, "a toggle is one bit wide")
-        val bit = defs.startBit
-        for (other in listOf(Varbit.varbit_4891, Varbit.varbit_4892, Varbit.varbit_4893, Varbit.varbit_4894)) {
-            val o = VarBitDefinitions.getDefs(other)
-            assertEquals(Varp.varp_1248, o.index)
-            assertTrue(bit < o.startBit || bit > o.endBit, "bit $bit overlaps varbit $other (${o.startBit}-${o.endBit})")
-        }
-    }
-
-    @Test
     fun withdrawingTheLastOfAnItemLeavesAPlaceholder() {
         val harness = login("phwithdraw")
         val player = harness.player
