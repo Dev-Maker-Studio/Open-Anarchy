@@ -5,10 +5,16 @@ import com.rs.game.model.entity.player.Controller
 import com.rs.game.tasks.WorldTasks
 import world.gregs.voidps.type.Tile
 
-class BossInstanceController(@Transient private val instance: BossInstance?) : Controller() {
+/**
+ * The instance itself cannot survive a logout, but the way back out of it has to: the key is kept
+ * so a player who logs in still lands on the right ground with the right area controller.
+ */
+class BossInstanceController(@Transient private val instance: BossInstance? = null, private val defKey: String = "") : Controller() {
+    private val def: BossInstanceDef? get() = instance?.def ?: BossInstanceDefs[defKey]
+
     override fun start() {
         val live = instance ?: return leave()
-        live.instance.let { player.setInstancedArea(it) }
+        player.setInstancedArea(live.instance)
         player.tele(live.localTile(live.def.entrance))
         setInside(1)
     }
@@ -21,11 +27,12 @@ class BossInstanceController(@Transient private val instance: BossInstance?) : C
         instance?.remove(player)
     }
 
+    /** Kept on through the logout so that [login] can put the player back where they belong. */
     override fun logout(): Boolean {
         setInside(0)
         instance?.remove(player)
         player.setTile(returnTile())
-        return true
+        return false
     }
 
     override fun login(): Boolean {
@@ -33,13 +40,6 @@ class BossInstanceController(@Transient private val instance: BossInstance?) : C
         WorldTasks.schedule { restoreArea() }
         return true
     }
-
-    private fun setInside(value: Int) {
-        val varbit = instance?.def?.insideVarbit ?: return
-        if (varbit != -1) player.vars.setVarBit(varbit, value)
-    }
-
-    private fun returnTile(): Tile = instance?.def?.returnTo ?: player.tile
 
     fun leaveInstance() = leave()
 
@@ -60,7 +60,14 @@ class BossInstanceController(@Transient private val instance: BossInstance?) : C
      * back: without it the godwars doors, altars and the prison entrance stop answering.
      */
     private fun restoreArea() {
-        val area = instance?.def?.returnController ?: return
+        val area = def?.returnController ?: return
         player.controllerManager.startController(area())
     }
+
+    private fun setInside(value: Int) {
+        val varbit = def?.insideVarbit ?: return
+        if (varbit != -1) player.vars.setVarBit(varbit, value)
+    }
+
+    private fun returnTile(): Tile = def?.returnTo ?: player.tile
 }

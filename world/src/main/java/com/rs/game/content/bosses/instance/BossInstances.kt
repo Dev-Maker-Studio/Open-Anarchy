@@ -55,7 +55,7 @@ object BossInstances {
         player.lock()
         instance.build {
             instance.add(player)
-            player.controllerManager.startController(BossInstanceController(instance))
+            player.controllerManager.startController(BossInstanceController(instance, instance.def.key))
             player.unlock()
         }
     }
