@@ -23,6 +23,10 @@ data class BossInstanceDef(
     val spawnSpeeds: List<SpawnSpeed> = SpawnSpeed.entries,
     val cost: Int = 0,
     val portraitZoom: Int = 0,
+    /** The loc that leads out of the real arena, and the instance-only twin spawned over it. */
+    val exitLoc: Int = -1,
+    val exitTile: Tile? = null,
+    val instanceExitLoc: Int = -1,
     val entranceRequirements: String = "None",
 ) {
     private val origin: Region = Region(regions.minOf { Region(it).x }, regions.minOf { Region(it).y })
