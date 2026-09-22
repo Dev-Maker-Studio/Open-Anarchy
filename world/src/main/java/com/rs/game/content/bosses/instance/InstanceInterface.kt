@@ -148,8 +148,25 @@ private fun handleAction(player: Player, button: Int) {
     val def = player.tempAttribs.getO<BossInstanceDef>(PENDING_BOSS) ?: return
     player.closeInterfaces()
     when (button) {
-        0 -> BossInstances.start(player, def, settings)
+        0 -> startOrRejoin(player, def, settings)
         1 -> InstanceInterface.promptJoin(player, def)
         2 -> BossInstances.rejoin(player)?.let { player.sendMessage(it) }
+    }
+}
+
+private fun startOrRejoin(player: Player, def: BossInstanceDef, settings: InstanceSettings) {
+    val existing = BossInstances.owned(player.username)
+    if (existing == null) {
+        BossInstances.start(player, def, settings)
+        return
+    }
+    val standing = if (existing.expired) "Your ${existing.def.displayName} instance has expired."
+    else "You already have a ${existing.def.displayName} instance with ${existing.minutesLeft} minutes left."
+    player.sendOptionDialogue(standing) { options ->
+        options.add(if (existing.expired) "Rejoin it and pay to renew it." else "Rejoin it.") {
+            BossInstances.rejoin(player)?.let { player.sendMessage(it) }
+        }
+        options.add("Start a new one and abandon it.") { BossInstances.start(player, def, settings) }
+        options.add("Cancel.")
     }
 }
