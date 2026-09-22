@@ -9,15 +9,18 @@ class BossInstanceController(@Transient private val instance: BossInstance?) : C
         val live = instance ?: return leave()
         live.instance.let { player.setInstancedArea(it) }
         player.tele(live.localTile(live.def.entrance))
+        setInside(1)
     }
 
     override fun onTeleported(type: TeleType) = leave()
 
     override fun forceClose() {
+        setInside(0)
         instance?.remove(player)
     }
 
     override fun logout(): Boolean {
+        setInside(0)
         instance?.remove(player)
         player.setTile(returnTile())
         return true
@@ -28,11 +31,17 @@ class BossInstanceController(@Transient private val instance: BossInstance?) : C
         return true
     }
 
+    private fun setInside(value: Int) {
+        val varbit = instance?.def?.insideVarbit ?: return
+        if (varbit != -1) player.vars.setVarBit(varbit, value)
+    }
+
     private fun returnTile(): Tile = instance?.def?.returnTo ?: player.tile
 
     fun leaveInstance() = leave()
 
     private fun leave() {
+        setInside(0)
         instance?.remove(player)
         player.tele(returnTile())
         removeController()

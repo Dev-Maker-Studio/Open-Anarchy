@@ -86,7 +86,17 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
 
     /** The boss is not waiting when the door opens: it arrives on the timer the owner paid for. */
     private fun stageBoss() {
-        npcsInside().filter { it.id in def.bossNpcs }.forEach { it.setRespawnTask(settings.spawnSpeed.ticks) }
+        val copied = npcsInside().filter { it.id in def.bossNpcs }
+        copied.forEach { it.setRespawnTask(settings.spawnSpeed.ticks) }
+        def.bossNpcs.filterNot { id -> copied.any { it.id == id } }.forEach(::spawnBoss)
+    }
+
+    /** A boss its arena summons rather than spawns, like Nex, has nothing to copy: give it one. */
+    private fun spawnBoss(npcId: Int) {
+        World.spawnNPC(npcId, localTile(def.home), false, true).apply {
+            setRespawnDelayOverride(settings.spawnSpeed.ticks)
+            setRespawnTask(settings.spawnSpeed.ticks)
+        }
     }
 
     private fun spawnExit() {
