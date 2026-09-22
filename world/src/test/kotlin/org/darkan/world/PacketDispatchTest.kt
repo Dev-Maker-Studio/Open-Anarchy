@@ -182,6 +182,7 @@ class PacketDispatchTest {
         val harness = WorldHarness.login("nogamemode", Rights.OWNER, chosenAccountType = false)
         loggedIn.add(harness)
         WorldHarness.tick()
+        harness.player.isChosenAccountType = false
 
         val inv = harness.player.inventory
         inv.items.clear()
