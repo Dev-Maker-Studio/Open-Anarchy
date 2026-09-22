@@ -21,6 +21,8 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.ModelRotator
 import com.rs.game.model.entity.Rotation
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions
+import com.rs.game.content.bosses.instance.BossInstanceDefs
+import com.rs.game.content.bosses.instance.InstanceInterface
 import com.rs.game.model.entity.player.Bank
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.InstancedController
@@ -458,5 +460,36 @@ fun loadDeveloperCommands() {
         bank.refreshTabs()
         bank.refreshItems()
         p.sendMessage("Bank filled to ${bank.bankSize} slots, $added added.")
+    }
+
+    Commands.add(Rights.DEVELOPER, "instance (boss key)", "Opens the boss instance window, or lists the keys.") { p, args ->
+        val key = args.getOrNull(0)
+        val def = key?.let { BossInstanceDefs[it] }
+        if (def == null) p.sendMessage("Bosses: " + BossInstanceDefs.all.joinToString(", ") { it.key })
+        else InstanceInterface.open(p, def)
+    }
+
+    Commands.add(Rights.DEVELOPER, "portrait [zoom] (pitch) (roll)", "Re-frames the open instance window's boss model so values can be tuned live.") { p, args ->
+        val zoom = args[0].toInt()
+        val pitch = args.getOrNull(1)?.toIntOrNull() ?: 0
+        val roll = args.getOrNull(2)?.toIntOrNull() ?: 0
+        InstanceInterface.applyPortrait(p, zoom, pitch, roll)
+        p.sendMessage("portraitZoom = $zoom, pitch = $pitch, roll = $roll")
+    }
+
+    Commands.add(Rights.DEVELOPER, "locsat (radius)", "Lists the locs around you with their ids, names and options.") { p, args ->
+        val radius = args.getOrNull(0)?.toIntOrNull() ?: 1
+        val seen = HashSet<Int>()
+        World.getChunkRadius(p.tile.getChunkId(), radius)
+            .mapNotNull { ChunkManager.getChunk(it) }
+            .flatMap { it.baseObjects + it.spawnedObjects }
+            .filter { seen.add(it.id) }
+            .sortedBy { Utils.getDistance(p.tile, it.tile) }
+            .take(30)
+            .forEach { obj ->
+                val options = obj.definitions.options?.filterNotNull()?.filter { it.isNotBlank() && it != "null" } ?: emptyList()
+                p.packets.sendDevConsoleMessage("${obj.id} ${obj.definitions.name} @ ${obj.tile.x},${obj.tile.y},${obj.tile.plane} [${options.joinToString(", ")}]")
+            }
+        p.sendMessage("Listed ${seen.size} locs within $radius chunk(s) - see the dev console.")
     }
 }

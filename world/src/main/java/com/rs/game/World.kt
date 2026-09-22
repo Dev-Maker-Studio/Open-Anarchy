@@ -736,7 +736,7 @@ object World {
     @JvmStatic
     fun isMultiArea(tile: Tile): Boolean {
         val chunkId = MapUtils.encode(Structure.CHUNK, tile.chunkX, tile.chunkY)
-        return Areas.withinArea("multi", chunkId) || (ChunkManager.getChunk(chunkId)?.isMulticombat ?: false)
+        return Areas.withinArea("multi", chunkId) || (ChunkManager.getChunk(tile.getChunkId())?.isMulticombat ?: false)
     }
 
     @JvmStatic

@@ -20,13 +20,11 @@ import com.rs.Settings;
 import com.rs.game.map.instance.InstanceBuilder;
 import com.rs.game.tasks.WorldTasks;
 import org.darkan.core.Logger;
-import com.rs.utils.Ticks;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class AsyncTaskExecutor {
 	public static volatile boolean SHUTDOWN;
@@ -54,29 +52,14 @@ public final class AsyncTaskExecutor {
 		}
 	}
 
-	public static void executeWorldThreadSafe(String methodName, CompletableFuture<Boolean> future, int timeoutSeconds, ThrowableRunnable operation) {
-		AtomicBoolean completed = new AtomicBoolean(false);
-		final int maxTicks = Ticks.fromSeconds(timeoutSeconds);
-		AsyncTaskExecutor.execute(() -> {
-			try {
-				operation.run();
-			} catch (Throwable e) {
-				Logger.handle(AsyncTaskExecutor.class, "executeWorldThreadSafe:" + methodName, e);
-			} finally {
-				completed.set(true);
-			}
-		});
-		WorldTasks.scheduleTimer(0, 0, tick -> {
-			if (completed.get()) {
-				future.complete(true);
-				return false;
-			}
-			if (tick >= maxTicks) {
-				future.completeExceptionally(new TimeoutException("Operation timed out."));
-				return false;
-			}
-			return true;
-		});
+	public static void executeWorldThreadSafe(String methodName, CompletableFuture<Boolean> future, ThrowableRunnable operation) {
+		try {
+			operation.run();
+			future.complete(true);
+		} catch (Throwable e) {
+			Logger.handle(AsyncTaskExecutor.class, "executeWorldThreadSafe:" + methodName, e);
+			future.completeExceptionally(e);
+		}
 	}
 
 	@FunctionalInterface
