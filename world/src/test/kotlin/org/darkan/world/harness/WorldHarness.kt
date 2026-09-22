@@ -88,9 +88,9 @@ object WorldHarness {
      * `WorldServer.initWorldLogin` does: `init(...)`, `start()`, flush, `setStarted()`.
      *
      * [chosenAccountType] defaults to true, i.e. an established character. `Player.processPackets`
-     * drops every packet except IfContinue and IfButton op1 while it is false, so a harness player
-     * left at the `new Player(...)` default cannot click, walk or talk at all - pass false only to
-     * test that gate.
+     * drops every packet except IfContinue and IfButton op1 while it is false, and `start()` hands
+     * a player without it to the tutorial, so a harness player left at the `new Player(...)`
+     * default cannot click, walk or talk at all - pass false only to test that gate.
      */
     fun login(
         username: String = "harness",
@@ -105,9 +105,12 @@ object WorldHarness {
         val session = RecordingSession(codec)
         val player = Player(account)
         player.init(session, account, screenMode, 1024, 768, MachineInformation())
+        // Before start(), which is where an unchosen account type takes over the login: tutorial
+        // island in a normal build, character customising in a debug one. Either leaves the player
+        // locked, so setting it afterwards made every test read the developer's own .env.
+        player.isChosenAccountType = chosenAccountType
         player.start()
         player.setStarted()
-        player.isChosenAccountType = chosenAccountType
         return HarnessPlayer(player, session)
     }
 
