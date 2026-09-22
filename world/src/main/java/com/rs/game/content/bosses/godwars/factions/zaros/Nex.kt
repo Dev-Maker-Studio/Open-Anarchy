@@ -62,6 +62,7 @@ private val PHASE_STEPS = listOf(
 )
 
 class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned, MINIONS, MinionPolicy.BOUND) {
+    private val baseId = id
     var arena: NexArena? = null
     var isFollowTarget = false
     var phase = NexPhase.SMOKE
@@ -113,12 +114,18 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
 
     override fun onRespawn() {
         super.onRespawn()
+        restoreForm()
         phase = NexPhase.SMOKE
         minionStage = 0
         attackCount = 1
         capDamage = 500
         setCantInteract(true)
         summon()
+    }
+
+    /** Her prayer switches and her death throes are all transformations; a fresh Nex wears none. */
+    private fun restoreForm() {
+        if (id != baseId) transformIntoNPC(baseId)
     }
 
     /** Nex takes her minions' power before she will fight: nothing can touch her until she has. */
@@ -164,6 +171,7 @@ class Nex(id: Int, tile: Tile, spawned: Boolean) : MinionHost(id, tile, spawned,
             if (tick == 0) anim(defs.deathEmote)
             else if (tick >= defs.deathDelay) {
                 drop()
+                restoreForm()
                 reset()
                 val war = arena
                 if (war != null) {
