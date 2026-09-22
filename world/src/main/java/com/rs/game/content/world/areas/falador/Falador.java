@@ -27,6 +27,7 @@ import world.gregs.voidps.type.Tile;
 import org.darkan.core.model.WorldObject;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
+import static com.rs.game.content.bosses.instance.InstanceEntrancesKt.isInstanceOption;
 import com.rs.plugin.handlers.PlayerStepHandler;
 
 @PluginEventHandler
@@ -118,6 +119,8 @@ public class Falador {
 	});
 
 	public static ObjectClickHandler handGiantMoleEntrance = new ObjectClickHandler(new Object[] { 12202 }, e -> {
+		if (isInstanceOption(e.getOption()))
+			return;
 		Player player = e.getPlayer();
 		GameObject object = e.getObj();
 
