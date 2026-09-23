@@ -49,7 +49,7 @@ open class MinionHost(
     override fun finish() {
         super.finish()
         if (policy != MinionPolicy.BOUND) return
-        minions.forEach { if (!it.hasFinished()) it.permanentlyDelete() }
+        minions.forEach { it.permanentlyDelete() }
         minions.clear()
     }
 
@@ -60,9 +60,15 @@ open class MinionHost(
         }
     }
 
+    /**
+     * A bound minion is marked as spawned so that dying never schedules a respawn of its own: the
+     * host is the only thing that may bring it back, and one that respawned itself outlived the
+     * roster it was in and haunted the arena.
+     */
     private fun spawnMinions() {
+        val ownLifecycle = policy == MinionPolicy.BOUND
         minionSpawns.mapTo(minions) { spawn ->
-            World.spawnNPC(spawn.npcId, spawn.tileFrom(respawnTile), isSpawned, true).also {
+            World.spawnNPC(spawn.npcId, spawn.tileFrom(respawnTile), ownLifecycle, true).also {
                 (it as? HostedMinion)?.host = this
             }
         }
