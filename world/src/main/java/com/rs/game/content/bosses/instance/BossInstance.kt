@@ -60,9 +60,10 @@ class BossInstance(val def: BossInstanceDef, val ownerUsername: String, var sett
         }
     }
 
-    /** A fresh payment buys another hour on top of whatever is left, and wakes the arena back up. */
-    fun renew() {
-        paidUntil = maxOf(System.currentTimeMillis(), paidUntil) + LIFETIME_MILLIS
+    /** A fresh payment buys more time on top of whatever is left, and wakes the arena back up. */
+    @JvmOverloads
+    fun renew(hours: Int = 1) {
+        paidUntil = maxOf(System.currentTimeMillis(), paidUntil) + hours * LIFETIME_MILLIS
         exhausted = false
         applySpawnSpeed()
     }
