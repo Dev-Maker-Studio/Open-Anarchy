@@ -1,6 +1,7 @@
 package com.rs.game.content.items
 
 import com.rs.engine.dialogue.sendOptionsDialogue
+import com.rs.game.content.bosses.instance.BossInstances
 import com.rs.game.World.getServerTicks
 import com.rs.game.content.Effect
 import com.rs.game.content.Potion
@@ -39,7 +40,7 @@ fun mapStaffPotato() {
                     Effect.SHOOTING_STAR_MINING_BUFF, Effect.OOG_THERMAL_POOL, Effect.OOG_SALTWATER_POOL,
                     Effect.PATCH_BOMB
                 ).forEach {
-                    e.player.addEffect(it, Ticks.fromHours(1000).toLong())
+                    e.player.addEffect(it, Ticks.fromHours(POTATO_HOURS).toLong())
                 }
                 arrayOf(
                     Potion.RECOVER_SPECIAL, Potion.SUPER_RESTORE, Potion.SUPER_ENERGY,
@@ -90,6 +91,9 @@ fun mapStaffPotato() {
         e.player.anim(if (set) 529 else 528)
     }
 }
+
+/** How long the potato hands out anything it hands out. */
+private const val POTATO_HOURS = 1000
 
 private enum class Command(val cmdName: String, val action: (Player) -> Unit) {
     GOD("Toggle God", { p ->
@@ -158,8 +162,9 @@ private enum class Command(val cmdName: String, val action: (Player) -> Unit) {
     NEVER_LOG("Neverlog", { it.nsv.setB("idleLogImmune", true) }),
     AGGRO_POT("Aggro pot toggle", { p ->
         if (p.hasEffect(Effect.AGGRESSION_POTION)) p.removeEffect(Effect.AGGRESSION_POTION)
-        else p.addEffect(Effect.AGGRESSION_POTION, Ticks.fromHours(1000).toLong())
+        else p.addEffect(Effect.AGGRESSION_POTION, Ticks.fromHours(POTATO_HOURS).toLong())
         p.sendMessage("Aggression potion: " + p.hasEffect(Effect.AGGRESSION_POTION))
     }),
-    NO_RANDOMS("Stop randoms for session", { it.nsv.setL("lastRandom", getServerTicks() + Ticks.fromHours(1000)) })
+    NO_RANDOMS("Stop randoms for session", { it.nsv.setL("lastRandom", getServerTicks() + Ticks.fromHours(POTATO_HOURS)) }),
+    EXTEND_INSTANCE("Extend instance to $POTATO_HOURS hours", { it.sendMessage(BossInstances.grant(it, POTATO_HOURS)) })
 }
