@@ -2,6 +2,7 @@ package com.rs.game.content.commands.bot
 
 import com.rs.db.WorldDB
 import com.rs.engine.command.Commands
+import com.rs.game.content.combat.CombatDefinitions
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
@@ -12,7 +13,7 @@ import world.gregs.voidps.type.Tile
 
 @ServerStartupEvent
 fun loadBotPrepCommands() {
-    Commands.add(Rights.PLAYER, "botprep [tele x y (z) | item id (amount) | equip id | level skill level | reset]", "Prepares a verified bot for its task.") { p, args ->
+    Commands.add(Rights.PLAYER, "botprep [tele x y (z) | item id (amount) | equip id | level skill level | spellbook modern|ancient | prayers normal|curses | reset]", "Prepares a verified bot for its task.") { p, args ->
         if (!p.isBot) return@add
         if (p.controllerManager.controller != null) {
             p.sendMessage("botprep refused: finish the current activity first.")
@@ -27,6 +28,8 @@ fun loadBotPrepCommands() {
             "item" -> p.inventory.addItem(args[1].toInt(), args.getOrNull(2)?.toInt() ?: 1)
             "equip" -> equip(p, args[1].toInt())
             "level" -> setLevel(p, args[1].toInt(), args[2].toInt())
+            "spellbook" -> p.combatDefinitions.setSpellbook(CombatDefinitions.Spellbook.valueOf(args[1].uppercase()), requireQuest = false)
+            "prayers" -> p.prayer.setPrayerBook(args[1].equals("curses", ignoreCase = true), requireQuest = false)
             "reset" -> {
                 p.inventory.reset()
                 p.equipment.reset()
