@@ -1,5 +1,6 @@
 package org.darkan.core.net.prot.update
 
+import world.gregs.voidps.buffer.read.Reader
 import world.gregs.voidps.buffer.write.BufferWriter
 
 /**
@@ -65,4 +66,37 @@ class MaskRegistryBuilder<C, K : Enum<K>>(
     fun build(): MaskRegistry<C, K> = MaskRegistry(header = header, defs = defs.toList())
 }
 
+fun interface MaskHeaderDecoder {
+    fun read(reader: Reader): Int
+}
 
+data class MaskDecodeDef<C, K : Enum<K>>(
+    val key: K,
+    val bit: Int,
+    val decode: (C, Reader) -> Unit,
+)
+
+class MaskDecoderRegistry<C, K : Enum<K>>(
+    private val header: MaskHeaderDecoder,
+    private val defs: List<MaskDecodeDef<C, K>>,
+) {
+    fun decode(ctx: C, reader: Reader): Int {
+        val maskData = header.read(reader)
+        for (def in defs) {
+            if ((maskData and def.bit) != 0) def.decode(ctx, reader)
+        }
+        return maskData
+    }
+}
+
+class MaskDecoderRegistryBuilder<C, K : Enum<K>>(
+    private val header: MaskHeaderDecoder,
+) {
+    private val defs = mutableListOf<MaskDecodeDef<C, K>>()
+
+    fun mask(key: K, bit: Int, decode: (C, Reader) -> Unit) {
+        defs += MaskDecodeDef(key = key, bit = bit, decode = decode)
+    }
+
+    fun build(): MaskDecoderRegistry<C, K> = MaskDecoderRegistry(header = header, defs = defs.toList())
+}

@@ -3,6 +3,7 @@ package org.darkan.core.model
 import kotlinx.io.Source
 import kotlinx.serialization.Serializable
 import world.gregs.voidps.buffer.*
+import world.gregs.voidps.buffer.write.Writer
 import java.util.*
 
 @Serializable
@@ -92,6 +93,34 @@ data class MachineInformation(
             dxDriverYear = $dxDriverYear
         )
     """.trimIndent()
+    }
+
+    fun write(writer: Writer) {
+        writer.writeByte(version)
+        writer.writeByte(operatingSystem)
+        writer.writeByte(x64os)
+        writer.writeByte(osVendor)
+        writer.writeByte(javaVendor)
+        writer.writeByte(javaBuild)
+        writer.writeByte(javaSubBuild)
+        writer.writeByte(javaUpdate)
+        writer.writeByte(0)
+        writer.writeShort(maxMem)
+        writer.writeByte(processors)
+        writer.writeMedium(ram)
+        writer.writeShort(cpuClock)
+        writer.writePrefixedString(gpuModel ?: "")
+        writer.writePrefixedString("")
+        writer.writePrefixedString(dwDirectXVersion ?: "")
+        writer.writePrefixedString("")
+        writer.writeByte(dxDriverMonth)
+        writer.writeShort(dxDriverYear)
+        writer.writePrefixedString(cpuType ?: "")
+        writer.writePrefixedString(cpuData ?: "")
+        writer.writeByte(cpuCores)
+        writer.writeByte(cpuFamilyId)
+        cpuFeatureFlags.forEach(writer::writeInt)
+        writer.writeInt(cpuModelInfo)
     }
 
     companion object {

@@ -3,6 +3,11 @@ import org.darkan.build.gameval.GenerateGamevalConstants
 plugins {
     kotlin("plugin.serialization")
     idea
+    `maven-publish`
+}
+
+java {
+    withSourcesJar()
 }
 
 dependencies {
@@ -48,4 +53,33 @@ sourceSets.main {
 // So a Gradle-imported IDE indexes the constants (and marks them generated rather than hand-written).
 idea.module {
     generatedSourceDirs.add(layout.buildDirectory.dir("generated/sources/gameval/java").get().asFile)
+}
+
+publishing {
+    val ciProjectId: String? = System.getenv("CI_PROJECT_ID")
+    val ciJobToken: String? = System.getenv("CI_JOB_TOKEN")
+    val ciPipelineId: String? = System.getenv("CI_PIPELINE_ID")
+    val ciBranch: String? = System.getenv("CI_COMMIT_REF_SLUG")
+    val ciTag: String? = System.getenv("CI_COMMIT_TAG")
+
+    publications.create<MavenPublication>("library") {
+        version = ciTag ?: if (ciBranch != null && ciPipelineId != null) "${project.version}-${ciBranch}-${ciPipelineId}" else project.version.toString()
+        artifactId = "core"
+        from(components["java"])
+    }
+
+    if (ciProjectId == null || ciJobToken == null) return@publishing
+    repositories {
+        maven {
+            name = "GitLab"
+            url = uri("https://gitlab.com/api/v4/projects/${ciProjectId}/packages/maven")
+            credentials(HttpHeaderCredentials::class) {
+                name = "Job-Token"
+                value = ciJobToken
+            }
+            authentication {
+                create<HttpHeaderAuthentication>("header")
+            }
+        }
+    }
 }

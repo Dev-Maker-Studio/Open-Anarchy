@@ -3,6 +3,7 @@ package org.darkan.core.net.prot
 import world.gregs.voidps.buffer.Cp1252
 import java.io.ByteArrayOutputStream
 import org.darkan.core.net.prot.packet.*
+import kotlin.reflect.KClass
 
 /**
  * Encodes a list of zone [ServerProt] sub-packets into a [ByteArray] suitable for
@@ -41,68 +42,44 @@ object ZonePacketEncoder {
         return out.toByteArray()
     }
 
+    val SUB_PACKET_TYPES: List<KClass<out ServerProt>> = listOf(
+        CustomizeObject::class,
+        RemoveGroundItem::class,
+        CreateGroundItem::class,
+        DestroyObject::class,
+        CreateObject::class,
+        MapProjAnim::class,
+        MapProjAnimHalfSq::class,
+        ObjectPrefetch::class,
+        GroundItemReveal::class,
+        GroundItemCount::class,
+        SoundEffectTile::class,
+        TileMessage::class,
+        ObjAnim::class,
+        SoundAreaTile::class,
+        SpotAnim::class,
+    )
+
     private fun encodeSubPacket(out: ByteArrayOutputStream, packet: ServerProt) {
+        val index = SUB_PACKET_TYPES.indexOf(packet::class)
+        if (index == -1) error("Unknown zone packet type: ${packet::class.simpleName}")
+        out.write(index)
         when (packet) {
-            is CustomizeObject -> {
-                out.write(0)
-                encodeCustomizeObject(out, packet)
-            }
-            is RemoveGroundItem -> {
-                out.write(1)
-                encodeRemoveGroundItem(out, packet)
-            }
-            is CreateGroundItem -> {
-                out.write(2)
-                encodeCreateGroundItem(out, packet)
-            }
-            is DestroyObject -> {
-                out.write(3)
-                encodeDestroyObject(out, packet)
-            }
-            is CreateObject -> {
-                out.write(4)
-                encodeCreateObject(out, packet)
-            }
-            is MapProjAnim -> {
-                out.write(5)
-                encodeMapProjAnim(out, packet)
-            }
-            is MapProjAnimHalfSq -> {
-                out.write(6)
-                encodeMapProjAnimHalfSq(out, packet)
-            }
-            is ObjectPrefetch -> {
-                out.write(7)
-                encodeObjectPrefetch(out, packet)
-            }
-            is GroundItemReveal -> {
-                out.write(8)
-                encodeGroundItemReveal(out, packet)
-            }
-            is GroundItemCount -> {
-                out.write(9)
-                encodeGroundItemCount(out, packet)
-            }
-            is SoundEffectTile -> {
-                out.write(10)
-                encodeSoundEffectTile(out, packet)
-            }
-            is TileMessage -> {
-                out.write(11)
-                encodeTileMessage(out, packet)
-            }
-            is ObjAnim -> {
-                out.write(12)
-                encodeObjAnim(out, packet)
-            }
-            is SoundAreaTile -> {
-                out.write(13)
-                encodeSoundAreaTile(out, packet)
-            }
-            is SpotAnim -> {
-                out.write(14)
-                encodeSpotAnim(out, packet)
-            }
+            is CustomizeObject -> encodeCustomizeObject(out, packet)
+            is RemoveGroundItem -> encodeRemoveGroundItem(out, packet)
+            is CreateGroundItem -> encodeCreateGroundItem(out, packet)
+            is DestroyObject -> encodeDestroyObject(out, packet)
+            is CreateObject -> encodeCreateObject(out, packet)
+            is MapProjAnim -> encodeMapProjAnim(out, packet)
+            is MapProjAnimHalfSq -> encodeMapProjAnimHalfSq(out, packet)
+            is ObjectPrefetch -> encodeObjectPrefetch(out, packet)
+            is GroundItemReveal -> encodeGroundItemReveal(out, packet)
+            is GroundItemCount -> encodeGroundItemCount(out, packet)
+            is SoundEffectTile -> encodeSoundEffectTile(out, packet)
+            is TileMessage -> encodeTileMessage(out, packet)
+            is ObjAnim -> encodeObjAnim(out, packet)
+            is SoundAreaTile -> encodeSoundAreaTile(out, packet)
+            is SpotAnim -> encodeSpotAnim(out, packet)
             else -> error("Unknown zone packet type: ${packet::class.simpleName}")
         }
     }

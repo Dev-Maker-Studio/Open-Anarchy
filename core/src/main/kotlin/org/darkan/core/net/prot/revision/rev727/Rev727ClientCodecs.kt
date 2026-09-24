@@ -1,6 +1,8 @@
 package org.darkan.core.net.prot.revision.rev727
 
+import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.core.remaining
+import io.ktor.utils.io.writeInt
 import kotlinx.io.readByteArray
 import kotlinx.io.readUByte
 import kotlinx.io.readUShort
@@ -11,7 +13,6 @@ import org.darkan.core.net.prot.*
 import org.darkan.core.net.prot.packet.*
 import world.gregs.voidps.buffer.*
 import org.darkan.core.fixChatMessage
-import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.type.Tile
 
 /** The value a 16-bit interface field carries when the client means "none". */
@@ -35,6 +36,34 @@ private const val NONE_16 = 0xFFFF
  */
 private fun Int.orNone(): Int = if (this == NONE_16) -1 else this
 
+private fun interfaceHash(interfaceId: Int, componentId: Int): Int = (interfaceId shl 16) or (componentId and NONE_16)
+
+private const val PREFERENCES_HEADER = 28
+
+private val LAST_PREFERENCE_INDEX = (1..255).last { Preference.forIndex(it) != null }
+
+
+private suspend fun ByteWriteChannel.writeWalk(walk: Walk) {
+    writeBoolean(walk.forceRun)
+    writeShort(walk.x)
+    writeShortLittle(walk.y)
+}
+
+private suspend fun ByteWriteChannel.writeMouseTrailStep(step: MouseTrailStep) {
+    when {
+        step.type == Type.SET_POSITION -> {
+            if (step.frames < 32) writeByte(step.frames + 192)
+            else writeShort((step.frames and 0x1FFF) + 57344)
+            writeInt((step.y shl 16) or (step.x and 0xFFFF))
+        }
+        step.frames < 8 && step.x in 0..63 && step.y in 0..63 -> writeShort((step.frames shl 12) + (step.x shl 6) + step.y)
+        else -> {
+            writeByte(step.frames + 128)
+            writeShort((step.x shl 8) + step.y)
+        }
+    }
+}
+
 internal fun Codec.registerRev727ClientProts() {
     //Utility/clientwatch
     clientProt<Ping>(opcode = 0)
@@ -46,14 +75,21 @@ internal fun Codec.registerRev727ClientProts() {
             pid = readUShort().toInt(),
             username = readRSString()
         )
+    }.encoder { out ->
+        out.writeShort(pid)
+        out.writeRSString(username)
     }
 
     // Client writes: writeInt(checkId), then one result blob per requested operation.
     clientProt(opcode = 36, size = ProtSize.VarByte) {
         ReflectionResponse(readInt(), readByteArray(remaining.toInt()))
+    }.encoder { out ->
+        out.writeInt(id)
+        out.writeBytes(data)
     }
 
     clientProt(opcode = 62, size = 1) { ClientFocus(readBoolean()) }
+        .encoder { out -> out.writeBoolean(focused) }
 
     clientProt(opcode = 84, size = 6) {
         ClientScreenSize(
@@ -62,10 +98,18 @@ internal fun Codec.registerRev727ClientProts() {
             height = readUShort().toInt(),
             switchDisplayMode = readBoolean()
         )
+    }.encoder { out ->
+        out.writeByte(displayMode)
+        out.writeShort(width)
+        out.writeShort(height)
+        out.writeBoolean(switchDisplayMode)
     }
 
     clientProt(opcode = 83, size = 4) {
         MoveCamera(angleX = readUShortAddLittle(), angleY = readUShortAdd())
+    }.encoder { out ->
+        out.writeShortAddLittle(angleX)
+        out.writeShortAdd(angleY)
     }
 
     clientProt(opcode = 44, size = 9) { //TODO test
@@ -74,6 +118,10 @@ internal fun Codec.registerRev727ClientProts() {
             key2 = readUIntMiddle(),
             fps = readByteSubtract()
         )
+    }.encoder { out ->
+        out.writeIntInverseMiddle(key1)
+        out.writeIntMiddle(key2)
+        out.writeByteSubtract(fps)
     }
 
     clientProt(opcode = 59, size = 6) {
@@ -85,6 +133,9 @@ internal fun Codec.registerRev727ClientProts() {
             x = positionHash and 0xFFFF,
             y = positionHash ushr 16
         )
+    }.encoder { out ->
+        out.writeIntLittle((x and 0xFFFF) or (y shl 16))
+        out.writeShort((time and 0x7FFF) or (mouseButton shl 15))
     }
 
     // Opcode 57 is emitted only by the client's native (jaclib/ICMP) mouse hook, so every event
@@ -103,6 +154,10 @@ internal fun Codec.registerRev727ClientProts() {
             y = positionHash ushr 16,
             hw = true
         )
+    }.encoder { out ->
+        out.writeIntLittle((x and 0xFFFF) or (y shl 16))
+        out.writeByteAdd(mouseButton shl 1)
+        out.writeShortLittle(time)
     }
 
     // Opcode 40 is the native (jaclib/ICMP) mouse trail, opcode 78 the java/AWT one: the client
@@ -162,9 +217,21 @@ internal fun Codec.registerRev727ClientProts() {
             frameCount = frameCount,
             frameSteps = frameSteps
         )
+    }.encoder(opcode = { if (it.steps.all(MouseTrailStep::hardware)) 40 else 78 }) { out ->
+        val hardware = steps.all(MouseTrailStep::hardware)
+        out.writeByte(frameSteps)
+        out.writeByte(frameCount)
+        for (step in steps) {
+            out.writeMouseTrailStep(step)
+            if (hardware) out.writeByte(0)
+        }
     }
 
     clientProt(opcode = 28, size = ProtSize.VarShort) { KeyPress(keyCode = readByte().toInt(), time = readUMedium()) }
+        .encoder { out ->
+            out.writeByte(keyCode)
+            out.writeMedium(time)
+        }
 
     clientProt(opcode = 85, size = ProtSize.VarByte) {
         ClientCheat(
@@ -172,6 +239,10 @@ internal fun Codec.registerRev727ClientProts() {
             save = readBoolean(),
             command = readRSString()
         )
+    }.encoder { out ->
+        out.writeBoolean(client)
+        out.writeBoolean(save)
+        out.writeRSString(command)
     }
 
     // Entity interactions
@@ -182,6 +253,9 @@ internal fun Codec.registerRev727ClientProts() {
             playerIndex = readShort().toInt(),
             forceRun = readBooleanSubtract()
         )
+    }.encoder(opcode = { playerOpOpcodes[it.opNum - 1] }) { out ->
+        out.writeShort(playerIndex)
+        out.writeBooleanSubtract(forceRun)
     }
 
     val npcOpOpcodes = intArrayOf(65, 16, 50, 77, 95, 3)
@@ -191,6 +265,9 @@ internal fun Codec.registerRev727ClientProts() {
             npcIndex = readUShort().toInt(),
             forceRun = readBoolean()
         )
+    }.encoder(opcode = { npcOpOpcodes[it.opNum - 1] }) { out ->
+        out.writeShort(npcIndex)
+        out.writeBoolean(forceRun)
     }
 
     val objOpOpcodes = intArrayOf(75, 93, 38, 32, 48, 73)
@@ -202,6 +279,11 @@ internal fun Codec.registerRev727ClientProts() {
             objectId = readInt(),
             forceRun = readBooleanAdd()
         )
+    }.encoder(opcode = { objOpOpcodes[it.opNum - 1] }) { out ->
+        out.writeShort(y)
+        out.writeShort(x)
+        out.writeInt(objectId)
+        out.writeBooleanAdd(forceRun)
     }
 
     val groundItemOpOpcodes = intArrayOf(24, 25, 54, 8, 43, 61)
@@ -213,6 +295,11 @@ internal fun Codec.registerRev727ClientProts() {
             y = readUShort().toInt(),
             x = readUShortAdd()
         )
+    }.encoder(opcode = { groundItemOpOpcodes[it.opNum - 1] }) { out ->
+        out.writeShortAddLittle(itemId)
+        out.writeBooleanInverse(forceRun)
+        out.writeShort(y)
+        out.writeShortAdd(x)
     }
 
     clientProt(opcode = 33, size = 5) {
@@ -220,8 +307,9 @@ internal fun Codec.registerRev727ClientProts() {
         val x = readUShort().toInt()
         val y = readUShortLittle()
         Walk(x, y, forceRun, false)
-    }
+    }.encoder { out -> out.writeWalk(this) }
 
+    // A client resolves Walk to this codec by class, so a plain walk goes out as 33 (fixed frames carry no length).
     clientProt(opcode = 42, size = 18) {
         val forceRun = readBoolean()
         val x = readUShort().toInt()
@@ -237,6 +325,19 @@ internal fun Codec.registerRev727ClientProts() {
         val absY = readUShort().toInt()
         readByte() //always 63
         Walk(x, y, forceRun, true)
+    }.encoder(opcode = { if (it.minimap) 42 else 33 }) { out ->
+        out.writeWalk(this)
+        if (!minimap) return@encoder
+        out.writeByte(-1)
+        out.writeByte(-1)
+        out.writeShort(0)
+        out.writeByte(57)
+        out.writeByte(0)
+        out.writeByte(0)
+        out.writeByte(89)
+        out.writeShort(0)
+        out.writeShort(0)
+        out.writeByte(63)
     }
 
     // Interface interactions
@@ -252,6 +353,10 @@ internal fun Codec.registerRev727ClientProts() {
             itemId = readUShort().toInt().orNone(),
             slotId = readUShortAdd().orNone()
         )
+    }.encoder(opcode = { ifButtonOpcodes[it.opNum - 1] }) { out ->
+        out.writeIntLittle(interfaceHash(interfaceId, componentId))
+        out.writeShort(itemId)
+        out.writeShortAdd(slotId)
     }
 
     clientProt(opcode = 4, size = 16) {
@@ -271,6 +376,13 @@ internal fun Codec.registerRev727ClientProts() {
             fromItemId = fromItemId,
             toItemId = toItemId
         )
+    }.encoder { out ->
+        out.writeShortAddLittle(toSlot)
+        out.writeShortLittle(fromSlot)
+        out.writeShortAddLittle(toItemId)
+        out.writeIntLittle(interfaceHash(toInter, toComp))
+        out.writeIntInverseMiddle(interfaceHash(fromInter, fromComp))
+        out.writeShortLittle(fromItemId)
     }
 
     clientProt(opcode = 98, size = 17) {
@@ -291,6 +403,14 @@ internal fun Codec.registerRev727ClientProts() {
             y = y,
             forceRun = forceRun
         )
+    }.encoder { out ->
+        out.writeShortAddLittle(x)
+        out.writeBooleanSubtract(forceRun)
+        out.writeIntMiddle(objectId)
+        out.writeInt(interfaceHash(interfaceId, componentId))
+        out.writeShortLittle(itemId)
+        out.writeShortAdd(slotId)
+        out.writeShortLittle(y)
     }
 
     clientProt(opcode = 67, size = 15) {
@@ -313,6 +433,14 @@ internal fun Codec.registerRev727ClientProts() {
             y = y,
             forceRun = forceRun
         )
+    }.encoder { out ->
+        out.writeShortAdd(itemIdContainer)
+        out.writeIntInverseMiddle(interfaceHash(interfaceId, componentId))
+        out.writeShort(itemId)
+        out.writeBooleanSubtract(forceRun)
+        out.writeShortAddLittle(slotId)
+        out.writeShortAddLittle(y)
+        out.writeShortLittle(x)
     }
 
     clientProt(opcode = 41, size = 11) {
@@ -329,6 +457,12 @@ internal fun Codec.registerRev727ClientProts() {
             npcIndex = npcIndex,
             forceRun = forceRun
         )
+    }.encoder { out ->
+        out.writeIntInverseMiddle(interfaceHash(interfaceId, componentId))
+        out.writeShortAddLittle(npcIndex)
+        out.writeBooleanSubtract(forceRun)
+        out.writeShortAddLittle(itemId)
+        out.writeShortAdd(slotId)
     }
 
     clientProt(opcode = 13, size = 11) {
@@ -345,6 +479,12 @@ internal fun Codec.registerRev727ClientProts() {
             playerIndex = playerIndex,
             forceRun = forceRun
         )
+    }.encoder { out ->
+        out.writeShort(slotId)
+        out.writeShortLittle(playerIndex)
+        out.writeBooleanSubtract(forceRun)
+        out.writeIntInverseMiddle(interfaceHash(interfaceId, componentId))
+        out.writeShortLittle(itemId)
     }
 
     clientProt(opcode = 46, size = 12) {
@@ -361,6 +501,12 @@ internal fun Codec.registerRev727ClientProts() {
             x = x,
             y = y
         )
+    }.encoder { out ->
+        out.writeShortLittle(itemId)
+        out.writeShortLittle(y)
+        out.writeIntMiddle(interfaceHash(interfaceId, componentId))
+        out.writeShortAdd(slotId)
+        out.writeShortLittle(x)
     }
 
     clientProt(opcode = 49, size = 6) {
@@ -371,6 +517,9 @@ internal fun Codec.registerRev727ClientProts() {
             componentId = (interfaceHash and 0xFFFF).orNone(),
             slotId = slotId
         )
+    }.encoder { out ->
+        out.writeIntMiddle(interfaceHash(interfaceId, componentId))
+        out.writeShortAddLittle(slotId)
     }
 
     // The drop target of a bank drag can be a tab header, which is a component with no slot: the
@@ -394,31 +543,51 @@ internal fun Codec.registerRev727ClientProts() {
             fromItemId = fromItemId,
             toItemId = toItemId
         )
+    }.encoder { out ->
+        out.writeShortAddLittle(toSlot)
+        out.writeShortLittle(fromSlot)
+        out.writeShort(toItemId)
+        out.writeShortAddLittle(fromItemId)
+        out.writeIntMiddle(interfaceHash(fromInter, fromComp))
+        out.writeIntLittle(interfaceHash(toInter, toComp))
     }
 
     clientProt<CloseInterface>(opcode = 60)
 
     // Dialog interactions
     clientProt(opcode = 87, size = ProtSize.VarByte) { ResumeTextDialog(readRSString()) }
+        .encoder { out -> out.writeRSString(text) }
     clientProt(opcode = 80, size = ProtSize.VarByte) { ResumeNameDialog(readRSString()) }
+        .encoder { out -> out.writeRSString(name) }
     clientProt(opcode = 69, size = ProtSize.VarByte) { ResumeClanForumQFCDialog(readRSString()) }
+        .encoder { out -> out.writeRSString(forumQfc) }
     clientProt(opcode = 11, size = 2) { ResumeHSLDialog(readUShort().toInt()) }
+        .encoder { out -> out.writeShort(data) }
     clientProt(opcode = 58, size = 4) { ResumeCountDialog(readInt()) }
+        .encoder { out -> out.writeInt(count) }
     // Read signed on purpose: the client writes -1 when the obj dialog is dismissed without a
     // pick, matching legacy GEItemSelect's `readShort()`.
     clientProt(opcode = 17, size = 2) { ResumeItemSelect(readShort().toInt()) }
+        .encoder { out -> out.writeShort(itemId) }
 
     // Communication
     clientProt(opcode = 86, size = ProtSize.VarByte) {
         Chat(
             color = readUByte().toInt().coerceIn(0, 12),
             effect = readUByte().toInt().coerceIn(0, 5),
-            message = (Cache.huffman.decompress(length = readSmart(), message = readByteArray(remaining.toInt())) ?: "").fixChatMessage()
+            message = (chatHuffman().decompress(length = readSmart(), message = readByteArray(remaining.toInt())) ?: "").fixChatMessage()
         )
+    }.encoder { out ->
+        out.writeByte(color)
+        out.writeByte(effect)
+        out.writeBytes(chatHuffman().compress(message))
     }
 
     clientProt(opcode = 15, size = ProtSize.VarShort) {
-        PrivateMessage(readRSString(), (Cache.huffman.decompress(length = readSmart(), message = readByteArray(remaining.toInt())) ?: "").fixChatMessage())
+        PrivateMessage(readRSString(), (chatHuffman().decompress(length = readSmart(), message = readByteArray(remaining.toInt())) ?: "").fixChatMessage())
+    }.encoder { out ->
+        out.writeRSString(toDisplayName)
+        out.writeBytes(chatHuffman().compress(message))
     }
 
     clientProt(opcode = 64, size = ProtSize.VarByte) {
@@ -427,6 +596,10 @@ internal fun Codec.registerRev727ClientProts() {
             qcId = readUShort().toInt(),
             messageData = if (remaining > 0) readByteArray(remaining.toInt()) else null
         )
+    }.encoder { out ->
+        out.writeByte(chatType)
+        out.writeShort(qcId)
+        messageData?.let { out.writeBytes(it) }
     }
 
     clientProt(opcode = 14, size = ProtSize.VarByte) {
@@ -435,21 +608,44 @@ internal fun Codec.registerRev727ClientProts() {
             qcId = readUShort().toInt(),
             messageData = if (remaining > 0) readByteArray(remaining.toInt()) else null
         )
+    }.encoder { out ->
+        out.writeRSString(toUsername)
+        out.writeShort(qcId)
+        messageData?.let { out.writeBytes(it) }
     }
 
     clientProt(opcode = 30, size = 1) { ChatType(readUByte().toInt()) }
+        .encoder { out -> out.writeByte(type) }
     clientProt(opcode = 20, size = 3) { ChatSetFilter(readUByte().toInt(), readUByte().toInt(), readUByte().toInt()) }
+        .encoder { out ->
+            out.writeByte(publicFilter)
+            out.writeByte(privateFilter)
+            out.writeByte(tradeFilter)
+        }
 
     // Friends/Ignore List
     clientProt(opcode = 26, size = ProtSize.VarByte) { AddFriend(readRSString()) }
+        .encoder { out -> out.writeRSString(name) }
     clientProt(opcode = 29, size = ProtSize.VarByte) { RemoveFriend(readRSString()) }
+        .encoder { out -> out.writeRSString(name) }
     clientProt(opcode = 34, size = ProtSize.VarByte) { AddIgnoreReq(readRSString(), readBoolean()) }
+        .encoder { out ->
+            out.writeRSString(username)
+            out.writeBoolean(temporary)
+        }
     clientProt(opcode = 12, size = ProtSize.VarByte) { RemoveIgnore(readRSString()) }
+        .encoder { out -> out.writeRSString(name) }
 
     // Friend Chat
     clientProt(opcode = 71, size = ProtSize.VarByte) { FcJoin(if (remaining > 0) readRSString() else null) }
+        .encoder { out -> fcName?.let { out.writeRSString(it) } }
     clientProt(opcode = 91, size = ProtSize.VarByte) { FcKick(readRSString()) }
+        .encoder { out -> out.writeRSString(username) }
     clientProt(opcode = 7, size = ProtSize.VarByte) { FcSetRank(rank = readByteSubtract(), username = readRSString()) }
+        .encoder { out ->
+            out.writeByteSubtract(rank)
+            out.writeRSString(username)
+        }
 
     // Clan Chat
     clientProt(opcode = 90, size = ProtSize.VarByte) {
@@ -458,15 +654,24 @@ internal fun Codec.registerRev727ClientProts() {
             pid = readUShort().toInt(),
             username = readRSString()
         )
+    }.encoder { out ->
+        out.writeBoolean(!guest)
+        out.writeShort(pid)
+        out.writeRSString(username)
     }
 
     // Game State
     clientProt<RegionLoadedConfirm>(opcode = 76)
     clientProt(opcode = 2, size = 4) { SoundEffectMusicEnded(readInt()) }
+        .encoder { out -> out.writeInt(musicId) }
     clientProt(opcode = 18, size = 4) { SongLoaded(readInt()) }
+        .encoder { out -> out.writeInt(songId) }
     clientProt(opcode = 45, size = 1) { CutsceneFinished(readBoolean()) }
+        .encoder { out -> out.writeBoolean(forced) }
     clientProt(opcode = 88, size = 2) { WritePing(readUShort().toInt()) }
+        .encoder { out -> out.writeShort(ping) }
     clientProt(opcode = 5, size = 4) { WorldMapClick(Tile(readUIntLittle())) }
+        .encoder { out -> out.writeIntLittle(tile.id) }
 
     clientProt(opcode = 10, size = ProtSize.VarByte) {
         SendPreferences(buildMap {
@@ -480,10 +685,16 @@ internal fun Codec.registerRev727ClientProts() {
                     put(preference, value)
             }
         })
+    }.encoder { out ->
+        out.writeByte(PREFERENCES_HEADER)
+        for (index in 1..LAST_PREFERENCE_INDEX)
+            out.writeByte(Preference.forIndex(index)?.let { preferences[it] } ?: 0)
     }
 
     clientProt(opcode = 55, size = 4) { TransmitvarVerifyId(readInt()) }
+        .encoder { out -> out.writeInt(id) }
     clientProt(opcode = 47, size = 4) { RequestWorldList(readInt()) }
+        .encoder { out -> out.writeInt(worldlistVersion) }
 
     // Reporting/Bug Tracking
     clientProt(opcode = 100, size = ProtSize.VarByte) {
@@ -493,6 +704,11 @@ internal fun Codec.registerRev727ClientProts() {
             mute = readBoolean(),
             reason = readRSString()
         )
+    }.encoder { out ->
+        out.writeRSString(username)
+        out.writeByte(type)
+        out.writeBoolean(mute)
+        out.writeRSString(reason)
     }
 
     clientProt(opcode = 35, size = ProtSize.VarShort) {
@@ -501,15 +717,31 @@ internal fun Codec.registerRev727ClientProts() {
             body = readJagString(),
             reproSteps = readJagString()
         )
+    }.encoder { out ->
+        out.writeByte(category)
+        out.writeJagString(body)
+        out.writeJagString(reproSteps)
     }
 
     // Account/Login
     clientProt(opcode = 52, size = ProtSize.VarByte) { EmailValidationSubmitCode(readRSString()) }
+        .encoder { out -> out.writeRSString(code) }
     clientProt(opcode = 92, size = ProtSize.VarShort) { EmailValidationAddNewAddress(readRSString(), readByte().toInt()) }
+        .encoder { out ->
+            out.writeRSString(email)
+            out.writeByte(flags)
+        }
     clientProt(opcode = 99, size = ProtSize.VarShort) { EmailValidationChangeAddress(readRSString(), readRSString()) }
+        .encoder { out ->
+            out.writeRSString(email)
+            out.writeRSString(email2)
+        }
     clientProt(opcode = 102, size = ProtSize.VarShort) { CheckEmailValidity(readByteArray(remaining.toInt())) }
+        .encoder { out -> out.writeBytes(encryptedData) }
     clientProt(opcode = 101, size = ProtSize.VarShort) { SendSignUpForm(readByteArray(remaining.toInt())) }
+        .encoder { out -> out.writeBytes(encryptedData) }
     clientProt(opcode = 79, size = 1) { AccountCreationStage(readUByte().toInt()) }
+        .encoder { out -> out.writeByte(stage) }
 
     clientProt(opcode = 56, size = ProtSize.VarShort) {
         LobbyHyperlink(
@@ -518,11 +750,23 @@ internal fun Codec.registerRev727ClientProts() {
             query = readRSString(),
             flags = readByte().toInt()
         )
+    }.encoder { out ->
+        out.writeRSString(service)
+        out.writeRSString(page)
+        out.writeRSString(query)
+        out.writeByte(flags)
     }
 
     // Unknown/Misc
     clientProt(opcode = 37, size = 2) { PlayVorbis(readShort().toInt()) }
+        .encoder { out -> out.writeShort(fileId) }
     clientProt(opcode = 63, size = 4) { AltWalk(x = readUShortAdd(), y = readUShort().toInt()) }
+        .encoder { out ->
+            out.writeShortAdd(x)
+            out.writeShort(y)
+        }
     clientProt(opcode = 82, size = 4) { AppletLoadingPleaseWait(readInt() /*Always 1057001181*/) }
+        .encoder { out -> out.writeInt(data) }
     clientProt(opcode = 97, size = ProtSize.VarByte) { UnkCs2StringResponse(readRSString()) }
+        .encoder { out -> out.writeRSString(str) }
 }
