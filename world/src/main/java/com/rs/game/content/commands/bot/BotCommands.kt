@@ -23,16 +23,8 @@ private val botCommands: Map<String, (Player, List<String>) -> Unit> = mapOf(
         val item = args[0].toInt()
         if (p.inventory.addItem(item, 1)) Equipment.sendWear(p, p.inventory.items.getThisItemSlot(item), item, true)
     },
-    "level" to { p, args ->
-        val skill = args[0].toInt()
-        val level = args[1].toInt()
-        if (skill in Constants.SKILL_NAME.indices && level in 1..(if (skill == Constants.DUNGEONEERING) 120 else 99)) {
-            p.skills.set(skill, level)
-            p.skills.setXp(skill, Skills.getXPForLevel(level).toDouble())
-            p.appearance.generateAppearanceData()
-        }
-    },
-    "quest" to { p, args -> p.questManager.completeQuest(Quest.valueOf(args[0].uppercase())) },
+    "level" to { p, args -> setLevel(p, args[0].toInt(), args[1].toInt()) },
+    "quest" to { p, args -> completeWithRequirements(p, Quest.valueOf(args[0].uppercase()), mutableSetOf()) },
     "spellbook" to { p, args -> p.combatDefinitions.setSpellbook(CombatDefinitions.Spellbook.valueOf(args[0].uppercase())) },
     "prayers" to { p, args -> p.prayer.setPrayerBook(args[0].equals("curses", ignoreCase = true)) },
     "appearance" to { p, _ -> randomizeLook(p) },
@@ -42,6 +34,21 @@ private val botCommands: Map<String, (Player, List<String>) -> Unit> = mapOf(
         p.appearance.generateAppearanceData()
     },
 )
+
+private fun setLevel(p: Player, skill: Int, level: Int) {
+    if (skill !in Constants.SKILL_NAME.indices || level !in 1..(if (skill == Constants.DUNGEONEERING) 120 else 99)) return
+    p.skills.set(skill, level)
+    p.skills.setXp(skill, Skills.getXPForLevel(level).toDouble())
+    p.appearance.generateAppearanceData()
+}
+
+private fun completeWithRequirements(p: Player, quest: Quest, done: MutableSet<Quest>) {
+    if (!done.add(quest)) return
+    val info = quest.defs.extraInfo
+    info.preReqs.forEach { completeWithRequirements(p, it, done) }
+    info.preReqSkillReqs.forEach { (skill, level) -> if (p.skills.getLevelForXp(skill) < level) setLevel(p, skill, level) }
+    p.questManager.completeQuest(quest)
+}
 
 @ServerStartupEvent
 fun mapBotCommands() {
