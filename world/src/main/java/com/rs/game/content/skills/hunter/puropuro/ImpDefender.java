@@ -2,8 +2,7 @@ package com.rs.game.content.skills.hunter.puropuro;
 
 import org.darkan.core.map.pathfinder.collision.CollisionStrategyType;
 import com.rs.game.World;
-import com.rs.game.content.skills.hunter.FlyingEntityHunter;
-import com.rs.game.content.skills.hunter.FlyingEntityHunter.FlyingEntities;
+import com.rs.game.content.skills.hunter.FlyingEntities;
 import com.rs.game.model.entity.ForceTalk;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
@@ -12,6 +11,7 @@ import org.darkan.core.model.Animation;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
 import org.darkan.core.Utils;
+import org.darkan.core.gameval.gen.Obj;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.NPCInstanceHandler;
 import com.rs.utils.Ticks;
@@ -60,7 +60,7 @@ public class ImpDefender extends NPC {
                     p.lock();
                     walkToAndExecute(p.getNearestTeleTile(1), () -> {
                         p.faceEntityTile(this);
-                        p.getInventory().replace(jar, FlyingEntityHunter.IMPLING_JAR);
+                        p.getInventory().replace(jar, Obj.ii_impling_jar);
                         setNextForceTalk(new ForceTalk("Be Free!"));
                     });
                     p.unlock();

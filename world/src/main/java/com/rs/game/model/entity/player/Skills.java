@@ -20,6 +20,7 @@ import com.rs.Settings;
 import com.rs.game.World;
 import com.rs.game.content.Effect;
 import com.rs.game.content.Skillcapes;
+import com.rs.game.content.minigames.creations.StealingCreationController;
 import com.rs.game.content.randomevents.RandomEvents;
 import com.rs.game.content.world.areas.wilderness.WildernessController;
 import com.rs.game.model.entity.player.managers.AuraManager.Aura;
@@ -40,6 +41,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import java.util.HashSet;
 import java.util.Set;
+import org.darkan.core.gameval.gen.Obj;
 import org.darkan.core.gameval.gen.Varbit;
 
 @PluginEventHandler
@@ -943,8 +945,7 @@ public final class Skills {
 		if (player.getBonusXpRate() > 0.0)
 			modifier += player.getBonusXpRate();
 
-		if (event.getMultiplier() > 1.0)
-			modifier += event.getMultiplier();
+		modifier += event.getMultiplier() - 1.0;
 
 		if (player.getAuraManager().isActivated(Aura.WISDOM))
 			modifier += 0.025;
@@ -958,7 +959,7 @@ public final class Skills {
 			return;
 		int oldLevel = getLevelForXp(skill);
 		double oldXp = xp[skill];
-		if ((skill == HITPOINTS || skill == MAGIC) && (player.getInventory().containsItem(12850, 1) || player.getInventory().containsItem(12851, 1)))
+		if ((skill == HITPOINTS || skill == MAGIC) && !(player.getControllerManager().getController() instanceof StealingCreationController) && (player.getInventory().containsItem(Obj.hvh_elemental_rune, 1) || player.getInventory().containsItem(Obj.hvh_catalytic_rune, 1)))
 			; //do not add any XP if they are using minigame runes
 		else
 			xp[skill] += exp;

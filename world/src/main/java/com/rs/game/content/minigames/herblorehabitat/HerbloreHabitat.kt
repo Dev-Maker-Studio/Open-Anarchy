@@ -124,16 +124,15 @@ private fun chop(player: Player, obj: GameObject) {
         return
     }
 
+    val hatchet = Hatchet.getBest(player)
+    if (hatchet == null) {
+        player.sendMessage("You do not have a hatchet that you have the woodcutting level to use.")
+        return
+    }
     player.actionManager.setAction(object : PlayerAction() {
-        val hatchet = Hatchet.getBest(player)
-
         override fun start(player: Player): Boolean {
             player.actionManager.actionDelay = 3
             player.faceObject(obj)
-            if (hatchet == null) {
-                player.sendMessage("You do not have a hatchet that you have the woodcutting level to use.")
-                return false
-            }
             return true
         }
 

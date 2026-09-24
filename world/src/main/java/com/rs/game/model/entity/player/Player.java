@@ -41,6 +41,7 @@ import com.rs.game.World.DropMethod;
 import com.rs.game.content.*;
 import com.rs.game.content.ItemConstants.ItemDegrade;
 import com.rs.game.content.items.DegradeChargesKt;
+import com.rs.game.content.minigames.creations.SacredClayEquipmentKt;
 import com.rs.game.content.Toolbelt.Tools;
 import com.rs.game.content.achievements.AchievementInterface;
 import com.rs.game.content.bosses.godwars.GodwarsController;
@@ -2036,6 +2037,7 @@ public class Player extends Entity {
 			hit.soakDamage(0.10);
 			spotAnim(2180);
 		}
+		SacredClayEquipmentKt.defendWithSacredClayShield(this, hit);
 		int shieldId = equipment.getShieldId();
 		if (shieldId == 13742) {
 			if (Utils.getRandomInclusive(100) <= 70)

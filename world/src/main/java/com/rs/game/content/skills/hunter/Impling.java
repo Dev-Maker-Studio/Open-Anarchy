@@ -1,7 +1,6 @@
 package com.rs.game.content.skills.hunter;
 
 import org.darkan.core.map.pathfinder.collision.CollisionStrategyType;
-import com.rs.game.content.skills.hunter.FlyingEntityHunter.FlyingEntities;
 import com.rs.game.content.skills.hunter.puropuro.ImpDefender;
 import com.rs.game.map.ChunkManager;
 import com.rs.game.model.entity.Entity;
@@ -190,27 +189,27 @@ public class Impling extends NPC {
 
 
         for (Tile tile : STATIC_PUROPURO_BABY_IMPLING_SPAWNS) {
-            new Impling(FlyingEntityHunter.FlyingEntities.BABY_IMPLING_PP.getNpcId(), tile, false);
+            new Impling(FlyingEntities.BABY_IMPLING_PP.getNpcId(), tile, false);
         }
 
         for (Tile tile : STATIC_PUROPURO_YOUNG_IMPLING_SPAWNS) {
-            new Impling(FlyingEntityHunter.FlyingEntities.YOUNG_IMPLING_PP.getNpcId(), tile, false);
+            new Impling(FlyingEntities.YOUNG_IMPLING_PP.getNpcId(), tile, false);
         }
 
         for (Tile tile : STATIC_PUROPURO_GOURMET_IMPLING_SPAWNS) {
-            new Impling(FlyingEntityHunter.FlyingEntities.GOURMET_IMPLING_PP.getNpcId(), tile, false);
+            new Impling(FlyingEntities.GOURMET_IMPLING_PP.getNpcId(), tile, false);
         }
 
         for (Tile tile : STATIC_PUROPURO_EARTH_IMPLING_SPAWNS) {
-            new Impling(FlyingEntityHunter.FlyingEntities.EARTH_IMPLING_PP.getNpcId(), tile, false);
+            new Impling(FlyingEntities.EARTH_IMPLING_PP.getNpcId(), tile, false);
         }
 
         for (Tile tile : STATIC_PUROPURO_ESSENCE_IMPLING_SPAWNS) {
-            new Impling(FlyingEntityHunter.FlyingEntities.ESSENCE_IMPLING_PP.getNpcId(), tile, false);
+            new Impling(FlyingEntities.ESSENCE_IMPLING_PP.getNpcId(), tile, false);
         }
 
         for (Tile tile : STATIC_PUROPURO_ECLECTIC_IMPLING_SPAWNS) {
-            new Impling(FlyingEntityHunter.FlyingEntities.ECLECTIC_IMPLING_PP.getNpcId(), tile, false);
+            new Impling(FlyingEntities.ECLECTIC_IMPLING_PP.getNpcId(), tile, false);
         }
 
         for (Tile tile : DYNAMIC_PUROPURO_LOW_IMPLING_SPAWNS) {
