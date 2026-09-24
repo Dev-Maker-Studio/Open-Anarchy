@@ -114,6 +114,10 @@ object MapXteas {
         return keys.filterValues { keyArray -> !keyArray.all { it == 0 } }.keys
     }
 
+    fun put(regionId: Int, regionKeys: IntArray) {
+        keys = keys + (regionId to regionKeys.copyOf())
+    }
+
     /**
      * Clear loaded keys (for testing or reloading).
      */

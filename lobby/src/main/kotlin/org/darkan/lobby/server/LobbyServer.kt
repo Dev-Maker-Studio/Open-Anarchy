@@ -16,12 +16,15 @@ import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logTrace
 import org.darkan.core.net.Session
 import org.darkan.core.crypt.Crypto
-import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.generateRandom24ByteArray
 import org.darkan.core.model.MachineInformation
 import org.darkan.core.model.Account
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.*
+import org.darkan.core.net.login.LOGIN_CRC_COUNT
+import org.darkan.core.net.login.LobbyLoginRequest
+import org.darkan.core.net.login.LoginDecode
+import org.darkan.core.net.login.LoginRsaKey
 import org.darkan.core.net.prot.Codec
 import org.darkan.core.net.prot.packet.UpdateUid192
 import org.darkan.lobby.Lobby
@@ -44,6 +47,7 @@ class LobbyServer(val js5: JS5Server) {
 
     private val js5RsaMod = BigInteger(EnvVars.js5RsaModulus)
     private val js5RsaExp = BigInteger(EnvVars.js5RsaExponent)
+    private val loginKey = LoginRsaKey(js5RsaMod, js5RsaExp)
 
     private val pendingLogins = ConcurrentHashMap.newKeySet<String>()
 
@@ -128,51 +132,27 @@ class LobbyServer(val js5: JS5Server) {
         val packet = input.readPacket(size)
         val major = packet.readInt()
         val minor = packet.readInt()
-        val rsaSize = packet.readUShort().toInt()
         val codec = Codec.get(major) ?: return output.finish(ResponseOpcode.GAME_UPDATE)
-        val sensitiveData = ByteReadPacket(RSA.crypt(packet.readByteArray(rsaSize), js5RsaMod, js5RsaExp))
-        if (sensitiveData.readUByte().toInt() != 10) return output.finish(ResponseOpcode.BAD_SESSION_ID)
-        val isaacKeys = IntArray(4) { sensitiveData.readInt() }
-        if (sensitiveData.readLong().toInt() != 0) return output.finish(ResponseOpcode.BAD_SESSION_ID)
-        val password = sensitiveData.readRSString()
-        val unk1 = sensitiveData.readLong()
-        val unk2 = sensitiveData.readLong()
-        val xtea = packet.decryptXtea(isaacKeys)
-        val stringUsername = xtea.readBoolean()
-        val username = (if (stringUsername) xtea.readRSString() else xtea.readLong().toRSString()).formatPlayerNameForProtocol()
-        val gameType = xtea.readUByte()
-        val language = xtea.readUByte()
-        val randomDat = xtea.readByteArray(24)
-        val loginServerToken = xtea.readRSString()
-        val prefSize = xtea.readUByte().toInt()
-        val prefs = IntArray(prefSize)
-        for (i in prefs.indices) prefs[i] = xtea.readUByte().toInt()
-        val clientKey = xtea.readRSString()
-        val unknown1 = xtea.readInt()
-        val unknown2 = xtea.readInt()
-        val js5ServerToken = xtea.readRSString()
-
-        if (loginServerToken != EnvVars.loginServerToken) {
-            logError("Login server token mismatch: ${EnvVars.loginServerToken}, $loginServerToken from $username")
-            //return output.finish(ResponseOpcode.GAME_UPDATE)
+        val crcCount = minOf(Cache.get().indexCount(), LOGIN_CRC_COUNT)
+        val request = when (val decoded = LobbyLoginRequest.decode(major, minor, packet, loginKey, crcCount)) {
+            is LoginDecode.Rejected -> return output.finish(decoded.response)
+            is LoginDecode.Decoded -> decoded.request
         }
+        val username = request.username
+        val password = request.password
+        val isaacKeys = request.isaacSeed
 
-        if (js5ServerToken != EnvVars.js5ServerToken) {
-            logError("JS5 server token mismatch: ${EnvVars.js5ServerToken}, $js5ServerToken from $username")
-            //return output.finish(ResponseOpcode.GAME_UPDATE)
-        }
+        if (request.loginServerToken != EnvVars.loginServerToken)
+            logError("Login server token mismatch: ${EnvVars.loginServerToken}, ${request.loginServerToken} from $username")
+        if (request.js5ServerToken != EnvVars.js5ServerToken)
+            logError("JS5 server token mismatch: ${EnvVars.js5ServerToken}, ${request.js5ServerToken} from $username")
+        if (request.clientKey != EnvVars.clientKey)
+            logError("Client key mismatch: ${EnvVars.clientKey}, ${request.clientKey} from $username")
 
-        if (clientKey != EnvVars.clientKey) {
-            logError("Client key mismatch: ${EnvVars.clientKey}, $clientKey from $username")
-            //return output.finish(ResponseOpcode.GAME_UPDATE)
-        }
-
-        for (index in 0..<Cache.get().indexCount()) {
-            if (index > 35) break
-            val crc = Cache.get().indexCrcs()[index]
-            val receivedCRC = xtea.readInt()
-            if (crc != receivedCRC && index < 32) {
-                logError("CRC mismatch: $crc, $receivedCRC from $username")
+        val crcs = Cache.get().indexCrcs()
+        for (index in 0 until minOf(crcCount, INDEX_CRCS_CHECKED)) {
+            if (crcs[index] != request.indexCrcs[index]) {
+                logError("CRC mismatch: ${crcs[index]}, ${request.indexCrcs[index]} from $username")
                 return output.finish(ResponseOpcode.GAME_UPDATE)
             }
         }
@@ -309,6 +289,7 @@ class LobbyServer(val js5: JS5Server) {
         // The client retries NO_REPLY_FROM_LOGIN_SERVER by itself, so a login rush waits its turn
         // rather than being told its password is insecure, which is what response 11 renders as.
         const val MAX_LOGINS_IN_FLIGHT = 20
+        const val INDEX_CRCS_CHECKED = 32
     }
 
     private fun initSession(write: ByteWriteChannel, isaacKeys: IntArray, hostname: String, codec: Codec): Session {

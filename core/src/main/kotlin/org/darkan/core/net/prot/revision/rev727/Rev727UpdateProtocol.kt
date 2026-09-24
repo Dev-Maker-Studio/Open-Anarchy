@@ -45,6 +45,19 @@ object Rev727UpdateProtocol : UpdateProtocol {
     override fun encodePlayerAppearance(data: PlayerAppearanceData): PlayerAppearance =
         PlayerAppearance.of(Rev727AppearanceEncoder.encode(data))
 
+    override fun decodePlayerAppearance(data: ByteArray, layout: AppearanceLayout): PlayerAppearanceData =
+        Rev727AppearanceDecoder.decode(data, layout)
+
+    override fun decodePlayerUpdate(data: ByteArray, state: PlayerUpdateClientState): PlayerUpdateFrame =
+        Rev727PlayerUpdateDecoder.decode(data, state, playerBitConfig, state.appearanceLayout ?: Rev727AppearanceDecoder.DEFAULT_LAYOUT)
+
+    override fun decodeNpcUpdate(
+        data: ByteArray,
+        state: NpcUpdateClientState,
+        localTileHash30: Int,
+        largeSceneView: Boolean,
+    ): NpcUpdateFrame = Rev727NpcUpdateDecoder.decode(data, state, npcBitConfig, localTileHash30, largeSceneView)
+
     // ----------------------------
     // Player update
     // ----------------------------
