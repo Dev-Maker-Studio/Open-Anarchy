@@ -1284,10 +1284,12 @@ public class Player extends Entity {
 		}
 
 		if (isBot() && !isChosenAccountType()) {
+			RandomLook.randomizeLook(this);
 			setChosenAccountType(true);
 			setStarter(1);
 		}
 		if (!isChosenAccountType()) {
+			RandomLook.randomizeLook(this);
 			if (!Settings.getConfig().isDebug())
 				getControllerManager().startController(new TutorialIslandController());
 			else
