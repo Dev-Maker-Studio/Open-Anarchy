@@ -508,7 +508,7 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
                 player.sendMessage("You have been killed by ${killer.displayName}")
             }
             player.equipment.deleteSlot(Equipment.CAPE)
-            player.sendPVEItemsOnDeath(killer, true)
+            dropItems(killer)
             player.tele(game.area.respawnPoint(player, team))
             player.stopAll()
             game.updateScore(player) { die() }
@@ -521,6 +521,15 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
             player.reset()
         }
         return false
+    }
+
+    private fun dropItems(killer: Player?) {
+        val items = (player.inventory.items.itemsCopy + player.equipment.itemsCopy).filterNotNull()
+        player.inventory.reset()
+        player.equipment.reset()
+        player.appearance.generateAppearanceData()
+        val tile = Tile.of(player.tile)
+        items.forEach { World.addGroundItem(it, tile, killer ?: player) }
     }
 
     private companion object {
