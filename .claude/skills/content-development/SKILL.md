@@ -67,6 +67,10 @@ worked example of everything below.
   the first option - the underlying array is an implementation detail. `hasOption` is named apart
   from the legacy 0-based `containsOption(int, ...)` on purpose, so a re-synced legacy call fails
   to compile instead of quietly reading the option next door.
+- **Timed sequences**: `player.schedule { wait(n) }` (`game.model.entity.async`) for per-entity
+  steps, `WorldTasks.schedule(delay) { }` for world timers. `Entity.reset()` clears the entity's
+  scheduled tasks (`clearPendingTasks`), so nothing in a `schedule` block may `wait()` after it calls
+  `reset()`; hand the tail to `WorldTasks` (`StealingCreationController.sendDeath`).
 - **Animation**: `entity.anim(Animation)`; `setNextAnimation` is deprecated. XP: `skills.addXp`
   fires the event chain, `addXpLamp` does not.
 - **Messages** use the definition names (`ItemDefinitions.getDefs(id).name.lowercase()`,

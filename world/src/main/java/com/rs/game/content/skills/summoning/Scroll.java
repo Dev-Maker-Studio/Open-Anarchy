@@ -23,8 +23,7 @@ import com.rs.game.content.Effect;
 import com.rs.game.content.combat.CombatStyle;
 import com.rs.game.content.combat.PlayerCombatKt;
 import com.rs.game.content.minigames.MinigameUtilKt;
-import com.rs.game.content.minigames.creations.Score;
-import com.rs.game.content.minigames.creations.StealingCreationController;
+import com.rs.game.content.minigames.creations.StealingCreationControllerKt;
 import com.rs.game.content.skills.cooking.Foods;
 import com.rs.game.content.skills.crafting.JewelryCraftingKt;
 import com.rs.game.content.skills.dungeoneering.FamiliarSpecs;
@@ -1254,21 +1253,7 @@ public enum Scroll {
 	
 	CLAY_DEPOSIT(14421, ScrollTarget.CLICK, "Sends all held clay back to the base.", 0.0, 12) {
 		@Override
-		public boolean use(Player owner, Familiar familiar) { 
-			if (owner.getControllerManager().getController() == null || !(owner.getControllerManager().getController() instanceof StealingCreationController sc)) {
-				familiar.dismiss();
-				return false;
-			}
-            Score score = sc.getGame().getScore(owner);
-			if (score == null)
-				return false;
-			for (Item item : familiar.getInventory().array()) {
-				if (item == null)
-					continue;
-				sc.getGame().sendItemToBase(owner, item, sc.getTeam(), true, false);
-			}
-			return true;
-		}
+		public boolean use(Player owner, Familiar familiar) { return StealingCreationControllerKt.depositFamiliarItems(owner, familiar); }
 	};
 	
 	private static final Map<Integer, Scroll> MAP = new HashMap<>();

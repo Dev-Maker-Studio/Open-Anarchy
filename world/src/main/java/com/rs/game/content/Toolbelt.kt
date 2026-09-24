@@ -1,5 +1,6 @@
 package com.rs.game.content
 
+import com.rs.game.content.minigames.creations.substituteSacredClayTool
 import com.rs.game.content.skills.mining.Pickaxe
 import com.rs.game.content.skills.woodcutting.Hatchet
 import com.rs.game.model.entity.player.Player
@@ -290,8 +291,8 @@ fun Player.addToolbelt(itemId: Int): Boolean {
 }
 
 fun Player.containsTool(itemId: Int): Boolean {
-    val tool = Toolbelt.Tools.forId(itemId) ?: return false
-    return tool.contains(getToolValue(tool), itemId)
+    val tool = Toolbelt.Tools.forId(itemId)
+    return substituteSacredClayTool(itemId) || (tool != null && tool.contains(getToolValue(tool), itemId))
 }
 
 fun Player.getToolValue(tool: Toolbelt.Tools) = toolbelt[tool] ?: 0
