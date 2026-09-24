@@ -124,6 +124,16 @@ object Accounts : AccountStore {
         ))
     }
 
+    suspend fun createBot(username: String): Account? {
+        val formatted = username.formatPlayerNameForProtocol()
+        if (exists(formatted)) return null
+        return insertNew(Account(
+            username = formatted,
+            email = "$formatted@bots.darkan.org",
+            passwordHash = "",
+        ).apply { bot = true })
+    }
+
     suspend fun create(req: AccountCreateRequest): Account? {
         val formattedUsername = req.username.formatPlayerNameForProtocol()
         val formattedEmail = req.email.formatPlayerNameForProtocol()

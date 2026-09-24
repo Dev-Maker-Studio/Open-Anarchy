@@ -37,6 +37,7 @@ class Account {
     var banned: Long = 0
     var muted: Long = 0
     var lastIp: String? = null
+    var bot: Boolean = false
 
     constructor(username: String, email: String, passwordHash: String, displayName: String = username.formatPlayerNameForDisplay()) {
         this.username = username
@@ -105,7 +106,7 @@ class Account {
         nameChangeRequired = false
     }
 
-    fun view() = AccountView(username, displayName, rights, banned, muted, social)
+    fun view() = AccountView(username, displayName, rights, banned, muted, social, bot)
 
     fun onlineTo(other: Account) =
         !(other.social.status.toInt() == 2 || (other.social.status.toInt() == 1 && !other.social.friends.contains(username)))

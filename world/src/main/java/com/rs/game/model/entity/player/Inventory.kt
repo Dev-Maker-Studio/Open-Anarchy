@@ -436,6 +436,7 @@ private fun useItemOnPlayer(e: IFOnPlayerEvent) {
     val target = e.target
     val item = player.inventory.getItem(e.slotId) ?: return
     if (!player.controllerManager.processItemOnPlayer(target, item, e.slotId)) return
+    if (BotContainment.refuseExchange(player, target)) return
     player.stopAll(false)
     if (PluginManager.handle(ItemOnPlayerEvent(player, target, item, false))) return
     player.interactionManager.setInteraction(StandardEntityInteraction(target, 0) {

@@ -16,6 +16,7 @@
 //
 package com.rs.engine;
 
+import com.rs.game.model.entity.player.BotContainment;
 import org.darkan.core.cache.EnumDefinitions;
 import org.darkan.core.cache.ItemDefinitions;
 import world.gregs.voidps.cache.definition.data.EnumDefinition;
@@ -367,6 +368,8 @@ public class Shop {
 	}
 
 	public void sell(Player player, int slotId, int quantity) {
+		if (BotContainment.refuseEconomy(player))
+			return;
 		if (buyOnly) {
 			player.sendMessage("You cannot sell items to this shop.");
 			return;

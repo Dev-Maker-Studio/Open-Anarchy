@@ -57,7 +57,7 @@ public class HighscoresManager extends DBItemManager {
 	}
 
 	public void saveSync(Player player) {
-		if (player.hasRights(Rights.OWNER) || player.hasRights(Rights.DEVELOPER) || player.hasRights(Rights.ADMIN) || player.getSkills().getTotalXp() < 50000)
+		if (player.isBot() || player.hasRights(Rights.OWNER) || player.hasRights(Rights.DEVELOPER) || player.hasRights(Rights.ADMIN) || player.getSkills().getTotalXp() < 50000)
 			return;
 		try {
 			getDocs().findOneAndReplace(eq("username", player.getUsername()), Document.parse(JsonFileManager.toJson(new Highscore(player))), new FindOneAndReplaceOptions().upsert(true));

@@ -21,6 +21,8 @@ import org.darkan.core.model.MachineInformation
 import org.darkan.core.model.Account
 import org.darkan.core.mongo.collections.Accounts
 import org.darkan.core.net.*
+import org.darkan.core.isBotName
+import org.darkan.core.net.login.HeadlessClient
 import org.darkan.core.net.login.LOGIN_CRC_COUNT
 import org.darkan.core.net.login.LobbyLoginRequest
 import org.darkan.core.net.login.LoginDecode
@@ -50,6 +52,7 @@ class LobbyServer(val js5: JS5Server) {
     private val loginKey = LoginRsaKey(js5RsaMod, js5RsaExp)
 
     private val pendingLogins = ConcurrentHashMap.newKeySet<String>()
+    private val botIpWhitelist = IpAllowList(EnvVars.botIpWhitelist)
 
     suspend fun start(): Job {
         val executor = Executors.newCachedThreadPool()
@@ -65,7 +68,6 @@ class LobbyServer(val js5: JS5Server) {
                     logInfo("Lobby server started on port ${EnvVars.lobbyPort}")
                     while (isActive) {
                         val socket = serverSocket.accept()
-                        logInfo("Client connected: ${socket.remoteAddress.ipString()}")
                         connectClient(socket)
                     }
                 }
@@ -96,7 +98,13 @@ class LobbyServer(val js5: JS5Server) {
         try {
             val input = socket.openReadChannel()
             val output = socket.openWriteChannel(autoFlush = false)
-            val ip = socket.remoteAddress.ipString()
+            val peerIp = socket.remoteAddress.ipString()
+            val ip = ProxyProtocol.clientIp(peerIp, input)
+            if (ip == null) {
+                logInfo("Dropped connection from trusted proxy $peerIp without a valid PROXY header")
+                return@launch
+            }
+            logInfo("Client connected: $ip")
 
             try {
                 when (val reqOpcode = input.readByte().toInt()) {
@@ -161,7 +169,10 @@ class LobbyServer(val js5: JS5Server) {
         // Whatever happens below, the username must not stay in pendingLogins - a throwing decode
         // used to leave it there for good and lock the account out until restart.
         val account = try {
-            authenticate(username, password, output) ?: return
+            if (HeadlessClient.isHeadless(request.fingerprint) && username.isBotName())
+                authenticateBot(username, ip, output) ?: return
+            else
+                authenticate(username, password, output) ?: return
         } finally {
             pendingLogins.remove(username)
         }
@@ -189,6 +200,11 @@ class LobbyServer(val js5: JS5Server) {
         }
         if (account == null) {
             logInfo("Account not found: $username")
+            output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+            return null
+        }
+        if (account.bot) {
+            logInfo("Refused password login to bot account $username")
             output.finish(ResponseOpcode.INVALID_CREDENTIALS)
             return null
         }
@@ -224,6 +240,27 @@ class LobbyServer(val js5: JS5Server) {
             Accounts.save(account)
         } else {
             logInfo("Account has no usable credential: $username")
+            output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+            return null
+        }
+        return account
+    }
+
+    private suspend fun authenticateBot(username: String, ip: String, output: ByteWriteChannel): Account? {
+        if (!botIpWhitelist.contains(ip)) {
+            logInfo("Refused bot login $username from non-whitelisted $ip")
+            output.finish(ResponseOpcode.INVALID_CREDENTIALS)
+            return null
+        }
+        val account = try {
+            Accounts.find(username) ?: Accounts.createBot(username)?.also { logInfo("Created bot account $username for $ip") }
+        } catch (e: Exception) {
+            logError("Failed to load bot account $username", e)
+            output.finish(ResponseOpcode.COULD_NOT_COMPLETE_LOGIN)
+            return null
+        }
+        if (account == null || !account.bot) {
+            logInfo("Refused bot login $username: name belongs to a player account")
             output.finish(ResponseOpcode.INVALID_CREDENTIALS)
             return null
         }
