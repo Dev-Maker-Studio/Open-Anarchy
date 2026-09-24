@@ -333,6 +333,10 @@ public abstract class Controller {
 		return true;
 	}
 
+	public boolean allowsBotItemTransfer() {
+		return false;
+	}
+
     public boolean canDepositItem(Item item) {
 		return true;
     }

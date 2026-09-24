@@ -16,6 +16,7 @@
 //
 package com.rs.game.content.minigames.partyroom;
 
+import com.rs.game.model.entity.player.BotContainment;
 import org.darkan.core.model.ObjectShape;
 import org.darkan.core.model.IFEvents;
 import com.rs.game.World;
@@ -77,6 +78,8 @@ public class PartyRoom {
 	}
 
 	public static void openChest(Player player) {
+		if (BotContainment.refuseEconomy(player))
+			return;
 		if (!player.getBank().checkPin())
 			return;
 		if (player.partyDeposit == null)

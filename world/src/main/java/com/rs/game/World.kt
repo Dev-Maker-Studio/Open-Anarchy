@@ -40,6 +40,7 @@ import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.EntityList
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
+import com.rs.game.model.entity.player.BotContainment
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
@@ -91,7 +92,7 @@ object World {
         players.add(player)
         PLAYER_MAP_USERNAME[player.username] = player
         PLAYER_MAP_DISPLAYNAME[player.displayName] = player
-        if (player.session != null && !player.username.contains("cli_bot")) AccountLimiter.add(player.session.ip)
+        if (player.session != null && !player.isBot) AccountLimiter.add(player.session.ip)
     }
 
     @JvmStatic
@@ -509,19 +510,22 @@ object World {
     @JvmStatic
     fun addGroundItem(item: Item, tile: Tile, owner: Player? = null, invisible: Boolean = true, hiddenTime: Int = 60, type: DropMethod = DropMethod.NORMAL, deleteTime: Int = 150): GroundItem? {
         if ((item.id == -1) || (owner != null && owner.rights == Rights.ADMIN)) return null
+        val heldByBot = owner != null && BotContainment.holdsItems(owner)
+        val hidden = invisible || heldByBot
+        val hiddenSeconds = if (heldByBot) -1 else hiddenTime
         if (type != DropMethod.NORMAL) if (type == DropMethod.TURN_UNTRADEABLES_TO_COINS && !ItemConstants.isTradeable(item)) {
             val price = item.definitions.getValue()
             if (price <= 0) return null
             item.id = 995
             item.amount = price
         }
-        val floorItem = GroundItem(item, tile, owner?.username, if (invisible) GroundItemType.INVISIBLE else GroundItemType.NORMAL)
+        val floorItem = GroundItem(item, tile, owner?.username, if (hidden) GroundItemType.INVISIBLE else GroundItemType.NORMAL)
         if (floorItem.amount > 1 && !item.definitions.isStackable() && floorItem.metaData == null) for (i in 0 until floorItem.amount) {
             val oneItem = Item(item.id, 1)
-            val newItem = GroundItem(oneItem, tile, owner?.username, if (invisible) GroundItemType.INVISIBLE else GroundItemType.NORMAL)
-            finalizeGroundItem(newItem, tile, owner, hiddenTime, deleteTime)
+            val newItem = GroundItem(oneItem, tile, owner?.username, if (hidden) GroundItemType.INVISIBLE else GroundItemType.NORMAL)
+            finalizeGroundItem(newItem, tile, owner, hiddenSeconds, deleteTime)
         }
-        else finalizeGroundItem(floorItem, tile, owner, hiddenTime, deleteTime)
+        else finalizeGroundItem(floorItem, tile, owner, hiddenSeconds, deleteTime)
         return floorItem
     }
 
@@ -529,6 +533,7 @@ object World {
     @JvmStatic
     fun addGroundItem(groundItem: GroundItem, owner: Player? = null, hiddenTime: Int = 60, deleteTime: Int = 150) {
         if (groundItem.id == -1 || (owner != null && owner.rights == Rights.ADMIN)) return
+        if (owner != null && BotContainment.holdsItems(owner) && !groundItem.isInvisible) return
 
         if (groundItem.amount > 1 && !groundItem.definitions.isStackable() && groundItem.metaData == null) {
             for (i in 0 until groundItem.amount) {
@@ -566,6 +571,10 @@ object World {
         if (!chunk.itemExists(groundItem)) return false
         if (player.isIronMan && groundItem.sourceId != 0 && groundItem.sourceId != player.uuid) {
             player.sendMessage("You may not pick up other players items as an ironman.")
+            return false
+        }
+        if (BotContainment.holdsItems(player) && groundItem.sourceId != 0 && groundItem.sourceId != player.uuid) {
+            player.sendMessage("Bots may not pick up other players items.")
             return false
         }
         if (add && !player.inventory.hasRoomFor(Item(groundItem.id, groundItem.amount, groundItem.metaData))) {

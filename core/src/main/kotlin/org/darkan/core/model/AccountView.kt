@@ -12,6 +12,7 @@ data class AccountView(
     var banned: Long = 0,
     var muted: Long = 0,
     var social: Social = Social(),
+    val bot: Boolean = false,
 ) {
     fun hasRights(checkRights: Rights) = rights.ordinal >= checkRights.ordinal
     fun checkMuted() = System.currentTimeMillis() < muted

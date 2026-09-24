@@ -16,6 +16,7 @@
 //
 package com.rs.net.decoders.handlers;
 
+import com.rs.game.model.entity.player.BotContainment;
 import org.darkan.core.cache.ItemDefinitions;
 import org.darkan.core.model.ObjectShape;
 import com.rs.game.World;
@@ -496,6 +497,8 @@ public class InventoryOptionsHandler {
 
 	public static void handleItemOption7(Player player, int slotId, int itemId, Item item) {
 		if (player.isLocked() || player.getEmotesManager().isAnimating() || !player.getBank().checkPin() || !player.getControllerManager().canDropItem(item))
+			return;
+		if (!item.getDefinitions().isDestroyItem() && BotContainment.refuseRelease(player))
 			return;
 		if (item.getDefinitions().isDestroyItem()) {
 			player.startConversation(new DestroyItem(player, slotId, item));

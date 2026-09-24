@@ -402,6 +402,8 @@ WORLD_DROP_MODIFIER=1.0
 ```env
 MULTILOG_WHITELIST=localhost,127.0.0.1,::1
 MULTILOG_LIMIT=3
+BOT_IP_WHITELIST=             # IPs/CIDRs whose headless-client " Bot" logins get the passwordless bot profile; empty = none
+TRUSTED_PROXIES=              # peers that must open every connection with a PROXY v1/v2 header naming the real client IP
 ```
 
 ### Protocol

@@ -151,7 +151,7 @@ public class DuelArenaController extends Controller {
 	}
 
 	public void addItem(int slot, int amount) {
-		if (!hasTarget() || player.isIronMan() || player.getRights() == Rights.ADMIN)
+		if (!hasTarget() || player.isIronMan() || player.isBot() || player.getRights() == Rights.ADMIN)
 			return;
 		Item item = player.getInventory().getItem(slot);
 		if (item == null)

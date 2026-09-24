@@ -61,6 +61,11 @@ public class StealingCreationController extends Controller {
 	}
 
 	@Override
+	public boolean allowsBotItemTransfer() {
+		return true;
+	}
+
+	@Override
 	public void start() {
 		sendInterfaces();
 	}

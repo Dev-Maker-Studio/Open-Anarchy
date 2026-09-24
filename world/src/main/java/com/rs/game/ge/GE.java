@@ -16,6 +16,7 @@
 //
 package com.rs.game.ge;
 
+import com.rs.game.model.entity.player.BotContainment;
 import org.darkan.core.cache.ItemDefinitions;
 import com.rs.utils.KtExtensionsKt;
 import world.gregs.voidps.cache.definition.data.ItemDefinition;
@@ -65,6 +66,8 @@ public class GE {
     }
 
     public static ButtonClickHandler mainInterface = new ButtonClickHandler(105, e -> {
+        if (BotContainment.refuseEconomy(e.getPlayer()))
+            return;
         if (e.getPlayer().isIronMan()) {
             e.getPlayer().sendMessage("Ironmen stand alone.");
             return;
@@ -199,6 +202,8 @@ public class GE {
 
     public static void handleSellInv(Player player, int slotId, int componentId) {
         player.soundEffect(4043, false);
+        if (BotContainment.refuseEconomy(player))
+            return;
         if (player.isIronMan()) {
             player.sendMessage("Ironmen stand alone.");
             return;
@@ -216,6 +221,8 @@ public class GE {
     }
 
     public static ButtonClickHandler collBox = new ButtonClickHandler(COLLECTION_BOX, e -> {
+        if (BotContainment.refuseEconomy(e.getPlayer()))
+            return;
         if (e.getPlayer().isIronMan()) {
             e.getPlayer().sendMessage("Ironmen stand alone.");
             return;

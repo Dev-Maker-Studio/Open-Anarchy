@@ -2,6 +2,7 @@ package org.darkan.lobby.name
 
 import org.darkan.core.formatPlayerNameForDisplay
 import org.darkan.core.formatPlayerNameForProtocol
+import org.darkan.core.isBotName
 import org.darkan.core.isValidAccountName
 import org.darkan.core.model.Account
 import org.darkan.core.mongo.collections.Accounts
@@ -23,6 +24,7 @@ object DisplayNameService {
     suspend fun available(displayName: String): DisplayNameRefusal? {
         val formatted = displayName.formatPlayerNameForProtocol()
         if (!formatted.isValidAccountName()) return DisplayNameRefusal.INVALID
+        if (formatted.isBotName()) return DisplayNameRefusal.TAKEN
         val name = formatted.formatPlayerNameForDisplay()
         if (!DisplayNameFilter.isAcceptable(name)) return DisplayNameRefusal.TAKEN
         return null

@@ -109,6 +109,8 @@ public class Trade {
 	public void openTrade(Player target) {
 		synchronized (this) {
 			synchronized (target.getTrade()) {
+				if (BotContainment.refuseExchange(player, target))
+					return;
 				if (target.isIronMan() || player.isIronMan()) {
 					player.sendMessage("You may not trade an ironman.");
 					target.sendMessage("You may not trade an ironman.");

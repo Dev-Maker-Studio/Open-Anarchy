@@ -17,6 +17,8 @@ object EnvVars {
     val serverName: String = dotenv.get("SERVER_NAME", "Darkan")
     val multiLogWhitelist: String = dotenv.get("MULTILOG_WHITELIST", "localhost,127.0.0.1,::1,0:0:0:0:0:0:0:1")
     val multiLogLimit: Int = dotenv.get("MULTILOG_LIMIT", "3").toInt()
+    val botIpWhitelist: String = dotenv.get("BOT_IP_WHITELIST", "")
+    val trustedProxies: String = dotenv.get("TRUSTED_PROXIES", "")
     val js5ServerToken: String = dotenv.get("JS5_SERVER_TOKEN", "ev9+VAp5/tMKeNR/7MOuH6lKWS+rGkHK")
     val loginServerToken: String = dotenv.get("LOGIN_SERVER_TOKEN", "wwGlrZHF5gKN6D3mDdihco3oPeYN2KFybL9hUUFqOvk")
     val clientKey: String = dotenv.get("CLIENT_KEY", "29EDD9FDC775629058FBBF106C5B0E0A3A8028FE0037D1737B8EC3EA2F4E8B8FD6F54EF2F4E65862")

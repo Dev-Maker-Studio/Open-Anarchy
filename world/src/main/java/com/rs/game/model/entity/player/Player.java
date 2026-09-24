@@ -1282,6 +1282,10 @@ public class Player extends Entity {
 			processWeeklyTasks();
 		}
 
+		if (isBot() && !isChosenAccountType()) {
+			setChosenAccountType(true);
+			setStarter(1);
+		}
 		if (!isChosenAccountType()) {
 			if (!Settings.getConfig().isDebug())
 				getControllerManager().startController(new TutorialIslandController());
@@ -1289,14 +1293,6 @@ public class Player extends Entity {
 				setStarter(1);
 			PlayerLook.openCharacterCustomizing(this);
 			startConversation(new GamemodeSelection(this));
-		}
-		if (getUsername().startsWith("cli_bot")) {
-			if (getControllerManager().isIn(TutorialIslandController.class)) {
-				tele(Settings.getConfig().getPlayerStartTile());
-				getControllerManager().forceStop();
-			}
-			setChosenAccountType(true);
-			setStarter(1);
 		}
 		//getPackets().write(new UpdateRichPresence("state", "Logged in as " + getDisplayName()));
 		PluginManager.handle(new LoginEvent(this));
@@ -1674,7 +1670,7 @@ public class Player extends Entity {
 			pet.finish();
 		lastLoggedIn = System.currentTimeMillis();
 		setFinished(true);
-		if (getSession() != null)
+		if (getSession() != null && !isBot())
 			AccountLimiter.remove(getSession().getIp());
 		WorldServer.INSTANCE.notifyPlayerOffline(getUsername());
 		World.removePlayer(this);
@@ -2255,6 +2251,8 @@ public class Player extends Entity {
 	}
 
 	public void sendPVEItemsOnDeath(Player killer, Tile deathTile, boolean noGravestone, Integer[][] slots) {
+		if (BotContainment.holdsItems(this))
+			return;
 		if ((Settings.getConfig().isDebug() && !hasRights(Rights.ADMIN)) || (!Settings.getConfig().isDebug() && hasRights(Rights.ADMIN)))
 			return;
 		auraManager.removeAura();
@@ -2295,6 +2293,8 @@ public class Player extends Entity {
 	}
 
 	public void sendPVPItemsOnDeath(Player killer) {
+		if (BotContainment.holdsItems(this))
+			return;
 //		if (hasRights(Rights.ADMIN) || Settings.getConfig().isDebug())
 //			return;
 		if (killer != null && !killer.getUsername().equals(getUsername()) && killer.isIronMan())
@@ -3226,6 +3226,10 @@ public class Player extends Entity {
 
 	public void setGraveStone(int graveStone) {
 		this.graveStone = graveStone;
+	}
+
+	public boolean isBot() {
+		return account != null && account.getBot();
 	}
 
 	public boolean isIronMan() {

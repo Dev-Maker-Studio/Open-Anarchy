@@ -26,8 +26,10 @@ import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.model.AccountView
+import org.darkan.core.model.MachineInformation
 import org.darkan.core.net.*
 import org.darkan.core.net.prot.Codec
+import org.darkan.core.net.login.HeadlessClient
 import org.darkan.core.net.login.LoginDecode
 import org.darkan.core.net.login.LoginRsaKey
 import org.darkan.core.net.login.LoginToken
@@ -68,6 +70,7 @@ object WorldServer {
     private val loginKey = LoginRsaKey(BigInteger(EnvVars.worldRsaModulus), BigInteger(EnvVars.worldRsaExponent))
 
     private val pendingLogins = ConcurrentHashMap.newKeySet<String>()
+    private val botIpWhitelist = IpAllowList(EnvVars.botIpWhitelist)
 
     private const val MAX_LOGINS_IN_FLIGHT = 20
     private const val INDEX_CRCS_CHECKED = 32
@@ -127,7 +130,7 @@ object WorldServer {
         try {
             val input = socket.openReadChannel()
             val output = socket.openWriteChannel(autoFlush = false)
-            val ip = socket.remoteAddress.ipString()
+            val ip = ProxyProtocol.clientIp(socket.remoteAddress.ipString(), input) ?: return@launch
 
             socket.use { socket ->
                 when (val reqOpcode = input.readByte().toInt()) {
@@ -202,8 +205,6 @@ object WorldServer {
 
         if (World.players.size() >= Settings.PLAYERS_LIMIT - 10)
             return output.finish(ResponseOpcode.WORLD_FULL)
-        if (AccountLimiter.getSessionsIP(ip) >= 3)
-            return output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
         if (World.containsPlayer(username))
             return output.finish(ResponseOpcode.ACCOUNT_ONLINE)
         if (!pendingLogins.add(username))
@@ -223,6 +224,7 @@ object WorldServer {
         }
         val account = admitted.account
         val player = admitted.player
+        clientRefusal(account, machineInfo, ip)?.let { return output.finish(it) }
 
         val session = initSession(output, isaacKeys, ip, codec)
 
@@ -270,6 +272,22 @@ object WorldServer {
             return output.finish(ResponseOpcode.COULD_NOT_COMPLETE_LOGIN)
         }
         session.readPackets(input)
+    }
+
+    private fun clientRefusal(account: AccountView, machine: MachineInformation, ip: String): Int? {
+        val headless = HeadlessClient.isHeadless(machine)
+        if (account.bot) {
+            if (headless && botIpWhitelist.contains(ip)) return null
+            logWarn("Refused bot ${account.username} from $ip (headless=$headless)")
+            return ResponseOpcode.INVALID_CREDENTIALS
+        }
+        if (headless && !EnvVars.worldBotsAllowed) {
+            logInfo("Refused headless client login for ${account.username}: bots are not allowed on this world")
+            return ResponseOpcode.INVALID_LOGIN_SERVER
+        }
+        if (AccountLimiter.getSessionsIP(ip) >= 3)
+            return ResponseOpcode.LOGIN_LIMIT_EXCEEDED
+        return null
     }
 
     private sealed interface Admission {
@@ -329,7 +347,7 @@ object WorldServer {
         player.setFinished(true)
         ChunkManager.updateChunks(player)
         World.removePlayer(player)
-        AccountLimiter.remove(ip)
+        if (!player.isBot) AccountLimiter.remove(ip)
     }
 
     /** False when no gateway is attached (headless tools, the test harness) or it is down. */
