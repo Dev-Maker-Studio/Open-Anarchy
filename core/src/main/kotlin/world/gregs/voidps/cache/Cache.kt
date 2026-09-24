@@ -130,7 +130,17 @@ interface Cache : Closeable {
         private const val HUFFMAN_ARCHIVE = 1
         private const val OPTIONAL_CACHE_PROPERTY = "darkan.cache.optional"
 
-        private val singleton: Cache by lazy {
+        @Volatile
+        private var installed: Cache? = null
+
+        @JvmStatic
+        fun install(cache: Cache) {
+            installed = cache
+        }
+
+        private val singleton: Cache get() = installed ?: configured
+
+        private val configured: Cache by lazy {
             try {
                 CacheSource.ensureBuilt()
                 if (EnvVars.memCache) MemoryCache.load() else FileCache.load()
