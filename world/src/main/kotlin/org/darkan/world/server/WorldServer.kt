@@ -19,21 +19,19 @@ import java.util.concurrent.Executors
 import java.util.function.Consumer
 import kotlin.use
 import kotlinx.coroutines.*
-import kotlinx.io.readByteArray
-import kotlinx.io.readUByte
-import kotlinx.io.readUShort
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger
 import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
-import org.darkan.core.formatPlayerNameForProtocol
 import org.darkan.core.model.AccountView
-import org.darkan.core.model.MachineInformation
 import org.darkan.core.net.*
 import org.darkan.core.net.prot.Codec
+import org.darkan.core.net.login.LoginDecode
+import org.darkan.core.net.login.LoginRsaKey
 import org.darkan.core.net.login.LoginToken
+import org.darkan.core.net.login.WorldLoginRequest
 import org.darkan.core.net.prot.packet.WorldLoginDetails
 import org.darkan.core.social.SocialAction
 import org.darkan.core.social.SocialEvent
@@ -54,8 +52,6 @@ import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.file.FileProvider
 import world.gregs.voidps.cache.file.prefetchKeys
-import world.gregs.voidps.cache.secure.RSA
-import world.gregs.voidps.cache.secure.decryptXtea
 
 object WorldServer {
     const val FRIEND_SERVER_UNAVAILABLE = "Unable to reach the friend server."
@@ -69,12 +65,12 @@ object WorldServer {
     lateinit var socialClient: SocialClient
         private set
 
-    private val worldRsaMod = BigInteger(EnvVars.worldRsaModulus)
-    private val worldRsaExp = BigInteger(EnvVars.worldRsaExponent)
+    private val loginKey = LoginRsaKey(BigInteger(EnvVars.worldRsaModulus), BigInteger(EnvVars.worldRsaExponent))
 
     private val pendingLogins = ConcurrentHashMap.newKeySet<String>()
 
     private const val MAX_LOGINS_IN_FLIGHT = 20
+    private const val INDEX_CRCS_CHECKED = 32
 
     private lateinit var js5: JS5Server
 
@@ -174,76 +170,33 @@ object WorldServer {
         val codec = Codec.get(major) ?: return output.finish(ResponseOpcode.GAME_UPDATE).also { logInfo("Invalid codec: $major") }
         val minor = packet.readInt()
 
-        val gameStateIsUnk10 = packet.readUByte().toInt() == 1
-
-        val rsaSize = packet.readUShort().toInt()
-        val sensitiveData = ByteReadPacket(RSA.crypt(packet.readByteArray(rsaSize), worldRsaMod, worldRsaExp))
-        if (sensitiveData.readUByte().toInt() != 10)
-            return output.finish(ResponseOpcode.BAD_SESSION_ID)
-
-        val isaacKeys = IntArray(4) { sensitiveData.readInt() }
-        if (sensitiveData.readLong().toInt() != 0)
-            return output.finish(ResponseOpcode.BAD_SESSION_ID)
-
-        // The client puts the lobby's signed token in the slot the lobby login uses for the password.
+        val request = when (val decoded = WorldLoginRequest.decode(major, minor, opcode == RequestOpcode.RECONNECT, packet, loginKey)) {
+            is LoginDecode.Rejected -> return output.finish(decoded.response)
+            is LoginDecode.Decoded -> decoded.request
+        }
+        val isaacKeys = request.isaacSeed
         // A world must never hold a plaintext password, so anything that is not shaped like a token is
         // dropped here, before it can be forwarded to the lobby or reach a log.
-        val lobbyAuthToken = sensitiveData.readRSString()
+        val lobbyAuthToken = request.authToken
         if (!LoginToken.hasTokenShape(lobbyAuthToken)) {
             logWarn("World login from $ip presented a malformed auth token; refusing")
             return output.finish(ResponseOpcode.INVALID_CREDENTIALS)
         }
-        sensitiveData.readLong()
-        sensitiveData.readLong()
-
-        val xtea = packet.decryptXtea(isaacKeys)
-        val stringUsername = xtea.readBoolean()
-        val username = (if (stringUsername) xtea.readRSString() else xtea.readLong().toRSString()).formatPlayerNameForProtocol()
-        val displayMode = xtea.readUByte().toInt()
-        val screenWidth = xtea.readUShort().toInt()
-        val screenHeight = xtea.readUShort().toInt()
-        xtea.readUByte() // unknown2
-        xtea.readByteArray(24) // randomDat
-        val settings = xtea.readRSString()
-        val affid = xtea.readInt()
-
-        val prefSize = xtea.readUByte().toInt()
-        for (i in 0 until prefSize)
-            xtea.readUByte() // prefs
-
-        // parse() consumes the machine-info version byte itself; reading it here too shifted every field.
-        val machineInfo = MachineInformation.parse(xtea)
-        if (machineInfo.version != 6)
+        val username = request.username
+        val displayMode = request.displayMode
+        val screenWidth = request.screenWidth
+        val screenHeight = request.screenHeight
+        val machineInfo = request.machine
+        if (machineInfo.version != WorldLoginRequest.MACHINE_INFO_VERSION)
             logError("Unexpected machine info version for $username (version=${machineInfo.version})")
+        if (request.worldToken != EnvVars.worldToken)
+            logError("World token mismatch: expected=${EnvVars.worldToken}, got=${request.worldToken} from $username")
 
-        xtea.readInt() // varVerifyId
-        xtea.readLong() // machineUid
-        xtea.readRSString() // static loginToken (applet param 13, not the HMAC auth token)
-        if (xtea.readUByte().toInt() == 1)
-            xtea.readRSString() // supplementaryLoginData
-        xtea.readUByte() // jagtheora
-        xtea.readUByte() // isApplet
-        xtea.readUByte() // signedTerms
-        xtea.readByte() // loginType
-        xtea.readInt() // sessionToken
-
-        val js5AuthToken = xtea.readRSString()
-        if (js5AuthToken != EnvVars.worldToken) {
-            logError("World token mismatch: expected=${EnvVars.worldToken}, got=$js5AuthToken from $username")
-        }
-
-        xtea.readUByte() // unknown
-        val worldId = xtea.readInt()
-
-        // CRC validation
-        for (index in 0 until 36) {
-            val receivedCRC = xtea.readInt()
-            if (index < Cache.get().indexCount()) {
-                val crc = Cache.get().indexCrcs()[index]
-                if (crc != receivedCRC && index < 32) {
-                    logError("CRC mismatch at index $index: expected=$crc, got=$receivedCRC from $username")
-                    return output.finish(ResponseOpcode.GAME_UPDATE)
-                }
+        val crcs = Cache.get().indexCrcs()
+        for (index in 0 until minOf(Cache.get().indexCount(), INDEX_CRCS_CHECKED)) {
+            if (crcs[index] != request.indexCrcs[index]) {
+                logError("CRC mismatch at index $index: expected=${crcs[index]}, got=${request.indexCrcs[index]} from $username")
+                return output.finish(ResponseOpcode.GAME_UPDATE)
             }
         }
 

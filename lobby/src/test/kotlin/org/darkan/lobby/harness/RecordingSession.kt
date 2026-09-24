@@ -6,6 +6,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.darkan.core.net.Isaac
+import org.darkan.core.net.ProtSession
 import org.darkan.core.net.Session
 import org.darkan.core.net.prot.ClientProt
 import org.darkan.core.net.prot.Codec
@@ -50,9 +51,9 @@ class RecordingSession(codec: Codec) : Session(
     private val recorded = mutableListOf<Event>()
 
     init {
-        val writerJobField = Session::class.java.getDeclaredField("writerJob").apply { isAccessible = true }
+        val writerJobField = ProtSession::class.java.getDeclaredField("writerJob").apply { isAccessible = true }
         runBlocking { (writerJobField.get(this@RecordingSession) as Job).cancelAndJoin() }
-        val outboundField = Session::class.java.getDeclaredField("outbound").apply { isAccessible = true }
+        val outboundField = ProtSession::class.java.getDeclaredField("outbound").apply { isAccessible = true }
         @Suppress("UNCHECKED_CAST")
         outbound = outboundField.get(this) as Channel<Any>
     }

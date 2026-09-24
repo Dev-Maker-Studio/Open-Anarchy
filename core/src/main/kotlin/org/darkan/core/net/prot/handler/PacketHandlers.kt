@@ -5,15 +5,14 @@ import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.getClasses
-import org.darkan.core.net.prot.ClientProt
 import java.lang.reflect.ParameterizedType
 
-interface PacketHandler<T, K : ClientProt> {
+interface PacketHandler<T, K : Any> {
     suspend fun handle(player: T, packet: K)
 }
 
 object PacketHandlers {
-    private val PACKET_HANDLERS = mutableMapOf<Class<out ClientProt>, PacketHandler<*, out ClientProt>>()
+    private val PACKET_HANDLERS = mutableMapOf<Class<*>, PacketHandler<*, *>>()
 
     fun loadHandlersFromPackage(pack: String) {
         logInfo("Initializing packet handlers ($pack)...")
@@ -30,7 +29,7 @@ object PacketHandlers {
         candidates.forEach { clazz ->
             try {
                 @Suppress("UNCHECKED_CAST")
-                val instance = clazz.getConstructor().newInstance() as PacketHandler<*, out ClientProt>
+                val instance = clazz.getConstructor().newInstance() as PacketHandler<*, *>
                 mapHandler(instance)
                 succeeded++
             } catch (e: Throwable) {
@@ -41,12 +40,12 @@ object PacketHandlers {
         logInfo("Packet handlers loaded: $succeeded succeeded, $failed failed, ${PACKET_HANDLERS.size} packet->handler mappings from ${candidates.size} candidate classes.")
     }
 
-    fun mapHandler(handler: PacketHandler<*, out ClientProt>) {
+    fun mapHandler(handler: PacketHandler<*, *>) {
         val parameterized = handler.javaClass.genericInterfaces.firstOrNull { it is ParameterizedType } as? ParameterizedType
             ?: error("Handler ${handler.javaClass.name} does not directly implement PacketHandler<T, K> with parameterized types (genericInterfaces=${handler.javaClass.genericInterfaces.joinToString()})")
         @Suppress("UNCHECKED_CAST")
-        val clazz = parameterized.actualTypeArguments.getOrNull(1) as? Class<ClientProt>
-            ?: error("Handler ${handler.javaClass.name} has no ClientProt type argument in ${parameterized.typeName}")
+        val clazz = parameterized.actualTypeArguments.getOrNull(1) as? Class<*>
+            ?: error("Handler ${handler.javaClass.name} has no packet type argument in ${parameterized.typeName}")
         val existing = PACKET_HANDLERS[clazz]
         if (existing != null && existing.javaClass != handler.javaClass) {
             logWarn("  Overwriting ${existing.javaClass.simpleName} with ${handler.javaClass.simpleName} for ${clazz.simpleName}")
@@ -56,15 +55,15 @@ object PacketHandlers {
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T> getHandler(packet: Class<out ClientProt>) = PACKET_HANDLERS[packet] as? PacketHandler<T, ClientProt>
+    fun <T> getHandler(packet: Class<*>) = PACKET_HANDLERS[packet] as? PacketHandler<T, Any>
 
     /**
      * Blocking dispatch for Java callers (e.g. Player.processPackets on the world thread).
      * Handlers that call only non-suspend legacy Java code complete synchronously.
      */
     @Suppress("UNCHECKED_CAST")
-    fun <T> handleBlocking(player: T, packet: ClientProt) {
-        val handler = PACKET_HANDLERS[packet::class.java] as? PacketHandler<T, ClientProt>
+    fun <T> handleBlocking(player: T, packet: Any) {
+        val handler = PACKET_HANDLERS[packet::class.java] as? PacketHandler<T, Any>
         if (handler == null) {
             logWarn("No handler found for packet: ${packet::class.java.simpleName} (${packet::class.java.name}), registered keys: ${PACKET_HANDLERS.keys.map { it.simpleName }}")
             return

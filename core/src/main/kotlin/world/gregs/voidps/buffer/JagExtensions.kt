@@ -342,6 +342,64 @@ fun Source.readSmart(): Int {
     }
 }
 
+fun Source.readIntLittle(): Int = readUIntLittle()
+
+fun Source.readIntMiddle(): Int = readUIntMiddle()
+
+fun Source.readIntInverse(): Int {
+    val second = readUByte().toInt()
+    val fourth = readUByte().toInt()
+    val third = readUByte().toInt()
+    val first = readByteInverse() and 0xff
+    return (fourth shl 24) or (third shl 16) or (second shl 8) or first
+}
+
+fun Source.readMediumReverseEnd(): Int {
+    val high = readUByte().toInt()
+    val low = readUByte().toInt()
+    val middle = readUByte().toInt()
+    return (high shl 16) or (middle shl 8) or low
+}
+
+fun Source.readBigSmart(): Int {
+    if (peek().readByte() < 0) return readInt() and 0x7fffffff
+    val value = readUShort()
+    return if (value == 32767) -1 else value
+}
+
+fun Source.readName(): Pair<String, String> {
+    val different = readBoolean()
+    val displayName = readRSString()
+    return displayName to if (different) readRSString() else displayName
+}
+
+fun Source.skipHashedMessageTimestamp() = skip(5)
+
+class BitReader(private val source: Source) {
+    private var current = 0
+    private var bitsLeft = 0
+
+    fun readBit(): Boolean = readBits(1) == 1
+
+    fun readBits(count: Int): Int {
+        var value = 0
+        var needed = count
+        while (needed > 0) {
+            if (bitsLeft == 0) {
+                current = source.readByte().toInt() and 0xff
+                bitsLeft = 8
+            }
+            val taken = minOf(needed, bitsLeft)
+            bitsLeft -= taken
+            value = (value shl taken) or ((current shr bitsLeft) and ((1 shl taken) - 1))
+            needed -= taken
+        }
+        return value
+    }
+}
+
+inline fun <T> Source.bitAccess(block: BitReader.() -> T): T = BitReader(this).block()
+
 suspend fun ByteReadChannel.readRSString(): String {
     val sb = StringBuilder()
     var b: Int
@@ -485,7 +543,7 @@ suspend fun ByteWriteChannel.writeLong(string: String) {
         when (char) {
             in 65..90 -> long += char - 64L
             in 97..122 -> long += char - 96L
-            in 0..9 -> long += char - 21L
+            in '0'.code..'9'.code -> long += char - 21L
         }
     }
     while (long % 37L == 0L && long != 0L)

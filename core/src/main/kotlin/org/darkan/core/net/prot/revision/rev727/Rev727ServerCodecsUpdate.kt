@@ -1,7 +1,13 @@
 package org.darkan.core.net.prot.revision.rev727
 
 import io.ktor.utils.io.*
+import kotlinx.io.Source
+import kotlinx.io.readByteArray
 import org.darkan.core.net.prot.*
+import org.darkan.core.net.prot.dto.ClanChannelChatter
+import org.darkan.core.net.prot.dto.ClanSettingsMember
+import org.darkan.core.net.prot.dto.ClanVarSetting
+import org.darkan.core.net.prot.dto.GrandExchangeOffer
 import org.darkan.core.net.prot.dto.InvSlotUpdate
 import org.darkan.core.net.prot.dto.InvTooltip
 import org.darkan.core.net.prot.packet.*
@@ -18,17 +24,39 @@ private fun smartSize(value: Int) = if (value < 128) 1 else 2
 private val InvSlotUpdate.effectiveTooltip: InvTooltip
     get() = if (itemId == -1) InvTooltip.Clear else tooltip
 
+private fun Source.readClanSettingsName(attr: Int): String {
+    val hash = if ((attr and 0x1) != 0) readLong() else 0L
+    return if ((attr and 0x2) != 0) readRSString() else hash.toRSString()
+}
+
+private fun Source.readClanVarSetting(): ClanVarSetting {
+    val header = readInt()
+    val key = header and 0x3FFFFFFF
+    return when (val type = header ushr 30) {
+        0 -> ClanVarSetting(key, intValue = readInt())
+        1 -> ClanVarSetting(key, longValue = readLong())
+        2 -> ClanVarSetting(key, stringValue = readRSString())
+        else -> error("Unknown clan var type $type")
+    }
+}
+
 internal fun Codec.registerRev727UpdatePackets() {
     serverProt<PlayerUpdate>(opcode = 43, size = ProtSize.VarShort) { out ->
         out.writeBytes(data)
+    }.decoder {
+        PlayerUpdate(readByteArray())
     }
 
     serverProt<NpcUpdateLarge>(opcode = 47, size = ProtSize.VarShort) { out ->
         out.writeBytes(data)
+    }.decoder {
+        NpcUpdateLarge(readByteArray())
     }
 
     serverProt<NpcUpdate>(opcode = 6, size = ProtSize.VarShort) { out ->
         out.writeBytes(data)
+    }.decoder {
+        NpcUpdate(readByteArray())
     }
 
     serverProt<UpdateInvPartial>(opcode = 4, size = ProtSize.VarShort) { out ->
@@ -63,6 +91,27 @@ internal fun Codec.registerRev727UpdatePackets() {
                 out.writeRSString(tooltip.text)
             }
         }
+    }.decoder {
+        val containerId = readUShort()
+        val flags = readUByte()
+        val hasTooltips = (flags and INV_FLAG_TOOLTIPS) != 0
+        val updates = mutableListOf<InvSlotUpdate>()
+        while (!exhausted()) {
+            val header = readSmart()
+            val itemId = readUShort() - 1
+            var amount = 0
+            if (itemId != -1) {
+                amount = readUByte()
+                if (amount == 255) amount = readInt()
+            }
+            val tooltip = when (if (hasTooltips) header and 0x3 else 1) {
+                1 -> InvTooltip.Clear
+                2 -> InvTooltip.Set(readRSString())
+                else -> InvTooltip.Keep
+            }
+            updates += InvSlotUpdate(if (hasTooltips) header ushr 2 else header, itemId, amount, tooltip)
+        }
+        UpdateInvPartial(containerId, (flags and INV_FLAG_NEGATIVE_KEY) != 0, updates.toTypedArray())
     }
 
     serverProt<UpdateInvFull>(opcode = 5, size = ProtSize.VarShort) { out ->
@@ -108,17 +157,45 @@ internal fun Codec.registerRev727UpdatePackets() {
                 }
             }
         }
+    }.decoder {
+        val containerId = readUShort()
+        val flags = readUByte()
+        val size = readUShort()
+        val itemIds = IntArray(size)
+        val amounts = IntArray(size)
+        for (i in 0 until size) {
+            var amount = readByteSubtract() and 0xFF
+            if (amount == 255) amount = readIntInverseMiddle()
+            amounts[i] = amount
+            itemIds[i] = readUShortAddLittle() - 1
+        }
+        val tooltips = when {
+            (flags and INV_FLAG_TOOLTIPS) != 0 -> {
+                val mask = readByteArray((size + 7) shr 3)
+                Array(size) { slot -> if ((mask[slot shr 3].toInt() shr (slot and 7) and 0x1) != 0) readRSString() else null }
+            }
+            (flags and INV_FLAG_SPARSE_TOOLTIPS) != 0 -> arrayOfNulls<String>(size).also { texts ->
+                repeat(readSmart()) { texts[readSmart()] = readRSString() }
+            }
+            else -> null
+        }
+        UpdateInvFull(containerId, (flags and INV_FLAG_NEGATIVE_KEY) != 0, itemIds, amounts, tooltips)
     }
 
     serverProt<UpdateInvStopTransmit>(opcode = 42, size = 3) { out ->
         out.writeByteInverse(if (negativeKey) 1 else 0)
         out.writeShortLittle(containerId)
+    }.decoder {
+        val negativeKey = (readByteInverse() and INV_FLAG_NEGATIVE_KEY) != 0
+        UpdateInvStopTransmit(readUShortLittle(), negativeKey)
     }
 
     serverProt<UpdateStat>(opcode = 140, size = 6) { out ->
         out.writeInt(xp)
         out.writeByte(skillId)
         out.writeByte(level)
+    }.decoder {
+        UpdateStat(xp = readInt(), skillId = readUByte(), level = readUByte())
     }
 
     serverProt<UpdateGESlot>(opcode = 57, size = 20) { out ->
@@ -135,16 +212,30 @@ internal fun Codec.registerRev727UpdatePackets() {
             out.writeInt(offer.currentAmount)
             out.writeInt(offer.totalPrice)
         }
+    }.decoder {
+        val slot = readUByte()
+        val progress = readUByte()
+        if (progress == 0) {
+            skip(18)
+            return@decoder UpdateGESlot(slot, null)
+        }
+        UpdateGESlot(slot, GrandExchangeOffer(progress, readUShort(), readInt(), readInt(), readInt(), readInt()))
     }
 
     serverProt<UpdateUid192>(opcode = 90, size = 28) { out ->
         out.writeBytes(data)
         out.writeInt(CRC.calculate(data))
+    }.decoder {
+        val data = readByteArray(24)
+        skip(4)
+        UpdateUid192(data)
     }
 
     serverProt<ClanChannelDelta>(opcode = 28, size = ProtSize.VarShort) { out ->
         out.writeBoolean(main)
         out.writeBytes(data)
+    }.decoder {
+        ClanChannelDelta(readBoolean(), readByteArray())
     }
 
     serverProt<ClanChannelFull>(opcode = 49, size = ProtSize.VarShort) { out ->
@@ -165,11 +256,29 @@ internal fun Codec.registerRev727UpdatePackets() {
                 out.writeShort(chatter.worldId)
             }
         }
+    }.decoder {
+        val main = readBoolean()
+        if (exhausted()) return@decoder ClanChannelFull(main)
+        val nameTypeFlag = readUByte()
+        skip(8)
+        val updateNum = readLong()
+        val clanName = readRSString()
+        skip(1)
+        val kickRank = readByte().toInt()
+        val talkRank = readByte().toInt()
+        val chatters = Array(readUShort()) {
+            val hash = if ((nameTypeFlag and 0x1) != 0) readLong() else 0L
+            val displayName = if ((nameTypeFlag and 0x2) != 0) readRSString() else hash.toRSString()
+            ClanChannelChatter(displayName, rank = readByte().toInt(), worldId = readUShort())
+        }
+        ClanChannelFull(main, clanName, updateNum, kickRank, talkRank, chatters)
     }
 
     serverProt<ClanSettingsDelta>(opcode = 46, size = ProtSize.VarShort) { out ->
         out.writeBoolean(main)
         out.writeBytes(data)
+    }.decoder {
+        ClanSettingsDelta(readBoolean(), readByteArray())
     }
 
     serverProt<ClanSettingsFull>(opcode = 137, size = ProtSize.VarShort) { out ->
@@ -228,6 +337,32 @@ internal fun Codec.registerRev727UpdatePackets() {
                 }
             }
         }
+    }.decoder {
+        val main = readBoolean()
+        if (exhausted()) return@decoder ClanSettingsFull(main)
+        val version = readUByte()
+        require(version in 1..5) { "Unsupported clan settings version $version" }
+        val attr = readUByte()
+        val updateCount = readInt()
+        skip(4)
+        val memberCount = readUShort()
+        val bannedCount = readUByte()
+        val clanName = readRSString()
+        if (version >= 4) skip(4)
+        val allowGuests = readUByte() == 1
+        val talkRank = readByte().toInt()
+        val kickRank = readByte().toInt()
+        skip(2)
+        val members = Array(memberCount) {
+            val displayName = readClanSettingsName(attr)
+            val rank = readByte().toInt()
+            val flags = if (version >= 2) readInt() else 0
+            if (version >= 5) skip(2)
+            ClanSettingsMember(displayName, rank, flags)
+        }
+        val bannedUsers = Array(bannedCount) { readClanSettingsName(attr) }
+        val settings = if (version >= 3) Array(readUShort()) { readClanVarSetting() } else emptyArray()
+        ClanSettingsFull(main, clanName, updateCount, allowGuests, talkRank, kickRank, members, bannedUsers, settings)
     }
 
     serverProt<ClanSettingsFullRaw>(opcode = 137, size = ProtSize.VarShort) { out ->
@@ -239,10 +374,14 @@ internal fun Codec.registerRev727UpdatePackets() {
 
     serverProt<RunEnergy>(opcode = 64, size = 1) { out ->
         out.writeByte(energy)
+    }.decoder {
+        RunEnergy(readUByte())
     }
 
     serverProt<PlayerWeight>(opcode = 14, size = 2) { out ->
         out.writeShort(weight)
+    }.decoder {
+        PlayerWeight(readShort().toInt())
     }
 
     serverProt<PlayerOption>(opcode = 111, size = ProtSize.VarByte) { out ->
@@ -250,18 +389,29 @@ internal fun Codec.registerRev727UpdatePackets() {
         out.writeByteAdd(slot)
         out.writeShortAddLittle(cursor)
         out.writeByteInverse(if (top) 1 else 0)
+    }.decoder {
+        val option = readRSString()
+        val slot = readByteAdd() and 0xFF
+        val cursor = readUShortAddLittle().let { if (it == 65535) -1 else it }
+        PlayerOption(option, slot, top = readBooleanInverse(), cursor = cursor)
     }
 
     serverProt<ReduceAttackPriority>(opcode = 61, size = 1) { out ->
         out.writeBooleanAdd(enabled)
+    }.decoder {
+        ReduceAttackPriority(readBooleanAdd())
     }
 
     serverProt<SetTarget>(opcode = 129, size = 2) { out ->
         out.writeShortLittle(target)
+    }.decoder {
+        SetTarget(readShortLittle())
     }
 
     serverProt<UpdateDob>(opcode = 157, size = 4) { out ->
         out.writeMedium(dob)
         out.writeBoolean(quickChatOnly)
+    }.decoder {
+        UpdateDob(readMedium(), readBoolean())
     }
 }

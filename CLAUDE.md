@@ -564,6 +564,10 @@ class Session {
 }
 ```
 
+`Session` is the server end of `ProtSession<I, O>`; `net.client.ClientSession` is the headless
+client end. Every prot carries both directions (`.decoder {}` on server prots, `.encoder {}` on
+client prots) - see `docs/headless-client.md`.
+
 ### Engine Loop
 
 Tick-based processing (default 600ms per tick):
@@ -800,6 +804,7 @@ Configure `STAFF_WEBHOOK_URL` for tick performance warnings and error notificati
 ## Documentation
 
 - `docs/social-gateway.md` - Comprehensive social gateway architecture
+- `docs/headless-client.md` - The client side of core: bidirectional codec, `ClientSession`, login encoding, JS5 cache sync, entity update decoding
 - `docs/community-worlds.md` - Running your own world against the dev lobby: the public community token, what the lobby enforces, the token-replay limit
 - `docs/clans.md` - The clan system: lobby-authoritative `ClanService`, typed `ClanAction` commands over the gateway, world `ClanRegistry`, shared `ClanRules`/`ClanPackets`
 - `README.md` - Quick start guide
