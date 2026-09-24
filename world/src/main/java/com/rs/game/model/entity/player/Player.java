@@ -2257,8 +2257,7 @@ public class Player extends Entity {
 	public void sendPVEItemsOnDeath(Player killer, Tile deathTile, boolean noGravestone, Integer[][] slots) {
 		if (BotContainment.holdsItems(this))
 			return;
-		boolean minigameItems = BotContainment.inTransferZone(this);
-		if ((Settings.getConfig().isDebug() && !hasRights(Rights.ADMIN) && !minigameItems) || (!Settings.getConfig().isDebug() && hasRights(Rights.ADMIN)))
+		if ((Settings.getConfig().isDebug() && !hasRights(Rights.ADMIN)) || (!Settings.getConfig().isDebug() && hasRights(Rights.ADMIN)))
 			return;
 		auraManager.removeAura();
 		Item[][] items = GraveStone.getItemsKeptOnDeath(this, slots);
