@@ -50,13 +50,13 @@ class StealingCreationLobbyController : Controller() {
 
     override fun logout(): Boolean {
         StealingCreationLobby.removePlayer(player)
-        player.tele(StealingCreation.EXIT)
+        player.tile = StealingCreation.EXIT
         return true
     }
 
     override fun login(): Boolean {
         StealingCreationLobby.removePlayer(player)
-        player.tele(StealingCreation.EXIT)
+        player.tile = StealingCreation.EXIT
         return true
     }
 
