@@ -553,9 +553,8 @@ class PrayerManager {
         player.packets.setIFRightClickOps(271, if (settingQuickPrayers) 42 else 8, 0, 29, 0)
     }
 
-    @JvmOverloads
-    fun setPrayerBook(curses: Boolean, requireQuest: Boolean = true) {
-        if (requireQuest && curses && !player.isQuestComplete(Quest.TEMPLE_AT_SENNTISTEN, "to use ancient curses.")) return
+    fun setPrayerBook(curses: Boolean) {
+        if (curses && !player.isQuestComplete(Quest.TEMPLE_AT_SENNTISTEN, "to use ancient curses.")) return
         closeAllPrayers()
         this.isCurses = curses
         player.interfaceManager.sendSubDefault(InterfaceManager.Sub.TAB_PRAYER)
