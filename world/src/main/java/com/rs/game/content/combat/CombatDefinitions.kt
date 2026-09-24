@@ -190,13 +190,14 @@ class CombatDefinitions {
             return 0
         }
 
-    fun setSpellbook(book: Spellbook) {
-        if (book == Spellbook.LUNAR && !player.isQuestComplete(
+    @JvmOverloads
+    fun setSpellbook(book: Spellbook, requireQuest: Boolean = true) {
+        if (requireQuest && book == Spellbook.LUNAR && !player.isQuestComplete(
                 Quest.LUNAR_DIPLOMACY,
                 "to use the Lunar spellbook."
             )
         ) return
-        if (book == Spellbook.ANCIENT && !player.isQuestComplete(
+        if (requireQuest && book == Spellbook.ANCIENT && !player.isQuestComplete(
                 Quest.DESERT_TREASURE,
                 "to use the Ancient spellbook."
             )
