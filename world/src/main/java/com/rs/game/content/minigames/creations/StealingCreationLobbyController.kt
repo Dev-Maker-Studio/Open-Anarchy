@@ -63,11 +63,11 @@ class StealingCreationLobbyController : Controller() {
     companion object {
         @JvmStatic
         fun climbOverStile(player: Player, stile: GameObject, entrance: Boolean) {
-            player.lock(3)
             if (entrance) {
                 if (!StealingCreationLobby.enterTeamLobby(player, stile.id == Loc.sc_team_b_stile)) return
             } else
                 StealingCreationLobby.removePlayer(player)
+            player.lock(3)
             player.forceMove(Tile.of(if (entrance) stile.x else stile.x + 2, stile.y, stile.plane), Seq.human_crossing_stile, 5, 60)
         }
     }
