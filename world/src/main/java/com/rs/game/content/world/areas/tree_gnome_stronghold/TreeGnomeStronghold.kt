@@ -60,7 +60,7 @@ private fun findNearby(id: Int, center: Tile): GameObject? {
         for (dx in -dist..dist)
             for (dy in -dist..dist) {
                 if (max(abs(dx), abs(dy)) != dist) continue
-                World.getBaseObjects(center.transform(dx, dy)).firstOrNull { it.id == id }?.let { return it }
+                World.getObjectWithId(center.transform(dx, dy), id)?.let { return it }
             }
     return null
 }
