@@ -6,7 +6,6 @@ import com.rs.game.content.skills.mining.Pickaxe
 import com.rs.game.content.skills.woodcutting.Hatchet
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.item.ItemTooltips
-import com.rs.game.model.item.TooltipSection
 import com.rs.net.decoders.handlers.InventoryOptionsHandler
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.XPGainEvent
@@ -104,15 +103,60 @@ fun mapSacredClayTools() {
         if (e.skillId in SacredClayArmour.combatSkills) applySacredClayArmourBonus(e) else applyToolBonus(e)
     }
 
-    ItemTooltips.metadata(SACRED_CLAY_REVERT_KEY, TooltipSection.STATE) { _, _, value ->
-        "Reverts at: ${ItemTooltips.value("${sacredClayChargePercent((value as Number).toInt())}%")}"
-    }
+    for (id in SacredClayTool.byId.keys + Obj.sc_reward_tool + Obj.sc_reward_volatile_tool)
+        onItemOnItem(intArrayOf(id), intArrayOf(id)) { e -> combineTools(e.player, e.item1.slot, e.item2.slot) }
 }
 
 private fun checkTool(player: Player, item: Item) {
-    val percent = sacredClayChargePercent(item.sacredClayCharge)
+    player.sendSacredClayDetails(item, sacredClayToolDetails(item))
+}
+
+fun isSacredClayTool(itemId: Int) = itemId in SacredClayTool.byId || itemId == Obj.sc_reward_tool || itemId == Obj.sc_reward_volatile_tool
+
+fun sacredClayToolDetails(item: Item): List<String> {
+    val charge = item.sacredClayCharge
+    val lines = mutableListOf("Charge: ${ItemTooltips.value("${sacredClayChargePercent(charge)}%")}")
+    val volatile = item.id == Obj.sc_reward_volatile_tool || item.id in SacredClayTool.volatileForms
+    lines += "Xp bonus: ${ItemTooltips.value("+${((if (volatile) VOLATILE_XP_BONUS else PROTO_XP_BONUS) * 100).roundToInt()}%")}"
+    val tool = SacredClayTool.byId[item.id]
+    if (tool == null) {
+        lines += if (volatile) "Transforms into a random tool" else "Transforms into any tool, free of charge"
+        return lines
+    }
+    for (skill in tool.skills)
+        lines += "Bonus xp left: ${ItemTooltips.value(bonusXp(charge, tool, skill, volatile))} ${Constants.SKILL_NAME[skill]}"
     val revert = item.getMetaDataI(SACRED_CLAY_REVERT_KEY, -1)
-    player.sendMessage("Your ${item.name.lowercase()} has $percent% of its charge remaining." + if (revert >= 0) " It will revert at ${sacredClayChargePercent(revert)}%." else "")
+    if (volatile && revert >= 0) {
+        lines += "Reverts at: ${ItemTooltips.value("${sacredClayChargePercent(revert)}%")}"
+        for (skill in tool.skills)
+            lines += "Before reverting: ${ItemTooltips.value(bonusXp(charge - revert, tool, skill, true))} ${Constants.SKILL_NAME[skill]}"
+    }
+    return lines
+}
+
+private fun bonusXp(charge: Int, tool: SacredClayTool, skill: Int, volatile: Boolean) =
+    (charge.coerceAtLeast(0).toDouble() / FULL_SACRED_CLAY_CHARGE * tool.bonusXpCapacity(skill, volatile)).roundToInt()
+
+private fun Item.setToolCharge(charge: Int) {
+    setSacredClayCharge(charge)
+    if (id in SacredClayTool.volatileForms) addMetaData(SACRED_CLAY_REVERT_KEY, (charge - 1) / VOLATILE_CHARGE_STEP * VOLATILE_CHARGE_STEP)
+}
+
+private fun combineTools(player: Player, fromSlot: Int, toSlot: Int) {
+    val from = player.inventory.getItem(fromSlot) ?: return
+    val to = player.inventory.getItem(toSlot) ?: return
+    if (fromSlot == toSlot || from.id != to.id) return
+    if (to.sacredClayCharge >= FULL_SACRED_CLAY_CHARGE) {
+        player.sendMessage("That ${to.name.lowercase()} is already fully charged.")
+        return
+    }
+    val total = from.sacredClayCharge + to.sacredClayCharge
+    to.setToolCharge(minOf(total, FULL_SACRED_CLAY_CHARGE))
+    val spare = total - FULL_SACRED_CLAY_CHARGE
+    if (spare > 0) from.setToolCharge(spare)
+    else player.inventory.deleteItem(fromSlot, from)
+    player.sendMessage("You combine the charges. Your ${to.name.lowercase()} now has ${sacredClayChargePercent(to.sacredClayCharge)}% charge" +
+        if (spare > 0) " and the other keeps ${sacredClayChargePercent(spare)}%." else ", and the empty tool crumbles to dust.")
 }
 
 private fun transformVolatile(player: Player, item: Item) {

@@ -67,14 +67,23 @@ fun mapSacredClayEquipment() {
         }
     }
 
-    ItemTooltips.metadata(SACRED_CLAY_CHARGE_KEY) { _, item, _ -> sacredClayChargeTooltip(item) }
+    ItemTooltips.metadata(SACRED_CLAY_CHARGE_KEY) { _, item, _ -> sacredClayDetails(item).joinToString("<br>") }
 }
 
-private fun sacredClayChargeTooltip(item: Item): String {
+private fun sacredClayDetails(item: Item): List<String> = if (isSacredClayTool(item.id)) sacredClayToolDetails(item) else equipmentDetails(item)
+
+private fun equipmentDetails(item: Item): List<String> {
     val charge = item.sacredClayCharge
-    val line = "Charge: ${ItemTooltips.value("${sacredClayChargePercent(charge)}%")}"
-    if (item.id !in SacredClayArmour.morphicIds) return line
-    return "$line<br>Bonus xp left: ${ItemTooltips.value((charge / FULL_SACRED_CLAY_CHARGE.toDouble() * ARMOUR_BONUS_XP).roundToInt())}"
+    val lines = mutableListOf("Charge: ${ItemTooltips.value("${sacredClayChargePercent(charge)}%")}")
+    if (item.id in SacredClayArmour.morphicIds) {
+        lines += "Xp bonus: ${ItemTooltips.value("+100%")} combat while worn"
+        lines += "Bonus xp left: ${ItemTooltips.value((charge / FULL_SACRED_CLAY_CHARGE.toDouble() * ARMOUR_BONUS_XP).roundToInt())}"
+        lines += "Form: ${ItemTooltips.value(SacredClayArmour.forId(item.id)!!.styleOf(item.id).label)}"
+    } else if (item.id in SacredClayArmour.SHIELD.ids) {
+        lines += "Defends: ${ItemTooltips.value(SacredClayArmour.SHIELD.styleOf(item.id).label)}"
+        lines += "Hits left: about ${ItemTooltips.value(charge / (FULL_SACRED_CLAY_CHARGE / SHIELD_DEFENCES) * SHIELD_DRAIN_CHANCE)}"
+    }
+    return lines
 }
 
 private fun checkEquipment(player: Player, item: Item) {
@@ -82,11 +91,7 @@ private fun checkEquipment(player: Player, item: Item) {
         player.sendMessage("Your sacred clay shield is inactive. The Rewards mystic can recharge it.")
         return
     }
-    val percent = sacredClayChargePercent(item.sacredClayCharge)
-    if (item.id in SacredClayArmour.morphicIds)
-        player.sendMessage("Your ${item.name.lowercase()} has $percent% of its charge remaining, enough for ${Utils.formatNumber((item.sacredClayCharge / FULL_SACRED_CLAY_CHARGE.toDouble() * ARMOUR_BONUS_XP).roundToInt())} bonus experience.")
-    else
-        player.sendMessage("Your ${item.name.lowercase()} has $percent% of its charge remaining.")
+    player.sendSacredClayDetails(item, equipmentDetails(item))
 }
 
 private fun chooseStyle(player: Player, item: Item, onChosen: (CombatStyle) -> Unit) {
