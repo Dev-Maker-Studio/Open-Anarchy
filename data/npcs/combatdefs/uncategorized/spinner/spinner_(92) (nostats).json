@@ -10,8 +10,8 @@
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 59,
-  "hitpoints": 940,
-  "maxHit": 90,
+  "hitpoints": 1010,
+  "maxHit": 96,
   "attackStyle": "MELEE",
   "combatLevels": {
     "ATTACK": 32,
