@@ -1,201 +1,212 @@
 package com.rs.game.content.minigames.soulwars
 
-import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.content.ItemConstants
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onItemOnNpc
 import com.rs.plugin.kts.onNpcClick
 import com.rs.utils.DropSets
 import com.rs.utils.drop.DropTable
-import kotlin.math.floor
-import kotlin.math.min
+import org.darkan.core.Utils
+import org.darkan.core.cache.ItemDefinitions
+import org.darkan.core.gameval.gen.Component
+import org.darkan.core.gameval.gen.Interface
+import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Varbit
 
-enum class Imbue(val itemId: Int, val imbuedItemId: Int, val zealCost: Int) {
-    GOLD_RING(1635, 15009, 2),
-    SAPPHIRE_RING(1637, 15010, 5),
-    EMERALD_RING(1639, 15011, 6),
-    RUBY_RING(1641, 15012, 10),
-    DIAMOND_RING(1643, 15013, 15),
-    DRAGONSTONE_RING(1645, 15014, 20),
-    LUNAR_RING(9104, 15015, 8),
-    RING_OF_CHAROS(6465, 15016, 4),
-    ONYX_RING(6575, 15017, 25),
-    SEERS_RING(6731, 15018, 25),
-    ARCHERS_RING(6733, 15019, 25),
-    WARRIOR_RING(6735, 15020, 25),
-    BERSERKER_RING(6737, 15220, 25)
+private const val GAMBLE_COST = 2
+
+private enum class Imbue(val obj: Int, val imbued: Int, val zealCost: Int) {
+    GOLD_RING(Obj.gold_ring, Obj.mob_gold_ring, 2),
+    SAPPHIRE_RING(Obj.sapphire_ring, Obj.mob_sapphire_ring, 5),
+    EMERALD_RING(Obj.emerald_ring, Obj.mob_emerald_ring, 6),
+    RUBY_RING(Obj.ruby_ring, Obj.mob_ruby_ring, 10),
+    DIAMOND_RING(Obj.diamond_ring, Obj.mob_diamond_ring, 15),
+    DRAGONSTONE_RING(Obj.dragonstone_ring, Obj.mob_dragonstone_ring, 20),
+    LUNAR_RING(Obj.lunar_ring, Obj.mob_lunar_ring, 8),
+    RING_OF_CHAROS(Obj.ring_of_charos_unlocked, Obj.mob_ring_of_charos_unlocked, 4),
+    ONYX_RING(Obj.onyx_ring, Obj.mob_onyx_ring, 25),
+    SEERS_RING(Obj.seer_ring, Obj.mob_seer_ring, 25),
+    ARCHERS_RING(Obj.ranger_ring, Obj.mob_ranger_ring, 25),
+    WARRIOR_RING(Obj.warrior_ring, Obj.mob_warrior_ring, 25),
+    BERSERKER_RING(Obj.berzerker_ring, Obj.mob_berzerker_ring, 25);
+
+    companion object {
+        private val byObj = entries.flatMap { listOf(it.obj to it, it.imbued to it) }.toMap()
+        fun forObj(obj: Int) = byObj[obj]
+    }
 }
 
-val COMP_TO_PET = mapOf(
-    6 to Triple(7975, 14652, 5),
-    14 to Triple(7976, 14653, 25),
-    10 to Triple(7977, 14654, 40),
-    12 to Triple(7978, 14655, 70),
-    16 to Triple(7979, 14651, 85),
-    81 to Triple(6570, 21512, 100)
-)
-val COMP_TO_CHARM = mapOf(
-    27 to Pair(ItemConstants.CHARM_IDS[0], 4),
-    26 to Pair(ItemConstants.CHARM_IDS[1], 5),
-    25 to Pair(ItemConstants.CHARM_IDS[2], 12),
-    24 to Pair(ItemConstants.CHARM_IDS[3], 30)
-)
-val COMP_TO_SKILL = mapOf(
-    37 to Skills.ATTACK,
-    35 to Skills.STRENGTH,
-    34 to Skills.DEFENSE,
-    33 to Skills.HITPOINTS,
-    36 to Skills.RANGE,
-    39 to Skills.MAGIC,
-    38 to Skills.PRAYER,
-    32 to Skills.SLAYER
-)
+private enum class XpReward(val component: Int, val skill: Int, val levelDivisor: Int, val xpMultiplier: Int) {
+    ATTACK(Component.interface_276.component_276_37, Skills.ATTACK, 600, 525),
+    STRENGTH(Component.interface_276.component_276_35, Skills.STRENGTH, 600, 525),
+    DEFENCE(Component.interface_276.component_276_34, Skills.DEFENSE, 600, 525),
+    CONSTITUTION(Component.interface_276.component_276_33, Skills.HITPOINTS, 600, 525),
+    RANGED(Component.interface_276.component_276_36, Skills.RANGE, 600, 480),
+    MAGIC(Component.interface_276.component_276_39, Skills.MAGIC, 600, 480),
+    PRAYER(Component.interface_276.component_276_38, Skills.PRAYER, 600, 270),
+    SLAYER(Component.interface_276.component_276_32, Skills.SLAYER, 349, 45);
+
+    fun xpPerZeal(player: Player): Int {
+        val level = player.skills.getLevelForXp(skill)
+        return level * level / levelDivisor * xpMultiplier
+    }
+
+    companion object {
+        private val byComponent = entries.associateBy { it.component }
+        fun forComponent(component: Int) = byComponent[component]
+    }
+}
+
+private enum class CharmReward(val component: Int, val charm: Int, val cost: Int, val amountAtCombat3: Double, val amountAtCombat138: Double) {
+    GOLD(Component.interface_276.component_276_27, ItemConstants.CHARM_IDS[0], 4, 6.0, 52.0),
+    GREEN(Component.interface_276.component_276_26, ItemConstants.CHARM_IDS[1], 5, 4.0, 34.0),
+    CRIMSON(Component.interface_276.component_276_25, ItemConstants.CHARM_IDS[2], 12, 4.0, 34.0),
+    BLUE(Component.interface_276.component_276_24, ItemConstants.CHARM_IDS[3], 30, 5.0, 45.0);
+
+    fun amount(player: Player): Int {
+        val combat = player.skills.combatLevelWithSummoning.toDouble()
+        return (amountAtCombat3 + (amountAtCombat138 - amountAtCombat3) * (combat - 3.0) / (138.0 - 3.0)).toInt()
+    }
+
+    companion object {
+        private val byComponent = entries.associateBy { it.component }
+        fun forComponent(component: Int) = byComponent[component]
+    }
+}
+
+private enum class PetReward(val component: Int, val requiredObj: Int, val pet: Int, val cost: Int) {
+    CREEPING_HAND(Component.interface_276.component_276_6, Obj.poh_trophydrop_crawlinghand, Obj.snp_interface_hand, 5),
+    MINITRICE(Component.interface_276.component_276_14, Obj.poh_trophydrop_cockatrice, Obj.snp_interface_cockatrice, 25),
+    BABY_BASILISK(Component.interface_276.component_276_10, Obj.poh_trophydrop_basilisk, Obj.snp_interface_basilisk, 40),
+    BABY_KURASK(Component.interface_276.component_276_12, Obj.poh_trophydrop_kurask, Obj.snp_interface_kurask, 70),
+    ABYSSAL_MINION(Component.interface_276.component_276_16, Obj.poh_trophydrop_abyssaldemon, Obj.snp_interface_abbyd, 85),
+    TZREK_JAD(Component.interface_276.component_276_81, Obj.tzhaar_cape_fire, Obj.lore_jad, 100);
+
+    companion object {
+        private val byComponent = entries.associateBy { it.component }
+        fun forComponent(component: Int) = byComponent[component]
+    }
+}
 
 @ServerStartupEvent
-fun mapRewardsPlugins() {
-    onNpcClick(8527, 8525, options = arrayOf("Rewards")) { (player) ->
-        player.interfaceManager.sendInterface(276)
-        player.vars.setVarBit(Varbit.snp_zeal, player.soulWarsZeal)
+fun mapSoulWarsRewards() {
+    onNpcClick(Npc.npc_8527, Npc.npc_8525, options = arrayOf("Rewards")) { (player) ->
+        player.interfaceManager.sendInterface(Interface.interface_276)
+        refreshZeal(player)
     }
 
-    onButtonClick(276) { (player, _, componentId, _, _, packet) ->
-        when(packet) {
-            1 -> {
-                when (componentId) {
-                    32, 33, 34, 35, 36, 37, 38, 39 -> COMP_TO_SKILL[componentId]?.let { player.sendMessage("You will receive ${Utils.formatNumber(getXpPerZeal(player.skills.getLevelForXp(it), it))} ${Skills.SKILL_NAME[it]} experience per Zeal exchanged.") }
-                    24, 25, 26, 27 -> COMP_TO_CHARM[componentId]?.let { (charmId, cost) ->
-                        player.sendMessage("You need $cost Zeal to buy ${getCharmAmount(player, charmId)} ${ItemDefinitions.getDefs(charmId).name.lowercase()}s.") }
-                    6, 14, 10, 12, 16, 81 -> COMP_TO_PET[componentId]?.let { (item, petId, cost) ->
-                        player.sendMessage("You need a ${ItemDefinitions.getDefs(item).name.lowercase()} and $cost Zeal to buy a ${ItemDefinitions.getDefs(petId).name}.") }
-                    8 -> player.sendMessage("You need 2 Zeal to gamble.")
-                    else -> player.sendMessage("soulrewardcomp: $componentId - $packet")
-                }
-                return@onButtonClick
-            }
-            2, 3, 4 -> {
-                when (componentId) {
-                    32, 33, 34, 35, 36, 37, 38, 39 -> COMP_TO_SKILL[componentId]?.let { buyXp(player, it, packet) }
-                    24, 25, 26, 27 -> COMP_TO_CHARM[componentId]?.let { (charmId, cost) ->
-                        if (player.soulWarsZeal < cost) {
-                            player.sendMessage("You need $cost Zeal to buy ${getCharmAmount(player, charmId)} ${ItemDefinitions.getDefs(charmId).name.lowercase()}s.")
-                            return@onButtonClick
-                        }
-                        player.soulWarsZeal -= cost
-                        player.inventory.addItemDrop(charmId, getCharmAmount(player, charmId))
-                    }
-                    6, 14, 10, 12, 16, 81 -> {
-                        COMP_TO_PET[componentId]?.let { (item, petId, cost) ->
-                            if (player.soulWarsZeal < cost || !player.inventory.containsItem(item)) {
-                                player.sendMessage("You need a ${ItemDefinitions.getDefs(item).name.lowercase()} and $cost Zeal to buy a ${ItemDefinitions.getDefs(petId).name}.")
-                                return@onButtonClick
-                            }
-                            player.soulWarsZeal -= cost
-                            player.inventory.deleteItem(item, 1)
-                            player.inventory.addItemDrop(petId, 1)
-                        }
-                    }
-                    8 -> {
-                        if (player.soulWarsZeal < 2) {
-                            player.sendMessage("You need 2 Zeal to gamble.")
-                            return@onButtonClick
-                        }
-                        player.soulWarsZeal -= 2
-                        DropTable.calculateDrops(player, DropSets.getDropSet("sw_gamble")).forEach { player.inventory.addItemDrop(it) }
-                        if (Utils.random(50) == 0) {
-                            player.npcDialogue(8526, HeadE.CHEERFUL, "Oi, guv! I'm feeling generous so I've conscripted one of my friends to gather charms for you.")
-                            player.inventory.addItemDrop(25350, 1)
-                        }
-                    }
-
-                    else -> player.sendMessage("soulrewardcomp: $componentId - $packet")
-                }
-            }
-            else -> {}
+    onButtonClick(Interface.interface_276) { e ->
+        val player = e.player
+        when (e.opNum) {
+            1 -> describe(player, e.component)
+            2, 3, 4 -> buy(player, e.component, e.opNum)
         }
-        player.vars.setVarBit(Varbit.snp_zeal, player.soulWarsZeal)
+        refreshZeal(player)
     }
 
-    onItemOnNpc(8527, 8525) { e ->
-        e.apply {
-            if (!Imbue.entries.any { e.item.id == it.itemId || e.item.id == it.imbuedItemId }) {
-                player.startConversation { npc(npc.id, HeadE.CALM_TALK, "I can't imbue that. Bring me a ring to imbue. I can also un-imbue a ring for you if you bring me an imbued ring.") }
-                return@onItemOnNpc
-            }
-            val imbue = Imbue.entries.first { e.item.id == it.itemId || e.item.id == it.imbuedItemId }
-            if (imbue.imbuedItemId == e.item.id) {
-                player.startConversation {
-                    npc(npc.id, HeadE.CALM_TALK, "Are you sure you'd like me to remove your enchantment? You won't be refunded any Zeal for this process.")
-                    options {
-                        opExec("Yes, please restore my ring to its original state.") {
-                            item.id = imbue.itemId
-                            player.inventory.refresh(item.slot)
-                        }
-                        op("Nevermind.")
-                    }
+    onItemOnNpc(Npc.npc_8527, Npc.npc_8525) { (player, item, npc) ->
+        val imbue = Imbue.forObj(item.id)
+            ?: return@onItemOnNpc player.startConversation { npc(npc.id, HeadE.CALM_TALK, "I can't imbue that. Bring me a ring to imbue. I can also un-imbue a ring for you if you bring me an imbued ring.") }
+        val slot = item.slot
+        if (item.id == imbue.imbued) {
+            player.startConversation {
+                npc(npc.id, HeadE.CALM_TALK, "Are you sure you'd like me to remove your enchantment? You won't be refunded any Zeal for this process.")
+                options {
+                    opExec("Yes, please restore my ring to its original state.") { swapRing(player, slot, imbue.imbued, imbue.obj) }
+                    op("Nevermind.")
                 }
             }
-            if (imbue.itemId == e.item.id) {
-                player.startConversation {
-                    npc(npc.id, HeadE.CALM_TALK, "I can imbue that ring for you for " + imbue.zealCost + " Zeal. Is that alright with you?")
-                    options {
-                        opExec("Yes, please imbue my ring.") {
-                            if (player.soulWarsZeal >= imbue.zealCost) {
-                                player.soulWarsZeal -= imbue.zealCost
-                                item.id = imbue.imbuedItemId
-                                player.inventory.refresh(item.slot)
-                            } else
-                                player.npcDialogue(npc.id, HeadE.CALM_TALK, "You don't have enough Zeal.")
-                        }
-                        op("Nevermind.")
-                    }
+            return@onItemOnNpc
+        }
+        player.startConversation {
+            npc(npc.id, HeadE.CALM_TALK, "I can imbue that ring for you for ${imbue.zealCost} Zeal. Is that alright with you?")
+            options {
+                opExec("Yes, please imbue my ring.") {
+                    if (player.soulWarsZeal < imbue.zealCost)
+                        return@opExec player.npcDialogue(npc.id, HeadE.CALM_TALK, "You don't have enough Zeal.")
+                    if (swapRing(player, slot, imbue.obj, imbue.imbued))
+                        player.soulWarsZeal -= imbue.zealCost
                 }
+                op("Nevermind.")
             }
         }
     }
 }
 
-fun buyXp(player: Player, skillId: Int, packet: Int) {
-    val zealCost = when(packet) {
+private fun swapRing(player: Player, slot: Int, from: Int, to: Int): Boolean {
+    val ring = player.inventory.getItem(slot)?.takeIf { it.id == from } ?: return false
+    ring.id = to
+    player.inventory.refresh(slot)
+    return true
+}
+
+private fun refreshZeal(player: Player) = player.vars.setVarBit(Varbit.snp_zeal, player.soulWarsZeal)
+
+private fun describe(player: Player, component: Int) {
+    XpReward.forComponent(component)?.let {
+        return player.sendMessage("You will receive ${Utils.formatNumber(it.xpPerZeal(player))} ${Skills.SKILL_NAME[it.skill]} experience per Zeal exchanged.")
+    }
+    CharmReward.forComponent(component)?.let {
+        return player.sendMessage("You need ${it.cost} Zeal to buy ${it.amount(player)} ${ItemDefinitions.getDefs(it.charm).name.lowercase()}s.")
+    }
+    PetReward.forComponent(component)?.let {
+        return player.sendMessage("You need a ${ItemDefinitions.getDefs(it.requiredObj).name.lowercase()} and ${it.cost} Zeal to buy a ${ItemDefinitions.getDefs(it.pet).name}.")
+    }
+    if (component == Component.interface_276.component_276_8)
+        player.sendMessage("You need $GAMBLE_COST Zeal to gamble.")
+}
+
+private fun buy(player: Player, component: Int, opNum: Int) {
+    XpReward.forComponent(component)?.let { return buyXp(player, it, opNum) }
+    CharmReward.forComponent(component)?.let { return buyCharms(player, it) }
+    PetReward.forComponent(component)?.let { return buyPet(player, it) }
+    if (component == Component.interface_276.component_276_8)
+        gamble(player)
+}
+
+private fun buyXp(player: Player, reward: XpReward, opNum: Int) {
+    val zealCost = when (opNum) {
         3 -> 10
         4 -> 100
         else -> 1
     }
-    if (player.soulWarsZeal < zealCost) {
-        player.sendMessage("You don't have enough Zeal.")
-        return
-    }
+    val xpPerZeal = reward.xpPerZeal(player)
+    if (xpPerZeal <= 0)
+        return player.sendMessage("Your ${Skills.SKILL_NAME[reward.skill]} level is too low to gain experience from Zeal.")
+    if (player.soulWarsZeal < zealCost)
+        return player.sendMessage("You don't have enough Zeal.")
     player.soulWarsZeal -= zealCost
-    player.skills.addXp(skillId, getXpPerZeal(player.skills.getLevelForXp(skillId), skillId).toDouble() * zealCost)
+    player.skills.addXp(reward.skill, xpPerZeal.toDouble() * zealCost)
 }
 
-fun getXpPerZeal(level: Int, skillId: Int): Int {
-    return when(skillId) {
-        Skills.ATTACK, Skills.STRENGTH, Skills.DEFENSE, Skills.HITPOINTS -> floor(min(1.0, (level*level) / 600.0)).toInt() * 525
-        Skills.RANGE, Skills.MAGIC -> floor(min(1.0, (level*level) / 600.0)).toInt() * 480
-        Skills.PRAYER -> floor(min(1.0, (level*level) / 600.0)).toInt() * 270
-        Skills.SLAYER -> floor(min(1.0, (level*level) / 349.0)).toInt() * 45
-        else -> 1
+private fun buyCharms(player: Player, reward: CharmReward) {
+    if (player.soulWarsZeal < reward.cost)
+        return player.sendMessage("You need ${reward.cost} Zeal to buy ${reward.amount(player)} ${ItemDefinitions.getDefs(reward.charm).name.lowercase()}s.")
+    player.soulWarsZeal -= reward.cost
+    player.inventory.addItemDrop(reward.charm, reward.amount(player))
+}
+
+private fun buyPet(player: Player, reward: PetReward) {
+    if (player.soulWarsZeal < reward.cost || !player.inventory.containsItem(reward.requiredObj))
+        return player.sendMessage("You need a ${ItemDefinitions.getDefs(reward.requiredObj).name.lowercase()} and ${reward.cost} Zeal to buy a ${ItemDefinitions.getDefs(reward.pet).name}.")
+    player.soulWarsZeal -= reward.cost
+    player.inventory.deleteItem(reward.requiredObj, 1)
+    player.inventory.addItemDrop(reward.pet, 1)
+}
+
+private fun gamble(player: Player) {
+    if (player.soulWarsZeal < GAMBLE_COST)
+        return player.sendMessage("You need $GAMBLE_COST Zeal to gamble.")
+    player.soulWarsZeal -= GAMBLE_COST
+    DropTable.calculateDrops(player, DropSets.getDropSet("sw_gamble")).forEach { player.inventory.addItemDrop(it) }
+    if (Utils.random(50) == 0) {
+        player.npcDialogue(Npc.snp_imp_post_nom, HeadE.CHEERFUL, "Oi, guv! I'm feeling generous so I've conscripted one of my friends to gather charms for you.")
+        player.inventory.addItemDrop(Obj.obj_25350, 1)
     }
-}
-
-fun getCharmAmount(player: Player, charmId: Int): Int {
-    return when(charmId) {
-        ItemConstants.CHARM_IDS[0] -> linearInterp(3.0, 6.0, 138.0, 52.0, player.skills.combatLevelWithSummoning.toDouble())
-        ItemConstants.CHARM_IDS[1], ItemConstants.CHARM_IDS[2] -> linearInterp(3.0, 4.0, 138.0, 34.0, player.skills.combatLevelWithSummoning.toDouble())
-        ItemConstants.CHARM_IDS[3] -> linearInterp(3.0, 5.0, 138.0, 45.0, player.skills.combatLevelWithSummoning.toDouble())
-        else -> 1
-    }.toInt()
-}
-
-fun linearInterp(x1: Double, y1: Double, x2: Double, y2: Double, x: Double): Double {
-    if (x1 == x2)
-        throw IllegalArgumentException("x1 and x2 cannot be the same value")
-    return ((y2 - y1) / (x2 - x1)) * (x - x1) + y1
 }
