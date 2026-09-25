@@ -25,6 +25,13 @@ fun Item.setSacredClayCharge(charge: Int) {
     if (sacredClayChargePercent(value) != shownBefore) markChanged()
 }
 
+private val TOOLTIP_TAGS = Regex("<[^>]+>")
+
+fun Player.sendSacredClayDetails(item: Item, lines: List<String>) {
+    sendMessage("Your ${item.name.lowercase()}:")
+    lines.forEach { sendMessage(" - ${it.replace(TOOLTIP_TAGS, "")}") }
+}
+
 fun sacredClayItem(id: Int): Item = Item(id).addMetaData(SACRED_CLAY_CHARGE_KEY, FULL_SACRED_CLAY_CHARGE)
 
 class HeldItem(private val player: Player, val item: Item, private val wornSlot: Int?) {
