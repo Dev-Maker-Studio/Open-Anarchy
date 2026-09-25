@@ -3,7 +3,6 @@ package com.rs.game.content.minigames.creations
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.model.Item
-import kotlin.math.ceil
 
 const val SACRED_CLAY_CHARGE_KEY = "sacredClayCharge"
 const val FULL_SACRED_CLAY_CHARGE = 1_000_000
@@ -11,18 +10,8 @@ const val FULL_SACRED_CLAY_CHARGE = 1_000_000
 val Item.sacredClayCharge: Int
     get() = getMetaDataI(SACRED_CLAY_CHARGE_KEY, FULL_SACRED_CLAY_CHARGE)
 
-fun sacredClayChargePercent(charge: Int) = ceil(charge * 100.0 / FULL_SACRED_CLAY_CHARGE).toInt()
-
 fun Item.setSacredClayCharge(charge: Int) {
-    val value = charge.coerceIn(0, FULL_SACRED_CLAY_CHARGE)
-    val metadata = getMetaData()
-    if (metadata == null || SACRED_CLAY_CHARGE_KEY !in metadata) {
-        addMetaData(SACRED_CLAY_CHARGE_KEY, value)
-        return
-    }
-    val shownBefore = sacredClayChargePercent(sacredClayCharge)
-    metadata[SACRED_CLAY_CHARGE_KEY] = value
-    if (sacredClayChargePercent(value) != shownBefore) markChanged()
+    addMetaData(SACRED_CLAY_CHARGE_KEY, charge.coerceAtLeast(0))
 }
 
 private val TOOLTIP_TAGS = Regex("<[^>]+>")

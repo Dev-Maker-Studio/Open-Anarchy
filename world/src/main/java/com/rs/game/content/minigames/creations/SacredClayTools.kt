@@ -13,6 +13,7 @@ import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnItem
 import com.rs.plugin.kts.onXpDrop
 import org.darkan.core.Constants
+import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.model.Item
 import kotlin.math.roundToInt
@@ -103,8 +104,8 @@ fun mapSacredClayTools() {
         if (e.skillId in SacredClayArmour.combatSkills) applySacredClayArmourBonus(e) else applyToolBonus(e)
     }
 
-    for (id in SacredClayTool.byId.keys + Obj.sc_reward_tool + Obj.sc_reward_volatile_tool)
-        onItemOnItem(intArrayOf(id), intArrayOf(id)) { e -> combineTools(e.player, e.item1.slot, e.item2.slot) }
+    for (id in SacredClayTool.byId.keys + Obj.sc_reward_tool + Obj.sc_reward_volatile_tool + SacredClayArmour.morphicIds + SacredClayArmour.SHIELD.ids)
+        onItemOnItem(intArrayOf(id), intArrayOf(id)) { e -> combineCharges(e.player, e.item1.slot, e.item2.slot) }
 }
 
 private fun checkTool(player: Player, item: Item) {
@@ -115,22 +116,22 @@ fun isSacredClayTool(itemId: Int) = itemId in SacredClayTool.byId || itemId == O
 
 fun sacredClayToolDetails(item: Item): List<String> {
     val charge = item.sacredClayCharge
-    val lines = mutableListOf("Charge: ${ItemTooltips.value("${sacredClayChargePercent(charge)}%")}")
     val volatile = item.id == Obj.sc_reward_volatile_tool || item.id in SacredClayTool.volatileForms
-    lines += "Xp bonus: ${ItemTooltips.value("+${((if (volatile) VOLATILE_XP_BONUS else PROTO_XP_BONUS) * 100).roundToInt()}%")}"
+    val lines = mutableListOf("Xp bonus: ${ItemTooltips.value("+${((if (volatile) VOLATILE_XP_BONUS else PROTO_XP_BONUS) * 100).roundToInt()}%")}")
     val tool = SacredClayTool.byId[item.id]
     if (tool == null) {
         lines += if (volatile) "Transforms into a random tool" else "Transforms into any tool, free of charge"
+        lines += "Bonus xp left:"
+        for (form in SacredClayTool.entries) for (skill in form.skills)
+            lines += "${form.label}: ${ItemTooltips.value(bonusXp(charge, form, skill, volatile))} ${Constants.SKILL_NAME[skill]}"
         return lines
     }
     for (skill in tool.skills)
         lines += "Bonus xp left: ${ItemTooltips.value(bonusXp(charge, tool, skill, volatile))} ${Constants.SKILL_NAME[skill]}"
     val revert = item.getMetaDataI(SACRED_CLAY_REVERT_KEY, -1)
-    if (volatile && revert >= 0) {
-        lines += "Reverts at: ${ItemTooltips.value("${sacredClayChargePercent(revert)}%")}"
+    if (volatile && revert >= 0)
         for (skill in tool.skills)
             lines += "Before reverting: ${ItemTooltips.value(bonusXp(charge - revert, tool, skill, true))} ${Constants.SKILL_NAME[skill]}"
-    }
     return lines
 }
 
@@ -142,21 +143,15 @@ private fun Item.setToolCharge(charge: Int) {
     if (id in SacredClayTool.volatileForms) addMetaData(SACRED_CLAY_REVERT_KEY, (charge - 1) / VOLATILE_CHARGE_STEP * VOLATILE_CHARGE_STEP)
 }
 
-private fun combineTools(player: Player, fromSlot: Int, toSlot: Int) {
+private fun combineCharges(player: Player, fromSlot: Int, toSlot: Int) {
     val from = player.inventory.getItem(fromSlot) ?: return
     val to = player.inventory.getItem(toSlot) ?: return
     if (fromSlot == toSlot || from.id != to.id) return
-    if (to.sacredClayCharge >= FULL_SACRED_CLAY_CHARGE) {
-        player.sendMessage("That ${to.name.lowercase()} is already fully charged.")
-        return
-    }
-    val total = from.sacredClayCharge + to.sacredClayCharge
-    to.setToolCharge(minOf(total, FULL_SACRED_CLAY_CHARGE))
-    val spare = total - FULL_SACRED_CLAY_CHARGE
-    if (spare > 0) from.setToolCharge(spare)
-    else player.inventory.deleteItem(fromSlot, from)
-    player.sendMessage("You combine the charges. Your ${to.name.lowercase()} now has ${sacredClayChargePercent(to.sacredClayCharge)}% charge" +
-        if (spare > 0) " and the other keeps ${sacredClayChargePercent(spare)}%." else ", and the empty tool crumbles to dust.")
+    val total = (from.sacredClayCharge.toLong() + to.sacredClayCharge).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    player.inventory.deleteItem(fromSlot, from)
+    to.setToolCharge(total)
+    player.sendMessage("You pour the charge from one ${to.name.lowercase()} into the other.")
+    player.sendSacredClayDetails(to, sacredClayDetails(to))
 }
 
 private fun transformVolatile(player: Player, item: Item) {
@@ -194,9 +189,10 @@ private fun revertTool(player: Player, held: HeldItem) {
         crumble(player, held)
         return
     }
-    val lost = sacredClayChargePercent(item.sacredClayCharge) - sacredClayChargePercent(charge)
+    val tool = SacredClayTool.byId.getValue(item.id)
+    val lost = tool.skills.joinToString(", ") { "${Utils.formatNumber(bonusXp(item.sacredClayCharge - charge, tool, it, true))} ${Constants.SKILL_NAME[it]}" }
     revertVolatile(held, charge)
-    player.sendMessage("Your tool reverts to a volatile tool" + if (lost > 0) ", losing $lost% of its charge." else ".")
+    player.sendMessage("Your tool reverts to a volatile tool, losing $lost bonus xp.")
 }
 
 private fun revertVolatile(held: HeldItem, charge: Int) {

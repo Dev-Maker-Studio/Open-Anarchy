@@ -70,11 +70,11 @@ fun mapSacredClayEquipment() {
     ItemTooltips.metadata(SACRED_CLAY_CHARGE_KEY) { _, item, _ -> sacredClayDetails(item).joinToString("<br>") }
 }
 
-private fun sacredClayDetails(item: Item): List<String> = if (isSacredClayTool(item.id)) sacredClayToolDetails(item) else equipmentDetails(item)
+fun sacredClayDetails(item: Item): List<String> = if (isSacredClayTool(item.id)) sacredClayToolDetails(item) else sacredClayEquipmentDetails(item)
 
-private fun equipmentDetails(item: Item): List<String> {
+fun sacredClayEquipmentDetails(item: Item): List<String> {
     val charge = item.sacredClayCharge
-    val lines = mutableListOf("Charge: ${ItemTooltips.value("${sacredClayChargePercent(charge)}%")}")
+    val lines = mutableListOf<String>()
     if (item.id in SacredClayArmour.morphicIds) {
         lines += "Xp bonus: ${ItemTooltips.value("+100%")} combat while worn"
         lines += "Bonus xp left: ${ItemTooltips.value((charge / FULL_SACRED_CLAY_CHARGE.toDouble() * ARMOUR_BONUS_XP).roundToInt())}"
@@ -91,7 +91,7 @@ private fun checkEquipment(player: Player, item: Item) {
         player.sendMessage("Your sacred clay shield is inactive. The Rewards mystic can recharge it.")
         return
     }
-    player.sendSacredClayDetails(item, equipmentDetails(item))
+    player.sendSacredClayDetails(item, sacredClayEquipmentDetails(item))
 }
 
 private fun chooseStyle(player: Player, item: Item, onChosen: (CombatStyle) -> Unit) {
