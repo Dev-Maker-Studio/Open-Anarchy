@@ -1,11 +1,13 @@
 package com.rs.game.content.minigames.soulwars
 
-import org.darkan.core.model.ObjectShape
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.World
 import com.rs.game.content.minigames.checkAndDeleteFoodAndPotions
 import com.rs.game.content.minigames.giveFoodAndPotions
+import com.rs.game.content.minigames.isMinigameSupply
+import com.rs.game.content.skills.summoning.Familiar
+import com.rs.game.map.ChunkManager
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.Teleport
@@ -16,320 +18,375 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
+import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.plugin.kts.onChunkEnter
+import com.rs.plugin.kts.onItemClick
+import com.rs.plugin.kts.onItemEquip
+import com.rs.plugin.kts.onObjectClick
+import com.rs.utils.Ticks
+import com.rs.utils.equipSlot
+import org.darkan.core.Utils
+import org.darkan.core.gameval.gen.Component
+import org.darkan.core.gameval.gen.Interface
+import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Seq
+import org.darkan.core.gameval.gen.Varc
+import org.darkan.core.gameval.gen.Varp
 import org.darkan.core.model.Item
-import world.gregs.voidps.type.Tile
-import org.darkan.core.util.MapUtils
+import org.darkan.core.model.ObjectShape
 import org.darkan.core.util.Area
 import org.darkan.core.util.Structure
-import org.darkan.core.Utils
-import com.rs.plugin.annotations.ServerStartupEvent
-import com.rs.utils.equipSlot
-import com.rs.plugin.kts.*
-import com.rs.utils.Ticks
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
-import it.unimi.dsi.fastutil.objects.ObjectSet
-import it.unimi.dsi.fastutil.objects.ObjectSets
+import world.gregs.voidps.type.Tile
 import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.sign
 
-const val LOBBY_OVERLAY = 837
-const val INGAME_OVERLAY = 836
+private const val PLAYER_MINIMUM = 4
+private const val CLIENT_TEAM_CAPACITY = 10
+private val TICKS_PER_MINUTE = Ticks.fromMinutes(1)
+private val LOBBY_COUNTDOWN = Ticks.fromMinutes(3)
+private val GAME_DURATION = Ticks.fromMinutes(20)
+private const val CAPTURE_INTERVAL = 5
+private const val CONTROL_MAX = 30
+private const val CONTROL_NEUTRAL = 15
+private const val RED_CONTROL = 25
+private const val BLUE_CONTROL = 5
+private const val MAX_AVATAR_LEVEL = 100
+private const val MIN_AVATAR_LEVEL = 80
+private const val AVATAR_DAMAGE_CAP = 700
+private const val MAX_ACTIVITY = 1000
+private const val DEATH_JINGLE = 90
 
-const val GAME_ACTIVE_VARC = 632
-const val PLAYERS_NEEDED_BLUE_VARC = 633
-const val PLAYERS_NEEDED_RED_VARC = 634
+private val WAITING_ROOM_ENTRY = Tile.of(1879, 3162, 0)
+private val WAITING_ROOM_EXIT = Tile.of(1880, 3162, 0)
+private val GREEN_PORTAL_ARRIVAL = Tile.of(1875, 3162, 0)
+private val GAME_EXIT = Tile.of(1886, 3172, 0)
+private val ARENA = Area(Structure.REGION, 28, 50, 3, 1)
 
-const val LOBBY_MINUTES_PASSED_VARC = 635
-const val GAME_MINUTES_PASSED_VARC = 636
+internal enum class Team(
+    val colouredName: String,
+    val cape: Int,
+    val avatarNpc: Int,
+    val avatarTile: Tile,
+    val avatarDangerChunks: Set<Int>,
+    val spawnArea: Area,
+    val exitArea: Area,
+    val sizeVarc: Int,
+    val avatarHealthVarc: Int,
+    val avatarLevelVarc: Int,
+    val avatarDeathsVarc: Int,
+) {
+    RED(
+        "<col=A31818>red</col>", Obj.snp_red_cape, Npc.snp_red_boss, Tile.of(1965, 3249, 0),
+        setOf(504215, 502167, 502166, 504214, 504213, 502165),
+        Area(Structure.TILE, 1952, 3236, 5, 6), Area(Structure.TILE, 1893, 3166, 3, 7),
+        Varc.varc_638, Varc.varc_640, Varc.varc_642, Varc.varc_644,
+    ),
+    BLUE(
+        "<col=3232D1>blue</col>", Obj.snp_blue_cape, Npc.snp_blue_boss, Tile.of(1805, 3208, 0),
+        setOf(463248, 461200, 461201, 463249, 463250, 461202),
+        Area(Structure.TILE, 1817, 3222, 5, 6), Area(Structure.TILE, 1885, 3166, 3, 7),
+        Varc.varc_637, Varc.varc_639, Varc.varc_641, Varc.varc_643,
+    );
 
-const val BLUE_TEAM_SIZE_VARC = 637
-const val RED_TEAM_SIZE_VARC = 638
+    val opponent: Team get() = if (this == RED) BLUE else RED
+}
 
-const val BLUE_AVATAR_HEALTH_VARC = 639
-const val RED_AVATAR_HEALTH_VARC = 640
-const val BLUE_AVATAR_LEVEL_VARC = 641
-const val RED_AVATAR_LEVEL_VARC = 642
-const val BLUE_AVATAR_DEATH_VARC = 643
-const val RED_AVATAR_DEATH_VARC = 644
+internal enum class CapturePoint(
+    val label: String,
+    val zone: Area,
+    val barChunks: Set<Int>,
+    val bar: Int,
+    val varc: Int,
+    val locTile: Tile,
+    val locShape: ObjectShape,
+    val redLoc: Int,
+    val blueLoc: Int,
+    val neutralLoc: Int,
+    val respawnArea: Area?,
+) {
+    OBELISK(
+        "the soul obelisk", Area(Structure.TILE, 1879, 3224, 15, 15), setOf(481684, 479636, 479635, 481683, 483731, 483732),
+        Component.interface_836.component_836_47, Varc.snp_obelisk_control_is_client, Tile.of(1886, 3231, 0), ObjectShape.SCENERY_INTERACT,
+        Loc.snp_central_obelisk_red, Loc.snp_central_obelisk_blue, Loc.snp_central_obelisk_neutral, null,
+    ),
+    EAST_GRAVEYARD(
+        "the eastern graveyard", Area(Structure.TILE, 1928, 3240, 10, 10), setOf(493973, 493974, 496022, 496021),
+        Component.interface_836.component_836_49, Varc.snp_east_control_is_client, Tile.of(1933, 3243, 0), ObjectShape.WALL_STRAIGHT,
+        Loc.snp_red_eastern_barrier, Loc.snp_blue_eastern_barrier, Loc.snp_neutral_eastern_barrier, Area(Structure.TILE, 1932, 3244, 2, 1),
+    ),
+    WEST_GRAVEYARD(
+        "the western graveyard", Area(Structure.TILE, 1837, 3213, 10, 10), setOf(471442, 469394, 469393, 471441),
+        Component.interface_836.component_836_50, Varc.snp_west_control_is_client, Tile.of(1842, 3220, 0), ObjectShape.WALL_STRAIGHT,
+        Loc.snp_red_western_barrier, Loc.snp_blue_western_barrier, Loc.snp_neutral_western_barrier, Area(Structure.TILE, 1841, 3218, 2, 1),
+    );
 
-const val MID_CLAIM_VARC = 645 //0-30  0 being blue owned 30 being red owned
-const val MID_CLAIM_BAR_COMP = 47
-const val EAST_CLAIM_VARC = 647 //0-30  0 being blue owned 30 being red owned
-const val EAST_CLAIM_BAR_COMP = 49
-const val WEST_CLAIM_VARC = 649 //0-30  0 being blue owned 30 being red owned
-const val WEST_CLAIM_BAR_COMP = 50
+    val locs = setOf(redLoc, blueLoc, neutralLoc)
 
-const val PLAYER_ACTIVITY_BAR_VAR = 1380 //0-1000
+    fun show(owner: Team?) {
+        val loc = World.getObjectWithType(locTile, locShape) ?: return
+        val id = when (owner) {
+            Team.RED -> redLoc
+            Team.BLUE -> blueLoc
+            null -> neutralLoc
+        }
+        if (loc.id != id)
+            loc.changeId(id)
+    }
 
-const val BONES = 14638
-const val SOUL_FRAGMENT = 14646
-const val RED_CAPE = 14641
-const val BLUE_CAPE = 14642
+    companion object {
+        fun forChunk(chunkId: Int) = entries.firstOrNull { chunkId in it.barChunks }
+    }
+}
 
-const val PLAYER_MINIMUM = 4
-const val TICKS_BETWEEN_GAMES = 300
+private class VarcFeed(vararg readers: Pair<Int, () -> Int>) {
+    private val varcs = readers.map { it.first }.toIntArray()
+    private val values = readers.map { it.second }
 
-val RED_AVATAR_DANGER_CHUNKS = setOf(504215, 502167, 502166, 504214, 504213, 502165)
-val BLUE_AVATAR_DANGER_CHUNKS = setOf(463248, 461200, 461201, 463249, 463250, 461202)
+    fun newSentValues() = IntArray(varcs.size) { Int.MIN_VALUE }
 
-val BLUE_EXIT_AREA = Area(Structure.TILE, 1885, 3166, 3, 7)
-val RED_EXIT_AREA = Area(Structure.TILE, 1893, 3166, 3, 7)
+    fun sync(player: Player, sent: IntArray) {
+        for (i in varcs.indices) {
+            val value = values[i]()
+            if (sent[i] != value) {
+                sent[i] = value
+                player.packets.sendVarc(varcs[i], value)
+            }
+        }
+    }
+}
 
-val BLUE_RESPAWN_AREA = Area(Structure.TILE, 1817, 3222, 5, 6)
-val RED_RESPAWN_AREA = Area(Structure.TILE, 1952, 3236, 5, 6)
-val EAST_RESPAWN_AREA = Area(Structure.TILE, 1932, 3244, 2, 1)
-val WEST_RESPAWN_AREA = Area(Structure.TILE, 1841, 3218, 2, 1)
+private object SoulWarsLobby {
+    val players = LinkedHashSet<Player>()
+    var game: SoulWars? = null
+    var countdown = 0
 
-val MID_CAP_ZONE = Area(Structure.TILE, 1879, 3224, 15, 15)
-val MID_CAP_CHUNKS = intArrayOf(481684, 479636, 479635, 481683, 483731, 483732)
-val EAST_GRAVEYARD_CAP_ZONE = Area(Structure.TILE, 1928, 3240, 10, 10)
-val EAST_CAP_CHUNKS = intArrayOf(493973, 493974, 496022, 496021)
-val WEST_GRAVEYARD_CAP_ZONE = Area(Structure.TILE, 1837, 3213, 10, 10)
-val WEST_CAP_CHUNKS = intArrayOf(471442, 469394, 469393, 471441)
+    val playersNeeded get() = (PLAYER_MINIMUM - players.size).coerceAtLeast(0)
 
-val LOBBY_PLAYERS: ObjectSet<Player> = ObjectSets.synchronize(ObjectOpenHashSet())
-val INGAME_PLAYERS: ObjectSet<Player> = ObjectSets.synchronize(ObjectOpenHashSet())
-var ACTIVE_GAME: SoulWars? = null
-var LOBBY_TICKS = 0
+    fun tick() {
+        game?.let { return it.tick() }
+        if (++countdown < LOBBY_COUNTDOWN)
+            return
+        countdown = 0
+        if (players.size >= PLAYER_MINIMUM)
+            SoulWars().let {
+                game = it
+                it.start(players.toList())
+            }
+    }
+
+    fun gameEnded() {
+        game = null
+        countdown = 0
+    }
+}
+
+private val LOBBY_VARCS = VarcFeed(
+    Varc.snp_game_in_progress_client to { if (SoulWarsLobby.game == null) 0 else 1 },
+    Varc.varc_633 to { CLIENT_TEAM_CAPACITY - SoulWarsLobby.playersNeeded },
+    Varc.varc_634 to { CLIENT_TEAM_CAPACITY - SoulWarsLobby.playersNeeded },
+    Varc.varc_635 to { SoulWarsLobby.countdown / TICKS_PER_MINUTE },
+    Varc.snp_game_duration_client to { (SoulWarsLobby.game?.ticks ?: 0) / TICKS_PER_MINUTE },
+    *Team.entries.map { team -> team.sizeVarc to { SoulWarsLobby.game?.members(team)?.size ?: 0 } }.toTypedArray(),
+)
+
+private val GAME_VARCS = VarcFeed(
+    Varc.snp_game_duration_client to { (SoulWarsLobby.game?.ticks ?: 0) / TICKS_PER_MINUTE },
+    *Team.entries.flatMap { team ->
+        listOf(
+            team.avatarHealthVarc to { SoulWarsLobby.game?.avatar(team)?.healthPercent() ?: 0 },
+            team.avatarLevelVarc to { SoulWarsLobby.game?.avatar(team)?.level ?: 0 },
+            team.avatarDeathsVarc to { SoulWarsLobby.game?.avatarDeaths(team) ?: 0 },
+        )
+    }.toTypedArray(),
+    *CapturePoint.entries.map { point -> point.varc to { SoulWarsLobby.game?.control(point) ?: CONTROL_NEUTRAL } }.toTypedArray(),
+)
 
 @ServerStartupEvent
-fun mapSoulwars() {
-    onObjectClick(42219) { (player) ->
-        player.useStairs(-1, Tile.of(1886, 3178, 0), 0, 1)
-    }
+fun mapSoulWars() {
+    onObjectClick(Loc.snp_edgeville_portal_leafy) { (player) -> player.useStairs(-1, Tile.of(1886, 3178, 0), 0, 1) }
 
-    onObjectClick(42220) { (player) ->
-        player.useStairs(-1, Tile.of(3082, 3475, 0), 0, 1)
-    }
+    onObjectClick(Loc.snp_leave_soulwars_portal) { (player) -> player.useStairs(-1, Tile.of(3082, 3475, 0), 0, 1) }
 
-    onObjectClick(42029) { (player) ->
+    onObjectClick(Loc.snp_blue_waitingroom_barrier) { (player) ->
         when {
-            player.x < 1880 -> {
-                player.passThrough(Tile.of(1880, 3162, 0))
+            player.x < WAITING_ROOM_EXIT.x -> {
+                player.passThrough(WAITING_ROOM_EXIT)
                 player.controllerManager.forceStop()
             }
-
-            player.equipment.get(Equipment.CAPE) != null || player.inventory.items.array().any { it?.definitions?.equipSlot == Equipment.CAPE } ->
-                player.sendMessage("You cannot enter the lobby with a cape.")
-
+            hasCape(player) -> player.sendMessage("You cannot enter the lobby with a cape.")
             else -> {
-                player.passThrough(Tile.of(1879, 3162, 0))
+                player.passThrough(WAITING_ROOM_ENTRY)
                 player.controllerManager.startController(SoulWarsLobbyController())
             }
         }
     }
 
-    onObjectClick(42031) { (player) ->
-        if (player.equipment.get(Equipment.CAPE) != null || player.inventory.items.array().any { it?.definitions?.equipSlot == Equipment.CAPE })
+    onObjectClick(Loc.snp_green_portal) { (player) ->
+        if (hasCape(player))
             return@onObjectClick player.sendMessage("You cannot enter the lobby with a cape.")
-        player.tele(Tile.of(1875, 3162, 0))
+        player.tele(GREEN_PORTAL_ARRIVAL)
         player.controllerManager.startController(SoulWarsLobbyController())
     }
 
-    onItemClick(BONES, options = arrayOf("Bury")) { (player, item) ->
-        val ctrl = player.controllerManager.getController(SoulWarsGameController::class.java)
-        if (ctrl != null) {
-            if (ctrl.game?.bury(player, ctrl.redTeam) == true) {
-                ctrl.activity += 100
-                player.inventory.deleteItem(item)
-                player.anim(827)
-            }
-        }
+    onItemClick(Obj.snp_bones, options = arrayOf("Bury")) { (player, item) ->
+        val controller = player.controllerManager.getController(SoulWarsGameController::class.java) ?: return@onItemClick
+        if (controller.game?.bury(player, controller.team) != true)
+            return@onItemClick
+        controller.activity = min(controller.activity + 100, MAX_ACTIVITY)
+        player.inventory.deleteItem(item)
+        player.anim(Seq.seq_827)
     }
 
-    onItemEquip(RED_CAPE, BLUE_CAPE) { e ->
-        e.apply {
-            if (dequip()) {
-                if (!player.controllerManager.isIn(SoulWarsGameController::class.java)) {
-                    player.equipment.setNoPluginTrigger(Equipment.CAPE, null)
-                    player.equipment.refresh(Equipment.CAPE)
-                    player.appearance.generateAppearanceData()
-                }
-                cancel()
-            }
-        }
+    onItemEquip(Obj.snp_red_cape, Obj.snp_blue_cape) { e ->
+        if (!e.dequip())
+            return@onItemEquip
+        if (!e.player.controllerManager.isIn(SoulWarsGameController::class.java))
+            removeCape(e.player)
+        e.cancel()
     }
 
     onChunkEnter { (entity, chunkId) ->
-        (entity as? Player)?.let { player ->
-            fun setBarsVisibility(mid: Boolean, east: Boolean, west: Boolean) {
-                player.packets.apply {
-                    setIFHidden(INGAME_OVERLAY, MID_CLAIM_BAR_COMP, !mid)
-                    setIFHidden(INGAME_OVERLAY, EAST_CLAIM_BAR_COMP, !east)
-                    setIFHidden(INGAME_OVERLAY, WEST_CLAIM_BAR_COMP, !west)
-                }
-            }
-
-            when {
-                MID_CAP_CHUNKS.contains(chunkId) -> setBarsVisibility(mid = true, east = false, west = false)
-                EAST_CAP_CHUNKS.contains(chunkId) -> setBarsVisibility(mid = false, east = true, west = false)
-                WEST_CAP_CHUNKS.contains(chunkId) -> setBarsVisibility(mid = false, east = false, west = true)
-            }
-        }
+        val player = entity as? Player ?: return@onChunkEnter
+        if (!player.controllerManager.isIn(SoulWarsGameController::class.java))
+            return@onChunkEnter
+        val shown = CapturePoint.forChunk(chunkId)
+        for (point in CapturePoint.entries)
+            player.packets.setIFHidden(Interface.interface_836, Utils.componentIdFromHash(point.bar), point != shown)
     }
 
-    WorldTasks.scheduleTimer(0, 0) { _ ->
-        processSoulwars()
-        return@scheduleTimer true
+    WorldTasks.scheduleTimer(0, 0) {
+        SoulWarsLobby.tick()
+        true
     }
 }
 
-fun processSoulwars() {
-    ACTIVE_GAME?.tick()
-    LOBBY_TICKS++
-    if (LOBBY_TICKS % TICKS_BETWEEN_GAMES == 0) {
-        attemptStartGame()
-        LOBBY_TICKS = 0
-    }
-    if (LOBBY_TICKS % 5 == 0) {
-        for (player in LOBBY_PLAYERS)
-            updateLobbyVars(player)
-        for (player in INGAME_PLAYERS)
-            updateIngameVars(player)
-    }
+private fun hasCape(player: Player) =
+    player.equipment.get(Equipment.CAPE) != null || player.inventory.items.array().any { it?.definitions?.equipSlot == Equipment.CAPE }
+
+private fun removeCape(player: Player) {
+    player.equipment.setNoPluginTrigger(Equipment.CAPE, null)
+    player.equipment.refresh(Equipment.CAPE)
+    player.appearance.generateAppearanceData()
 }
 
-fun updateLobbyVars(player: Player) {
-    player.packets.apply {
-        sendVarc(GAME_ACTIVE_VARC, if (ACTIVE_GAME == null) 0 else 1)
+internal class SoulAvatar(val team: Team, private val game: SoulWars) : NPC(team.avatarNpc, team.avatarTile) {
+    var level = MAX_AVATAR_LEVEL
 
-        sendVarc(PLAYERS_NEEDED_BLUE_VARC, ACTIVE_GAME?.redTeam?.size ?: (LOBBY_PLAYERS.count() + (10 - PLAYER_MINIMUM)))
-        sendVarc(PLAYERS_NEEDED_RED_VARC, ACTIVE_GAME?.redTeam?.size ?: (LOBBY_PLAYERS.count() + (10 - PLAYER_MINIMUM)))
-
-        sendVarc(BLUE_TEAM_SIZE_VARC, ACTIVE_GAME?.blueTeam?.size ?: (LOBBY_PLAYERS.count() + (10 - PLAYER_MINIMUM)))
-        sendVarc(RED_TEAM_SIZE_VARC, ACTIVE_GAME?.redTeam?.size ?: (LOBBY_PLAYERS.count() + (10 - PLAYER_MINIMUM)))
-
-        sendVarc(LOBBY_MINUTES_PASSED_VARC, LOBBY_TICKS / 100)
-        sendVarc(GAME_MINUTES_PASSED_VARC, ACTIVE_GAME?.ticks?.div(100) ?: 0)
-    }
-}
-
-fun updateIngameVars(player: Player) {
-    updateLobbyVars(player)
-    player.packets.apply {
-        sendVarc(RED_AVATAR_HEALTH_VARC, ACTIVE_GAME?.redAvatar?.getHealthVarc() ?: 0)
-        sendVarc(RED_AVATAR_LEVEL_VARC, ACTIVE_GAME?.redAvatar?.plane ?: 0)
-        sendVarc(RED_AVATAR_DEATH_VARC, ACTIVE_GAME?.redDeaths ?: 0)
-
-        sendVarc(BLUE_AVATAR_HEALTH_VARC, ACTIVE_GAME?.blueAvatar?.getHealthVarc() ?: 0)
-        sendVarc(BLUE_AVATAR_LEVEL_VARC, ACTIVE_GAME?.blueAvatar?.plane ?: 0)
-        sendVarc(BLUE_AVATAR_DEATH_VARC, ACTIVE_GAME?.blueDeaths ?: 0)
-
-        sendVarc(MID_CLAIM_VARC, ACTIVE_GAME?.midCapVal ?: 15)
-        sendVarc(EAST_CLAIM_VARC, ACTIVE_GAME?.eastCapVal ?: 15)
-        sendVarc(WEST_CLAIM_VARC, ACTIVE_GAME?.westCapVal ?: 15)
-    }
-}
-
-fun attemptStartGame() {
-    if (ACTIVE_GAME != null)
-        return
-    if (LOBBY_PLAYERS.count() >= PLAYER_MINIMUM)
-        ACTIVE_GAME = SoulWars()
-}
-
-class SoulAvatar(private val redTeam: Boolean, val game: SoulWars, var level: Int = 100) : NPC(if (redTeam) 8596 else 8597, if (redTeam) Tile.of(1965, 3249, 0) else Tile.of(1805, 3208, 0)) {
     init {
-        capDamage = 700
+        capDamage = AVATAR_DAMAGE_CAP
     }
 
     override fun sendDeath(source: Entity?) {
         super.sendDeath(source)
-        level = 100
-        if (redTeam)
-            game.redDeaths++
-        else
-            game.blueDeaths++
+        level = MAX_AVATAR_LEVEL
+        game.avatarKilled(team)
     }
 
-    override fun handlePreHit(hit: Hit?) {
-        super.handlePreHit(hit)
-        val player = hit?.source as? Player ?: return
-        if (player.skills.getLevelForXp(Skills.SLAYER) < level)
+    override fun handlePreHit(hit: Hit) {
+        val attacker = (hit.source as? Familiar)?.owner ?: hit.source as? Player
+        if (attacker != null && !attackableBy(attacker))
             hit.damage = 0
+        super.handlePreHit(hit)
     }
 
     override fun canBeAttackedBy(player: Player): Boolean {
-        return if (redTeam)
-            game.blueTeam.contains(player)
-        else
-            game.redTeam.contains(player)
+        if (game.teamOf(player) != team.opponent)
+            return false
+        if (!meetsSlayerRequirement(player)) {
+            player.sendMessage("You need a Slayer level of $level to attack this avatar.")
+            return false
+        }
+        return true
     }
 
-    override fun getPossibleTargets(): MutableList<Entity> {
-        return if (redTeam)
-            game.blueTeam.filter { RED_AVATAR_DANGER_CHUNKS.contains(it.getChunkId()) }.toMutableList()
-        else
-            game.redTeam.filter { BLUE_AVATAR_DANGER_CHUNKS.contains(it.getChunkId()) }.toMutableList()
-    }
+    override fun getPossibleTargets(): MutableList<Entity> =
+        game.members(team.opponent).filter { !it.isDead && it.getChunkId() in team.avatarDangerChunks }.toMutableList()
 
-    fun getHealthVarc(): Int {
-        return takeUnless { it.isDead || it.hasFinished() }
-            ?.hitpoints
-            ?.let { ceil(it.toDouble() * 100.0 / 15000.0).toInt() }
-            ?: 0
-    }
+    fun attackableBy(player: Player) = game.teamOf(player) == team.opponent && meetsSlayerRequirement(player)
+
+    private fun meetsSlayerRequirement(player: Player) = player.skills.getLevelForXp(Skills.SLAYER) >= level
+
+    fun remainingHitpoints() = if (isDead || hasFinished()) 0 else hitpoints
+
+    fun healthPercent() = ceil(remainingHitpoints() * 100.0 / maxHitpoints).toInt()
 }
 
-class SoulWars {
-    val redTeam: ObjectSet<Player> = ObjectSets.synchronize(ObjectOpenHashSet())
-    val blueTeam: ObjectSet<Player> = ObjectSets.synchronize(ObjectOpenHashSet())
-    var redAvatar = SoulAvatar(true, this)
-    var blueAvatar = SoulAvatar(false, this)
-    var redDeaths = 0
-    var blueDeaths = 0
-    var midCapVal = 15
-    var eastCapVal = 15
-    var westCapVal = 15
+internal class SoulWars {
+    private val teams = Team.entries.associateWith { LinkedHashSet<Player>() }
+    private val avatars = Team.entries.associateWith { SoulAvatar(it, this) }
+    private val avatarDeaths = Team.entries.associateWith { 0 }.toMutableMap()
+    private val control = CapturePoint.entries.associateWith { CONTROL_NEUTRAL }.toMutableMap()
+    private val owners = CapturePoint.entries.associateWith<CapturePoint, Team?> { null }.toMutableMap()
     var ticks = 0
+        private set
+    var ended = false
+        private set
 
-    init {
-        val sortedPlayers = LOBBY_PLAYERS.toList().sortedBy { it.skills.combatLevel }
-        var redTotalCombatLevel = 0
-        var blueTotalCombatLevel = 0
+    fun members(team: Team): Set<Player> = teams.getValue(team)
+    fun teamOf(player: Player) = Team.entries.firstOrNull { player in teams.getValue(it) }
+    fun avatar(team: Team) = avatars.getValue(team)
+    fun avatarDeaths(team: Team) = avatarDeaths.getValue(team)
+    fun control(point: CapturePoint) = control.getValue(point)
 
-        for (player in sortedPlayers) {
-            if (redTotalCombatLevel <= blueTotalCombatLevel) {
-                player.controllerManager.startController(SoulWarsGameController(true, this))
-                redTeam.add(player)
-                redTotalCombatLevel += player.skills.combatLevel
-            } else {
-                player.controllerManager.startController(SoulWarsGameController(false, this))
-                blueTeam.add(player)
-                blueTotalCombatLevel += player.skills.combatLevel
-            }
-            LOBBY_PLAYERS.remove(player)
+    fun start(entrants: List<Player>) {
+        CapturePoint.entries.forEach { it.show(null) }
+        val combatTotals = Team.entries.associateWith { 0 }.toMutableMap()
+        for (player in entrants.sortedByDescending { it.skills.combatLevel }) {
+            val team = Team.entries.minWith(compareBy<Team>({ teams.getValue(it).size }, { combatTotals.getValue(it) }))
+            teams.getValue(team).add(player)
+            combatTotals[team] = combatTotals.getValue(team) + player.skills.combatLevel
+            player.controllerManager.startController(SoulWarsGameController(team == Team.RED, this))
         }
     }
 
-    private fun getObelisk(): GameObject? {
-        return World.getObjectWithType(Tile.of(1886, 3231, 0), ObjectShape.SCENERY_INTERACT)
+    fun tick() {
+        if (++ticks >= GAME_DURATION)
+            return end()
+        if (ticks % CAPTURE_INTERVAL == 0)
+            updateCapturePoints()
     }
 
-    private fun getEastBarrier(): GameObject? {
-        return World.getObjectWithType(Tile.of(1933, 3243, 0), ObjectShape.WALL_STRAIGHT)
+    private fun updateCapturePoints() {
+        for (point in CapturePoint.entries) {
+            val balance = capturers(Team.RED, point) - capturers(Team.BLUE, point)
+            val value = (control.getValue(point) + balance.sign).coerceIn(0, CONTROL_MAX)
+            control[point] = value
+            val owner = when {
+                value >= RED_CONTROL -> Team.RED
+                value <= BLUE_CONTROL -> Team.BLUE
+                else -> null
+            }
+            if (owner == owners[point])
+                continue
+            owners[point] = owner
+            point.show(owner)
+            if (owner != null)
+                broadcast("The ${owner.colouredName} team has taken control of ${point.label}.")
+        }
     }
 
-    private fun getWestBarrier(): GameObject? {
-        return World.getObjectWithType(Tile.of(1842, 3220, 0), ObjectShape.WALL_STRAIGHT)
+    private fun capturers(team: Team, point: CapturePoint) =
+        teams.getValue(team).count { it.isCanPvp && !it.isDead && point.zone.within(it.tile) }
+
+    private fun broadcast(message: String) = teams.values.forEach { team -> team.forEach { it.sendMessage(message) } }
+
+    fun avatarKilled(team: Team) {
+        avatarDeaths[team] = avatarDeaths.getValue(team) + 1
     }
 
-    fun closestRespawnPoint(redTeam: Boolean, tile: Tile): Tile {
-        val possibleTiles = ArrayList<Tile>()
-        possibleTiles.add(if (redTeam) RED_RESPAWN_AREA.getRandomTile() else BLUE_RESPAWN_AREA.getRandomTile())
-        if (if (redTeam) eastCapVal >= 25 else eastCapVal <= 5)
-            possibleTiles.add(EAST_RESPAWN_AREA.getRandomTile())
-        if (if (redTeam) westCapVal >= 25 else westCapVal <= 5)
-            possibleTiles.add(WEST_RESPAWN_AREA.getRandomTile())
-        return possibleTiles.minByOrNull { Utils.getDistance(it, tile) }!!
+    fun respawnTile(team: Team, tile: Tile): Tile {
+        val graveyards = CapturePoint.entries.filter { owners[it] == team }.mapNotNull { it.respawnArea?.getRandomTile() }
+        return (graveyards + team.spawnArea.getRandomTile()).minBy { Utils.getDistance(it, tile) }
     }
 
-    fun bury(player: Player, redTeam: Boolean): Boolean {
-        val avatar = if (redTeam) redAvatar else blueAvatar
+    fun bury(player: Player, team: Team): Boolean {
+        val avatar = avatars.getValue(team)
         if (avatar.isDead || avatar.hasFinished())
             return false
-        if (avatar.level >= 100) {
+        if (avatar.level >= MAX_AVATAR_LEVEL) {
             player.sendMessage("Your avatar is already a high enough level.")
             return false
         }
@@ -337,187 +394,200 @@ class SoulWars {
         return true
     }
 
-    fun tick() {
-        if (++ticks >= Ticks.fromMinutes(20)) return endGame()
-        if (ticks % 5 == 0) {
-            listOf(EAST_CAP_CHUNKS to EAST_GRAVEYARD_CAP_ZONE, MID_CAP_CHUNKS to MID_CAP_ZONE, WEST_CAP_CHUNKS to WEST_GRAVEYARD_CAP_ZONE).forEach { (chunks, zone) ->
-                val side = World.getPlayersInChunks(*chunks).count { it.isCanPvp && zone.within(it.tile) && redTeam.contains(it) } - World.getPlayersInChunks(*chunks).count { it.isCanPvp && zone.within(it.tile) && blueTeam.contains(it) }
-                when (zone) {
-                    EAST_GRAVEYARD_CAP_ZONE -> eastCapVal = Utils.clampI(eastCapVal + side.sign, 0, 30)
-                    MID_CAP_ZONE -> midCapVal = Utils.clampI(midCapVal + side.sign, 0, 30)
-                    WEST_GRAVEYARD_CAP_ZONE -> westCapVal = Utils.clampI(westCapVal + side.sign, 0, 30)
-                }
-            }
-            updateObjectTeam(getObelisk(), 42012, 42011, 42010, midCapVal)?.let { color ->
-                INGAME_PLAYERS.forEach { it.sendMessage("The $color team has taken control of the soul obelisk.") }
-            }
-            updateObjectTeam(getEastBarrier(), 42016, 42013, 42019, eastCapVal)?.let { color ->
-                INGAME_PLAYERS.forEach { it.sendMessage("The $color team has taken control of the eastern graveyard.") }
-            }
-            updateObjectTeam(getWestBarrier(), 42017, 42014, 42020, westCapVal)?.let { color ->
-                INGAME_PLAYERS.forEach { it.sendMessage("The $color team has taken control of the western graveyard.") }
-            }
+    fun offerFragments(player: Player, team: Team, fragments: Item) {
+        if (owners[CapturePoint.OBELISK] != team)
+            return player.sendMessage("The obelisk is unresponsive as your team is not in control of it.")
+        val avatar = avatars.getValue(team.opponent)
+        val used = min(fragments.amount, avatar.level - MIN_AVATAR_LEVEL)
+        if (used <= 0)
+            return player.sendMessage("Your opponent's avatar cannot be weakened any further.")
+        player.inventory.deleteItem(Obj.snp_tut_soul_fragment, used)
+        avatar.level -= used
+    }
+
+    fun left(player: Player) {
+        teams.values.forEach { it.remove(player) }
+        if (!ended && teams.values.all { it.isEmpty() })
+            end()
+    }
+
+    private fun winner(): Team? {
+        val redDeaths = avatarDeaths.getValue(Team.RED)
+        val blueDeaths = avatarDeaths.getValue(Team.BLUE)
+        if (redDeaths != blueDeaths)
+            return if (redDeaths > blueDeaths) Team.BLUE else Team.RED
+        val redHitpoints = avatars.getValue(Team.RED).remainingHitpoints()
+        val blueHitpoints = avatars.getValue(Team.BLUE).remainingHitpoints()
+        return when {
+            redHitpoints > blueHitpoints -> Team.RED
+            blueHitpoints > redHitpoints -> Team.BLUE
+            else -> null
         }
     }
 
-    private fun updateObjectTeam(obj: GameObject?, redId: Int, blueId: Int, neutralId: Int, capVal: Int): String? {
-        if (obj == null)
-            return null
-        val newId = when {
-            capVal >= 25 -> redId
-            capVal <= 5 -> blueId
-            else -> neutralId
+    private fun end() {
+        ended = true
+        val winner = winner()
+        avatars.values.forEach {
+            it.finish()
+            it.cancelRespawnTask()
         }
-        if (obj.id != newId) {
-            obj.changeId(newId)
-            return if (newId == redId) "<col=A31818>red</col>" else "<col=3232D1>blue</col>"
-        }
-        return null
-    }
-
-    private fun endGame() {
-        val winningTeam =
-            if (redDeaths == blueDeaths)
-                if (blueAvatar.hitpoints == redAvatar.hitpoints)
-                    null
-                else if (blueAvatar.hitpoints > redAvatar.hitpoints)
-                    blueTeam
-                else
-                    redTeam
-            else if (redDeaths > blueDeaths)
-                blueTeam
-            else
-                redTeam
-        arrayOf(blueAvatar, redAvatar).forEach { avatar ->
-            avatar.finish()
-            avatar.cancelRespawnTask()
-        }
-        arrayOf(redTeam to RED_EXIT_AREA, blueTeam to BLUE_EXIT_AREA).forEach { (team, exitArea) ->
-            team.forEach { player ->
-                player.tele(exitArea.getRandomTile())
+        CapturePoint.entries.forEach { it.show(null) }
+        for (team in Team.entries) {
+            for (player in teams.getValue(team).toList()) {
+                player.tele(team.exitArea.getRandomTile())
                 player.controllerManager.forceStop()
-                val zeal = if (winningTeam == team) 3 else 1
-                player.soulWarsZeal += zeal
-                player.incrementCount("Soul Wars Zeal earned", zeal)
-                when (zeal) {
-                    1 -> player.sendMessage("Your team lost. You are awarded 1 Zeal. You now have ${Utils.formatNumber(player.soulWarsZeal)} Zeal.")
-                    2 -> player.sendMessage("The game was a draw. You are awarded 2 Zeal. You now have ${Utils.formatNumber(player.soulWarsZeal)} Zeal.")
-                    3 -> player.sendMessage("Your team won. You are awarded 3 Zeal. You now have ${Utils.formatNumber(player.soulWarsZeal)} Zeal.")
-                }
+                award(player, team, winner)
             }
         }
-        ACTIVE_GAME = null
+        clearArenaGroundItems()
+        SoulWarsLobby.gameEnded()
+    }
+
+    private fun award(player: Player, team: Team, winner: Team?) {
+        val zeal = if (winner == team) 3 else 1
+        player.soulWarsZeal += zeal
+        player.incrementCount("Soul Wars Zeal earned", zeal)
+        val result = when (winner) {
+            team -> "Your team won"
+            null -> "The game was a draw"
+            else -> "Your team lost"
+        }
+        player.sendMessage("$result. You are awarded $zeal Zeal. You now have ${Utils.formatNumber(player.soulWarsZeal)} Zeal.")
+    }
+
+    private fun clearArenaGroundItems() {
+        for (x in ARENA.mapX until ARENA.mapX + ARENA.mapWidth step 8) {
+            for (y in ARENA.mapY until ARENA.mapY + ARENA.mapHeight step 8) {
+                ChunkManager.getChunk(Tile.of(x, y, 0).getChunkId(), false).allGroundItems
+                    .filter { it.id == Obj.snp_bones || it.id == Obj.snp_tut_soul_fragment || isMinigameSupply(it.id) }
+                    .forEach { World.removeGroundItem(it) }
+            }
+        }
     }
 }
 
 class SoulWarsLobbyController : Controller() {
+    @Transient
+    private var sentVarcs: IntArray? = null
+
     override fun start() {
-        player.interfaceManager.sendOverlay(LOBBY_OVERLAY)
-        LOBBY_PLAYERS.add(player)
-        updateLobbyVars(player)
+        player.interfaceManager.sendOverlay(Interface.interface_837)
+        SoulWarsLobby.players.add(player)
+        syncVarcs()
+    }
+
+    override fun process() = syncVarcs()
+
+    private fun syncVarcs() {
+        val sent = sentVarcs ?: LOBBY_VARCS.newSentValues().also { sentVarcs = it }
+        LOBBY_VARCS.sync(player, sent)
     }
 
     override fun login(): Boolean {
-        player.tele(Tile.of(1880, 3162, 0))
-        player.controllerManager.forceStop()
+        player.tele(WAITING_ROOM_EXIT)
         return true
     }
 
-    override fun processTeleport(tele: Teleport): Boolean { return false }
+    override fun processTeleport(tele: Teleport) = false
 
     override fun logout(): Boolean {
-        LOBBY_PLAYERS.remove(player)
-        player.tele(Tile.of(1880, 3162, 0))
-        player.tile = Tile.of(1880, 3162, 0)
+        SoulWarsLobby.players.remove(player)
+        player.tile = WAITING_ROOM_EXIT
         return false
     }
 
     override fun onRemove() {
-        LOBBY_PLAYERS.remove(player)
+        SoulWarsLobby.players.remove(player)
         player.interfaceManager.removeOverlay()
     }
 }
 
-class SoulWarsGameController(val redTeam: Boolean, @Transient val game: SoulWars?) : Controller() {
+class SoulWarsGameController internal constructor(val redTeam: Boolean, @Transient internal val game: SoulWars?) : Controller() {
     @Transient
-    var activity: Int = 1000
+    internal var activity: Int = MAX_ACTIVITY
+
+    @Transient
+    private var sentVarcs: IntArray? = null
+
+    internal val team get() = if (redTeam) Team.RED else Team.BLUE
+
+    override fun start() {
+        player.interfaceManager.sendOverlay(Interface.interface_836)
+        syncVarcs()
+        player.tele(team.spawnArea.getRandomTile())
+        player.equipment.setNoPluginTrigger(Equipment.CAPE, Item(team.cape, 1))
+        player.equipment.refresh(Equipment.CAPE)
+        player.appearance.generateAppearanceData()
+        player.isCanPvp = false
+        player.startConversation {
+            npc(Npc.nom_nomad, HeadE.EVIL_LAUGH, "The time is now! Crush their souls!")
+        }
+    }
+
+    private fun syncVarcs() {
+        val sent = sentVarcs ?: GAME_VARCS.newSentValues().also { sentVarcs = it }
+        GAME_VARCS.sync(player, sent)
+    }
 
     override fun processObjectClick1(obj: GameObject): Boolean {
-        fun checkPositionAndPassThrough(check: Boolean, deltaX: Int, deltaY: Int) {
-            if (check) {
-                player.sendMessage("Onward! You have no reason to go back inside.")
-                return
-            }
-            player.passThrough(obj.tile.transform(deltaX, deltaY, 0))
-            player.isCanPvp = true
-        }
-
         when (obj.id) {
-            42021, 42022 -> player.sendOptionDialogue {
+            Loc.snp_blue_exit_portal, Loc.snp_red_exit_portal -> player.sendOptionDialogue {
                 it.add("Yes, leave. (You won't receive any rewards for doing so)") { player.controllerManager.forceStop() }
                 it.add("Nevermind.")
             }
-            42023, 42024 -> giveFoodAndPotions(player)
-            42015 -> checkPositionAndPassThrough(player.x < obj.x, -1, 0)
-            42018 -> checkPositionAndPassThrough(player.x >= obj.x, 0, 0)
-            in arrayOf(42016, 42013, 42019) -> checkPositionAndPassThrough(player.y > obj.y, 0, -1)
-            in arrayOf(42017, 42014, 42020) -> checkPositionAndPassThrough(player.y >= obj.y, 0, 0)
+            Loc.snp_counter_bandages_blue, Loc.snp_counter_bandages_red -> giveFoodAndPotions(player)
+            Loc.snp_blue_graveyard_barrier -> leaveThrough(obj, player.x < obj.x, -1, 0)
+            Loc.snp_red_graveyard_barrier -> leaveThrough(obj, player.x >= obj.x, 0, 0)
+            in CapturePoint.EAST_GRAVEYARD.locs -> leaveThrough(obj, player.y > obj.y, 0, -1)
+            in CapturePoint.WEST_GRAVEYARD.locs -> leaveThrough(obj, player.y >= obj.y, 0, 0)
         }
         return false
     }
 
+    private fun leaveThrough(obj: GameObject, alreadyOutside: Boolean, deltaX: Int, deltaY: Int) {
+        if (alreadyOutside)
+            return player.sendMessage("Onward! You have no reason to go back inside.")
+        player.passThrough(obj.tile.transform(deltaX, deltaY, 0))
+        player.isCanPvp = true
+    }
+
     override fun processItemOnObject(obj: GameObject, item: Item): Boolean {
-        if (item.id == SOUL_FRAGMENT && (obj.id == 42010 || obj.id == 42011 || obj.id == 42012)) {
-            val isCorrectTeamControl = (redTeam && obj.id == 42012) || (!redTeam && obj.id == 42011)
-            if (!isCorrectTeamControl) {
-                player.sendMessage("The obelisk is unresponsive as your team is not in control of it.")
-                return false
-            }
-
-            val avatarLevel = (if (redTeam) game?.blueAvatar else game?.redAvatar)?.plane ?: -1
-            val numToUse = min(item.amount, avatarLevel)
-
-            if (numToUse <= 0) {
-                player.sendMessage("Your opponent's avatar cannot be weakened any further.")
-                return false
-            }
-
-            player.inventory.deleteItem(SOUL_FRAGMENT, numToUse)
-            if (redTeam)
-                game?.blueAvatar?.let { avatar -> avatar.level -= numToUse }
-            else
-                game?.redAvatar?.let { avatar -> avatar.level -= numToUse }
-        }
+        if (item.id == Obj.snp_tut_soul_fragment && obj.id in CapturePoint.OBELISK.locs)
+            game?.offerFragments(player, team, item)
         return false
     }
 
     override fun sendDeath(): Boolean {
         player.lock(8)
         player.stopAll()
-        WorldTasks.scheduleTimer { loop: Int ->
+        WorldTasks.scheduleTimer { loop ->
             when (loop) {
-                0 -> player.anim(836)
+                0 -> player.anim(Seq.human_death)
                 1 -> player.sendMessage("Oh dear, you have died.")
                 4 -> {
-                    val killer = player.mostDamageReceivedSourcePlayer
-                    if (killer != null) {
+                    player.mostDamageReceivedSourcePlayer?.let { killer ->
                         killer.removeDamage(player)
                         killer.increaseKillCount(player)
                     }
-                    val soulFrags = player.inventory.getItemById(SOUL_FRAGMENT)
-                    if (soulFrags != null) {
-                        World.addGroundItem(soulFrags, player.tile)
-                        player.inventory.deleteItem(soulFrags)
+                    val activeGame = game?.takeIf { !it.ended && player.controllerManager.controller === this }
+                    if (activeGame == null) {
+                        player.anim(-1)
+                        return@scheduleTimer false
                     }
-                    World.addGroundItem(Item(BONES, 1), player.tile)
+                    player.inventory.getItemById(Obj.snp_tut_soul_fragment)?.let { fragments ->
+                        World.addGroundItem(fragments, player.tile)
+                        player.inventory.deleteItem(fragments)
+                    }
+                    World.addGroundItem(Item(Obj.snp_bones, 1), player.tile)
                     player.reset()
-                    player.tele(game?.closestRespawnPoint(redTeam, player.tile) ?: player.tile)
+                    player.tele(activeGame.respawnTile(team, player.tile))
                     player.isCanPvp = false
                     player.anim(-1)
-                    activity = 1000
+                    activity = MAX_ACTIVITY
                 }
                 5 -> {
-                    player.jingle(90)
+                    player.jingle(DEATH_JINGLE)
                     return@scheduleTimer false
                 }
             }
@@ -527,45 +597,31 @@ class SoulWarsGameController(val redTeam: Boolean, @Transient val game: SoulWars
     }
 
     override fun process() {
-        if (player.inCombat())
-            activity = Utils.clampI(activity + 10, 0, 1000)
-        else
-            activity -= 2
-        player.vars.setVar(PLAYER_ACTIVITY_BAR_VAR, activity)
+        activity = if (player.inCombat()) min(activity + 10, MAX_ACTIVITY) else activity - 2
+        player.vars.setVar(Varp.varp_1380, activity.coerceAtLeast(0))
         if (activity <= 0) {
-            player.tele(RED_EXIT_AREA.getRandomTile())
+            player.tele(team.exitArea.getRandomTile())
             player.controllerManager.forceStop()
+            return
         }
+        syncVarcs()
     }
 
-    override fun start() {
-        player.interfaceManager.sendOverlay(INGAME_OVERLAY)
-        INGAME_PLAYERS.add(player)
-        updateIngameVars(player)
-        player.tele(if (redTeam) RED_RESPAWN_AREA.getRandomTile() else BLUE_RESPAWN_AREA.getRandomTile())
-        player.equipment.setNoPluginTrigger(Equipment.CAPE, Item(if (redTeam) RED_CAPE else BLUE_CAPE, 1))
-        player.equipment.refresh(Equipment.CAPE)
-        player.appearance.generateAppearanceData()
-        player.isCanPvp = false
-        player.startConversation {
-            npc(8528, HeadE.EVIL_LAUGH, "The time is now! Crush their souls!")
-        }
+    override fun canAttack(target: Entity) = when (target) {
+        is SoulAvatar -> target.team == team.opponent
+        is Player -> game?.teamOf(target) == team.opponent
+        else -> true
     }
 
-    override fun canAttack(target: Entity): Boolean {
-        if (target is NPC)
-            return true
-        return if (redTeam)
-            game?.blueTeam?.contains(target) ?: false
-        else
-            game?.redTeam?.contains(target) ?: false
+    override fun canHit(entity: Entity) = when (entity) {
+        is SoulAvatar -> entity.attackableBy(player)
+        is Player -> game?.teamOf(entity) == team.opponent
+        else -> true
     }
 
     override fun login(): Boolean {
-        clearMinigameValues(player)
-        player.tele(Tile.of(1886, 3172, 0))
-        player.controllerManager.forceStop()
-        return false
+        player.tele(GAME_EXIT)
+        return true
     }
 
     override fun canDepositItem(item: Item?): Boolean {
@@ -573,52 +629,27 @@ class SoulWarsGameController(val redTeam: Boolean, @Transient val game: SoulWars
         return false
     }
 
-    override fun processTeleport(tele: Teleport): Boolean { return false }
+    override fun processTeleport(tele: Teleport) = false
 
     override fun logout(): Boolean {
         clearMinigameValues(player)
-        INGAME_PLAYERS.remove(player)
-        if (redTeam)
-            game?.redTeam?.remove(player)
-        else
-            game?.blueTeam?.remove(player)
-        player.tele(Tile.of(1886, 3172, 0))
-        player.tile = Tile.of(1886, 3172, 0)
+        game?.left(player)
+        player.tile = GAME_EXIT
         return false
     }
 
     override fun onRemove() {
         clearMinigameValues(player)
-        player.inventory.items.array().map {
-            if (it != null && (it.id == BONES || it.id == SOUL_FRAGMENT))
-                player.inventory.deleteItem(it)
-        }
-        INGAME_PLAYERS.remove(player)
         player.interfaceManager.removeOverlay()
-        if (redTeam)
-            game?.redTeam?.remove(player)
-        else
-            game?.blueTeam?.remove(player)
+        game?.left(player)
     }
 }
 
-fun clearMinigameValues(player: Player) {
+private fun clearMinigameValues(player: Player) {
     player.isCanPvp = false
     checkAndDeleteFoodAndPotions(player)
-    player.inventory.deleteItem(BONES, 28)
-    player.inventory.deleteItem(SOUL_FRAGMENT, Integer.MAX_VALUE)
-    player.equipment.setNoPluginTrigger(Equipment.CAPE, null)
-    player.equipment.refresh(Equipment.CAPE)
-    player.appearance.generateAppearanceData()
+    player.inventory.deleteItem(Obj.snp_bones, player.inventory.getNumberOf(Obj.snp_bones))
+    player.inventory.deleteItem(Obj.snp_tut_soul_fragment, Int.MAX_VALUE)
+    removeCape(player)
     player.reset()
-}
-
-fun getQuickchatVar(varId: Int): Int {
-    return when(varId) {
-        850 -> ACTIVE_GAME?.blueAvatar?.plane ?: 0
-        851 -> ACTIVE_GAME?.redAvatar?.plane ?: 0
-        866 -> ACTIVE_GAME?.blueAvatar?.getHealthVarc() ?: 0
-        867 -> ACTIVE_GAME?.redAvatar?.getHealthVarc() ?: 0
-        else -> 0
-    }
 }
