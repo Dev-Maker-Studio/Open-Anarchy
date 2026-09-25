@@ -23,7 +23,8 @@ private const val VOLATILE_CHARGE_STEP = FULL_SACRED_CLAY_CHARGE / 10
 private const val TOOL_LEVEL = 40
 private const val PROTO_XP_BONUS = 1.0
 private const val VOLATILE_XP_BONUS = 1.2
-private const val VOLATILE_CAPACITY_SCALE = 1.6
+private const val PROTO_BONUS_XP = 15_000.0
+private const val VOLATILE_BONUS_XP = PROTO_BONUS_XP * 1.6
 private const val TOOL_USED_OBJ = "sacredClayToolObj"
 private const val TOOL_USED_TICK = "sacredClayToolTick"
 
@@ -32,21 +33,17 @@ enum class SacredClayTool(
     val volatile: Int,
     val baseTool: Int?,
     val label: String,
-    private val protoBonusXp: Map<Int, Double>,
+    val skills: Set<Int>,
 ) {
-    PICKAXE(Obj.sc_reward_pickaxe, Obj.sc_reward_volatile_pickaxe, null, "Pickaxe", mapOf(Constants.MINING to 7_500.0)),
-    HATCHET(Obj.sc_reward_axe, Obj.sc_reward_volatile_axe, null, "Hatchet", mapOf(Constants.WOODCUTTING to 17_500.0)),
-    HARPOON(Obj.sc_reward_harpoon, Obj.sc_reward_volatile_harpoon, Obj.harpoon, "Harpoon", mapOf(Constants.FISHING to 11_750.0)),
-    BUTTERFLY_NET(Obj.sc_reward_butterfly_net, Obj.sc_reward_volatile_butterfly_net, Obj.hunting_butterfly_net, "Butterfly net", mapOf(Constants.HUNTER to 2_500.0)),
-    KNIFE(Obj.sc_reward_knife, Obj.sc_reward_volatile_knife, Obj.knife, "Fletching knife", mapOf(Constants.FLETCHING to 40_000.0)),
-    HAMMER(Obj.sc_reward_hammer, Obj.sc_reward_volatile_hammer, Obj.hammer, "Hammer", mapOf(Constants.SMITHING to 32_000.0, Constants.CONSTRUCTION to 25_375.0)),
-    NEEDLE(Obj.sc_reward_needle, Obj.sc_reward_volatile_needle, Obj.needle, "Needle", mapOf(Constants.CRAFTING to 22_000.0));
+    PICKAXE(Obj.sc_reward_pickaxe, Obj.sc_reward_volatile_pickaxe, null, "Pickaxe", setOf(Constants.MINING)),
+    HATCHET(Obj.sc_reward_axe, Obj.sc_reward_volatile_axe, null, "Hatchet", setOf(Constants.WOODCUTTING)),
+    HARPOON(Obj.sc_reward_harpoon, Obj.sc_reward_volatile_harpoon, Obj.harpoon, "Harpoon", setOf(Constants.FISHING)),
+    BUTTERFLY_NET(Obj.sc_reward_butterfly_net, Obj.sc_reward_volatile_butterfly_net, Obj.hunting_butterfly_net, "Butterfly net", setOf(Constants.HUNTER)),
+    KNIFE(Obj.sc_reward_knife, Obj.sc_reward_volatile_knife, Obj.knife, "Fletching knife", setOf(Constants.FLETCHING)),
+    HAMMER(Obj.sc_reward_hammer, Obj.sc_reward_volatile_hammer, Obj.hammer, "Hammer", setOf(Constants.SMITHING, Constants.CONSTRUCTION)),
+    NEEDLE(Obj.sc_reward_needle, Obj.sc_reward_volatile_needle, Obj.needle, "Needle", setOf(Constants.CRAFTING));
 
     val ids = setOf(proto, volatile)
-    val skills: Set<Int> get() = protoBonusXp.keys
-
-    fun bonusXpCapacity(skill: Int, volatile: Boolean) = protoBonusXp.getValue(skill) * if (volatile) VOLATILE_CAPACITY_SCALE else 1.0
-
     fun usableBy(player: Player) = skills.any { player.skills.getLevel(it) >= TOOL_LEVEL }
 
     companion object {
@@ -117,39 +114,35 @@ fun isSacredClayTool(itemId: Int) = itemId in SacredClayTool.byId || itemId == O
 fun sacredClayToolDetails(item: Item): List<String> {
     val charge = item.sacredClayCharge
     val volatile = item.id == Obj.sc_reward_volatile_tool || item.id in SacredClayTool.volatileForms
-    val lines = mutableListOf("Xp bonus: ${ItemTooltips.value("+${((if (volatile) VOLATILE_XP_BONUS else PROTO_XP_BONUS) * 100).roundToInt()}%")}")
-    val tool = SacredClayTool.byId[item.id]
-    if (tool == null) {
-        lines += if (volatile) "Transforms into a random tool" else "Transforms into any tool, free of charge"
-        lines += "Bonus xp left:"
-        for (form in SacredClayTool.entries) for (skill in form.skills)
-            lines += "${form.label}: ${ItemTooltips.value(bonusXp(charge, form, skill, volatile))} ${Constants.SKILL_NAME[skill]}"
-        return lines
-    }
-    for (skill in tool.skills)
-        lines += "Bonus xp left: ${ItemTooltips.value(bonusXp(charge, tool, skill, volatile))} ${Constants.SKILL_NAME[skill]}"
+    val lines = mutableListOf(
+        "Xp bonus: ${ItemTooltips.value("+${((if (volatile) VOLATILE_XP_BONUS else PROTO_XP_BONUS) * 100).roundToInt()}%")}",
+        "Bonus xp left: ${ItemTooltips.value(bonusXp(charge, volatile))}",
+    )
     val revert = item.getMetaDataI(SACRED_CLAY_REVERT_KEY, -1)
-    if (volatile && revert >= 0)
-        for (skill in tool.skills)
-            lines += "Before reverting: ${ItemTooltips.value(bonusXp(charge - revert, tool, skill, true))} ${Constants.SKILL_NAME[skill]}"
+    when {
+        item.id == Obj.sc_reward_volatile_tool -> lines += "Transforms into a random tool"
+        item.id == Obj.sc_reward_tool -> lines += "Transforms into any tool, free of charge"
+        volatile && revert >= 0 -> lines += "Before reverting: ${ItemTooltips.value(bonusXp(charge - revert, true))}"
+    }
     return lines
 }
 
-private fun bonusXp(charge: Int, tool: SacredClayTool, skill: Int, volatile: Boolean) =
-    (charge.coerceAtLeast(0).toDouble() / FULL_SACRED_CLAY_CHARGE * tool.bonusXpCapacity(skill, volatile)).roundToInt()
+private fun bonusXp(charge: Int, volatile: Boolean) =
+    (charge.coerceAtLeast(0).toDouble() / FULL_SACRED_CLAY_CHARGE * if (volatile) VOLATILE_BONUS_XP else PROTO_BONUS_XP).roundToInt()
 
-private fun Item.setToolCharge(charge: Int) {
-    setSacredClayCharge(charge)
-    if (id in SacredClayTool.volatileForms) addMetaData(SACRED_CLAY_REVERT_KEY, (charge - 1) / VOLATILE_CHARGE_STEP * VOLATILE_CHARGE_STEP)
+private fun Item.startVolatileSegment() {
+    addMetaData(SACRED_CLAY_REVERT_KEY, (sacredClayCharge - VOLATILE_CHARGE_STEP).coerceAtLeast(0))
 }
 
 private fun combineCharges(player: Player, fromSlot: Int, toSlot: Int) {
     val from = player.inventory.getItem(fromSlot) ?: return
     val to = player.inventory.getItem(toSlot) ?: return
     if (fromSlot == toSlot || from.id != to.id) return
-    val total = (from.sacredClayCharge.toLong() + to.sacredClayCharge).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+    val added = from.sacredClayCharge
     player.inventory.deleteItem(fromSlot, from)
-    to.setToolCharge(total)
+    to.setSacredClayCharge((to.sacredClayCharge.toLong() + added).coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
+    val revert = to.getMetaDataI(SACRED_CLAY_REVERT_KEY, -1)
+    if (revert >= 0) to.addMetaData(SACRED_CLAY_REVERT_KEY, (revert.toLong() + added).coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
     player.sendMessage("You pour the charge from one ${to.name.lowercase()} into the other.")
     player.sendSacredClayDetails(to, sacredClayDetails(to))
 }
@@ -157,9 +150,8 @@ private fun combineCharges(player: Player, fromSlot: Int, toSlot: Int) {
 private fun transformVolatile(player: Player, item: Item) {
     val held = player.heldItem(item) ?: return
     val tool = SacredClayTool.entries.random()
-    val charge = item.sacredClayCharge
-    item.setSacredClayCharge(charge)
-    item.addMetaData(SACRED_CLAY_REVERT_KEY, (charge - 1) / VOLATILE_CHARGE_STEP * VOLATILE_CHARGE_STEP)
+    item.setSacredClayCharge(item.sacredClayCharge)
+    item.startVolatileSegment()
     held.changeId(tool.volatile)
     player.sendMessage("Your volatile tool transforms into a ${tool.label.lowercase()}!")
 }
@@ -184,15 +176,14 @@ private fun revertTool(player: Player, held: HeldItem) {
         player.sendMessage("Your sacred clay tool reverts to a proto-tool.")
         return
     }
-    val charge = item.sacredClayCharge / VOLATILE_CHARGE_STEP * VOLATILE_CHARGE_STEP
+    val charge = item.getMetaDataI(SACRED_CLAY_REVERT_KEY, 0).coerceIn(0, item.sacredClayCharge)
     if (charge <= 0) {
         crumble(player, held)
         return
     }
-    val tool = SacredClayTool.byId.getValue(item.id)
-    val lost = tool.skills.joinToString(", ") { "${Utils.formatNumber(bonusXp(item.sacredClayCharge - charge, tool, it, true))} ${Constants.SKILL_NAME[it]}" }
+    val lost = bonusXp(item.sacredClayCharge - charge, true)
     revertVolatile(held, charge)
-    player.sendMessage("Your tool reverts to a volatile tool, losing $lost bonus xp.")
+    player.sendMessage("Your tool reverts to a volatile tool, losing ${Utils.formatNumber(lost)} bonus xp.")
 }
 
 private fun revertVolatile(held: HeldItem, charge: Int) {
@@ -224,7 +215,7 @@ private fun applyToolBonus(e: XPGainEvent) {
     val volatile = held.item.id == tool.volatile
     val bonus = if (volatile) VOLATILE_XP_BONUS else PROTO_XP_BONUS
     e.multiplier += bonus
-    val drain = (e.xp * bonus / tool.bonusXpCapacity(e.skillId, volatile) * FULL_SACRED_CLAY_CHARGE).roundToInt().coerceAtLeast(1)
+    val drain = (e.xp * bonus / (if (volatile) VOLATILE_BONUS_XP else PROTO_BONUS_XP) * FULL_SACRED_CLAY_CHARGE).roundToInt().coerceAtLeast(1)
     val charge = held.item.sacredClayCharge - drain
     if (charge <= 0) {
         crumble(player, held)
@@ -239,5 +230,5 @@ private fun applyToolBonus(e: XPGainEvent) {
 
 fun Item.restoreSacredClayCharge() {
     setSacredClayCharge(FULL_SACRED_CLAY_CHARGE)
-    if (id in SacredClayTool.volatileForms) addMetaData(SACRED_CLAY_REVERT_KEY, FULL_SACRED_CLAY_CHARGE - VOLATILE_CHARGE_STEP)
+    if (id in SacredClayTool.volatileForms) startVolatileSegment()
 }
