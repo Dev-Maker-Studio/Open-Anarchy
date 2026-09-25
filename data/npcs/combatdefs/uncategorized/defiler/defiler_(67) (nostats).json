@@ -10,8 +10,8 @@
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 59,
-  "hitpoints": 270,
-  "maxHit": 60,
+  "hitpoints": 620,
+  "maxHit": 99,
   "attackStyle": "RANGE",
   "combatLevels": {
     "ATTACK": 0,

@@ -1,287 +1,248 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.pest
 
-import org.darkan.core.cache.ItemDefinitions
 import com.rs.engine.dialogue.sendOptionsDialogue
 import com.rs.engine.quest.Quest
-import com.rs.game.content.combat.CombatMod
-import com.rs.game.content.combat.CombatStyle
-import com.rs.game.content.combat.onCombatFormulaAdjust
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import org.darkan.core.Constants
-import org.darkan.core.model.Rights
-import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
 import com.rs.plugin.kts.onItemOnNpc
 import com.rs.plugin.kts.onNpcClick
 import com.rs.utils.DropSets
 import com.rs.utils.drop.DropTable
-import kotlin.math.floor
-import org.darkan.core.gameval.gen.Varbit
+import org.darkan.core.Constants
+import org.darkan.core.Utils
+import org.darkan.core.gameval.gen.Component
+import org.darkan.core.gameval.gen.Interface
+import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Varp
+import org.darkan.core.model.Item
 
-private const val INTERFACE = 1011
-private val COMPS: IntArray = intArrayOf(15, 196, 208, 220, 232, 244, 256, 268, 280)
-private val VOIDS: IntArray = intArrayOf(11665, 11664, 11663, 10611, 8840, 8842, 8841, 19712, 11666)
-private val COSTS: IntArray = intArrayOf(200, 200, 200, 250, 250, 150, 250, 150, 10)
+private const val PENDING_EXCHANGE = "pestControlExchange"
+private const val VOID_LEVEL = 42
+private const val VOID_PRAYER_LEVEL = 22
+private const val XP_LEVEL = 25
+private const val PACK_LEVEL = 25
+private const val XP_LEVEL_DIVISOR = 600
+private const val CHARM_COST = 2
+private const val DEFLECTOR_CONQUEST_RATING = 1250
+private const val ELITE_UPGRADE_COST = 100
+private const val KORASI_SWORD_PRICE = 200_000
+private const val HERB_PACK_MIN = 10
+private const val HERB_PACK_MAX = 15
+private const val SEED_PACK_ROLLS = 6
+private val MINERAL_PACK_COAL = 18..25
+private val MINERAL_PACK_IRON = 12..18
+private val VOID_STATS = intArrayOf(Constants.ATTACK, Constants.STRENGTH, Constants.DEFENSE, Constants.HITPOINTS, Constants.RANGE, Constants.MAGIC)
+private val ELITE_UPGRADES = mapOf(
+    Obj.pest_void_knight_top to Obj.vkq3_reward_torso_black,
+    Obj.dummy_pest_void_knight_top to Obj.vkq3_reward_torso_black,
+    Obj.obj_8840 to Obj.vkq3_reward_legs_black,
+)
 
-private data class Reward(val cost: Int, val give: Runnable)
+private enum class Page(val container: Int, vararg val tabs: Int) {
+    EXPERIENCE(Component.interface_1011.component_1011_63, Component.interface_1011.component_1011_20, Component.interface_1011.component_1011_73),
+    EQUIPMENT(Component.interface_1011.component_1011_69, Component.interface_1011.component_1011_29, Component.interface_1011.component_1011_75),
+    CONSUMABLES(Component.interface_1011.component_1011_70, Component.interface_1011.component_1011_24, Component.interface_1011.component_1011_31),
+}
+
+private enum class EquipmentReward(val button: Int, val obj: Int, val cost: Int, val needsLevels: Boolean) {
+    MELEE_HELM(Component.interface_1011.component_1011_15, Obj.obj_11665, 200, true),
+    RANGER_HELM(Component.interface_1011.component_1011_196, Obj.obj_11664, 200, true),
+    MAGE_HELM(Component.interface_1011.component_1011_208, Obj.obj_11663, 200, true),
+    TOP(Component.interface_1011.component_1011_220, Obj.pest_void_knight_top, 250, true),
+    ROBE(Component.interface_1011.component_1011_232, Obj.obj_8840, 250, true),
+    GLOVES(Component.interface_1011.component_1011_244, Obj.pest_void_knight_gloves, 150, true),
+    MACE(Component.interface_1011.component_1011_256, Obj.pest_void_knight_mace, 250, true),
+    DEFLECTOR(Component.interface_1011.component_1011_268, Obj.conq_reward_shield, 150, true),
+    SEAL(Component.interface_1011.component_1011_280, Obj.obj_11666, 10, false),
+}
+
+private enum class XpBatch(val points: Int, val bonus: Double) { ONE(1, 1.0), TEN(10, 1.01), HUNDRED(100, 1.1) }
+
+private enum class XpReward(val skill: Int, val multiplier: Int, vararg val buttons: Int) {
+    ATTACK(Constants.ATTACK, 35, Component.interface_1011.component_1011_68, Component.interface_1011.component_1011_86, Component.interface_1011.component_1011_88),
+    STRENGTH(Constants.STRENGTH, 35, Component.interface_1011.component_1011_100, Component.interface_1011.component_1011_102, Component.interface_1011.component_1011_104),
+    DEFENCE(Constants.DEFENSE, 35, Component.interface_1011.component_1011_116, Component.interface_1011.component_1011_118, Component.interface_1011.component_1011_120),
+    CONSTITUTION(Constants.HITPOINTS, 35, Component.interface_1011.component_1011_132, Component.interface_1011.component_1011_134, Component.interface_1011.component_1011_136),
+    RANGED(Constants.RANGE, 32, Component.interface_1011.component_1011_148, Component.interface_1011.component_1011_150, Component.interface_1011.component_1011_152),
+    MAGIC(Constants.MAGIC, 32, Component.interface_1011.component_1011_164, Component.interface_1011.component_1011_166, Component.interface_1011.component_1011_168),
+    PRAYER(Constants.PRAYER, 18, Component.interface_1011.component_1011_180, Component.interface_1011.component_1011_182, Component.interface_1011.component_1011_184),
+}
+
+private enum class Pack(val button: Int, val cost: Int, val skill: Int, val label: String) {
+    HERB(Component.interface_1011.component_1011_291, 30, Constants.HERBLORE, "herb pack"),
+    MINERAL(Component.interface_1011.component_1011_302, 15, Constants.MINING, "mineral pack"),
+    SEED(Component.interface_1011.component_1011_313, 15, Constants.FARMING, "seed pack"),
+}
+
+private enum class Charm(val obj: Int, val one: Int, val ten: Int, val all: Int) {
+    SPINNER(Obj.lore_pest_spinner_token, Component.interface_1011.component_1011_324, Component.interface_1011.component_1011_326, Component.interface_1011.component_1011_328),
+    TORCHER(Obj.lore_pest_torcher_token, Component.interface_1011.component_1011_339, Component.interface_1011.component_1011_341, Component.interface_1011.component_1011_343),
+    RAVAGER(Obj.lore_pest_ravager_token, Component.interface_1011.component_1011_354, Component.interface_1011.component_1011_356, Component.interface_1011.component_1011_358),
+    SHIFTER(Obj.lore_pest_shifter_token, Component.interface_1011.component_1011_369, Component.interface_1011.component_1011_371, Component.interface_1011.component_1011_373);
+
+    fun amount(button: Int, player: Player) = when (button) {
+        one -> 1
+        ten -> 10
+        all -> player.commendations / CHARM_COST
+        else -> 0
+    }
+}
+
+private class Exchange(val cost: Int, val description: String, val refusal: () -> String?, val deliver: () -> Unit)
+
+private val equipmentByButton = EquipmentReward.entries.associateBy { it.button }
+private val xpByButton = XpReward.entries.flatMap { reward -> reward.buttons.mapIndexed { index, button -> button to (reward to XpBatch.entries[index]) } }.toMap()
+private val packByButton = Pack.entries.associateBy { it.button }
+private val charmByButton = Charm.entries.flatMap { charm -> listOf(charm.one, charm.ten, charm.all).map { it to charm } }.toMap()
+private val pageByTab = Page.entries.flatMap { page -> page.tabs.map { it to page } }.toMap()
 
 @ServerStartupEvent
-fun mapPestControlRewards() {
-    onCombatFormulaAdjust voidEffect@ { player, target, offensiveBonus, combatStyle ->
-        if (player !is Player) return@voidEffect CombatMod()
-        return@voidEffect when(combatStyle) {
-            CombatStyle.MELEE -> if (player.fullVoidEquipped(11665, 11676)) CombatMod(
-                accuracyLevel = 1.1,
-                strengthLevel = 1.1
-            ) else null
-            CombatStyle.RANGE -> if (player.fullVoidEquipped(11664, 11675)) CombatMod(
-                accuracyLevel = 1.1,
-                strengthLevel = 1.1
-            ) else null
-            CombatStyle.MAGIC -> if (player.fullVoidEquipped(11663, 11674)) CombatMod(accuracyLevel = 1.3) else null
-        } ?: CombatMod()
+fun mapCommendationExchange() {
+    onNpcClick(Npc.conq_tutorial_npc, "Void Knight", options = arrayOf("Exchange")) { (player) -> player.openCommendationExchange() }
+
+    onButtonClick(Interface.interface_1011) { e ->
+        val player = e.player
+        val button = e.component
+        pageByTab[button]?.let { return@onButtonClick player.showPage(it) }
+        equipmentByButton[button]?.let { return@onButtonClick player.offer(equipmentExchange(player, it)) }
+        xpByButton[button]?.let { (reward, batch) -> return@onButtonClick player.offer(xpExchange(player, reward, batch)) }
+        packByButton[button]?.let { return@onButtonClick player.offer(packExchange(player, it)) }
+        charmByButton[button]?.let { return@onButtonClick player.offer(charmExchange(player, it, it.amount(button, player))) }
+        when (button) {
+            Component.interface_1011.component_1011_383 -> player.confirmExchange()
+            Component.interface_1011.component_1011_385 -> player.hideConfirmation()
+            Component.interface_1011.component_1011_51 -> player.closeInterfaces()
+        }
     }
 
-    onNpcClick(npcNamesOrIds = arrayOf<Any>(12195, "Void Knight"), options = arrayOf("Exchange")) { it.player.openExchangeShop() }
-
-    onNpcClick(11681) { (player) ->
+    onNpcClick(Npc.npc_11681) { (player) ->
         if (!player.isQuestComplete(Quest.VOID_STARES_BACK, "to buy Korasi's sword")) return@onNpcClick
-        player.sendOptionsDialogue("Would you like to buy Korasi's sword for 200,000 coins?") {
+        player.sendOptionsDialogue("Would you like to buy Korasi's sword for ${Utils.formatNumber(KORASI_SWORD_PRICE)} coins?") {
             opExec("Yes, that sounds like a fair price.") {
-                if (player.inventory.coinsAsInt < 200000) {
+                if (!player.inventory.hasCoins(KORASI_SWORD_PRICE)) {
                     player.sendMessage("You don't have enough money for that.")
                     return@opExec
                 }
-                player.inventory.removeCoins(200000)
-                player.inventory.addItemDrop(19784, 1)
+                player.inventory.removeCoins(KORASI_SWORD_PRICE)
+                player.inventory.addItemDrop(Obj.vkq3_korasi_sword_reward, 1)
             }
-            op("Nevermind.")
+            op("Never mind.")
         }
     }
 
-    onItemOnNpc(11681) { (player, item) ->
-        if (item.id == 10611 || item.id == 8840 || item.id == 8839) {
-            if (!player.isQuestComplete(Quest.VOID_STARES_BACK, "to upgrade void knight armor")) return@onItemOnNpc
-            if (player.pestPoints < 100) {
-                player.sendMessage("You need 100 Void Knight Commendations to upgrade void knight armor.")
-                return@onItemOnNpc
-            }
-            player.sendOptionsDialogue("Upgrade this piece to elite for 100 commendations?") {
-                opExec("Yes, upgrade my armor.") {
-                    if (player.pestPoints >= 100) {
-                        player.pestPoints = player.pestPoints - 100
-                        item.id = if (item.id == 8840) 19786 else 19785
-                        player.inventory.refresh(item.slot)
-                    }
-                }
-                op("Nevermind.")
-            }
+    onItemOnNpc(Npc.npc_11681) { (player, item) ->
+        val elite = ELITE_UPGRADES[item.id] ?: return@onItemOnNpc
+        if (!player.isQuestComplete(Quest.VOID_STARES_BACK, "to upgrade void knight armour")) return@onItemOnNpc
+        if (player.commendations < ELITE_UPGRADE_COST) {
+            player.sendMessage("You need $ELITE_UPGRADE_COST Void Knight commendations to upgrade void knight armour.")
+            return@onItemOnNpc
         }
-    }
-
-    onButtonClick(1011) { (player, _, componentId) ->
-        when (componentId) {
-            15, 196, 208, 220, 232, 244, 256, 268, 280 -> {
-                if (!player.skills.hasRequirements(Constants.ATTACK, 42, Constants.STRENGTH, 42, Constants.DEFENSE, 42, Constants.HITPOINTS, 42, Constants.RANGE, 42, Constants.MAGIC, 42, Constants.PRAYER, 22)) {
-                    player.sendMessage("You need level 42 Attack, Strength, Defence, Constitution, Ranged, Magic, and 22 Prayer in to purchase void equipment.")
-                    return@onButtonClick
-                }
-                var search = -1
-                for (i in COMPS.indices)
-                    if (COMPS[i] == componentId)
-                        search = i
-                val slot = search
-                player.buy(ItemDefinitions.getDefs(VOIDS[slot]).name, COSTS[slot]) {
-                    player.inventory.addItemDrop(VOIDS[slot], 1)
-                }
+        player.sendOptionsDialogue("Upgrade this piece to elite for $ELITE_UPGRADE_COST commendations?") {
+            opExec("Yes, upgrade my armour.") {
+                if (player.commendations < ELITE_UPGRADE_COST || player.inventory.getItem(item.slot)?.id != item.id) return@opExec
+                player.commendations -= ELITE_UPGRADE_COST
+                item.id = elite
+                player.inventory.refresh(item.slot)
             }
-
-            68, 86, 88 -> player.buySkillXp(Skills.ATTACK, componentId)
-            100, 102, 104 -> player.buySkillXp(Skills.STRENGTH, componentId)
-            116, 118, 120 -> player.buySkillXp(Skills.DEFENSE, componentId)
-            132, 134, 136 -> player.buySkillXp(Skills.HITPOINTS, componentId)
-            148, 150, 152 -> player.buySkillXp(Skills.RANGE, componentId)
-            164, 166, 168 -> player.buySkillXp(Skills.MAGIC, componentId)
-            180, 182, 184 -> player.buySkillXp(Skills.PRAYER, componentId)
-            291 -> {
-                if (player.skills.getLevelForXp(Constants.HERBLORE) < 25) {
-                    player.sendMessage("You need an Herblore level of 25 in order to purchase an herblore pack.")
-                    return@onButtonClick
-                }
-                player.buy("herb pack", 30, Runnable {
-                    repeat(5) {
-                        val herb = DropTable.calculateDrops(player, DropSets.getDropSet("herb"))
-                        if (herb.size <= 0) return@repeat
-                        player.inventory.addItemDrop(herb[0].id + 1, 1)
-                    }
-                })
-            }
-
-            302 -> {
-                if (player.skills.getLevelForXp(Constants.MINING) < 25) {
-                    player.sendMessage("You need an Mining level of 25 in order to purchase a mineral pack.")
-                    return@onButtonClick
-                }
-                player.buy("mineral pack", 15) {
-                    player.inventory.addItem(441, Utils.random(20), true)
-                    player.inventory.addItem(454, Utils.random(30), true)
-                }
-            }
-
-            313 -> {
-                if (player.skills.getLevelForXp(Constants.FARMING) < 25) {
-                    player.sendMessage("You need an Farming level of 25 in order to purchase a seed pack.")
-                    return@onButtonClick
-                }
-                player.buy("seed pack", 15) {
-                    repeat(6) {
-                        for (rew in DropTable.calculateDrops(player, DropSets.getDropSet("nest_shit_seed")))
-                            player.inventory.addItemDrop(rew)
-                    }
-                }
-            }
-
-            324, 326, 328 -> player.sendInputInteger("How many would you like to buy?") { amt ->
-                player.buy(Utils.formatNumber(amt) + " spinner charms", amt * 2) { player.inventory.addItemDrop(12166, amt) }
-            }
-
-            339, 341, 343 -> player.sendInputInteger("How many would you like to buy?") { amt ->
-                player.buy(Utils.formatNumber(amt) + " torcher charms", amt * 2) { player.inventory.addItemDrop(12167, amt) }
-            }
-
-            354, 356, 358 -> player.sendInputInteger("How many would you like to buy?") { amt ->
-                player.buy(Utils.formatNumber(amt) + " ravager charms", amt * 2) { player.inventory.addItemDrop(12164, amt) }
-            }
-
-            369, 371, 373 -> player.sendInputInteger("How many would you like to buy?") { amt ->
-                player.buy(Utils.formatNumber(amt) + " shifter charms", amt * 2) { player.inventory.addItemDrop(12165, amt) }
-            }
-
-            383 -> player.confirmBuy()
-            385 -> {
-                player.packets.setIFHidden(INTERFACE, 71, true)
-                player.tempAttribs.removeO<Any?>("pcShopBuy")
-            }
-
-            20, 73 -> {
-                //experience
-                player.packets.setIFHidden(INTERFACE, 70, true)
-                player.packets.setIFHidden(INTERFACE, 69, true)
-            }
-
-            24, 31 -> {
-                //consumables
-                player.packets.setIFHidden(INTERFACE, 70, false)
-                player.packets.setIFHidden(INTERFACE, 69, true)
-            }
-
-            29, 75 -> {
-                //equipment
-                player.packets.setIFHidden(INTERFACE, 70, true)
-                player.packets.setIFHidden(INTERFACE, 69, false)
-            }
-
-            else -> player.sendMessage("Component: $componentId")
+            op("Never mind.")
         }
     }
 }
 
-private fun Player.fullVoidEquipped(vararg helmid: Int): Boolean {
-    var hasDeflector = equipment.shieldId == 19712
-    if (equipment.glovesId != 8842) {
-        if (!hasDeflector) return false
-        hasDeflector = false
-    }
-    val legsId = equipment.legsId
-    val hasLegs = legsId != -1 && (legsId == 8840 || legsId == 19786 || legsId == 19788 || legsId == 19790)
-    if (!hasLegs) {
-        if (!hasDeflector) return false
-        hasDeflector = false
-    }
-    val torsoId = equipment.chestId
-    val hasTorso = torsoId != -1 && (torsoId == 8839 || torsoId == 10611 || torsoId == 19785 || torsoId == 19787 || torsoId == 19789)
-    if (!hasTorso && !hasDeflector)
-        return false
-    val helmId = equipment.hatId
-    if (helmId == -1) return false
-    var hasHelm = false
-    for (id in helmid) if (helmId == id) {
-        hasHelm = true
-        break
-    }
-    return hasHelm
+fun Player.openCommendationExchange() {
+    interfaceManager.sendInterface(Interface.interface_1011)
+    vars.setVar(Varp.varp_1875, DEFLECTOR_CONQUEST_RATING)
+    refreshCommendations()
+    hideConfirmation()
+    showPage(Page.EXPERIENCE)
 }
 
-private fun Player.openExchangeShop() {
-    interfaceManager.sendInterface(INTERFACE)
-    vars.setVar(1875, 1250)
-    refreshPoints()
+private fun Player.showPage(page: Page) {
+    for (other in Page.entries)
+        packets.setIFHidden(Utils.interfaceIdFromHash(other.container), Utils.componentIdFromHash(other.container), other != page)
 }
 
-private fun Player.refreshPoints() {
-    vars.setVarBit(Varbit.pest_points_old2, pestPoints)
-}
-
-private fun Player.confirmBuy() {
-    packets.setIFHidden(INTERFACE, 71, true)
-    val reward = tempAttribs.removeO<Reward?>("pcShopBuy")
-    if (reward == null) return
-    val currentPoints = pestPoints
-    if (!hasRights(Rights.DEVELOPER) && currentPoints - reward.cost < 0) {
-        sendMessage("You don't have enough Commendations remaining to complete this exchange.")
+private fun Player.offer(exchange: Exchange) {
+    exchange.refusal()?.let {
+        sendMessage(it)
         return
     }
-    pestPoints = currentPoints - reward.cost
-    refreshPoints()
-    reward.give.run()
-}
-
-private fun Player.buy(reward: String, cost: Int, give: Runnable) {
-    packets.setIFText(1011, 380, "Are you sure you wish to exchange $cost Commendations in return for a $reward?")
-    packets.setIFHidden(INTERFACE, 71, false)
-    tempAttribs.setO<Any?>("pcShopBuy", Reward(cost, give))
-}
-
-private fun Player.buySkillXp(skillId: Int, componentId: Int) {
-    if (skills.getLevelForXp(skillId) < 25) {
-        sendMessage("You need 25 " + Skills.SKILL_NAME[skillId] + " to purchase experience.")
+    if (commendations < exchange.cost) {
+        sendMessage("You need ${exchange.cost} commendations to exchange for ${exchange.description}.")
         return
     }
-    val multiplier = when (skillId) {
-        Skills.PRAYER -> 18.0
-        Skills.MAGIC, Skills.RANGE -> 32.0
-        else -> 35.0
+    tempAttribs.setO<Exchange>(PENDING_EXCHANGE, exchange)
+    packets.setIFText(Component.interface_1011.component_1011_380, "Are you sure you wish to exchange ${exchange.cost} Commendations in return for ${exchange.description}?")
+    packets.setIFHidden(Utils.interfaceIdFromHash(Component.interface_1011.component_1011_71), Utils.componentIdFromHash(Component.interface_1011.component_1011_71), false)
+}
+
+private fun Player.hideConfirmation() {
+    tempAttribs.removeO<Exchange>(PENDING_EXCHANGE)
+    packets.setIFHidden(Utils.interfaceIdFromHash(Component.interface_1011.component_1011_71), Utils.componentIdFromHash(Component.interface_1011.component_1011_71), true)
+}
+
+private fun Player.confirmExchange() {
+    val exchange = tempAttribs.getO<Exchange>(PENDING_EXCHANGE)
+    hideConfirmation()
+    if (exchange == null) return
+    exchange.refusal()?.let {
+        sendMessage(it)
+        return
     }
-    val baseXp = (skills.getLevelForXp(skillId) * skills.getLevelForXp(skillId)) / 600.0
-    val xp = floor(baseXp * multiplier) * getXpCost(componentId)
-    buy("${Utils.formatNumber(xp.toInt())} ${Skills.SKILL_NAME[skillId]} XP", getXpCost(componentId)) {
-        skills.addXp(skillId, xp)
+    if (commendations < exchange.cost) {
+        sendMessage("You don't have enough commendations remaining to complete this exchange.")
+        return
+    }
+    commendations -= exchange.cost
+    exchange.deliver()
+}
+
+private fun equipmentExchange(player: Player, reward: EquipmentReward) = Exchange(reward.cost, Utils.addArticle(Item(reward.obj).name), refusal = {
+    when {
+        reward.needsLevels && (VOID_STATS.any { player.skills.getLevelForXp(it) < VOID_LEVEL } || player.skills.getLevelForXp(Constants.PRAYER) < VOID_PRAYER_LEVEL) ->
+            "You need level $VOID_LEVEL Attack, Strength, Defence, Constitution, Ranged and Magic, and level $VOID_PRAYER_LEVEL Prayer, to exchange for Void Knight equipment."
+        !player.inventory.hasFreeSlots() -> "You don't have enough inventory space."
+        else -> null
+    }
+}) { player.inventory.addItem(reward.obj, 1) }
+
+private fun xpExchange(player: Player, reward: XpReward, batch: XpBatch): Exchange {
+    val level = player.skills.getLevelForXp(reward.skill)
+    val xp = (level * level / XP_LEVEL_DIVISOR) * reward.multiplier * batch.points * batch.bonus
+    return Exchange(batch.points, "${Utils.formatNumber(xp.toInt())} ${Skills.SKILL_NAME[reward.skill]} XP", refusal = {
+        if (player.skills.getLevelForXp(reward.skill) < XP_LEVEL) "You need a ${Skills.SKILL_NAME[reward.skill]} level of $XP_LEVEL to exchange for experience." else null
+    }) { player.skills.addXp(reward.skill, xp) }
+}
+
+private fun packExchange(player: Player, pack: Pack) = Exchange(pack.cost, "a ${pack.label}", refusal = {
+    when {
+        player.skills.getLevelForXp(pack.skill) < PACK_LEVEL -> "You need a ${Skills.SKILL_NAME[pack.skill]} level of $PACK_LEVEL to exchange for a ${pack.label}."
+        !player.inventory.hasFreeSlots() -> "You don't have enough inventory space."
+        else -> null
+    }
+}) {
+    when (pack) {
+        Pack.HERB -> repeat(Utils.random(HERB_PACK_MIN, HERB_PACK_MAX)) {
+            DropTable.calculateDrops(player, DropSets.getDropSet("herb")).forEach { player.inventory.addItemDrop(noted(it.id), it.amount) }
+        }
+        Pack.MINERAL -> {
+            player.inventory.addItemDrop(Obj.cert_coal, Utils.random(MINERAL_PACK_COAL.first, MINERAL_PACK_COAL.last))
+            player.inventory.addItemDrop(Obj.cert_iron_ore, Utils.random(MINERAL_PACK_IRON.first, MINERAL_PACK_IRON.last))
+        }
+        Pack.SEED -> repeat(SEED_PACK_ROLLS) {
+            DropTable.calculateDrops(player, DropSets.getDropSet("nest_shit_seed")).forEach { player.inventory.addItemDrop(it) }
+        }
     }
 }
 
-private fun getXpCost(componentId: Int): Int {
-    return when (componentId) {
-        68, 100, 116, 132, 148, 164, 180 -> 1
-        86, 102, 118, 134, 150, 166, 182 -> 10
-        88, 104, 120, 136, 152, 168, 184 -> 100
-        else -> 1
-    }
+private fun charmExchange(player: Player, charm: Charm, amount: Int): Exchange {
+    val item = Item(charm.obj, amount.coerceAtLeast(1))
+    return Exchange(item.amount * CHARM_COST, "${Utils.formatNumber(item.amount)} x ${item.name}", refusal = {
+        if (!player.inventory.hasRoomFor(item)) "You don't have enough inventory space." else null
+    }) { player.inventory.addItem(item) }
 }
+
+private fun noted(obj: Int) = Item(obj).definitions.noteId.takeIf { it > 0 } ?: obj

@@ -10,8 +10,8 @@
   "deathDelay": 8,
   "deathSound": -1,
   "respawnDelay": 59,
-  "hitpoints": 180,
-  "maxHit": 60,
+  "hitpoints": 830,
+  "maxHit": 121,
   "attackStyle": "MAGIC",
   "combatLevels": {
     "ATTACK": 0,
