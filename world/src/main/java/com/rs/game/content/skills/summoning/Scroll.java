@@ -1251,7 +1251,7 @@ public enum Scroll {
 		public boolean use(Player owner, Familiar familiar) { return FamiliarSpecs.glimmer(owner, familiar, 200); }
 	},
 	
-	CLAY_DEPOSIT(14421, ScrollTarget.CLICK, "Sends all held clay back to the base.", 0.0, 12) {
+	CLAY_DEPOSIT(14421, ScrollTarget.CLICK, "Sends all held clay back to the base.", 0.0, 30) {
 		@Override
 		public boolean use(Player owner, Familiar familiar) { return StealingCreationControllerKt.depositFamiliarItems(owner, familiar); }
 	};

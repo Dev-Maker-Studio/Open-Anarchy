@@ -15,7 +15,8 @@ import org.darkan.core.model.Item
 private const val KILN_CLASS_KEY = "sc_kiln_class"
 private const val KILN_PROTECTION_KEY = "sc_kiln_protected_until"
 private val KILN_PROTECTION_TICKS = Ticks.fromSeconds(10)
-private const val BULK_PER_CLASS = 15
+private const val RUNES_PER_CLASS = 15
+private const val ARROWS_PER_CLAY = 15
 
 private class KilnClass(val clay: Int, val clayVarc: Int, val button: Int, val highlight: Int)
 
@@ -46,10 +47,10 @@ enum class KilnProduct(val component: Int, val skill: Int, private val products:
     DAGGER(Component.interface_813.component_813_52, Constants.SMITHING, intArrayOf(Obj.sc_dagger_1, Obj.sc_dagger_2, Obj.sc_dagger_3, Obj.sc_dagger_4, Obj.sc_dagger_5)),
     SCIMITAR(Component.interface_813.component_813_53, Constants.SMITHING, intArrayOf(Obj.sc_scimitar_1, Obj.sc_scimitar_2, Obj.sc_scimitar_3, Obj.sc_scimitar_4, Obj.sc_scimitar_5)),
     WARHAMMER(Component.interface_813.component_813_54, Constants.SMITHING, intArrayOf(Obj.sc_warhammer_1, Obj.sc_warhammer_2, Obj.sc_warhammer_3, Obj.sc_warhammer_4, Obj.sc_warhammer_5)),
-    BOW(Component.interface_813.component_813_55, Constants.CRAFTING, intArrayOf(Obj.sc_bow_1, Obj.sc_bow_2, Obj.sc_bow_3, Obj.sc_bow_4, Obj.sc_bow_5)),
-    ARROWS(Component.interface_813.component_813_56, Constants.CRAFTING, intArrayOf(Obj.sc_arrow_1, Obj.sc_arrow_2, Obj.sc_arrow_3, Obj.sc_arrow_4, Obj.sc_arrow_5), { BULK_PER_CLASS * it }),
-    ELEMENTAL_RUNES(Component.interface_813.component_813_57, Constants.RUNECRAFTING, IntArray(5) { Obj.hvh_elemental_rune }, { BULK_PER_CLASS * it }),
-    CATALYTIC_RUNES(Component.interface_813.component_813_58, Constants.RUNECRAFTING, IntArray(5) { Obj.hvh_catalytic_rune }, { BULK_PER_CLASS * it }),
+    BOW(Component.interface_813.component_813_55, Constants.FLETCHING, intArrayOf(Obj.sc_bow_1, Obj.sc_bow_2, Obj.sc_bow_3, Obj.sc_bow_4, Obj.sc_bow_5)),
+    ARROWS(Component.interface_813.component_813_56, Constants.FLETCHING, intArrayOf(Obj.sc_arrow_1, Obj.sc_arrow_2, Obj.sc_arrow_3, Obj.sc_arrow_4, Obj.sc_arrow_5), { ARROWS_PER_CLAY }),
+    ELEMENTAL_RUNES(Component.interface_813.component_813_57, Constants.RUNECRAFTING, IntArray(5) { Obj.hvh_elemental_rune }, { RUNES_PER_CLASS * it }),
+    CATALYTIC_RUNES(Component.interface_813.component_813_58, Constants.RUNECRAFTING, IntArray(5) { Obj.hvh_catalytic_rune }, { RUNES_PER_CLASS * it }),
     POUCH(Component.interface_813.component_813_59, Constants.SUMMONING, intArrayOf(Obj.sc_lore_beast, Obj.sc_lore_beast_2, Obj.sc_lore_beast_3, Obj.sc_lore_beast_4, Obj.sc_lore_beast_5)),
     STAFF(Component.interface_813.component_813_60, Constants.CRAFTING, intArrayOf(Obj.sc_staff_1, Obj.sc_staff_2, Obj.sc_staff_3, Obj.sc_staff_4, Obj.sc_staff_5)),
     SCROLL(Component.interface_813.component_813_61, Constants.SUMMONING, IntArray(5) { Obj.sc_lore_clay_deposit }, { it }),

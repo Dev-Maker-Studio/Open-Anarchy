@@ -4,6 +4,7 @@ import com.rs.game.World
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
+import com.rs.utils.Ticks
 import org.darkan.core.Logger
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.model.Item
@@ -16,6 +17,7 @@ private const val END_LOCK_TICKS = 7
 private const val END_DELAY_TICKS = 6
 private const val DESTROY_DELAY_TICKS = 2
 private const val FULL_PLOT_DEGRADATION = 30
+private val FINAL_COUNTDOWN = Ticks.fromMinutes(1)
 
 class StealingCreationGameController private constructor(val blueTeam: MutableList<Player>, val redTeam: MutableList<Player>) {
 
@@ -161,6 +163,7 @@ class StealingCreationGameController private constructor(val blueTeam: MutableLi
         val degradation = area.getDegradation(x, y)
         if (tier !in 1..5 || degradation < 1) return false
         area.setDegradation(x, y, degradation - 1)
+        if (degradation == 1 && clayExhausted()) startFinalCountdown()
         val look = if (degradation - 1 > FULL_PLOT_DEGRADATION) 0 else if (degradation - 1 > 0) 1 else 2
         val looks = source.spotsForTier(tier)
         val center = area.plotTile(x, y, BarrierTier.PLOT_INSET + 3, BarrierTier.PLOT_INSET + 3)
@@ -173,6 +176,19 @@ class StealingCreationGameController private constructor(val blueTeam: MutableLi
     }
 
     fun isEmpty(x: Int, y: Int) = area.getDegradation(x, y) == 0
+
+    private fun clayExhausted() = (0 until area.size).none { x ->
+        (0 until area.size).any { y -> ClaySource.forPlot(area.getType(x, y)) != null && area.getTier(x, y) in 1..5 && area.getDegradation(x, y) > 0 }
+    }
+
+    private fun startFinalCountdown() {
+        if (ticksLeft <= FINAL_COUNTDOWN) return
+        endTick = World.getServerTicks() + FINAL_COUNTDOWN
+        for (player in blueTeam + redTeam) {
+            player.sendMessage("<col=FF0000>All of the sacred clay has been gathered. The game will end in one minute!</col>")
+            (player.controllerManager.controller as? StealingCreationController)?.sendTimer()
+        }
+    }
 
     private fun spawnLoc(id: Int, shape: ObjectShape, rotation: Int, x: Int, y: Int) {
         World.spawnObject(GameObject(id, shape, rotation, Tile.of(x, y, 0)))
@@ -238,8 +254,8 @@ class StealingCreationGameController private constructor(val blueTeam: MutableLi
         if (amount <= 0) return false
         val item = Item(itemId, amount)
         val units = scoreUnits(item)
-        if (!score.canWithdraw(units)) {
-            player.sendMessage("You cannot take this amount of items as your score is too low.")
+        if (!score.canWithdraw()) {
+            player.sendMessage("You need a score above zero to take items from your base.")
             return false
         }
         if (!player.inventory.hasRoomFor(item)) {
