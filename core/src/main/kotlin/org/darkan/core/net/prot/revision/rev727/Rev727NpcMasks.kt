@@ -82,9 +82,8 @@ internal val npcMasks: MaskRegistry<NpcMaskCtx, NpcMaskKey> =
 
         // 0x80 face entity
         mask(NpcMaskKey.FACE_ENTITY, 0x80) { ctx, out ->
-                // Prefer the explicit per-tick value, fall back to the persistent target on add.
                 val c = ctx.npc.blocks.common
-                val face = c.faceEntity ?: c.persistentFaceEntity!!
+                val face = c.faceEntity ?: c.persistentFaceEntity ?: -1
                 out.writeShortLittle(if (face == -1) 65535 else face)
         }
 

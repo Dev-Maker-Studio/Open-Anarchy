@@ -31,9 +31,8 @@ fun buildPlayerMaskPresence(state: PlayerUpdateTrackingState, player: PlayerUpda
         appearance != null && state.needAppearanceUpdate(player.index, appearance.hash)
 
     p[PlayerMaskKey.ANIMATION.ordinal] = b.movementAnimations != null
-    // Face entity: explicit set this tick, OR newly added with a persistent face target.
-    p[PlayerMaskKey.FACE_ENTITY.ordinal] =
-        c.faceEntity != null || (added && c.persistentFaceEntity != null)
+    // Always sent on add: the client reuses player slots and keeps the last face target it saw.
+    p[PlayerMaskKey.FACE_ENTITY.ordinal] = c.faceEntity != null || added
     p[PlayerMaskKey.TEMPORARY_MOVE_TYPE.ordinal] = b.temporaryMoveTypeId != null
     p[PlayerMaskKey.ANIMATION_SEQUENCE.ordinal] = b.sequences != null
     // Movement type: explicit change this tick, or always sent on add.
@@ -58,9 +57,8 @@ fun buildNpcMaskPresence(npc: NpcUpdateNpc, added: Boolean = false): BooleanArra
     p[NpcMaskKey.BAS.ordinal] = b.basId != null
     p[NpcMaskKey.VARN_SET.ordinal] = b.varnsNoClear != null
     p[NpcMaskKey.SPOT_ANIM_4.ordinal] = c.spotAnims[3] != null
-    // Face entity: explicit set this tick, OR newly added with a persistent face target.
-    p[NpcMaskKey.FACE_ENTITY.ordinal] =
-        c.faceEntity != null || (added && c.persistentFaceEntity != null)
+    // Always sent on add: the client reuses npc slots and keeps the last face target it saw.
+    p[NpcMaskKey.FACE_ENTITY.ordinal] = c.faceEntity != null || added
     p[NpcMaskKey.ANIMATION_SEQUENCE.ordinal] = b.sequences != null
     p[NpcMaskKey.SPOT_ANIM_2.ordinal] = c.spotAnims[1] != null
     p[NpcMaskKey.HITS.ordinal] = c.hits != null

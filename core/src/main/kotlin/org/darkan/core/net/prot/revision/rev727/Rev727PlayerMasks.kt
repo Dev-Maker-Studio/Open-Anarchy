@@ -149,9 +149,8 @@ internal val playerMasks: MaskRegistry<PlayerMaskCtx, PlayerMaskKey> =
 
         // 0x2 Face entity
         mask(PlayerMaskKey.FACE_ENTITY, 0x2) { ctx, out ->
-                // Prefer the explicit per-tick value, fall back to the persistent target on add.
                 val c = ctx.player.blocks.common
-                val face = c.faceEntity ?: c.persistentFaceEntity!!
+                val face = c.faceEntity ?: c.persistentFaceEntity ?: -1
                 val idx = if (face == -1) 65535 else face
                 out.writeShortAdd(idx)
         }
