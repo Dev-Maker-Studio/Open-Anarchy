@@ -92,12 +92,16 @@ class Rev727NpcUpdateDecoderTest {
     )
 
     @Test
-    fun `npcs in view are added with id position facing and persistent name and combat level`() {
+    fun `npcs in view are added with id position facing face target and persistent name and combat level`() {
         val harness = Harness(customisationLayout)
         val guard = npc(10, 3010, 3203, 3202, faceAngle = 4096)
         val captain = npc(
             11, 3011, 3195, 3186, plane = 0, faceAngle = 14336,
-            blocks = NpcUpdateBlocks(persistentName = "Captain Rovin", persistentCombatLevel = 250),
+            blocks = NpcUpdateBlocks(
+                common = CommonUpdateBlocks(persistentFaceEntity = 32768 + 7),
+                persistentName = "Captain Rovin",
+                persistentCombatLevel = 250,
+            ),
         )
         val far = npc(12, 3012, 3220, 3200)
 
@@ -109,23 +113,36 @@ class Rev727NpcUpdateDecoderTest {
         assertEquals(3203, added.x)
         assertEquals(3202, added.y)
         assertEquals(4096, added.faceAngle)
-        assertNull(added.masks)
+        assertEquals(-1, added.masks?.common?.faceEntity)
+        assertNull(added.masks?.name)
         val named = frame[11]!!
         assertEquals(tileHash30(3195, 3186, 0), named.tileHash30)
         assertEquals(14336, named.faceAngle)
+        assertEquals(32768 + 7, named.masks?.common?.faceEntity)
         assertEquals("Captain Rovin", named.masks?.name)
         assertEquals(250, named.masks?.combatLevel)
         assertNull(frame[12])
     }
 
     @Test
-    fun `npcs added without any masks end the packet without a terminator`() {
+    fun `npcs added without a face target clear the face target the client kept for the slot`() {
         val harness = Harness(customisationLayout)
 
         val frame = harness.tick(localTile, npc(1, 1, 3201, 3201), npc(2, 2, 3199, 3190))
 
         assertEquals(listOf(1, 2), frame.entries.map { it.index })
-        assertTrue(frame.entries.all { it.added && it.masks == null })
+        assertTrue(frame.entries.all { it.added && it.masks?.common?.faceEntity == -1 })
+    }
+
+    @Test
+    fun `idle npcs without masks end the packet without a terminator`() {
+        val harness = Harness(customisationLayout)
+        harness.tick(localTile, npc(1, 1, 3201, 3201), npc(2, 2, 3199, 3190))
+
+        val frame = harness.tick(localTile, npc(1, 1, 3201, 3201), npc(2, 2, 3199, 3190))
+
+        assertEquals(emptyList(), frame.entries)
+        assertEquals(listOf(1, 2), harness.client.localNpcIndices())
     }
 
     @Test
