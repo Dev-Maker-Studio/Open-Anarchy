@@ -16,6 +16,7 @@
 //
 package com.rs.game.model.entity;
 
+import org.darkan.core.gameval.gen.Spotanim;
 import com.rs.Settings;
 import org.darkan.core.model.Bonus;
 import org.darkan.core.model.ObjectShape;
@@ -409,21 +410,15 @@ public abstract class Entity {
 	}
 
 	public void sendSoulSplit(Hit hit, Entity user) {
-		if (hit.getDamage() > 0)
-			World.sendProjectile(user, this, 2263, new Pair<>(11, 11), 0, 50, 0);
 		user.heal(hit.getDamage() / 5);
 		if (user instanceof Player p)
 			p.incrementCount("Health soulsplitted back", hit.getDamage() / 5);
 		if (this instanceof Player p)
 			p.getPrayer().drainPrayer((double) hit.getDamage() / 5);
-		WorldTasks.schedule(new Task() {
-			@Override
-			public void run() {
-				setNextSpotAnim(new SpotAnim(2264));
-				if (hit.getDamage() > 0)
-					World.sendProjectile(Entity.this, user, 2263, new Pair<>(11, 11), 0, 50, 0);
-			}
-		}, 0);
+		if (hit.getDamage() <= 0)
+			return;
+		spotAnim(Spotanim.mah4_reward_spot_soulsplit_impact);
+		World.sendProjectile(this, user, Spotanim.mah4_reward_spot_soulsplit_proj, new Pair<>(28, 28), 0, 10, 0);
 	}
 
 	protected void processHit(Hit hit) {
@@ -708,7 +703,9 @@ public abstract class Entity {
 		lastTile = Tile.of(getTile());
 		if (lastFaceEntity >= 0) {
 			Entity target = lastFaceEntity >= 32768 ? World.getPlayers().get(lastFaceEntity - 32768) : World.getNPCs().get(lastFaceEntity);
-			if (target != null) {
+			if (target == null || target.hasFinished() || !target.withinDistance(getTile(), 16))
+				setNextFaceEntity(null);
+			else {
 				int size = target.getSize();
 				updateAngle(target.getTile(), size, size);
 			}

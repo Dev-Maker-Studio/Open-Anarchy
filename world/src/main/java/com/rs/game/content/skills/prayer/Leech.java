@@ -22,6 +22,8 @@ import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.entity.player.managers.PrayerManager;
+import org.darkan.core.gameval.gen.Seq;
+import org.darkan.core.gameval.gen.Spotanim;
 import org.darkan.core.model.AttribMap;
 
 import java.util.*;
@@ -46,24 +48,22 @@ public class Leech {
 	private static final String LEECH_BOOST_DECAY_PREFIX = "leech_boost_decay_";
 
 	public enum LeechType {
-		ATTACK(Skills.ATTACK, Prayer.LEECH_ATTACK, 1, 2231, 2232),
-		STRENGTH(Skills.STRENGTH, Prayer.LEECH_STRENGTH, 1, 2248, 2250),
-		DEFENSE(Skills.DEFENSE, Prayer.LEECH_DEFENSE, 1, 2244, 2246),
-		RANGED(Skills.RANGE, Prayer.LEECH_RANGE, 1, 2236, 2238),
-		MAGIC(Skills.MAGIC, Prayer.LEECH_MAGIC, 1, 2240, 2242),
-		SPECIAL(-1, Prayer.LEECH_SPECIAL, 1, 2256, 2258),
-		ENERGY(-1, Prayer.LEECH_ENERGY, 1, 2252, 2254);
+		ATTACK(Skills.ATTACK, Prayer.LEECH_ATTACK, Spotanim.mah4_reward_spot_leech_proj, Spotanim.mah4_reward_spot_leech_impact),
+		STRENGTH(Skills.STRENGTH, Prayer.LEECH_STRENGTH, Spotanim.mah4_reward_spot_leech_proj_5, Spotanim.mah4_reward_spot_leech_impact_5),
+		DEFENSE(Skills.DEFENSE, Prayer.LEECH_DEFENSE, Spotanim.mah4_reward_spot_leech_proj_4, Spotanim.mah4_reward_spot_leech_impact_4),
+		RANGED(Skills.RANGE, Prayer.LEECH_RANGE, Spotanim.mah4_reward_spot_leech_proj_2, Spotanim.mah4_reward_spot_leech_impact_2),
+		MAGIC(Skills.MAGIC, Prayer.LEECH_MAGIC, Spotanim.mah4_reward_spot_leech_proj_3, Spotanim.mah4_reward_spot_leech_impact_3),
+		SPECIAL(-1, Prayer.LEECH_SPECIAL, Spotanim.mah4_reward_spot_leech_proj_7, Spotanim.mah4_reward_spot_leech_impact_7),
+		ENERGY(-1, Prayer.LEECH_ENERGY, Spotanim.mah4_reward_spot_leech_proj_6, Spotanim.mah4_reward_spot_leech_impact_6);
 
 		public final int skillId;
 		private final Prayer prayer;
-		private final int castAnim;
 		private final int projAnim;
 		private final int spotAnimHit;
 
-		LeechType(int skillId, Prayer prayer, int castAnim, int projAnim, int spotAnimHit) {
+		LeechType(int skillId, Prayer prayer, int projAnim, int spotAnimHit) {
 			this.skillId = skillId;
 			this.prayer = prayer;
-			this.castAnim = castAnim;
 			this.projAnim = projAnim;
 			this.spotAnimHit = spotAnimHit;
 		}
@@ -80,7 +80,7 @@ public class Leech {
 
 		((Player) entity).getCombatDefinitions().drainSpec(10);
 		player.getCombatDefinitions().restoreSpecialAttack(10);
-		playLeechEffect(player, entity, type.castAnim, type.projAnim, type.spotAnimHit, 8109);
+		playLeechEffect(player, entity, type.projAnim, type.spotAnimHit, 8109);
 	}
 
 	public static void applyLeechRun(Player player, Entity entity, LeechType type) {
@@ -89,12 +89,12 @@ public class Leech {
 
 		((Player) entity).drainRunEnergy(10.0);
 		player.restoreRunEnergy(10.0);
-		playLeechEffect(player, entity, type.castAnim, type.projAnim, type.spotAnimHit, 8109);
+		playLeechEffect(player, entity, type.projAnim, type.spotAnimHit, 8109);
 	}
 
 	public static void applyLeechCurse(Player player, Entity target, LeechType type) {
 		handleLeechOnHit(player, target, type.skillId);
-		playLeechEffect(player, target, type.castAnim, type.projAnim, type.spotAnimHit, 8109);
+		playLeechEffect(player, target, type.projAnim, type.spotAnimHit, 8109);
 	}
 
 	//called when attacker hits a target and leech applies
@@ -241,8 +241,8 @@ public class Leech {
 			player.getPrayer().setStatMod(statMod, percent);
 	}
 
-	public static void playLeechEffect(Player player, Entity target, int castSpotAnim, int projectileID, int targetSpotAnim, int soundId) {
-		player.sync(12565, castSpotAnim);
+	public static void playLeechEffect(Player player, Entity target, int projectileID, int targetSpotAnim, int soundId) {
+		player.anim(Seq.mah4_reward_player_leech);
 		player.soundEffect(target, soundId, true);
 
 		player.getPrayer().curseProjectile(player, target, projectileID, targetSpotAnim, true);
