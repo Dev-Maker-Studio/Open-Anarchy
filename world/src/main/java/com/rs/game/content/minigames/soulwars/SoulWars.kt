@@ -539,7 +539,7 @@ class SoulWarsGameController internal constructor(val redTeam: Boolean, @Transie
             Loc.snp_counter_bandages_blue, Loc.snp_counter_bandages_red -> giveFoodAndPotions(player)
             Loc.snp_blue_graveyard_barrier -> leaveThrough(obj, player.x < obj.x, -1, 0)
             Loc.snp_red_graveyard_barrier -> leaveThrough(obj, player.x >= obj.x, 0, 0)
-            in CapturePoint.EAST_GRAVEYARD.locs -> leaveThrough(obj, player.y > obj.y, 0, -1)
+            in CapturePoint.EAST_GRAVEYARD.locs -> leaveThrough(obj, player.y <= obj.y, 0, 0)
             in CapturePoint.WEST_GRAVEYARD.locs -> leaveThrough(obj, player.y >= obj.y, 0, 0)
         }
         return false
