@@ -465,16 +465,13 @@ object Rev727UpdateProtocol : UpdateProtocol {
             if (npc.finished || !within(snapshot.localTileHash30, npc, radius)) continue
 
             stream.writeBits(cfg.indexBits, npc.index)
-            // On add, we may also need to send persistent state masks (face entity, name,
-            // combat level) even if the NPC has no per-tick block changes.
-            val needUpdate = needsNpcUpdateBlock(npc) || hasNpcPersistentAddBlock(npc)
 
             val dx = npc.x - localX
             val dy = npc.y - localY
             val encX = ((dx and posMask) + (1 shl posBits)) % (1 shl posBits)
             val encY = ((dy and posMask) + (1 shl posBits)) % (1 shl posBits)
 
-            stream.writeBits(1, if (needUpdate) 1 else 0)
+            stream.writeBits(1, 1)
             stream.writeBits(posBits, encY)
             stream.writeBits(cfg.rotationBits, (npc.faceAngle shr 11) - 4)
             stream.writeBits(cfg.idBits, npc.id)
@@ -483,9 +480,7 @@ object Rev727UpdateProtocol : UpdateProtocol {
             stream.writeBits(cfg.planeBits, npc.plane)
 
             state.localIndexes[state.localCount++] = npc.index
-            if (needUpdate) {
-                appendNpcMasks(maskOut, npc, added = true)
-            }
+            appendNpcMasks(maskOut, npc, added = true)
         }
     }
 
@@ -519,19 +514,6 @@ object Rev727UpdateProtocol : UpdateProtocol {
         if (c.hits != null) return true
         if (c.modelOverrides != null) return true
         for (s in c.spotAnims) if (s != null) return true
-        return false
-    }
-
-    /**
-     * Returns whether this NPC has any persistent state that should be sent only when
-     * the NPC is being newly added to a viewer's local list (face entity target, custom
-     * name, custom combat level).
-     */
-    private fun hasNpcPersistentAddBlock(npc: NpcUpdateNpc): Boolean {
-        val b = npc.blocks
-        if (b.common.persistentFaceEntity != null) return true
-        if (b.persistentName != null) return true
-        if (b.persistentCombatLevel != null) return true
         return false
     }
 }
