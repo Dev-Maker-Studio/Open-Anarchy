@@ -266,7 +266,7 @@ public final class Familiar extends NPC {
 			owner.sendMessage("Only an abyssal familiar can carry blank rune essence.");
 			return;
 		}
-		if ((!ItemConstants.isTradeable(item) && !owner.getDungManager().isInsideDungeon()) || item.getId() == 4049 || item.getDefinitions().getValue() > 50000) {
+		if (!isClayFamiliar() && ((!ItemConstants.isTradeable(item) && !owner.getDungManager().isInsideDungeon()) || item.getId() == 4049 || item.getDefinitions().getValue() > 50000)) {
 			owner.sendMessage("You cannot store this item.");
 			return;
 		}
@@ -338,6 +338,10 @@ public final class Familiar extends NPC {
 	
 	public boolean isPassive() {
 		return pouch.isPassive();
+	}
+
+	public boolean isClayFamiliar() {
+		return pouch.getScroll() == Scroll.CLAY_DEPOSIT;
 	}
 
 	public boolean canStoreEssOnly() {

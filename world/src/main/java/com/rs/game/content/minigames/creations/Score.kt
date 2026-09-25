@@ -8,25 +8,14 @@ import org.darkan.core.gameval.gen.Varcstr
 import org.darkan.core.model.Item
 
 private const val POINTS_PER_CLAY_CLASS = 15
-private const val CLAY_UNITS_PER_CLASS = 15
-private const val ITEM_UNITS_PER_CLASS = 30
 private const val DAMAGE_POINTS = 5
 private const val DAMAGE_PER_POINTS = 10
 private const val WIN_BONUS = 1.1
-private const val MAX_NET_WITHDRAWN_POINTS = 3000
 private val REWARD_THRESHOLDS = intArrayOf(20_000, 22_000, 26_000, 34_000, 50_000, 82_000, 146_000)
 private const val REWARD_POINTS_PER_SCORE = 1000
 private const val FIRST_TIERED_REWARD = 20
 
-private val UNITS_PER_ITEM: Map<Int, Int> = buildMap {
-    StealingCreation.SACRED_CLAY.forEachIndexed { index, id -> put(id, CLAY_UNITS_PER_CLASS * (index + 1)) }
-    for (product in KilnProduct.entries) for (clayClass in 1..5) {
-        val made = product.product(clayClass)
-        put(made.id, ITEM_UNITS_PER_CLASS * clayClass / made.amount)
-    }
-}
-
-fun scoreUnits(item: Item) = (UNITS_PER_ITEM[item.id] ?: 0) * item.amount
+fun scoreUnits(item: Item) = if (StealingCreation.crateFor(item.id) == null) 0 else item.definitions.cost * item.amount
 
 class Score(val name: String, val team: Boolean) {
     var gathering = 0
@@ -59,7 +48,7 @@ class Score(val name: String, val team: Boolean) {
         depositing += scoreUnits(item)
     }
 
-    fun canWithdraw(units: Int) = (withdrawing + units - depositing) * 2 <= MAX_NET_WITHDRAWN_POINTS
+    fun canWithdraw() = total(0) > 0
 
     fun withdraw(units: Int) {
         withdrawing += units

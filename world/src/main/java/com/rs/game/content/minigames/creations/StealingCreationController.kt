@@ -5,6 +5,7 @@ import com.rs.engine.dialogue.sendOptionsDialogue
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.pathfinder.RouteEvent
 import com.rs.game.World
+import com.rs.game.content.combat.RangedWeapon
 import com.rs.game.content.combat.getMeleeCombatDelay
 import com.rs.game.content.combat.getWeaponAttackEmote
 import com.rs.game.content.skills.magic.TeleType
@@ -36,6 +37,7 @@ import org.darkan.core.model.Item
 import world.gregs.voidps.type.Tile
 
 private const val WALL_CLIMB_AGILITY = 60
+private const val RIFT_JUMP_AGILITY = 40
 private const val PICKPOCKET_KEY = "sc_pickpocket_tick"
 private const val PICKPOCKET_DELAY_TICKS = 3
 private const val PICKPOCKET_LEVEL_GAP = 20
@@ -45,6 +47,18 @@ private const val BARRIER_REPAIR_COST = 1
 private const val FIRST_CLAY_GATHER_DELAY = 2
 private val CLIMBABLE_WALLS = setOf(Loc.sc_agility_wall, Loc.sc_agility_wall_end, Loc.sc_agility_wall_02)
 private val CRATE_TABLES = (Loc.sc_table_clay..Loc.sc_table_summoning).toSet()
+private val WIELD_SKILLS = mapOf(
+    KilnProduct.HATCHET to Constants.WOODCUTTING, KilnProduct.PICKAXE to Constants.MINING,
+    KilnProduct.HARPOON to Constants.FISHING, KilnProduct.BUTTERFLY_NET to Constants.HUNTER,
+    KilnProduct.DAGGER to Constants.ATTACK, KilnProduct.SCIMITAR to Constants.ATTACK, KilnProduct.WARHAMMER to Constants.ATTACK,
+    KilnProduct.HELM to Constants.DEFENSE, KilnProduct.PLATEBODY to Constants.DEFENSE, KilnProduct.PLATELEGS to Constants.DEFENSE,
+    KilnProduct.COIF to Constants.RANGE, KilnProduct.LEATHER_BODY to Constants.RANGE, KilnProduct.CHAPS to Constants.RANGE,
+    KilnProduct.BOW to Constants.RANGE, KilnProduct.ARROWS to Constants.RANGE,
+    KilnProduct.HAT to Constants.MAGIC, KilnProduct.ROBE_TOP to Constants.MAGIC, KilnProduct.ROBE_BOTTOM to Constants.MAGIC, KilnProduct.STAFF to Constants.MAGIC,
+)
+private val WIELD_REQUIREMENTS: Map<Int, Pair<Int, Int>> = buildMap {
+    for ((product, skill) in WIELD_SKILLS) for (clayClass in 1..5) put(product.product(clayClass).id, skill to StealingCreation.levelFor(clayClass))
+}
 private val ENEMY_DAMAGE_LOOKS = setOf(HitLook.MELEE_DAMAGE, HitLook.RANGE_DAMAGE, HitLook.MAGIC_DAMAGE)
 private val CAPE_SLOT_COMPONENT = Utils.componentIdFromHash(Component.interface_387.component_387_9)
 
@@ -54,9 +68,9 @@ fun depositFamiliarItems(owner: Player, familiar: Familiar): Boolean {
         familiar.dismiss()
         return false
     }
-    familiar.inventory.array().filterNotNull().forEach {
-        controller.game.deposit(owner, it, controller.getTeam())
+    familiar.inventory.array().filterNotNull().filter { StealingCreation.crateFor(it.id) != null }.forEach {
         familiar.removeItem(it)
+        controller.game.deposit(owner, it, controller.getTeam())
     }
     return true
 }
@@ -86,10 +100,12 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
 
     override fun sendInterfaces() {
         player.interfaceManager.sendOverlay(Interface.interface_809, false)
-        player.packets.sendVarc(Varc.sc_server_cycles_left_on_launch, game.ticksLeft)
+        sendTimer()
         player.vars.setVarBit(Varbit.sc_team, teamNumber(team))
         game.getScore(player)?.let { sendScore(it) }
     }
+
+    fun sendTimer() = player.packets.sendVarc(Varc.sc_server_cycles_left_on_launch, game.ticksLeft)
 
     fun sendScore(score: Score) {
         player.vars.setVar(Varp.sc_score_clay_gathered, score.gathering)
@@ -123,8 +139,13 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
     }
 
     override fun canEquip(slotId: Int, itemId: Int): Boolean {
-        if (slotId != Equipment.CAPE) return true
-        player.sendMessage("You can't remove your team's colours.")
+        if (slotId == Equipment.CAPE) {
+            player.sendMessage("You can't remove your team's colours.")
+            return false
+        }
+        val (skill, level) = WIELD_REQUIREMENTS[itemId] ?: return true
+        if (player.skills.getLevel(skill) >= level) return true
+        player.sendMessage("You need a ${Constants.SKILL_NAME[skill]} level of $level to wield that.")
         return false
     }
 
@@ -155,11 +176,17 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
             }
             if (game.area.inSafeArea(target, !team) || game.area.inSafeArea(player, team)) return false
         }
-        if (player.appearance.isNPC) {
-            player.sendMessage("You cannot attack while you are hidden.")
+        if (player.appearance.isNPC && (player.combatDefinitions.spell != null || RangedWeapon.forId(player.equipment.weaponId) != null)) {
+            player.sendMessage("The fog is too thick to fire arrows or cast spells through.")
             return false
         }
         return true
+    }
+
+    override fun canSummonFamiliar(): Boolean {
+        if (!player.appearance.isNPC) return true
+        player.sendMessage("You cannot summon a familiar while inside the fog.")
+        return false
     }
 
     override fun processOutgoingHit(hit: Hit, target: Entity) {
@@ -380,9 +407,14 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
     }
 
     private fun buildBarrier(hotspot: GameObject) {
-        val tier = BarrierTier.entries.lastOrNull { player.inventory.containsItem(it.item, BarrierTier.BUILD_COST) }
+        val held = BarrierTier.entries.filter { player.inventory.containsItem(it.item, BarrierTier.BUILD_COST) }
+        if (held.isEmpty()) {
+            player.sendMessage("You need ${BarrierTier.BUILD_COST} barriers of the same class to build.")
+            return
+        }
+        val tier = held.lastOrNull { player.skills.getLevel(Constants.CONSTRUCTION) >= StealingCreation.levelFor(it.tier) }
         if (tier == null) {
-            player.sendMessage("You don't have enough barrier items to build.")
+            player.sendMessage("You need a Construction level of ${StealingCreation.levelFor(held.first().tier)} to build those barriers.")
             return
         }
         val x = game.area.plotX(hotspot.tile)
@@ -417,24 +449,26 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
             player.sendMessage("This barrier doesn't need any repairing.")
             return
         }
-        if (!player.inventory.containsItem(tier.item, BARRIER_REPAIR_COST)) {
-            player.sendMessage("You don't have enough barriers of required type to repair this barrier.")
+        val repairWith = BarrierTier.entries.drop(tier.ordinal).firstOrNull { player.inventory.containsItem(it.item, BARRIER_REPAIR_COST) }
+        if (repairWith == null) {
+            player.sendMessage("You need a barrier of class ${tier.tier} or higher to repair this barrier.")
             return
         }
         player.lock(2)
         player.schedule {
             player.anim(Seq.sc_player_building_walls)
             wait(1)
-            if (player.inventory.containsItem(tier.item, BARRIER_REPAIR_COST) && game.repairBarrier(x, y))
-                player.inventory.deleteItem(tier.item, BARRIER_REPAIR_COST)
+            if (player.inventory.containsItem(repairWith.item, BARRIER_REPAIR_COST) && game.repairBarrier(x, y))
+                player.inventory.deleteItem(repairWith.item, BARRIER_REPAIR_COST)
             player.unlock()
         }
     }
 
     private fun crossObstacle(obstacle: GameObject) {
         val isWall = obstacle.id in CLIMBABLE_WALLS
-        if (isWall && player.skills.getLevel(Constants.AGILITY) < WALL_CLIMB_AGILITY) {
-            player.sendMessage("You need to have an Agility level of $WALL_CLIMB_AGILITY to climb over the wall.")
+        val required = if (isWall) WALL_CLIMB_AGILITY else RIFT_JUMP_AGILITY
+        if (player.skills.getLevel(Constants.AGILITY) < required) {
+            player.sendMessage("You need an Agility level of $required to ${if (isWall) "climb over the wall" else "jump across the rift"}.")
             return
         }
         val distance = if (isWall) 2 else 3
