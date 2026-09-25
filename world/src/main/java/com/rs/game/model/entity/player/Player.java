@@ -1283,7 +1283,7 @@ public class Player extends Entity {
 			processWeeklyTasks();
 		}
 
-		if (isBot() && !isChosenAccountType()) {
+		if (isBot() && (!isChosenAccountType() || getAppearance().hasDefaultLook())) {
 			RandomLook.randomizeLook(this);
 			setChosenAccountType(true);
 			setStarter(1);

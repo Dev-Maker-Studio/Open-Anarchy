@@ -397,11 +397,16 @@ object SocialGateway {
     }
 
     private suspend fun joinFriendsChat(username: String, ownerName: String) {
+        val from = Accounts.find(username) ?: return
+        if (from.bot) {
+            forgetCurrentFriendsChat(username)
+            emit(username, SocialEvent.FriendsChatChanged(null))
+            return
+        }
         val owner = Accounts.findByDisplayName(ownerName) ?: Accounts.find(ownerName)
             ?: return refuseJoin(username, "Unable to find that friends chat.")
         if (owner.social.friendsChat.name == null)
             return refuseJoin(username, "The friends chat you are trying to join is not set up yet.")
-        val from = Accounts.find(username) ?: return
         if (owner.social.ignores.contains(username))
             return refuseJoin(username, "You are not allowed to join this user's friends chat channel.")
         if (!rankAllowed(fcRankOf(owner, from), owner.social.friendsChat.rankToEnter))

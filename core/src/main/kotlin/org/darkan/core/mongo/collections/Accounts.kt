@@ -131,7 +131,10 @@ object Accounts : AccountStore {
             username = formatted,
             email = "$formatted@bots.darkan.org",
             passwordHash = "",
-        ).apply { bot = true })
+        ).apply {
+            bot = true
+            social.currentFriendsChat = null
+        })
     }
 
     suspend fun create(req: AccountCreateRequest): Account? {

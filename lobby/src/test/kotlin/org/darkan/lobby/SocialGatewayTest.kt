@@ -172,6 +172,20 @@ class SocialGatewayTest {
     }
 
     @Test
+    fun `a bot account never joins a friends chat, not even one it had saved`() = runBlocking {
+        val owner = LobbyHarness.account("owner")
+        LobbyHarness.openFriendsChat(owner, "Helpers")
+        val bot = LobbyHarness.account("bot", currentFriendsChat = owner.displayName).apply { this.bot = true }
+
+        LobbyHarness.lobbyLogin(owner)
+        val session = LobbyHarness.lobbyLogin(bot)
+        LobbyHarness.act(bot, SocialAction.JoinFriendsChat(owner.displayName))
+
+        assertTrue(session.sent.filterIsInstance<FriendsChatChannel>().none { !it.clear }, "a bot was put in a friends chat")
+        assertNull(bot.social.currentFriendsChat, "a bot kept its saved friends chat")
+    }
+
+    @Test
     fun `leaving a friends chat is remembered as leaving it`() = runBlocking {
         val owner = LobbyHarness.account("owner")
         LobbyHarness.openFriendsChat(owner, "Helpers")

@@ -299,6 +299,11 @@ class Appearance {
         male()
     }
 
+    fun hasDefaultLook(): Boolean {
+        val default = Appearance()
+        return isMale && lookI.contentEquals(default.lookI) && colour.contentEquals(default.colour)
+    }
+
     val oldArms: Int
         get() = if (isMale) 26 else 61
 
