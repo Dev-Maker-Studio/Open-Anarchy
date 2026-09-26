@@ -30,6 +30,9 @@ enum class FortificationPart(val intact: IntArray, val intactShape: ObjectShape,
             Loc.pest_wall_gate_damaged_1_open, Loc.pest_wall_gate_damaged_1_mirror_open, Loc.pest_wall_gate_damaged_2_open, Loc.pest_wall_gate_damaged_2_mirror_open,
         )
 
+        val locs = entries.flatMap { it.intact.toList() }.toSet() + gateLocs +
+            setOf(Loc.pest_barricade_destroyed, Loc.pest_barricade_destroyed_bottom, Loc.pest_barricade_destroyed_top)
+
         private val intactLevels = entries.flatMap { part -> part.intact.mapIndexed { level, loc -> loc to (part to level) } }.toMap()
         private val destroyedParts = mapOf(
             Loc.pest_wall_gate_destroyed to (GATE to 2),
@@ -51,6 +54,15 @@ class FortificationPiece(val part: FortificationPart, val tile: Tile, val rotati
     fun objectAt(level: Int): GameObject =
         if (level >= part.destroyedLevel) part.destroyed(rotation).let { (id, rot) -> GameObject(id, ObjectShape.GROUND_DECORATION, rot, tile) }
         else GameObject(part.intact[level], part.intactShape, rotation, tile)
+
+    fun clear() {
+        for (shape in listOf(part.intactShape, ObjectShape.GROUND_DECORATION)) {
+            while (true) {
+                val obj = World.getObject(tile, shape)?.takeIf { it.id in FortificationPart.locs } ?: break
+                World.removeObject(obj)
+            }
+        }
+    }
 }
 
 class Fortification(val pieces: List<FortificationPiece>, level: Int) {
@@ -91,8 +103,7 @@ class Fortification(val pieces: List<FortificationPiece>, level: Int) {
 
     private fun setLevel(newLevel: Int) {
         for (piece in pieces) {
-            val current = piece.objectAt(level)
-            World.getObjectWithId(piece.tile, current.id)?.let(World::removeObject)
+            piece.clear()
             World.spawnObject(piece.objectAt(newLevel))
         }
         level = newLevel
