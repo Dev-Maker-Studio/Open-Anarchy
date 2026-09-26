@@ -76,6 +76,12 @@ private val PORTAL_HP_TEXT = mapOf(
     PortalPosition.SOUTH_EAST to Component.interface_408.component_408_15,
     PortalPosition.SOUTH_WEST to Component.interface_408.component_408_16,
 )
+private val PORTAL_ICON = mapOf(
+    PortalPosition.WEST to Component.interface_408.component_408_2,
+    PortalPosition.EAST to Component.interface_408.component_408_3,
+    PortalPosition.SOUTH_EAST to Component.interface_408.component_408_4,
+    PortalPosition.SOUTH_WEST to Component.interface_408.component_408_5,
+)
 private val PORTAL_SHIELD_ICON = mapOf(
     PortalPosition.WEST to Component.interface_408.component_408_18,
     PortalPosition.EAST to Component.interface_408.component_408_20,
@@ -239,8 +245,8 @@ class PestControlGame private constructor(val tier: LanderTier, private val rost
         player.packets.setIFText(Component.interface_408.component_408_1, knight.hitpoints.toString())
         for (portal in portals) {
             player.packets.setIFText(PORTAL_HP_TEXT.getValue(portal.position), if (portal.destroyed) "0" else portal.hitpoints.toString())
-            val shieldIcon = PORTAL_SHIELD_ICON.getValue(portal.position)
-            player.packets.setIFHidden(Utils.interfaceIdFromHash(shieldIcon), Utils.componentIdFromHash(shieldIcon), !portal.shielded || portal.destroyed)
+            player.hideComponent(PORTAL_ICON.getValue(portal.position), portal.destroyed)
+            player.hideComponent(PORTAL_SHIELD_ICON.getValue(portal.position), !portal.shielded || portal.destroyed)
         }
         refreshContribution(player)
     }
@@ -314,3 +320,6 @@ class PestControlGame private constructor(val tier: LanderTier, private val rost
         }
     }
 }
+
+private fun Player.hideComponent(component: Int, hidden: Boolean) =
+    packets.setIFHidden(Utils.interfaceIdFromHash(component), Utils.componentIdFromHash(component), hidden)
