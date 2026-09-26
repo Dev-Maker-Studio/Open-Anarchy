@@ -34,6 +34,8 @@ class PestPortal(
 
     override fun processNPC() {}
 
+    override fun setCombatTarget(entity: Entity?) {}
+
     fun dropShield() {
         if (!shielded || destroyed) return
         shielded = false

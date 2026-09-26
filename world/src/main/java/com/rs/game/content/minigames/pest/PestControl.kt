@@ -3,12 +3,10 @@ package com.rs.game.content.minigames.pest
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.content.minigames.pest.npcs.Splatter
-import com.rs.game.content.world.doors.Doors
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.Hit.HitLook
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
-import com.rs.game.model.gameobject.GameObject
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.npcCombat
 import com.rs.plugin.kts.onItemClick
@@ -24,17 +22,8 @@ import world.gregs.voidps.type.Tile
 private const val SEAL_RADIUS = 2
 private const val SEAL_DAMAGE = 100
 private const val SEAL_DELAY = 2
-private const val REPAIR_DELAY = 3
 private val SEALS = listOf(Obj.obj_11666, Obj.obj_11667, Obj.obj_11668, Obj.obj_11669, Obj.obj_11670, Obj.obj_11671, Obj.obj_11672, Obj.obj_11673)
-private val REPAIR_LOGS = intArrayOf(Obj.logs, Obj.oak_logs, Obj.willow_logs, Obj.maple_logs, Obj.yew_logs, Obj.magic_logs)
 private val SPLATTERS = arrayOf<Any>(Npc.pest_splatter_1, Npc.pest_splatter_2, Npc.pest_splatter_3, Npc.pest_splatter_4, Npc.pest_splatter_5)
-private val GATES = FortificationPart.entries.filter { it.gate }.flatMap { it.intact.toList() } +
-    listOf(Loc.pest_wall_gate_destroyed, Loc.pest_wall_gate_destroyed_mirror, Loc.pest_wall_gate_fixed_open, Loc.pest_wall_gate_fixed_mirror_open,
-        Loc.pest_wall_gate_damaged_1_open, Loc.pest_wall_gate_damaged_1_mirror_open, Loc.pest_wall_gate_damaged_2_open, Loc.pest_wall_gate_damaged_2_mirror_open,
-        Loc.pest_wall_gate_destroyed_open, Loc.pest_wall_gate_destroyed_mirror_open)
-private val BARRICADES = FortificationPart.entries.filter { !it.gate }.flatMap { it.intact.toList() } +
-    listOf(Loc.pest_barricade_destroyed, Loc.pest_barricade_destroyed_bottom, Loc.pest_barricade_destroyed_top)
-
 val Player.pestControlGame get() = (controllerManager.controller as? PestControlGameController)?.game
 
 @ServerStartupEvent
@@ -69,19 +58,6 @@ fun mapPestControl() {
     npcCombat(*SPLATTERS) { npc, _ ->
         (npc as? Splatter)?.explode()
         npc.attackSpeed
-    }
-
-    onObjectClick(*GATES.toTypedArray<Any>()) { (player, obj, option) ->
-        val fortification = player.pestControlGame?.fortifications?.at(obj.tile)
-        when (option) {
-            "Repair" -> repair(player, obj)
-            else -> if (fortification != null && fortification.destroyed && fortification.closed) player.sendMessage("There's nothing left of this gate to open.")
-            else Doors.handleDoubleDoor(player, obj)
-        }
-    }
-
-    onObjectClick(*BARRICADES.toTypedArray<Any>()) { (player, obj, option) ->
-        if (option == "Repair") repair(player, obj)
     }
 
     onObjectClick(Loc.pest_watchtower_ladder) { (player, obj) ->
@@ -119,25 +95,5 @@ fun mapPestControl() {
     onLogin { (player) ->
         player.refreshCommendations()
         PestControlGame.offerHybridBoots(player)
-    }
-}
-
-private fun repair(player: Player, obj: GameObject) {
-    val game = player.pestControlGame ?: return
-    val fortification = game.fortifications.at(obj.tile) ?: return
-    val log = REPAIR_LOGS.firstOrNull { player.inventory.containsItem(it, 1, false) }
-    when {
-        player.isLocked -> return
-        !fortification.damaged -> player.sendMessage("It doesn't need repairing.")
-        !fortification.closed -> player.sendMessage("You need to close the gate before you can repair it.")
-        !player.inventory.containsItem(Obj.hammer) -> player.sendMessage("You need a hammer to repair this.")
-        log == null -> player.sendMessage("You need some logs to repair this.")
-        else -> {
-            player.lock(REPAIR_DELAY)
-            player.anim(Seq.pest_repair)
-            player.inventory.deleteItem(log, 1)
-            fortification.repair()
-            game.creditRepair(player)
-        }
     }
 }

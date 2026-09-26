@@ -17,6 +17,8 @@ class VoidKnight(id: Int, tile: Tile, private val game: PestControlGame) : NPC(i
 
     override fun processNPC() {}
 
+    override fun setCombatTarget(entity: Entity?) {}
+
     override fun canBeAttackedBy(player: Player) = false
 
     override fun sendDeath(source: Entity) {
