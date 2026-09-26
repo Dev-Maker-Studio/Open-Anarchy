@@ -22,7 +22,7 @@
   ],
   "attackAnim": -1,
   "attackSound": -1,
-  "defenceAnim": "pest_portal_shield_defend",
+  "defenceAnim": -1,
   "defendSound": -1,
   "deathAnim": "pest_portal_death",
   "deathDelay": 0,

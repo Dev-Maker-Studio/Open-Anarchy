@@ -25,6 +25,11 @@ enum class FortificationPart(val intact: IntArray, val intactShape: ObjectShape,
     }
 
     companion object {
+        val gateLocs = entries.filter { it.gate }.flatMap { it.intact.toList() }.toSet() + setOf(
+            Loc.pest_wall_gate_destroyed, Loc.pest_wall_gate_destroyed_mirror, Loc.pest_wall_gate_fixed_open, Loc.pest_wall_gate_fixed_mirror_open,
+            Loc.pest_wall_gate_damaged_1_open, Loc.pest_wall_gate_damaged_1_mirror_open, Loc.pest_wall_gate_damaged_2_open, Loc.pest_wall_gate_damaged_2_mirror_open,
+        )
+
         private val intactLevels = entries.flatMap { part -> part.intact.mapIndexed { level, loc -> loc to (part to level) } }.toMap()
         private val destroyedParts = mapOf(
             Loc.pest_wall_gate_destroyed to (GATE to 2),
@@ -73,6 +78,11 @@ class Fortification(val pieces: List<FortificationPiece>, level: Int) {
         if (!damaged || !closed) return false
         setLevel(level - 1)
         return true
+    }
+
+    fun removeRevealedTemplate() {
+        if (!damaged || destroyed) return
+        for (piece in pieces) World.getObjectWithId(piece.tile, piece.objectAt(0).id)?.let(World::removeObject)
     }
 
     fun rebuild() {
