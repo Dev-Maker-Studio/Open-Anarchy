@@ -16,14 +16,17 @@ import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
+import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
 import com.rs.utils.Ticks
 import com.rs.utils.WorldUtil
 import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Interface
+import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.type.Tile
 import kotlin.math.ceil
 
@@ -36,12 +39,14 @@ private const val TEMPLATE_CHUNK_X = 328
 private const val TEMPLATE_CHUNK_Y = 320
 private const val KNIGHT_X = 32
 private const val KNIGHT_Y = 32
-private const val SQUIRE_X = 32
-private const val SQUIRE_Y = 49
+private const val SQUIRE_X = 35
+private const val SQUIRE_Y = 54
+private const val SUPPLY_TABLE_X = 32
+private const val SUPPLY_TABLE_Y = 54
 private const val DECK_MIN_X = 32
 private const val DECK_MAX_X = 35
 private const val DECK_MIN_Y = 50
-private const val DECK_MAX_Y = 54
+private const val DECK_MAX_Y = 53
 private const val PORTAL_HEAL = 500
 private const val HUD_REFRESH = 5
 private const val SPAWN_RADIUS = 4
@@ -119,6 +124,7 @@ class PestControlGame private constructor(val tier: LanderTier, private val rost
         fortifications.rebuildAll()
         knight = VoidKnight(KNIGHTS.random(), local(KNIGHT_X, KNIGHT_Y), this)
         squire = NPC(Npc.pest_squire_instance, local(SQUIRE_X, SQUIRE_Y), true).apply { setRandomWalk(false) }
+        World.spawnObject(GameObject(Loc.snp_counter_bandages_blue, ObjectShape.SCENERY_INTERACT, 0, local(SUPPLY_TABLE_X, SUPPLY_TABLE_Y)))
         portals = PortalPosition.entries.map {
             PestPortal(this, it, local(it.localX, it.localY), tier.activePortals[it.ordinal], tier.shieldedPortals[it.ordinal], tier.portalHitpoints)
         }

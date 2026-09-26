@@ -1,9 +1,13 @@
 package com.rs.game.content.minigames.pest
 
+import com.rs.game.content.minigames.checkAndDeleteFoodAndPotions
+import com.rs.game.content.minigames.giveFoodAndPotions
 import com.rs.game.content.skills.magic.TeleType
 import com.rs.game.model.entity.Teleport
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Controller
+import com.rs.game.model.gameobject.GameObject
+import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.map.pathfinder.Direction
 
@@ -31,6 +35,16 @@ class PestControlGameController(@Transient val game: PestControlGame?) : Control
     override fun canMove(dir: Direction): Boolean {
         val game = game ?: return true
         return !game.blocksMovement(player.tile.transform(dir.dx, dir.dy))
+    }
+
+    override fun processObjectClick1(`object`: GameObject) = takeSupplies(`object`)
+
+    override fun processObjectClick2(`object`: GameObject) = takeSupplies(`object`)
+
+    private fun takeSupplies(table: GameObject): Boolean {
+        if (table.id != Loc.snp_counter_bandages_blue) return true
+        giveFoodAndPotions(player)
+        return false
     }
 
     override fun processTeleport(tele: Teleport): Boolean {
@@ -63,18 +77,21 @@ class PestControlGameController(@Transient val game: PestControlGame?) : Control
 
     override fun logout(): Boolean {
         loggingOut = true
+        checkAndDeleteFoodAndPotions(player)
         game?.leave(player)
         player.tile = (game?.tier ?: LanderTier.NOVICE).exitTile
         return true
     }
 
     override fun login(): Boolean {
+        checkAndDeleteFoodAndPotions(player)
         player.tile = LanderTier.NOVICE.exitTile
         return true
     }
 
     override fun forceClose() {
         game?.leave(player)
+        checkAndDeleteFoodAndPotions(player)
         player.setForceMultiArea(false)
         player.interfaceManager.removeOverlay()
         player.reset()
