@@ -153,6 +153,9 @@ public class NPC extends Entity {
 			setRandomWalk(false);
 		if (id == 7891)
 			setRandomWalk(false);
+		Integer wanderRange = NPCWanderKt.wanderRange(id);
+		if (wanderRange != null)
+			setRandomWalk(wanderRange > 0);
 		BoxHunterType npc = BoxHunterType.forId(id);
 		if (npc != null)
 			setRandomWalk(true);
@@ -320,14 +323,21 @@ public class NPC extends Entity {
 		if (!hasWalkSteps() && shouldRandomWalk()) {
 			boolean can = Math.random() > 0.9;
 			if (can) {
+				int maxSteps = getDefinitions().hasAttackOption() ? 7 : 3;
+				Integer wanderRange = NPCWanderKt.wanderRange(id);
+				if (wanderRange != null && wanderRange > 0) {
+					resetWalkSteps();
+					DumbRouteFinder.addDumbPathfinderSteps(this, NPCWanderKt.wanderDestination(respawnTile, wanderRange), maxSteps, getCollisionStrategy());
+					return;
+				}
 				int moveX = Utils.random(getDefinitions().hasAttackOption() ? 4 : 2, getDefinitions().hasAttackOption() ? 8 : 4);
 				int moveY = Utils.random(getDefinitions().hasAttackOption() ? 4 : 2, getDefinitions().hasAttackOption() ? 8 : 4);
 				if (Utils.random(2) == 0) moveX = -moveX;
 				if (Utils.random(2) == 0) moveY = -moveY;
 				resetWalkSteps();
-				DumbRouteFinder.addDumbPathfinderSteps(this, respawnTile.transform(moveX, moveY, 0), getDefinitions().hasAttackOption() ? 7 : 3, getCollisionStrategy());
+				DumbRouteFinder.addDumbPathfinderSteps(this, respawnTile.transform(moveX, moveY, 0), maxSteps, getCollisionStrategy());
 				if (Utils.getDistance(this.getTile(), respawnTile) > 3 && !getDefinitions().hasAttackOption())
-					DumbRouteFinder.addDumbPathfinderSteps(this, respawnTile, getDefinitions().hasAttackOption() ? 7 : 3, getCollisionStrategy());
+					DumbRouteFinder.addDumbPathfinderSteps(this, respawnTile, maxSteps, getCollisionStrategy());
 			}
 		}
 	}

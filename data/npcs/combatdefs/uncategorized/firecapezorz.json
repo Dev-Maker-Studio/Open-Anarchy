@@ -49,5 +49,5 @@
   "agressivenessType": "AGGRESSIVE",
   "aggroDistance": 10,
   "deAggroDistance": -1,
-  "maxDistFromSpawn": -1
+  "maxDistFromSpawn": 20
 }
