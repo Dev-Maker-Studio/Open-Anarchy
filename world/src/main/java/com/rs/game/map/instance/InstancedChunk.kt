@@ -36,13 +36,13 @@ class InstancedChunk(val fromChunkId: Int, toChunkId: Int, private val mapRotati
     override fun checkLoaded() {}
 
     fun loadMap(copyNpcs: Boolean, copyMulti: Boolean) {
-        val realChunk = ChunkManager.getChunk(fromChunkId, true)
+        val template = InstanceBuilder.template(fromChunkId)
         setMapDataLoaded()
         if (copyMulti) copyMulticombat()
         WorldCollision.initChunk(id)
-        copyFloor(WorldCollision.live) { x, y -> WorldCollision.getFlags(originalBaseX + x, originalBaseY + y, fromPlane) }
-        for (obj in transformObjects(realChunk.baseObjects))
-            ChunkManager.getChunk(obj.tile.getChunkId()).addBaseObject(obj)
+        copyFloor(WorldCollision.live, template.floor(fromChunkId))
+        for (obj in transformObjects(template.objects(fromChunkId)))
+            ChunkManager.getChunk(obj.tile.getChunkId(), false).addBaseObject(obj)
         if (copyNpcs) spawnTemplateNpcs()
     }
 

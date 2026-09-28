@@ -185,6 +185,15 @@ object WorldHarness {
         repeat(count) { tick() }
     }
 
+    fun tickUntil(timeoutMillis: Long = 30_000, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeoutMillis
+        while (!condition()) {
+            check(System.currentTimeMillis() < deadline) { "Condition not met within ${timeoutMillis}ms of ticking" }
+            tick()
+            Thread.sleep(10)
+        }
+    }
+
     private fun startedPlayers(): List<Player> =
         World.players.filterNotNull().filter { it.hasStarted() && !it.hasFinished() }
 

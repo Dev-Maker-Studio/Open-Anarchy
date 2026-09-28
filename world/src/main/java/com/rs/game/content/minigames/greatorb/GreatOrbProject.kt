@@ -2,6 +2,7 @@ package com.rs.game.content.minigames.greatorb
 
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
+import com.rs.game.map.ChunkManager
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
@@ -19,6 +20,8 @@ private val APPRENTICES = arrayOf<Any>(
 
 @ServerStartupEvent
 fun mapGreatOrbProject() {
+    ChunkManager.permanentlyPreloadRegions(*OrbAltar.entries.map { it.anchor.getRegionId() }.toIntArray())
+
     onNpcClick(Npc.rcguild_wizard_acantha, Npc.rcguild_wizard_vief) { (player, npc, option) ->
         val team = OrbTeam.forLeader(npc.id) ?: return@onNpcClick
         when (option) {

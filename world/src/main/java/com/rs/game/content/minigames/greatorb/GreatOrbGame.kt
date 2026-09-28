@@ -3,7 +3,6 @@ package com.rs.game.content.minigames.greatorb
 import com.rs.engine.dialogue.sendOptionsDialogue
 import com.rs.game.World
 import com.rs.game.content.skills.runecrafting.Runecrafting
-import com.rs.game.map.ChunkManager
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
@@ -90,7 +89,6 @@ class GreatOrbGame(roster: Map<OrbTeam, List<Player>>) {
     private val lastRound get() = round == OrbAltar.entries.lastIndex
 
     init {
-        ChunkManager.permanentlyPreloadRegions(*OrbAltar.entries.map { it.anchor.getRegionId() }.toIntArray())
         players.keys.forEach { it.greatOrbController?.game = this }
         WorldTasks.scheduleTimer(1, 0) { tick() }
     }
