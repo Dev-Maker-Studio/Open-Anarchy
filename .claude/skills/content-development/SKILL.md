@@ -161,8 +161,10 @@ format; measure on the shared assets.
   client (§6). The fast suite (`world/src/test`, `WorldHarness`) is for engine-tier behaviour
   only (collision, line of sight, packet dispatch, containers), in a class named for the engine
   part it covers, and such a test must fail against the broken code before the fix.
-  `ChunkManager.getChunk(tile.getChunkId())` loads a region's map, base locs and clipping for one
-  (`LineOfSightTest`). **No test in this repo is "known flaky".** An intermittent failure is a bug
+  `ChunkManager.getChunk(tile.getChunkId())` requests a region: its collision is fully blocked at
+  once and the map, base locs and clipping land a tick later off the world thread, so a test
+  follows it with `WorldHarness.tickUntil { ... }` (`LineOfSightTest`); instance copies likewise
+  complete their future on a later tick. **No test in this repo is "known flaky".** An intermittent failure is a bug
   in the code or the harness and is fixed, never re-run until green or annotated away - the
   `SocialGatewayTest` presence failures were `RecordingSession` calling `Job.cancel()`, which
   returns while the writer coroutine is still draining the outbound channel, so whatever it
