@@ -5807,24 +5807,6 @@
   },
   {
     "tile": {
-      "plane": 2,
-      "x": 1648,
-      "y": 5408
-    },
-    "comment": "Wizard",
-    "npcId": 8033
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1648,
-      "y": 5408
-    },
-    "comment": "Wizard",
-    "npcId": 8035
-  },
-  {
-    "tile": {
       "plane": 0,
       "x": 1696,
       "y": 5272
@@ -5912,96 +5894,6 @@
     },
     "comment": "Confused barbarian",
     "npcId": 5364
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1699,
-      "y": 5471
-    },
-    "comment": "Wizard Korvak",
-    "npcId": 8029
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1698,
-      "y": 5474
-    },
-    "comment": "Wizard Vief",
-    "npcId": 8030
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1693,
-      "y": 5473
-    },
-    "comment": "Wizard Acantha",
-    "npcId": 8031
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1694,
-      "y": 5462
-    },
-    "comment": "Wizard Elriss",
-    "npcId": 8032
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1703,
-      "y": 5468
-    },
-    "comment": "Wizard",
-    "npcId": 8034
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1702,
-      "y": 5466
-    },
-    "comment": "Wizard",
-    "npcId": 8036
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1703,
-      "y": 5469
-    },
-    "comment": "Wizard",
-    "npcId": 8037
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1692,
-      "y": 5469
-    },
-    "comment": "Wizard",
-    "npcId": 8038
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1703,
-      "y": 5464
-    },
-    "comment": "Wizard",
-    "npcId": 8039
-  },
-  {
-    "tile": {
-      "plane": 2,
-      "x": 1691,
-      "y": 5473
-    },
-    "comment": "Wizard",
-    "npcId": 8040
   },
   {
     "tile": {
