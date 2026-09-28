@@ -26,5 +26,5 @@
   "agressivenessType": "PASSIVE",
   "aggroDistance": 8,
   "deAggroDistance": -1,
-  "maxDistFromSpawn": -1
+  "maxDistFromSpawn": 120
 }
