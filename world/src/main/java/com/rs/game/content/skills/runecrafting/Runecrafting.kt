@@ -47,6 +47,14 @@ object Runecrafting {
     const val BINDING_NECKLACE = Obj.magic_emerald_necklace
 
     private const val RCING_SUIT_XP_BONUS = 1.025
+    private val RCING_SUIT_PIECES = listOf(
+        RcingSuitPiece(Equipment.HEAD, 0.004, Obj.hlr4m_runecrafter_hat_poh, Obj.obj_21517),
+        RcingSuitPiece(Equipment.CHEST, 0.008, Obj.hlr4m_runecrafter_robe_poh, Obj.obj_21516),
+        RcingSuitPiece(Equipment.LEGS, 0.006, Obj.hlr4m_runecrafter_legs_poh, Obj.obj_21518),
+        RcingSuitPiece(Equipment.FEET, 0.002, Obj.hlr4m_runecrafter_boots_poh, Obj.obj_21519),
+    )
+
+    private class RcingSuitPiece(val slot: Int, val bonus: Double, vararg val objs: Int)
     private const val ZMI_XP_BONUS = 2.0
 
     enum class RCRune(val req: Int, val xp: Double, val id: Int, val isPureEss: Boolean, vararg val multipliers: Int) {
@@ -159,7 +167,7 @@ object Runecrafting {
         player.inventory.deleteItem(combination.reagentRune.id, crafted)
 
         var xp = combination.xp
-        if (hasRcingSuit(player)) xp *= RCING_SUIT_XP_BONUS
+        xp *= rcingSuitBonus(player)
 
         val runeName = ItemDefinitions.getDefs(combination.outputRuneId).name
         if (player.equipment.amuletId == BINDING_NECKLACE) {
@@ -210,7 +218,7 @@ object Runecrafting {
             player.inventory.addItem(rune.id, amount)
             xp += rune.xp
         }
-        if (hasRcingSuit(player)) xp *= RCING_SUIT_XP_BONUS
+        xp *= rcingSuitBonus(player)
         player.skills.addXp(Skills.RUNECRAFTING, xp * ZMI_XP_BONUS)
         playCraftAnimation(player)
         player.sendMessage("You bind the temple's power into assorted runes.")
@@ -223,7 +231,8 @@ object Runecrafting {
     }
 
     @JvmStatic
-    fun runecraft(player: Player, rune: RCRune, span: Boolean) {
+    @JvmOverloads
+    fun runecraft(player: Player, rune: RCRune, span: Boolean, xpMultiplier: Double = 1.0) {
         val level = player.skills.getLevel(Skills.RUNECRAFTING)
         if (level < rune.req) {
             player.simpleDialogue("You need a runecrafting level of ${rune.req} to craft this rune.")
@@ -254,8 +263,8 @@ object Runecrafting {
             craftArmadylRunes(player, rune, essence, span)
             return
         }
-        var xp = rune.xp * essence
-        if (hasRcingSuit(player)) xp *= RCING_SUIT_XP_BONUS
+        var xp = rune.xp * essence * xpMultiplier
+        xp *= rcingSuitBonus(player)
         val crafted = essence * rune.multiplier(level)
         player.skills.addXp(Skills.RUNECRAFTING, xp)
         if (!span) {
@@ -290,11 +299,11 @@ object Runecrafting {
     }
 
     @JvmStatic
-    fun hasRcingSuit(player: Player) =
-        player.equipment.hatId == Obj.hlr4m_runecrafter_hat_poh &&
-            player.equipment.chestId == Obj.hlr4m_runecrafter_robe_poh &&
-            player.equipment.legsId == Obj.hlr4m_runecrafter_legs_poh &&
-            player.equipment.bootsId == Obj.hlr4m_runecrafter_boots_poh
+    fun hasRcingSuit(player: Player) = RCING_SUIT_PIECES.all { player.equipment.getIdInSlot(it.slot) in it.objs }
+
+    private fun rcingSuitBonus(player: Player): Double =
+        if (hasRcingSuit(player)) RCING_SUIT_XP_BONUS
+        else 1.0 + RCING_SUIT_PIECES.filter { player.equipment.getIdInSlot(it.slot) in it.objs }.sumOf { it.bonus }
 
     @JvmStatic
     fun locate(player: Player, ruinsX: Int, ruinsY: Int) {
