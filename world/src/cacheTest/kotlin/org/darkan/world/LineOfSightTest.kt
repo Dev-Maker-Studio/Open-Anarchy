@@ -31,6 +31,7 @@ class LineOfSightTest {
         val inside = Tile.of(3192, 9822, 0)
         ChunkManager.getChunk(outside.getChunkId())
         ChunkManager.getChunk(inside.getChunkId())
+        WorldHarness.tickUntil { World.getObjectWithId(outside, Loc.fai_varrock_bank_bars_door_mirror) != null }
         assertNotNull(World.getObjectWithId(outside, Loc.fai_varrock_bank_bars_door_mirror))
         assertTrue(World.hasLineOfSight(outside, 1, inside, 1))
     }

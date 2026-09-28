@@ -2,12 +2,10 @@ package com.rs.game.map.instance
 
 import com.rs.game.World
 import com.rs.game.map.ChunkManager
+import com.rs.game.map.MapWorkers
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -40,10 +38,19 @@ object InstanceBuilder {
 
     private val reservedRegions = IntOpenHashSet()
     private val templates = ConcurrentHashMap<Int, Template>()
-    private val builders = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism((Runtime.getRuntime().availableProcessors() - 1).coerceAtLeast(1)))
 
-    private class Template(val region: MapRegion) {
-        val objectsByChunk: Map<Int, List<WorldObject>> = region.getObjects().groupBy { it.tile.getChunkId() }
+    internal class Template(private val region: MapRegion) {
+        private val objectsByChunk: Map<Int, List<WorldObject>> = region.getObjects().groupBy { it.tile.getChunkId() }
+        private val clipFlags = region.getClipFlags()!!
+
+        fun objects(chunkId: Int) = objectsByChunk[chunkId].orEmpty()
+
+        fun floor(chunkId: Int): (Int, Int) -> Int {
+            val (chunkX, chunkY, plane) = MapUtils.decode(Structure.CHUNK, chunkId)
+            val localX = (chunkX shl 3) - region.baseX
+            val localY = (chunkY shl 3) - region.baseY
+            return { x, y -> clipFlags[plane][localX + x][localY + y] }
+        }
     }
 
     private class ChunkCopy(val from: Int, val to: Int, val rotation: Int)
@@ -122,7 +129,7 @@ object InstanceBuilder {
     }
 
     private fun build(ref: Instance, copies: List<ChunkCopy>, copyNpcs: Boolean, copyMulti: Boolean, future: CompletableFuture<Boolean>) {
-        builders.launch {
+        MapWorkers.launch {
             val built = runCatching { buildChunks(copies) }
             WorldTasks.schedule(0) {
                 runCatching { publish(ref, built.getOrThrow(), copyNpcs, copyMulti) }
@@ -146,13 +153,14 @@ object InstanceBuilder {
     }
 
     private fun buildChunk(copy: ChunkCopy, collision: CollisionBuffer): Pair<InstancedChunk, List<GameObject>> {
-        val template = templates.computeIfAbsent(MapUtils.chunkToRegionId(copy.from)) { Template(MapRegion(it).apply { loadRegionMap(false) }) }
+        val template = template(copy.from)
         val chunk = InstancedChunk(copy.from, copy.to, copy.rotation)
-        val region = template.region
-        val flags = region.getClipFlags()!![MapUtils.decode(Structure.CHUNK, copy.from)[2]]
-        chunk.copyFloor(collision) { x, y -> flags[chunk.originalBaseX - region.baseX + x][chunk.originalBaseY - region.baseY + y] }
-        return chunk to chunk.transformObjects(template.objectsByChunk[copy.from].orEmpty())
+        chunk.copyFloor(collision, template.floor(copy.from))
+        return chunk to chunk.transformObjects(template.objects(copy.from))
     }
+
+    internal fun template(chunkId: Int): Template =
+        templates.computeIfAbsent(MapUtils.chunkToRegionId(chunkId)) { Template(MapRegion(it).apply { loadRegionMap(false) }) }
 
     private fun publish(ref: Instance, built: BuiltMap, copyNpcs: Boolean, copyMulti: Boolean): Boolean {
         if (ref.isDestroyed) return false
