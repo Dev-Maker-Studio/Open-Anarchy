@@ -5,6 +5,7 @@ import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.definition.data.MapObject
 import world.gregs.voidps.cache.definition.decoder.MapObjectDecoder
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Complete region data including terrain tiles and objects.
@@ -48,7 +49,9 @@ data class TileInfo(
  * ```
  */
 object RegionLoader {
-    private val regionCache = mutableMapOf<Int, RegionData?>()
+    private class Loaded(val data: RegionData?)
+
+    private val regionCache = ConcurrentHashMap<Int, Loaded>()
 
     /**
      * Pre-computed tile indices for iteration order (matches client expectation).
@@ -76,17 +79,8 @@ object RegionLoader {
     fun loadRegion(cache: Cache, regionX: Int, regionY: Int, useCache: Boolean = true): RegionData? {
         val regionId = (regionX shl 8) or regionY
 
-        if (useCache) {
-            regionCache[regionId]?.let { return it }
-        }
-
-        val data = loadRegionInternal(cache, regionX, regionY)
-
-        if (useCache) {
-            regionCache[regionId] = data
-        }
-
-        return data
+        if (!useCache) return loadRegionInternal(cache, regionX, regionY)
+        return regionCache.computeIfAbsent(regionId) { Loaded(loadRegionInternal(cache, regionX, regionY)) }.data
     }
 
     /**

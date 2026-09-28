@@ -23,10 +23,11 @@ object RegionCollision {
         return region
     }
 
-    fun clip(obj: WorldObject) {
+    @JvmOverloads
+    fun clip(obj: WorldObject, writer: CollisionWriter = WorldCollision.live) {
         if (obj.id == -1) return
         val defs = ObjectDefinitions.getDefs(obj.id)
-        WorldCollision.clipObject(obj.tile, obj.id, obj.type, obj.rotation, defs.solid, defs.blocksProjectiles, defs.ignoreOnRoute, defs.sizeX, defs.sizeY)
+        WorldCollision.clipObject(obj.tile, obj.id, obj.type, obj.rotation, defs.solid, defs.blocksProjectiles, defs.ignoreOnRoute, defs.sizeX, defs.sizeY, writer)
     }
 
     fun unclip(obj: WorldObject) {

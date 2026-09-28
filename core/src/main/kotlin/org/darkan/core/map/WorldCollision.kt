@@ -5,6 +5,12 @@ import org.darkan.core.map.pathfinder.getZoneIndex
 import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.type.Tile
 
+fun interface CollisionWriter {
+    fun add(x: Int, y: Int, level: Int, flag: Int)
+}
+
+private fun CollisionWriter.add(tile: Tile, flag: Int) = add(tile.x, tile.y, tile.level, flag)
+
 /**
  * Global collision flag map.
  * Stores collision flags per-zone in a flat array indexed by zone coordinate.
@@ -13,6 +19,9 @@ import world.gregs.voidps.type.Tile
 object WorldCollision {
     @JvmField
     val allFlags: Array<IntArray?> = arrayOfNulls(2048 * 2048 * 4)
+
+    @JvmField
+    val live = CollisionWriter(::addFlag)
 
     @JvmStatic
     fun getFlags(x: Int, y: Int, level: Int): Int {
@@ -100,13 +109,13 @@ object WorldCollision {
 
     // --- Object clipping ---
 
-    fun addObject(tile: Tile, sizeX: Int, sizeY: Int, blocksProjectiles: Boolean, pathfinder: Boolean) {
+    fun addObject(tile: Tile, sizeX: Int, sizeY: Int, blocksProjectiles: Boolean, pathfinder: Boolean, writer: CollisionWriter = live) {
         var flag = ClipFlag.BW_FULL.flag
         if (blocksProjectiles) flag = flag or ClipFlag.BP_FULL.flag
         if (pathfinder) flag = flag or ClipFlag.PF_FULL.flag
         for (tileX in tile.x until tile.x + sizeX)
             for (tileY in tile.y until tile.y + sizeY)
-                addFlag(tileX, tileY, tile.level, flag)
+                writer.add(tileX, tileY, tile.level, flag)
     }
 
     fun removeObject(tile: Tile, sizeX: Int, sizeY: Int, blocksProjectiles: Boolean, pathfinder: Boolean) {
@@ -118,25 +127,25 @@ object WorldCollision {
                 removeFlag(tileX, tileY, tile.level, flag)
     }
 
-    fun addWall(tile: Tile, type: ObjectShape, rotation: Int, blocksProjectiles: Boolean, pathfinder: Boolean) {
+    fun addWall(tile: Tile, type: ObjectShape, rotation: Int, blocksProjectiles: Boolean, pathfinder: Boolean, writer: CollisionWriter = live) {
         when (type) {
             ObjectShape.WALL_STRAIGHT -> when (rotation) {
-                0 -> { addFlag(tile, ClipFlag.blockWest(true, blocksProjectiles, pathfinder)); addFlag(tile.add(-1, 0), ClipFlag.blockEast(true, blocksProjectiles, pathfinder)) }
-                1 -> { addFlag(tile, ClipFlag.blockNorth(true, blocksProjectiles, pathfinder)); addFlag(tile.add(0, 1), ClipFlag.blockSouth(true, blocksProjectiles, pathfinder)) }
-                2 -> { addFlag(tile, ClipFlag.blockEast(true, blocksProjectiles, pathfinder)); addFlag(tile.add(1, 0), ClipFlag.blockWest(true, blocksProjectiles, pathfinder)) }
-                3 -> { addFlag(tile, ClipFlag.blockSouth(true, blocksProjectiles, pathfinder)); addFlag(tile.add(0, -1), ClipFlag.blockNorth(true, blocksProjectiles, pathfinder)) }
+                0 -> { writer.add(tile, ClipFlag.blockWest(true, blocksProjectiles, pathfinder)); writer.add(tile.add(-1, 0), ClipFlag.blockEast(true, blocksProjectiles, pathfinder)) }
+                1 -> { writer.add(tile, ClipFlag.blockNorth(true, blocksProjectiles, pathfinder)); writer.add(tile.add(0, 1), ClipFlag.blockSouth(true, blocksProjectiles, pathfinder)) }
+                2 -> { writer.add(tile, ClipFlag.blockEast(true, blocksProjectiles, pathfinder)); writer.add(tile.add(1, 0), ClipFlag.blockWest(true, blocksProjectiles, pathfinder)) }
+                3 -> { writer.add(tile, ClipFlag.blockSouth(true, blocksProjectiles, pathfinder)); writer.add(tile.add(0, -1), ClipFlag.blockNorth(true, blocksProjectiles, pathfinder)) }
             }
             ObjectShape.WALL_DIAGONAL_CORNER, ObjectShape.WALL_STRAIGHT_CORNER -> when (rotation) {
-                0 -> { addFlag(tile, ClipFlag.blockNorthWest(true, blocksProjectiles, pathfinder)); addFlag(tile.add(-1, 1), ClipFlag.blockSouthEast(true, blocksProjectiles, pathfinder)) }
-                1 -> { addFlag(tile, ClipFlag.blockNorthEast(true, blocksProjectiles, pathfinder)); addFlag(tile.add(1, 1), ClipFlag.blockSouthWest(true, blocksProjectiles, pathfinder)) }
-                2 -> { addFlag(tile, ClipFlag.blockSouthEast(true, blocksProjectiles, pathfinder)); addFlag(tile.add(1, -1), ClipFlag.blockNorthWest(true, blocksProjectiles, pathfinder)) }
-                3 -> { addFlag(tile, ClipFlag.blockSouthWest(true, blocksProjectiles, pathfinder)); addFlag(tile.add(-1, -1), ClipFlag.blockNorthEast(true, blocksProjectiles, pathfinder)) }
+                0 -> { writer.add(tile, ClipFlag.blockNorthWest(true, blocksProjectiles, pathfinder)); writer.add(tile.add(-1, 1), ClipFlag.blockSouthEast(true, blocksProjectiles, pathfinder)) }
+                1 -> { writer.add(tile, ClipFlag.blockNorthEast(true, blocksProjectiles, pathfinder)); writer.add(tile.add(1, 1), ClipFlag.blockSouthWest(true, blocksProjectiles, pathfinder)) }
+                2 -> { writer.add(tile, ClipFlag.blockSouthEast(true, blocksProjectiles, pathfinder)); writer.add(tile.add(1, -1), ClipFlag.blockNorthWest(true, blocksProjectiles, pathfinder)) }
+                3 -> { writer.add(tile, ClipFlag.blockSouthWest(true, blocksProjectiles, pathfinder)); writer.add(tile.add(-1, -1), ClipFlag.blockNorthEast(true, blocksProjectiles, pathfinder)) }
             }
             ObjectShape.WALL_WHOLE_CORNER -> when (rotation) {
-                0 -> { addFlag(tile, ClipFlag.blockNorth(true, blocksProjectiles, pathfinder) or ClipFlag.blockWest(true, blocksProjectiles, pathfinder)); addFlag(tile.add(-1, 0), ClipFlag.blockEast(true, blocksProjectiles, pathfinder)); addFlag(tile.add(0, 1), ClipFlag.blockSouth(true, blocksProjectiles, pathfinder)) }
-                1 -> { addFlag(tile, ClipFlag.blockNorth(true, blocksProjectiles, pathfinder) or ClipFlag.blockEast(true, blocksProjectiles, pathfinder)); addFlag(tile.add(0, 1), ClipFlag.blockSouth(true, blocksProjectiles, pathfinder)); addFlag(tile.add(1, 0), ClipFlag.blockWest(true, blocksProjectiles, pathfinder)) }
-                2 -> { addFlag(tile, ClipFlag.blockEast(true, blocksProjectiles, pathfinder) or ClipFlag.blockSouth(true, blocksProjectiles, pathfinder)); addFlag(tile.add(1, 0), ClipFlag.blockWest(true, blocksProjectiles, pathfinder)); addFlag(tile.add(0, -1), ClipFlag.blockNorth(true, blocksProjectiles, pathfinder)) }
-                3 -> { addFlag(tile, ClipFlag.blockSouth(true, blocksProjectiles, pathfinder) or ClipFlag.blockWest(true, blocksProjectiles, pathfinder)); addFlag(tile.add(0, -1), ClipFlag.blockNorth(true, blocksProjectiles, pathfinder)); addFlag(tile.add(-1, 0), ClipFlag.blockEast(true, blocksProjectiles, pathfinder)) }
+                0 -> { writer.add(tile, ClipFlag.blockNorth(true, blocksProjectiles, pathfinder) or ClipFlag.blockWest(true, blocksProjectiles, pathfinder)); writer.add(tile.add(-1, 0), ClipFlag.blockEast(true, blocksProjectiles, pathfinder)); writer.add(tile.add(0, 1), ClipFlag.blockSouth(true, blocksProjectiles, pathfinder)) }
+                1 -> { writer.add(tile, ClipFlag.blockNorth(true, blocksProjectiles, pathfinder) or ClipFlag.blockEast(true, blocksProjectiles, pathfinder)); writer.add(tile.add(0, 1), ClipFlag.blockSouth(true, blocksProjectiles, pathfinder)); writer.add(tile.add(1, 0), ClipFlag.blockWest(true, blocksProjectiles, pathfinder)) }
+                2 -> { writer.add(tile, ClipFlag.blockEast(true, blocksProjectiles, pathfinder) or ClipFlag.blockSouth(true, blocksProjectiles, pathfinder)); writer.add(tile.add(1, 0), ClipFlag.blockWest(true, blocksProjectiles, pathfinder)); writer.add(tile.add(0, -1), ClipFlag.blockNorth(true, blocksProjectiles, pathfinder)) }
+                3 -> { writer.add(tile, ClipFlag.blockSouth(true, blocksProjectiles, pathfinder) or ClipFlag.blockWest(true, blocksProjectiles, pathfinder)); writer.add(tile.add(0, -1), ClipFlag.blockNorth(true, blocksProjectiles, pathfinder)); writer.add(tile.add(-1, 0), ClipFlag.blockEast(true, blocksProjectiles, pathfinder)) }
             }
             else -> {}
         }
@@ -169,11 +178,11 @@ object WorldCollision {
     /**
      * Clip an object into the collision map based on its shape, rotation, and definition properties.
      */
-    fun clipObject(tile: Tile, id: Int, shape: ObjectShape, rotation: Int, clipType: Int, blocksProjectiles: Boolean, ignoresPathfinder: Boolean, sizeX: Int, sizeY: Int) {
+    fun clipObject(tile: Tile, id: Int, shape: ObjectShape, rotation: Int, clipType: Int, blocksProjectiles: Boolean, ignoresPathfinder: Boolean, sizeX: Int, sizeY: Int, writer: CollisionWriter = live) {
         if (id == -1 || clipType == 0) return
         when (shape) {
             ObjectShape.WALL_STRAIGHT, ObjectShape.WALL_DIAGONAL_CORNER, ObjectShape.WALL_WHOLE_CORNER, ObjectShape.WALL_STRAIGHT_CORNER ->
-                addWall(tile, shape, rotation, blocksProjectiles, !ignoresPathfinder)
+                addWall(tile, shape, rotation, blocksProjectiles, !ignoresPathfinder, writer)
             ObjectShape.WALL_INTERACT, ObjectShape.SCENERY_INTERACT, ObjectShape.GROUND_INTERACT,
             ObjectShape.STRAIGHT_SLOPE_ROOF, ObjectShape.DIAGONAL_SLOPE_ROOF, ObjectShape.DIAGONAL_SLOPE_CONNECT_ROOF,
             ObjectShape.STRAIGHT_SLOPE_CORNER_CONNECT_ROOF, ObjectShape.STRAIGHT_SLOPE_CORNER_ROOF, ObjectShape.STRAIGHT_FLAT_ROOF,
@@ -181,9 +190,9 @@ object WorldCollision {
             ObjectShape.STRAIGHT_BOTTOM_EDGE_CONNECT_ROOF, ObjectShape.STRAIGHT_BOTTOM_EDGE_CONNECT_CORNER_ROOF -> {
                 val sx = if (rotation == 1 || rotation == 3) sizeY else sizeX
                 val sy = if (rotation == 1 || rotation == 3) sizeX else sizeY
-                addObject(tile, sx, sy, blocksProjectiles, !ignoresPathfinder)
+                addObject(tile, sx, sy, blocksProjectiles, !ignoresPathfinder, writer)
             }
-            ObjectShape.GROUND_DECORATION -> if (clipType == 1) addBlockWalkAndProj(tile)
+            ObjectShape.GROUND_DECORATION -> if (clipType == 1) writer.add(tile, ClipFlag.PFBW_GROUND_DECO.flag)
             else -> {}
         }
     }
