@@ -3,6 +3,8 @@ package com.rs.game.content.commands.bot
 import com.rs.db.WorldDB
 import com.rs.engine.command.Commands
 import com.rs.engine.quest.Quest
+import com.rs.game.content.minigames.barbarianassault.HIGHEST_WAVE
+import com.rs.game.content.minigames.barbarianassault.Wave
 import com.rs.game.content.randomizeLook
 import com.rs.game.content.combat.CombatDefinitions
 import com.rs.game.model.entity.player.Equipment
@@ -28,6 +30,7 @@ private val botCommands: Map<String, (Player, List<String>) -> Unit> = mapOf(
     "spellbook" to { p, args -> p.combatDefinitions.setSpellbook(CombatDefinitions.Spellbook.valueOf(args[0].uppercase())) },
     "prayers" to { p, args -> p.prayer.setPrayerBook(args[0].equals("curses", ignoreCase = true)) },
     "appearance" to { p, _ -> randomizeLook(p) },
+    "bawave" to { p, args -> p.set(HIGHEST_WAVE, args[0].toInt().coerceIn(0, Wave.entries.size)) },
     "reset" to { p, _ ->
         p.inventory.reset()
         p.equipment.reset()

@@ -66,6 +66,22 @@ class Appearance {
     @Transient
     private var player: Player? = null
 
+    @Transient
+    private var wornOverrides: MutableMap<Int, Int>? = null
+
+    fun overrideWorn(slot: Int, obj: Int) {
+        val overrides = wornOverrides ?: HashMap<Int, Int>().also { wornOverrides = it }
+        if (overrides[slot] == obj) return
+        overrides[slot] = obj
+        generateAppearanceData()
+    }
+
+    fun clearWornOverride(slot: Int) {
+        if (wornOverrides?.remove(slot) != null) generateAppearanceData()
+    }
+
+    private fun worn(slot: Int): AppearanceSlot = wornOverrides?.get(slot)?.let { AppearanceSlot.Worn(it) } ?: wornOrEmpty(player!!.equipment[slot])
+
     init {
         resetAppearance()
     }
@@ -190,7 +206,7 @@ class Appearance {
                 AppearanceSlot.Empty
         )
 
-        slots.add(wornOrEmpty(player.equipment[Equipment.AURA]))
+        slots.add(worn(Equipment.AURA))
         return slots
     }
 
@@ -213,7 +229,7 @@ class Appearance {
         for (slotId in 0 until Equipment.SIZE) {
             if (Equipment.DISABLED_SLOTS[slotId] != 0) continue
             slotFlag++
-            if (player.equipment.getId(slotId) == -1) continue
+            if (player.equipment.getId(slotId) == -1 || wornOverrides?.containsKey(slotId) == true) continue
             val item: Item = player.equipment[slotId] ?: continue
             val defs: ItemDefinition = item.definitions ?: continue
 
