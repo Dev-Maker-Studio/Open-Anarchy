@@ -12,8 +12,8 @@ import kotlin.math.ceil
 private const val MAX_PLAYERS = 25
 private const val MAX_PRIORITY = 4
 private val MIN_PLAYERS get() = if (Settings.getConfig().isDebug) 1 else 5
-private val DEPARTURE_WAIT get() = if (Settings.getConfig().isDebug) Ticks.fromSeconds(6) else Ticks.fromMinutes(5)
-private val HUD_REFRESH = Ticks.fromSeconds(30)
+private val DEPARTURE_WAIT get() = if (Settings.getConfig().isDebug) Ticks.fromSeconds(6) else Ticks.fromSeconds(30)
+private val HUD_REFRESH = Ticks.fromSeconds(6)
 
 class Lander private constructor(val tier: LanderTier) {
     private val queue = LinkedHashSet<Player>()
@@ -35,7 +35,7 @@ class Lander private constructor(val tier: LanderTier) {
                 player.useStairs(-1, tier.boardTile, 1, 2, "You board the lander.")
                 player.controllerManager.startController(PestControlLobbyController(tier))
                 queue += player
-                if (queue.size == 1) startClock()
+                if (queue.size == MIN_PLAYERS) startClock()
                 refreshAll()
             }
         }
@@ -45,7 +45,7 @@ class Lander private constructor(val tier: LanderTier) {
         player.interfaceManager.removeOverlay()
         if (!queue.remove(player)) return
         priority.remove(player)
-        if (queue.isEmpty()) generation++
+        if (queue.size < MIN_PLAYERS) generation++
         refreshAll()
     }
 
@@ -54,9 +54,8 @@ class Lander private constructor(val tier: LanderTier) {
         val clock = ++generation
         WorldTasks.scheduleTimer(1, 0) { tick ->
             if (clock != generation) return@scheduleTimer false
-            if (queue.size >= MAX_PLAYERS || (ticksLeft == 0 && queue.size >= MIN_PLAYERS)) depart()
-            else if (ticksLeft == 0) departureTick = World.getServerTicks() + DEPARTURE_WAIT
-            if (queue.isEmpty()) {
+            if (queue.size >= MAX_PLAYERS || ticksLeft == 0) depart()
+            if (queue.size < MIN_PLAYERS) {
                 generation++
                 return@scheduleTimer false
             }
@@ -85,9 +84,9 @@ class Lander private constructor(val tier: LanderTier) {
     }
 
     private fun refresh(player: Player) {
-        val minutes = ceil(ticksLeft / Ticks.fromMinutes(1).toDouble()).toInt()
+        val departure = if (queue.size < MIN_PLAYERS) "Waiting for players" else "${ceil(ticksLeft * 60.0 / Ticks.fromMinutes(1)).toInt()} sec"
         player.packets.setIFText(Component.interface_407.component_407_3, tier.displayName)
-        player.packets.setIFText(Component.interface_407.component_407_13, "Next Departure: $minutes min")
+        player.packets.setIFText(Component.interface_407.component_407_13, "Next Departure: $departure")
         player.packets.setIFText(Component.interface_407.component_407_14, "Players Ready: ${queue.size}")
         player.packets.setIFText(Component.interface_407.component_407_15, "(Need $MIN_PLAYERS to $MAX_PLAYERS players)")
         player.packets.setIFText(Component.interface_407.component_407_16, "Commendations: ${player.commendations}")
