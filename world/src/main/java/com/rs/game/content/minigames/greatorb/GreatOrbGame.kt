@@ -105,7 +105,7 @@ class GreatOrbGame(roster: Map<OrbTeam, List<Player>>) {
                     if (ticksLeft <= 0) endRound()
                 }
             }
-            Phase.BREAK -> if (--ticksLeft <= 0) beginRound()
+            Phase.BREAK -> if (--ticksLeft <= 0) if (lastRound) finish(true) else beginRound()
             Phase.ENDED -> return false
         }
         return phase != Phase.ENDED
@@ -321,13 +321,10 @@ class GreatOrbGame(roster: Map<OrbTeam, List<Player>>) {
                 player.inventory.addItemDrop(Obj.blankrune_high, max(1, scores[team.ordinal] - scores[team.opponent.ordinal] / 2 + 1))
             refreshResults(player)
         }
-        if (lastRound) {
-            finish(true)
-            return
-        }
         phase = Phase.BREAK
         ticksLeft = BREAK_TICKS
-        portal = NPC(Npc.rcguild_portal, altar.arrival.transform(0, -1), true).apply { setRandomWalk(false) }
+        if (lastRound) sendAll("That was the last altar. Craft any essence you have before the project wraps up.")
+        else portal = NPC(Npc.rcguild_portal, altar.arrival.transform(0, -1), true).apply { setRandomWalk(false) }
         players.keys.forEach(::refreshHud)
     }
 
