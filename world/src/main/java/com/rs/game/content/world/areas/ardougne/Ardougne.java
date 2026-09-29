@@ -426,15 +426,6 @@ public class Ardougne  {
 
 	public static ObjectClickHandler handlehadleystairsdown = new ObjectClickHandler(new Object[] { 2535 }, e -> e.getPlayer().tele(Tile.of(2516, 3423, 0)));
 
-	//Observatory goblin kitchen dungeon-Note the stairs(25429) at (2335, 9350, 0) south of the ruin one is supposed to be a cutscene leading to the end of the quest but shares an ID
-	public static ObjectClickHandler handlegoblinladderup = new ObjectClickHandler(new Object[] { 25429 }, e -> e.getPlayer().tele(Tile.of(2458, 3185, 0)));
-
-	public static ObjectClickHandler handlegoblinladderdown = new ObjectClickHandler(new Object[] { 25432 }, e -> e.getPlayer().tele(Tile.of(2335, 9394, 0)));
-
-	public static ObjectClickHandler handleObservatoryladderup = new ObjectClickHandler(new Object[] { 25431 }, e -> e.getPlayer().tele(Tile.of(2443, 3158, 1)));
-
-	public static ObjectClickHandler handleObservatoryladderdown = new ObjectClickHandler(new Object[] { 25437 }, e -> e.getPlayer().tele(Tile.of(2444, 3162, 0)));
-
 	public static ObjectClickHandler handleLooseRailing = new ObjectClickHandler(new Object[] { 19171 }, e -> {
 		if (!Agility.hasLevel(e.getPlayer(), 20)) return;
 		e.getPlayer().useStairs(-1, Tile.of(e.getPlayer().getX() >= 2523 ? 2522 : 2523, 3375, 0), 1, 2, "You easily squeeze through the railing.");
