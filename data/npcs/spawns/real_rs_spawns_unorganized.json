@@ -1152,15 +1152,6 @@
     }
   },
   {
-    "comment": "Fist Of Guthix: Banker added by jazneta",
-    "npcId": 7605,
-    "tile": {
-      "x": 1699,
-      "y": 5599,
-      "plane": 0
-    }
-  },
-  {
     "comment": "Giant bat added by jazneta",
     "npcId": 78,
     "tile": {

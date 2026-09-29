@@ -41,6 +41,7 @@ import com.rs.game.World.DropMethod;
 import com.rs.game.content.*;
 import com.rs.game.content.ItemConstants.ItemDegrade;
 import com.rs.game.content.items.DegradeChargesKt;
+import com.rs.game.content.items.DegradeStages;
 import com.rs.game.content.minigames.creations.SacredClayEquipmentKt;
 import com.rs.game.content.Toolbelt.Tools;
 import com.rs.game.content.achievements.AchievementInterface;
@@ -1043,8 +1044,9 @@ public class Player extends Entity {
 					DegradeChargesKt.drainDegradeCharge(item);
 					if (item.getMetaDataI("combatCharges") <= 0) {
 						ItemDegrade deg = null;
+						int baseId = DegradeStages.baseId(item.getId());
 						for (ItemDegrade d : ItemDegrade.values())
-							if (d.getItemId() == item.getId() || d.getDegradedId() == item.getId() && d.getBrokenId() != -1) {
+							if (d.getItemId() == baseId || d.getDegradedId() == baseId && d.getBrokenId() != -1) {
 								deg = d;
 								break;
 							}
@@ -2272,13 +2274,17 @@ public class Player extends Entity {
 		for (Item item : items[1]) {
 			if (item == null)
 				continue;
+			int baseId = DegradeStages.baseId(item.getId());
 			ItemDegrade deg = null;
 			for(ItemDegrade d : ItemDegrade.values())
-				if (d.getDegradedId() == item.getId() || d.getItemId() == item.getId()) {
+				if (d.getDegradedId() == baseId || d.getItemId() == baseId) {
 					deg = d;
 					break;
 				}
-			if (deg != null)
+			if (deg == null && DegradeStages.deathBroken(item.getId()) != -1) {
+				item.setId(DegradeStages.deathBroken(item.getId()));
+				item.deleteMetaData();
+			} else if (deg != null)
 				if (deg.getBrokenId() != -1) {
 					item.setId(deg.getBrokenId());
 					item.deleteMetaData();
@@ -2342,15 +2348,17 @@ public class Player extends Entity {
 				droppedItems.add(item);
 				//World.addGroundItem(item, getLastTile(), killer == null ? this : killer, true, 60);
 			else {
+				int baseId = DegradeStages.baseId(item.getId());
 				ItemDegrade deg = null;
 				for (ItemDegrade d : ItemDegrade.values()) {
-					if (d.getDegradedId() == item.getId() || d.getItemId() == item.getId()) {
+					if (d.getDegradedId() == baseId || d.getItemId() == baseId) {
 						deg = d;
 						break;
 					}
 				}
-				if (deg != null && deg.getBrokenId() != -1) {
-					Item broken = new Item(deg.getBrokenId(), item.getAmount());
+				int brokenId = deg != null ? deg.getBrokenId() : DegradeStages.deathBroken(item.getId());
+				if (brokenId != -1) {
+					Item broken = new Item(brokenId, item.getAmount());
 					droppedItems.add((!ItemConstants.isTradeable(broken) && (killer != null && killer != this)) ? new Item(995, item.getDefinitions().getCost()) : broken);
 				} else
 					droppedItems.add(new Item(995, item.getDefinitions().getCost()));
