@@ -20,7 +20,8 @@ import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
 import com.rs.game.model.entity.player.Player
-import com.rs.utils.ItemConfig
+import org.darkan.core.cache.ItemDefinitions
+import org.darkan.core.gameval.gen.Obj
 
 private const val KING_ROALD = 648
 
@@ -236,20 +237,14 @@ private fun complete(player: Player) {
 
 
 fun checkRewards(player: Player) {
-    val RingOfFire = 13659
-    val FlameGloves = 13660
-    val InfernoAdze = 13661
     if (!player.questManager.isComplete(Quest.ALL_FIRED_UP)) return
     if (player.getBool("AllFiredUpI")) {
         if (!player.getBool("AllFiredUpI.claimed")) {
             if (player.inventory.hasFreeSlots()) {
                 player.set("AllFiredUpI.claimed", true)
-                player.inventory.addItem(RingOfFire)
+                player.inventory.addItem(Obj.firedup_ring)
                 player.sendMessage(
-                    "King Roald hands you a " + ItemConfig.get(RingOfFire).uidName.replace(
-                        "_".toRegex(),
-                        " "
-                    )
+                    "King Roald hands you a " + ItemDefinitions.getDefs(Obj.firedup_ring).name.lowercase()
                 )
             } else player.sendMessage("You do not have enough space to claim a reward")
         }
@@ -258,12 +253,9 @@ fun checkRewards(player: Player) {
         if (!player.getBool("AllFiredUpII.claimed")) {
             if (player.inventory.hasFreeSlots()) {
                 player.set("AllFiredUpII.claimed", true)
-                player.inventory.addItem(FlameGloves)
+                player.inventory.addItem(Obj.firedup_gloves)
                 player.sendMessage(
-                    "King Roald hands you a " + ItemConfig.get(FlameGloves).uidName.replace(
-                        "_".toRegex(),
-                        " "
-                    )
+                    "King Roald hands you a " + ItemDefinitions.getDefs(Obj.firedup_gloves).name.lowercase()
                 )
             } else player.sendMessage("You do not have enough space to claim a reward")
         }
@@ -272,12 +264,9 @@ fun checkRewards(player: Player) {
         if (!player.getBool("AllFiredUpIII.claimed")) {
             if (player.inventory.hasFreeSlots()) {
                 player.set("AllFiredUpIII.claimed", true)
-                player.inventory.addItem(InfernoAdze)
+                player.inventory.addItem(Obj.firedup_adze)
                 player.sendMessage(
-                    "King Roald hands you a " + ItemConfig.get(InfernoAdze).uidName.replace(
-                        "_".toRegex(),
-                        " "
-                    )
+                    "King Roald hands you a " + ItemDefinitions.getDefs(Obj.firedup_adze).name.lowercase()
                 )
             } else player.sendMessage("You do not have enough space to claim a reward")
         }

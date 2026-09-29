@@ -29,10 +29,8 @@ import java.util.Map;
 @PluginEventHandler
 public class ItemConfig {
 	private static Map<Integer, ItemConfig> CONFIG_CACHE = new HashMap<>();
-	private static final Map<String, Integer> UID_TO_ID = new HashMap<>();
 	private final static String PATH = "./data/items/config.json";
 
-	private String uidName;
 	private int dropSound = -1;
 	private int equipSound = -1;
 	private int attackDelay = -1;
@@ -50,11 +48,6 @@ public class ItemConfig {
 			CONFIG_CACHE = JsonFileManager.loadJsonFile(new File(PATH), new TypeToken<Map<Integer, ItemConfig>>(){}.getType());
 		else
 			Logger.error(ItemConfig.class, "init", "No item config file found at " + PATH + "!");
-		for (int key : CONFIG_CACHE.keySet()) {
-			if (UID_TO_ID.get(CONFIG_CACHE.get(key).uidName) != null)
-				Logger.error(ItemConfig.class, "init", "Duplicate item uid names " + CONFIG_CACHE.get(key).uidName + " - " + key);
-			UID_TO_ID.put(CONFIG_CACHE.get(key).uidName, key);
-		}
 	}
 
 	public static void main(String[] args) throws IOException {
@@ -133,10 +126,6 @@ public class ItemConfig {
 		return weight;
 	}
 
-	public String getUidName() {
-		return uidName;
-	}
-
 	public String getExamine(Item item) {
 		if (item.getAmount() >= 100000)
 			return Utils.formatNumber(item.getAmount()) + " x " + item.getDefinitions().getName() + ".";
@@ -151,11 +140,5 @@ public class ItemConfig {
 
 	public static ItemConfig get(Item item) {
 		return CONFIG_CACHE.get(item.getId());
-	}
-
-	public static int forUid(String uid) {
-		if (UID_TO_ID.get(uid) == null)
-			throw new IllegalArgumentException("No item with UID " + uid + " found in item configuration.");
-		return UID_TO_ID.get(uid);
 	}
 }

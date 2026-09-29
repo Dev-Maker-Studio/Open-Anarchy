@@ -16,6 +16,7 @@
 //
 package com.rs.game.content.quests.priestinperil;
 
+import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.quest.Quest;
@@ -31,7 +32,6 @@ import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ItemOnObjectHandler;
 import com.rs.plugin.handlers.NPCDeathHandler;
 import com.rs.plugin.handlers.ObjectClickHandler;
-import com.rs.utils.ItemConfig;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -324,11 +324,11 @@ public class PriestInPeril extends QuestOutline {
 			player.getPackets().setIFText(272, 17, Monuments.getMonumentByTile(e.getObj().getTile()).message);
 			if(player.getQuestManager().getAttribs(Quest.PRIEST_IN_PERIL).getB(String.valueOf(Monuments.getMonumentByTile(e.getObj().getTile())))){
 				player.getPackets().setIFItem(272, 4, Monuments.getMonumentByTile(e.getObj().getTile()).itemID, 1);
-				player.sendMessage("This monument holds a " + ItemConfig.get(Monuments.getMonumentByTile(e.getObj().getTile()).itemID).getUidName().replaceAll("_", " "));
+				player.sendMessage("This monument holds a " + ItemDefinitions.getDefs(Monuments.getMonumentByTile(e.getObj().getTile()).itemID).getName().toLowerCase());
 			}
 			else {
 				player.getPackets().setIFItem(272, 4, Monuments.getMonumentByTile(e.getObj().getTile()).goldenID, 1);
-				player.sendMessage("This monument holds a " + ItemConfig.get(Monuments.getMonumentByTile(e.getObj().getTile()).goldenID).getUidName().replaceAll("_", " "));
+				player.sendMessage("This monument holds a " + ItemDefinitions.getDefs(Monuments.getMonumentByTile(e.getObj().getTile()).goldenID).getName().toLowerCase());
 			}
 		}
 		if(e.getOption().equalsIgnoreCase("take-from")) {
@@ -336,7 +336,7 @@ public class PriestInPeril extends QuestOutline {
 				if (!player.getQuestManager().getAttribs(Quest.PRIEST_IN_PERIL).getB(String.valueOf(Monuments.getMonumentByTile(e.getObj().getTile())))) {
 					if (player.getInventory().containsItem(Monuments.getMonumentByTile(e.getObj().getTile()).itemID)) {
 						player.getInventory().replace(Monuments.getMonumentByTile(e.getObj().getTile()).itemID, Monuments.getMonumentByTile(e.getObj().getTile()).goldenID);
-						player.sendMessage("You take the " + ItemConfig.get(Monuments.getMonumentByTile(e.getObj().getTile()).goldenID).getUidName().replaceAll("_", " ") + " from the statue leaving your " + ItemConfig.get(Monuments.getMonumentByTile(e.getObj().getTile()).itemID).getUidName().replaceAll("_", " ") + " in its place.");
+						player.sendMessage("You take the " + ItemDefinitions.getDefs(Monuments.getMonumentByTile(e.getObj().getTile()).goldenID).getName().toLowerCase() + " from the statue leaving your " + ItemDefinitions.getDefs(Monuments.getMonumentByTile(e.getObj().getTile()).itemID).getName().toLowerCase() + " in its place.");
 						player.getQuestManager().getAttribs(Quest.PRIEST_IN_PERIL).setB(String.valueOf(Monuments.getMonumentByTile(e.getObj().getTile())), true);
 					} else {
 						player.applyHit(new Hit(player, 3, Hit.HitLook.TRUE_DAMAGE));
@@ -345,7 +345,7 @@ public class PriestInPeril extends QuestOutline {
 				} else {
 					if (player.getInventory().containsItem(Monuments.getMonumentByTile(e.getObj().getTile()).goldenID)) {
 						player.getInventory().replace(Monuments.getMonumentByTile(e.getObj().getTile()).goldenID, Monuments.getMonumentByTile(e.getObj().getTile()).itemID);
-						player.sendMessage("You take the " + ItemConfig.get(Monuments.getMonumentByTile(e.getObj().getTile()).itemID).getUidName().replaceAll("_", " ") + " from the statue leaving your " + ItemConfig.get(Monuments.getMonumentByTile(e.getObj().getTile()).goldenID).getUidName().replaceAll("_", " ") + " in its place.");
+						player.sendMessage("You take the " + ItemDefinitions.getDefs(Monuments.getMonumentByTile(e.getObj().getTile()).itemID).getName().toLowerCase() + " from the statue leaving your " + ItemDefinitions.getDefs(Monuments.getMonumentByTile(e.getObj().getTile()).goldenID).getName().toLowerCase() + " in its place.");
 						player.getQuestManager().getAttribs(Quest.PRIEST_IN_PERIL).setB(String.valueOf(Monuments.getMonumentByTile(e.getObj().getTile())), false);
 					} else {
 						player.applyHit(new Hit(player, 3, Hit.HitLook.TRUE_DAMAGE));
