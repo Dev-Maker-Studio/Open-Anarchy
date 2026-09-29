@@ -16,6 +16,8 @@
 //
 package com.rs.game.content.skills.fletching;
 
+import static com.rs.game.content.quests.bigchompybirdhunting.BigChompyBirdHuntingKt.STAGE_MAKING_OGRE_ARROWS;
+
 import org.darkan.core.cache.ItemDefinitions;
 import com.rs.engine.quest.Quest;
 import com.rs.game.model.entity.player.Player;
@@ -48,6 +50,12 @@ public class Fletching extends PlayerAction {
 		STRUNG_LONG_BOW(48, BOW_STRING, new int[] { 839 }, new int[] { 10 }, new double[] { 10 }, new Animation(6684)),
 
 		ACHEY_LOG(2862, KNIFE, new int[] { 2864, 4825 }, new int[] { 5, 30 }, new double[] { 6.4, 45 }, new Animation(6702)),
+
+		WOLFBONE_ARROWHEADS(2859, CHISEL, new int[] { 2861 }, new int[] { 5 }, new double[] { 2.5 }, new Animation(-1)),
+		
+		FLIGHTED_OGRE_ARROWS(2864, FEATHER, new int[] { 2865 }, new int[] { 5 }, new double[] { 0.9 }, new Animation(-1)),
+
+		OGRE_ARROWS(2861, 2865, new int[] { 2866 }, new int[] { 5 }, new double[] { 1.0 }, new Animation(-1)),
 
 		//STRUNG_COMP_BOW(4825, BOW_STRING, new int[] { 4827 }, new int[] { 30 }, new double[] { 45 }, new Animation(6684)),
 
@@ -276,29 +284,37 @@ public class Fletching extends PlayerAction {
 	public boolean start(Player player) {
 		if (option >= fletch.getProduct().length)
 			return false;
-		if ((fletch == Fletch.BROAD_ARROW || fletch == Fletch.BROAD_BOLTS) && !player.isBroadFletching()) {
-			player.sendMessage("You need to unlock the ability to fletch these from a slayer master.");
-			return false;
-		}
-		if (fletch == Fletch.ACHEY_LOG && !player.isQuestComplete(Quest.ZOGRE_FLESH_EATERS)) {
-			player.sendMessage("You must complete Zogre Flesh Eaters before being able to fletch this.");
-			return false;
-		}
-		if (fletch == Fletch.ACHEY_LOG && option == 1) {
-			if (!player.getInventory().containsItem(2859)) {
-				player.sendMessage("You need some wolf bones in order to fletch this.");
-				return false;
+			if (fletch == Fletch.ACHEY_LOG && option == 0
+        		&& player.getQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING) < STAGE_MAKING_OGRE_ARROWS) {
+    		player.sendMessage("You don't know how to make ogre arrow shafts yet.");
+    			return false;
 			}
+
+			if (fletch == Fletch.ACHEY_LOG && option == 1) {
+    			if (!player.isQuestComplete(Quest.ZOGRE_FLESH_EATERS)) {
+        	player.sendMessage("You must complete Zogre Flesh Eaters before being able to fletch this.");
+        		return false;
+    		}
+
+    		if (!player.getInventory().containsItem(2859)) {
+        	player.sendMessage("You need some wolf bones in order to fletch this.");
+        		return false;
+    		}
+}
+
+			if ((fletch == Fletch.WOLFBONE_ARROWHEADS
+        		|| fletch == Fletch.FLIGHTED_OGRE_ARROWS
+        		|| fletch == Fletch.OGRE_ARROWS)
+        		&& player.getQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING) < STAGE_MAKING_OGRE_ARROWS) {
+
+    		player.sendMessage("You don't know how to make ogre arrows yet.");
+    			return false;
 		}
-		if ((fletch == Fletch.ACHEY_LOG && option == 0) && !player.isQuestComplete(Quest.BIG_CHOMPY_BIRD_HUNTING)) {
-			player.sendMessage("You must complete Big Chompy Bird Hunting before being able to fletch these.");
-			return false;
+			if (!process(player))
+				return false;
+			player.sendMessage("You attempt to create " + Utils.addArticle(new Item(fletch.getProduct()[option]).getDefinitions().getName().replace("(u)", "")) + "...", true);
+				return true;
 		}
-		if (!process(player))
-			return false;
-		player.sendMessage("You attempt to create " + Utils.addArticle(new Item(fletch.getProduct()[option]).getDefinitions().getName().replace("(u)", "")) + "...", true);
-		return true;
-	}
 
 	@Override
 	public boolean process(Player player) {
@@ -342,11 +358,31 @@ public class Fletching extends PlayerAction {
 				default -> 15;
 			};
 
-		if (fletch.getProduct()[option] == 2865)
-			if (fletch.getId() == 2864) amount = 4;
+		if (fletch.getProduct()[option] == 2864) {
+    		amount = 4;
+		}
 
-		if (fletch.getProduct()[option] == 2864 || fletch.getProduct()[option] == 2865)
-			amount = 4;
+		if (fletch.getProduct()[option] == 2861) {
+    		amount = 4;
+		}
+
+		if (fletch == Fletch.FLIGHTED_OGRE_ARROWS) {
+    		amount = Math.min(6, player.getInventory().getNumberOf(2864));
+    		amount = Math.min(amount, player.getInventory().getNumberOf(FEATHER) / 4);
+
+    		if (amount <= 0) {
+        		player.sendMessage("You need four feathers for each ogre arrow shaft.");
+        	return -1;
+    	}
+	}
+
+		if (fletch == Fletch.OGRE_ARROWS) {
+    		amount = Math.min(6, player.getInventory().getNumberOf(2861));
+    		amount = Math.min(amount, player.getInventory().getNumberOf(2865));
+
+    	if (amount <= 0)
+        	return -1;
+	}
 
 		if (fletch.getProduct()[option] == 21581)
 			amount = 10;
@@ -360,14 +396,30 @@ public class Fletching extends PlayerAction {
 			}
 		}
 
-		if (!player.getInventory().containsItem(fletch.getId(), amount) && (fletch.getProduct()[option] != 52) && (fletch.getProduct()[option] != 21581) && (fletch.getProduct()[option] != 2864)) {
+		if (!player.getInventory().containsItem(fletch.getId(), amount)
+        && (fletch.getProduct()[option] != 52)
+        && (fletch.getProduct()[option] != 21581)
+        && (fletch.getProduct()[option] != 2864)
+        && (fletch.getProduct()[option] != 2861)) {
 			player.sendMessage("You don't have enough of the supplies to make that many.");
 			return -1;
 		}
 		player.anim(fletch.getAnim());
-		player.getInventory().deleteItem(fletch.getId(), fletch.getProduct()[option] == 52 || fletch.getProduct()[option] == 21581 || fletch.getProduct()[option] == 2864  ? 1 : amount);
-		if (fletch.getSelected() != KNIFE && fletch.getSelected() != CHISLE)
-			player.getInventory().deleteItem(fletch.getSelected(), amount);
+		player.getInventory().deleteItem(
+        fletch.getId(),
+        fletch.getProduct()[option] == 52
+                || fletch.getProduct()[option] == 21581
+                || fletch.getProduct()[option] == 2864
+                || fletch.getProduct()[option] == 2861
+                ? 1
+                : amount
+		);
+
+if (fletch == Fletch.FLIGHTED_OGRE_ARROWS) {
+    player.getInventory().deleteItem(FEATHER, amount * 4);
+} else if (fletch.getSelected() != KNIFE && fletch.getSelected() != CHISLE) {
+    player.getInventory().deleteItem(fletch.getSelected(), amount);
+}
 		player.getInventory().addItem(fletch.getProduct()[option], amount);
 		player.sendMessage("You create " + Utils.addArticle(new Item(fletch.getProduct()[option]).getDefinitions().getName().toLowerCase().replace(" (u)", "")) + ".", true);
 		player.getSkills().addXp(Constants.FLETCHING, fletch.getXp()[option] * amount);
