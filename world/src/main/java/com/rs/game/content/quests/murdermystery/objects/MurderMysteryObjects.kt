@@ -2,10 +2,15 @@ package com.rs.game.content.quests.murdermystery
 
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
+import com.rs.game.World
+import org.darkan.core.model.Item
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.plugin.kts.onLogin
+import com.rs.plugin.kts.onPickupItem
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onObjectClick
+import world.gregs.voidps.type.Tile
 
 const val MM_MURDERER_ANNA = 1
 const val MM_MURDERER_BOB = 2
@@ -19,6 +24,7 @@ private const val THREAD_TAKEN_KEY = "murderMysteryThreadTaken"
 const val MM_POISON_EVIDENCE_FOUND = "murderMysteryPoisonEvidenceFound"
 
 const val CRIMINAL_DAGGER = 1813
+private val DAGGER_TILE = Tile.of(2746, 3578, 0)
 const val CRIMINAL_DAGGER_DUSTED = 1814
 const val PUNGENT_POT = 1812
 
@@ -79,33 +85,56 @@ private data class EvidenceBarrel(
     val plane: Int,
     val itemId: Int,
     val dustedItemId: Int,
+    val printItemId: Int,
     val foundText: String,
     val alreadyText: String
 )
 
 private val evidenceBarrels = arrayOf(
-    EvidenceBarrel(ANNAS_BARREL, 2733, 3575, 0, ANNAS_NECKLACE, ANNAS_NECKLACE_DUSTED,
+    EvidenceBarrel(ANNAS_BARREL, 2733, 3575, 0, ANNAS_NECKLACE, ANNAS_NECKLACE_DUSTED, ANNAS_PRINT,
         "There's something shiny hidden at the bottom. You take Anna's Silver Necklace.",
         "I already have Anna's Necklace."),
-    EvidenceBarrel(BOBS_BARREL, 2735, 3579, 0, BOBS_CUP, BOBS_CUP_DUSTED,
+    EvidenceBarrel(BOBS_BARREL, 2735, 3579, 0, BOBS_CUP, BOBS_CUP_DUSTED, BOBS_PRINT,
         "There's something shiny hidden at the bottom. You take Bob's silver cup.",
         "I already have Bob's cup."),
-    EvidenceBarrel(CAROLS_BARREL, 2733, 3580, 1, CAROLS_BOTTLE, CAROLS_BOTTLE_DUSTED,
+    EvidenceBarrel(CAROLS_BARREL, 2733, 3580, 1, CAROLS_BOTTLE, CAROLS_BOTTLE_DUSTED, CAROLS_PRINT,
         "There's something shiny hidden at the bottom. You take Carol's silver bottle.",
         "I already have Carol's bottle."),
-    EvidenceBarrel(DAVIDS_BARREL, 2733, 3577, 1, DAVIDS_BOOK, DAVIDS_BOOK_DUSTED,
+    EvidenceBarrel(DAVIDS_BARREL, 2733, 3577, 1, DAVIDS_BOOK, DAVIDS_BOOK_DUSTED, DAVIDS_PRINT,
         "There's something shiny hidden at the bottom. You take David's silver book.",
         "I already have David's book."),
-    EvidenceBarrel(ELIZABETHS_BARREL, 2747, 3581, 1, ELIZABETHS_NEEDLE, ELIZABETHS_NEEDLE_DUSTED,
+    EvidenceBarrel(ELIZABETHS_BARREL, 2747, 3581, 1, ELIZABETHS_NEEDLE, ELIZABETHS_NEEDLE_DUSTED, ELIZABETHS_PRINT,
         "There's something shiny hidden at the bottom. You take Elizabeth's silver needle.",
         "I already have Elizabeth's Needle."),
-    EvidenceBarrel(FRANKS_BARREL, 2747, 3577, 1, FRANKS_POT, FRANKS_POT_DUSTED,
+    EvidenceBarrel(FRANKS_BARREL, 2747, 3577, 1, FRANKS_POT, FRANKS_POT_DUSTED, FRANKS_PRINT,
         "There's something shiny hidden at the bottom. You take Frank's silver pot.",
         "I already have Frank's pot.")
 )
 
 @ServerStartupEvent
 fun mapMurderMysteryObjects() {
+    onLogin { (player) ->
+        syncCriminalDagger(player)
+    }
+
+    onPickupItem(CRIMINAL_DAGGER, tiles = arrayOf(DAGGER_TILE)) { e ->
+        val player = e.player
+
+        if (!murderMysteryStarted(player)) {
+            e.cancelPickup()
+            return@onPickupItem
+        }
+
+        if (player.inventory.containsItem(CRIMINAL_DAGGER, 1)) {
+            e.cancelPickup()
+            player.simpleDialogue("I already have the murder weapon.")
+            return@onPickupItem
+        }
+
+        beginGatheringEvidence(player)
+        player.simpleDialogue("This knife doesn't seem sturdy enough to have killed Lord Sinclair.")
+    }
+
     onObjectClick(PUNGENT_POT_TABLE) { (player, obj) ->
         if (obj.x != 2747 || obj.y != 3579 || obj.plane != 0)
             return@onObjectClick
@@ -181,7 +210,8 @@ fun mapMurderMysteryObjects() {
 
         beginGatheringEvidence(player)
         if (player.inventory.containsItem(barrel.itemId, 1) ||
-            player.inventory.containsItem(barrel.dustedItemId, 1)
+            player.inventory.containsItem(barrel.dustedItemId, 1) ||
+            player.inventory.containsItem(barrel.printItemId, 1)
         ) {
             player.sendMessage(barrel.alreadyText)
         } else {
@@ -332,6 +362,19 @@ private fun takeFlour(player: Player) {
     player.inventory.deleteItem(EMPTY_POT, 1)
     player.inventory.addItemDrop(POT_OF_FLOUR, 1)
     player.sendMessage("You take some flour from the barrel. There's still plenty of flour left.")
+}
+
+fun syncCriminalDagger(player: Player) {
+    if (!murderMysteryStarted(player))
+        return
+
+    if (player.inventory.containsItem(CRIMINAL_DAGGER, 1) ||
+        player.inventory.containsItem(CRIMINAL_DAGGER_DUSTED, 1) ||
+        player.inventory.containsItem(UNKNOWN_PRINT, 1) ||
+        player.inventory.containsItem(KILLERS_PRINT, 1))
+        return
+
+    World.addGroundItemNoExpire(Item(CRIMINAL_DAGGER, 1), DAGGER_TILE, player)
 }
 
 private fun murderMysteryStarted(player: Player): Boolean {

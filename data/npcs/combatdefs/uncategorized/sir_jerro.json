@@ -18,11 +18,19 @@
   "attackStyle": "MELEE",
   "attackBonus": "SLASH_ATT",
   "combatLevels": {
-    "ATTACK": 54,
+    "ATTACK": 57,
     "RANGE": 1,
     "STRENGTH": 54,
     "DEFENSE": 54,
     "MAGE": 1
+  },
+  "bonuses": {
+    "SLASH_ATT": 22,
+    "STAB_DEF": 87,
+    "SLASH_DEF": 84,
+    "CRUSH_DEF": 76,
+    "MAGIC_DEF": -10,
+    "RANGE_DEF": 79
   },
   "attackRange": -1,
   "attackGfx": -1,

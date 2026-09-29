@@ -35,7 +35,9 @@ private fun cityGuardDialogue(player: Player, npc: NPC) {
             return@startConversation
         }
 
-        if (player.inventory.containsItem(SKAVID_MAP, 1)) {
+        if (player.inventory.containsItem(SKAVID_MAP, 1) ||
+            player.bank.containsItem(SKAVID_MAP, 1)
+        ) {
             npc(
                 npc,
                 CALM_TALK,

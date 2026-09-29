@@ -1,8 +1,10 @@
 package com.rs.plugin.kts
 
 import org.darkan.core.model.ObjectShape
+import com.rs.engine.pathfinder.RouteEvent
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.npc.NPC
+import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.npc.combat.CombatScriptsHandler
 import com.rs.game.model.entity.player.Player
 import world.gregs.voidps.type.Tile
@@ -176,4 +178,12 @@ fun onXpDrop(eventHandler: (XPGainEvent) -> Unit) {
 fun npcCombat(vararg npcNamesOrIds: Any, script: (NPC, Entity) -> Int) {
     npcNamesOrIds.forEach { require(it is String || it is Int) { "npcNamesOrIds must contain only String or Int types" } }
     CombatScriptsHandler.addCombatScript(npcNamesOrIds) { player, npc -> script(player, npc) }
+}
+
+fun ownedNpc(owner: Player, id: Int, tile: Tile, hideFromOtherPlayers: Boolean = true, configure: OwnedNPC.() -> Unit = {}): OwnedNPC {
+    return OwnedNPC(owner, id, tile, hideFromOtherPlayers).apply(configure)
+}
+
+fun Entity.walkToAndExecute(target: Any, onNearest: () -> Boolean, onReached: () -> Unit) {
+    setRouteEvent(RouteEvent(target, Runnable { onReached() }, onNearest))
 }

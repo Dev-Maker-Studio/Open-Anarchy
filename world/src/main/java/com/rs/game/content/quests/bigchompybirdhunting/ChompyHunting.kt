@@ -11,10 +11,11 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onDropItem
 import com.rs.plugin.kts.onItemClick
+import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onNpcClick
 import com.rs.plugin.kts.onNpcDeath
 import org.darkan.core.model.Item
@@ -94,6 +95,13 @@ private class QuestChompyCorpse(
 
 @ServerStartupEvent
 fun mapBigChompyHunting() {
+
+    onLogin { (player) ->
+        if (player.getQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING) in STAGE_HUNTING_CHOMPY..STAGE_COMPLETE) {
+            player.set(QUEST_CHOMPY_ACTIVE, false)
+            player.set(DEAD_CHOMPY_ACTIVE, false)
+        }
+    }
 
     onDropItem(BLOATED_TOAD) { event ->
         val player = event.player
@@ -302,7 +310,7 @@ private fun handleRantzBait(
 
 private fun firstChompyBaitDialogue(
     player: Player,
-    baitTile: Tile
+    bait.tile: Tile
 ) {
     player.startConversation {
 
@@ -336,7 +344,7 @@ private fun firstChompyBaitDialogue(
         exec {
             beginRantzHunt(
                 player,
-                baitTile
+                bait.tile
             )
         }
     }
@@ -344,17 +352,13 @@ private fun firstChompyBaitDialogue(
 
 private fun beginRantzHunt(
     player: Player,
-    baitTile: Tile
+    bait.tile: Tile
 ) {
     player.schedule {
 
         wait(4)
 
-        World.removeGroundItem(
-            player,
-            Item(BLOATED_TOAD, 1),
-            baitTile
-        )
+        World.removeGroundItem(player, bait)
 
         val chompy = OwnedNPC(
             player,
@@ -368,7 +372,7 @@ private fun beginRantzHunt(
         chompy.isCantInteract = true
 
         chompy.faceTile(
-            baitTile
+            bait.tile
         )
 
         player.startConversation {
@@ -512,18 +516,14 @@ private fun handleCookingStageRecoveryBait(
 
 private fun attractQuestChompy(
     player: Player,
-    baitTile: Tile
+    bait.tile: Tile
 ) {
     player.schedule {
 
         wait(4)
 
         if (!canHuntQuestChompy(player)) {
-            World.removeGroundItem(
-                player,
-                Item(BLOATED_TOAD, 1),
-                baitTile
-            )
+            World.removeGroundItem(player, bait)
 
             return@schedule
         }
@@ -537,11 +537,7 @@ private fun attractQuestChompy(
                 player.inventory.containsItem(SEASONED_CHOMPY, 1)
             )
         ) {
-            World.removeGroundItem(
-                player,
-                Item(BLOATED_TOAD, 1),
-                baitTile
-            )
+            World.removeGroundItem(player, bait)
 
             return@schedule
         }
@@ -550,20 +546,12 @@ private fun attractQuestChompy(
             player.getBool(QUEST_CHOMPY_ACTIVE) ||
             player.getBool(DEAD_CHOMPY_ACTIVE)
         ) {
-            World.removeGroundItem(
-                player,
-                Item(BLOATED_TOAD, 1),
-                baitTile
-            )
+            World.removeGroundItem(player, bait)
 
             return@schedule
         }
 
-        World.removeGroundItem(
-            player,
-            Item(BLOATED_TOAD, 1),
-            baitTile
-        )
+        World.removeGroundItem(player, bait)
 
         val chompy = QuestChompy(
             player,
@@ -575,7 +563,7 @@ private fun attractQuestChompy(
         chompy.isCantInteract = false
 
         chompy.faceTile(
-            baitTile
+            bait.tile
         )
 
         player.set(
@@ -664,7 +652,7 @@ private fun canHuntQuestChompy(
 private fun isInRantzClearing(
     tile: Tile
 ): Boolean {
-    return tile.plane == 0 &&
+    return tile.level == 0 &&
             tile.x in BAIT_MIN_X..BAIT_MAX_X &&
             tile.y in BAIT_MIN_Y..BAIT_MAX_Y
 }

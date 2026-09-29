@@ -11,6 +11,7 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
+import com.rs.plugin.kts.onLogin
 
 private const val DOOGLE_LEAVES = 1573
 private const val ONION = 1957
@@ -20,6 +21,22 @@ private const val COOKING_CHOMPY = "big_chompy_cooking_chompy"
 
 @ServerStartupEvent
 fun mapBigChompyOgreSpitRoast() {
+
+    onLogin { (player) ->
+        if (player.getBool(COOKING_CHOMPY)) {
+            player.set(COOKING_CHOMPY, false)
+
+            if (player.getQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING) == STAGE_COOKING_CHOMPY &&
+                !player.inventory.containsItem(RAW_CHOMPY, 1) &&
+                !player.inventory.containsItem(SEASONED_CHOMPY, 1) &&
+                !player.bank.containsItem(RAW_CHOMPY, 1) &&
+                !player.bank.containsItem(SEASONED_CHOMPY, 1)
+            ) {
+                player.inventory.addItemDrop(RAW_CHOMPY, 1)
+                player.sendMessage("Your interrupted chompy preparation has been restored so you can try again.")
+            }
+        }
+    }
 
     onItemOnObject(
         objectNamesOrIds = arrayOf("Ogre spit-roast"),

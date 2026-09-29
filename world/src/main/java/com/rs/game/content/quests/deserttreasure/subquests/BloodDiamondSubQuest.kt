@@ -4,6 +4,7 @@ import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
+import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnItem
@@ -47,7 +48,10 @@ fun mapBloodDiamondDesertTreasure() {
     onNpcClick(MALAK) { (player) -> malakDialogue(player) }
     onNpcClick(RUANTUN) { (player) -> ruantunDialogue(player) }
     onItemOnNpc(HIGH_PRIEST_ENTRANA) { (player, item) -> blessPot(player, item.id) }
-    onNpcDeath(DESSOUS) { e -> (e.killer as? Player)?.set(DESSOUS_KILLED, true) }
+    onNpcDeath(DESSOUS) { e ->
+        val dessous = e.npc as? OwnedNPC ?: return@onNpcDeath
+        dessous.owner.set(DESSOUS_KILLED, true)
+    }
 
     onItemOnItem(intArrayOf(GARLIC), intArrayOf(PESTLE_AND_MORTAR)) { e ->
         e.player.inventory.deleteItem(GARLIC, 1)
@@ -126,12 +130,12 @@ private fun DialogueBuilder.malakDealOffer(player: Player) {
     player(CALM_TALK, "I am here looking for a special diamond... I have reason to believe it is somewhere in this vicinity, and it is probably in the possession of a warrior of Zamorak.")
     player(CALM_TALK, "I'm fairly sure it will have some kind of magical aura or something too. I don't suppose you've seen it, or know where it might be?")
     npc(MALAK, CALM_TALK, "Interesting... Well perhaps we can come to a little... arrangement, human.")
-    npc(MALAK, QUESTION, "I may have information that may assist you, but you in turn will have to do something for me. What do you say? Do you think we could come to some form of agreement?")
+    npc(MALAK, CONFUSED, "I may have information that may assist you, but you in turn will have to do something for me. What do you say? Do you think we could come to some form of agreement?")
     player(CONFUSED, "Well, what kind of something? No offence, but you're not exactly the trustworthy type...")
     npc(MALAK, CHUCKLE, "Ah, you have a healthy sense of paranoia, I see. It is not a particularly unfair request on my part...")
     npc(MALAK, CALM_TALK, "All I ask is that you ensure that the current owner of the diamond is killed. For my part, I will let you know his whereabouts, and how exactly to kill him.")
     npc(MALAK, CALM_TALK, "When he is dead, you may take the diamond from his corpse and do with it what you will. I have no interest in such baubles.")
-    npc(MALAK, QUESTION, "So what say you? A life for a diamond. As a mark of good faith, I will give you some information free:")
+    npc(MALAK, CONFUSED, "So what say you? A life for a diamond. As a mark of good faith, I will give you some information free:")
     npc(MALAK, CALM_TALK, "The current owner of this diamond is named Dessous.")
     options {
         op("Yes") {
@@ -158,7 +162,7 @@ private fun DialogueBuilder.malakQuestions(player: Player) {
             npc(MALAK, CALM_TALK, " However, if it will help seal our deal, I will let you know some of the details.")
             npc(MALAK, CALM_TALK, "As you may or may not know, myself and my blood kin are the rulers of this land, all serving under Lord Drakan. However, we tend not to die of old age or similar natural causes, which means that to gain another Lords title or land, there often need to be...")
             npc(MALAK, CALM_TALK, "Unnatural causes of death involved. Let us just say, that Dessous is in control of some land that I myself would like some say in, and that it is not in my interest to be seen to be responsible for the death of a fellow Lord.")
-            npc(MALAK, QUESTION, "It would however be extremely advantageous to myself should some random human adventurer take it upon themself to remove this rival for me... Do you understand?")
+            npc(MALAK, CONFUSED, "It would however be extremely advantageous to myself should some random human adventurer take it upon themself to remove this rival for me... Do you understand?")
             player(CALM_TALK, "Yes... I think so...")
             npc(MALAK, CALM_TALK, "Good, we understand each other then. We will both benefit from the death of Dessous.")
             goto("malakQuestions")
@@ -318,7 +322,7 @@ private fun blessPot(player: Player, itemId: Int) {
         if (itemId == SILVER_POT_BLOOD) {
             npc(HIGH_PRIEST_ENTRANA, CONFUSED, "A somewhat strange request, but I see no harm in... Wait a moment... is that BLOOD?")
             player(NERVOUS, "Erm... yes...")
-            npc(HIGH_PRIEST_ENTRANA, CONFUSED, "Why do you want me to bless a pot full of someones blood???")
+            npc(HIGH_PRIEST_ENTRANA, CONFUSED, "Why do you want me to bless a pot full of someone's blood???")
             player(NERVOUS, "Oh, don't worry, it's not 'someones', it's my own!")
             exec { swapPot(player, itemId, blessed) }
             npc(HIGH_PRIEST_ENTRANA, CONFUSED, "I... see... Well it is an unusual thing, but I see no harm in it. Take this, and walk in peace with Saradomin.")

@@ -1,14 +1,15 @@
 package com.rs.game.content.quests.watchtower.dialogues
 
-import com.rs.engine.dialogue.ConversationBuilder
+import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.content.quests.watchtower.*
 import com.rs.game.model.entity.npc.NPC
+import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 
@@ -24,6 +25,7 @@ private const val SKAVID_3_COMPLETE = "watchtowerSkavid3Complete"
 private const val SKAVID_5_COMPLETE = "watchtowerSkavid5Complete"
 
 private const val MAD_SKAVID_COMPLETE = "watchtowerMadSkavidComplete"
+private const val MAGENTA_PILLAR_VARBIT = 3129
 
 @ServerStartupEvent
 fun mapWatchtowerSkavids() {
@@ -161,7 +163,7 @@ private fun scaredSkavidDialogue(player: Player, npc: NPC) {
                     lateinit var shaman: NPC
 
                     exec {
-                        shaman = spawnInterruptingShaman(npc)
+                        shaman = spawnInterruptingShaman(player, npc)
                     }
 
                     npc(
@@ -230,16 +232,16 @@ private fun scaredSkavidDialogue(player: Player, npc: NPC) {
     }
 }
 
-private fun spawnInterruptingShaman(skavid: NPC): NPC {
+private fun spawnInterruptingShaman(player: Player, skavid: NPC): NPC {
     val spawnTile = World.findAdjacentFreeSpace(
         skavid.tile,
         1
     ) ?: skavid.tile
 
-    return World.spawnNPC(
+    return OwnedNPC(
+        player,
         INTERRUPTING_OGRE_SHAMAN,
         spawnTile,
-        true,
         false
     ).apply {
         setRandomWalk(false)
@@ -292,7 +294,7 @@ private fun normalSkavidDialogue(player: Player, npc: NPC) {
     }
 }
 
-private fun ConversationBuilder.skavidOne(
+private fun DialogueBuilder.skavidOne(
     player: Player,
     npc: NPC
 ) {
@@ -332,7 +334,7 @@ private fun ConversationBuilder.skavidOne(
     )
 }
 
-private fun ConversationBuilder.skavidTwo(
+private fun DialogueBuilder.skavidTwo(
     player: Player,
     npc: NPC
 ) {
@@ -372,7 +374,7 @@ private fun ConversationBuilder.skavidTwo(
     )
 }
 
-private fun ConversationBuilder.skavidThree(
+private fun DialogueBuilder.skavidThree(
     player: Player,
     npc: NPC
 ) {
@@ -412,7 +414,7 @@ private fun ConversationBuilder.skavidThree(
     )
 }
 
-private fun ConversationBuilder.skavidFive(
+private fun DialogueBuilder.skavidFive(
     player: Player,
     npc: NPC
 ) {
@@ -452,7 +454,7 @@ private fun ConversationBuilder.skavidFive(
     )
 }
 
-private fun ConversationBuilder.skavidOptions(
+private fun DialogueBuilder.skavidOptions(
     player: Player,
     npc: NPC,
     correct: String,
@@ -577,7 +579,7 @@ private fun madSkavidDialogue(
     }
 }
 
-private fun ConversationBuilder.madSkavidOptions(
+private fun DialogueBuilder.madSkavidOptions(
     player: Player,
     npc: NPC,
     correct: String
@@ -633,7 +635,7 @@ private fun ConversationBuilder.madSkavidOptions(
     }
 }
 
-private fun ConversationBuilder.madSkavidCrystalRecovery(
+private fun DialogueBuilder.madSkavidCrystalRecovery(
     player: Player,
     npc: NPC
 ) {
@@ -654,7 +656,12 @@ private fun ConversationBuilder.madSkavidCrystalRecovery(
                 player.inventory.containsItem(
                     WATCHTOWER_CRYSTAL_2,
                     1
-                )
+                ) ||
+                player.bank.containsItem(
+                    WATCHTOWER_CRYSTAL_2,
+                    1
+                ) ||
+                player.vars.getVarBit(MAGENTA_PILLAR_VARBIT) != 0
             ) {
                 npc(
                     npc,
