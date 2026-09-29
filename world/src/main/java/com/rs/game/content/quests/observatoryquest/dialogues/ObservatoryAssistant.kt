@@ -59,7 +59,7 @@ fun mapObservatoryAssistant() {
     }
 }
 
-private fun com.rs.engine.dialogue.ConversationBuilder.assistantBeforeQuest() {
+private fun com.rs.engine.dialogue.DialogueBuilder.assistantBeforeQuest() {
     player(HeadE.CALM_TALK, "Hi, are you busy?")
     npc(OBSERVATORY_ASSISTANT, HeadE.CALM_TALK, "Me? I'm always busy.")
     npc(
@@ -140,7 +140,7 @@ private fun com.rs.engine.dialogue.ConversationBuilder.assistantBeforeQuest() {
     }
 }
 
-private fun com.rs.engine.dialogue.ConversationBuilder.assistantGreeting() {
+private fun com.rs.engine.dialogue.DialogueBuilder.assistantGreeting() {
     when (Random.nextInt(3)) {
         0 -> {
             player(HeadE.CALM_TALK, "Hello there.")
@@ -167,7 +167,7 @@ private fun com.rs.engine.dialogue.ConversationBuilder.assistantGreeting() {
     }
 }
 
-private fun com.rs.engine.dialogue.ConversationBuilder.plankHelp(player: Player) {
+private fun com.rs.engine.dialogue.DialogueBuilder.plankHelp(player: Player) {
     val planks = player.inventory.getAmountOf(PLANK)
 
     when {
@@ -216,7 +216,7 @@ private fun com.rs.engine.dialogue.ConversationBuilder.plankHelp(player: Player)
     }
 }
 
-private fun com.rs.engine.dialogue.ConversationBuilder.bronzeHelp(player: Player) {
+private fun com.rs.engine.dialogue.DialogueBuilder.bronzeHelp(player: Player) {
     if (!player.inventory.containsItem(BRONZE_BAR, 1)) {
         player(
             HeadE.CALM_TALK,
@@ -241,7 +241,7 @@ private fun com.rs.engine.dialogue.ConversationBuilder.bronzeHelp(player: Player
     }
 }
 
-private fun com.rs.engine.dialogue.ConversationBuilder.moltenGlassHelp(player: Player) {
+private fun com.rs.engine.dialogue.DialogueBuilder.moltenGlassHelp(player: Player) {
     if (!player.inventory.containsItem(MOLTEN_GLASS, 1)) {
         player(
             HeadE.CALM_TALK,
@@ -271,7 +271,7 @@ private fun com.rs.engine.dialogue.ConversationBuilder.moltenGlassHelp(player: P
     }
 }
 
-private fun com.rs.engine.dialogue.ConversationBuilder.lensMouldHelp(player: Player) {
+private fun com.rs.engine.dialogue.DialogueBuilder.lensMouldHelp(player: Player) {
     if (!player.inventory.containsItem(LENS_MOULD, 1)) {
         player(
             HeadE.CALM_TALK,
@@ -311,7 +311,7 @@ private fun com.rs.engine.dialogue.ConversationBuilder.lensMouldHelp(player: Pla
     }
 }
 
-private fun com.rs.engine.dialogue.ConversationBuilder.lensHelp(player: Player) {
+private fun com.rs.engine.dialogue.DialogueBuilder.lensHelp(player: Player) {
     if (!player.inventory.containsItem(OBSERVATORY_LENS, 1)) {
         player(HeadE.CALM_TALK, "How should I make this lens?")
         npc(
@@ -346,7 +346,7 @@ private fun com.rs.engine.dialogue.ConversationBuilder.lensHelp(player: Player) 
     }
 }
 
-private fun com.rs.engine.dialogue.ConversationBuilder.departingDialogue() {
+private fun com.rs.engine.dialogue.DialogueBuilder.departingDialogue() {
     player(HeadE.HAPPY_TALKING, "Hello again.")
     npc(
         OBSERVATORY_ASSISTANT,
@@ -364,7 +364,7 @@ private fun com.rs.engine.dialogue.ConversationBuilder.departingDialogue() {
     )
 }
 
-private fun com.rs.engine.dialogue.ConversationBuilder.assistantGeneralDialogue() {
+private fun com.rs.engine.dialogue.DialogueBuilder.assistantGeneralDialogue() {
     player(HeadE.CALM_TALK, "Hello there.")
     npc(OBSERVATORY_ASSISTANT, HeadE.CALM_TALK, "Yes?")
 }

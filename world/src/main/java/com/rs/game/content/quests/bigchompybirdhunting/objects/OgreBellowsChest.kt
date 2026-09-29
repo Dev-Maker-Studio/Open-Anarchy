@@ -8,7 +8,9 @@ import com.rs.game.content.quests.bigchompybirdhunting.OGRE_BELLOWS_2
 import com.rs.game.content.quests.bigchompybirdhunting.OGRE_BELLOWS_3
 import com.rs.game.content.quests.bigchompybirdhunting.STAGE_GETTING_BLOATED_TOAD
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.util.Utils
+import com.rs.game.World
+import com.rs.game.model.gameobject.OwnedObject
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import org.darkan.core.Constants
@@ -61,8 +63,8 @@ fun mapBigChompyOgreBellowsChest() {
             "You manage to lift the huge rock off the chest."
         )
 
-        obj.setIdTemporary(
-            UNLOCKED_OGRE_CHEST,
+        World.spawnObjectTemporary(
+            OwnedObject(player, obj, UNLOCKED_OGRE_CHEST),
             Ticks.fromSeconds(30)
         )
 

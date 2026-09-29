@@ -242,7 +242,7 @@ private fun bugsDialogue(player: Player, npc: NPC) {
                 npc(
                     npc,
                     HAPPY_TALKING,
-                    "Dad says you's making da chompy for us! Slurp! Me's has to have cabbage wiv mine! Chompy is our favorite yummms!"
+                    "Dad says you's making da chompy for us! Slurp! Me's has to have cabbage wiv mine! Chompy is our favourite yummms!"
                 )
             }
 

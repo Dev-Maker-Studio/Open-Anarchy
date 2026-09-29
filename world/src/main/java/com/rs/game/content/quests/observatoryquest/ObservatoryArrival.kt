@@ -1,13 +1,13 @@
 package com.rs.game.content.quests.observatoryquest
 
-import com.rs.engine.dialogue.ConversationBuilder
+import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
 import com.rs.game.World
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Animation
+import org.darkan.core.model.Animation
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onNpcClick
@@ -393,7 +393,7 @@ private fun checkConstellationAnswer(
     }
 }
 
-private fun ConversationBuilder.observatoryConstellationSuccess(
+private fun DialogueBuilder.observatoryConstellationSuccess(
     player: Player,
     constellation: Int
 ) {
@@ -618,6 +618,8 @@ private fun ConversationBuilder.observatoryConstellationSuccess(
             syncObservatoryRope(player)
         }
     }
+
+}
 
 private fun giveObservatoryConstellationReward(
     player: Player,

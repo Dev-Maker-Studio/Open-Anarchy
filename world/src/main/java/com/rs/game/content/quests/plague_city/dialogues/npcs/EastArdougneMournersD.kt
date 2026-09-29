@@ -39,7 +39,7 @@ class EastArdougneMournersD (player: Player, npc: NPC) {
                     npc(npc, SKEPTICAL_THINKING, "Your hands are covered in mud.")
                     player(CALM_TALK, "Oh that...")
                     npc(npc, SKEPTICAL_THINKING, "Funny, you don't look like the gardening type.")
-                    player(CALM_TALK, "Oh no, I love gardening! It's my favorite pastime.")
+                    player(CALM_TALK, "Oh no, I love gardening! It's my favourite pastime.")
                 }
 
                 in STAGE_GRILL_REMOVED..STAGE_COMPLETE -> {

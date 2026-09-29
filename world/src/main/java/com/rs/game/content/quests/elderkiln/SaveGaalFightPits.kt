@@ -58,13 +58,13 @@ fun mapSaveGaalFightPits() {
             player(CHEERFUL, "You've taught yourself to speak. That's impressive.")
             npc(npc, T_CALM_TALK, "Ga'al-Xox speak good. Ga'al-Xox real TzHaar.")
             player(CONFUSED, "What are you doing here?")
-            npc(npc, T_CALM_TALK, "Ga'al-Xox here to die with honor!")
+            npc(npc, T_CALM_TALK, "Ga'al-Xox here to die with honour!")
             player(CONFUSED, "Er-")
-            npc(npc, T_CALM_TALK, "Ga'al-Xox fight in Fight Pit with great honor!")
+            npc(npc, T_CALM_TALK, "Ga'al-Xox fight in Fight Pit with great honour!")
             label("ops")
             options {
                 op("Can you help me convince that Ga'al to come with me?") {
-                    npc(npc, T_CALM_TALK, "No, no. Ga'al here to die with honor!")
+                    npc(npc, T_CALM_TALK, "No, no. Ga'al here to die with honour!")
                     player(CALM_TALK, "But TzHaar-Mej-Jeh has a plan that will be able to get the Ga'al's memories back.")
                     npc(npc, T_CALM_TALK, "Ga'al meant to stay here!")
                     goto("ops")
@@ -73,7 +73,7 @@ fun mapSaveGaalFightPits() {
                     npc(npc, T_CALM_TALK, "Why JalYt need Ga'al?")
                     player(SKEPTICAL, "TzHaar-Mej-Jeh said he wanted his Ga'al, but you would do just as well. I'm sure he wouldn't know the difference.")
                     player(CALM_TALK, "So, Ga'al, will you come with me? TzHaar-Mej-Jeh thinks there is a way of giving you back your memories and turning you into a real TzHaar.")
-                    npc(npc, T_CALM_TALK, "Ga'al-Xox meant to stay here. Ga'al-Xox die with great honor!")
+                    npc(npc, T_CALM_TALK, "Ga'al-Xox meant to stay here. Ga'al-Xox die with great honour!")
                     goto("ops")
                 }
                 op("I need to go.")
@@ -115,7 +115,7 @@ fun saveGaalFightPitsAkDialogue(player: Player, npc: NPC) {
                 npc(npc.id, T_CALM_TALK, "Ga'al are a disease on TzHaar society, JalYt.")
                 options {
                     op("But you can't just kill them!") {
-                        npc(npc.id, T_CALM_TALK, "Our ways are not your soft ways, JalYt. To die in Fight Pit is great honor for any TzHaar.")
+                        npc(npc.id, T_CALM_TALK, "Our ways are not your soft ways, JalYt. To die in Fight Pit is great honour for any TzHaar.")
                     }
                     op("I suppose you're protecting your society.") {
                         npc(npc.id, T_CALM_TALK, "You smart for JalYt. Most JalYt think what we do to Ga'al is wrong.")

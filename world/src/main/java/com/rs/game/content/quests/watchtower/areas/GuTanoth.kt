@@ -16,7 +16,7 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnNpc
 import com.rs.plugin.kts.onNpcClick
@@ -148,16 +148,14 @@ fun mapGuTanoth() {
 
     onObjectClick(
         ROCK_CAKE_STALL,
-        tiles = arrayOf(ROCK_CAKE_STALL_TILE),
-        options = arrayOf("Steal-from")
+        tiles = arrayOf(ROCK_CAKE_STALL_TILE)
     ) { (player) ->
         handleRockCakeStall(player)
     }
 
     onObjectClick(
         BROKEN_BRIDGE_GAP,
-        tiles = arrayOf(BROKEN_BRIDGE_GAP_TILE),
-        options = arrayOf("Jump-over")
+        tiles = arrayOf(BROKEN_BRIDGE_GAP_TILE)
     ) { (player) ->
         handleBrokenBridge(player)
     }
@@ -702,12 +700,12 @@ private fun handleNightshadeOnShamanCaveGuard(
         )
 
         exec {
-            player.inventory.deleteItem(CAVE_NIGHTSHADE, 1)
-
             player.sendOptionDialogue(
                 "You can run past, but keep in mind that a dangerous area follows!"
             ) { options ->
                 options.add("Proceed regardless") {
+                    player.inventory.deleteItem(CAVE_NIGHTSHADE, 1)
+
                     player.set(
                         SHAMAN_CAVE_GUARD_DISTRACTED,
                         true

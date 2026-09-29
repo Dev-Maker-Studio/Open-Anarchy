@@ -357,11 +357,11 @@ public enum Quest {
 				player.getPackets().sendRunScript(4249, 81461271, 81461272, 81461273, 81461274, 81461279, questState, height, "<col=ebe076>" + "Required items:" + "</col>", requiredItemsStr);
 				height += Utils.getIFStringHeightAbs(requiredItemsStr, 495, 351);
 
-				String combatStuffStr = getCombatInformationString();
+				String combatStuffStr = getCombatInformationString(player);
 				player.getPackets().sendRunScript(4249, 81461280, 81461281, 81461282, -1, -1, questState, height, "<col=ebe076>" + "Combat:" + "</col>", combatStuffStr);
 				height += Utils.getIFStringHeightAbs(combatStuffStr, 495, 393);
 
-				String rewardsStr = getRewardsString();
+				String rewardsStr = getRewardsString(player);
 				player.getPackets().sendRunScript(4249, 81461283, 81461284, 81461285, 81461286, 81461291, questState, height, "<col=ebe076>" + "Rewards:" + "</col>", rewardsStr);
 				height += Utils.getIFStringHeightAbs(rewardsStr, 495, 388);
 
@@ -387,18 +387,18 @@ public enum Quest {
 		return getHandler().getRequiredItemsString();
 	}
 
-	private String getCombatInformationString() {
+	private String getCombatInformationString(Player player) {
 		QuestOutline handler = getHandler();
 		if (handler == null)
 			return "None.";
-		return getHandler().getCombatInformationString();
+		return getHandler().getCombatInformationString(player);
 	}
 
-	private String getRewardsString() {
+	private String getRewardsString(Player player) {
 		QuestOutline handler = getHandler();
 		if (handler == null)
 			return getQuestPointRewardLine().replace("<br>", "");
-		return getHandler().getRewardsString();
+		return getHandler().getRewardsString(player);
 	}
 
 	public String getRequirementsString(Player player) {

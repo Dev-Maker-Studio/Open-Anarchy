@@ -223,6 +223,7 @@ private fun DialogueBuilder.conclusiveEvidence(player: Player) {
     simple("You hand over all the evidence.")
     npc(MANSION_GUARD, HAPPY_TALKING, "Please accept this reward from the family!") {
         removeQuestEvidence(player)
+        clearQuestState(player)
         player.setQuestStage(Quest.MURDER_MYSTERY, STAGE_PRESENTING_EVIDENCE)
         player.questManager.completeQuest(Quest.MURDER_MYSTERY)
     }
@@ -361,6 +362,13 @@ private fun poisonProofText(murderer: Int): String = when (murderer) {
     MM_MURDERER_ELIZABETH -> "You prove to the guard Elizabeth did not use poison on the fountain."
     MM_MURDERER_FRANK -> "You prove to the guard Frank did not use poison on the Sinclair Crest."
     else -> error("Invalid Murder Mystery murderer state.")
+}
+
+private fun clearQuestState(player: Player) {
+    player.delete(MM_MURDERER_KEY)
+    player.delete("murderMysteryThreadTaken")
+    player.delete(MM_POISON_EVIDENCE_FOUND)
+    player.delete(MM_POISON_BUYERS_KNOWN)
 }
 
 private fun removeQuestEvidence(player: Player) {

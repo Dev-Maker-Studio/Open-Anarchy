@@ -41,7 +41,7 @@ public class GuildMasterDragonSlayerD extends Conversation {
 					option("No", new Dialogue()
 							.addPlayer(HeadE.HAPPY_TALKING, "On second thoughts, a mighty and perilous quest fit only for the most powerful champions " +
 									"isn't something I want to commit to at the moment. Maybe later.")
-							.addNPC(GUILD_MASTER, HeadE.CALM_TALK, "Very well. Return when are ready"));
+							.addNPC(GUILD_MASTER, HeadE.CALM_TALK, "Very well. Return when you are ready"));
 				}
 			});
 

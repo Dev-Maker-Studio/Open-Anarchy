@@ -13,6 +13,7 @@ private const val OG = 853
 
 private const val OG_TASK_STARTED = "watchtowerOgTaskStarted"
 private const val OG_TASK_COMPLETE = "watchtowerOgTaskComplete"
+private const val RELIC_PART_1_HANDED_IN = "watchtowerRelicPart1HandedIn"
 
 @ServerStartupEvent
 fun mapWatchtowerOg() {
@@ -33,6 +34,28 @@ private fun ogDialogue(player: Player, npc: NPC) {
         }
 
         if (player.getBool(OG_TASK_COMPLETE)) {
+            if (!player.inventory.containsItem(RELIC_PART_1, 1) &&
+                !player.bank.containsItem(RELIC_PART_1, 1) &&
+                !player.getBool(RELIC_PART_1_HANDED_IN)
+            ) {
+                npc(
+                    npc,
+                    CALM_TALK,
+                    "What, you lost it?"
+                )
+
+                exec {
+                    player.inventory.addItemDrop(RELIC_PART_1, 1)
+                }
+
+                npc(
+                    npc,
+                    CALM_TALK,
+                    "Here, take another and don't lose it!"
+                )
+                return@startConversation
+            }
+
             npc(
                 npc,
                 HAPPY_TALKING,

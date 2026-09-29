@@ -2,6 +2,7 @@ package com.rs.game.content.quests.deserttreasure.objects
 
 import com.rs.engine.quest.Quest
 import com.rs.game.World
+import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.content.quests.deserttreasure.STAGE_DIAMONDS_OF_AZZANADRA
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
@@ -13,7 +14,6 @@ private const val BLOOD_POT_COMPLETE = 4667
 private const val DESSOUS_TOMB_X = 3568
 private const val DESSOUS_TOMB_Y = 3401
 private const val DESSOUS_TOMB_PLANE = 0
-private const val DESSOUS_TOMB_USED = "dtDessousTombUsed"
 
 @ServerStartupEvent
 fun mapDessousTomb() {
@@ -30,8 +30,8 @@ private fun useBloodPotOnTomb(player: Player, itemId: Int) {
         player.sendMessage("Nothing interesting happens.")
         return
     }
-    if (player.getBool(DESSOUS_TOMB_USED)) {
-        player.sendMessage("The tomb has already been disturbed.")
+    if (World.getNPCs().any { npc -> npc is OwnedNPC && npc.owner === player && npc.id == DESSOUS && !npc.hasFinished() }) {
+        player.sendMessage("Dessous has already been disturbed.")
         return
     }
     if (!player.inventory.containsItem(BLOOD_POT_COMPLETE, 1)) {
@@ -40,7 +40,8 @@ private fun useBloodPotOnTomb(player: Player, itemId: Int) {
     }
 
     player.inventory.deleteItem(itemId, 1)
-    player.set(DESSOUS_TOMB_USED, true)
     player.sendMessage("You pour the blood from the pot onto the tomb. A terrible presence stirs beneath the ground...")
-    World.spawnNPC(DESSOUS, Tile.of(DESSOUS_TOMB_X, DESSOUS_TOMB_Y, DESSOUS_TOMB_PLANE), true, true)
+    OwnedNPC(player, DESSOUS, Tile.of(DESSOUS_TOMB_X, DESSOUS_TOMB_Y, DESSOUS_TOMB_PLANE), true).apply {
+        setAutoDespawnAtDistance(false)
+    }
 }

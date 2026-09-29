@@ -392,7 +392,7 @@ private fun DialogueBuilder.pierre(player: Player) {
             player(CALM_TALK, "Any sounds of a struggle with Lord Sinclair?")
             npc(PIERRE, CALM_TALK, "No, I don't remember hearing anything like that.")
             player(CALM_TALK, "How about the guard dog barking at all?")
-            npc(PIERRE, CALM_TALK, "I hear him bark all the time. It's one of his favorite things to do. I can't say I did the night of the murder though as I wasn't close enough to hear either way.")
+            npc(PIERRE, CALM_TALK, "I hear him bark all the time. It's one of his favourite things to do. I can't say I did the night of the murder though as I wasn't close enough to hear either way.")
         },
         poison = {
             npc(PIERRE, CALM_TALK, "Well, I know David said that he was going to do something about the spiders' nest that's between the two servants' quarters upstairs.")
