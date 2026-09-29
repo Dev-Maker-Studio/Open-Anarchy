@@ -1,5 +1,6 @@
 package com.rs.game.content
 
+import com.rs.game.content.minigames.fistofguthix.FogGloves
 import com.rs.game.World.broadcastLoot
 import com.rs.game.content.skills.dungeoneering.DungeonRewards.HerbicideSetting
 import com.rs.game.content.skills.prayer.Burying
@@ -57,6 +58,7 @@ fun mapDrops() {
     }
 
     onNpcDrop(null, HerbicideSetting.entries.map { it.herb.herbId }.toTypedArray()) { e ->
+        FogGloves.herbDrop(e.player, e.item)
         if (herbicide(e.player, e.item.item))
             return@onNpcDrop e.deleteItem()
         if (e.player.familiarPouch === Pouch.MACAW && e.player.familiar.inventory.freeSlot() > 0) {
