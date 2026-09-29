@@ -124,7 +124,6 @@ class GhostsAhoy : QuestOutline() {
     override fun complete(player: Player) {
         player.inventory.addItem(Ectophial)
         player.skills.addXp(Skills.PRAYER, 2400.0)
-        player.vars.saveVar(217, 5)
         sendQuestCompleteInterface(player, Ectophial)
     }
 

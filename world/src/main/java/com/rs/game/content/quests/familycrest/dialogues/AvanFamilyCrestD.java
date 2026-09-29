@@ -54,14 +54,14 @@ public class AvanFamilyCrestD extends Conversation {
             }
         });
 		case TALK_TO_BOOT -> {
-			addNPC(NPC, HeadE.CALM_TALK, "So how are you doing getting me my perfect gold jewelry?");
+			addNPC(NPC, HeadE.CALM_TALK, "So how are you doing getting me my perfect gold jewellery?");
 			addPlayer(HeadE.HAPPY_TALKING, "I'm still after that 'perfect gold'.");
 			addNPC(NPC, HeadE.CALM_TALK, "I know how you feel... for such a long time I have searched and searched for the elusive perfect gold...");
 			addNPC(NPC, HeadE.CALM_TALK, "I thought I had gotten a good lead on finding it when I heard talk of a dwarven expert on gold named Boot some time" +
 					" back, but unfortunately for me, he has returned to his mountain home, which I cannot find.");
 		}
 		case GIVE_AVAN_JEWLERY -> {
-			addNPC(NPC, HeadE.CALM_TALK, "So how are you doing getting me my perfect gold jewelry?");
+			addNPC(NPC, HeadE.CALM_TALK, "So how are you doing getting me my perfect gold jewellery?");
 			if(player.getInventory().containsItems(new int[]{PERFECT_RUBY_NECKLACE, PERFECT_RUBY_RING}, new int[]{1, 1})) {
 				addPlayer(HeadE.HAPPY_TALKING, "I have the ring and necklace right here.");
 				addSimple("You show Avan the jewlery");

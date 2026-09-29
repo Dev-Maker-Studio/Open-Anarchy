@@ -29,7 +29,7 @@ fun mapMurderMysteryPoisonSalesman() {
 
 private fun DialogueBuilder.poisonSalesmanDialogue(player: Player) {
     player(CALM_TALK, "I'm investigating the murder at the Sinclair house.")
-    npc(POISON_SALESMAN, SHOCKED, "There was a murder at the Sinclair House??? That's terrible! And I was only there the other day too! They bought the last of my Patented Multi Purpose Poison!"
+    npc(POISON_SALESMAN, AMAZED, "There was a murder at the Sinclair House??? That's terrible! And I was only there the other day too! They bought the last of my Patented Multi Purpose Poison!"
     )
 
     label("poisonOptions")

@@ -125,6 +125,57 @@ fun loadAnimationCommands() {
         }
     }
 
+    Commands.add(Rights.DEVELOPER, "testnpc,possessnpc [npcId]", "Spawns a real NPC for combat/animation testing.") { p, args ->
+        val npcId = args[0].toInt()
+        if (npcId !in 0 until Utils.getNPCDefinitionsSize())
+            return@add
+        getTestNpc(p)?.finish()
+        val npc = com.rs.game.model.entity.npc.NPC(npcId, p.tile.transform(1, 0))
+        npc.setRandomWalk(false)
+        p.tempAttribs.setO(TEST_NPC_ATTR, npc)
+        p.sendMessage("Test NPC $npcId spawned. Use ::testnpcattack, ::npcanim, or ::unpossess.")
+    }
+
+    Commands.add(Rights.DEVELOPER, "testnpcattack,npcattack", "Makes the possessed test NPC attack you using real NPC combat.") { p, _ ->
+        val npc = getTestNpc(p)
+        if (npc == null) {
+            p.sendMessage("You do not have an active test NPC. Use ::possessnpc [npcId] first.")
+            return@add
+        }
+        npc.setCombatTarget(p)
+        p.sendMessage("Test NPC ${npc.id} is now attacking you.")
+    }
+
+    Commands.add(Rights.DEVELOPER, "npcanim [animId]", "Forces an animation on the possessed test NPC.") { p, args ->
+        val npc = getTestNpc(p)
+        if (npc == null) {
+            p.sendMessage("You do not have an active test NPC. Use ::possessnpc [npcId] first.")
+            return@add
+        }
+        npc.anim(args[0].toInt())
+    }
+
+    Commands.add(Rights.DEVELOPER, "testnpchere,npchere", "Moves the possessed test NPC beside you.") { p, _ ->
+        val npc = getTestNpc(p)
+        if (npc == null) {
+            p.sendMessage("You do not have an active test NPC. Use ::possessnpc [npcId] first.")
+            return@add
+        }
+        npc.removeCombatTarget()
+        npc.tele(p.tile.transform(1, 0))
+    }
+
+    Commands.add(Rights.DEVELOPER, "unpossess,removetestnpc", "Removes the possessed test NPC.") { p, _ ->
+        val npc = getTestNpc(p)
+        if (npc == null) {
+            p.sendMessage("You do not have an active test NPC.")
+            return@add
+        }
+        npc.finish()
+        p.tempAttribs.removeO(TEST_NPC_ATTR)
+        p.sendMessage("Test NPC removed.")
+    }
+
     Commands.add(Rights.DEVELOPER, "headicon", "Set custom headicon.") { p, args ->
         p.tempAttribs.setI("customHeadIcon", args[0].toInt())
         p.appearance.generateAppearanceData()
@@ -177,4 +228,16 @@ private fun compatibleAnimations(basId: Int): List<Int> {
             matches.add(i)
     }
     return matches
+}
+
+
+private const val TEST_NPC_ATTR = "developerTestNpc"
+
+private fun getTestNpc(player: com.rs.game.model.entity.player.Player): com.rs.game.model.entity.npc.NPC? {
+    val npc = player.tempAttribs.getO<com.rs.game.model.entity.npc.NPC>(TEST_NPC_ATTR)
+    if (npc == null || npc.hasFinished()) {
+        player.tempAttribs.removeO(TEST_NPC_ATTR)
+        return null
+    }
+    return npc
 }

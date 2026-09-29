@@ -1,7 +1,7 @@
 package com.rs.game.content.quests.observatoryquest
 
 import com.rs.engine.book.Book
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onObjectClick

@@ -3,8 +3,8 @@ package com.rs.game.content.quests.watchtower.dialogues
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
-import com.rs.game.content.combat.Hit
-import com.rs.game.content.combat.Hit.HitLook
+import com.rs.game.model.entity.Hit
+import com.rs.game.model.entity.Hit.HitLook
 import com.rs.game.content.quests.watchtower.*
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
@@ -16,6 +16,7 @@ private const val DRAGON_BONES = 536
 
 private const val TOBAN_TASK_STARTED = "watchtowerTobanTaskStarted"
 private const val TOBAN_TASK_COMPLETE = "watchtowerTobanTaskComplete"
+private const val RELIC_PART_3_HANDED_IN = "watchtowerRelicPart3HandedIn"
 
 @ServerStartupEvent
 fun mapWatchtowerToban() {
@@ -36,10 +37,75 @@ private fun tobanDialogue(player: Player, npc: NPC) {
         }
 
         if (player.getBool(TOBAN_TASK_COMPLETE)) {
+            if (player.getBool(RELIC_PART_3_HANDED_IN)) {
+                npc(
+                    npc,
+                    HAPPY_TALKING,
+                    "Hahaha! Small t'ing has done well."
+                )
+                return@startConversation
+            }
+
+            val hasRelicPart =
+                player.inventory.containsItem(RELIC_PART_3, 1) ||
+                player.bank.containsItem(RELIC_PART_3, 1)
+
+            if (hasRelicPart) {
+                npc(
+                    npc,
+                    HAPPY_TALKING,
+                    "Hahaha! Small t'ing has done well."
+                )
+                return@startConversation
+            }
+
             npc(
                 npc,
                 HAPPY_TALKING,
-                "Hahaha! Small t'ing has done well."
+                "Hahaha! Small t'ing returns. Did you bring the dragon bone?"
+            )
+
+            if (!player.inventory.containsItem(DRAGON_BONES, 1)) {
+                player(
+                    CALM_TALK,
+                    "I have nothing for you."
+                )
+
+                npc(
+                    npc,
+                    ANGRY,
+                    "Then you shall get nothing from me!"
+                )
+                return@startConversation
+            }
+
+            player(
+                HAPPY_TALKING,
+                "When I say I will get something, I get it!"
+            )
+
+            if (!player.inventory.hasFreeSlots()) {
+                npc(
+                    npc,
+                    HAPPY_TALKING,
+                    "Hahaha! Small t'ing has done it. Toban is glad, but you can't hold his reward; you'd best put somet'ing down."
+                )
+                return@startConversation
+            }
+
+            exec {
+                player.inventory.deleteItem(DRAGON_BONES, 1)
+                player.inventory.addItem(RELIC_PART_3, 1)
+            }
+
+            npc(
+                npc,
+                HAPPY_TALKING,
+                "Hahaha! Small t'ing has done it. Toban is glad - take this..."
+            )
+
+            simple(
+                "The ogre gives you part of a statue."
             )
             return@startConversation
         }

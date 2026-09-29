@@ -4,7 +4,7 @@ import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onNpcClick
@@ -85,8 +85,7 @@ fun mapWatchtowerGrounds() {
         DAMAGED_DAGGER_BUSH,
         TATTERED_EYE_PATCH_BUSH,
         OLD_ROBE_BUSH,
-        UNUSUAL_ARMOUR_BUSH,
-        options = arrayOf("Search")
+        UNUSUAL_ARMOUR_BUSH
     ) { (player, obj) ->
         if (player.getQuestStage(Quest.WATCHTOWER) != STAGE_SEARCH_WATCHTOWER) {
             player.sendMessage("You find nothing of interest.")
@@ -168,8 +167,7 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        GROUND_FLOOR_LADDER_UP,
-        options = arrayOf("Climb-up")
+        GROUND_FLOOR_LADDER_UP
     ) { (player, obj) ->
         if (!obj.tile.isAt(2544, 3111, 0))
             return@onObjectClick
@@ -204,8 +202,7 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        FIRST_FLOOR_LADDER_DOWN,
-        options = arrayOf("Climb-down")
+        FIRST_FLOOR_LADDER_DOWN
     ) { (player, obj) ->
         if (!obj.tile.isAt(2544, 3111, 1))
             return@onObjectClick
@@ -219,8 +216,7 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        FIRST_FLOOR_LADDER_UP,
-        options = arrayOf("Climb-up")
+        FIRST_FLOOR_LADDER_UP
     ) { (player, obj) ->
         if (!obj.tile.isAt(2549, 3111, 1))
             return@onObjectClick
@@ -234,8 +230,7 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        SECOND_FLOOR_LADDER_DOWN,
-        options = arrayOf("Climb-down")
+        SECOND_FLOOR_LADDER_DOWN
     ) { (player, obj) ->
         if (!obj.tile.isAt(2549, 3111, 2))
             return@onObjectClick
@@ -327,8 +322,7 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        SHIELD_LEVER,
-        options = arrayOf("Pull")
+        SHIELD_LEVER
     ) { (player, obj) ->
         if (!obj.tile.isAt(2543, 3115, 2))
             return@onObjectClick
@@ -410,10 +404,6 @@ fun mapWatchtowerGrounds() {
                 player.questManager.completeQuest(
                     Quest.WATCHTOWER
                 )
-
-                player.sendMessage(
-                    "Congratulations! You have completed: 'Watchtower' - Complete this quest."
-                )
             }
         }
     }
@@ -430,10 +420,12 @@ private fun allCrystalsPlaced(
 
 private fun searchFingernailsBush(player: Player) {
     if (player.getBool(FOUND_FINGERNAILS)) {
-        if (!player.inventory.containsItem(FINGERNAILS, 1)) {
+        if (!player.inventory.containsItem(FINGERNAILS, 1) &&
+            !player.bank.containsItem(FINGERNAILS, 1)
+        ) {
             player.startConversation {
                 player(
-                    HeadE.DISGUSTED,
+                    HeadE.UPSET,
                     "What's this? Disgusting! Some fingernails. They may be a clue though... I'd better take them."
                 )
 
@@ -453,7 +445,7 @@ private fun searchFingernailsBush(player: Player) {
 
     player.startConversation {
         player(
-            HeadE.DISGUSTED,
+            HeadE.UPSET,
             "What's this? Disgusting! Some fingernails. They may be a clue though... I'd better take them."
         )
 
@@ -479,6 +471,25 @@ private fun searchEvidenceBush(
     giveItemBeforeText: Boolean
 ) {
     if (player.getBool(attribute)) {
+        if (!player.inventory.containsItem(itemId, 1) &&
+            !player.bank.containsItem(itemId, 1)
+        ) {
+            player.startConversation {
+                player(
+                    HeadE.CALM_TALK,
+                    text
+                )
+
+                exec {
+                    player.inventory.addItemDrop(
+                        itemId,
+                        1
+                    )
+                }
+            }
+            return
+        }
+
         alreadySearched(player)
         return
     }

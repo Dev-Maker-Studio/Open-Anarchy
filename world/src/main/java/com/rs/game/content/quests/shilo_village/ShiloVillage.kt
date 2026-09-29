@@ -387,10 +387,8 @@ fun mapShiloVillage() {
                         e.player.getPackets().setIFText(174, 16, "")
                         if(!e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_TATTERED_SCROLL")) {
                             if(e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_CRUMPLED_SCROLL")) {
-                                if(e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_STONE_PLAQUE")) {
-                                    if (e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_COLLECTED_Z_CORPSE")) {
-                                        e.player.setQuestStage(Quest.SHILO_VILLAGE, 4)
-                                    }
+                                if (e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_COLLECTED_Z_CORPSE")) {
+                                    e.player.setQuestStage(Quest.SHILO_VILLAGE, 4)
                                 }
                             }
                         }
@@ -475,11 +473,9 @@ fun mapShiloVillage() {
                         e.player.getPackets().setIFText(174, 15, "")
                         e.player.getPackets().setIFText(174, 16, "")
                         if(!e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_CRUMPLED_SCROLL")) {
-                            if(e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_STONE_PLAQUE")) {
-                                if (e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_TATTERED_SCROLL")) {
-                                    if (e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_COLLECTED_Z_CORPSE")) {
-                                        e.player.setQuestStage(Quest.SHILO_VILLAGE, 4)
-                                    }
+                            if (e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_TATTERED_SCROLL")) {
+                                if (e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_COLLECTED_Z_CORPSE")) {
+                                    e.player.setQuestStage(Quest.SHILO_VILLAGE, 4)
                                 }
                             }
                         }
@@ -969,10 +965,8 @@ fun mapShiloVillage() {
                                     player.inventory.addItem(610, 1, false)
                                     if(!player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_COLLECTED_Z_CORPSE")) {
                                         if (player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_CRUMPLED_SCROLL")) {
-                                            if (player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_STONE_PLAQUE")) {
-                                                if (player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_TATTERED_SCROLL")) {
-                                                    player.setQuestStage(Quest.SHILO_VILLAGE, 4)
-                                                }
+                                            if (player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_TATTERED_SCROLL")) {
+                                                player.setQuestStage(Quest.SHILO_VILLAGE, 4)
                                             }
                                         }
                                     }
