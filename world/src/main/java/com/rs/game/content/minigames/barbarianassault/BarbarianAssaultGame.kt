@@ -886,6 +886,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
                 player.vars.saveVarBit(Varbit.barbassault_armour_get_granite, 1)
             }
             player.sendMessage("Wave ${wave.number} complete! You have been awarded $awarded ${role.displayName} Honour Points.")
+            if (awarded < points) player.sendMessage("You can't hold more than ${role.pointsCap} ${role.displayName} Honour Points; spend some with Commander Connad.")
         }
         val next = wave.next
         team.room = next?.let(WaitingRoom::of) ?: WaitingRoom.ONE
