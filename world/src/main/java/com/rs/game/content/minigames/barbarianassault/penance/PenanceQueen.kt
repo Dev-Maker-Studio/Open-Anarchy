@@ -46,7 +46,7 @@ class PenanceQueen(tile: Tile, val game: BarbarianAssaultGame) : NPC(Npc.npc_524
         if (dying || isDead) return
         age++
         spawns.removeIf { it.isDead || it.hasFinished() }
-        if (age % EGG_INTERVAL == 1) game.dropYellowEgg(middleTile)
+        if (age % EGG_INTERVAL == 1) game.dropYellowEgg(this)
         if (age % SPAWN_INTERVAL == 0 && spawns.size < MAX_SPAWNS) spawnQueenSpawn()
         val players = game.players.filter { game.isPlaying(it) }
         val adjacent = players.firstOrNull { WorldUtil.isInRange(this, it, 0) }

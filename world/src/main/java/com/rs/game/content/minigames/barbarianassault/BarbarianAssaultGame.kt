@@ -48,6 +48,9 @@ private const val ATTACK_BONUS_PER_LEVEL = 10
 private const val WRONG_EGG_DAMAGE = 50
 private const val SUPPLY_AMOUNT = 50
 private const val STOCK_EACH = 7
+private const val TAKE_AMOUNT = 10
+private const val YELLOW_EGG_MIN = 4
+private const val YELLOW_EGG_SPREAD = 3
 private const val ARENA_EXIT_DELAY = 3
 private const val FINISH_DELAY = 4
 private const val TRAP_CHARGES = 2
@@ -624,7 +627,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
 
     private fun fill(player: Player, obj: Int) {
         if (!player.inventory.hasFreeSlots()) return player.sendMessage("You don't have any room.")
-        player.inventory.addItem(obj, player.inventory.freeSlots)
+        player.inventory.addItem(obj, TAKE_AMOUNT.coerceAtMost(player.inventory.freeSlots))
     }
 
     private fun stockUp(player: Player, objs: IntArray) {
@@ -793,8 +796,12 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
         queenSpawns += spawn
     }
 
-    fun dropYellowEgg(tile: Tile) {
-        val target = (0 until 10).asSequence().map { tile.transform(Utils.random(-3, 3), Utils.random(-3, 3)) }.firstOrNull { World.floorAndWallsFree(it, 1) } ?: return
+    fun dropYellowEgg(queen: PenanceQueen) {
+        val centre = queen.middleTile
+        val reach = queen.size / 2 + YELLOW_EGG_MIN
+        val target = (0 until 20).asSequence()
+            .map { centre.transform(Utils.random(-reach - YELLOW_EGG_SPREAD, reach + YELLOW_EGG_SPREAD), Utils.random(-reach - YELLOW_EGG_SPREAD, reach + YELLOW_EGG_SPREAD)) }
+            .firstOrNull { chebyshev(it, centre) >= reach && World.floorAndWallsFree(it, 1) } ?: return
         val egg = GroundItem(Item(Obj.barbassault_egg_04), target, null, GroundItemType.NORMAL)
         World.addGroundItem(egg, null, -1, -1)
         eggs += egg
@@ -958,8 +965,18 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
         cleanUp()
     }
 
+    private fun stopEnemies() {
+        val enemies: List<NPC> = penance.toList() + queenSpawns + listOfNotNull(queen)
+        for (npc in enemies) {
+            npc.combat.removeTarget()
+            npc.clearPendingTasks()
+            npc.finish()
+        }
+    }
+
     private fun leaveArena(finalists: List<Player>, room: WaitingRoom, after: (Player) -> Unit) {
         active.clear()
+        stopEnemies()
         finalists.forEachIndexed { slot, player ->
             val controller = player.controllerManager.controller as? BarbarianAssaultController
             controller?.game = null
@@ -967,7 +984,8 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
             cleanInventory(player)
             player.interfaceManager.removeOverlay()
             player.reset()
-            player.poison.reset()
+            player.unlock()
+            player.anim(-1)
             player.tele(room.arrivalTile(slot))
             player.controllerManager.startController(BarbarianAssaultWaitingController(room))
             WorldTasks.schedule(1) { after(player) }
@@ -991,6 +1009,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
     fun leave(player: Player) {
         if (!active.remove(player)) return
         cleanInventory(player)
+        player.reset()
         medic -= player
         sendTeamMessage("${player.displayName} has left the arena.")
         if (state == State.RUNNING && active.isEmpty()) {
@@ -1002,9 +1021,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
 
     private fun cleanUp() {
         WorldTasks.schedule(FINISH_DELAY) {
-            penance.toList().forEach(NPC::finish)
-            queenSpawns.forEach(NPC::finish)
-            queen?.finish()
+            stopEnemies()
             eggs.forEach(World::removeGroundItem)
             baits.forEach { World.removeGroundItem(it.ground) }
             resources.filterNotNull().forEach(World::removeGroundItem)

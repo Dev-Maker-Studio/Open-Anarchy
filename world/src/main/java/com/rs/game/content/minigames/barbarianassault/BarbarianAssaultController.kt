@@ -3,10 +3,14 @@ package com.rs.game.content.minigames.barbarianassault
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.Teleport
+import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.model.GroundItem
+import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.model.Item
+
+private const val DEATH_TICKS = 3
 
 val Player.baGameController get() = controllerManager.controller as? BarbarianAssaultController
 val Player.baGame get() = baGameController?.game
@@ -50,9 +54,15 @@ class BarbarianAssaultController(@Transient var game: BarbarianAssaultGame?) : C
     }
 
     override fun sendDeath(): Boolean {
-        player.reset()
-        player.heal(player.maxHitpoints)
-        game?.playerDied(player)
+        val game = game ?: return true
+        player.lock()
+        player.stopAll()
+        player.schedule {
+            player.anim(Seq.human_death)
+            wait(DEATH_TICKS)
+            player.sendMessage("Oh dear, you have died.")
+            game.playerDied(player)
+        }
         return false
     }
 
