@@ -6,6 +6,7 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcDeath
 import com.rs.plugin.kts.onObjectClick
+import com.rs.plugin.kts.onLogin
 import com.rs.game.model.entity.async.schedule
 import world.gregs.voidps.type.Tile
 
@@ -45,6 +46,12 @@ private val smokeTorches = listOf(
 
 @ServerStartupEvent
 fun mapSmokeDiamondDesertTreasure() {
+    onLogin { (player) ->
+        if (player.getBool(FAREED_ACTIVE) && !player.getBool(SMOKE_DEFEATED)) {
+            player.set(FAREED_ACTIVE, false)
+        }
+    }
+
     onObjectClick(SMOKE_WELL) { (player) ->
         player.simpleDialogue("I can see a lot of foul looking smoke at the bottom of this well. I don't think breathing it in directly would be very good for my health.")
     }
@@ -53,11 +60,11 @@ fun mapSmokeDiamondDesertTreasure() {
         onObjectClick(torch.id) { (player) ->
             if (!player.getBool(torch.state)) {
                 player.set(torch.state, true)
-                val generation = player.getInt(torch.generation) + 1
+                val generation = player.getI(torch.generation) + 1
                 player.set(torch.generation, generation)
                 player.sendMessage("You light the torch.")
                 player.tasks.schedule(TORCH_BURN_TICKS) {
-                    if (player.getBool(torch.state) && player.getInt(torch.generation) == generation) {
+                    if (player.getBool(torch.state) && player.getI(torch.generation) == generation) {
                         player.set(torch.state, false)
                         player.sendMessage("The ${torch.direction} torch burns out...")
                     }
@@ -88,7 +95,12 @@ fun mapSmokeDiamondDesertTreasure() {
             return@onObjectClick
         }
         if (player.getBool(SMOKE_DEFEATED)) {
-            player.sendMessage("The Diamond of Smoke seems to have mystically found its way back here...")
+            if (!DesertTreasureDiamonds.hasSmokeDiamond(player)) {
+                player.sendMessage("The Diamond of Smoke seems to have mystically found its way back here...")
+                DesertTreasureDiamonds.giveSmokeDiamond(player)
+            } else {
+                player.sendMessage("There is nothing more for you here.")
+            }
             return@onObjectClick
         }
         if (player.getBool(FAREED_ACTIVE)) return@onObjectClick

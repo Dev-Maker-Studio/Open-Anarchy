@@ -6,7 +6,7 @@ import com.rs.game.content.world.LightSource
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPickupItem

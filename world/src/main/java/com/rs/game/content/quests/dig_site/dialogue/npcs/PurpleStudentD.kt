@@ -81,7 +81,7 @@ class PurpleStudentD(val player: Player, val npc: NPC) {
                         player(CALM_TALK, "Err... Yes please!")
                         npc(npc, CALM_TALK, "Well... it's going to cost you...")
                         player(CALM_TALK, "Oh, well how much?")
-                        npc(npc, CALM_TALK, "I'll tell you what I would like: a precious stone. I don't find many of them. My favorite are opals; they are beautiful.")
+                        npc(npc, CALM_TALK, "I'll tell you what I would like: a precious stone. I don't find many of them. My favourite are opals; they are beautiful.")
                         npc(npc, CALM_TALK, "Just like me! Tee hee hee!")
                         player(CALM_TALK, "Err... OK I'll see what I can do, but I'm not sure where I'd get one.")
                         npc(npc, CALM_TALK, "Well, I have seen people get them from panning occasionally.")

@@ -94,8 +94,8 @@ fun mapWatchtowerPotion() {
     ) { e ->
         val player = e.player
 
-        if (player.getQuestStage(Quest.WATCHTOWER) !=
-            STAGE_MAKE_OGRE_POTION
+        if (player.getQuestStage(Quest.WATCHTOWER) !in
+            STAGE_MAKE_OGRE_POTION..STAGE_DEFEAT_SHAMANS
         ) {
             return@onItemOnItem
         }
@@ -104,7 +104,7 @@ fun mapWatchtowerPotion() {
          * Adding jangerberries twice is the wrong mixture.
          */
         if (player.getBool(JANGERBERRIES_ADDED)) {
-            explodePotion(player)
+            explodePotion(player, JANGERBERRIES)
             return@onItemOnItem
         }
 
@@ -140,14 +140,14 @@ fun mapWatchtowerPotion() {
     ) { e ->
         val player = e.player
 
-        if (player.getQuestStage(Quest.WATCHTOWER) !=
-            STAGE_MAKE_OGRE_POTION
+        if (player.getQuestStage(Quest.WATCHTOWER) !in
+            STAGE_MAKE_OGRE_POTION..STAGE_DEFEAT_SHAMANS
         ) {
             return@onItemOnItem
         }
 
         if (!player.getBool(JANGERBERRIES_ADDED)) {
-            explodePotion(player)
+            explodePotion(player, GROUND_BAT_BONES)
             return@onItemOnItem
         }
 
@@ -278,7 +278,10 @@ fun mapWatchtowerPotion() {
  * ------------------------------------------------------------
  */
 
-private fun explodePotion(player: Player) {
+private fun explodePotion(
+    player: Player,
+    wrongIngredient: Int
+) {
 
     player.startConversation {
         player(
@@ -286,6 +289,15 @@ private fun explodePotion(player: Player) {
             "OW! That hurt!"
         )
     }
+
+    /*
+     * The ingredient that caused the bad mixture is consumed
+     * along with the unfinished potion.
+     */
+    player.inventory.deleteItem(
+        wrongIngredient,
+        1
+    )
 
     /*
      * The unfinished potion is destroyed by the explosion.

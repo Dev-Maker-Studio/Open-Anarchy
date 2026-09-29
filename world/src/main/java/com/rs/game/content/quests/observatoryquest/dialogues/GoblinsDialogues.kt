@@ -4,11 +4,10 @@ import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.game.World
 import com.rs.game.model.entity.npc.NPC
-import com.rs.lib.game.ForceTalk
-import com.rs.lib.util.Utils
+import com.rs.game.model.entity.ForceTalk
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
-import com.rs.plugin.kts.onNpcSpawn
 import com.rs.utils.Ticks
 import org.darkan.core.model.Direction
 
@@ -72,17 +71,7 @@ private fun sendObservatoryGoblinOverhead(npc: NPC) {
 
 @ServerStartupEvent
 fun mapObservatoryGoblinDialogues() {
-
-    onNpcSpawn(
-        GREASYCHEEKS,
-        SMELLYTOES,
-        CREAKYKNEES
-    ) { e ->
-
-        configureObservatoryGoblin(e.npc)
-    }
-
-    onNpcClick(
+onNpcClick(
         CREAKYKNEES,
         options = arrayOf("Talk-to")
     ) { e ->

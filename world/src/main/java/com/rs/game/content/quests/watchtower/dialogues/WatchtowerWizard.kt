@@ -16,6 +16,7 @@ private const val CLEAN_GUAM = 249
 private const val JANGERBERRIES = 247
 private const val BAT_BONES = 530
 private const val OGRE_POTION = 2394
+private const val MAD_SKAVID_COMPLETE = "watchtowerMadSkavidComplete"
 
 private const val RELIC_PART_1_HANDED_IN = "watchtowerRelicPart1HandedIn"
 private const val RELIC_PART_2_HANDED_IN = "watchtowerRelicPart2HandedIn"
@@ -53,10 +54,10 @@ private fun watchtowerWizardDialogue(player: Player, npc: NPC) {
                 skavidMapProgress(player, npc)
 
             STAGE_SEARCH_SKAVID_CAVES ->
-                searchingSkavidCaves(npc)
+                searchingSkavidCaves(player, npc)
 
             STAGE_FIND_SHAMAN_ENCLAVE ->
-                findingShamanEnclave(npc)
+                findingShamanEnclave(player, npc)
 
             STAGE_DISCOVER_SHAMANS ->
                 discoveredShamans(player, npc)
@@ -65,7 +66,7 @@ private fun watchtowerWizardDialogue(player: Player, npc: NPC) {
                 makeOgrePotion(player, npc)
 
             STAGE_DEFEAT_SHAMANS ->
-                defeatShamans(npc)
+                defeatShamans(player, npc)
 
             STAGE_RECOVER_CRYSTALS ->
                 recoverCrystals(player, npc)
@@ -264,6 +265,11 @@ private fun DialogueBuilder.startQuest(
                     npc,
                     HAPPY_TALKING,
                     "Yes I could do with an extra pair of eyes here."
+                )
+
+                player(
+                    CONFUSED,
+                    "???"
                 )
 
                 npc(
@@ -549,10 +555,27 @@ private fun DialogueBuilder.handleRelicParts(
     val handedParts = relicPartsHandedIn(player)
 
     if (heldParts + handedParts >= 3) {
-        if (heldParts > 1) {
-            player(CALM_TALK, "An ogre gave me these...")
-        } else {
+        if (handedParts > 0 && heldParts == 1) {
             player(CALM_TALK, "An ogre gave me this...")
+
+            val lastPart = when {
+                player.inventory.containsItem(RELIC_PART_1, 1) -> RELIC_PART_1
+                player.inventory.containsItem(RELIC_PART_2, 1) -> RELIC_PART_2
+                player.inventory.containsItem(RELIC_PART_3, 1) -> RELIC_PART_3
+                else -> return
+            }
+
+            exec {
+                handInRelicPart(player, lastPart)
+            }
+
+            npc(
+                npc,
+                CALM_TALK,
+                "Ah, it's part of an old ogre statue. I'll see if I can fix it up for you. It might come in handy. There may be more parts to find... I'll keep this for later."
+            )
+        } else {
+            player(CALM_TALK, "An ogre gave me these...")
         }
 
         npc(
@@ -726,7 +749,31 @@ private fun DialogueBuilder.skavidMapOptions(
                 "I am trying to get into the shamans' cave."
             )
 
-            shamanCaveAdvice(npc)
+            npc(
+                npc,
+                CALM_TALK,
+                "Yes, it will be well guarded. Hmmm, let me see... Ah yes, I gather some ogres are allergic to certain herbs. Now what was it? It had white berries and blue leaves.... Cave nightshade, thats it! You should try looking through some of the caves."
+            )
+
+            player(CALM_TALK, "Alright!")
+
+            npc(
+                npc,
+                CALM_TALK,
+                "And don't forget to look out for the dragons!"
+            )
+
+            player(AMAZED, "The WHAT?")
+
+            npc(npc, CALM_TALK, "Dragons.")
+
+            npc(
+                npc,
+                CALM_TALK,
+                "Didn't you know that the ogres keep blue dragons as pets and for magical ingredients? Well, regardless, I'm sure a bold, brave adventurer such as yourself won't have any problems."
+            )
+
+            player(WORRIED, "Great...")
         }
 
         op("It is going well.") {
@@ -742,6 +789,7 @@ private fun DialogueBuilder.skavidMapOptions(
 }
 
 private fun DialogueBuilder.searchingSkavidCaves(
+    player: Player,
     npc: NPC
 ) {
     npc(npc, CALM_TALK, "Hello again. How do you fare?")
@@ -758,6 +806,24 @@ private fun DialogueBuilder.searchingSkavidCaves(
                 HAPPY_TALKING,
                 "That is good news. Let me know if you find anything of interest."
             )
+        }
+
+        if (
+            player.questManager.getAttribs(Quest.WATCHTOWER).getB(MAD_SKAVID_COMPLETE) &&
+            !player.inventory.containsItem(WATCHTOWER_CRYSTAL_2, 1)
+        ) {
+            op("I had a crystal but I lost it!") {
+                player(
+                    WORRIED,
+                    "I had a crystal, but I lost it!"
+                )
+
+                npc(
+                    npc,
+                    SAD,
+                    "Oh no. Well, you had better go back there, then!"
+                )
+            }
         }
 
         op("I am now ready for the shamans.") {
@@ -772,6 +838,7 @@ private fun DialogueBuilder.searchingSkavidCaves(
 }
 
 private fun DialogueBuilder.findingShamanEnclave(
+    player: Player,
     npc: NPC
 ) {
     npc(npc, CALM_TALK, "Hello again. How do you fare?")
@@ -788,6 +855,24 @@ private fun DialogueBuilder.findingShamanEnclave(
                 HAPPY_TALKING,
                 "That is good news. Let me know if you find anything of interest."
             )
+        }
+
+        if (
+            player.questManager.getAttribs(Quest.WATCHTOWER).getB(MAD_SKAVID_COMPLETE) &&
+            !player.inventory.containsItem(WATCHTOWER_CRYSTAL_2, 1)
+        ) {
+            op("I had a crystal but I lost it!") {
+                player(
+                    WORRIED,
+                    "I had a crystal, but I lost it!"
+                )
+
+                npc(
+                    npc,
+                    SAD,
+                    "Oh no. Well, you had better go back there, then!"
+                )
+            }
         }
 
         op("I am now ready for the shamans.") {
@@ -824,7 +909,7 @@ private fun DialogueBuilder.shamanCaveAdvice(
         "And don't forget to look out for the dragons!"
     )
 
-    player(SHOCKED, "The WHAT?")
+    player(AMAZED, "The WHAT?")
 
     npc(npc, CALM_TALK, "Dragons.")
 
@@ -1029,8 +1114,14 @@ private fun DialogueBuilder.makeOgrePotion(
 }
 
 private fun DialogueBuilder.defeatShamans(
+    player: Player,
     npc: NPC
 ) {
+    if (player.inventory.containsItem(OGRE_POTION, 1)) {
+        makeOgrePotion(player, npc)
+        return
+    }
+
     npc(
         npc,
         CALM_TALK,

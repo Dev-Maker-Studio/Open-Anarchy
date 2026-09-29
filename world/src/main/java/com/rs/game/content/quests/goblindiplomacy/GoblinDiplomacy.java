@@ -63,8 +63,8 @@ public class GoblinDiplomacy extends QuestOutline {
 			break;
 		case 1:
 			lines.add("");
-			lines.add("The Goblin generals need orange armor");
-			lines.add("I can make orange armor by taking orange dye and using");
+			lines.add("The Goblin generals need orange armour");
+			lines.add("I can make orange armour by taking orange dye and using");
 			lines.add("it on regular goblin mail.");
 			lines.add("");
 			lines.add("I can make orange dye by mixing red and yellow dye");
@@ -82,8 +82,8 @@ public class GoblinDiplomacy extends QuestOutline {
 			break;
 		case 2:
 			lines.add("");
-			lines.add("The Goblin generals need blue armor");
-			lines.add("I can make blue armor by taking blue dye and using");
+			lines.add("The Goblin generals need blue armour");
+			lines.add("I can make blue armour by taking blue dye and using");
 			lines.add("it on regular goblin mail.");
 			lines.add("");
 			lines.add("Blue dye can be made from 2 woad leaves");
@@ -94,7 +94,7 @@ public class GoblinDiplomacy extends QuestOutline {
 			break;
 		case 3:
 			lines.add("");
-			lines.add("The Goblin generals need brown armor...");
+			lines.add("The Goblin generals need brown armour...");
 			lines.add("That is just regular goblin mail...");
 			lines.add("");
 			break;
@@ -124,68 +124,68 @@ public class GoblinDiplomacy extends QuestOutline {
 			Options startOptions = new Options() {
 				@Override
 				public void create() {
-					option("Why are you arguing about the color of your armor?", new Dialogue().addPlayer(HeadE.CALM_TALK, "Why are you arguing about the color of your armor?").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "We decide to celebrate goblin new century").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "By changing the color of our armor").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Light blue get boring after a bit").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "And we want change").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Problem is they want different changed to us"));
-					option("Wouldn't you prefer peace?", new Dialogue().addPlayer(HeadE.CALM_TALK, "Wouldn't you prefer peace?").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Yeah peace is good as long as it's peace wearing green armor").addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "But green too much like skin!").addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "Nearly make you look naked!"));
-					option("Do you want me to pick enter an armor color for you?", new Dialogue().addPlayer(HeadE.CALM_TALK, "Do you want me to pick an armor color for you?").addPlayer(HeadE.CALM_TALK, "Different to either green or red").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Hmm me dunno what that'd look like").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "You'd have to bring me some, so us could decide").addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "Yep bring us orange armor").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Yep orange might be good", () -> player.getQuestManager().setStage(Quest.GOBLIN_DIPLOMACY, 1)));
+					option("Why are you arguing about the colour of your armour?", new Dialogue().addPlayer(HeadE.CALM_TALK, "Why are you arguing about the colour of your armour?").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "We decide to celebrate goblin new century").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "By changing the colour of our armour").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Light blue get boring after a bit").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "And we want change").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Problem is they want different changed to us"));
+					option("Wouldn't you prefer peace?", new Dialogue().addPlayer(HeadE.CALM_TALK, "Wouldn't you prefer peace?").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Yeah peace is good as long as it's peace wearing green armour").addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "But green too much like skin!").addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "Nearly make you look naked!"));
+					option("Do you want me to pick enter an armour colour for you?", new Dialogue().addPlayer(HeadE.CALM_TALK, "Do you want me to pick an armour colour for you?").addPlayer(HeadE.CALM_TALK, "Different to either green or red").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Hmm me dunno what that'd look like").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "You'd have to bring me some, so us could decide").addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "Yep bring us orange armour").addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Yep orange might be good", () -> player.getQuestManager().setStage(Quest.GOBLIN_DIPLOMACY, 1)));
 				}
 			};
 
 			if (player.getQuestManager().getStage(Quest.GOBLIN_DIPLOMACY) == 0) {
-				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Green armor best");
+				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Green armour best");
 				addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "No no red every time");
 				addNPC(WARTFACE, HeadE.CHILD_ANGRY, "Go away human, we busy");
 				addOptions(startOptions);
 			}
 			if (player.getQuestManager().getStage(Quest.GOBLIN_DIPLOMACY) == 1) {
-				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Green armor best");
+				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Green armour best");
 				addNPC(BENTNOZE, HeadE.CHILD_ANGRY, "No no red every time");
 				addNPC(WARTFACE, HeadE.CHILD_ANGRY, "Go away human,we busy");
 				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Oh it you");
 				if (player.getInventory().containsItems(new Item(286, 1))) {
-					addPlayer(HeadE.CALM_TALK, "I have some orange armor");
-					addSimple("You give the armor to the goblins");
+					addPlayer(HeadE.CALM_TALK, "I have some orange armour");
+					addSimple("You give the armour to the goblins");
 					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "No I don't like that much");
-					addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "It clashes with my skin color");
-					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Try bringing us blue armor", () -> {
+					addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "It clashes with my skin colour");
+					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Try bringing us blue armour", () -> {
 						player.getInventory().deleteItem(new Item(286, 1));
 						player.getQuestManager().setStage(Quest.GOBLIN_DIPLOMACY, 2);
 					});
 				} else {
-					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Have you got some orange goblin armor yet?");
+					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Have you got some orange goblin armour yet?");
 					addPlayer(HeadE.CALM_TALK, "Err no");
 					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Come back when you have some");
 				}
 			}
 			if (player.getQuestManager().getStage(Quest.GOBLIN_DIPLOMACY) == 2) {
-				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Green armor best");
+				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Green armour best");
 				addNPC(BENTNOZE, HeadE.CHILD_ANGRY, "No no red every time");
 				addNPC(WARTFACE, HeadE.CHILD_ANGRY, "Go away human,we busy");
 				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Oh it you");
 				if (player.getInventory().containsItems(new Item(287, 1))) {
-					addPlayer(HeadE.CALM_TALK, "I have some blue armor");
-					addSimple("You give the armor to the goblins");
+					addPlayer(HeadE.CALM_TALK, "I have some blue armour");
+					addSimple("You give the armour to the goblins");
 					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "No I don't like that much");
-					addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "It clashes with my skin color");
-					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Try bringing us brown armor", () -> {
+					addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "It clashes with my skin colour");
+					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Try bringing us brown armour", () -> {
 						player.getInventory().deleteItem(new Item(287, 1));
 						player.getQuestManager().setStage(Quest.GOBLIN_DIPLOMACY, 3);
 					});
 				} else {
-					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Have you got some blue goblin armor yet?");
+					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Have you got some blue goblin armour yet?");
 					addPlayer(HeadE.CALM_TALK, "Err no");
 					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Come back when you have some");
 				}
 			}
 			if (player.getQuestManager().getStage(Quest.GOBLIN_DIPLOMACY) == 3) {
-				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Green armor best");
+				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Green armour best");
 				addNPC(BENTNOZE, HeadE.CHILD_ANGRY, "No no red every time");
 				addNPC(WARTFACE, HeadE.CHILD_ANGRY, "Go away human,we busy");
 				addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Oh it you");
 				if (player.getInventory().containsItems(new Item(288, 1))) {
-					addPlayer(HeadE.CALM_TALK, "I have some brown armor");
-					addSimple("You give the armor to the goblins");
-					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "That color quiet nice. Me can see myself wearing this");
-					addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "It a deal then. Brown armor it is");
+					addPlayer(HeadE.CALM_TALK, "I have some brown armour");
+					addSimple("You give the armour to the goblins");
+					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "That colour quiet nice. Me can see myself wearing this");
+					addNPC(BENTNOZE, HeadE.CHILD_CALM_TALK, "It a deal then. Brown armour it is");
 					addNPC(WARTFACE, HeadE.CHILD_CALM_TALK, "Thank you for sorting out our argument. Take this gold bar as reward!");
 					addNext(() -> {
 						player.getInventory().deleteItem(new Item(288, 1));

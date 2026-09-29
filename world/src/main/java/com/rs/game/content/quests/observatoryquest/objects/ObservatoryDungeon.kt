@@ -6,10 +6,11 @@ import com.rs.engine.quest.Quest
 import com.rs.game.content.world.doors.Doors
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 import com.rs.plugin.kts.onNpcDeath
+import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
 import world.gregs.voidps.type.Tile
 
@@ -111,6 +112,12 @@ private val DUNGEON_CHESTS = listOf(
 
 @ServerStartupEvent
 fun mapObservatoryDungeon() {
+
+    onLogin { (player) ->
+        if (player.getBool(GUARD_AWAKE_ATTR) && !player.getBool(GUARD_DEFEATED_ATTR)) {
+            player.set(GUARD_AWAKE_ATTR, false)
+        }
+    }
 
     onObjectClick(
         CHEST_2191,
@@ -320,7 +327,7 @@ private fun searchObservatoryChest(
     chestIndex: Int
 ) {
     var keyChest =
-        player.getInt(KEY_CHEST_ATTR)
+        player.getI(KEY_CHEST_ATTR)
 
     if (keyChest <= 0) {
         keyChest =
@@ -347,6 +354,10 @@ private fun searchObservatoryChest(
             player.inventory.containsItem(
                 GOBLIN_KITCHEN_KEY,
                 1
+            ) ||
+            player.bank.containsItem(
+                GOBLIN_KITCHEN_KEY,
+                1
             )
         ) {
             player.sendMessage(
@@ -369,7 +380,7 @@ private fun searchObservatoryChest(
     }
 
     var searched =
-        player.getInt(SEARCHED_CHESTS_ATTR)
+        player.getI(SEARCHED_CHESTS_ATTR)
 
     val chestBit =
         1 shl chestIndex

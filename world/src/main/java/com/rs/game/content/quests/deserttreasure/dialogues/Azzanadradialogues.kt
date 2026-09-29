@@ -91,7 +91,7 @@ private fun useAncientAltar(player: Player) {
             op("Yes, replace my spellbook.") {
                 exec {
                     player.prayer.drainPrayer()
-                    if (player.combatDefinitions.spellbook != CombatDefinitions.Spellbook.ANCIENT) {
+                    if (player.combatDefinitions.getSpellbook() != CombatDefinitions.Spellbook.ANCIENT) {
                         player.sendMessage("Your mind clears and you switch back to the ancient spellbook.")
                         player.combatDefinitions.setSpellbook(CombatDefinitions.Spellbook.ANCIENT)
                     } else {

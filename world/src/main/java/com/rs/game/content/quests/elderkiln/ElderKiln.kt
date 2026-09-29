@@ -37,7 +37,7 @@ class ElderKiln : QuestOutline() {
     override fun getJournalLines(player: Player, stage: Int) = when (stage) {
         STAGE_UNSTARTED -> listOf("I should speak to TzHaar-Mej-Jeh by the Birthing Pools in the TzHaar City.")
         STAGE_HATCH_EGG -> listOf("I need to help the TzHaar-Mej hatch their egg by regulating the temperature.")
-        STAGE_SAVE_GAAL_FIGHTPITS -> listOf("The Ga'al is going to be honor killed in the Fight Pits and I need to get him back to Jeh.")
+        STAGE_SAVE_GAAL_FIGHTPITS -> listOf("The Ga'al is going to be honour killed in the Fight Pits and I need to get him back to Jeh.")
         STAGE_WRAP_UP_FIGHT_PITS -> listOf("I successfully defended the Ga'al in the Fight Pits and took out the champion.", "I should speak with the Mej's in the marketplace.")
         STAGE_GO_TO_KILN -> listOf("TzHaar-Mej-Ak has reluctantly decided to allow our attempt to restore the memories.", "I should take Ga'al to the Fight Kiln.")
         STAGE_COMPLETE -> listOf("QUEST COMPLETE!")

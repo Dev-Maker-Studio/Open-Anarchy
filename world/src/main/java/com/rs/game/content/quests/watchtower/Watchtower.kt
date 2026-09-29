@@ -56,27 +56,45 @@ const val GROUND_BAT_BONES = 2391
 const val TOBANS_GOLD = 2393
 const val MAGIC_OGRE_POTION = 2395
 const val SPELL_SCROLL = 2396
+const val SHAMAN_ROBE = 2397
 const val CAVE_NIGHTSHADE = 2398
 
 const val WATCHTOWER_SCROLL_READ = "watchtowerSpellScrollRead"
 
+private const val CYAN_PILLAR_VARBIT = 3127
+
 @ServerStartupEvent
 fun mapWatchtowerItems() {
+    onItemClick(
+        SHAMAN_ROBE,
+        options = arrayOf("Search")
+    ) { e ->
+        val player = e.player
+
+        if (player.getQuestStage(Quest.WATCHTOWER) < STAGE_RECOVER_CRYSTALS ||
+            player.isQuestComplete(Quest.WATCHTOWER)
+        ) {
+            player.sendMessage("You search the robe but find nothing.")
+            return@onItemClick
+        }
+
+        if (player.inventory.containsItem(WATCHTOWER_CRYSTAL_3, 1) ||
+            player.bank.containsItem(WATCHTOWER_CRYSTAL_3, 1) ||
+            player.vars.getVarBit(CYAN_PILLAR_VARBIT) != 0
+        ) {
+            player.sendMessage("You search the robe but find nothing.")
+            return@onItemClick
+        }
+
+        player.inventory.addItemDrop(WATCHTOWER_CRYSTAL_3, 1)
+        player.sendMessage("You search the robe and find a crystal.")
+    }
+
     onItemClick(
         SPELL_SCROLL,
         options = arrayOf("Read")
     ) { e ->
         val player = e.player
-
-        if (!player.isQuestComplete(Quest.WATCHTOWER)) {
-            player.sendMessage("You cannot make sense of the scroll yet.")
-            return@onItemClick
-        }
-
-        if (player.getBool(WATCHTOWER_SCROLL_READ)) {
-            player.sendMessage("You have already memorised the Watchtower teleport spell.")
-            return@onItemClick
-        }
 
         player.sendMessage("You memorise what is written on the scroll.")
 

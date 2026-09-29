@@ -384,6 +384,15 @@ public class QuestDefinitions {
 		return QUESTS_NAME.get(name);
 	}
 
+	public void sendNotStarted(Player player) {
+		if (varValues != null)
+			for (int[] varValue : varValues)
+				player.getVars().setVar(varValue[0], 0);
+		if (varbitValues != null)
+			for (int[] varbitValue : varbitValues)
+				player.getVars().setVarBit(varbitValue[0], 0);
+	}
+
 	public void sendStarted(Player player) {
 		if (varValues != null)
 			for (int[] varValue : varValues)

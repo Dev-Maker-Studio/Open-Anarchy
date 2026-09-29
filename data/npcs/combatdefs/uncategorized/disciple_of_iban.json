@@ -11,7 +11,7 @@
   "defendSound": -1,
   "deathAnim": "human_death",
   "deathDelay": 6,
-  "deathSound": -1,
+  "deathSound": 512,
   "respawnDelay": 59,
   "hitpoints": 200,
   "maxHit": 20,
