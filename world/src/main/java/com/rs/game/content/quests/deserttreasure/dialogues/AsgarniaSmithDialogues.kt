@@ -54,7 +54,7 @@ private fun startDesertTreasure(player: Player) {
 
             options {
                 op("Not right now") {
-                    player(CALM_TALK, "No thanks. Playing delivery ${if (player.isMale) "boy" else "girl"} doesn't really sound much like fun to me.")
+                    player(CALM_TALK, "No thanks. Playing delivery ${if (player.appearance.isMale) "boy" else "girl"} doesn't really sound much like fun to me.")
                     npc(ASGARN_QSTART, CALM_TALK, "Well, okay. Can't say as I blame you for thinking that. I'll go take it there myself later I guess.")
                 }
 

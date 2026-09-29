@@ -115,7 +115,7 @@ private fun DialogueBuilder.villageHostility(eblisId: Int) {
 private fun DialogueBuilder.diamondsHistory(player: Player, eblisId: Int) {
     player(CALM_TALK, "So tell me... Did you ever hear of something called the Diamonds of Azzanadra?")
     npc(eblisId, AMAZED, "This is the treasure which you seek???")
-    npc(eblisId, HAPPY, "Please accept my apologies noble ${if (player.isMale) "sir" else "madam"}! I thought you were but some opportunistic thief, looking to steal what heritage we have left! Now I see that you are in fact a brave adventurer, looking to restore our glories back upon us!")
+    npc(eblisId, HAPPY, "Please accept my apologies noble ${if (player.appearance.isMale) "sir" else "madam"}! I thought you were but some opportunistic thief, looking to steal what heritage we have left! Now I see that you are in fact a brave adventurer, looking to restore our glories back upon us!")
     player(CONFUSED, "Uh... yeah... So anyway, you have heard of them?")
     npc(eblisId, AMAZED, "Heard of them? Of course I have heard of them! They are the legacy of our greatest ever hero!")
     player(CONFUSED, "So... do you have any idea where they might be? I have a feeling they will be very valuable.")
@@ -283,7 +283,7 @@ private fun DialogueBuilder.hurryToPillars(eblisId: Int) {
 private fun DialogueBuilder.pillarsReport(eblisId: Int) {
     player(CALM_TALK, "I used the Four Diamonds on the pillars surrounding the pyramid...")
     npc(eblisId, CONFUSED, "Yes? And what happened?")
-    player(CONFUSED, "Er... they changed colour.)
+    player(CONFUSED, "Er... they changed colour.")
     npc(eblisId, CALM_TALK, "Ah, that was the power being re-absorbed back into them. That should have been sufficient to break the magic seal preventing anyone exiting or entering the structure. Quickly, you must let Lord Azzanadra know that he is free again after these many years!")
     npc(eblisId, CALM_TALK, "Please, when you have freed Azzanadra, let me know what words he has for his faithful followers...")
 }

@@ -74,7 +74,7 @@ const val BERVIRIUS_NOTES_ID = 624
 fun mapTrufitus() {
     fun showedAhZaRhoonItems(player: Player): Boolean {
         val attribs = player.questManager.getAttribs(Quest.SHILO_VILLAGE)
-        return attribs.getB("HAS_SHOWN_BONE_SHARD") && attribs.getB("HAS_SHOWN_STONE_PLAQUE") && attribs.getB("HAS_SHOWN_TATTERED_SCROLL") && attribs.getB("HAS_SHOWN_CRUMPLED_SCROLL") && attribs.getB("HAS_BURIED_Z_CORPSE")
+        return attribs.getB("HAS_SHOWN_BONE_SHARD") && attribs.getB("HAS_SHOWN_TATTERED_SCROLL") && attribs.getB("HAS_SHOWN_CRUMPLED_SCROLL") && attribs.getB("HAS_BURIED_Z_CORPSE")
     }
 
     onItemOnNpc(TRUFITUS_ID) { (player, item, npc) ->

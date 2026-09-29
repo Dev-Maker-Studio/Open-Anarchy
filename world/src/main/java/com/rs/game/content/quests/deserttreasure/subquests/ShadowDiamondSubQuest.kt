@@ -9,6 +9,7 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcDeath
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPlayerStep
+import com.rs.plugin.kts.onLogin
 import org.darkan.core.Constants
 import org.darkan.core.Utils
 import world.gregs.voidps.type.Tile
@@ -48,6 +49,12 @@ private val DAMIS_SECOND_FORM_TAUNTS = arrayOf(
 
 @ServerStartupEvent
 fun mapShadowDiamondDesertTreasure() {
+    onLogin { (player) ->
+        if (player.getBool(DAMIS_ACTIVE) && !player.getBool(DAMIS_DEFEATED)) {
+            player.set(DAMIS_ACTIVE, false)
+        }
+    }
+
     onObjectClick(SECURE_CHEST, tiles = arrayOf(SECURE_CHEST_TILE)) { (player) ->
         openSecureChest(player)
     }
