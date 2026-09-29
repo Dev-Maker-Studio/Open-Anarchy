@@ -233,8 +233,7 @@ class FogMatch(first: Player, second: Player) {
         val side = state(player) ?: return
         val inner = house.innerSide(barrier.tile)
         if (side.house == house) {
-            if (player.tile != inner) return player.sendMessage("You need to stand next to the barrier to pass through it.")
-            moveThrough(player, barrier, barrier.tile) {
+            moveThrough(player, barrier, inner, barrier.tile) {
                 side.house = null
                 side.houseExitTick = clock
                 refreshHint()
@@ -244,16 +243,16 @@ class FogMatch(first: Player, second: Player) {
         val refusal = when {
             !isHunted(player) -> "Only the hunted may enter the houses."
             clock - side.houseExitTick < REENTRY_TICKS -> "You must wait before entering another house."
-            player.tile != barrier.tile -> "You need to stand next to the barrier to pass through it."
+            Utils.getDistanceI(player.tile, barrier.tile) > 1 || house.inside(player.tile) -> "You need to stand next to the barrier to pass through it."
             else -> null
         }
         if (refusal != null) return player.sendMessage(refusal)
-        moveThrough(player, barrier, inner) { enterHouse(side, house) }
+        moveThrough(player, barrier, barrier.tile, inner) { enterHouse(side, house) }
     }
 
-    private fun moveThrough(player: Player, barrier: GameObject, destination: Tile, after: () -> Unit) {
+    private fun moveThrough(player: Player, barrier: GameObject, from: Tile, destination: Tile, after: () -> Unit) {
         World.sendObjectAnimation(barrier, Animation(Seq.hvh_barrier_door_thru))
-        player.forceMove(destination, -1, 0, 30, true) { after() }
+        player.forceMove(from, destination, -1, 0, 30, true) { after() }
     }
 
     private fun enterHouse(side: FogCombatant, house: House) {
