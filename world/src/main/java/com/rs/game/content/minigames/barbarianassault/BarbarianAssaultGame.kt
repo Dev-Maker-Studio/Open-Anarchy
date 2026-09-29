@@ -49,6 +49,9 @@ private const val WRONG_EGG_DAMAGE = 50
 private const val SUPPLY_AMOUNT = 50
 private const val STOCK_EACH = 7
 private const val TAKE_AMOUNT = 10
+private const val EGG_SPEED = 4
+private const val EGG_ANGLE = 16
+private val EGG_HEIGHTS = 80 to 30
 private const val YELLOW_EGG_MIN = 4
 private const val YELLOW_EGG_SPREAD = 3
 private const val ARENA_EXIT_DELAY = 3
@@ -522,18 +525,10 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
             else -> {
                 stock[colour.ordinal]--
                 player.anim(Seq.barbassault_egg_cannon_human_fire)
-                val delay = projectileDelay(chebyshev(target.tile, launcher)) + if (colour == EggColour.RED) 1 else 0
-                World.sendProjectile(launcher, target, EGG_PROJECTILES.getValue(colour), 60 to 20, 0, 5 + delay * 5, 16)
-                WorldTasks.schedule(delay) { eggImpact(player, target, colour) }
+                World.sendProjectile(launcher, target, EGG_PROJECTILES.getValue(colour), EGG_HEIGHTS, 0, EGG_SPEED, EGG_ANGLE) { eggImpact(player, target, colour) }
                 active.forEach { refreshHopper(it, cannon) }
             }
         }
-    }
-
-    private fun projectileDelay(distance: Int) = when {
-        distance <= 3 -> 4
-        distance <= 9 -> 5
-        else -> 6
     }
 
     private fun eggImpact(shooter: Player, target: Penance, colour: EggColour) {
@@ -569,12 +564,11 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
         omega--
         val launcher = local(cannon.launcher)
         player.anim(Seq.barbassault_egg_cannon_human_fire)
-        val delay = projectileDelay(chebyshev(queen.tile, launcher))
-        World.sendProjectile(launcher, queen, Spotanim.barbassault_egg_projectile, 60 to 40, 0, 5 + delay * 5, 16)
-        WorldTasks.schedule(delay) {
-            if (state != State.RUNNING || queen.dying || queen.isDead) return@schedule
-            queen.spotAnim(Spotanim.barbassault_atomic_spike)
-            queen.omegaHit(player, Utils.random(OMEGA_MIN, OMEGA_MAX))
+        World.sendProjectile(launcher, queen, Spotanim.barbassault_egg_projectile, EGG_HEIGHTS, 0, EGG_SPEED, EGG_ANGLE) {
+            if (state == State.RUNNING && !queen.dying && !queen.isDead) {
+                queen.spotAnim(Spotanim.barbassault_atomic_spike)
+                queen.omegaHit(player, Utils.random(OMEGA_MIN, OMEGA_MAX))
+            }
         }
         active.forEach { refreshHopper(it, cannon) }
     }
