@@ -5,7 +5,7 @@
   "names": [
     "Penance Healer"
   ],
-  "attackAnim": "barbassault_penance_healer_cloud",
+  "attackAnim": -1,
   "attackSound": -1,
   "defenceAnim": "barbassault_penance_healer_defend",
   "defendSound": -1,

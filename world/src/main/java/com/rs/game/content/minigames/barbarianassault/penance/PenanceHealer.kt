@@ -7,7 +7,6 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.Hit.HitLook
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.Utils
-import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.gameval.gen.Spotanim
 import world.gregs.voidps.type.Tile
 
@@ -92,7 +91,6 @@ class PenanceHealer(id: Int, tile: Tile, game: BarbarianAssaultGame, ordinal: In
         if (sprayCounter < SPRAY_COOLDOWN || !withinDistance(target.tile, 1) || target.tile == tile) return false
         sprayCounter = 0
         faceEntity(target)
-        anim(Seq.barbassault_penance_healer_cloud)
         spotAnim(Spotanim.barbassault_penance_healer_cloud)
         when (target) {
             is Player -> target.poison.makePoisoned(PLAYER_POISON)
