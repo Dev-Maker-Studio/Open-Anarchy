@@ -35,6 +35,7 @@ import org.darkan.core.net.login.LoginRsaKey
 import org.darkan.core.net.login.LoginToken
 import org.darkan.core.net.login.WorldLoginRequest
 import org.darkan.core.net.prot.packet.WorldLoginDetails
+import org.darkan.core.net.web.DiscordWebhook
 import org.darkan.core.social.SocialAction
 import org.darkan.core.social.SocialEvent
 import org.darkan.core.social.SocialPackets
@@ -282,9 +283,13 @@ object WorldServer {
             return ResponseOpcode.INVALID_CREDENTIALS
         }
         if (headless && !EnvVars.worldBotsAllowed) {
-            logInfo("Refused headless client login for ${account.username}: bots are not allowed on this world")
-            return ResponseOpcode.INVALID_LOGIN_SERVER
-        }
+            if (!" ${machine.cpuData} ".contains(" override ")) {
+                logInfo("Refused headless client login for ${account.username} from $ip (${machine.cpuData}): bots are not allowed on this world")
+                return ResponseOpcode.INVALID_LOGIN_SERVER
+            }
+            logWarn("Headless override login for ${account.username} from $ip on bot-prohibited world ${EnvVars.worldId}: ${machine.cpuData}")
+            DiscordWebhook.sendStaffMessage("Real player **${account.username}** logged in headlessly to bot-prohibited world ${EnvVars.worldId} from $ip (`${machine.cpuData}`)")
+        } else if (headless) logInfo("Headless client login for ${account.username} from $ip: ${machine.cpuData}")
         if (AccountLimiter.getSessionsIP(ip) >= 3)
             return ResponseOpcode.LOGIN_LIMIT_EXCEEDED
         return null
