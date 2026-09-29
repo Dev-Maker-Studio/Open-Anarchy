@@ -60,7 +60,7 @@ fun mapFistOfGuthix() {
         npc(npc.id, HeadE.CALM_TALK, "Welcome to the Fist of Guthix. Here the energy of Guthix's fist still seeps from the ground, and those brave enough gather it.")
         options {
             op("How does it work?") {
-                npc(npc.id, HeadE.CALM_TALK, "Go through the passageway to the waiting room. Once $LOBBY_MINIMUM people are waiting, everyone is paired against an opponent.")
+                npc(npc.id, HeadE.CALM_TALK, "Go through the passageway to the waiting room. A minute after $LOBBY_MINIMUM people are waiting, or straight away once there are $LOBBY_FULL, everyone is paired against an opponent.")
                 npc(npc.id, HeadE.CALM_TALK, "Each match has two rounds. In one you are the hunted: take a stone from a dispenser and wield it to gather charge. The nearer the centre, the faster it charges, and the more it hurts.")
                 npc(npc.id, HeadE.CALM_TALK, "In the other you are the hunter and must kill your opponent before they gather $CHARGE_CAP charges or ten minutes pass. Whoever gathers more charge wins; a tie is a loss for both of you.")
                 npc(npc.id, HeadE.CALM_TALK, "The hunted may hide in the houses, but they hurt to stay in, and you must wait before entering another. The portal inside costs $PORTAL_COST charges and may not take you where you hoped.")
