@@ -1,0 +1,708 @@
+package com.rs.game.content.quests.watchtower.dialogues
+
+import com.rs.engine.dialogue.ConversationBuilder
+import com.rs.engine.dialogue.HeadE.*
+import com.rs.engine.dialogue.startConversation
+import com.rs.engine.quest.Quest
+import com.rs.game.World
+import com.rs.game.content.quests.watchtower.*
+import com.rs.game.model.entity.npc.NPC
+import com.rs.game.model.entity.player.Player
+import com.rs.lib.util.Utils
+import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.plugin.kts.onNpcClick
+
+private const val SCARED_SKAVID = 863
+private const val MAD_SKAVID = 864
+private const val SKAVID = 865
+
+private const val INTERRUPTING_OGRE_SHAMAN = 2418
+
+private const val SKAVID_1_COMPLETE = "watchtowerSkavid1Complete"
+private const val SKAVID_2_COMPLETE = "watchtowerSkavid2Complete"
+private const val SKAVID_3_COMPLETE = "watchtowerSkavid3Complete"
+private const val SKAVID_5_COMPLETE = "watchtowerSkavid5Complete"
+
+private const val MAD_SKAVID_COMPLETE = "watchtowerMadSkavidComplete"
+
+@ServerStartupEvent
+fun mapWatchtowerSkavids() {
+    onNpcClick(
+        SCARED_SKAVID,
+        options = arrayOf("Talk-to")
+    ) { (player, npc) ->
+        scaredSkavidDialogue(player, npc)
+    }
+
+    onNpcClick(
+        SKAVID,
+        options = arrayOf("Talk-to")
+    ) { (player, npc) ->
+        normalSkavidDialogue(player, npc)
+    }
+
+    onNpcClick(
+        MAD_SKAVID,
+        options = arrayOf("Talk-to")
+    ) { (player, npc) ->
+        madSkavidDialogue(player, npc)
+    }
+}
+
+private fun scaredSkavidDialogue(player: Player, npc: NPC) {
+    player.startConversation {
+        val stage = player.getQuestStage(Quest.WATCHTOWER)
+
+        if (stage < STAGE_LEARN_SKAVID_LANGUAGE) {
+            npc(
+                npc,
+                CALM_TALK,
+                "Tanath cur, tanath cur!"
+            )
+
+            player(
+                CALM_TALK,
+                "???"
+            )
+
+            simple(
+                "The skavid is trying to communicate..."
+            )
+
+            simple(
+                "You don't know any skavid words yet!"
+            )
+
+            return@startConversation
+        }
+
+        if (stage == STAGE_LEARN_SKAVID_LANGUAGE) {
+            npc(
+                npc,
+                WORRIED,
+                "Tanath cur, tanath cur!"
+            )
+
+            player(
+                CALM_TALK,
+                "???"
+            )
+
+            npc(
+                npc,
+                WORRIED,
+                "Don't hurt me, don't hurt me!"
+            )
+
+            player(
+                CALM_TALK,
+                "Stop moaning, creature. I know about you skavids - you serve those monsters, the ogres."
+            )
+
+            npc(
+                npc,
+                WORRIED,
+                "Please don't touch me!"
+            )
+
+            player(
+                CALM_TALK,
+                "You have something that belongs to me..."
+            )
+
+            npc(
+                npc,
+                WORRIED,
+                "I don't have anything; please believe me!"
+            )
+
+            player(
+                CALM_TALK,
+                "Somehow, I find your words hard to believe."
+            )
+
+            npc(
+                npc,
+                WORRIED,
+                "I'm begging your kindness; I don't have it!"
+            )
+
+            options {
+                op("I don't believe you, hand it over!") {
+                    player(
+                        ANGRY,
+                        "I don't believe you, hand it over!"
+                    )
+
+                    npc(
+                        npc,
+                        WORRIED,
+                        "Ahhhhh, help!"
+                    )
+
+                    player(
+                        CALM_TALK,
+                        "Oh great, I'm not getting anywhere."
+                    )
+                }
+
+                op("Okay, okay, I'm not going to hurt you.") {
+                    player(
+                        CALM_TALK,
+                        "Okay, okay, I'm not going to hurt you."
+                    )
+
+                    npc(
+                        npc,
+                        HAPPY_TALKING,
+                        "Thank you, kind ${if (player.appearance.isMale) "sir" else "madam"}. I'll tells you where that things you wants is. The mad skavids have it in their cave in the city. You will have to learn skavid, otherwise they will not talks to you. Here, I'll tell you what you need to know..."
+                    )
+
+                    lateinit var shaman: NPC
+
+                    exec {
+                        shaman = spawnInterruptingShaman(npc)
+                    }
+
+                    npc(
+                        INTERRUPTING_OGRE_SHAMAN,
+                        ANGRY,
+                        "You shut your mouth! Don't tell them anything!"
+                    )
+
+                    npc(
+                        npc,
+                        WORRIED,
+                        "Tanath cur, tanath cur!"
+                    )
+
+                    exec {
+                        shaman.finish()
+                    }
+
+                    npc(
+                        npc,
+                        CALM_TALK,
+                        "I cannot help you, but the others can. Let me tells you the most common skavid words: Ar, nod, gor, ig and cur. Those will gets you started."
+                    )
+
+                    exec {
+                        player.setQuestStage(
+                            Quest.WATCHTOWER,
+                            STAGE_SEARCH_SKAVID_CAVES
+                        )
+                    }
+                }
+            }
+
+            return@startConversation
+        }
+
+        if (stage >= STAGE_SEARCH_SKAVID_CAVES) {
+            if (hasLearnedSkavid(player)) {
+                npc(
+                    npc,
+                    HAPPY_TALKING,
+                    "Master, my kinsmen tell me you have learned skavid. You should speak to the mad ones in their cave."
+                )
+
+                if (stage == STAGE_SEARCH_SKAVID_CAVES) {
+                    exec {
+                        player.setQuestStage(
+                            Quest.WATCHTOWER,
+                            STAGE_FIND_SHAMAN_ENCLAVE
+                        )
+                    }
+                }
+            } else {
+                npc(
+                    npc,
+                    CALM_TALK,
+                    "Master, how are you doing learning our language?"
+                )
+
+                player(
+                    CALM_TALK,
+                    "I am studying the speech of your kind..."
+                )
+            }
+        }
+    }
+}
+
+private fun spawnInterruptingShaman(skavid: NPC): NPC {
+    val spawnTile = World.findAdjacentFreeSpace(
+        skavid.tile,
+        1
+    ) ?: skavid.tile
+
+    return World.spawnNPC(
+        INTERRUPTING_OGRE_SHAMAN,
+        spawnTile,
+        true,
+        false
+    ).apply {
+        setRandomWalk(false)
+        setNextFaceEntity(skavid)
+    }
+}
+
+private fun normalSkavidDialogue(player: Player, npc: NPC) {
+    player.startConversation {
+        if (player.getQuestStage(Quest.WATCHTOWER) < STAGE_SEARCH_SKAVID_CAVES) {
+            npc(
+                npc,
+                CALM_TALK,
+                if (Utils.random(2) == 0) {
+                    "Gor cur..."
+                } else {
+                    "Bidith tanath..."
+                }
+            )
+
+            player(
+                CALM_TALK,
+                "???"
+            )
+
+            simple(
+                "The skavid is trying to communicate..."
+            )
+
+            simple(
+                "You don't know any skavid words yet!"
+            )
+
+            return@startConversation
+        }
+
+        when {
+            npc.tile.y >= 9460 ->
+                skavidOne(player, npc)
+
+            npc.tile.x >= 2510 && npc.tile.y >= 9448 ->
+                skavidTwo(player, npc)
+
+            npc.tile.y >= 9445 ->
+                skavidThree(player, npc)
+
+            else ->
+                skavidFive(player, npc)
+        }
+    }
+}
+
+private fun ConversationBuilder.skavidOne(
+    player: Player,
+    npc: NPC
+) {
+    val questAttribs =
+        player.questManager.getAttribs(Quest.WATCHTOWER)
+
+    if (questAttribs.getB(SKAVID_1_COMPLETE)) {
+        npc(
+            npc,
+            HAPPY_TALKING,
+            "Bidith ig!"
+        )
+
+        simple(
+            "You have already talked to this skavid."
+        )
+
+        return
+    }
+
+    npc(
+        npc,
+        CALM_TALK,
+        "Cur bidith..."
+    )
+
+    simple(
+        "The skavid is trying to communicate..."
+    )
+
+    skavidOptions(
+        player = player,
+        npc = npc,
+        correct = "Ig.",
+        response = "Ig! Bidith ig!",
+        attribute = SKAVID_1_COMPLETE
+    )
+}
+
+private fun ConversationBuilder.skavidTwo(
+    player: Player,
+    npc: NPC
+) {
+    val questAttribs =
+        player.questManager.getAttribs(Quest.WATCHTOWER)
+
+    if (questAttribs.getB(SKAVID_2_COMPLETE)) {
+        npc(
+            npc,
+            HAPPY_TALKING,
+            "Ar cur!"
+        )
+
+        simple(
+            "You have already talked to this skavid."
+        )
+
+        return
+    }
+
+    npc(
+        npc,
+        CALM_TALK,
+        "Gor cur..."
+    )
+
+    simple(
+        "The skavid is trying to communicate..."
+    )
+
+    skavidOptions(
+        player = player,
+        npc = npc,
+        correct = "Ar.",
+        response = "Ar, ar cur!",
+        attribute = SKAVID_2_COMPLETE
+    )
+}
+
+private fun ConversationBuilder.skavidThree(
+    player: Player,
+    npc: NPC
+) {
+    val questAttribs =
+        player.questManager.getAttribs(Quest.WATCHTOWER)
+
+    if (questAttribs.getB(SKAVID_3_COMPLETE)) {
+        npc(
+            npc,
+            HAPPY_TALKING,
+            "Cur tanath!"
+        )
+
+        simple(
+            "You have already talked to this skavid."
+        )
+
+        return
+    }
+
+    npc(
+        npc,
+        CALM_TALK,
+        "Bidith tanath..."
+    )
+
+    simple(
+        "The skavid is trying to communicate..."
+    )
+
+    skavidOptions(
+        player = player,
+        npc = npc,
+        correct = "Cur.",
+        response = "Cur, cur tanath!",
+        attribute = SKAVID_3_COMPLETE
+    )
+}
+
+private fun ConversationBuilder.skavidFive(
+    player: Player,
+    npc: NPC
+) {
+    val questAttribs =
+        player.questManager.getAttribs(Quest.WATCHTOWER)
+
+    if (questAttribs.getB(SKAVID_5_COMPLETE)) {
+        npc(
+            npc,
+            HAPPY_TALKING,
+            "Gor nod!"
+        )
+
+        simple(
+            "You have already talked to this skavid."
+        )
+
+        return
+    }
+
+    npc(
+        npc,
+        CALM_TALK,
+        "Tanath gor..."
+    )
+
+    simple(
+        "The skavid is trying to communicate..."
+    )
+
+    skavidOptions(
+        player = player,
+        npc = npc,
+        correct = "Nod.",
+        response = "Nod, gor nod!",
+        attribute = SKAVID_5_COMPLETE
+    )
+}
+
+private fun ConversationBuilder.skavidOptions(
+    player: Player,
+    npc: NPC,
+    correct: String,
+    response: String,
+    attribute: String
+) {
+    options {
+        listOf(
+            "Cur.",
+            "Ar.",
+            "Ig.",
+            "Nod.",
+            "Gor."
+        ).forEach { answer ->
+            op(answer) {
+                player(
+                    CALM_TALK,
+                    answer
+                )
+
+                if (answer == correct) {
+                    npc(
+                        npc,
+                        HAPPY_TALKING,
+                        response
+                    )
+
+                    simple(
+                        "It seems the skavid understood you."
+                    )
+
+                    exec {
+                        player.questManager
+                            .getAttribs(Quest.WATCHTOWER)
+                            .setB(attribute, true)
+                    }
+                } else {
+                    npc(
+                        npc,
+                        CONFUSED,
+                        "???"
+                    )
+
+                    simple(
+                        "It seems that was the wrong reply."
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun madSkavidDialogue(
+    player: Player,
+    npc: NPC
+) {
+    player.startConversation {
+        val questAttribs =
+            player.questManager.getAttribs(Quest.WATCHTOWER)
+
+        if (!hasLearnedSkavid(player)) {
+            npc(
+                npc,
+                CALM_TALK,
+                "Tanath gor ar bidith?"
+            )
+
+            player(
+                CALM_TALK,
+                "???"
+            )
+
+            simple(
+                "You cannot communicate with the skavid."
+            )
+
+            simple(
+                "It seems you haven't learned enough of their language yet..."
+            )
+
+            return@startConversation
+        }
+
+        if (questAttribs.getB(MAD_SKAVID_COMPLETE)) {
+            madSkavidCrystalRecovery(player, npc)
+            return@startConversation
+        }
+
+        val test = when (Utils.random(4)) {
+            0 -> MadSkavidTest(
+                phrase = "Ar cur...",
+                answer = "Gor."
+            )
+
+            1 -> MadSkavidTest(
+                phrase = "Bidith ig...",
+                answer = "Cur."
+            )
+
+            2 -> MadSkavidTest(
+                phrase = "Cur tanath...",
+                answer = "Bidith."
+            )
+
+            else -> MadSkavidTest(
+                phrase = "Gor nod...",
+                answer = "Tanath."
+            )
+        }
+
+        npc(
+            npc,
+            CALM_TALK,
+            test.phrase
+        )
+
+        madSkavidOptions(
+            player = player,
+            npc = npc,
+            correct = test.answer
+        )
+    }
+}
+
+private fun ConversationBuilder.madSkavidOptions(
+    player: Player,
+    npc: NPC,
+    correct: String
+) {
+    options {
+        listOf(
+            "Cur.",
+            "Ar.",
+            "Bidith.",
+            "Tanath.",
+            "Gor."
+        ).forEach { answer ->
+            op(answer) {
+                player(
+                    CALM_TALK,
+                    answer
+                )
+
+                if (answer == correct) {
+                    exec {
+                        player.inventory.addItemDrop(
+                            WATCHTOWER_CRYSTAL_2,
+                            1
+                        )
+
+                        player.questManager
+                            .getAttribs(Quest.WATCHTOWER)
+                            .setB(MAD_SKAVID_COMPLETE, true)
+                    }
+
+                    npc(
+                        npc,
+                        HAPPY_TALKING,
+                        "Hehe! So you speak a little skavid, eh? I'm impressed. Here, take this prize. The others are with the shamans in the enclave - you'll never get them back. They hid one in the sacred rock - nothing can touch it now."
+                    )
+
+                    simple(
+                        "The skavid gives you a large crystal."
+                    )
+                } else {
+                    npc(
+                        npc,
+                        CONFUSED,
+                        "???"
+                    )
+
+                    simple(
+                        "The response was wrong."
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun ConversationBuilder.madSkavidCrystalRecovery(
+    player: Player,
+    npc: NPC
+) {
+    npc(
+        npc,
+        CALM_TALK,
+        "What, you gots the crystal..."
+    )
+
+    options {
+        op("But I've lost it!") {
+            player(
+                WORRIED,
+                "But I've lost it!"
+            )
+
+            if (
+                player.inventory.containsItem(
+                    WATCHTOWER_CRYSTAL_2,
+                    1
+                )
+            ) {
+                npc(
+                    npc,
+                    CALM_TALK,
+                    "I haves no more for you."
+                )
+            } else {
+                exec {
+                    player.inventory.addItemDrop(
+                        WATCHTOWER_CRYSTAL_2,
+                        1
+                    )
+                }
+
+                npc(
+                    npc,
+                    CALM_TALK,
+                    "Alright, take this one then..."
+                )
+            }
+        }
+
+        op("Oh, okay then.") {
+            player(
+                CALM_TALK,
+                "Oh, okay then."
+            )
+
+            npc(
+                npc,
+                CALM_TALK,
+                "I'll be on my way, then."
+            )
+        }
+    }
+}
+
+private fun hasLearnedSkavid(player: Player): Boolean {
+    val questAttribs =
+        player.questManager.getAttribs(Quest.WATCHTOWER)
+
+    return questAttribs.getB(SKAVID_1_COMPLETE) &&
+        questAttribs.getB(SKAVID_2_COMPLETE) &&
+        questAttribs.getB(SKAVID_3_COMPLETE) &&
+        questAttribs.getB(SKAVID_5_COMPLETE)
+}
+
+private data class MadSkavidTest(
+    val phrase: String,
+    val answer: String
+)

@@ -47,6 +47,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static com.rs.game.content.quests.plague_city.utils.PlagueCityConstantsKt.ARDOUGNE_TELEPORT_UNLOCKED;
+import static com.rs.game.content.quests.watchtower.WatchtowerKt.WATCHTOWER_SCROLL_READ;
 import static com.rs.game.content.world.areas.yanille.npcs.AleckKt.DEFAULT_TELEPORT_LOCATION;
 import static com.rs.game.content.world.areas.yanille.npcs.AleckKt.WATCHTOWER_TELEPORT_LOCATION_KEY;
 
@@ -211,7 +212,7 @@ public class Magic {
 				break;
 			case 48: // PoH teleport
 				sendNormalTeleportSpell(player, 40, 48, Tile.of(player.getHouse().getLocation().getTile()), new RuneSet(Rune.AIR, 1, Rune.EARTH, 1, Rune.LAW, 1), () -> {
-					player.tele(Tile.of(player.getTile())); //cancel teleport tile movement
+					player.tele(Tile.of(player.getTile()));
 					enterHouseAndResetDamage(player);
 				});
 				break;
@@ -226,11 +227,15 @@ public class Magic {
 				}
 				break;
 			case 62: // Watchtower teleport
-				final Tile WATCHTOWER_TILE = Tile.of(2547, 3113, 2);
-				final Tile YANILLE_TILE = Tile.of(2576, 3089, 0);
-				Boolean teleportLocation = (Boolean) player.getSavingAttributes().getOrDefault(WATCHTOWER_TELEPORT_LOCATION_KEY, DEFAULT_TELEPORT_LOCATION);
-				Tile teleportTile = teleportLocation ? YANILLE_TILE : WATCHTOWER_TILE;
-				sendNormalTeleportSpell(player, 58, 68, teleportTile, new RuneSet(Rune.EARTH, 2, Rune.LAW, 2));
+				if (player.isQuestComplete(Quest.WATCHTOWER) && player.getBool(WATCHTOWER_SCROLL_READ)) {
+					final Tile WATCHTOWER_TILE = Tile.of(2547, 3113, 2);
+					final Tile YANILLE_TILE = Tile.of(2576, 3089, 0);
+					Boolean teleportLocation = (Boolean) player.getSavingAttributes().getOrDefault(WATCHTOWER_TELEPORT_LOCATION_KEY, DEFAULT_TELEPORT_LOCATION);
+					Tile teleportTile = teleportLocation ? YANILLE_TILE : WATCHTOWER_TILE;
+					sendNormalTeleportSpell(player, 58, 68, teleportTile, new RuneSet(Rune.EARTH, 2, Rune.LAW, 2));
+				} else {
+					player.sendMessage("You have not yet learned this spell.");
+				}
 				break;
 			case 69: // Trollheim teleport
 				if (player.isQuestComplete(Quest.EADGARS_RUSE)) {
@@ -464,7 +469,7 @@ public class Magic {
 			if (downEmoteId != -1)
 				npc.anim(downEmoteId == -2 ? -1 : downEmoteId);
 			if (downGraphicId != -1)
-				npc.spotAnim(new SpotAnim(downGraphicId));
+				npc.spotAnim(downGraphicId);
 			if (onArrive != null)
 				onArrive.accept(npc);
 			npc.resetReceivedDamage();

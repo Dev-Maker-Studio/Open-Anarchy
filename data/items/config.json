@@ -931,11 +931,12 @@
     "uidName": "staff_of_armadyl",
     "dropSound": 2739,
     "equipSound": 2240,
-    "attackDelay": -1,
-    "defendAnim": -1,
+    "attackDelay": 4,
+    "defendAnim": 424,
     "defendSound": -1,
-    "attackRange": 0,
+    "attackRange": 7,
     "weight": 5.0,
+    "equipmentSlot": 3,
     "examine": "The power in this staff causes it to vibrate gently."
   },
   "85": {
