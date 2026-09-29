@@ -8,7 +8,8 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.LoginEvent
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
-import com.rs.utils.ItemConfig
+import org.darkan.core.cache.ItemDefinitions
+import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Varbit
 
 @ServerStartupEvent
@@ -75,47 +76,35 @@ fun mapBeaconConstruction() {
             }
             if (!e.player.getBool("AllFiredUp.DeathPlateau")) {
                 if (!e.player.getBool("AllFiredUp.DeathPlateauI")) {
-                    if (e.player.inventory.getNumberOf(960) < 2) {
+                    if (e.player.inventory.getNumberOf(Obj.woodplank) < 2) {
                         e.player.sendMessage(
                             "You need 2 ${
-                                ItemConfig.get(960).uidName.replace(
-                                    "_".toRegex(),
-                                    " "
-                                )
+                                ItemDefinitions.getDefs(Obj.woodplank).name.lowercase()
                             } to repair the ladder."
                         )
                     } else {
                         e.player.sendMessage(
                             "You repair the ladder using 2 ${
-                                ItemConfig.get(960).uidName.replace(
-                                    "_".toRegex(),
-                                    " "
-                                )
+                                ItemDefinitions.getDefs(Obj.woodplank).name.lowercase()
                             }."
                         )
-                        e.player.inventory.deleteItem(960, 2)
+                        e.player.inventory.deleteItem(Obj.woodplank, 2)
                         e.player.set("AllFiredUp.DeathPlateauI", true)
                     }
                 }
                 if (!e.player.getBool("AllFiredUp.DeathPlateauII")) {
-                    if (e.player.inventory.getNumberOf(4819) < 4) e.player.sendMessage(
+                    if (e.player.inventory.getNumberOf(Obj.nails_bronze) < 4) e.player.sendMessage(
                         "You need 4 ${
-                            ItemConfig.get(4819).uidName.replace(
-                                "_".toRegex(),
-                                " "
-                            )
+                            ItemDefinitions.getDefs(Obj.nails_bronze).name.lowercase()
                         } to repair the ladder."
                     )
                     else {
                         e.player.sendMessage(
                             "You repair the ladder using 4 ${
-                                ItemConfig.get(4819).uidName.replace(
-                                    "_".toRegex(),
-                                    " "
-                                )
+                                ItemDefinitions.getDefs(Obj.nails_bronze).name.lowercase()
                             }."
                         )
-                        e.player.inventory.deleteItem(4819, 4)
+                        e.player.inventory.deleteItem(Obj.nails_bronze, 4)
                         e.player.set("AllFiredUp.DeathPlateauII", true)
                     }
                 }
@@ -159,31 +148,19 @@ fun mapBeaconConstruction() {
                 player.sendMessage("You do not possess the required level of Crafting(42) to repair the windbreak.")
                 return@onObjectClick
             }
-            if (!player.getBool("AllFiredUp.GodWars")) if (player.inventory.getNumberOf(1733) >= 1) {
-                if (player.inventory.getNumberOf(5931) >= 3) {
+            if (!player.getBool("AllFiredUp.GodWars")) if (player.inventory.getNumberOf(Obj.needle) >= 1) {
+                if (player.inventory.getNumberOf(Obj.jute_fibre) >= 3) {
                     player.sendMessage(
-                        "You repair the windbreak using 3 " + ItemConfig.get(5931).uidName.replace(
-                            "_".toRegex(),
-                            " "
-                        ) + "."
+                        "You repair the windbreak using 3 " + ItemDefinitions.getDefs(Obj.jute_fibre).name.lowercase() + "."
                     )
                     player.set("AllFiredUp.GodWars", true)
                     player.vars.saveVarBit(Varbit.firedup_access12, 1)
-                    player.inventory.deleteItem(5931, 3)
+                    player.inventory.deleteItem(Obj.jute_fibre, 3)
                 } else player.sendMessage(
-                    "You need 3 " + ItemConfig.get(5931).uidName.replace(
-                        "_".toRegex(),
-                        " "
-                    ) + " to repair the windbreak."
+                    "You need 3 " + ItemDefinitions.getDefs(Obj.jute_fibre).name.lowercase() + " to repair the windbreak."
                 )
             } else player.sendMessage(
-                "You need a " + ItemConfig.get(1733).uidName.replace(
-                    "_".toRegex(),
-                    " "
-                ) + " and 3 " + ItemConfig.get(5931).uidName.replace(
-                    "_".toRegex(),
-                    " "
-                ) + " to repair the windbreak."
+                "You need a " + ItemDefinitions.getDefs(Obj.needle).name.lowercase() + " and 3 " + ItemDefinitions.getDefs(Obj.jute_fibre).name.lowercase() + " to repair the windbreak."
             )
         }
     }
@@ -197,39 +174,27 @@ fun mapBeaconConstruction() {
                 return@onObjectClick
             }
             if (!player.getBool("AllFiredUp.WildernessTemple")) if (!player.getBool("AllFiredUp.WildernessTempleI")) {
-                if (player.inventory.getNumberOf(960) < 2) player.sendMessage(
-                    "You need 2 " + ItemConfig.get(960).uidName.replace(
-                        "_".toRegex(),
-                        " "
-                    ) + " to repair the ladder."
+                if (player.inventory.getNumberOf(Obj.woodplank) < 2) player.sendMessage(
+                    "You need 2 " + ItemDefinitions.getDefs(Obj.woodplank).name.lowercase() + " to repair the ladder."
                 )
                 else {
                     player.sendMessage(
-                        "You repair the ladder using 2 " + ItemConfig.get(960).uidName.replace(
-                            "_".toRegex(),
-                            " "
-                        ) + "."
+                        "You repair the ladder using 2 " + ItemDefinitions.getDefs(Obj.woodplank).name.lowercase() + "."
                     )
-                    player.inventory.deleteItem(960, 2)
+                    player.inventory.deleteItem(Obj.woodplank, 2)
 
                     player.set("AllFiredUp.WildernessTempleI", true)
                 }
             }
             if (!player.getBool("AllFiredUp.WildernessTempleII")) {
-                if (player.inventory.getNumberOf(4819) < 4) player.sendMessage(
-                    "You need 2 " + ItemConfig.get(4819).uidName.replace(
-                        "_".toRegex(),
-                        " "
-                    ) + " to repair the ladder."
+                if (player.inventory.getNumberOf(Obj.nails_bronze) < 4) player.sendMessage(
+                    "You need 2 " + ItemDefinitions.getDefs(Obj.nails_bronze).name.lowercase() + " to repair the ladder."
                 )
                 else {
                     player.sendMessage(
-                        "You repair the ladder using 4 " + ItemConfig.get(4819).uidName.replace(
-                            "_".toRegex(),
-                            " "
-                        ) + "."
+                        "You repair the ladder using 4 " + ItemDefinitions.getDefs(Obj.nails_bronze).name.lowercase() + "."
                     )
-                    player.inventory.deleteItem(4819, 4)
+                    player.inventory.deleteItem(Obj.nails_bronze, 4)
                     player.set("AllFiredUp.WildernessTempleII", true)
                 }
             }
