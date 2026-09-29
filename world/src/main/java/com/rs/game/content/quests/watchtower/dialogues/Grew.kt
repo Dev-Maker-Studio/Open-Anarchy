@@ -13,6 +13,8 @@ private const val GREW = 854
 
 private const val GREW_TASK_STARTED = "watchtowerGrewTaskStarted"
 private const val GREW_TASK_COMPLETE = "watchtowerGrewTaskComplete"
+private const val YELLOW_PILLAR_VARBIT = 3128
+private const val RELIC_PART_2_HANDED_IN = "watchtowerRelicPart2HandedIn"
 
 @ServerStartupEvent
 fun mapWatchtowerGrew() {
@@ -33,6 +35,52 @@ private fun grewDialogue(player: Player, npc: NPC) {
         }
 
         if (player.getBool(GREW_TASK_COMPLETE)) {
+            if (!player.inventory.containsItem(RELIC_PART_2, 1) &&
+                !player.bank.containsItem(RELIC_PART_2, 1) &&
+                !player.getBool(RELIC_PART_2_HANDED_IN)
+            ) {
+                npc(
+                    npc,
+                    CALM_TALK,
+                    "What, you lost it?"
+                )
+
+                exec {
+                    player.inventory.addItemDrop(RELIC_PART_2, 1)
+                }
+
+                npc(
+                    npc,
+                    CALM_TALK,
+                    "Take another and don't lose it, morsel."
+                )
+                return@startConversation
+            }
+
+            if (!player.inventory.containsItem(WATCHTOWER_CRYSTAL_1, 1) &&
+                !player.bank.containsItem(WATCHTOWER_CRYSTAL_1, 1) &&
+                player.vars.getVarBit(YELLOW_PILLAR_VARBIT) == 0 &&
+                !player.isQuestComplete(Quest.WATCHTOWER)
+            ) {
+                npc(
+                    npc,
+                    CALM_TALK,
+                    "The morsel has lost the crystal?"
+                )
+
+                npc(
+                    npc,
+                    HAPPY_TALKING,
+                    "Grew has another. Take it, morsel."
+                )
+
+                exec {
+                    player.inventory.addItemDrop(WATCHTOWER_CRYSTAL_1, 1)
+                }
+
+                return@startConversation
+            }
+
             npc(
                 npc,
                 HAPPY_TALKING,

@@ -5,7 +5,7 @@ import com.rs.game.content.quests.watchtower.STAGE_COLLECT_OGRE_RELIC
 import com.rs.game.content.quests.watchtower.TOBANS_GOLD
 import com.rs.game.content.quests.watchtower.TOBANS_KEY
 import com.rs.game.model.entity.player.Player
-import com.rs.lib.game.Tile
+import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onObjectClick
@@ -70,7 +70,9 @@ private fun mapTobanChest() {
             return@onObjectClick
         }
 
-        if (player.inventory.containsItem(TOBANS_GOLD, 1)) {
+        if (player.inventory.containsItem(TOBANS_GOLD, 1) ||
+            player.bank.containsItem(TOBANS_GOLD, 1)
+        ) {
             player.sendMessage("The chest is empty.")
             return@onObjectClick
         }

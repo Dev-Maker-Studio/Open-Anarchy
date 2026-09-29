@@ -64,7 +64,7 @@ object RobinCastleKt {
                     player(CALM_TALK, "I'm always willing to learn.")
                     npc(npc, CALM_TALK, "When you're on the prowl for pickpocketing targets, it should be fairly obvious who's not paying enough attention to the world around them.")
                     npc(npc, CALM_TALK, "Just saunter up to them all casual-like, then dip your hand into their wallets as gently and as neatly as you can.")
-                    npc(npc, CALM_TALK, "If you succeed, you'll get some of the contents of their pockets; it not, they'll likely punch you in the face, so be warned.")
+                    npc(npc, CALM_TALK, "If you succeed, you'll get some of the contents of their pockets; if not, they'll likely punch you in the face, so be warned.")
                     npc(npc, CALM_TALK, "It stings, and you'll need a moment to gather your wits.")
                     player(CALM_TALK, "Thanks, Robin.")
                     npc(npc, CALM_TALK, "You can use the training dummy if you'd like, but after a while you'll need to switch to real marks if you want to improve.")

@@ -6,7 +6,7 @@ import com.rs.game.content.world.doors.Doors
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import com.rs.lib.util.Utils
+import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPlayerStep

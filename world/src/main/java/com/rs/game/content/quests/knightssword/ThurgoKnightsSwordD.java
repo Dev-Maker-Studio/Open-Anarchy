@@ -22,7 +22,7 @@ public class ThurgoKnightsSwordD extends Conversation {
 		case FIND_DWARF -> {
 			if(player.getQuestManager().getAttribs(Quest.KNIGHTS_SWORD).getB("gave_thurgo_pie")) {
 				addPlayer(HeadE.HAPPY_TALKING, "Can you make a special sword for me?");
-				addNPC(THURGO, HeadE.CALM_TALK, "Well, after bringing me my favorite food I guess I should give it a go. What sort of sword is it?");
+				addNPC(THURGO, HeadE.CALM_TALK, "Well, after bringing me my favourite food I guess I should give it a go. What sort of sword is it?");
 				addPlayer(HeadE.HAPPY_TALKING, "I need you to make a sword for one of Falador's knights. He had one which was passed down through five " +
 						"generations, but his squire has lost it.");
 				addPlayer(HeadE.HAPPY_TALKING, "So we need an identical one to replace it.");
