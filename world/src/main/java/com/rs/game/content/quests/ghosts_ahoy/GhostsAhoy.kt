@@ -122,6 +122,7 @@ class GhostsAhoy : QuestOutline() {
     }
 
     override fun complete(player: Player) {
+        player.vars.saveVarBit(Varbit.ahoy_questvar, QUEST_VAR_COMPLETE)
         player.inventory.addItem(Ectophial)
         player.skills.addXp(Skills.PRAYER, 2400.0)
         sendQuestCompleteInterface(player, Ectophial)
@@ -129,7 +130,7 @@ class GhostsAhoy : QuestOutline() {
 
     override fun updateStage(player: Player, stage: Int) {
         if (stage == STAGE_5_GATHER_ITEMS) {
-            player.vars.saveVarBit(Varbit.ahoy_questvar, 5)
+            player.vars.saveVarBit(Varbit.ahoy_questvar, QUEST_VAR_GATHERING)
             player.vars.syncVarsToClient()
             ensureGhostsAhoySailColors(player)
         }
@@ -138,15 +139,21 @@ class GhostsAhoy : QuestOutline() {
     }
 }
 
+private const val QUEST_VAR_GATHERING = 5
+private const val QUEST_VAR_COMPLETE = 8
+
 @ServerStartupEvent
 fun mapGAVarbits(){
     onLogin { (player) ->
         if (player.getQuestStage(Quest.GHOSTS_AHOY) >= GhostsAhoy.STAGE_4_SEEK_OLD_WOMAN && !player.isQuestComplete(Quest.GHOSTS_AHOY))
              ensureGhostsAhoySailColors(player)
-        if (player.isQuestComplete(Quest.GHOSTS_AHOY) || player.getQuestStage(Quest.GHOSTS_AHOY) >= GhostsAhoy.STAGE_5_GATHER_ITEMS) {
-            player.vars.saveVarBit(Varbit.ahoy_questvar, 5)
-            player.vars.syncVarsToClient()
+        val questVar = when {
+            player.isQuestComplete(Quest.GHOSTS_AHOY) -> QUEST_VAR_COMPLETE
+            player.getQuestStage(Quest.GHOSTS_AHOY) >= GhostsAhoy.STAGE_5_GATHER_ITEMS -> QUEST_VAR_GATHERING
+            else -> return@onLogin
         }
+        player.vars.saveVarBit(Varbit.ahoy_questvar, questVar)
+        player.vars.syncVarsToClient()
     }
 }
 
