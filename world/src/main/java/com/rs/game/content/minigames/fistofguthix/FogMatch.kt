@@ -65,7 +65,7 @@ class FogCombatant(val player: Player, val slot: Int) {
     var score = 0
     var hadHuntedTurn = false
     var house: House? = null
-    var houseExitTick = Int.MIN_VALUE
+    var houseExitTick = -REENTRY_TICKS
     var houseClock = 0
     var scoringEvents = 0
     var lastIncrement = 0
@@ -384,7 +384,7 @@ class FogMatch(first: Player, second: Player) {
         player.reset()
         player.anim(-1)
         side.house = null
-        side.houseExitTick = Int.MIN_VALUE
+        side.houseExitTick = -REENTRY_TICKS
         side.teleporting = false
     }
 
