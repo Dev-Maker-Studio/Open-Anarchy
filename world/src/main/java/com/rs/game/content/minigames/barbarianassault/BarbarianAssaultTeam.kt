@@ -220,6 +220,11 @@ object BarbarianAssaultTeams {
             return
         }
         val wasLeader = leaderBefore == player
+        if (wasLeader && team.game == null) {
+            team.sendTeam("${player.displayName}, your team leader, has left.")
+            disband(team)
+            return
+        }
         team.game?.leave(player)
         team.sendTeam("${player.displayName} has left the team.")
         if (wasLeader) team.leader.sendMessage("You are now the leader of your team.")

@@ -7,7 +7,6 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.Hit.HitLook
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.game.tasks.WorldTasks
 import com.rs.utils.WorldUtil
 import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Npc
@@ -26,7 +25,7 @@ private const val RANGED_MAX = 60
 private const val MELEE_INTERVAL = 5
 private const val MELEE_MAX = 130
 private const val MOVE_INTERVAL = 3
-private const val RANGED_DELAY = 2
+private const val RANGED_SPEED = 5
 
 class PenanceQueen(tile: Tile, val game: BarbarianAssaultGame) : NPC(Npc.npc_5247, tile, true) {
     var dying = false
@@ -76,11 +75,11 @@ class PenanceQueen(tile: Tile, val game: BarbarianAssaultGame) : NPC(Npc.npc_524
         anim(Seq.barbassault_penacne_queen_new_attack_ranged)
         spotAnim(Spotanim.barbassault_penance_queen_range_attack_casting)
         for (target in targets) {
-            World.sendProjectile(this, target, Spotanim.barbassault_penance_queen_range_attack_travel, 80 to 30, 20, 10, 16)
-            WorldTasks.schedule(RANGED_DELAY) {
-                if (dying || !game.isPlaying(target)) return@schedule
-                target.spotAnim(Spotanim.barbassault_penance_queen_range_attack_impact)
-                target.applyHit(Hit(this, Utils.random(RANGED_MAX + 1), HitLook.RANGE_DAMAGE))
+            World.sendProjectile(this, target, Spotanim.barbassault_penance_queen_range_attack_travel, 80 to 30, 0, RANGED_SPEED, 16) {
+                if (!dying && game.isPlaying(target)) {
+                    target.spotAnim(Spotanim.barbassault_penance_queen_range_attack_impact)
+                    target.applyHit(Hit(this, Utils.random(RANGED_MAX + 1), HitLook.RANGE_DAMAGE))
+                }
             }
         }
     }
