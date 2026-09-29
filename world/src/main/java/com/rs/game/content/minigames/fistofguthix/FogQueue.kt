@@ -7,6 +7,7 @@ import com.rs.game.content.skills.magic.TeleType
 import com.rs.game.model.entity.player.Controller
 import com.rs.game.model.entity.player.Player
 import com.rs.game.tasks.WorldTasks
+import com.rs.utils.Ticks
 import org.darkan.core.cache.ItemDefinitions
 import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Interface
@@ -22,9 +23,11 @@ private val WAITING_PASSAGE_SIDE: Tile = Tile.of(1652, 5600, 0)
 private val LOBBY_AREA = 1674..1721 to 5593..5607
 private val WAITING_AREA = 1605..1656 to 5583..5621
 
-const val LOBBY_MINIMUM = 16
+const val LOBBY_MINIMUM = 8
+const val LOBBY_FULL = 16
 private const val ACTIVITY_CAP = 250
-private const val PAIRING_INTERVAL = 25
+private const val FULL_COUNTDOWN = 25
+private val MINIMUM_COUNTDOWN = Ticks.fromMinutes(1)
 private const val SCOREBOARD_SIZE = 50
 private const val PASSAGE_TICKS = 2
 
@@ -35,7 +38,7 @@ object FogQueue {
     private val waiting = LinkedHashSet<Player>()
     private val matches = LinkedHashSet<FogMatch>()
     private val scoreboard = ArrayDeque<String>()
-    private var nextPairing = 0
+    private var countdown = 0
     private var running = false
 
     val results: List<String> get() = scoreboard.toList()
@@ -58,7 +61,7 @@ object FogQueue {
         WorldTasks.schedule(PASSAGE_TICKS) {
             if (player.hasFinished() || !inFogWaitingRoom(player.tile) || player.fogLobbyController == null) return@schedule
             waiting += player
-            player.sendMessage("You enter the waiting room. Matches begin once $LOBBY_MINIMUM players are waiting.")
+            player.sendMessage("You enter the waiting room. Matches begin a minute after $LOBBY_MINIMUM players are waiting, or at once with $LOBBY_FULL.")
             ensureTimer()
             refreshAll()
         }
@@ -78,18 +81,21 @@ object FogQueue {
     private fun ensureTimer() {
         if (running) return
         running = true
-        nextPairing = PAIRING_INTERVAL
+        countdown = 0
         WorldTasks.scheduleTimer(1, 0) {
             waiting.removeIf { it.hasFinished() || !inFogWaitingRoom(it.tile) }
             if (waiting.isEmpty() && matches.isEmpty()) {
                 running = false
                 return@scheduleTimer false
             }
-            if (--nextPairing <= 0) {
-                nextPairing = PAIRING_INTERVAL
-                if (waiting.size >= LOBBY_MINIMUM) pair()
+            val before = countdown
+            countdown = when {
+                waiting.size >= LOBBY_FULL -> if (countdown in 1..FULL_COUNTDOWN) countdown else FULL_COUNTDOWN
+                waiting.size >= LOBBY_MINIMUM -> if (countdown > 0) countdown else MINIMUM_COUNTDOWN
+                else -> 0
             }
-            if (nextPairing % 5 == 0) refreshAll()
+            if (countdown > 0 && --countdown == 0) pair()
+            if ((countdown > 0 && countdown % 5 == 0) || (before == 0) != (countdown == 0)) refreshAll()
             true
         }
     }
@@ -127,8 +133,8 @@ object FogQueue {
 
     fun status(player: Player): String = when {
         player !in waiting -> "Walk through the passageway to join the waiting room."
-        waiting.size < LOBBY_MINIMUM -> "Waiting for players: ${waiting.size}/$LOBBY_MINIMUM"
-        else -> "Pairing in ${ceil(nextPairing * 0.6).toInt()} seconds (${waiting.size} waiting)"
+        countdown == 0 -> "Waiting for players: ${waiting.size}/$LOBBY_MINIMUM"
+        else -> "Pairing in ${ceil(countdown * 0.6).toInt()} seconds (${waiting.size} waiting)"
     }
 }
 
