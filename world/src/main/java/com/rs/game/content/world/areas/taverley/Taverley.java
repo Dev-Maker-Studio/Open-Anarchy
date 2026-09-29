@@ -71,7 +71,7 @@ public class Taverley {
 		if (p.getQuestManager().getStage(Quest.WOLF_WHISTLE) == WolfWhistle.NOT_STARTED) {
 			p.startConversation(new Dialogue()
 					.addSimple("I'm sure there is nothing down there. It's just an old, dry well that is making funny echoes.")
-				);
+					);
 		} else if (p.getQuestManager().getStage(Quest.WOLF_WHISTLE) == WolfWhistle.PIKKUPSTIX_HELP) {
 			/* TODO: start cutscene
 			 * set up cutscene props
@@ -122,6 +122,16 @@ public class Taverley {
 	});
 
 	public static ObjectClickHandler handleTaverleyDungeonOddWall = new ObjectClickHandler(new Object[] { 2117 }, e -> Doors.handleDoor(e.getPlayer(), e.getObj(), -1));
+
+	public static ObjectClickHandler handleLakeCavern = new ObjectClickHandler(new Object[] { 67043, 67044 }, e -> {
+		if (e.getObjectId() == 67043 && e.getObj().getTile().isAt(2923, 3404, 0)) {
+			e.getPlayer().tele(Tile.of(2220, 4532, 0));
+			return;
+		}
+
+		if (e.getObjectId() == 67044 && e.getObj().getTile().isAt(2220, 4531, 0))
+			e.getPlayer().tele(Tile.of(2927, 3406, 0));
+	});
 
 	public static PickupItemHandler zammyWines = new PickupItemHandler(new Object[] { 245 }, new Tile[] { Tile.of(2946, 3474, 0), Tile.of(2946, 3473, 0) }, e -> {
 		if (!e.isTelegrabbed()) {

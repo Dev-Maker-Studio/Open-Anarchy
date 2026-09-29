@@ -120,7 +120,7 @@
     },
     "respawnTicks": 30
   },
-    {
+  {
     "comment": "Dwellberries added by mr_ashie_b",
     "itemId": 2126,
     "amount": 1,
@@ -218,5 +218,27 @@
       "plane": 0
     },
     "respawnTicks": 1
+  },
+  {
+    "comment": "Cave nightshade - northern Skavid cave added by Zemouregal",
+    "itemId": 2398,
+    "amount": 1,
+    "tile": {
+      "x": 2532,
+      "y": 9468,
+      "plane": 0
+    },
+    "respawnTicks": 50
+  },
+  {
+    "comment": "Cave nightshade - Mad Skavid cave added by Zemouregal",
+    "itemId": 2398,
+    "amount": 1,
+    "tile": {
+      "x": 2527,
+      "y": 9415,
+      "plane": 0
+    },
+    "respawnTicks": 50
   }
 ]

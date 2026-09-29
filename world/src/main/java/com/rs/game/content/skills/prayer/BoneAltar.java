@@ -131,22 +131,13 @@ public class BoneAltar  {
 	public static ObjectClickHandler handleAltars = new ObjectClickHandler(new Object[] {"Altar", "Chaos altar", "Altar of guthix"}, e -> {
 		Player player = e.getPlayer();
 
+		// The Jaldraocht altar (6552) has quest-specific spellbook behaviour and
+		// is handled by Desert Treasure rather than the generic prayer altar.
+		if (e.getObjectId() == 6552)
+			return;
+
 		if (e.getObj().getDefinitions().hasOption(1, "Pray") || e.getObj().getDefinitions().hasOption(1, "Pray-at") || e.getObj().getDefinitions().hasOption(1, "Recharge")) {
 			player.getPrayer().worshipAltar();
-			if (e.getObjectId() == 6552) {
-				player.startConversation(new Dialogue().addOptions("Change spellbooks?", ops -> {
-					ops.add("Yes, replace my spellbook.", () -> {
-						if (player.getCombatDefinitions().getSpellbook() != CombatDefinitions.Spellbook.ANCIENT) {
-							player.sendMessage("Your mind clears and you switch back to the ancient spellbook.");
-							player.getCombatDefinitions().setSpellbook(CombatDefinitions.Spellbook.ANCIENT);
-						} else {
-							player.sendMessage("Your mind clears and you switch back to the normal spellbook.");
-							player.getCombatDefinitions().setSpellbook(CombatDefinitions.Spellbook.MODERN);
-						}
-					});
-					ops.add("Nevermind.");
-				}));
-			}
 		}
 	}
 	);

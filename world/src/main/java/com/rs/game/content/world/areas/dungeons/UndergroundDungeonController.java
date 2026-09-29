@@ -16,6 +16,7 @@
 //
 package com.rs.game.content.world.areas.dungeons;
 
+import com.rs.engine.quest.Quest;
 import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.content.skills.slayer.Slayer;
 import com.rs.game.content.world.LightSource;
@@ -33,7 +34,7 @@ public class UndergroundDungeonController extends Controller {
 	private transient boolean initial;
 
 	private final boolean hasStench;
-    private final boolean requiresLightSource;
+	private final boolean requiresLightSource;
 
 	public UndergroundDungeonController(boolean hasStench, boolean requiresLightSource) {
 		this.hasStench = hasStench;
@@ -119,7 +120,7 @@ public class UndergroundDungeonController extends Controller {
 			player.useStairs(-1, Tile.of(3219, 9532, 2), 1, 2);
 			player.getControllerManager().forceStop();
 			return false;
-		} else if (object.getId() == 31435)
+		} else if (object.getId() == 31435 && !player.isQuestComplete(Quest.SMOKING_KILLS))
 			return false;
 		else if (object.getId() == 15811) {
 			player.useStairs(-1, Tile.of(3749, 2973, 0), 1, 2);

@@ -487,5 +487,15 @@
 	"dir": "NORTH",
     "comment": "Guard",
     "npcId": 1150
+  },
+  {
+    "tile": {
+      "plane": 0,
+      "x": 2834,
+      "y": 3741
+    },
+	"dir": "EAST",
+    "comment": "Troll Child",
+    "npcId": 1934
   }
 ]
