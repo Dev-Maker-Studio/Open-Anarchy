@@ -450,7 +450,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
             } else player.inventory.deleteItem(slot, item)
         }
         player.inventory.refresh()
-        player.anim(Seq.barbassault_loc_vending_arm_pull)
+        player.anim(Seq.human_pickuptable)
         player.sendMessage(if (converted == 0) "The converter has nothing to convert." else "The converter changes $converted egg(s).")
     }
 
@@ -613,7 +613,8 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
                 }
             }
         }
-        player.anim(Seq.barbassault_loc_vending_arm_pull)
+        player.anim(Seq.human_pickuptable)
+        World.sendObjectAnimation(obj, Animation(Seq.barbassault_loc_vending_arm_pull))
     }
 
     private fun give(player: Player, obj: Int, amount: Int) {
@@ -691,7 +692,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
         }
         if (npc.dying || npc.isDead) return
         player.inventory.deleteItem(slot, item)
-        player.anim(Seq.barbassault_egg_poision)
+        player.anim(Seq.human_throw)
         player.faceEntity(npc)
         val correct = item.id == required.getValue(Role.HEALER).poison
         if (!correct) {
@@ -852,7 +853,8 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
             else -> {
                 if (item.id == Obj.barbassault_egg_poison) player.inventory.deleteItem(Obj.barbassault_spikes, 1)
                 player.inventory.replaceItem(result, 1, slot)
-                player.anim(if (obj != null) Seq.barbassault_egg_poision else Seq.barbassault_atomic_spike)
+                player.anim(Seq.human_pickuptable)
+                obj?.let { World.sendObjectAnimation(it, Animation(Seq.barbassault_crater_bubbles)) }
             }
         }
     }
