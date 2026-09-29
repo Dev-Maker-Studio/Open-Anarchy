@@ -1,5 +1,7 @@
 package com.rs.game.content.quests.watchtower.dialogues
 
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Npc
 import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
@@ -10,12 +12,6 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 
-private const val WATCHTOWER_WIZARD = 872
-
-private const val CLEAN_GUAM = 249
-private const val JANGERBERRIES = 247
-private const val BAT_BONES = 530
-private const val OGRE_POTION = 2394
 private const val MAD_SKAVID_COMPLETE = "watchtowerMadSkavidComplete"
 
 private const val RELIC_PART_1_HANDED_IN = "watchtowerRelicPart1HandedIn"
@@ -24,7 +20,7 @@ private const val RELIC_PART_3_HANDED_IN = "watchtowerRelicPart3HandedIn"
 
 @ServerStartupEvent
 fun mapWatchtowerWizard() {
-    onNpcClick(WATCHTOWER_WIZARD, options = arrayOf("Talk-to")) { (player, npc) ->
+    onNpcClick(Npc.watchtower_wizard, options = arrayOf("Talk-to")) { (player, npc) ->
         watchtowerWizardDialogue(player, npc)
     }
 }
@@ -335,7 +331,7 @@ private fun DialogueBuilder.searchWatchtower(
         "Hello again. Did you find anything of interest?"
     )
 
-    if (player.inventory.containsItem(FINGERNAILS, 1)) {
+    if (player.inventory.containsItem(Obj.fingernails, 1)) {
         player(
             CALM_TALK,
             "Have a look at these..."
@@ -363,7 +359,7 @@ private fun DialogueBuilder.searchWatchtower(
     }
 
     when {
-        player.inventory.containsItem(OLD_ROBE, 1) -> {
+        player.inventory.containsItem(Obj.watchtowerrobe, 1) -> {
             player(CALM_TALK, "I have this robe...")
             npc(npc, CALM_TALK, "Let me see...")
             npc(
@@ -373,7 +369,7 @@ private fun DialogueBuilder.searchWatchtower(
             )
         }
 
-        player.inventory.containsItem(DAMAGED_DAGGER, 1) -> {
+        player.inventory.containsItem(Obj.watchtowerdagger, 1) -> {
             player(CALM_TALK, "I have this dagger...")
             npc(npc, CALM_TALK, "Let me see...")
             npc(
@@ -383,7 +379,7 @@ private fun DialogueBuilder.searchWatchtower(
             )
         }
 
-        player.inventory.containsItem(UNUSUAL_ARMOUR, 1) -> {
+        player.inventory.containsItem(Obj.watchtowerarmour, 1) -> {
             player(CALM_TALK, "I have this armour...")
             npc(npc, CALM_TALK, "Let me see...")
             npc(
@@ -393,7 +389,7 @@ private fun DialogueBuilder.searchWatchtower(
             )
         }
 
-        player.inventory.containsItem(TATTERED_EYE_PATCH, 1) -> {
+        player.inventory.containsItem(Obj.watch_eye_patch, 1) -> {
             player(CALM_TALK, "I have this eyepatch...")
             npc(npc, CALM_TALK, "Let me see...")
             npc(
@@ -483,7 +479,7 @@ private fun DialogueBuilder.skavidExplanation(
             )
 
             exec {
-                player.inventory.deleteItem(FINGERNAILS, 1)
+                player.inventory.deleteItem(Obj.fingernails, 1)
                 player.setQuestStage(
                     Quest.WATCHTOWER,
                     STAGE_FIND_WAY_INTO_GUTANOTH
@@ -559,9 +555,9 @@ private fun DialogueBuilder.handleRelicParts(
             player(CALM_TALK, "An ogre gave me this...")
 
             val lastPart = when {
-                player.inventory.containsItem(RELIC_PART_1, 1) -> RELIC_PART_1
-                player.inventory.containsItem(RELIC_PART_2, 1) -> RELIC_PART_2
-                player.inventory.containsItem(RELIC_PART_3, 1) -> RELIC_PART_3
+                player.inventory.containsItem(Obj.relicpart1, 1) -> Obj.relicpart1
+                player.inventory.containsItem(Obj.relicpart2, 1) -> Obj.relicpart2
+                player.inventory.containsItem(Obj.relicpart3, 1) -> Obj.relicpart3
                 else -> return
             }
 
@@ -591,7 +587,7 @@ private fun DialogueBuilder.handleRelicParts(
         simple("The Watchtower Wizard casts a spell.")
 
         exec {
-            player.inventory.addItem(OGRE_RELIC, 1)
+            player.inventory.addItem(Obj.ogrerelic, 1)
             player.setQuestStage(
                 Quest.WATCHTOWER,
                 STAGE_ENTER_GUTANOTH
@@ -609,14 +605,14 @@ private fun DialogueBuilder.handleRelicParts(
     }
 
     val part = when {
-        player.inventory.containsItem(RELIC_PART_1, 1) ->
-            RELIC_PART_1
+        player.inventory.containsItem(Obj.relicpart1, 1) ->
+            Obj.relicpart1
 
-        player.inventory.containsItem(RELIC_PART_2, 1) ->
-            RELIC_PART_2
+        player.inventory.containsItem(Obj.relicpart2, 1) ->
+            Obj.relicpart2
 
-        player.inventory.containsItem(RELIC_PART_3, 1) ->
-            RELIC_PART_3
+        player.inventory.containsItem(Obj.relicpart3, 1) ->
+            Obj.relicpart3
 
         else ->
             return
@@ -656,7 +652,7 @@ private fun DialogueBuilder.getSkavidMap(
     player: Player,
     npc: NPC
 ) {
-    if (player.inventory.containsItem(SKAVID_MAP, 1)) {
+    if (player.inventory.containsItem(Obj.skavidmap, 1)) {
         player(
             CALM_TALK,
             "I have worked out the guard's puzzle."
@@ -699,7 +695,7 @@ private fun DialogueBuilder.skavidMapProgress(
 ) {
     npc(npc, CALM_TALK, "How is the quest going?")
 
-    if (player.inventory.containsItem(SKAVID_MAP, 1)) {
+    if (player.inventory.containsItem(Obj.skavidmap, 1)) {
         player(
             CALM_TALK,
             "I have worked out the guard's puzzle."
@@ -810,7 +806,7 @@ private fun DialogueBuilder.searchingSkavidCaves(
 
         if (
             player.questManager.getAttribs(Quest.WATCHTOWER).getB(MAD_SKAVID_COMPLETE) &&
-            !player.inventory.containsItem(WATCHTOWER_CRYSTAL_2, 1)
+            !player.inventory.containsItem(Obj.powering_crystal2, 1)
         ) {
             op("I had a crystal but I lost it!") {
                 player(
@@ -859,7 +855,7 @@ private fun DialogueBuilder.findingShamanEnclave(
 
         if (
             player.questManager.getAttribs(Quest.WATCHTOWER).getB(MAD_SKAVID_COMPLETE) &&
-            !player.inventory.containsItem(WATCHTOWER_CRYSTAL_2, 1)
+            !player.inventory.containsItem(Obj.powering_crystal2, 1)
         ) {
             op("I had a crystal but I lost it!") {
                 player(
@@ -979,12 +975,12 @@ private fun DialogueBuilder.makeOgrePotion(
     player: Player,
     npc: NPC
 ) {
-    if (player.inventory.containsItem(OGRE_POTION, 1)) {
+    if (player.inventory.containsItem(Obj.ogre_potion, 1)) {
         npc(npc, CALM_TALK, "Any more news?")
 
         exec {
-            player.inventory.deleteItem(OGRE_POTION, 1)
-            player.inventory.addItem(MAGIC_OGRE_POTION, 1)
+            player.inventory.deleteItem(Obj.ogre_potion, 1)
+            player.inventory.addItem(Obj.magic_ogre_potion, 1)
         }
 
         player(CALM_TALK, "I have made the potion.")
@@ -1034,7 +1030,7 @@ private fun DialogueBuilder.makeOgrePotion(
         "Yes indeed, let me see, what was it again..."
     )
 
-    if (player.inventory.containsItem(CLEAN_GUAM, 1)) {
+    if (player.inventory.containsItem(Obj.guam_leaf, 1)) {
         npc(npc, CALM_TALK, "You need a guam leaf.")
         player(CALM_TALK, "I have one right here.")
         npc(
@@ -1052,7 +1048,7 @@ private fun DialogueBuilder.makeOgrePotion(
         player(CALM_TALK, "What is the final ingredient?")
     }
 
-    if (player.inventory.containsItem(JANGERBERRIES, 1)) {
+    if (player.inventory.containsItem(Obj.jangerberries, 1)) {
         npc(npc, CALM_TALK, "You need some jangerberries.")
         player(CALM_TALK, "I have some of those.")
         npc(npc, HAPPY_TALKING, "Wonderful!")
@@ -1079,7 +1075,7 @@ private fun DialogueBuilder.makeOgrePotion(
     )
 
     when {
-        player.inventory.containsItem(GROUND_BAT_BONES, 1) -> {
+        player.inventory.containsItem(Obj.ground_bat_bones, 1) -> {
             player(
                 CALM_TALK,
                 "Are these ground up well enough?"
@@ -1092,7 +1088,7 @@ private fun DialogueBuilder.makeOgrePotion(
             )
         }
 
-        player.inventory.containsItem(BAT_BONES, 1) -> {
+        player.inventory.containsItem(Obj.bat_bones, 1) -> {
             player(
                 CALM_TALK,
                 "I have some bat bones; how can I grind them?"
@@ -1117,7 +1113,7 @@ private fun DialogueBuilder.defeatShamans(
     player: Player,
     npc: NPC
 ) {
-    if (player.inventory.containsItem(OGRE_POTION, 1)) {
+    if (player.inventory.containsItem(Obj.ogre_potion, 1)) {
         makeOgrePotion(player, npc)
         return
     }
@@ -1253,7 +1249,7 @@ private fun DialogueBuilder.postQuest(
                     "I lost the scroll you gave me."
                 )
 
-                if (player.inventory.containsItem(SPELL_SCROLL, 1)) {
+                if (player.inventory.containsItem(Obj.watchtowerspell, 1)) {
                     npc(
                         npc,
                         HAPPY_TALKING,
@@ -1277,7 +1273,7 @@ private fun DialogueBuilder.postQuest(
                     )
 
                     exec {
-                        player.inventory.addItem(SPELL_SCROLL, 1)
+                        player.inventory.addItem(Obj.watchtowerspell, 1)
                     }
                 }
             }
@@ -1299,21 +1295,21 @@ private fun DialogueBuilder.postQuest(
 }
 
 private fun hasAnyRelicPart(player: Player): Boolean {
-    return player.inventory.containsItem(RELIC_PART_1, 1) ||
-            player.inventory.containsItem(RELIC_PART_2, 1) ||
-            player.inventory.containsItem(RELIC_PART_3, 1)
+    return player.inventory.containsItem(Obj.relicpart1, 1) ||
+            player.inventory.containsItem(Obj.relicpart2, 1) ||
+            player.inventory.containsItem(Obj.relicpart3, 1)
 }
 
 private fun relicPartsHeld(player: Player): Int {
     var count = 0
 
-    if (player.inventory.containsItem(RELIC_PART_1, 1))
+    if (player.inventory.containsItem(Obj.relicpart1, 1))
         count++
 
-    if (player.inventory.containsItem(RELIC_PART_2, 1))
+    if (player.inventory.containsItem(Obj.relicpart2, 1))
         count++
 
-    if (player.inventory.containsItem(RELIC_PART_3, 1))
+    if (player.inventory.containsItem(Obj.relicpart3, 1))
         count++
 
     return count
@@ -1341,37 +1337,37 @@ private fun handInRelicPart(
     player.inventory.deleteItem(itemId, 1)
 
     when (itemId) {
-        RELIC_PART_1 ->
+        Obj.relicpart1 ->
             player.set(RELIC_PART_1_HANDED_IN, true)
 
-        RELIC_PART_2 ->
+        Obj.relicpart2 ->
             player.set(RELIC_PART_2_HANDED_IN, true)
 
-        RELIC_PART_3 ->
+        Obj.relicpart3 ->
             player.set(RELIC_PART_3_HANDED_IN, true)
     }
 }
 
 private fun consumeRelicParts(player: Player) {
-    if (player.inventory.containsItem(RELIC_PART_1, 1)) {
-        player.inventory.deleteItem(RELIC_PART_1, 1)
+    if (player.inventory.containsItem(Obj.relicpart1, 1)) {
+        player.inventory.deleteItem(Obj.relicpart1, 1)
         player.set(RELIC_PART_1_HANDED_IN, true)
     }
 
-    if (player.inventory.containsItem(RELIC_PART_2, 1)) {
-        player.inventory.deleteItem(RELIC_PART_2, 1)
+    if (player.inventory.containsItem(Obj.relicpart2, 1)) {
+        player.inventory.deleteItem(Obj.relicpart2, 1)
         player.set(RELIC_PART_2_HANDED_IN, true)
     }
 
-    if (player.inventory.containsItem(RELIC_PART_3, 1)) {
-        player.inventory.deleteItem(RELIC_PART_3, 1)
+    if (player.inventory.containsItem(Obj.relicpart3, 1)) {
+        player.inventory.deleteItem(Obj.relicpart3, 1)
         player.set(RELIC_PART_3_HANDED_IN, true)
     }
 }
 
 private fun hasAllWatchtowerCrystals(player: Player): Boolean {
-    return player.inventory.containsItem(WATCHTOWER_CRYSTAL_1, 1) &&
-            player.inventory.containsItem(WATCHTOWER_CRYSTAL_2, 1) &&
-            player.inventory.containsItem(WATCHTOWER_CRYSTAL_3, 1) &&
-            player.inventory.containsItem(WATCHTOWER_CRYSTAL_4, 1)
+    return player.inventory.containsItem(Obj.powering_crystal1, 1) &&
+            player.inventory.containsItem(Obj.powering_crystal2, 1) &&
+            player.inventory.containsItem(Obj.powering_crystal3, 1) &&
+            player.inventory.containsItem(Obj.powering_crystal4, 1)
 }

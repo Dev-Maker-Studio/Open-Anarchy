@@ -1,7 +1,7 @@
 package com.rs.game.content.quests.watchtower.areas
 
-import com.rs.game.content.quests.watchtower.CAVE_NIGHTSHADE
-import com.rs.game.content.quests.watchtower.SKAVID_MAP
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Loc
 import com.rs.game.content.world.LightSource
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.player.Equipment
@@ -10,22 +10,6 @@ import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPickupItem
-
-private const val CAVE_1_ENTRANCE = 2806
-private const val CAVE_2_ENTRANCE = 2807
-private const val CAVE_3_ENTRANCE = 2808
-private const val CAVE_4_ENTRANCE = 2809
-private const val CAVE_5_ENTRANCE = 2805
-private const val CAVE_6_ENTRANCE = 2810
-
-private const val CAVE_1_EXIT = 2818
-private const val CAVE_2_EXIT = 2819
-private const val CAVE_3_EXIT = 2820
-private const val CAVE_4_EXIT = 2817
-private const val CAVE_5_EXIT = 2821
-private const val CAVE_6_EXIT = 2822
-
-private const val YANILLE_HOLE_IN = 2823
 
 private const val NIGHTSHADE_POISON_DAMAGE = 20
 
@@ -63,45 +47,45 @@ private data class SkavidCave(
 
 private val SKAVID_CAVES = listOf(
     SkavidCave(
-        CAVE_1_ENTRANCE,
+        Loc.skavid_cave2,
         CAVE_1_SURFACE,
         CAVE_1_INSIDE,
-        CAVE_1_EXIT,
+        Loc.cave2exit,
         CAVE_1_OUTSIDE
     ),
     SkavidCave(
-        CAVE_2_ENTRANCE,
+        Loc.skavid_cave3,
         CAVE_2_SURFACE,
         CAVE_2_INSIDE,
-        CAVE_2_EXIT,
+        Loc.cave3exit,
         CAVE_2_OUTSIDE
     ),
     SkavidCave(
-        CAVE_3_ENTRANCE,
+        Loc.skavid_cave4,
         CAVE_3_SURFACE,
         CAVE_3_INSIDE,
-        CAVE_3_EXIT,
+        Loc.cave4exit,
         CAVE_3_OUTSIDE
     ),
     SkavidCave(
-        CAVE_4_ENTRANCE,
+        Loc.skavid_cave5,
         CAVE_4_SURFACE,
         CAVE_4_INSIDE,
-        CAVE_4_EXIT,
+        Loc.cave1exit,
         CAVE_4_OUTSIDE
     ),
     SkavidCave(
-        CAVE_5_ENTRANCE,
+        Loc.skavid_cave1,
         CAVE_5_SURFACE,
         CAVE_5_INSIDE,
-        CAVE_5_EXIT,
+        Loc.cave5exit,
         CAVE_5_OUTSIDE
     ),
     SkavidCave(
-        CAVE_6_ENTRANCE,
+        Loc.skavid_cave6,
         CAVE_6_SURFACE,
         CAVE_6_INSIDE,
-        CAVE_6_EXIT,
+        Loc.cave6exit,
         CAVE_6_OUTSIDE
     )
 )
@@ -125,7 +109,7 @@ fun mapWatchtowerSkavidCaves() {
         if (!obj.tile.isAt(cave.entranceTile.x, cave.entranceTile.y))
             return@onObjectClick
 
-        if (!player.inventory.containsItem(SKAVID_MAP, 1)) {
+        if (!player.inventory.containsItem(Obj.skavidmap, 1)) {
             player.sendMessage(
                 "The caves are too complex to navigate without a map."
             )
@@ -153,22 +137,14 @@ fun mapWatchtowerSkavidCaves() {
         player.useStairs(cave.outsideTile)
     }
 
-    onObjectClick(
-        YANILLE_HOLE_IN,
-        tiles = arrayOf(YANILLE_HOLE_IN_TILE),
-        options = arrayOf("Climb-down"),
-        checkDistance = true
-    ) { (player) ->
+    onObjectClick(Loc.yanilleholein, tiles = arrayOf(YANILLE_HOLE_IN_TILE)) { (player, _, option) ->
+        if (option != "Climb-down") return@onObjectClick
         player.sendMessage("You enter the tunnel.")
-
         player.useStairs(YANILLE_HOLE_DESTINATION)
-
-        player.sendMessage(
-            "So that's how the skavids are getting into Yanille!"
-        )
+        player.sendMessage("So that's how the skavids are getting into Yanille!")
     }
 
-    onPickupItem(CAVE_NIGHTSHADE) { event ->
+    onPickupItem(Obj.nightshade) { event ->
         val player = event.player
 
         if (hasArmouredGloves(player)) {

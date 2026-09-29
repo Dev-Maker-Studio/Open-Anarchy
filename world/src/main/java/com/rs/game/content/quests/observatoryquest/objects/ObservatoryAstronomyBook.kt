@@ -1,16 +1,12 @@
 package com.rs.game.content.quests.observatoryquest
 
 import com.rs.engine.book.Book
-import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onObjectClick
-
-private const val ASTRONOMY_BOOK = 600
-private const val ASTRONOMY_BOOK_TABLE = 24927
-
-private val ASTRONOMY_BOOK_TABLE_TILE =
-    Tile.of(2438, 3187, 0)
+import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.gameval.gen.Obj
+import world.gregs.voidps.type.Tile
 
 class AstronomyBook : Book(
     "The Tale of Scorpius",
@@ -39,43 +35,20 @@ class AstronomyBook : Book(
 
 @ServerStartupEvent
 fun mapObservatoryAstronomyBook() {
-
-    onObjectClick(
-        ASTRONOMY_BOOK_TABLE,
-        tiles = arrayOf(ASTRONOMY_BOOK_TABLE_TILE)
-    ) { (player) ->
-
-        if (player.inventory.containsItem(ASTRONOMY_BOOK, 1)) {
-            player.sendMessage(
-                "You already have a copy of the Astronomy book."
-            )
+    onObjectClick(Loc.canafis_table_small, tiles = arrayOf(Tile.of(2438, 3187, 0))) { (player) ->
+        if (player.inventory.containsItem(Obj.book_of_astrology, 1)) {
+            player.sendMessage("You already have a copy of the Astronomy book.")
             return@onObjectClick
         }
-
         if (!player.inventory.hasFreeSlots()) {
-            player.sendMessage(
-                "You don't have enough inventory space."
-            )
+            player.sendMessage("You don't have enough inventory space.")
             return@onObjectClick
         }
-
-        player.inventory.addItem(
-            ASTRONOMY_BOOK,
-            1
-        )
-
-        player.sendMessage(
-            "You take the Astronomy book from the table."
-        )
+        player.inventory.addItem(Obj.book_of_astrology, 1)
+        player.sendMessage("You take the Astronomy book from the table.")
     }
 
-    onItemClick(
-        ASTRONOMY_BOOK,
-        options = arrayOf("Read")
-    ) { (player) ->
-
-        player.openBook(
-            AstronomyBook()
-        )
+    onItemClick(Obj.book_of_astrology, options = arrayOf("Read")) { (player) ->
+        player.openBook(AstronomyBook())
     }
 }

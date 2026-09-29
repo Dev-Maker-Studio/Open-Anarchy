@@ -11,91 +11,51 @@ import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
-import world.gregs.voidps.type.Tile
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.plugin.events.DropItemEvent
 import com.rs.plugin.kts.onDropItem
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onNpcClick
 import com.rs.plugin.kts.onNpcDeath
+import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Seq
+import org.darkan.core.model.GroundItem
 import org.darkan.core.model.Item
-
-private const val RANTZ = 4471
-
-private const val CHOMPY_BIRD = 1550
-private const val DEAD_CHOMPY_BIRD = 1016
-
-private const val FEATHER = 314
-private const val CHOMPY_PLUCK_FEATHERS = 5
+import world.gregs.voidps.type.Tile
 
 const val CHOMPY_KILLS = "big_chompy_kills"
 
-private const val COMP_OGRE_BOW = 4827
-
+private const val CHOMPY_PLUCK_FEATHERS = 5
 private const val QUEST_CHOMPY_ACTIVE = "bigChompyQuestChompyActive"
 private const val DEAD_CHOMPY_ACTIVE = "bigChompyDeadChompyActive"
 
-private const val BAIT_MIN_X = 2639
-private const val BAIT_MAX_X = 2655
-private const val BAIT_MIN_Y = 2948
-private const val BAIT_MAX_Y = 2959
-
 private val FIRST_CHOMPY_SPAWN = Tile.of(2647, 2947, 0)
 
-private class QuestChompy(
-    owner: Player,
-    tile: Tile
-) : OwnedNPC(
-    owner,
-    CHOMPY_BIRD,
-    tile,
-    true
-) {
-
+private class QuestChompy(owner: Player, tile: Tile) : OwnedNPC(owner, Npc.chompybird, tile, true) {
     override fun handlePreHit(hit: Hit) {
         super.handlePreHit(hit)
-
-        val player = hit.source as? Player
-            ?: return
-
+        val player = hit.source as? Player ?: return
         if (!hasValidChompyWeapon(player)) {
             hit.damage = 0
-
-            player.sendMessage(
-                "You need to use an ogre bow and suitable arrows to hunt the chompy bird."
-            )
+            player.sendMessage("You need to use an ogre bow and suitable arrows to hunt the chompy bird.")
         }
     }
 
     override fun onDespawnEarly() {
-        owner.set(
-            QUEST_CHOMPY_ACTIVE,
-            false
-        )
+        owner.set(QUEST_CHOMPY_ACTIVE, false)
     }
 }
 
-private class QuestChompyCorpse(
-    owner: Player,
-    tile: Tile
-) : OwnedNPC(
-    owner,
-    DEAD_CHOMPY_BIRD,
-    tile,
-    true
-) {
-
+private class QuestChompyCorpse(owner: Player, tile: Tile) : OwnedNPC(owner, Npc.chompybird_dead, tile, true) {
     override fun onDespawnEarly() {
-        owner.set(
-            DEAD_CHOMPY_ACTIVE,
-            false
-        )
+        owner.set(DEAD_CHOMPY_ACTIVE, false)
     }
 }
 
 @ServerStartupEvent
 fun mapBigChompyHunting() {
-
     onLogin { (player) ->
         if (player.getQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING) in STAGE_HUNTING_CHOMPY..STAGE_COMPLETE) {
             player.set(QUEST_CHOMPY_ACTIVE, false)
@@ -103,556 +63,179 @@ fun mapBigChompyHunting() {
         }
     }
 
-    onDropItem(BLOATED_TOAD) { event ->
+    onDropItem(Obj.bloated_toad) { event ->
         val player = event.player
-
-        when (
-            player.getQuestStage(
-                Quest.BIG_CHOMPY_BIRD_HUNTING
-            )
-        ) {
-            STAGE_BAITING_CHOMPY -> {
-                handleRantzBait(
-                    player,
-                    event
-                )
-            }
-
-            STAGE_HUNTING_CHOMPY -> {
-                handlePlayerBait(
-                    player,
-                    event
-                )
-            }
-
-            STAGE_COOKING_CHOMPY -> {
-                handleCookingStageRecoveryBait(
-                    player,
-                    event
-                )
-            }
-
-            STAGE_COMPLETE -> {
-                handlePlayerBait(
-                    player,
-                    event
-                )
-            }
+        when (player.getQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING)) {
+            STAGE_BAITING_CHOMPY -> handleRantzBait(player, event)
+            STAGE_HUNTING_CHOMPY, STAGE_COMPLETE -> handlePlayerBait(player, event)
+            STAGE_COOKING_CHOMPY -> handleCookingStageRecoveryBait(player, event)
         }
     }
 
-    onItemClick(
-        OGRE_BOW,
-        COMP_OGRE_BOW,
-        options = arrayOf("Check kills")
-    ) { event ->
-        val kills = getChompyKills(
-            event.player
-        )
-
-        event.player.sendMessage(
-            "You have killed $kills chompy ${if (kills == 1) "bird" else "birds"}."
-        )
+    onItemClick(Obj.ogre_bow, Obj.obj_4827, options = arrayOf("Check kills")) { (player) ->
+        val kills = getChompyKills(player)
+        player.sendMessage("You have killed $kills chompy ${if (kills == 1) "bird" else "birds"}.")
     }
 
-    onNpcDeath(CHOMPY_BIRD) { event ->
-
-        val chompy = event.npc as? QuestChompy
-            ?: return@onNpcDeath
-
+    onNpcDeath(Npc.chompybird) { event ->
+        val chompy = event.npc as? QuestChompy ?: return@onNpcDeath
         val player = chompy.owner
-
-        if (event.killer !== player) {
+        if (event.killer !== player || !canHuntQuestChompy(player) || !player.getBool(QUEST_CHOMPY_ACTIVE))
             return@onNpcDeath
-        }
-
-        if (!canHuntQuestChompy(player)) {
-            return@onNpcDeath
-        }
-
-        if (!player.getBool(QUEST_CHOMPY_ACTIVE)) {
-            return@onNpcDeath
-        }
-
-        player.set(
-            QUEST_CHOMPY_ACTIVE,
-            false
-        )
-
-        addChompyKill(
-            player
-        )
-
-        player.set(
-            DEAD_CHOMPY_ACTIVE,
-            true
-        )
-
-        val deadChompy = QuestChompyCorpse(
-            player,
-            chompy.tile
-        )
-
-        deadChompy.setRandomWalk(false)
+        player.set(QUEST_CHOMPY_ACTIVE, false)
+        addChompyKill(player)
+        player.set(DEAD_CHOMPY_ACTIVE, true)
+        QuestChompyCorpse(player, chompy.tile).setRandomWalk(false)
     }
 
-    onNpcClick(
-        DEAD_CHOMPY_BIRD,
-        options = arrayOf("Pluck")
-    ) { event ->
-
-        val player = event.player
-
-        val chompy = event.npc as? QuestChompyCorpse
-            ?: return@onNpcClick
-
-        if (chompy.owner !== player) {
+    onNpcClick(Npc.chompybird_dead, options = arrayOf("Pluck")) { (player, npc) ->
+        val chompy = npc as? QuestChompyCorpse ?: return@onNpcClick
+        if (chompy.owner !== player || !canHuntQuestChompy(player) || !player.getBool(DEAD_CHOMPY_ACTIVE))
             return@onNpcClick
-        }
-
-        if (!canHuntQuestChompy(player)) {
-            return@onNpcClick
-        }
-
-        if (!player.getBool(DEAD_CHOMPY_ACTIVE)) {
-            return@onNpcClick
-        }
-
-        pluckQuestChompy(
-            player,
-            chompy
-        )
+        pluckQuestChompy(player, chompy)
     }
 }
 
-fun getChompyKills(
-    player: Player
-): Int {
-    return player.getI(
-        CHOMPY_KILLS,
-        0
-    )
-}
+fun getChompyKills(player: Player): Int = player.getI(CHOMPY_KILLS, 0)
 
-private fun addChompyKill(
-    player: Player
-) {
-    player.set(
-        CHOMPY_KILLS,
-        getChompyKills(player) + 1
-    )
-}
+private fun addChompyKill(player: Player) = player.set(CHOMPY_KILLS, getChompyKills(player) + 1)
 
-private fun hasValidChompyWeapon(
-    player: Player
-): Boolean {
+private fun hasValidChompyWeapon(player: Player): Boolean {
     val weaponId = player.equipment.weaponId
-
-    if (
-        weaponId != OGRE_BOW &&
-        weaponId != COMP_OGRE_BOW
-    ) {
-        return false
-    }
-
-    val weapon = RangedWeapon.forId(
-        weaponId
-    ) ?: return false
-
-    val ammo = AmmoType.forId(
-        player.equipment.ammoId
-    ) ?: return false
-
+    if (weaponId != Obj.ogre_bow && weaponId != Obj.obj_4827) return false
+    val weapon = RangedWeapon.forId(weaponId) ?: return false
+    val ammo = AmmoType.forId(player.equipment.ammoId) ?: return false
     return weapon.ammos?.contains(ammo) == true
 }
 
-private fun handleRantzBait(
-    player: Player,
-    event: com.rs.plugin.events.DropItemEvent
-) {
+private fun placeBait(player: Player, event: DropItemEvent): GroundItem? {
+    event.cancelDrop()
+    if (!player.inventory.containsItem(Obj.bloated_toad, 1)) return null
+    player.inventory.deleteItem(Obj.bloated_toad, 1)
+    return World.addGroundItemNoExpire(Item(Obj.bloated_toad, 1), player.tile, player)
+}
+
+private fun handleRantzBait(player: Player, event: DropItemEvent) {
     if (!isInRantzClearing(player.tile)) {
         event.cancelDrop()
-
-        player.sendMessage(
-            "This is too far away for Rantz to shoot the chompy bird."
-        )
-
+        player.sendMessage("This is too far away for Rantz to shoot the chompy bird.")
         return
     }
-
-    event.cancelDrop()
-
-    if (
-        !player.inventory.containsItem(
-            BLOATED_TOAD,
-            1
-        )
-    ) {
+    if (!player.inventory.containsItem(Obj.bloated_toad, 1)) {
+        event.cancelDrop()
         return
     }
-
-    player.inventory.deleteItem(
-        BLOATED_TOAD,
-        1
-    )
-
-    val bait = World.addGroundItemNoExpire(
-        Item(BLOATED_TOAD, 1),
-        player.tile,
-        player
-    )
-
-    firstChompyBaitDialogue(
-        player,
-        bait?.tile ?: player.tile
-    )
+    val baitTile = player.tile
+    firstChompyBaitDialogue(player, placeBait(player, event), baitTile)
 }
 
-private fun firstChompyBaitDialogue(
-    player: Player,
-    bait.tile: Tile
-) {
+private fun firstChompyBaitDialogue(player: Player, bait: GroundItem?, baitTile: Tile) {
     player.startConversation {
-
-        player(
-            CALM_TALK,
-            "There you go, I've placed the bait."
-        )
-
-        npc(
-            RANTZ,
-            CALM_TALK,
-            "Goodz, me now waits for da chompy! It shouldn't be long now. Sneaky...sneaky..."
-        )
-
-        player(
-            CALM_TALK,
-            "Yes, I know...stick da chompy!"
-        )
-
-        npc(
-            RANTZ,
-            CALM_TALK,
-            "Hey..you's creature, is da fatsy toady still dere? Go get more fatsy toadies if dey all gone!"
-        )
-
-        player(
-            CALM_TALK,
-            "What? I have to get more bait if there's none there? Does this Chompy Bird even exist I wonder?"
-        )
-
-        exec {
-            beginRantzHunt(
-                player,
-                bait.tile
-            )
-        }
+        player(CALM_TALK, "There you go, I've placed the bait.")
+        npc(Npc.npc_4471, CALM_TALK, "Goodz, me now waits for da chompy! It shouldn't be long now. Sneaky...sneaky...")
+        player(CALM_TALK, "Yes, I know...stick da chompy!")
+        npc(Npc.npc_4471, CALM_TALK, "Hey..you's creature, is da fatsy toady still dere? Go get more fatsy toadies if dey all gone!")
+        player(CALM_TALK, "What? I have to get more bait if there's none there? Does this Chompy Bird even exist I wonder?")
+        exec { beginRantzHunt(player, bait, baitTile) }
     }
 }
 
-private fun beginRantzHunt(
-    player: Player,
-    bait.tile: Tile
-) {
+private fun beginRantzHunt(player: Player, bait: GroundItem?, baitTile: Tile) {
     player.schedule {
-
         wait(4)
-
-        World.removeGroundItem(player, bait)
-
-        val chompy = OwnedNPC(
-            player,
-            CHOMPY_BIRD,
-            FIRST_CHOMPY_SPAWN,
-            true
-        )
-
+        bait?.let { World.removeGroundItem(it) }
+        val chompy = OwnedNPC(player, Npc.chompybird, FIRST_CHOMPY_SPAWN, true)
         chompy.setRandomWalk(false)
         chompy.setAutoDespawnAtDistance(false)
         chompy.isCantInteract = true
-
-        chompy.faceTile(
-            bait.tile
-        )
-
+        chompy.faceTile(baitTile)
         player.startConversation {
-
-            npc(
-                chompy,
-                HAPPY_TALKING,
-                "Sqwark! Gobble!"
-            )
-
-            npc(
-                RANTZ,
-                HAPPY_TALKING,
-                "Hey, dere's da chompy, I's gonna shoot it!"
-            )
-
-            exec {
-                rantzMissesChompy(
-                    player,
-                    chompy
-                )
-            }
+            npc(chompy, HAPPY_TALKING, "Sqwark! Gobble!")
+            npc(Npc.npc_4471, HAPPY_TALKING, "Hey, dere's da chompy, I's gonna shoot it!")
+            exec { rantzMissesChompy(player, chompy) }
         }
     }
 }
 
-private fun rantzMissesChompy(
-    player: Player,
-    chompy: OwnedNPC
-) {
+private fun rantzMissesChompy(player: Player, chompy: OwnedNPC) {
     player.schedule {
-
         repeat(3) {
-
-            val rantz = World.getNPCsInChunkRange(
-                player.chunkId,
-                1
-            ).firstOrNull {
-                it.id == RANTZ
+            World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == Npc.npc_4471 }?.let { rantz ->
+                rantz.faceEntity(chompy)
+                rantz.anim(Seq._100_jubbly_ogre_bow)
             }
-
-            if (rantz != null) {
-                rantz.faceEntity(
-                    chompy
-                )
-
-                rantz.anim(
-                    3460
-                )
-            }
-
             wait(3)
         }
-
         chompy.finish()
-
-        player.setQuestStage(
-            Quest.BIG_CHOMPY_BIRD_HUNTING,
-            STAGE_RANTZ_FAILED_HUNT
-        )
+        player.setQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING, STAGE_RANTZ_FAILED_HUNT)
     }
 }
 
-private fun handlePlayerBait(
-    player: Player,
-    event: com.rs.plugin.events.DropItemEvent
-) {
+private fun handlePlayerBait(player: Player, event: DropItemEvent) {
     if (!isInRantzClearing(player.tile)) {
         event.cancelDrop()
-
-        player.sendMessage(
-            "This is too far away to attract a chompy."
-        )
-
+        player.sendMessage("This is too far away to attract a chompy.")
         return
     }
-
-    if (
-        player.getBool(QUEST_CHOMPY_ACTIVE) ||
-        player.getBool(DEAD_CHOMPY_ACTIVE)
-    ) {
+    if (player.getBool(QUEST_CHOMPY_ACTIVE) || player.getBool(DEAD_CHOMPY_ACTIVE)) {
         event.cancelDrop()
-
-        player.sendMessage(
-            "You already have a chompy to deal with."
-        )
-
+        player.sendMessage("You already have a chompy to deal with.")
         return
     }
-
-    event.cancelDrop()
-
-    if (
-        !player.inventory.containsItem(
-            BLOATED_TOAD,
-            1
-        )
-    ) {
+    if (!player.inventory.containsItem(Obj.bloated_toad, 1)) {
+        event.cancelDrop()
         return
     }
-
-    player.inventory.deleteItem(
-        BLOATED_TOAD,
-        1
-    )
-
-    val bait = World.addGroundItemNoExpire(
-        Item(BLOATED_TOAD, 1),
-        player.tile,
-        player
-    )
-
-    attractQuestChompy(
-        player,
-        bait?.tile ?: player.tile
-    )
+    val baitTile = player.tile
+    attractQuestChompy(player, placeBait(player, event), baitTile)
 }
 
-private fun handleCookingStageRecoveryBait(
-    player: Player,
-    event: com.rs.plugin.events.DropItemEvent
-) {
-    if (
-        player.inventory.containsItem(RAW_CHOMPY, 1) ||
-        player.inventory.containsItem(SEASONED_CHOMPY, 1)
-    ) {
+private fun hasQuestChompy(player: Player) =
+    player.inventory.containsItem(Obj.raw_chompy, 1) || player.inventory.containsItem(Obj.cooked_s_chompy, 1)
+
+private fun handleCookingStageRecoveryBait(player: Player, event: DropItemEvent) {
+    if (hasQuestChompy(player)) {
         event.cancelDrop()
-
-        player.sendMessage(
-            "You already have the chompy you need."
-        )
-
+        player.sendMessage("You already have the chompy you need.")
         return
     }
-
-    handlePlayerBait(
-        player,
-        event
-    )
+    handlePlayerBait(player, event)
 }
 
-private fun attractQuestChompy(
-    player: Player,
-    bait.tile: Tile
-) {
+private fun attractQuestChompy(player: Player, bait: GroundItem?, baitTile: Tile) {
     player.schedule {
-
         wait(4)
-
-        if (!canHuntQuestChompy(player)) {
-            World.removeGroundItem(player, bait)
-
-            return@schedule
-        }
-
-        if (
-            player.getQuestStage(
-                Quest.BIG_CHOMPY_BIRD_HUNTING
-            ) == STAGE_COOKING_CHOMPY &&
-            (
-                player.inventory.containsItem(RAW_CHOMPY, 1) ||
-                player.inventory.containsItem(SEASONED_CHOMPY, 1)
-            )
-        ) {
-            World.removeGroundItem(player, bait)
-
-            return@schedule
-        }
-
-        if (
-            player.getBool(QUEST_CHOMPY_ACTIVE) ||
-            player.getBool(DEAD_CHOMPY_ACTIVE)
-        ) {
-            World.removeGroundItem(player, bait)
-
-            return@schedule
-        }
-
-        World.removeGroundItem(player, bait)
-
-        val chompy = QuestChompy(
-            player,
-            FIRST_CHOMPY_SPAWN
-        )
-
+        bait?.let { World.removeGroundItem(it) }
+        if (!canHuntQuestChompy(player)) return@schedule
+        if (player.getQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING) == STAGE_COOKING_CHOMPY && hasQuestChompy(player)) return@schedule
+        if (player.getBool(QUEST_CHOMPY_ACTIVE) || player.getBool(DEAD_CHOMPY_ACTIVE)) return@schedule
+        val chompy = QuestChompy(player, FIRST_CHOMPY_SPAWN)
         chompy.setRandomWalk(false)
         chompy.setAutoDespawnAtDistance(false)
         chompy.isCantInteract = false
-
-        chompy.faceTile(
-            bait.tile
-        )
-
-        player.set(
-            QUEST_CHOMPY_ACTIVE,
-            true
-        )
-
-        chompy.forceTalk(
-            "Sqwark! Gobble!"
-        )
+        chompy.faceTile(baitTile)
+        player.set(QUEST_CHOMPY_ACTIVE, true)
+        chompy.forceTalk("Sqwark! Gobble!")
     }
 }
 
-private fun pluckQuestChompy(
-    player: Player,
-    chompy: QuestChompyCorpse
-) {
-    if (
-        player.getQuestStage(
-            Quest.BIG_CHOMPY_BIRD_HUNTING
-        ) == STAGE_COOKING_CHOMPY &&
-        (
-            player.inventory.containsItem(RAW_CHOMPY, 1) ||
-            player.inventory.containsItem(SEASONED_CHOMPY, 1)
-        )
-    ) {
-        player.sendMessage(
-            "You already have the chompy you need."
-        )
-
-        player.set(
-            DEAD_CHOMPY_ACTIVE,
-            false
-        )
-
+private fun pluckQuestChompy(player: Player, chompy: QuestChompyCorpse) {
+    if (player.getQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING) == STAGE_COOKING_CHOMPY && hasQuestChompy(player)) {
+        player.sendMessage("You already have the chompy you need.")
+        player.set(DEAD_CHOMPY_ACTIVE, false)
         chompy.finish()
         return
     }
-
-    player.faceEntity(
-        chompy
-    )
-
-    player.sendMessage(
-        "You pluck the chompy bird..."
-    )
-
-    player.inventory.addItemDrop(
-        FEATHER,
-        CHOMPY_PLUCK_FEATHERS
-    )
-
-    player.inventory.addItemDrop(
-        RAW_CHOMPY,
-        1
-    )
-
-    player.sendMessage(
-        "You get some feathers and raw chompy bird meat."
-    )
-
-    player.set(
-        DEAD_CHOMPY_ACTIVE,
-        false
-    )
-
+    player.faceEntity(chompy)
+    player.sendMessage("You pluck the chompy bird...")
+    player.inventory.addItemDrop(Obj.feather, CHOMPY_PLUCK_FEATHERS)
+    player.inventory.addItemDrop(Obj.raw_chompy, 1)
+    player.sendMessage("You get some feathers and raw chompy bird meat.")
+    player.set(DEAD_CHOMPY_ACTIVE, false)
     chompy.finish()
 }
 
-private fun canHuntQuestChompy(
-    player: Player
-): Boolean {
-    return when (
-        player.getQuestStage(
-            Quest.BIG_CHOMPY_BIRD_HUNTING
-        )
-    ) {
-        STAGE_HUNTING_CHOMPY,
-        STAGE_COOKING_CHOMPY,
-        STAGE_COMPLETE -> true
+private fun canHuntQuestChompy(player: Player): Boolean =
+    player.getQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING) in setOf(STAGE_HUNTING_CHOMPY, STAGE_COOKING_CHOMPY, STAGE_COMPLETE)
 
-        else -> false
-    }
-}
-
-private fun isInRantzClearing(
-    tile: Tile
-): Boolean {
-    return tile.level == 0 &&
-            tile.x in BAIT_MIN_X..BAIT_MAX_X &&
-            tile.y in BAIT_MIN_Y..BAIT_MAX_Y
-}
+private fun isInRantzClearing(tile: Tile): Boolean = tile.level == 0 && tile.x in 2639..2655 && tile.y in 2948..2959

@@ -5,10 +5,7 @@ import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-
-const val DESERT_TREASURE_ETCHINGS = 4654
-const val DESERT_TREASURE_TRANSLATION = 4655
-const val ARCHAEOLOGICAL_EXPERT_NPC = 619
+import org.darkan.core.gameval.gen.Obj
 
 class TerryBalandoDialogues(val player: Player, val npc: NPC) {
     init {
@@ -18,15 +15,16 @@ class TerryBalandoDialogues(val player: Player, val npc: NPC) {
                     npc(npc, CALM_TALK, "That's right, who wants to know...?")
                     npc(npc, CALM_TALK, "Ah yes, I recognise you! You're the ${if (player.appearance.isMale) "fellow" else "lass"} who found that strange artefact for the museum, aren't you? What can I do for you now?")
 
-                    if (!player.inventory.containsOneItem(DESERT_TREASURE_ETCHINGS)) {
+                    if (!player.inventory.containsOneItem(Obj.four_diamonds_etchings)) {
                         player(CALM_TALK, "I had some etchings to deliver to you, but I don't have them on me...")
                         npc(npc, CALM_TALK, "Then... you better go get them for me?")
                     } else {
                         player(CALM_TALK, "That's right. I was in the desert down by the Bedabin Camp, and I found an archaeologist who asked me to deliver this to you.")
-                        npc(npc, EXCITED, "You spoke to the legendary Asgarnia Smith??? Quickly, let me see what he had to give you! He is always at the forefront of archaeological breakthroughs!")
-                        player.inventory.deleteItem(DESERT_TREASURE_ETCHINGS, 1)
+                        npc(npc, AMAZED, "You spoke to the legendary Asgarnia Smith??? Quickly, let me see what he had to give you! He is always at the forefront of archaeological breakthroughs!") {
+                            player.inventory.deleteItem(Obj.four_diamonds_etchings, 1)
+                        }
                         player(CALM_TALK, "So what does the inscription say? Anything interesting?")
-                        npc(npc, EXCITED, "This is fascinating! These cuneiforms seem to predate even the settlement we are excavating here. This is most interesting indeed!")
+                        npc(npc, AMAZED, "This is fascinating! These cuneiforms seem to predate even the settlement we are excavating here. This is most interesting indeed!")
                         player(CALM_TALK, "Can you translate it for me?")
                         npc(npc, CALM_TALK, "I am not familiar with this particular language, but the similarities in the pictographs may allow me to work out a rough translation.")
                         player(CALM_TALK, "Um... so, can you translate it for me or not?")
@@ -39,12 +37,12 @@ class TerryBalandoDialogues(val player: Player, val npc: NPC) {
 
                 STAGE_RETURN_TO_ASGARNIA -> {
                     npc(npc, CALM_TALK, "Hello again.")
-                    if (!player.containsItem(DESERT_TREASURE_TRANSLATION)) {
+                    if (!player.containsItem(Obj.four_diamonds_translation_primer)) {
                         player(CALM_TALK, "I lost that translation you gave me...")
                         npc(npc, CALM_TALK, "Oh, no matter. I mostly remember what it said anyway. Here you go!")
                         if (player.inventory.hasFreeSlots()) {
-                            item(DESERT_TREASURE_TRANSLATION, "Terry Balando gives you the translation he prepared.") {
-                                player.inventory.addItem(DESERT_TREASURE_TRANSLATION, 1)
+                            item(Obj.four_diamonds_translation_primer, "Terry Balando gives you the translation he prepared.") {
+                                player.inventory.addItem(Obj.four_diamonds_translation_primer, 1)
                             }
                         } else {
                             simple("You need at least 1 free inventory slot to receive the translation.")
@@ -56,7 +54,6 @@ class TerryBalandoDialogues(val player: Player, val npc: NPC) {
                 }
 
                 else -> {
-                    // Only used for Desert Treasure quest stages 1&2.
                     npc(npc, CALM_TALK, "Hello again. How goes the archaeology?")
                     player(CALM_TALK, "Pretty well, thanks.")
                     npc(npc, CALM_TALK, "Glad to hear it!")
@@ -69,14 +66,15 @@ class TerryBalandoDialogues(val player: Player, val npc: NPC) {
         if (player.getQuestStage(Quest.DESERT_TREASURE) != STAGE_TERRY_BALANDO)
             return
 
-        if (!player.inventory.containsOneItem(DESERT_TREASURE_ETCHINGS))
+        if (!player.inventory.containsOneItem(Obj.four_diamonds_etchings))
             return
 
         player.startConversation {
             player(CALM_TALK, "I was asked to deliver these etchings to you.")
-            npc(npc, EXCITED, "These are from Asgarnia Smith? Quickly, let me have a look!")
-            player.inventory.deleteItem(DESERT_TREASURE_ETCHINGS, 1)
-            npc(npc, EXCITED, "Fascinating! Give me a moment and I will see what I can make of these inscriptions.") {
+            npc(npc, AMAZED, "These are from Asgarnia Smith? Quickly, let me have a look!") {
+                player.inventory.deleteItem(Obj.four_diamonds_etchings, 1)
+            }
+            npc(npc, AMAZED, "Fascinating! Give me a moment and I will see what I can make of these inscriptions.") {
                 player.setQuestStage(Quest.DESERT_TREASURE, STAGE_RETURN_TO_ASGARNIA)
             }
         }

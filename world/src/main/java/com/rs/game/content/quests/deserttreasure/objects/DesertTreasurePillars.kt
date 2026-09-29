@@ -1,23 +1,16 @@
 package com.rs.game.content.quests.deserttreasure.objects
 
 import com.rs.engine.quest.Quest
-import com.rs.game.content.quests.deserttreasure.DesertTreasureDiamonds
 import com.rs.game.content.quests.deserttreasure.STAGE_IFTAH_YA_SIMSIM
 import com.rs.game.content.quests.deserttreasure.STAGE_RETURN_TO_JALDRAOCHT
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.plugin.annotations.ServerStartupEvent
-import com.rs.plugin.kts.*
-
-private const val BLOOD_PILLAR = 6482
-private const val SMOKE_PILLAR = 6485
-private const val ICE_PILLAR = 6488
-private const val SHADOW_PILLAR = 6491
-
-private const val BLOOD_VARBIT = 390
-private const val SMOKE_VARBIT = 387
-private const val ICE_VARBIT = 389
-private const val SHADOW_VARBIT = 388
+import com.rs.plugin.kts.onItemOnObject
+import com.rs.plugin.kts.onLogin
+import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Varbit
 
 private const val MAGIC_REQUIREMENT = 50
 
@@ -26,44 +19,20 @@ private const val SMOKE_PLACED = "dtSmokeDiamondPlaced"
 private const val ICE_PLACED = "dtIceDiamondPlaced"
 private const val SHADOW_PLACED = "dtShadowDiamondPlaced"
 
-private data class Pillar(
-    val objectId: Int,
-    val x: Int,
-    val y: Int,
-    val diamondId: Int,
-    val varbit: Int,
-    val placedKey: String
-)
+private data class Pillar(val objectId: Int, val x: Int, val y: Int, val diamondId: Int, val varbit: Int, val placedKey: String)
 
 private val pillars = arrayOf(
-    Pillar(
-        BLOOD_PILLAR, 3220, 2909,
-        DesertTreasureDiamonds.BLOOD_DIAMOND, BLOOD_VARBIT, BLOOD_PLACED
-    ),
-    Pillar(
-        SMOKE_PILLAR, 3244, 2909,
-        DesertTreasureDiamonds.SMOKE_DIAMOND, SMOKE_VARBIT, SMOKE_PLACED
-    ),
-    Pillar(
-        ICE_PILLAR, 3244, 2885,
-        DesertTreasureDiamonds.ICE_DIAMOND, ICE_VARBIT, ICE_PLACED
-    ),
-    Pillar(
-        SHADOW_PILLAR, 3220, 2885,
-        DesertTreasureDiamonds.SHADOW_DIAMOND, SHADOW_VARBIT, SHADOW_PLACED
-    )
+    Pillar(Loc.loc_6482, 3220, 2909, Obj.fd_blood_diamond, Varbit.fd_column_blood, BLOOD_PLACED),
+    Pillar(Loc.loc_6485, 3244, 2909, Obj.fd_diamond_fire, Varbit.fd_column_fire, SMOKE_PLACED),
+    Pillar(Loc.loc_6488, 3244, 2885, Obj.fd_icediamond, Varbit.fd_column_ice, ICE_PLACED),
+    Pillar(Loc.loc_6491, 3220, 2885, Obj.fd_dark_diamond, Varbit.fd_column_shadow, SHADOW_PLACED)
 )
 
 @ServerStartupEvent
 fun mapDesertTreasurePillars() {
     onItemOnObject(
         objectNamesOrIds = pillars.map { it.objectId }.toTypedArray(),
-        itemNamesOrIds = arrayOf(
-            DesertTreasureDiamonds.BLOOD_DIAMOND,
-            DesertTreasureDiamonds.SMOKE_DIAMOND,
-            DesertTreasureDiamonds.ICE_DIAMOND,
-            DesertTreasureDiamonds.SHADOW_DIAMOND
-        )
+        itemNamesOrIds = pillars.map { it.diamondId }.toTypedArray()
     ) { (player, obj, item) ->
         val pillar = pillars.firstOrNull {
             it.objectId == obj.id &&

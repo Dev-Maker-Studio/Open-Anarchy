@@ -17,6 +17,7 @@ import com.rs.game.content.skills.mining.Pickaxe
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
+import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.model.Item
 import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
@@ -438,7 +439,7 @@ fun mapTheDigSiteInteractions() {
 
     onItemOnNpc(*DIGSITE_WORKMEN.toTypedArray()) { (player, item, npc) -> if (item.id == INVITATION_LETTER) DigsiteWorkmanD(player, npc).showInvitation() }
     onItemOnNpc(ARCHAEOLOGICAL_EXPERT) { (player, item, npc) ->
-        if (player.getQuestStage(Quest.DESERT_TREASURE) == STAGE_TERRY_BALANDO && item.id == 4654)
+        if (player.getQuestStage(Quest.DESERT_TREASURE) == STAGE_TERRY_BALANDO && item.id == Obj.four_diamonds_etchings)
             TerryBalandoDialogues(player, npc).receiveEtchings()
         else
             ArchaeologicalExpertD(player, npc).identifyItem(item)

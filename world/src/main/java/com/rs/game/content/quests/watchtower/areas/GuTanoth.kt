@@ -1,12 +1,13 @@
 package com.rs.game.content.quests.watchtower.areas
 
+import org.darkan.core.gameval.gen.Seq
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Loc
 import com.rs.engine.dialogue.HeadE.CALM_TALK
 import com.rs.engine.dialogue.HeadE.CONFUSED
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
-import com.rs.game.content.quests.watchtower.CAVE_NIGHTSHADE
-import com.rs.game.content.quests.watchtower.OGRE_RELIC
-import com.rs.game.content.quests.watchtower.ROCK_CAKE
 import com.rs.game.content.quests.watchtower.STAGE_ENTER_GUTANOTH
 import com.rs.game.content.quests.watchtower.STAGE_FIND_SHAMAN_ENCLAVE
 import com.rs.game.content.quests.watchtower.STAGE_GET_SKAVID_MAP
@@ -23,22 +24,8 @@ import com.rs.plugin.kts.onNpcClick
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPlayerStep
 import org.darkan.core.Constants
-import org.darkan.core.model.Animation
 import world.gregs.voidps.type.Tile
 
-private const val ENTRANCE_GUARD = 858
-private const val MARKET_GUARD = 859
-private const val SOUTHWEST_GUARD = 860
-private const val TOLL_BRIDGE_GUARD = 861
-private const val SHAMAN_CAVE_GUARD = 870
-private const val OGRE_TRADER = 875
-
-private const val CITY_GATE = 2786
-private const val BROKEN_BRIDGE_GAP = 2831
-private const val ROCK_CAKE_STALL = 2793
-
-private const val COINS = 995
-private const val GOLD_BAR = 2357
 private const val BRIDGE_TOLL = 20
 
 private const val ROCK_CAKE_THIEVING_LEVEL = 15
@@ -80,7 +67,7 @@ private val GUARD_PUNCH_EXIT_TILES = arrayOf(
 @ServerStartupEvent
 fun mapGuTanoth() {
     onNpcClick(
-        ENTRANCE_GUARD,
+        Npc.ogre_guard1,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         if (npc.withinDistance(CITY_GATE_TILE, 8)) {
@@ -91,48 +78,48 @@ fun mapGuTanoth() {
     }
 
     onNpcClick(
-        MARKET_GUARD,
+        Npc.ogre_guard2,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         handleMarketGuard(player, npc)
     }
 
     onNpcClick(
-        SOUTHWEST_GUARD,
+        Npc.ogre_guard3,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         handleSouthwestGuard(player, npc)
     }
 
     onNpcClick(
-        TOLL_BRIDGE_GUARD,
+        Npc.ogre_guard4,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         handleTollBridgeGuard(player, npc)
     }
 
     onNpcClick(
-        SHAMAN_CAVE_GUARD,
+        Npc.enclave_guard,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         handleShamanCaveGuard(player, npc)
     }
 
-    onItemOnNpc(SHAMAN_CAVE_GUARD) { (player, item, npc) ->
-        if (item.id == CAVE_NIGHTSHADE) {
+    onItemOnNpc(Npc.enclave_guard) { (player, item, npc) ->
+        if (item.id == Obj.nightshade) {
             handleNightshadeOnShamanCaveGuard(player, npc)
         }
     }
 
     onNpcClick(
-        OGRE_TRADER,
+        Npc.ogre_trader2,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         handleOgreTrader(player, npc)
     }
 
     onObjectClick(
-        CITY_GATE,
+        Loc.ogreguardgate1,
         tiles = arrayOf(CITY_GATE_TILE)
     ) { (player, obj) ->
         val questAttribs =
@@ -147,14 +134,14 @@ fun mapGuTanoth() {
     }
 
     onObjectClick(
-        ROCK_CAKE_STALL,
+        Loc.rockcounter_withcakes,
         tiles = arrayOf(ROCK_CAKE_STALL_TILE)
     ) { (player) ->
         handleRockCakeStall(player)
     }
 
     onObjectClick(
-        BROKEN_BRIDGE_GAP,
+        Loc.tanothjump2,
         tiles = arrayOf(BROKEN_BRIDGE_GAP_TILE)
     ) { (player) ->
         handleBrokenBridge(player)
@@ -180,7 +167,7 @@ private fun handleEntranceGuard(player: Player, npc: NPC) {
             "Well, what proof of friendship did you bring?"
         )
 
-        if (!player.inventory.containsItem(OGRE_RELIC, 1)) {
+        if (!player.inventory.containsItem(Obj.ogrerelic, 1)) {
             player(
                 CONFUSED,
                 "I don't have anything."
@@ -221,7 +208,7 @@ private fun handleEntranceGuard(player: Player, npc: NPC) {
         )
 
         exec {
-            player.inventory.deleteItem(OGRE_RELIC, 1)
+            player.inventory.deleteItem(Obj.ogrerelic, 1)
 
             player.setQuestStage(
                 Quest.WATCHTOWER,
@@ -254,11 +241,11 @@ private fun handleGoldenGatewayGuard(player: Player, npc: NPC) {
             "Creature, did you bring me the gold?"
         )
 
-        if (!player.inventory.containsItem(GOLD_BAR, 1))
+        if (!player.inventory.containsItem(Obj.gold_bar, 1))
             return@startConversation
 
         exec {
-            player.inventory.deleteItem(GOLD_BAR, 1)
+            player.inventory.deleteItem(Obj.gold_bar, 1)
         }
 
         player(
@@ -400,7 +387,7 @@ private fun handleSouthwestGuard(player: Player, npc: NPC) {
 
     if (
         questAttribs.getB(MARKET_GIFT_REQUESTED) &&
-        player.inventory.containsItem(ROCK_CAKE, 1)
+        player.inventory.containsItem(Obj.rockcake, 1)
     ) {
         handleRockCakeHandIn(player, npc)
         return
@@ -445,10 +432,10 @@ private fun handleRockCakeStall(player: Player) {
     }
 
     player.setNextFaceTile(ROCK_CAKE_STALL_TILE)
-    player.setNextAnimation(Animation(881))
+    player.anim(Seq.human_pickpocket)
     player.lock(2)
 
-    player.inventory.addItem(ROCK_CAKE, 1)
+    player.inventory.addItem(Obj.rockcake, 1)
     player.skills.addXp(
         Constants.THIEVING,
         ROCK_CAKE_THIEVING_XP
@@ -469,7 +456,7 @@ private fun handleRockCakeHandIn(player: Player, npc: NPC) {
         )
 
         item(
-            ROCK_CAKE,
+            Obj.rockcake,
             "You give the guard a rock cake."
         )
 
@@ -480,7 +467,7 @@ private fun handleRockCakeHandIn(player: Player, npc: NPC) {
         )
 
         exec {
-            player.inventory.deleteItem(ROCK_CAKE, 1)
+            player.inventory.deleteItem(Obj.rockcake, 1)
 
             val questAttribs =
                 player.questManager.getAttribs(Quest.WATCHTOWER)
@@ -498,7 +485,7 @@ private fun handleRockCakeHandIn(player: Player, npc: NPC) {
 
             Agility.handleObstacle(
                 player,
-                3303,
+                Seq.trollheim_wall_kit_climb_over,
                 2,
                 Tile.of(2506, 3011, 0),
                 1.0
@@ -527,7 +514,7 @@ private fun handleBrokenBridge(player: Player) {
     if (player.skills.getLevel(Skills.AGILITY) < BROKEN_BRIDGE_AGILITY_LEVEL) {
         player.startConversation {
             npc(
-                TOLL_BRIDGE_GUARD,
+                Npc.ogre_guard4,
                 CALM_TALK,
                 "Come back when you've got the moves!"
             )
@@ -538,7 +525,7 @@ private fun handleBrokenBridge(player: Player) {
     if (player.x < BROKEN_BRIDGE_GAP_TILE.x) {
         Agility.handleObstacle(
             player,
-            3303,
+            Seq.trollheim_wall_kit_climb_over,
             1,
             Tile.of(2533, 3029, 0),
             1.0
@@ -556,7 +543,7 @@ private fun handleBrokenBridge(player: Player) {
 
     player.startConversation {
         npc(
-            TOLL_BRIDGE_GUARD,
+            Npc.ogre_guard4,
             CALM_TALK,
             "Oi! Little thing. If you want to cross here, you must pay me 20 gold pieces first!"
         )
@@ -567,7 +554,7 @@ private fun handleBrokenBridge(player: Player) {
         )
 
         npc(
-            TOLL_BRIDGE_GUARD,
+            Npc.ogre_guard4,
             CALM_TALK,
             "That's what I said, like it or lump it."
         )
@@ -579,7 +566,7 @@ private fun handleBrokenBridge(player: Player) {
                     "Okay, I'll pay it."
                 )
 
-                if (!player.inventory.containsItem(COINS, BRIDGE_TOLL)) {
+                if (!player.inventory.containsItem(Obj.coins, BRIDGE_TOLL)) {
                     player.sendMessage(
                         "You don't have enough gold pieces."
                     )
@@ -587,20 +574,20 @@ private fun handleBrokenBridge(player: Player) {
                 }
 
                 npc(
-                    TOLL_BRIDGE_GUARD,
+                    Npc.ogre_guard4,
                     CALM_TALK,
                     "A wise choice, little thing."
                 )
 
                 exec {
                     player.inventory.deleteItem(
-                        COINS,
+                        Obj.coins,
                         BRIDGE_TOLL
                     )
 
                     Agility.handleObstacle(
                         player,
-                        3303,
+                        Seq.trollheim_wall_kit_climb_over,
                         1,
                         Tile.of(2529, 3029, 0),
                         1.0
@@ -624,7 +611,7 @@ private fun handleBrokenBridge(player: Player) {
                 )
 
                 npc(
-                    TOLL_BRIDGE_GUARD,
+                    Npc.ogre_guard4,
                     CALM_TALK,
                     "In that case you're not crossing."
                 )
@@ -689,7 +676,7 @@ private fun handleNightshadeOnShamanCaveGuard(
     if (player.getQuestStage(Quest.WATCHTOWER) < STAGE_FIND_SHAMAN_ENCLAVE)
         return
 
-    if (!player.inventory.containsItem(CAVE_NIGHTSHADE, 1))
+    if (!player.inventory.containsItem(Obj.nightshade, 1))
         return
 
     player.startConversation {
@@ -704,7 +691,7 @@ private fun handleNightshadeOnShamanCaveGuard(
                 "You can run past, but keep in mind that a dangerous area follows!"
             ) { options ->
                 options.add("Proceed regardless") {
-                    player.inventory.deleteItem(CAVE_NIGHTSHADE, 1)
+                    player.inventory.deleteItem(Obj.nightshade, 1)
 
                     player.set(
                         SHAMAN_CAVE_GUARD_DISTRACTED,

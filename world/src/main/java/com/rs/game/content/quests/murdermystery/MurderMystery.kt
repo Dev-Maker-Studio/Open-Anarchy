@@ -5,6 +5,7 @@ import com.rs.engine.quest.QuestHandler
 import com.rs.engine.quest.QuestOutline
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
+import org.darkan.core.gameval.gen.Obj
 
 const val STAGE_UNSTARTED = 0
 const val STAGE_SOMETHINGS_AMISS = 1
@@ -39,6 +40,6 @@ class MurderMystery : QuestOutline() {
     override fun complete(player: Player) {
         player.skills.addXpQuest(Skills.CRAFTING, 1406.0)
         player.inventory.addCoins(2000)
-        sendQuestCompleteInterface(player, 995)
+        sendQuestCompleteInterface(player, Obj.coins)
     }
 }

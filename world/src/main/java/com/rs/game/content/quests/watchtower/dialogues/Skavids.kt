@@ -1,5 +1,8 @@
 package com.rs.game.content.quests.watchtower.dialogues
 
+import org.darkan.core.gameval.gen.Varbit
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Npc
 import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
@@ -13,38 +16,31 @@ import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 
-private const val SCARED_SKAVID = 863
-private const val MAD_SKAVID = 864
-private const val SKAVID = 865
-
-private const val INTERRUPTING_OGRE_SHAMAN = 2418
-
 private const val SKAVID_1_COMPLETE = "watchtowerSkavid1Complete"
 private const val SKAVID_2_COMPLETE = "watchtowerSkavid2Complete"
 private const val SKAVID_3_COMPLETE = "watchtowerSkavid3Complete"
 private const val SKAVID_5_COMPLETE = "watchtowerSkavid5Complete"
 
 private const val MAD_SKAVID_COMPLETE = "watchtowerMadSkavidComplete"
-private const val MAGENTA_PILLAR_VARBIT = 3129
 
 @ServerStartupEvent
 fun mapWatchtowerSkavids() {
     onNpcClick(
-        SCARED_SKAVID,
+        Npc.scared_skavid,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         scaredSkavidDialogue(player, npc)
     }
 
     onNpcClick(
-        SKAVID,
+        Npc.skavidtalker1,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         normalSkavidDialogue(player, npc)
     }
 
     onNpcClick(
-        MAD_SKAVID,
+        Npc.mad_skavid,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         madSkavidDialogue(player, npc)
@@ -167,7 +163,7 @@ private fun scaredSkavidDialogue(player: Player, npc: NPC) {
                     }
 
                     npc(
-                        INTERRUPTING_OGRE_SHAMAN,
+                        Npc.forget_redaxe_shaman_cutscene_alt,
                         ANGRY,
                         "You shut your mouth! Don't tell them anything!"
                     )
@@ -240,7 +236,7 @@ private fun spawnInterruptingShaman(player: Player, skavid: NPC): NPC {
 
     return OwnedNPC(
         player,
-        INTERRUPTING_OGRE_SHAMAN,
+        Npc.forget_redaxe_shaman_cutscene_alt,
         spawnTile,
         false
     ).apply {
@@ -601,7 +597,7 @@ private fun DialogueBuilder.madSkavidOptions(
                 if (answer == correct) {
                     exec {
                         player.inventory.addItemDrop(
-                            WATCHTOWER_CRYSTAL_2,
+                            Obj.powering_crystal2,
                             1
                         )
 
@@ -654,14 +650,14 @@ private fun DialogueBuilder.madSkavidCrystalRecovery(
 
             if (
                 player.inventory.containsItem(
-                    WATCHTOWER_CRYSTAL_2,
+                    Obj.powering_crystal2,
                     1
                 ) ||
                 player.bank.containsItem(
-                    WATCHTOWER_CRYSTAL_2,
+                    Obj.powering_crystal2,
                     1
                 ) ||
-                player.vars.getVarBit(MAGENTA_PILLAR_VARBIT) != 0
+                player.vars.getVarBit(Varbit.watchtower_pillar_3) != 0
             ) {
                 npc(
                     npc,
@@ -671,7 +667,7 @@ private fun DialogueBuilder.madSkavidCrystalRecovery(
             } else {
                 exec {
                     player.inventory.addItemDrop(
-                        WATCHTOWER_CRYSTAL_2,
+                        Obj.powering_crystal2,
                         1
                     )
                 }

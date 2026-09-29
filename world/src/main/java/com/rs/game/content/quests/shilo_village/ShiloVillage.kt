@@ -1,21 +1,13 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.quests.shilo_village
 
+import org.darkan.core.gameval.gen.Varbit
+import org.darkan.core.gameval.gen.Sound
+import org.darkan.core.gameval.gen.Interface
+import org.darkan.core.gameval.gen.Component
+import org.darkan.core.gameval.gen.Seq
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Loc
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import org.darkan.core.map.pathfinder.Direction
@@ -39,7 +31,6 @@ import org.darkan.core.Constants
 import org.darkan.core.model.Item
 import world.gregs.voidps.type.Tile
 import com.rs.plugin.PluginManager
-import com.rs.plugin.annotations.PluginEventHandler
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.events.PickupItemEvent
 import com.rs.plugin.kts.*
@@ -53,7 +44,6 @@ import com.rs.plugin.kts.*
     completedStage = 9
 )
 
-@PluginEventHandler
 class ShiloVillage : QuestOutline() {
     companion object {
         const val NOT_STARTED = 0
@@ -84,7 +74,7 @@ class ShiloVillage : QuestOutline() {
 
     override fun complete(player: Player) {
         player.skills.addXpQuest(Constants.CRAFTING, 3875.0)
-        sendQuestCompleteInterface(player, 1891)
+        sendQuestCompleteInterface(player, Obj.cake)
     }
 
 }
@@ -93,68 +83,12 @@ class ShiloVillage : QuestOutline() {
 fun mapShiloVillage() {
     var lit = false
     var isBossUp = false
-    val BONE_SHARD_ID = 604
-    val BONE_KEY_ID = 605
-    val STONE_PLAQUE_ID = 606
-    val CHISEL_ID = 1755
-    val Z_CORPSE_ID = 610
-    val TATTERED_SCROLL_ID = 607
-    val CRUMPLED_SCROLL_ID = 608
-    val BURIED_MOUND_ID = 2217
-    val WATERFALL_ROCKS_ID = 2225
-    val CAVE_IN_ID = 2220
-    val STRANGE_STONE_ID = 2221
-    val GALLOWS_ID = 2224
-    val SACKS_ID = 2223
-    val LOOSE_ROCKS_ID = 2222
-    val UNROPED_FISSURE_ID = 2218
-    val ROPED_FISSURE_ID = 2219
-    val DIG_ANIM_ID = 830
-    val PICKUP_ANIM_ID = 827
-    val WELL_STACKED_ROCKS_ID = 2234
-    val ROCK_SLIDE_ID = 2236
-    val B_DOLMEN_ID = 2235
-    val SWORD_POMMEL_ID = 623
-    val LOCATING_SPHERE_ID = 611
-    val BERVIRIUS_NOTES_ID = 624
-    val CHISEL_ANIM_ID = 886
-    val BONE_BEADS_ID = 618
-    val BEADS_OF_THE_DEAD_ID = 616
-    val BRONZE_WIRE_ID = 5602
-    val BRONZE_WIRE2_ID = 1794
-    val TOMB_EXIT_ID = 2243
-    val ANCIENT_METAL_GATE1_ID = 2255
-    val ANCIENT_METAL_GATE2_ID = 2256
-    val ROCKS_ID = 2257
-    val BONE_DOOR1_ID = 2246
-    val BONE_DOOR2_ID = 2247
-    val BONE_DOOR3_ID = 2248
-    val BONE_DOOR4_ID = 2249
-    val BONE_DOOR5_ID = 2250
-    val R_DOLMEN_ID = 2258
-    val BOSS_NPC1_ID = 507
-    val BOSS_NPC2_ID = 508
-    val BOSS_NPC3_ID = 509
-    val R_CORPSE_ID = 609
-    val R_NPC_ID = 506
-    val VIGROY_NPC_ID = 511
-    val HAGEDY_NPC_ID = 510
-    val VIGROY_CART_ID = 2265
-    val HAGEDY_CART_ID = 2230
-    val SHILO_GATE_ID = 2216
 
-    //TODO ADD MUSIC AND SPOT ANIMS
-    //TODO LOCATING ORB FUNCTIONALITY(optional)
-    //todo using bone key on trufitus(optional)
-    //TODO DROPPING/DESTROYING QUEST ITEM WARNINGS/FUNCTIONALITY
-    //TODO LACK OF BOD NECKLACE CAUSING RASHIYILIA TO SPAWN IN MONSTERS THAT ATTACK YOU
-    //TODO SMASHED TABLE(optional)
-    //TODO OPTIONAL RAFT CUTSCENE(optional)
 
     fun spawnBoss(player: Player) {
         player.packets.sendCameraShake(3, 50, 1, 20, 1)
         WorldTasks.schedule(2) {
-            val nazastarool = spawnNPC(BOSS_NPC1_ID, Tile.of(player.tile, 1), true, true)
+            val nazastarool = spawnNPC(Npc.zq_mainzombie1, Tile.of(player.tile, 1), true, true)
             nazastarool.isForceAgressive = true
             nazastarool.setForceAggroDistance(10)
             nazastarool.combatTarget = player
@@ -170,10 +104,10 @@ fun mapShiloVillage() {
         }
     }
 
-    onNpcDeath(BOSS_NPC1_ID){ e ->
+    onNpcDeath(Npc.zq_mainzombie1){ e ->
         val location = e.npc.tile
         WorldTasks.schedule(7) {
-            val nazastarool = spawnNPC(BOSS_NPC2_ID, location, true, true)
+            val nazastarool = spawnNPC(Npc.zq_mainzombie2, location, true, true)
             nazastarool.faceDir(e.npc.direction)
             nazastarool.isForceAgressive = true
             nazastarool.setForceAggroDistance(10)
@@ -188,10 +122,10 @@ fun mapShiloVillage() {
         }
     }
 
-    onNpcDeath(BOSS_NPC2_ID){ e ->
+    onNpcDeath(Npc.zq_mainzombie2){ e ->
         WorldTasks.schedule(7) {
             val location = e.npc.tile
-            val nazastarool = spawnNPC(BOSS_NPC3_ID, location, true, true)
+            val nazastarool = spawnNPC(Npc.zq_mainzombie3, location, true, true)
             nazastarool.faceDir(e.npc.direction)
             nazastarool.isForceAgressive = true
             nazastarool.setForceAggroDistance(10)
@@ -208,8 +142,8 @@ fun mapShiloVillage() {
         }
     }
 
-    onNpcDeath(BOSS_NPC3_ID){ e ->
-        e.killer.soundEffect(438, true) //bugfix for death sound not playing
+    onNpcDeath(Npc.zq_mainzombie3){ e ->
+        e.killer.soundEffect(Sound.sound_438, true)
         isBossUp = false
         val player = e.killer as Player?
         player?.sendMessage("You see something appear on the dolmen.")
@@ -217,20 +151,20 @@ fun mapShiloVillage() {
         player?.startConversation {
             simple("You hear a disembodied voice fading away into the distance:<br>May you perish in the fires of Zamorak's furnace!<br>Rashiliyia's curse is upon you!")
             exec{
-                addGroundItem(Item(R_CORPSE_ID), Tile.of(2892, 9487, 0), player)
+                addGroundItem(Item(Obj.zqcorpse), Tile.of(2892, 9487, 0), player)
                 player.questManager?.getAttribs(Quest.SHILO_VILLAGE)?.setB("HAS_KILLED_BOSS", true)
             }
         }
     }
 
-    onPickupItem(R_CORPSE_ID){ e ->
+    onPickupItem(Obj.zqcorpse){ e ->
         e.player.startConversation {
             item(e.item.id, "You take the mummified remains of a human female. You feel certain that these are Rashiliyia's remains. You carefully place the remains in your inventory.")
         }
         e.player.setQuestStage(Quest.SHILO_VILLAGE, DEAL_WITH_RASHILIYIAS_CORPSE)
     }
 
-    onItemOnItem(intArrayOf(CHISEL_ID), intArrayOf(BONE_SHARD_ID)) { e ->
+    onItemOnItem(intArrayOf(Obj.chisel), intArrayOf(Obj.zqboneshard)) { e ->
         when (e.player.getQuestStage(Quest.SHILO_VILLAGE)) {
             7 -> {
                 if(e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_TRIED_LOCK")) {
@@ -238,10 +172,10 @@ fun mapShiloVillage() {
                         e.player.startConversation {
                             simple("Remembering Zadimus' words and the strange bone lock, you start to craft the bone. You successfully make a key out of the bone shard.")
                             exec {
-                                e.player.anim(CHISEL_ANIM_ID)
+                                e.player.anim(Seq.human_diamondcutting)
                                 WorldTasks.schedule(2) {
-                                    e.player.inventory.removeItems(Item(BONE_SHARD_ID, 1))
-                                    e.player.inventory.addItem(Item(BONE_KEY_ID, 1))
+                                    e.player.inventory.removeItems(Item(Obj.zqboneshard, 1))
+                                    e.player.inventory.addItem(Item(Obj.zqbonekey, 1))
                                 }
                             }
                         }
@@ -264,17 +198,17 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemOnItem(intArrayOf(CHISEL_ID), intArrayOf(SWORD_POMMEL_ID)) { e ->
+    onItemOnItem(intArrayOf(Obj.chisel), intArrayOf(Obj.zqbevsword)) { e ->
         when (e.player.getQuestStage(Quest.SHILO_VILLAGE)) {
             7 -> {
                 e.player.startConversation {
-                    item(SWORD_POMMEL_ID, "You prepare the ivory pommel and the chisel to start crafting...")
-                    item(BONE_BEADS_ID, "You successfully craft some of the ivory into beads. They may look good as part of a necklace.")
+                    item(Obj.zqbevsword, "You prepare the ivory pommel and the chisel to start crafting...")
+                    item(Obj.zqbonebeads, "You successfully craft some of the ivory into beads. They may look good as part of a necklace.")
                     exec {
-                        e.player.anim(CHISEL_ANIM_ID)
+                        e.player.anim(Seq.human_diamondcutting)
                         WorldTasks.schedule(2) {
-                            e.player.inventory.removeItems(Item(SWORD_POMMEL_ID, 1))
-                            e.player.inventory.addItem(Item(BONE_BEADS_ID, 1))
+                            e.player.inventory.removeItems(Item(Obj.zqbevsword, 1))
+                            e.player.inventory.addItem(Item(Obj.zqbonebeads, 1))
                         }
                     }
                 }
@@ -286,17 +220,17 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemOnItem(intArrayOf(BRONZE_WIRE_ID, BRONZE_WIRE2_ID), intArrayOf(BONE_BEADS_ID)) { e ->
+    onItemOnItem(intArrayOf(Obj.rd_wire, Obj.bronzecraftwire), intArrayOf(Obj.zqbonebeads)) { e ->
         when (e.player.getQuestStage(Quest.SHILO_VILLAGE)) {
             7 -> {
                 e.player.startConversation {
-                    item(BEADS_OF_THE_DEAD_ID, "You successfully craft the beads and bronze wire into a necklace which you name, 'Beads of the Dead'")
+                    item(Obj.zqdeadbeads, "You successfully craft the beads and bronze wire into a necklace which you name, 'Beads of the Dead'")
                     exec {
-                        e.player.anim(CHISEL_ANIM_ID)
+                        e.player.anim(Seq.human_diamondcutting)
                         WorldTasks.schedule(1) {
                             e.player.inventory.removeItems(Item(e.item1.id, 1))
                             e.player.inventory.removeItems(Item(e.item2.id, 1))
-                            e.player.inventory.addItem(Item(BEADS_OF_THE_DEAD_ID, 1))
+                            e.player.inventory.addItem(Item(Obj.zqdeadbeads, 1))
                         }
                     }
                 }
@@ -308,48 +242,48 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemClick(BONE_SHARD_ID, options = arrayOf("Inspect")){ (player) ->
+    onItemClick(Obj.zqboneshard, options = arrayOf("Inspect")){ (player) ->
         player.startConversation {
             simple("You look at the shard of bone. The words of Zadimus come back to you. 'I am the key, but only kin may approach her.'")
         }
     }
 
-    onItemClick(Z_CORPSE_ID, options = arrayOf("Bury")){ (player) ->
+    onItemClick(Obj.zqzadimusbones, options = arrayOf("Bury")){ (player) ->
         val statuetile = Tile.of(2795, 3090, 0)
         if(player.tile.withinDistance(statuetile, 4) && player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_SHOWN_Z_CORPSE")) {
             player.sendMessage("You feel an unearthly compunction to bury this corpse!")
             player.sendMessage("You dig a hole for the remains.")
             player.lock(9)
             WorldTasks.schedule(1) {
-                player.anim(DIG_ANIM_ID)
+                player.anim(Seq.seq_830)
             }
             WorldTasks.schedule(2) {
-                player.anim(PICKUP_ANIM_ID)
+                player.anim(Seq.seq_827)
                 player.sendMessage("You lay the remains of Zadimus to rest")
-                player.inventory.removeItems(Item(Z_CORPSE_ID, 1))
+                player.inventory.removeItems(Item(Obj.zqzadimusbones, 1))
             }
             WorldTasks.schedule(4) {
                 player.faceDir(Direction.SOUTH)
             }
             WorldTasks.schedule(6) {
                 player.lock()
-                val ghost = spawnNPC(501, player.tile, true, true)
+                val ghost = spawnNPC(Npc.zadimus_ghost, player.tile, true, true)
                 ghost.setRandomWalk(false)
                 ghost.faceDir(Direction.SOUTH)
                 ghost.addWalkSteps(Tile.of(2975, 3084, 0), 2, false)
                 ghost.faceDir(Direction.NORTH)
                 player.startConversation {
                     simple("You hear an unearthly moaning sound as you see an apparition materialise right in front of you.")
-                    npc(501,HeadE.CALM_TALK,"You have released me from my torture, and now I shall aid you. You seek to dispell the one who tortured and killed me. Remember this... 'I am the key, but only kin may approach her.'") {
+                    npc(Npc.zadimus_ghost,HeadE.CALM_TALK,"You have released me from my torture, and now I shall aid you. You seek to dispell the one who tortured and killed me. Remember this... 'I am the key, but only kin may approach her.'") {
                         exec {
                             player.unlock()
                             ghost.finish()
-                            player.inventory.addItem(604, 1)
+                            player.inventory.addItem(Obj.zqboneshard, 1)
                             player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).setB("HAS_BURIED_Z_CORPSE", true)
                         }
                     }
-                    item(604,"The apparition disappears into the ground where you buried the corpse. You see the ground in front of you shake as a shard of bone forces its way to the surface. You take the bone shard and place it in your")
-                    item(604, "inventory.")
+                    item(Obj.zqboneshard,"The apparition disappears into the ground where you buried the corpse. You see the ground in front of you shake as a shard of bone forces its way to the surface. You take the bone shard and place it in your")
+                    item(Obj.zqboneshard, "inventory.")
                 }
             }
         }else{
@@ -362,29 +296,28 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemClick(TATTERED_SCROLL_ID, options = arrayOf("Read")) { e ->
+    onItemClick(Obj.zqberviriusscroll, options = arrayOf("Read")) { e ->
         e.player.startConversation {
             simple("This looks like part of a scroll about someone called Bervirius<br>Would you like to read it?")
             options("SELECT AN OPTION") {
                 op("Yes please.") {
                     exec{
-                        e.player.interfaceManager.sendInterface(174)
-                        e.player.getPackets().setIFText(174, 1, "")
-                        e.player.getPackets().setIFText(174, 2, "")
-                        e.player.getPackets().setIFText(174, 3, "Bervirius, son of King Danthalas, was killed in ")
-                        e.player.getPackets().setIFText(174, 4, "battle. His bravery became legend... devout mother")
-                        e.player.getPackets().setIFText(174, 5, "Rashiliya was so heartbroken that she swore fealty")
-                        e.player.getPackets().setIFText(174, 6, "to Zamorak if he would return her son to her.")
-                        e.player.getPackets().setIFText(174, 7, "Bervirius returned as an undead creature...")
-                        e.player.getPackets().setIFText(174, 8, "Many guards died fighting the undead Bervirius.")
-                        e.player.getPackets().setIFText(174, 9, "Eventually the undead Bervirius was set on fire...")
-                        e.player.getPackets().setIFText(174, 10, "His remains were taken far to the South, and then")
-                        e.player.getPackets().setIFText(174, 11, "towards the setting sun to a tomb that is")
-                        e.player.getPackets().setIFText(174, 12, "surrounded by and level with the sea. This is the")
-                        e.player.getPackets().setIFText(174, 13, "only way to contain the spirits of witches and the")
-                        e.player.getPackets().setIFText(174, 14, "undead.")
-                        e.player.getPackets().setIFText(174, 15, "")
-                        e.player.getPackets().setIFText(174, 16, "")
+                        e.player.sendShiloScroll(
+                            "",
+                            "",
+                            "Bervirius, son of King Danthalas, was killed in ",
+                            "battle. His bravery became legend... devout mother",
+                            "Rashiliya was so heartbroken that she swore fealty",
+                            "to Zamorak if he would return her son to her.",
+                            "Bervirius returned as an undead creature...",
+                            "Many guards died fighting the undead Bervirius.",
+                            "Eventually the undead Bervirius was set on fire...",
+                            "His remains were taken far to the South, and then",
+                            "towards the setting sun to a tomb that is",
+                            "surrounded by and level with the sea. This is the",
+                            "only way to contain the spirits of witches and the",
+                            "undead."
+                        )
                         if(!e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_TATTERED_SCROLL")) {
                             if(e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_CRUMPLED_SCROLL")) {
                                 if (e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_COLLECTED_Z_CORPSE")) {
@@ -402,9 +335,9 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemClick(BERVIRIUS_NOTES_ID, options = arrayOf("Read")) { e ->
+    onItemClick(Obj.zqberviriusscroll2, options = arrayOf("Read")) { e ->
         e.player.startConversation {
-            item(BERVIRIUS_NOTES_ID,"This scroll is a collection of writings. Some of them are just scraps of papyrus with what looks like random scribblings. Which would you like to read?")
+            item(Obj.zqberviriusscroll2,"This scroll is a collection of writings. Some of them are just scraps of papyrus with what looks like random scribblings. Which would you like to read?")
             options("Select an Option") {
                 op("Tattered Yellow papyrus.") {
                     simple("...and rest like your mother who is silent in the peace of her tomb far to the North of Ah Za Rhoon. Near the sea, and under the hills deep in the underground to watch all nature from the darkness of her final resting place.")
@@ -449,29 +382,23 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemClick(CRUMPLED_SCROLL_ID, options = arrayOf("Read")) { e ->
+    onItemClick(Obj.zqrashiliyiascroll, options = arrayOf("Read")) { e ->
         e.player.startConversation {
             simple("This looks like part of a scroll about Rashiliya. Would you like to read it?")
             options("SELECT AN OPTION") {
                 op("Yes please.") {
                     exec{
-                        e.player.interfaceManager.sendInterface(174)
-                        e.player.getPackets().setIFText(174, 1, "")
-                        e.player.getPackets().setIFText(174, 2, "")
-                        e.player.getPackets().setIFText(174, 3, "Rashiliya's rage went unchecked. She killed")
-                        e.player.getPackets().setIFText(174, 4, "without mercy for revenge of her son's life. Like a")
-                        e.player.getPackets().setIFText(174, 5, "spectre through the night she entered houses and")
-                        e.player.getPackets().setIFText(174, 6, "one by one quietly strangled life from the.")
-                        e.player.getPackets().setIFText(174, 7, "occupants. It is said that only a handful survived,")
-                        e.player.getPackets().setIFText(174, 8, "protected by necklace wards to keep the Witch ")
-                        e.player.getPackets().setIFText(174, 9, "Queen at bay.")
-                        e.player.getPackets().setIFText(174, 10, "")
-                        e.player.getPackets().setIFText(174, 11, "")
-                        e.player.getPackets().setIFText(174, 12, "")
-                        e.player.getPackets().setIFText(174, 13, "")
-                        e.player.getPackets().setIFText(174, 14, "")
-                        e.player.getPackets().setIFText(174, 15, "")
-                        e.player.getPackets().setIFText(174, 16, "")
+                        e.player.sendShiloScroll(
+                            "",
+                            "",
+                            "Rashiliya's rage went unchecked. She killed",
+                            "without mercy for revenge of her son's life. Like a",
+                            "spectre through the night she entered houses and",
+                            "one by one quietly strangled life from the.",
+                            "occupants. It is said that only a handful survived,",
+                            "protected by necklace wards to keep the Witch ",
+                            "Queen at bay."
+                        )
                         if(!e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_CRUMPLED_SCROLL")) {
                             if (e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_TATTERED_SCROLL")) {
                                 if (e.player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_COLLECTED_Z_CORPSE")) {
@@ -491,7 +418,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemClick(STONE_PLAQUE_ID, options = arrayOf("Read")) { e ->
+    onItemClick(Obj.zqplaque, options = arrayOf("Read")) { e ->
         e.player.startConversation {
             simple("The markings are very intricate. It's a very strange language. The meaning of it evades you though. Perhaps Trufitus can decipher the markings?")
             {
@@ -512,9 +439,9 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemOnObject(objectNamesOrIds = arrayOf(UNROPED_FISSURE_ID), itemNamesOrIds = arrayOf("Lit candle", "Lit torch", "Lit black candle")){ (player, obj, item) ->
+    onItemOnObject(objectNamesOrIds = arrayOf(Loc.ahzarhoon_entrance_fissure), itemNamesOrIds = arrayOf("Lit candle", "Lit torch", "Lit black candle")){ (player, obj, item) ->
         if((player.getQuestStage(Quest.SHILO_VILLAGE) >= 2)) {
-            player.anim(PICKUP_ANIM_ID)
+            player.anim(Seq.seq_827)
             WorldTasks.schedule(2) {
                 player.inventory.removeItems(Item(item.id, 1))
                 lit = true
@@ -532,13 +459,13 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemOnObject(objectNamesOrIds = arrayOf(B_DOLMEN_ID), itemNamesOrIds = arrayOf(R_CORPSE_ID)){ (player, obj, item) ->
+    onItemOnObject(objectNamesOrIds = arrayOf(Loc.zqdolmen), itemNamesOrIds = arrayOf(Obj.zqcorpse)){ (player, obj, item) ->
 
-        player.anim(PICKUP_ANIM_ID)
+        player.anim(Seq.seq_827)
         WorldTasks.schedule(1) {
             player.inventory.removeItems(Item(item.id, 1))
             WorldTasks.schedule(2) {
-                val rashiliyia = spawnNPC(R_NPC_ID, Tile.of(player.tile, 1), true, true)
+                val rashiliyia = spawnNPC(Npc.zqzombiequeen, Tile.of(player.tile, 1), true, true)
                 rashiliyia.faceEntity(player)
                 player.faceEntity(rashiliyia)
                 rashiliyia.setRandomWalk(false)
@@ -551,12 +478,12 @@ fun mapShiloVillage() {
                         player.sendMessage("Without warning the spirit of Rashiliyia disappears")
                     }
                     npc(
-                        R_NPC_ID,
+                        Npc.zqzombiequeen,
                         HeadE.CALM_TALK,
                         "You have my gratitude for releasing my spirit. I have suffered a vengeful and evil existence. I was tricked by Zamorak. He returned my son to me as an undead creature."
                     )
                     npc(
-                        R_NPC_ID,
+                        Npc.zqzombiequeen,
                         HeadE.CALM_TALK,
                         "My hatred and bitterness corrupted me. I tried to destroy all life... now I am released. And am grateful to contemplate eternal rest..."
                     )
@@ -570,15 +497,15 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemOnObject(objectNamesOrIds = arrayOf(BONE_DOOR1_ID, BONE_DOOR2_ID, BONE_DOOR3_ID, BONE_DOOR4_ID, BONE_DOOR5_ID), itemNamesOrIds = arrayOf("Bones")){ (player, obj, item) ->
+    onItemOnObject(objectNamesOrIds = arrayOf(Loc.thzq_tombrooml1, Loc.thzq_tombroomr1, Loc.thzq_tombrooml2, Loc.thzq_tombrooml3, Loc.thzq_tombroomr2), itemNamesOrIds = arrayOf("Bones")){ (player, obj, item) ->
         if(player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_USED_ONE_BONE")) {
             if(player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_USED_TWO_BONES")) {
                 player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).setB("HAS_USED_THREE_BONES", true)
                 player.sendMessage("You carefully place another bone in the door...")
-                player.anim(PICKUP_ANIM_ID)
+                player.anim(Seq.seq_827)
                 WorldTasks.schedule(2) {
                     player.inventory.removeItems(Item(item.id, 1))
-                    World.getObject(Tile.of(2893,9480,0))?.setIdTemporary(BONE_DOOR5_ID, 270)
+                    World.getObject(Tile.of(2893,9480,0))?.setIdTemporary(Loc.thzq_tombroomr2, 270)
                 }
                 player.inventory.removeItems(Item(item.id, 1))
                 player.startConversation{
@@ -588,10 +515,10 @@ fun mapShiloVillage() {
             }else{
                 player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).setB("HAS_USED_TWO_BONES", true)
                 player.sendMessage("You carefully place another bone in the door...")
-                player.anim(PICKUP_ANIM_ID)
+                player.anim(Seq.seq_827)
                 WorldTasks.schedule(2) {
                     player.inventory.removeItems(Item(item.id, 1))
-                    World.getObject(Tile.of(2892,9480,0))?.setIdTemporary(BONE_DOOR4_ID, 270)
+                    World.getObject(Tile.of(2892,9480,0))?.setIdTemporary(Loc.thzq_tombrooml3, 270)
                     player.startConversation{
                         item(item.id, "You place the bone into the skeletal door and it fits. There is just one recess left now.")
                     }
@@ -600,10 +527,10 @@ fun mapShiloVillage() {
         }else{
             player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).setB("HAS_USED_ONE_BONE", true)
             player.sendMessage("You carefully place a bone in the door...")
-            player.anim(PICKUP_ANIM_ID)
+            player.anim(Seq.seq_827)
             WorldTasks.schedule(2) {
                 player.inventory.removeItems(Item(item.id, 1))
-                World.getObject(Tile.of(2892,9480,0))?.setIdTemporary(BONE_DOOR3_ID, 270)
+                World.getObject(Tile.of(2892,9480,0))?.setIdTemporary(Loc.thzq_tombrooml2, 270)
                 player.startConversation{
                     item(item.id, "You place the bone into the skeletal door and it fits. There are two recesses left now.")
                 }
@@ -615,14 +542,14 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemOnObject(arrayOf("Ancient Door"), itemNamesOrIds = arrayOf(BONE_KEY_ID)){ (player, obj, item) ->
+    onItemOnObject(arrayOf("Ancient Door"), itemNamesOrIds = arrayOf(Obj.zqbonekey)){ (player, obj, item) ->
         player.sendMessage("You try the key with the lock")
-        player.anim(PICKUP_ANIM_ID)
+        player.anim(Seq.seq_827)
         WorldTasks.schedule(1) {
             player.sendMessage("A shimmering light dances over the doors, before you can blink, the doors creak open.")
         }
         WorldTasks.schedule(2) {
-            player.vars.setVarBit(4882, 2)
+            player.vars.setVarBit(Varbit.varbit_4882, 2)
         }
         WorldTasks.schedule(3) {
             player.startConversation{
@@ -630,7 +557,7 @@ fun mapShiloVillage() {
                 player.tele(2928, 9521, 0)
             }
             WorldTasks.schedule(1) {
-                if (player.equipment.neckId != BEADS_OF_THE_DEAD_ID) {
+                if (player.equipment.neckId != Obj.zqdeadbeads) {
                     player.sendMessage("Rashiliyia appears!")
                     WorldTasks.schedule(5) {
                         player.sendMessage("You feel invisible hands starting to choke you...")
@@ -640,9 +567,9 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemOnObject(arrayOf(TOMB_EXIT_ID), itemNamesOrIds = arrayOf(BONE_KEY_ID)){ (player, obj, item) ->
+    onItemOnObject(arrayOf(Loc.hillsideexitclosedr), itemNamesOrIds = arrayOf(Obj.zqbonekey)){ (player, obj, item) ->
         player.sendMessage("You unlock the door with the key.")
-        player.anim(PICKUP_ANIM_ID)
+        player.anim(Seq.seq_827)
         WorldTasks.schedule(1) {
             player.sendMessage("The doors creak open revealing bright daylight.")
         }
@@ -650,13 +577,12 @@ fun mapShiloVillage() {
             player.sendMessage("You walk outside into the warmth of the jungle heat.")
             player.tele(2916, 3092, 0)
         }
-        //todo only if the dungeon isnt complete
         WorldTasks.schedule(3) {
             player.sendMessage("You get a sense that something seems incomplete.")
         }
     }
 
-    onItemOnObject(objectNamesOrIds = arrayOf(UNROPED_FISSURE_ID), itemNamesOrIds = arrayOf("Rope")){ (player, obj, item) ->
+    onItemOnObject(objectNamesOrIds = arrayOf(Loc.ahzarhoon_entrance_fissure), itemNamesOrIds = arrayOf("Rope")){ (player, obj, item) ->
         if(!lit) {
             player.startConversation {
                 player(HeadE.CONFUSED, "There is not enough light to see a safe place place to anchor it.")
@@ -666,9 +592,9 @@ fun mapShiloVillage() {
             player.startConversation {
                 item(item.id,"You see where to attach the rope very clearly. You secure the rope well.")
             }
-            player.anim(PICKUP_ANIM_ID)
+            player.anim(Seq.seq_827)
             WorldTasks.schedule(2) {
-                obj.setIdTemporary(2219, 360)
+                obj.setIdTemporary(Loc.ahzarhoon_entrance_fissure_withrope, 360)
                 player.inventory.removeItems(Item(item.id, 1))
             }
 
@@ -677,17 +603,17 @@ fun mapShiloVillage() {
         }
     }
 
-    onItemOnObject(objectNamesOrIds = arrayOf(STRANGE_STONE_ID), itemNamesOrIds = arrayOf("Chisel")){ (player) ->
-        if(!player.inventory.containsItem(STONE_PLAQUE_ID) && !player.bank.containsItem(STONE_PLAQUE_ID)) {
+    onItemOnObject(objectNamesOrIds = arrayOf(Loc.zqsecretstone), itemNamesOrIds = arrayOf("Chisel")){ (player) ->
+        if(!player.inventory.containsItem(Obj.zqplaque) && !player.bank.containsItem(Obj.zqplaque)) {
             player.startConversation {
                 item(
-                    STONE_PLAQUE_ID,
+                    Obj.zqplaque,
                     "You cleanly cut the plaque of letters away from the rock. You place it carefully into your inventory."
                 )
-                player.anim(PICKUP_ANIM_ID)
+                player.anim(Seq.seq_827)
                 if (player.inventory.hasFreeSlots()) {
                     player.sendMessage("You add the stone plaque to your inventory.")
-                    player.inventory.addItem(STONE_PLAQUE_ID, 1, false)
+                    player.inventory.addItem(Obj.zqplaque, 1, false)
                     player.questManager.getAttribs(Quest.SHILO_VILLAGE).setB("HAS_COLLECTED_PLAQUE", true)
                 } else {
                     player.sendMessage("You do not have enough room in your inventory.")
@@ -696,13 +622,12 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(UNROPED_FISSURE_ID) { (player, obj, options) ->
+    onObjectClick(Loc.ahzarhoon_entrance_fissure) { (player, obj, options) ->
         if (options == "Search") {
             player.startConversation {
                 simple("You see a small fisure in the granite that you might just be able to crawl through. Beyond the fissure is a long fall. Do you want to try to crawl through the fissure?")
                 options("CLIMB INTO THE FISURE?") {
                     op("Yes, I'll give it a go!") {
-                        //Todo FAILURE BECAUSE THERES NO ROPE ATTACHED - FOLLOWING LINE IS IMPROV.
                         player(HeadE.CALM_TALK, "I had better use a rope.")
 
                     }
@@ -726,9 +651,9 @@ fun mapShiloVillage() {
                 simple("You search the folliage...")
                 exec{
                     player.sendMessage("transforming varbit")
-                    player.anim(PICKUP_ANIM_ID)
+                    player.anim(Seq.seq_827)
                     WorldTasks.schedule(2) {
-                        player.vars.setVarBit(4882, 1)
+                        player.vars.setVarBit(Varbit.varbit_4882, 1)
                     }
                 }
                 simple("...and reveal an ancient doorway set into the side of the hill!")
@@ -736,13 +661,13 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(ANCIENT_METAL_GATE1_ID, ANCIENT_METAL_GATE2_ID) { (player, obj, options) ->
+    onObjectClick(Loc.zombiequeengateclosedl, Loc.zombiequeengateclosedr) { (player, obj, options) ->
         if (options == "Search") {
             player.startConversation {
                 simple("There is an ancient symbol on the gate. It looks like a human figure with something around its neck. It looks pretty scary.")
             }
         }else{
-            if (player.equipment.neckId == BEADS_OF_THE_DEAD_ID) {
+            if (player.equipment.neckId == Obj.zqdeadbeads) {
                 player.sendMessage("The Beads of the Dead start to glow...")
                 Doors.handleDoubleDoor(player, obj)
             }
@@ -752,7 +677,7 @@ fun mapShiloVillage() {
     onObjectClick("Ancient Door") { (player, obj, options) ->
         if (options == "Enter") {
             player.startConversation {
-                player.vars.setVarBit(4882, 0)
+                player.vars.setVarBit(Varbit.varbit_4882, 0)
             }
         }
         if (options == "Open") {
@@ -775,7 +700,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(ROPED_FISSURE_ID) { (player, obj, options) ->
+    onObjectClick(Loc.ahzarhoon_entrance_fissure_withrope) { (player, obj, options) ->
         if (options == "Look-at") {
             player.startConversation {
                 simple("You see a small fissure in the granite that you might just be able to crawl through. You can see that a rope is attached nearby.")
@@ -787,7 +712,7 @@ fun mapShiloVillage() {
                 options("CLIMB INTO THE FISURE?") {
                     op("Yes, I'll give it a go!") {
                         exec {
-                            player.anim(PICKUP_ANIM_ID)
+                            player.anim(Seq.seq_827)
                             WorldTasks.schedule(1) {
                                 player.tele(2898, 9401, 0)
                                 player.faceDir(Direction.SOUTH)
@@ -808,7 +733,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(STRANGE_STONE_ID) { (player, obj, options) ->
+    onObjectClick(Loc.zqsecretstone) { (player, obj, options) ->
         if (options == "Look-at") {
             player.startConversation {
                 simple("This stone seems to have strange markings on it.")
@@ -821,7 +746,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(WATERFALL_ROCKS_ID) { (player, obj,options) ->
+    onObjectClick(Loc.zqwaterfallrocks) { (player, obj,options) ->
         if (options == "Look-at") {
             player.startConversation {
                 simple("There is a huge cascading waterfall in front of you, the roar of the water is quite loud. To the east you can see what looks like a trecherous pathway, it might lead outside.")
@@ -836,19 +761,11 @@ fun mapShiloVillage() {
                             player.sendMessage("You start carefully edging along the slippery path...")
                             player.lock(6)
                             WorldTasks.schedule(2) {
-                                player.anim(PICKUP_ANIM_ID)
+                                player.anim(Seq.seq_827)
                             }
                             WorldTasks.schedule(4) {
                                 player.tele(2923, 2997, 0)
                             }
-                            //todo possibility of failure
-                            //if the player fails:
-                            //You fall!
-                            //Player: Arrgghhhh!
-                            //You're pumelled as the thrashing water throws
-                            //you against the rocks.
-                            //The player is dealt some damage.
-                            //(End of dialogue)
                         }
                     }
                     op("No, I'll look for another exit."){
@@ -859,8 +776,8 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(LOOSE_ROCKS_ID) { (player) ->
-        if(player.inventory.containsItem(TATTERED_SCROLL_ID) || player.bank.containsItem(TATTERED_SCROLL_ID)){
+    onObjectClick(Loc.secretrubblebook) { (player) ->
+        if(player.inventory.containsItem(Obj.zqberviriusscroll) || player.bank.containsItem(Obj.zqberviriusscroll)){
             player.sendMessage("You have already searched the rocks and retrieved a tattered scroll.")
             return@onObjectClick
         }
@@ -869,12 +786,12 @@ fun mapShiloVillage() {
             options("SELECT AN OPTION") {
                 op("Yes, I'll carefully move the rocks to see what's behind them."){
                     simple("You start to slowly move the rocks to one side")
-                    item(TATTERED_SCROLL_ID,"You carefully manage to remove enough rocks to see a book shelf. You gingerly remove a delicate scroll from the shelf and place it in your inventory"){
+                    item(Obj.zqberviriusscroll,"You carefully manage to remove enough rocks to see a book shelf. You gingerly remove a delicate scroll from the shelf and place it in your inventory"){
                         exec {
-                            player.anim(PICKUP_ANIM_ID)
+                            player.anim(Seq.seq_827)
                             if (player.inventory.hasFreeSlots()) {
                                 player.sendMessage("You add the tattered scroll to your inventory.")
-                                player.inventory.addItem(TATTERED_SCROLL_ID,1,false)
+                                player.inventory.addItem(Obj.zqberviriusscroll,1,false)
                             } else {
                                 player.sendMessage("You do not have enough room in your inventory.")
                             }
@@ -888,7 +805,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(TOMB_EXIT_ID) { (player, obj, options) ->
+    onObjectClick(Loc.hillsideexitclosedr) { (player, obj, options) ->
 
         if (options == "Open") {
             player.sendMessage("The door seems to be locked!")
@@ -910,23 +827,23 @@ fun mapShiloVillage() {
 
     }
 
-    onObjectClick(SACKS_ID) { (player) ->
-        if(player.inventory.containsItem(CRUMPLED_SCROLL_ID) || player.bank.containsItem(CRUMPLED_SCROLL_ID)){
+    onObjectClick(Loc.zqsacks) { (player) ->
+        if(player.inventory.containsItem(Obj.zqrashiliyiascroll) || player.bank.containsItem(Obj.zqrashiliyiascroll)){
             player.sendMessage("You have already searched the sacks and retrieved a crumpled scroll.")
             return@onObjectClick
         }
-        player.itemDialogue(CRUMPLED_SCROLL_ID,"You find a tattered but very ornate scroll, which you place carefully in your inventory.")
-        player.anim(PICKUP_ANIM_ID)
+        player.itemDialogue(Obj.zqrashiliyiascroll,"You find a tattered but very ornate scroll, which you place carefully in your inventory.")
+        player.anim(Seq.seq_827)
         if (player.inventory.hasFreeSlots()) {
             player.sendMessage("You add the crumpled scroll to your inventory.")
-            player.inventory.addItem(CRUMPLED_SCROLL_ID, 1, false)
+            player.inventory.addItem(Obj.zqrashiliyiascroll, 1, false)
         } else {
             player.sendMessage("You do not have enough room in your inventory.")
         }
     }
 
-    onObjectClick(GALLOWS_ID) { ( player, obj, options) ->
-        if(player.inventory.containsItem(610) || player.bank.containsItem(610)){
+    onObjectClick(Loc.zqgallows) { ( player, obj, options) ->
+        if(player.inventory.containsItem(Obj.zqzadimusbones) || player.bank.containsItem(Obj.zqzadimusbones)){
             player.sendMessage("You have already searched the gallows and retrieved the corpse.")
             return@onObjectClick
         }
@@ -949,20 +866,20 @@ fun mapShiloVillage() {
                     }
                     op("Yes, I may find something else on the corpse.") {
 
-                        item(610, "You gently support the frame of the skeleton and lift the skull through the noose."){
+                        item(Obj.zqzadimusbones, "You gently support the frame of the skeleton and lift the skull through the noose."){
                             exec{
                                 player.sendMessage("You search the gallows...")
                             }
                         }
                         item(
-                            610,
+                            Obj.zqzadimusbones,
                             "You find an old sack and place the skeleton in it. Maybe Trufitus can give you some tips on what to do with it."
                         ) {
                             exec {
-                                player.anim(PICKUP_ANIM_ID)
+                                player.anim(Seq.seq_827)
                                 if (player.inventory.hasFreeSlots()) {
                                     player.sendMessage("You add the corpse to your inventory.")
-                                    player.inventory.addItem(610, 1, false)
+                                    player.inventory.addItem(Obj.zqzadimusbones, 1, false)
                                     if(!player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_COLLECTED_Z_CORPSE")) {
                                         if (player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_CRUMPLED_SCROLL")) {
                                             if (player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_READ_TATTERED_SCROLL")) {
@@ -983,13 +900,13 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(CAVE_IN_ID) { (player) ->
+    onObjectClick(Loc.secretrubble) { (player) ->
         player.startConversation {
             simple("You see that there is a narrow gap through into the darkness. You could try to wriggle through and see where it takes you")
             options("WRIGGLE THROUGH THE RUBBLE?") {
                 op("Yes, I'll wriggle through.") {
                     exec {
-                        player.anim(PICKUP_ANIM_ID)
+                        player.anim(Seq.seq_827)
                         WorldTasks.schedule(1) {
                             val dungtile = Tile.of(2889, 9285, 0)
                             if(player.tile.withinDistance(dungtile, 3)) {
@@ -1007,7 +924,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(BURIED_MOUND_ID) { (player, obj, options) ->
+    onObjectClick(Loc.ahzarhoon_entrance) { (player, obj, options) ->
         if(player.getQuestStage(Quest.SHILO_VILLAGE) >= FIND_TEMPLE_OF_AH_ZA_RHOON) {
             if (options == "Search") {
                 player.startConversation {
@@ -1015,31 +932,31 @@ fun mapShiloVillage() {
                     options("WHAT DO YOU WANT TO DO WITH THE MOUND?") {
                         op("Try and excavate the mound.") {
                             exec {
-                                if (player.getInventory().containsItem(952, 1)) {
+                                if (player.getInventory().containsItem(Obj.spade, 1)) {
                                     player.lock(15)
                                     WorldTasks.schedule(1) {
-                                        player.anim(DIG_ANIM_ID)
+                                        player.anim(Seq.seq_830)
                                     }
                                     WorldTasks.schedule(3) {
-                                        player.anim(DIG_ANIM_ID)
+                                        player.anim(Seq.seq_830)
                                     }
                                     WorldTasks.schedule(5) {
-                                        player.anim(DIG_ANIM_ID)
+                                        player.anim(Seq.seq_830)
                                     }
                                     WorldTasks.schedule(7) {
-                                        player.anim(DIG_ANIM_ID)
+                                        player.anim(Seq.seq_830)
                                     }
                                     WorldTasks.schedule(9) {
-                                        player.anim(DIG_ANIM_ID)
+                                        player.anim(Seq.seq_830)
                                     }
                                     WorldTasks.schedule(11) {
-                                        player.anim(DIG_ANIM_ID)
+                                        player.anim(Seq.seq_830)
                                     }
                                     WorldTasks.schedule(13) {
-                                        player.anim(DIG_ANIM_ID)
+                                        player.anim(Seq.seq_830)
                                     }
                                     WorldTasks.schedule(14) {
-                                        obj.setIdTemporary(UNROPED_FISSURE_ID, 3600)
+                                        obj.setIdTemporary(Loc.ahzarhoon_entrance_fissure, 3600)
                                     }
                                 }else{
                                     player.sendMessage("You need to have a spade with you to excavate this.")
@@ -1058,7 +975,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(WELL_STACKED_ROCKS_ID) { (player, obj, options) ->
+    onObjectClick(Loc.zqrocks) { (player, obj, options) ->
         if(player.getQuestStage(Quest.SHILO_VILLAGE) >= INVESTIGATE_B_TOMB) {
             if (options == "Search") {
                 player.startConversation {
@@ -1068,7 +985,7 @@ fun mapShiloVillage() {
                             exec {
                                 player.lock(3)
                                 WorldTasks.schedule(1) {
-                                    player.anim(PICKUP_ANIM_ID)
+                                    player.anim(Seq.seq_827)
                                 }
                                 WorldTasks.schedule(2) {
                                     player.tele(2763, 9375, 0)
@@ -1088,9 +1005,9 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(ROCKS_ID, checkDistance = true) { (player, obj, options) ->
+    onObjectClick(Loc.zq_rashrocks, checkDistance = true) { (player, obj, options) ->
         player.lock(3)
-        player.anim(PICKUP_ANIM_ID)
+        player.anim(Seq.seq_827)
         WorldTasks.schedule(1) {
             val dungtile2 = Tile.of(2929, 9516, 0)
             if (player.tile.withinDistance(dungtile2, 3)) {
@@ -1105,7 +1022,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(ROCK_SLIDE_ID) { (player, obj, options) ->
+    onObjectClick(Loc.zqhandholds) { (player, obj, options) ->
         if (options == "Climb") {
             player.startConversation {
                 simple("You attempt to climb the granite rock.")
@@ -1113,7 +1030,7 @@ fun mapShiloVillage() {
                     exec {
                         player.lock(3)
                         WorldTasks.schedule(1) {
-                            player.anim(PICKUP_ANIM_ID)
+                            player.anim(Seq.seq_827)
                         }
                         WorldTasks.schedule(2) {
                             player.tele(2762, 2989, 0)
@@ -1124,7 +1041,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(BONE_DOOR1_ID, BONE_DOOR2_ID, BONE_DOOR3_ID, BONE_DOOR4_ID, BONE_DOOR5_ID) { (player, obj, options) ->
+    onObjectClick(Loc.thzq_tombrooml1, Loc.thzq_tombroomr1, Loc.thzq_tombrooml2, Loc.thzq_tombrooml3, Loc.thzq_tombroomr2) { (player, obj, options) ->
         if (options == "Search") {
             player.startConversation {
                 simple("The door is ornately carved with depictions of skeletal warriors. You notice that some of the skeletal warriors depictions are not complete. Instead, there are recesses where some of the bones should be. There are three recesses.")
@@ -1141,7 +1058,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(R_DOLMEN_ID) { (player, obj, options) ->
+    onObjectClick(Loc.zqrashdolmen) { (player, obj, options) ->
 
         if (!isBossUp) {
             if (!player.getQuestManager().getAttribs(Quest.SHILO_VILLAGE).getB("HAS_KILLED_BOSS")) {
@@ -1153,7 +1070,7 @@ fun mapShiloVillage() {
                     return@startConversation
                 }
             } else {
-                if (!player.inventory.containsItem(R_CORPSE_ID) && !player.bank.containsItem(R_CORPSE_ID)) {
+                if (!player.inventory.containsItem(Obj.zqcorpse) && !player.bank.containsItem(Obj.zqcorpse)) {
                     val chunk = ChunkManager.getChunk(player.getChunkId())
                     val groundItemsMap = chunk.getGroundItems()
                     var foundCorpse = false
@@ -1162,7 +1079,7 @@ fun mapShiloVillage() {
                             val iterator = groundItemList.iterator()
                             while (iterator.hasNext()) {
                                 val groundItem = iterator.next()
-                                if (groundItem.id == R_CORPSE_ID && groundItem.tile == Tile.of(2892,9487,0) && groundItem.ownerUsername == player.username) {
+                                if (groundItem.id == Obj.zqcorpse && groundItem.tile == Tile.of(2892,9487,0) && groundItem.ownerUsername == player.username) {
                                     val e1 = PickupItemEvent(player, groundItem, false)
                                     PluginManager.handle(e1)
                                     foundCorpse = true;
@@ -1172,7 +1089,7 @@ fun mapShiloVillage() {
                                                 simple("You search the dolmen... And find the mumified remains of a human female.")
                                             }
                                             exec{
-                                                player.soundEffect(2582, false)
+                                                player.soundEffect(Sound.sound_2582, false)
                                                 removeGroundItem(player, groundItem, true)
                                             }
                                         }
@@ -1183,7 +1100,7 @@ fun mapShiloVillage() {
                     }
                     if(!foundCorpse){
                         player.sendMessage("You see something appear on the dolmen.")
-                        addGroundItem(Item(R_CORPSE_ID), Tile.of(2892, 9487, 0), player)
+                        addGroundItem(Item(Obj.zqcorpse), Tile.of(2892, 9487, 0), player)
                     }
                 }
             }
@@ -1193,17 +1110,17 @@ fun mapShiloVillage() {
 
     }
 
-    onObjectClick(B_DOLMEN_ID) { (player, obj, options) ->
+    onObjectClick(Loc.zqdolmen) { (player, obj, options) ->
 
-        val hasPommel = player.inventory.containsItem(SWORD_POMMEL_ID) || player.bank.containsItem(SWORD_POMMEL_ID)
+        val hasPommel = player.inventory.containsItem(Obj.zqbevsword) || player.bank.containsItem(Obj.zqbevsword)
         val hasSphere =
-            player.inventory.containsItem(LOCATING_SPHERE_ID) || player.bank.containsItem(LOCATING_SPHERE_ID)
-        val hasNotes = player.inventory.containsItem(BERVIRIUS_NOTES_ID) || player.bank.containsItem(BERVIRIUS_NOTES_ID)
+            player.inventory.containsItem(Obj.zqcrystal) || player.bank.containsItem(Obj.zqcrystal)
+        val hasNotes = player.inventory.containsItem(Obj.zqberviriusscroll2) || player.bank.containsItem(Obj.zqberviriusscroll2)
         val missingItems = mutableListOf<Pair<Int, Int>>()
 
-        if (!hasPommel) missingItems.add(SWORD_POMMEL_ID to 1)
-        if (!hasSphere) missingItems.add(LOCATING_SPHERE_ID to 1)
-        if (!hasNotes) missingItems.add(BERVIRIUS_NOTES_ID to 1)
+        if (!hasPommel) missingItems.add(Obj.zqbevsword to 1)
+        if (!hasSphere) missingItems.add(Obj.zqcrystal to 1)
+        if (!hasNotes) missingItems.add(Obj.zqberviriusscroll2 to 1)
 
         val itemCount = missingItems.size
 
@@ -1238,19 +1155,19 @@ fun mapShiloVillage() {
                         simple("The dolmen is intricately decorated with the symbol of two crossed palm trees. It might be the family crest? You can see that there ${if (itemCount > 1) "are some items" else "is an item"} on the dolmen.")
                         if (player.inventory.freeSlots >= itemCount) {
                             for ((id, amount) in missingItems) {
-                                if (id == SWORD_POMMEL_ID) {
+                                if (id == Obj.zqbevsword) {
                                     item(
                                         id,
                                         "You find a rusty sword with an ivory pommel. You take the Ivory pommel and place it in your inventory."
                                     )
                                 }
-                                if (id == LOCATING_SPHERE_ID) {
+                                if (id == Obj.zqcrystal) {
                                     item(
                                         id,
                                         "You find a Crystal Sphere. You take the crystal and place it carefully in your inventory."
                                     )
                                 }
-                                if (id == BERVIRIUS_NOTES_ID) {
+                                if (id == Obj.zqberviriusscroll2) {
                                     item(
                                         id,
                                         "You find some writing on the dolmen, you grab some nearby scraps of delicate paper together and copy the text as best you can and collect them together as a scroll."
@@ -1268,7 +1185,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onNpcClick(VIGROY_NPC_ID){ (player, npc) ->
+    onNpcClick(Npc.shilocartdriver){ (player, npc) ->
         if(player.questManager.isComplete(Quest.SHILO_VILLAGE)){
             player.startConversation {
                 npc(npc,HeadE.CALM_TALK,"I am offering a cart ride to Brimhaven if you're interested. It will cost 10 gold coins...")
@@ -1291,7 +1208,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onNpcClick(HAGEDY_NPC_ID){ (player, npc) ->
+    onNpcClick(Npc.brimhavencartdriver){ (player, npc) ->
         if(player.questManager.isComplete(Quest.SHILO_VILLAGE)){
             player.startConversation {
                 npc(npc,HeadE.CALM_TALK,"I am offering a cart ride to Shilo Village if you're interested. It will cost 10 gold coins...")
@@ -1314,7 +1231,7 @@ fun mapShiloVillage() {
         }
     }
 
-    onObjectClick(VIGROY_CART_ID){(player, obj, options) ->
+    onObjectClick(Loc.shilocart){(player, obj, options) ->
         if(player.questManager.isComplete(Quest.SHILO_VILLAGE)) {
             if (player.getInventory().hasCoins(10)) {
                 player.getInventory().removeCoins(10)
@@ -1328,7 +1245,7 @@ fun mapShiloVillage() {
         return@onObjectClick
     }
 
-    onObjectClick(HAGEDY_CART_ID) { (player, obj, options) ->
+    onObjectClick(Loc.brimhavencart) { (player, obj, options) ->
         if (player.questManager.isComplete(Quest.SHILO_VILLAGE)) {
             if (player.getInventory().hasCoins(10)) {
                 player.getInventory().removeCoins(10)
@@ -1342,7 +1259,7 @@ fun mapShiloVillage() {
         return@onObjectClick
     }
 
-    onObjectClick(SHILO_GATE_ID) { e ->
+    onObjectClick(Loc.shilo_brokencart) { e ->
         if (e.player.questManager.isComplete(Quest.SHILO_VILLAGE)) {
             e.player.startConversation {
                 simple("You approach the cart and see undead creatures gathering by the village gates. There is a note attached to the cart. The note says, :: Danger :: Deadly green mist DO NOT ENTER IF YOU VALUE YOUR LIFE !")
@@ -1379,3 +1296,16 @@ fun mapShiloVillage() {
     }
 }
 
+private val SCROLL_LINES = intArrayOf(
+    Component.interface_174.component_174_1, Component.interface_174.component_174_2, Component.interface_174.component_174_3,
+    Component.interface_174.component_174_4, Component.interface_174.component_174_5, Component.interface_174.component_174_6,
+    Component.interface_174.component_174_7, Component.interface_174.component_174_8, Component.interface_174.component_174_9,
+    Component.interface_174.component_174_10, Component.interface_174.component_174_11, Component.interface_174.component_174_12,
+    Component.interface_174.component_174_13, Component.interface_174.component_174_14, Component.interface_174.component_174_15,
+    Component.interface_174.component_174_16
+)
+
+private fun Player.sendShiloScroll(vararg text: String) {
+    interfaceManager.sendInterface(Interface.interface_174)
+    SCROLL_LINES.forEachIndexed { index, component -> packets.setIFText(component, text.getOrElse(index) { "" }) }
+}

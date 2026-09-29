@@ -3,9 +3,12 @@ package com.rs.game.content.quests.deserttreasure
 import com.rs.engine.quest.Quest
 import com.rs.engine.quest.QuestHandler
 import com.rs.engine.quest.QuestOutline
+import com.rs.game.World
 import com.rs.game.content.combat.CombatDefinitions
+import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
+import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Varbit
 
 const val STAGE_UNSTARTED = 0
@@ -23,20 +26,15 @@ const val STAGE_AZZANADRA = 11
 const val STAGE_COMPLETE = 12
 
 object DesertTreasureDiamonds {
-    const val BLOOD_DIAMOND = 4670
-    const val ICE_DIAMOND = 4671
-    const val SMOKE_DIAMOND = 4672
-    const val SHADOW_DIAMOND = 4673
+    fun hasBloodDiamond(player: Player) = player.containsItem(Obj.fd_blood_diamond)
+    fun hasIceDiamond(player: Player) = player.containsItem(Obj.fd_icediamond)
+    fun hasSmokeDiamond(player: Player) = player.containsItem(Obj.fd_diamond_fire)
+    fun hasShadowDiamond(player: Player) = player.containsItem(Obj.fd_dark_diamond)
 
-    fun hasBloodDiamond(player: Player) = player.containsItem(BLOOD_DIAMOND)
-    fun hasIceDiamond(player: Player) = player.containsItem(ICE_DIAMOND)
-    fun hasSmokeDiamond(player: Player) = player.containsItem(SMOKE_DIAMOND)
-    fun hasShadowDiamond(player: Player) = player.containsItem(SHADOW_DIAMOND)
-
-    fun giveBloodDiamond(player: Player) = player.inventory.addItemDrop(BLOOD_DIAMOND, 1)
-    fun giveIceDiamond(player: Player) = player.inventory.addItemDrop(ICE_DIAMOND, 1)
-    fun giveSmokeDiamond(player: Player) = player.inventory.addItemDrop(SMOKE_DIAMOND, 1)
-    fun giveShadowDiamond(player: Player) = player.inventory.addItemDrop(SHADOW_DIAMOND, 1)
+    fun giveBloodDiamond(player: Player) = player.inventory.addItemDrop(Obj.fd_blood_diamond, 1)
+    fun giveIceDiamond(player: Player) = player.inventory.addItemDrop(Obj.fd_icediamond, 1)
+    fun giveSmokeDiamond(player: Player) = player.inventory.addItemDrop(Obj.fd_diamond_fire, 1)
+    fun giveShadowDiamond(player: Player) = player.inventory.addItemDrop(Obj.fd_dark_diamond, 1)
 
     fun diamondCount(player: Player) = listOf(
         hasBloodDiamond(player), hasIceDiamond(player), hasSmokeDiamond(player), hasShadowDiamond(player)
@@ -44,6 +42,9 @@ object DesertTreasureDiamonds {
 
     fun hasAllDiamonds(player: Player) = diamondCount(player) == 4
 }
+
+fun Player.ownsActiveNpc(npcId: Int): Boolean =
+    World.NPCs.any { it is OwnedNPC && it.owner === this && it.id == npcId && !it.hasFinished() }
 
 @QuestHandler(
     quest = Quest.DESERT_TREASURE,
@@ -82,22 +83,25 @@ class DesertTreasure : QuestOutline() {
     override fun complete(player: Player) {
         player.skills.addXpQuest(Skills.MAGIC, 20000.0)
         player.combatDefinitions.setSpellbook(CombatDefinitions.Spellbook.ANCIENT)
-        sendQuestCompleteInterface(player, 4675)
+        sendQuestCompleteInterface(player, Obj.staff_of_zaros)
     }
 
     override fun updateStage(player: Player, stage: Int) {
-        when (stage) {
-            STAGE_TERRY_BALANDO -> player.vars.setVarBit(Varbit.desert_treasure, 5)
-            STAGE_RETURN_TO_ASGARNIA -> player.vars.setVarBit(Varbit.desert_treasure, 10)
-            STAGE_MIRROR_MIRROR -> player.vars.setVarBit(Varbit.desert_treasure, 15)
-            STAGE_TALK_TO_BARTENDER -> player.vars.setVarBit(Varbit.desert_treasure, 20)
-            STAGE_TALK_TO_EBLIS -> player.vars.setVarBit(Varbit.desert_treasure, 25)
-            STAGE_RETURN_TO_MIRRORS -> player.vars.setVarBit(Varbit.desert_treasure, 30)
-            STAGE_DIAMONDS_OF_AZZANADRA -> player.vars.setVarBit(Varbit.desert_treasure, 35)
-            STAGE_IFTAH_YA_SIMSIM -> player.vars.setVarBit(Varbit.desert_treasure, 45)
-            STAGE_RETURN_TO_JALDRAOCHT -> player.vars.setVarBit(Varbit.desert_treasure, 50)
-            STAGE_TOMB_RAIDER -> player.vars.setVarBit(Varbit.desert_treasure, 55)
-            STAGE_AZZANADRA, STAGE_COMPLETE -> player.vars.setVarBit(Varbit.desert_treasure, 60)
-        }
+        CLIENT_PROGRESS[stage]?.let { player.vars.setVarBit(Varbit.deserttreasure, it) }
     }
 }
+
+private val CLIENT_PROGRESS = mapOf(
+    STAGE_TERRY_BALANDO to 1,
+    STAGE_RETURN_TO_ASGARNIA to 2,
+    STAGE_MIRROR_MIRROR to 3,
+    STAGE_TALK_TO_BARTENDER to 4,
+    STAGE_TALK_TO_EBLIS to 5,
+    STAGE_RETURN_TO_MIRRORS to 10,
+    STAGE_DIAMONDS_OF_AZZANADRA to 11,
+    STAGE_IFTAH_YA_SIMSIM to 12,
+    STAGE_RETURN_TO_JALDRAOCHT to 12,
+    STAGE_TOMB_RAIDER to 13,
+    STAGE_AZZANADRA to 14,
+    STAGE_COMPLETE to 15
+)

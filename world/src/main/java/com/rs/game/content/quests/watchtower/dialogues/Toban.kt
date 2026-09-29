@@ -1,5 +1,7 @@
 package com.rs.game.content.quests.watchtower.dialogues
 
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Npc
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
@@ -11,16 +13,13 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 
-private const val TOBAN = 855
-private const val DRAGON_BONES = 536
-
 private const val TOBAN_TASK_STARTED = "watchtowerTobanTaskStarted"
 private const val TOBAN_TASK_COMPLETE = "watchtowerTobanTaskComplete"
 private const val RELIC_PART_3_HANDED_IN = "watchtowerRelicPart3HandedIn"
 
 @ServerStartupEvent
 fun mapWatchtowerToban() {
-    onNpcClick(TOBAN, options = arrayOf("Talk-to")) { (player, npc) ->
+    onNpcClick(Npc.toban, options = arrayOf("Talk-to")) { (player, npc) ->
         tobanDialogue(player, npc)
     }
 }
@@ -47,8 +46,8 @@ private fun tobanDialogue(player: Player, npc: NPC) {
             }
 
             val hasRelicPart =
-                player.inventory.containsItem(RELIC_PART_3, 1) ||
-                player.bank.containsItem(RELIC_PART_3, 1)
+                player.inventory.containsItem(Obj.relicpart3, 1) ||
+                player.bank.containsItem(Obj.relicpart3, 1)
 
             if (hasRelicPart) {
                 npc(
@@ -65,7 +64,7 @@ private fun tobanDialogue(player: Player, npc: NPC) {
                 "Hahaha! Small t'ing returns. Did you bring the dragon bone?"
             )
 
-            if (!player.inventory.containsItem(DRAGON_BONES, 1)) {
+            if (!player.inventory.containsItem(Obj.dragon_bones, 1)) {
                 player(
                     CALM_TALK,
                     "I have nothing for you."
@@ -94,8 +93,8 @@ private fun tobanDialogue(player: Player, npc: NPC) {
             }
 
             exec {
-                player.inventory.deleteItem(DRAGON_BONES, 1)
-                player.inventory.addItem(RELIC_PART_3, 1)
+                player.inventory.deleteItem(Obj.dragon_bones, 1)
+                player.inventory.addItem(Obj.relicpart3, 1)
             }
 
             npc(
@@ -186,7 +185,7 @@ private fun tobanDialogue(player: Player, npc: NPC) {
             "Hahaha! Small t'ing returns. Did you bring the dragon bone?"
         )
 
-        if (!player.inventory.containsItem(DRAGON_BONES, 1)) {
+        if (!player.inventory.containsItem(Obj.dragon_bones, 1)) {
             player(
                 CALM_TALK,
                 "I have nothing for you."
@@ -217,8 +216,8 @@ private fun tobanDialogue(player: Player, npc: NPC) {
         }
 
         exec {
-            player.inventory.deleteItem(DRAGON_BONES, 1)
-            player.inventory.addItem(RELIC_PART_3, 1)
+            player.inventory.deleteItem(Obj.dragon_bones, 1)
+            player.inventory.addItem(Obj.relicpart3, 1)
             player.set(TOBAN_TASK_COMPLETE, true)
         }
 

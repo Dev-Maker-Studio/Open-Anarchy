@@ -7,21 +7,16 @@ import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcDeath
+import com.rs.plugin.kts.onLogin
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPlayerStep
-import com.rs.plugin.kts.onLogin
 import org.darkan.core.Constants
 import org.darkan.core.Utils
+import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Seq
 import world.gregs.voidps.type.Tile
-
-private const val SHADOW_ENTRANCE_LADDER = 6560
-private const val SHADOW_INTERIOR_LADDER = 32015
-private const val SECURE_CHEST = 6448
-
-private const val DAMIS_FIRST = 1974
-private const val DAMIS_SECOND = 1975
-private const val LOCKPICK = 1523
-private const val GILDED_CROSS = 4674
 
 private val SHADOW_ENTRANCE_TILE = Tile.of(2547, 3421, 0)
 private val SHADOW_INTERIOR_LADDER_TILE = Tile.of(2629, 5072, 0)
@@ -55,11 +50,11 @@ fun mapShadowDiamondDesertTreasure() {
         }
     }
 
-    onObjectClick(SECURE_CHEST, tiles = arrayOf(SECURE_CHEST_TILE)) { (player) ->
+    onObjectClick(Loc.fd_bandit_shutchest, tiles = arrayOf(SECURE_CHEST_TILE)) { (player) ->
         openSecureChest(player)
     }
 
-    onObjectClick(SHADOW_ENTRANCE_LADDER, tiles = arrayOf(SHADOW_ENTRANCE_TILE)) { (player) ->
+    onObjectClick(Loc.loc_6560, tiles = arrayOf(SHADOW_ENTRANCE_TILE)) { (player) ->
         if (!player.getBool(RASOLO_DEAL_ACCEPTED)) {
             player.sendMessage("You cannot find a way into the hidden dungeon.")
             return@onObjectClick
@@ -67,7 +62,7 @@ fun mapShadowDiamondDesertTreasure() {
         player.useLadder(SHADOW_INTERIOR_LADDER_TILE)
     }
 
-    onObjectClick(SHADOW_INTERIOR_LADDER, tiles = arrayOf(SHADOW_INTERIOR_LADDER_TILE)) { (player) ->
+    onObjectClick(Loc.di2_ladder_base, tiles = arrayOf(SHADOW_INTERIOR_LADDER_TILE)) { (player) ->
         player.useLadder(SHADOW_ENTRANCE_TILE)
     }
 
@@ -75,7 +70,7 @@ fun mapShadowDiamondDesertTreasure() {
         enterDamisRoom(player)
     }
 
-    onNpcDeath(DAMIS_FIRST) { e ->
+    onNpcDeath(Npc.fd_damis_normal) { e ->
         val damis = e.npc as? OwnedNPC ?: return@onNpcDeath
         val player = damis.owner
         if (!player.getBool(DAMIS_ACTIVE) || player.getBool(DAMIS_DEFEATED))
@@ -84,13 +79,13 @@ fun mapShadowDiamondDesertTreasure() {
         player.set(DAMIS_FIRST_DEFEATED, true)
         damis.forceTalk("Now I show... you... my true... power!")
 
-        val secondForm = OwnedNPC(player, DAMIS_SECOND, damis.tile, true)
+        val secondForm = OwnedNPC(player, Npc.fd_damis_tougher, damis.tile, true)
         secondForm.setAutoDespawnAtDistance(false)
         secondForm.combatTarget = player
         scheduleDamisTaunt(player, secondForm)
     }
 
-    onNpcDeath(DAMIS_SECOND) { e ->
+    onNpcDeath(Npc.fd_damis_tougher) { e ->
         val damis = e.npc as? OwnedNPC ?: return@onNpcDeath
         val player = damis.owner
         if (!player.getBool(DAMIS_ACTIVE))
@@ -116,7 +111,7 @@ private fun openSecureChest(player: Player) {
         return
     }
 
-    if (!player.inventory.containsOneItem(LOCKPICK)) {
+    if (!player.inventory.containsOneItem(Obj.lockpick)) {
         player.sendMessage("You need a lockpick to attempt to open the chest.")
         return
     }
@@ -133,13 +128,13 @@ private fun openSecureChest(player: Player) {
 }
 
 private fun attemptSecureChest(player: Player) {
-    if (!player.inventory.containsOneItem(LOCKPICK)) {
+    if (!player.inventory.containsOneItem(Obj.lockpick)) {
         player.sendMessage("You need a lockpick to attempt to open the chest.")
         return
     }
 
     player.faceTile(SECURE_CHEST_TILE)
-    player.anim(832)
+    player.anim(Seq.human_pickuptable)
     player.sendMessage("You attempt to pick the first lock...")
 
     if (!rollLockpick(player)) {
@@ -162,14 +157,14 @@ private fun attemptSecureChest(player: Player) {
     }
 
     player.sendMessage("...and manage to pick the final lock.")
-    player.inventory.addItemDrop(GILDED_CROSS, 1)
+    player.inventory.addItemDrop(Obj.fd_sword_cross, 1)
     player.set(GILDED_CROSS_CLAIMED, true)
     player.simpleDialogue("Inside the chest, hidden under some rags, you find a Gilded Cross.")
 }
 
 private fun failSecureChest(player: Player) {
     player.sendMessage("...and fail. The locking mechanism has reset itself.")
-    player.inventory.deleteItem(LOCKPICK, 1)
+    player.inventory.deleteItem(Obj.lockpick, 1)
     player.sendMessage("Your lock pick snapped while attempting to pick the lock.")
 }
 
@@ -198,7 +193,7 @@ private fun enterDamisRoom(player: Player) {
     player.startConversation {
         simple("A voice seems to come from walls:<br><br>'You... do not be... long in this... place...<br>Turn... back now, or... prepare... to meet your... doom...'")
         exec {
-            val damis = OwnedNPC(player, DAMIS_FIRST, DAMIS_SPAWN_TILE, true)
+            val damis = OwnedNPC(player, Npc.fd_damis_normal, DAMIS_SPAWN_TILE, true)
             damis.setAutoDespawnAtDistance(false)
             damis.forceTalk("You should... have listened to me!")
             damis.combatTarget = player

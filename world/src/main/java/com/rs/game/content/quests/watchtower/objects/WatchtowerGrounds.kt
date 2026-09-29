@@ -1,5 +1,9 @@
 package com.rs.game.content.quests.watchtower
 
+import org.darkan.core.gameval.gen.Varbit
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Loc
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
@@ -9,38 +13,6 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnObject
 import com.rs.plugin.kts.onNpcClick
 import com.rs.plugin.kts.onObjectClick
-
-private const val TOWER_GUARD = 877
-private const val WATCHTOWER_WIZARD = 872
-
-private const val EMPTY_BUSH = 2798
-private const val FINGERNAILS_BUSH = 2799
-private const val DAMAGED_DAGGER_BUSH = 2800
-private const val TATTERED_EYE_PATCH_BUSH = 2801
-private const val OLD_ROBE_BUSH = 2802
-private const val UNUSUAL_ARMOUR_BUSH = 2803
-
-private const val GROUND_FLOOR_LADDER_UP = 2833
-private const val FIRST_FLOOR_LADDER_DOWN = 17122
-private const val FIRST_FLOOR_LADDER_UP = 2796
-private const val SECOND_FLOOR_LADDER_DOWN = 2797
-
-private const val CYAN_PILLAR = 20025
-private const val YELLOW_PILLAR = 20029
-private const val MAGENTA_PILLAR = 20033
-private const val WHITE_PILLAR = 21549
-
-private const val SHIELD_LEVER = 2794
-
-private const val CYAN_PILLAR_VARBIT = 3127
-private const val YELLOW_PILLAR_VARBIT = 3128
-private const val MAGENTA_PILLAR_VARBIT = 3129
-private const val WHITE_PILLAR_VARBIT = 3130
-
-private const val YELLOW_CRYSTAL = WATCHTOWER_CRYSTAL_1
-private const val MAGENTA_CRYSTAL = WATCHTOWER_CRYSTAL_2
-private const val CYAN_CRYSTAL = WATCHTOWER_CRYSTAL_3
-private const val WHITE_CRYSTAL = WATCHTOWER_CRYSTAL_4
 
 private const val FOUND_FINGERNAILS = "watchtowerFoundFingernails"
 private const val FOUND_DAMAGED_DAGGER = "watchtowerFoundDamagedDagger"
@@ -62,7 +34,7 @@ private val WATCHTOWER_EMPTY_BUSHES = setOf(
 @ServerStartupEvent
 fun mapWatchtowerGrounds() {
     onNpcClick(
-        TOWER_GUARD,
+        Npc.tower_guard,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         player.startConversation {
@@ -80,12 +52,12 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        EMPTY_BUSH,
-        FINGERNAILS_BUSH,
-        DAMAGED_DAGGER_BUSH,
-        TATTERED_EYE_PATCH_BUSH,
-        OLD_ROBE_BUSH,
-        UNUSUAL_ARMOUR_BUSH
+        Loc.watchtowerbush,
+        Loc.watchtowerbushnail,
+        Loc.watchtowerbushdagger,
+        Loc.watchtowerbusheyepatch,
+        Loc.watchtowerbushrobe,
+        Loc.watchtowerbusharmour
     ) { (player, obj) ->
         if (player.getQuestStage(Quest.WATCHTOWER) != STAGE_SEARCH_WATCHTOWER) {
             player.sendMessage("You find nothing of interest.")
@@ -93,7 +65,7 @@ fun mapWatchtowerGrounds() {
         }
 
         when (obj.id) {
-            EMPTY_BUSH -> {
+            Loc.watchtowerbush -> {
                 if (obj.tile !in WATCHTOWER_EMPTY_BUSHES)
                     return@onObjectClick
 
@@ -105,60 +77,60 @@ fun mapWatchtowerGrounds() {
                 }
             }
 
-            FINGERNAILS_BUSH -> {
+            Loc.watchtowerbushnail -> {
                 if (!obj.tile.isAt(2544, 3134, 0))
                     return@onObjectClick
 
                 searchFingernailsBush(player)
             }
 
-            DAMAGED_DAGGER_BUSH -> {
+            Loc.watchtowerbushdagger -> {
                 if (!obj.tile.isAt(2549, 3135, 0))
                     return@onObjectClick
 
                 searchEvidenceBush(
                     player = player,
                     attribute = FOUND_DAMAGED_DAGGER,
-                    itemId = DAMAGED_DAGGER,
+                    itemId = Obj.watchtowerdagger,
                     text = "Aha, a dagger! I wonder if this is evidence...",
                     giveItemBeforeText = false
                 )
             }
 
-            TATTERED_EYE_PATCH_BUSH -> {
+            Loc.watchtowerbusheyepatch -> {
                 if (!obj.tile.isAt(2546, 3130, 0))
                     return@onObjectClick
 
                 searchEvidenceBush(
                     player = player,
                     attribute = FOUND_TATTERED_EYE_PATCH,
-                    itemId = TATTERED_EYE_PATCH,
+                    itemId = Obj.watch_eye_patch,
                     text = "I've found an eye patch; I had better show this to the Watchtower Wizard.",
                     giveItemBeforeText = true
                 )
             }
 
-            OLD_ROBE_BUSH -> {
+            Loc.watchtowerbushrobe -> {
                 if (!obj.tile.isAt(2559, 3123, 0))
                     return@onObjectClick
 
                 searchEvidenceBush(
                     player = player,
                     attribute = FOUND_OLD_ROBE,
-                    itemId = OLD_ROBE,
+                    itemId = Obj.watchtowerrobe,
                     text = "Aha! A robe. This could be a clue...",
                     giveItemBeforeText = true
                 )
             }
 
-            UNUSUAL_ARMOUR_BUSH -> {
+            Loc.watchtowerbusharmour -> {
                 if (!obj.tile.isAt(2558, 3132, 0))
                     return@onObjectClick
 
                 searchEvidenceBush(
                     player = player,
                     attribute = FOUND_UNUSUAL_ARMOUR,
-                    itemId = UNUSUAL_ARMOUR,
+                    itemId = Obj.watchtowerarmour,
                     text = "Here's some armour; it could be evidence...",
                     giveItemBeforeText = true
                 )
@@ -167,7 +139,7 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        GROUND_FLOOR_LADDER_UP
+        Loc.towerladder
     ) { (player, obj) ->
         if (!obj.tile.isAt(2544, 3111, 0))
             return@onObjectClick
@@ -175,7 +147,7 @@ fun mapWatchtowerGrounds() {
         if (player.getQuestStage(Quest.WATCHTOWER) == STAGE_UNSTARTED) {
             player.startConversation {
                 npc(
-                    TOWER_GUARD,
+                    Npc.tower_guard,
                     HeadE.ANGRY,
                     "You can't go up there. That's private, that is."
                 )
@@ -185,7 +157,7 @@ fun mapWatchtowerGrounds() {
 
         player.startConversation {
             npc(
-                TOWER_GUARD,
+                Npc.tower_guard,
                 HeadE.CALM_TALK,
                 "It is the wizards' helping hand - let 'em up."
             )
@@ -202,7 +174,7 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        FIRST_FLOOR_LADDER_DOWN
+        Loc.qip_watchtower_ladder_top
     ) { (player, obj) ->
         if (!obj.tile.isAt(2544, 3111, 1))
             return@onObjectClick
@@ -216,7 +188,7 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        FIRST_FLOOR_LADDER_UP
+        Loc.watchladderup
     ) { (player, obj) ->
         if (!obj.tile.isAt(2549, 3111, 1))
             return@onObjectClick
@@ -230,7 +202,7 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        SECOND_FLOOR_LADDER_DOWN
+        Loc.watchladderdown
     ) { (player, obj) ->
         if (!obj.tile.isAt(2549, 3111, 2))
             return@onObjectClick
@@ -245,16 +217,16 @@ fun mapWatchtowerGrounds() {
 
     onItemOnObject(
         objectNamesOrIds = arrayOf(
-            CYAN_PILLAR,
-            YELLOW_PILLAR,
-            MAGENTA_PILLAR,
-            WHITE_PILLAR
+            Loc.loc_20025,
+            Loc.loc_20029,
+            Loc.loc_20033,
+            Loc.loc_21549
         ),
         itemNamesOrIds = arrayOf(
-            WATCHTOWER_CRYSTAL_1,
-            WATCHTOWER_CRYSTAL_2,
-            WATCHTOWER_CRYSTAL_3,
-            WATCHTOWER_CRYSTAL_4
+            Obj.powering_crystal1,
+            Obj.powering_crystal2,
+            Obj.powering_crystal3,
+            Obj.powering_crystal4
         )
     ) { e ->
         val player = e.player
@@ -266,16 +238,16 @@ fun mapWatchtowerGrounds() {
         }
 
         val validTile = when (obj.id) {
-            CYAN_PILLAR ->
+            Loc.loc_20025 ->
                 obj.tile.isAt(2545, 3116, 2)
 
-            YELLOW_PILLAR ->
+            Loc.loc_20029 ->
                 obj.tile.isAt(2545, 3113, 2)
 
-            MAGENTA_PILLAR ->
+            Loc.loc_20033 ->
                 obj.tile.isAt(2548, 3116, 2)
 
-            WHITE_PILLAR ->
+            Loc.loc_21549 ->
                 obj.tile.isAt(2548, 3113, 2)
 
             else -> false
@@ -285,10 +257,10 @@ fun mapWatchtowerGrounds() {
             return@onItemOnObject
 
         val correctCrystal = when (obj.id) {
-            CYAN_PILLAR -> CYAN_CRYSTAL
-            YELLOW_PILLAR -> YELLOW_CRYSTAL
-            MAGENTA_PILLAR -> MAGENTA_CRYSTAL
-            WHITE_PILLAR -> WHITE_CRYSTAL
+            Loc.loc_20025 -> Obj.powering_crystal3
+            Loc.loc_20029 -> Obj.powering_crystal1
+            Loc.loc_20033 -> Obj.powering_crystal2
+            Loc.loc_21549 -> Obj.powering_crystal4
             else -> -1
         }
 
@@ -300,10 +272,10 @@ fun mapWatchtowerGrounds() {
         }
 
         val varbit = when (obj.id) {
-            CYAN_PILLAR -> CYAN_PILLAR_VARBIT
-            YELLOW_PILLAR -> YELLOW_PILLAR_VARBIT
-            MAGENTA_PILLAR -> MAGENTA_PILLAR_VARBIT
-            WHITE_PILLAR -> WHITE_PILLAR_VARBIT
+            Loc.loc_20025 -> Varbit.watchtower_pillar_1
+            Loc.loc_20029 -> Varbit.watchtower_pillar_2
+            Loc.loc_20033 -> Varbit.watchtower_pillar_3
+            Loc.loc_21549 -> Varbit.watchtower_pillar_4
             else -> return@onItemOnObject
         }
 
@@ -322,7 +294,7 @@ fun mapWatchtowerGrounds() {
     }
 
     onObjectClick(
-        SHIELD_LEVER
+        Loc.watchleverup
     ) { (player, obj) ->
         if (!obj.tile.isAt(2543, 3115, 2))
             return@onObjectClick
@@ -352,22 +324,22 @@ fun mapWatchtowerGrounds() {
         }
 
         player.vars.saveVarBit(
-            CYAN_PILLAR_VARBIT,
+            Varbit.watchtower_pillar_1,
             2
         )
 
         player.vars.saveVarBit(
-            YELLOW_PILLAR_VARBIT,
+            Varbit.watchtower_pillar_2,
             2
         )
 
         player.vars.saveVarBit(
-            MAGENTA_PILLAR_VARBIT,
+            Varbit.watchtower_pillar_3,
             2
         )
 
         player.vars.saveVarBit(
-            WHITE_PILLAR_VARBIT,
+            Varbit.watchtower_pillar_4,
             2
         )
 
@@ -377,25 +349,25 @@ fun mapWatchtowerGrounds() {
 
         player.startConversation {
             npc(
-                WATCHTOWER_WIZARD,
+                Npc.watchtower_wizard,
                 HeadE.HAPPY_TALKING,
                 "Marvellous! It works! The town will now be safe."
             )
 
             npc(
-                WATCHTOWER_WIZARD,
+                Npc.watchtower_wizard,
                 HeadE.HAPPY_TALKING,
                 "Your help was invaluable. Take this payment as a token of my gratitude."
             )
 
             npc(
-                WATCHTOWER_WIZARD,
+                Npc.watchtower_wizard,
                 HeadE.HAPPY_TALKING,
                 "Also, let me improve your Magic level for you."
             )
 
             npc(
-                WATCHTOWER_WIZARD,
+                Npc.watchtower_wizard,
                 HeadE.HAPPY_TALKING,
                 "Here is a special item for you - it's a new spell. Read the scroll and you will be able to teleport yourself here."
             )
@@ -412,16 +384,16 @@ fun mapWatchtowerGrounds() {
 private fun allCrystalsPlaced(
     player: Player
 ): Boolean {
-    return player.vars.getVarBit(CYAN_PILLAR_VARBIT) >= 1 &&
-            player.vars.getVarBit(YELLOW_PILLAR_VARBIT) >= 1 &&
-            player.vars.getVarBit(MAGENTA_PILLAR_VARBIT) >= 1 &&
-            player.vars.getVarBit(WHITE_PILLAR_VARBIT) >= 1
+    return player.vars.getVarBit(Varbit.watchtower_pillar_1) >= 1 &&
+            player.vars.getVarBit(Varbit.watchtower_pillar_2) >= 1 &&
+            player.vars.getVarBit(Varbit.watchtower_pillar_3) >= 1 &&
+            player.vars.getVarBit(Varbit.watchtower_pillar_4) >= 1
 }
 
 private fun searchFingernailsBush(player: Player) {
     if (player.getBool(FOUND_FINGERNAILS)) {
-        if (!player.inventory.containsItem(FINGERNAILS, 1) &&
-            !player.bank.containsItem(FINGERNAILS, 1)
+        if (!player.inventory.containsItem(Obj.fingernails, 1) &&
+            !player.bank.containsItem(Obj.fingernails, 1)
         ) {
             player.startConversation {
                 player(
@@ -431,7 +403,7 @@ private fun searchFingernailsBush(player: Player) {
 
                 exec {
                     player.inventory.addItemDrop(
-                        FINGERNAILS,
+                        Obj.fingernails,
                         1
                     )
                 }
@@ -451,7 +423,7 @@ private fun searchFingernailsBush(player: Player) {
 
         exec {
             player.inventory.addItemDrop(
-                FINGERNAILS,
+                Obj.fingernails,
                 1
             )
 
