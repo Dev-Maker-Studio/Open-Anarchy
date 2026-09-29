@@ -44,6 +44,7 @@ private const val CENTRE_RUN_RESTORE = 1.0
 private const val COUNTDOWN_TICKS = 5
 private const val ROUND_BREAK_TICKS = 5
 private const val FINISH_TICKS = 5
+private const val CELEBRATE_TICKS = 2
 private const val TELEPORT_TICKS = 3
 private const val RESPAWN_MIN_DISTANCE = 20
 private const val UNSEEN_COMPENSATION = 500
@@ -395,10 +396,6 @@ class FogMatch(first: Player, second: Player) {
             b.score > a.score -> b
             else -> null
         }
-        winner?.player?.let {
-            it.anim(Seq.hvh_player_winner_pose)
-            it.spotAnim(Spotanim.hvh_winners_spot)
-        }
         val results = sides.associateWith { FogResults.normal(it, sides.first { other -> other != it }, winner == it) }
         FogQueue.record(a.player, a.score, b.player, b.score, winner?.player)
         WorldTasks.schedule(FINISH_TICKS) {
@@ -406,6 +403,7 @@ class FogMatch(first: Player, second: Player) {
                 if (state(side.player) == null) continue
                 leave(side.player, null)
                 FogResults.apply(side.player, result)
+                if (side == winner) celebrate(side.player)
             }
         }
     }
@@ -432,6 +430,7 @@ class FogMatch(first: Player, second: Player) {
             if (state(remaining.player) == null) return@schedule
             leave(remaining.player, null)
             FogResults.apply(remaining.player, result)
+            celebrate(remaining.player)
         }
     }
 
@@ -449,6 +448,13 @@ class FogMatch(first: Player, second: Player) {
             else -> player.tele(FOG_LOBBY_RETURN)
         }
         FogQueue.matchLeft(this, player, reason == null || reason == LeaveReason.FORFEIT)
+    }
+
+    private fun celebrate(player: Player) = WorldTasks.schedule(CELEBRATE_TICKS) {
+        if (player.hasFinished()) return@schedule
+        player.stopAll()
+        player.anim(Seq.hvh_player_winner_pose)
+        player.spotAnim(Spotanim.hvh_winners_spot)
     }
 
     fun sendHud(player: Player) {
