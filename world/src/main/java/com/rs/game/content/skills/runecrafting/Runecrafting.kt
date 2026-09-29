@@ -16,6 +16,7 @@
 //
 package com.rs.game.content.skills.runecrafting
 
+import com.rs.game.content.minigames.fistofguthix.FogGloves
 import com.rs.engine.dialogue.sendOptionsDialogue
 import com.rs.engine.quest.Quest
 import com.rs.game.content.combat.CombatDefinitions.Spellbook
@@ -266,7 +267,7 @@ object Runecrafting {
         var xp = rune.xp * essence * xpMultiplier
         xp *= rcingSuitBonus(player)
         val crafted = essence * rune.multiplier(level)
-        player.skills.addXp(Skills.RUNECRAFTING, xp)
+        player.skills.addXp(Skills.RUNECRAFTING, xp + FogGloves.runecraftingBonus(player, rune.id, rune.xp, essence))
         if (!span) {
             playCraftAnimation(player)
             player.sendMessage("You bind the temple's power into ${ItemDefinitions.getDefs(rune.id).name.lowercase()}s.")
