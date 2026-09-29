@@ -43,6 +43,7 @@ import kotlin.math.max
 private const val SPAWN_INTERVAL = 10
 private const val CALL_INTERVAL = 50
 private const val HUD_INTERVAL = 2
+private const val STALE_CALL_TICKS = 1
 private const val FAILED_ATTACK_BACKLASH = 20
 private const val ATTACK_BONUS_PER_LEVEL = 10
 private const val WRONG_EGG_DAMAGE = 50
@@ -122,6 +123,8 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
     private val active = LinkedHashSet<Player>()
     private val required = EnumMap<Role, Call>(Role::class.java)
     private val announced = EnumMap<Role, Call>(Role::class.java)
+    private val previous = EnumMap<Role, Call>(Role::class.java)
+    private var callsChangedTick = 0
     private val medic = HashSet<Player>()
     private val penance = ArrayList<Penance>()
     private val kills = EnumMap<PenanceFamily, Int>(PenanceFamily::class.java)
@@ -217,6 +220,8 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
     }
 
     private fun changeCalls() {
+        previous.putAll(required)
+        callsChangedTick = tick
         for (role in Role.entries) required[role] = Call.forRole(role).filter { it != required[role] }.random()
         announced.clear()
         active.forEach(::refreshCalls)
@@ -645,6 +650,10 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
             return
         }
         val call = Call.forHorn(role, option) ?: return
+        if (tick - callsChangedTick <= STALE_CALL_TICKS && call == previous[role.partner]) {
+            player.sendMessage("The calls have just changed; call your ${role.partner.displayName} again.")
+            return
+        }
         announced[role.partner] = call
         player.anim(Seq.barbassault_human_use_horn)
         player.sendMessage("You call '${call.shout}' to your ${role.partner.displayName}.")

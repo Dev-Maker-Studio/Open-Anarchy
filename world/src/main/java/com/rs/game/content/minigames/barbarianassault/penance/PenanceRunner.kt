@@ -1,5 +1,6 @@
 package com.rs.game.content.minigames.barbarianassault.penance
 
+import com.rs.engine.pathfinder.routeEntityToTile
 import com.rs.game.content.minigames.barbarianassault.Bait
 import com.rs.game.content.minigames.barbarianassault.BarbarianAssaultGame
 import com.rs.game.content.minigames.barbarianassault.PenanceFamily
@@ -14,6 +15,8 @@ private const val WEST_LIMIT = 14
 private const val EAST_LIMIT = 45
 private const val QUEEN_EAST_LIMIT = 44
 private const val ESCAPE_Y = 14
+private const val ESCAPE_X = 30
+private const val STUCK_TICKS = 10
 private const val NORMAL_RETREAT_Y = 38
 private const val QUEEN_RETREAT_Y = 30
 
@@ -23,6 +26,7 @@ class PenanceRunner(id: Int, tile: Tile, game: BarbarianAssaultGame, ordinal: In
     private var destination: Tile = tile
     private var target: Bait? = null
     private var badFood = 0
+    private var stuck = 0
 
     override fun tickPenance() {
         phase = phase % PHASES + 1
@@ -55,6 +59,13 @@ class PenanceRunner(id: Int, tile: Tile, game: BarbarianAssaultGame, ordinal: In
             return
         }
         if (phase == WANDER_PHASE) destination = wanderDestination()
+        stuck = if (stepTowards(destination) || destination == tile) 0 else stuck + 1
+        if (stuck >= STUCK_TICKS) detour()
+    }
+
+    private fun detour() {
+        val next = routeEntityToTile(this, game.local(ESCAPE_X, ESCAPE_Y)).coords.firstOrNull { it.x != x || it.y != y } ?: return
+        destination = Tile.of(next.x, next.y, plane)
         stepTowards(destination)
     }
 
