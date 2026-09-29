@@ -6,37 +6,28 @@ import com.rs.game.content.world.doors.Doors
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
-import org.darkan.core.Utils
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onPlayerStep
+import org.darkan.core.Utils
+import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.gameval.gen.Npc
 import world.gregs.voidps.type.Tile
-
-private const val PYRAMID_DOOR_LEFT = 6545
-private const val PYRAMID_DOOR_RIGHT = 6547
 
 private val PYRAMID_DOOR_LEFT_TILE = Tile.of(3233, 2899, 0)
 private val PYRAMID_DOOR_RIGHT_TILE = Tile.of(3232, 2899, 0)
 
-private const val EXTERIOR_DOWN = 6497
 private val EXTERIOR_DOWN_TILE = Tile.of(3233, 2897, 0)
 
-private const val LEVEL_1_UP = 6504
 private val LEVEL_1_UP_TILE = Tile.of(2913, 4953, 3)
-private const val LEVEL_1_DOWN = 6498
 private val LEVEL_1_DOWN_TILE = Tile.of(2909, 4964, 3)
 
-private const val LEVEL_2_UP = 6503
 private val LEVEL_2_UP_TILE = Tile.of(2845, 4964, 2)
-private const val LEVEL_2_DOWN = 6499
 private val LEVEL_2_DOWN_TILE = Tile.of(2846, 4973, 2)
 
-private const val LEVEL_3_UP = 6502
 private val LEVEL_3_UP_TILE = Tile.of(2782, 4973, 1)
-private const val LEVEL_3_DOWN = 6500
 private val LEVEL_3_DOWN_TILE = Tile.of(2784, 4941, 1)
 
-private const val LEVEL_4_UP = 6501
 private val LEVEL_4_UP_TILE = Tile.of(3232, 9293, 0)
 
 private val PYRAMID_TRAP_EXIT = Tile.of(3233, 2883, 0)
@@ -53,7 +44,6 @@ private val SAFE_LADDER_TILES = setOf(
 
 private const val BASE_TRAP_DENOMINATOR = 18
 
-private const val SCARAB_SWARM = 2001
 private const val SCARAB_ROLL = 180
 private const val SCARAB_COOLDOWN_MS = 15_000L
 private const val SCARAB_COOLDOWN_KEY = "dtPyramidLastScarab"
@@ -61,8 +51,8 @@ private const val SCARAB_COOLDOWN_KEY = "dtPyramidLastScarab"
 @ServerStartupEvent
 fun mapJaldraochtPyramid() {
     onObjectClick(
-        PYRAMID_DOOR_LEFT,
-        PYRAMID_DOOR_RIGHT,
+        Loc.four_diamonds_door_1,
+        Loc.four_diamonds_door_mirror,
         tiles = arrayOf(PYRAMID_DOOR_LEFT_TILE, PYRAMID_DOOR_RIGHT_TILE)
     ) { (player, obj) ->
         if (!canEnterPyramid(player)) {
@@ -72,7 +62,7 @@ fun mapJaldraochtPyramid() {
         Doors.handleDoubleDoor(player, obj)
     }
 
-    onObjectClick(EXTERIOR_DOWN, tiles = arrayOf(EXTERIOR_DOWN_TILE)) { (player) ->
+    onObjectClick(Loc.desert_laddertop, tiles = arrayOf(EXTERIOR_DOWN_TILE)) { (player) ->
         if (!canEnterPyramid(player)) {
             player.sendMessage("A powerful magical force prevents you from entering the pyramid.")
             return@onObjectClick
@@ -80,28 +70,28 @@ fun mapJaldraochtPyramid() {
         player.useLadder(LEVEL_1_UP_TILE)
     }
 
-    onObjectClick(LEVEL_1_UP, tiles = arrayOf(LEVEL_1_UP_TILE)) { (player) ->
+    onObjectClick(Loc.desert_ladder, tiles = arrayOf(LEVEL_1_UP_TILE)) { (player) ->
         player.useLadder(EXTERIOR_DOWN_TILE)
     }
-    onObjectClick(LEVEL_1_DOWN, tiles = arrayOf(LEVEL_1_DOWN_TILE)) { (player) ->
+    onObjectClick(Loc.desert_laddertop3_2, tiles = arrayOf(LEVEL_1_DOWN_TILE)) { (player) ->
         player.useLadder(LEVEL_2_UP_TILE)
     }
 
-    onObjectClick(LEVEL_2_UP, tiles = arrayOf(LEVEL_2_UP_TILE)) { (player) ->
+    onObjectClick(Loc.desert_ladder2_3, tiles = arrayOf(LEVEL_2_UP_TILE)) { (player) ->
         player.useLadder(LEVEL_1_DOWN_TILE)
     }
-    onObjectClick(LEVEL_2_DOWN, tiles = arrayOf(LEVEL_2_DOWN_TILE)) { (player) ->
+    onObjectClick(Loc.desert_laddertop2_1, tiles = arrayOf(LEVEL_2_DOWN_TILE)) { (player) ->
         player.useLadder(LEVEL_3_UP_TILE)
     }
 
-    onObjectClick(LEVEL_3_UP, tiles = arrayOf(LEVEL_3_UP_TILE)) { (player) ->
+    onObjectClick(Loc.desert_ladder1_2, tiles = arrayOf(LEVEL_3_UP_TILE)) { (player) ->
         player.useLadder(LEVEL_2_DOWN_TILE)
     }
-    onObjectClick(LEVEL_3_DOWN, tiles = arrayOf(LEVEL_3_DOWN_TILE)) { (player) ->
+    onObjectClick(Loc.desert_laddertop1_0, tiles = arrayOf(LEVEL_3_DOWN_TILE)) { (player) ->
         player.useLadder(LEVEL_4_UP_TILE)
     }
 
-    onObjectClick(LEVEL_4_UP, tiles = arrayOf(LEVEL_4_UP_TILE)) { (player) ->
+    onObjectClick(Loc.desert_ladder0_1, tiles = arrayOf(LEVEL_4_UP_TILE)) { (player) ->
         player.useLadder(LEVEL_3_DOWN_TILE)
     }
 
@@ -165,7 +155,7 @@ private fun rollScarabEncounter(player: Player) {
     player.set(SCARAB_COOLDOWN_KEY, now)
     player.stopAll()
 
-    OwnedNPC(player, SCARAB_SWARM, player.tile, false).combatTarget = player
+    OwnedNPC(player, Npc.ics_scarab_swarm, player.tile, false).combatTarget = player
     player.sendMessage("A swarm of scarabs boils up from beneath the floor!")
 }
 

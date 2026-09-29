@@ -16,6 +16,7 @@
 //
 package com.rs.game.content.skills.fletching;
 
+import org.darkan.core.gameval.gen.Obj;
 import static com.rs.game.content.quests.bigchompybirdhunting.BigChompyBirdHuntingKt.STAGE_MAKING_OGRE_ARROWS;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -49,13 +50,13 @@ public class Fletching extends PlayerAction {
 
 		STRUNG_LONG_BOW(48, BOW_STRING, new int[] { 839 }, new int[] { 10 }, new double[] { 10 }, new Animation(6684)),
 
-		ACHEY_LOG(2862, KNIFE, new int[] { 2864, 4825 }, new int[] { 5, 30 }, new double[] { 6.4, 45 }, new Animation(6702)),
+		ACHEY_LOG(2862, KNIFE, new int[] { Obj.ogre_arrow_shaft, 4825 }, new int[] { 5, 30 }, new double[] { 6.4, 45 }, new Animation(6702)),
 
-		WOLFBONE_ARROWHEADS(2859, CHISEL, new int[] { 2861 }, new int[] { 5 }, new double[] { 2.5 }, new Animation(-1)),
+		WOLFBONE_ARROWHEADS(Obj.wolf_bones, CHISLE, new int[] { Obj.obj_2861 }, new int[] { 5 }, new double[] { 2.5 }, new Animation(-1)),
 		
-		FLIGHTED_OGRE_ARROWS(2864, FEATHER, new int[] { 2865 }, new int[] { 5 }, new double[] { 0.9 }, new Animation(-1)),
+		FLIGHTED_OGRE_ARROWS(Obj.ogre_arrow_shaft, FEATHER, new int[] { Obj.ogre_headless_arrow }, new int[] { 5 }, new double[] { 0.9 }, new Animation(-1)),
 
-		OGRE_ARROWS(2861, 2865, new int[] { 2866 }, new int[] { 5 }, new double[] { 1.0 }, new Animation(-1)),
+		OGRE_ARROWS(Obj.obj_2861, Obj.ogre_headless_arrow, new int[] { Obj.ogre_arrow }, new int[] { 5 }, new double[] { 1.0 }, new Animation(-1)),
 
 		//STRUNG_COMP_BOW(4825, BOW_STRING, new int[] { 4827 }, new int[] { 30 }, new double[] { 45 }, new Animation(6684)),
 
@@ -216,7 +217,7 @@ public class Fletching extends PlayerAction {
 
 		DRAGON_DART(11232, FEATHER, new int[] { 11230 }, new int[] { 95 }, new double[] { 18.4 }, new Animation(-1)),
 
-		BLISTERWOODS(21600, KNIFE, new int[] { 21580, 21581, 21582 }, new int[] { 70, 70, 70 }, new double[] { 100, 10, 100 }, new Animation(-1));
+		BLISTERWOODS(21600, KNIFE, new int[] { 21580, Obj.myq5_blisterwood_stake, 21582 }, new int[] { 70, 70, 70 }, new double[] { 100, 10, 100 }, new Animation(-1));
 
 		private static final Map<Integer, Fletch> fletching = new HashMap<>();
 
@@ -296,7 +297,7 @@ public class Fletching extends PlayerAction {
         		return false;
     		}
 
-    		if (!player.getInventory().containsItem(2859)) {
+    		if (!player.getInventory().containsItem(Obj.wolf_bones)) {
         	player.sendMessage("You need some wolf bones in order to fletch this.");
         		return false;
     		}
@@ -358,16 +359,16 @@ public class Fletching extends PlayerAction {
 				default -> 15;
 			};
 
-		if (fletch.getProduct()[option] == 2864) {
+		if (fletch.getProduct()[option] == Obj.ogre_arrow_shaft) {
     		amount = 4;
 		}
 
-		if (fletch.getProduct()[option] == 2861) {
+		if (fletch.getProduct()[option] == Obj.obj_2861) {
     		amount = 4;
 		}
 
 		if (fletch == Fletch.FLIGHTED_OGRE_ARROWS) {
-    		amount = Math.min(6, player.getInventory().getNumberOf(2864));
+    		amount = Math.min(6, player.getInventory().getNumberOf(Obj.ogre_arrow_shaft));
     		amount = Math.min(amount, player.getInventory().getNumberOf(FEATHER) / 4);
 
     		if (amount <= 0) {
@@ -377,30 +378,30 @@ public class Fletching extends PlayerAction {
 	}
 
 		if (fletch == Fletch.OGRE_ARROWS) {
-    		amount = Math.min(6, player.getInventory().getNumberOf(2861));
-    		amount = Math.min(amount, player.getInventory().getNumberOf(2865));
+    		amount = Math.min(6, player.getInventory().getNumberOf(Obj.obj_2861));
+    		amount = Math.min(amount, player.getInventory().getNumberOf(Obj.ogre_headless_arrow));
 
     	if (amount <= 0)
         	return -1;
 	}
 
-		if (fletch.getProduct()[option] == 21581)
+		if (fletch.getProduct()[option] == Obj.myq5_blisterwood_stake)
 			amount = 10;
 
 		if (fletch.getProduct()[option] == 4825) {
-			if (!player.getInventory().containsItem(2859, 1)) {
+			if (!player.getInventory().containsItem(Obj.wolf_bones, 1)) {
 				player.sendMessage("You need some wolf bones to create this item.");
 				return -1;
 			} else {
-				player.getInventory().deleteItem(2859, 1);
+				player.getInventory().deleteItem(Obj.wolf_bones, 1);
 			}
 		}
 
 		if (!player.getInventory().containsItem(fletch.getId(), amount)
         && (fletch.getProduct()[option] != 52)
-        && (fletch.getProduct()[option] != 21581)
-        && (fletch.getProduct()[option] != 2864)
-        && (fletch.getProduct()[option] != 2861)) {
+        && (fletch.getProduct()[option] != Obj.myq5_blisterwood_stake)
+        && (fletch.getProduct()[option] != Obj.ogre_arrow_shaft)
+        && (fletch.getProduct()[option] != Obj.obj_2861)) {
 			player.sendMessage("You don't have enough of the supplies to make that many.");
 			return -1;
 		}
@@ -408,9 +409,9 @@ public class Fletching extends PlayerAction {
 		player.getInventory().deleteItem(
         fletch.getId(),
         fletch.getProduct()[option] == 52
-                || fletch.getProduct()[option] == 21581
-                || fletch.getProduct()[option] == 2864
-                || fletch.getProduct()[option] == 2861
+                || fletch.getProduct()[option] == Obj.myq5_blisterwood_stake
+                || fletch.getProduct()[option] == Obj.ogre_arrow_shaft
+                || fletch.getProduct()[option] == Obj.obj_2861
                 ? 1
                 : amount
 		);

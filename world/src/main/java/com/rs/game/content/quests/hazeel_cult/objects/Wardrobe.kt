@@ -7,7 +7,6 @@ import com.rs.game.content.quests.hazeel_cult.npcs.exposeButlerJones
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 
-
 @ServerStartupEvent
 fun mapJonesWardrobe() {
     onObjectClick(Loc.hazeelcbshut, Loc.hazeelcbopen) { (player) ->

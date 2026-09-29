@@ -1,8 +1,10 @@
 package com.rs.game.content.world.areas.desert
+import org.darkan.core.gameval.gen.Loc
 import com.rs.utils.isAt
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
+import com.rs.game.content.quests.deserttreasure.STAGE_COMPLETE as DESERT_TREASURE_COMPLETE
 import com.rs.game.content.skills.agility.agilitypyramid.AgilityPyramidController
 import com.rs.game.content.world.areas.dungeons.UndergroundDungeonController
 import world.gregs.voidps.type.Tile
@@ -140,8 +142,8 @@ fun mapDesertInteractions() {
     }
 
     // Ancient Spellbook Pyramid Rear Entrance - unlocked by Desert Treasure.
-    onObjectClick(6481) { (player) ->
-        if (player.getQuestStage(Quest.DESERT_TREASURE) == com.rs.game.content.quests.deserttreasure.STAGE_COMPLETE)
+    onObjectClick(Loc.desert_trasure_back_door_skew) { (player) ->
+        if (player.getQuestStage(Quest.DESERT_TREASURE) == DESERT_TREASURE_COMPLETE)
             player.tele(Tile.of(3233, 9310, 0))
         else
             player.sendMessage("The tunnel is sealed by an ancient power.")

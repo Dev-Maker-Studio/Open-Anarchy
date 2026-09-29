@@ -5,6 +5,7 @@ import com.rs.engine.quest.QuestHandler
 import com.rs.engine.quest.QuestOutline
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
+import org.darkan.core.gameval.gen.Obj
 
 const val STAGE_UNSTARTED = 0
 const val STAGE_GATHERING_PLANKS = 1
@@ -25,71 +26,21 @@ const val STAGE_COMPLETE = 8
     completedStage = STAGE_COMPLETE
 )
 class ObservatoryQuest : QuestOutline() {
-
-    override fun getJournalLines(
-    player: Player,
-    stage: Int
-): List<String> = when (stage) {
-
-    STAGE_UNSTARTED -> listOf(
-        "I can start this quest by speaking to the Observatory",
-        "professor at the Observatory reception, south-west of Ardougne."
-    )
-
-    STAGE_GATHERING_PLANKS -> listOf(
-        "The Observatory professor needs materials to repair his telescope.",
-        "First, he has asked me to bring him three planks of wood",
-        "for the telescope's base."
-    )
-
-    STAGE_GETTING_BRONZE -> listOf(
-        "I have given the professor the three planks.",
-        "He now needs a bronze bar for the telescope's tube."
-    )
-
-    STAGE_GETTING_MOLTEN_GLASS -> listOf(
-        "I have given the professor the bronze bar.",
-        "He now needs some molten glass to make a new lens."
-    )
-
-    STAGE_FINDING_LENS_MOULD -> listOf(
-        "I brought the professor some molten glass, but one of the",
-        "goblins has stolen his lens mould.",
-        "The professor's assistant suggested I search the dungeon",
-        "under the goblin settlement."
-    )
-
-    STAGE_MAKING_LENS -> listOf(
-        "I recovered the lens mould from the goblins.",
-        "I need to use the mould with molten glass to make",
-        "a new lens for the Observatory telescope."
-    )
-
-    STAGE_TRAVELLING_TO_OBSERVATORY -> listOf(
-        "I have made the new lens and given it to the professor.",
-        "He has gone ahead to the Observatory dome.",
-        "Since the bridge is broken, I need to travel through",
-        "the dungeon beneath the goblin settlement to reach him."
-    )
-
-    STAGE_OBSERVING_CONSTELLATION -> listOf(
-        "The professor has repaired the Observatory telescope.",
-        "He wants me to look through it and identify the",
-        "constellation I can see.",
-        "The star charts downstairs may help me identify it."
-    )
-
-    STAGE_COMPLETE -> listOf(
-        "QUEST COMPLETE!"
-    )
-
-    else -> listOf(
-        "Invalid quest stage. Report this to an administrator."
-    )
-}
+    override fun getJournalLines(player: Player, stage: Int): List<String> = when (stage) {
+        STAGE_UNSTARTED -> listOf("I can start this quest by speaking to the Observatory", "professor at the Observatory reception, south-west of Ardougne.")
+        STAGE_GATHERING_PLANKS -> listOf("The Observatory professor needs materials to repair his telescope.", "First, he has asked me to bring him three planks of wood", "for the telescope's base.")
+        STAGE_GETTING_BRONZE -> listOf("I have given the professor the three planks.", "He now needs a bronze bar for the telescope's tube.")
+        STAGE_GETTING_MOLTEN_GLASS -> listOf("I have given the professor the bronze bar.", "He now needs some molten glass to make a new lens.")
+        STAGE_FINDING_LENS_MOULD -> listOf("I brought the professor some molten glass, but one of the", "goblins has stolen his lens mould.", "The professor's assistant suggested I search the dungeon", "under the goblin settlement.")
+        STAGE_MAKING_LENS -> listOf("I recovered the lens mould from the goblins.", "I need to use the mould with molten glass to make", "a new lens for the Observatory telescope.")
+        STAGE_TRAVELLING_TO_OBSERVATORY -> listOf("I have made the new lens and given it to the professor.", "He has gone ahead to the Observatory dome.", "Since the bridge is broken, I need to travel through", "the dungeon beneath the goblin settlement to reach him.")
+        STAGE_OBSERVING_CONSTELLATION -> listOf("The professor has repaired the Observatory telescope.", "He wants me to look through it and identify the", "constellation I can see.", "The star charts downstairs may help me identify it.")
+        STAGE_COMPLETE -> listOf("QUEST COMPLETE!")
+        else -> listOf("Invalid quest stage. Report this to an administrator.")
+    }
 
     override fun complete(player: Player) {
         player.skills.addXpQuest(Skills.CRAFTING, 2250.0)
-        sendQuestCompleteInterface(player, 602)
+        sendQuestCompleteInterface(player, Obj.lens_mould)
     }
 }

@@ -7,7 +7,6 @@ import com.rs.game.content.quests.hazeel_cult.*
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 
-
 @ServerStartupEvent
 fun mapHazeelChest() {
     onObjectClick(Loc.carnilleanshutchest, Loc.carnilleanopenchest) { (player) ->

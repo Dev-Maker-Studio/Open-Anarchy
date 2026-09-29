@@ -37,10 +37,6 @@ private val ORBS = intArrayOf(Obj.caveorb1, Obj.caveorb2, Obj.caveorb3, Obj.cave
 
 private data class OrbSpawn(val itemId: Int, val tile: Tile)
 
-/*
- * Stalagmites object 3232 is a single 3x1 object anchored at one end.
- * The flat rock occupies its center tile and traversal is perpendicular to its footprint.
- */
 private data class FlatRockTrap(val tile: Tile, val horizontalTraversal: Boolean) {
     val rotation: Int
         get() = if (horizontalTraversal) 1 else 0
@@ -55,15 +51,11 @@ private data class FlatRockTrap(val tile: Tile, val horizontalTraversal: Boolean
         get() = stalagmiteTiles + tile
 }
 
-/*
- * The duplicate orb item IDs are kept in their previous geographic order so
- * existing testing characters do not have their destruction varbits remapped.
- */
 private val VISIBLE_ORB_SPAWNS = listOf(
-    OrbSpawn(Obj.caveorb4, Tile.of(2416, 9696, 0)), // north passage
-    OrbSpawn(Obj.caveorb3, Tile.of(2389, 9685, 0)), // ogre passage
-    OrbSpawn(Obj.caveorb2, Tile.of(2389, 9676, 0)), // western plank passage
-    OrbSpawn(Obj.caveorb1, Tile.of(2382, 9668, 0))  // trapped south-west passage
+    OrbSpawn(Obj.caveorb4, Tile.of(2416, 9696, 0)),
+    OrbSpawn(Obj.caveorb3, Tile.of(2389, 9685, 0)),
+    OrbSpawn(Obj.caveorb2, Tile.of(2389, 9676, 0)),
+    OrbSpawn(Obj.caveorb1, Tile.of(2382, 9668, 0))
 )
 private val TRAPPED_ORB_TILE = Tile.of(2382, 9668, 0)
 private val VISIBLE_ORB_TILES = VISIBLE_ORB_SPAWNS.map { it.tile }.toTypedArray()

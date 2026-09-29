@@ -1,5 +1,7 @@
 package com.rs.game.content.quests.watchtower
 
+import org.darkan.core.gameval.gen.Varbit
+import org.darkan.core.gameval.gen.Obj
 import com.rs.engine.quest.Quest
 import com.rs.engine.quest.QuestHandler
 import com.rs.engine.quest.QuestOutline
@@ -32,41 +34,12 @@ const val REQUIRED_MAGIC_LEVEL = 14
 const val REQUIRED_MINING_LEVEL = 40
 const val REQUIRED_THIEVING_LEVEL = 15
 
-const val OGRE_RELIC = 2372
-const val RELIC_PART_1 = 2373
-const val RELIC_PART_2 = 2374
-const val RELIC_PART_3 = 2375
-const val SKAVID_MAP = 2376
-const val OGRE_TOOTH = 2377
-const val TOBANS_KEY = 2378
-const val ROCK_CAKE = 2379
-
-const val WATCHTOWER_CRYSTAL_1 = 2380
-const val WATCHTOWER_CRYSTAL_2 = 2381
-const val WATCHTOWER_CRYSTAL_3 = 2382
-const val WATCHTOWER_CRYSTAL_4 = 2383
-
-const val FINGERNAILS = 2384
-const val OLD_ROBE = 2385
-const val UNUSUAL_ARMOUR = 2386
-const val DAMAGED_DAGGER = 2387
-const val TATTERED_EYE_PATCH = 2388
-
-const val GROUND_BAT_BONES = 2391
-const val TOBANS_GOLD = 2393
-const val MAGIC_OGRE_POTION = 2395
-const val SPELL_SCROLL = 2396
-const val SHAMAN_ROBE = 2397
-const val CAVE_NIGHTSHADE = 2398
-
 const val WATCHTOWER_SCROLL_READ = "watchtowerSpellScrollRead"
-
-private const val CYAN_PILLAR_VARBIT = 3127
 
 @ServerStartupEvent
 fun mapWatchtowerItems() {
     onItemClick(
-        SHAMAN_ROBE,
+        Obj.shaman_robe,
         options = arrayOf("Search")
     ) { e ->
         val player = e.player
@@ -78,20 +51,20 @@ fun mapWatchtowerItems() {
             return@onItemClick
         }
 
-        if (player.inventory.containsItem(WATCHTOWER_CRYSTAL_3, 1) ||
-            player.bank.containsItem(WATCHTOWER_CRYSTAL_3, 1) ||
-            player.vars.getVarBit(CYAN_PILLAR_VARBIT) != 0
+        if (player.inventory.containsItem(Obj.powering_crystal3, 1) ||
+            player.bank.containsItem(Obj.powering_crystal3, 1) ||
+            player.vars.getVarBit(Varbit.watchtower_pillar_1) != 0
         ) {
             player.sendMessage("You search the robe but find nothing.")
             return@onItemClick
         }
 
-        player.inventory.addItemDrop(WATCHTOWER_CRYSTAL_3, 1)
+        player.inventory.addItemDrop(Obj.powering_crystal3, 1)
         player.sendMessage("You search the robe and find a crystal.")
     }
 
     onItemClick(
-        SPELL_SCROLL,
+        Obj.watchtowerspell,
         options = arrayOf("Read")
     ) { e ->
         val player = e.player
@@ -99,7 +72,7 @@ fun mapWatchtowerItems() {
         player.sendMessage("You memorise what is written on the scroll.")
 
         player.inventory.deleteItem(
-            SPELL_SCROLL,
+            Obj.watchtowerspell,
             1
         )
 
@@ -134,7 +107,6 @@ fun mapWatchtowerItems() {
     completedStage = STAGE_COMPLETE
 )
 class Watchtower : QuestOutline() {
-
     companion object {
         @JvmStatic
         fun meetsRequirements(player: Player): Boolean {
@@ -150,7 +122,6 @@ class Watchtower : QuestOutline() {
         player: Player,
         stage: Int
     ): List<String> = when (stage) {
-
         STAGE_UNSTARTED -> listOf(
             "I can start this quest by speaking to the",
             "Watchtower Wizard, north-west of Yanille.",
@@ -342,13 +313,13 @@ class Watchtower : QuestOutline() {
         player.inventory.addCoins(5000)
 
         player.inventory.addItemDrop(
-            SPELL_SCROLL,
+            Obj.watchtowerspell,
             1
         )
 
         sendQuestCompleteInterface(
             player,
-            SPELL_SCROLL
+            Obj.watchtowerspell
         )
     }
 }

@@ -1,5 +1,7 @@
 package com.rs.game.content.quests.watchtower.dialogues
 
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Npc
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
@@ -9,13 +11,10 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 
-private const val CITY_GUARD = 862
-private const val DEATH_RUNE = 560
-
 @ServerStartupEvent
 fun mapWatchtowerCityGuard() {
     onNpcClick(
-        CITY_GUARD,
+        Npc.city_guard,
         options = arrayOf("Talk-to")
     ) { (player, npc) ->
         cityGuardDialogue(player, npc)
@@ -35,8 +34,8 @@ private fun cityGuardDialogue(player: Player, npc: NPC) {
             return@startConversation
         }
 
-        if (player.inventory.containsItem(SKAVID_MAP, 1) ||
-            player.bank.containsItem(SKAVID_MAP, 1)
+        if (player.inventory.containsItem(Obj.skavidmap, 1) ||
+            player.bank.containsItem(Obj.skavidmap, 1)
         ) {
             npc(
                 npc,
@@ -58,9 +57,9 @@ private fun cityGuardDialogue(player: Player, npc: NPC) {
             return@startConversation
         }
 
-        if (player.inventory.containsItem(DEATH_RUNE, 1)) {
+        if (player.inventory.containsItem(Obj.deathrune, 1)) {
             exec {
-                player.inventory.deleteItem(DEATH_RUNE, 1)
+                player.inventory.deleteItem(Obj.deathrune, 1)
             }
 
             player(
@@ -75,7 +74,7 @@ private fun cityGuardDialogue(player: Player, npc: NPC) {
             )
 
             exec {
-                player.inventory.addItemDrop(SKAVID_MAP, 1)
+                player.inventory.addItemDrop(Obj.skavidmap, 1)
 
                 if (stage == STAGE_GET_SKAVID_MAP) {
                     player.setQuestStage(

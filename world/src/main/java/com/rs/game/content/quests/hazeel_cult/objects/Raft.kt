@@ -11,13 +11,12 @@ import com.rs.plugin.kts.onObjectClick
 private val CAVE_RAFT_TILE = Tile.of(2567, 9679, 0)
 private val CAVE_RAFT_EXIT = Tile.of(2567, 9679, 0)
 
-// The transcript orders these by number of correctly-set valves, not geographic island number.
 private val destinations = mapOf(
     1 to Tile.of(2578, 9687, 0),
     2 to Tile.of(2593, 9694, 0),
-    3 to Tile.of(2616, 9725, 0), // fourth island
-    4 to Tile.of(2599, 9711, 0), // third island
-    5 to Tile.of(2607, 9692, 0)  // cult hideout
+    3 to Tile.of(2616, 9725, 0),
+    4 to Tile.of(2599, 9711, 0),
+    5 to Tile.of(2607, 9692, 0)
 )
 
 @ServerStartupEvent

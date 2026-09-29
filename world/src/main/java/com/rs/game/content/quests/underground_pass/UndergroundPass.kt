@@ -8,7 +8,6 @@ import org.darkan.core.gameval.gen.Varbit
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import world.gregs.voidps.type.Tile
-import com.rs.plugin.annotations.PluginEventHandler
 
 const val STAGE_UNSTARTED = 0
 const val STAGE_FIND_KOFTIK = 1
@@ -44,7 +43,6 @@ private val QUEST_ITEMS_TO_REMOVE = (Obj.swamprocks1..Obj.ibans_ashes).filter { 
     rewardsText = "3,000 Attack XP<br>3,000 Agility XP<br>Iban's staff<br>Klank's gauntlets<br>Access to the western lands",
     completedStage = STAGE_COMPLETE
 )
-@PluginEventHandler
 class UndergroundPass : QuestOutline() {
     override fun getJournalLines(player: Player, stage: Int): List<String> = when (stage) {
         STAGE_UNSTARTED -> listOf(

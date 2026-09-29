@@ -8,28 +8,19 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnNpc
 import com.rs.plugin.kts.onNpcClick
-
-private const val EBLIS_BANDIT_CAMP = 1922
-private const val EBLIS_MIRRORS = 1924
-
-private const val MAGIC_LOGS = 1513
-private const val STEEL_BAR = 2353
-private const val MOLTEN_GLASS = 1775
-private const val BONES = 526
-private const val ASHES = 592
-private const val CHARCOAL = 973
-private const val BLOOD_RUNE = 565
+import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Obj
 
 private const val INGREDIENTS_AGREED = "dtEblisIngredientsAgreed"
 
 private enum class Ingredient(val itemId: Int, val required: Int, val key: String, val one: String, val many: String) {
-    LOGS(MAGIC_LOGS, 12, "dtEblisMagicLogs", "a magic log", "magic logs"),
-    STEEL(STEEL_BAR, 6, "dtEblisSteelBars", "a steel bar", "steel bars"),
-    GLASS(MOLTEN_GLASS, 6, "dtEblisMoltenGlass", "some molten glass", "pieces of molten glass"),
-    BONE(BONES, 1, "dtEblisBones", "a set of standard bones", "sets of standard bones"),
-    ASH(ASHES, 1, "dtEblisAshes", "some ashes", "ashes"),
-    COAL(CHARCOAL, 1, "dtEblisCharcoal", "some charcoal", "charcoal"),
-    RUNE(BLOOD_RUNE, 1, "dtEblisBloodRune", "a blood rune", "blood runes");
+    LOGS(Obj.magic_logs, 12, "dtEblisMagicLogs", "a magic log", "magic logs"),
+    STEEL(Obj.steel_bar, 6, "dtEblisSteelBars", "a steel bar", "steel bars"),
+    GLASS(Obj.molten_glass, 6, "dtEblisMoltenGlass", "some molten glass", "pieces of molten glass"),
+    BONE(Obj.bones, 1, "dtEblisBones", "a set of standard bones", "sets of standard bones"),
+    ASH(Obj.ashes, 1, "dtEblisAshes", "some ashes", "ashes"),
+    COAL(Obj.charcoal, 1, "dtEblisCharcoal", "some charcoal", "charcoal"),
+    RUNE(Obj.bloodrune, 1, "dtEblisBloodRune", "a blood rune", "blood runes");
 
     fun delivered(player: Player) = player.getI(key, 0)
     fun remaining(player: Player) = required - delivered(player)
@@ -38,8 +29,8 @@ private enum class Ingredient(val itemId: Int, val required: Int, val key: Strin
 
 @ServerStartupEvent
 fun mapEblisDesertTreasure() {
-    onNpcClick(EBLIS_BANDIT_CAMP, EBLIS_MIRRORS) { (player, npc) -> eblisDialogue(player, npc.id) }
-    onItemOnNpc(EBLIS_BANDIT_CAMP) { (player, item) -> giveIngredient(player, item.id) }
+    onNpcClick(Npc.npc_1922, Npc.npc_1924) { (player, npc) -> eblisDialogue(player, npc.id) }
+    onItemOnNpc(Npc.npc_1922) { (player, item) -> giveIngredient(player, item.id) }
 }
 
 private fun eblisDialogue(player: Player, eblisId: Int) {
@@ -49,9 +40,9 @@ private fun eblisDialogue(player: Player, eblisId: Int) {
                 if (player.getBool(INGREDIENTS_AGREED)) collectIngredients(player, eblisId)
                 else firstMeeting(player, eblisId)
             STAGE_RETURN_TO_MIRRORS ->
-                if (eblisId == EBLIS_MIRRORS) mirrorsBriefing(player, eblisId) else pointToMirrors(eblisId)
+                if (eblisId == Npc.npc_1924) mirrorsBriefing(player, eblisId) else pointToMirrors(eblisId)
             STAGE_DIAMONDS_OF_AZZANADRA ->
-                if (eblisId == EBLIS_MIRRORS) diamondProgress(player, eblisId) else pointToMirrors(eblisId)
+                if (eblisId == Npc.npc_1924) diamondProgress(player, eblisId) else pointToMirrors(eblisId)
             STAGE_IFTAH_YA_SIMSIM -> hurryToPillars(eblisId)
             STAGE_RETURN_TO_JALDRAOCHT -> pillarsReport(eblisId)
             STAGE_TOMB_RAIDER, STAGE_AZZANADRA, STAGE_COMPLETE ->
@@ -115,7 +106,7 @@ private fun DialogueBuilder.villageHostility(eblisId: Int) {
 private fun DialogueBuilder.diamondsHistory(player: Player, eblisId: Int) {
     player(CALM_TALK, "So tell me... Did you ever hear of something called the Diamonds of Azzanadra?")
     npc(eblisId, AMAZED, "This is the treasure which you seek???")
-    npc(eblisId, HAPPY, "Please accept my apologies noble ${if (player.appearance.isMale) "sir" else "madam"}! I thought you were but some opportunistic thief, looking to steal what heritage we have left! Now I see that you are in fact a brave adventurer, looking to restore our glories back upon us!")
+    npc(eblisId, HAPPY_TALKING, "Please accept my apologies noble ${if (player.appearance.isMale) "sir" else "madam"}! I thought you were but some opportunistic thief, looking to steal what heritage we have left! Now I see that you are in fact a brave adventurer, looking to restore our glories back upon us!")
     player(CONFUSED, "Uh... yeah... So anyway, you have heard of them?")
     npc(eblisId, AMAZED, "Heard of them? Of course I have heard of them! They are the legacy of our greatest ever hero!")
     player(CONFUSED, "So... do you have any idea where they might be? I have a feeling they will be very valuable.")
@@ -207,10 +198,10 @@ private fun giveIngredient(player: Player, itemId: Int) {
     when {
         !eligible -> player.sendMessage("Nothing interesting happens.")
         ingredient == null -> player.startConversation {
-            npc(EBLIS_BANDIT_CAMP, CALM_TALK, "Thank you, but I don't have any need for that.")
+            npc(Npc.npc_1922, CALM_TALK, "Thank you, but I don't have any need for that.")
         }
         ingredient.remaining(player) <= 0 -> player.startConversation {
-            npc(EBLIS_BANDIT_CAMP, CALM_TALK, "I already have as much of that as the spell requires.")
+            npc(Npc.npc_1922, CALM_TALK, "I already have as much of that as the spell requires.")
         }
         else -> {
             val amount = minOf(ingredient.remaining(player), player.inventory.getAmountOf(itemId))
@@ -253,8 +244,9 @@ private fun DialogueBuilder.diamondProgress(player: Player, eblisId: Int) {
             npc(eblisId, CALM_TALK, "As I say, the enchantment is very inaccurate.")
             npc(eblisId, CALM_TALK, "I can only focus upon the aura the diamonds have left behind them, so any place where the Diamonds were present for a significant period of time will still be shown - such as the Bandit Camp where I make my home.")
             npc(eblisId, SAD, "My apologies, but magic is an inaccurate art in many respects.")
-        op("Leave")
-            npc(elbisId,CALM_TALK, "Don't forget to come back here when you have collected all four diamonds.")
+        }
+        op("Leave") {
+            npc(eblisId, CALM_TALK, "Don't forget to come back here when you have collected all four diamonds.")
         }
         if (count > 0)
             op("I've been collecting the diamonds.") {
@@ -270,8 +262,8 @@ private fun DialogueBuilder.allFourDiamonds(player: Player, eblisId: Int) {
     npc(eblisId, CALM_TALK, "In the end, they cast a spell upon him, to trap him in the stone structure to the South of here.")
     npc(eblisId, CALM_TALK, "They stole his very life force, the essence of his power, and trapped it within four crystals - the very same Four Diamonds which you have now recovered from the brigands who stole from us.")
     npc(eblisId, CALM_TALK, "The four pillars surrounding the structure are keeping the containment spell intact. By placing a diamond into each, you will breach the magical defenses and begin to restore Azzanadra's power, and be able to enter the structure.")
-    npc(eblisId, HAPPY, "Go, place the diamonds, and free my lord Azzanadra!")
-    npc(eblisId, CALM_TALK, "The path will be hard, for his prison is full of traps and danger to prevent his rescue, but he will reward you beyond your wildest dreams when freed!")
+    npc(eblisId, HAPPY_TALKING, "Go, place the diamonds, and free my lord Azzanadra!")
+    npc(eblisId, CALM_TALK, "The path will be hard, for his prison is full of traps and danger to prevent his rescue, but he will reward you beyond your wildest dreams when freed!") {
         player.setQuestStage(Quest.DESERT_TREASURE, STAGE_IFTAH_YA_SIMSIM)
     }
 }

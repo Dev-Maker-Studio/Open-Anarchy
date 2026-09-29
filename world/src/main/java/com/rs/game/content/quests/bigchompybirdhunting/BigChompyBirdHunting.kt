@@ -6,6 +6,7 @@ import com.rs.engine.quest.QuestOutline
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import org.darkan.core.Constants
+import org.darkan.core.gameval.gen.Obj
 
 const val STAGE_UNSTARTED = 0
 const val STAGE_MAKING_OGRE_ARROWS = 1
@@ -16,27 +17,6 @@ const val STAGE_RANTZ_FAILED_HUNT = 5
 const val STAGE_HUNTING_CHOMPY = 6
 const val STAGE_COOKING_CHOMPY = 7
 const val STAGE_COMPLETE = 8
-
-const val WOLF_BONES = 2859
-const val WOLFBONE_ARROWHEADS = 2861
-
-const val ACHEY_LOGS = 2862
-const val OGRE_ARROW_SHAFT = 2864
-const val FLIGHTED_OGRE_ARROW = 2865
-const val OGRE_ARROW = 2866
-
-const val OGRE_BELLOWS = 2871
-const val OGRE_BELLOWS_3 = 2872
-const val OGRE_BELLOWS_2 = 2873
-const val OGRE_BELLOWS_1 = 2874
-
-const val BLOATED_TOAD = 2875
-
-const val RAW_CHOMPY = 2876
-const val COOKED_CHOMPY = 2878
-const val SEASONED_CHOMPY = 2882
-
-const val OGRE_BOW = 2883
 
 const val REQUIRED_COOKING_LEVEL = 30
 const val REQUIRED_FLETCHING_LEVEL = 5
@@ -61,18 +41,13 @@ class BigChompyBirdHunting : QuestOutline() {
 
     companion object {
         @JvmStatic
-        fun meetsRequirements(player: Player): Boolean {
-            return player.skills.getLevel(Constants.COOKING) >= REQUIRED_COOKING_LEVEL &&
-                    player.skills.getLevel(Constants.FLETCHING) >= REQUIRED_FLETCHING_LEVEL &&
-                    player.skills.getLevel(Constants.RANGE) >= REQUIRED_RANGED_LEVEL
-        }
+        fun meetsRequirements(player: Player): Boolean =
+            player.skills.getLevel(Constants.COOKING) >= REQUIRED_COOKING_LEVEL &&
+                player.skills.getLevel(Constants.FLETCHING) >= REQUIRED_FLETCHING_LEVEL &&
+                player.skills.getLevel(Constants.RANGE) >= REQUIRED_RANGED_LEVEL
     }
 
-    override fun getJournalLines(
-        player: Player,
-        stage: Int
-    ): List<String> = when (stage) {
-
+    override fun getJournalLines(player: Player, stage: Int): List<String> = when (stage) {
         STAGE_UNSTARTED -> listOf(
             "I can start this quest by speaking to Rantz",
             "in the Feldip Hills.",
@@ -80,7 +55,6 @@ class BigChompyBirdHunting : QuestOutline() {
             "I need level 30 Cooking, level 5 Fletching",
             "and level 30 Ranged."
         )
-
         STAGE_MAKING_OGRE_ARROWS -> listOf(
             "Rantz wants to hunt a chompy bird.",
             "He has asked me to make some 'stabbers' for him.",
@@ -89,7 +63,6 @@ class BigChompyBirdHunting : QuestOutline() {
             "feathers and arrowheads made from wolf bones.",
             "Rantz needs six ogre arrows."
         )
-
         STAGE_GETTING_BLOATED_TOAD -> listOf(
             "I gave Rantz six ogre arrows.",
             "",
@@ -98,14 +71,12 @@ class BigChompyBirdHunting : QuestOutline() {
             "I need to find a way to inflate one of the",
             "toads from the nearby swamp."
         )
-
         STAGE_SHOWING_BLOATED_TOAD -> listOf(
             "I have managed to make a bloated toad.",
             "",
             "I should show the 'fatsy toady' to Rantz",
             "so he can tell me what to do with it."
         )
-
         STAGE_BAITING_CHOMPY -> listOf(
             "Rantz approved of my bloated toad.",
             "",
@@ -113,7 +84,6 @@ class BigChompyBirdHunting : QuestOutline() {
             "clearing to the south so that it can attract",
             "a chompy bird."
         )
-
         STAGE_RANTZ_FAILED_HUNT -> listOf(
             "The bloated toad attracted a chompy bird,",
             "but Rantz keeps missing it.",
@@ -121,14 +91,12 @@ class BigChompyBirdHunting : QuestOutline() {
             "Perhaps I can convince him to let me",
             "try using his ogre bow."
         )
-
         STAGE_HUNTING_CHOMPY -> listOf(
             "Rantz has lent me an ogre bow.",
             "",
             "I need to use the bow and ogre arrows",
             "to hunt a chompy bird for Rantz and his family."
         )
-
         STAGE_COOKING_CHOMPY -> listOf(
             "I have hunted a chompy bird.",
             "",
@@ -137,36 +105,18 @@ class BigChompyBirdHunting : QuestOutline() {
             "I should find out how each of them wants",
             "their chompy prepared."
         )
-
         STAGE_COMPLETE -> listOf(
             "QUEST COMPLETE!"
         )
-
         else -> listOf(
             "Invalid quest stage. Report this to an administrator."
         )
     }
 
     override fun complete(player: Player) {
-
-        player.skills.addXpQuest(
-            Skills.FLETCHING,
-            262.0
-        )
-
-        player.skills.addXpQuest(
-            Skills.COOKING,
-            1470.0
-        )
-
-        player.skills.addXpQuest(
-            Skills.RANGE,
-            735.0
-        )
-
-        sendQuestCompleteInterface(
-            player,
-            OGRE_BOW
-        )
+        player.skills.addXpQuest(Skills.FLETCHING, 262.0)
+        player.skills.addXpQuest(Skills.COOKING, 1470.0)
+        player.skills.addXpQuest(Skills.RANGE, 735.0)
+        sendQuestCompleteInterface(player, Obj.ogre_bow)
     }
 }

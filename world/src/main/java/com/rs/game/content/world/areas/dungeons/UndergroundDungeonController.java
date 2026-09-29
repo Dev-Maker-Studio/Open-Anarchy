@@ -16,6 +16,7 @@
 //
 package com.rs.game.content.world.areas.dungeons;
 
+import org.darkan.core.gameval.gen.Loc;
 import com.rs.engine.quest.Quest;
 import com.rs.game.content.skills.magic.TeleType;
 import com.rs.game.content.skills.slayer.Slayer;
@@ -120,7 +121,7 @@ public class UndergroundDungeonController extends Controller {
 			player.useStairs(-1, Tile.of(3219, 9532, 2), 1, 2);
 			player.getControllerManager().forceStop();
 			return false;
-		} else if (object.getId() == 31435 && !player.isQuestComplete(Quest.SMOKING_KILLS))
+		} else if (object.getId() == Loc.loc_31435 && !player.isQuestComplete(Quest.SMOKING_KILLS))
 			return false;
 		else if (object.getId() == 15811) {
 			player.useStairs(-1, Tile.of(3749, 2973, 0), 1, 2);

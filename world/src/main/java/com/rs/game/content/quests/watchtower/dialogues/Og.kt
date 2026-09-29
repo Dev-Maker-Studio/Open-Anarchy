@@ -1,5 +1,7 @@
 package com.rs.game.content.quests.watchtower.dialogues
 
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Npc
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
@@ -9,15 +11,13 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 
-private const val OG = 853
-
 private const val OG_TASK_STARTED = "watchtowerOgTaskStarted"
 private const val OG_TASK_COMPLETE = "watchtowerOgTaskComplete"
 private const val RELIC_PART_1_HANDED_IN = "watchtowerRelicPart1HandedIn"
 
 @ServerStartupEvent
 fun mapWatchtowerOg() {
-    onNpcClick(OG, options = arrayOf("Talk-to")) { (player, npc) ->
+    onNpcClick(Npc.og, options = arrayOf("Talk-to")) { (player, npc) ->
         ogDialogue(player, npc)
     }
 }
@@ -34,8 +34,8 @@ private fun ogDialogue(player: Player, npc: NPC) {
         }
 
         if (player.getBool(OG_TASK_COMPLETE)) {
-            if (!player.inventory.containsItem(RELIC_PART_1, 1) &&
-                !player.bank.containsItem(RELIC_PART_1, 1) &&
+            if (!player.inventory.containsItem(Obj.relicpart1, 1) &&
+                !player.bank.containsItem(Obj.relicpart1, 1) &&
                 !player.getBool(RELIC_PART_1_HANDED_IN)
             ) {
                 npc(
@@ -45,7 +45,7 @@ private fun ogDialogue(player: Player, npc: NPC) {
                 )
 
                 exec {
-                    player.inventory.addItemDrop(RELIC_PART_1, 1)
+                    player.inventory.addItemDrop(Obj.relicpart1, 1)
                 }
 
                 npc(
@@ -96,7 +96,7 @@ private fun ogDialogue(player: Player, npc: NPC) {
                     )
 
                     exec {
-                        player.inventory.addItemDrop(TOBANS_KEY, 1)
+                        player.inventory.addItemDrop(Obj.toban_key, 1)
                         player.set(OG_TASK_STARTED, true)
 
                         if (player.getQuestStage(Quest.WATCHTOWER) == STAGE_FIND_WAY_INTO_GUTANOTH) {
@@ -131,7 +131,7 @@ private fun ogDialogue(player: Player, npc: NPC) {
             "Where my gold from dat dirty Toban?"
         )
 
-        if (player.inventory.containsItem(TOBANS_GOLD, 1)) {
+        if (player.inventory.containsItem(Obj.stolen_gold, 1)) {
             player(
                 HAPPY_TALKING,
                 "I have your gold."
@@ -145,8 +145,8 @@ private fun ogDialogue(player: Player, npc: NPC) {
                 )
             } else {
                 exec {
-                    player.inventory.deleteItem(TOBANS_GOLD, 1)
-                    player.inventory.addItem(RELIC_PART_1, 1)
+                    player.inventory.deleteItem(Obj.stolen_gold, 1)
+                    player.inventory.addItem(Obj.relicpart1, 1)
                     player.set(OG_TASK_COMPLETE, true)
                 }
 
@@ -197,7 +197,7 @@ private fun ogDialogue(player: Player, npc: NPC) {
                     "I have lost the key!"
                 )
 
-                if (player.inventory.containsItem(TOBANS_KEY, 1)) {
+                if (player.inventory.containsItem(Obj.toban_key, 1)) {
                     npc(
                         npc,
                         CALM_TALK,
@@ -209,7 +209,7 @@ private fun ogDialogue(player: Player, npc: NPC) {
                     )
                 } else {
                     exec {
-                        player.inventory.addItemDrop(TOBANS_KEY, 1)
+                        player.inventory.addItemDrop(Obj.toban_key, 1)
                     }
 
                     npc(

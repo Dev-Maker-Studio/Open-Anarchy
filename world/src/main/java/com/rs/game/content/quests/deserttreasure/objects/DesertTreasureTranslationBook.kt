@@ -3,11 +3,8 @@ package com.rs.game.content.quests.deserttreasure
 import com.rs.engine.book.Book
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
+import org.darkan.core.gameval.gen.Obj
 
-/**
- * The translation Terry Balando produces from Asgarnia Smith's etchings.
- * Item 4655 is the translated book ID for reference.
- */
 class DesertTreasureTranslationBook : Book(
     "Translation",
     """
@@ -44,7 +41,7 @@ class DesertTreasureTranslationBook : Book(
 
 @ServerStartupEvent
 fun mapDesertTreasureTranslationBook() {
-    onItemClick(4655, options = arrayOf("Read")) { (player) ->
+    onItemClick(Obj.four_diamonds_translation_primer, options = arrayOf("Read")) { (player) ->
         player.openBook(DesertTreasureTranslationBook())
     }
 }

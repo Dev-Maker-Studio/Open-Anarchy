@@ -8,6 +8,8 @@ import org.darkan.core.model.ObjectShape
 import com.rs.engine.command.Commands
 import com.rs.game.World
 import com.rs.game.map.ChunkManager
+import com.rs.game.model.entity.npc.NPC
+import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.async.schedule
 import com.rs.game.tasks.Task
 import com.rs.game.tasks.WorldTasks
@@ -130,9 +132,9 @@ fun loadAnimationCommands() {
         if (npcId !in 0 until Utils.getNPCDefinitionsSize())
             return@add
         getTestNpc(p)?.finish()
-        val npc = com.rs.game.model.entity.npc.NPC(npcId, p.tile.transform(1, 0))
+        val npc = NPC(npcId, p.tile.transform(1, 0))
         npc.setRandomWalk(false)
-        p.tempAttribs.setO(TEST_NPC_ATTR, npc)
+        p.tempAttribs.setO<NPC>(TEST_NPC_ATTR, npc)
         p.sendMessage("Test NPC $npcId spawned. Use ::testnpcattack, ::npcanim, or ::unpossess.")
     }
 
@@ -172,7 +174,7 @@ fun loadAnimationCommands() {
             return@add
         }
         npc.finish()
-        p.tempAttribs.removeO(TEST_NPC_ATTR)
+        p.tempAttribs.removeO<NPC>(TEST_NPC_ATTR)
         p.sendMessage("Test NPC removed.")
     }
 
@@ -230,13 +232,12 @@ private fun compatibleAnimations(basId: Int): List<Int> {
     return matches
 }
 
-
 private const val TEST_NPC_ATTR = "developerTestNpc"
 
-private fun getTestNpc(player: com.rs.game.model.entity.player.Player): com.rs.game.model.entity.npc.NPC? {
-    val npc = player.tempAttribs.getO<com.rs.game.model.entity.npc.NPC>(TEST_NPC_ATTR)
+private fun getTestNpc(player: Player): NPC? {
+    val npc = player.tempAttribs.getO<NPC>(TEST_NPC_ATTR)
     if (npc == null || npc.hasFinished()) {
-        player.tempAttribs.removeO(TEST_NPC_ATTR)
+        player.tempAttribs.removeO<NPC>(TEST_NPC_ATTR)
         return null
     }
     return npc

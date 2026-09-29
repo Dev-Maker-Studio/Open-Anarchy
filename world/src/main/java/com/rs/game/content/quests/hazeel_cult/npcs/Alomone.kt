@@ -33,7 +33,6 @@ fun mapAlomone() {
     }
 }
 
-/** Cult-side players see the non-combat Alomone; everyone else sees the combat variant. */
 private fun alomoneIdFor(player: Player): Int =
     if (player.isCultSide()) Npc.hazeelcult_alomone else Npc.hazeelcult_alomone_combat
 

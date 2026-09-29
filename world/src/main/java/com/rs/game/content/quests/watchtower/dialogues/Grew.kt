@@ -1,5 +1,8 @@
 package com.rs.game.content.quests.watchtower.dialogues
 
+import org.darkan.core.gameval.gen.Varbit
+import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Npc
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
@@ -9,16 +12,13 @@ import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onNpcClick
 
-private const val GREW = 854
-
 private const val GREW_TASK_STARTED = "watchtowerGrewTaskStarted"
 private const val GREW_TASK_COMPLETE = "watchtowerGrewTaskComplete"
-private const val YELLOW_PILLAR_VARBIT = 3128
 private const val RELIC_PART_2_HANDED_IN = "watchtowerRelicPart2HandedIn"
 
 @ServerStartupEvent
 fun mapWatchtowerGrew() {
-    onNpcClick(GREW, options = arrayOf("Talk-to")) { (player, npc) ->
+    onNpcClick(Npc.grew, options = arrayOf("Talk-to")) { (player, npc) ->
         grewDialogue(player, npc)
     }
 }
@@ -35,8 +35,8 @@ private fun grewDialogue(player: Player, npc: NPC) {
         }
 
         if (player.getBool(GREW_TASK_COMPLETE)) {
-            if (!player.inventory.containsItem(RELIC_PART_2, 1) &&
-                !player.bank.containsItem(RELIC_PART_2, 1) &&
+            if (!player.inventory.containsItem(Obj.relicpart2, 1) &&
+                !player.bank.containsItem(Obj.relicpart2, 1) &&
                 !player.getBool(RELIC_PART_2_HANDED_IN)
             ) {
                 npc(
@@ -46,7 +46,7 @@ private fun grewDialogue(player: Player, npc: NPC) {
                 )
 
                 exec {
-                    player.inventory.addItemDrop(RELIC_PART_2, 1)
+                    player.inventory.addItemDrop(Obj.relicpart2, 1)
                 }
 
                 npc(
@@ -57,9 +57,9 @@ private fun grewDialogue(player: Player, npc: NPC) {
                 return@startConversation
             }
 
-            if (!player.inventory.containsItem(WATCHTOWER_CRYSTAL_1, 1) &&
-                !player.bank.containsItem(WATCHTOWER_CRYSTAL_1, 1) &&
-                player.vars.getVarBit(YELLOW_PILLAR_VARBIT) == 0 &&
+            if (!player.inventory.containsItem(Obj.powering_crystal1, 1) &&
+                !player.bank.containsItem(Obj.powering_crystal1, 1) &&
+                player.vars.getVarBit(Varbit.watchtower_pillar_2) == 0 &&
                 !player.isQuestComplete(Quest.WATCHTOWER)
             ) {
                 npc(
@@ -75,7 +75,7 @@ private fun grewDialogue(player: Player, npc: NPC) {
                 )
 
                 exec {
-                    player.inventory.addItemDrop(WATCHTOWER_CRYSTAL_1, 1)
+                    player.inventory.addItemDrop(Obj.powering_crystal1, 1)
                 }
 
                 return@startConversation
@@ -166,7 +166,7 @@ private fun grewDialogue(player: Player, npc: NPC) {
             "The morsel is back. Does it have our tooth for us?"
         )
 
-        if (!player.inventory.containsItem(OGRE_TOOTH, 1)) {
+        if (!player.inventory.containsItem(Obj.ogretooth, 1)) {
             player(
                 WORRIED,
                 "Err, I don't have it."
@@ -187,10 +187,10 @@ private fun grewDialogue(player: Player, npc: NPC) {
         )
 
         exec {
-            player.inventory.deleteItem(OGRE_TOOTH, 1)
+            player.inventory.deleteItem(Obj.ogretooth, 1)
 
-            player.inventory.addItemDrop(RELIC_PART_2, 1)
-            player.inventory.addItemDrop(WATCHTOWER_CRYSTAL_1, 1)
+            player.inventory.addItemDrop(Obj.relicpart2, 1)
+            player.inventory.addItemDrop(Obj.powering_crystal1, 1)
 
             player.set(GREW_TASK_COMPLETE, true)
         }

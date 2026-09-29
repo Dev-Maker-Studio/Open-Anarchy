@@ -1,109 +1,41 @@
 package com.rs.game.content.quests.bigchompybirdhunting
 
 import com.rs.game.model.entity.player.Player
+import org.darkan.core.gameval.gen.Obj
 
-data class ChompyHat(
-    val itemId: Int,
-    val requiredKills: Int,
-    val rank: String
-)
+data class ChompyHat(val itemId: Int, val requiredKills: Int, val rank: String)
 
 val CHOMPY_HATS = listOf(
-    ChompyHat(2978, 30, "Ogre Bowman"),
-    ChompyHat(2979, 40, "Bowman"),
-    ChompyHat(2980, 50, "Ogre Yeoman"),
-    ChompyHat(2981, 70, "Yeoman"),
-    ChompyHat(2982, 95, "Ogre Marksman"),
-    ChompyHat(2983, 125, "Marksman"),
-    ChompyHat(2984, 170, "Ogre Woodsman"),
-    ChompyHat(2985, 225, "Woodsman"),
-    ChompyHat(2986, 300, "Ogre Forester"),
-    ChompyHat(2987, 400, "Forester"),
-    ChompyHat(2988, 550, "Ogre Bowmaster"),
-    ChompyHat(2989, 700, "Bowmaster"),
-    ChompyHat(2990, 1000, "Ogre Expert"),
-    ChompyHat(2991, 1300, "Expert"),
-    ChompyHat(2992, 1700, "Ogre Dragon Archer"),
-    ChompyHat(2993, 2250, "Dragon Archer"),
-    ChompyHat(2994, 3000, "Expert Ogre Dragon Archer"),
-    ChompyHat(2995, 4000, "Expert Dragon Archer")
+    ChompyHat(Obj.obj_2978, 30, "Ogre Bowman"),
+    ChompyHat(Obj.obj_2979, 40, "Bowman"),
+    ChompyHat(Obj.obj_2980, 50, "Ogre Yeoman"),
+    ChompyHat(Obj.obj_2981, 70, "Yeoman"),
+    ChompyHat(Obj.obj_2982, 95, "Ogre Marksman"),
+    ChompyHat(Obj.obj_2983, 125, "Marksman"),
+    ChompyHat(Obj.obj_2984, 170, "Ogre Woodsman"),
+    ChompyHat(Obj.obj_2985, 225, "Woodsman"),
+    ChompyHat(Obj.obj_2986, 300, "Ogre Forester"),
+    ChompyHat(Obj.obj_2987, 400, "Forester"),
+    ChompyHat(Obj.obj_2988, 550, "Ogre Bowmaster"),
+    ChompyHat(Obj.obj_2989, 700, "Bowmaster"),
+    ChompyHat(Obj.obj_2990, 1000, "Ogre Expert"),
+    ChompyHat(Obj.obj_2991, 1300, "Expert"),
+    ChompyHat(Obj.obj_2992, 1700, "Ogre Dragon Archer"),
+    ChompyHat(Obj.obj_2993, 2250, "Dragon Archer"),
+    ChompyHat(Obj.obj_2994, 3000, "Expert Ogre Dragon Archer"),
+    ChompyHat(Obj.obj_2995, 4000, "Expert Dragon Archer")
 )
 
-fun claimChompyHats(
-    player: Player
-): Int {
+fun claimChompyHats(player: Player): Int {
     val kills = getChompyKills(player)
-
-    var hatsGiven = 0
-
-    for (hat in CHOMPY_HATS) {
-        if (kills < hat.requiredKills) {
-            continue
-        }
-
-        if (ownsChompyHat(player, hat.itemId)) {
-            continue
-        }
-
-        player.inventory.addItemDrop(
-            hat.itemId,
-            1
-        )
-
-        hatsGiven++
-    }
-
-    return hatsGiven
+    val earned = CHOMPY_HATS.filter { kills >= it.requiredKills && !ownsChompyHat(player, it.itemId) }
+    earned.forEach { player.inventory.addItemDrop(it.itemId, 1) }
+    return earned.size
 }
 
-fun nextChompyHat(
-    player: Player
-): ChompyHat? {
-    val kills = getChompyKills(player)
+fun nextChompyHat(player: Player): ChompyHat? = getChompyKills(player).let { kills -> CHOMPY_HATS.firstOrNull { kills < it.requiredKills } }
 
-    return CHOMPY_HATS.firstOrNull {
-        kills < it.requiredKills
-    }
-}
+fun highestEarnedChompyHat(player: Player): ChompyHat? = getChompyKills(player).let { kills -> CHOMPY_HATS.lastOrNull { kills >= it.requiredKills } }
 
-fun highestEarnedChompyHat(
-    player: Player
-): ChompyHat? {
-    val kills = getChompyKills(player)
-
-    return CHOMPY_HATS.lastOrNull {
-        kills >= it.requiredKills
-    }
-}
-
-private fun ownsChompyHat(
-    player: Player,
-    itemId: Int
-): Boolean {
-    if (
-        player.inventory.containsItem(
-            itemId,
-            1
-        )
-    ) {
-        return true
-    }
-
-    if (
-        player.bank.containsItem(
-            itemId
-        )
-    ) {
-        return true
-    }
-
-    if (
-        player.equipment.containsOneItem(
-            itemId
-        )
-    ) {
-        return true
-    }
-
-    return false
-}
+private fun ownsChompyHat(player: Player, itemId: Int): Boolean =
+    player.inventory.containsItem(itemId, 1) || player.bank.containsItem(itemId) || player.equipment.containsOneItem(itemId)

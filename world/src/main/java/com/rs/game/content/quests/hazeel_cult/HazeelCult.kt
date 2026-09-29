@@ -34,8 +34,6 @@ private const val COMBAT_UNDECIDED = "You may need to defeat Alomone (level 9)."
 private const val COMBAT_CULT = "None."
 private const val COMBAT_CARNILLEAN = "You will need to defeat Alomone (level 9)."
 
-
-
 @QuestHandler(
     quest = Quest.HAZEEL_CULT,
     startText = "Speak to Sir Ceril Carnillean in his mansion south-west of Ardougne Castle.",
