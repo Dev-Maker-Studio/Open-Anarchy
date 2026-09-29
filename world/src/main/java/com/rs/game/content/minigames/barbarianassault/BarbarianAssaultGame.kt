@@ -568,6 +568,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
             if (state == State.RUNNING && !queen.dying && !queen.isDead) {
                 queen.spotAnim(Spotanim.barbassault_atomic_spike)
                 queen.omegaHit(player, Utils.random(OMEGA_MIN, OMEGA_MAX))
+                sendTeamMessage("An omega egg slams into the Penance Queen!")
             }
         }
         active.forEach { refreshHopper(it, cannon) }

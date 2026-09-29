@@ -17,11 +17,11 @@ import world.gregs.voidps.type.Tile
 import kotlin.math.sign
 
 private const val EGG_INTERVAL = 18
-private const val SPAWN_INTERVAL = 35
-private const val MAX_SPAWNS = 3
-private const val RANGED_INTERVAL = 9
+private const val SPAWN_INTERVAL = 45
+private const val MAX_SPAWNS = 2
+private const val RANGED_INTERVAL = 15
 private const val RANGED_REACH = 12
-private const val RANGED_MAX = 60
+private const val RANGED_MAX = 40
 private const val MELEE_INTERVAL = 5
 private const val MELEE_MAX = 130
 private const val MOVE_INTERVAL = 3
