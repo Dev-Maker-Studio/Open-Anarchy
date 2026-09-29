@@ -44,6 +44,7 @@ private const val CENTRE_RUN_RESTORE = 1.0
 private const val COUNTDOWN_TICKS = 5
 private const val ROUND_BREAK_TICKS = 5
 private const val FINISH_TICKS = 5
+private const val HINT_ARROW = 1
 private const val CELEBRATE_TICKS = 2
 private const val TELEPORT_TICKS = 3
 private const val RESPAWN_MIN_DISTANCE = 20
@@ -72,6 +73,7 @@ class FogCombatant(val player: Player, val slot: Int) {
     var lastIncrement = 0
     var shownStone = true
     var teleporting = false
+    var hintIndex = -1
 }
 
 class FogMatch(first: Player, second: Player) {
@@ -331,6 +333,7 @@ class FogMatch(first: Player, second: Player) {
 
     fun died(player: Player) {
         val side = state(player) ?: return
+        clearHint(side)
         player.reset()
         player.unlock()
         player.anim(-1)
@@ -359,6 +362,7 @@ class FogMatch(first: Player, second: Player) {
         if (phase != Phase.ROUND) return
         phase = Phase.BREAK
         ticks = ROUND_BREAK_TICKS
+        refreshHint()
         val finished = hunted
         for (side in sides) {
             side.player.sendMessage("<col=ffff00>$reason. ${finished.player.displayName} finished the round with ${finished.score} charges.")
@@ -436,12 +440,12 @@ class FogMatch(first: Player, second: Player) {
 
     private fun leave(player: Player, reason: LeaveReason?) {
         val side = state(player) ?: return
+        sides.forEach(::clearHint)
         side.house = null
         present -= player
         player.fogController?.match = null
         if (player.fogController != null) player.controllerManager.removeControllerWithoutCheck()
         cleanUp(player)
-        opponentOf(player).hintIconsManager.removeAll()
         when (reason) {
             LeaveReason.LOGOUT -> player.tile = FOG_LOBBY_RETURN
             LeaveReason.TELEPORT -> {}
@@ -499,11 +503,18 @@ class FogMatch(first: Player, second: Player) {
     }
 
     private fun refreshHint() {
-        val hunterPlayer = hunter.player
-        val huntedPlayer = hunted.player
-        huntedPlayer.hintIconsManager.removeAll()
-        hunterPlayer.hintIconsManager.removeAll()
-        if (phase == Phase.ROUND && hunted.house == null) hunterPlayer.hintIconsManager.addHintIcon(huntedPlayer, 0, -1, false)
+        for (side in sides) {
+            clearHint(side)
+            if (phase != Phase.ROUND || side.player !in present) continue
+            val target = sides.first { it != side }
+            if (target.player !in present || (side == hunter && target.house != null)) continue
+            side.hintIndex = side.player.hintIconsManager.addHintIcon(target.player, HINT_ARROW, -1, true)
+        }
+    }
+
+    private fun clearHint(side: FogCombatant) {
+        if (side.hintIndex >= 0) side.player.hintIconsManager.removeHintIcon(side.hintIndex)
+        side.hintIndex = -1
     }
 
     private fun teleport(player: Player, tile: Tile) {
