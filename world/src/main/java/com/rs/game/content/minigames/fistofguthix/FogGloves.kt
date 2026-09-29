@@ -4,12 +4,12 @@ import com.rs.game.model.entity.player.Equipment
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.item.ItemTooltips
 import com.rs.plugin.annotations.ServerStartupEvent
-import com.rs.plugin.kts.onNpcDrop
 import com.rs.plugin.kts.onXpDrop
 import org.darkan.core.Constants
 import org.darkan.core.Utils
 import org.darkan.core.cache.ItemDefinitions
 import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.model.GroundItem
 import org.darkan.core.model.Item
 
 const val GLOVE_CHARGES_KEY = "fogGloveCharges"
@@ -36,12 +36,6 @@ enum class FogGlove(val obj: Int, val lifetime: Int, val target: Int) {
     }
 }
 
-private val HERBS = arrayOf<Any>(
-    Obj.unidentified_guam, Obj.unidentified_marentill, Obj.unidentified_tarromin, Obj.unidentified_harralander,
-    Obj.unidentified_ranarr, Obj.unidentified_toadflax, Obj.unidentified_irit, Obj.unidentified_avantoe,
-    Obj.unidentified_kwuarm, Obj.unidentified_snapdragon, Obj.unidentified_cadantine, Obj.unidentified_lantadyme,
-    Obj.unidentified_dwarf_weed, Obj.unidentified_torstol,
-)
 private val HERB_GLOVES = setOf(FogGlove.IRIT, FogGlove.AVANTOE, FogGlove.KWUARM, FogGlove.CADANTINE)
 
 object FogGloves {
@@ -68,18 +62,17 @@ object FogGloves {
         return used
     }
 
+    fun herbDrop(player: Player, drop: GroundItem) {
+        val (glove, item) = FogGlove.worn(player)?.takeIf { it.first in HERB_GLOVES } ?: return
+        if (drop.id != glove.target && Utils.random(100) < HERB_FORCE_PERCENT) drop.setId(glove.target)
+        if (drop.id == glove.target) use(player, glove, item, 1)
+    }
+
     private fun charges(item: Item, glove: FogGlove) = item.getMetaDataI(GLOVE_CHARGES_KEY, glove.lifetime)
 }
 
 @ServerStartupEvent
 fun mapFogGloves() {
-    onNpcDrop(null, HERBS) { e ->
-        val drop = e.item ?: return@onNpcDrop
-        val (glove, item) = FogGlove.worn(e.player)?.takeIf { it.first in HERB_GLOVES } ?: return@onNpcDrop
-        if (drop.id != glove.target && Utils.random(100) < HERB_FORCE_PERCENT) drop.setId(glove.target)
-        if (drop.id == glove.target) FogGloves.use(e.player, glove, item, 1)
-    }
-
     onXpDrop { e ->
         if (e.skillId != Constants.SLAYER) return@onXpDrop
         val player = e.player
