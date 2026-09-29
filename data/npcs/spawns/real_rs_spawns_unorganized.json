@@ -3230,7 +3230,6 @@
       "plane": 0
     }
   },
-
   {
     "comment": "Fayeth added by trent",
     "npcId": 2342,
@@ -11022,7 +11021,7 @@
       "x": 2099,
       "y": 3921
     },
-    "comment": "\u0027Bird\u0027s-Eye\u0027 Jack",
+    "comment": "'Bird's-Eye' Jack",
     "npcId": 5901
   },
   {
@@ -11085,7 +11084,7 @@
       "x": 2160,
       "y": 3744
     },
-    "comment": "\u0027Bird\u0027s-Eye\u0027 Jack",
+    "comment": "'Bird's-Eye' Jack",
     "npcId": 431
   },
   {
@@ -14559,7 +14558,7 @@
       "x": 2401,
       "y": 4452
     },
-    "comment": "General Bre\u0027egth",
+    "comment": "General Bre'egth",
     "npcId": 11317
   },
   {
@@ -14568,7 +14567,7 @@
       "x": 2402,
       "y": 4452
     },
-    "comment": "General Bre\u0027egth",
+    "comment": "General Bre'egth",
     "npcId": 11317
   },
   {
@@ -16683,7 +16682,7 @@
       "x": 2534,
       "y": 2848
     },
-    "comment": "Grr\u0027bah",
+    "comment": "Grr'bah",
     "npcId": 15241
   },
   {
@@ -21012,7 +21011,7 @@
       "x": 2602,
       "y": 2862
     },
-    "comment": "I\u0027rk",
+    "comment": "I'rk",
     "npcId": 15239
   },
   {
@@ -24351,7 +24350,7 @@
       "x": 2741,
       "y": 5344
     },
-    "comment": "Young \u0027un",
+    "comment": "Young 'un",
     "npcId": 5803
   },
   {
@@ -28797,7 +28796,7 @@
       "x": 2832,
       "y": 5302
     },
-    "comment": "Kree\u0027arra",
+    "comment": "Kree'arra",
     "npcId": 6222
   },
   {
@@ -30012,7 +30011,7 @@
       "x": 2835,
       "y": 10226
     },
-    "comment": "Dromund\u0027s cat",
+    "comment": "Dromund's cat",
     "npcId": 2140
   },
   {
@@ -30060,8 +30059,6 @@
     "comment": "Wemund",
     "npcId": 2155
   },
-
-
   {
     "tile": {
       "plane": 0,
@@ -31598,7 +31595,7 @@
       "x": 2926,
       "y": 5322
     },
-    "comment": "K\u0027ril Tsutsaroth",
+    "comment": "K'ril Tsutsaroth",
     "npcId": 6203
   },
   {
@@ -32552,7 +32549,7 @@
       "x": 2904,
       "y": 10207
     },
-    "comment": "Riki the sculptor\u0027s model",
+    "comment": "Riki the sculptor's model",
     "npcId": 2142
   },
   {
@@ -32768,7 +32765,7 @@
       "x": 2931,
       "y": 10213
     },
-    "comment": "Smokin\u0027 Joe",
+    "comment": "Smokin' Joe",
     "npcId": 2952
   },
   {
@@ -37979,7 +37976,7 @@
       "x": 3110,
       "y": 5537
     },
-    "comment": "Dagon\u0027hai Elite",
+    "comment": "Dagon'hai Elite",
     "npcId": 7137
   },
   {
@@ -40823,7 +40820,7 @@
       "x": 3181,
       "y": 5204
     },
-    "comment": "Mishkal\u0027un Dorn",
+    "comment": "Mishkal'un Dorn",
     "npcId": 5839
   },
   {
@@ -40832,7 +40829,7 @@
       "x": 3159,
       "y": 5211
     },
-    "comment": "Dakh\u0027thoulan Aegis",
+    "comment": "Dakh'thoulan Aegis",
     "npcId": 5840
   },
   {
@@ -40841,7 +40838,7 @@
       "x": 3176,
       "y": 5215
     },
-    "comment": "Sil\u0027as Dahcsnu",
+    "comment": "Sil'as Dahcsnu",
     "npcId": 5841
   },
   {
@@ -40877,7 +40874,7 @@
       "x": 3176,
       "y": 5392
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7139
   },
   {
@@ -45809,7 +45806,7 @@
       "x": 3258,
       "y": 5461
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45818,7 +45815,7 @@
       "x": 3255,
       "y": 5457
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45827,7 +45824,7 @@
       "x": 3253,
       "y": 5454
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45836,7 +45833,7 @@
       "x": 3253,
       "y": 5473
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45845,7 +45842,7 @@
       "x": 3206,
       "y": 5467
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45854,7 +45851,7 @@
       "x": 3213,
       "y": 5458
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45863,7 +45860,7 @@
       "x": 3248,
       "y": 5459
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45872,7 +45869,7 @@
       "x": 3256,
       "y": 5454
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45881,7 +45878,7 @@
       "x": 3256,
       "y": 5451
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45890,7 +45887,7 @@
       "x": 3245,
       "y": 5465
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45899,7 +45896,7 @@
       "x": 3253,
       "y": 5475
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45908,7 +45905,7 @@
       "x": 3255,
       "y": 5463
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7138
   },
   {
@@ -45917,7 +45914,7 @@
       "x": 3258,
       "y": 5462
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7139
   },
   {
@@ -45926,7 +45923,7 @@
       "x": 3253,
       "y": 5453
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7139
   },
   {
@@ -45935,7 +45932,7 @@
       "x": 3224,
       "y": 5469
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7139
   },
   {
@@ -45944,7 +45941,7 @@
       "x": 3222,
       "y": 5464
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7139
   },
   {
@@ -45953,7 +45950,7 @@
       "x": 3251,
       "y": 5454
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7139
   },
   {
@@ -45962,7 +45959,7 @@
       "x": 3242,
       "y": 5460
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7139
   },
   {
@@ -45971,7 +45968,7 @@
       "x": 3259,
       "y": 5467
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7139
   },
   {
@@ -45980,7 +45977,7 @@
       "x": 3255,
       "y": 5471
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7140
   },
   {
@@ -45989,7 +45986,7 @@
       "x": 3260,
       "y": 5449
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7140
   },
   {
@@ -45998,7 +45995,7 @@
       "x": 3208,
       "y": 5455
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7140
   },
   {
@@ -46007,7 +46004,7 @@
       "x": 3257,
       "y": 5474
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7140
   },
   {
@@ -46016,7 +46013,7 @@
       "x": 3251,
       "y": 5474
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7140
   },
   {
@@ -46025,7 +46022,7 @@
       "x": 3260,
       "y": 5448
     },
-    "comment": "Dagon\u0027hai Monk",
+    "comment": "Dagon'hai Monk",
     "npcId": 7140
   },
   {
@@ -49265,7 +49262,7 @@
       "x": 3267,
       "y": 3164
     },
-	"dir": "EAST",
+    "dir": "EAST",
     "comment": "Banker",
     "npcId": 496
   },
@@ -49275,7 +49272,7 @@
       "x": 3267,
       "y": 3167
     },
-	"dir": "EAST",
+    "dir": "EAST",
     "comment": "Banker",
     "npcId": 496
   },
@@ -49285,7 +49282,7 @@
       "x": 3267,
       "y": 3169
     },
-	"dir": "EAST",
+    "dir": "EAST",
     "comment": "Banker",
     "npcId": 496
   },
@@ -49295,7 +49292,7 @@
       "x": 3267,
       "y": 3166
     },
-	"dir": "EAST",
+    "dir": "EAST",
     "comment": "Banker",
     "npcId": 497
   },
@@ -49305,7 +49302,7 @@
       "x": 3267,
       "y": 3168
     },
-	"dir": "EAST",
+    "dir": "EAST",
     "comment": "Banker",
     "npcId": 497
   },
@@ -53563,7 +53560,7 @@
       "x": 3424,
       "y": 3458
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -61249,7 +61246,7 @@
       "x": 4638,
       "y": 5111
     },
-    "comment": "Ga\u0027al",
+    "comment": "Ga'al",
     "npcId": 15132
   },
   {
@@ -61366,7 +61363,7 @@
       "x": 4630,
       "y": 5180
     },
-    "comment": "Ga\u0027al",
+    "comment": "Ga'al",
     "npcId": 15133
   },
   {
@@ -61375,7 +61372,7 @@
       "x": 4671,
       "y": 5158
     },
-    "comment": "Ga\u0027al-Jeh",
+    "comment": "Ga'al-Jeh",
     "npcId": 15137
   },
   {
@@ -61591,7 +61588,7 @@
       "x": 4720,
       "y": 5109
     },
-    "comment": "Ga\u0027al",
+    "comment": "Ga'al",
     "npcId": 15131
   },
   {
@@ -61600,7 +61597,7 @@
       "x": 4731,
       "y": 5081
     },
-    "comment": "Ga\u0027al",
+    "comment": "Ga'al",
     "npcId": 15132
   },
   {
@@ -61609,7 +61606,7 @@
       "x": 4732,
       "y": 5078
     },
-    "comment": "Ga\u0027al",
+    "comment": "Ga'al",
     "npcId": 15133
   },
   {
@@ -61762,7 +61759,7 @@
       "x": 4672,
       "y": 5159
     },
-    "comment": "Ga\u0027al-Xox",
+    "comment": "Ga'al-Xox",
     "npcId": 15135
   },
   {
@@ -62446,7 +62443,7 @@
       "x": 3368,
       "y": 3277
     },
-    "comment": "A\u0027abla",
+    "comment": "A'abla",
     "npcId": 959
   },
   {
@@ -65038,7 +65035,7 @@
       "x": 2615,
       "y": 3091
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 495
   },
@@ -65048,7 +65045,7 @@
       "x": 2615,
       "y": 3092
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 494
   },
@@ -65058,7 +65055,7 @@
       "x": 2615,
       "y": 3094
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 494
   },
@@ -65068,7 +65065,7 @@
       "x": 2614,
       "y": 3330
     },
-	"dir": "NORTH",
+    "dir": "NORTH",
     "comment": "Banker",
     "npcId": 494
   },
@@ -65078,7 +65075,7 @@
       "x": 2616,
       "y": 3330
     },
-	"dir": "NORTH",
+    "dir": "NORTH",
     "comment": "Banker",
     "npcId": 495
   },
@@ -65088,7 +65085,7 @@
       "x": 2619,
       "y": 3330
     },
-	"dir": "NORTH",
+    "dir": "NORTH",
     "comment": "Banker",
     "npcId": 495
   },
@@ -65098,7 +65095,7 @@
       "x": 2583,
       "y": 3422
     },
-	"dir": "EAST",
+    "dir": "EAST",
     "comment": "Banker",
     "npcId": 494
   },
@@ -65108,7 +65105,7 @@
       "x": 2583,
       "y": 3423
     },
-	"dir": "EAST",
+    "dir": "EAST",
     "comment": "Banker",
     "npcId": 495
   },
@@ -65118,7 +65115,7 @@
       "x": 2621,
       "y": 3895
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 1360
   },
@@ -65128,7 +65125,7 @@
       "x": 2657,
       "y": 3280
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 495
   },
@@ -65138,7 +65135,7 @@
       "x": 2657,
       "y": 3283
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 494
   },
@@ -65148,7 +65145,7 @@
       "x": 2657,
       "y": 3286
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 494
   },
@@ -65248,7 +65245,7 @@
       "x": 2851,
       "y": 2954
     },
-	"dir": "NORTH",
+    "dir": "NORTH",
     "comment": "Banker",
     "npcId": 499
   },
@@ -65258,7 +65255,7 @@
       "x": 2853,
       "y": 2955
     },
-	"dir": "NORTH",
+    "dir": "NORTH",
     "comment": "Banker",
     "npcId": 499
   },
@@ -65653,7 +65650,7 @@
       "x": 3514,
       "y": 3479
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 1036
   },
@@ -65663,7 +65660,7 @@
       "x": 3514,
       "y": 3481
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 1036
   },
@@ -65673,7 +65670,7 @@
       "x": 3682,
       "y": 2981
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 3198
   },
@@ -65683,7 +65680,7 @@
       "x": 3682,
       "y": 2982
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 3199
   },
@@ -65693,7 +65690,7 @@
       "x": 3682,
       "y": 2983
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Banker",
     "npcId": 3198
   },
@@ -66846,7 +66843,7 @@
       "x": 2141,
       "y": 3904
     },
-    "comment": "Beedy-eye\u0027 Jones",
+    "comment": "Beedy-eye' Jones",
     "npcId": 4554
   },
   {
@@ -66855,7 +66852,7 @@
       "x": 2225,
       "y": 3803
     },
-    "comment": "Beedy-eye\u0027 Jones",
+    "comment": "Beedy-eye' Jones",
     "npcId": 4554
   },
   {
@@ -66873,7 +66870,7 @@
       "x": 2138,
       "y": 3892
     },
-    "comment": "Beefy\u0027 Burns",
+    "comment": "Beefy' Burns",
     "npcId": 4541
   },
   {
@@ -66882,7 +66879,7 @@
       "x": 2222,
       "y": 3789
     },
-    "comment": "Beefy\u0027 Burns",
+    "comment": "Beefy' Burns",
     "npcId": 4541
   },
   {
@@ -66936,7 +66933,7 @@
       "x": 2138,
       "y": 3907
     },
-    "comment": "Betty\u0027 B.Boppin",
+    "comment": "Betty' B.Boppin",
     "npcId": 4553
   },
   {
@@ -66945,7 +66942,7 @@
       "x": 2222,
       "y": 3804
     },
-    "comment": "Betty\u0027 B.Boppin",
+    "comment": "Betty' B.Boppin",
     "npcId": 4553
   },
   {
@@ -68277,7 +68274,7 @@
       "x": 2645,
       "y": 3229
     },
-    "comment": "Black-eye\u0027",
+    "comment": "Black-eye'",
     "npcId": 5589
   },
   {
@@ -70590,7 +70587,7 @@
       "x": 2807,
       "y": 3190
     },
-    "comment": "Cap\u0027n Izzy No-Beard",
+    "comment": "Cap'n Izzy No-Beard",
     "npcId": 437
   },
   {
@@ -72536,33 +72533,6 @@
     },
     "comment": "Citizen",
     "npcId": 7554
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2541,
-      "y": 3029
-    },
-    "comment": "City guard",
-    "npcId": 862
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2541,
-      "y": 3034
-    },
-    "comment": "City guard",
-    "npcId": 862
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2543,
-      "y": 3031
-    },
-    "comment": "City guard",
-    "npcId": 862
   },
   {
     "tile": {
@@ -78870,7 +78840,7 @@
       "x": 2140,
       "y": 3916
     },
-    "comment": "Eagle-eye\u0027 Shultz",
+    "comment": "Eagle-eye' Shultz",
     "npcId": 4542
   },
   {
@@ -78879,7 +78849,7 @@
       "x": 2224,
       "y": 3813
     },
-    "comment": "Eagle-eye\u0027 Shultz",
+    "comment": "Eagle-eye' Shultz",
     "npcId": 4542
   },
   {
@@ -79403,24 +79373,6 @@
     },
     "comment": "Enchanted Bucket",
     "npcId": 4525
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2507,
-      "y": 3036
-    },
-    "comment": "Enclave guard",
-    "npcId": 870
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2507,
-      "y": 3040
-    },
-    "comment": "Enclave guard",
-    "npcId": 870
   },
   {
     "tile": {
@@ -80175,7 +80127,7 @@
       "x": 2141,
       "y": 3891
     },
-    "comment": "First mate \u0027Davey-boy\u0027",
+    "comment": "First mate 'Davey-boy'",
     "npcId": 4543
   },
   {
@@ -80184,7 +80136,7 @@
       "x": 2225,
       "y": 3788
     },
-    "comment": "First mate \u0027Davey-boy\u0027",
+    "comment": "First mate 'Davey-boy'",
     "npcId": 4543
   },
   {
@@ -84711,7 +84663,7 @@
       "x": 3652,
       "y": 3484
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Ghost guard",
     "npcId": 1706
   },
@@ -84721,7 +84673,7 @@
       "x": 3652,
       "y": 3487
     },
-	"dir": "WEST",
+    "dir": "WEST",
     "comment": "Ghost guard",
     "npcId": 1706
   },
@@ -84731,7 +84683,7 @@
       "x": 3658,
       "y": 3508
     },
-	"dir": "NORTH",
+    "dir": "NORTH",
     "comment": "Ghost guard",
     "npcId": 1706
   },
@@ -84741,7 +84693,7 @@
       "x": 3661,
       "y": 3508
     },
-	"dir": "NORTH",
+    "dir": "NORTH",
     "comment": "Ghost guard",
     "npcId": 1706
   },
@@ -93733,7 +93685,7 @@
       "x": 2645,
       "y": 3230
     },
-    "comment": "Gummy\u0027",
+    "comment": "Gummy'",
     "npcId": 5591
   },
   {
@@ -98062,7 +98014,7 @@
       "x": 2841,
       "y": 3538
     },
-	"dir": "EAST",
+    "dir": "EAST",
     "comment": "Jade",
     "npcId": 4296
   },
@@ -101807,7 +101759,7 @@
       "x": 2142,
       "y": 3894
     },
-    "comment": "Lecherous\u0027 Lee",
+    "comment": "Lecherous' Lee",
     "npcId": 4556
   },
   {
@@ -101816,7 +101768,7 @@
       "x": 2226,
       "y": 3791
     },
-    "comment": "Lecherous\u0027 Lee",
+    "comment": "Lecherous' Lee",
     "npcId": 4556
   },
   {
@@ -102086,7 +102038,7 @@
       "x": 2726,
       "y": 3349
     },
-    "comment": "Legends\u0027 guard",
+    "comment": "Legends' guard",
     "npcId": 398
   },
   {
@@ -102095,7 +102047,7 @@
       "x": 2731,
       "y": 3348
     },
-    "comment": "Legends\u0027 guard",
+    "comment": "Legends' guard",
     "npcId": 399
   },
   {
@@ -102266,7 +102218,7 @@
       "x": 2927,
       "y": 3320
     },
-    "comment": "Li\u0027l lamb",
+    "comment": "Li'l lamb",
     "npcId": 5146
   },
   {
@@ -108783,7 +108735,7 @@
       "x": 3100,
       "y": 3257
     },
-	"clip": "INDOOR",
+    "clip": "INDOOR",
     "comment": "Ned",
     "npcId": 918
   },
@@ -108829,7 +108781,7 @@
       "x": 2645,
       "y": 3224
     },
-    "comment": "No fingers\u0027",
+    "comment": "No fingers'",
     "npcId": 5590
   },
   {
@@ -109870,92 +109822,11 @@
   {
     "tile": {
       "plane": 0,
-      "x": 2501,
-      "y": 3012
-    },
-    "comment": "Ogre guard",
-    "npcId": 860
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2503,
-      "y": 3011
-    },
-    "comment": "Ogre guard",
-    "npcId": 860
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2505,
-      "y": 3062
-    },
-    "comment": "Ogre guard",
-    "npcId": 859
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2507,
-      "y": 3062
-    },
-    "comment": "Ogre guard",
-    "npcId": 859
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2526,
-      "y": 3018
-    },
-    "comment": "Ogre guard",
-    "npcId": 861
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2529,
-      "y": 3019
-    },
-    "comment": "Ogre guard",
-    "npcId": 861
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2549,
-      "y": 3029
-    },
-    "comment": "Ogre guard",
-    "npcId": 858
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2551,
-      "y": 3031
-    },
-    "comment": "Ogre guard",
-    "npcId": 858
-  },
-  {
-    "tile": {
-      "plane": 0,
       "x": 2528,
       "y": 3048
     },
     "comment": "Ogre merchant",
     "npcId": 874
-  },
-  {
-    "tile": {
-      "plane": 0,
-      "x": 2513,
-      "y": 3034
-    },
-    "comment": "Ogre trader",
-    "npcId": 875
   },
   {
     "tile": {
@@ -111502,7 +111373,7 @@
       "x": 3076,
       "y": 3429
     },
-	"clip": "INDOOR",
+    "clip": "INDOOR",
     "comment": "Peksa",
     "npcId": 538
   },
@@ -112700,7 +112571,7 @@
       "x": 2139,
       "y": 3900
     },
-    "comment": "Picarron\u0027 Pete",
+    "comment": "Picarron' Pete",
     "npcId": 4545
   },
   {
@@ -112709,7 +112580,7 @@
       "x": 2223,
       "y": 3799
     },
-    "comment": "Picarron\u0027 Pete",
+    "comment": "Picarron' Pete",
     "npcId": 4545
   },
   {
@@ -117992,7 +117863,7 @@
       "x": 3187,
       "y": 3423
     },
-	"clip": "INDOOR",
+    "clip": "INDOOR",
     "comment": "Sani",
     "npcId": 4905
   },
@@ -123312,7 +123183,7 @@
       "x": 2226,
       "y": 3808
     },
-    "comment": "Sticky\u0027 Sanders",
+    "comment": "Sticky' Sanders",
     "npcId": 4557
   },
   {
@@ -124698,7 +124569,7 @@
       "x": 2738,
       "y": 2794
     },
-    "comment": "The Monkey\u0027s Aunt",
+    "comment": "The Monkey's Aunt",
     "npcId": 1454
   },
   {
@@ -124707,7 +124578,7 @@
       "x": 2737,
       "y": 2793
     },
-    "comment": "The Monkey\u0027s Uncle",
+    "comment": "The Monkey's Uncle",
     "npcId": 1453
   },
   {
@@ -129882,7 +129753,7 @@
       "x": 1367,
       "y": 5677
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 15233
   },
   {
@@ -129891,7 +129762,7 @@
       "x": 1370,
       "y": 5665
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 15233
   },
   {
@@ -129900,7 +129771,7 @@
       "x": 1377,
       "y": 5681
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 15233
   },
   {
@@ -129909,7 +129780,7 @@
       "x": 1381,
       "y": 5674
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 15233
   },
   {
@@ -129918,7 +129789,7 @@
       "x": 1382,
       "y": 5663
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 15233
   },
   {
@@ -129927,7 +129798,7 @@
       "x": 2192,
       "y": 3188
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -129936,7 +129807,7 @@
       "x": 2192,
       "y": 3191
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -129945,7 +129816,7 @@
       "x": 2194,
       "y": 3189
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -129954,7 +129825,7 @@
       "x": 2194,
       "y": 3190
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -129963,7 +129834,7 @@
       "x": 2196,
       "y": 3187
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -129972,7 +129843,7 @@
       "x": 2196,
       "y": 3189
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -129981,7 +129852,7 @@
       "x": 2206,
       "y": 3164
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -129990,7 +129861,7 @@
       "x": 2208,
       "y": 3163
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -129999,7 +129870,7 @@
       "x": 2209,
       "y": 3163
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130008,7 +129879,7 @@
       "x": 2209,
       "y": 3164
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130017,7 +129888,7 @@
       "x": 2216,
       "y": 3136
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130026,7 +129897,7 @@
       "x": 2216,
       "y": 3140
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130035,7 +129906,7 @@
       "x": 2216,
       "y": 3142
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130044,7 +129915,7 @@
       "x": 2218,
       "y": 3139
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130053,7 +129924,7 @@
       "x": 2178,
       "y": 3238
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130062,7 +129933,7 @@
       "x": 2180,
       "y": 3236
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130071,7 +129942,7 @@
       "x": 2208,
       "y": 3225
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130080,7 +129951,7 @@
       "x": 2208,
       "y": 3227
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130089,7 +129960,7 @@
       "x": 2210,
       "y": 3215
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130098,7 +129969,7 @@
       "x": 2210,
       "y": 3217
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130107,7 +129978,7 @@
       "x": 2210,
       "y": 3224
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130116,7 +129987,7 @@
       "x": 2213,
       "y": 3243
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130125,7 +129996,7 @@
       "x": 2214,
       "y": 3244
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130134,7 +130005,7 @@
       "x": 2215,
       "y": 3245
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130143,7 +130014,7 @@
       "x": 2218,
       "y": 3245
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130152,7 +130023,7 @@
       "x": 2219,
       "y": 3244
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130161,7 +130032,7 @@
       "x": 2220,
       "y": 3243
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130170,7 +130041,7 @@
       "x": 2221,
       "y": 3243
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130179,7 +130050,7 @@
       "x": 2281,
       "y": 3142
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130188,7 +130059,7 @@
       "x": 2282,
       "y": 3140
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130197,7 +130068,7 @@
       "x": 2283,
       "y": 3136
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130206,7 +130077,7 @@
       "x": 2283,
       "y": 3145
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130215,7 +130086,7 @@
       "x": 2296,
       "y": 3195
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130224,7 +130095,7 @@
       "x": 2247,
       "y": 3226
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130233,7 +130104,7 @@
       "x": 2248,
       "y": 3225
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130242,7 +130113,7 @@
       "x": 2248,
       "y": 3227
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130251,7 +130122,7 @@
       "x": 2249,
       "y": 3227
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130260,7 +130131,7 @@
       "x": 2249,
       "y": 3258
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130269,7 +130140,7 @@
       "x": 2251,
       "y": 3257
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130278,7 +130149,7 @@
       "x": 2251,
       "y": 3260
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130287,7 +130158,7 @@
       "x": 2253,
       "y": 3259
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130296,7 +130167,7 @@
       "x": 2259,
       "y": 3211
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130305,7 +130176,7 @@
       "x": 2267,
       "y": 3223
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130314,7 +130185,7 @@
       "x": 2267,
       "y": 3225
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130323,7 +130194,7 @@
       "x": 2268,
       "y": 3224
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130332,7 +130203,7 @@
       "x": 2291,
       "y": 3262
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1212
   },
   {
@@ -130341,7 +130212,7 @@
       "x": 2298,
       "y": 3262
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 1211
   },
   {
@@ -130350,7 +130221,7 @@
       "x": 2459,
       "y": 3449
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 15233
   },
   {
@@ -130359,7 +130230,7 @@
       "x": 2460,
       "y": 3445
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 15233
   },
   {
@@ -130368,7 +130239,7 @@
       "x": 2464,
       "y": 3448
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 15233
   },
   {
@@ -130377,7 +130248,7 @@
       "x": 3055,
       "y": 3628
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130386,7 +130257,7 @@
       "x": 3059,
       "y": 3641
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130395,7 +130266,7 @@
       "x": 3060,
       "y": 3622
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130404,7 +130275,7 @@
       "x": 3063,
       "y": 3627
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130413,7 +130284,7 @@
       "x": 3055,
       "y": 3701
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130422,7 +130293,7 @@
       "x": 3059,
       "y": 3704
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130431,7 +130302,7 @@
       "x": 3126,
       "y": 3709
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130440,7 +130311,7 @@
       "x": 3130,
       "y": 3704
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130449,7 +130320,7 @@
       "x": 3130,
       "y": 3708
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130458,7 +130329,7 @@
       "x": 3135,
       "y": 3705
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130467,7 +130338,7 @@
       "x": 3129,
       "y": 3714
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130476,7 +130347,7 @@
       "x": 3134,
       "y": 3718
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130485,7 +130356,7 @@
       "x": 3210,
       "y": 3704
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130494,7 +130365,7 @@
       "x": 3214,
       "y": 3707
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130503,7 +130374,7 @@
       "x": 3252,
       "y": 3652
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130512,7 +130383,7 @@
       "x": 3255,
       "y": 3650
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130521,7 +130392,7 @@
       "x": 3294,
       "y": 3612
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130530,7 +130401,7 @@
       "x": 3298,
       "y": 3607
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130539,7 +130410,7 @@
       "x": 3300,
       "y": 3617
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130548,7 +130419,7 @@
       "x": 3305,
       "y": 3627
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130557,7 +130428,7 @@
       "x": 3308,
       "y": 3588
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130566,7 +130437,7 @@
       "x": 3311,
       "y": 3633
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130575,7 +130446,7 @@
       "x": 3312,
       "y": 3621
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130584,7 +130455,7 @@
       "x": 3313,
       "y": 3607
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130593,7 +130464,7 @@
       "x": 3314,
       "y": 3630
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130602,7 +130473,7 @@
       "x": 3318,
       "y": 3614
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 2266
   },
   {
@@ -130611,7 +130482,7 @@
       "x": 3425,
       "y": 3292
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130620,7 +130491,7 @@
       "x": 3435,
       "y": 3314
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130629,7 +130500,7 @@
       "x": 3442,
       "y": 3277
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130638,7 +130509,7 @@
       "x": 3409,
       "y": 3369
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130647,7 +130518,7 @@
       "x": 3420,
       "y": 3349
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130656,7 +130527,7 @@
       "x": 3430,
       "y": 3340
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130665,7 +130536,7 @@
       "x": 3435,
       "y": 3330
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130674,7 +130545,7 @@
       "x": 3435,
       "y": 3359
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130683,7 +130554,7 @@
       "x": 3437,
       "y": 3339
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130692,7 +130563,7 @@
       "x": 3437,
       "y": 3374
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130701,7 +130572,7 @@
       "x": 3446,
       "y": 3385
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130710,7 +130581,7 @@
       "x": 3447,
       "y": 3388
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130719,7 +130590,7 @@
       "x": 3450,
       "y": 3370
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130728,7 +130599,7 @@
       "x": 3450,
       "y": 3387
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130737,7 +130608,7 @@
       "x": 3451,
       "y": 3336
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130746,7 +130617,7 @@
       "x": 3452,
       "y": 3355
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130755,7 +130626,7 @@
       "x": 3418,
       "y": 3420
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130764,7 +130635,7 @@
       "x": 3424,
       "y": 3452
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130773,7 +130644,7 @@
       "x": 3428,
       "y": 3409
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130782,7 +130653,7 @@
       "x": 3433,
       "y": 3416
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130791,7 +130662,7 @@
       "x": 3434,
       "y": 3394
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130800,7 +130671,7 @@
       "x": 3436,
       "y": 3407
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130809,7 +130680,7 @@
       "x": 3438,
       "y": 3414
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130818,7 +130689,7 @@
       "x": 3439,
       "y": 3449
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130827,7 +130698,7 @@
       "x": 3446,
       "y": 3439
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130836,7 +130707,7 @@
       "x": 3454,
       "y": 3410
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130845,7 +130716,7 @@
       "x": 3454,
       "y": 3423
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130854,7 +130725,7 @@
       "x": 3460,
       "y": 3313
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130863,7 +130734,7 @@
       "x": 3474,
       "y": 3317
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130872,7 +130743,7 @@
       "x": 3483,
       "y": 3267
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130881,7 +130752,7 @@
       "x": 3484,
       "y": 3326
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130890,7 +130761,7 @@
       "x": 3486,
       "y": 3265
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130899,7 +130770,7 @@
       "x": 3487,
       "y": 3310
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130908,7 +130779,7 @@
       "x": 3490,
       "y": 3313
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130917,7 +130788,7 @@
       "x": 3492,
       "y": 3322
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130926,7 +130797,7 @@
       "x": 3510,
       "y": 3325
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130935,7 +130806,7 @@
       "x": 3511,
       "y": 3267
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130944,7 +130815,7 @@
       "x": 3514,
       "y": 3295
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130953,7 +130824,7 @@
       "x": 3514,
       "y": 3309
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130962,7 +130833,7 @@
       "x": 3515,
       "y": 3278
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130971,7 +130842,7 @@
       "x": 3517,
       "y": 3267
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130980,7 +130851,7 @@
       "x": 3481,
       "y": 3341
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130989,7 +130860,7 @@
       "x": 3484,
       "y": 3386
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -130998,7 +130869,7 @@
       "x": 3491,
       "y": 3350
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131007,7 +130878,7 @@
       "x": 3491,
       "y": 3368
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131016,7 +130887,7 @@
       "x": 3508,
       "y": 3353
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131025,7 +130896,7 @@
       "x": 3513,
       "y": 3340
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131034,7 +130905,7 @@
       "x": 3514,
       "y": 3372
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131043,7 +130914,7 @@
       "x": 3467,
       "y": 3441
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131052,7 +130923,7 @@
       "x": 3471,
       "y": 3424
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131061,7 +130932,7 @@
       "x": 3484,
       "y": 3398
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131070,7 +130941,7 @@
       "x": 3490,
       "y": 3401
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131079,7 +130950,7 @@
       "x": 3504,
       "y": 3412
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131088,7 +130959,7 @@
       "x": 3507,
       "y": 3442
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131097,7 +130968,7 @@
       "x": 3508,
       "y": 3438
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131106,7 +130977,7 @@
       "x": 3511,
       "y": 3442
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131115,7 +130986,7 @@
       "x": 3513,
       "y": 3441
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131124,7 +130995,7 @@
       "x": 3459,
       "y": 3457
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131133,7 +131004,7 @@
       "x": 3460,
       "y": 3462
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131142,7 +131013,7 @@
       "x": 3462,
       "y": 3459
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131151,7 +131022,7 @@
       "x": 3463,
       "y": 3490
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131160,7 +131031,7 @@
       "x": 3464,
       "y": 3511
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131169,7 +131040,7 @@
       "x": 3465,
       "y": 3466
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131178,7 +131049,7 @@
       "x": 3466,
       "y": 3495
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131187,7 +131058,7 @@
       "x": 3466,
       "y": 3497
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131196,7 +131067,7 @@
       "x": 3467,
       "y": 3485
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131205,7 +131076,7 @@
       "x": 3467,
       "y": 3497
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131214,7 +131085,7 @@
       "x": 3467,
       "y": 3509
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131223,7 +131094,7 @@
       "x": 3469,
       "y": 3470
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131232,7 +131103,7 @@
       "x": 3470,
       "y": 3469
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131241,7 +131112,7 @@
       "x": 3471,
       "y": 3477
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131250,7 +131121,7 @@
       "x": 3474,
       "y": 3505
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131259,7 +131130,7 @@
       "x": 3476,
       "y": 3507
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131268,7 +131139,7 @@
       "x": 3479,
       "y": 3511
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131277,7 +131148,7 @@
       "x": 3480,
       "y": 3468
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131286,7 +131157,7 @@
       "x": 3480,
       "y": 3470
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131295,7 +131166,7 @@
       "x": 3482,
       "y": 3469
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131304,7 +131175,7 @@
       "x": 3483,
       "y": 3511
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131313,7 +131184,7 @@
       "x": 3484,
       "y": 3464
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131322,7 +131193,7 @@
       "x": 3485,
       "y": 3509
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131331,7 +131202,7 @@
       "x": 3490,
       "y": 3461
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131340,7 +131211,7 @@
       "x": 3491,
       "y": 3460
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131349,7 +131220,7 @@
       "x": 3494,
       "y": 3461
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131358,7 +131229,7 @@
       "x": 3494,
       "y": 3512
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131367,7 +131238,7 @@
       "x": 3498,
       "y": 3461
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131376,7 +131247,7 @@
       "x": 3499,
       "y": 3513
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131385,7 +131256,7 @@
       "x": 3501,
       "y": 3513
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131394,7 +131265,7 @@
       "x": 3502,
       "y": 3464
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131403,7 +131274,7 @@
       "x": 3504,
       "y": 3463
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131412,7 +131283,7 @@
       "x": 3506,
       "y": 3512
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131421,7 +131292,7 @@
       "x": 3506,
       "y": 3515
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131430,7 +131301,7 @@
       "x": 3507,
       "y": 3515
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131439,7 +131310,7 @@
       "x": 3509,
       "y": 3512
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131448,7 +131319,7 @@
       "x": 3511,
       "y": 3488
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131457,7 +131328,7 @@
       "x": 3513,
       "y": 3467
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131466,7 +131337,7 @@
       "x": 3513,
       "y": 3487
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131475,7 +131346,7 @@
       "x": 3513,
       "y": 3489
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131484,7 +131355,7 @@
       "x": 3513,
       "y": 3503
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131493,7 +131364,7 @@
       "x": 3514,
       "y": 3490
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131502,7 +131373,7 @@
       "x": 3515,
       "y": 3495
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131511,7 +131382,7 @@
       "x": 3515,
       "y": 3499
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131520,7 +131391,7 @@
       "x": 3516,
       "y": 3469
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131529,7 +131400,7 @@
       "x": 3584,
       "y": 3455
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -131538,7 +131409,7 @@
       "x": 3600,
       "y": 3452
     },
-    "comment": "Will o\u0027 the wisp",
+    "comment": "Will o' the wisp",
     "npcId": 681
   },
   {
@@ -133503,5 +133374,14 @@
     },
     "comment": "Zookeeper",
     "npcId": 7570
+  },
+  {
+    "comment": "Ruantun added for Desert Treasure by Zemouregal",
+    "npcId": 1916,
+    "tile": {
+      "x": 3111,
+      "y": 9690,
+      "plane": 0
+    }
   }
 ]

@@ -9,6 +9,9 @@ import com.rs.engine.quest.QuestOutline
 import com.rs.game.World
 import com.rs.game.content.achievements.Achievement
 import com.rs.game.content.quests.dig_site.dialogue.npcs.*
+import com.rs.game.content.quests.deserttreasure.TerryBalandoDialogues
+import com.rs.game.content.quests.deserttreasure.STAGE_TERRY_BALANDO
+import com.rs.game.content.quests.deserttreasure.STAGE_RETURN_TO_ASGARNIA
 import com.rs.game.content.quests.dig_site.utils.*
 import com.rs.game.content.skills.mining.Pickaxe
 import com.rs.game.model.entity.npc.NPC
@@ -238,7 +241,12 @@ fun mapTheDigSiteInteractions() {
             GREEN_STUDENT -> GreenStudentD(player, npc)
             BROWN_STUDENT -> BrownStudentD(player, npc)
             PURPLE_STUDENT -> PurpleStudentD(player, npc)
-            ARCHAEOLOGICAL_EXPERT -> ArchaeologicalExpertD(player, npc)
+            ARCHAEOLOGICAL_EXPERT -> {
+                if (player.getQuestStage(Quest.DESERT_TREASURE) in STAGE_TERRY_BALANDO..STAGE_RETURN_TO_ASGARNIA)
+                    TerryBalandoDialogues(player, npc)
+                else
+                    ArchaeologicalExpertD(player, npc)
+            }
             in DIGSITE_WORKMEN -> DigsiteWorkmanD(player, npc)
             DOUG_DEEPING -> DougDeepingD(player, npc)
         }
@@ -429,7 +437,12 @@ fun mapTheDigSiteInteractions() {
     }
 
     onItemOnNpc(*DIGSITE_WORKMEN.toTypedArray()) { (player, item, npc) -> if (item.id == INVITATION_LETTER) DigsiteWorkmanD(player, npc).showInvitation() }
-    onItemOnNpc(ARCHAEOLOGICAL_EXPERT) { (player, item, npc) -> ArchaeologicalExpertD(player, npc).identifyItem(item) }
+    onItemOnNpc(ARCHAEOLOGICAL_EXPERT) { (player, item, npc) ->
+        if (player.getQuestStage(Quest.DESERT_TREASURE) == STAGE_TERRY_BALANDO && item.id == 4654)
+            TerryBalandoDialogues(player, npc).receiveEtchings()
+        else
+            ArchaeologicalExpertD(player, npc).identifyItem(item)
+    }
     onItemOnNpc(*EXAMINER.toTypedArray()) { (player, item, npc) -> if (item.id == ANCIENT_TALISMAN) player.npcDialogue(npc, CALM_TALK, "Wow - that's unusual! You should show it to Terry, the archaeological expert, in the next room.") }
     onItemOnNpc(PANNING_GUIDE) { (player, item, npc) ->
         if (item.id == CUP_OF_TEA) {

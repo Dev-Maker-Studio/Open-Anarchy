@@ -98,9 +98,6 @@ fun mapDesertInteractions() {
         }
     }
 
-    // Bandit Camp Bartender
-    onNpcClick(1921) { (player) -> ShopsHandler.openShop(player, "the_big_heist_lodge") }
-
     // Ali Snake Charmer
     onNpcClick(1872) { (player, npc) ->
         player.startConversation {
@@ -142,8 +139,13 @@ fun mapDesertInteractions() {
         }
     }
 
-    // Ancient Spellbook Pyramid Rear Entrance
-    onObjectClick(6481) { (player) -> player.tele(Tile.of(3233, 9310, 0)) }
+    // Ancient Spellbook Pyramid Rear Entrance - unlocked by Desert Treasure.
+    onObjectClick(6481) { (player) ->
+        if (player.getQuestStage(Quest.DESERT_TREASURE) == com.rs.game.content.quests.deserttreasure.STAGE_COMPLETE)
+            player.tele(Tile.of(3233, 9310, 0))
+        else
+            player.sendMessage("The tunnel is sealed by an ancient power.")
+    }
 
     // Pyramid Sarcophagi
     onObjectClick(6516) { (player, obj) ->
