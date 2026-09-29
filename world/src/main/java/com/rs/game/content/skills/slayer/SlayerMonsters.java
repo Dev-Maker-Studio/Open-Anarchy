@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public enum SlayerMonsters {
+	GELATINOUS_ABOMINATION(14849, 1),
 	CRAWLING_HAND(1648, 5),
 	CAVE_BUG(1832, 7),
 	CAVE_CRAWLER(7787, 10),
