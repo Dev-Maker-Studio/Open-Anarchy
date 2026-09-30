@@ -65,14 +65,6 @@ object Rev727UpdateProtocol : UpdateProtocol {
     override fun encodePlayerUpdate(snapshot: PlayerUpdateSnapshot, state: PlayerUpdateTrackingState): ByteArray {
         val local = snapshot.playersByIndex[snapshot.localIndex] ?: return ByteArray(0)
 
-        // Refresh localPlayers from the current tick snapshot so that each
-        // local index points to the latest PlayerUpdatePlayer data (or null
-        // if the player logged out, which needsRemove() will catch).
-        for (i in 0 until state.localIndexCount) {
-            val idx = state.localIndexes[i]
-            state.localPlayers[idx] = snapshot.playersByIndex[idx]
-        }
-
         val stream = BufferWriter(capacity = 16384)
         val updateBlocks = BufferWriter(capacity = 16384)
 
@@ -102,12 +94,10 @@ object Rev727UpdateProtocol : UpdateProtocol {
 
     private fun withinDistance(local: PlayerUpdatePlayer, other: PlayerUpdatePlayer, largeSceneView: Boolean): Boolean {
         if (other.hidden && other.index != local.index) return false
+        if (tileHash30Plane(local.tileHash30) != tileHash30Plane(other.tileHash30)) return false
         val radius = if (largeSceneView) 126 else 14
-        val localX = (local.tileHash30 shr 14) and 0x3fff
-        val localY = local.tileHash30 and 0x3fff
-        val otherX = (other.tileHash30 shr 14) and 0x3fff
-        val otherY = other.tileHash30 and 0x3fff
-        return abs(localX - otherX) <= radius && abs(localY - otherY) <= radius
+        return abs(tileHash30X(local.tileHash30) - tileHash30X(other.tileHash30)) <= radius &&
+            abs(tileHash30Y(local.tileHash30) - tileHash30Y(other.tileHash30)) <= radius
     }
 
     private fun needsRemove(local: PlayerUpdatePlayer, p: PlayerUpdatePlayer, largeSceneView: Boolean): Boolean {
@@ -152,13 +142,6 @@ object Rev727UpdateProtocol : UpdateProtocol {
             stream.writeBits(2, 3)
             stream.writeBits(18, (yOff and 0xff) + ((xOff and 0xff) shl 8) + (planeOffset shl 16))
         }
-    }
-
-    private fun regionHash18Of(tileHash30: Int): Int {
-        val x = (tileHash30 shr 14) and 0x3fff
-        val y = tileHash30 and 0x3fff
-        val plane = (tileHash30 shr 28) and 0x3
-        return (plane shl 16) or ((x shr 6) shl 8) or (y shr 6)
     }
 
     private fun skipPlayers(stream: BufferWriter, amount: Int) {
@@ -246,33 +229,31 @@ object Rev727UpdateProtocol : UpdateProtocol {
 
             if (skip > 0) {
                 skip--
+                state.localPlayers[playerIndex] = snapshot.playersByIndex[playerIndex]
                 state.slotFlags[playerIndex] = (state.slotFlags[playerIndex].toInt() or 2).toByte()
                 continue
             }
 
-            val p = state.localPlayers[playerIndex]
+            val clientRegionHash = regionHash18Of(state.localPlayers[playerIndex]!!.tileHash30)
+            val p = snapshot.playersByIndex[playerIndex]
             if (p == null || needsRemove(local, p, largeSceneView)) {
                 stream.writeBits(1, 1)
                 stream.writeBits(1, 0)
                 stream.writeBits(2, 0)
-                if (p == null) {
+                val hash = p?.regionHash18 ?: clientRegionHash
+                state.regionHashes[playerIndex] = hash
+                if (hash == clientRegionHash) {
                     stream.writeBits(1, 0)
                 } else {
-                    state.regionHashes[playerIndex] = regionHash18Of(p.lastTileHash30)
-                    val hash = p.regionHash18
-                    if (hash == state.regionHashes[playerIndex]) {
-                        stream.writeBits(1, 0)
-                    } else {
-                        stream.writeBits(1, 1)
-                        updateRegionHash(stream, state.regionHashes[playerIndex], hash)
-                        state.regionHashes[playerIndex] = hash
-                    }
+                    stream.writeBits(1, 1)
+                    updateRegionHash(stream, clientRegionHash, hash)
                 }
                 state.localPlayers[playerIndex] = null
                 continue
             }
+            state.localPlayers[playerIndex] = p
 
-            val needUpdate = needsUpdateBlock(p)
+            val needUpdate = needsUpdateBlock(state, p)
             if (needUpdate) appendUpdateBlock(updateBlocks, state, p, added = false)
 
             if (p.hasTeleported) {
@@ -323,8 +304,8 @@ object Rev727UpdateProtocol : UpdateProtocol {
                 for (i2 in i + 1 until state.localIndexCount) {
                     val p2Index = state.localIndexes[i2]
                     if (nsn0 == ((state.slotFlags[p2Index].toInt() and 0x1) != 0)) continue
-                    val p2 = state.localPlayers[p2Index] ?: break
-                    val p2Need = needsRemove(local, p2, largeSceneView) || p2.hasTeleported || p2.nextWalkDirection != null || p2.zeroDisplacementWalk || needsUpdateBlock(p2)
+                    val p2 = snapshot.playersByIndex[p2Index] ?: break
+                    val p2Need = needsRemove(local, p2, largeSceneView) || p2.hasTeleported || p2.nextWalkDirection != null || p2.zeroDisplacementWalk || needsUpdateBlock(state, p2)
                     if (p2Need) break
                     skip++
                 }
@@ -335,8 +316,7 @@ object Rev727UpdateProtocol : UpdateProtocol {
         stream.stopBitAccess()
     }
 
-    private fun needsUpdateBlock(p: PlayerUpdatePlayer): Boolean {
-        // Any non-null update block means "needs update".
+    private fun needsUpdateBlock(state: PlayerUpdateTrackingState, p: PlayerUpdatePlayer): Boolean {
         val b = p.blocks
         val c = b.common
         if (c.tint != null) return true
@@ -346,7 +326,7 @@ object Rev727UpdateProtocol : UpdateProtocol {
         if (c.hits != null) return true
         if (c.modelOverrides != null) return true
         for (s in c.spotAnims) if (s != null) return true
-        if (b.appearance != null) return true
+        if (b.appearance != null && state.needAppearanceUpdate(p.index, b.appearance.hash)) return true
         if (b.movementAnimations != null) return true
         if (b.faceDirection != null) return true
         if (b.movementTypeId != null) return true
