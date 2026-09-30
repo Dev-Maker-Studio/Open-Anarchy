@@ -237,7 +237,7 @@ public final class WorldThread extends Thread {
 				World.processEntityLists();
 				Launcher.autosaveSlice();
 				long time = (System.currentTimeMillis() - startTime);
-				Logger.trace(WorldThread.class, "tick", "Tick finished - Mem: " + (Utils.formatDouble(WorldUtil.getMemUsedPerc())) + "% - " + time + "ms - Players online: " + World.getPlayers().size());
+				Logger.trace(WorldThread.class, "tick", "Tick finished - Mem: " + (Utils.formatDouble(WorldUtil.getMemUsedPerc())) + "% - " + time + "ms - Players online: " + World.getPlayerCount());
 
 				if (time > HIGHEST_TICK)
 					HIGHEST_TICK = time;
