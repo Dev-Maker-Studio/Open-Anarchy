@@ -12,9 +12,11 @@ import world.gregs.voidps.cache.file.FileProvider
 
 class JS5Server(val provider: FileProvider, val prefetchKeys: IntArray) {
     val limiter = MultilogLimiter()
+    private val botIps = IpAllowList(EnvVars.botIpWhitelist)
 
     suspend fun init(input: ByteReadChannel, output: ByteWriteChannel, ip: String) {
-        if (!limiter.add(ip)) {
+        val limited = !botIps.contains(ip)
+        if (limited && !limiter.add(ip)) {
             output.finish(ResponseOpcode.LOGIN_LIMIT_EXCEEDED)
             return
         }
@@ -82,7 +84,7 @@ class JS5Server(val provider: FileProvider, val prefetchKeys: IntArray) {
                 }
             }
         } finally {
-            limiter.remove(ip)
+            if (limited) limiter.remove(ip)
         }
     }
 
