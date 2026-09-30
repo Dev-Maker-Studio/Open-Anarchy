@@ -6,7 +6,6 @@ import com.rs.engine.quest.Quest
 import com.rs.game.content.quests.underground_pass.*
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
-import com.rs.game.model.entity.player.Skills
 
 fun undergroundPassKingLathasDialogue(player: Player, npc: NPC) {
     player.startConversation {
@@ -23,8 +22,8 @@ fun undergroundPassKingLathasDialogue(player: Player, npc: NPC) {
                         npc(npc, CALM_TALK, "I need someone to find a route through to the western lands. Will you undertake this quest?")
                         options {
                             op("Yes, I'll do it.") {
-                                if (player.skills.getLevelForXp(Skills.RANGE) < 25) {
-                                    simple("You need a Ranged level of at least 25 to start Underground Pass.")
+                                if (!Quest.UNDERGROUND_PASS.meetsReqs(player, "to start this quest.")) {
+                                    simple("You do not meet the requirements to start Underground Pass.")
                                 } else {
                                     questStart(Quest.UNDERGROUND_PASS)
                                     player(HAPPY_TALKING, "Yes, I'll do it.")

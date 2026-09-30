@@ -235,74 +235,62 @@ private fun DialogueBuilder.startQuest(
 
     options {
         op("Accept Quest") {
-            if (!Watchtower.meetsRequirements(player)) {
-                exec {
-                    player.sendMessage(
-                        "You do not meet the requirements to start : 'Watchtower'."
-                    )
-                }
+            player(
+                CALM_TALK,
+                "Can I be of help?"
+            )
 
-                simple(
-                    "You do not meet the requirements to start : 'Watchtower'."
-                )
-            } else {
-                player(
-                    CALM_TALK,
-                    "Can I be of help?"
-                )
+            npc(
+                npc,
+                HAPPY_TALKING,
+                "Help? Oh wonderful, dear traveller!"
+            )
 
-                npc(
-                    npc,
-                    HAPPY_TALKING,
-                    "Help? Oh wonderful, dear traveller!"
-                )
+            npc(
+                npc,
+                HAPPY_TALKING,
+                "Yes I could do with an extra pair of eyes here."
+            )
 
-                npc(
-                    npc,
-                    HAPPY_TALKING,
-                    "Yes I could do with an extra pair of eyes here."
-                )
+            player(
+                CONFUSED,
+                "???"
+            )
 
-                player(
-                    CONFUSED,
-                    "???"
-                )
+            npc(
+                npc,
+                CALM_TALK,
+                "There must be some evidence of what has happened here. Perhaps you could assist me in searching for clues?"
+            )
 
-                npc(
-                    npc,
-                    CALM_TALK,
-                    "There must be some evidence of what has happened here. Perhaps you could assist me in searching for clues?"
-                )
+            player(
+                CALM_TALK,
+                "I would be happy to."
+            )
 
-                player(
-                    CALM_TALK,
-                    "I would be happy to."
-                )
+            npc(
+                npc,
+                CALM_TALK,
+                "Try searching the surrounding area. If you find anything unusual, bring it here."
+            )
 
-                npc(
-                    npc,
-                    CALM_TALK,
-                    "Try searching the surrounding area. If you find anything unusual, bring it here."
-                )
+            npc(
+                npc,
+                CALM_TALK,
+                "Try the bushes - I've read enough adventure stories to know that clues get caught in bushes all the time."
+            )
 
-                npc(
-                    npc,
-                    CALM_TALK,
-                    "Try the bushes - I've read enough adventure stories to know that clues get caught in bushes all the time."
-                )
+            npc(
+                npc,
+                CALM_TALK,
+                "I will tell the guards to let you past - that way, you can just use the ladder to get in and out."
+            )
 
-                npc(
-                    npc,
-                    CALM_TALK,
-                    "I will tell the guards to let you past - that way, you can just use the ladder to get in and out."
+            exec {
+                player.setQuestStage(
+                    Quest.WATCHTOWER,
+                    STAGE_SEARCH_WATCHTOWER
                 )
-
-                exec {
-                    player.setQuestStage(
-                        Quest.WATCHTOWER,
-                        STAGE_SEARCH_WATCHTOWER
-                    )
-                }
             }
         }
 

@@ -7,7 +7,9 @@ import com.rs.engine.quest.Quest
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnNpc
+import com.rs.plugin.kts.onObjectClick
 import com.rs.plugin.kts.onNpcClick
+import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.gameval.gen.Obj
 
@@ -138,8 +140,6 @@ private fun DialogueBuilder.ingredientBriefing(player: Player, eblisId: Int) {
     npc(eblisId, CALM_TALK, "Well, six scrying glasses should be sufficient. For each scrying glass, I will need two magic logs, a steel bar and some molten glass. This makes a total of 12 magic logs, 6 pieces of molten glass, and 6 steel bars.")
     npc(eblisId, CALM_TALK, "In addition, for the actual spell to enchant the glasses, I will require one set of normal bones, some ash, some charcoal and a single blood rune.")
     npc(eblisId, CALM_TALK, "Do you understand me, adventurer?")
-    player(CONFUSED, "Quick question; what kind of bones do you need?")
-    npc(eblisId, CALM_TALK, "Standard bones. Other types of bones are of no use to me in this spell.")
     label("eblisIngredientChoice")
     options {
         op("Yes, I'll go and get those.") {
@@ -149,6 +149,11 @@ private fun DialogueBuilder.ingredientBriefing(player: Player, eblisId: Int) {
         op("No, please repeat those ingredients.") {
             player(CALM_TALK, "No, please repeat those ingredients.")
             npc(eblisId, CALM_TALK, "12 magic logs, 6 steel bars, 6 pieces of molten glass, a set of ordinary bones, some ashes, some charcoal and a blood rune.")
+            goto("eblisIngredientChoice")
+        }
+        op("Quick question; what kind of bones do you need?") {
+            player(CONFUSED, "Quick question; what kind of bones do you need?")
+            npc(eblisId, CALM_TALK, "Standard bones. Other types of bones are of no use to me in this spell.")
             goto("eblisIngredientChoice")
         }
     }
@@ -171,6 +176,14 @@ private fun handOver(player: Player, ingredient: Ingredient, amount: Int) {
 private fun DialogueBuilder.collectIngredients(player: Player, eblisId: Int) {
     val plan = ingredientPlan(player)
     val outstanding = outstandingText(player, plan)
+
+    if (Ingredient.entries.all { it.remaining(player) <= 0 }) {
+        npc(eblisId, CHEERFUL, "Excellent! Those are all the ingredients I need to create the scrying glasses.")
+        npc(eblisId, CALM_TALK, "I will find a suitable spot in the desert to the East of here, and set them up. When you are ready to begin your search, please come and find me there, I will show you how to utilise the mirrors to find the diamonds.") {
+            player.setQuestStage(Quest.DESERT_TREASURE, STAGE_RETURN_TO_MIRRORS)
+        }
+        return
+    }
 
     if (plan.values.all { it == 0 }) {
         player(CALM_TALK, "I'm still gathering what you asked for.")

@@ -66,10 +66,38 @@ class DesertTreasure : QuestOutline() {
         STAGE_DIAMONDS_OF_AZZANADRA -> buildList {
             add("I have given Eblis the special scrying glasses and he has located the four diamonds for me.")
             add("The four diamonds are spread across these areas: Canifis, Trollheim, Pollnivneach, and Baxtorian Falls. I can search for them in any order.")
-            add(if (DesertTreasureDiamonds.hasBloodDiamond(player)) "I have retrieved the blood diamond from Malak, near Canifis." else "I still need to retrieve the blood diamond. I should speak to Malak in Canifis about Dessous.")
-            add(if (DesertTreasureDiamonds.hasIceDiamond(player)) "I have retrieved the ice diamond from the ice trolls near Trollheim." else "I still need to retrieve the ice diamond. A troll child near Trollheim claimed his diamond was stolen.")
-            add(if (DesertTreasureDiamonds.hasSmokeDiamond(player)) "I have retrieved the smoke diamond from Fareed, in the Smoke Dungeon." else "I still need to retrieve the smoke diamond, guarded by Fareed in the Smoke Dungeon near Pollnivneach.")
-            add(if (DesertTreasureDiamonds.hasShadowDiamond(player)) "I have retrieved the shadow diamond from the Shadow Dungeon." else "I still need to retrieve the shadow diamond. I should speak to Rasolo, south of Baxtorian Falls, about an invisible dungeon.")
+            if (DesertTreasureDiamonds.hasBloodDiamond(player)) {
+                add("I have retrieved the blood diamond from Malak, near Canifis.")
+            } else {
+                add("I still need the blood diamond. Malak in Canifis wants me to kill Dessous, who lies beneath a grave south-east of Canifis.")
+                add("Malak suggested I take a silver bar to Ruantun in the Draynor sewers for a ritual pot, have it blessed on Entrana, then return to Malak for fresh blood.")
+                add("I should add crushed garlic and spice to the blessed pot of blood, then use it on Dessous' tomb to lure and weaken him.")
+            }
+            if (DesertTreasureDiamonds.hasIceDiamond(player)) {
+                add("I have retrieved the ice diamond from the ice trolls near Trollheim.")
+            } else {
+                add("I still need the ice diamond. A crying troll child near Trollheim may help if I give him something sweet.")
+                add("The path beyond Trollheim is dangerously cold. I will need climbing boots made into spiked boots by Dunstan in Burthorpe before climbing it.")
+                add("I should follow the Ice Path, defeat Kamil, then free the troll child's parents to recover the diamond.")
+            }
+            if (DesertTreasureDiamonds.hasSmokeDiamond(player)) {
+                add("I have retrieved the smoke diamond from Fareed, in the Smoke Dungeon.")
+            } else {
+                add("I still need the smoke diamond. I should enter the smokey well near Pollnivneach with protection from the smoke.")
+                add("Inside the Smoke Dungeon I need to light all four standing torches before they burn out, then open the central chest for the warm key.")
+                add("The warm key opens Fareed's gate. I will need to defeat him to recover the smoke diamond.")
+            }
+            if (DesertTreasureDiamonds.hasShadowDiamond(player)) {
+                add("I have retrieved the shadow diamond from the Shadow Dungeon.")
+            } else if (!player.getBool(RASOLO_DEAL_ACCEPTED)) {
+                add("I still need to retrieve the shadow diamond. I should speak to Rasolo, south of Baxtorian Falls, about an invisible dungeon.")
+            } else if (player.containsItem(Obj.fd_sword_cross)) {
+                add("I found Rasolo's gilded cross in the Bandit Camp. I should return it to him for his ring of visibility.")
+            } else if (player.containsItem(Obj.fd_ring_visibility)) {
+                add("Rasolo gave me his ring of visibility. I should wear it near the invisible dungeon east of him to find Damis.")
+            } else {
+                add("Rasolo wants his gilded cross back before he will give me his ring of visibility. Laheeb stole it and hid it somewhere in the Bandit Camp south of Rasolo.")
+            }
             if (DesertTreasureDiamonds.hasAllDiamonds(player)) add("I have all four diamonds. I should return to Eblis at the mirrors.")
         }
         STAGE_IFTAH_YA_SIMSIM -> listOf("I have all four diamonds and have met with Eblis, who wants me to sort the diamonds into their obelisks at the pyramid.")
@@ -88,6 +116,7 @@ class DesertTreasure : QuestOutline() {
 
     override fun updateStage(player: Player, stage: Int) {
         CLIENT_PROGRESS[stage]?.let { player.vars.setVarBit(Varbit.deserttreasure, it) }
+        player.vars.setVarBit(Varbit.fd_mirror_present, if (stage >= STAGE_RETURN_TO_MIRRORS) 1 else 0)
     }
 }
 

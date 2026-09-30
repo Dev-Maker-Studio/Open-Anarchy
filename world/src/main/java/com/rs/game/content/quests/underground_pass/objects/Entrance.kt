@@ -10,7 +10,7 @@ import com.rs.plugin.kts.onObjectClick
 
 private val SURFACE_ENTRANCE_TILE = Tile.of(2433, 3313, 0)
 private val PASS_ENTRANCE_TILE = Tile.of(2496, 9714, 0)
-private val SURFACE_EXIT_TILE = Tile.of(2434, 3312, 0)
+private val SURFACE_EXIT_TILE = Tile.of(2438, 3315, 0)
 
 @ServerStartupEvent
 fun mapUndergroundPassEntrance() {

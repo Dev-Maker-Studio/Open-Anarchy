@@ -4,9 +4,11 @@ import com.rs.engine.dialogue.DialogueBuilder
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
+import com.rs.game.content.Toolbelt
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnItem
 import com.rs.plugin.kts.onItemOnNpc
 import com.rs.plugin.kts.onNpcClick
@@ -28,7 +30,7 @@ private val potRecipes = listOf(
 
 @ServerStartupEvent
 fun mapBloodDiamondDesertTreasure() {
-    onNpcClick(Npc.fourdiamonds_vampire_lord) { (player) -> malakDialogue(player) }
+    onNpcClick(Npc.fourdiamonds_vampire_lord, options = arrayOf("Talk-to")) { (player) -> malakDialogue(player) }
     onNpcClick(Npc.malak) { (player) -> ruantunDialogue(player) }
     onItemOnNpc(Npc.high_priest_of_entrana) { (player, item) -> blessPot(player, item.id) }
     onNpcDeath(Npc.blooddiamond_vampirewarrior) { e ->
@@ -36,10 +38,15 @@ fun mapBloodDiamondDesertTreasure() {
         dessous.owner.set(DESSOUS_KILLED, true)
     }
 
+    onItemClick(Obj.garlic, options = arrayOf("Crush")) { e ->
+        if (!e.player.inventory.containsItem(Obj.pestle_and_mortar, 1) && !Toolbelt.containsTool(e.player, Obj.pestle_and_mortar)) {
+            e.player.sendMessage("You need a pestle and mortar to crush the garlic.")
+            return@onItemClick
+        }
+        crushGarlic(e.player)
+    }
     onItemOnItem(intArrayOf(Obj.garlic), intArrayOf(Obj.pestle_and_mortar)) { e ->
-        e.player.inventory.deleteItem(Obj.garlic, 1)
-        e.player.inventory.addItem(Obj.fd_crushed_garlic, 1)
-        e.player.sendMessage("You crush the garlic into a fine powder.")
+        crushGarlic(e.player)
     }
     onItemOnItem(intArrayOf(Obj.fd_silver_pot_blood_blessed, Obj.fd_silver_pot_blood_spiced_blessed), intArrayOf(Obj.garlic)) { e ->
         e.player.sendMessage("You need to crush the garlic before adding it to the pot.")
@@ -52,6 +59,14 @@ fun mapBloodDiamondDesertTreasure() {
             e.player.sendMessage(if (ingredient == Obj.spicespot) "You add some spices to the pot." else "You add some crushed garlic to the pot.")
         }
     }
+}
+
+private fun crushGarlic(player: Player) {
+    if (!player.inventory.containsItem(Obj.garlic, 1))
+        return
+    player.inventory.deleteItem(Obj.garlic, 1)
+    player.inventory.addItem(Obj.fd_crushed_garlic, 1)
+    player.sendMessage("You crush the garlic into a fine powder.")
 }
 
 private fun malakDialogue(player: Player) {
@@ -123,8 +138,9 @@ private fun DialogueBuilder.malakDealOffer(player: Player) {
     npc(Npc.fourdiamonds_vampire_lord, CALM_TALK, "The current owner of this diamond is named Dessous.")
     options {
         op("Yes") {
-            player(CALM_TALK, "Well... I can't see any drawback. Okay, I accept your offer. Now tell me what you know.")
-            exec { player.set(MALAK_DEAL, true) }
+            player(CALM_TALK, "Well... I can't see any drawback. Okay, I accept your offer. Now tell me what you know.") {
+                player.set(MALAK_DEAL, true)
+            }
             npc(Npc.fourdiamonds_vampire_lord, CHUCKLE, "What I know? Hah! After you have been alive for as long as I, the things I know are enough to fill a library.")
             npc(Npc.fourdiamonds_vampire_lord, CALM_TALK, " I'm afraid you will need to be a little more specific.")
             malakQuestions(player)
@@ -160,8 +176,9 @@ private fun DialogueBuilder.malakQuestions(player: Player) {
             goto("malakQuestions")
         }
         op("How can I kill Dessous?") {
-            exec { player.set(MALAK_ASKED_HOW, true) }
-            player(CONFUSED, "So what advice can you give me on killing Dessous?")
+            player(CONFUSED, "So what advice can you give me on killing Dessous?") {
+                player.set(MALAK_ASKED_HOW, true)
+            }
             npc(Npc.fourdiamonds_vampire_lord, CALM_TALK, "As ancient and weak as Dessous is, he is still more than a match for the likes of you.")
             npc(Npc.fourdiamonds_vampire_lord, CALM_TALK, "That is, assuming you were to fight him fairly.")
             npc(Npc.fourdiamonds_vampire_lord, CALM_TALK, "My proposal would be for you to even the odds up a little bit...")
@@ -237,14 +254,13 @@ private fun DialogueBuilder.malakDealFollowUp(player: Player) {
 private fun DialogueBuilder.malakReward(player: Player) {
     npc(Npc.fourdiamonds_vampire_lord, EVIL_LAUGH, "Ah, the wandering hero returns! I take it you have dispatched poor old Dessous for me?")
     player(ANGRY, "Quit playing games with me, Malak. I want that diamond, and I want it now!")
-    exec {
+    npc(Npc.fourdiamonds_vampire_lord, ANGRY, "Do not take that tone of voice with me, meat. You should be thankful I have allowed you your life.")
+    npc(Npc.fourdiamonds_vampire_lord, ANGRY, "Here, take your precious little bauble.") {
         player.inventory.deleteItem(Obj.fd_silver_pot_blessed, player.inventory.getAmountOf(Obj.fd_silver_pot_blessed))
         DesertTreasureDiamonds.giveBloodDiamond(player)
         player.set(BLOOD_DIAMOND_CLAIMED, true)
     }
-    npc(Npc.fourdiamonds_vampire_lord, ANGRY, "Do not take that tone of voice with me, meat. You should be thankful I have allowed you your life.")
-    npc(Npc.fourdiamonds_vampire_lord, ANGRY, "Here, take your precious little bauble.")
-    npc(Npc.fourdiamonds_vampire_lord, ANGRY, "I will take that silver pot from you as well, humans are not meant to possess such artefacts. Now get out of my sight, our deal is complete, and if I see you here again I will not hesistate to take you to Lord Drakan.")
+    npc(Npc.fourdiamonds_vampire_lord, ANGRY, "I will take that silver pot from you as well, humans are not meant to possess such artefacts.")
     npc(Npc.fourdiamonds_vampire_lord, ANGRY, "He will be extremely pleased to meet the murderer of poor Dessous, I suspect.")
 }
 
@@ -272,8 +288,7 @@ private fun ruantunDialogue(player: Player) {
         npc(Npc.malak, SAD, "I usssed to have that honour... Why do you ssseek me?")
 
         if (player.inventory.containsOneItem(Obj.silver_bar)) {
-            player(CALM_TALK, "I have a silver bar with me, I was wondering if you could make it into a 'sacrificial offering pot' for me?")
-            exec {
+            player(CALM_TALK, "I have a silver bar with me, I was wondering if you could make it into a 'sacrificial offering pot' for me?") {
                 player.inventory.deleteItem(Obj.silver_bar, 1)
                 player.inventory.addItem(Obj.fd_silver_pot, 1)
             }
@@ -293,6 +308,9 @@ private fun blessPot(player: Player, itemId: Int) {
     val blessed = when (itemId) {
         Obj.fd_silver_pot -> Obj.fd_silver_pot_blessed
         Obj.fd_silver_pot_blood -> Obj.fd_silver_pot_blood_blessed
+        Obj.fd_silver_pot_blood_garlic -> Obj.fd_silver_pot_blood_garlic_blessed
+        Obj.fd_silver_pot_blood_spiced -> Obj.fd_silver_pot_blood_spiced_blessed
+        Obj.fd_silver_pot_blood_garlic_spiced -> Obj.fd_silver_pot_blood_garlic_spiced_blessed
         else -> null
     }
     if (blessed == null || !player.getBool(MALAK_DEAL)) {
@@ -303,16 +321,18 @@ private fun blessPot(player: Player, itemId: Int) {
     player.startConversation {
         npc(Npc.high_priest_of_entrana, CALM_TALK, "Many greetings. Welcome to our fair island.")
         player(CALM_TALK, "Hi, I was wondering, can you quickly bless this for me?")
-        if (itemId == Obj.fd_silver_pot_blood) {
+        if (itemId != Obj.fd_silver_pot) {
             npc(Npc.high_priest_of_entrana, CONFUSED, "A somewhat strange request, but I see no harm in... Wait a moment... is that BLOOD?")
             player(NERVOUS, "Erm... yes...")
             npc(Npc.high_priest_of_entrana, CONFUSED, "Why do you want me to bless a pot full of someone's blood???")
             player(NERVOUS, "Oh, don't worry, it's not 'someones', it's my own!")
-            exec { swapPot(player, itemId, blessed) }
-            npc(Npc.high_priest_of_entrana, CONFUSED, "I... see... Well it is an unusual thing, but I see no harm in it. Take this, and walk in peace with Saradomin.")
+            npc(Npc.high_priest_of_entrana, CONFUSED, "I... see... Well it is an unusual thing, but I see no harm in it. Take this, and walk in peace with Saradomin.") {
+                swapPot(player, itemId, blessed)
+            }
         } else {
-            exec { swapPot(player, itemId, blessed) }
-            npc(Npc.high_priest_of_entrana, CALM_TALK, "A somewhat strange request, but I see no harm in it. There you go. May Saradomin walk with you.")
+            npc(Npc.high_priest_of_entrana, CALM_TALK, "A somewhat strange request, but I see no harm in it. There you go. May Saradomin walk with you.") {
+                swapPot(player, itemId, blessed)
+            }
         }
     }
 }

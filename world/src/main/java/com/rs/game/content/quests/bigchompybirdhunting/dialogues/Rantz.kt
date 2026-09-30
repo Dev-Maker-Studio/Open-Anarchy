@@ -15,7 +15,7 @@ import world.gregs.voidps.type.Tile
 
 @ServerStartupEvent
 fun mapRantzBigChompyBirdHunting() {
-    onNpcClick(Npc.npc_4471, options = arrayOf("Talk-to")) { (player, npc) ->
+    onNpcClick(Npc.npc_8659, options = arrayOf("Talk-to")) { (player, npc) ->
         rantzDialogue(player, npc)
     }
 }
@@ -73,8 +73,7 @@ private fun DialogueBuilder.startQuest(player: Player, npc: NPC) {
                 simple("You do not meet the requirements to start : 'Big Chompy Bird Hunting'.")
             } else {
                 player(CALM_TALK, "OK, I'll make you some 'stabbers'.")
-                npc(npc, CALM_TALK, "Good you creature, you need sticksies from achey tree and stabbies from dog bones.")
-                exec {
+                npc(npc, CALM_TALK, "Good you creature, you need sticksies from achey tree and stabbies from dog bones.") {
                     player.setQuestStage(Quest.BIG_CHOMPY_BIRD_HUNTING, STAGE_MAKING_OGRE_ARROWS)
                 }
             }
