@@ -174,7 +174,10 @@ class GameArea(val size: Int) {
 
     fun respawnPoint(player: Player, red: Boolean): Tile {
         val gates = BarrierTier.gateIds(red)
-        return World.getSpawnedObjectsInChunkRange(player.chunkId, 8).firstOrNull { it.id in gates }?.tile ?: baseEntrance(player.tile, red)
+        return World.getSpawnedObjectsInChunkRange(player.chunkId, 8)
+            .filter { it.id in gates }
+            .minByOrNull { Utils.getDistance(player.tile, it.tile) }
+            ?.let(::gateInside) ?: baseEntrance(player.tile, red)
     }
 
     fun nearPlotPoint(player: Player, x: Int, y: Int, offsetX: Int, offsetY: Int, distance: Int = 2) =
