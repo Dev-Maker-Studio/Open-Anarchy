@@ -19,11 +19,19 @@ import org.darkan.core.gameval.gen.Seq
 import world.gregs.voidps.type.Tile
 
 private val SHADOW_ENTRANCE_TILE = Tile.of(2547, 3421, 0)
+private val SHADOW_ENTRANCE_ARRIVAL_TILE = Tile.of(2547, 3422, 0)
 private val SHADOW_INTERIOR_LADDER_TILE = Tile.of(2629, 5072, 0)
+private val SHADOW_INTERIOR_ARRIVAL_TILE = Tile.of(2630, 5072, 0)
 private val SECURE_CHEST_TILE = Tile.of(3169, 2967, 0)
 private val DAMIS_SPAWN_TILE = Tile.of(2738, 5081, 0)
 
-private val DAMIS_ROOM_TRIGGER = Tile.of(2737, 5081, 0)
+private val DAMIS_WARNING_ONE_TILES = (2650..2665).flatMap { x -> (5068..5085).map { y -> Tile.of(x, y, 0) } }.toTypedArray()
+private val DAMIS_WARNING_TWO_TILES = (2670..2695).flatMap { x -> (5095..5115).map { y -> Tile.of(x, y, 0) } }.toTypedArray()
+private val DAMIS_WARNING_THREE_TILES = (2700..2728).flatMap { x -> (5075..5108).map { y -> Tile.of(x, y, 0) } }.toTypedArray()
+
+private val DAMIS_ROOM_TRIGGERS = (2733..2743).flatMap { x ->
+    (5076..5086).map { y -> Tile.of(x, y, 0) }
+}.toTypedArray()
 
 const val RASOLO_DEAL_ACCEPTED = "dtRasoloDealAccepted"
 
@@ -32,6 +40,9 @@ private const val DAMIS_ACTIVE = "dtDamisActive"
 private const val DAMIS_FIRST_DEFEATED = "dtDamisFirstDefeated"
 private const val DAMIS_DEFEATED = "dtDamisDefeated"
 private const val SHADOW_DIAMOND_CLAIMED = "dtShadowDiamondClaimed"
+private const val DAMIS_WARNING_ONE = "dtDamisWarningOne"
+private const val DAMIS_WARNING_TWO = "dtDamisWarningTwo"
+private const val DAMIS_WARNING_THREE = "dtDamisWarningThree"
 
 private val DAMIS_SECOND_FORM_TAUNTS = arrayOf(
     "Your pathetic skill won't help you now!",
@@ -59,14 +70,21 @@ fun mapShadowDiamondDesertTreasure() {
             player.sendMessage("You cannot find a way into the hidden dungeon.")
             return@onObjectClick
         }
-        player.useLadder(SHADOW_INTERIOR_LADDER_TILE)
+        player.set(DAMIS_WARNING_ONE, false)
+        player.set(DAMIS_WARNING_TWO, false)
+        player.set(DAMIS_WARNING_THREE, false)
+        player.useLadder(SHADOW_INTERIOR_ARRIVAL_TILE)
     }
 
     onObjectClick(Loc.di2_ladder_base, tiles = arrayOf(SHADOW_INTERIOR_LADDER_TILE)) { (player) ->
-        player.useLadder(SHADOW_ENTRANCE_TILE)
+        player.useLadder(SHADOW_ENTRANCE_ARRIVAL_TILE)
     }
 
-    onPlayerStep(arrayOf(DAMIS_ROOM_TRIGGER)) { (player) ->
+    onPlayerStep(DAMIS_WARNING_ONE_TILES) { (player) -> showDamisWarning(player, DAMIS_WARNING_ONE, "A voice seems to come from the walls around you;") }
+    onPlayerStep(DAMIS_WARNING_TWO_TILES) { (player) -> showDamisWarning(player, DAMIS_WARNING_TWO, "'You... do not be... long in this... place...") }
+    onPlayerStep(DAMIS_WARNING_THREE_TILES) { (player) -> showDamisWarning(player, DAMIS_WARNING_THREE, "Turn... back now, or... prepare... to meet your... doom...'") }
+
+    onPlayerStep(DAMIS_ROOM_TRIGGERS) { (player) ->
         enterDamisRoom(player)
     }
 
@@ -79,7 +97,7 @@ fun mapShadowDiamondDesertTreasure() {
         player.set(DAMIS_FIRST_DEFEATED, true)
         damis.forceTalk("Now I show... you... my true... power!")
 
-        val secondForm = OwnedNPC(player, Npc.fd_damis_tougher, damis.tile, true)
+        val secondForm = Damis(player, Npc.fd_damis_tougher, damis.tile)
         secondForm.setAutoDespawnAtDistance(false)
         secondForm.combatTarget = player
         scheduleDamisTaunt(player, secondForm)
@@ -108,6 +126,11 @@ private fun openSecureChest(player: Player) {
 
     if (player.getBool(GILDED_CROSS_CLAIMED)) {
         player.simpleDialogue("You find nothing of interest inside the chest.")
+        return
+    }
+
+    if (player.skills.getLevelForXp(Constants.THIEVING) < 53) {
+        player.sendMessage("You need a Thieving level of 53 to pick this lock.")
         return
     }
 
@@ -157,6 +180,7 @@ private fun attemptSecureChest(player: Player) {
     }
 
     player.sendMessage("...and manage to pick the final lock.")
+    player.skills.addXp(Constants.THIEVING, 150.0)
     player.inventory.addItemDrop(Obj.fd_sword_cross, 1)
     player.set(GILDED_CROSS_CLAIMED, true)
     player.simpleDialogue("Inside the chest, hidden under some rags, you find a Gilded Cross.")
@@ -170,7 +194,15 @@ private fun failSecureChest(player: Player) {
 
 private fun rollLockpick(player: Player): Boolean {
     val level = player.skills.getLevel(Constants.THIEVING)
-    return Utils.skillSuccess(level, player.auraManager.thievingMul, 8, 72)
+    return Utils.skillSuccess(level, player.auraManager.thievingMul, 47, 128)
+}
+
+private fun showDamisWarning(player: Player, key: String, message: String) {
+    if (player.getQuestStage(Quest.DESERT_TREASURE) != STAGE_DIAMONDS_OF_AZZANADRA ||
+        !player.getBool(RASOLO_DEAL_ACCEPTED) || player.getBool(DAMIS_DEFEATED) || player.getBool(key)
+    ) return
+    player.set(key, true)
+    player.sendMessage(message)
 }
 
 private fun enterDamisRoom(player: Player) {
@@ -190,15 +222,14 @@ private fun enterDamisRoom(player: Player) {
         return
 
     player.set(DAMIS_ACTIVE, true)
-    player.startConversation {
-        simple("A voice seems to come from walls:<br><br>'You... do not be... long in this... place...<br>Turn... back now, or... prepare... to meet your... doom...'")
-        exec {
-            val damis = OwnedNPC(player, Npc.fd_damis_normal, DAMIS_SPAWN_TILE, true)
-            damis.setAutoDespawnAtDistance(false)
-            damis.forceTalk("You should... have listened to me!")
-            damis.combatTarget = player
-        }
-    }
+
+    val damisId = if (player.getBool(DAMIS_FIRST_DEFEATED)) Npc.fd_damis_tougher else Npc.fd_damis_normal
+    val damis = Damis(player, damisId, DAMIS_SPAWN_TILE)
+    damis.setAutoDespawnAtDistance(false)
+    damis.forceTalk("You should... have listened to me!")
+    damis.combatTarget = player
+    if (damisId == Npc.fd_damis_tougher)
+        scheduleDamisTaunt(player, damis)
 }
 
 private fun scheduleDamisTaunt(player: Player, damis: OwnedNPC) {

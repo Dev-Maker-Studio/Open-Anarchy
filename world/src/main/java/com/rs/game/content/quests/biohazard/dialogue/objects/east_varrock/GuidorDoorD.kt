@@ -33,7 +33,7 @@ class GuidorDoorD(player: Player, obj: GameObject) {
                 }
 
                 else -> {
-                    player(CALM_TALK, "That's someone's bedroom.<br>I'm not going in there without a reason.")
+                    player(CALM_TALK, "That's someone's bedroom. I'm not going in there without a reason.")
                 }
 
             }

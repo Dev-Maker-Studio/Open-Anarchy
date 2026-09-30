@@ -57,7 +57,9 @@ private fun DialogueBuilder.startDesertTreasure(player: Player) {
                 }
 
                 op("Accept quest") {
-                    if (!player.inventory.hasFreeSlots()) {
+                    if (!Quest.DESERT_TREASURE.meetsReqs(player, "to start this quest.")) {
+                        simple("You do not meet the requirements to start Desert Treasure.")
+                    } else if (!player.inventory.hasFreeSlots()) {
                         npc(Npc.npc_1918, CALM_TALK, "Well, you're going to have to clear some junk out of your inventory before I hand this over.")
                     } else {
                         questStart(Quest.DESERT_TREASURE)
@@ -171,31 +173,31 @@ private fun DialogueBuilder.treasureHunt(player: Player) {
 
 private fun DialogueBuilder.allFourDiamondsAsgarnia(player: Player) {
     player(CALM_TALK, "Hello there.")
-    npc(Npc.npc_1918, CALM_TALK, "Hello again.<br>How's the treasure hunting going?")
+    npc(Npc.npc_1918, CALM_TALK, "Hello again. How's the treasure hunting going?")
     player(CALM_TALK, "Well, I've found four diamonds.")
-    npc(Npc.npc_1918, CONFUSED, "What?<br>But you've been gone ages!")
+    npc(Npc.npc_1918, CONFUSED, "What? But you've been gone ages!")
     npc(Npc.npc_1918, CALM_TALK, "C'mon, you can be square with me, you must have found more treasure than just four measly diamonds by now!")
     player(CALM_TALK, "No, I really haven't.")
-    npc(Npc.npc_1918, CALM_TALK, "Hmmm.<br>Well, okay a deal is a deal.<br>Hand two of them over.")
+    npc(Npc.npc_1918, CALM_TALK, "Hmmm. Well, okay a deal is a deal. Hand two of them over.")
     player(CALM_TALK, "Actually, I think I'm going to need them to gain access to the real treasure...")
-    npc(Npc.npc_1918, HAPPY_TALKING, "REALLY?<br>Great, I love treasure!")
+    npc(Npc.npc_1918, HAPPY_TALKING, "REALLY? Great, I love treasure!")
     npc(Npc.npc_1918, HAPPY_TALKING, "Don't worry about two measly diamonds if you think they'll lead to something better!")
     npc(Npc.npc_1918, CALM_TALK, "I don't usually get out of bed for less than a hundred gold bars!")
 }
 
 private fun DialogueBuilder.diamondsPlacedAsgarnia(player: Player) {
     player(CALM_TALK, "Hello there.")
-    npc(Npc.npc_1918, CALM_TALK, "Hello again, apprentice archaeologist.<br>How's the treasure hunting going?")
+    npc(Npc.npc_1918, CALM_TALK, "Hello again, apprentice archaeologist. How's the treasure hunting going?")
     player(CALM_TALK, "Well... I found four diamonds...")
-    npc(Npc.npc_1918, HAPPY_TALKING, "Great!<br>Pass me my share, and it's a good job all around!")
+    npc(Npc.npc_1918, HAPPY_TALKING, "Great! Pass me my share, and it's a good job all around!")
     player(CALM_TALK, "Um... sorry, I can't.")
-    npc(Npc.npc_1918, CONFUSED, "Huh?<br>You're not trying to break a deal here are ya???")
-    player(CALM_TALK, "No, it's just...<br>There were these weird pillars around this pyramid...")
+    npc(Npc.npc_1918, CONFUSED, "Huh? You're not trying to break a deal here are ya???")
+    player(CALM_TALK, "No, it's just... There were these weird pillars around this pyramid...")
     npc(Npc.npc_1918, CONFUSED, "Yes?")
-    player(NERVOUS, "Um...<br><br>Well...")
-    player(NERVOUS, "They kind of...<br>ate the diamonds...")
+    player(NERVOUS, "Um... Well...")
+    player(NERVOUS, "They kind of... ate the diamonds...")
     npc(Npc.npc_1918, CONFUSED, "Pyramid columns ate your diamonds?")
-    npc(Npc.npc_1918, CONFUSED, "That's a crazy story kid.<br>Why would you go putting diamonds into them in the first place anyway?<br>Diamonds!")
+    npc(Npc.npc_1918, CONFUSED, "That's a crazy story kid. Why would you go putting diamonds into them in the first place anyway? Diamonds!")
     npc(Npc.npc_1918, CALM_TALK, "Of all things!")
     player(CALM_TALK, "Well, I have this feeling there is some better treasure inside that pyramid, and I needed to put the diamonds in to gain entrance.")
     npc(Npc.npc_1918, HAPPY_TALKING, "Well what are you wasting time talking to me for?")

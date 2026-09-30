@@ -36,7 +36,7 @@ class SanfewDEadgarsRuse(player: Player, npc: NPC) {
                     player(CALM_TALK, "Eadgar says he needs some dirty clothes for his plan, and he said you might be able to help.")
                     npc(npc, CALM_TALK, "Now why would he need that?")
                     player(CALM_TALK, "It's a long story.")
-                    npc(npc, CALM_TALK, "Never mind then...<br>I think Tegid is doing his laundry outside. You could ask him if you can borrow one of his dirty robes.")
+                    npc(npc, CALM_TALK, "Never mind then... I think Tegid is doing his laundry outside. You could ask him if you can borrow one of his dirty robes.")
                 }
 
                 in STAGE_NEED_TROLL_POTION..STAGE_DISCOVERED_KEY_LOCATION -> {

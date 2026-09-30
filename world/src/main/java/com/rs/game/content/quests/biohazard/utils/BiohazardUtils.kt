@@ -155,7 +155,7 @@ class BiohazardUtils(val player: Player) {
                 player.sendMessage("That wasn't very nice.")
             }
         } else if (stage >= STAGE_APPLE_IN_CAULDRON) {
-            player.playerDialogue(CALM_TALK, "The stew is already looking a bit rotten.<br>I shouldn't need to put another rotten apple in there.")
+            player.playerDialogue(CALM_TALK, "The stew is already looking a bit rotten. I shouldn't need to put another rotten apple in there.")
         } else {
             player.sendMessage("You see no benefit in doing that.")
         }

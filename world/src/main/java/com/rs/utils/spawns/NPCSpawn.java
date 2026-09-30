@@ -55,10 +55,29 @@ public class NPCSpawn {
 	}
 
 	public NPC spawn() {
-		NPC npc = World.spawnNPC(npcId, tile, dir, false, true, customName);
+		Tile spawnTile = tile;
+		if ((npcId == 1973 || npcId == 1976) && tile.getPlane() == 0 && tile.getX() >= 2624 && tile.getX() <= 2743 && tile.getY() >= 5056 && tile.getY() <= 5119 && !World.floorAndWallsFree(tile, getDefs().getSize())) {
+			spawnTile = nearestWalkableTile(tile, getDefs().getSize());
+		}
+		NPC npc = World.spawnNPC(npcId, spawnTile, dir, false, true, customName);
 		if (clip != null)
 			npc.setCollisionStrategyType(clip);
 		return npc;
+	}
+
+	private Tile nearestWalkableTile(Tile origin, int size) {
+		for (int radius = 1; radius <= 8; radius++) {
+			for (int x = origin.getX() - radius; x <= origin.getX() + radius; x++) {
+				for (int y = origin.getY() - radius; y <= origin.getY() + radius; y++) {
+					if (Math.max(Math.abs(x - origin.getX()), Math.abs(y - origin.getY())) != radius)
+						continue;
+					Tile candidate = Tile.of(x, y, origin.getPlane());
+					if (World.floorAndWallsFree(candidate, size))
+						return candidate;
+				}
+			}
+		}
+		throw new IllegalStateException("No walkable spawn tile near " + origin + " for NPC " + npcId);
 	}
 
 	public NPC spawnAtCoords(Tile tile, Direction dir) {

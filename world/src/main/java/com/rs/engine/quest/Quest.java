@@ -303,10 +303,12 @@ public enum Quest {
 				meetsRequirements = false;
 			}
 		}
-		for (int skillId : getDefs().getExtraInfo().getPreReqSkillReqs().keySet()) {
-			if (player.getSkills().getLevelForXp(skillId) < getDefs().getExtraInfo().getPreReqSkillReqs().get(skillId)) {
+		Map<Integer, Integer> skillReqs = new HashMap<>(getDefs().getExtraInfo().getPreReqSkillReqs());
+		getDefs().getExtraInfo().getSkillReq().forEach((skillId, level) -> skillReqs.merge(skillId, level, Math::max));
+		for (int skillId : skillReqs.keySet()) {
+			if (player.getSkills().getLevelForXp(skillId) < skillReqs.get(skillId)) {
 				if (actionStr != null)
-					player.sendMessage("You need " + Utils.addArticle(Skills.SKILL_NAME[skillId]) + " level of " + getDefs().getExtraInfo().getPreReqSkillReqs().get(skillId)+".");
+					player.sendMessage("You need " + Utils.addArticle(Skills.SKILL_NAME[skillId]) + " level of " + skillReqs.get(skillId)+".");
 				meetsRequirements = false;
 			}
 		}

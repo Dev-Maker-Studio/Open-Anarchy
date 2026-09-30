@@ -96,8 +96,11 @@ fun mapDeathPlateauInteractions() {
             }
         }
         if (e.equip() && e.item.id == SPIKED_BOOTS) {
-            e.player.sendMessage("Trying to walk in these would be difficult. I'll carry them for now.")
-            e.cancel()
+            val inIcelands = e.player.x in 2800..2895 && e.player.y in 3700..3835
+            if (!inIcelands) {
+                e.player.sendMessage("Trying to walk in these would be difficult. I'll carry them for now.")
+                e.cancel()
+            }
         }
     }
 

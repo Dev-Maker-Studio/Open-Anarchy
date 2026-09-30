@@ -35,11 +35,12 @@ private val PYRAMID_TRAP_EXIT = Tile.of(3233, 2883, 0)
 private val LEVEL_1_TRAP_TILES = regionTiles(45, 77, 3)
 private val LEVEL_2_TRAP_TILES = regionTiles(44, 77, 2)
 private val LEVEL_3_TRAP_TILES = regionTiles(43, 77, 1)
+private val LEVEL_4_TRAP_TILES = regionTiles(50, 145, 0)
 
 private val SAFE_LADDER_TILES = setOf(
     LEVEL_1_UP_TILE, LEVEL_1_DOWN_TILE,
     LEVEL_2_UP_TILE, LEVEL_2_DOWN_TILE,
-    LEVEL_3_UP_TILE, LEVEL_3_DOWN_TILE
+    LEVEL_3_UP_TILE, LEVEL_3_DOWN_TILE, LEVEL_4_UP_TILE
 )
 
 private const val BASE_TRAP_DENOMINATOR = 18
@@ -104,13 +105,17 @@ fun mapJaldraochtPyramid() {
     onPlayerStep(LEVEL_3_TRAP_TILES) { (player, _, tile) ->
         processPyramidStep(player, tile)
     }
+    onPlayerStep(LEVEL_4_TRAP_TILES) { (player, _, tile) ->
+        processPyramidStep(player, tile)
+    }
 }
 
 private fun canEnterPyramid(player: Player): Boolean =
     player.getQuestStage(Quest.DESERT_TREASURE) >= STAGE_RETURN_TO_JALDRAOCHT
 
 private fun processPyramidStep(player: Player, tile: Tile) {
-    if (!canEnterPyramid(player) || tile in SAFE_LADDER_TILES || player.isLocked)
+    if (!canEnterPyramid(player) || tile in SAFE_LADDER_TILES || player.isLocked ||
+        (tile.plane == 0 && tile.x in 3228..3238 && tile.y in 9310..9320))
         return
 
     if (rollPyramidTrap(player)) {

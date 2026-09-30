@@ -319,7 +319,10 @@ public class Fletching extends PlayerAction {
 
 	@Override
 	public boolean process(Player player) {
-		if ((ticks <= 0) || !player.getInventory().containsItem(fletch.getId(), 1) || !player.getInventory().containsItem(fletch.getSelected(), 1))
+		if (ticks <= 0 || !player.getInventory().containsItem(fletch.getId(), 1))
+			return false;
+		if (!player.getInventory().containsItem(fletch.getSelected(), 1)
+				&& !com.rs.game.content.Toolbelt.containsTool(player, fletch.getSelected()))
 			return false;
 		if (player.getSkills().getLevel(Constants.FLETCHING) < fletch.getLevel()[option]) {
 			player.simpleDialogue("You need a level of " + fletch.getLevel()[option] + " to fletch this.");
