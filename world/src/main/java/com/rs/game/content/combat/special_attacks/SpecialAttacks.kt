@@ -742,11 +742,11 @@ fun handleClick(player: Player) {
 
 fun execute(type: SpecialAttack.Type, player: Player, target: Entity?): Int {
     val spec = getSpec(player.equipment.weaponId)
-    var cost = spec!!.energyCost.toDouble()
-    if (spec.type != type) {
+    if (spec == null || spec.type != type) {
         player.combatDefinitions.drainSpec(0)
         return 3
     }
+    var cost = spec.energyCost.toDouble()
     if (player.combatDefinitions.hasRingOfVigour()) cost *= 0.9
     if (player.combatDefinitions.getSpecialAttackPercentage() < cost) {
         player.sendMessage("You don't have enough power left.")
