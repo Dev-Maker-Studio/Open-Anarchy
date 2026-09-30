@@ -45,7 +45,7 @@ enum class BarrierTier(val item: Int, private val blueWalls: IntArray, private v
     }
 }
 
-private fun gateApproach(gate: GameObject): Tile? = when (gate.rotation) {
+fun gateInside(gate: GameObject): Tile? = when (gate.rotation) {
     0 -> Tile.of(gate.x - 1, gate.y, gate.plane)
     1 -> Tile.of(gate.x, gate.y + 1, gate.plane)
     2 -> Tile.of(gate.x + 1, gate.y, gate.plane)
@@ -55,15 +55,15 @@ private fun gateApproach(gate: GameObject): Tile? = when (gate.rotation) {
 
 private fun Player.isAt(x: Int, y: Int) = this.x == x && this.y == y
 
-private fun Player.isAtGate(gate: GameObject) = isAt(gate.x, gate.y) || gateApproach(gate)?.let { isAt(it.x, it.y) } == true
+private fun Player.isAtGate(gate: GameObject) = isAt(gate.x, gate.y) || gateInside(gate)?.let { isAt(it.x, it.y) } == true
 
 private fun Player.walkToGate(gate: GameObject): Boolean {
     if (isAtGate(gate)) return true
-    val approach = gateApproach(gate) ?: return false
+    val approach = gateInside(gate) ?: return false
     return addWalkSteps(gate.x, gate.y) || addWalkSteps(approach.x, approach.y)
 }
 
-private fun Player.gateExit(gate: GameObject): Tile? = if (!isAt(gate.x, gate.y)) Tile.of(gate.x, gate.y, gate.plane) else gateApproach(gate)
+private fun Player.gateExit(gate: GameObject): Tile? = if (!isAt(gate.x, gate.y)) Tile.of(gate.x, gate.y, gate.plane) else gateInside(gate)
 
 fun Player.passBarrier(gate: GameObject, red: Boolean) {
     if (hasEffect(Effect.FREEZE)) {
