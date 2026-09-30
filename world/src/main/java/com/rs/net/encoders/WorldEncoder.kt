@@ -146,22 +146,17 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         npcTrackingState.localCount = 0
     }
 
-    fun initPlayerTrackingState() {
+    private fun initPlayerTrackingState(regionHashes: IntArray) {
         val state = playerTrackingState
         state.localIndexCount = 0
         state.outIndexCount = 0
         state.localAddedPlayers = 0
         state.totalRenderDataSentLength = 0
-
-        // Local player is always in the local list
         state.localPlayers[player.index] = EntitySnapshotFactory.buildPlayerUpdatePlayer(player, player)
         state.localIndexes[state.localIndexCount++] = player.index
-
-        // All other slots start as "outside" players with their current region hashes
         for (playerIndex in 1 until 2048) {
             if (playerIndex == player.index) continue
-            val p: Player? = World.players[playerIndex]
-            state.regionHashes[playerIndex] = p?.getRegionHash() ?: 0
+            state.regionHashes[playerIndex] = regionHashes[playerIndex]
             state.outIndexes[state.outIndexCount++] = playerIndex
         }
     }
@@ -590,7 +585,8 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     fun sendDynamicMapRegion() {
         val chunks = BuildInstancedRegion.chunks(player.chunkX, player.chunkY, player.mapSize, ::instancedChunkDescriptor)
-        val withLocalPlayer = takeLocalPlayerBlock()
+        val otherPlayerRegionIds = takeLocalPlayerBlock()
+        val withLocalPlayer = otherPlayerRegionIds != null
         session.queuePacket(
             BuildInstancedRegion(
                 mapSize = player.mapSize,
@@ -601,7 +597,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
                 forceMapRefresh = player.isForceNextMapLoadRefresh,
                 localPlayerPid = if (withLocalPlayer) player.index else null,
                 localPlayerBaseTileHash = if (withLocalPlayer) player.tile.id else null,
-                otherPlayerRegionIds = if (withLocalPlayer) buildOtherPlayerRegionIds() else null,
+                otherPlayerRegionIds = otherPlayerRegionIds,
             )
         )
     }
@@ -615,7 +611,8 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     fun sendMapRegion() {
         val regionIds = BuildRegion.regionIds(player.chunkX, player.chunkY, player.mapSize)
-        val withLocalPlayer = takeLocalPlayerBlock()
+        val otherPlayerRegionIds = takeLocalPlayerBlock()
+        val withLocalPlayer = otherPlayerRegionIds != null
         session.queuePacket(
             BuildRegion(
                 regionIds = regionIds,
@@ -626,17 +623,18 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
                 forceMapRefresh = player.isForceNextMapLoadRefresh,
                 localPlayerPid = if (withLocalPlayer) player.index else null,
                 localPlayerBaseTileHash = if (withLocalPlayer) player.tile.id else null,
-                otherPlayerRegionIds = if (withLocalPlayer) buildOtherPlayerRegionIds() else null,
+                otherPlayerRegionIds = otherPlayerRegionIds,
             )
         )
     }
 
-    private fun takeLocalPlayerBlock(): Boolean {
+    private fun takeLocalPlayerBlock(): IntArray? {
         if (localPlayerBlockSent)
-            return false
+            return null
         localPlayerBlockSent = true
-        initPlayerTrackingState()
-        return true
+        val regionHashes = buildOtherPlayerRegionIds()
+        initPlayerTrackingState(regionHashes)
+        return regionHashes
     }
 
     private fun buildOtherPlayerRegionIds(): IntArray {

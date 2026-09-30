@@ -209,8 +209,50 @@ class Rev727PlayerUpdateDecoderTest {
 
         val downstairs = player(3, 3233, 3168, plane = 0, from = carol.tileHash30, teleported = true)
         frame = harness.tick(stay(local), downstairs)
+        assertTrue(frame[3]!!.removed)
+
+        local = player(localIndex, 3230, 3170, plane = 0, from = local.tileHash30, teleported = true)
+        frame = harness.tick(local, stay(downstairs))
+        assertTrue(frame[3]!!.added)
         assertEquals(0, frame[3]?.plane)
         assertEquals(3233, frame[3]?.x)
+    }
+
+    @Test
+    fun `players on another plane are never local`() {
+        val local = player(localIndex, 3200, 3200)
+        val upstairs = player(2, 3201, 3200, plane = 1)
+        val harness = Harness(localIndex, listOf(local, upstairs))
+
+        var frame = harness.tick(local, upstairs)
+        assertNull(frame[2])
+        assertEquals(listOf(1), harness.client.localPlayerIndices())
+
+        val downstairs = player(2, 3201, 3200, plane = 0, from = upstairs.tileHash30, teleported = true)
+        frame = harness.tick(local, downstairs)
+        assertTrue(frame[2]!!.added)
+
+        frame = harness.tick(local, player(2, 3201, 3200, plane = 1, from = downstairs.tileHash30, teleported = true))
+        assertTrue(frame[2]!!.removed)
+        assertEquals(listOf(1), harness.client.localPlayerIndices())
+    }
+
+    @Test
+    fun `a slot freed by a local player who changed region is reused at the right tile`() {
+        val local = player(localIndex, 3200, 3200)
+        var leaver = player(2, 3190, 3195)
+        val harness = Harness(localIndex, listOf(local, leaver))
+        harness.tick(local, leaver)
+
+        leaver = player(2, 3205, 3205, from = leaver.tileHash30, teleported = true)
+        harness.tick(local, leaver)
+
+        var frame = harness.tick(local)
+        assertTrue(frame[2]!!.removed)
+
+        frame = harness.tick(local, player(2, 3203, 3198))
+        assertTrue(frame[2]!!.added)
+        assertEquals(tileHash30(3203, 3198, 0), frame[2]?.tileHash30)
     }
 
     @Test

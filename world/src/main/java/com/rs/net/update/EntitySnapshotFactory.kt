@@ -363,7 +363,7 @@ object EntitySnapshotFactory {
         val playersByIndex = arrayOfNulls<PlayerUpdatePlayer>(2048)
         for (index in 1 until 2048) {
             val p = World.players[index] ?: continue
-            if (!p.hasFinished()) {
+            if (p.hasStarted() && !p.hasFinished()) {
                 playersByIndex[index] = buildPlayerUpdatePlayer(p, observer)
             }
         }
