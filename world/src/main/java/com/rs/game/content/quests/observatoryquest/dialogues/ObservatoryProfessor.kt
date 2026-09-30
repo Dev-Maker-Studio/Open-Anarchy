@@ -59,8 +59,7 @@ private fun startObservatoryQuest(player: Player) {
     }
 }
 
-private fun observatoryIntroduction(player: Player) {
-    player.startConversation {
+private fun com.rs.engine.dialogue.DialogueBuilder.observatoryIntroduction(player: Player) {
         player(HeadE.CALM_TALK, "An Observatory?")
         npc(Npc.observatory_professor, HeadE.CALM_TALK, "Of course. We have a superb telescope up in the Observatory, on the hill.")
         npc(Npc.observatory_professor, HeadE.HAPPY_TALKING, "A truly marvellous invention, the likes of which you'll never behold again.")
@@ -97,7 +96,6 @@ private fun observatoryIntroduction(player: Player) {
                 npc(Npc.observatory_professor, HeadE.CALM_TALK, "If you see anyone who can help then please send them my way.")
             }
         }
-    }
 }
 
 private fun gatheringPlanks(player: Player) {

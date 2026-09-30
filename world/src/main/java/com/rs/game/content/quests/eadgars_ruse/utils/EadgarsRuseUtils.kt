@@ -49,7 +49,7 @@ class EadgarsRuseUtils(val player: Player) {
                     npc(PARROTY_PETE, FRUSTRATED, "Hey! What are you doing with that parrot?") { player.faceEntityTile(parrotyPete) }
                     player(CALM_TALK, "Nothing.")
                     npc(PARROTY_PETE, WORRIED, "It looks drunk! You should NEVER feed alcohol to a parrot!") { player.faceEntityTile(parrotyPete) }
-                    player(CALM_TALK, "Well, good thing I found it!<br>I'll just take it to the vet for you, shall I?")
+                    player(CALM_TALK, "Well, good thing I found it! I'll just take it to the vet for you, shall I?")
                     npc(PARROTY_PETE, HAPPY_TALKING, "Oh, thank you! We're ever so busy here at the Zoo.") { player.faceEntityTile(parrotyPete) }
                 }
                 waitForDialogue()
@@ -88,7 +88,7 @@ class EadgarsRuseUtils(val player: Player) {
                 if (player.inventory.hasFreeSlots()) {
                     player.startConversation {
                         simple("You look under the rack and find the drunk parrot.")
-                        npc(PARROT, T_CALM_TALK, "Ah, hello Sir. Could you please free me?<br>I seem to have ... OW! What are you doing?<br>That's my spleen!")
+                        npc(PARROT, T_CALM_TALK, "Ah, hello Sir. Could you please free me? I seem to have ... OW! What are you doing? That's my spleen!")
                         player(CALM_TALK, "I think it's probably heard enough.") {
                             player.anim(PICKUP_ANIM)
                             player.inventory.addItem(DRUNK_PARROT)

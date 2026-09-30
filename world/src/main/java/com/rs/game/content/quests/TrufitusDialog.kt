@@ -1358,10 +1358,10 @@ fun mapTrufitus() {
 
         when (val questStage = player.getQuestStage(Quest.JUNGLE_POTION)) {
             JunglePotion.QUEST_COMPLETE -> player.startConversation {
-                npc(npc, HeadE.HAPPY_TALKING, "My greatest respects, bwana.<br>I  have communed with my gods and the future looks good for my people.")
+                npc(npc, HeadE.HAPPY_TALKING, "My greatest respects, bwana. I  have communed with my gods and the future looks good for my people.")
                 npc(npc, HeadE.NERVOUS, "We are happy now that the gods are not angry with us.")
                 npc(npc, HeadE.CALM_TALK, "With some blessings, we will be safe here.")
-                npc(npc, HeadE.CALM_TALK, "You should deliver the good news to bwana Timfraku, chief of Tai Bwo Wannai.<br>He lives in a raised hut not far from here.")
+                npc(npc, HeadE.CALM_TALK, "You should deliver the good news to bwana Timfraku, chief of Tai Bwo Wannai. He lives in a raised hut not far from here.")
             }
             JunglePotion.NOT_STARTED -> junglePotionIntroduction(player, npc)
             else -> JUNGLE_HERBS[questStage]?.let { junglePotionHerbDialogue(player, npc, questStage == JunglePotion.FIND_ROGUES_PURSE, it) }
@@ -1378,7 +1378,7 @@ private class JungleHerb(
     val clue: List<Pair<HeadE, String>>
 )
 
-private const val ARDRIGAL_CLUE_1 = "The next herb is called 'ardrigal'.<br>It is related to the palm, and grows in its brother's shady profusion."
+private const val ARDRIGAL_CLUE_1 = "The next herb is called 'ardrigal'. It is related to the palm, and grows in its brother's shady profusion."
 private const val ARDRIGAL_CLUE_2 = "To the north-east you will find a small peninsula. It is just after the cliffs come down to meet the sands. That is where you should search for it."
 private const val SITO_FOIL_CLUE = "Now I want you to find a herb called 'sito foil', and it grows best where the ground has been blackened by the living flame."
 private const val VOLENCIA_MOSS_CLUE_1 = "The next herb is called 'volencia moss'. It clings to rocks for its existence, and is difficult to see, so you must search well for it."
@@ -1386,43 +1386,43 @@ private const val VOLENCIA_MOSS_CLUE_2 = "Volencia moss prefers rocks of high me
 private const val ROGUES_PURSE_CLUE_1 = "This herb is the most difficult to find, as it inhabits the darkness of the underground."
 private const val ROGUES_PURSE_CLUE_2 = "It is called 'rogue's purse', and is only to be found in pothole caverns in the northern part of this island."
 private const val ROGUES_PURSE_CLUE_3 = "A secret entrance to the pothole caverns is set into the northern cliffs of this land. Take care, bwana, as it may be dangerous."
-private const val SNAKE_WEED_CLUE = "The first herb that you need to gather is called 'snake weed'.<br>It grows near vines in an area to the south-west, where the ground turns soft and the water kisses your feet."
+private const val SNAKE_WEED_CLUE = "The first herb that you need to gather is called 'snake weed'. It grows near vines in an area to the south-west, where the ground turns soft and the water kisses your feet."
 
 private val JUNGLE_HERBS = mapOf(
     JunglePotion.FIND_SNAKE_WEED to JungleHerb(
         Obj.unidentified_snake_weed, Obj.snake_weed, "snake weed",
-        "Greetings, bwana.<br>Do you have the snake weed?",
+        "Greetings, bwana. Do you have the snake weed?",
         listOf(HeadE.HAPPY_TALKING to "Great! You have the snake weed. Many thanks.", HeadE.CALM_TALK to ARDRIGAL_CLUE_1, HeadE.CALM_TALK to ARDRIGAL_CLUE_2),
         listOf(HeadE.CALM_TALK to SNAKE_WEED_CLUE, HeadE.CALM_TALK to "I really need that snake weed if I am to make this potion.")
     ),
     JunglePotion.FIND_ARDRIGAL to JungleHerb(
         Obj.unidentified_ardrigal, Obj.ardrigal, "ardrigal",
         "Have you brought the ardrigal herb?",
-        listOf(HeadE.HAPPY_TALKING to "Ardrigal! Wonderful.<br>You are doing well, bwana.", HeadE.CALM_TALK to SITO_FOIL_CLUE),
+        listOf(HeadE.HAPPY_TALKING to "Ardrigal! Wonderful. You are doing well, bwana.", HeadE.CALM_TALK to SITO_FOIL_CLUE),
         listOf(HeadE.CALM_TALK to ARDRIGAL_CLUE_1, HeadE.CALM_TALK to ARDRIGAL_CLUE_2)
     ),
     JunglePotion.FIND_SITO_FOIL to JungleHerb(
         Obj.unidentified_sito_foil, Obj.sito_foil, "sito foil",
-        "Hello again, bwana.<br>Have you been successful in getting the sito foil?",
-        listOf(HeadE.HAPPY_TALKING to "Well done, bwana.<br>Just two more herbs to collect.", HeadE.CALM_TALK to VOLENCIA_MOSS_CLUE_1, HeadE.CALM_TALK to VOLENCIA_MOSS_CLUE_2),
+        "Hello again, bwana. Have you been successful in getting the sito foil?",
+        listOf(HeadE.HAPPY_TALKING to "Well done, bwana. Just two more herbs to collect.", HeadE.CALM_TALK to VOLENCIA_MOSS_CLUE_1, HeadE.CALM_TALK to VOLENCIA_MOSS_CLUE_2),
         listOf(HeadE.CALM_TALK to SITO_FOIL_CLUE)
     ),
     JunglePotion.FIND_VOLENCIA_MOSS to JungleHerb(
         Obj.unidentified_volencia_moss, Obj.volencia_moss, "volencia moss",
-        "Greetings, bwana.<br>Do you have the volencia moss?",
+        "Greetings, bwana. Do you have the volencia moss?",
         listOf(
-            HeadE.HAPPY_TALKING to "Ah, volencia moss. Beautiful.<br>One final herb and the potion will be complete.",
+            HeadE.HAPPY_TALKING to "Ah, volencia moss. Beautiful. One final herb and the potion will be complete.",
             HeadE.AMAZED to ROGUES_PURSE_CLUE_1, HeadE.CALM_TALK to ROGUES_PURSE_CLUE_2, HeadE.CALM_TALK to ROGUES_PURSE_CLUE_3
         ),
         listOf(HeadE.CALM_TALK to VOLENCIA_MOSS_CLUE_1, HeadE.CALM_TALK to VOLENCIA_MOSS_CLUE_2)
     ),
     JunglePotion.FIND_ROGUES_PURSE to JungleHerb(
         Obj.unidentified_rogues_purse, Obj.rogues_purse, "rogue's purse",
-        "Welcome back.<br>Have you been successful in getting the rogue's purse, bwana?",
+        "Welcome back. Have you been successful in getting the rogue's purse, bwana?",
         listOf(
             HeadE.CALM_TALK to "Most excellent, bwana! You have returned all the herbs to me.",
-            HeadE.HAPPY_TALKING to "I can finish the preparations for the potion, and at last divine with the gods.<br>Many blessings upon you!",
-            HeadE.CALM_TALK to "I must now prepare.<br>Please excuse me while I make the arrangements."
+            HeadE.HAPPY_TALKING to "I can finish the preparations for the potion, and at last divine with the gods. Many blessings upon you!",
+            HeadE.CALM_TALK to "I must now prepare. Please excuse me while I make the arrangements."
         ),
         listOf(HeadE.AMAZED to ROGUES_PURSE_CLUE_1, HeadE.CALM_TALK to ROGUES_PURSE_CLUE_2, HeadE.CALM_TALK to ROGUES_PURSE_CLUE_3)
     )
@@ -1458,7 +1458,7 @@ private fun junglePotionHandOver(player: Player, npc: NPC, finalHerb: Boolean, h
             npc(npc, HeadE.CONFUSED, "I don't recognise that grimy herb, bwana.")
         }
         else -> player.startConversation {
-            npc(npc, HeadE.SAD_MILD_LOOK_DOWN, "Please don't try to deceive me.<br>I really need that ${herb.herbName} if I am to make this potion.")
+            npc(npc, HeadE.SAD_MILD_LOOK_DOWN, "Please don't try to deceive me. I really need that ${herb.herbName} if I am to make this potion.")
         }
     }
 }
@@ -1470,7 +1470,7 @@ private fun junglePotionQuestOffer(player: Player, npc: NPC) {
         npc(npc, HeadE.CALM_TALK, "I will then give you details of where to find the next herb. In return for this great favour, I will give you training in Herblore.")
         questStart(Quest.JUNGLE_POTION)
         exec { player.questManager.setStage(Quest.JUNGLE_POTION, JunglePotion.FIND_SNAKE_WEED) }
-        player(HeadE.HAPPY_TALKING, "It sounds like just the challenge for me.<br>And it would make a nice break from killing things!")
+        player(HeadE.HAPPY_TALKING, "It sounds like just the challenge for me. And it would make a nice break from killing things!")
         npc(npc, HeadE.CHEERFUL, "That is excellent, bwana!")
         npc(npc, HeadE.CALM_TALK, SNAKE_WEED_CLUE)
     }
@@ -1478,12 +1478,12 @@ private fun junglePotionQuestOffer(player: Player, npc: NPC) {
 
 private fun junglePotionIntroduction(player: Player, npc: NPC) {
     player.startConversation {
-        npc(npc, HeadE.HAPPY_TALKING, "Greetings, bwana!<br>I am Trufitus Shakaya of the Tai Bwo Wannai village.")
+        npc(npc, HeadE.HAPPY_TALKING, "Greetings, bwana! I am Trufitus Shakaya of the Tai Bwo Wannai village.")
         npc(npc, HeadE.HAPPY_TALKING, "Welcome to our humble village.")
         options {
             op("What does 'bwana' mean?") {
                 npc(npc, HeadE.HAPPY_TALKING, player.getPronoun("It means 'friend', gracious sir.", "Gracious lady, it means friend."))
-                npc(npc, HeadE.CONFUSED, "And friends come in peace.<br>I assume that you come in peace?")
+                npc(npc, HeadE.CONFUSED, "And friends come in peace. I assume that you come in peace?")
                 options {
                     op("Yes, of course I do.") {
                         npc(npc, HeadE.HAPPY_TALKING, "Well, that is good news, as I may have a proposition for you.")
@@ -1521,7 +1521,7 @@ private fun DialogueBuilder.junglePotionHelpRequest(player: Player, npc: NPC) {
             exec { junglePotionQuestOffer(player, npc) }
         }
         op("I am sorry, but I am very busy.") {
-            npc(npc, HeadE.CALM_TALK, "Very well, then.<br>May your journeys bring you much joy.")
+            npc(npc, HeadE.CALM_TALK, "Very well, then. May your journeys bring you much joy.")
             npc(npc, HeadE.CONFUSED, "Perhaps you will pass this way again, and then take up my proposal?")
             npc(npc, HeadE.HAPPY_TALKING, "But for now, fare thee well.")
         }

@@ -32,12 +32,21 @@ default:
     - git -C cache-source sparse-checkout set gamevals
     - git -C cache-source checkout --quiet "$CACHE_SOURCE_SHA"
 
+compile:
+  stage: build
+  script:
+    - ./gradlew :world:compileKotlin :world:compileJava --build-cache
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+
 # Every branch and tag gets compiled; nothing is kept from feature branches.
 build:
   stage: build
   script:
     # Serial on purpose: the shared runner cannot hold two Kotlin compilations of this size at once.
     - ./gradlew assemble --build-cache
+  rules:
+    - if: '$CI_COMMIT_TAG'
 
 # Publishes lobby-server and world-server to the package registry:
 #   dev push -> <version>-dev-<pipeline id>   (the channel beta servers follow)
@@ -45,7 +54,6 @@ build:
 deploy:
   stage: deploy
   rules:
-    - if: '$CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_COMMIT_TAG'
   script:
     - ./gradlew publish --build-cache

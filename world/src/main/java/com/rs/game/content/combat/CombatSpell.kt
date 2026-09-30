@@ -16,6 +16,7 @@
 //
 package com.rs.game.content.combat
 
+import org.darkan.core.gameval.gen.Npc
 import com.rs.game.World
 import com.rs.game.content.Effect
 import com.rs.game.content.skills.dungeoneering.DungeonController
@@ -620,6 +621,11 @@ enum class CombatSpell(
     }
 
     fun canCast(player: Player, target: Entity): Boolean {
+        if (target is NPC && ((target.id == Npc.icediamond_icewarrior && !isFireSpell) ||
+                (target.id == Npc.firediamond_firewarrior && !isWaterSpell))) {
+            player.sendMessage("${target.definitions.name} is immune to this spell.")
+            return false
+        }
         if (player.skills.getLevel(Constants.MAGIC) < req) {
             player.sendMessage("You need a magic level of $req to cast this spell.")
             return false

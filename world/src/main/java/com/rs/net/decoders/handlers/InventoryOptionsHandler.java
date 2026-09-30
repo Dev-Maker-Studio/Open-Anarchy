@@ -471,6 +471,16 @@ public class InventoryOptionsHandler {
 			}
 		}
 
+		Fletch fletch = Fletch.forId(itemId);
+		if (fletch != null && fletch.getSelected() == Fletching.KNIFE) {
+			if (player.getInventory().containsItem(Fletching.KNIFE) || com.rs.game.content.Toolbelt.containsTool(player, Fletching.KNIFE)) {
+				player.startConversation(new FletchingD(player, fletch));
+			} else {
+				player.sendMessage("You need a knife to fletch the " + item.getDefinitions().getName().toLowerCase() + ".");
+			}
+			return;
+		}
+
 		if (itemId == 1438)
 			Runecrafting.locate(player, 3127, 3405);
 		else if (itemId == 1440)

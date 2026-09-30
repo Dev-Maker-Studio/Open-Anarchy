@@ -2072,7 +2072,6 @@
     "allowAmbient": false,
     "id": 213,
     "regionIds": [
-      12945,
       12300
     ]
   },
@@ -2619,7 +2618,8 @@
     "allowAmbient": false,
     "id": 271,
     "regionIds": [
-      9366
+      9366,
+      8009
     ]
   },
   {
@@ -3399,7 +3399,10 @@
     "regionIds": [
       12589,
       12845,
-      13101
+      13101,
+      11597,
+      11341,
+      11085
     ]
   },
   {
@@ -3467,7 +3470,9 @@
     "comment": "",
     "allowAmbient": false,
     "id": 359,
-    "regionIds": []
+    "regionIds": [
+      12945
+    ]
   },
   {
     "name": "Elvarg's Theme",
@@ -3526,7 +3531,8 @@
     "allowAmbient": false,
     "id": 365,
     "regionIds": [
-      11570
+      11570,
+      11670
     ]
   },
   {
@@ -3794,7 +3800,7 @@
   {
     "name": "Path of Peril",
     "hint": "in Damis's Shadow Dungeon.",
-    "comment": "Zanaris",
+    "comment": "Dungeon",
     "allowAmbient": false,
     "id": 393,
     "regionIds": [
@@ -6745,7 +6751,7 @@
     "allowAmbient": false,
     "id": 729,
     "regionIds": [
-      12349
+      14411
     ]
   },
   {

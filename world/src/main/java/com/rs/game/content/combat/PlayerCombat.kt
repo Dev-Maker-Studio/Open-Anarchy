@@ -19,6 +19,8 @@ package com.rs.game.content.combat
 import org.darkan.core.model.Bonus
 import org.darkan.core.cache.ItemDefinitions
 import org.darkan.core.map.pathfinder.Direction
+import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.gameval.gen.Obj
 import com.rs.game.World
 import com.rs.game.content.Effect
 import com.rs.game.content.combat.special_attacks.SpecialAttack
@@ -35,7 +37,6 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.Skills
 import com.rs.game.model.entity.player.actions.PlayerAction
 import org.darkan.core.Constants
-import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.model.Animation
 import org.darkan.core.model.Item
@@ -313,7 +314,7 @@ class PlayerCombat(@JvmField val target: Entity) : PlayerAction() {
                     checkSwiftGlovesEffect(player, p.taskDelay, attackStyle, weaponId, hit, p)
                 }
                 delayHit(target, p.taskDelay, weaponId, attackStyle, hit)
-                if (specced) player.equipment.removeAmmo(Equipment.AMMO, 1)
+                if (specced && !(target is NPC && target.id == Npc.firediamond_firewarrior)) player.equipment.removeAmmo(Equipment.AMMO, 1)
                 else dropAmmo(player, target, Equipment.AMMO, 1)
             }
 
@@ -577,6 +578,11 @@ fun getRangeCombatDelay(player: Player): Int {
 fun dropAmmo(player: Player, target: Entity, slot: Int = Equipment.AMMO, quantity: Int = 1) {
     if (player.equipment.getItem(slot) == null) return
     val ammoId = player.equipment.getItem(slot)!!.id
+    if (target is NPC && target.id == Npc.firediamond_firewarrior) {
+        player.equipment.removeAmmo(slot, quantity)
+        World.addGroundItem(Item(if (ammoId == Obj.ice_arrow) Obj.ice_arrow else Obj.ashes, quantity), target.tile, player)
+        return
+    }
     when (ammoId) {
         15243, 25202, 10033, 10034, 19152, 19157, 19162, 10142, 10143, 10144, 10145 -> {
             player.equipment.removeAmmo(slot, quantity) //delete 100% of the time

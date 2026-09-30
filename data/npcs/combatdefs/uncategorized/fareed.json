@@ -6,9 +6,9 @@
   "names": [
     "Fareed"
   ],
-  "attackAnim": "sitting_throne_attack",
+  "attackAnim": 422,
   "attackSound": -1,
-  "defenceAnim": "human_sword_def",
+  "defenceAnim": "human_unarmed_def",
   "defendSound": -1,
   "deathAnim": "human_death",
   "deathDelay": 6,
