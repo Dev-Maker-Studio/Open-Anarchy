@@ -41,6 +41,15 @@ import kotlin.math.hypot
 import kotlin.math.max
 
 private const val SPAWN_INTERVAL = 10
+private const val WAVES_COUNTER = "Barbarian Assault waves completed"
+private const val QUEEN_COUNTER = "Penance Queen kills"
+private const val HONOUR_COUNTER = "Barbarian Assault Honour Points earned"
+private const val TRAPS_COUNTER = "Barbarian Assault traps repaired"
+private const val EGGS_COLLECTED_COUNTER = "Barbarian Assault eggs collected"
+private const val EGGS_CONVERTED_COUNTER = "Barbarian Assault eggs converted"
+private const val EGGS_LOADED_COUNTER = "Barbarian Assault cannon eggs loaded"
+private const val DEATHS_COUNTER = "Barbarian Assault deaths"
+internal const val HEALERS_POISONED_COUNTER = "Penance Healers poisoned"
 private const val CALL_INTERVAL = 50
 private const val HUD_INTERVAL = 2
 private const val STALE_CALL_TICKS = 1
@@ -323,7 +332,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
         setTrapState(index)
         World.sendObjectAnimation(traps[index], Animation(Seq.barbassault_trap_attack))
         runner.forceTalk("Aaargh!")
-        runner.applyHit(Hit(runner, runner.hitpoints, HitLook.TRUE_DAMAGE))
+        runner.applyHit(Hit(roles.entries.firstOrNull { it.value == Role.DEFENDER }?.key ?: runner, runner.hitpoints, HitLook.TRUE_DAMAGE))
         return true
     }
 
@@ -358,6 +367,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
             player.inventory.deleteItem(Obj.logs, 1)
             trapCharges[index] = TRAP_CHARGES
             setTrapState(index)
+            player.incrementCount(TRAPS_COUNTER)
             player.sendMessage("You fix the trap.")
         }
     }
@@ -420,6 +430,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
                 if (!World.removeGroundItem(player, item, false)) return
                 eggs -= item
                 stats.goodEggs++
+                player.incrementCount(EGGS_COLLECTED_COUNTER)
                 if (toBag) bag.merge(colour, 1, Int::plus) else player.inventory.addItem(colour.obj, 1)
             }
         }
@@ -462,6 +473,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
         }
         player.inventory.refresh()
         player.anim(Seq.human_pickuptable)
+        if (converted > 0) player.incrementCount(EGGS_CONVERTED_COUNTER, converted)
         player.sendMessage(if (converted == 0) "The converter has nothing to convert." else "The converter changes $converted egg(s).")
     }
 
@@ -492,6 +504,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
             return
         }
         player.anim(Seq.barb_assault_egg_place)
+        player.incrementCount(EGGS_LOADED_COUNTER, loaded)
         player.sendMessage("You load $loaded egg(s) into the ${cannon.displayName} hopper.")
         active.forEach { refreshHopper(it, cannon) }
     }
@@ -886,11 +899,13 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
             val individual = scores.team + (scores.components[role] ?: 0).coerceAtLeast(0)
             val points = if (wave.queen) QUEEN_POINTS else individual.coerceAtLeast(0)
             val awarded = role.addPoints(player, points)
-            if (wave.queen) Role.entries.filter { it != role }.forEach { it.addPoints(player, QUEEN_OTHER_POINTS) }
+            val otherAwarded = if (wave.queen) Role.entries.filter { it != role }.sumOf { it.addPoints(player, QUEEN_OTHER_POINTS) } else 0
+            if (awarded + otherAwarded > 0) player.incrementCount(HONOUR_COUNTER, awarded + otherAwarded)
             player.set(HIGHEST_WAVE, max(player.highestBarbarianAssaultWave, wave.number))
-            player.incrementCount("Barbarian Assault waves completed")
+            player.incrementCount(WAVES_COUNTER)
+            player.incrementCount("$WAVES_COUNTER as ${role.displayName}")
             if (wave.queen) {
-                player.incrementCount("Penance Queen kills")
+                player.incrementCount(QUEEN_COUNTER)
                 player.vars.saveVarBit(Varbit.barbassault_queendead, 1)
                 player.vars.saveVarBit(Varbit.barbassault_armour_get_granite, 1)
             }
@@ -954,6 +969,7 @@ class BarbarianAssaultGame(val team: BarbarianAssaultTeam, val wave: Wave) {
     }
 
     fun playerDied(player: Player) {
+        player.incrementCount(DEATHS_COUNTER)
         if (state != State.RUNNING) return
         sendTeamMessage("${player.displayName} has fallen! The wave is lost.")
         fail()

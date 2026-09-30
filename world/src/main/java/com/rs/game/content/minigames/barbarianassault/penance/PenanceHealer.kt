@@ -1,6 +1,7 @@
 package com.rs.game.content.minigames.barbarianassault.penance
 
 import com.rs.game.content.minigames.barbarianassault.BarbarianAssaultGame
+import com.rs.game.content.minigames.barbarianassault.HEALERS_POISONED_COUNTER
 import com.rs.game.content.minigames.barbarianassault.PenanceFamily
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.Hit
@@ -55,6 +56,7 @@ class PenanceHealer(id: Int, tile: Tile, game: BarbarianAssaultGame, ordinal: In
     fun feed(player: Player, correct: Boolean) {
         lastFeeder = player
         if (!correct) return
+        player.incrementCount(HEALERS_POISONED_COUNTER)
         applyHit(Hit(player, FOOD_DAMAGE.coerceAtMost(hitpoints), HitLook.POISON_DAMAGE))
         if (!poisoned || game.tick - gateTick >= POISON_GATE) gateTick = game.tick
         if (!poisoned) lastPulse = game.tick

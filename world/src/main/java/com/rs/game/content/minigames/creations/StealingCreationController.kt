@@ -39,6 +39,13 @@ import world.gregs.voidps.type.Tile
 private const val WALL_CLIMB_AGILITY = 60
 private const val RIFT_JUMP_AGILITY = 40
 private const val PICKPOCKET_KEY = "sc_pickpocket_tick"
+private const val CLAY_COUNTER = "Stealing Creation sacred clay gathered"
+private const val KILN_COUNTER = "Stealing Creation items made at the kiln"
+private const val BUILT_COUNTER = "Stealing Creation barriers built"
+private const val REPAIRED_COUNTER = "Stealing Creation barriers repaired"
+private const val PICKPOCKETS_COUNTER = "Stealing Creation pickpockets"
+private const val KILLS_COUNTER = "Stealing Creation players killed"
+private const val DEATHS_COUNTER = "Stealing Creation deaths"
 private const val PICKPOCKET_DELAY_TICKS = 3
 private const val PICKPOCKET_LEVEL_GAP = 20
 private const val GIVE_DISTANCE = 3
@@ -248,7 +255,9 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
                 return@RouteEvent
             }
             val stolen = target.inventory.items.array().filterNotNull().randomOrNull() ?: return@RouteEvent
-            if (player.inventory.addItem(stolen)) target.inventory.deleteItem(stolen)
+            if (!player.inventory.addItem(stolen)) return@RouteEvent
+            target.inventory.deleteItem(stolen)
+            player.incrementCount(PICKPOCKETS_COUNTER)
             player.sendMessage("You sucessfully pickpocket an item from $targetName's pockets!")
         })
         return false
@@ -271,7 +280,10 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
     override fun processButtonClick(interfaceId: Int, componentId: Int, slotId: Int, slotId2: Int, opNum: Int): Boolean {
         when (interfaceId) {
             Interface.interface_813 -> {
-                Kiln.handleButton(player, componentId, opNum) { clayClass, clayUsed -> game.updateScore(player) { process(clayClass, clayUsed) } }
+                Kiln.handleButton(player, componentId, opNum) { clayClass, clayUsed ->
+                    game.updateScore(player) { process(clayClass, clayUsed) }
+                    player.incrementCount(KILN_COUNTER, clayUsed)
+                }
                 return true
             }
             Interface.interface_387 -> if (opNum == 1 && componentId == CAPE_SLOT_COMPONENT) {
@@ -432,8 +444,10 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
         player.schedule {
             player.anim(Seq.sc_player_building_walls)
             wait(1)
-            if (player.inventory.containsItem(tier.item, BarrierTier.BUILD_COST) && game.buildBarrier(team, tier, x, y))
+            if (player.inventory.containsItem(tier.item, BarrierTier.BUILD_COST) && game.buildBarrier(team, tier, x, y)) {
                 player.inventory.deleteItem(tier.item, BarrierTier.BUILD_COST)
+                player.incrementCount(BUILT_COUNTER)
+            }
             player.unlock()
         }
     }
@@ -458,8 +472,10 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
         player.schedule {
             player.anim(Seq.sc_player_building_walls)
             wait(1)
-            if (player.inventory.containsItem(repairWith.item, BARRIER_REPAIR_COST) && game.repairBarrier(x, y))
+            if (player.inventory.containsItem(repairWith.item, BARRIER_REPAIR_COST) && game.repairBarrier(x, y)) {
                 player.inventory.deleteItem(repairWith.item, BARRIER_REPAIR_COST)
+                player.incrementCount(REPAIRED_COUNTER)
+            }
             player.unlock()
         }
     }
@@ -511,6 +527,7 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
             override fun processWithDelay(player: Player): Int {
                 if (Utils.getRandomInclusive(clayClass) == 0) game.useSkillPlot(x, y)
                 player.inventory.addItem(Item(StealingCreation.SACRED_CLAY[clayClass - 1], 1))
+                player.incrementCount(CLAY_COUNTER)
                 game.updateScore(player) { gather(clayClass) }
                 return gatherDelay()
             }
@@ -537,10 +554,12 @@ class StealingCreationController(@Transient val game: StealingCreationGameContro
             val killer = player.mostDamageReceivedSourcePlayer
             if (killer != null) {
                 game.updateScore(killer) { kill() }
+                killer.incrementCount(KILLS_COUNTER)
                 killer.removeDamage(player)
                 game.getScore(killer)?.let { killer.sendMessage("You have killed ${player.displayName}, you now have ${it.killed} kills.") }
                 player.sendMessage("You have been killed by ${killer.displayName}")
             }
+            player.incrementCount(DEATHS_COUNTER)
             player.equipment.deleteSlot(Equipment.CAPE)
             dropItems(killer)
             player.tele(game.area.respawnPoint(player, team))

@@ -43,6 +43,16 @@ import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.math.sign
 
+private const val ZEAL_COUNTER = "Soul Wars Zeal earned"
+private const val PLAYED_COUNTER = "Soul Wars games played"
+private const val WON_COUNTER = "Soul Wars games won"
+private const val LOST_COUNTER = "Soul Wars games lost"
+private const val DRAWN_COUNTER = "Soul Wars games drawn"
+private const val KILLS_COUNTER = "Soul Wars players killed"
+private const val DEATHS_COUNTER = "Soul Wars deaths"
+private const val BONES_COUNTER = "Soul Wars bones buried"
+private const val FRAGMENTS_COUNTER = "Soul Wars soul fragments offered"
+private const val CAPTURES_COUNTER = "Soul Wars capture points taken"
 private const val PLAYER_MINIMUM = 4
 private const val CLIENT_TEAM_CAPACITY = 10
 private val TICKS_PER_MINUTE = Ticks.fromMinutes(1)
@@ -363,8 +373,10 @@ internal class SoulWars {
                 continue
             owners[point] = owner
             point.show(owner)
-            if (owner != null)
+            if (owner != null) {
+                teams.getValue(owner).filter { it.isCanPvp && !it.isDead && point.zone.within(it.tile) }.forEach { it.incrementCount(CAPTURES_COUNTER) }
                 broadcast("The ${owner.colouredName} team has taken control of ${point.label}.")
+            }
         }
     }
 
@@ -391,6 +403,7 @@ internal class SoulWars {
             return false
         }
         avatar.level++
+        player.incrementCount(BONES_COUNTER)
         return true
     }
 
@@ -402,6 +415,7 @@ internal class SoulWars {
         if (used <= 0)
             return player.sendMessage("Your opponent's avatar cannot be weakened any further.")
         player.inventory.deleteItem(Obj.snp_tut_soul_fragment, used)
+        player.incrementCount(FRAGMENTS_COUNTER, used)
         avatar.level -= used
     }
 
@@ -447,7 +461,13 @@ internal class SoulWars {
     private fun award(player: Player, team: Team, winner: Team?) {
         val zeal = if (winner == team) 3 else 1
         player.soulWarsZeal += zeal
-        player.incrementCount("Soul Wars Zeal earned", zeal)
+        player.incrementCount(ZEAL_COUNTER, zeal)
+        player.incrementCount(PLAYED_COUNTER)
+        player.incrementCount(when (winner) {
+            team -> WON_COUNTER
+            null -> DRAWN_COUNTER
+            else -> LOST_COUNTER
+        })
         val result = when (winner) {
             team -> "Your team won"
             null -> "The game was a draw"
@@ -569,7 +589,9 @@ class SoulWarsGameController internal constructor(val redTeam: Boolean, @Transie
                     player.mostDamageReceivedSourcePlayer?.let { killer ->
                         killer.removeDamage(player)
                         killer.increaseKillCount(player)
+                        killer.incrementCount(KILLS_COUNTER)
                     }
+                    player.incrementCount(DEATHS_COUNTER)
                     val activeGame = game?.takeIf { !it.ended && player.controllerManager.controller === this }
                     if (activeGame == null) {
                         player.anim(-1)

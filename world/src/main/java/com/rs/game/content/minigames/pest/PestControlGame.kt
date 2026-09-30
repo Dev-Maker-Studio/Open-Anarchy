@@ -59,6 +59,10 @@ private const val WIN_COINS_PER_COMBAT_LEVEL = 10
 private const val HYBRID_BOOTS_CHANCE = 550
 private const val HYBRID_OFFER = "pestControlHybridBootsOffer"
 private const val WINS_COUNTER = "Pest Control games won"
+private const val PLAYED_COUNTER = "Pest Control games played"
+private const val COMMENDATIONS_COUNTER = "Pest Control commendations earned"
+private const val PORTALS_COUNTER = "Pest Control portals destroyed"
+private const val REPAIRS_COUNTER = "Pest Control fortifications repaired"
 private val DURATION = Ticks.fromMinutes(20)
 private val SHIELD_DROPS = intArrayOf(Ticks.fromSeconds(15), Ticks.fromSeconds(45), Ticks.fromSeconds(75), Ticks.fromSeconds(105))
 private val SHIELD_ORDERS = listOf(
@@ -208,7 +212,9 @@ class PestControlGame private constructor(val tier: LanderTier, private val rost
     }
 
     fun creditRepair(player: Player) {
-        if (state == State.RUNNING && player in players) addContribution(player, REPAIR_CONTRIBUTION)
+        if (state != State.RUNNING || player !in players) return
+        addContribution(player, REPAIR_CONTRIBUTION)
+        player.incrementCount(REPAIRS_COUNTER)
     }
 
     private fun addContribution(player: Player, amount: Int) {
@@ -219,6 +225,7 @@ class PestControlGame private constructor(val tier: LanderTier, private val rost
     fun portalDestroyed(portal: PestPortal) {
         if (state != State.RUNNING) return
         knight.heal(PORTAL_HEAL)
+        portal.recievedDamageEntities.filterIsInstance<Player>().filter { it in players }.forEach { it.incrementCount(PORTALS_COUNTER) }
         sendTeamMessage("The ${portal.position.description} portal has been destroyed!")
         pests.filter { it.portal == portal }.filterIsInstance<Spinner>().forEach(Spinner::detonate)
         players.forEach(::refreshHud)
@@ -283,6 +290,7 @@ class PestControlGame private constructor(val tier: LanderTier, private val rost
     }
 
     private fun settle(player: Player, won: Boolean, score: Int) {
+        player.incrementCount(PLAYED_COUNTER)
         val result = when {
             !won -> "You failed to protect the void knight and have not been awarded any points."
             score < REQUIRED_CONTRIBUTION -> "The knights notice your lack of zeal in that battle and have not presented you with any points."
@@ -291,6 +299,8 @@ class PestControlGame private constructor(val tier: LanderTier, private val rost
                 val coins = player.skills.combatLevelWithSummoning * WIN_COINS_PER_COMBAT_LEVEL
                 player.inventory.addCoins(coins)
                 player.incrementCount(WINS_COUNTER)
+                player.incrementCount("Pest Control ${tier.displayName} games won")
+                if (credited > 0) player.incrementCount(COMMENDATIONS_COUNTER, credited)
                 if (Utils.random(HYBRID_BOOTS_CHANCE) == 0) player.set(HYBRID_OFFER, true)
                 val capped = if (credited < tier.commendations) " You have reached the maximum of $COMMENDATION_CAP commendations." else ""
                 "Congratulations! You managed to protect the void knight and have been awarded $credited commendation points and ${Utils.formatNumber(coins)} coins.$capped"

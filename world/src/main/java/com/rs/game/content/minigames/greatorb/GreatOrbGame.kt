@@ -31,6 +31,14 @@ const val ACTIVITY_MAX = 1000
 const val GOP_XP_MULTIPLIER = 2.0
 val GUILD_RETURN: Tile = Tile.of(1696, 5473, 2)
 
+private const val GAMES_COMPLETED_COUNTER = "Great Orb Project games completed"
+private const val GAMES_WON_COUNTER = "Great Orb Project games won"
+private const val ALTARS_COUNTER = "Great Orb Project altars captured"
+private const val ORBS_SCORED_COUNTER = "Great Orb Project orbs scored"
+private const val ORBS_NUDGED_COUNTER = "Great Orb Project enemy orbs nudged"
+private const val BARRIERS_RAISED_COUNTER = "Great Orb Project barriers raised"
+private const val BARRIERS_DESTROYED_COUNTER = "Great Orb Project barriers destroyed"
+private const val TOKENS_COUNTER = "Great Orb Project tokens earned"
 private const val ROUND_TICKS = 200
 private const val BREAK_TICKS = 25
 private const val ENEMY_LOCKOUT_TICKS = 50
@@ -161,6 +169,7 @@ class GreatOrbGame(roster: Map<OrbTeam, List<Player>>) {
     fun score(orb: Orb) {
         orbs.remove(orb)
         scores[orb.team.ordinal]++
+        orb.lastMover?.takeIf { players[it] == orb.team }?.incrementCount(ORBS_SCORED_COUNTER)
         val scoredRound = round
         WorldTasks.schedule(DESPAWN_DELAY) { orb.finish() }
         WorldTasks.schedule(RESPAWN_DELAY) { if (phase == Phase.ACTIVE && round == scoredRound) spawnOrb(orb.team) }
@@ -195,6 +204,7 @@ class GreatOrbGame(roster: Map<OrbTeam, List<Player>>) {
         if (orb.team == team) orb.hold(player, attract)
         else {
             orb.nudge(player, attract)
+            player.incrementCount(ORBS_NUDGED_COUNTER)
             enemyCooldown[player] = clock + ENEMY_COOLDOWN
         }
         player.vars.setVarBit(CONTRIBUTED[round], 1)
@@ -234,6 +244,7 @@ class GreatOrbGame(roster: Map<OrbTeam, List<Player>>) {
         World.spawnObject(barrier)
         World.sendObjectAnimation(barrier, Animation(Seq.rcguild_magic_barrier_spawn))
         barriers[player] = barrier
+        player.incrementCount(BARRIERS_RAISED_COUNTER)
         player.anim(Seq.rcguild_player_set_barrier)
         player.spotAnim(team.barrierSpotanim)
         player.vars.setVarBit(Varbit.rcguild_activity, ACTIVITY_MAX)
@@ -262,6 +273,7 @@ class GreatOrbGame(roster: Map<OrbTeam, List<Player>>) {
         }
         barriers.entries.removeIf { it.value == barrier }
         World.removeObject(barrier)
+        player.incrementCount(BARRIERS_DESTROYED_COUNTER)
     }
 
     fun enterPortal(player: Player) {
@@ -365,9 +377,15 @@ class GreatOrbGame(roster: Map<OrbTeam, List<Player>>) {
     private fun settle(player: Player, team: OrbTeam, tokens: Int, completed: Boolean) {
         val won = results.count { it == team }
         val lost = results.count { it == team.opponent }
-        if (tokens > 0) player.inventory.addItemDrop(Obj.rcguild_reward_token, tokens)
+        if (tokens > 0) {
+            player.inventory.addItemDrop(Obj.rcguild_reward_token, tokens)
+            player.incrementCount(TOKENS_COUNTER, tokens)
+        }
+        if (won > 0) player.incrementCount(ALTARS_COUNTER, won)
         player.sendMessage("Your team captured $won altar${if (won == 1) "" else "s"} and lost $lost. You have been awarded ${Utils.formatNumber(tokens)} Runecrafting guild tokens.")
-        if (completed) player.incrementCount("Great Orb Project games completed")
+        if (!completed) return
+        player.incrementCount(GAMES_COMPLETED_COUNTER)
+        if (won > lost) player.incrementCount(GAMES_WON_COUNTER)
     }
 
     fun leave(player: Player) {

@@ -136,5 +136,10 @@ fun Player.awardStealingCreationPoints(personal: Score, winner: Int) {
     vars.setVarBit(Varbit.sc_points, scPoints)
     incrementCount("Stealing Creation points earned", points)
     incrementCount("Stealing creation games played")
+    when (winner) {
+        personal.teamId -> incrementCount("Stealing Creation games won")
+        0 -> Unit
+        else -> incrementCount("Stealing Creation games lost")
+    }
     sendMessage("You earn: $points reward point${if (points != 1) "s" else ""}.")
 }

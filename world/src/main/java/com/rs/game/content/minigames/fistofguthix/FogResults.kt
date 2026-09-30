@@ -12,6 +12,14 @@ private const val RATING_KEY = "fogRating"
 private const val WINS_COUNTER = "Fist of Guthix wins"
 private const val LOSSES_COUNTER = "Fist of Guthix losses"
 private const val FORFEITS_COUNTER = "Fist of Guthix forfeits"
+private const val MATCHES_COUNTER = "Fist of Guthix matches played"
+private const val CHARGES_COUNTER = "Fist of Guthix charges gained"
+private const val TOKENS_COUNTER = "Fist of Guthix tokens earned"
+private const val HYBRID_GLOVES_COUNTER = "Fist of Guthix hybrid gloves won"
+internal const val KILLS_COUNTER = "Fist of Guthix opponents killed"
+internal const val STONES_COUNTER = "Fist of Guthix stones taken"
+internal const val ORBS_COUNTER = "Fist of Guthix orbs used"
+internal const val PORTALS_COUNTER = "Fist of Guthix portals used"
 private const val HYBRID_OFFER = "fogHybridGlovesOffer"
 private const val BASE_RATING_CHANGE = 10
 private const val MARGIN_PER_RATING = 500
@@ -57,6 +65,9 @@ object FogResults {
         val rating = (rating(player) + result.ratingChange).coerceAtLeast(0L)
         player.set(RATING_KEY, rating)
         val marks = player.vars.getVarBit(Varbit.hvh_forfeiter)
+        player.incrementCount(MATCHES_COUNTER)
+        if (result.charges > 0) player.incrementCount(CHARGES_COUNTER, result.charges)
+        if (result.tokens > 0) player.incrementCount(TOKENS_COUNTER, result.tokens)
         when {
             result.forfeited -> {
                 player.incrementCount(FORFEITS_COUNTER)
@@ -85,7 +96,9 @@ object FogResults {
         val wins = player.getCounterValueL(WINS_COUNTER)
         if (wins < HYBRID_WINS) return
         val odds = (HYBRID_BASE_ODDS - (wins - HYBRID_WINS)).coerceAtLeast(HYBRID_MIN_ODDS.toLong()).toInt()
-        if (Utils.random(odds) == 0) player.set(HYBRID_OFFER, true)
+        if (Utils.random(odds) != 0) return
+        player.set(HYBRID_OFFER, true)
+        player.incrementCount(HYBRID_GLOVES_COUNTER)
     }
 
     fun offerHybridGloves(player: Player) {

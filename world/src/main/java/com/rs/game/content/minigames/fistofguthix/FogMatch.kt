@@ -226,6 +226,7 @@ class FogMatch(first: Player, second: Player) {
                 player.faceObject(dispenser)
                 player.anim(Seq.human_pickuptable)
                 player.inventory.addItem(STONES[(hunted.score / STONE_STAGE_CHARGES).coerceAtMost(STONES.lastIndex)], 1)
+                player.incrementCount(STONES_COUNTER)
                 player.sendMessage("You take a stone from the dispenser. Wield it to begin gathering charge.")
             }
         }
@@ -276,6 +277,7 @@ class FogMatch(first: Player, second: Player) {
         if (!isHunted(player) || side.teleporting) return
         if (side.score < PORTAL_COST) return player.sendMessage("You need at least $PORTAL_COST charges to activate the portal.")
         side.score -= PORTAL_COST
+        player.incrementCount(PORTALS_COUNTER)
         refreshScores()
         val succeeded = Utils.random(100) < PORTAL_SUCCESS_PERCENT
         val destination = if (succeeded) FogArena.houses.filter { it != house }.random() else null
@@ -315,6 +317,7 @@ class FogMatch(first: Player, second: Player) {
         if (refusal != null) return player.sendMessage(refusal)
         if (player.inventory.getItem(slot)?.id != Obj.hvh_teleport_tablet) return
         player.inventory.deleteItem(slot, Item(Obj.hvh_teleport_tablet, 1))
+        player.incrementCount(ORBS_COUNTER)
         side.teleporting = true
         player.lock()
         player.anim(Seq.hvh_orb_teleport)
@@ -341,6 +344,7 @@ class FogMatch(first: Player, second: Player) {
         if (phase == Phase.ROUND && side == hunted) {
             player.sendMessage("You have been killed. Your charge for this round stands at ${side.score}.")
             hunter.player.sendMessage("You have killed ${player.displayName}!")
+            hunter.player.incrementCount(KILLS_COUNTER)
             stripStones(player)
             endRound("${player.displayName} has been killed")
             return
