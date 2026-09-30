@@ -814,26 +814,6 @@
     }
   },
   {
-    "comment": "Fighter hat",
-    "itemId": 10548,
-    "amount": 1,
-    "tile": {
-      "x": 2534,
-      "y": 3574,
-      "plane": 0
-    }
-  },
-  {
-    "comment": "Fighter torso",
-    "itemId": 10551,
-    "amount": 1,
-    "tile": {
-      "x": 2534,
-      "y": 3576,
-      "plane": 0
-    }
-  },
-  {
     "comment": "Magic Secateurs",
     "itemId": 7409,
     "amount": 1,
