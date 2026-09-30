@@ -183,6 +183,8 @@ object ChunkManager {
         chunk
     }
 
+    fun findChunk(id: Int): Chunk? = synchronized(chunks) { chunks[id] }
+
     @JvmStatic
     fun putChunk(id: Int, chunk: Chunk): Chunk? = synchronized(chunks) { chunks.put(id, chunk) }
 

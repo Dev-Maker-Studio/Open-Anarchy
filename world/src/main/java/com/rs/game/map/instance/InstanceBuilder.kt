@@ -12,6 +12,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.darkan.core.Logger
 import org.darkan.core.map.CollisionBuffer
+import org.darkan.core.map.CollisionWriter
 import org.darkan.core.map.MapRegion
 import org.darkan.core.map.RegionCollision
 import org.darkan.core.map.WorldCollision
@@ -175,6 +176,8 @@ object InstanceBuilder {
             if (copyMulti) chunk.copyMulticombat()
             if (copyNpcs) chunk.spawnTemplateNpcs()
         }
+        built.collision.writeOverflow(WorldCollision.live)
+        restoreNeighbourEdges(built.chunks.mapTo(IntOpenHashSet()) { it.id })
         for (index in displaced) {
             val player = World.players[index] ?: continue
             if (!player.hasStarted() || player.hasFinished()) continue
@@ -182,6 +185,23 @@ object InstanceBuilder {
             player.loadMapRegions()
         }
         return true
+    }
+
+    private fun restoreNeighbourEdges(published: IntOpenHashSet) {
+        val intoPublished = CollisionWriter { x, y, level, flag -> if (chunk(x shr 3, y shr 3, level) in published) WorldCollision.addFlag(x, y, level, flag) }
+        val neighbours = IntOpenHashSet()
+        for (id in published) {
+            val (chunkX, chunkY, plane) = MapUtils.decode(Structure.CHUNK, id)
+            for (dx in -1..1) for (dy in -1..1) {
+                val neighbour = chunk(chunkX + dx, chunkY + dy, plane)
+                if (neighbour !in published) neighbours.add(neighbour)
+            }
+        }
+        for (id in neighbours) {
+            val loaded = ChunkManager.findChunk(id) ?: continue
+            loaded.getAllBaseObjects(false)?.forEach { RegionCollision.clip(it, intoPublished) }
+            loaded.spawnedObjects.forEach { RegionCollision.clip(it, intoPublished) }
+        }
     }
 
     private fun fail(future: CompletableFuture<Boolean>, e: Throwable) {
