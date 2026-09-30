@@ -27,6 +27,7 @@ class PenanceRunner(id: Int, tile: Tile, game: BarbarianAssaultGame, ordinal: In
     private var target: Bait? = null
     private var badFood = 0
     private var stuck = 0
+    private var following = false
 
     override fun tickPenance() {
         phase = phase % PHASES + 1
@@ -53,10 +54,13 @@ class PenanceRunner(id: Int, tile: Tile, game: BarbarianAssaultGame, ordinal: In
             if (!stepTowards(current.tile)) target = null
             return
         }
-        if (searches()) game.findBait(this)?.let {
-            target = it
-            if (it.tile == tile) eat(it) else stepTowards(it.tile)
-            return
+        if (following || searches()) {
+            game.findBait(this)?.let {
+                target = it
+                if (it.tile == tile) eat(it) else stepTowards(it.tile)
+                return
+            }
+            following = false
         }
         if (phase == WANDER_PHASE) destination = wanderDestination()
         stuck = if (stepTowards(destination) || destination == tile) 0 else stuck + 1
@@ -81,13 +85,17 @@ class PenanceRunner(id: Int, tile: Tile, game: BarbarianAssaultGame, ordinal: In
         if (!game.consumeBait(bait)) return
         if (!bait.good) {
             forceTalk("Blughhhh.")
+            following = false
             badFood = BAD_FOOD_TICKS
             selector = 0
             if (phase > 5) phase -= 5
             destination = game.local(local.x, if (game.wave.queen) QUEEN_RETREAT_Y else NORMAL_RETREAT_Y)
             return
         }
-        if (!game.springTrap(this)) forceTalk("Chomp, chomp.")
+        if (!game.springTrap(this)) {
+            forceTalk("Chomp, chomp.")
+            following = true
+        }
     }
 
     private fun wanderDestination(): Tile {
