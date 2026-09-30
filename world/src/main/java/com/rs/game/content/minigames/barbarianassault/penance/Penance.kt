@@ -51,7 +51,10 @@ open class Penance(id: Int, tile: Tile, val game: BarbarianAssaultGame, val fami
         super.sendDeath(source)
     }
 
-    override fun drop() = game.dropEggs(this)
+    override fun drop() {
+        mostDamageReceivedSourcePlayer?.sendNPCKill(name)
+        game.dropEggs(this)
+    }
 
     override fun finish() {
         super.finish()
