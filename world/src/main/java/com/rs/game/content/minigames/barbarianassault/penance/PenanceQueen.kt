@@ -106,7 +106,9 @@ class PenanceQueen(tile: Tile, val game: BarbarianAssaultGame) : NPC(Npc.npc_524
         super.sendDeath(source)
     }
 
-    override fun drop() = Unit
+    override fun drop() {
+        mostDamageReceivedSourcePlayer?.sendNPCKill(name)
+    }
 }
 
 class QueenSpawn(tile: Tile, val game: BarbarianAssaultGame) : NPC(Npc.barbassault_pen_queen_spawn, tile, true) {
@@ -120,5 +122,7 @@ class QueenSpawn(tile: Tile, val game: BarbarianAssaultGame) : NPC(Npc.barbassau
 
     override fun getPossibleTargets(): List<Entity> = game.players.filter { game.isPlaying(it) && withinDistance(it.tile, RANGED_REACH) }
 
-    override fun drop() = Unit
+    override fun drop() {
+        mostDamageReceivedSourcePlayer?.sendNPCKill(name)
+    }
 }
