@@ -184,11 +184,13 @@ class GameArea(val size: Int) {
         player.withinDistance(plotTile(x, y, BarrierTier.PLOT_INSET + offsetX, BarrierTier.PLOT_INSET + offsetY).let { Tile.of(it.x, it.y, player.plane) }, distance)
 
     fun inSafeArea(player: Player, red: Boolean): Boolean {
-        val respawn = respawnPoint(player, red)
-        val x = plotX(respawn)
-        val y = plotY(respawn)
-        if (getType(x, y) != PlotType.BASE) return nearPlotPoint(player, x, y, 2, 2)
-        return if (red) nearPlotPoint(player, x, y, 2, 2, 3) else nearPlotPoint(player, x, y, 1, 1, 5)
+        val x = plotX(player.tile)
+        val y = plotY(player.tile)
+        if (!inBounds(x, y) || getWallTeam(x, y) != teamNumber(red)) return false
+        val (low, high) = if (getType(x, y) == PlotType.BASE) 0 to 7 else BarrierTier.PLOT_INSET + 1 to BarrierTier.PLOT_OUTSET - 1
+        val min = plotTile(x, y, low, low)
+        val max = plotTile(x, y, high, high)
+        return player.x in min.x..max.x && player.y in min.y..max.y
     }
 
     fun inFog(player: Player, x: Int, y: Int): Boolean {
