@@ -79,6 +79,9 @@ object World {
 
     @JvmStatic
     val players: EntityList<Player> = EntityList(Settings.PLAYERS_LIMIT)
+    @JvmStatic
+    val playerCount: Int get() = players.count { !it.isBot }
+
     private val PLAYER_MAP_USERNAME: MutableMap<String, Player> = ConcurrentHashMap()
     private val PLAYER_MAP_DISPLAYNAME: MutableMap<String, Player> = ConcurrentHashMap()
 

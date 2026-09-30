@@ -88,7 +88,9 @@ object SocialGateway {
         val worldId: Int?,
         val sink: SocialSink,
         val order: Long,
-    )
+    ) {
+        var bot = false
+    }
 
     private class LobbySink(val session: Session, private val username: String) : SocialSink {
         override suspend fun deliver(usernames: List<String>, event: SocialEvent) {
@@ -142,6 +144,7 @@ object SocialGateway {
         val list = attachmentsByUsername.computeIfAbsent(username) { CopyOnWriteArrayList() }
         val before = locationOf(username)
         val first = list.isEmpty()
+        attachment.bot = account.bot
         val replaced = list.removeIf { it.sink === attachment.sink }
         list += attachment
         if (!replaced) countOnline(attachment, +1)
@@ -177,7 +180,7 @@ object SocialGateway {
     }
 
     private fun countOnline(attachment: Attachment, delta: Int) {
-        if (attachment.sink !is WorldSession) return
+        if (attachment.sink !is WorldSession || attachment.bot) return
         val world = Lobby.worldList.get(attachment.sink.worldId) ?: return
         world.playersOnline = maxOf(0, world.playersOnline + delta)
     }
