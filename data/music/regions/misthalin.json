@@ -1,8 +1,7 @@
 [
   {
     "genre": "Varrock",
-    "parent": "Misthalin",
-    "comment": "Its done, but we need to add more overall songs",
+    "comment": "",
     "isActive": true,
     "regionIds": [
       12597,
@@ -12,38 +11,35 @@
     ],
     "songs": [
       106,
-      116,
       125,
       157,
       175,
-      330
+      177
     ]
   },
   {
     "genre": "Grand Exchange",
-    "parent": "Misthalin",
-    "comment": "Its done, but we need to add more overall songs",
+    "comment": "",
     "isActive": true,
     "regionIds": [
       12598
     ],
     "songs": [
-      116,
-      175,
-      330,
       496
     ]
   },
   {
     "genre": "Draynor Manor",
-    "parent": "Spooky",
-    "comment": "is generic spooky, includes rag and bone man area",
+    "comment": "",
     "isActive": true,
     "regionIds": [
       12340,
       12440
     ],
-    "songs": []
+    "songs": [
+      333,
+      338
+    ]
   },
   {
     "genre": "Sorcerer's Garden",
@@ -102,29 +98,29 @@
   },
   {
     "genre": "Draynor",
-    "parent": "Misthalin",
     "comment": "",
     "isActive": true,
     "regionIds": [
-      12338
+      12338,
+      12339
     ],
     "songs": [
-      851,
-      852,
-      853,
-      854,
-      855
+      3,
+      151
     ]
   },
   {
     "genre": "Lumbridge Swamp",
-    "parent": "Swamp",
     "comment": "",
     "regionIds": [
       12593,
       12849
     ],
-    "songs": []
+    "songs": [
+      64,
+      145
+    ],
+    "isActive": true
   },
   {
     "genre": "Other Misthalin",
@@ -134,19 +130,51 @@
     "regionIds": [
       12081,
       12082,
-      12339,
       12596,
       13110,
       13109,
       13108,
-      12852,
-      12851,
-      12594,
-      12595,
-      12337,
-      12850,
-      12437
+      12852
     ],
     "songs": []
+  },
+  {
+    "genre": "Lumbridge",
+    "comment": "",
+    "isActive": true,
+    "regionIds": [
+      12850,
+      12851,
+      12595
+    ],
+    "songs": [
+      2,
+      76,
+      163,
+      684
+    ]
+  },
+  {
+    "genre": "Lumbridge to Draynor",
+    "comment": "",
+    "isActive": true,
+    "regionIds": [
+      12594
+    ],
+    "songs": [
+      327
+    ]
+  },
+  {
+    "genre": "Wizards' Tower",
+    "comment": "",
+    "isActive": true,
+    "regionIds": [
+      12337,
+      12437
+    ],
+    "songs": [
+      85
+    ]
   }
 ]

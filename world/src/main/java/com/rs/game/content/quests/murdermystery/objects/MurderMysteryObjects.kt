@@ -27,6 +27,7 @@ const val MM_THREAD_TAKEN_KEY = "murderMysteryThreadTaken"
 const val MM_POISON_EVIDENCE_FOUND = "murderMysteryPoisonEvidenceFound"
 
 private val DAGGER_TILE = Tile.of(2746, 3578, 0)
+private val PUNGENT_POT_TILE = Tile.of(2747, 3579, 0)
 
 private data class EvidenceBarrel(val loc: Int, val tile: Tile, val itemId: Int, val dustedItemId: Int, val printItemId: Int, val foundText: String, val alreadyText: String)
 
@@ -72,7 +73,7 @@ private val POISON_AREAS = mapOf(
 
 @ServerStartupEvent
 fun mapMurderMysteryObjects() {
-    onLogin { (player) -> syncCriminalDagger(player) }
+    onLogin { (player) -> syncMurderSceneEvidence(player) }
     onPickupItem(Obj.murderweapon, tiles = arrayOf(DAGGER_TILE)) { e ->
         val player = e.player
         if (!murderMysteryStarted(player)) {
@@ -88,14 +89,18 @@ fun mapMurderMysteryObjects() {
         player.simpleDialogue("This knife doesn't seem sturdy enough to have killed Lord Sinclair.")
     }
 
-    onObjectClick(Loc.kr_sin_roundtable_resize, tiles = arrayOf(Tile.of(2747, 3579, 0))) { (player) ->
-        if (!murderMysteryStarted(player)) return@onObjectClick
-        beginGatheringEvidence(player)
-        if (player.inventory.containsItem(Obj.murderpot2, 1)) {
-            player.simpleDialogue("I already have the poisoned pot.")
-            return@onObjectClick
+    onPickupItem(Obj.murderpot2, tiles = arrayOf(PUNGENT_POT_TILE)) { e ->
+        val player = e.player
+        if (!murderMysteryStarted(player)) {
+            e.cancelPickup()
+            return@onPickupItem
         }
-        player.inventory.addItemDrop(Obj.murderpot2, 1)
+        if (player.inventory.containsItem(Obj.murderpot2, 1)) {
+            e.cancelPickup()
+            player.simpleDialogue("I already have the poisoned pot.")
+            return@onPickupItem
+        }
+        beginGatheringEvidence(player)
         player.simpleDialogue("It seems like Lord Sinclair was drinking from this before he died.")
     }
 
@@ -213,14 +218,15 @@ private fun takeFlour(player: Player) {
     player.sendMessage("You take some flour from the barrel. There's still plenty of flour left.")
 }
 
-fun syncCriminalDagger(player: Player) {
+fun syncMurderSceneEvidence(player: Player) {
     if (!murderMysteryStarted(player)) return
-    if (player.inventory.containsItem(Obj.murderweapon, 1) ||
-        player.inventory.containsItem(Obj.murderweapondust, 1) ||
-        player.inventory.containsItem(Obj.murderfingerprint1, 1) ||
-        player.inventory.containsItem(Obj.murderfingerprint, 1))
-        return
-    World.addGroundItemNoExpire(Item(Obj.murderweapon, 1), DAGGER_TILE, player)
+    if (!player.inventory.containsItem(Obj.murderweapon, 1) &&
+        !player.inventory.containsItem(Obj.murderweapondust, 1) &&
+        !player.inventory.containsItem(Obj.murderfingerprint1, 1) &&
+        !player.inventory.containsItem(Obj.murderfingerprint, 1))
+        World.addGroundItemNoExpire(Item(Obj.murderweapon, 1), DAGGER_TILE, player)
+    if (!player.inventory.containsItem(Obj.murderpot2, 1))
+        World.addGroundItemNoExpire(Item(Obj.murderpot2, 1), PUNGENT_POT_TILE, player)
 }
 
 fun murderMysteryStarted(player: Player): Boolean = player.getQuestStage(Quest.MURDER_MYSTERY) in STAGE_SOMETHINGS_AMISS until STAGE_COMPLETE

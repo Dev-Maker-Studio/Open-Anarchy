@@ -57,7 +57,7 @@ private fun startCooksAssistantQuest(player: Player, npc: NPC) {
         player(HeadE.CONFUSED, "What's wrong?")
         npc(npc, HeadE.UPSET, "Oh dear, oh dear, I'm in a terrible, terrible mess!")
         npc(npc, HeadE.UPSET, "It's the duke's birthday today, and I should be making him a big birthday cake using special ingredients... but I've forgotten to get the ingredients.")
-        npc(npc, HeadE.SAD_MILD, "I'll never get them in time now. He'll sack me!<br>Whatever will I do?")
+        npc(npc, HeadE.SAD_MILD, "I'll never get them in time now. He'll sack me! Whatever will I do?")
         npc(npc, HeadE.UPSET, "I have four children and a goat to look after. Would you help me? Please?")
 
         options {
@@ -188,7 +188,7 @@ private fun DialogueBuilder.showQuestDetails(player: Player, npc: NPC) {
             npc(npc, HeadE.HAPPY_TALKING, "Most of the ingredients I was able to obtain fairly easily, but there were some... oddities... that I have been unable to lay my hands on.")
             player(HeadE.CONFUSED, "Like what?")
             npc(npc, HeadE.HAPPY_TALKING, "I need the following ingredients as soon as possible!")
-            npc(npc, HeadE.HAPPY_TALKING, "One Eye of Newt<br>A freshly made 'Dirty Blast'<br>A rotten tomato")
+            npc(npc, HeadE.HAPPY_TALKING, "One Eye of Newt A freshly made 'Dirty Blast' A rotten tomato")
             npc(npc, HeadE.HAPPY_TALKING, "And a glass of greenman's ale.")
             npc(npc, HeadE.HAPPY_TALKING, "I have given you 100 coins to cover any expenses you may incur, feel free to keep the change.") {
                 player.inventory.addCoins(100)

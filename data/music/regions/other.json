@@ -190,8 +190,7 @@
   },
   {
     "genre": "Darkmeyer",
-    "parent": "Spooky",
-    "comment": "Spooky + meyer stuff? Ask a rs3 buff, zemo",
+    "comment": "",
     "isActive": true,
     "regionIds": [
       14132,
@@ -212,7 +211,6 @@
     "songs": [
       1000,
       1001,
-      1002,
       1003,
       1004
     ]
@@ -234,7 +232,8 @@
       11421,
       11068,
       11067,
-      11066
+      11066,
+      11323
     ],
     "songs": [
       9,
@@ -417,8 +416,6 @@
     "comment": "Poison waste, Lumbridge swamp & desert swamp",
     "isActive": true,
     "regionIds": [
-      12593,
-      12849,
       13611,
       8752,
       9008
@@ -465,16 +462,10 @@
   },
   {
     "genre": "Wilderness",
-    "comment": "Covers the entire overworld wild, maybe call on wildy controller?, covers edgevill dungeon wilderness",
+    "comment": "",
     "isActive": true,
     "regionIds": [
       11081,
-      12630,
-      12629,
-      12886,
-      12885,
-      13142,
-      13141,
       12443,
       12190,
       12446,
@@ -528,26 +519,18 @@
       13369,
       13368,
       13367,
-      13722,
-      11670,
       11937,
       12193,
       10057,
-      12610,
       12107,
       11588,
-      11844,
-      13459,
-      13458
+      11844
     ],
     "songs": [
-      1,
       8,
       10,
-      11,
       13,
       14,
-      21,
       26,
       34,
       37,
@@ -567,50 +550,19 @@
       179,
       182,
       183,
-      219,
-      298,
-      300,
-      308,
-      321,
       326,
       329,
       331,
       332,
-      333,
       334,
       337,
-      361,
-      365,
-      374,
-      384,
       435,
       449,
       450,
-      471,
       475,
       476,
-      504,
-      520,
-      533,
-      554,
-      565,
       586,
-      594,
-      600,
-      618,
-      640,
-      643,
-      647,
-      653,
-      667,
-      682,
-      683,
-      726,
-      729,
-      962,
-      1004,
-      1005,
-      1092
+      667
     ]
   },
   {
@@ -772,6 +724,79 @@
       936,
       938,
       939
+    ]
+  },
+  {
+    "genre": "Chaos Tunnels",
+    "comment": "",
+    "isActive": true,
+    "regionIds": [
+      12630,
+      12629,
+      12886,
+      12885,
+      13142,
+      13141
+    ],
+    "songs": [
+      459,
+      467
+    ]
+  },
+  {
+    "genre": "Paterdomus Mausoleum",
+    "comment": "",
+    "isActive": true,
+    "regionIds": [
+      13722
+    ],
+    "songs": [
+      156
+    ]
+  },
+  {
+    "genre": "Stronghold of Player Safety",
+    "comment": "",
+    "isActive": true,
+    "regionIds": [
+      12610
+    ],
+    "songs": [
+      493
+    ]
+  },
+  {
+    "genre": "Smoking Kills Dungeon",
+    "comment": "",
+    "isActive": true,
+    "regionIds": [
+      13459,
+      13458
+    ],
+    "songs": [
+      540
+    ]
+  },
+  {
+    "genre": "Melzar's Maze Basement",
+    "comment": "",
+    "isActive": true,
+    "regionIds": [
+      11670
+    ],
+    "songs": [
+      365
+    ]
+  },
+  {
+    "genre": "Mage Training Arena Basement",
+    "comment": "",
+    "isActive": true,
+    "regionIds": [
+      14411
+    ],
+    "songs": [
+      729
     ]
   }
 ]

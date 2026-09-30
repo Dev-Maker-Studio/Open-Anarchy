@@ -40,7 +40,7 @@ private fun DialogueBuilder.startMurderMystery(player: Player) {
             npc(Npc.murderguard, CALM_TALK, "Look around and investigate who might be responsible. The Sarge said every murder leaves clues to who done it, but frankly we're out of our depth here.") {
                 ensureMurderer(player)
                 player.setQuestStage(Quest.MURDER_MYSTERY, STAGE_SOMETHINGS_AMISS)
-                syncCriminalDagger(player)
+                syncMurderSceneEvidence(player)
             }
         }
         op("You should do your own dirty work.") {

@@ -193,12 +193,6 @@ private fun mapArdougneDungeons() {
         AgilityShortcuts.walkLog(player, player.transform(if (obj.id == Loc.ardougne_log_balance_right_sc) -4 else 4, 0, 0), 3)
     }
 
-    onObjectClick(Loc.upass_caveentrance2) { (player) ->
-        if (player.isQuestComplete(Quest.BIOHAZARD))
-            player.tele(Tile.of(2312, 3217, 0))
-        else
-            player.playerDialogue(HeadE.WORRIED, "I don't think I should go through here. I don't know where I'll end up.")
-    }
 
     onObjectClick(Loc.ladder_cellar, tiles = arrayOf(Tile.of(2677, 3405, 0))) { (player) ->
         player.useStairs(Seq.seq_827, player.transform(0, 6400, 0), 1, 2)

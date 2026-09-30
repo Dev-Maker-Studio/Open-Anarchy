@@ -1,7 +1,6 @@
 [
   {
     "genre": "Falador",
-    "parent": "Asgarnia",
     "comment": "",
     "isActive": true,
     "regionIds": [
@@ -10,7 +9,8 @@
     ],
     "songs": [
       15,
-      72
+      72,
+      186
     ]
   },
   {

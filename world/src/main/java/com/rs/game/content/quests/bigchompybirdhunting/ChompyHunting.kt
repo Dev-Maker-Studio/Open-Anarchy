@@ -132,9 +132,9 @@ private fun handleRantzBait(player: Player, event: DropItemEvent) {
 private fun firstChompyBaitDialogue(player: Player, bait: GroundItem?, baitTile: Tile) {
     player.startConversation {
         player(CALM_TALK, "There you go, I've placed the bait.")
-        npc(Npc.npc_4471, CALM_TALK, "Goodz, me now waits for da chompy! It shouldn't be long now. Sneaky...sneaky...")
+        npc(Npc.npc_8659, CALM_TALK, "Goodz, me now waits for da chompy! It shouldn't be long now. Sneaky...sneaky...")
         player(CALM_TALK, "Yes, I know...stick da chompy!")
-        npc(Npc.npc_4471, CALM_TALK, "Hey..you's creature, is da fatsy toady still dere? Go get more fatsy toadies if dey all gone!")
+        npc(Npc.npc_8659, CALM_TALK, "Hey..you's creature, is da fatsy toady still dere? Go get more fatsy toadies if dey all gone!")
         player(CALM_TALK, "What? I have to get more bait if there's none there? Does this Chompy Bird even exist I wonder?")
         exec { beginRantzHunt(player, bait, baitTile) }
     }
@@ -151,7 +151,7 @@ private fun beginRantzHunt(player: Player, bait: GroundItem?, baitTile: Tile) {
         chompy.faceTile(baitTile)
         player.startConversation {
             npc(chompy, HAPPY_TALKING, "Sqwark! Gobble!")
-            npc(Npc.npc_4471, HAPPY_TALKING, "Hey, dere's da chompy, I's gonna shoot it!")
+            npc(Npc.npc_8659, HAPPY_TALKING, "Hey, dere's da chompy, I's gonna shoot it!")
             exec { rantzMissesChompy(player, chompy) }
         }
     }
@@ -160,7 +160,7 @@ private fun beginRantzHunt(player: Player, bait: GroundItem?, baitTile: Tile) {
 private fun rantzMissesChompy(player: Player, chompy: OwnedNPC) {
     player.schedule {
         repeat(3) {
-            World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == Npc.npc_4471 }?.let { rantz ->
+            World.getNPCsInChunkRange(player.chunkId, 1).firstOrNull { it.id == Npc.npc_8659 }?.let { rantz ->
                 rantz.faceEntity(chompy)
                 rantz.anim(Seq._100_jubbly_ogre_bow)
             }

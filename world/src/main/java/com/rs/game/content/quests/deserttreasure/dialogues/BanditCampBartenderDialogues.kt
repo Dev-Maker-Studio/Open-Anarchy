@@ -20,7 +20,8 @@ private fun banditCampBartenderDialogue(player: Player, npc: NPC) {
         return
     }
 
-    val hasStartedBartenderConversation = player.tempAttribs.getB(DRINK_OPENED_ATTR)
+    val questAttrs = player.questManager.getAttribs(Quest.DESERT_TREASURE)
+    val hasStartedBartenderConversation = questAttrs.getB(DRINK_OPENED_ATTR)
 
     player.startConversation {
         if (!hasStartedBartenderConversation) {
@@ -38,12 +39,11 @@ private fun banditCampBartenderDialogue(player: Player, npc: NPC) {
                     } else if (!player.inventory.hasFreeSlots()) {
                         npc(npc, SHAKING_HEAD, "You ain't got room to carry it, and I'm glad 'cos I didn't want to serve you anyway.")
                     } else {
-                        exec {
+                        npc(npc, HAPPY_TALKING, "There you go.") {
                             player.inventory.removeCoins(650)
                             player.inventory.addItem(Obj.bandit_brew, 1)
-                            player.tempAttribs.setB(DRINK_OPENED_ATTR, true)
+                            questAttrs.setB(DRINK_OPENED_ATTR, true)
                         }
-                        npc(npc, HAPPY_TALKING, "There you go.")
                     }
                 }
             }
@@ -78,7 +78,7 @@ private fun banditCampBartenderDialogue(player: Player, npc: NPC) {
                 npc(npc, CALM_TALK, "I don't recall it particularly well, other than they are said to contain an incredible power.")
                 npc(npc, CALM_TALK, "If you really want to hear more about it you'd be best off finding someone who cares about the past, and the history of this area, and stop bothering me.")
                 exec {
-                    player.tempAttribs.setB(DRINK_OPENED_ATTR, false)
+                    questAttrs.setB(DRINK_OPENED_ATTR, false)
                     player.setQuestStage(Quest.DESERT_TREASURE, STAGE_TALK_TO_EBLIS)
                 }
             }
