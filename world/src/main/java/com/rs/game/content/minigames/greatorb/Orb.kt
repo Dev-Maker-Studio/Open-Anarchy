@@ -13,6 +13,7 @@ import kotlin.math.sign
 
 class Orb(private val game: GreatOrbGame, val team: OrbTeam, tile: Tile) : NPC(team.orb, tile, true) {
     var holder: Player? = null
+    var lastMover: Player? = null
         private set
     var scored = false
         private set
@@ -30,6 +31,7 @@ class Orb(private val game: GreatOrbGame, val team: OrbTeam, tile: Tile) : NPC(t
 
     fun hold(player: Player, attract: Boolean) {
         holder = player
+        lastMover = player
         this.attract = attract
         heldAt = game.clock
     }

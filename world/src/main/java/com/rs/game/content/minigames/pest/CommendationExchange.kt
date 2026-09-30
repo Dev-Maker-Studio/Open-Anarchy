@@ -197,6 +197,7 @@ private fun Player.confirmExchange() {
         return
     }
     commendations -= exchange.cost
+    incrementCount("Pest Control commendations spent", exchange.cost)
     exchange.deliver()
 }
 

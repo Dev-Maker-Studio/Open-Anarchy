@@ -241,6 +241,7 @@ class StealingCreationGameController private constructor(val blueTeam: MutableLi
     fun deposit(player: Player, item: Item, red: Boolean) {
         if (getScore(player) == null || StealingCreation.crateFor(item.id) == null) return
         crates.getValue(red).merge(item.id, item.amount, Int::plus)
+        player.incrementCount("Stealing Creation items deposited", item.amount)
         updateScore(player) { deposit(item) }
     }
 
