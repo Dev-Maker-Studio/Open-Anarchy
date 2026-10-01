@@ -69,11 +69,13 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
     fun setVar(id: Int, value: Int, forceSend: Boolean = false, save: Boolean = false) {
         if (forceSend)
             modified.add(id)
-        if (id < 0 || id >= varpValues.size || varpValues[id] == value)
+        if (id < 0 || id >= varpValues.size)
             return
-        varpValues[id] = value
         if (save)
             vars[id] = value
+        if (varpValues[id] == value)
+            return
+        varpValues[id] = value
         modified.add(id)
     }
 
@@ -90,7 +92,7 @@ class Vars(val vars: MutableMap<Int, Int> = HashMap()) {
         val shiftedMask = mask shl defs.startBit
         val varpValue = (varpValues[defs.index] and shiftedMask.inv()) or ((cappedValue shl defs.startBit) and shiftedMask)
 
-        if (varpValue != varpValues[defs.index])
+        if (save || varpValue != varpValues[defs.index])
             setVar(defs.index, varpValue, forceSend, save)
     }
 
