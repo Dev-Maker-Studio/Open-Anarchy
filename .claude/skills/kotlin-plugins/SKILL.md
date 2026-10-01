@@ -73,6 +73,12 @@ These facts come from `PluginManager.java`, `PluginMethodRepository.java` and `p
     first and prints `ERROR: Duplicate ... methods` to stderr, so grep for existing registrations
     of an id before adding one.
   - `onNpcClick(options = arrayOf("Pickpocket")) { }` with no keys handles that option on every NPC.
+- **NPC click interceptors:** `interceptNpcClick("Talk-to") { player, npc -> Boolean }` runs once the
+  player has reached the NPC and before the NPC's own handler. Returning `true` consumes the click;
+  `false` passes it to the next interceptor and then to the normal id/name/option lookup. Use it
+  when an activity borrows NPCs that have their own dialogue (a clue step, a delivery customer)
+  instead of registering a second handler for the id. No options means every option. Only return
+  `true` after doing something the player can see (`NPCClickEvent.intercepted`, `NPCHandler`).
 - **Item clicks:** these do have `options`. `onItemClick(options = arrayOf("Bind"))` with no keys is an
   option-global handler.
 - **Buttons:** one handler per **interface id**. Branch on `e.componentId`, or compare `e.component`

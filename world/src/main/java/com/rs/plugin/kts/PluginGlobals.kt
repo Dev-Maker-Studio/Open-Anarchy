@@ -27,6 +27,8 @@ fun overrideNpcLOS(func: TriFunction<Entity, Any, Boolean, Boolean>) {
     Entity.addLOSOverride(func)
 }
 
+fun interceptNpcClick(vararg options: String, claim: (Player, NPC) -> Boolean) = NPCClickEvent.intercept(options.toSet(), claim)
+
 fun onNpcClick(vararg npcNamesOrIds: Any, checkDistance: Boolean = true, options: Array<String>? = null, eventHandler: (NPCClickEvent) -> Unit) {
     npcNamesOrIds.forEach { require(it is String || it is Int) { "npcNamesOrIds must contain only String or Int types" } }
     NPCClickEvent.registerMethod(NPCClickEvent::class.java, NPCClickHandler(checkDistance, npcNamesOrIds, options) { eventHandler(it) })

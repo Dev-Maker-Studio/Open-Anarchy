@@ -2,6 +2,7 @@ package org.darkan.world.harness
 
 import org.darkan.core.cache.DefinitionTables
 import world.gregs.voidps.cache.definition.data.ItemDefinition
+import world.gregs.voidps.cache.definition.data.NPCDefinition
 import world.gregs.voidps.cache.definition.data.ObjectDefinition
 import world.gregs.voidps.cache.definition.data.VarBitDefinition
 
@@ -24,6 +25,7 @@ object TestDefinitions {
     const val OAK_LOGS = 1521
     const val WHIP = 4151
     const val TREE = 1276
+    const val MAN = 1
 
     private const val WEAPON_SLOT = 3
     private const val SHIELD_SLOT = 5
@@ -38,6 +40,7 @@ object TestDefinitions {
     fun install() {
         DefinitionTables.items = items()
         DefinitionTables.objects = objects()
+        DefinitionTables.npcs = npcs()
         DefinitionTables.varbits = varbits()
     }
 
@@ -89,6 +92,12 @@ object TestDefinitions {
      * The layouts the bank and equipment screens pack their state into. Written down because a
      * varbit with no definition writes to nothing, and the containers under test read them back.
      */
+    private fun npcs(): Array<NPCDefinition> {
+        val table = Array(MAN + 1) { NPCDefinition(id = it) }
+        table[MAN] = NPCDefinition(id = MAN, name = "Man", options = arrayOf("Talk-to", null, null, null, null, "Examine"))
+        return table
+    }
+
     private fun varbits(): Array<VarBitDefinition> {
         val table = Array(maxOf(BANK_PLACEHOLDERS, KEYWORD_INDEX) + 1) { VarBitDefinition(id = it) }
         for ((index, varbit) in (FIRST_TAB_SIZE..LAST_TAB_SIZE).withIndex()) {
