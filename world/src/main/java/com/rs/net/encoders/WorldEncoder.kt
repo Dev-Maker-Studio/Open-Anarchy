@@ -246,6 +246,10 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
         session.queuePacket(IfSetAnim(interfaceId, componentId, emoteId))
     }
 
+    fun setIFAnimation(emoteId: Int, component: Int) {
+        setIFAnimation(emoteId, component shr 16, component and 0xFFFF)
+    }
+
     fun setIFAngle(interfaceId: Int, componentId: Int, pitch: Int, roll: Int, scale: Int) {
         session.queuePacket(IfSetAngle(interfaceId, componentId, pitch, roll, scale))
     }
@@ -260,6 +264,18 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     fun setIFNPCHead(interfaceId: Int, componentId: Int, npcId: Int) {
         session.queuePacket(IfSetNpcHead(interfaceId, componentId, npcId))
+    }
+
+    fun setIFItem(component: Int, id: Int, amount: Int) {
+        setIFItem(component shr 16, component and 0xFFFF, id, amount)
+    }
+
+    fun setIFPlayerHead(component: Int) {
+        setIFPlayerHead(component shr 16, component and 0xFFFF)
+    }
+
+    fun setIFNPCHead(component: Int, npcId: Int) {
+        setIFNPCHead(component shr 16, component and 0xFFFF, npcId)
     }
 
     // ======================== GE / Draw / Hint ========================

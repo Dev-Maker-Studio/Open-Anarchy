@@ -19,8 +19,29 @@ import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import world.gregs.voidps.type.Tile
 import org.darkan.core.Logger
+import org.darkan.core.Utils
+import org.darkan.core.gameval.gen.Component
+import org.darkan.core.gameval.gen.Cs2
+import org.darkan.core.gameval.gen.Varbit
 import com.rs.utils.types
 import kotlin.coroutines.*
+
+private val FIXED_GAMEFRAME = intArrayOf(
+    Component.interface_548.component_548_4,
+    Component.interface_548.component_548_5,
+    Component.interface_548.component_548_6,
+    Component.interface_548.component_548_7,
+    Component.interface_548.component_548_8,
+    Component.interface_548.component_548_9,
+    Component.interface_548.component_548_10,
+    Component.interface_548.component_548_11,
+    Component.interface_548.component_548_12,
+    Component.interface_548.component_548_13,
+    Component.interface_548.component_548_14,
+    Component.interface_548.buff_bar,
+)
+
+private val RESIZEABLE_GAMEFRAME = intArrayOf(Component.interface_746.buff_bar, Component.interface_751.component_751_3)
 
 class Cutscene(val player: Player) : Continuation<Unit> {
     lateinit var coroutine: Continuation<Unit>
@@ -32,6 +53,7 @@ class Cutscene(val player: Player) : Continuation<Unit> {
 
     val objects = mutableMapOf<Int, Any>()
     var mapHidden = false
+    private var hiddenGameframe: IntArray? = null
     var constructingRegion = false
     private var instance: Instance? = null
     var endTile: Tile = player.tile
@@ -65,6 +87,7 @@ class Cutscene(val player: Player) : Continuation<Unit> {
         waitCondition = null
         if (player.x != endTile.x || player.y != endTile.y || player.plane != endTile.plane) player.tele(endTile)
         if (mapHidden) player.packets.setBlockMinimapState(0)
+        restoreGameframe()
         restoreDefaultAspectRatio()
         player.packets.sendResetCamera()
         player.setLargeSceneView(false)
@@ -119,6 +142,26 @@ class Cutscene(val player: Player) : Continuation<Unit> {
 
     fun unhideMinimap() {
         player.packets.setBlockMinimapState(0)
+    }
+
+    fun hideGameframe() {
+        if (hiddenGameframe != null) return
+        val components = if (player.resizeable()) RESIZEABLE_GAMEFRAME else FIXED_GAMEFRAME
+        hiddenGameframe = components
+        sendGameframeHidden(components, true)
+    }
+
+    fun restoreGameframe() {
+        val components = hiddenGameframe ?: return
+        hiddenGameframe = null
+        sendGameframeHidden(components, false)
+    }
+
+    private fun sendGameframeHidden(components: IntArray, hidden: Boolean) {
+        player.vars.setVarBit(Varbit.varbit_6448, if (hidden) 1 else 0)
+        player.packets.sendRunScript(Cs2.cs2_4008, if (hidden) 1 else 0, 0)
+        for (component in components)
+            player.packets.setIFHidden(Utils.interfaceIdFromHash(component), Utils.componentIdFromHash(component), hidden)
     }
 
     fun camPos(moveLocalX: Int, moveLocalY: Int, height: Int, speed1: Int = -1, speed2: Int = -1) {

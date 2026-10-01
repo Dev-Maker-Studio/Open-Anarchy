@@ -23,6 +23,7 @@ class CutscenePresenter {
     }
 
     fun present(player: Player, block: suspend Cutscene.(CoroutineScope) -> Unit) {
+        currentCutscene?.restoreGameframe()
         val cutscene = Cutscene(player)
         currentCutscene = cutscene
         cutscene.coroutine = suspend {
@@ -31,6 +32,7 @@ class CutscenePresenter {
     }
 
     fun stop() {
+        currentCutscene?.restoreGameframe()
         currentCutscene = null
     }
 }

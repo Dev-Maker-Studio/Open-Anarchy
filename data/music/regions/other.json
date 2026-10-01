@@ -798,5 +798,18 @@
     "songs": [
       729
     ]
+  },
+  {
+    "genre": "Grim's house",
+    "comment": "Halloween 2010 event house: preparation (17237) and party (17235) copies",
+    "isActive": true,
+    "regionIds": [
+      17237,
+      17235
+    ],
+    "songs": [
+      907,
+      908
+    ]
   }
 ]
