@@ -31,6 +31,7 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnItem
 import com.rs.utils.Ticks
+import org.darkan.core.gameval.gen.Obj
 import java.util.*
 import kotlin.math.floor
 
@@ -99,6 +100,12 @@ fun mapPotionOps() {
         e.player.inventory.refresh(toSlot)
         e.player.sendMessage("You pour from one container into the other" + (if (pot.emptyId == -1 && doses1 == 0) " and the flask shatters to pieces." else "."))
     }
+}
+
+private fun Player.gnomeCocktail(strength: Int, strengthMultiplier: Double, heal: Int) {
+    skills.adjustStat(strength, strengthMultiplier, STRENGTH)
+    skills.adjustStat(-3, -0.02, ATTACK)
+    heal(heal)
 }
 
 enum class Potion(val emptyId: Int, val ids: IntArray, val effect: (Player) -> Unit) {
@@ -776,12 +783,20 @@ enum class Potion(val emptyId: Int, val ids: IntArray, val effect: (Player) -> U
         p.heal(20)
     }),
 
-    FRUIT_BLAST(COCKTAIL_GLASS, 2084, { p ->
-        p.heal(9)
-    }),
-    PRE_MADE_FRUIT_BLAST(COCKTAIL_GLASS, 2034, { p ->
-        p.heal(9)
-    }),
+    FRUIT_BLAST(COCKTAIL_GLASS, Obj.obj_2084, { p -> p.heal(90) }),
+    PREMADE_FRUIT_BLAST(COCKTAIL_GLASS, Obj.obj_2034, { p -> p.heal(90) }),
+    PINEAPPLE_PUNCH(COCKTAIL_GLASS, Obj.obj_2048, { p -> p.heal(90) }),
+    PREMADE_PINEAPPLE_PUNCH(COCKTAIL_GLASS, Obj.obj_2036, { p -> p.heal(90) }),
+    WIZARD_BLIZZARD(COCKTAIL_GLASS, Obj.obj_2054, { p -> p.gnomeCocktail(1, 0.06, 50) }),
+    PREMADE_WIZARD_BLIZZARD(COCKTAIL_GLASS, Obj.obj_2040, { p -> p.gnomeCocktail(1, 0.06, 50) }),
+    SHORT_GREEN_GUY(COCKTAIL_GLASS, Obj.obj_2080, { p -> p.gnomeCocktail(1, 0.05, 50) }),
+    PREMADE_SHORT_GREEN_GUY(COCKTAIL_GLASS, Obj.obj_2038, { p -> p.gnomeCocktail(1, 0.05, 50) }),
+    DRUNK_DRAGON(COCKTAIL_GLASS, Obj.obj_2092, { p -> p.gnomeCocktail(2, 0.05, 50) }),
+    PREMADE_DRUNK_DRAGON(COCKTAIL_GLASS, Obj.obj_2032, { p -> p.gnomeCocktail(2, 0.05, 50) }),
+    CHOC_SATURDAY(COCKTAIL_GLASS, Obj.obj_2074, { p -> p.gnomeCocktail(2, 0.05, 50) }),
+    PREMADE_CHOC_SATURDAY(COCKTAIL_GLASS, Obj.obj_2030, { p -> p.gnomeCocktail(2, 0.05, 50) }),
+    BLURBERRY_SPECIAL(COCKTAIL_GLASS, Obj.obj_2064, { p -> p.gnomeCocktail(2, 0.05, 70) }),
+    PREMADE_BLURBERRY_SPECIAL(COCKTAIL_GLASS, Obj.obj_2028, { p -> p.gnomeCocktail(2, 0.05, 70) }),
 
     CHEFS_DELIGHT(BEER_GLASS, 5755, { p ->
         p.skills.adjustStat(1, 0.05, COOKING)
