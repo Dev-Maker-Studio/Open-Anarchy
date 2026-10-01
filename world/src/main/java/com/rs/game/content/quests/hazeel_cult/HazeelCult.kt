@@ -111,7 +111,7 @@ class HazeelCult : QuestOutline() {
 fun mapHazeelCultState() {
     onLogin { (player) ->
         val stage = player.questManager.getStage(Quest.HAZEEL_CULT)
-        if (stage > STAGE_UNSTARTED) Quest.HAZEEL_CULT.handler.updateStage(player, stage)
+        if (stage > STAGE_UNSTARTED) Quest.HAZEEL_CULT.handler?.updateStage(player, stage)
     }
 }
 
