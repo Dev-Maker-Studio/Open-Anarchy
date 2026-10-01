@@ -59,6 +59,19 @@ object Foods {
     fun isConsumable(item: Item) = Food.forId(item.id) != null
 
     enum class Food(val ids: IntArray, private val container: Int, val heal: Int, val effect: ((Player) -> Unit)? = null) {
+        DELIVERED_TOAD_CRUNCHIES(Obj.aluft_toad_crunchies, 80),
+        DELIVERED_SPICY_CRUNCHIES(Obj.aluft_spicy_crunchies, 70),
+        DELIVERED_WORM_CRUNCHIES(Obj.aluft_worm_crunchies, 80),
+        DELIVERED_CHOCCHIP_CRUNCHIES(Obj.obj_9544, 70),
+        DELIVERED_FRUIT_BATTA(Obj.aluft_fruit_batta, 110),
+        DELIVERED_TOAD_BATTA(Obj.aluft_toad_batta, 120),
+        DELIVERED_WORM_BATTA(Obj.aluft_worm_batta, 120),
+        DELIVERED_VEGETABLE_BATTA(Obj.aluft_vegetable_batta, 110),
+        DELIVERED_CHEESE_AND_TOMATO_BATTA(Obj.aluft_cheeseplustom_batta, 110),
+        DELIVERED_WORM_HOLE(Obj.aluft_worm_hole, 120),
+        DELIVERED_VEG_BALL(Obj.aluft_veg_ball, 120),
+        DELIVERED_TANGLED_TOAD_LEGS(Obj.aluft_tangled_toads_legs, 150),
+        DELIVERED_CHOCOLATE_BOMB(Obj.aluft_chocolate_bomb, 150),
         ACAI(Obj.brsum_acai, 50),
         ADMIRAL_PIE(intArrayOf(Obj.admiral_pie, Obj.half_admiral_pie), Obj.piedish, 80, { it.skills.adjustStat(5, 0.0, Constants.FISHING) }),
         AMPHIBIOUS_FRUIT(Obj.jaro_fruit_amphibious, 150),
@@ -105,7 +118,6 @@ object Foods {
         CELEBRATION_CAKE_3(Obj.celebration_cake_candles_lit, 20),
         CHEESE(Obj.cheese, 20),
         CHEESEPTOM_BATTA(Obj.cheeseplustom_batta, 110),
-        CHEESE_AND_TOMATO_BATTA(Obj.aluft_cheeseplustom_batta, 110),
         CHEESE_WHEEL(Obj.cheese_wheel, 20),
         CHICKEN(Obj.cooked_chicken, 30),
         CHILLI_CON_CARNE(intArrayOf(Obj.bowl_chillipluscarne), Obj.bowl_empty, 50),

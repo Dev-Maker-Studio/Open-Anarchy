@@ -783,6 +783,13 @@ enum class Potion(val emptyId: Int, val ids: IntArray, val effect: (Player) -> U
         p.heal(20)
     }),
 
+    DELIVERED_FRUIT_BLAST(COCKTAIL_GLASS, Obj.obj_9514, { p -> p.heal(90) }),
+    DELIVERED_PINEAPPLE_PUNCH(COCKTAIL_GLASS, Obj.obj_9512, { p -> p.heal(90) }),
+    DELIVERED_WIZARD_BLIZZARD(COCKTAIL_GLASS, Obj.obj_9508, { p -> p.gnomeCocktail(1, 0.06, 50) }),
+    DELIVERED_SHORT_GREEN_GUY(COCKTAIL_GLASS, Obj.obj_9510, { p -> p.gnomeCocktail(1, 0.05, 50) }),
+    DELIVERED_DRUNK_DRAGON(COCKTAIL_GLASS, Obj.obj_9516, { p -> p.gnomeCocktail(2, 0.05, 50) }),
+    DELIVERED_CHOC_SATURDAY(COCKTAIL_GLASS, Obj.obj_9518, { p -> p.gnomeCocktail(2, 0.05, 50) }),
+    DELIVERED_BLURBERRY_SPECIAL(COCKTAIL_GLASS, Obj.obj_9520, { p -> p.gnomeCocktail(2, 0.05, 70) }),
     FRUIT_BLAST(COCKTAIL_GLASS, Obj.obj_2084, { p -> p.heal(90) }),
     PREMADE_FRUIT_BLAST(COCKTAIL_GLASS, Obj.obj_2034, { p -> p.heal(90) }),
     PINEAPPLE_PUNCH(COCKTAIL_GLASS, Obj.obj_2048, { p -> p.heal(90) }),
