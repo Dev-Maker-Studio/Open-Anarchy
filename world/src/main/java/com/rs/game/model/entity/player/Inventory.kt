@@ -254,7 +254,7 @@ class Inventory {
     fun containsItem(itemId: Int, amount: Int): Boolean = containsItem(itemId, amount, true)
 
     fun containsItem(itemId: Int, amount: Int, checkToolbelt: Boolean): Boolean =
-        items.contains(Item(itemId, amount)) || (checkToolbelt && Toolbelt.containsTool(player, itemId))
+        (checkToolbelt && Toolbelt.containsTool(player, itemId)) || items.contains(Item(itemId, amount))
 
     fun containsItems(vararg itemIds: Int): Boolean = itemIds.all { items.contains(Item(it, 1)) }
 
@@ -277,7 +277,7 @@ class Inventory {
     fun containsOneItem(vararg itemIds: Int): Boolean = containsOneItem(true, *itemIds)
 
     fun containsOneItem(checkToolbelt: Boolean, vararg itemIds: Int): Boolean =
-        itemIds.any { items.containsOne(Item(it, 1)) || (checkToolbelt && Toolbelt.containsTool(player, it)) }
+        itemIds.any { (checkToolbelt && Toolbelt.containsTool(player, it)) || items.containsOne(Item(it, 1)) }
 
     fun sendExamine(slotId: Int) {
         if (slotId >= itemsContainerSize) return
