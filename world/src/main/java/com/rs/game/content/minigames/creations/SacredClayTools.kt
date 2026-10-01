@@ -20,7 +20,7 @@ import kotlin.math.roundToInt
 
 const val SACRED_CLAY_REVERT_KEY = "sacredClayRevertAt"
 private const val VOLATILE_CHARGE_STEP = FULL_SACRED_CLAY_CHARGE / 10
-private const val TOOL_LEVEL = 40
+private const val VOLATILE_TOOL_LEVEL = 40
 private const val PROTO_XP_BONUS = 1.0
 private const val VOLATILE_XP_BONUS = 1.2
 private const val PROTO_BONUS_XP = 15_000.0
@@ -44,7 +44,7 @@ enum class SacredClayTool(
     NEEDLE(Obj.sc_reward_needle, Obj.sc_reward_volatile_needle, Obj.needle, "Needle", setOf(Constants.CRAFTING));
 
     val ids = setOf(proto, volatile)
-    fun usableBy(player: Player) = skills.any { player.skills.getLevel(it) >= TOOL_LEVEL }
+    fun usableBy(player: Player, form: Int) = form == proto || skills.any { player.skills.getLevel(it) >= VOLATILE_TOOL_LEVEL }
 
     companion object {
         val byId = entries.flatMap { tool -> tool.ids.map { it to tool } }.toMap()
@@ -58,8 +58,7 @@ enum class SacredClayTool(
 
 fun Player.substituteSacredClayTool(baseToolId: Int): Boolean {
     val tool = SacredClayTool.forBaseTool(baseToolId) ?: return false
-    val held = heldItems(tool.ids).firstOrNull() ?: return false
-    if (!tool.usableBy(this)) return false
+    val held = heldItems(tool.ids).firstOrNull { tool.usableBy(this, it.item.id) } ?: return false
     markSacredClayToolUsed(held.item.id)
     return true
 }
@@ -89,8 +88,8 @@ fun mapSacredClayTools() {
         val clayTool = if (e.item1.id in SacredClayTool.byId) e.item1 else e.item2
         val other = if (clayTool === e.item1) e.item2 else e.item1
         val tool = SacredClayTool.byId.getValue(clayTool.id)
-        if (!tool.usableBy(e.player)) {
-            e.player.sendMessage("You need level $TOOL_LEVEL in the relevant skill to use this tool.")
+        if (!tool.usableBy(e.player, clayTool.id)) {
+            e.player.sendMessage("You need level $VOLATILE_TOOL_LEVEL in the relevant skill to use this tool.")
             return@onItemOnItem
         }
         InventoryOptionsHandler.handleItemOnItem(e.player, Item(tool.baseTool!!, 1), other, -1, other.slot)
@@ -204,7 +203,7 @@ private fun Player.sacredClayToolInUse(skill: Int): HeldItem? {
         else -> tempAttribs.getI(TOOL_USED_OBJ, -1).takeIf { tempAttribs.getL(TOOL_USED_TICK) >= World.getServerTicks() - 1 }
     } ?: return null
     val tool = SacredClayTool.byId[itemId] ?: return null
-    if (skill !in tool.skills || !tool.usableBy(this)) return null
+    if (skill !in tool.skills || !tool.usableBy(this, itemId)) return null
     return heldItems(setOf(itemId)).firstOrNull()
 }
 
