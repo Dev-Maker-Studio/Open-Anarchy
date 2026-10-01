@@ -133266,5 +133266,23 @@
       "y": 9690,
       "plane": 0
     }
+  },
+  {
+    "tile": {
+      "plane": 1,
+      "x": 2439,
+      "y": 3502
+    },
+    "comment": "Gianne jnr.",
+    "npcId": 4572
+  },
+  {
+    "tile": {
+      "plane": 0,
+      "x": 3354,
+      "y": 3222
+    },
+    "comment": "Captain Daerkin",
+    "npcId": 4595
   }
 ]
