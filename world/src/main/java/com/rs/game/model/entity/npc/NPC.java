@@ -132,6 +132,8 @@ public class NPC extends Entity {
 	}
 
 	private boolean intelligentRoutefinder;
+	private transient boolean keepsOwnFacing;
+	private transient Player interactingPlayer;
 	public boolean maskTest;
 
 	public NPC(int id, Tile tile, Direction direction, boolean permaDeath) {
@@ -224,11 +226,15 @@ public class NPC extends Entity {
 	}
 
 	public void faceInteracting(Player player) {
-		setNextFaceEntity(player);
+		interactingPlayer = player;
 		player.getTempAttribs().setO(FACING_INTERACTING_PLAYER, this);
+		if (!keepsOwnFacing)
+			setNextFaceEntity(player);
 	}
 
 	public void stopFacingInteracting(Player player) {
+		if (interactingPlayer == player)
+			interactingPlayer = null;
 		if (getLastFaceEntity() == player.getClientIndex() && !getCombat().hasTarget())
 			stopFaceEntity();
 	}
@@ -319,7 +325,17 @@ public class NPC extends Entity {
 					forceWalk = null;
 	}
 
+	private boolean isInteractingWithPlayer() {
+		return interactingPlayer != null && !interactingPlayer.hasFinished() && interactingPlayer.getTempAttribs().getO(FACING_INTERACTING_PLAYER) == this;
+	}
+
+	public void setKeepsOwnFacing(boolean keepsOwnFacing) {
+		this.keepsOwnFacing = keepsOwnFacing;
+	}
+
 	protected void randomWalk() {
+		if (isInteractingWithPlayer())
+			return;
 		if (!hasWalkSteps() && shouldRandomWalk()) {
 			boolean can = Math.random() > 0.9;
 			if (can) {

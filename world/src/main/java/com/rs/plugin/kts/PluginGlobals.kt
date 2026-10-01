@@ -7,6 +7,7 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.npc.OwnedNPC
 import com.rs.game.model.entity.npc.combat.CombatScriptsHandler
 import com.rs.game.model.entity.player.Player
+import com.rs.game.model.entity.player.managers.EmotesManager.Emote
 import world.gregs.voidps.type.Tile
 import com.rs.plugin.events.*
 import com.rs.plugin.handlers.*
@@ -130,6 +131,10 @@ fun onItemOnObject(objectNamesOrIds: Array<Any>, itemNamesOrIds: Array<Any>? = n
     objectNamesOrIds.forEach { require(it is String || it is Int) { "objectNamesOrIds must contain only String or Int types" } }
     itemNamesOrIds?.forEach { require(it is String || it is Int) { "itemNamesOrIds must contain only String or Int types" } }
     ItemOnObjectEvent.registerMethod(ItemOnObjectEvent::class.java, ItemOnObjectHandler(checkDistance, objectNamesOrIds, itemNamesOrIds, tiles) { eventHandler(it) })
+}
+
+fun onEmote(vararg emotes: Emote, eventHandler: (EmoteEvent) -> Unit) {
+    EmoteEvent.registerMethod(EmoteEvent::class.java, EmoteHandler(emotes) { eventHandler(it) })
 }
 
 fun onLogin(eventHandler: (LoginEvent) -> Unit) {

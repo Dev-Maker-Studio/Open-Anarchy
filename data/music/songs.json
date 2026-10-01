@@ -8194,7 +8194,7 @@
     "comment": "",
     "allowAmbient": false,
     "id": 907,
-    "regionIds": []
+    "regionIds": [17237]
   },
   {
     "name": "Black Zabeth: LIVE!",
@@ -8202,7 +8202,7 @@
     "comment": "Halloween event",
     "allowAmbient": false,
     "id": 908,
-    "regionIds": []
+    "regionIds": [17235]
   },
   {
     "name": "",
