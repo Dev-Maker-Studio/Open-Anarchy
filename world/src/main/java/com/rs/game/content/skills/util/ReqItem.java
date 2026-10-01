@@ -334,6 +334,12 @@ public enum ReqItem {
 	ENTGALLOW_TRAP(Category.DUNG_KNIFE_FLETCHING, new Item(17772, 1), Constants.FLETCHING, 83, 223.0, 17754, new Item[] { new Item(17698, 1) }),
 	GRAVE_CREEPER_TRAP(Category.DUNG_KNIFE_FLETCHING, new Item(17774, 1), Constants.FLETCHING, 93, 271.0, 17754, new Item[] { new Item(17700, 1) }),
 
+	SNAKESKIN_BOOTS(Category.SNAKESKIN, new Item(Obj.snakeskin_boots, 1), Constants.CRAFTING, 45, 30.0, Obj.needle, new Item[] { new Item(Obj.village_snake_hide, 6), new Item(Obj.thread, 1) }),
+	SNAKESKIN_VAMBRACES(Category.SNAKESKIN, new Item(Obj.snakeskin_vambraces, 1), Constants.CRAFTING, 47, 35.0, Obj.needle, new Item[] { new Item(Obj.village_snake_hide, 8), new Item(Obj.thread, 1) }),
+	SNAKESKIN_BANDANA(Category.SNAKESKIN, new Item(Obj.snakeskin_bandana, 1), Constants.CRAFTING, 48, 45.0, Obj.needle, new Item[] { new Item(Obj.village_snake_hide, 5), new Item(Obj.thread, 1) }),
+	SNAKESKIN_CHAPS(Category.SNAKESKIN, new Item(Obj.snakeskin_chaps, 1), Constants.CRAFTING, 51, 50.0, Obj.needle, new Item[] { new Item(Obj.village_snake_hide, 12), new Item(Obj.thread, 1) }),
+	SNAKESKIN_BODY(Category.SNAKESKIN, new Item(Obj.snakeskin_body, 1), Constants.CRAFTING, 53, 55.0, Obj.needle, new Item[] { new Item(Obj.village_snake_hide, 15), new Item(Obj.thread, 1) }),
+
 	;
 
 	private final Item product;
