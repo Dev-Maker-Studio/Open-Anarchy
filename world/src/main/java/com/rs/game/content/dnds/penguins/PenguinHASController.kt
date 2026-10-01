@@ -227,7 +227,7 @@ class PenguinManager() {
     }
 
     fun getLastReset(): ZonedDateTime {
-        val today = LocalDate.now()
+        val today = LocalDate.now(ZoneOffset.UTC)
         val lastReset = today.minusDays(((today.dayOfWeek.value - 3 + 7) % 7).toLong())
         return lastReset.atStartOfDay(ZoneOffset.UTC)
     }

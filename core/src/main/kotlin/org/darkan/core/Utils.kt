@@ -448,7 +448,7 @@ object Utils {
 
     @JvmStatic
     fun getTodayDate(): Int {
-        val cal = Calendar.getInstance()
+        val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
         return ((cal.get(Calendar.YEAR) - 2000) shl 9) or (cal.get(Calendar.MONTH) shl 5) or cal.get(Calendar.DAY_OF_MONTH)
     }
 
