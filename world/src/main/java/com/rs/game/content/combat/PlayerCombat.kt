@@ -665,6 +665,8 @@ fun delayHit(target: Entity, delay: Int, weaponId: Int, attackStyle: AttackStyle
         checkPoison(target, weaponId, hit)
 }
 
+private val VINE_WHIPS = Obj.jaro_vine_whip_abyssal..Obj.jaro_vine_whip_abyssal_green
+
 fun calculatePoisonStartDamage(weaponId: Int, hit: Hit, poisonLevel: Int): Int {
     // note that dungeoneering poison differences only matter for ammo and not melee weapons
     return when (poisonLevel) {
@@ -703,7 +705,7 @@ fun checkPoison(target: Entity, weaponId: Int, hit: Hit) {
     val poisonLevel = when {
         name.contains("(p++)") -> 2
         name.contains("(p+)") -> 1
-        name.contains("(p)") -> 0
+        name.contains("(p)") || weaponId in VINE_WHIPS -> 0
         else -> -1
     }
     if (poisonLevel == -1) return
