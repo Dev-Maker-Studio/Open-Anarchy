@@ -20,7 +20,7 @@ import com.rs.Settings;
 import com.rs.game.World;
 import com.rs.game.content.Effect;
 import com.rs.game.content.Skillcapes;
-import com.rs.game.content.minigames.creations.StealingCreationController;
+import com.rs.game.content.minigames.MinigameUtilKt;
 import com.rs.game.content.randomevents.RandomEvents;
 import com.rs.game.content.world.areas.wilderness.WildernessController;
 import com.rs.game.model.entity.player.managers.AuraManager.Aura;
@@ -959,9 +959,7 @@ public final class Skills {
 			return;
 		int oldLevel = getLevelForXp(skill);
 		double oldXp = xp[skill];
-		if ((skill == HITPOINTS || skill == MAGIC) && !(player.getControllerManager().getController() instanceof StealingCreationController) && (player.getInventory().containsItem(Obj.hvh_elemental_rune, 1) || player.getInventory().containsItem(Obj.hvh_catalytic_rune, 1)))
-			; //do not add any XP if they are using minigame runes
-		else
+		if (skill != MAGIC || !MinigameUtilKt.minigameRunesVoidMagicXp(player))
 			xp[skill] += exp;
 		int newLevel = getLevelForXp(skill);
 		double newXp = xp[skill];

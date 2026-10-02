@@ -1,19 +1,31 @@
 package com.rs.game.content.minigames
 
+import com.rs.game.content.minigames.clanwars.FFAController
+import com.rs.game.content.minigames.creations.StealingCreationController
+import com.rs.game.content.minigames.crucible.CrucibleController
+import com.rs.game.content.minigames.fistofguthix.FogController
 import com.rs.game.model.entity.player.Player
+import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Varbit
 
-val MINIGAME_SUPPLIES = arrayOf(12850, 12851, 4049, 4050, 18715, 18716, 18717, 18718, 22373, 22374, 22375, 22376, 22379, 22380)
+private val MINIGAME_RUNES = intArrayOf(Obj.hvh_elemental_rune, Obj.hvh_catalytic_rune)
+
+private val MINIGAME_SUPPLIES = setOf(
+    *MINIGAME_RUNES.toTypedArray(),
+    Obj.castlewars_bandages, Obj.cert_castlewars_bandages,
+    Obj.castlewars_4_dose_attack, Obj.castlewars_3_dose_attack, Obj.castlewars_2_dose_attack, Obj.castlewars_1_dose_attack,
+    Obj.dom_potion_1, Obj.dom_potion_1_half, Obj.dom_potion_2, Obj.dom_potion_2_half, Obj.dom_potion_4, Obj.dom_potion_4_half,
+)
 
 fun giveFoodAndPotions(player: Player) {
     checkAndDeleteFoodAndPotions(player)
-    player.inventory.addItem(12850, 10000)
-    player.inventory.addItem(12851, 10000)
-    player.inventory.addItem(18715, 1)
-    player.inventory.addItem(22373, 2)
-    player.inventory.addItem(22379, 2)
-    player.inventory.addItem(22375, 1)
-    player.inventory.addItem(4049, player.inventory.freeSlots)
+    player.inventory.addItem(Obj.hvh_elemental_rune, 10000)
+    player.inventory.addItem(Obj.hvh_catalytic_rune, 10000)
+    player.inventory.addItem(Obj.castlewars_4_dose_attack, 1)
+    player.inventory.addItem(Obj.dom_potion_1, 2)
+    player.inventory.addItem(Obj.dom_potion_4, 2)
+    player.inventory.addItem(Obj.dom_potion_2, 1)
+    player.inventory.addItem(Obj.castlewars_bandages, player.inventory.freeSlots)
 }
 
 fun checkAndDeleteFoodAndPotions(player: Player) {
@@ -23,8 +35,15 @@ fun checkAndDeleteFoodAndPotions(player: Player) {
     }
 }
 
-fun isMinigameSupply(id: Int): Boolean {
-    return MINIGAME_SUPPLIES.any { it == id }
+fun isMinigameSupply(id: Int): Boolean = id in MINIGAME_SUPPLIES
+
+fun minigameRunesVoidMagicXp(player: Player): Boolean {
+    if (MINIGAME_RUNES.none { player.inventory.containsItem(it) }) return false
+    return when (val controller = player.controllerManager.controller) {
+        is StealingCreationController, is FogController, is CrucibleController -> false
+        is FFAController -> !controller.dangerous
+        else -> true
+    }
 }
 
 fun enableMinigameRunes(player: Player) {

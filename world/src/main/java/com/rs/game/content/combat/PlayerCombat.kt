@@ -25,6 +25,7 @@ import com.rs.game.World
 import com.rs.game.content.Effect
 import com.rs.game.content.combat.special_attacks.SpecialAttack
 import com.rs.game.content.combat.special_attacks.execute
+import com.rs.game.content.minigames.minigameRunesVoidMagicXp
 import com.rs.game.content.skills.summoning.Familiar
 import com.rs.game.model.WorldProjectile
 import com.rs.game.model.entity.Entity
@@ -765,6 +766,7 @@ fun addXpFamiliar(player: Player, target: Entity, xpType: XPType, hit: Hit) {
 }
 
 fun addXp(player: Player, target: Entity, xpType: XPType?, hit: Hit) {
+    if (hit.look == HitLook.MAGIC_DAMAGE && minigameRunesVoidMagicXp(player)) return
     var combatXp: Double
     val damage = Utils.clampI(hit.damage, 0, target.hitpoints)
     when (hit.look) {
@@ -779,9 +781,6 @@ fun addXp(player: Player, target: Entity, xpType: XPType?, hit: Hit) {
                     }
                 }
                 if (combatXp > 0.0) player.skills.addXp(Constants.MAGIC, combatXp)
-                //				double hpXp = (hit.getDamage() / 7.5);
-                //				if (hpXp > 0)
-                //					player.getSkills().addXp(Constants.HITPOINTS, hpXp);
             }
         }
 
