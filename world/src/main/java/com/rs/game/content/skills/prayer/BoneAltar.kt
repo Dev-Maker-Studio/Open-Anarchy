@@ -39,7 +39,7 @@ fun mapBoneAltar() {
     onObjectClick("Altar", "Chaos altar", "Altar of guthix") { (player, obj) ->
         if (obj.id == Loc.dt_zaros_altar)
             return@onObjectClick
-        val defs = obj.definitions
+        val defs = obj.getDefinitions(player)
         if (defs.hasOption(1, "Pray") || defs.hasOption(1, "Pray-at") || defs.hasOption(1, "Recharge"))
             player.prayer.worshipAltar()
     }
