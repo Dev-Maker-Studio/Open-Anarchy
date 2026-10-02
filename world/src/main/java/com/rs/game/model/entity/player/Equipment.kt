@@ -565,7 +565,7 @@ fun mapEquipment() {
         val player = e.player
         when (e.component) {
             Component.interface_667.component_667_9 -> {
-                if (e.slotId >= Equipment.AURA) return@onButtonClick
+                if (e.slotId >= Equipment.SIZE) return@onButtonClick
                 val item = player.equipment.getItem(e.slotId) ?: return@onButtonClick
                 when (e.opNum) {
                     10 -> {
