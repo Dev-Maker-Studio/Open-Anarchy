@@ -182,7 +182,7 @@ fun handleFurniturePlacementClick(player: Player, tile: Tile): Boolean {
         player.sendMessage("You can't build that there.")
         return true
     }
-    if (!placement.furniture.footprint(tile, placement.rotation).all { ClaimManager.canBuild(player, it) })
+    if (!placement.furniture.footprint(tile, placement.rotation).all { ClaimManager.canConstruct(player, it) })
         return true
     showGhost(player, placement, tile)
     player.sendMessage("Left-click the ghost to build it, right-click it to rotate, or click elsewhere to move it.")
@@ -210,6 +210,7 @@ private fun rotateGhost(player: Player) {
 
 private fun openFurnitureMenu(player: Player) {
     cancelPlacement(player)
+    if (!ClaimManager.canConstruct(player, player.tile)) return
     val categories = Category.entries
     player.startConversation {
         statementWithActions(FurnitureMenu(categories.map { it.icon }), *categories.map { category -> Runnable { openCategory(player, category, 0) } }.toTypedArray())
@@ -237,6 +238,7 @@ private fun choose(player: Player, piece: Furniture) {
         return
     }
     player.closeInterfaces()
+    if (!ClaimManager.canConstruct(player, player.tile)) return
     if (!piece.canCraft(player)) {
         player.sendMessage("You need ${piece.materials()} to make that.")
         return
@@ -252,7 +254,7 @@ private fun choose(player: Player, piece: Furniture) {
 private fun pickUpPiece(player: Player, obj: GameObject) {
     val piece = Furniture.ALL.firstOrNull { it.crafted && it.loc == obj.id } ?: return
     if (World.getObject(obj.tile, obj.type)?.id != obj.id) return
-    if (!ClaimManager.canBuild(player, obj.tile)) return
+    if (!ClaimManager.canConstruct(player, obj.tile)) return
     if (!player.inventory.hasFreeSlots()) {
         player.sendMessage("You don't have enough inventory space to pick that up.")
         return
@@ -264,6 +266,10 @@ private fun pickUpPiece(player: Player, obj: GameObject) {
 
 private fun startPlacement(player: Player, furniture: Furniture) {
     cancelPlacement(player)
+    if (!ClaimManager.canConstruct(player, player.tile)) {
+        player.closeInterfaces()
+        return
+    }
     player.closeInterfaces()
     player.tempAttribs.setO<Placement>(PLACEMENT_KEY, Placement(furniture))
     player.sendMessage("Click the ground where you want to place the ${ItemDefinitions.getDefs(furniture.menuItem).name.lowercase()}.")
@@ -287,6 +293,7 @@ private fun build(player: Player, placement: Placement, tile: Tile) {
         player.sendMessage("You can't build that there.")
         return
     }
+    if (!furniture.footprint(tile, rotation).all { ClaimManager.canConstruct(player, it) }) return
     val name = ItemDefinitions.getDefs(furniture.menuItem).name.lowercase()
     player.faceTile(tile)
     if (furniture.placedFromItem) {
