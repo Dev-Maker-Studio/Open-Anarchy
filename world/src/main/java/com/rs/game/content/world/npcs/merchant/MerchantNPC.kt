@@ -19,6 +19,7 @@ import world.gregs.voidps.type.Tile
 
 private const val STARTING_COINS = 250
 private const val NO_MODEL = -1
+private const val SPARE_MODELS = 16
 private const val NO_RENDER_ANIM = -1
 private const val WANDER_CHANCE = 0.3
 private const val WANDER_RADIUS = 12
@@ -136,9 +137,13 @@ class MerchantNPC(id: Int, tile: Tile) : NPC(id, tile, null, true) {
     private fun tier(item: Item) = Bonus.entries.sumOf { maxOf(0, Equipment.getBonus(item, it)) }
 
     private fun dress(worn: List<Item>) {
-        val models = worn.flatMap { listOf(it.definitions.maleEquip1, it.definitions.maleEquip2) }.filter { it != NO_MODEL }
-        if (models.isNotEmpty()) {
-            modifyMesh().appendModels(*models.toIntArray())
+        val base = definitions.modelIds
+        val models = worn.flatMap { listOf(it.definitions.maleEquip1, it.definitions.maleEquip2) }.filter { it != NO_MODEL }.take(SPARE_MODELS)
+        if (base != null && models.isNotEmpty()) {
+            val ids = base.copyOf()
+            val firstSpare = ids.size - SPARE_MODELS
+            models.forEachIndexed { index, model -> ids[firstSpare + index] = model }
+            modifyMesh().addModels(*ids)
             dressed = true
         } else if (dressed) {
             resetMesh()
