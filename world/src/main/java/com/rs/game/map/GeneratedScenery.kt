@@ -32,7 +32,7 @@ object GeneratedScenery {
         for (scenery in scenery(generator, regionX, regionY)) {
             val x = baseX + scenery.x
             val y = baseY + scenery.y
-            if (x shr 3 != chunk.x || y shr 3 != chunk.y) continue
+            if (scenery.level != chunk.plane || x shr 3 != chunk.x || y shr 3 != chunk.y) continue
             val shape = ObjectShape.forId(scenery.shape) ?: continue
             chunk.addGeneratedObject(GameObject(scenery.id, shape, scenery.rotation, x, y, scenery.level))
         }
