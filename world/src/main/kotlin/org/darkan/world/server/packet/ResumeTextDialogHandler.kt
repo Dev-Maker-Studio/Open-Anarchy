@@ -1,6 +1,5 @@
 package org.darkan.world.server.packet
 
-import com.rs.game.content.skills.construction.onPlacementHoverSample
 import com.rs.game.model.entity.player.Player
 import com.rs.plugin.events.InputStringEvent
 import org.darkan.core.net.prot.packet.ResumeTextDialog
@@ -11,10 +10,6 @@ import org.darkan.core.net.prot.handler.PacketHandler
 class ResumeTextDialogHandler : PacketHandler<Player, ResumeTextDialog> {
     override suspend fun handle(player: Player, packet: ResumeTextDialog) {
         if (!player.isRunning || !player.hasStarted()) return
-        if (packet.text.startsWith("~ph,")) {
-            onPlacementHoverSample(player, packet.text)
-            return
-        }
         val e = player.tempAttribs.removeO<InputStringEvent>("pluginEnterLongText")
         e?.run(packet.text)
     }
