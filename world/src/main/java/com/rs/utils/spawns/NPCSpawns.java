@@ -44,6 +44,7 @@ public final class NPCSpawns {
 	private final static String CUSTOM = "custom";
 	final static Charset ENCODING = StandardCharsets.UTF_8;
 
+	private static boolean loadingCustom;
 	private static final Object lock = new Object();
 	private static final ArrayList<NPCSpawn> ALL_SPAWNS = new ArrayList<>();
 	private static final ArrayList<NPCSpawn> ADDED_SPAWNS = new ArrayList<>();
@@ -69,9 +70,11 @@ public final class NPCSpawns {
 		// A generated world does not get the vanilla spawns: only what is in data/npcs/spawns/custom, plus what the
 		// server's own code spawns (merchants, wildlife, implings), is there.
 		File[] spawnFiles = EnvVars.INSTANCE.getGenerateMaps() ? new File(PATH + CUSTOM).listFiles() : new File(PATH).listFiles();
+		loadingCustom = true;
 		if (spawnFiles != null)
 			for (File f : spawnFiles)
 				load(f);
+		loadingCustom = false;
 		Logger.info(NPCSpawns.class, "init", "Loaded " + ALL_SPAWNS.size() + " NPC spawns...");
 	}
 
@@ -90,6 +93,9 @@ public final class NPCSpawns {
 	}
 
 	public static void add(NPCSpawn spawn) {
+		// code-registered spawns (holiday events, minigames) are vanilla content too
+		if (EnvVars.INSTANCE.getGenerateMaps() && !loadingCustom)
+			return;
 		if (spawn != null) {
 			ALL_SPAWNS.add(spawn);
 			List<NPCSpawn> regionSpawns = NPC_SPAWNS.get(spawn.getTile().getChunkId());
