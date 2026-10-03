@@ -55,6 +55,10 @@ class WorldGenerator(
         WILDERNESS(
             WILDERNESS_UNDERLAY, WILDERNESS_ODDS,
             listOf(Scenery(Loc.deadtree1, 2, 2), Scenery(Loc.deadtree2, 1, 3), Scenery(Loc.deadtree4, 2, 2))
+        ),
+        WINTER(
+            WINTER_UNDERLAY, WINTER_ODDS,
+            listOf(Scenery(Loc.deadtree1, 2, 2), Scenery(Loc.deadtree2, 1, 3), Scenery(Loc.deadtree4, 2, 2))
         )
     }
 
@@ -221,19 +225,20 @@ class WorldGenerator(
 
     private fun findClusters(cellX: Int, cellY: Int): List<OreCluster> {
         val site = site(cellX, cellY)
-        val ores = when (site.biome) {
-            Biome.DESERT -> DESERT_ORES
-            Biome.WILDERNESS -> WILDERNESS_ORES
+        val rocks = when (site.biome) {
+            Biome.DESERT -> DESERT_ORES.flatMap { ore -> List(ROCKS_PER_ORE) { ore } }
+            Biome.WILDERNESS -> WILDERNESS_ORES.flatMap { ore -> List(ROCKS_PER_ORE) { ore } }
+            Biome.WINTER -> WINTER_ROCKS
             else -> return emptyList()
         }
         val found = mutableListOf<OreCluster>()
-        for (number in 0 until CLUSTERS_PER_SITE) {
+        for (number in 0 until if (site.biome == Biome.WINTER) 1 else CLUSTERS_PER_SITE) {
             val hash = hash(cellX * CLUSTERS_PER_SITE + number, cellY, CLUSTER_SALT)
             val spread = 2 * CLUSTER_START_RADIUS + 1
             val startX = site.x.toInt() - CLUSTER_START_RADIUS + (hash / CLUSTER_SPREAD % spread).toInt()
             val startY = site.y.toInt() - CLUSTER_START_RADIUS + (hash / CLUSTER_SPREAD / spread % spread).toInt()
             val centre = clusterCentre(site.biome, startX, startY, found) ?: continue
-            found.add(buildCluster(ores, centre.first, centre.second, hash))
+            found.add(buildCluster(rocks, centre.first, centre.second, hash))
         }
         return found
     }
@@ -265,14 +270,14 @@ class WorldGenerator(
         return !nearLiquid(x - CLUSTER_RADIUS, y - CLUSTER_RADIUS, 2 * CLUSTER_RADIUS) && !overlapsFurnace(x - CLUSTER_RADIUS, y - CLUSTER_RADIUS, 2 * CLUSTER_RADIUS + 1)
     }
 
-    /** [ROCKS_PER_ORE] rocks of every ore of the biome on distinct tiles of a square around the centre. */
+    /** The rocks on distinct tiles of a square around the centre. */
     private fun buildCluster(ores: List<Int>, centreX: Int, centreY: Int, hash: Long): OreCluster {
         val side = 2 * CLUSTER_RADIUS + 1
         val tiles = (0 until side * side).sortedBy { hash(it, ores.size, hash) }
         val rocks = mutableListOf<MapObject>()
         val xs = mutableListOf<Int>()
         val ys = mutableListOf<Int>()
-        for ((index, ore) in ores.flatMap { ore -> List(ROCKS_PER_ORE) { ore } }.withIndex()) {
+        for ((index, ore) in ores.withIndex()) {
             val tile = tiles[index]
             rocks.add(MapObject(ore, 0, 0, 0, SCENERY_SHAPE, (hash shr ROTATION_SHIFT + index and 3).toInt()))
             xs.add(centreX - CLUSTER_RADIUS + tile / side)
@@ -426,7 +431,11 @@ class WorldGenerator(
             cellY * BIOME_SPACING + BIOME_SPACING / 2.0 + fraction(hash, 1) * 2 * BIOME_JITTER - BIOME_JITTER,
             MIN_STRETCH + fraction(hash, 2) * (MAX_STRETCH - MIN_STRETCH),
             MIN_STRETCH + fraction(hash, 3) * (MAX_STRETCH - MIN_STRETCH),
-            if (cellX == SPAWN_CELL_X && cellY == SPAWN_CELL_Y) Biome.PLAINS else Biome.entries[(hash shr BIOME_PICK_SHIFT).toInt().mod(Biome.entries.size)]
+            when {
+                cellX == SPAWN_CELL_X && cellY == SPAWN_CELL_Y -> Biome.PLAINS
+                (hash shr WINTER_PICK_SHIFT) % WINTER_SITE_ODDS == 0L -> Biome.WINTER
+                else -> LAND_BIOMES[(hash shr BIOME_PICK_SHIFT).toInt().mod(LAND_BIOMES.size)]
+            }
         )
     }
 
@@ -488,6 +497,11 @@ class WorldGenerator(
         const val DESERT_UNDERLAY = 62
         const val FOREST_UNDERLAY = 160
         const val WILDERNESS_UNDERLAY = 149
+        const val WINTER_UNDERLAY = 58
+        private const val WINTER_SITE_ODDS = 8L
+        private const val WINTER_PICK_SHIFT = 30
+        /** The biomes every site picks from at random; winter is rolled before it, so adding it did not move any other biome. */
+        private val LAND_BIOMES = listOf(Biome.PLAINS, Biome.DESERT, Biome.FOREST, Biome.WILDERNESS)
         const val WATER_OVERLAY = 112
         const val WATER_UNDERLAY = 37
         const val LAVA_OVERLAY = 19
@@ -497,6 +511,7 @@ class WorldGenerator(
         private const val DESERT_ODDS = 14L
         private const val FOREST_ODDS = 2L
         private const val WILDERNESS_ODDS = 9L
+        private const val WINTER_ODDS = 9L
         private const val CLUSTERS_PER_SITE = 3
         private const val CLUSTER_RADIUS = 2
         private const val CLUSTER_GAP = 40
@@ -505,6 +520,8 @@ class WorldGenerator(
         private const val CLUSTER_SPREAD = 11L
         private const val CLUSTER_SALT = 0x4F5245L
         private const val ROCKS_PER_ORE = 2
+        /** The winter biome's single cluster: one rune and two adamantite rocks. */
+        private val WINTER_ROCKS = listOf(Loc.loc_37208, Loc.loc_11939, Loc.loc_11939)
         private val DESERT_ORES = listOf(Loc.loc_11957, Loc.loc_11960, Loc.loc_11954)
         private val WILDERNESS_ORES = listOf(Loc.loc_11933, Loc.loc_11936, Loc.loc_37307, Loc.loc_11930, Loc.loc_11942)
         private const val FURNACE_WIDTH = 2
