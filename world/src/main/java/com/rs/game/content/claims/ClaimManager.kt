@@ -31,7 +31,7 @@ object ClaimManager {
     private const val DESTROY = 8
     private const val PVP = 16
     private val FILE = File("./data/claims.json")
-    private val DESTROY_OPTIONS = setOf("chop down", "chop", "mine", "cut", "cut down", "pick", "pick-up", "smash", "break", "burn", "destroy", "dismantle", "demolish", "remove", "dig", "rake", "harvest", "clear", "pull")
+    private val DESTROY_OPTIONS = setOf("chop down", "chop", "mine", "cut", "cut down", "pick", "pick-up", "pick up", "smash", "break", "burn", "destroy", "dismantle", "demolish", "remove", "dig", "rake", "harvest", "clear", "pull")
     private val BORDER_BY_MASK = intArrayOf(
         -1,
         Loc.claim_border_n, Loc.claim_border_e, Loc.claim_border_ne, Loc.claim_border_s, Loc.claim_border_ns, Loc.claim_border_es, Loc.claim_border_nes,

@@ -142,7 +142,7 @@ class Equipment {
             if (!init) player.refreshHitPoints()
         }
         equipmentWeight = items.array().sumOf { if (it == null) 0.0 else ItemConfig.get(it.id).getWeight(true) }
-        player.packets.refreshWeight(player.inventory.inventoryWeight + equipmentWeight)
+        player.packets.refreshWeight(player.weight)
     }
 
     val weaponBAS: Int
