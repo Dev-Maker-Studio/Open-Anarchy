@@ -201,8 +201,8 @@ class InterfaceManager(private val player: Player) {
     fun removeSub(sub: Sub) = removeGameWindowSub(sub.resizeable, sub.fixed)
 
     fun sendSubDefault(sub: Sub) {
-        // generated worlds have no quests: the quest tab is the land claims tab
-        if (sub == Sub.TAB_QUEST && EnvVars.generateMaps) {
+        // generated worlds use the achievements tab for land claims; the quest tab stays, with no quests in it
+        if (sub == Sub.TAB_ACHIEVEMENT && EnvVars.generateMaps) {
             sendSub(sub, Interface.claim_tab, true)
             ClaimManager.pushState(player)
             return
