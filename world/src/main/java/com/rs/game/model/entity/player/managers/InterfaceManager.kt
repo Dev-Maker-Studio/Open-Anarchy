@@ -16,6 +16,7 @@
 //
 package com.rs.game.model.entity.player.managers
 
+import org.darkan.core.EnvVars
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
 import com.google.common.collect.Maps
@@ -199,6 +200,9 @@ class InterfaceManager(private val player: Player) {
     fun removeSub(sub: Sub) = removeGameWindowSub(sub.resizeable, sub.fixed)
 
     fun sendSubDefault(sub: Sub) {
+        // generated worlds have no quests: the quest tab stays empty
+        if (sub == Sub.TAB_QUEST && EnvVars.generateMaps)
+            return
         sendSub(sub, sub.getDefaultInterfaceId(player), true)
         sub.defaultProcedure(player)
     }
