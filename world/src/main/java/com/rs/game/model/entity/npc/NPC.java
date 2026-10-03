@@ -16,6 +16,7 @@
 //
 package com.rs.game.model.entity.npc;
 
+import org.darkan.core.EnvVars;
 import org.darkan.core.model.Bonus;
 import org.darkan.core.cache.NPCDefinitions;
 import world.gregs.voidps.cache.definition.data.NPCDefinition;
@@ -175,6 +176,8 @@ public class NPC extends Entity {
 		// npc is started on creating instance
 		loadMapRegions();
 		checkMultiArea();
+		if (EnvVars.INSTANCE.getNoNpcs())
+			finish();
 	}
 
 	public NPC(int id, Tile tile, boolean permaDeath) {
