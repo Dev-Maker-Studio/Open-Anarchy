@@ -295,7 +295,7 @@ class Inventory {
 
     fun refreshConfigs() {
         inventoryWeight = items.array().sumOf { if (it == null) 0.0 else ItemConfig.get(it.id).getWeight(false) }
-        player.packets.refreshWeight(player.equipment.equipmentWeight + inventoryWeight)
+        player.packets.refreshWeight(player.weight)
     }
 
     fun coinPouchToInventory(amount: Int) {

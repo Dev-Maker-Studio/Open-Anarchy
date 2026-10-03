@@ -725,6 +725,8 @@ public final class Skills {
 		player.getVars().syncVarsToClient();
 		Set<Integer> toUpdate = new HashSet<>(markedForUpdate);
 		player.getPackets().updateStats(toUpdate.stream().mapToInt(e -> e).toArray());
+		if (toUpdate.contains(Constants.STRENGTH))
+			player.getPackets().refreshWeight(player.getWeight());
 		if (markedForLevelUp != -1) {
 			sendLevelUp(markedForLevelUp);
 			player.getPackets().sendRunEnergy(player.getRunEnergy());
