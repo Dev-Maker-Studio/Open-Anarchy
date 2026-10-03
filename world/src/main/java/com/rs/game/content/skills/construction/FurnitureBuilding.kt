@@ -35,12 +35,12 @@ private const val MORE_ICON = 25525
 private const val PAGE_SIZE = 7
 private const val PLACEMENT_KEY = "furniturePlacement"
 private const val SLOT_COMPONENT_STRIDE = 7
-private const val ROTATION_STEPS = 8
+private const val ROTATION_STEPS = 4
 private const val PLACE_OPTION = "Place"
 private val MATERIALS = intArrayOf(Obj.woodplank, 1539, 2351, 2353, 2357, 36)
 private const val FURNACE_WIDTH = 2
 private const val FURNACE_DEPTH = 3
-private const val STEPS_PER_QUARTER_TURN = 2
+private const val STEPS_PER_QUARTER_TURN = 1
 private const val DEGREES_PER_STEP = 360 / ROTATION_STEPS
 
 private val CLOSE_BUTTON = Utils.componentIdFromHash(Component.interface_1306.component_1306_55)
