@@ -176,13 +176,6 @@ public class NPC extends Entity {
 		// npc is started on creating instance
 		loadMapRegions();
 		checkMultiArea();
-		if (EnvVars.INSTANCE.getNoNpcs()) {
-			// not finish(): subclasses override it and read fields their constructors have not set yet
-			setFinished(true);
-			ChunkManager.updateChunks(this);
-			NpcCollision.fillNPCClip(getTile(), getSize(), false);
-			World.removeNPC(this);
-		}
 	}
 
 	public NPC(int id, Tile tile, boolean permaDeath) {
