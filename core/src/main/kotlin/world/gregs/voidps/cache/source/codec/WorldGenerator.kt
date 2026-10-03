@@ -48,8 +48,7 @@ class WorldGenerator(
         DESERT(
             DESERT_UNDERLAY, DESERT_ODDS,
             listOf(
-                Scenery(Loc.boulder1, 1, 10), Scenery(Loc.boulder2, 1, 10), Scenery(Loc.boulder3, 1, 10), Scenery(Loc.boulder4, 1, 10),
-                Scenery(Loc.loc_11954, 1, IRON_ROCK_WEIGHT)
+                Scenery(Loc.boulder1, 1, 10), Scenery(Loc.boulder2, 1, 10), Scenery(Loc.boulder3, 1, 10), Scenery(Loc.boulder4, 1, 10)
             )
         ),
         FOREST(FOREST_UNDERLAY, FOREST_ODDS, listOf(Scenery(Loc.tree, 2, 3), Scenery(Loc.oaktree, 3, 2), Scenery(Loc.willowtree, 2, 2))),
@@ -70,6 +69,8 @@ class WorldGenerator(
 
     private class FurnaceSite(val furnace: Furnace?)
 
+    private class OreCluster(val rocks: List<MapObject>, val globalX: List<Int>, val globalY: List<Int>)
+
     private class Grid(val biomes: Array<Array<Biome>>, val liquids: Array<Array<Liquid?>>, val heights: Array<IntArray>)
 
     private val sites = ConcurrentHashMap<Long, Site>()
@@ -77,6 +78,8 @@ class WorldGenerator(
     private val grids = ConcurrentHashMap<Long, Grid>()
 
     private val furnaces = ConcurrentHashMap<Long, FurnaceSite>()
+
+    private val clusters = ConcurrentHashMap<Long, List<OreCluster>>()
 
     override fun terrain(regionX: Int, regionY: Int): ByteArray {
         val square = MapSquare.Square(MapSquare.Shape.TERRAIN, regionX, regionY)
@@ -110,6 +113,7 @@ class WorldGenerator(
         val globalY = originY / SIZE + regionY
         placeScenery(definition, grid(globalX, globalY), globalX, globalY)
         placeFurnaces(definition, globalX, globalY)
+        placeOreClusters(definition, globalX, globalY)
         return definition.objects
     }
 
@@ -190,6 +194,91 @@ class WorldGenerator(
                 definition.objects.add(MapObject(scenery.id, localX, localY, 0, SCENERY_SHAPE, (hash shr ROTATION_SHIFT and 3).toInt()))
             }
         }
+    }
+
+    /** Ore rocks gather in clusters, never scattered: each desert and wilderness biome site has [CLUSTERS_PER_SITE] of them. */
+    private fun placeOreClusters(definition: MapDefinition, regionX: Int, regionY: Int) {
+        val baseX = regionX * SIZE
+        val baseY = regionY * SIZE
+        for (cellX in cellOf(baseX) - 1..cellOf(baseX + SIZE - 1) + 1) {
+            for (cellY in cellOf(baseY) - 1..cellOf(baseY + SIZE - 1) + 1) {
+                for (cluster in clustersOf(cellX, cellY)) {
+                    for (index in cluster.rocks.indices) {
+                        val x = cluster.globalX[index]
+                        val y = cluster.globalY[index]
+                        if (x in baseX until baseX + SIZE && y in baseY until baseY + SIZE) {
+                            val rock = cluster.rocks[index]
+                            definition.objects.add(MapObject(rock.id, x - baseX, y - baseY, 0, SCENERY_SHAPE, rock.rotation))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun clustersOf(cellX: Int, cellY: Int): List<OreCluster> =
+        clusters.computeIfAbsent(cellX.toLong() shl CELL_KEY_SHIFT xor (cellY.toLong() and CELL_KEY_MASK)) { findClusters(cellX, cellY) }
+
+    private fun findClusters(cellX: Int, cellY: Int): List<OreCluster> {
+        val site = site(cellX, cellY)
+        val ores = when (site.biome) {
+            Biome.DESERT -> DESERT_ORES
+            Biome.WILDERNESS -> WILDERNESS_ORES
+            else -> return emptyList()
+        }
+        val found = mutableListOf<OreCluster>()
+        for (number in 0 until CLUSTERS_PER_SITE) {
+            val hash = hash(cellX * CLUSTERS_PER_SITE + number, cellY, CLUSTER_SALT)
+            val spread = 2 * CLUSTER_START_RADIUS + 1
+            val startX = site.x.toInt() - CLUSTER_START_RADIUS + (hash / CLUSTER_SPREAD % spread).toInt()
+            val startY = site.y.toInt() - CLUSTER_START_RADIUS + (hash / CLUSTER_SPREAD / spread % spread).toInt()
+            val centre = clusterCentre(site.biome, startX, startY, found) ?: continue
+            found.add(buildCluster(ores, centre.first, centre.second, hash))
+        }
+        return found
+    }
+
+    private fun clusterCentre(biome: Biome, startX: Int, startY: Int, others: List<OreCluster>): Pair<Int, Int>? {
+        for (ring in 0..CLUSTER_SEARCH_RADIUS) {
+            for (dx in -ring..ring) {
+                for (dy in -ring..ring) {
+                    if (maxOf(kotlin.math.abs(dx), kotlin.math.abs(dy)) != ring) continue
+                    val x = startX + dx
+                    val y = startY + dy
+                    if (others.none { far -> far.globalX.any { kotlin.math.abs(it - x) < CLUSTER_GAP } && far.globalY.any { kotlin.math.abs(it - y) < CLUSTER_GAP } } &&
+                        clusterSpotClear(biome, x, y)
+                    ) {
+                        return x to y
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    private fun clusterSpotClear(biome: Biome, x: Int, y: Int): Boolean {
+        for (dx in -CLUSTER_RADIUS..CLUSTER_RADIUS) {
+            for (dy in -CLUSTER_RADIUS..CLUSTER_RADIUS) {
+                if (biomeAtGlobal(x + dx, y + dy) != biome) return false
+            }
+        }
+        return !nearLiquid(x - CLUSTER_RADIUS, y - CLUSTER_RADIUS, 2 * CLUSTER_RADIUS) && !overlapsFurnace(x - CLUSTER_RADIUS, y - CLUSTER_RADIUS, 2 * CLUSTER_RADIUS + 1)
+    }
+
+    /** [ROCKS_PER_ORE] rocks of every ore of the biome on distinct tiles of a square around the centre. */
+    private fun buildCluster(ores: List<Int>, centreX: Int, centreY: Int, hash: Long): OreCluster {
+        val side = 2 * CLUSTER_RADIUS + 1
+        val tiles = (0 until side * side).sortedBy { hash(it, ores.size, hash) }
+        val rocks = mutableListOf<MapObject>()
+        val xs = mutableListOf<Int>()
+        val ys = mutableListOf<Int>()
+        for ((index, ore) in ores.flatMap { ore -> List(ROCKS_PER_ORE) { ore } }.withIndex()) {
+            val tile = tiles[index]
+            rocks.add(MapObject(ore, 0, 0, 0, SCENERY_SHAPE, (hash shr ROTATION_SHIFT + index and 3).toInt()))
+            xs.add(centreX - CLUSTER_RADIUS + tile / side)
+            ys.add(centreY - CLUSTER_RADIUS + tile % side)
+        }
+        return OreCluster(rocks, xs, ys)
     }
 
     private fun placeFurnaces(definition: MapDefinition, regionX: Int, regionY: Int) {
@@ -408,7 +497,16 @@ class WorldGenerator(
         private const val DESERT_ODDS = 14L
         private const val FOREST_ODDS = 2L
         private const val WILDERNESS_ODDS = 9L
-        private const val IRON_ROCK_WEIGHT = 2
+        private const val CLUSTERS_PER_SITE = 3
+        private const val CLUSTER_RADIUS = 2
+        private const val CLUSTER_GAP = 40
+        private const val CLUSTER_START_RADIUS = 100
+        private const val CLUSTER_SEARCH_RADIUS = 60
+        private const val CLUSTER_SPREAD = 11L
+        private const val CLUSTER_SALT = 0x4F5245L
+        private const val ROCKS_PER_ORE = 2
+        private val DESERT_ORES = listOf(Loc.loc_11957, Loc.loc_11960, Loc.loc_11954)
+        private val WILDERNESS_ORES = listOf(Loc.loc_11933, Loc.loc_11936, Loc.loc_37307, Loc.loc_11930, Loc.loc_11942)
         private const val FURNACE_WIDTH = 2
         private const val FURNACE_DEPTH = 3
         private const val FURNACE_MARGIN = 1
