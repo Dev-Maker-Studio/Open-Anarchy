@@ -66,11 +66,17 @@ class WorldGenerator(
 
     private class Site(val x: Double, val y: Double, val stretchX: Double, val stretchY: Double, val biome: Biome)
 
+    private class Furnace(val x: Int, val y: Int, val width: Int, val depth: Int, val rotation: Int)
+
+    private class FurnaceSite(val furnace: Furnace?)
+
     private class Grid(val biomes: Array<Array<Biome>>, val liquids: Array<Array<Liquid?>>, val heights: Array<IntArray>)
 
     private val sites = ConcurrentHashMap<Long, Site>()
 
     private val grids = ConcurrentHashMap<Long, Grid>()
+
+    private val furnaces = ConcurrentHashMap<Long, FurnaceSite>()
 
     override fun terrain(regionX: Int, regionY: Int): ByteArray {
         val square = MapSquare.Square(MapSquare.Shape.TERRAIN, regionX, regionY)
@@ -90,9 +96,21 @@ class WorldGenerator(
         val globalX = originX / SIZE + regionX
         val globalY = originY / SIZE + regionY
         val grid = grid(globalX, globalY)
-        placeScenery(definition, grid, globalX, globalY)
         placeSmelting(definition, grid)
         return MapJson.writeLocs(definition, square)
+    }
+
+    /**
+     * The trees and rocks of a map square, local to the square. They are not part of [locations]: the world spawns them
+     * as objects when the area loads, so the cache carries no tree and the client bakes no shadow for one.
+     */
+    fun scenery(regionX: Int, regionY: Int): List<MapObject> {
+        val definition = MapDefinition(regionY + (regionX shl 8), levels = 0)
+        val globalX = originX / SIZE + regionX
+        val globalY = originY / SIZE + regionY
+        placeScenery(definition, grid(globalX, globalY), globalX, globalY)
+        placeFurnaces(definition, globalX, globalY)
+        return definition.objects
     }
 
     fun liquidTileAt(x: Int, y: Int): Liquid? {
@@ -166,9 +184,82 @@ class WorldGenerator(
                 if (nearLiquid(regionX * SIZE + localX, regionY * SIZE + localY, scenery.size)) {
                     continue
                 }
+                if (overlapsFurnace(regionX * SIZE + localX, regionY * SIZE + localY, scenery.size)) {
+                    continue
+                }
                 definition.objects.add(MapObject(scenery.id, localX, localY, 0, SCENERY_SHAPE, (hash shr ROTATION_SHIFT and 3).toInt()))
             }
         }
+    }
+
+    private fun placeFurnaces(definition: MapDefinition, regionX: Int, regionY: Int) {
+        val baseX = regionX * SIZE
+        val baseY = regionY * SIZE
+        for (cellX in cellOf(baseX) - 1..cellOf(baseX + SIZE - 1) + 1) {
+            for (cellY in cellOf(baseY) - 1..cellOf(baseY + SIZE - 1) + 1) {
+                val furnace = furnaceOf(cellX, cellY) ?: continue
+                if (furnace.x in baseX until baseX + SIZE && furnace.y in baseY until baseY + SIZE) {
+                    definition.objects.add(MapObject(Loc.built_furnace, furnace.x - baseX, furnace.y - baseY, 0, SCENERY_SHAPE, furnace.rotation))
+                }
+            }
+        }
+    }
+
+    private fun overlapsFurnace(x: Int, y: Int, size: Int): Boolean {
+        for (cellX in cellOf(x) - 1..cellOf(x + size) + 1) {
+            for (cellY in cellOf(y) - 1..cellOf(y + size) + 1) {
+                val furnace = furnaceOf(cellX, cellY) ?: continue
+                if (x < furnace.x + furnace.width + FURNACE_MARGIN && x + size > furnace.x - FURNACE_MARGIN &&
+                    y < furnace.y + furnace.depth + FURNACE_MARGIN && y + size > furnace.y - FURNACE_MARGIN
+                ) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private fun cellOf(tile: Int) = Math.floorDiv(tile, BIOME_SPACING)
+
+    private fun furnaceOf(cellX: Int, cellY: Int): Furnace? =
+        furnaces.computeIfAbsent(cellX.toLong() shl CELL_KEY_SHIFT xor (cellY.toLong() and CELL_KEY_MASK)) { FurnaceSite(findFurnace(cellX, cellY)) }.furnace
+
+    private fun findFurnace(cellX: Int, cellY: Int): Furnace? {
+        val site = site(cellX, cellY)
+        if (site.biome != Biome.WILDERNESS) {
+            return null
+        }
+        val hash = hash(cellX, cellY, FURNACE_SALT)
+        val rotation = (hash and 3).toInt()
+        val width = if (rotation and 1 == 0) FURNACE_WIDTH else FURNACE_DEPTH
+        val depth = if (rotation and 1 == 0) FURNACE_DEPTH else FURNACE_WIDTH
+        val spread = 2 * FURNACE_START_RADIUS + 1
+        val startX = site.x.toInt() - FURNACE_START_RADIUS + (hash / FURNACE_SPREAD % spread).toInt()
+        val startY = site.y.toInt() - FURNACE_START_RADIUS + (hash / FURNACE_SPREAD / spread % spread).toInt()
+        for (ring in 0..FURNACE_SEARCH_RADIUS) {
+            for (dx in -ring..ring) {
+                for (dy in -ring..ring) {
+                    if (maxOf(kotlin.math.abs(dx), kotlin.math.abs(dy)) != ring) {
+                        continue
+                    }
+                    if (furnaceSpotClear(startX + dx, startY + dy, width, depth)) {
+                        return Furnace(startX + dx, startY + dy, width, depth, rotation)
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    private fun furnaceSpotClear(x: Int, y: Int, width: Int, depth: Int): Boolean {
+        for (dx in -FURNACE_MARGIN until width + FURNACE_MARGIN) {
+            for (dy in -FURNACE_MARGIN until depth + FURNACE_MARGIN) {
+                if (biomeAtGlobal(x + dx, y + dy) != Biome.WILDERNESS) {
+                    return false
+                }
+            }
+        }
+        return !nearLiquid(x, y, maxOf(width, depth))
     }
 
     private fun placeSmelting(definition: MapDefinition, grid: Grid) {
@@ -318,6 +409,13 @@ class WorldGenerator(
         private const val FOREST_ODDS = 2L
         private const val WILDERNESS_ODDS = 9L
         private const val IRON_ROCK_WEIGHT = 2
+        private const val FURNACE_WIDTH = 2
+        private const val FURNACE_DEPTH = 3
+        private const val FURNACE_MARGIN = 1
+        private const val FURNACE_START_RADIUS = 60
+        private const val FURNACE_SEARCH_RADIUS = 80
+        private const val FURNACE_SPREAD = 7L
+        private const val FURNACE_SALT = 0x46524EL
         private const val SCENERY_SHAPE = 10
         private const val CELL = 8
         private const val CELLS = 8
