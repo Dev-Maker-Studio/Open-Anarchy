@@ -42,7 +42,7 @@ class IfDragOntoIfHandler : PacketHandler<Player, IfDragOntoIf> {
                 player.bank.switchItem(packet.fromSlot, packet.toSlot, packet.toInter shl 16 or packet.toComp)
             }
             // Drag a shop stock slot onto the inventory to buy one.
-            packet.fromInter == 1265 && packet.toInter == 1266 && player.tempAttribs.getB("shop_buying") -> {
+            (packet.fromInter == 1265 || packet.fromInter == 1326) && packet.toInter == 1266 && player.tempAttribs.getB("shop_buying") -> {
                 val shop = player.tempAttribs.getO<Shop>("Shop") ?: return
                 shop.buy(player, packet.fromSlot, 1)
             }

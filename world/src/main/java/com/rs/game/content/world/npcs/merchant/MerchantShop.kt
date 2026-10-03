@@ -4,6 +4,7 @@ import com.rs.engine.Shop
 import com.rs.game.model.entity.player.Player
 import com.rs.utils.shop.ShopItem
 import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.gameval.gen.Varp
 import org.darkan.core.model.Item
 import kotlin.math.ceil
 
@@ -11,6 +12,7 @@ private const val SHOP_NAME = "Merchant"
 private const val SHOP_ATTRIBUTE = "Shop"
 private const val SELL_MARKUP = 1.25
 private const val MIN_PRICE = 1
+private const val MERCHANT_SHOP_INTERFACE = 1326
 
 class MerchantShop(private val merchant: MerchantNPC) : Shop(SHOP_NAME, Obj.coins, emptyArray<ShopItem>(), true, false) {
     private val viewers = HashSet<Player>()
@@ -34,10 +36,17 @@ class MerchantShop(private val merchant: MerchantNPC) : Shop(SHOP_NAME, Obj.coin
         viewers.clear()
     }
 
+    override fun getShopInterfaceId() = MERCHANT_SHOP_INTERFACE
+
     override fun addPlayer(player: Player) {
         super.addPlayer(player)
         viewers.add(player)
+        showCoins(player)
     }
+
+    fun showCoins(player: Player) = player.vars.setVar(Varp.merchant_coins, merchant.coins)
+
+    fun showCoinsToViewers() = viewers.filter { it.tempAttribs.getO<Shop>(SHOP_ATTRIBUTE) === this }.forEach(::showCoins)
 
     override fun getSellPrice(item: Item): Int = storePrice(item)
 
@@ -57,6 +66,7 @@ class MerchantShop(private val merchant: MerchantNPC) : Shop(SHOP_NAME, Obj.coin
         if (paid <= 0) return
         merchant.pay(paid)
         merchant.stockChanged()
+        showCoinsToViewers()
     }
 
     override fun buy(player: Player, slotId: Int, quantity: Int) {
@@ -67,6 +77,7 @@ class MerchantShop(private val merchant: MerchantNPC) : Shop(SHOP_NAME, Obj.coin
         if (spent <= 0) return
         merchant.earn(spent)
         merchant.stockChanged()
+        showCoinsToViewers()
     }
 
     private fun storePrice(item: Item): Int = maxOf(item.definitions.getValue(), MIN_PRICE)
