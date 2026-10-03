@@ -5,7 +5,10 @@ import com.rs.game.content.combat.XPType
 import com.rs.game.content.combat.getMeleeCombatDelay
 import com.rs.game.content.combat.getWeaponAttackEmote
 import com.rs.game.model.entity.Entity
+import com.rs.game.model.entity.HitBar
 import com.rs.game.model.entity.actions.Action
+import com.rs.game.model.entity.npc.NPC
+import com.rs.game.model.entity.npc.NPCBodyMeshModifier
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.plugin.annotations.ServerStartupEvent
@@ -29,6 +32,11 @@ private const val REPAIR_XP_PER_TICK = 3.0
 private const val REPAIR_ANIM_INTERVAL = 3
 private const val STRENGTH_DAMAGE_DIVISOR = 8
 private const val BASE_DAMAGE = 1
+private const val INVISIBLE_NPC = 9167
+/** A speck of a model about 2.9 tiles up; the client places the bar just above the NPC's model, so this sets the bar's height. */
+private const val BAR_HEIGHT_MODEL = 8719
+private const val FULL_BAR = 255
+private const val BAR_LINGER_TICKS = 4
 
 enum class Material(val xpPerDamage: Double) {
     LIGHT_WOOD(0.5),
@@ -95,7 +103,26 @@ private fun destroy(obj: GameObject) {
     World.removeObject(obj)
 }
 
+/** An object cannot carry a hit bar, so the bar is shown on an invisible, unclickable NPC standing on the object's tile. */
+private class ObjectHitBar(private val from: Int, private val to: Int, private val max: Int) : HitBar() {
+    override fun getType() = 0
+
+    override fun getPercentage() = from * FULL_BAR / max
+
+    override fun getToPercentage() = to * FULL_BAR / max
+}
+
 private class DestroyFurniture(private val obj: GameObject, private val furniture: BuiltFurniture) : Action() {
+    private var barCarrier: NPC? = null
+
+    private fun showBar(from: Int, to: Int) {
+        val carrier = barCarrier?.takeUnless { it.hasFinished() } ?: NPC(INVISIBLE_NPC, obj.tile).also {
+            it.bodyMeshModifier = NPCBodyMeshModifier(it.definitions).addModels(BAR_HEIGHT_MODEL)
+            barCarrier = it
+        }
+        carrier.nextHitBars.add(ObjectHitBar(from, to, furniture.maxHp))
+    }
+
     override fun start(entity: Entity): Boolean = canAttack(entity as Player)
 
     override fun process(entity: Entity): Boolean = isStanding(obj) && canAttack(entity as Player)
@@ -109,7 +136,9 @@ private class DestroyFurniture(private val obj: GameObject, private val furnitur
         player.faceObject(obj)
         player.anim(Animation(getWeaponAttackEmote(weapon, style)))
         player.skills.addXp(trainedSkill(style.xpType), damage * furniture.material.xpPerDamage)
-        val remaining = hitPoints(obj, furniture) - damage
+        val before = hitPoints(obj, furniture)
+        val remaining = before - damage
+        showBar(before, maxOf(remaining, 0))
         if (remaining <= 0) {
             destroy(obj)
             player.sendMessage("You smash the ${obj.definitions.name.lowercase()} to pieces.")
@@ -122,6 +151,7 @@ private class DestroyFurniture(private val obj: GameObject, private val furnitur
 
     override fun stop(entity: Entity) {
         entity.anim(-1)
+        barCarrier?.finishAfterTicks(BAR_LINGER_TICKS)
     }
 
     private fun canAttack(player: Player): Boolean {
