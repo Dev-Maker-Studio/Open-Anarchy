@@ -65,7 +65,7 @@ private fun removeShadows(tree: GameObject) {
  * because removing it would bring the map's tree back; a planted tree's empty loc is removed again a tick later.
  */
 private fun replaceWithNothing(tree: GameObject, baseTree: Boolean) {
-    val empty = GameObject(Loc.loc_9776, tree.type, tree.rotation, tree.tile)
+    val empty = GameObject(Loc.invisible_type8_nonblocking, tree.type, tree.rotation, tree.tile)
     World.spawnObject(empty, false)
     if (!baseTree) WorldTasks.schedule(1) { World.removeObject(empty) }
 }
