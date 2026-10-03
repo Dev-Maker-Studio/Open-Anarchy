@@ -2,6 +2,7 @@ package org.darkan.world.server.packet
 
 import com.rs.engine.pathfinder.RouteEvent
 import com.rs.game.World
+import com.rs.game.content.claims.ClaimManager
 import com.rs.game.model.entity.player.Player
 import com.rs.net.decoders.handlers.ObjectHandler
 import com.rs.plugin.PluginManager
@@ -23,6 +24,8 @@ class IfOnObjectHandler : PacketHandler<Player, IfOnObject> {
         if (!player.mapChunkIds.contains(tile.getChunkId()))
             return
         val obj = World.getObjectWithId(tile, packet.objectId) ?: return
+        if (!ClaimManager.canBuild(player, tile))
+            return
 
         player.stopAll(false)
         if (packet.forceRun)

@@ -909,6 +909,8 @@ public class NPC extends Entity {
 		if (isForceWalking()) // if force walk not gonna get target
 			return;
 		combat.setTarget(entity);
+		if (entity instanceof Player player)
+			player.getMusicsManager().onTargetedBy(this);
 		lastAttackedByTarget = System.currentTimeMillis();
 	}
 

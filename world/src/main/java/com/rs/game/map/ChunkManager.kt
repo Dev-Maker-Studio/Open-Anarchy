@@ -19,6 +19,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.ints.IntSets
 import kotlinx.coroutines.launch
+import org.darkan.core.EnvVars
 import org.darkan.core.Logger
 import org.darkan.core.map.MapRegion
 import org.darkan.core.map.WorldCollision
@@ -45,6 +46,10 @@ fun loadAllMapData() {
     val maxMemory = Runtime.getRuntime().maxMemory()
     Logger.info(WorldCollision::class.java, "loadAllMapData", "${maxMemory / (1024 * 1024)}mb heap space available. For better performance, allocate at least 1024mb or 3072mb")
     val optimize = Settings.getConfig().isAllowHighMemUseOptimizations && maxMemory != Int.MAX_VALUE.toLong()
+    if (EnvVars.generateMaps) {
+        Logger.info(WorldCollision::class.java, "loadAllMapData", "Generated world: regions load when a player needs them")
+        return
+    }
     if (!optimize || maxMemory <= COLLISION_HEAP) return
     val preloadObjects = maxMemory > OBJECTS_HEAP
     for (regionId in 0 until MAX_REGION_ID) {

@@ -114,7 +114,9 @@ public class QuestInformationParser {
 		for (QuestInformation info : QUESTS_ID.values())
 			for (Quest quest : new HashSet<>(info.getPreReqs()))
 				addPreReqs(info, quest);
-		Quest.VOID_STARES_BACK.getDefs().getExtraInfo().addSkillReq(Skills.DEFENSE, 25);
+		QuestInformation voidStaresBack = Quest.VOID_STARES_BACK.getDefs().getExtraInfo();
+		if (voidStaresBack != null)
+			voidStaresBack.addSkillReq(Skills.DEFENSE, 25);
 	}
 
 	public static void addPreReqs(QuestInformation info, Quest quest) {

@@ -243,7 +243,7 @@ public class PlayerModifiers {
 		Commands.add(Rights.ADMIN, "setlevelother [player_name skillId level]", "Sets another player's skill to a certainl level.", (p, args) -> World.forceGetPlayerByDisplay(args[0], target -> {
             int skill = Integer.parseInt(args[1]);
             int level = Integer.parseInt(args[2]);
-            if (level < 0 || level > (skill == Constants.DUNGEONEERING ? 120 : 99)) {
+            if (level < 0 || level > Skills.MAX_LEVEL) {
                 p.sendMessage("Please choose a valid level.");
                 return;
             }

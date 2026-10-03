@@ -1,0 +1,270 @@
+package com.rs.game.content.claims
+
+import com.rs.engine.command.Commands
+import com.rs.game.World
+import com.rs.game.model.entity.player.Player
+import com.rs.game.model.gameobject.GameObject
+import com.rs.game.tasks.WorldTasks
+import com.rs.plugin.annotations.ServerStartupEvent
+import com.rs.plugin.kts.onButtonClick
+import org.darkan.core.JsonFileManager
+import org.darkan.core.gameval.gen.Component
+import org.darkan.core.gameval.gen.Interface
+import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.model.ObjectShape
+import org.darkan.core.model.Rights
+import world.gregs.voidps.type.Tile
+import java.io.File
+
+object ClaimManager {
+    const val MAX_TILES_PER_PLAYER = 256
+
+    private const val NORTH = 1
+    private const val EAST = 2
+    private const val SOUTH = 4
+    private const val WEST = 8
+    private const val STARTUP_DELAY_TICKS = 5
+    private const val CHECKED_BOX = "[ X ]"
+    private const val EMPTY_BOX = "[   ]"
+    private val FILE = File("./data/claims.json")
+    private val DESTROY_OPTIONS = setOf("chop down", "chop", "mine", "cut", "cut down", "pick", "pick-up", "smash", "break", "burn", "destroy", "dismantle", "demolish", "remove", "dig", "rake", "harvest", "clear", "pull")
+    private val BORDER_BY_MASK = intArrayOf(
+        -1,
+        Loc.claim_border_n, Loc.claim_border_e, Loc.claim_border_ne, Loc.claim_border_s, Loc.claim_border_ns, Loc.claim_border_es, Loc.claim_border_nes,
+        Loc.claim_border_w, Loc.claim_border_nw, Loc.claim_border_ew, Loc.claim_border_new, Loc.claim_border_sw, Loc.claim_border_nsw, Loc.claim_border_esw, Loc.claim_border_nesw
+    )
+
+    private val claims = ArrayList<Claim>()
+    private val borders = HashMap<Int, List<GameObject>>()
+    private val sessions = HashMap<String, Session>()
+    private val openSettings = HashMap<String, Int>()
+    private val appliedPvp = HashMap<String, Boolean?>()
+    private var nextId = 1
+
+    private class Session {
+        var start: Tile? = null
+        var moving: Claim? = null
+        var corner: Pair<Int, Int>? = null
+        var highlight: GameObject? = null
+    }
+
+    @JvmStatic
+    fun claimAt(tile: Tile): Claim? = claims.firstOrNull { it.contains(tile) }
+
+    @JvmStatic
+    fun canBuild(player: Player, tile: Tile, notify: Boolean = true): Boolean {
+        val claim = claimAt(tile) ?: return true
+        if (claim.owner == player.username || claim.allowConstruct)
+            return true
+        if (notify)
+            player.sendMessage("This land is claimed by ${claim.owner}; you can't build here.")
+        return false
+    }
+
+    @JvmStatic
+    fun canDestroy(player: Player, tile: Tile, notify: Boolean = true): Boolean {
+        val claim = claimAt(tile) ?: return true
+        if (claim.owner == player.username || claim.allowDestroy)
+            return true
+        if (notify)
+            player.sendMessage("This land is claimed by ${claim.owner}; you can't destroy things here.")
+        return false
+    }
+
+    @JvmStatic
+    fun allowObjectOption(player: Player, obj: GameObject, opNum: Int): Boolean {
+        val option = obj.getDefinitions(player).getOption(opNum)?.lowercase() ?: return true
+        return option !in DESTROY_OPTIONS || canDestroy(player, obj.tile)
+    }
+
+    @JvmStatic
+    fun pvpOverride(tile: Tile): Boolean? = claimAt(tile)?.allowPvp
+
+    @JvmStatic
+    fun refreshPvp(player: Player) {
+        val state = pvpOverride(player.tile)
+        if (appliedPvp[player.username] == state && appliedPvp.containsKey(player.username))
+            return
+        appliedPvp[player.username] = state
+        player.setPlayerOption(if (player.isCanPvp) "Attack" else "null", 1, false)
+        player.appearance.generateAppearanceData()
+    }
+
+    @JvmStatic
+    fun inClaimMode(player: Player): Boolean = sessions.containsKey(player.username)
+
+    private fun ownedTiles(owner: String, ignoring: Claim? = null): Int =
+        claims.filter { it.owner == owner && it !== ignoring }.sumOf { it.tileCount }
+
+    private fun toggleMode(player: Player) {
+        if (sessions.remove(player.username)?.also { clearSelection(player, it) } != null) {
+            player.sendMessage("Claim mode off.")
+            return
+        }
+        sessions[player.username] = Session()
+        player.sendMessage("Claim mode on. Click the ground to pick a first corner, then click again to finish the claim. Click the edge of your claim to move a corner, or inside it for Claim Settings.")
+    }
+
+    private fun clearSelection(player: Player, session: Session) {
+        session.highlight?.let { player.packets.sendRemoveObject(it) }
+        session.highlight = null
+        session.start = null
+        session.moving = null
+        session.corner = null
+    }
+
+    private fun showHighlight(player: Player, session: Session, tile: Tile) {
+        session.highlight?.let { player.packets.sendRemoveObject(it) }
+        val marker = GameObject(Loc.claim_highlight, ObjectShape.GROUND_DECORATION, 0, tile)
+        session.highlight = marker
+        player.packets.sendAddObject(marker)
+    }
+
+    @JvmStatic
+    fun handleClick(player: Player, tile: Tile): Boolean {
+        val session = sessions[player.username] ?: return false
+        val moving = session.moving
+        val start = session.start
+        if (moving != null) {
+            val corner = session.corner!!
+            val fixedX = if (corner.first == moving.minX) moving.maxX else moving.minX
+            val fixedY = if (corner.second == moving.minY) moving.maxY else moving.minY
+            finish(player, session, tile, Tile.of(fixedX, fixedY, moving.plane), moving)
+            return true
+        }
+        if (start != null) {
+            finish(player, session, start, tile, null)
+            return true
+        }
+        val existing = claimAt(tile)
+        when {
+            existing == null -> {
+                session.start = tile
+                showHighlight(player, session, tile)
+                player.sendMessage("First corner selected. Click the opposite corner to claim.")
+            }
+            existing.owner != player.username -> player.sendMessage("This land is claimed by ${existing.owner}.")
+            existing.isEdge(tile) -> {
+                session.moving = existing
+                session.corner = existing.nearestCorner(tile)
+                showHighlight(player, session, Tile.of(session.corner!!.first, session.corner!!.second, existing.plane))
+                player.sendMessage("Corner selected. Click where the corner should go.")
+            }
+            else -> openSettings(player, existing)
+        }
+        return true
+    }
+
+    private fun finish(player: Player, session: Session, a: Tile, b: Tile, editing: Claim?) {
+        clearSelection(player, session)
+        if (a.plane != b.plane) {
+            player.sendMessage("A claim has to stay on one level.")
+            return
+        }
+        val candidate = Claim(
+            id = editing?.id ?: nextId,
+            owner = player.username,
+            plane = a.plane,
+            minX = minOf(a.x, b.x),
+            minY = minOf(a.y, b.y),
+            maxX = maxOf(a.x, b.x),
+            maxY = maxOf(a.y, b.y),
+            allowConstruct = editing?.allowConstruct ?: false,
+            allowDestroy = editing?.allowDestroy ?: false,
+            allowPvp = editing?.allowPvp ?: false
+        )
+        if (ownedTiles(player.username, editing) + candidate.tileCount > MAX_TILES_PER_PLAYER) {
+            player.sendMessage("You can claim at most $MAX_TILES_PER_PLAYER tiles; that would make ${ownedTiles(player.username, editing) + candidate.tileCount}.")
+            return
+        }
+        if (claims.any { it !== editing && it.overlaps(candidate) }) {
+            player.sendMessage("That overlaps another claim.")
+            return
+        }
+        if (editing == null) {
+            nextId++
+            claims.add(candidate)
+        } else {
+            clearBorder(editing)
+            editing.minX = candidate.minX
+            editing.minY = candidate.minY
+            editing.maxX = candidate.maxX
+            editing.maxY = candidate.maxY
+        }
+        val result = editing ?: candidate
+        drawBorder(result)
+        save()
+        player.sendMessage("Claim saved: ${result.width} x ${result.height} (${result.tileCount} tiles).")
+    }
+
+    private fun drawBorder(claim: Claim) {
+        val objects = ArrayList<GameObject>()
+        for (x in claim.minX..claim.maxX)
+            for (y in claim.minY..claim.maxY) {
+                var mask = 0
+                if (y == claim.maxY) mask = mask or NORTH
+                if (x == claim.maxX) mask = mask or EAST
+                if (y == claim.minY) mask = mask or SOUTH
+                if (x == claim.minX) mask = mask or WEST
+                if (mask == 0)
+                    continue
+                val marker = GameObject(BORDER_BY_MASK[mask], ObjectShape.GROUND_DECORATION, 0, Tile.of(x, y, claim.plane))
+                World.spawnObject(marker, false)
+                objects.add(marker)
+            }
+        borders[claim.id] = objects
+    }
+
+    private fun clearBorder(claim: Claim) {
+        borders.remove(claim.id)?.forEach { World.removeObject(it) }
+    }
+
+    private fun openSettings(player: Player, claim: Claim) {
+        openSettings[player.username] = claim.id
+        player.interfaceManager.sendInterface(Interface.claim_settings)
+        refreshSettings(player, claim)
+    }
+
+    private fun refreshSettings(player: Player, claim: Claim) {
+        player.packets.setIFText(Component.claim_settings.construct_toggle, if (claim.allowConstruct) CHECKED_BOX else EMPTY_BOX)
+        player.packets.setIFText(Component.claim_settings.destroy_toggle, if (claim.allowDestroy) CHECKED_BOX else EMPTY_BOX)
+        player.packets.setIFText(Component.claim_settings.pvp_toggle, if (claim.allowPvp) CHECKED_BOX else EMPTY_BOX)
+    }
+
+    private fun save() {
+        JsonFileManager.saveJsonFile(claims, FILE)
+    }
+
+    private fun load() {
+        if (!FILE.exists())
+            return
+        val stored = JsonFileManager.loadJsonFile(FILE, Array<Claim>::class.java) ?: return
+        claims.addAll(stored)
+        nextId = (claims.maxOfOrNull { it.id } ?: 0) + 1
+        WorldTasks.schedule(STARTUP_DELAY_TICKS, Runnable { claims.forEach { drawBorder(it) } })
+    }
+
+    @ServerStartupEvent
+    @JvmStatic
+    fun init() {
+        load()
+        Commands.add(Rights.PLAYER, "claim", "Toggles claim mode.") { p, _ -> toggleMode(p) }
+        onButtonClick(Interface.claim_settings) { e ->
+            val claim = claims.firstOrNull { it.id == openSettings[e.player.username] } ?: return@onButtonClick
+            if (claim.owner != e.player.username)
+                return@onButtonClick
+            when (e.component) {
+                Component.claim_settings.construct_toggle -> claim.allowConstruct = !claim.allowConstruct
+                Component.claim_settings.destroy_toggle -> claim.allowDestroy = !claim.allowDestroy
+                Component.claim_settings.pvp_toggle -> claim.allowPvp = !claim.allowPvp
+                Component.claim_settings.close -> {
+                    e.player.closeInterfaces()
+                    return@onButtonClick
+                }
+                else -> return@onButtonClick
+            }
+            save()
+            refreshSettings(e.player, claim)
+        }
+    }
+}

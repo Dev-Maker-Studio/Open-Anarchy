@@ -100,7 +100,7 @@ object Builder {
         start: Long,
         report: (String) -> Unit
     ): BuildResult {
-        val threads = Runtime.getRuntime().availableProcessors()
+        val threads = PackThreads.count()
         val pool = Executors.newFixedThreadPool(threads) { runnable ->
             Thread(runnable, "cache-build").apply { isDaemon = true }
         }
@@ -145,6 +145,7 @@ object Builder {
             var removed = 0
             var tables = 0
             FileStore.open(output, writable = true).use { store ->
+                store.durable = PackThreads.durable()
                 for (index in indices) {
                     val result = buildIndex(
                         tree, index, store, pool, manifest,

@@ -560,6 +560,10 @@ public class Shop {
 		return mainStock;
 	}
 
+	public ShopItem[] getGeneralStock() {
+		return generalStock;
+	}
+
 	public boolean isBuyOnly() {
 		return buyOnly;
 	}

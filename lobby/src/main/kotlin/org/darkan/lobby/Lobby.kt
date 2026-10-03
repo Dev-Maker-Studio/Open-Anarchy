@@ -24,6 +24,7 @@ import org.darkan.lobby.web.model.AccountCreationSession
 import org.darkan.lobby.web.model.LobbyPlayer
 import org.darkan.lobby.web.module
 import world.gregs.voidps.cache.Cache
+import org.darkan.core.net.js5.DiscoveredMapFileProvider
 import world.gregs.voidps.cache.file.FileProvider
 import world.gregs.voidps.cache.file.prefetchKeys
 import java.lang.management.ManagementFactory
@@ -87,7 +88,7 @@ object Lobby : CoroutineScope {
         logInfo("Starting application services...")
         cache = Cache.get()
         cacheCrcs = cache.indexCrcs()
-        cacheProvider = FileProvider.load(cache)
+        cacheProvider = FileProvider.load(cache).let { if (EnvVars.gateMaps) DiscoveredMapFileProvider(it, cache) else it }
         js5Server = JS5Server(cacheProvider, prefetchKeys(cache))
         PacketHandlers.loadHandlersFromPackage("org.darkan.lobby.server.packet")
         startLobbyAPI()

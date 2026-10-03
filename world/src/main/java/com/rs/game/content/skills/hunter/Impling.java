@@ -8,6 +8,7 @@ import com.rs.game.model.entity.ForceTalk;
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.tasks.WorldTasks;
 import world.gregs.voidps.type.Tile;
+import org.darkan.core.EnvVars;
 import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.annotations.ServerStartupEvent;
@@ -21,7 +22,11 @@ public class Impling extends NPC {
     private final Tile respawnTile;
 
     public Impling(int id, Tile tile, boolean dynamic) {
-        super(id, tile);
+        this(id, tile, dynamic, false);
+    }
+
+    public Impling(int id, Tile tile, boolean dynamic, boolean permaDeath) {
+        super(id, tile, permaDeath);
         ChunkManager.permanentlyPreloadRegions(tile.getRegionId());
         this.dynamic = dynamic;
         this.respawnTile = tile;
@@ -48,6 +53,8 @@ public class Impling extends NPC {
         reset();
         setTile(respawnTile);
         finish();
+        if (isSpawned())
+            return;
         int impId = rollImpRespawn();
         setNPC(impId == -1 ? rollLowTierOverworldImp() : impId);
         if (!isSpawned())
@@ -170,6 +177,8 @@ public class Impling extends NPC {
 
     @ServerStartupEvent
     public static void initSpawns() {
+        if (EnvVars.INSTANCE.getGenerateMaps())
+            return;
         Tile[] STATIC_PUROPURO_BABY_IMPLING_SPAWNS = new Tile[]{ Tile.of(2563, 4291, 0), Tile.of(2563, 4348, 0), Tile.of(2568, 4323, 0), Tile.of(2571, 4305, 0), Tile.of(2571, 4337, 0), Tile.of(2581, 4300, 0), Tile.of(2584, 4344, 0), Tile.of(2596, 4296, 0), Tile.of(2609, 4339, 0), Tile.of(2610, 4304, 0), Tile.of(2615, 4322, 0), Tile.of(2620, 4291, 0), Tile.of(2620, 4348, 0) };
         Tile[] STATIC_PUROPURO_YOUNG_IMPLING_SPAWNS = new Tile[]{ Tile.of(2564, 4321, 0), Tile.of(2574, 4321, 0), Tile.of(2574, 4331, 0), Tile.of(2587, 4300, 0), Tile.of(2590, 4348, 0), Tile.of(2592, 4291, 0), Tile.of(2595, 4343, 0), Tile.of(2612, 4309, 0), Tile.of(2612, 4327, 0), Tile.of(2619, 4322, 0) };
         Tile[] STATIC_PUROPURO_GOURMET_IMPLING_SPAWNS = new Tile[]{ Tile.of(2568, 4296, 0), Tile.of(2568, 4327, 0), Tile.of(2574, 4311, 0), Tile.of(2580, 4343, 0), Tile.of(2585, 4296, 0), Tile.of(2597, 4293, 0), Tile.of(2602, 4346, 0), Tile.of(2609, 4317, 0), Tile.of(2615, 4298, 0), Tile.of(2615, 4342, 0), Tile.of(2618, 4321, 0) };

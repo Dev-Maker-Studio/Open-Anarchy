@@ -36,7 +36,10 @@ import org.darkan.core.social.SocialAction
 import org.darkan.core.social.SocialEvent
 import org.darkan.core.social.SocialPackets
 import org.darkan.core.social.Speaker
+import org.darkan.core.map.MapDiscovery
 import org.darkan.core.social.gateway.AccountAction
+import org.darkan.core.social.gateway.MapDiscovered
+import org.darkan.core.social.gateway.WindowDemand
 import org.darkan.core.social.gateway.AccountCommand
 import org.darkan.core.social.gateway.AccountUpdate
 import org.darkan.core.social.gateway.AnnouncementBroadcast
@@ -714,6 +717,10 @@ object SocialGateway {
 
             is AccountCommand -> handleAccountCommand(session, msg)
 
+            is MapDiscovered -> MapDiscovery.discover(msg.regionIds)
+
+            is WindowDemand -> WindowOrchestrator.ensure(msg.windowX, msg.windowY)
+
             is DisplayNameLookup -> sendToWorld(session.worldId, DisplayNameResult(msg.requestId, Accounts.find(msg.username)?.displayName))
 
             is ClanCommand -> sendToWorld(session.worldId, ClanService.handle(msg.username, msg.action, msg.requestId))
@@ -751,6 +758,8 @@ object SocialGateway {
         is SocialCommand -> isOnWorld(msg.username, session)
         is ClanCommand -> isOnWorld(msg.username, session)
         is AccountCommand -> false
+        is MapDiscovered -> false
+        is WindowDemand -> false
         is AnnouncementBroadcast -> false
         else -> true
     }

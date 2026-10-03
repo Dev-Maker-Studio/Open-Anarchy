@@ -291,7 +291,7 @@ public class Debug {
 			}
 			int skill = Integer.parseInt(args[0]);
 			int level = Integer.parseInt(args[1]);
-			if (level < 0 || level > (skill == Constants.DUNGEONEERING ? 120 : 99)) {
+			if (level < 0 || level > Skills.MAX_LEVEL) {
 				p.sendMessage("Please choose a valid level.");
 				return;
 			}

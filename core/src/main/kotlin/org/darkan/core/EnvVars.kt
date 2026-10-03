@@ -39,6 +39,7 @@ object EnvVars {
     // and, while DEBUG is on, the only account allowed any administrative lobby feature at all: a dev
     // environment lets people grant themselves rights on their own worlds, so rights alone are no gate.
     val lobbyOwner: String = dotenv.get("LOBBY_OWNER", "trent").lowercase().replace(" ", "_")
+    val worldOwner: String = dotenv.get("WORLD_OWNER", "").lowercase().replace(" ", "_")
     // The prepacked cache named in the environment; only served when no source tree is configured.
     val prepackedCachePath: String = dotenv.get("CACHE_PATH", "../cache/")
     // A cache source tree (docs/cache-source.md). When set, the server builds it into CACHE_BUILD_PATH on
@@ -47,6 +48,35 @@ object EnvVars {
     val cacheSourcePath: String? = dotenv.get("CACHE_SOURCE_PATH", null)?.takeIf { it.isNotBlank() }
         ?: CACHE_SOURCE_SUBMODULE.takeIf { !File(prepackedCachePath).isDirectory && File(it, "cache.json").isFile }
     val cacheBuildPath: String = dotenv.get("CACHE_BUILD_PATH", "./data/cache")
+    // Generate flat grass for every map square the source tree has no terrain file for, and save each square into the
+    // tree the first time a player explores it (org.darkan.core.cache.MapMaterializer).
+    val generateMaps: Boolean = dotenv.get("CACHE_GENERATE_MAPS", "false").toBooleanStrict()
+    // Threads the cache packer may use; generating a world defaults to one so that it never takes the whole machine.
+    val cachePackThreads: Int = dotenv.get("CACHE_PACK_THREADS", null)?.toIntOrNull() ?: if (generateMaps) 1 else 0
+    // Only one process may generate or pack a cache at a time on this machine: they queue on this file.
+    val cachePackLock: String = dotenv.get("CACHE_PACK_LOCK", System.getProperty("java.io.tmpdir") + "/darkan-cache-pack.lock")
+    // Lobby: only hand a map square to a client once a world has reported it explored (org.darkan.core.map.MapDiscovery).
+    // World: report the squares sent to players to the lobby. Both need to be set for the fog to work.
+    // Run this world as one 16384 x 16384 window of the 1,000,000 x 1,000,000 generated world (org.darkan.core.map.WorldWindow).
+    // Both unset: the world is window 0,0, which is the plain generated world.
+    val worldWindowX: Int? = dotenv.get("WORLD_WINDOW_X", null)?.toIntOrNull()
+    val worldWindowY: Int? = dotenv.get("WORLD_WINDOW_Y", null)?.toIntOrNull()
+    val windowed: Boolean = worldWindowX != null && worldWindowY != null
+    // Lobby: start neighbouring windows on demand by running WINDOW_SCRIPT, at most WINDOW_MAX_RUNNING at a time.
+    // World ids and ports of window worlds: a community lobby only takes ids 100 to 999, so a world on one sets a base in that range.
+    val windowWorldIdBase: Int = dotenv.get("WINDOW_WORLD_ID_BASE", "2000").toInt()
+    val windowPortBase: Int = dotenv.get("WINDOW_PORT_BASE", "44000").toInt()
+    // The world id of window 0,0 when it is not the base (the world a player starts in).
+    val windowHomeWorldId: Int = dotenv.get("WINDOW_HOME_WORLD_ID", "0").toInt()
+    // A world that has no lobby orchestrator behind it starts the windows its players are heading for by running this script.
+    val windowLaunchScript: String = dotenv.get("WINDOW_LAUNCH_SCRIPT", "")
+    val windowOrchestrator: Boolean = dotenv.get("WINDOW_ORCHESTRATOR", "false").toBooleanStrict()
+    val windowScript: String = dotenv.get("WINDOW_SCRIPT", "./scripts/window-world.sh")
+    val windowMaxRunning: Int = dotenv.get("WINDOW_MAX_RUNNING", "8").toInt()
+    // Window world: exit after this many minutes without a player (0 = never). The lobby starts it again on demand.
+    val windowIdleExitMinutes: Int = dotenv.get("WINDOW_IDLE_EXIT_MINUTES", "0").toInt()
+    val gateMaps: Boolean = dotenv.get("CACHE_GATE_MAPS", "false").toBooleanStrict()
+    val discoveredMapsPath: String = dotenv.get("DISCOVERED_MAPS_PATH", "./data/map/discovered.txt")
     // The packed cache the server actually opens: the build of the source tree when one is configured
     // (org.darkan.core.cache.CacheSource builds it before Cache.get() opens it), else the prepacked one.
     val cachePath: String = if (cacheSourcePath != null) cacheBuildPath else prepackedCachePath

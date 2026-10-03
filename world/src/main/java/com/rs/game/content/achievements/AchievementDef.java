@@ -118,9 +118,11 @@ public class AchievementDef {
 				if (struct.getIntValue(i, -1) >= 1 && struct.getIntValue(i, -1) <= 25)
 					addSkillReq(toRealSkillId(struct.getIntValue(i, -1)), struct.getIntValue(i+1, -1));
 				else if (struct.getIntValue(i, -1) == 61) {
-					quests.add(Quest.forSlot(struct.getIntValue(i+1, -1)));
-					for (int skillId : Quest.forSlot(struct.getIntValue(i+1, -1)).getDefs().getExtraInfo().getPreReqSkillReqs().keySet())
-						addSkillReq(skillId, Quest.forSlot(struct.getIntValue(i+1, -1)).getDefs().getExtraInfo().getPreReqSkillReqs().get(skillId));
+					Quest required = Quest.forSlot(struct.getIntValue(i+1, -1));
+					quests.add(required);
+					if (required != null && required.getDefs().getExtraInfo() != null)
+						for (int skillId : required.getDefs().getExtraInfo().getPreReqSkillReqs().keySet())
+							addSkillReq(skillId, required.getDefs().getExtraInfo().getPreReqSkillReqs().get(skillId));
 				}
 	}
 

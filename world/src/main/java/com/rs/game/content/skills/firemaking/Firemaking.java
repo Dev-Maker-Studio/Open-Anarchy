@@ -237,6 +237,8 @@ public class Firemaking extends Action {
 	}
 
 	public static boolean canLightFire(Entity entity, Player player) {
+		if (player != null && !com.rs.game.content.claims.ClaimManager.canBuild(player, entity.getTile(), true))
+			return true;
 		return !World.canLightFire(entity.getPlane(), entity.getX(), entity.getY()) || ChunkManager.getChunk(entity.getChunkId()).getSpawnedObject(entity.getTile()) != null || (player != null && (player.getControllerManager().getController() instanceof DuelArenaController || player.getControllerManager().getController() instanceof DuelController));
 	}
 }

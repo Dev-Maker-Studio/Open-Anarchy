@@ -16,6 +16,7 @@ import org.darkan.core.social.gateway.DisplayNameLookup
 import org.darkan.core.social.gateway.GatewayPlayerPresence
 import org.darkan.core.social.gateway.GatewayWorldInfo
 import org.darkan.core.social.gateway.LoginTokenVerdict
+import org.darkan.core.social.gateway.MapDiscovered
 import org.darkan.core.social.gateway.PlayerOffline
 import org.darkan.core.social.gateway.PlayerOnline
 import org.darkan.core.social.gateway.PresenceSyncReason
@@ -87,6 +88,16 @@ class SocialClient(
         send(PlayerOnline(username = username, displayName = displayName, rightsCrown = rightsCrown, privateStatus = privateStatus))
 
     fun sendPlayerOffline(username: String): Boolean = send(PlayerOffline(username = username))
+
+    private val reportedRegions = ConcurrentHashMap.newKeySet<Int>()
+
+    fun reportMapDiscovered(regionIds: IntArray): Boolean {
+        val fresh = regionIds.filter(reportedRegions::add).toIntArray()
+        if (fresh.isEmpty()) return true
+        val sent = send(MapDiscovered(fresh))
+        if (!sent) fresh.forEach(reportedRegions::remove)
+        return sent
+    }
 
     fun act(username: String, action: SocialAction): Boolean = send(SocialCommand(username, action))
 

@@ -1,9 +1,12 @@
 package org.darkan.world.server.packet
 
 import com.rs.game.content.Effect
+import com.rs.game.content.claims.ClaimManager
+import com.rs.game.content.skills.construction.handleFurniturePlacementClick
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.net.prot.packet.Walk
 import org.darkan.core.net.prot.handler.PacketHandler
+import world.gregs.voidps.type.Tile
 
 class WalkHandler : PacketHandler<Player, Walk> {
     override suspend fun handle(player: Player, packet: Walk) {
@@ -18,6 +21,10 @@ class WalkHandler : PacketHandler<Player, Walk> {
             player.sendMessage("You are stunned.")
             return
         }
+        if (ClaimManager.handleClick(player, Tile.of(packet.x, packet.y, player.plane)))
+            return
+        if (handleFurniturePlacementClick(player, Tile.of(packet.x, packet.y, player.plane)))
+            return
         player.stopAll()
         player.walkRequest = packet
     }

@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Rev-727 Technical Design</title>
+<link rel="stylesheet" href="style.css"></head><body>
+
+<div class="cover">
+  <h1>Free-Placement Construction on Revision 727</h1>
+  <div class="sub">Technical design: porting the RS3 player-owned house to the 2012 client and the Darkan server</div>
+  <div class="meta">
+    Document 2 of 3 &middot; Darkan construction port series<br>
+    <span class="ver">Version 2.0 (draft)</span> &middot; 2 October 2026<br>
+    Specification source: <i>01 RS3 Construction Reference v2</i><br>
+    Open items tracked in: <i>03 Open Questions &amp; Roadmap v2</i><br>
+    Code baseline: server/world, package <span class="mono">com.rs.game.content.skills.construction</span>
+  </div>
+</div>
+
+<h1>0. What changed in version 2</h1>
+<p>Four code investigations (placement hook and object slots, template anatomy, catalogue extraction, client limits) and a re-read of the RS3 source text settled most of version 1's open questions. The headline results:</p>
+<table class="changelog">
+<tr><th style="width:30mm">Area</th><th>Outcome</th></tr>
+<tr><td>Click-to-place</td><td><b>Confirmed feasible.</b> <span class="mono">Walk(x, y, forceRun, minimap)</span> carries an absolute world tile; a session check goes before <span class="mono">stopAll()</span> in <span class="mono">WalkHandler</span> (section 9.1).</td></tr>
+<tr><td>Ghost preview</td><td><b>Confirmed feasible.</b> Per-player object spawn and per-player recolour exist (section 9.1).</td></tr>
+<tr><td>Object slots</td><td>A multi-tile object is stored under its <b>base tile only</b>, and spawning into an occupied slot <b>replaces silently</b>. The layout therefore needs its own occupancy index (section 7.3).</td></tr>
+<tr><td>Level 120</td><td><b>Confirmed.</b> The level fits the stat packet; XP table enum 716 already reaches 140. About 12 server sites and 3 cosmetic scripts change (section 9.5).</td></tr>
+<tr><td>Trunk</td><td>750 slots in one inventory key works; page the interface (section 9.3).</td></tr>
+<tr><td>Surface placement</td><td>Loc definitions carry a height offset; <b>feasible</b> but needs new loc ids (section 7.2).</td></tr>
+<tr><td>Shell templates</td><td>No existing chunk can serve as a shaped shell, but the terrain format allows void tiles; styles differ only in ids, so shells can be <b>generated</b> (section 6).</td></tr>
+<tr><td>Floors</td><td>RS3 has <b>three</b> floors; the 727 client has four planes and the roof needs one. A plane plan is proposed (section 5.2).</td></tr>
+<tr><td>Fidelity loss</td><td>RS3 places rooms on the <b>tile</b> grid; chunks force 8-tile cells (section 5.4).</td></tr>
+<tr><td>Catalogue</td><td>Sized: 447 objects, 812 locs, 128 builds; 17 builds with variants need orientation review (section 7.1).</td></tr>
+<tr><td>Defects</td><td>Four more found (section 2.4).</td></tr>
+</table>
+
+<h1>1. Purpose and scope</h1>
+<p>Darkan already contains a complete <b>2012-style</b> house: a grid of purposeful rooms with furniture hotspots. This document designs the change from that system to the <b>RS3 free-placement model</b> of document 1, on the unmodified revision-727 client.</p>
+<h2>1.1 Goals</h2>
+<ul>
+<li>Rooms are shapes without purpose; furniture is placed on any valid tile and can be moved, rotated and returned to storage without loss.</li>
+<li>The craft &rarr; store &rarr; place loop: workbench, furniture storage, build-mode placement session.</li>
+<li>The RS3 limits: 48&times;48 plot, 25 rooms, a level-scaled furniture cap (25 to 500), up to three floors, 12 room shapes, Construction to level 120.</li>
+<li>Existing player houses survive: legacy rooms and furniture are migrated.</li>
+</ul>
+<h2>1.2 Non-goals for the first releases</h2>
+<ul>
+<li>RS3 rendering, models and animation. The client stays revision 727.</li>
+<li>Homesteads, deferred to a later phase (section 12).</li>
+<li>45&deg; rotation, drag-and-drop and a live cursor preview, which the 727 client cannot express (section 3).</li>
+<li>Balconies with beam supports, and all 650+ RS3 decorative items. The first catalogue is the existing 447 house objects.</li>
+</ul>
+<div class="note"><b>Reading guide.</b> <span class="tag v">VERIFIED</span> means checked in this repository (code or cache) during this work. <span class="tag q">OPEN</span> means unresolved and tracked in document 3. Everything else is a design decision.</div>
+
+<h1>2. Baseline: how the current house works</h1>
+<p>All of this was checked in the repository on 2 October 2026 (paths relative to <span class="mono">server/</span>).</p>
+<h2>2.1 Rendering</h2>
+<ul>
+<li>A house is an <b>8&times;8-chunk instance</b>. A chunk is 8&times;8 tiles. Each room is <b>one chunk copied from a template map</b> (regions 29_79 and 30_79 in <span class="mono">cache-source/maps</span>) with one of four rotations, by <span class="mono">Instance.copyChunk</span> on top of <span class="mono">InstanceBuilder</span>. <span class="tag v">VERIFIED</span></li>
+<li>The client is sent a <b>chunk-descriptor array</b>: for every chunk of a 13&times;13 window on 4 planes, which template chunk to draw, as <span class="mono">(rot&amp;3)&lt;&lt;1 | (plane&amp;3)&lt;&lt;24 | (chunkX&amp;0x3ff)&lt;&lt;14 | (chunkY&amp;0x7ff)&lt;&lt;3</span>, or &minus;1 (<span class="mono">ServerRegionPackets.kt</span>). The client loads terrain and base objects itself; the server sends only object deltas. <span class="tag v">VERIFIED</span></li>
+<li>Rooms may not sit on grid row/column 0 or 7, so the <b>usable grid is 6&times;6 chunks = 48&times;48 tiles</b>, exactly the RS3 plot. <span class="tag v">VERIFIED</span></li>
+<li>Planes today: 0 dungeon, 1 ground, 2 upper, 3 roofs. Styles pick the template plane/region. <span class="tag v">VERIFIED</span></li>
+</ul>
+<h2>2.2 Furniture and content tables</h2>
+<ul>
+<li>Template chunks hold <b>hotspot locs</b>; building swaps the hotspot for the furniture loc on the same tile and rotation. The save stores only <span class="mono">(build, slot)</span> per room. <span class="tag v">VERIFIED</span></li>
+<li><span class="mono">HouseObjects</span> has 447 entries (395 distinct item ids, 812 distinct loc ids); <span class="mono">HouseBuilds</span> has 128 builds. All 395 items exist in <span class="mono">config_obj</span>, so every piece has a trunk icon. <span class="tag v">VERIFIED</span></li>
+<li>Furniture-create interface 1306 (7 slots) and its client script already read cost and level from object params. <span class="tag v">VERIFIED</span></li>
+</ul>
+<h2>2.3 Persistence and lifecycle</h2>
+<ul>
+<li>Saves are Gson JSON in Mongo. Enums serialise <b>by name</b>. <span class="tag v">VERIFIED</span></li>
+<li>Adding or removing a room, or toggling build mode, runs <span class="mono">refreshHouse()</span>: destroy and recreate everything behind a loading screen. <span class="tag v">VERIFIED</span></li>
+</ul>
+<h2>2.4 Defects found</h2>
+<table>
+<tr><th>Defect</th><th>Effect</th><th>Needed for</th></tr>
+<tr><td><span class="mono">InstanceBuilder.findEmptyChunkBound</span> loops <span class="mono">chunkBase[0] until width</span>; with a base of 16 or more and a width of 8 the range is empty, so <span class="mono">Instance.chunkIds</span> is never filled. <span class="tag v">VERIFIED</span></td><td>Cleanup and presence checks silently do nothing.</td><td>Per-chunk bookkeeping</td></tr>
+<tr><td><span class="mono">Skills.getLevelForXp</span> hard-codes <span class="mono">skill == DUNGEONEERING ? 120 : 99</span>, in two overloads. <span class="tag v">VERIFIED</span></td><td>Construction cannot exceed 99.</td><td>Level 120</td></tr>
+<tr><td><span class="mono">Chunk.getObjectWithId(int, int)</span> loops to 64 over an <span class="mono">[8][8]</span> array. <span class="tag v">VERIFIED</span> (spike S1)</td><td>Possible out-of-range or wrong lookups.</td><td>Any object lookup by id</td></tr>
+<tr><td><span class="mono">HouseRooms</span> door directions disagree with the map: the Bedroom chunk has doors S and W where the code says N and W; the Costume Room has one south door where the code says four. <span class="mono">doorDirs</span> is never read. <span class="tag v">VERIFIED</span> (spike S2)</td><td>None today (the chunk decides); a trap for migration.</td><td>Legacy migration</td></tr>
+<tr><td><span class="mono">HouseConstants.WALL_IDS</span> style 2 is 13004; the map uses 1415. <span class="tag v">VERIFIED</span> (spike S2)</td><td>Wrong wall id for that style when walls are spawned.</td><td>Doorway modes</td></tr>
+<tr><td><span class="mono">House.kt:381</span> tests <span class="mono">consLvl == 99</span> for the final room bonus. <span class="tag v">VERIFIED</span></td><td>Breaks at level 120.</td><td>Level 120</td></tr>
+</table>
+
+<h1>3. Feasibility matrix</h1>
+<p>"Direct" needs no engine change; "Adapt" needs new code on existing mechanisms; "Gap" cannot be matched and gets a substitute.</p>
+<table>
+<tr><th>RS3 feature</th><th>727 mechanism</th><th>Verdict</th></tr>
+<tr><td>48&times;48 plot</td><td>Existing 6&times;6 interior chunk grid</td><td>Direct</td></tr>
+<tr><td>Rooms of 8&times;8, 8&times;16, 16&times;16</td><td>1, 2 or 4 chunk cells</td><td>Direct</td></tr>
+<tr><td>Rooms of 4&times;4, 4&times;8, 4&times;16</td><td>Shape embedded in a whole cell</td><td>Adapt (space cost)</td></tr>
+<tr><td>Tile-granular room positions</td><td>Chunk copy is 8-tile granular</td><td>Gap (section 5.4)</td></tr>
+<tr><td>Octagon, cross, T, corner, rounded shapes</td><td>Generated template chunks with void tiles</td><td>Adapt (asset work)</td></tr>
+<tr><td>Place furniture on any tile</td><td>Server-side object spawn with collision</td><td>Direct</td></tr>
+<tr><td>Click a tile to place</td><td>Walk packet carries the tile; session hook in <span class="mono">WalkHandler</span></td><td>Adapt (confirmed)</td></tr>
+<tr><td>Cursor-following preview</td><td>No hover; per-player ghost after a click</td><td>Gap &rarr; substitute (confirmed)</td></tr>
+<tr><td>Scroll rotation, 45&deg; rotation</td><td>Rotation 0&ndash;3; buttons</td><td>Gap &rarr; substitute</td></tr>
+<tr><td>Drag-and-drop move and swap</td><td>No drag events; "Move" then click a tile</td><td>Gap &rarr; substitute</td></tr>
+<tr><td>Furniture storage, 750 items</td><td>Inventory key plus paged CS2 interface</td><td>Adapt (confirmed)</td></tr>
+<tr><td>Workbench crafting</td><td>Existing make-X and interface 1306</td><td>Direct</td></tr>
+<tr><td>Construction level 120</td><td>Per-skill cap; three cosmetic scripts</td><td>Adapt (confirmed)</td></tr>
+<tr><td>Rugs under furniture</td><td>Ground-decoration slot is separate from scenery</td><td>Direct</td></tr>
+<tr><td>Objects on tables</td><td>New loc defs with height offset</td><td>Adapt</td></tr>
+<tr><td>Doorway modes</td><td>Remove or spawn wall objects on 2 tiles</td><td>Direct</td></tr>
+<tr><td>Stairs and up to 3 floors</td><td>Plane plan, stair objects</td><td>Adapt (section 5.2)</td></tr>
+<tr><td>Floor styles (14)</td><td>Terrain overlay variants per template</td><td>Adapt (section 6.3)</td></tr>
+<tr><td>Move a placed room</td><td>Re-copy chunks and translate objects</td><td>Direct</td></tr>
+<tr><td>Homesteads</td><td>13&times;13-chunk client window</td><td>Deferred</td></tr>
+<tr><td>650 RS3 decorative items</td><td>RS3 asset import pipeline</td><td>Later</td></tr>
+</table>
+
+<h1>4. Architecture overview</h1>
+<table>
+<tr><th>Layer</th><th>Responsibility</th><th>Replaces</th></tr>
+<tr><td><b>Layout model</b></td><td>The saved truth: rooms, furniture, doorway modes, storage counts, plus an <i>occupancy index</i> derived from it. Pure data and validation.</td><td>RoomReference, ObjectReference</td></tr>
+<tr><td><b>Catalogue</b></td><td>Immutable definitions: room shapes, furniture, recipes, limits.</td><td>HouseRooms, HouseBuilds, HouseObjects</td></tr>
+<tr><td><b>House renderer</b></td><td>Turns a layout into an instance, incrementally.</td><td>createHouse, refreshHouse, spawnBuildObjects</td></tr>
+<tr><td><b>Interaction</b></td><td>Placement sessions, storage and shop interfaces, workbench, functional-furniture handlers.</td><td>HouseController click chain, openBuildInterface</td></tr>
+</table>
+<p>All new code is Kotlin. Java files touched by the migration (servants, pets, estate agent, sawmill, tablets) are converted when touched.</p>
+
+<h1>5. Spatial model</h1>
+{{GRID_SVG}}
+<h2>5.1 Coordinates</h2>
+<ul>
+<li>The instance stays 8&times;8 chunks; border cells (index 0 and 7) are the unusable black chunk and interior cells (1&ndash;6) form the plot.</li>
+<li>Furniture position is stored as <b>plot-relative tiles</b>, <span class="mono">x, y in 0..47</span>, plus a floor index. The incoming Walk packet gives an absolute world tile and no plane (<span class="tag v">VERIFIED</span>); the session converts it with the instance base and uses the player's own plane.</li>
+<li>Rotation is 0&ndash;3, the loc rotation the client understands.</li>
+</ul>
+<h2>5.2 Floors and planes</h2>
+<p>RS3 allows <b>three floors</b> (first floor at level 30, second at level 70). The 727 client has <b>four planes</b>, and the roof needs the plane above the top floor, so three floors plus a roof need all four planes and displace the legacy dungeon on plane 0.</p>
+<table>
+<tr><th>Phase</th><th>Plane 0</th><th>Plane 1</th><th>Plane 2</th><th>Plane 3</th></tr>
+<tr><td>While the legacy dungeon exists</td><td>dungeon</td><td>ground</td><td>first floor</td><td>roofs</td></tr>
+<tr><td>After the dungeon is retired</td><td>ground</td><td>first floor</td><td>second floor</td><td>roofs</td></tr>
+</table>
+<p>So the first release supports <b>two floors</b>, which matches RS3 up to level 69, and the third floor ships with the dungeon's retirement. <span class="tag q">OPEN</span> Decision D6.</p>
+<p><b>Stairs</b> follow RS3: a per-room "Add Stairs" option (level 30) that places a spiral staircase in the centre of the room and creates a room of the same shape above it, at double cost. The staircase is part of the room's shell variant, not free furniture, so room shapes need a with-stairs variant. Balconies with beam supports are out of scope.</p>
+<h2>5.3 Room shapes as chunk cells</h2>
+<table>
+<tr><th>Shape</th><th>RS3 footprint</th><th>Cells</th><th>Template</th><th>Waste</th></tr>
+<tr><td>Square</td><td>8&times;8</td><td>1&times;1</td><td>full-cell shell</td><td>0%</td></tr>
+<tr><td>Square (large)</td><td>16&times;16</td><td>2&times;2</td><td>four shell chunks, centre walls removed</td><td>0%</td></tr>
+<tr><td>Hallway (large)</td><td>8&times;16</td><td>1&times;2</td><td>two shell chunks</td><td>0%</td></tr>
+<tr><td>Hallway</td><td>4&times;8</td><td>1&times;1</td><td>centred 4-wide strip, rest void</td><td>50% of cell</td></tr>
+<tr><td>Hallway (long)</td><td>4&times;16</td><td>1&times;2</td><td>two centred strips</td><td>50% of cells</td></tr>
+<tr><td>Square (small)</td><td>4&times;4</td><td>1&times;1</td><td>centred 4&times;4 shell, rest void</td><td>75% of cell</td></tr>
+<tr><td>Octagon, cross, T, corner, two rounded</td><td>8&times;8</td><td>1&times;1</td><td>masked shell, cut areas void</td><td>by shape</td></tr>
+</table>
+<p>Every shape puts its doorways on <b>tiles 3 and 4 of each cell edge</b>. This matches the legacy templates: <span class="tag v">VERIFIED</span> each door side holds two door-hotspot locs on tiles 3&ndash;4, walls sit on tiles 1, 2, 5, 6 and corners on 0 and 7, and a closed side has walls on 3&ndash;4.</p>
+<h2>5.4 The largest fidelity loss: tile-granular rooms</h2>
+<p>Document 1 now establishes that RS3 builds on the <b>game-square grid</b> and requires separated rooms to be at least 2 tiles apart. That implies rooms can sit at <b>tile</b> offsets. The 727 client can only be told to draw a template at <b>chunk</b> (8-tile) offsets, so here every room snaps to an 8-tile cell. Consequences:</p>
+<ul>
+<li>A 4-wide room cannot sit flush against another room's wall at a 4-tile offset; it is centred in its cell.</li>
+<li>Rooms cannot be placed with 2-tile gaps; adjacent cells are separated by their own walls.</li>
+<li>Layouts that rely on odd offsets (for example an L of 4-wide hallways) take more space.</li>
+</ul>
+<p>An alternative would build floors and walls purely from spawned objects over a blank template, which allows tile offsets but costs thousands of objects per floor and loses terrain variety. It is rejected for the first release. <span class="tag q">OPEN</span> Decision D8.</p>
+<h2>5.5 Capacity</h2>
+<p>The plot holds 36 cells per floor. Twenty-five one-cell rooms leave 11 spare, and large rooms hit the 25-room cap before running out of cells, so cells are never the binding limit.</p>
+
+<h1>6. Rooms and shells</h1>
+<h2>6.1 Shell versus legacy room</h2>
+<p>A <b>shell</b> contains only structure: floor, outer walls, doorway gaps, non-interactive trim. The legacy templates (816 hotspots across 25 rooms) mix structure and hotspots, so they cannot be used unchanged.</p>
+<h2>6.2 Template facts</h2>
+<ul>
+<li><span class="mono">terrain.json</span> stores <span class="mono">tiles[level][localX]</span> as a string of 64 tiles, each a comma-separated list of tokens: <span class="mono">o&lt;id&gt;/&lt;shape&gt;/&lt;rot&gt;</span> overlay, <span class="mono">s&lt;flags&gt;</span>, <span class="mono">u&lt;id&gt;</span> underlay, <span class="mono">h&lt;height&gt;</span>, or <span class="mono">-</span>. <span class="tag v">VERIFIED</span></li>
+<li><span class="mono">locs.json</span> entries are <span class="mono">{id, x, y, level, shape, rotation}</span>, region-local. <span class="tag v">VERIFIED</span></li>
+<li><b>Every overlay in both regions has shape 0</b>, so all legacy floors, even the throne room and chapel, are full squares; <b>no existing chunk can be a shaped shell</b>. <span class="tag v">VERIFIED</span></li>
+<li><b>Void tiles are legal</b>: a tile of <span class="mono">h30</span> alone is valid, and the black chunk is 64 tiles of <span class="mono">o143/0/0,s5,h30</span> with no locs. So cut-away corners and unused cell areas can be authored. <span class="tag v">VERIFIED</span> That a void tile renders and blocks correctly in the client is still to be seen. <span class="tag q">OPEN</span></li>
+<li>Styles differ <b>only in floor overlay and wall/rock loc ids</b>; layout is identical. <span class="tag v">VERIFIED</span></li>
+</ul>
+<h2>6.3 Template generation</h2>
+<p>Because styles change only ids, shells should be <b>generated</b>, not hand-built:</p>
+<ol>
+<li>Author one <b>master shell per shape</b> (12 shapes, with and without stairs) by editing terrain and locs.</li>
+<li>A generator script emits the style variants by substituting the wall and rock loc ids and the floor overlay id into a dedicated template region (or regions) in <span class="mono">cache-source/maps</span>.</li>
+<li>The catalogue maps <span class="mono">(shape, wall style, floor style, stairs)</span> to a template chunk.</li>
+</ol>
+<p>The combinatorics need care: 12 shapes &times; 2 stair variants &times; 5 wall styles &times; 14 floor styles is 1,680 chunks, about 26 regions. Bootstrap with a small set (Basic Wood, three floors) and grow it. Floor style must be baked into terrain; wall style could instead be applied at runtime by replacing wall objects, which would cut the matrix to 12 &times; 2 &times; 14. <span class="tag q">OPEN</span> Decision D7.</p>
+<h2>6.4 Bootstrap</h2>
+<p>Reuse the legacy Garden or Parlour chunk as the Square shell and delete every hotspot base object when the chunk is applied (visit mode already removes hotspots this way). That gives a working Square room with no new assets and proves the pipeline before any terrain is authored.</p>
+<h2>6.5 Doorways</h2>
+<p>Each cell edge has one doorway of two tiles in one of three modes: <b>open</b> (default; no wall object), <b>wall</b>, or <b>window</b> (a wall object spawned over the gap). Connected doorways are always open. Upper-floor unconnected doorways may not be open, matching RS3. The wall ids per style come from the map, not from <span class="mono">WALL_IDS</span> (defect in section 2.4).</p>
+
+<h1>7. Furniture model</h1>
+<h2>7.1 Catalogue entry</h2>
+<pre>FurnitureDef(
+  id            : String          // stable save key, snake_case, never renamed
+  category      : FurnitureCategory
+  loc           : Loc gameval     // the built object
+  icon          : Obj gameval     // item shown in storage and workbench
+  placement     : FLOOR | WALL | WALL_DECOR | GROUND_DECOR | SURFACE
+  footprint     : (sizeX, sizeY)  // from the object definition
+  craftLevel    : Int
+  xp            : Double
+  materials     : List&lt;Material&gt;
+  workbenchTier : WOODEN | STEEL | REINFORCED
+  perHouseCap   : Int?            // cauldron 5, and so on
+  onUse         : handler key?
+)</pre>
+<p>The first catalogue is generated from the legacy tables. Measured on 2 October 2026:</p>
+<table>
+<tr><th>Measure</th><th>Value</th></tr>
+<tr><td><span class="mono">HouseObjects</span> entries / distinct item ids / distinct loc ids</td><td>447 / 395 / 812</td></tr>
+<tr><td><span class="mono">HouseBuilds</span> total</td><td>128 (111 single hotspot id, 17 with several)</td></tr>
+<tr><td>Objects shared by several builds</td><td>74 (chairs 1&ndash;3, staircases, portals)</td></tr>
+<tr><td>Placement class from <span class="mono">modelTypes[0]</span>: FLOOR (10, 11)</td><td>266</td></tr>
+<tr><td>SURFACE candidates (a name rule, <i>over-matches</i>, e.g. "Staircase")</td><td>84</td></tr>
+<tr><td>WALL_DECOR (4&ndash;8) / GROUND_DECOR (22) / WALL (0&ndash;3, 9) / unresolved</td><td>42 / 26 / 21 / 8</td></tr>
+<tr><td>Flagged "needs to be looked over" / TODO</td><td>3 / 1 (STAIRCASE_2)</td></tr>
+<tr><td>Heraldry objects with a dynamic id (<span class="mono">objectId 0</span>)</td><td>8</td></tr>
+<tr><td>Objects in no build (lectern, chests, armour cases)</td><td>7</td></tr>
+</table>
+<p>The 17 builds with several hotspot ids (six rugs, window, door, hedging, seating, shelves, dining bench, cages, traps, floor, combat ring with 16 ids, habitat with 66) list their locs index-aligned to the hotspot ids. The conversion picks a <b>canonical loc by footprint</b> and keeps the rest as aliases. These are the orientation risk: the variants often encode side, corner or facing that the hotspot used to supply. They need a manual review (document 3, C8). Surface classification also needs a hand-curated list.</p>
+<h2>7.2 Surface placement</h2>
+<p>Loc definitions carry <span class="mono">modelSizeX/Y/Z</span> (resize) and <span class="mono">offsetX/Y/Z</span> (translate), with <span class="mono">offsetZ</span> the height. <span class="tag v">VERIFIED</span> A "table-top" variant of a vase or book is a new loc definition with a height offset. New locs are authored by adding a JSON file; ids 73902&ndash;73983 (82) fit in the existing archive, and anything above needs a new archive line in the index. <span class="tag v">VERIFIED</span> Surface items therefore compete with other new content for 82 ids, so a new archive should be planned.</p>
+<h2>7.3 Occupancy</h2>
+<p>The engine tracks one object per <b>slot</b> per tile (wall 0, wall decoration 1, scenery 2, ground decoration 3), and a multi-tile object is stored <b>under its base tile only</b>; collision covers the full footprint with sizes swapped for rotations 1 and 3. A spawn into an occupied slot <b>replaces</b> the existing object, matching only on base tile and slot, so two overlapping multi-tile objects on different base tiles coexist. There is no helper that lists the objects covering a tile. <span class="tag v">VERIFIED</span></p>
+<p>The chunk therefore cannot be asked "is this tile free?". The layout keeps its own <b>occupancy index</b>, a map from <span class="mono">(floor, x, y, slot)</span> to placed-object id, with every footprint tile expanded, rebuilt from the saved layout on load and updated on every change. All validation reads that index, and the renderer never spawns into a slot the index says is taken.</p>
+<table>
+<tr><th>Class</th><th>Slot</th><th>Typical objects</th><th>Rule</th></tr>
+<tr><td>FLOOR</td><td>scenery</td><td>tables, beds, ranges</td><td>all footprint tiles free of scenery and not wall-blocked</td></tr>
+<tr><td>GROUND_DECOR</td><td>ground decoration</td><td>rugs, grass</td><td>slot free; does not block FLOOR objects above it</td></tr>
+<tr><td>WALL / WALL_DECOR</td><td>wall / wall decoration</td><td>windows, paintings</td><td>tile has an interior wall on the chosen side; slot free</td></tr>
+<tr><td>SURFACE</td><td>scenery (offset)</td><td>vases, books</td><td>tile covered by a surface-flagged FLOOR object</td></tr>
+</table>
+<h2>7.4 Validation</h2>
+<pre>validate(def, tile, rot, floor):
+  cells = footprint(def.sizeX, def.sizeY, rot) at tile
+  for t in cells:
+      require t inside plot and under a placed room's floor mask on floor
+      require t not in a doorway keep-clear zone or on the entry portal tile
+  match def.placement:
+      FLOOR        -> all t: index.free(floor, t, SCENERY), shell does not block t
+      GROUND_DECOR -> all t: index.free(floor, t, GROUND_DECOR)
+      WALL, WALL_DECOR -> adjacent shell wall on facing side, slot free
+      SURFACE      -> all t covered by a surface-flagged FLOOR object
+  require count(layout) &lt; furnitureLimit(constructionLevel)
+  require perHouseCount(def) &lt; def.perHouseCap
+  require doorways and portal remain reachable (flood fill on the room mask)</pre>
+<p>It runs twice: for the ghost, and again at commit on the world thread.</p>
+
+<h1>8. Rendering and lifecycle</h1>
+<h2>8.1 From rebuild-all to incremental</h2>
+<table>
+<tr><th>Change</th><th>Work</th><th>Client impact</th></tr>
+<tr><td>Place, move, remove furniture</td><td>Spawn/remove one object; update index and collision</td><td>Object delta only</td></tr>
+<tr><td>Doorway mode</td><td>Spawn/remove wall objects on 2 tiles</td><td>Object delta only</td></tr>
+<tr><td>Add, remove, move, restyle a room</td><td><span class="mono">copyChunk</span> for the affected cells, then reapply their furniture</td><td>Map reload for displaced players</td></tr>
+<tr><td>Enter / leave build mode</td><td>Toggle roofs and tooling; no copy</td><td>None</td></tr>
+</table>
+<p><span class="mono">InstanceBuilder.publish</span> forces a map reload (<span class="mono">setForceNextMapLoadRefresh</span> then <span class="mono">loadMapRegions</span>) for players standing on a replaced chunk, <span class="tag v">VERIFIED</span> so a room change in a populated house needs no extra code. A player inside a removed room is teleported to the portal first.</p>
+<h2>8.2 Build order when a house loads</h2>
+<ol>
+<li>Reserve the instance (after the <span class="mono">chunkIds</span> fix).</li>
+<li>For every cell, copy the shell chunk for its room, shape, styles and rotation, or the black chunk.</li>
+<li>Strip hotspots and other flagged template objects.</li>
+<li>Apply doorway modes.</li>
+<li>Rebuild the occupancy index; spawn and clip every placed object.</li>
+<li>Spawn roofs when not in build mode; place players.</li>
+</ol>
+<p>The server-side object count stays small: at most 500 furniture plus a few dozen doorway objects. The shell's base objects live in the client's own map data.</p>
+<h2>8.3 Concurrency and roofs</h2>
+<p>Chunk copies are asynchronous. The house carries one <b>operation lock</b>: structural edits are refused while a copy is in flight, and furniture operations on the affected cells queue behind it. The single legacy roof chunk fits only square rooms, so roofs are hidden for non-square shapes in the first release. <span class="tag q">OPEN</span> (document 3, O9)</p>
+
+<h1>9. Interaction</h1>
+<h2>9.1 Placement session</h2>
+{{FLOW_SVG}}
+<ol>
+<li>The player picks an item in the build interface (or "Move" on a placed object). The server opens a <b>placement session</b> bound to the player.</li>
+<li>The next ground click arrives as a <b>Walk packet</b>: <span class="mono">Walk(x, y, forceRun, minimap)</span>, an absolute world tile, no plane. <span class="mono">WalkHandler</span> currently calls <span class="mono">stopAll()</span> and stores <span class="mono">walkRequest</span>, which <span class="mono">Entity.processEntity</span> consumes each tick. The session check goes <b>before</b> <span class="mono">stopAll()</span>. <span class="tag v">VERIFIED</span> The server also sends <span class="mono">MinimapFlag(255, 255)</span> to clear the flag, since the client may draw its own. <span class="tag q">OPEN</span> (O1b)</li>
+<li>The server validates and shows a <b>ghost</b> to that player only: <span class="mono">player.packets.sendAddObject</span> draws it, and <span class="mono">sendCustomizeObject</span> on a throwaway object with <span class="mono">modifyMesh()</span> recolours it (valid or invalid). <span class="tag v">VERIFIED</span> These packets do not touch chunk state, so a chunk resend can overwrite the ghost; the session re-sends it after any map reload. A tile marker (<span class="mono">sendSpotAnim</span> or a hint icon) is available as a second cue.</li>
+<li>Buttons on a small control interface: rotate left, rotate right, confirm, cancel. Clicking another tile re-targets the ghost.</li>
+<li>Confirm re-validates, commits (spawn, clip, persist, decrement storage), and ends the session.</li>
+</ol>
+<p>Cancelling, logging out, leaving build mode, teleporting or any locking action clears the ghost and the session.</p>
+<h2>9.2 Move, swap and remove</h2>
+<ul>
+<li><b>Move</b>: a right-click option on a placed object starts a session pre-loaded with it; on confirm the old placement is removed in the same operation.</li>
+<li><b>Swap</b>: moving onto an occupied tile with a compatible footprint swaps the two objects, both re-validated.</li>
+<li><b>Remove</b>: a right-click option returns the item to storage with no loss.</li>
+</ul>
+<h2>9.3 Interfaces</h2>
+<p>RS3 furniture storage is a bank-like box <b>outside</b> the house, with no deposit or withdraw inside (document 1, section 6). The design copies that: a storage box and a workbench are spawned outside the Rimmington portal at start-up, and inside the house the build interface reads from the same stored counts.</p>
+<table>
+<tr><th>Interface</th><th>Content</th><th>Notes</th></tr>
+<tr><td>Furniture storage</td><td>Category tree, item grid, counts, withdraw/deposit</td><td>One inventory key of up to 750 slots (a 2,000-slot bank already works); the interface <b>pages</b> a window of about 40&ndash;60 slots from a varc offset</td></tr>
+<tr><td>Build panel</td><td>Same item window, "Place" action, remove mode</td><td>Opens in build mode</td></tr>
+<tr><td>Placement controls</td><td>Rotate L/R, confirm, cancel</td><td>Overlay shown only in a session</td></tr>
+<tr><td>Room shop</td><td>12 shapes with cost and level, stairs checkbox, confirmation step</td><td>Replaces interface 402</td></tr>
+<tr><td>Workbench</td><td>Recipe list, materials, make-X</td><td>Extends interface 1306 and the make-X statement</td></tr>
+<tr><td>House options</td><td>Build mode, doorways, edit room, portal, style</td><td>Extends interface 398</td></tr>
+</table>
+<p>Limits that shape the client scripts: an inventory-key update is a variable-short packet with a 16-bit slot count (about 9,300 slots at worst), so 750 slots is trivial; the binding constraint is the <b>200,000-instruction cap per entry point</b>, which is why the bank splits its work. A paged window keeps the draw loop small. <span class="tag v">VERIFIED</span></p>
+<p><b>Authoring pattern.</b> A new interface is a numbered folder of component JSON files under <span class="mono">cache-source/interfaces/</span> (the next free id is 1324), registered in the interface and component gamevals, with scripts in <span class="mono">clientscripts/</span>, opened server-side by <span class="mono">interfaceManager.sendInterface(Interface.x)</span> and handled by <span class="mono">onButtonClick(Interface.x)</span> in an <span class="mono">@ServerStartupEvent</span> function. The game-settings interface is the working example, and the estimate for a small interface is about a day. <span class="tag v">VERIFIED</span></p>
+<p>Client state follows the project's varbit rule: a varbit only where the interface must own the value (for instance an "active session" flag), in the first free bit of the feature's parent varp after listing every varbit on it. The layout itself stays in the player save.</p>
+<h2>9.4 Crafting and limits</h2>
+<ul>
+<li>The workbench is an object with a tier (wooden up to requirement 20, steel framed up to 60, reinforced any). Crafting consumes materials, checks level (with saw and chisel boosts), grants XP and adds one unit to storage. Placement itself needs no level.</li>
+<li>Limits follow RS3 as a data table: rooms 5/10/15/20/25 at levels 1/30/60/90/120; furniture 25/50/75/100/150/200/300/400/500 at levels 1/20/35/50/65/80/95/110/115; floors at levels 1, 30, 70.</li>
+</ul>
+<h2>9.5 Level 120</h2>
+<ul>
+<li>The stat packet sends the level as an unsigned byte, so 120 fits; the XP table <b>enum 716 already has keys to 140</b>, with key 120 equal to 104,273,167. CS2 does not clamp the level text. <span class="tag v">VERIFIED</span></li>
+<li>Client work is cosmetic: <span class="mono">stats_mouseover_create</span>, <span class="mono">xp_onstattransmit</span> and <span class="mono">stats_update</span> special-case Dungeoneering (skill 24) and need a Construction case, so the tooltip and XP popup behave. <span class="tag v">VERIFIED</span></li>
+<li>Server work: introduce <span class="mono">Skills.getMaxLevel(skill)</span> and replace the literal 99/120 sites: both <span class="mono">getLevelForXp</span> overloads, the target-level clamp, <span class="mono">isMaxed</span>, <span class="mono">checkMulti99s</span>, the "achieved 99" messages (three copies), the level-up check, <span class="mono">Skillcapes.kt:65</span> and <span class="mono">House.kt:381</span>. About a dozen sites. <span class="tag v">VERIFIED</span> Whether level 120 also changes the Construction cape and the max-cape rules is policy, not technical.</li>
+</ul>
+<h2>9.6 Functional furniture</h2>
+<p>The existing <span class="mono">HouseController</span> dispatches clicks on built-object ids in a long chain. Because furniture keeps its loc id after placement, these handlers keep working; they are re-expressed as <span class="mono">@ServerStartupEvent</span> plugins keyed by catalogue entry and stripped of any room assumption. Room-dependent handlers (the entry portal) become <b>required fixtures</b> with their own rules. Stairs are part of the room shell (section 5.2). Portal nexus, potion cauldron and tiered altars follow after the core loop.</p>
+
+<h1>10. Persistence and migration</h1>
+<h2>10.1 Schema</h2>
+<pre>HouseLayout(
+  version   : Int = 2,
+  rooms     : List&lt;PlacedRoom&gt;,        // shape key, cellX, cellY, floor, rotation,
+                                       //   hasStairs, wallStyle, floorStyle
+  furniture : List&lt;PlacedFurniture&gt;,   // id, x, y, floor, rotation   (tiles 0..47)
+  doorways  : Map&lt;String, DoorwayMode&gt;,
+  storage   : Map&lt;String, Int&gt;         // furniture id -> count owned and unplaced
+)</pre>
+<p>All keys are stable strings, never enum ordinals and never renamed. The layout is a new nullable field on <span class="mono">House</span>; the legacy fields stay read-only until the migration is proven. The occupancy index is derived, transient, and never saved.</p>
+<h2>10.2 Legacy migration</h2>
+<p>The legacy grid is the new cell grid, so a 727 house can keep its layout:</p>
+<ol>
+<li>Each legacy <span class="mono">RoomReference</span> becomes a Square <span class="mono">PlacedRoom</span> at the same cell, floor and rotation, with the same style. Legacy dungeon rooms and staircase chunks are handled separately.</li>
+<li>Each <span class="mono">ObjectReference(build, slot)</span> is resolved to a tile by scanning the room's template chunk for the hotspot whose id is in <span class="mono">build.ids</span> and applying the room rotation. The hotspot table already exists: 816 hotspot rows across the 25 rooms, with chunk, tile and rotation. Multi-hotspot builds (windows, floors, hedging) produce one object per hotspot.</li>
+<li>Migration must read door positions and wall ids from the <b>map</b>, not from <span class="mono">HouseRooms.doorDirs</span> or <span class="mono">WALL_IDS</span>, because both disagree with the map.</li>
+<li>A build with no catalogue mapping is refunded into storage and logged.</li>
+<li>It runs once at login, writes the layout, and keeps a snapshot of the legacy fields for rollback.</li>
+</ol>
+<p>Servants, pets and the portal location carry over unchanged.</p>
+
+<h1>11. What happens to legacy content</h1>
+<table>
+<tr><th>Content</th><th>RS3 2026</th><th>Proposed here</th></tr>
+<tr><td>Servants</td><td>Removed</td><td>Keep (authentic to 2012, code exists)</td></tr>
+<tr><td>Dungeon / basement</td><td>Removed</td><td>Keep on plane 0 outside the free-placement system until the third floor ships (section 5.2)</td></tr>
+<tr><td>Menagerie / pets</td><td>Storage furniture</td><td>Keep the PetHouse code, expose it as a placeable item</td></tr>
+<tr><td>Room purposes</td><td>Removed</td><td>Removed; furniture becomes ordinary catalogue entries</td></tr>
+</table>
+
+<h1>12. Phasing</h1>
+<table>
+<tr><th>Phase</th><th>Content</th><th>Exit test</th></tr>
+<tr><td>0 Foundations</td><td>Fix <span class="mono">chunkIds</span> and <span class="mono">getObjectWithId</span>; <span class="mono">Skills.getMaxLevel</span>; layout schema; catalogue generation</td><td>Existing houses unchanged</td></tr>
+<tr><td>1 Spatial core</td><td>Square shell via stripped legacy chunk; add/remove/move room with confirmation; stairs; two floors; incremental copy</td><td>Build a 6&times;6 two-floor house with no furniture</td></tr>
+<tr><td>2 Furniture engine</td><td>Occupancy index, placement session, validation, move/swap/remove, persistence</td><td>Place and reload 500 objects; identical</td></tr>
+<tr><td>3 Storage and crafting</td><td>Storage box, paged interface, workbench tiers, XP, limits</td><td>Train 1 to 120 on the training table</td></tr>
+<tr><td>4 Shapes and styles</td><td>Master shells and generator for 12 shapes, wall and floor styles</td><td>All shapes buildable</td></tr>
+<tr><td>5 Functional furniture</td><td>Rebind handlers; nexus, cauldron, tiered altars</td><td>Parity with 2012 functions</td></tr>
+<tr><td>6 Migration</td><td>Legacy conversion at login, rollback, support tooling</td><td>Dry run on a copy of production saves</td></tr>
+<tr><td>7 Third floor, homesteads</td><td>Retire the dungeon; multi-plot neighbourhoods</td><td>&mdash;</td></tr>
+</table>
+
+<h1>13. Risks</h1>
+<table>
+<tr><th>Risk</th><th>Impact</th><th>Mitigation</th></tr>
+<tr><td>No hover, drag or wheel: clunkier than RS3</td><td>UX</td><td>Explicit session, recoloured ghost, Move shortcut. Accepted gap.</td></tr>
+<tr><td>Chunk snapping (section 5.4)</td><td>Fidelity</td><td>Accepted; revisit only if players object</td></tr>
+<tr><td>Template matrix is large (up to 1,680 chunks)</td><td>Schedule, cache size</td><td>Generator; start with Basic Wood; decide D7</td></tr>
+<tr><td>Void tiles untested in client</td><td>Shaped rooms may look wrong</td><td>Authoring spike with one octagon (document 3, O2)</td></tr>
+<tr><td>Spawning into an occupied slot replaces silently</td><td>Lost furniture</td><td>Occupancy index is the only gate; engine test that fails on the old behaviour</td></tr>
+<tr><td>Ghost lost on chunk resend</td><td>Confusing UX</td><td>Re-send after map reload</td></tr>
+<tr><td>Orientation baked into hotspot-specific locs</td><td>Wrong-facing furniture</td><td>Review the 17 variant builds</td></tr>
+<tr><td>Migration errors destroy saves</td><td>Player trust</td><td>One-way write with snapshot; dry run on a production copy</td></tr>
+<tr><td>New locs exhaust 82 free ids</td><td>Blocks surface items</td><td>Plan a new loc archive early</td></tr>
+<tr><td>Project standards (Kotlin, gamevals, varbits, owned code)</td><td>Rework</td><td>Designed to them; protocol and cache-library areas untouched</td></tr>
+</table>
+
+<h1>14. Proposed code layout</h1>
+<table>
+<tr><th>New / changed</th><th>Purpose</th></tr>
+<tr><td><span class="mono">construction/layout/HouseLayout.kt, OccupancyIndex.kt</span></td><td>Schema, serialisation, limits, occupancy</td></tr>
+<tr><td><span class="mono">construction/catalogue/RoomShape.kt, FurnitureDef.kt, FurnitureCatalogue.kt</span></td><td>Definitions</td></tr>
+<tr><td><span class="mono">construction/build/PlacementValidator.kt, PlacementSession.kt</span></td><td>Placement</td></tr>
+<tr><td><span class="mono">construction/build/HouseRenderer.kt</span></td><td>Incremental instance rendering</td></tr>
+<tr><td><span class="mono">construction/migration/LegacyHouseMigration.kt</span></td><td>Legacy conversion</td></tr>
+<tr><td><span class="mono">construction/workbench/*</span></td><td>Crafting, tiers, recipes</td></tr>
+<tr><td><span class="mono">WalkHandler.kt</span> (changed)</td><td>Session hook before <span class="mono">stopAll()</span></td></tr>
+<tr><td><span class="mono">InstanceBuilder.kt</span>, <span class="mono">Chunk.java</span>, <span class="mono">Skills.java</span> (changed)</td><td>chunkIds and lookup fixes; per-skill level cap</td></tr>
+<tr><td><span class="mono">cache-source/interfaces, clientscripts, maps, config_loc</span></td><td>New interfaces, scripts, shell templates, loc variants</td></tr>
+</table>
+</body></html>

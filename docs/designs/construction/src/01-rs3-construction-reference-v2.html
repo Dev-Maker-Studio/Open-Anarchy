@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>RS3 Construction Reference</title>
+<link rel="stylesheet" href="style.css"></head><body>
+
+<div class="cover">
+  <h1>RuneScape 3 Construction &amp; Player-Owned Houses</h1>
+  <div class="sub">System reference: how the 2026 free-placement rework works</div>
+  <div class="meta">
+    Document 1 of 3 &middot; Darkan construction port series<br>
+    <span class="ver">Version 2.0 (draft)</span> &middot; 2 October 2026<br>
+    Companion documents: <i>02 Rev-727 Technical Design</i>, <i>03 Open Questions &amp; Roadmap</i><br>
+    Source basis: raw wikitext of runescape.wiki (read through the MediaWiki API), plus news posts read through a summariser
+  </div>
+</div>
+
+<h1>0. What changed in version 2</h1>
+<p>Version 1 was built from summarised web pages. Version 2 re-reads the primary text: the <b>raw wikitext</b> of the Build mode, Player-owned house, Furniture storage, Furniture workbench, Homestead, 2026 Construction update and "Everything you need to know" pages. That corrected or completed these points:</p>
+<table class="changelog">
+<tr><th style="width:24mm">Topic</th><th>v1 said</th><th>v2 says</th></tr>
+<tr><td>Furniture limit</td><td>Only levels 1, 95, 115 known</td><td>Full 9-step ladder from 25 to 500 (section 4.2)</td></tr>
+<tr><td>Floors</td><td>"An upper floor"</td><td>Up to <b>three floors</b>: first floor at level 30, second at level 70 (section 4.3)</td></tr>
+<tr><td>Stairs</td><td>Not described</td><td>A per-room "Add Stairs" option from level 30; spiral staircase at room centre; doubles room cost when it creates a floor (section 4.3)</td></tr>
+<tr><td>Furniture trunk</td><td>Conflict over use inside the house</td><td><b>Resolved</b>: the storage is a bank-like box outside the Rimmington portal; deposit and withdraw are impossible inside the house (section 6)</td></tr>
+<tr><td>Moving rooms</td><td>Date unknown</td><td>Shipped <b>27 July 2026</b> together with floor styles (section 4.5)</td></tr>
+<tr><td>Floor styles</td><td>Not described</td><td>Per-room floor styles, 14 listed (section 4.6)</td></tr>
+<tr><td>House Teleport spell</td><td>Level 50</td><td>Level <b>40</b> Magic (section 9.1)</td></tr>
+<tr><td>Level-60 portal</td><td>Otot or Mazcab</td><td>The wiki names <b>Otot</b>; Mazcab does not appear (section 9.1)</td></tr>
+<tr><td>Room placement grid</td><td>Snap unknown</td><td>The wiki says rooms and furniture go on the <b>game-square grid</b>, i.e. tile-granular (section 4.4)</td></tr>
+</table>
+
+<h1>1. Scope, method and confidence</h1>
+<p>This document describes the live RS3 Construction skill and player-owned house (PoH) system after the <b>13 July 2026 rework</b> and the patches through <b>21 September 2026</b>. It is the behavioural specification that <i>02 Rev-727 Technical Design</i> ports from. It describes <i>what the game does</i>, not how Jagex implements it.</p>
+<table>
+<tr><td style="width:22mm"><span class="tag v">VERIFIED</span></td><td>Read directly in raw wikitext or confirmed in this repository's code or cache.</td></tr>
+<tr><td><span class="tag r">REPORTED</span></td><td>From a summarised page only. Probable; re-check before it becomes a hard requirement.</td></tr>
+<tr><td><span class="tag i">INFERENCE</span></td><td>Deduced by us; no source states it.</td></tr>
+<tr><td><span class="tag q">CONFLICT</span></td><td>Sources disagree. Listed in section 12.</td></tr>
+</table>
+
+<h1>2. Timeline</h1>
+<table>
+<tr><th style="width:30mm">Date</th><th>Event</th></tr>
+<tr><td>31 May 2006</td><td>Construction and PoH launch with fixed room types and furniture hotspots. <span class="tag v">VERIFIED</span></td></tr>
+<tr><td>19 Jan 2026</td><td>Rework first announced in "The Roadmap That Changes RuneScape Forever". <span class="tag v">VERIFIED</span></td></tr>
+<tr><td>20 Mar 2026</td><td>First detailed dev blog (goals and scope). <span class="tag v">VERIFIED</span></td></tr>
+<tr><td>13 July 2026</td><td>Full rework: no hotspots, free placement, furniture storage, workbench crafting, Construction cap 120, five house styles, homesteads. <span class="tag v">VERIFIED</span></td></tr>
+<tr><td>13&ndash;14 July</td><td>Day-2 hotfixes: XP/hour rebalanced, confirmation screen when buying rooms, level check removed from placing furniture. <span class="tag r">REPORTED</span></td></tr>
+<tr><td>27 July 2026</td><td>Ability to <b>move rooms</b> and customise <b>floor styles</b>. <span class="tag v">VERIFIED</span></td></tr>
+<tr><td>1 September 2026</td><td>Portal effects, new recipes, 300-furniture limit enforced with an entry warning. <span class="tag r">REPORTED</span></td></tr>
+<tr><td>21 September 2026</td><td>Furniture limit raised to <b>500</b>. <span class="tag v">VERIFIED</span></td></tr>
+</table>
+
+<h1>3. The central design change</h1>
+<p>The 2006&ndash;2025 house was a grid of <b>purposeful rooms</b> with fixed <b>hotspots</b>: a Kitchen had a larder hotspot and a stove hotspot, you built one piece of furniture into each, and removing it forfeited the item.</p>
+<p>The rework replaces that with a loop: <b>craft</b> furniture at a workbench, <b>store</b> it in furniture storage, <b>place</b> it on any tile in build mode, and move, rotate, swap or return it to storage with no loss. Rooms have <b>no function</b>; furniture is "decoupled from specific rooms"; duplicates are allowed. <span class="tag v">VERIFIED</span></p>
+<p>The design goals state that houses should be "transitory": no direct bank access and no new skilling hubs, so players keep using the wider world. <span class="tag v">VERIFIED</span></p>
+
+<h1>4. Plot, rooms, floors and limits</h1>
+<h2>4.1 The plot</h2>
+<ul>
+<li>One square plot of <b>48&times;48 game squares</b>, "total, unchanging size". <span class="tag v">VERIFIED</span></li>
+<li>Placement uses a build grid "based on the game square grid". <span class="tag v">VERIFIED</span></li>
+<li>Player dungeons, basements and servants were <b>not restored</b>. <span class="tag r">REPORTED</span></li>
+</ul>
+<h2>4.2 Limits by Construction level</h2>
+<table>
+<tr><th>Level</th><th>Max rooms</th><th>Max furniture</th><th>Floors</th></tr>
+<tr><td>1</td><td>5*</td><td>25*</td><td>ground</td></tr>
+<tr><td>20</td><td></td><td>50</td><td></td></tr>
+<tr><td>30</td><td>10</td><td></td><td>+ first floor</td></tr>
+<tr><td>35</td><td></td><td>75</td><td></td></tr>
+<tr><td>50</td><td></td><td>100</td><td></td></tr>
+<tr><td>60</td><td>15</td><td></td><td></td></tr>
+<tr><td>65</td><td></td><td>150</td><td></td></tr>
+<tr><td>70</td><td></td><td></td><td>+ second floor</td></tr>
+<tr><td>80</td><td></td><td>200</td><td></td></tr>
+<tr><td>90</td><td>20</td><td></td><td></td></tr>
+<tr><td>95</td><td></td><td>300</td><td></td></tr>
+<tr><td>110</td><td></td><td>400</td><td></td></tr>
+<tr><td>115</td><td></td><td>500</td><td></td></tr>
+<tr><td>120</td><td>25</td><td></td><td></td></tr>
+</table>
+<p class="small"><span class="tag v">VERIFIED</span> (Build mode page). *The level-1 values are marked "citation needed" on the wiki and "should be confirmed in-game".</p>
+<h2>4.3 Floors and stairs</h2>
+<ul>
+<li>A house has up to <b>three floors</b>. Ground-floor rooms from level 1, first-floor rooms from level 30, second-floor rooms from level 70. <span class="tag v">VERIFIED</span></li>
+<li>Stairs are a <b>room option</b>: an "Add Stairs" checkbox in the room picker (level 30). The staircase is a spiral staircase in the <b>centre of the room</b>, styled by the house style. <span class="tag v">VERIFIED</span></li>
+<li>If no room exists above, adding stairs creates one automatically and <b>doubles the room's cost</b>. Further rooms can then be added on that floor while standing on it. <span class="tag v">VERIFIED</span></li>
+<li>Stairs cannot be added or removed except by deleting the room, but can be "edited" to add or remove the room above. This can strand upper floors if a connecting room is removed. <span class="tag v">VERIFIED</span></li>
+<li><b>Balconies</b>: an upper room may overhang the ground by being added from an upper-level room; beams are placed on the ground to support it. A room cannot be removed while another sits directly above it. On the second floor, rooms can only be built directly on top of a room of the same type. <span class="tag v">VERIFIED</span></li>
+</ul>
+<h2>4.4 Room shapes (12)</h2>
+<table>
+<tr><th>Shape</th><th>Footprint</th><th>Usable</th><th>Doors</th><th>Cost (gp)</th><th>Level</th></tr>
+<tr><td>Square</td><td>8&times;8</td><td>64</td><td>4</td><td>1,000</td><td>1</td></tr>
+<tr><td>Hallway</td><td>4&times;8</td><td>32</td><td>4</td><td>5,000</td><td>10</td></tr>
+<tr><td>Square (small)</td><td>4&times;4</td><td>16</td><td>4</td><td>10,000</td><td>20</td></tr>
+<tr><td>Hallway (long)</td><td>4&times;16</td><td>64</td><td>4</td><td>30,000</td><td>30</td></tr>
+<tr><td>Corner</td><td>8&times;8</td><td>48</td><td>4</td><td>50,000</td><td>40</td></tr>
+<tr><td>T-shape</td><td>8&times;8</td><td>48</td><td>4</td><td>50,000</td><td>45</td></tr>
+<tr><td>Cross</td><td>8&times;8</td><td>48</td><td>4</td><td>50,000</td><td>50</td></tr>
+<tr><td>Octagon</td><td>8&times;8</td><td>~60</td><td>4</td><td>150,000</td><td>60</td></tr>
+<tr><td>Corner (rounded)</td><td>8&times;8</td><td>~60</td><td>2</td><td>125,000</td><td>70</td></tr>
+<tr><td>End (rounded)</td><td>8&times;8</td><td>~56</td><td>1</td><td>175,000</td><td>75</td></tr>
+<tr><td>Hallway (large)</td><td>8&times;16</td><td>128</td><td>4</td><td>250,000</td><td>90</td></tr>
+<tr><td>Square (large)</td><td>16&times;16</td><td>256</td><td>4</td><td>500,000</td><td>95</td></tr>
+</table>
+<p class="small"><span class="tag v">VERIFIED</span> (Build mode page, raw table). Rooms are not refundable after placement.</p>
+<h2>4.5 Adding, moving and removing rooms</h2>
+<ul>
+<li>Two ways to add: click an existing <b>doorway</b> and choose "Add Room" (connects if there is space), or place the whole room freely on the grid and rotate it before clicking to commit. <span class="tag v">VERIFIED</span></li>
+<li>Rooms need not be adjacent; <b>separated rooms must be at least 2 tiles apart</b>. <span class="tag v">VERIFIED</span> Together with the tile-grid statement this indicates room positions are <b>not</b> locked to an 8-tile lattice. <span class="tag i">INFERENCE</span></li>
+<li>To <b>move</b> a room: stand in it and choose "Edit Current Room" from the House Controls tab, or use "Edit Doorway". To <b>remove</b>: right-click a doorway inside it, "Edit doorway", "Remove room". <span class="tag v">VERIFIED</span></li>
+</ul>
+<h2>4.6 Doorways and floor styles</h2>
+<ul>
+<li>Each room has at least one doorway. Right-clicking one offers: add an adjacent room, remove the adjacent room, or (if unconnected) customise it. <span class="tag v">VERIFIED</span></li>
+<li>An unconnected doorway can be a <b>doorway</b>, a <b>wall with a window</b> or a <b>solid wall</b>. Connected doorways must stay doorways. There is no way to add doors. Unconnected doorways on floors 2 and 3 cannot be empty. <span class="tag v">VERIFIED</span></li>
+<li>Each room has an editable <b>floor style</b> (since 27 July). The wiki lists 14: wood plank (default), teak plank, mahogany plank, herringbone light, herringbone dark, paving stone, grey flagstone, red flagstone, dark stone slabs, terracotta paving, kitchen tile, temple tile, straw and mud. Prices 5,000&ndash;15,000 gp; several need a level, a quest or a shop plan. <span class="tag v">VERIFIED</span></li>
+</ul>
+
+<h1>5. Build mode</h1>
+<p>Build mode toggles seamlessly from the House Controls tab, even with visitors present. <span class="tag v">VERIFIED</span> The build interface lives at the left of the screen and can be collapsed.</p>
+<h2>5.1 Controls</h2>
+<table>
+<tr><th>Action</th><th>Input</th></tr>
+<tr><td>Place</td><td>Left-click a tile or wall</td></tr>
+<tr><td>Rotate left / right</td><td>Scroll wheel up / down</td></tr>
+<tr><td>Return to storage</td><td>Del</td></tr>
+<tr><td>Cancel</td><td>Esc</td></tr>
+<tr><td>Zoom / move while placing</td><td>Alt+scroll / Alt+click</td></tr>
+<tr><td>Move or swap placed furniture</td><td>Pick it up and place it again; drag-and-drop</td></tr>
+</table>
+<p class="small"><span class="tag v">VERIFIED</span> A "remove furniture" mode returns anything clicked to storage.</p>
+<h2>5.2 Placement rules</h2>
+<ul>
+<li>Furniture goes "freely on the game square tile system, with few restrictions". <span class="tag v">VERIFIED</span></li>
+<li>Furniture may be placed <b>even if you lack the Construction level</b> to craft it. <span class="tag v">VERIFIED</span></li>
+<li>Trees cannot go indoors. Paintings and cobwebs must go against a wall (interior or exterior). <span class="tag v">VERIFIED</span></li>
+<li>Furniture <b>generally cannot intersect</b> other furniture (chairs cannot tuck under tables). <b>Ground decorations</b> such as rugs and grass are the exception: items can sit on them. <span class="tag v">VERIFIED</span></li>
+<li>The indoor/outdoor filter is cosmetic; plants and grass may be placed indoors. <span class="tag v">VERIFIED</span></li>
+<li>Furniture not in storage appears faded in the build list: it can be previewed, not placed. <span class="tag v">VERIFIED</span></li>
+<li>Surface placement (an object on a table) and ceiling placement are not described. <span class="tag i">INFERENCE</span> that they exist.</li>
+</ul>
+<h2>5.3 Instance rules</h2>
+<ul>
+<li>Items cannot be dropped normally in build mode; dropped items vanish when you leave. Fires and marker plants work in any mode but are removed on leaving. <span class="tag v">VERIFIED</span></li>
+<li>Logging out or switching worlds places you outside the portal. Familiars cannot be summoned in build mode. Dueling is blocked. <span class="tag v">VERIFIED</span></li>
+</ul>
+
+<h1>6. Furniture storage</h1>
+<ul>
+<li>A dedicated, bank-like box <b>outside the Rimmington house portal</b>. It stores up to <b>750 unique furniture items</b>; furniture must be stored there to be used in build mode and cannot be placed from the inventory. <span class="tag v">VERIFIED</span></li>
+<li>Furniture <b>cannot be deposited or withdrawn from inside the house</b>, and is not part of the standard bank. This resolves the v1 conflict: marketing's "Furniture Trunk" is the Rimmington box. <span class="tag v">VERIFIED</span></li>
+<li>Category tree: Furnishings (chairs, tables, fireplaces, bookcases, beds, storage, shelves, misc), Functional (altars &amp; burners, cooking fires &amp; ranges, storage, water source, aquarium gear, skilling items, lecterns, crafting stations, pets, misc), Teleports, Decor (rugs, clocks, armour stands, trophies, display items, wall decor), Lighting, Trophies, Garden, Misc (games). <span class="tag v">VERIFIED</span></li>
+<li>Former members can withdraw members' furniture but not redeposit it. <span class="tag v">VERIFIED</span></li>
+</ul>
+
+<h1>7. Crafting and training</h1>
+<h2>7.1 Workbenches</h2>
+<table>
+<tr><th>Workbench</th><th>Where</th><th>Can craft</th></tr>
+<tr><td>Furniture workbench</td><td>Outside the Rimmington portal (one in the normal game)</td><td>any furniture</td></tr>
+<tr><td>Wooden workbench</td><td>In-house; Construction 17</td><td>requirement up to level 20</td></tr>
+<tr><td>Steel framed workbench</td><td>In-house; Construction 46</td><td>requirement up to level 60</td></tr>
+<tr><td>Reinforced steel framed</td><td>In-house; Construction 62</td><td>any requirement</td></tr>
+</table>
+<p class="small"><span class="tag v">VERIFIED</span> A crystal saw in the backpack lets you craft furniture up to 3 levels above your base level (chisel +1); an equipped Prifddinas crystal saw gives 5 (+1); these stack with tea and stew boosts.</p>
+<h2>7.2 Recipes and XP</h2>
+<ul>
+<li>Crafting uses the Furniture Construction interface with materials in the inventory; hammer and saw come from the tool belt. <span class="tag r">REPORTED</span></li>
+<li>Materials: planks (regular, oak, teak, mahogany, eternal), bars, cloth, nails, soft clay, magic stones, gold leaf, marble, limestone. <span class="tag r">REPORTED</span></li>
+<li>Recipes unlock by level, quest, exploration or shop purchase. <span class="tag r">REPORTED</span></li>
+<li>Per-piece recipe and XP tables are still <b>not captured</b>.</li>
+</ul>
+<h2>7.3 Training path</h2>
+<table>
+<tr><th>Levels</th><th>Item</th><th>XP each</th></tr>
+<tr><td>1&ndash;33</td><td>Wooden long table (8 oak planks)</td><td>228</td></tr>
+<tr><td>33&ndash;56</td><td>Oak larder</td><td>480</td></tr>
+<tr><td>56&ndash;72</td><td>Teak long table</td><td>720</td></tr>
+<tr><td>72&ndash;80</td><td>Mahogany long table</td><td>1,120</td></tr>
+<tr><td>80&ndash;106</td><td>Basic potion cauldron</td><td>2,618</td></tr>
+<tr><td>106&ndash;110</td><td>Eternal round table (6 eternal planks)</td><td>3,120</td></tr>
+<tr><td>110&ndash;120</td><td>Eternal long table (8 eternal planks)</td><td>4,160</td></tr>
+</table>
+<p class="small"><span class="tag v">VERIFIED</span> (section headings of the Construction training page). Contracts from level 40 are a second route.</p>
+
+<h1>8. Functional furniture</h1>
+<table>
+<tr><th>Furniture</th><th>Tiers and levels</th><th>Function</th></tr>
+<tr><td>Portal nexus</td><td>Basic 74 (5 teleports), Greater 84 (10), Master 94 (15), Grandmaster 104 (43)</td><td>Teleport hub</td></tr>
+<tr><td>Jewellery box</td><td>Basic 81, Fancy 86, Ornate 91</td><td>Teleports from jewellery you stored</td></tr>
+<tr><td>Potion cauldron</td><td>Basic 80, Bubbling 95, Arcane 110</td><td>One timed potion type, up to 250 doses; up to 5 per plot; higher tiers lengthen the timer</td></tr>
+<tr><td>Altars</td><td>Oak 45, teak 50, cloth 56, mahogany 60, limestone 64, marble 70, gilded 75; god altars 105</td><td>Prayer XP</td></tr>
+<tr><td>Others</td><td>Armour repair stand, slayer helm stand, trophy and cape displays, costume storage, artefact storage via the archaeologist's workbench</td><td>Assorted</td></tr>
+</table>
+<p class="small">Cauldron rules <span class="tag v">VERIFIED</span> (launch guide); tier levels <span class="tag r">REPORTED</span>.</p>
+
+<h1>9. Entry, styles and instancing</h1>
+<h2>9.1 Portals and the spell</h2>
+<ul>
+<li>Nine house portals: <b>Rimmington, Taverley, Pollnivneach, Rellekka, Brimhaven, Yanille, Prifddinas, Otot, Menaphos</b>. Houses are not tied to a portal; any one may be used to enter, and the exit portal is selectable. Changing the default exit costs a fee and carries the same requirements as entering. <span class="tag v">VERIFIED</span></li>
+<li>The <b>House Teleport spell needs 40 Magic</b>; a Teleport-to-house tablet needs no level. Settings choose whether teleports land inside the house or outside the portal. <span class="tag v">VERIFIED</span></li>
+<li>Free-to-play worlds: enter only at Rimmington, exit at Rimmington or Taverley. <span class="tag v">VERIFIED</span></li>
+<li>Per-portal level and fee figures (Rimmington 1 / 5,000 gp up to Prifddinas 75 and Plague's End) come from a summarised page. <span class="tag r">REPORTED</span></li>
+<li>To start, complete the quest <i>There's No Place Like Home&hellip;</i> in Rimmington; it grants a plot with a simple structure and scrap furniture. <span class="tag v">VERIFIED</span></li>
+</ul>
+<h2>9.2 Styles</h2>
+<p>Five exterior styles set "the fabric of the house": Basic Wood (default), Basic Stone, Fancy Stone (members), Dark Stone (members, Love Story), Fremennik Wood (members). Applied through six estate agents or by right-click "Redecorate". The plot, scenery and sky are the same for every style. <span class="tag v">VERIFIED</span></p>
+<h2>9.3 Instancing</h2>
+<p>The house lives in an instanced <b>pocket dimension</b>; its scenery can vary with the plot it is assigned inside a homestead. <span class="tag v">VERIFIED</span></p>
+
+<h1>10. Homesteads</h1>
+<ul>
+<li>A shared space where the owner and up to four others build houses together. Members move between homes and use each other's facilities. Public homesteads allow unlimited visitors. <span class="tag v">VERIFIED</span></li>
+<li>Created by the <b>housing wizard</b> outside the Rimmington portal ("Start a homestead"); invite nearby players during a limited window; name and finalise once there is more than one member. The name cannot be changed without recreating it. <span class="tag v">VERIFIED</span></li>
+<li>Entry: right-click any portal, "Homestead centre" or "Visit homestead" (public list with search). Plots are numbered; swapping plots takes effect only after the homestead is unloaded by everyone. <span class="tag v">VERIFIED</span></li>
+<li>Ironman players cannot use other players' workbenches or nexus. Cross-world behaviour and privacy are noted as unclear. <span class="tag v">VERIFIED</span></li>
+</ul>
+
+<h1>11. Migration and what was not restored</h1>
+<ul>
+<li>Old rooms and layouts were not preserved; furniture that mapped onto a new object was converted into furniture storage. <span class="tag v">VERIFIED</span></li>
+<li>Not restored: player dungeons, servants, portable workbenches. <span class="tag r">REPORTED</span></li>
+</ul>
+
+<h1>12. Conflicts and gaps</h1>
+<table>
+<tr><th style="width:8mm">#</th><th>Item</th><th>Status</th></tr>
+<tr><td>1</td><td>Level-120 XP: one summary says 200M. The standard table puts level 120 at <b>104,273,167 XP</b>, which the Darkan engine's own formula reproduces; 200M is the XP cap.</td><td>Use 104,273,167 <span class="tag q">CONFLICT</span></td></tr>
+<tr><td>2</td><td>Room snap granularity</td><td>Grid is game-square; exact snap unstated <span class="tag i">INFERENCE</span></td></tr>
+<tr><td>3</td><td>Level-1 limits (5 rooms, 25 furniture)</td><td>Wiki marks them unconfirmed</td></tr>
+<tr><td>4</td><td>Per-piece recipe and XP tables</td><td>Not obtained</td></tr>
+<tr><td>5</td><td>Surface and ceiling placement rules</td><td>Not described</td></tr>
+<tr><td>6</td><td>Portal level and fee per location</td><td>Summarised source only</td></tr>
+<tr><td>7</td><td>Whether rotation can be 45&deg;</td><td>One summary said "some objects"; not in wikitext</td></tr>
+</table>
+
+<h1>13. Sources</h1>
+<ul class="small">
+<li>runescape.wiki raw wikitext (MediaWiki API): Build mode; Player-owned house; 2026 Construction update; Furniture storage; Furniture workbench; Workbench; Homestead; Construction training (headings); Update: Everything you need to know about Player Owned Housing!; Update: Player Owned House Rework &amp; 120 Construction.</li>
+<li>Summarised only: secure.runescape.com/m=news (Day-2 news; September Patch Week); jagex.com launch news; Portal nexus, Potion cauldron, Jewellery box, Estate agent pages.</li>
+</ul>
+</body></html>

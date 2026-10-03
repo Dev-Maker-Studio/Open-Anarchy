@@ -19,6 +19,8 @@ package com.rs.utils.spawns;
 import com.google.gson.JsonIOException;
 import org.darkan.core.cache.NPCDefinitions;
 import com.rs.game.World;
+import com.rs.game.content.skills.hunter.FlyingEntities;
+import org.darkan.core.EnvVars;
 import org.darkan.core.JsonFileManager;
 import world.gregs.voidps.type.Tile;
 import org.darkan.core.Logger;
@@ -101,8 +103,11 @@ public final class NPCSpawns {
 	public static void loadNPCSpawns(int chunkId) {
 		List<NPCSpawn> spawns = NPC_SPAWNS.get(chunkId);
 		if (spawns != null)
-			for (NPCSpawn spawn : spawns)
+			for (NPCSpawn spawn : spawns) {
+				if (EnvVars.INSTANCE.getGenerateMaps() && FlyingEntities.Companion.getByNpc().containsKey(spawn.getNPCId()))
+					continue;
 				spawn.spawn();
+			}
 	}
 
 	public static List<NPCSpawn> getSpawnsForChunk(int chunkId) {

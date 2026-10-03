@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>RS3 Construction Reference</title>
+<link rel="stylesheet" href="style.css"></head><body>
+
+<div class="cover">
+  <h1>RuneScape 3 Construction &amp; Player-Owned Houses</h1>
+  <div class="sub">System reference: how the 2026 free-placement rework works</div>
+  <div class="meta">
+    Document 1 of 3 &middot; Darkan construction port series<br>
+    <span class="ver">Version 1.0 (draft)</span> &middot; 2 October 2026<br>
+    Companion documents: <i>02 Rev-727 Technical Design</i>, <i>03 Open Questions &amp; Roadmap</i><br>
+    Source basis: runescape.wiki and secure.runescape.com news pages, read through a summarising fetcher (see section 1)
+  </div>
+</div>
+
+<h1>1. Scope, method and confidence</h1>
+<p>This document describes the live RS3 Construction skill and player-owned house (PoH) system as it stands after the <b>13 July 2026 rework</b> and the patches through <b>21 September 2026</b>. It exists to be the behavioural specification that <i>02 Rev-727 Technical Design</i> ports from. It describes <i>what the game does</i>, not how Jagex implements it; implementation is inferred only where marked.</p>
+<h2>1.1 Evidence quality</h2>
+<p>Every wiki page was read through a fetcher that returns a model-written summary rather than raw page text, and several pages returned 404 or were disambiguation stubs. Numbers are therefore <i>reported</i>, not proven. The launch announcement, the Day-2 news and the September patch notes were all read through the same summariser, so none of them is a verbatim quote. Each statement carries a tag:</p>
+<table>
+<tr><td style="width:22mm"><span class="tag v">VERIFIED</span></td><td>Confirmed by two or more independent pages, or by the Darkan code/cache in this repository.</td></tr>
+<tr><td><span class="tag r">REPORTED</span></td><td>Stated by one summarised source. Treat as probable; re-check before it becomes a hard requirement.</td></tr>
+<tr><td><span class="tag i">INFERENCE</span></td><td>Deduced by us; not stated by any source.</td></tr>
+<tr><td><span class="tag q">CONFLICT</span></td><td>Sources disagree or a figure looks wrong. Listed in section 12.</td></tr>
+</table>
+
+<h1>2. Timeline</h1>
+<table>
+<tr><th style="width:30mm">Date</th><th>Event</th></tr>
+<tr><td>31 May 2006</td><td>Construction and PoH launch with room types and furniture <b>hotspots</b> fixed to each room. <span class="tag v">VERIFIED</span></td></tr>
+<tr><td>9 June 2014</td><td>Owners gain the ability to kick a named guest. <span class="tag r">REPORTED</span></td></tr>
+<tr><td>13 July 2026</td><td>Full rework: no hotspots, free placement, furniture storage, workbench crafting, Construction cap raised to 120, five house styles, homesteads. Jagex's press page dates it 14 July. <span class="tag r">REPORTED</span></td></tr>
+<tr><td>13&ndash;14 July</td><td>Day-2 hotfixes: XP/hour rebalanced toward active play, confirmation screen added when buying rooms, level check removed from placing furniture in build mode, hallway-at-boundary bug noted, "move room" announced as in progress. <span class="tag r">REPORTED</span></td></tr>
+<tr><td>1 September 2026</td><td>Portal visual effects, new recipes, the 300-furniture limit re-enforced with an entry warning. <span class="tag r">REPORTED</span></td></tr>
+<tr><td>21 September 2026</td><td>Furniture limit raised to <b>500</b>; estate agent appearance refined. <span class="tag r">REPORTED</span></td></tr>
+</table>
+
+<h1>3. The central design change</h1>
+<p>The 2006&ndash;2025 house was a <b>grid of purposeful rooms</b>. A "Kitchen" room contained fixed hotspots (larder, stove, sink); you built one piece of furniture <i>into</i> each hotspot, and removing it forfeited the item. Training was the act of building and removing at hotspots.</p>
+<p>The rework replaces all of that with a three-step loop:</p>
+<ol>
+<li><b>Craft</b> an individual furniture object at a workbench, consuming materials and granting XP.</li>
+<li><b>Store</b> it in <i>furniture storage</i> (a trunk separate from the bank).</li>
+<li><b>Place</b> it on any tile in any room in build mode, move it, rotate it, swap it, or return it to storage without loss.</li>
+</ol>
+<p>Rooms now carry <b>no function</b>; they are cosmetic shapes that define walkable space and where doorways go. <span class="tag v">VERIFIED</span> (rework announcement and wiki 2026 update page agree). Furniture is no longer tied to room type, and the same piece can be placed many times.</p>
+
+<h1>4. Plot, rooms and limits</h1>
+<h2>4.1 The plot</h2>
+<ul>
+<li>The house sits on a single square plot of <b>48 &times; 48 game squares (2,304 tiles)</b>. <span class="tag v">VERIFIED</span> Two wiki pages agree.</li>
+<li>A house has at most <b>25 rooms</b> and <b>500 furniture objects</b> at the top of the progression. <span class="tag r">REPORTED</span></li>
+<li>There is an upper floor reachable by stairs; upper-floor doorways cannot be left empty (they must be wall, window or door). A known bug allowed an inaccessible upstairs room. <span class="tag r">REPORTED</span></li>
+<li>Dungeons, basements and servants were <b>not restored</b>. <span class="tag r">REPORTED</span></li>
+</ul>
+<h2>4.2 Limits by Construction level</h2>
+<table>
+<tr><th>Level</th><th>Max rooms</th><th>Max furniture</th></tr>
+<tr><td>1</td><td>5</td><td>25</td></tr>
+<tr><td>30</td><td>10</td><td>not captured</td></tr>
+<tr><td>60</td><td>15</td><td>not captured</td></tr>
+<tr><td>90</td><td>20</td><td>not captured</td></tr>
+<tr><td>95</td><td>&mdash;</td><td>300</td></tr>
+<tr><td>115</td><td>&mdash;</td><td>500</td></tr>
+<tr><td>120</td><td>25</td><td>500</td></tr>
+</table>
+<p class="small"><span class="tag r">REPORTED</span> The Build-mode wiki page lists room steps; furniture steps between 25, 300 and 500 were not captured and almost certainly exist (<span class="tag i">INFERENCE</span>). The launch cap was 300; the 1 September patch added an entry warning above it; 21 September raised it to 500.</p>
+
+<h2>4.3 Room shapes</h2>
+<p>Rooms are bought as predefined patterns, each with a footprint, a count of usable squares, a number of doorways, a coin cost and a level requirement. There are <b>12 shapes</b>. <span class="tag r">REPORTED</span> (runescape.wiki/w/Player-owned_house)</p>
+<table>
+<tr><th>Shape</th><th>Footprint</th><th>Usable</th><th>Doors</th><th>Cost (gp)</th><th>Level</th></tr>
+<tr><td>Square</td><td>8&times;8</td><td>64</td><td>4</td><td>1,000</td><td>1</td></tr>
+<tr><td>Hallway</td><td>4&times;8</td><td>32</td><td>4</td><td>5,000</td><td>10</td></tr>
+<tr><td>Square (small)</td><td>4&times;4</td><td>16</td><td>4</td><td>10,000</td><td>20</td></tr>
+<tr><td>Hallway (long)</td><td>4&times;16</td><td>64</td><td>4</td><td>30,000</td><td>30</td></tr>
+<tr><td>Corner</td><td>8&times;8</td><td>48</td><td>4</td><td>50,000</td><td>40</td></tr>
+<tr><td>T-shape</td><td>8&times;8</td><td>48</td><td>4</td><td>50,000</td><td>45</td></tr>
+<tr><td>Cross</td><td>8&times;8</td><td>48</td><td>4</td><td>50,000</td><td>50</td></tr>
+<tr><td>Octagon</td><td>8&times;8</td><td>~60</td><td>4</td><td>150,000</td><td>60</td></tr>
+<tr><td>Corner (rounded)</td><td>8&times;8</td><td>~60</td><td>2</td><td>125,000</td><td>70</td></tr>
+<tr><td>End (rounded)</td><td>8&times;8</td><td>~56</td><td>1</td><td>175,000</td><td>75</td></tr>
+<tr><td>Hallway (large)</td><td>8&times;16</td><td>128</td><td>4</td><td>250,000</td><td>90</td></tr>
+<tr><td>Square (large)</td><td>16&times;16</td><td>256</td><td>4</td><td>500,000</td><td>95</td></tr>
+</table>
+<h2>4.4 Placing and connecting rooms</h2>
+<ul>
+<li>Two methods exist: <b>attach</b> a new room through an existing doorway, or <b>position</b> a whole room on the build grid with rotation. <span class="tag r">REPORTED</span></li>
+<li>Rooms may be disconnected from each other; separated rooms must be at least <b>2 tiles apart</b>. <span class="tag r">REPORTED</span></li>
+<li>An unconnected doorway can be set to <i>open doorway</i>, <i>filled wall</i> or <i>wall with window</i>. <span class="tag r">REPORTED</span></li>
+<li>Adding a room shows a <b>confirmation screen</b> (added Day 2). Moving a placed room was announced as in development on Day 2 and is listed as a feature on the wiki; the date it shipped is unknown. <span class="tag q">CONFLICT</span></li>
+<li>Whether room positions snap to a 4-tile or 8-tile grid is <b>not stated by any source</b>. Hallways of width 4 and small squares of 4&times;4 suggest a 4-tile snap. <span class="tag i">INFERENCE</span> This matters greatly to the 727 port (see document 2, section 5).</li>
+</ul>
+
+<h1>5. Build mode</h1>
+<p>Build mode is toggled from the house controls tab, even with visitors present. <span class="tag r">REPORTED</span></p>
+<h2>5.1 Controls</h2>
+<table>
+<tr><th>Action</th><th>Input</th></tr>
+<tr><td>Place the selected furniture</td><td>Left-click a tile or wall</td></tr>
+<tr><td>Rotate before placing</td><td>Scroll wheel (left/right); some objects allow 45&deg; steps</td></tr>
+<tr><td>Return to storage</td><td>Delete key, or a remove-furniture mode</td></tr>
+<tr><td>Cancel</td><td>Esc</td></tr>
+<tr><td>Move or swap placed furniture</td><td>Click-and-drag onto another tile or object</td></tr>
+<tr><td>Zoom / move while placing</td><td>Alt+scroll / Alt+click</td></tr>
+</table>
+<h2>5.2 Placement rules</h2>
+<ul>
+<li>Any tile may take furniture; there are no hotspots. Duplicates of the same item are allowed. <span class="tag v">VERIFIED</span></li>
+<li>Trees may not be placed indoors. Paintings and cobwebs go on walls. <span class="tag r">REPORTED</span></li>
+<li><b>Ground decorations</b> (rugs) allow other furniture to be stacked on top of them. <span class="tag r">REPORTED</span></li>
+<li>Furniture not yet in storage appears faded in the build list: it can be previewed but not placed. <span class="tag r">REPORTED</span></li>
+<li>The level check was removed from placement on Day 2 (you need the level to <i>craft</i>, not to place). <span class="tag r">REPORTED</span></li>
+<li>Surface placement (an object on a table) and ceiling placement are not described by any fetched source; the existence of wall, floor, ground-decoration and surface categories is <span class="tag i">INFERENCE</span>.</li>
+</ul>
+<h2>5.3 Restrictions in the house</h2>
+<ul>
+<li>Items dropped in build mode vanish when you leave. Logging out or switching world puts you outside the portal. Familiars cannot be summoned in build mode. Dueling is disabled. <span class="tag r">REPORTED</span></li>
+</ul>
+
+<h1>6. Furniture storage (the "trunk")</h1>
+<ul>
+<li>Holds up to <b>750 unique furniture items</b>; separate from the bank. <span class="tag r">REPORTED</span></li>
+<li>Furniture must be in storage to be placed; it cannot be placed straight from the inventory. <span class="tag r">REPORTED</span></li>
+<li>Categories: Furnishings, Functional (altars, ranges, crafting stations, pets), Decor, Garden, Teleports, Lighting, Trophies. <span class="tag r">REPORTED</span></li>
+<li>Accessible from a box outside the Rimmington portal. One page says deposit/withdraw is impossible <i>inside</i> the house while Jagex marketing lists a "Furniture Trunk" as house furniture. <span class="tag q">CONFLICT</span></li>
+<li>Ex-members can withdraw members' furniture but not redeposit it. <span class="tag r">REPORTED</span></li>
+<li>Other storage furniture: costume room, toy box, treasure chest, armour chest, cape rack, menagerie, aquarium. <span class="tag r">REPORTED</span></li>
+</ul>
+
+<h1>7. Crafting and training</h1>
+<h2>7.1 Workbenches</h2>
+<table>
+<tr><th>Workbench</th><th>Where</th><th>Requirement</th><th>Can craft</th></tr>
+<tr><td>Furniture workbench</td><td>Outside Rimmington portal</td><td>none</td><td>any furniture, any level</td></tr>
+<tr><td>Wooden workbench</td><td>In-house (crafted)</td><td>Construction 17: 5 planks + 5 steel nails, 143 XP</td><td>furniture up to level 20</td></tr>
+<tr><td>Steel framed workbench</td><td>In-house</td><td>Construction 46</td><td>up to level 60</td></tr>
+<tr><td>Reinforced steel framed</td><td>In-house</td><td>Construction 62</td><td>any level</td></tr>
+</table>
+<p class="small">All <span class="tag r">REPORTED</span>. Portable workbenches were disabled.</p>
+<h2>7.2 Recipes</h2>
+<ul>
+<li>Uses the Furniture Construction interface with materials in the inventory; hammer and saw come from the tool belt. <span class="tag r">REPORTED</span></li>
+<li>Materials: planks (regular, oak, teak, mahogany, eternal), bars, cloth, nails, soft clay, magic stones, gold leaf, marble, limestone. <span class="tag r">REPORTED</span></li>
+<li>XP per piece runs from small values up to <b>15,000</b> (Crystal Throne, level 95). Crystal saw +3, Prifddinas saw +5, chisel +1 and tea give level boosts. <span class="tag r">REPORTED</span></li>
+<li>Recipes unlock by level, quest, exploration or shop purchase. <span class="tag r">REPORTED</span></li>
+<li>The per-piece recipe and XP tables were <b>not obtained</b>.</li>
+</ul>
+<h2>7.3 Training path (level &rarr; item)</h2>
+<table>
+<tr><th>Levels</th><th>Item</th><th>XP each</th></tr>
+<tr><td>1&ndash;33</td><td>Wooden long table (8 oak planks)</td><td>228</td></tr>
+<tr><td>33&ndash;56</td><td>Oak larder</td><td>480</td></tr>
+<tr><td>56&ndash;72</td><td>Teak long table</td><td>720</td></tr>
+<tr><td>72&ndash;80</td><td>Mahogany long table</td><td>1,120</td></tr>
+<tr><td>80&ndash;106</td><td>Basic potion cauldron</td><td>2,618</td></tr>
+<tr><td>106&ndash;110</td><td>Eternal round table (6 eternal planks)</td><td>3,120</td></tr>
+<tr><td>110&ndash;120</td><td>Eternal long table (8 eternal planks)</td><td>4,160</td></tr>
+</table>
+<p class="small"><span class="tag r">REPORTED</span> Contracts from level 40 give 15,800&ndash;54,000 XP each. Fort Forinthry gives some XP.</p>
+
+<h1>8. Functional furniture</h1>
+<table>
+<tr><th>Furniture</th><th>Tiers and levels</th><th>Function</th></tr>
+<tr><td>Portal nexus</td><td>Basic 74 (5 teleports), Greater 84 (10), Master 94 (15), Grandmaster 104 (43)</td><td>Teleport hub; destinations cost runes in proportion to the spell</td></tr>
+<tr><td>Jewellery box</td><td>Basic 81 (16 teleports), Fancy 86, Ornate 91</td><td>Jewellery teleports</td></tr>
+<tr><td>Potion cauldron</td><td>Basic 80 (12 min), Bubbling 95 (30 min), Arcane 110 (60 min)</td><td>250 doses of one potion; max 5 per plot</td></tr>
+<tr><td>Altars</td><td>Oak 45, teak 50, cloth 56, mahogany 60, limestone 64, marble 70, gilded 75; god altars 105</td><td>Prayer XP; gilded altar plus two burners multiplies XP &times;3.5</td></tr>
+<tr><td>Others</td><td>Armour repair stand, slayer helm stand, mini War's Restoration crystal, Ports table, achievement display, skillcape stand, boss trophy displays, artefact storage</td><td>Assorted</td></tr>
+</table>
+<p class="small">All <span class="tag r">REPORTED</span>. Spirit trees and ranges were not covered by any fetched source (<span class="tag i">INFERENCE</span>: they live under the Functional category).</p>
+
+<h1>9. Entry, styles and instancing</h1>
+<h2>9.1 Portals</h2>
+<table>
+<tr><th>Portal</th><th>Requirement</th><th>Fee (gp)</th></tr>
+<tr><td>Rimmington</td><td>level 1</td><td>5,000</td></tr>
+<tr><td>Taverley</td><td>level 1</td><td>5,000</td></tr>
+<tr><td>Pollnivneach</td><td>level 20</td><td>7,500</td></tr>
+<tr><td>Rellekka</td><td>level 30</td><td>10,000</td></tr>
+<tr><td>Brimhaven</td><td>level 40</td><td>15,000</td></tr>
+<tr><td>Yanille</td><td>level 50</td><td>25,000</td></tr>
+<tr><td>Menaphos</td><td>level 50 + The Jack of Spades</td><td>50,000</td></tr>
+<tr><td>Otot / Mazcab (name disputed)</td><td>level 60 + reputation</td><td>50,000</td></tr>
+<tr><td>Prifddinas</td><td>level 75 + Plague's End</td><td>50,000</td></tr>
+</table>
+<p class="small"><span class="tag r">REPORTED</span> The level-60 portal is named differently on two pages (<span class="tag q">CONFLICT</span>). The Varrock elite task halves some fees. A "leave via another portal" option and a preferred portal exist. Teleport tablets can land inside or outside. The House Teleport spell needs the intro quest and is level 50.</p>
+<h2>9.2 Styles</h2>
+<table>
+<tr><th>Style</th><th>Reapply cost (gp)</th><th>Notes</th></tr>
+<tr><td>Basic Wood</td><td>2,500</td><td>Default</td></tr>
+<tr><td>Basic Stone</td><td>5,000</td><td></td></tr>
+<tr><td>Fancy Stone</td><td>25,000</td><td>Members</td></tr>
+<tr><td>Dark Stone</td><td>25,000</td><td>Members; needs the Love Story quest</td></tr>
+<tr><td>Fremennik Wood</td><td>10,000</td><td>Members</td></tr>
+</table>
+<p class="small"><span class="tag r">REPORTED</span> Estate agents (Rimmington, Seers' Village, Falador, Ardougne, Varrock, Prifddinas) apply styles; the 2026 page also says styles can be mixed within one property.</p>
+<h2>9.3 Instancing</h2>
+<p>The house is an <b>instanced pocket dimension</b> reached through portals; houses are not tied to the portal used. <span class="tag v">VERIFIED</span> The tutorial quest <i>There's No Place Like Home&hellip;</i> teaches placement and room building and is required before some other quests. <span class="tag r">REPORTED</span></p>
+
+<h1>10. Homesteads and visitors</h1>
+<ul>
+<li>A <b>homestead</b> is a shared neighbourhood instance of up to <b>5 players</b> (owner plus four). Created via the housing wizard at the Rimmington portal; members invited by right-click within a time window; the group then names and finalises it. <span class="tag r">REPORTED</span></li>
+<li>Members walk freely between each other's homes and use each other's facilities (ironmen cannot use others' workbenches or nexus). Public homesteads are searchable with unrestricted visitor numbers. Leaving returns the plot to a single home. <span class="tag r">REPORTED</span></li>
+<li>Owners can kick a specific guest; guests visit by invitation or through a public homestead. <span class="tag r">REPORTED</span></li>
+</ul>
+
+<h1>11. Migration and what was not restored</h1>
+<ul>
+<li>Old rooms and walls were <b>not preserved</b>. Furniture that mapped onto a new object was converted into furniture storage; unconvertible items were logged for possible later restoration. <span class="tag v">VERIFIED</span></li>
+<li>Not restored: player dungeons and their furniture, servants, portable workbenches. <span class="tag r">REPORTED</span></li>
+<li>Housewarming gift furniture was given from 13 July to 13 August. <span class="tag r">REPORTED</span></li>
+</ul>
+
+<h1>12. Conflicts and gaps</h1>
+<table>
+<tr><th style="width:8mm">#</th><th>Item</th><th>Detail</th></tr>
+<tr><td>1</td><td>Level-120 XP</td><td>One summary says 200M XP is level 120. The standard RuneScape table puts level 120 at <b>104,273,167 XP</b>; 200M is the XP cap. The figure is probably a conflation. <span class="tag q">CONFLICT</span> Resolved in document 2 by using the standard table unless evidence appears.</td></tr>
+<tr><td>2</td><td>Room snap grid</td><td>4-tile or 8-tile granularity unstated (section 4.4).</td></tr>
+<tr><td>3</td><td>Trunk access in house</td><td>Sources disagree whether storage can be used inside the house (section 6).</td></tr>
+<tr><td>4</td><td>Level-60 portal</td><td>Otot or Mazcab (section 9.1).</td></tr>
+<tr><td>5</td><td>Furniture limit steps</td><td>Only levels 1, 95, 115 captured.</td></tr>
+<tr><td>6</td><td>Surface/ceiling rules</td><td>Not described by any source.</td></tr>
+<tr><td>7</td><td>Recipe and XP tables</td><td>Not obtained for individual furniture pieces.</td></tr>
+<tr><td>8</td><td>Room moving</td><td>Date and behaviour unknown.</td></tr>
+</table>
+
+<h1>13. Sources</h1>
+<ul class="small">
+<li>runescape.wiki: Construction; 2026 Construction update; Player-owned house; Build mode; Furniture storage; Furniture workbench; Wooden workbench; Portal nexus; Potion cauldron; Jewellery box; Homestead; Estate agent; Construction training; Update: Everything you need to know about Player Owned Housing!; Update: Player Owned House Rework &amp; 120 Construction.</li>
+<li>secure.runescape.com/m=news: Player Owned House Rework &amp; 120 Construction (announcement); Player-owned house update &ndash; Day 2 news; September Patch Week.</li>
+<li>jagex.com/news: RuneScape launches highly anticipated player-owned housing update.</li>
+</ul>
+</body></html>

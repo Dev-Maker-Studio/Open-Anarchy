@@ -27,6 +27,7 @@ import org.darkan.core.Logger.logTrace
 import org.darkan.core.Logger.logWarn
 import org.darkan.core.model.AccountView
 import org.darkan.core.model.MachineInformation
+import org.darkan.core.model.Rights
 import org.darkan.core.net.*
 import org.darkan.core.net.prot.Codec
 import org.darkan.core.net.login.HeadlessClient
@@ -53,6 +54,7 @@ import org.darkan.world.social.SocialClient
 import org.darkan.world.social.SocialSync
 import world.gregs.voidps.buffer.*
 import world.gregs.voidps.cache.Cache
+import org.darkan.core.net.js5.DiscoveredMapFileProvider
 import world.gregs.voidps.cache.file.FileProvider
 import world.gregs.voidps.cache.file.prefetchKeys
 
@@ -80,7 +82,7 @@ object WorldServer {
 
     fun start(port: Int): Job {
         val cache = Cache.get()
-        js5 = JS5Server(FileProvider.load(cache), prefetchKeys(cache))
+        js5 = JS5Server(FileProvider.load(cache).let { if (EnvVars.gateMaps) DiscoveredMapFileProvider(it, cache) else it }, prefetchKeys(cache))
         val executor = Executors.newCachedThreadPool()
         dispatcher = executor.asCoroutineDispatcher()
         selectorManager = ActorSelectorManager(dispatcher)
@@ -235,6 +237,8 @@ object WorldServer {
         try {
             // init() calls World.addPlayer() which assigns player.index
             player.init(session, account, displayMode, screenWidth, screenHeight, machineInfo)
+            if (EnvVars.worldOwner.isNotEmpty() && player.username.equals(EnvVars.worldOwner, ignoreCase = true))
+                player.rights = Rights.OWNER
 
             // Send WorldLoginDetails before ISAAC is active (noIsaac=true)
             session.send(
