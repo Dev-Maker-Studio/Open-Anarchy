@@ -4,6 +4,7 @@ import com.rs.engine.dialogue.startConversation
 import com.rs.engine.dialogue.statements.Statement
 import com.rs.game.World
 import com.rs.game.model.entity.player.Player
+import com.rs.game.model.entity.player.managers.InterfaceManager
 import com.rs.game.model.gameobject.GameObject
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnItem
@@ -24,6 +25,7 @@ import org.darkan.core.model.IFEvents
 import org.darkan.core.model.Item
 import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.type.Tile
+import java.io.File
 
 private const val PLANKS_REQUIRED = 3
 private const val PLACEMENT_KEY = "furniturePlacement"
@@ -81,8 +83,23 @@ fun mapFurnitureBuilding() {
     }
 }
 
+private const val HOVER_SAMPLE_KEY = "placementHoverSample"
+private val HOVER_LOG = File("./logs/placement-hover.log")
+
+fun onPlacementHoverSample(player: Player, text: String) {
+    if (player.tempAttribs.getO<Placement>(PLACEMENT_KEY) == null) return
+    val sample = text.removePrefix("~ph,")
+    player.tempAttribs.setO<String>(HOVER_SAMPLE_KEY, sample)
+    logHover("S ${player.username} $sample ${player.tile.x} ${player.tile.y} ${player.plane} ${player.screenMode}")
+}
+
+private fun logHover(line: String) {
+    synchronized(HOVER_LOG) { HOVER_LOG.appendText("${System.currentTimeMillis()} $line\n") }
+}
+
 fun handleFurniturePlacementClick(player: Player, tile: Tile): Boolean {
     val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return false
+    logHover("T ${player.username} ${tile.x} ${tile.y} ${tile.plane} last=${player.tempAttribs.getO<String>(HOVER_SAMPLE_KEY)} at ${player.tile.x} ${player.tile.y} ${player.screenMode}")
     val ghost = placement.ghost
     if (ghost != null && ghost.tile == tile) {
         build(player, placement, tile)
@@ -125,6 +142,7 @@ private fun openFurnitureMenu(player: Player) {
 private fun startPlacement(player: Player, furniture: Furniture) {
     player.closeInterfaces()
     player.tempAttribs.setO<Placement>(PLACEMENT_KEY, Placement(furniture))
+    player.interfaceManager.sendSub(InterfaceManager.Sub.MINIGAME_HUD, Interface.placement_hover)
     player.sendMessage("Click the ground where you want to place the ${ItemDefinitions.getDefs(furniture.menuItem).name.lowercase()}.")
 }
 
@@ -132,6 +150,7 @@ private fun cancelPlacement(player: Player) {
     val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return
     placement.ghost?.let(player.packets::sendRemoveObject)
     player.tempAttribs.removeO<Placement>(PLACEMENT_KEY)
+    player.interfaceManager.removeSub(InterfaceManager.Sub.MINIGAME_HUD)
 }
 
 private fun build(player: Player, placement: Placement, tile: Tile) {
