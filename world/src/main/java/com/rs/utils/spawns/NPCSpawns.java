@@ -41,6 +41,7 @@ import java.util.Map;
 public final class NPCSpawns {
 
 	private final static String PATH = "data/npcs/spawns/";
+	private final static String CUSTOM = "custom";
 	final static Charset ENCODING = StandardCharsets.UTF_8;
 
 	private static final Object lock = new Object();
@@ -65,9 +66,12 @@ public final class NPCSpawns {
 	@ServerStartupEvent(Priority.FILE_IO)
 	public static void init() throws JsonIOException, IOException {
 		Logger.info(NPCSpawns.class, "init", "Loading NPC spawns...");
-		File[] spawnFiles = new File(PATH).listFiles();
-		for (File f : spawnFiles)
-			load(f);
+		// A generated world does not get the vanilla spawns: only what is in data/npcs/spawns/custom, plus what the
+		// server's own code spawns (merchants, wildlife, implings), is there.
+		File[] spawnFiles = EnvVars.INSTANCE.getGenerateMaps() ? new File(PATH + CUSTOM).listFiles() : new File(PATH).listFiles();
+		if (spawnFiles != null)
+			for (File f : spawnFiles)
+				load(f);
 		Logger.info(NPCSpawns.class, "init", "Loaded " + ALL_SPAWNS.size() + " NPC spawns...");
 	}
 
