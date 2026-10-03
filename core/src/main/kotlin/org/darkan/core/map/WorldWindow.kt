@@ -9,6 +9,8 @@ object WorldWindow {
     const val OVERLAP_TILES = 2048
     const val STRIDE_TILES = WINDOW_TILES - OVERLAP_TILES
     const val HANDOVER_MARGIN = OVERLAP_TILES / 2
+    const val GRID_WINDOWS = 26
+    const val GRID_TILES = (GRID_WINDOWS - 1) * STRIDE_TILES + WINDOW_TILES
     const val WINDOWS_PER_AXIS = (WORLD_TILES - WINDOW_TILES + STRIDE_TILES - 1) / STRIDE_TILES + 1
 
     fun origin(window: Int): Int = minOf(window * STRIDE_TILES, WORLD_TILES - WINDOW_TILES)
