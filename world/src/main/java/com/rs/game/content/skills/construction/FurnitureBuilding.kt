@@ -37,7 +37,9 @@ private const val PLACEMENT_KEY = "furniturePlacement"
 private const val SLOT_COMPONENT_STRIDE = 7
 private const val ROTATION_STEPS = 4
 private const val PLACE_OPTION = "Place"
-private val MATERIALS = intArrayOf(Obj.woodplank, 1539, 2351, 2353, 2357, 36)
+private const val IRON_ORE = 440
+private const val COAL = 453
+private val MATERIALS = intArrayOf(Obj.woodplank, 1539, 2351, 2353, 2357, 36, IRON_ORE, COAL)
 private const val FURNACE_WIDTH = 2
 private const val FURNACE_DEPTH = 3
 private const val STEPS_PER_QUARTER_TURN = 1
@@ -75,7 +77,7 @@ private class Furniture(
     companion object {
         val CHAIR = Furniture(Obj.poh_armchair_1, Loc.built_wooden_chair, Loc.poh_chair1_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 66.0, category = Category.FURNITURE)
         val DOOR = Furniture(Obj.wooden_door_furniture_item, Loc.built_wooden_door, Loc.timberwall_doorl_placement_ghost, ObjectShape.WALL_STRAIGHT, 3, 100.0, category = Category.DOORS)
-        val FURNACE = Furniture(Obj.furnace_item, Loc.built_furnace, Loc.poh_furnace_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 0.0, FURNACE_WIDTH, FURNACE_DEPTH, true)
+        val FURNACE = Furniture(Obj.furnace_item, Loc.built_furnace, Loc.poh_furnace_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 60.0, FURNACE_WIDTH, FURNACE_DEPTH, true, Category.ACCESSORIES, listOf(IRON_ORE to 10, COAL to 2))
 
         /** An object from the map's own definitions, shaped and sized like it; [type] is its first model type. */
         private fun piece(item: Int, built: Int, ghost: Int, source: Int, category: Category, type: Int, label: String, vararg cost: Pair<Int, Int>): Furniture {
@@ -159,9 +161,9 @@ fun mapFurnitureBuilding() {
     onItemOnItem(intArrayOf(Obj.hammer), MATERIALS) { e -> openFurnitureMenu(e.player) }
     onObjectClick(*Furniture.ALL.map { it.ghost }.toTypedArray()) { e -> if (e.opNum == 2) rotateGhost(e.player) }
     onItemClick(Obj.furnace_item, options = arrayOf(PLACE_OPTION)) { e -> startPlacement(e.player, Furniture.FURNACE) }
-    for (piece in Furniture.ALL.filter { it.crafted })
+    for (piece in Furniture.ALL.filter { it.crafted && it !== Furniture.FURNACE })
         onItemClick(piece.menuItem, options = arrayOf(PLACE_OPTION)) { e -> startPlacement(e.player, piece) }
-    onObjectClick(*Furniture.ALL.filter { it.crafted }.map { it.loc }.toTypedArray()) { e -> if (e.option == PICK_UP_OPTION) pickUpPiece(e.player, e.obj) }
+    onObjectClick(*Furniture.ALL.filter { it.crafted && it !== Furniture.FURNACE }.map { it.loc }.toTypedArray()) { e -> if (e.option == PICK_UP_OPTION) pickUpPiece(e.player, e.obj) }
     onLogin { (player) ->
         if (!player.inventory.containsItem(Obj.hammer)) player.inventory.addItemDrop(Obj.hammer)
         val missingPlanks = PLANKS_REQUIRED - player.inventory.getNumberOf(Obj.woodplank)
