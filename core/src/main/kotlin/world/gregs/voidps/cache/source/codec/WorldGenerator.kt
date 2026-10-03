@@ -1,6 +1,7 @@
 package world.gregs.voidps.cache.source.codec
 
 import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.map.WorldWindow
 import world.gregs.voidps.cache.MapSquare
 import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.definition.data.MapObject
@@ -75,7 +76,7 @@ class WorldGenerator(
 
     private class OreCluster(val rocks: List<MapObject>, val globalX: List<Int>, val globalY: List<Int>)
 
-    private class Grid(val biomes: Array<Array<Biome>>, val liquids: Array<Array<Liquid?>>, val heights: Array<IntArray>)
+    private class Grid(val biomes: Array<Array<Biome>>, val liquids: Array<Array<Liquid?>>, val heights: Array<IntArray>, val roads: Array<BooleanArray>)
 
     private val sites = ConcurrentHashMap<Long, Site>()
 
@@ -133,9 +134,30 @@ class WorldGenerator(
         return grid.liquids[Math.floorMod(globalX, SIZE)][Math.floorMod(globalY, SIZE)]
     }
 
+    /** Whether the tile, local to this window, is on one of the four roads that run from the spawn to the edge of the grid. */
+    fun onRoad(x: Int, y: Int): Boolean = roadAt(x + originX, y + originY)
+
+    /** Whether the rectangle, local to this window, touches a road. */
+    fun roadTouches(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean =
+        roadTouchesGlobal(minX + originX, minY + originY, maxX + originX, maxY + originY)
+
+    private fun roadAt(x: Int, y: Int): Boolean = roadTouchesGlobal(x, y, x, y)
+
+    private fun roadTouchesGlobal(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean {
+        val insideGrid = maxX >= 0 && minX < WorldWindow.GRID_TILES && maxY >= 0 && minY < WorldWindow.GRID_TILES
+        val crossesColumn = maxX >= SPAWN_X - ROAD_REACH && minX <= SPAWN_X + ROAD_REACH
+        val crossesRow = maxY >= SPAWN_Y - ROAD_REACH && minY <= SPAWN_Y + ROAD_REACH
+        return insideGrid && (crossesColumn || crossesRow)
+    }
+
+    private fun roadVerge(x: Int, y: Int): Boolean = roadTouchesGlobal(x - 1, y - 1, x, y)
+
     fun biomeAt(x: Int, y: Int): Biome = biomeAtGlobal(x + originX, y + originY)
 
     private fun tile(grid: Grid, localX: Int, localY: Int): String {
+        if (grid.roads[localX][localY]) {
+            return "o$ROAD_OVERLAY/0/0,u${grid.biomes[localX][localY].underlay},h${grid.heights[localX][localY]}"
+        }
         val liquid = grid.liquids[localX][localY]
         if (liquid != null) {
             return "o${liquid.overlay}/0/0,s1,u${liquid.underlay},h1"
@@ -149,19 +171,20 @@ class WorldGenerator(
         val biomes = Array(SIZE + 1) { dx -> Array(SIZE + 1) { dy -> biomeAtGlobal(baseX + dx, baseY + dy) } }
         val lake = Array(SIZE + 1) { dx -> DoubleArray(SIZE + 1) { dy -> lake(baseX + dx, baseY + dy) } }
         val pond = Array(SIZE + 1) { dx -> DoubleArray(SIZE + 1) { dy -> pond(baseX + dx, baseY + dy) } }
-        val points = Array(SIZE + 1) { dx -> Array(SIZE + 1) { dy -> liquid(biomes[dx][dy], lake[dx][dy], pond[dx][dy]) } }
+        val points = Array(SIZE + 1) { dx -> Array(SIZE + 1) { dy -> if (roadVerge(baseX + dx, baseY + dy)) null else liquid(biomes[dx][dy], lake[dx][dy], pond[dx][dy]) } }
         val liquids = Array(SIZE) { dx -> Array(SIZE) { dy -> tileLiquid(points, dx, dy) } }
         val heights = Array(SIZE) { dx ->
             IntArray(SIZE) { dy ->
                 val biome = biomes[dx][dy]
-                val basin = maxOf(
+                val basin = if (roadVerge(baseX + dx, baseY + dy)) 0.0 else maxOf(
                     ((lake[dx][dy] - BANK_START) / (lakeLevel(biome) - BANK_START)).coerceIn(0.0, 1.0),
                     if (biome == Biome.DESERT) ((pond[dx][dy] - POND_BANK_START) / (POND_LEVEL - POND_BANK_START)).coerceIn(0.0, 1.0) else 0.0
                 )
                 lerp(land(baseX + dx, baseY + dy), WATER_HEIGHT.toDouble(), basin).toInt().coerceIn(WATER_HEIGHT, MAX_HEIGHT)
             }
         }
-        return Grid(biomes, liquids, heights)
+        val roads = Array(SIZE) { dx -> BooleanArray(SIZE) { dy -> roadAt(baseX + dx, baseY + dy) } }
+        return Grid(biomes, liquids, heights, roads)
     }
 
     private fun liquid(biome: Biome, lake: Double, pond: Double): Liquid? = when {
@@ -190,6 +213,9 @@ class WorldGenerator(
                 val localX = cellX * CELL + (hash / SCENERY_SPREAD % room).toInt()
                 val localY = cellY * CELL + (hash / SCENERY_SPREAD / room % room).toInt()
                 if (nearLiquid(regionX * SIZE + localX, regionY * SIZE + localY, scenery.size)) {
+                    continue
+                }
+                if (roadTouchesGlobal(regionX * SIZE + localX - 1, regionY * SIZE + localY - 1, regionX * SIZE + localX + scenery.size, regionY * SIZE + localY + scenery.size)) {
                     continue
                 }
                 if (overlapsFurnace(regionX * SIZE + localX, regionY * SIZE + localY, scenery.size)) {
@@ -267,7 +293,8 @@ class WorldGenerator(
                 if (biomeAtGlobal(x + dx, y + dy) != biome) return false
             }
         }
-        return !nearLiquid(x - CLUSTER_RADIUS, y - CLUSTER_RADIUS, 2 * CLUSTER_RADIUS) && !overlapsFurnace(x - CLUSTER_RADIUS, y - CLUSTER_RADIUS, 2 * CLUSTER_RADIUS + 1)
+        return !roadTouchesGlobal(x - CLUSTER_RADIUS - 1, y - CLUSTER_RADIUS - 1, x + CLUSTER_RADIUS + 1, y + CLUSTER_RADIUS + 1) &&
+            !nearLiquid(x - CLUSTER_RADIUS, y - CLUSTER_RADIUS, 2 * CLUSTER_RADIUS) && !overlapsFurnace(x - CLUSTER_RADIUS, y - CLUSTER_RADIUS, 2 * CLUSTER_RADIUS + 1)
     }
 
     /** The rocks on distinct tiles of a square around the centre. */
@@ -353,7 +380,7 @@ class WorldGenerator(
                 }
             }
         }
-        return !nearLiquid(x, y, maxOf(width, depth))
+        return !roadTouchesGlobal(x - FURNACE_MARGIN - 1, y - FURNACE_MARGIN - 1, x + width + FURNACE_MARGIN, y + depth + FURNACE_MARGIN) && !nearLiquid(x, y, maxOf(width, depth))
     }
 
     private fun placeSmelting(definition: MapDefinition, grid: Grid) {
@@ -502,6 +529,8 @@ class WorldGenerator(
         private const val WINTER_PICK_SHIFT = 30
         /** The biomes every site picks from at random; winter is rolled before it, so adding it did not move any other biome. */
         private val LAND_BIOMES = listOf(Biome.PLAINS, Biome.DESERT, Biome.FOREST, Biome.WILDERNESS)
+        const val ROAD_OVERLAY = 102
+        private const val ROAD_REACH = 1
         const val WATER_OVERLAY = 112
         const val WATER_UNDERLAY = 37
         const val LAVA_OVERLAY = 19
