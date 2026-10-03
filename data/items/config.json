@@ -261196,5 +261196,285 @@
     "attackRange": 0,
     "weight": 50.0,
     "examine": "A furnace small enough to carry. Use Place to set it down."
+  },
+  "25498": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A door (3) ready to place. Use Place to set it down."
+  },
+  "25499": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A iron gate (37) ready to place. Use Place to set it down."
+  },
+  "25500": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A steel door (59) ready to place. Use Place to set it down."
+  },
+  "25501": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A wooden gate (37) ready to place. Use Place to set it down."
+  },
+  "25502": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A lever (33) ready to place. Use Place to set it down."
+  },
+  "25503": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A bar (131) ready to place. Use Place to set it down."
+  },
+  "25504": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A bar (132) ready to place. Use Place to set it down."
+  },
+  "25505": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A bar (136) ready to place. Use Place to set it down."
+  },
+  "25506": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A drawers (350) ready to place. Use Place to set it down."
+  },
+  "25507": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A cupboard (367) ready to place. Use Place to set it down."
+  },
+  "25508": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A dresser (373) ready to place. Use Place to set it down."
+  },
+  "25509": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A bookcase (380) ready to place. Use Place to set it down."
+  },
+  "25510": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A bookcase (381) ready to place. Use Place to set it down."
+  },
+  "25511": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A bed (419) ready to place. Use Place to set it down."
+  },
+  "25512": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A large bed (424) ready to place. Use Place to set it down."
+  },
+  "25513": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A workbench (540) ready to place. Use Place to set it down."
+  },
+  "25514": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A bank table (591) ready to place. Use Place to set it down."
+  },
+  "25515": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A table (593) ready to place. Use Place to set it down."
+  },
+  "25516": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A wall (36073) ready to place. Use Place to set it down."
+  },
+  "25517": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 5.0,
+    "examine": "A candles (202) ready to place. Use Place to set it down."
+  },
+  "25518": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 0.0,
+    "examine": "The doors construction category."
+  },
+  "25519": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 0.0,
+    "examine": "The walls construction category."
+  },
+  "25520": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 0.0,
+    "examine": "The fences construction category."
+  },
+  "25521": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 0.0,
+    "examine": "The furniture construction category."
+  },
+  "25522": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 0.0,
+    "examine": "The accessories construction category."
+  },
+  "25523": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 0.0,
+    "examine": "The stairs construction category."
+  },
+  "25524": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 0.0,
+    "examine": "The light construction category."
+  },
+  "25525": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 0.0,
+    "examine": "The more construction category."
   }
 }
