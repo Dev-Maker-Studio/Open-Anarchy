@@ -13,7 +13,7 @@ nothing here has been played through in game yet, only compiled and started.
   `WindowRules`, `docs/infinite-world.md`. Verified: overlap terrain identical between neighbours, orchestrator endpoint, gated JS5.
   Not tested: edge hop, position save/restore, handover.
 - `GeneratedWorldRules`, `GeneratedWildlife` (animals, fishing spots, implings, 1/25 roll), `GeneratedMusic` + `Biome`/`BiomeMusic`
-  (music by biome), `BiomeCommands` (`telebiome`), `DesertRocks`, `TreePunching`, `TreePlanting`, `FishingSpotDepletion`, tree roots.
+  (music by biome), `BiomeCommands` (`biome`), `DesertRocks`, `TreePunching`, `TreePlanting`, `FishingSpotDepletion`, tree roots.
 - `PackThreads`, `scripts/low-impact.sh`, the cache pack lock: throttled generation.
 - `MapDiscovery`, `DiscoveredMapFileProvider`, `LoginProbe`: map fog gated per discovered square, headless login probe.
 
