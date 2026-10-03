@@ -37,6 +37,7 @@ private const val PLACEMENT_KEY = "furniturePlacement"
 private const val SLOT_COMPONENT_STRIDE = 7
 private const val ROTATION_STEPS = 4
 private const val PLACE_OPTION = "Place"
+private const val PLACE_OP_NUM = 1
 private const val ROTATE_OP_NUM = 2
 private const val IRON_ORE = 440
 private const val COAL = 453
@@ -194,7 +195,11 @@ fun handleFurniturePlacementClick(player: Player, tile: Tile): Boolean {
 fun handleGhostClick(player: Player, tile: Tile, objectId: Int, opNum: Int): Boolean {
     val ghost = player.tempAttribs.getO<Placement>(PLACEMENT_KEY)?.ghost ?: return false
     if (ghost.id != objectId || !ghost.tile.matches(tile)) return false
-    if (opNum == ROTATE_OP_NUM) rotateGhost(player)
+    val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return false
+    when (opNum) {
+        PLACE_OP_NUM -> build(player, placement, ghost.tile)
+        ROTATE_OP_NUM -> rotateGhost(player)
+    }
     return true
 }
 
