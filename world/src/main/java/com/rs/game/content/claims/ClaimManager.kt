@@ -11,6 +11,7 @@ import org.darkan.core.JsonFileManager
 import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.gameval.gen.Varp
 import org.darkan.core.model.ObjectShape
 import org.darkan.core.model.Rights
 import world.gregs.voidps.type.Tile
@@ -24,8 +25,11 @@ object ClaimManager {
     private const val SOUTH = 4
     private const val WEST = 8
     private const val STARTUP_DELAY_TICKS = 5
-    private const val CHECKED_BOX = "[ X ]"
-    private const val EMPTY_BOX = "[   ]"
+    private const val MODE_ON = 1
+    private const val SELECTED = 2
+    private const val CONSTRUCT = 4
+    private const val DESTROY = 8
+    private const val PVP = 16
     private val FILE = File("./data/claims.json")
     private val DESTROY_OPTIONS = setOf("chop down", "chop", "mine", "cut", "cut down", "pick", "pick-up", "smash", "break", "burn", "destroy", "dismantle", "demolish", "remove", "dig", "rake", "harvest", "clear", "pull")
     private val BORDER_BY_MASK = intArrayOf(
@@ -37,7 +41,7 @@ object ClaimManager {
     private val claims = ArrayList<Claim>()
     private val borders = HashMap<Int, List<GameObject>>()
     private val sessions = HashMap<String, Session>()
-    private val openSettings = HashMap<String, Int>()
+    private val selected = HashMap<String, Int>()
     private val appliedPvp = HashMap<String, Boolean?>()
     private var nextId = 1
 
@@ -99,10 +103,12 @@ object ClaimManager {
     private fun toggleMode(player: Player) {
         if (sessions.remove(player.username)?.also { clearSelection(player, it) } != null) {
             player.sendMessage("Claim mode off.")
+            pushState(player)
             return
         }
         sessions[player.username] = Session()
-        player.sendMessage("Claim mode on. Click the ground to pick a first corner, then click again to finish the claim. Click the edge of your claim to move a corner, or inside it for Claim Settings.")
+        player.sendMessage("Claim mode on. Click the ground to pick a first corner, then click again to finish the claim. Click the edge of your claim to move a corner, or inside it to select it.")
+        pushState(player)
     }
 
     private fun clearSelection(player: Player, session: Session) {
@@ -150,7 +156,7 @@ object ClaimManager {
                 showHighlight(player, session, Tile.of(session.corner!!.first, session.corner!!.second, existing.plane))
                 player.sendMessage("Corner selected. Click where the corner should go.")
             }
-            else -> openSettings(player, existing)
+            else -> select(player, existing)
         }
         return true
     }
@@ -195,6 +201,8 @@ object ClaimManager {
         drawBorder(result)
         save()
         player.sendMessage("Claim saved: ${result.width} x ${result.height} (${result.tileCount} tiles).")
+        selected[player.username] = result.id
+        pushState(player)
     }
 
     private fun drawBorder(claim: Claim) {
@@ -219,16 +227,29 @@ object ClaimManager {
         borders.remove(claim.id)?.forEach { World.removeObject(it) }
     }
 
-    private fun openSettings(player: Player, claim: Claim) {
-        openSettings[player.username] = claim.id
-        player.interfaceManager.sendInterface(Interface.claim_settings)
-        refreshSettings(player, claim)
+    private fun select(player: Player, claim: Claim) {
+        selected[player.username] = claim.id
+        player.sendMessage("Claim selected. Use the Claims tab to change its permissions.")
+        pushState(player)
     }
 
-    private fun refreshSettings(player: Player, claim: Claim) {
-        player.packets.setIFText(Component.claim_settings.construct_toggle, if (claim.allowConstruct) CHECKED_BOX else EMPTY_BOX)
-        player.packets.setIFText(Component.claim_settings.destroy_toggle, if (claim.allowDestroy) CHECKED_BOX else EMPTY_BOX)
-        player.packets.setIFText(Component.claim_settings.pvp_toggle, if (claim.allowPvp) CHECKED_BOX else EMPTY_BOX)
+    private fun selectedClaim(player: Player): Claim? =
+        claims.firstOrNull { it.id == selected[player.username] && it.owner == player.username }
+
+    @JvmStatic
+    fun pushState(player: Player) {
+        val claim = selectedClaim(player)
+        var state = 0
+        if (sessions.containsKey(player.username))
+            state = state or MODE_ON
+        if (claim != null) {
+            state = state or SELECTED
+            if (claim.allowConstruct) state = state or CONSTRUCT
+            if (claim.allowDestroy) state = state or DESTROY
+            if (claim.allowPvp) state = state or PVP
+        }
+        player.vars.setVar(Varp.claim_state, state)
+        player.vars.setVar(Varp.claim_tiles, ownedTiles(player.username))
     }
 
     private fun save() {
@@ -249,22 +270,21 @@ object ClaimManager {
     fun init() {
         load()
         Commands.add(Rights.PLAYER, "claim", "Toggles claim mode.") { p, _ -> toggleMode(p) }
-        onButtonClick(Interface.claim_settings) { e ->
-            val claim = claims.firstOrNull { it.id == openSettings[e.player.username] } ?: return@onButtonClick
-            if (claim.owner != e.player.username)
+        onButtonClick(Interface.claim_tab) { e ->
+            val player = e.player
+            if (e.component == Component.claim_tab.toggle_mode) {
+                toggleMode(player)
                 return@onButtonClick
+            }
+            val claim = selectedClaim(player) ?: return@onButtonClick
             when (e.component) {
-                Component.claim_settings.construct_toggle -> claim.allowConstruct = !claim.allowConstruct
-                Component.claim_settings.destroy_toggle -> claim.allowDestroy = !claim.allowDestroy
-                Component.claim_settings.pvp_toggle -> claim.allowPvp = !claim.allowPvp
-                Component.claim_settings.close -> {
-                    e.player.closeInterfaces()
-                    return@onButtonClick
-                }
+                Component.claim_tab.construct_toggle -> claim.allowConstruct = !claim.allowConstruct
+                Component.claim_tab.destroy_toggle -> claim.allowDestroy = !claim.allowDestroy
+                Component.claim_tab.pvp_toggle -> claim.allowPvp = !claim.allowPvp
                 else -> return@onButtonClick
             }
             save()
-            refreshSettings(e.player, claim)
+            pushState(player)
         }
     }
 }
