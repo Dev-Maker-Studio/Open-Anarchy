@@ -8,6 +8,7 @@ import com.rs.game.model.gameobject.GameObject
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemOnItem
 import com.rs.plugin.kts.onLogin
+import com.rs.plugin.kts.onObjectClick
 import org.darkan.core.Constants
 import org.darkan.core.Utils
 import org.darkan.core.cache.ItemDefinitions
