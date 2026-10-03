@@ -261186,5 +261186,15 @@
     "attackRange": 0,
     "weight": 0.0,
     "examine": "Very wealthy wow."
+  },
+  "25497": {
+    "dropSound": 2739,
+    "equipSound": 2240,
+    "attackDelay": -1,
+    "defendAnim": -1,
+    "defendSound": -1,
+    "attackRange": 0,
+    "weight": 50.0,
+    "examine": "A furnace small enough to carry. Use Place to set it down."
   }
 }

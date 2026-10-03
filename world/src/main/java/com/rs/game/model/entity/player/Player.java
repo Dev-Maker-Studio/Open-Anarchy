@@ -1649,6 +1649,7 @@ public class Player extends Entity {
 
 	private transient long logoutDeadline;
 	private static final int MAX_LOGOUT_DELAY_TICKS = Ticks.fromSeconds(60);
+	private static final double WEIGHT_RELIEF_KG_PER_STRENGTH_LEVEL = 1.0;
 
 	private Notes notes;
 
@@ -3638,7 +3639,9 @@ public class Player extends Entity {
 	}
 
 	public double getWeight() {
-		return inventory.getInventoryWeight() + equipment.getEquipmentWeight();
+		double carried = inventory.getInventoryWeight() + equipment.getEquipmentWeight();
+		double strengthRelief = skills.getLevelForXp(Constants.STRENGTH) * WEIGHT_RELIEF_KG_PER_STRENGTH_LEVEL;
+		return carried - Math.min(strengthRelief, Math.max(carried, 0.0));
 	}
 
 	public boolean hasWickedHoodTalisman(WickedHoodRune rune) {
