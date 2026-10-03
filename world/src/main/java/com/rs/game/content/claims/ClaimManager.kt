@@ -66,6 +66,17 @@ object ClaimManager {
         return false
     }
 
+    /** Construction pieces are only made, placed and picked up on land claimed by the player, or by someone who allows building. */
+    @JvmStatic
+    fun canConstruct(player: Player, tile: Tile, notify: Boolean = true): Boolean {
+        val claim = claimAt(tile)
+        if (claim != null && (claim.owner == player.username || claim.allowConstruct))
+            return true
+        if (notify)
+            player.sendMessage(if (claim == null) "You can only do that on land you have claimed." else "This land is claimed by ${claim.owner}; you can't build here.")
+        return false
+    }
+
     @JvmStatic
     fun canDestroy(player: Player, tile: Tile, notify: Boolean = true): Boolean {
         val claim = claimAt(tile) ?: return true
