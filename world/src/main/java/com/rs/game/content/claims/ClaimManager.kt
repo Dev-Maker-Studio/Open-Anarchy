@@ -42,6 +42,7 @@ object ClaimManager {
     private val borders = HashMap<Int, List<GameObject>>()
     private val sessions = HashMap<String, Session>()
     private val selected = HashMap<String, Int>()
+    private val pendingDelete = HashMap<String, Int>()
     private val appliedPvp = HashMap<String, Boolean?>()
     private var nextId = 1
 
@@ -233,6 +234,21 @@ object ClaimManager {
         pushState(player)
     }
 
+    private fun deleteClaim(player: Player, claim: Claim) {
+        if (pendingDelete[player.username] != claim.id) {
+            pendingDelete[player.username] = claim.id
+            player.sendMessage("Click Delete claim again to confirm. This removes the ${claim.tileCount} tile claim for good.")
+            return
+        }
+        pendingDelete.remove(player.username)
+        clearBorder(claim)
+        claims.remove(claim)
+        selected.remove(player.username)
+        save()
+        player.sendMessage("Claim deleted.")
+        pushState(player)
+    }
+
     private fun selectedClaim(player: Player): Claim? =
         claims.firstOrNull { it.id == selected[player.username] && it.owner == player.username }
 
@@ -277,6 +293,11 @@ object ClaimManager {
                 return@onButtonClick
             }
             val claim = selectedClaim(player) ?: return@onButtonClick
+            if (e.component == Component.claim_tab.delete_claim) {
+                deleteClaim(player, claim)
+                return@onButtonClick
+            }
+            pendingDelete.remove(player.username)
             when (e.component) {
                 Component.claim_tab.construct_toggle -> claim.allowConstruct = !claim.allowConstruct
                 Component.claim_tab.destroy_toggle -> claim.allowDestroy = !claim.allowDestroy
