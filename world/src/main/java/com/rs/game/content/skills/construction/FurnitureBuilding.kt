@@ -6,6 +6,7 @@ import com.rs.game.World
 import com.rs.game.content.claims.ClaimManager
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
+import com.rs.game.tasks.WorldTasks
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnItem
@@ -14,6 +15,7 @@ import com.rs.plugin.kts.onObjectClick
 import org.darkan.core.Constants
 import org.darkan.core.Utils
 import org.darkan.core.cache.ItemDefinitions
+import org.darkan.core.cache.ObjectDefinitions
 import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.gameval.gen.Inv
@@ -28,10 +30,14 @@ import org.darkan.core.model.ObjectShape
 import world.gregs.voidps.type.Tile
 
 private const val PLANKS_REQUIRED = 3
+private const val XP_PER_MATERIAL = 5.0
+private const val MORE_ICON = 25525
+private const val PAGE_SIZE = 7
 private const val PLACEMENT_KEY = "furniturePlacement"
 private const val SLOT_COMPONENT_STRIDE = 7
 private const val ROTATION_STEPS = 8
 private const val PLACE_OPTION = "Place"
+private val MATERIALS = intArrayOf(Obj.woodplank, 1539, 2351, 2353, 2357, 36)
 private const val FURNACE_WIDTH = 2
 private const val FURNACE_DEPTH = 3
 private const val STEPS_PER_QUARTER_TURN = 2
@@ -40,7 +46,17 @@ private const val DEGREES_PER_STEP = 360 / ROTATION_STEPS
 private val CLOSE_BUTTON = Utils.componentIdFromHash(Component.interface_1306.component_1306_55)
 private val FIRST_SLOT_BUTTON = Utils.componentIdFromHash(Component.interface_1306.component_1306_8)
 
-private enum class Furniture(
+private enum class Category(val label: String, val icon: Int) {
+    DOORS("Doors", 25518),
+    WALLS("Walls", 25519),
+    FENCES("Fences", 25520),
+    FURNITURE("Furniture", 25521),
+    ACCESSORIES("Accessories", 25522),
+    STAIRS("Stairs", 25523),
+    LIGHT("Light", 25524),
+}
+
+private class Furniture(
     val menuItem: Int,
     val loc: Int,
     val ghost: Int,
@@ -50,14 +66,52 @@ private enum class Furniture(
     val width: Int = 1,
     val depth: Int = 1,
     val placedFromItem: Boolean = false,
+    val category: Category? = null,
+    val cost: List<Pair<Int, Int>> = emptyList(),
 ) {
-    CHAIR(Obj.poh_armchair_1, Loc.built_wooden_chair, Loc.poh_chair1_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 66.0),
-    WALL(Obj.wooden_wall_furniture_item, Loc.built_wooden_wall, Loc.poh_timberwall_placement_ghost, ObjectShape.WALL_STRAIGHT, 3, 100.0),
-    DOOR(Obj.wooden_door_furniture_item, Loc.built_wooden_door, Loc.timberwall_doorl_placement_ghost, ObjectShape.WALL_STRAIGHT, 3, 100.0),
-    FURNACE(Obj.furnace_item, Loc.built_furnace, Loc.poh_furnace_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 0.0, FURNACE_WIDTH, FURNACE_DEPTH, true),
+    /** A piece built from materials into a carried item, which is then placed and can be picked up again. */
+    val crafted get() = cost.isNotEmpty()
+
+    companion object {
+        val CHAIR = Furniture(Obj.poh_armchair_1, Loc.built_wooden_chair, Loc.poh_chair1_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 66.0, category = Category.FURNITURE)
+        val WALL = Furniture(Obj.wooden_wall_furniture_item, Loc.built_wooden_wall, Loc.poh_timberwall_placement_ghost, ObjectShape.WALL_STRAIGHT, 3, 100.0, category = Category.WALLS)
+        val DOOR = Furniture(Obj.wooden_door_furniture_item, Loc.built_wooden_door, Loc.timberwall_doorl_placement_ghost, ObjectShape.WALL_STRAIGHT, 3, 100.0, category = Category.DOORS)
+        val FURNACE = Furniture(Obj.furnace_item, Loc.built_furnace, Loc.poh_furnace_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 0.0, FURNACE_WIDTH, FURNACE_DEPTH, true)
+
+        /** An object from the map's own definitions, shaped and sized like it; [type] is its first model type. */
+        private fun piece(item: Int, built: Int, ghost: Int, source: Int, category: Category, type: Int, label: String, vararg cost: Pair<Int, Int>): Furniture {
+            val def = ObjectDefinitions.getDefs(source)
+            val shape = ObjectShape.forId(type) ?: ObjectShape.SCENERY_INTERACT
+            val quarterTurn = if (shape == ObjectShape.WALL_STRAIGHT) 3 else 0
+            return Furniture(item, built, ghost, shape, quarterTurn, cost.sumOf { it.second } * XP_PER_MATERIAL, def.sizeX, def.sizeY, true, category, cost.toList())
+        }
+
+        val ALL: List<Furniture> = listOf(CHAIR, WALL, DOOR, FURNACE,
+        piece(25498, 73933, 73932, 3, Category.DOORS, 0, "Door", 960 to 3),
+        piece(25499, 73935, 73934, 37, Category.DOORS, 0, "Iron gate", 2351 to 3, 1539 to 10),
+        piece(25500, 73937, 73936, 59, Category.DOORS, 0, "Steel door", 2353 to 3, 1539 to 10),
+        piece(25501, 73939, 73938, 37, Category.FENCES, 0, "Wooden gate", 960 to 4),
+        piece(25502, 73941, 73940, 33, Category.ACCESSORIES, 4, "Lever", 2351 to 1),
+        piece(25503, 73943, 73942, 131, Category.FURNITURE, 0, "Bar", 960 to 5),
+        piece(25504, 73945, 73944, 132, Category.FURNITURE, 10, "Bar", 960 to 5),
+        piece(25505, 73947, 73946, 136, Category.FURNITURE, 10, "Bar", 960 to 5),
+        piece(25506, 73949, 73948, 350, Category.FURNITURE, 10, "Drawers", 960 to 4),
+        piece(25507, 73951, 73950, 367, Category.FURNITURE, 10, "Cupboard", 960 to 3),
+        piece(25508, 73953, 73952, 373, Category.FURNITURE, 10, "Dresser", 960 to 4),
+        piece(25509, 73955, 73954, 380, Category.FURNITURE, 10, "Bookcase", 960 to 4),
+        piece(25510, 73957, 73956, 381, Category.FURNITURE, 10, "Bookcase", 960 to 4),
+        piece(25511, 73959, 73958, 419, Category.FURNITURE, 10, "Bed", 960 to 4),
+        piece(25512, 73961, 73960, 424, Category.FURNITURE, 10, "Large bed", 2357 to 3, 1539 to 8),
+        piece(25513, 73963, 73962, 540, Category.FURNITURE, 10, "Workbench", 960 to 5, 1539 to 5),
+        piece(25514, 73965, 73964, 591, Category.FURNITURE, 10, "Bank table", 960 to 5, 1539 to 5),
+        piece(25515, 73967, 73966, 593, Category.FURNITURE, 10, "Table", 960 to 5),
+        piece(25516, 73969, 73968, 36073, Category.WALLS, 0, "Wall", 960 to 4),
+        piece(25517, 73971, 73970, 202, Category.LIGHT, 10, "Candles", 36 to 3, 960 to 1),
+        )
+    }
 }
 
-private val MENU_FURNITURE = Furniture.entries.filterNot { it.placedFromItem }
+private fun Category.pieces(): List<Furniture> = Furniture.ALL.filter { it.category == this }
 
 private fun Furniture.footprint(tile: Tile, rotation: Int): List<Tile> {
     val (across, along) = if (rotation and 1 == 0) width to depth else depth to width
@@ -67,23 +121,29 @@ private fun Furniture.footprint(tile: Tile, rotation: Int): List<Tile> {
 private fun Furniture.fits(player: Player, tile: Tile, rotation: Int): Boolean =
     tile.plane == player.plane && footprint(tile, rotation).all { World.floorAndWallsFree(it, 1) }
 
-private fun Furniture.isAffordable(player: Player): Boolean =
-    if (placedFromItem) player.inventory.containsItem(menuItem) else player.inventory.getNumberOf(Obj.woodplank) >= PLANKS_REQUIRED
+private fun Furniture.isAffordable(player: Player): Boolean = when {
+    placedFromItem -> player.inventory.containsItem(menuItem)
+    else -> player.inventory.getNumberOf(Obj.woodplank) >= PLANKS_REQUIRED
+}
 
 private fun Furniture.shortage(): String =
     if (placedFromItem) "You need a ${ItemDefinitions.getDefs(menuItem).name.lowercase()} to place." else "You need $PLANKS_REQUIRED planks to build furniture."
+
+private fun Furniture.canCraft(player: Player): Boolean = cost.all { (item, amount) -> player.inventory.getNumberOf(item) >= amount }
+
+private fun Furniture.materials(): String = cost.joinToString(", ") { (item, amount) -> "$amount x ${ItemDefinitions.getDefs(item).name.lowercase()}" }
 
 private class Placement(val furniture: Furniture, var ghost: GameObject? = null, var step: Int = 0) {
     val rotation get() = (furniture.rotation + step / STEPS_PER_QUARTER_TURN) and 3
 }
 
-private object FurnitureMenu : Statement {
+private class FurnitureMenu(private val icons: List<Int>) : Statement {
     override fun send(player: Player) {
-        val available = MENU_FURNITURE.indices.sumOf { 1 shl (it + 1) }
+        val available = icons.indices.sumOf { 1 shl (it + 1) }
         player.packets.sendVarc(Varc.varc_841, available)
-        player.packets.sendItems(Inv.inv_398, MENU_FURNITURE.map { Item(it.menuItem, 1) }.toTypedArray<Item?>())
+        player.packets.sendItems(Inv.inv_398, icons.map { Item(it, 1) }.toTypedArray<Item?>())
         player.packets.setIFEvents(IFEvents(Component.interface_1306.component_1306_55, -1, -1).enableContinueButton())
-        MENU_FURNITURE.indices.forEach {
+        icons.indices.forEach {
             player.packets.setIFEvents(IFEvents(Interface.interface_1306, FIRST_SLOT_BUTTON + it * SLOT_COMPONENT_STRIDE, 4, 4).enableContinueButton())
         }
         player.interfaceManager.sendInterface(Interface.interface_1306)
@@ -97,9 +157,12 @@ private object FurnitureMenu : Statement {
 
 @ServerStartupEvent
 fun mapFurnitureBuilding() {
-    onItemOnItem(intArrayOf(Obj.hammer), intArrayOf(Obj.woodplank)) { e -> openFurnitureMenu(e.player) }
-    onObjectClick(*Furniture.entries.map { it.ghost }.toTypedArray()) { e -> if (e.opNum == 2) rotateGhost(e.player) }
+    onItemOnItem(intArrayOf(Obj.hammer), MATERIALS) { e -> openFurnitureMenu(e.player) }
+    onObjectClick(*Furniture.ALL.map { it.ghost }.toTypedArray()) { e -> if (e.opNum == 2) rotateGhost(e.player) }
     onItemClick(Obj.furnace_item, options = arrayOf(PLACE_OPTION)) { e -> startPlacement(e.player, Furniture.FURNACE) }
+    for (piece in Furniture.ALL.filter { it.crafted })
+        onItemClick(piece.menuItem, options = arrayOf(PLACE_OPTION)) { e -> startPlacement(e.player, piece) }
+    onObjectClick(*Furniture.ALL.filter { it.crafted }.map { it.loc }.toTypedArray()) { e -> if (e.option == PICK_UP_OPTION) pickUpPiece(e.player, e.obj) }
     onLogin { (player) ->
         if (!player.inventory.containsItem(Obj.hammer)) player.inventory.addItemDrop(Obj.hammer)
         val missingPlanks = PLANKS_REQUIRED - player.inventory.getNumberOf(Obj.woodplank)
@@ -146,13 +209,56 @@ private fun rotateGhost(player: Player) {
 
 private fun openFurnitureMenu(player: Player) {
     cancelPlacement(player)
-    if (player.inventory.getNumberOf(Obj.woodplank) < PLANKS_REQUIRED) {
-        player.sendMessage("You need $PLANKS_REQUIRED planks to build furniture.")
+    val categories = Category.entries
+    player.startConversation {
+        statementWithActions(FurnitureMenu(categories.map { it.icon }), *categories.map { category -> Runnable { openCategory(player, category, 0) } }.toTypedArray())
+    }
+}
+
+private fun openCategory(player: Player, category: Category, page: Int) {
+    val pieces = category.pieces()
+    if (pieces.isEmpty()) {
+        player.sendMessage("There is nothing to build in ${category.label.lowercase()} yet.")
         return
     }
-    player.startConversation {
-        statementWithActions(FurnitureMenu, *MENU_FURNITURE.map { furniture -> Runnable { startPlacement(player, furniture) } }.toTypedArray())
+    val start = page * (PAGE_SIZE - 1)
+    val paged = pieces.size > PAGE_SIZE
+    val shown = if (paged) pieces.drop(start).take(PAGE_SIZE - 1) else pieces
+    val hasMore = paged && start + shown.size < pieces.size
+    val icons = shown.map { it.menuItem } + if (paged) listOf(MORE_ICON) else emptyList()
+    val actions = shown.map { piece -> Runnable { choose(player, piece) } } + if (paged) listOf(Runnable { openCategory(player, category, if (hasMore) page + 1 else 0) }) else emptyList()
+    WorldTasks.schedule(1) { player.startConversation { statementWithActions(FurnitureMenu(icons), *actions.toTypedArray()) } }
+}
+
+private fun choose(player: Player, piece: Furniture) {
+    if (!piece.crafted) {
+        if (player.inventory.getNumberOf(Obj.woodplank) < PLANKS_REQUIRED) player.sendMessage("You need $PLANKS_REQUIRED planks to build furniture.") else startPlacement(player, piece)
+        return
     }
+    player.closeInterfaces()
+    if (!piece.canCraft(player)) {
+        player.sendMessage("You need ${piece.materials()} to make that.")
+        return
+    }
+    piece.cost.forEach { (item, amount) -> player.inventory.deleteItem(item, amount) }
+    player.inventory.addItemDrop(piece.menuItem, 1)
+    player.anim(Animation(Seq.human_poh_build_floor))
+    player.skills.addXp(Constants.CONSTRUCTION, piece.xp)
+    player.sendMessage("You make a ${ItemDefinitions.getDefs(piece.menuItem).name.lowercase()}. Use Place on it to set it down.")
+}
+
+/** Puts a placed piece back into the inventory as its item. */
+private fun pickUpPiece(player: Player, obj: GameObject) {
+    val piece = Furniture.ALL.firstOrNull { it.crafted && it.loc == obj.id } ?: return
+    if (World.getObject(obj.tile, obj.type)?.id != obj.id) return
+    if (!ClaimManager.canBuild(player, obj.tile)) return
+    if (!player.inventory.hasFreeSlots()) {
+        player.sendMessage("You don't have enough inventory space to pick that up.")
+        return
+    }
+    World.removeObject(obj)
+    player.inventory.addItem(piece.menuItem, 1)
+    player.sendMessage("You pick up the ${ItemDefinitions.getDefs(piece.menuItem).name.lowercase()}.")
 }
 
 private fun startPlacement(player: Player, furniture: Furniture) {
