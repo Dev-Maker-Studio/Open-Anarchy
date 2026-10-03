@@ -27,6 +27,9 @@ import world.gregs.voidps.type.Tile
 private const val PLANKS_REQUIRED = 3
 private const val PLACEMENT_KEY = "furniturePlacement"
 private const val SLOT_COMPONENT_STRIDE = 7
+private const val ROTATION_STEPS = 8
+private const val STEPS_PER_QUARTER_TURN = 2
+private const val DEGREES_PER_STEP = 360 / ROTATION_STEPS
 
 private val CLOSE_BUTTON = Utils.componentIdFromHash(Component.interface_1306.component_1306_55)
 private val FIRST_SLOT_BUTTON = Utils.componentIdFromHash(Component.interface_1306.component_1306_8)
@@ -44,7 +47,9 @@ private enum class Furniture(
     DOOR(Obj.wooden_door_furniture_item, Loc.built_wooden_door, Loc.timberwall_doorl_placement_ghost, ObjectShape.WALL_STRAIGHT, 3, 100.0),
 }
 
-private class Placement(val furniture: Furniture, var ghost: GameObject? = null)
+private class Placement(val furniture: Furniture, var ghost: GameObject? = null, var step: Int = 0) {
+    val rotation get() = (furniture.rotation + step / STEPS_PER_QUARTER_TURN) and 3
+}
 
 private object FurnitureMenu : Statement {
     override fun send(player: Player) {
@@ -67,6 +72,7 @@ private object FurnitureMenu : Statement {
 @ServerStartupEvent
 fun mapFurnitureBuilding() {
     onItemOnItem(intArrayOf(Obj.hammer), intArrayOf(Obj.woodplank)) { e -> openFurnitureMenu(e.player) }
+    onObjectClick(*Furniture.entries.map { it.ghost }.toTypedArray()) { e -> if (e.opNum == 2) rotateGhost(e.player) }
     onLogin { (player) ->
         if (!player.inventory.containsItem(Obj.hammer)) player.inventory.addItemDrop(Obj.hammer)
         val missingPlanks = PLANKS_REQUIRED - player.inventory.getNumberOf(Obj.woodplank)
@@ -78,18 +84,30 @@ fun handleFurniturePlacementClick(player: Player, tile: Tile): Boolean {
     val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return false
     val ghost = placement.ghost
     if (ghost != null && ghost.tile == tile) {
-        build(player, placement.furniture, tile)
+        build(player, placement, tile)
         return true
     }
     if (tile.plane != player.plane || !World.floorAndWallsFree(tile, 1)) {
         player.sendMessage("You can't build that there.")
         return true
     }
-    ghost?.let(player.packets::sendRemoveObject)
-    val furniture = placement.furniture
-    placement.ghost = GameObject(furniture.ghost, furniture.shape, furniture.rotation, tile).also(player.packets::sendAddObject)
-    player.sendMessage("Click the ghost again to build it, or click elsewhere to move it.")
+    showGhost(player, placement, tile)
+    player.sendMessage("Left-click the ghost to build it, right-click it to rotate, or click elsewhere to move it.")
     return true
+}
+
+private fun showGhost(player: Player, placement: Placement, tile: Tile) {
+    placement.ghost?.let(player.packets::sendRemoveObject)
+    val furniture = placement.furniture
+    placement.ghost = GameObject(furniture.ghost, furniture.shape, placement.rotation, tile).also(player.packets::sendAddObject)
+}
+
+private fun rotateGhost(player: Player) {
+    val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return
+    val ghost = placement.ghost ?: return
+    placement.step = (placement.step + 1) % ROTATION_STEPS
+    showGhost(player, placement, ghost.tile)
+    player.sendMessage("Rotation ${placement.step * DEGREES_PER_STEP} degrees.")
 }
 
 private fun openFurnitureMenu(player: Player) {
@@ -115,7 +133,8 @@ private fun cancelPlacement(player: Player) {
     player.tempAttribs.removeO<Placement>(PLACEMENT_KEY)
 }
 
-private fun build(player: Player, furniture: Furniture, tile: Tile) {
+private fun build(player: Player, placement: Placement, tile: Tile) {
+    val furniture = placement.furniture
     cancelPlacement(player)
     if (player.inventory.getNumberOf(Obj.woodplank) < PLANKS_REQUIRED) {
         player.sendMessage("You need $PLANKS_REQUIRED planks to build furniture.")
@@ -124,7 +143,7 @@ private fun build(player: Player, furniture: Furniture, tile: Tile) {
     player.inventory.deleteItem(Obj.woodplank, PLANKS_REQUIRED)
     player.faceTile(tile)
     player.anim(Animation(Seq.human_poh_build_floor))
-    val built = GameObject(furniture.loc, furniture.shape, furniture.rotation, tile)
+    val built = GameObject(furniture.loc, furniture.shape, placement.rotation, tile)
     initBuiltFurniture(built)
     World.spawnObject(built)
     player.skills.addXp(Constants.CONSTRUCTION, furniture.xp)
