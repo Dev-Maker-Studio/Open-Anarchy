@@ -46,4 +46,4 @@ nothing here has been played through in game yet, only compiled and started.
 ## Known gaps
 - The saved map squares in the cache were flat plains, so none of the biome content showed. Regenerating them is done for `stage-22`'s
   4000 x 4000 area; world 123 still needs it.
-- `AudioCommands.kt` (in the music session's report) did not exist in the merged tree; nothing was lost.
+- The music session could not compile because of an `AudioCommands.kt` error mid-edit; the merged tree compiles clean.
