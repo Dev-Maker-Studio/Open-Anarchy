@@ -28,6 +28,7 @@ import com.rs.game.content.world.areas.wilderness.WildernessController
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.Hit
 import com.rs.game.model.entity.async.schedule
+import com.rs.game.content.claims.ClaimManager
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.OwnedObject
 import com.rs.game.tasks.WorldTasks
@@ -247,6 +248,8 @@ private fun setUp(player: Player, cannonType: Int) {
         player.sendMessage("You can't place your cannon here.")
         return
     }
+    if (!ClaimManager.canBuild(player, player.tile))
+        return
     val area = BannedArea.MAP[player.getRegionId()]
     if (area != null) {
         player.sendMessage(area.message)

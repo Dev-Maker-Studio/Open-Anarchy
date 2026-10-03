@@ -36,7 +36,7 @@ object Packer {
     /** Pack [tree] into [output], replacing whatever cache is already there. */
     fun pack(tree: SourceTree, output: File, report: (String) -> Unit = {}): PackResult {
         val start = System.nanoTime()
-        val threads = Runtime.getRuntime().availableProcessors()
+        val threads = PackThreads.count()
         val pool = Executors.newFixedThreadPool(threads) { runnable ->
             Thread(runnable, "cache-pack").apply { isDaemon = true }
         }

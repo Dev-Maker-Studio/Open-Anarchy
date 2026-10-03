@@ -19,6 +19,7 @@ package com.rs.utils.music;
 import com.google.gson.JsonIOException;
 import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.World;
+import com.rs.game.content.world.generated.GeneratedMusicKt;
 import com.rs.game.model.entity.player.Player;
 import org.darkan.core.JsonFileManager;
 import org.darkan.core.model.Item;
@@ -126,6 +127,14 @@ public class Music {
 		return MUSICS.get(musicId);
 	}
 
+	public static List<Genre> getGenres() {
+		return genres;
+	}
+
+	public static Set<Integer> getSongIds() {
+		return MUSICS.keySet();
+	}
+
 	/**
 	 * Start with the region genre but if there are genre chunks then default to that.
 	 * Lastly make sure the genre is active.
@@ -133,6 +142,9 @@ public class Music {
 	 * @return
 	 */
 	public static Genre getGenre(Player player) {
+		Genre biomeGenre = GeneratedMusicKt.biomeGenre(player);
+		if(biomeGenre != null)
+			return biomeGenre;
 		if(!GENRE_REGION.containsKey(player.getRegionId()))
 			return null;
 		Genre g = GENRE_REGION.get(player.getRegionId());

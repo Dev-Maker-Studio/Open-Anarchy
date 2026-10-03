@@ -1,5 +1,7 @@
 package com.rs.game.map;
 
+import org.darkan.core.cache.MapMaterializer;
+
 import org.darkan.core.model.ObjectShape;
 import com.rs.engine.pathfinder.GameObjectCollision;
 import org.darkan.core.map.WorldCollision;
@@ -344,6 +346,7 @@ public class Chunk {
     public void checkLoaded() {
         if (!loadedMapData) {
             loadedMapData = true;
+            MapMaterializer.explored(getRegionX(), getRegionY());
             ChunkManager.loadRegionMapDataByChunkId(id);
         }
         if (!loadedSpawnData) {

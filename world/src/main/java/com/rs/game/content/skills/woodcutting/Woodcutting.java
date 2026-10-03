@@ -29,7 +29,9 @@ import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.entity.player.managers.AuraManager;
 import com.rs.game.model.gameobject.GameObject;
 import com.rs.game.tasks.WorldTasks;
+import com.rs.game.content.skills.construction.TreeRoot;
 import org.darkan.core.Constants;
+import org.darkan.core.EnvVars;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
 import org.darkan.core.Logger;
@@ -229,6 +231,10 @@ public class Woodcutting extends Action {
 					player.sendMessage("Your resourceful aura prevents the " + (TreeType.IVY == type ? "ivy" : "tree") + " from being felled.");
 					return 3;
 				}
+				if (entity instanceof Player player && EnvVars.INSTANCE.getGenerateMaps() && (type == TreeType.NORMAL || type == TreeType.OAK || type == TreeType.WILLOW)) {
+					player.getInventory().addItem(TreeRoot.Companion.forTreeName(treeObj.getDefinitions().getName()).getRoot(), Utils.random(10) == 0 ? 2 : 1);
+					player.sendMessage("You find some tree roots in the stump.", true);
+				}
 				fellTree();
 				entity.anim(-1);
 				return -1;
@@ -238,6 +244,10 @@ public class Woodcutting extends Action {
 	}
 
 	public void fellTree() {
+		if (type != TreeType.IVY) {
+			TreePunchingKt.destroyTree(treeObj);
+			return;
+		}
 		if (!World.isSpawnedObject(treeObj) && treeObj.getPlane() < 3 && type != TreeType.IVY) {
 			for (int x = -1;x <= 1;x++) {
 				for (int y = -1;y <= 1;y++) {

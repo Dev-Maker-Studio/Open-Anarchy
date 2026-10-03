@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Open Questions and Roadmap</title>
+<link rel="stylesheet" href="style.css"></head><body>
+
+<div class="cover">
+  <h1>Construction Port: Open Questions &amp; Spike Plan</h1>
+  <div class="sub">The ledger that drives each revision of documents 1 and 2</div>
+  <div class="meta">
+    Document 3 of 3 &middot; Darkan construction port series<br>
+    <span class="ver">Version 2.0 (draft)</span> &middot; 2 October 2026<br>
+    Closed in this revision: 12 questions &middot; Still open: 9 &middot; New: 8 &middot; Decisions pending: 8
+  </div>
+</div>
+
+<h1>1. How to use this document</h1>
+<p>Documents 1 and 2 are specifications. This one is the work queue: everything the design assumes or does not know, with the cheapest check that settles it. A revision of the set is cut when a batch is answered. Priority reflects how much of the design falls over if the answer is unwelcome: <b>P1</b> changes the architecture, <b>P2</b> changes or cuts a feature, <b>P3</b> is detail.</p>
+
+<h1>2. Closed in version 2</h1>
+<table>
+<tr><th style="width:11mm">ID</th><th>Question</th><th>Answer</th><th style="width:22mm">Folded into</th></tr>
+<tr><td>O1</td><td>Does Walk carry the clicked tile; can a click be swallowed?</td><td><span class="mono">Walk(x, y, forceRun, minimap)</span>: absolute world tile, no plane. Intercept in <span class="mono">WalkHandler</span> before <span class="mono">stopAll()</span>. <span class="mono">AltWalk</span> has no handler.</td><td>Doc 2 &sect;9.1</td></tr>
+<tr><td>O3</td><td>How are multi-tile objects stored; what happens on overlap?</td><td>Base tile only; replace on same slot; no covering-tile helper. The layout needs its own occupancy index.</td><td>Doc 2 &sect;7.3</td></tr>
+<tr><td>O4</td><td>Can the stats UI show Construction 120?</td><td>Yes. Level fits the byte; enum 716 reaches 140. Three cosmetic scripts and about 12 server sites change.</td><td>Doc 2 &sect;9.5</td></tr>
+<tr><td>O5</td><td>Per-player spawn and recolour?</td><td>Yes: <span class="mono">sendAddObject</span>, <span class="mono">sendCustomizeObject</span> with <span class="mono">modifyMesh()</span>; <span class="mono">sendSpotAnim</span> / hint icon for markers.</td><td>Doc 2 &sect;9.1</td></tr>
+<tr><td>O6</td><td>Can one inventory key hold 750 slots?</td><td>Yes (bank holds 2,000). The real limit is the 200,000-instruction CS2 cap; page the interface.</td><td>Doc 2 &sect;9.3</td></tr>
+<tr><td>O7</td><td>Can a loc carry a height offset?</td><td>Yes: <span class="mono">offsetZ</span> and <span class="mono">modelSizeX/Y/Z</span>. 82 free ids in the current archive; a new archive beyond.</td><td>Doc 2 &sect;7.2</td></tr>
+<tr><td>C1</td><td>How big is the catalogue; what is canonical?</td><td>447 entries, 812 locs, 128 builds; classes counted; 17 variant builds need review (now C8).</td><td>Doc 2 &sect;7.1</td></tr>
+<tr><td>C2</td><td>Where is each hotspot in its template?</td><td>816 hotspot rows across 25 rooms extracted with chunk, tile and rotation.</td><td>Doc 2 &sect;10.2</td></tr>
+<tr><td>C3</td><td>RS3 furniture and floor limit steps?</td><td>Full nine-step furniture ladder, room steps and floor steps read from wikitext.</td><td>Doc 1 &sect;4.2</td></tr>
+<tr><td>C7</td><td>Level-60 portal name?</td><td>Otot. Mazcab is absent from the wikitext.</td><td>Doc 1 &sect;9.1</td></tr>
+<tr><td>R1</td><td>Is the trunk usable inside the house?</td><td>No. It is a box outside the Rimmington portal.</td><td>Doc 1 &sect;6</td></tr>
+<tr><td>R2</td><td>When did room moving ship?</td><td>27 July 2026, with floor styles.</td><td>Doc 1 &sect;2</td></tr>
+</table>
+
+<h1>3. Still open</h1>
+<table>
+<tr><th style="width:10mm">ID</th><th style="width:9mm">Pri</th><th>Question</th><th>How to answer</th><th style="width:20mm">Blocks</th></tr>
+<tr><td>O1b</td><td>P3</td><td>Does the client draw its own minimap flag on a ground click that the server swallows? (Server code only sets the flag after routing.)</td><td>Click in a dev client with the hook stubbed; watch the flag.</td><td>Doc 2 &sect;9.1</td></tr>
+<tr><td>O2</td><td>P1</td><td>Does a void tile (<span class="mono">h30</span> alone) render and block correctly in the client, so a cut-away corner works?</td><td>Author one octagon chunk and view it. The format allows it; no client test yet.</td><td>Doc 2 &sect;6.2</td></tr>
+<tr><td>O8</td><td>P3</td><td>Is a ghost recolour readable on dark models, or is a tile marker needed too?</td><td>Visual test.</td><td>Doc 2 &sect;9.1</td></tr>
+<tr><td>O9</td><td>P2</td><td>Roofs for non-square shapes: hide them, or author roof templates?</td><td>Decision after O2.</td><td>Doc 2 &sect;8.3</td></tr>
+<tr><td>C4</td><td>P2</td><td>Per-piece recipe and XP for the RS3 catalogue; which 2012 pieces have an RS3 equivalent?</td><td>Raw wikitext of the furniture recipe pages; reuse 2012 XP and materials for the first catalogue.</td><td>Doc 2 &sect;9.4</td></tr>
+<tr><td>C5</td><td>P2</td><td>Exact snap of the RS3 room grid. The wiki says the game-square grid and a 2-tile gap rule, which implies tile granularity.</td><td>Community footage or in-game; low value because the 727 port cannot match it (decision D8).</td><td>Doc 2 &sect;5.4</td></tr>
+<tr><td>C6</td><td>P3</td><td>Dark Stone has no 727 equivalent; what is the closest style?</td><td>View the seven legacy styles in the client.</td><td>Doc 2 &sect;6.3</td></tr>
+<tr><td>C9</td><td>P3</td><td>Per-portal level and fee table; sub-points such as the elite-task discount.</td><td>Raw wikitext of the portal template.</td><td>Doc 1 &sect;9.1</td></tr>
+<tr><td>C10</td><td>P3</td><td>Can rotation exceed 4 steps for any RS3 object (one summary said "some 45&deg;")?</td><td>Not in wikitext; confirm in game or drop.</td><td>Doc 1 &sect;12</td></tr>
+</table>
+
+<h1>4. New in version 2</h1>
+<table>
+<tr><th style="width:10mm">ID</th><th style="width:9mm">Pri</th><th>Question</th><th>How to answer</th><th style="width:20mm">Blocks</th></tr>
+<tr><td>O10</td><td>P1</td><td>Plane plan: three floors plus a roof need all four planes and displace the legacy dungeon. Can the client show a ground floor on plane 0 with roofs on plane 3 correctly?</td><td>Build a test instance with rooms on planes 0&ndash;2 and a roof on 3; walk through it.</td><td>Doc 2 &sect;5.2</td></tr>
+<tr><td>O11</td><td>P1</td><td>Template matrix: 12 shapes &times; 2 stair variants &times; 5 wall styles &times; 14 floor styles is about 1,680 chunks. Can wall style be applied at runtime to cut it, and what is the cache and download cost?</td><td>Prototype the generator for one shape and two styles; measure size.</td><td>Doc 2 &sect;6.3</td></tr>
+<tr><td>O12</td><td>P2</td><td>Loc id budget: 82 free ids in the current archive. How many new locs do surface items, stairs and shell trim need?</td><td>Count from the catalogue draft; plan a new archive.</td><td>Doc 2 &sect;7.2</td></tr>
+<tr><td>O13</td><td>P2</td><td>Ghost lifetime: <span class="mono">sendAddObject</span> bypasses chunk state, so a chunk resend can erase it. Which events resend chunks?</td><td>Read <span class="mono">Chunk</span> update paths; test a map reload mid-session.</td><td>Doc 2 &sect;9.1</td></tr>
+<tr><td>O14</td><td>P2</td><td>Stairs as shell variants: do paired ground and upper shells line up (centre staircase, same orientation)? What does removing a room under an upper room do?</td><td>Design the stair shell; write the removal rules from the RS3 text.</td><td>Doc 2 &sect;5.2</td></tr>
+<tr><td>C8</td><td>P1</td><td>Orientation review of the 17 multi-variant builds and the 74 shared objects: which variants encode side, corner or facing?</td><td>Hand review of <span class="mono">catalogue-draft.tsv</span> with the loc models.</td><td>Doc 2 &sect;7.1</td></tr>
+<tr><td>C11</td><td>P2</td><td>The legacy data disagrees with the map in places (Bedroom and Costume Room doors, style-2 wall id). Are there more mismatches?</td><td>Script: compare every room's door sides and every style's wall ids with the map.</td><td>Doc 2 &sect;10.2</td></tr>
+<tr><td>C12</td><td>P3</td><td>Surface-candidate classification over-matches (84 flagged). Which are really table-top objects?</td><td>Hand-curate the list.</td><td>Doc 2 &sect;7.1</td></tr>
+</table>
+
+<h1>5. Decisions awaiting an owner</h1>
+<table>
+<tr><th style="width:10mm">ID</th><th>Decision</th><th>Recommendation</th></tr>
+<tr><td>D1</td><td>Keep servants, dungeons and the menagerie as in 2012, or follow RS3 and drop them?</td><td>Keep servants and pets; keep the dungeon only until the third floor ships.</td></tr>
+<tr><td>D2</td><td>May the first release ship with only the Square shell and Basic Wood?</td><td>Yes; shapes and styles are phase 4.</td></tr>
+<tr><td>D3</td><td>One-way automatic migration at login, or opt-in?</td><td>Automatic with a legacy snapshot, after a production-copy dry run.</td></tr>
+<tr><td>D4</td><td>Catalogue source: existing 447 objects only, or also imported RS3 decor?</td><td>Existing 447 first; RS3 decor via the asset pipeline after phase 5.</td></tr>
+<tr><td>D5</td><td>Is a world-visible ghost acceptable if a per-player ghost fails (O13)?</td><td>Acceptable for the first release. Less likely now that per-player spawn is confirmed.</td></tr>
+<tr><td>D6</td><td>Retire the legacy dungeon to unlock the third floor?</td><td>Yes, in phase 7; two floors until then.</td></tr>
+<tr><td>D7</td><td>Apply wall style at runtime to shrink the template matrix, or bake both wall and floor style into terrain?</td><td>Runtime wall style; bake floor style. Decide after O11.</td></tr>
+<tr><td>D8</td><td>Accept chunk-granular rooms (8-tile cells) or build floors from objects for tile-granular rooms?</td><td>Accept cells; revisit only on player feedback.</td></tr>
+</table>
+
+<h1>6. Next spike batch</h1>
+<table>
+<tr><th style="width:10mm">#</th><th>Spike</th><th>Answers</th><th>Output</th></tr>
+<tr><td>S6</td><td>Void-tile and plane test: author one octagon chunk and a three-plane test room; view in the dev client</td><td>O2, O9, O10</td><td>Screenshots; verdict on shaped shells and the plane plan</td></tr>
+<tr><td>S7</td><td>Generator prototype: emit wall-style and floor-style variants of one shell into a new region; measure size</td><td>O11, D7</td><td>Size table; go/no-go on runtime wall style</td></tr>
+<tr><td>S8</td><td>Catalogue review: orientation, shared objects, surface list; compare all rooms and styles with the map</td><td>C8, C11, C12, O12</td><td>Reviewed catalogue; mismatch list</td></tr>
+<tr><td>S9</td><td>Hook and ghost prototype: swallow a Walk click, show a recoloured ghost, survive a map reload</td><td>O1b, O8, O13</td><td>Working throwaway branch; findings</td></tr>
+<tr><td>S10</td><td>Raw wikitext sweep of recipe and portal pages</td><td>C4, C9</td><td>Corrected tables for document 1</td></tr>
+</table>
+
+<h1>7. Roadmap summary</h1>
+<table>
+<tr><th>Revision</th><th>Trigger</th><th>Contents</th></tr>
+<tr><td>v1</td><td>Research complete</td><td>Reference, design, question ledger</td></tr>
+<tr><td>v2 (this)</td><td>Spikes S1&ndash;S4 and a raw-wikitext re-read</td><td>Placement hook, slot semantics, template anatomy, catalogue sizing, level 120 and client limits settled</td></tr>
+<tr><td>v3</td><td>Spikes S6&ndash;S10</td><td>Shaped-shell and plane plan proven or revised, template matrix sized, catalogue reviewed, recipe tables captured</td></tr>
+<tr><td>v4</td><td>Decisions D1&ndash;D8</td><td>Scope fixed; implementation tickets cut from the phases in document 2</td></tr>
+</table>
+
+<h1>8. Changelog</h1>
+<table class="changelog">
+<tr><th style="width:14mm">Version</th><th style="width:22mm">Date</th><th>Change</th></tr>
+<tr><td>2.0</td><td>2 Oct 2026</td><td>Document 1 rebuilt from raw wikitext (full limit ladder, floors and stairs, floor styles, room moving, storage location, spell level, portal name). Document 2 absorbs spikes S1&ndash;S4: walk hook and ghost confirmed, occupancy index, plane plan, template generation, level-120 plan, trunk paging, catalogue sizing, four more code defects, tile-granularity fidelity loss. This document: 12 questions closed, 8 added, decisions D6&ndash;D8 added, next spike batch defined.</td></tr>
+<tr><td>1.0</td><td>2 Oct 2026</td><td>First issue of all three documents.</td></tr>
+</table>
+</body></html>

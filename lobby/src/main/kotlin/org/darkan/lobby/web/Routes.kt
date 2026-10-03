@@ -9,6 +9,8 @@ import io.ktor.server.websocket.*
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.darkan.core.EnvVars
+import org.darkan.core.map.WorldWindow
+import org.darkan.lobby.social.WindowOrchestrator
 import org.darkan.core.social.gateway.AnnouncementBroadcast
 import org.darkan.lobby.social.SocialGateway
 import org.darkan.lobby.web.controller.AccountsController
@@ -37,6 +39,18 @@ fun Application.configureRouting() {
             val req = call.receive<AnnouncementBroadcast>()
             SocialGateway.broadcastAnnouncement(req)
             call.respond(buildJsonObject { put("ok", true) })
+        }
+
+        post("/admin/windows/{x}/{y}") {
+            if (!call.apiKeyPresented()) {
+                return@post call.respond(HttpStatusCode.Unauthorized, buildJsonObject { put("error", "Unauthorized") })
+            }
+            val x = call.parameters["x"]?.toIntOrNull()
+            val y = call.parameters["y"]?.toIntOrNull()
+            if (x == null || y == null || x !in 0 until WorldWindow.WINDOWS_PER_AXIS || y !in 0 until WorldWindow.WINDOWS_PER_AXIS) {
+                return@post call.respond(HttpStatusCode.BadRequest, buildJsonObject { put("error", "No such window") })
+            }
+            call.respond(buildJsonObject { put("status", WindowOrchestrator.ensure(x, y).name) })
         }
 
         AccountsController.registerRoutes(this)

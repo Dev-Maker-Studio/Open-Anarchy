@@ -1,3 +1,0 @@
-[submodule "cache-source"]
-	path = cache-source
-	url = ../cache-unpacked.git

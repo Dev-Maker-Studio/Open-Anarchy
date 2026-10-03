@@ -16,6 +16,9 @@
 //
 package com.rs.game.model.entity.player;
 
+import com.rs.game.content.world.generated.GeneratedWorldRulesKt;
+import com.rs.game.content.world.generated.WindowRulesKt;
+
 import com.rs.Settings;
 import org.darkan.core.model.Bonus;
 import org.darkan.core.cache.EnumDefinitions;
@@ -380,6 +383,7 @@ public class Player extends Entity {
 	public boolean hasRenewalPrayer;
 
 	private double runEnergy;
+	private transient double runEnergyXpCarry;
 	private boolean allowChatEffects;
 	private boolean mouseButtons;
 	public int totalDonated;
@@ -978,6 +982,7 @@ public class Player extends Entity {
 			processTimePlayedTasks();
 			processTimedRestorations();
 			processMusic();
+			com.rs.game.content.claims.ClaimManager.refreshPvp(this);
 			processItemDegrades();
 			auraManager.process();
 			prayer.processPrayer();
@@ -1081,6 +1086,7 @@ public class Player extends Entity {
 	}
 
 	private void processMusic() {
+		musicsManager.processBiomeAndCombat();
 		if (!getTempAttribs().getB("MUSIC_BREAK") && musicsManager.musicEnded()) {
 			getTempAttribs().setB("MUSIC_BREAK", true);
 			WorldTasks.schedule(new Task() {
@@ -1178,12 +1184,27 @@ public class Player extends Entity {
 		getVars().setVar(Varp.option_run, resting ? 3 : getRun() ? 1 : 0);
 	}
 
+	public double getMaxRunEnergy() {
+		return 100.0 + getSkills().getLevel(Constants.AGILITY);
+	}
+
 	public void restoreRunEnergy(double energy) {
-		if (runEnergy + energy > 100.0)
-			runEnergy = 100.0;
+		if (runEnergy + energy > getMaxRunEnergy())
+			runEnergy = getMaxRunEnergy();
 		else
 			runEnergy += energy;
 		getPackets().sendRunEnergy(runEnergy);
+	}
+
+	public void drainRunEnergyForRunning(double energy) {
+		double before = runEnergy;
+		drainRunEnergy(energy);
+		runEnergyXpCarry += before - runEnergy;
+		double whole = Math.floor(runEnergyXpCarry);
+		if (whole >= 1.0) {
+			runEnergyXpCarry -= whole;
+			getSkills().addXpSilent(Constants.AGILITY, whole);
+		}
 	}
 
 	public void drainRunEnergy(double energy) {
@@ -1658,6 +1679,7 @@ public class Player extends Entity {
 		getTempAttribs().setB("realFinished", true);
 		if (hasFinished())
 			return;
+		WindowRulesKt.saveWindowPosition(this);
 		if (isDead() || isDying()) {
 			dyingTime = 0;
 			setHitpoints(getMaxHitpoints());
@@ -1928,15 +1950,15 @@ public class Player extends Entity {
 
 	public void setRunEnergy(double runEnergy) {
 		if (getNSV().getB("infRun")) {
-			this.runEnergy = 100.0;
+			this.runEnergy = getMaxRunEnergy();
 			getPackets().sendRunEnergy(this.runEnergy);
 			return;
 		}
 		this.runEnergy = runEnergy;
 		if (this.runEnergy < 0.0)
 			this.runEnergy = 0.0;
-		if (this.runEnergy > 100.0)
-			this.runEnergy = 100.0;
+		if (this.runEnergy > getMaxRunEnergy())
+			this.runEnergy = getMaxRunEnergy();
 		getPackets().sendRunEnergy(this.runEnergy);
 	}
 
@@ -2153,6 +2175,8 @@ public class Player extends Entity {
 	@Override
 	public void sendDeath(final Entity source) {
 		if (!controllerManager.sendDeath())
+			return;
+		if (GeneratedWorldRulesKt.sendGeneratedWorldDeath(this, source))
 			return;
 		dangerousDeath(source, null);
 	}
@@ -2405,7 +2429,8 @@ public class Player extends Entity {
 	}
 
 	public boolean isCanPvp() {
-		return canPvp;
+		Boolean claimPvp = com.rs.game.content.claims.ClaimManager.pvpOverride(getTile());
+		return claimPvp != null ? claimPvp : canPvp;
 	}
 
 	public void setCanPvp(boolean canPvp, boolean topOption) {

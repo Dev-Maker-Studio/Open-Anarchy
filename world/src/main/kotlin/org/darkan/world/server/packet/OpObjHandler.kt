@@ -1,6 +1,7 @@
 package org.darkan.world.server.packet
 
 import com.rs.game.World
+import com.rs.game.content.claims.ClaimManager
 import com.rs.game.content.clans.ClansManager
 import com.rs.game.model.entity.player.Player
 import com.rs.net.decoders.handlers.ObjectHandler
@@ -27,6 +28,8 @@ class OpObjHandler : PacketHandler<Player, OpObj> {
         }
 
         if (player.isLocked || player.emotesManager.isAnimating)
+            return
+        if (!ClaimManager.allowObjectOption(player, mapObject, packet.opNum))
             return
         player.stopAll(false)
         if (packet.forceRun)

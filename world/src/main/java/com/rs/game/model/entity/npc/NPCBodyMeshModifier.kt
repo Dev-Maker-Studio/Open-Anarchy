@@ -48,6 +48,11 @@ class NPCBodyMeshModifier(private val defs: NPCDefinition?) {
         return this
     }
 
+    fun appendModels(vararg models: Int): NPCBodyMeshModifier {
+        modelIds = (modelIds ?: defs!!.modelIds!!) + models
+        return this
+    }
+
     fun setColor(index: Int, color: Int): NPCBodyMeshModifier {
         val d = defs!!
         if (modifiedColors == null && d.modifiedColours != null) {

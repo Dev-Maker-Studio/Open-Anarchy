@@ -97,6 +97,8 @@ public final class NPCCombat {
 
 	public void addAttackedByDelay(Entity target) {
 		target.setAttackedBy(npc);
+		if (target instanceof Player player)
+			player.getMusicsManager().onTargetedBy(npc);
 		target.setAttackedByDelay(System.currentTimeMillis() + npc.getAttackSpeed() * 600L + 600); // 8seconds
 	}
 

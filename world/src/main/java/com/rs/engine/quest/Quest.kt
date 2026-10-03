@@ -337,7 +337,6 @@ enum class Quest(val id: Int, private val slotId: Int) {
                 if (quest.slotId >= 0)
                     QUESTS_BY_SLOTID[quest.slotId] = quest
             }
-            initializeHandlers()
         }
 
         @JvmStatic

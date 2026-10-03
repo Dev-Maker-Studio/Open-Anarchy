@@ -47,7 +47,8 @@ import org.darkan.core.gameval.gen.Varbit;
 @PluginEventHandler
 public final class Skills {
 
-	public static final double MAXIMUM_EXP = 200000000;
+	public static final double MAXIMUM_EXP = 2000000000;
+	public static final int MAX_LEVEL = 120;
 	public static final int
 	ATTACK = 0,
 	DEFENSE = 1,
@@ -100,6 +101,8 @@ public final class Skills {
 
 	private transient int currentCounter;
 	private transient Player player;
+	private final transient boolean[] silentHeld = new boolean[25];
+	private final transient double[] clientXp = new double[25];
 	private final transient Set<Integer> markedForUpdate = IntSets.synchronize(new IntOpenHashSet());
 	private transient double bonusXpDrop;
 	private transient int markedForLevelUp = -1;
@@ -317,19 +320,19 @@ public final class Skills {
 			e.getPlayer().sendInputInteger("Please enter target " + (usingLevel ? "level" : "xp") + " you want to set: ", integer -> {
 				if (!usingLevel) {
 					int xpTarget = integer;
-					if (xpTarget < e.getPlayer().getSkills().getXp(skillId) || e.getPlayer().getSkills().getXp(skillId) >= 200000000)
+					if (xpTarget < e.getPlayer().getSkills().getXp(skillId) || e.getPlayer().getSkills().getXp(skillId) >= (int) MAXIMUM_EXP)
 						return;
-					if (xpTarget > 200000000)
-						xpTarget = 200000000;
+					if (xpTarget > (int) MAXIMUM_EXP)
+						xpTarget = (int) MAXIMUM_EXP;
 					e.getPlayer().getSkills().setSkillTarget(false, skillId, xpTarget);
 
 				} else {
 					int levelTarget = integer;
 					int curLevel = e.getPlayer().getSkills().getLevel(skillId);
-					if (curLevel >= (skillId == 24 ? 120 : 99))
+					if (curLevel >= MAX_LEVEL)
 						return;
-					if (levelTarget > (skillId == 24 ? 120 : 99))
-						levelTarget = skillId == 24 ? 120 : 99;
+					if (levelTarget > MAX_LEVEL)
+						levelTarget = MAX_LEVEL;
 					if (levelTarget < e.getPlayer().getSkills().getLevel(skillId))
 						return;
 					e.getPlayer().getSkills().setSkillTarget(true, skillId, levelTarget);
@@ -632,25 +635,25 @@ public final class Skills {
 		double exp = Math.floor(xp[skill]);
 		int points = 0;
 		int output = 0;
-		for (int lvl = 1; lvl <= (skill == Constants.DUNGEONEERING ? 120 : 99); lvl++) {
+		for (int lvl = 1; lvl <= MAX_LEVEL; lvl++) {
 			points += Math.floor(lvl + 300.0 * Math.pow(2.0, lvl / 7.0));
 			output = (int) ((double) points / 4);
 			if ((output - 1) >= exp)
 				return lvl;
 		}
-		return skill == Constants.DUNGEONEERING ? 120 : 99;
+		return MAX_LEVEL;
 	}
 
 	public static int getLevelForXp(int skill, long xp) {
 		int points = 0;
 		int output = 0;
-		for (int lvl = 1; lvl <= (skill == Constants.DUNGEONEERING ? 120 : 99); lvl++) {
+		for (int lvl = 1; lvl <= MAX_LEVEL; lvl++) {
 			points += Math.floor(lvl + 300.0 * Math.pow(2.0, lvl / 7.0));
 			output = (int) ((double) points / 4);
 			if ((output - 1) >= Math.floor(xp))
 				return lvl;
 		}
-		return skill == Constants.DUNGEONEERING ? 120 : 99;
+		return MAX_LEVEL;
 	}
 
 	public int getTotalLevel() {
@@ -686,7 +689,32 @@ public final class Skills {
 	}
 
 	public void markForRefresh(int skill) {
+		silentHeld[skill] = false;
 		markedForUpdate.add(skill);
+	}
+
+	public int getClientXp(int skill) {
+		return (int) (silentHeld[skill] ? clientXp[skill] : xp[skill]);
+	}
+
+	public void addXpSilent(int skill, double exp) {
+		if (player.isXpLocked() || xp[skill] >= MAXIMUM_EXP)
+			return;
+		int oldLevel = getLevelForXp(skill);
+		if (!silentHeld[skill]) {
+			clientXp[skill] = xp[skill];
+			silentHeld[skill] = true;
+		}
+		xp[skill] = Math.min(MAXIMUM_EXP, xp[skill] + exp);
+		int newLevel = getLevelForXp(skill);
+		if (newLevel <= oldLevel)
+			return;
+		level[skill] += newLevel - oldLevel;
+		markedForLevelUp = skill;
+		silentHeld[skill] = false;
+		markedForUpdate.add(skill);
+		player.setNextSpotAnim(new SpotAnim(2456, 0, 254));
+		player.getPackets().sendSound(new Sound(307, 0, SoundType.VORB_EFFECT));
 	}
 
 	public void updateXPDrops() {
@@ -697,8 +725,10 @@ public final class Skills {
 		player.getVars().syncVarsToClient();
 		Set<Integer> toUpdate = new HashSet<>(markedForUpdate);
 		player.getPackets().updateStats(toUpdate.stream().mapToInt(e -> e).toArray());
-		if (markedForLevelUp != -1)
+		if (markedForLevelUp != -1) {
 			sendLevelUp(markedForLevelUp);
+			player.getPackets().sendRunEnergy(player.getRunEnergy());
+		}
 		markedForUpdate.clear();
 		markedForLevelUp = -1;
 		bonusXpDrop = 0;

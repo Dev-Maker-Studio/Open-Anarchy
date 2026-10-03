@@ -24,12 +24,15 @@ import org.darkan.core.model.Rights;
 import org.darkan.core.Utils;
 import com.rs.plugin.annotations.PluginEventHandler;
 import com.rs.plugin.handlers.ButtonClickHandler;
+import com.rs.utils.music.Biome;
+import com.rs.utils.music.BiomeMusic;
 import com.rs.utils.music.Genre;
 import com.rs.utils.music.Music;
 import com.rs.utils.music.Song;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import com.rs.game.model.entity.npc.NPC;
 
 @PluginEventHandler
 public final class MusicsManager {
@@ -50,6 +53,10 @@ public final class MusicsManager {
     private transient boolean playListOn;
     private transient int nextPlayListMusic;
     private transient boolean shuffleOn;
+    private transient Biome playingBiome;
+    private transient long combatMusicUntil;
+    private final transient ArrayDeque<Integer> biomeQueue = new ArrayDeque<>();
+    private static final long COMBAT_MUSIC_LINGER_MS = 15000;
 
     public MusicsManager() {
         unlockedMusics = new ArrayList<>();
@@ -108,6 +115,41 @@ public final class MusicsManager {
         unlockedMusics.add(552);
     }
 
+    private void unlockAllMusic() {
+        for (int musicId : Music.getSongIds())
+            if (!unlockedMusics.contains(musicId))
+                unlockedMusics.add(musicId);
+    }
+
+    public boolean combatMusicActive() {
+        return combatMusicUntil > System.currentTimeMillis();
+    }
+
+    public void onTargetedBy(NPC npc) {
+        if (!player.hasStarted())
+            return;
+        int song = BiomeMusic.combatSong(npc.getDefinitions().getCombatLevel(), player.getSkills().getCombatLevelWithSummoning());
+        if (song == BiomeMusic.NO_SONG)
+            return;
+        combatMusicUntil = System.currentTimeMillis() + COMBAT_MUSIC_LINGER_MS;
+        if (playingMusic != song)
+            playSongWithoutUnlocking(song);
+    }
+
+    public void processBiomeAndCombat() {
+        if (combatMusicUntil != 0 && !combatMusicActive()) {
+            combatMusicUntil = 0;
+            playingBiome = null;
+        }
+        if (combatMusicActive() || playListOn || settedMusic || !player.hasStarted())
+            return;
+        if (player.getControllerManager().getController() != null && player.getControllerManager().getController().playAmbientStrictlyBackgroundMusic())
+            return;
+        Genre genre = player.getControllerManager().getController() == null ? Music.getGenre(player) : player.getControllerManager().getController().getGenre();
+        if (Biome.Companion.of(genre) != playingBiome)
+            nextAmbientSong();
+    }
+
     public void passMusics(Player p) {
         for (int musicId : p.getMusicsManager().unlockedMusics)
             if (!unlockedMusics.contains(musicId))
@@ -121,6 +163,7 @@ public final class MusicsManager {
     public void setPlayer(Player player) {
         this.player = player;
         playingMusic = ChunkManager.getChunk(player.getChunkId()).getMusicId();
+        unlockAllMusic();
     }
 
     public void switchShuffleOn() {
@@ -254,7 +297,7 @@ public final class MusicsManager {
 	 * Next ambient song by genre or region.
 	 */
     public void nextAmbientSong() {
-        if (player.getCutsceneManager().hasCutscene())
+        if (player.getCutsceneManager().hasCutscene() || combatMusicActive())
             return;
         if (player.getControllerManager().getController() != null && !player.getControllerManager().getController().playAmbientMusic())
             return;
@@ -329,29 +372,12 @@ public final class MusicsManager {
     private void pickAmbientSong() {
         playingGenre = player.getControllerManager().getController() == null ?
                 Music.getGenre(player) : player.getControllerManager().getController().getGenre();
-        if (playingGenre == null) {
-			playingMusic = NULL_SOUND_TRACK;//don't play music.
-        }
-        else {
-            //genre song ids int[] -> list<>
-            List<Integer> genreSongs = Arrays.stream(playingGenre.getSongs()).boxed().collect(Collectors.toList());
-
-            genreSongs.retainAll(new ArrayList<>() {
-                private static final long serialVersionUID = 1L;
-				{ //Unlocked music or allowed ambient music inside the genre & region music
-                    addAll(unlockedMusics);
-                    addAll(Music.getAllowAmbientMusic());
-                }
-            });
-            //Tack on region music to local genre.
-			List<Integer> regionSongs = new ArrayList<>();
-            try {
-                regionSongs.addAll((Arrays.stream(Music.getRegionMusics(player.getRegionId())).boxed().toList()));
-            } catch (NullPointerException e) {
-                //empty song region
-            }
-			cycleMusic(regionSongs, genreSongs);
-        }
+        Biome biome = Biome.Companion.of(playingGenre);
+        if (biome != playingBiome)
+            biomeQueue.clear();
+        playingBiome = biome;
+        int song = BiomeMusic.nextSong(biome, biomeQueue, lastTenSongs);
+        playingMusic = song == BiomeMusic.NO_SONG ? NULL_SOUND_TRACK : song;
     }
 
 	private void cycleMusic(List<Integer> regionSongs, List<Integer> genreSongs) {
@@ -406,9 +432,7 @@ public final class MusicsManager {
         if (playListOn || settedMusic && playingMusicDelay + (180000) >= System.currentTimeMillis())
             return;
         settedMusic = false;
-        if (playingMusic != requestMusicId)
-            playSongWithoutUnlocking(requestMusicId);
-        playingGenre = Music.getGenre(player);
+        processBiomeAndCombat();
     }
 
     public void forcePlayMusic(int musicId) {
@@ -465,8 +489,6 @@ public final class MusicsManager {
             player.getPackets().setIFText(187, 4, song.getName() != null ? song.getName() : "");
             if (!unlockedMusics.contains(musicId)) {
                 addMusicToUnlockedList(musicId);
-                if (song.getName() != null)
-                    player.sendMessage("<col=ff0000>You have unlocked a new play play music track: " + song.getName() + ".");
             }
         }
     }
@@ -476,8 +498,6 @@ public final class MusicsManager {
         if (song != null)
             if (!unlockedMusics.contains(musicId)) {
                 addMusicToUnlockedList(musicId);
-                if (song.getName() != null)
-                    player.sendMessage("<col=ff0000>You have unlocked unlocked a new music track: " + song.getName() + ".");
             }
     }
 

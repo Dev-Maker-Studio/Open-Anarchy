@@ -64,6 +64,9 @@ object MapCodec : SourceCodec {
     override val id: String
         get() = "map-json"
 
+    @Volatile
+    var generator: MapGenerator? = null
+
     /** One file per archive, and its id (always 0 in 727) is not in the path. */
     override fun fileIdsFromMetadata(archive: Int): Boolean = true
 
@@ -100,6 +103,10 @@ object MapCodec : SourceCodec {
         check(ids.size == 1) { "Map archive $archive (${square.name}) is one file on disk but its metadata lists ${ids.size}." }
         val file = directory.resolve(path(square))
         if (!Files.isRegularFile(file)) {
+            val generated = generator?.let { generate(it, square) }
+            if (generated != null) {
+                return PackedArchive(compile(square, generated), ids)
+            }
             throw IOException("Map archive $archive (${square.name}) has no JSON at ${file.toAbsolutePath()}.")
         }
         val text = Files.readAllBytes(file)
@@ -140,6 +147,12 @@ object MapCodec : SourceCodec {
         }
         val sidecar = SourceFiles.pristine(file)
         return if (Files.isRegularFile(sidecar)) listOf(file, sidecar) else listOf(file)
+    }
+
+    fun generate(generator: MapGenerator, square: MapSquare.Square): ByteArray? = when (square.shape) {
+        MapSquare.Shape.TERRAIN -> generator.terrain(square.regionX, square.regionY)
+        MapSquare.Shape.LOCATIONS -> generator.locations(square.regionX, square.regionY)
+        else -> null
     }
 
     /** `<x>_<y>/<shape>.json`, the file [square] is stored as. */

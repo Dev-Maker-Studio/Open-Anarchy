@@ -19,6 +19,7 @@ package com.rs.utils.spawns;
 import com.google.gson.JsonIOException;
 import org.darkan.core.cache.ItemDefinitions;
 import com.rs.game.World;
+import org.darkan.core.EnvVars;
 import org.darkan.core.JsonFileManager;
 import org.darkan.core.model.Item;
 import world.gregs.voidps.type.Tile;
@@ -97,6 +98,8 @@ public final class ItemSpawns {
 	}
 
 	public static void loadItemSpawns(int chunkId) {
+		if (EnvVars.INSTANCE.getGenerateMaps())
+			return;
 		List<ItemSpawn> spawns = ITEM_SPAWNS.get(chunkId);
 		if (spawns != null)
 			for (ItemSpawn spawn : spawns)

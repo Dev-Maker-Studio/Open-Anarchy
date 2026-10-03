@@ -274,6 +274,16 @@ data class PlayerOffline(
     val username: String,
 ) : SocialGatewayWireMessage
 
+/** World → lobby: a player is close to the handover into window ([windowX], [windowY], org.darkan.core.map.WorldWindow), so that world should be running. */
+@Serializable
+@SerialName("WindowDemand")
+data class WindowDemand(val windowX: Int, val windowY: Int) : SocialGatewayWireMessage
+
+/** World → lobby: [regionIds] (`regionX shl 8 or regionY`) were sent to a player, so the lobby may serve those map squares. */
+@Serializable
+@SerialName("MapDiscovered")
+data class MapDiscovered(val regionIds: IntArray) : SocialGatewayWireMessage
+
 /** World → lobby: the player [username] asks for [action]. */
 @Serializable
 @SerialName("SocialCommand")

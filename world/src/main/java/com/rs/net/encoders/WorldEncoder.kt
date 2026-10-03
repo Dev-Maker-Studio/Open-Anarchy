@@ -16,6 +16,9 @@
 //
 package com.rs.net.encoders
 
+import org.darkan.core.EnvVars
+import org.darkan.core.map.MapDiscovery
+import org.darkan.world.server.WorldServer
 import com.rs.game.World
 import com.rs.game.map.ChunkManager
 import com.rs.game.model.WorldProjectile
@@ -464,7 +467,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     // ======================== Player stats / weight / energy ========================
 
     fun sendRunEnergy(energy: Double) {
-        session.queuePacket(RunEnergy(energy.toInt()))
+        session.queuePacket(RunEnergy((energy * PERCENT / player.maxRunEnergy).toInt().coerceIn(0, PERCENT)))
     }
 
     fun refreshWeight(weight: Double) {
@@ -473,7 +476,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     fun updateStats(vararg skills: Int) {
         for (skill in skills) {
-            session.queuePacket(UpdateStat(player.skills.getXp(skill).toInt(), skill, player.skills.getLevel(skill)))
+            session.queuePacket(UpdateStat(player.skills.getClientXp(skill), skill, player.skills.getLevel(skill)))
         }
     }
 
@@ -627,6 +630,10 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     fun sendMapRegion() {
         val regionIds = BuildRegion.regionIds(player.chunkX, player.chunkY, player.mapSize)
+        if (EnvVars.gateMaps) {
+            MapDiscovery.discover(regionIds)
+            WorldServer.socialClient.reportMapDiscovered(regionIds)
+        }
         val otherPlayerRegionIds = takeLocalPlayerBlock()
         val withLocalPlayer = otherPlayerRegionIds != null
         session.queuePacket(
@@ -994,6 +1001,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     }
 
     companion object {
+        private const val PERCENT = 100
         private val EMPTY_XTEAS = intArrayOf(0, 0, 0, 0)
         private const val PARTIAL_SLOT_BYTES = 4
         private const val FULL_SLOT_BYTES = 3
