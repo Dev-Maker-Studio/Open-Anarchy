@@ -6,12 +6,10 @@ import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.actions.Action
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.game.tasks.WorldTasks
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import org.darkan.core.Constants
 import org.darkan.core.Utils
-import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.model.Animation
@@ -24,7 +22,6 @@ private const val PUNCH_OPTION = "Punch"
 private const val FREE_SLOTS_REQUIRED = 3
 private const val ROOT_DOUBLE_CHANCE = 10
 private const val SHADOW_NAME = "null"
-private const val SHADOW_REACH = 2
 
 private val TREE_NAMES = arrayOf<Any>("Tree", "Swamp tree", "Dead tree", "Evergreen", "Dying tree", "Jungle Tree")
 
@@ -37,10 +34,8 @@ fun mapTreePunching() {
 }
 
 fun destroyTree(tree: GameObject) {
-    val baseTree = !World.isSpawnedObject(tree)
     World.removeObject(tree)
     removeShadows(tree)
-    replaceWithNothing(tree, baseTree)
 }
 
 private fun removeShadows(tree: GameObject) {
@@ -58,27 +53,6 @@ private fun removeShadows(tree: GameObject) {
         World.getObject(above, ObjectShape.SCENERY_INTERACT)?.let(World::removeObject)
         World.getObject(above, ObjectShape.GROUND_INTERACT)?.let(World::removeObject)
     }
-}
-
-/**
- * The client keeps a tree's ground shadow when the tree loc is only destroyed. Swapping the loc for an empty one, the way
- * a tree becomes a stump, makes it redraw the tile without the shadow, but only the tiles of the new loc: a shadow reaches
- * past the tree's own footprint, so the tiles around it get an empty loc too, removed again a tick later. A tree from the
- * map file keeps the empty loc on its own tile, because removing it would bring the map's tree back; a planted tree's is
- * removed with the rest.
- */
-private fun replaceWithNothing(tree: GameObject, baseTree: Boolean) {
-    val size = maxOf(tree.definitions.sizeX, tree.definitions.sizeY)
-    val temporary = mutableListOf<GameObject>()
-    for (dx in -SHADOW_REACH until size + SHADOW_REACH) for (dy in -SHADOW_REACH until size + SHADOW_REACH) {
-        val tile = tree.tile.transform(dx, dy, 0)
-        val own = dx == 0 && dy == 0
-        if (!own && World.getObject(tile, tree.type) != null) continue
-        val empty = GameObject(Loc.invisible_type8_nonblocking, tree.type, if (own) tree.rotation else 0, tile)
-        World.spawnObject(empty, false)
-        if (!own || !baseTree) temporary.add(empty)
-    }
-    WorldTasks.schedule(1) { temporary.forEach(World::removeObject) }
 }
 
 private class TreePunch(private val tree: GameObject) : Action() {
