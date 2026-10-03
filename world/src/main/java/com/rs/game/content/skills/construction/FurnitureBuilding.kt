@@ -37,6 +37,7 @@ private const val PLACEMENT_KEY = "furniturePlacement"
 private const val SLOT_COMPONENT_STRIDE = 7
 private const val ROTATION_STEPS = 4
 private const val PLACE_OPTION = "Place"
+private const val ROTATE_OP_NUM = 2
 private const val IRON_ORE = 440
 private const val COAL = 453
 private val MATERIALS = intArrayOf(Obj.woodplank, 1539, 2351, 2353, 2357, 36, IRON_ORE, COAL)
@@ -186,6 +187,14 @@ fun handleFurniturePlacementClick(player: Player, tile: Tile): Boolean {
         return true
     showGhost(player, placement, tile)
     player.sendMessage("Left-click the ghost to build it, right-click it to rotate, or click elsewhere to move it.")
+    return true
+}
+
+/** The ghost exists only on the player's client, so its options never find a world object; this takes them before that lookup. */
+fun handleGhostClick(player: Player, tile: Tile, objectId: Int, opNum: Int): Boolean {
+    val ghost = player.tempAttribs.getO<Placement>(PLACEMENT_KEY)?.ghost ?: return false
+    if (ghost.id != objectId || !ghost.tile.matches(tile)) return false
+    if (opNum == ROTATE_OP_NUM) rotateGhost(player)
     return true
 }
 
