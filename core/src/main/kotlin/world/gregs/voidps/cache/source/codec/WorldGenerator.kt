@@ -10,8 +10,36 @@ import kotlin.math.floor
 class WorldGenerator(
     private val seed: Long = DEFAULT_SEED,
     private val originX: Int = 0,
-    private val originY: Int = 0
+    private val originY: Int = 0,
+    /** Side of the square area, in tiles, around the spawn that is really built; 0 builds the whole world. */
+    private val areaTiles: Int = 0
 ) : MapGenerator {
+
+    /** Whether the map square is inside the built area. A dev subsample packs every square outside it as empty void. */
+    fun inArea(regionX: Int, regionY: Int): Boolean {
+        if (areaTiles <= 0) return true
+        val span = (areaTiles + SIZE - 1) / SIZE
+        val low = SPAWN_X / SIZE - span / 2
+        val globalX = originX / SIZE + regionX
+        val globalY = originY / SIZE + regionY
+        return globalX in low until low + span && globalY in (SPAWN_Y / SIZE - span / 2) until (SPAWN_Y / SIZE - span / 2) + span
+    }
+
+    /** A terrain square with nothing in it on any level, what a subsample packs outside its area. */
+    fun voidTerrain(regionX: Int, regionY: Int): ByteArray {
+        val square = MapSquare.Square(MapSquare.Shape.TERRAIN, regionX, regionY)
+        val void = rows { _ -> row { _ -> VOID_TILE } }
+        val text = StringBuilder(TEXT_CAPACITY)
+        text.append("{\n  \"region\": \"").append(square.directory).append("\",\n  \"levels\": 4,\n  \"tiles\": [\n")
+        text.append(void).append(",\n").append(void).append(",\n").append(void).append(",\n").append(void)
+        text.append("\n  ],\n  \"effects\": ").append(EFFECTS).append("\n}\n")
+        return text.toString().toByteArray(Charsets.UTF_8)
+    }
+
+    /** A locations square with no objects. */
+    fun emptyLocations(regionX: Int, regionY: Int): ByteArray =
+        MapJson.writeLocs(MapDefinition(regionY + (regionX shl 8), levels = 0), MapSquare.Square(MapSquare.Shape.LOCATIONS, regionX, regionY))
+
 
     class Scenery(val id: Int, val size: Int, val weight: Int)
 

@@ -101,6 +101,7 @@ object MapCodec : SourceCodec {
         val square = square(metadata.nameHash, archive)
         val ids = metadata.fileIds()
         check(ids.size == 1) { "Map archive $archive (${square.name}) is one file on disk but its metadata lists ${ids.size}." }
+        outsideArea(square)?.let { return PackedArchive(it, ids) }
         val file = directory.resolve(path(square))
         if (!Files.isRegularFile(file)) {
             val generated = generator?.let { generate(it, square) }
@@ -147,6 +148,22 @@ object MapCodec : SourceCodec {
         }
         val sidecar = SourceFiles.pristine(file)
         return if (Files.isRegularFile(sidecar)) listOf(file, sidecar) else listOf(file)
+    }
+
+    private val outside = java.util.concurrent.ConcurrentHashMap<MapSquare.Shape, ByteArray>()
+
+    /**
+     * The shared empty archive for a square outside a dev subsample's area (see WorldGenerator.inArea), or null when the
+     * square is inside it or the world is not a subsample. Terrain and locations encode the same for every region.
+     */
+    private fun outsideArea(square: MapSquare.Square): ByteArray? {
+        val generator = generator as? WorldGenerator ?: return null
+        if (generator.inArea(square.regionX, square.regionY)) return null
+        return when (square.shape) {
+            MapSquare.Shape.TERRAIN -> outside.computeIfAbsent(square.shape) { compile(square, generator.voidTerrain(square.regionX, square.regionY)) }
+            MapSquare.Shape.LOCATIONS -> outside.computeIfAbsent(square.shape) { compile(square, generator.emptyLocations(square.regionX, square.regionY)) }
+            else -> null
+        }
     }
 
     fun generate(generator: MapGenerator, square: MapSquare.Square): ByteArray? = when (square.shape) {
