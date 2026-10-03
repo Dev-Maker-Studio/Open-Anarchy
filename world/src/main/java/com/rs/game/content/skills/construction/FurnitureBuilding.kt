@@ -84,79 +84,13 @@ fun mapFurnitureBuilding() {
 }
 
 private const val HOVER_SAMPLE_KEY = "placementHoverSample"
-private const val HOVER_FROZEN_KEY = "placementHoverFrozenUntil"
-private const val HOVER_MOVED_KEY = "placementHoverMovedAt"
-private const val HOVER_FREEZE_MS = 6000L
-private const val HOVER_MIN_INTERVAL_MS = 80L
-private const val HOVER_MAX_TILES = 24.0
 private val HOVER_LOG = File("./logs/placement-hover.log")
 
-private const val CAMERA_DISTANCE = 10.0
-private const val CAMERA_SCALE = 0.894
-private const val CAMERA_FOCUS_HEIGHT = 1.562
-private const val CAMERA_YAW_OFFSET = 0.128
-private const val CAMERA_CENTRE_DROP = -0.041
-private const val ANGLE_UNITS = 2048.0
-
-private class HoverSample(val mouseX: Int, val mouseY: Int, val yaw: Int, val pitch: Int, val viewWidth: Int, val viewHeight: Int, val buttons: Int)
-
-/**
- * The tile under the mouse, as an offset from the player's tile, projected from the camera. The client never reports the tile
- * under the mouse, so this inverts a fitted camera model (distance, scale, focus height) over the sampled mouse position, camera
- * yaw and pitch and the viewport size. It is accurate to about one tile; the click that places the furniture is exact.
- */
-private fun hoveredOffset(sample: HoverSample): Pair<Int, Int>? {
-    val yaw = -sample.yaw * 2 * Math.PI / ANGLE_UNITS + CAMERA_YAW_OFFSET
-    val pitch = sample.pitch * 2 * Math.PI / ANGLE_UNITS
-    val sinYaw = Math.sin(yaw)
-    val cosYaw = Math.cos(yaw)
-    val camera = doubleArrayOf(-CAMERA_DISTANCE * Math.cos(pitch) * sinYaw, -CAMERA_DISTANCE * Math.cos(pitch) * cosYaw, CAMERA_FOCUS_HEIGHT + CAMERA_DISTANCE * Math.sin(pitch))
-    val forward = normalise(doubleArrayOf(-camera[0], -camera[1], CAMERA_FOCUS_HEIGHT - camera[2]))
-    val right = normalise(doubleArrayOf(forward[1], -forward[0], 0.0))
-    val up = doubleArrayOf(right[1] * forward[2] - right[2] * forward[1], right[2] * forward[0] - right[0] * forward[2], right[0] * forward[1] - right[1] * forward[0])
-    val scale = CAMERA_SCALE * sample.viewHeight
-    val sx = (sample.mouseX - sample.viewWidth / 2.0) / scale
-    val sy = -(sample.mouseY - (sample.viewHeight / 2.0 + CAMERA_CENTRE_DROP * sample.viewHeight)) / scale
-    val ray = DoubleArray(3) { forward[it] + sx * right[it] + sy * up[it] }
-    if (ray[2] >= -1e-6)
-        return null
-    val t = -camera[2] / ray[2]
-    val x = camera[0] + t * ray[0]
-    val y = camera[1] + t * ray[1]
-    if (Math.hypot(x, y) > HOVER_MAX_TILES)
-        return null
-    return Math.round(x).toInt() to Math.round(y).toInt()
-}
-
-private fun normalise(v: DoubleArray): DoubleArray {
-    val length = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
-    return DoubleArray(3) { v[it] / length }
-}
-
-private fun parseSample(text: String): HoverSample? {
-    val f = text.removePrefix("~ph,").split(",").map { it.toIntOrNull() ?: return null }
-    if (f.size < 11)
-        return null
-    return HoverSample(f[0], f[1], f[2], f[3], f[4], f[5], f[10])
-}
-
 fun onPlacementHoverSample(player: Player, text: String) {
-    val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return
-    val sample = parseSample(text) ?: return
-    player.tempAttribs.setO<String>(HOVER_SAMPLE_KEY, text.removePrefix("~ph,"))
-    val now = System.currentTimeMillis()
-    if (sample.buttons != 0)
-        player.tempAttribs.setL(HOVER_FROZEN_KEY, now + HOVER_FREEZE_MS)
-    if (now < player.tempAttribs.getL(HOVER_FROZEN_KEY) || now - player.tempAttribs.getL(HOVER_MOVED_KEY) < HOVER_MIN_INTERVAL_MS)
-        return
-    if (sample.mouseX !in 0..sample.viewWidth || sample.mouseY !in 0..sample.viewHeight)
-        return
-    val (dx, dy) = hoveredOffset(sample) ?: return
-    val tile = Tile.of(player.tile.x + dx, player.tile.y + dy, player.plane)
-    if (placement.ghost?.tile == tile || !World.floorAndWallsFree(tile, 1))
-        return
-    player.tempAttribs.setL(HOVER_MOVED_KEY, now)
-    showGhost(player, placement, tile)
+    if (player.tempAttribs.getO<Placement>(PLACEMENT_KEY) == null) return
+    val sample = text.removePrefix("~ph,")
+    player.tempAttribs.setO<String>(HOVER_SAMPLE_KEY, sample)
+    logHover("S ${player.username} $sample ${player.tile.x} ${player.tile.y} ${player.plane} ${player.screenMode}")
 }
 
 private fun logHover(line: String) {
@@ -165,10 +99,7 @@ private fun logHover(line: String) {
 
 fun handleFurniturePlacementClick(player: Player, tile: Tile): Boolean {
     val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return false
-    val last = player.tempAttribs.getO<String>(HOVER_SAMPLE_KEY)
-    val predicted = last?.let { parseSample("~ph,$it") }?.let(::hoveredOffset)
-    logHover("T ${player.username} ${tile.x} ${tile.y} ${tile.plane} last=$last at ${player.tile.x} ${player.tile.y} ${player.screenMode} predicted=${predicted?.let { "${player.tile.x + it.first},${player.tile.y + it.second}" }}")
-    player.tempAttribs.setL(HOVER_FROZEN_KEY, 0L)
+    logHover("T ${player.username} ${tile.x} ${tile.y} ${tile.plane} last=${player.tempAttribs.getO<String>(HOVER_SAMPLE_KEY)} at ${player.tile.x} ${player.tile.y} ${player.screenMode}")
     val ghost = placement.ghost
     if (ghost != null && ghost.tile == tile) {
         build(player, placement, tile)
@@ -193,7 +124,6 @@ private fun rotateGhost(player: Player) {
     val placement = player.tempAttribs.getO<Placement>(PLACEMENT_KEY) ?: return
     val ghost = placement.ghost ?: return
     placement.step = (placement.step + 1) % ROTATION_STEPS
-    player.tempAttribs.setL(HOVER_FROZEN_KEY, 0L)
     showGhost(player, placement, ghost.tile)
     player.sendMessage("Rotation ${placement.step * DEGREES_PER_STEP} degrees.")
 }
