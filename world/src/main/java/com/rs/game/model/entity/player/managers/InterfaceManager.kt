@@ -16,6 +16,7 @@
 //
 package com.rs.game.model.entity.player.managers
 
+import com.rs.game.content.claims.ClaimManager
 import org.darkan.core.EnvVars
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
@@ -200,9 +201,12 @@ class InterfaceManager(private val player: Player) {
     fun removeSub(sub: Sub) = removeGameWindowSub(sub.resizeable, sub.fixed)
 
     fun sendSubDefault(sub: Sub) {
-        // generated worlds have no quests: the quest tab stays empty
-        if (sub == Sub.TAB_QUEST && EnvVars.generateMaps)
+        // generated worlds have no quests: the quest tab is the land claims tab
+        if (sub == Sub.TAB_QUEST && EnvVars.generateMaps) {
+            sendSub(sub, Interface.claim_tab, true)
+            ClaimManager.pushState(player)
             return
+        }
         sendSub(sub, sub.getDefaultInterfaceId(player), true)
         sub.defaultProcedure(player)
     }
