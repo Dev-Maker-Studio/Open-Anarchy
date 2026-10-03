@@ -16,6 +16,7 @@
 //
 package com.rs.game.content.skills.mining;
 
+import org.darkan.core.gameval.gen.Seq;
 import com.rs.game.content.Effect;
 import com.rs.game.content.achievements.SetReward;
 import com.rs.game.content.dnds.shootingstar.Star;
@@ -41,14 +42,17 @@ import java.util.function.Supplier;
 @PluginEventHandler
 public class Mining extends Action {
 
+	/** The right click option on tin and copper rocks that mines them bare handed, as slowly as with a bronze pickaxe. */
+	private static final String GATHER_OPTION = "Gather";
+
 	public static ObjectClickHandler handleClay = new ObjectClickHandler(new Object[] { "Clay rocks", "Clay vein", "Clay rock" },
 			e -> e.getPlayer().getActionManager().setAction(new Mining(RockType.CLAY, e.getObj())));
 	
 	public static ObjectClickHandler handleCopper = new ObjectClickHandler(new Object[] { "Copper ore rocks", "Copper ore vein", "Copper rock" },
-			e -> e.getPlayer().getActionManager().setAction(new Mining(RockType.COPPER, e.getObj())));
+			e -> e.getPlayer().getActionManager().setAction(new Mining(RockType.COPPER, e.getObj(), GATHER_OPTION.equals(e.getOption()))));
 
 	public static ObjectClickHandler handleTin = new ObjectClickHandler(new Object[] { "Tin ore rocks", "Tin ore vein", "Tin rock" },
-			e -> e.getPlayer().getActionManager().setAction(new Mining(RockType.TIN, e.getObj())));
+			e -> e.getPlayer().getActionManager().setAction(new Mining(RockType.TIN, e.getObj(), GATHER_OPTION.equals(e.getOption()))));
 
 	public static ObjectClickHandler handleBlurite = new ObjectClickHandler(new Object[] { "Blurite ore rocks" },
 			e -> e.getPlayer().getActionManager().setAction(new Mining(RockType.BLURITE, e.getObj())));
@@ -121,6 +125,7 @@ public class Mining extends Action {
 	public static LoginHandler updateSandstone = new LoginHandler(e -> e.getPlayer().getVars().setVarBit(10133, e.getPlayer().getDailyI("redSandstoneMined")));
 
 	private final RockType type;
+	private final boolean bareHanded;
 	private Pickaxe pick;
 	private int rockId;
 	private GameObject rockObj;
@@ -128,34 +133,42 @@ public class Mining extends Action {
 	private Supplier<Integer> replaceId;
 
 	public Mining(RockType type, GameObject rock) {
+		this(type, rock, false);
+	}
+
+	public Mining(RockType type, GameObject rock, boolean bareHanded) {
 		this.type = type;
+		this.bareHanded = bareHanded;
 		this.rockId = rock.getId();
 		rockObj = rock;
 	}
 
 	public Mining(RockType type, NPC rock, Supplier<Integer> replaceId) {
 		this.type = type;
+		this.bareHanded = false;
 		rockNPC = rock;
 		this.replaceId = replaceId;
 	}
 
 	@Override
 	public boolean start(Entity entity) {
-		if (entity instanceof Player player)
+		if (bareHanded)
+			pick = Pickaxe.BRONZE;
+		else if (entity instanceof Player player)
 			pick = Pickaxe.getBest(player);
 		else
 			pick = Pickaxe.DRAGON_G;
 		if (!checkAll(entity))
 			return false;
 		if (entity instanceof Player player)
-			player.sendMessage("You swing your pickaxe at the rock...", true);
+			player.sendMessage(bareHanded ? "You scrape at the rock with your bare hands..." : "You swing your pickaxe at the rock...", true);
 		setActionDelay(entity, ((pick == Pickaxe.DRAGON || pick == Pickaxe.DRAGON_G) && Utils.random(2) == 0) ? 1 : 2);
 		return true;
 	}
 
 	@Override
 	public boolean process(Entity entity) {
-		entity.anim(pick.getAnimId());
+		entity.anim(bareHanded ? Seq.seq_422 : pick.getAnimId());
 		return checkAll(entity);
 	}
 
