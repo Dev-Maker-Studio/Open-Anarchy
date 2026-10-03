@@ -16,6 +16,7 @@
 //
 package com.rs.game.model.entity.npc;
 
+import org.darkan.core.EnvVars;
 import org.darkan.core.model.Bonus;
 import org.darkan.core.cache.NPCDefinitions;
 import world.gregs.voidps.cache.definition.data.NPCDefinition;
