@@ -2,6 +2,7 @@ package org.darkan.world.server.packet
 
 import com.rs.game.content.Effect
 import com.rs.game.content.claims.ClaimManager
+import com.rs.game.content.items.handleModelPotatoClick
 import com.rs.game.content.skills.construction.handleFurniturePlacementClick
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.net.prot.packet.Walk
@@ -22,6 +23,8 @@ class WalkHandler : PacketHandler<Player, Walk> {
             return
         }
         if (ClaimManager.handleClick(player, Tile.of(packet.x, packet.y, player.plane)))
+            return
+        if (handleModelPotatoClick(player, Tile.of(packet.x, packet.y, player.plane)))
             return
         if (handleFurniturePlacementClick(player, Tile.of(packet.x, packet.y, player.plane)))
             return
