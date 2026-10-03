@@ -51,6 +51,10 @@ object EnvVars {
     // Generate flat grass for every map square the source tree has no terrain file for, and save each square into the
     // tree the first time a player explores it (org.darkan.core.cache.MapMaterializer).
     val generateMaps: Boolean = dotenv.get("CACHE_GENERATE_MAPS", "false").toBooleanStrict()
+    // Dev subsample: build only a square of this many tiles around the spawn (4000 is 63 x 63 map squares) and pack every
+    // other map square as empty void, which makes a cache build take seconds. 0 builds the whole world. Use a separate
+    // CACHE_BUILD_PATH for it, so a subsample is never mistaken for a full build.
+    val generateSize: Int = dotenv.get("CACHE_GENERATE_SIZE", "0").toInt()
     // Threads the cache packer may use; generating a world defaults to one so that it never takes the whole machine.
     val cachePackThreads: Int = dotenv.get("CACHE_PACK_THREADS", null)?.toIntOrNull() ?: if (generateMaps) 1 else 0
     // Only one process may generate or pack a cache at a time on this machine: they queue on this file.

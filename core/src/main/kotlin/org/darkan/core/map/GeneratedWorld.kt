@@ -9,6 +9,6 @@ object GeneratedWorld {
     val windowY: Int = EnvVars.worldWindowY ?: 0
 
     val generator: WorldGenerator by lazy {
-        WorldGenerator(WorldGenerator.DEFAULT_SEED, WorldWindow.origin(windowX), WorldWindow.origin(windowY))
+        WorldGenerator(WorldGenerator.DEFAULT_SEED, WorldWindow.origin(windowX), WorldWindow.origin(windowY), EnvVars.generateSize)
     }
 }
