@@ -96,3 +96,4 @@ world-server.jar
 
 .env.unit
 .jar.version
+/data/cache-*/
