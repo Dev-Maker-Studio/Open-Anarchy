@@ -29,13 +29,16 @@ private const val GROUND_LEVEL = 0
 
 private val generator = GeneratedWorld.generator
 
+private val HOSTILE_BIOMES = setOf(Biome.WILDERNESS, Biome.WINTER)
+
 private val animals = mapOf(
     Biome.PLAINS to intArrayOf(Npc.chicken, Npc.cow, Npc.npc_5154, Npc.pig_1, Npc.dog, Npc.poh_growncat_bluegrey),
     Biome.DESERT to intArrayOf(Npc.desert_goat_black2, Npc.rabbit_rabbit_grey, Npc.wolf, Npc.camel, Npc.snake, Npc.scorpion),
     Biome.WILDERNESS to intArrayOf(
         Npc.rand_skeleton_melee_lvl2_3, Npc.rand_skeleton_melee_lvl3_1, Npc.rand_skeleton_melee_lvl5_1,
         Npc.rand_skeleton_melee_lvl7_1, Npc.rand_skeleton_melee_lvl10_2, Npc.darkbear, Npc.brownbear, Npc.wolf
-    )
+    ),
+    Biome.WINTER to intArrayOf(Npc.icegiant, Npc.icegiant2, Npc.icegiant3, Npc.wolf, Npc.wolfpack_leader_whiter, Npc.brownbear, Npc.darkbear)
 )
 
 private val forestImplings = intArrayOf(Npc.ii_impling_type_1, Npc.ii_impling_type_2, Npc.ii_impling_type_3, Npc.ii_impling_type_4)
@@ -50,7 +53,7 @@ fun startGeneratedWildlife() {
     WorldTasks.scheduleTimer(MINUTE_TICKS, MINUTE_TICKS) {
         World.players.forEach { player ->
             if (player.hasStarted() && !player.hasFinished() && player.plane == GROUND_LEVEL) {
-                val odds = if (generator.biomeAt(player.x, player.y) == Biome.WILDERNESS) WILDERNESS_POPUP_ODDS else POPUP_ODDS
+                val odds = if (generator.biomeAt(player.x, player.y) in HOSTILE_BIOMES) WILDERNESS_POPUP_ODDS else POPUP_ODDS
                 if (Utils.random(odds) == 0) popUpAnimal(player)
                 if (Utils.random(POPUP_ODDS) == 0) popUpFishingSpot(player)
             }
@@ -76,7 +79,7 @@ private fun popUpAnimal(player: Player) {
     }
     val ids = animals[biome] ?: return
     val animal = World.spawnNPC(ids[Utils.random(ids.size)], tile, true)
-    if (biome == Biome.WILDERNESS) animal.setForceAgressive(true)
+    if (biome in HOSTILE_BIOMES) animal.setForceAgressive(true)
     animal.finishAfterTicks(ANIMAL_LIFETIME_TICKS)
 }
 
