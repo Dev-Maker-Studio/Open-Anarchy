@@ -70,9 +70,11 @@ public final class NPCSpawns {
 		// A generated world does not get the vanilla spawns: only what is in data/npcs/spawns/custom, plus what the
 		// server's own code spawns (merchants, wildlife, implings), is there.
 		File[] spawnFiles = EnvVars.INSTANCE.getGenerateMaps() ? new File(PATH + CUSTOM).listFiles() : new File(PATH).listFiles();
+		loadingCustom = true;
 		if (spawnFiles != null)
 			for (File f : spawnFiles)
 				load(f);
+		loadingCustom = false;
 		Logger.info(NPCSpawns.class, "init", "Loaded " + ALL_SPAWNS.size() + " NPC spawns...");
 	}
 
