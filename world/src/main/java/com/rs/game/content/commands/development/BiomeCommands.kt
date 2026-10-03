@@ -16,7 +16,7 @@ private const val GROUND_PLANE = 0
 fun loadBiomeCommands() {
     val last = Biome.entries.size - 1
     val names = Biome.entries.joinToString(", ") { "${it.ordinal} ${it.name.lowercase()}" }
-    Commands.add(Rights.DEVELOPER, "telebiome [0-$last]", "Teleports to the nearest tile of a biome: $names.") { p, args ->
+    Commands.add(Rights.DEVELOPER, "biome [0-$last]", "Teleports to the nearest tile of a biome: $names.") { p, args ->
         val generator = MapCodec.generator as? WorldGenerator
         if (generator == null) {
             p.sendMessage("This world does not generate its map, so it has no biomes.")
@@ -24,7 +24,7 @@ fun loadBiomeCommands() {
         }
         val biome = args.getOrNull(0)?.toIntOrNull()?.let { Biome.entries.getOrNull(it) }
         if (biome == null) {
-            p.sendMessage("Use telebiome [0-$last]: $names.")
+            p.sendMessage("Use biome [0-$last]: $names.")
             return@add
         }
         val target = nearestBiomeTile(generator, biome, p.x, p.y)
