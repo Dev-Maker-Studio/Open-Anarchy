@@ -12,6 +12,7 @@ import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Interface
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Varp
+import org.darkan.core.map.GeneratedWorld
 import org.darkan.core.model.ObjectShape
 import org.darkan.core.model.Rights
 import world.gregs.voidps.type.Tile
@@ -94,7 +95,7 @@ object ClaimManager {
     }
 
     @JvmStatic
-    fun pvpOverride(tile: Tile): Boolean? = claimAt(tile)?.allowPvp
+    fun pvpOverride(tile: Tile): Boolean? = if (GeneratedWorld.onRoad(tile.x, tile.y)) false else claimAt(tile)?.allowPvp
 
     @JvmStatic
     fun refreshPvp(player: Player) {
@@ -156,6 +157,7 @@ object ClaimManager {
         }
         val existing = claimAt(tile)
         when {
+            existing == null && GeneratedWorld.onRoad(tile.x, tile.y) -> player.sendMessage("Roads can't be claimed.")
             existing == null -> {
                 session.start = tile
                 showHighlight(player, session, tile)
@@ -193,6 +195,10 @@ object ClaimManager {
         )
         if (ownedTiles(player.username, editing) + candidate.tileCount > MAX_TILES_PER_PLAYER) {
             player.sendMessage("You can claim at most $MAX_TILES_PER_PLAYER tiles; that would make ${ownedTiles(player.username, editing) + candidate.tileCount}.")
+            return
+        }
+        if (GeneratedWorld.roadTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
+            player.sendMessage("Roads can't be claimed; that claim would cover one.")
             return
         }
         if (claims.any { it !== editing && it.overlaps(candidate) }) {
