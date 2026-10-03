@@ -1,5 +1,6 @@
 package com.rs.game.content.world.npcs.merchant
 
+import com.rs.engine.command.Commands
 import com.rs.game.World
 import com.rs.game.content.combat.AttackStyle.Companion.getStyles
 import com.rs.game.content.combat.CombatStyle
@@ -18,6 +19,7 @@ import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
 import com.rs.plugin.kts.onNpcClick
 import org.darkan.core.gameval.gen.Npc
+import org.darkan.core.model.Rights
 import org.darkan.core.util.MapUtils
 import org.darkan.core.util.Structure
 import world.gregs.voidps.type.Tile
@@ -79,6 +81,7 @@ private const val SPAWN_CHANCE = 0.5
 private const val LOADED_CHUNK_RADIUS = 6
 private const val CHUNK_TILES = 8
 private const val SPAWN_ATTEMPTS = 30
+private const val MERCHANT_COMMAND_RADIUS = 3
 private const val MELEE_STYLE_INDEX = 1
 private const val MIN_ATTACK_DELAY = 1
 
@@ -97,6 +100,22 @@ fun mapWanderingMerchant() {
         maxOf(getMeleeCombatDelay(weaponId), MIN_ATTACK_DELAY)
     }
     WorldTasks.scheduleHalfHourly { rollMerchantSpawn() }
+    Commands.add(Rights.OWNER, "merchant", "Spawns a wandering merchant next to you.") { player, _ -> spawnMerchantNear(player) }
+}
+
+private fun spawnMerchantNear(player: Player) {
+    val tile = (0..MERCHANT_COMMAND_RADIUS).firstNotNullOfOrNull { radius ->
+        (-radius..radius).flatMap { dx -> (-radius..radius).map { dy -> player.tile.transform(dx, dy, 0) } }
+            .filter { it != player.tile && World.floorAndWallsFree(it, 1) }
+            .randomOrNull()
+    }
+    if (tile == null) {
+        player.sendMessage("There's no room for a merchant next to you.")
+        return
+    }
+    activeMerchant?.takeIf { !it.hasFinished() }?.finish()
+    activeMerchant = World.spawnNPC(MERCHANT_IDS.random() as Int, tile, true) as? MerchantNPC
+    player.sendMessage("A wandering merchant appears.")
 }
 
 private fun talk(player: Player, merchant: MerchantNPC) {
