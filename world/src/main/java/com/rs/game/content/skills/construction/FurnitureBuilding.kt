@@ -74,7 +74,6 @@ private class Furniture(
 
     companion object {
         val CHAIR = Furniture(Obj.poh_armchair_1, Loc.built_wooden_chair, Loc.poh_chair1_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 66.0, category = Category.FURNITURE)
-        val WALL = Furniture(Obj.wooden_wall_furniture_item, Loc.built_wooden_wall, Loc.poh_timberwall_placement_ghost, ObjectShape.WALL_STRAIGHT, 3, 100.0, category = Category.WALLS)
         val DOOR = Furniture(Obj.wooden_door_furniture_item, Loc.built_wooden_door, Loc.timberwall_doorl_placement_ghost, ObjectShape.WALL_STRAIGHT, 3, 100.0, category = Category.DOORS)
         val FURNACE = Furniture(Obj.furnace_item, Loc.built_furnace, Loc.poh_furnace_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 0.0, FURNACE_WIDTH, FURNACE_DEPTH, true)
 
@@ -86,7 +85,7 @@ private class Furniture(
             return Furniture(item, built, ghost, shape, quarterTurn, cost.sumOf { it.second } * XP_PER_MATERIAL, def.sizeX, def.sizeY, true, category, cost.toList())
         }
 
-        val ALL: List<Furniture> = listOf(CHAIR, WALL, DOOR, FURNACE,
+        val ALL: List<Furniture> = listOf(CHAIR, DOOR, FURNACE,
         piece(25498, 73933, 73932, 3, Category.DOORS, 0, "Door", 960 to 3),
         piece(25499, 73935, 73934, 37, Category.DOORS, 0, "Iron gate", 2351 to 3, 1539 to 10),
         piece(25500, 73937, 73936, 59, Category.DOORS, 0, "Steel door", 2353 to 3, 1539 to 10),
