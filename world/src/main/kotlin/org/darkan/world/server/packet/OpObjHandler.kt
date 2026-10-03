@@ -3,6 +3,7 @@ package org.darkan.world.server.packet
 import com.rs.game.World
 import com.rs.game.content.claims.ClaimManager
 import com.rs.game.content.clans.ClansManager
+import com.rs.game.content.skills.construction.handleGhostClick
 import com.rs.game.model.entity.player.Player
 import com.rs.net.decoders.handlers.ObjectHandler
 import org.darkan.core.net.prot.packet.OpObj
@@ -15,6 +16,8 @@ class OpObjHandler : PacketHandler<Player, OpObj> {
             return
         val tile = Tile.of(packet.x, packet.y, player.plane)
         if (!player.mapChunkIds.contains(tile.getChunkId()))
+            return
+        if (handleGhostClick(player, tile, packet.objectId, packet.opNum))
             return
         val mapObject = World.getObjectWithId(tile, packet.objectId) ?: return
         if (mapObject.id != packet.objectId)
