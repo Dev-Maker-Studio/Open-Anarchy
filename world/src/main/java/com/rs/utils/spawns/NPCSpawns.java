@@ -44,6 +44,7 @@ public final class NPCSpawns {
 	private final static String CUSTOM = "custom";
 	final static Charset ENCODING = StandardCharsets.UTF_8;
 
+	private static boolean loadingCustom;
 	private static final Object lock = new Object();
 	private static final ArrayList<NPCSpawn> ALL_SPAWNS = new ArrayList<>();
 	private static final ArrayList<NPCSpawn> ADDED_SPAWNS = new ArrayList<>();
@@ -90,6 +91,9 @@ public final class NPCSpawns {
 	}
 
 	public static void add(NPCSpawn spawn) {
+		// code-registered spawns (holiday events, minigames) are vanilla content too
+		if (EnvVars.INSTANCE.getGenerateMaps() && !loadingCustom)
+			return;
 		if (spawn != null) {
 			ALL_SPAWNS.add(spawn);
 			List<NPCSpawn> regionSpawns = NPC_SPAWNS.get(spawn.getTile().getChunkId());
