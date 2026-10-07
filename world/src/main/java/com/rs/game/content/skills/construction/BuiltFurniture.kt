@@ -25,8 +25,8 @@ private const val HP_ATTRIB = "builtFurnitureHp"
 private const val MISSING_HP = -1
 private const val DESTROY_OPTION = "Destroy"
 private const val REPAIR_OPTION = "Repair"
-private const val OPEN_OPTION = "Open"
-private const val CLOSE_OPTION = "Close"
+internal const val OPEN_OPTION = "Open"
+internal const val CLOSE_OPTION = "Close"
 private const val REPAIR_HP_PER_TICK = 6
 private const val REPAIR_XP_PER_TICK = 3.0
 private const val REPAIR_ANIM_INTERVAL = 3
@@ -81,12 +81,14 @@ private fun hitPoints(obj: GameObject, furniture: BuiltFurniture): Int =
 private fun isStanding(obj: GameObject): Boolean = World.getObject(obj.tile, obj.type)?.id == obj.id
 
 private fun toggleDoor(door: GameObject, opening: Boolean, furniture: BuiltFurniture) {
-    val newTile = door.tile.doorSwingTile(door.rotation, opening)
-    val swung = GameObject(if (opening) furniture.openLoc else furniture.loc, door.type, door.getRotation(if (opening) 1 else -1), newTile)
+    val swung = swungDoor(door, opening, furniture.loc, furniture.openLoc)
     swung.attribs.setI(HP_ATTRIB, hitPoints(door, furniture))
     World.removeObject(door)
     World.spawnObject(swung)
 }
+
+internal fun swungDoor(door: GameObject, opening: Boolean, closedLoc: Int, openLoc: Int): GameObject =
+    GameObject(if (opening) openLoc else closedLoc, door.type, door.getRotation(if (opening) 1 else -1), door.tile.doorSwingTile(door.rotation, opening))
 
 private fun Tile.doorSwingTile(rotation: Int, opening: Boolean): Tile {
     val effective = if (opening) rotation else (rotation - 1) and 3

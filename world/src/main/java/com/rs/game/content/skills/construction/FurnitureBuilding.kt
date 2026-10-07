@@ -72,9 +72,11 @@ private class Furniture(
     val placedFromItem: Boolean = false,
     val category: Category? = null,
     val cost: List<Pair<Int, Int>> = emptyList(),
+    val openLoc: Int = -1,
 ) {
     /** A piece built from materials into a carried item, which is then placed and can be picked up again. */
     val crafted get() = cost.isNotEmpty()
+    val placedLocs get() = if (openLoc == -1) intArrayOf(loc) else intArrayOf(loc, openLoc)
 
     companion object {
         val CHAIR = Furniture(Obj.poh_armchair_1, Loc.built_wooden_chair, Loc.poh_chair1_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 66.0, category = Category.FURNITURE)
@@ -82,18 +84,18 @@ private class Furniture(
         val FURNACE = Furniture(Obj.furnace_item, Loc.built_furnace, Loc.poh_furnace_placement_ghost, ObjectShape.SCENERY_INTERACT, 0, 60.0, FURNACE_WIDTH, FURNACE_DEPTH, true, Category.ACCESSORIES, listOf(IRON_ORE to 10, COAL to 2))
 
         /** An object from the map's own definitions, shaped and sized like it; [type] is its first model type. */
-        private fun piece(item: Int, built: Int, ghost: Int, source: Int, category: Category, type: Int, label: String, vararg cost: Pair<Int, Int>): Furniture {
+        private fun piece(item: Int, built: Int, ghost: Int, source: Int, category: Category, type: Int, label: String, vararg cost: Pair<Int, Int>, openLoc: Int = -1): Furniture {
             val def = ObjectDefinitions.getDefs(source)
             val shape = ObjectShape.forId(type) ?: ObjectShape.SCENERY_INTERACT
             val quarterTurn = if (shape == ObjectShape.WALL_STRAIGHT) 3 else 0
-            return Furniture(item, built, ghost, shape, quarterTurn, cost.sumOf { it.second } * XP_PER_MATERIAL, def.sizeX, def.sizeY, true, category, cost.toList())
+            return Furniture(item, built, ghost, shape, quarterTurn, cost.sumOf { it.second } * XP_PER_MATERIAL, def.sizeX, def.sizeY, true, category, cost.toList(), openLoc)
         }
 
         val ALL: List<Furniture> = listOf(CHAIR, DOOR, FURNACE,
-        piece(25498, 73933, 73932, 3, Category.DOORS, 0, "Door", 960 to 3),
-        piece(25499, 73935, 73934, 37, Category.DOORS, 0, "Iron gate", 2351 to 3, 1539 to 10),
-        piece(25500, 73937, 73936, 59, Category.DOORS, 0, "Steel door", 2353 to 3, 1539 to 10),
-        piece(25501, 73939, 73938, 37, Category.FENCES, 0, "Wooden gate", 960 to 4),
+        piece(25498, 73933, 73932, 3, Category.DOORS, 0, "Door", 960 to 3, openLoc = Loc.placeable_door_3_built_open),
+        piece(25499, 73935, 73934, 37, Category.DOORS, 0, "Iron gate", 2351 to 3, 1539 to 10, openLoc = Loc.placeable_iron_gate_37_built_open),
+        piece(25500, 73937, 73936, 59, Category.DOORS, 0, "Steel door", 2353 to 3, 1539 to 10, openLoc = Loc.placeable_steel_door_59_built_open),
+        piece(25501, 73939, 73938, 37, Category.FENCES, 0, "Wooden gate", 960 to 4, openLoc = Loc.placeable_wooden_gate_37_built_open),
         piece(25502, 73941, 73940, 33, Category.ACCESSORIES, 4, "Lever", 2351 to 1),
         piece(25503, 73943, 73942, 131, Category.FURNITURE, 0, "Bar", 960 to 5),
         piece(25504, 73945, 73944, 132, Category.FURNITURE, 10, "Bar", 960 to 5),
@@ -165,7 +167,12 @@ fun mapFurnitureBuilding() {
     onItemClick(Obj.furnace_item, options = arrayOf(PLACE_OPTION)) { e -> startPlacement(e.player, Furniture.FURNACE) }
     for (piece in Furniture.ALL.filter { it.crafted && it !== Furniture.FURNACE })
         onItemClick(piece.menuItem, options = arrayOf(PLACE_OPTION)) { e -> startPlacement(e.player, piece) }
-    onObjectClick(*Furniture.ALL.filter { it.crafted && it !== Furniture.FURNACE }.map { it.loc }.toTypedArray()) { e -> if (e.option == PICK_UP_OPTION) pickUpPiece(e.player, e.obj) }
+    onObjectClick(*Furniture.ALL.filter { it.crafted && it !== Furniture.FURNACE }.flatMap { it.placedLocs.toList() }.toTypedArray()) { e ->
+        when (e.option) {
+            PICK_UP_OPTION -> pickUpPiece(e.player, e.obj)
+            OPEN_OPTION, CLOSE_OPTION -> swingPiece(e.obj, e.option == OPEN_OPTION)
+        }
+    }
     onLogin { (player) ->
         if (!player.inventory.containsItem(Obj.hammer)) player.inventory.addItemDrop(Obj.hammer)
         val missingPlanks = PLANKS_REQUIRED - player.inventory.getNumberOf(Obj.woodplank)
@@ -266,7 +273,7 @@ private fun choose(player: Player, piece: Furniture) {
 
 /** Puts a placed piece back into the inventory as its item. */
 private fun pickUpPiece(player: Player, obj: GameObject) {
-    val piece = Furniture.ALL.firstOrNull { it.crafted && it.loc == obj.id } ?: return
+    val piece = Furniture.ALL.firstOrNull { it.crafted && obj.id in it.placedLocs } ?: return
     if (World.getObject(obj.tile, obj.type)?.id != obj.id) return
     if (!ClaimManager.canConstruct(player, obj.tile)) return
     if (!player.inventory.hasFreeSlots()) {
@@ -276,6 +283,13 @@ private fun pickUpPiece(player: Player, obj: GameObject) {
     World.removeObject(obj)
     player.inventory.addItem(piece.menuItem, 1)
     player.sendMessage("You pick up the ${ItemDefinitions.getDefs(piece.menuItem).name.lowercase()}.")
+}
+
+private fun swingPiece(obj: GameObject, opening: Boolean) {
+    val piece = Furniture.ALL.firstOrNull { it.openLoc != -1 && obj.id in it.placedLocs } ?: return
+    if (World.getObject(obj.tile, obj.type)?.id != obj.id) return
+    World.removeObject(obj)
+    World.spawnObject(swungDoor(obj, opening, piece.loc, piece.openLoc))
 }
 
 private fun startPlacement(player: Player, furniture: Furniture) {
