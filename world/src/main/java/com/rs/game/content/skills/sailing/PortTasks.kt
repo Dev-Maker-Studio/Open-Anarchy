@@ -21,7 +21,8 @@ class PortTask(
     val to: Port,
     val crates: Int,
     val baseXp: Int,
-    val coins: Int
+    val coins: Int,
+    val monster: Int = ActiveTask.NO_MONSTER
 ) {
     val bag: BagTier get() = BagTier.forXp(baseXp)
 }
@@ -32,7 +33,7 @@ object PortTasks {
     private const val MIN_XP = 40
     private const val COINS_PER_XP = 0.8
     private const val LEVEL_COIN_STEP = 0.02
-    private const val BOUNTY_LEVEL = 30
+    const val BOUNTY_LEVEL = 30
     private const val RANGE_BASE = 150
     private const val RANGE_PER_LEVEL = 10
 

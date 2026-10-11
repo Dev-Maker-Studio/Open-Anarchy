@@ -1,6 +1,6 @@
 package com.rs.game.content.skills.sailing
 
-enum class BoatState { DOCKED, SAILING, CAPSIZED }
+enum class BoatState { DOCKED, SAILING, CAPSIZED, BOTTLED }
 
 class Boat(
     val id: Long,
@@ -22,7 +22,10 @@ class Boat(
     var cannon: CannonTier? = null,
     var hook: HookTier? = null,
     val facilities: MutableSet<Facility> = mutableSetOf(),
-    val crew: MutableList<Crewmate> = mutableListOf()
+    val crew: MutableList<Crewmate> = mutableListOf(),
+    val nets: MutableList<NetTier> = mutableListOf(),
+    var keg: KegKind? = null,
+    var kegDoses: Int = 0
 ) {
     val hold = CargoHold(0)
 
@@ -43,9 +46,15 @@ class Boat(
 
     val holdCapacity: Int get() = type.holdBase + hull.ordinal * type.holdPerTier
 
-    val hotspotsUsed: Int get() = facilities.size + (if (cannon != null) 1 else 0) + (if (hook != null) 1 else 0)
+    val hotspotsUsed: Int get() = facilities.size + nets.size + (if (cannon != null) 1 else 0) + (if (hook != null) 1 else 0)
 
     val crewSlots: Int get() = type.crewSlots
+
+    val maxNets: Int get() = type.nets
+
+    val activeKeg: KegKind? get() = keg?.takeIf { kegDoses > 0 && Facility.KEG in facilities }
+
+    val hasCatcher: Boolean get() = facilities.any { it.catcher }
 
     fun capsize() {
         hitpoints = 0
