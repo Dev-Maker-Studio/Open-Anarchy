@@ -139,8 +139,8 @@ object PortSites {
     fun biomeAt(x: Int, y: Int): Biome = generator.biomeAt(x, y)
 
     fun levelAt(x: Int, y: Int): Int = 1 + maxOf(
-        abs(WorldWindow.origin(sectorX) + x - WorldGenerator.SPAWN_X),
-        abs(WorldWindow.origin(sectorY) + y - WorldGenerator.SPAWN_Y)
+        abs(WorldWindow.origin(sectorX) + x - WorldGenerator.ORIGIN_X),
+        abs(WorldWindow.origin(sectorY) + y - WorldGenerator.ORIGIN_Y)
     ) / TILES_PER_LEVEL
 
     private fun inGenerated(x: Int, y: Int): Boolean =

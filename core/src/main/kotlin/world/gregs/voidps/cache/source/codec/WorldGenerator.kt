@@ -25,10 +25,11 @@ class WorldGenerator(
     fun inArea(regionX: Int, regionY: Int): Boolean {
         if (areaTiles <= 0) return true
         val span = (areaTiles + SIZE - 1) / SIZE
-        val low = SPAWN_X / SIZE - span / 2
+        val lowX = maxOf(0, ORIGIN_X / SIZE - span / 2)
+        val lowY = maxOf(0, ORIGIN_Y / SIZE - span / 2)
         val globalX = originX / SIZE + regionX
         val globalY = originY / SIZE + regionY
-        return globalX in low until low + span && globalY in (SPAWN_Y / SIZE - span / 2) until (SPAWN_Y / SIZE - span / 2) + span
+        return globalX in lowX until lowX + span && globalY in lowY until lowY + span
     }
 
     fun voidTerrain(regionX: Int, regionY: Int): ByteArray {
@@ -227,8 +228,8 @@ class WorldGenerator(
 
     private fun roadTouchesGlobal(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean {
         val insideGrid = maxX >= 0 && minX < WorldWindow.GRID_TILES && maxY >= 0 && minY < WorldWindow.GRID_TILES
-        val crossesColumn = maxX >= SPAWN_X && minX < SPAWN_X + ROAD_WIDTH
-        val crossesRow = maxY >= SPAWN_Y && minY < SPAWN_Y + ROAD_WIDTH
+        val crossesColumn = maxX >= ORIGIN_X && minX < ORIGIN_X + ROAD_WIDTH
+        val crossesRow = maxY >= ORIGIN_Y && minY < ORIGIN_Y + ROAD_WIDTH
         return insideGrid && (crossesColumn || crossesRow)
     }
 
@@ -363,8 +364,8 @@ class WorldGenerator(
     }
 
     private fun roadGap(x: Int, y: Int): Double {
-        val column = if (x < SPAWN_X) SPAWN_X - x else x - (SPAWN_X + ROAD_WIDTH - 1)
-        val row = if (y < SPAWN_Y) SPAWN_Y - y else y - (SPAWN_Y + ROAD_WIDTH - 1)
+        val column = if (x < ORIGIN_X) ORIGIN_X - x else x - (ORIGIN_X + ROAD_WIDTH - 1)
+        val row = if (y < ORIGIN_Y) ORIGIN_Y - y else y - (ORIGIN_Y + ROAD_WIDTH - 1)
         return minOf(column, row).toDouble()
     }
 
@@ -499,7 +500,7 @@ class WorldGenerator(
 
     private fun layouts(site: Site): List<Layout> = when (site.biome) {
         Biome.DESERT -> DESERT_ORES.flatMap { ore -> List(CLUSTERS_PER_ORE) { oreLayout(ore) } }
-        Biome.WILDERNESS -> wildernessOres(hypot(site.x - SPAWN_X, site.y - SPAWN_Y)).map { oreLayout(it) }
+        Biome.WILDERNESS -> wildernessOres(hypot(site.x - ORIGIN_X, site.y - ORIGIN_Y)).map { oreLayout(it) }
         Biome.MOUNTAIN -> MOUNTAIN_ORES.map { oreLayout(it) }
         Biome.VOLCANO -> VOLCANO_ORES.map { oreLayout(it) }
         Biome.WINTER -> listOf(Layout(WINTER_ROCKS, WINTER_SIDE))
@@ -548,6 +549,7 @@ class WorldGenerator(
     private fun clusterSpotClear(biome: Biome, centreX: Int, centreY: Int, side: Int): Boolean {
         val x0 = centreX - side / 2
         val y0 = centreY - side / 2
+        if (x0 - AREA_MARGIN < 0 || y0 - AREA_MARGIN < 0) return false
         for (x in x0 - AREA_MARGIN..x0 + side + AREA_MARGIN step AREA_STEP) {
             for (y in y0 - AREA_MARGIN..y0 + side + AREA_MARGIN step AREA_STEP) {
                 if (biomeAtGlobal(x, y) != biome || liquidAtGlobal(x, y) != null) return false
@@ -690,6 +692,9 @@ class WorldGenerator(
     }
 
     private fun spotClear(biome: Biome, x: Int, y: Int, width: Int, depth: Int, others: List<Fixture>): Boolean {
+        if (x - SPOT_MARGIN < 0 || y - SPOT_MARGIN < 0) {
+            return false
+        }
         for (dx in -SPOT_MARGIN until width + SPOT_MARGIN) {
             for (dy in -SPOT_MARGIN until depth + SPOT_MARGIN) {
                 if (biomeAtGlobal(x + dx, y + dy) != biome) {
@@ -749,6 +754,7 @@ class WorldGenerator(
 
     private fun islandFits(site: Site, x: Int, y: Int, radius: Double, others: List<Island>): Boolean {
         if (nearestSite(x, y) !== site) return false
+        if (x - radius * ISLAND_REACH - ISLAND_CLEARANCE < 0 || y - radius * ISLAND_REACH - ISLAND_CLEARANCE < 0) return false
         if (fieldOf(distances(x, y), Biome.OCEAN) < radius * ISLAND_REACH + ISLAND_CLEARANCE) return false
         if (roadTouchesGlobal(x - ISLAND_CLEARANCE, y - ISLAND_CLEARANCE, x + ISLAND_CLEARANCE, y + ISLAND_CLEARANCE)) return false
         return others.none { hypot((it.x - x).toDouble(), (it.y - y).toDouble()) < it.radius + radius + ISLAND_GAP }
@@ -896,10 +902,15 @@ class WorldGenerator(
     }
 
     private fun biomeOf(cellX: Int, cellY: Int, hash: Long): Biome {
-        if (cellX == SPAWN_CELL_X && cellY == SPAWN_CELL_Y) return Biome.PLAINS
+        if (cellX < 0 || cellY < 0) {
+            val mirroredX = if (cellX < 0) -cellX - 1 else cellX
+            val mirroredY = if (cellY < 0) -cellY - 1 else cellY
+            return biomeOf(mirroredX, mirroredY, hash(mirroredX, mirroredY, BIOME_SALT))
+        }
+        if (cellX == ORIGIN_CELL_X && cellY == ORIGIN_CELL_Y) return Biome.PLAINS
         if ((hash shr WINTER_PICK_SHIFT) % WINTER_SITE_ODDS == 0L) return Biome.WINTER
         val extra = hash(cellX, cellY, EXTRA_BIOME_SALT)
-        val onRoadCell = cellX == SPAWN_CELL_X || cellY == SPAWN_CELL_Y
+        val onRoadCell = cellX == ORIGIN_CELL_X || cellY == ORIGIN_CELL_Y
         return when {
             !onRoadCell && extra % OCEAN_SITE_ODDS == 0L -> Biome.OCEAN
             (extra shr MOUNTAIN_PICK_SHIFT) % MOUNTAIN_SITE_ODDS == 0L -> Biome.MOUNTAIN
@@ -959,10 +970,10 @@ class WorldGenerator(
         const val DEFAULT_SEED = 727L
         const val WORLD_SIZE = 16384
         const val BIOME_SPACING = 340
-        const val SPAWN_X = 3222
-        const val SPAWN_Y = 3218
-        private const val SPAWN_CELL_X = SPAWN_X / BIOME_SPACING
-        private const val SPAWN_CELL_Y = SPAWN_Y / BIOME_SPACING
+        const val ORIGIN_X = WorldWindow.WORLD_ORIGIN_X
+        const val ORIGIN_Y = WorldWindow.WORLD_ORIGIN_Y
+        private const val ORIGIN_CELL_X = ORIGIN_X / BIOME_SPACING
+        private const val ORIGIN_CELL_Y = ORIGIN_Y / BIOME_SPACING
         const val MIN_BIOME_WIDTH = 200
         const val MAX_BIOME_WIDTH = 400
         const val PLAINS_UNDERLAY = Underlay.underlay_161

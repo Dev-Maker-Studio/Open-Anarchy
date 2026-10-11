@@ -12,8 +12,8 @@ object GeneratedWorld {
         WorldGenerator(WorldGenerator.DEFAULT_SEED, WorldWindow.origin(windowX), WorldWindow.origin(windowY), EnvVars.generateSize)
     }
 
-    val spawnX: Int = WorldWindow.toLocal(WorldGenerator.SPAWN_X, windowX).coerceIn(0, WorldWindow.WINDOW_TILES - 1)
-    val spawnY: Int = WorldWindow.toLocal(WorldGenerator.SPAWN_Y, windowY).coerceIn(0, WorldWindow.WINDOW_TILES - 1)
+    val spawnX: Int = WorldWindow.toLocal(WorldGenerator.ORIGIN_X, windowX).coerceIn(0, WorldWindow.WINDOW_TILES - 1)
+    val spawnY: Int = WorldWindow.toLocal(WorldGenerator.ORIGIN_Y, windowY).coerceIn(0, WorldWindow.WINDOW_TILES - 1)
 
     val lodestoneSites: List<Pair<Int, Int>> by lazy { if (EnvVars.generateMaps) generator.lodestoneSites() else emptyList() }
 
