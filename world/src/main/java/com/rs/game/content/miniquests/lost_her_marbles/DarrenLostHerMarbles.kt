@@ -1,5 +1,7 @@
 package com.rs.game.content.miniquests.lost_her_marbles
 
+import com.rs.game.content.skills.thieving.Thieving
+
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.miniquest.Miniquest
@@ -146,7 +148,7 @@ class DarrenLostHerMarbles(val p: Player, val npc: NPC) {
     private fun claimRewards(player: Player, stage: Int) {
         player.sendMessage("You gain 1200 Thieving XP as bounty on your flame fragments.")
         removeItems(player)
-        player.skills.addXp(Skills.THIEVING, 1200.00)
+        Thieving.awardXp(player, 1200.00)
         player.miniquestManager.getAttribs(Miniquest.LOST_HER_MARBLES).setI("rewardClaimed", stage)
     }
 }

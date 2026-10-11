@@ -19,6 +19,7 @@ object Constants {
     const val HERBLORE = 15
     const val AGILITY = 16
     const val THIEVING = 17
+    const val SAILING = 17
     const val SLAYER = 18
     const val FARMING = 19
     const val RUNECRAFTING = 20
@@ -32,7 +33,7 @@ object Constants {
         "Attack", "Defence", "Strength", "Constitution", "Ranged",
         "Prayer", "Magic", "Cooking", "Woodcutting", "Fletching",
         "Fishing", "Firemaking", "Crafting", "Smithing", "Mining",
-        "Herblore", "Agility", "Thieving", "Slayer", "Farming",
+        "Herblore", "Agility", "Sailing", "Slayer", "Farming",
         "Runecrafting", "Hunter", "Construction", "Summoning", "Dungeoneering"
     )
 

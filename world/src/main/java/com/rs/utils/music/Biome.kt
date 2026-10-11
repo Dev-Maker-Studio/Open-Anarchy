@@ -1,7 +1,7 @@
 package com.rs.utils.music
 
 enum class Biome {
-    PLAINS, CITY, FOREST, DESERT, JUNGLE, SWAMP, SNOW, WILDERNESS, DUNGEON, VOLCANIC;
+    PLAINS, CITY, FOREST, DESERT, JUNGLE, SWAMP, SNOW, WILDERNESS, DUNGEON, VOLCANIC, OCEAN, MOUNTAIN;
 
     companion object {
         private val CITY_GENRES = setOf("varrock", "falador", "ardougne", "grand exchange", "edgeville", "taverly & burthorpe", "thieves guild", "dominion lobby")
@@ -11,10 +11,17 @@ enum class Biome {
         private val JUNGLE_WORDS = listOf("jungle", "ogre", "feldip", "ape atoll", "brimhaven")
         private val FOREST_WORDS = listOf("elf", "isafdar", "zanaris", "gnome")
 
+        private const val GENERATED_PREFIX = "generated "
+
+        @JvmStatic
+        fun generatedGenreName(biome: Biome): String = GENERATED_PREFIX + biome.name.lowercase()
+
         @JvmStatic
         fun of(genre: Genre?): Biome {
             genre ?: return PLAINS
             val name = genre.genreName.lowercase()
+            if (name.startsWith(GENERATED_PREFIX))
+                return valueOf(name.removePrefix(GENERATED_PREFIX).uppercase())
             val parent = genre.parent?.lowercase().orEmpty()
             return when {
                 parent == "dungeon" || parent == "dungeoneering" || DUNGEON_WORDS.any { name.contains(it) } -> DUNGEON

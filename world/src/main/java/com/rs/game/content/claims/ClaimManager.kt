@@ -2,6 +2,7 @@ package com.rs.game.content.claims
 
 import com.rs.engine.command.Commands
 import com.rs.game.World
+import com.rs.game.content.skills.sailing.PortSites
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
@@ -19,7 +20,7 @@ import world.gregs.voidps.type.Tile
 import java.io.File
 
 object ClaimManager {
-    const val MAX_TILES_PER_PLAYER = 256
+    const val STARTING_TILES = 100
 
     private const val NORTH = 1
     private const val EAST = 2
@@ -31,6 +32,8 @@ object ClaimManager {
     private const val CONSTRUCT = 4
     private const val DESTROY = 8
     private const val PVP = 16
+    private const val LODESTONE_MESSAGE = "The land around a lodestone can't be claimed or built on."
+    private const val PORT_MESSAGE = "The land around a port can't be claimed or built on."
     private val FILE = File("./data/claims.json")
     private val DESTROY_OPTIONS = setOf("chop down", "chop", "mine", "cut", "cut down", "pick", "pick-up", "pick up", "smash", "break", "burn", "destroy", "dismantle", "demolish", "remove", "dig", "rake", "harvest", "clear", "pull")
     private val BORDER_BY_MASK = intArrayOf(
@@ -57,8 +60,20 @@ object ClaimManager {
     @JvmStatic
     fun claimAt(tile: Tile): Claim? = claims.firstOrNull { it.contains(tile) }
 
+    fun all(): List<Claim> = claims
+
     @JvmStatic
     fun canBuild(player: Player, tile: Tile, notify: Boolean = true): Boolean {
+        if (GeneratedWorld.inLodestoneZone(tile.x, tile.y)) {
+            if (notify)
+                player.sendMessage(LODESTONE_MESSAGE)
+            return false
+        }
+        if (PortSites.inZone(tile.x, tile.y)) {
+            if (notify)
+                player.sendMessage(PORT_MESSAGE)
+            return false
+        }
         val claim = claimAt(tile) ?: return true
         if (claim.owner == player.username || claim.allowConstruct)
             return true
@@ -70,6 +85,16 @@ object ClaimManager {
     /** Construction pieces are only made, placed and picked up on land claimed by the player, or by someone who allows building. */
     @JvmStatic
     fun canConstruct(player: Player, tile: Tile, notify: Boolean = true): Boolean {
+        if (GeneratedWorld.inLodestoneZone(tile.x, tile.y)) {
+            if (notify)
+                player.sendMessage(LODESTONE_MESSAGE)
+            return false
+        }
+        if (PortSites.inZone(tile.x, tile.y)) {
+            if (notify)
+                player.sendMessage(PORT_MESSAGE)
+            return false
+        }
         val claim = claimAt(tile)
         if (claim != null && (claim.owner == player.username || claim.allowConstruct))
             return true
@@ -158,6 +183,8 @@ object ClaimManager {
         val existing = claimAt(tile)
         when {
             existing == null && GeneratedWorld.onRoad(tile.x, tile.y) -> player.sendMessage("Roads can't be claimed.")
+            existing == null && GeneratedWorld.inLodestoneZone(tile.x, tile.y) -> player.sendMessage(LODESTONE_MESSAGE)
+            existing == null && PortSites.inZone(tile.x, tile.y) -> player.sendMessage(PORT_MESSAGE)
             existing == null -> {
                 session.start = tile
                 showHighlight(player, session, tile)
@@ -193,8 +220,20 @@ object ClaimManager {
             allowDestroy = editing?.allowDestroy ?: false,
             allowPvp = editing?.allowPvp ?: false
         )
-        if (ownedTiles(player.username, editing) + candidate.tileCount > MAX_TILES_PER_PLAYER) {
-            player.sendMessage("You can claim at most $MAX_TILES_PER_PLAYER tiles; that would make ${ownedTiles(player.username, editing) + candidate.tileCount}.")
+        if (ownedTiles(player.username, editing) + candidate.tileCount > player.claimTileAllowance) {
+            player.sendMessage("You can claim at most ${player.claimTileAllowance} tiles; that would make ${ownedTiles(player.username, editing) + candidate.tileCount}.")
+            return
+        }
+        if (GeneratedWorld.roadTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
+            player.sendMessage("Roads can't be claimed; that claim would cover one.")
+            return
+        }
+        if (GeneratedWorld.lodestoneZoneTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
+            player.sendMessage("That claim would cover land around a lodestone, which can't be claimed.")
+            return
+        }
+        if (PortSites.zoneTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
+            player.sendMessage("That claim would cover land around a port, which can't be claimed.")
             return
         }
         if (GeneratedWorld.roadTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {

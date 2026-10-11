@@ -79,6 +79,7 @@ public class Chunk {
     protected GameObject[][][] baseObjects = new GameObject[8][8][4];
     protected Map<Integer, GameObject> removedBaseObjects = Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>());
     protected List<GameObject> spawnedObjects = ObjectLists.synchronize(new ObjectArrayList<>());
+    protected Set<GameObject> generatedObjects = ObjectSets.synchronize(new ObjectOpenHashSet<>());
 
     protected Set<GameObject> flaggedObjectsForTickProcessing = ObjectSets.synchronize(new ObjectOpenHashSet<>());
 
@@ -98,6 +99,10 @@ public class Chunk {
         this.y = coords[1];
         this.plane = coords[2];
         musicIds = Music.getRegionMusics(MapUtils.chunkToRegionId(chunkId));
+    }
+
+    public int getChunkId() {
+        return id;
     }
 
     public void clearCollisionData() {
@@ -349,6 +354,7 @@ public class Chunk {
             MapMaterializer.explored(getRegionX(), getRegionY());
             ChunkManager.loadRegionMapDataByChunkId(id);
             GeneratedScenery.spawn(this);
+            WorldDelta.apply(this);
         }
         if (!loadedSpawnData) {
             loadedSpawnData = true;
@@ -388,7 +394,28 @@ public class Chunk {
             addRemovedObject(obj);
             return;
         }
+        if (WorldDelta.hides(this, obj)) {
+            addRemovedObject(obj);
+            ChunkManager.markChunkActive(id);
+            return;
+        }
         GameObjectCollision.clip(obj);
+        WorldDelta.restoreTimed(obj);
+    }
+
+    /**
+     * Adds an object the world generates, like a tree: spawned on top of the map, clipped, and sent to players with the
+     * rest of the chunk. Unlike spawnObject it does not mark the chunk active, so a forest does not keep its region loaded.
+     */
+    public void addGeneratedObject(GameObject obj) {
+        if (getSpawnedObjectWithSlot(obj.getTile(), obj.getSlot()) != null)
+            return;
+        if (WorldDelta.hides(this, obj))
+            return;
+        spawnedObjects.add(obj);
+        generatedObjects.add(obj);
+        GameObjectCollision.clip(obj);
+        WorldDelta.restoreTimed(obj);
     }
 
     /**
@@ -403,11 +430,16 @@ public class Chunk {
     }
 
     public void spawnObject(GameObject newObj, boolean clip) {
+        spawnObject(newObj, clip, true);
+    }
+
+    public void spawnObject(GameObject newObj, boolean clip, boolean record) {
         GameObject baseObj = baseObjects[newObj.getTile().getXInChunk()][newObj.getTile().getYInChunk()][newObj.getSlot()];
         GameObject spawnedObj = getSpawnedObjectWithSlot(newObj.getTile(), newObj.getSlot());
 
         if (spawnedObj != null) {
             spawnedObjects.remove(spawnedObj);
+            generatedObjects.remove(spawnedObj);
             if (clip)
                 GameObjectCollision.unclip(spawnedObj);
         }
@@ -433,6 +465,8 @@ public class Chunk {
             newObj.getTile().getXInChunk(), newObj.getTile().getYInChunk(),
             newObj.getId(), newObj.getType().getId(), newObj.getRotation()
         ));
+        if (record && WorldDelta.spawned(this, newObj) && newObj != baseObj)
+            generatedObjects.add(newObj);
     }
 
     public void removeObject(GameObject toRemove) {
@@ -447,12 +481,14 @@ public class Chunk {
         GameObject spawned = getSpawnedObjectWithSlot(toRemove.getTile(), toRemove.getSlot());
         if (spawned != null) {
             spawnedObjects.remove(toRemove);
+            WorldDelta.removed(this, toRemove, generatedObjects.remove(toRemove));
             unflagForProcess(toRemove);
             GameObjectCollision.unclip(toRemove);
             if (baseObject != null)
                 GameObjectCollision.clip(baseObject);
             replace = true;
         } else if (toRemove.equals(baseObject)) {
+            WorldDelta.removed(this, toRemove, true);
             unflagForProcess(toRemove);
             GameObjectCollision.unclip(toRemove);
             addRemovedObject(baseObject);
@@ -842,6 +878,7 @@ public class Chunk {
         if (getGroundItems() != null)
             getGroundItems().clear();
         getSpawnedObjects().clear();
+        generatedObjects.clear();
         getRemovedObjects().clear();
         for (int npcIndex : new IntOpenHashSet(npcs)) {
             NPC npc = World.getNPCs().get(npcIndex);

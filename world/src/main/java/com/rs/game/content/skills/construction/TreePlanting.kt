@@ -2,6 +2,7 @@ package com.rs.game.content.skills.construction
 
 import com.rs.game.World
 import com.rs.game.content.skills.firemaking.Firemaking
+import com.rs.game.map.WorldDelta
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
@@ -29,6 +30,7 @@ enum class TreeRoot(val root: Int, val stump: Int, val tree: Int, val treeName: 
 
 @ServerStartupEvent
 fun mapTreePlanting() {
+    WorldDelta.track(*TreeRoot.entries.flatMap { listOf(it.stump, it.tree) }.toIntArray())
     TreeRoot.entries.forEach { type ->
         onItemClick(type.root, options = arrayOf(PLANT_OPTION)) { (player) -> plantTreeRoot(player, type) }
     }
@@ -51,12 +53,6 @@ private fun plantTreeRoot(player: Player, type: TreeRoot) {
         val stump = GameObject(type.stump, ObjectShape.SCENERY_INTERACT, 0, tile)
         World.spawnObject(stump)
         player.setNextFaceTile(tile)
-        WorldTasks.schedule(Ticks.fromMinutes(GROWTH_MINUTES)) { growTree(stump, type) }
+        WorldDelta.scheduleTransform(stump, type.tree, Ticks.fromMinutes(GROWTH_MINUTES))
     }
-}
-
-private fun growTree(stump: GameObject, type: TreeRoot) {
-    if (World.getObject(stump.tile, stump.type)?.id != stump.id) return
-    World.removeObject(stump)
-    World.spawnObject(GameObject(type.tree, ObjectShape.SCENERY_INTERACT, 0, stump.tile))
 }

@@ -18,6 +18,7 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.instantiateNpc
 import com.rs.plugin.kts.npcCombat
 import com.rs.plugin.kts.onNpcClick
+import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.model.Rights
 import org.darkan.core.util.MapUtils
@@ -77,15 +78,19 @@ private val MERCHANT_IDS = arrayOf<Any>(
     Npc.wandering_merchant_50
 )
 
-private const val SPAWN_CHANCE = 0.5
-private const val LOADED_CHUNK_RADIUS = 6
+private const val SPAWN_CHANCE_PERCENT = 1.0
+private const val SPAWN_INTERVAL_TICKS = 100
+private const val NEAR_PLAYER_CHUNK_RADIUS = 3
+private const val NEAR_PLAYER_TILES = 18
+private const val DESPAWN_TILES = 96
+private const val PERCENT = 100.0
 private const val CHUNK_TILES = 8
-private const val SPAWN_ATTEMPTS = 30
+private const val SPAWN_ATTEMPTS = 8
 private const val MERCHANT_COMMAND_RADIUS = 3
 private const val MELEE_STYLE_INDEX = 1
 private const val MIN_ATTACK_DELAY = 1
 
-private var activeMerchant: MerchantNPC? = null
+private val activeMerchants = java.util.concurrent.ConcurrentHashMap.newKeySet<MerchantNPC>()
 
 @ServerStartupEvent
 fun mapWanderingMerchant() {
@@ -99,7 +104,11 @@ fun mapWanderingMerchant() {
         CombatScript.delayHit(npc, 0, target, Hit.melee(npc, maxHit))
         maxOf(getMeleeCombatDelay(weaponId), MIN_ATTACK_DELAY)
     }
-    WorldTasks.scheduleHalfHourly { rollMerchantSpawn() }
+    WorldTasks.scheduleTimer(SPAWN_INTERVAL_TICKS, SPAWN_INTERVAL_TICKS) {
+        despawnAbandonedMerchants()
+        nearPlayerChunks().forEach { if (Math.random() * PERCENT < SPAWN_CHANCE_PERCENT) spawnInChunk(it) }
+        true
+    }
     Commands.add(Rights.OWNER, "merchant", "Spawns a wandering merchant next to you.") { player, _ -> spawnMerchantNear(player) }
 }
 
@@ -113,8 +122,7 @@ private fun spawnMerchantNear(player: Player) {
         player.sendMessage("There's no room for a merchant next to you.")
         return
     }
-    activeMerchant?.takeIf { !it.hasFinished() }?.finish()
-    activeMerchant = World.spawnNPC(MERCHANT_IDS.random() as Int, tile, true) as? MerchantNPC
+    (World.spawnNPC(MERCHANT_IDS.random() as Int, tile, true) as? MerchantNPC)?.let { activeMerchants.add(it) }
     player.sendMessage("A wandering merchant appears.")
 }
 
@@ -126,24 +134,28 @@ private fun talk(player: Player, merchant: MerchantNPC) {
     }
 }
 
-private fun rollMerchantSpawn() {
-    if (activeMerchant?.let { !it.isDead && !it.hasFinished() } == true) return
-    if (Math.random() >= SPAWN_CHANCE) return
-    val tile = randomLoadedTile() ?: return
-    activeMerchant = World.spawnNPC(MERCHANT_IDS.random() as Int, tile, true) as? MerchantNPC
+private fun nearPlayerChunks(): List<Int> = World.players
+    .filter { !it.isBot && it.hasStarted() && !it.hasFinished() }
+    .flatMap { World.getChunkRadius(it.chunkId, NEAR_PLAYER_CHUNK_RADIUS) }
+    .distinct()
+    .filter { ChunkManager.findChunk(it).let { chunk -> chunk != null && chunk !is InstancedChunk } }
+
+private fun spawnInChunk(chunkId: Int) {
+    val (chunkX, chunkY, plane) = MapUtils.decode(Structure.CHUNK, chunkId)
+    repeat(SPAWN_ATTEMPTS) {
+        val tile = Tile.of(chunkX * CHUNK_TILES + (0 until CHUNK_TILES).random(), chunkY * CHUNK_TILES + (0 until CHUNK_TILES).random(), plane)
+        val nearPlayer = World.players.any { !it.hasFinished() && it.plane == plane && Utils.getDistance(it.tile, tile) <= NEAR_PLAYER_TILES }
+        if (!nearPlayer || !World.floorAndWallsFree(tile, 1)) return@repeat
+        (World.spawnNPC(MERCHANT_IDS.random() as Int, tile, true) as? MerchantNPC)?.let { activeMerchants.add(it) }
+        return
+    }
 }
 
-private fun randomLoadedTile(): Tile? {
-    val chunkIds = World.players
-        .filter { !it.isBot && !it.hasFinished() }
-        .flatMap { World.getChunkRadius(it.chunkId, LOADED_CHUNK_RADIUS) }
-        .distinct()
-        .filter { ChunkManager.findChunk(it).let { chunk -> chunk != null && chunk !is InstancedChunk } }
-    if (chunkIds.isEmpty()) return null
-    repeat(SPAWN_ATTEMPTS) {
-        val (chunkX, chunkY, plane) = MapUtils.decode(Structure.CHUNK, chunkIds.random())
-        val tile = Tile.of(chunkX * CHUNK_TILES + (0 until CHUNK_TILES).random(), chunkY * CHUNK_TILES + (0 until CHUNK_TILES).random(), plane)
-        if (World.floorAndWallsFree(tile, 1)) return tile
+private fun despawnAbandonedMerchants() {
+    activeMerchants.removeIf { merchant ->
+        val gone = merchant.hasFinished() || merchant.isDead
+        val abandoned = !gone && World.players.none { !it.hasFinished() && it.plane == merchant.plane && Utils.getDistance(it.tile, merchant.tile) < DESPAWN_TILES }
+        if (abandoned) merchant.finish()
+        gone || abandoned
     }
-    return null
 }

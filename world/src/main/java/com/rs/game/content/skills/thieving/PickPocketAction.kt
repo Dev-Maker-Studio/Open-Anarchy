@@ -8,8 +8,6 @@ import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.entity.player.actions.PlayerAction
 import com.rs.game.tasks.WorldTasks
-import com.rs.plugin.annotations.ServerStartupEvent
-import com.rs.plugin.kts.onNpcClick
 import com.rs.utils.drop.DropTable
 import org.darkan.core.Constants
 import org.darkan.core.Utils
@@ -22,15 +20,6 @@ private val LOOT_ANIMS = intArrayOf(Seq.human_pickpocket, Seq.agil09_pickpocket_
 private val LOOT_SPOTANIMS = intArrayOf(-1, Spotanim.agil09_pickpocket_2_items_spot, Spotanim.agil09_pickpocket_3_items_spot, Spotanim.agil09_pickpocket_4_items_spot)
 private val LOOT_MESSAGES = arrayOf("double", "triple", "quadruple")
 
-@ServerStartupEvent
-fun mapPickpocketing() {
-    onNpcClick(options = arrayOf("Pickpocket", "Grab-feather")) { (player, npc) ->
-        val pocket = PickPocketableNPC.get(npc.id) ?: return@onNpcClick
-        npc.resetDirection()
-        player.actionManager.setAction(PickPocketAction(npc, pocket))
-    }
-}
-
 class PickPocketAction(@JvmField val npc: NPC, @JvmField val npcData: PickPocketableNPC) : PlayerAction() {
     private var index = 0
     private var success = false
@@ -38,6 +27,7 @@ class PickPocketAction(@JvmField val npc: NPC, @JvmField val npcData: PickPocket
     private val npcName get() = npc.definitions.name.lowercase()
 
     override fun start(player: Player): Boolean {
+        if (Thieving.REMOVED) return false
         if (!checkAll(player)) return false
         success = successful(player)
         player.faceEntityTile(npc)
@@ -81,7 +71,7 @@ class PickPocketAction(@JvmField val npc: NPC, @JvmField val npcData: PickPocket
         if (npcData == PickPocketableNPC.DWARF_TRADER) Thieving.checkGuards(player)
         player.sendMessage(lootMessage(), true)
         player.incrementCount("${npc.definitions.name} pickpocketed")
-        player.skills.addXp(Constants.THIEVING, npcData.experience)
+        Thieving.awardXp(player, npcData.experience)
         repeat(index + 1) {
             DropTable.calculateDrops(player, npcData.loot).forEach { player.inventory.addItem(it.id, it.amount) }
         }

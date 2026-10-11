@@ -1,5 +1,7 @@
 package com.rs.game.content.skills.thieving.thievesGuild;
 
+import com.rs.game.content.skills.thieving.Thieving;
+
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
 import com.rs.game.model.entity.player.actions.PlayerAction;
@@ -45,7 +47,7 @@ public class PickPocketDummyMK2 extends PlayerAction {
 		}
 		else {
 			if(player.getSkills().getLevel(Skills.THIEVING) <= 15)
-				player.getSkills().addXp(Constants.THIEVING, 4);
+				Thieving.awardXp(player, 4);
 			if(player.getSkills().getLevel(Skills.THIEVING) >= 16)
 				player.sendMessage("There's not much more you can learn from a static dummy at this point.");
 		}

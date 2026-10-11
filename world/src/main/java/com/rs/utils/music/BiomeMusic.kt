@@ -1,5 +1,6 @@
 package com.rs.utils.music
 
+import org.darkan.core.EnvVars
 import org.darkan.core.gameval.gen.Midi
 import java.util.ArrayDeque
 import java.util.Deque
@@ -27,8 +28,50 @@ object BiomeMusic {
         byBiome.mapValues { (_, songs) -> songs.filter { Music.getSong(it) != null } }
     }
 
+    private val generated: Map<Biome, List<Int>> = mapOf(
+        Biome.PLAINS to listOf(
+            Midi.harmony, Midi.harmony2, Midi.garden, Midi.wander, Midi.village, Midi.start, Midi.adventure,
+            Midi.spirit, Midi.yesteryear, Midi.dream, Midi.expanse, Midi.tomorrow, Midi.lullaby
+        ),
+        Biome.FOREST to listOf(
+            Midi.forest, Midi.woodland, Midi.natural, Midi.riverside, Midi.faerie, Midi.neverland, Midi.emotion,
+            Midi.understanding, Midi.serene, Midi.breeze, Midi.soundscape
+        ),
+        Biome.DESERT to listOf(
+            Midi.arabian, Midi.arabian2, Midi.arabian3, Midi.nomad, Midi.egypt, Midi.sunburn, Midi.scarab, Midi.sphinx,
+            Midi.mirage, Midi.dynasty, Midi.lonesome, Midi.hypnotized, Midi.arabique, Midi.kharidian_nights
+        ),
+        Biome.SNOW to listOf(
+            Midi.frostbite, Midi.rellekka, Midi.starlight, Midi.beyond, Midi.kingdom, Midi.hermit, Midi.saga,
+            Midi.borderland, Midi.warrior, Midi.inadequacy
+        ),
+        Biome.WILDERNESS to listOf(
+            Midi.wilderness, Midi.wilderness2, Midi.wilderness3, Midi.dangerous, Midi.dark, Midi.faithless, Midi.forbidden,
+            Midi.undercurrent, Midi.underground, Midi.troubled, Midi.venomous, Midi.moody, Midi.gaol, Midi.legion
+        ),
+        Biome.OCEAN to listOf(
+            Midi.saltwater, Midi.stillwater, Midi.freshwater, Midi.voyage, Midi.trawler, Midi.fishing, Midi.landlubber,
+            Midi.marooned, Midi.shipwrecked, Midi.lighthouse, Midi.stranded, Midi.waterfall, Midi.waterlogged
+        ),
+        Biome.MOUNTAIN to listOf(
+            Midi.expedition, Midi.sojourn, Midi.contest, Midi.tremble, Midi.overpass, Midi.horizon, Midi.legend,
+            Midi.courage, Midi.principality
+        ),
+        Biome.VOLCANIC to listOf(
+            Midi.eruption, Midi.tzhaar, Midi.kethsi, Midi.deadlands, Midi.shadowland, Midi.lair,
+            Midi.tzhaar2wandering1, Midi.tzhaar2wandering2, Midi.tzhaar2wandering3, Midi.tzhaar2wandering4, Midi.tzhaar2wandering5
+        )
+    )
+
     @JvmStatic
-    fun songsOf(biome: Biome): List<Int> = pools[biome]?.takeIf { it.isNotEmpty() } ?: pools[Biome.PLAINS].orEmpty()
+    fun generatedSongs(biome: Biome): List<Int> = generated[biome].orEmpty().filter { Music.getSong(it) != null }
+
+    @JvmStatic
+    fun songsOf(biome: Biome): List<Int> {
+        if (EnvVars.generateMaps)
+            generatedSongs(biome).takeIf { it.isNotEmpty() }?.let { return it }
+        return pools[biome]?.takeIf { it.isNotEmpty() } ?: pools[Biome.PLAINS].orEmpty()
+    }
 
     @JvmStatic
     fun nextSong(biome: Biome, queue: ArrayDeque<Int>, recent: Deque<Int>): Int {
