@@ -1,5 +1,7 @@
 package com.rs.game.content.skills.thieving.thievesGuild;
 
+import com.rs.game.content.skills.thieving.Thieving;
+
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.game.World;
@@ -150,7 +152,7 @@ public class HankyPoints {
         player.startConversation(new Dialogue().addNPC(npc.getId(), HeadE.CALM_TALK, "Sure thing! Let's see now..."));
 
         double xp = (calculateXP(player) / maxPoints) * claimablePoints;
-        player.getSkills().addXp(Skills.THIEVING, xp);
+        Thieving.awardXp(player, xp);
 
         player.sendMessage("You gain " + Utils.getFormattedNumber((int) xp, ',') + " Thieving XP.");
 
@@ -253,7 +255,7 @@ public class HankyPoints {
                     case 3 -> {
                         if (Utils.skillSuccess(e.getPlayer().getSkills().getLevel(Skills.THIEVING), 190, 190)) {
                             e.getPlayer().sendMessage("The door swings open.");
-                            e.getPlayer().getSkills().addXp(Constants.THIEVING, 210);
+                            Thieving.awardXp(e.getPlayer(), 210);
                             World.spawnObjectTemporary(new GameObject(-1, e.getObj().getType(), e.getObj().getRotation(), e.getObj().getTile()), Ticks.fromMinutes(5), true);
                             World.spawnObjectTemporary(new GameObject(e.getObjectId() + 1, e.getObj().getType(), e.getObj().getRotation() - 3, e.getObj().getTile().transform(0, -1, 0)), Ticks.fromMinutes(5), true);
                         } else {
@@ -295,7 +297,7 @@ public class HankyPoints {
                     case 3 -> {
                         if (Utils.skillSuccess(e.getPlayer().getSkills().getLevel(Skills.THIEVING), 190, 190)) {
                             e.getPlayer().sendMessage("The door swings open.");
-                            e.getPlayer().getSkills().addXp(Constants.THIEVING, 280);
+                            Thieving.awardXp(e.getPlayer(), 280);
                             World.spawnObjectTemporary(new GameObject(-1, e.getObj().getType(), e.getObj().getRotation(), e.getObj().getTile()), Ticks.fromMinutes(5), true);
                             World.spawnObjectTemporary(new GameObject(e.getObjectId() + 1, e.getObj().getType(), e.getObj().getRotation() + 1, e.getObj().getTile().transform(0, +1, 0)), Ticks.fromMinutes(5), true);
                         } else {
@@ -323,7 +325,7 @@ public class HankyPoints {
         player.sendMessage("You attempt to pick the lock.");
         player.anim(536);
         if (Utils.skillSuccess(e.getPlayer().getSkills().getLevel(Skills.THIEVING), 190, 190)) {
-            player.getSkills().addXp(Constants.THIEVING, 30);
+            Thieving.awardXp(player, 30);
             object.setIdTemporary(e.getObjectId() + 1, Ticks.fromMinutes(1));
             player.incWeeklyI("HankyPoints", 1);
             player.sendMessage("You find a blue handkerchief.");
@@ -346,7 +348,7 @@ public class HankyPoints {
         player.sendMessage("You attempt to pick the lock.");
         player.anim(536);
         if (Utils.skillSuccess(e.getPlayer().getSkills().getLevel(Skills.THIEVING), 190, 190)) {
-            player.getSkills().addXp(Constants.THIEVING, 180);
+            Thieving.awardXp(player, 180);
             player.sendMessage("You find a red handkerchief.");
             player.incWeeklyI("HankyPoints", 4);
             object.setIdTemporary(e.getObjectId() + 1, Ticks.fromMinutes(1));

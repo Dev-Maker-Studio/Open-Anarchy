@@ -16,6 +16,8 @@
 //
 package com.rs.game.content.skills.dungeoneering;
 
+import com.rs.game.content.skills.thieving.Thieving;
+
 import com.rs.Settings;
 import org.darkan.core.cache.ItemDefinitions;
 import org.darkan.core.model.ObjectShape;
@@ -739,7 +741,7 @@ public class DungeonController extends Controller {
 				player.getInventory().addItemDrop(DungeonUtils.getArrows(type + 1), Utils.random(100) + 1);
 			if (Utils.random(5) == 0)
 				player.getInventory().addItemDrop(DungeonUtils.getRandomWeapon(type + 1), 1);
-			player.getSkills().addXp(Constants.THIEVING, DungeonConstants.THIEF_CHEST_XP[type]);
+			Thieving.awardXp(player, DungeonConstants.THIEF_CHEST_XP[type]);
 			return false;
 		} else if (object.getId() == DungeonConstants.THIEF_CHEST_OPEN[floorType.ordinal()]) {
 			player.sendMessage("You already looted this chest.");

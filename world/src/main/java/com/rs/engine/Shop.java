@@ -68,7 +68,7 @@ public class Shop {
 		}
 	}
 
-	public static ButtonClickHandler handleInterfaces = new ButtonClickHandler(new Object[] { 449, 1265, 1266, 621 }, e -> {
+	public static ButtonClickHandler handleInterfaces = new ButtonClickHandler(new Object[] { 449, 1265, 1326, 1266, 621 }, e -> {
 		if (e.getInterfaceId() == 449) {
 			if (e.getComponentId() == 1) {
 				Shop shop = e.getPlayer().getTempAttribs().getO("Shop");
@@ -92,7 +92,7 @@ public class Shop {
 					shop.buy(e.getPlayer(), slot, 50);
 				shop.sendCustomPrices(e.getPlayer());
 			}
-		} else if (e.getInterfaceId() == 1265) {
+		} else if (e.getInterfaceId() == 1265 || e.getInterfaceId() == 1326) {
 			Shop shop = e.getPlayer().getTempAttribs().getO("Shop");
 			if (shop == null)
 				return;
@@ -131,26 +131,26 @@ public class Shop {
 				}
 			} else if (e.getComponentId() == 208) {
 				e.getPlayer().getTempAttribs().setI("shopAmt", Utils.clampI(e.getPlayer().getTempAttribs().getI("shopAmt", 0) + 5, 1, 5000));
-				e.getPlayer().getPackets().setIFText(1265, 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
+				e.getPlayer().getPackets().setIFText(e.getInterfaceId(), 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
 			} else if (e.getComponentId() == 15) {
 				e.getPlayer().getTempAttribs().setI("shopAmt", Utils.clampI(e.getPlayer().getTempAttribs().getI("shopAmt", 0) + 1, 1, 5000));
-				e.getPlayer().getPackets().setIFText(1265, 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
+				e.getPlayer().getPackets().setIFText(e.getInterfaceId(), 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
 			} else if (e.getComponentId() == 214) {
 				e.getPlayer().getTempAttribs().setI("shopAmt", Utils.clampI(e.getPlayer().getTempAttribs().getI("shopAmt", 0) - 1, 1, 5000));
-				e.getPlayer().getPackets().setIFText(1265, 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
+				e.getPlayer().getPackets().setIFText(e.getInterfaceId(), 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
 			} else if (e.getComponentId() == 217) {
 				e.getPlayer().getTempAttribs().setI("shopAmt", Utils.clampI(e.getPlayer().getTempAttribs().getI("shopAmt", 0) - 5, 1, 5000));
-				e.getPlayer().getPackets().setIFText(1265, 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
+				e.getPlayer().getPackets().setIFText(e.getInterfaceId(), 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
 			} else if (e.getComponentId() == 220) {
 				e.getPlayer().getTempAttribs().setI("shopAmt", 1);
-				e.getPlayer().getPackets().setIFText(1265, 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
+				e.getPlayer().getPackets().setIFText(e.getInterfaceId(), 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
 			} else if (e.getComponentId() == 211) {
 				if ((slot == -1) || (shop.getMainStock() == null) || (slot > shop.getMainStock().length - 1) || (shop.getMainStock()[slot] == null))
 					return;
 				if (e.getPlayer().getInventory().getItems().array()[slot] == null)
 					return;
 				e.getPlayer().getTempAttribs().setI("shopAmt", Utils.clampI(isBuying ? shop.getMainStock()[slot].getItem().getAmount() : e.getPlayer().getInventory().getItems().array()[slot].getAmount(), 1, 5000));
-				e.getPlayer().getPackets().setIFText(1265, 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
+				e.getPlayer().getPackets().setIFText(e.getInterfaceId(), 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
 			} else if (e.getComponentId() == 29) {
 				e.getPlayer().getVars().setVar(Varp.shop_last_viewed_inventory, 93);
 				e.getPlayer().getTempAttribs().removeB("shop_buying");
@@ -158,7 +158,7 @@ public class Shop {
 			} else if (e.getComponentId() == 28) {
 				e.getPlayer().getTempAttribs().setB("shop_buying", true);
 				e.getPlayer().getTempAttribs().setI("shopAmt", 1);
-				e.getPlayer().getPackets().setIFText(1265, 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
+				e.getPlayer().getPackets().setIFText(e.getInterfaceId(), 67, String.valueOf(e.getPlayer().getTempAttribs().getI("shopAmt", 0)));
 			}
 			shop.sendCustomPrices(e.getPlayer());
 		} else if (e.getInterfaceId() == 1266) {
@@ -223,19 +223,19 @@ public class Shop {
 		//player.getVars().setVar(2565, 1); //changes to sell tab
 		player.getVars().syncVarsToClient();
 		sendStore(player);
-		player.getInterfaceManager().sendInterface(1265);
+		player.getInterfaceManager().sendInterface(getShopInterfaceId());
 		player.getPackets().sendVarc(1876, -1);
-		player.getPackets().setIFEvents(new IFEvents(1265, 20, 0, getStoreSize() * 6).enableRightClickOptions(0,1,2,3,4,5,9));
-		player.getPackets().setIFEvents(new IFEvents(1265, 26, 0, getStoreSize() * 6)
+		player.getPackets().setIFEvents(new IFEvents(getShopInterfaceId(), 20, 0, getStoreSize() * 6).enableRightClickOptions(0,1,2,3,4,5,9));
+		player.getPackets().setIFEvents(new IFEvents(getShopInterfaceId(), 26, 0, getStoreSize() * 6)
 				.enableUseOptions(UseFlag.ICOMPONENT)
 				.enableRightClickOptions(0,2,3)
 				.setDepth(4)
 				.enableDrag()
 				.enableDepthFlagIgnoring()
 				.enableUseTargetability());
-		player.getPackets().setIFText(1265, 85, name);
+		player.getPackets().setIFText(getShopInterfaceId(), 85, name);
 		if (isGeneralStore())
-			player.getPackets().setIFHidden(1265, 52, false);
+			player.getPackets().setIFHidden(getShopInterfaceId(), 52, false);
 		sendInventory(player);
 		player.getTempAttribs().setB("shop_buying", true);
 		WorldTasks.delay(1, () -> sendCustomPrices(player));
@@ -247,10 +247,14 @@ public class Shop {
 		for (int i = 0;i < mainStock.length;i++) {
 			if (mainStock[i] == null)
 				continue;
-			//player.getPackets().setIFSlotGraphic(1265, 24, i, 592);
+			//player.getPackets().setIFSlotGraphic(getShopInterfaceId(), 24, i, 592);
 			if (mainStock[i].getCustomPrice() > 0)
-				player.getPackets().setIFText(1265, 23, i, Utils.kmify(mainStock[i].getCustomPrice()));
+				player.getPackets().setIFText(getShopInterfaceId(), 23, i, Utils.kmify(mainStock[i].getCustomPrice()));
 		}
+	}
+
+	protected int getShopInterfaceId() {
+		return 1265;
 	}
 
 	public void sendInventory(Player player) {
@@ -339,7 +343,7 @@ public class Shop {
 		}
 	}
 
-	private boolean addItem(int itemId, int quantity) {
+	public boolean addItem(int itemId, int quantity) {
 		for (ShopItem item : mainStock)
 			if (item.getItem().getId() == itemId) {
 				item.getItem().setAmount(item.getItem().getAmount() + quantity);

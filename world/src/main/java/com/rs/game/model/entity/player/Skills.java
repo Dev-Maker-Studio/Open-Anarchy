@@ -47,7 +47,7 @@ import org.darkan.core.gameval.gen.Varbit;
 @PluginEventHandler
 public final class Skills {
 
-	public static final double MAXIMUM_EXP = 2000000000;
+	public static final double MAXIMUM_EXP = 200_000_000_000.0;
 	public static final int MAX_LEVEL = 120;
 	public static final int
 	ATTACK = 0,
@@ -68,6 +68,7 @@ public final class Skills {
 	HERBLORE = 15,
 	AGILITY = 16,
 	THIEVING = 17,
+	SAILING = 17,
 	SLAYER = 18,
 	FARMING = 19,
 	RUNECRAFTING = 20,
@@ -79,7 +80,7 @@ public final class Skills {
 	public static int SIZE = 25;
 
 	public static final String[] SKILL_NAME = { "Attack", "Defence", "Strength", "Constitution", "Ranged", "Prayer", "Magic", "Cooking", "Woodcutting", "Fletching", "Fishing", "Firemaking", "Crafting", "Smithing", "Mining", "Herblore", "Agility",
-			"Thieving", "Slayer", "Farming", "Runecrafting", "Hunter", "Construction", "Summoning", "Dungeoneering" };
+			"Sailing", "Slayer", "Farming", "Runecrafting", "Hunter", "Construction", "Summoning", "Dungeoneering" };
 
 	public static final int NONE = -1;
 
@@ -320,10 +321,8 @@ public final class Skills {
 			e.getPlayer().sendInputInteger("Please enter target " + (usingLevel ? "level" : "xp") + " you want to set: ", integer -> {
 				if (!usingLevel) {
 					int xpTarget = integer;
-					if (xpTarget < e.getPlayer().getSkills().getXp(skillId) || e.getPlayer().getSkills().getXp(skillId) >= (int) MAXIMUM_EXP)
+					if (xpTarget < e.getPlayer().getSkills().getXp(skillId) || e.getPlayer().getSkills().getXp(skillId) >= MAXIMUM_EXP)
 						return;
-					if (xpTarget > (int) MAXIMUM_EXP)
-						xpTarget = (int) MAXIMUM_EXP;
 					e.getPlayer().getSkills().setSkillTarget(false, skillId, xpTarget);
 
 				} else {
@@ -694,7 +693,7 @@ public final class Skills {
 	}
 
 	public int getClientXp(int skill) {
-		return (int) (silentHeld[skill] ? clientXp[skill] : xp[skill]);
+		return (int) Math.min(Integer.MAX_VALUE, silentHeld[skill] ? clientXp[skill] : xp[skill]);
 	}
 
 	public void addXpSilent(int skill, double exp) {

@@ -1,5 +1,6 @@
 package com.rs.game.content.quests.underground_pass.objects
 
+import com.rs.game.content.skills.thieving.Thieving
 import org.darkan.core.gameval.gen.Bas
 import org.darkan.core.gameval.gen.Loc
 import org.darkan.core.gameval.gen.Obj
@@ -544,7 +545,7 @@ private fun Player.pickUndergroundPassCageLock(obj: GameObject, requiredLevel: I
             return@schedule
         }
 
-        skills.addXp(Constants.THIEVING, CAGE_PICK_XP)
+        Thieving.awardXp(this@pickUndergroundPassCageLock, CAGE_PICK_XP)
         sendMessage("You successfully pick the lock and pass through the cage door.")
         val destination = when (obj.rotation) {
             0 -> obj.tile.transform(if (x < obj.x) 0 else -1, 0)

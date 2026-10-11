@@ -12,6 +12,16 @@ object GeneratedWorld {
         WorldGenerator(WorldGenerator.DEFAULT_SEED, WorldWindow.origin(windowX), WorldWindow.origin(windowY), EnvVars.generateSize)
     }
 
+    val lodestoneSites: List<Pair<Int, Int>> by lazy { if (EnvVars.generateMaps) generator.lodestoneSites() else emptyList() }
+
+    fun lodestoneZoneTouches(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean =
+        lodestoneSites.any { (x, y) ->
+            maxX >= x - WorldGenerator.LODESTONE_RADIUS && minX <= x + WorldGenerator.LODESTONE_RADIUS &&
+                maxY >= y - WorldGenerator.LODESTONE_RADIUS && minY <= y + WorldGenerator.LODESTONE_RADIUS
+        }
+
+    fun inLodestoneZone(x: Int, y: Int): Boolean = lodestoneZoneTouches(x, y, x, y)
+
     fun onRoad(x: Int, y: Int): Boolean = EnvVars.generateMaps && generator.onRoad(x, y)
 
     fun roadTouches(minX: Int, minY: Int, maxX: Int, maxY: Int): Boolean = EnvVars.generateMaps && generator.roadTouches(minX, minY, maxX, maxY)

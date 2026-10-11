@@ -62,7 +62,7 @@ enum class Skillcapes(
         player.startConversation {
             npc(npcId, CHEERFUL, "Ah, this is a Skillcape of ${name}. I have mastered the art of ${name.lowercase()} and wear it proudly to show others.")
             player(SKEPTICAL, "Hmm, interesting.")
-            if (player.skills.getLevelForXp(ordinal) >= 99) {
+            if (player.skills.getLevelForXp(ordinal) >= CAPE_LEVEL) {
                 npc(npcId, NO_EXPRESSION, "Ah, but I see you are already $verb, perhaps you have come to me to purchase a Skillcape of $name, and thus join the elite few who have mastered this exacting skill?")
                 options {
                     op("Yes, I'd like to buy one please.") {
@@ -99,7 +99,7 @@ enum class Skillcapes(
                 options {
                     op("Please tell me more about skillcapes.") {
                         player(HAPPY_TALKING, "Please tell me more about skillcapes.")
-                        npc(npcId, CALM_TALK, "Of course. Skillcapes are a symbol of achievement. Only people who have mastered a skill and reached level 99 can get their hands on them and gain the benefits they carry.")
+                        npc(npcId, CALM_TALK, "Of course. Skillcapes are a symbol of achievement. Only people who have mastered a skill and reached level $CAPE_LEVEL can get their hands on them and gain the benefits they carry.")
                     }
                     op("Bye.") {
                         player(HAPPY_TALKING, "Bye.")
@@ -111,6 +111,8 @@ enum class Skillcapes(
     }
 
     companion object {
+        const val CAPE_LEVEL = 120
+
         @JvmStatic
         fun trimCapes(player: Player) {
             if (!player.skills.checkMulti99s()) return

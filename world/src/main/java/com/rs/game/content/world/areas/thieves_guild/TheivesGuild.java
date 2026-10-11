@@ -1,5 +1,7 @@
 package com.rs.game.content.world.areas.thieves_guild;
 
+import com.rs.game.content.skills.thieving.Thieving;
+
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.miniquest.Miniquest;
@@ -87,7 +89,7 @@ public class TheivesGuild {
 
     public static ItemClickHandler read = new ItemClickHandler(new Object[]{ 18646 }, new String[]{"Read"}, e -> {
         e.getPlayer().itemDialogue(18646, "You read the instructive document, and feel rather more adept in pilferage and larceny. You gain 175 Thieving XP");
-        e.getPlayer().getSkills().addXp(Skills.THIEVING, 175);
+        Thieving.awardXp(e.getPlayer(), 175);
         e.getPlayer().getInventory().deleteItem(18646, 1);
     });
 

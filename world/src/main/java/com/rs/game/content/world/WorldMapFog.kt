@@ -23,11 +23,15 @@ fun mapWorldMapFog() {
     onChunkEnter { e -> e.player?.let(::revealFog) }
 }
 
-private fun revealFog(player: Player) {
-    val minCellX = fogCell(player.x - FOG_REVEAL_RADIUS_TILES)
-    val maxCellX = fogCell(player.x + FOG_REVEAL_RADIUS_TILES)
-    val minCellY = fogCell(player.y - FOG_REVEAL_RADIUS_TILES)
-    val maxCellY = fogCell(player.y + FOG_REVEAL_RADIUS_TILES)
+private fun revealFog(player: Player) = revealWorldMapFog(player, player.x, player.y, FOG_REVEAL_RADIUS_TILES)
+
+fun revealWorldMapFog(player: Player, centreX: Int, centreY: Int, radius: Int) {
+    if (centreX !in 0 until FOG_AREA_TILES || centreY !in 0 until FOG_AREA_TILES)
+        return
+    val minCellX = fogCell(centreX - radius)
+    val maxCellX = fogCell(centreX + radius)
+    val minCellY = fogCell(centreY - radius)
+    val maxCellY = fogCell(centreY + radius)
     for (cellY in minCellY..maxCellY) {
         for (cellX in minCellX..maxCellX) {
             val cell = cellY * FOG_CELLS_PER_ROW + cellX
