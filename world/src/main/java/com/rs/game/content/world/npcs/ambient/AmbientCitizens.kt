@@ -33,6 +33,7 @@ private const val TALK_OPTION = "Talk-to"
 private const val ATTACK_OPTION = "Attack"
 private const val UNNAMED = "null"
 private const val DESPAWN_TILES = 400
+private const val MAX_CITIZENS_PER_AREA = 6
 
 private val generator = GeneratedWorld.generator
 
@@ -67,6 +68,7 @@ private fun spawnNear(player: Player) {
     repeat(PLACEMENT_ATTEMPTS) {
         val tile = player.tile.transform(Utils.random(-SPAWN_RANGE, SPAWN_RANGE + 1), Utils.random(-SPAWN_RANGE, SPAWN_RANGE + 1), 0)
         if (generator.liquidTileAt(tile.x, tile.y) != null || !World.floorAndWallsFree(tile, 1)) return@repeat
+        if (citizens.count { !it.hasFinished() && Utils.getDistance(it.tile, tile) <= SPAWN_RANGE } >= MAX_CITIZENS_PER_AREA) return
         citizens.add(AmbientNPC(citizenIds.random(), tile))
         return
     }

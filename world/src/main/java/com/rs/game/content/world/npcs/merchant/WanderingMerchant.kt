@@ -87,6 +87,8 @@ private const val PERCENT = 100.0
 private const val CHUNK_TILES = 8
 private const val SPAWN_ATTEMPTS = 8
 private const val MERCHANT_COMMAND_RADIUS = 3
+private const val AREA_CAP_TILES = 150
+private const val MAX_MERCHANTS_PER_AREA = 6
 private const val MELEE_STYLE_INDEX = 1
 private const val MIN_ATTACK_DELAY = 1
 
@@ -146,6 +148,7 @@ private fun spawnInChunk(chunkId: Int) {
         val tile = Tile.of(chunkX * CHUNK_TILES + (0 until CHUNK_TILES).random(), chunkY * CHUNK_TILES + (0 until CHUNK_TILES).random(), plane)
         val nearPlayer = World.players.any { !it.hasFinished() && it.plane == plane && Utils.getDistance(it.tile, tile) <= NEAR_PLAYER_TILES }
         if (!nearPlayer || !World.floorAndWallsFree(tile, 1)) return@repeat
+        if (activeMerchants.count { !it.hasFinished() && it.plane == plane && Utils.getDistance(it.tile, tile) <= AREA_CAP_TILES } >= MAX_MERCHANTS_PER_AREA) return
         (World.spawnNPC(MERCHANT_IDS.random() as Int, tile, true) as? MerchantNPC)?.let { activeMerchants.add(it) }
         return
     }

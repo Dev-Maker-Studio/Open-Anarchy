@@ -42,7 +42,7 @@ import java.util.function.Supplier;
 @PluginEventHandler
 public class Mining extends Action {
 
-	/** The right click option on tin and copper rocks that mines them bare handed, as slowly as with a bronze pickaxe. */
+	/** The right click option on tin and copper rocks that gathers the ore bare handed in one action, like punching a tree. */
 	private static final String GATHER_OPTION = "Gather";
 
 	public static ObjectClickHandler handleClay = new ObjectClickHandler(new Object[] { "Clay rocks", "Clay vein", "Clay rock" },
@@ -190,7 +190,7 @@ public class Mining extends Action {
 		if (type.getOres().size() == 1 && !type.getOres().getFirst().checkRequirements(entity instanceof Player player ? player : null))
 			return -1;
 		for (Ore ore : type.getOres()) {
-			if (ore.checkRequirements(entity instanceof Player player ? player : null) && ore.rollSuccess(entity instanceof Player player ? player : null, level)) {
+			if (ore.checkRequirements(entity instanceof Player player ? player : null) && (bareHanded || ore.rollSuccess(entity instanceof Player player ? player : null, level))) {
 				if (entity instanceof Player player) {
 					ore.giveOre(player);
 					int[] range = VARROCK_ARMOR_ORE_TIERS.get(ore);
