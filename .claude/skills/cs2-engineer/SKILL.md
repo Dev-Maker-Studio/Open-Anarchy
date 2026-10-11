@@ -444,6 +444,28 @@ corrected opcode is added to the `Cs2Op` enum by hand.
   `onVarpTransmit` reads, so the list redraws from the inv alone and the tabs from the var alone. The server enables
   ops with `IFEvents(layer, 0, rows * 3 - 1).enableRightClickOptions(0, 1, 2)` after opening.
 
+- **New interface archives need an `interfaces/index.json` entry** (`"<id>": {"version": 1, "compression": "gzip"}`) on top of
+  the component JSONs and the `gamevals/interface.json` / `component.json` entries; a script names its own components as
+  `Component.<interface>.<name>` once `gamevals.d.ts` has a `namespace <interface>` block under `namespace Component`.
+- **`colour(...)` only takes a literal**: `ccSetColour(colour(intArg))` fails with `Unknown opcode function 'colour'`; pass the
+  colour as a number parameter and call `ccSetColour(intArg)`.
+- **Run the tools from a directory with no `.env`** (the scratchpad, say). With `CACHE_SOURCE_PATH` in the cwd's `.env`,
+  `Cache.get()` builds the world's tree into `CACHE_BUILD_PATH` first (map generator, the world map image), which fails on a tree
+  whose generated squares are not saved; set `CACHE_PATH`, `GAMEVAL_PATH=<tree>/gamevals` explicitly.
+- **Scratch pack without the generated maps**: make a directory of symlinks to every top-level entry of the tree except `maps`,
+  give it an empty `maps/` holding only an `index.json` whose `archives` is `{}`, and `tools cache build <scratch tree> <empty dir>`
+  (a full pack, 30 s). The incremental stat walk does not follow the symlinks, so repack into a fresh dir after every edit.
+  `cs2 analyse`, `readback.sh` (with `GAMEVAL_PATH` set, or every header reads `// cs2_<id>`) and `jshell` decodes then run against it.
+- **Render an interface headlessly**: `JAVA_OPTS="-Ddarkan.capture=out.png -Ddarkan.captureAfter=40" CACHE_PATH=<pack> GAMEVAL_PATH=<tree>/gamevals
+  xvfb-run -a -s "-screen 0 1280x900x24" tools interface <id> --source <tree> --var varbit_x=1`; crop the 1600x900 capture.
+- **`rawOptions` and `opcodeOrder` on loc and npc definitions**: the encoder writes `rawOptions` (ten entries), not `options`, so
+  an option changed on a copied loc or npc must be changed in both; an option left `null` must also lose its opcode (30-34) from
+  `opcodeOrder`, or it packs as an empty string; a name set on a def whose order lacks opcode 2 is silently dropped.
+- **Lists from an inv**: `[proc,sailing_rows]` / `[proc,sailing_cards]` draw one row or card per inv slot from the slot's
+  tooltip text (`invGetTooltip`) with ccs at ids `3n`..`3n+2`, so the server's row is `slotId / 3`; the server sends the rows with
+  `sendItems(Inv.x, items)` and `ItemTooltips.METADATA_KEY`. Used by the Sailing captain's log, notice board, crew management,
+  gangplank and side panel (`docs` note `src/implementation/sailing-client-assets.md`).
+
 ## 5. Keep this skill current
 
 When a change teaches something new - a client rule, an op's real behaviour, a hook that works or

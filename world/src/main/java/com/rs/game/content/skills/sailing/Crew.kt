@@ -1,6 +1,6 @@
 package com.rs.game.content.skills.sailing
 
-enum class CrewJob { HELM, SALVAGE, CANNON, NONE }
+enum class CrewJob { HELM, SALVAGE, CANNON, TRAWL, REPAIR, NONE }
 
 class Crewmate(
     val name: String,
@@ -11,7 +11,12 @@ class Crewmate(
     val sailingLevel: Int,
     var job: CrewJob = CrewJob.NONE
 ) {
+    fun effectiveHelmsmanship(boat: Boat): Int = if (boat.activeKeg == KegKind.WHIRLPOOL) maxOf(helmsmanship, WHIRLPOOL_MINIMUM) else helmsmanship
+
+    fun effectiveDeckhandiness(boat: Boat): Int = if (boat.activeKeg == KegKind.WHIRLPOOL) maxOf(deckhandiness, WHIRLPOOL_MINIMUM) else deckhandiness
+
     companion object {
+        private const val WHIRLPOOL_MINIMUM = 2
         private const val MERCHANT_WAGE_PER_LEVEL = 4
         private const val MERCHANT_STAT_DIVISOR = 25
         private const val MAX_STAT = 4

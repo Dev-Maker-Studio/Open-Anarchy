@@ -32,6 +32,10 @@ class BoatMovement(
     private var burstTicksLeft = 0
     private var windBoost = false
 
+    val boosted: Boolean get() = bursts > 0
+
+    val boostTicksLeft: Int get() = burstTicksLeft
+
     val topSpeed: Double get() {
         val capped = (boat.baseSpeed + bursts * BURST_SPEED).coerceAtMost(boat.speedCap)
         return if (windBoost) capped + BURST_SPEED else capped
@@ -51,6 +55,10 @@ class BoatMovement(
         y = newY
         heading = newHeading
         targetHeading = newHeading
+        speed = 0.0
+    }
+
+    fun dropSpeed() {
         speed = 0.0
     }
 

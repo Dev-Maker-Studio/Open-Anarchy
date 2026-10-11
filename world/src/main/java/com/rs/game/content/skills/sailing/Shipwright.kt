@@ -3,6 +3,7 @@ package com.rs.game.content.skills.sailing
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.sendOptionsDialogue
 import com.rs.engine.dialogue.startConversation
+import com.rs.game.content.Skillcapes
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.Constants
 import org.darkan.core.cache.ItemDefinitions
@@ -16,6 +17,9 @@ private const val CANNONBALL_PACK = 50
 private const val CONSTRUCTION_XP_PER_LEVEL = 25
 private const val CONSTRUCTION_XP_BASE = 100
 private const val MAX_OPTIONS = 5
+private const val NAME_MIN = 3
+private const val NAME_MAX = 24
+private const val FACILITIES_PER_PAGE = 4
 private val NAME_DESCRIPTORS = listOf("Salty", "Gallant", "Drifting", "Merry", "Stormy", "Lucky", "Brave", "Gentle")
 private val NAME_NOUNS = listOf("Gull", "Barnacle", "Kraken", "Mermaid", "Anchor", "Dolphin", "Petrel", "Lantern")
 
@@ -25,6 +29,7 @@ private class Upgrade(
     val constructionLevel: Int,
     val cost: Materials.Cost,
     val bypassTier: Int,
+    val unlock: Schematic? = null,
     val apply: (Boat) -> Unit
 )
 
@@ -94,7 +99,7 @@ object Shipwright {
     }
 
     private fun hullUpgrade(boat: Boat): Upgrade? = HullTier.entries.getOrNull(boat.hull.ordinal + 1)?.let { tier ->
-        Upgrade("${tier.name.lowercase()} hull", tier.sailingLevel, tier.constructionLevel, Materials.hullCost(tier.wood, boat.type), tier.wood.ordinal) { it.upgradeHull(tier) }
+        Upgrade("${tier.name.lowercase()} hull", tier.sailingLevel, tier.constructionLevel, Materials.hullCost(tier.wood, boat.type), tier.wood.ordinal, tier.schematic) { it.upgradeHull(tier) }
     }
 
     private fun helmUpgrade(boat: Boat): Upgrade? = HelmTier.entries.getOrNull(boat.helm.ordinal + 1)?.let { tier ->
@@ -102,13 +107,13 @@ object Shipwright {
     }
 
     private fun sailUpgrade(boat: Boat): Upgrade? = SailTier.entries.getOrNull(boat.sail.ordinal + 1)?.let { tier ->
-        Upgrade("${tier.name.lowercase()} mast and sails", tier.sailingLevel, tier.constructionLevel, Materials.sailCost(Wood.entries[tier.ordinal], boat.type), tier.ordinal) { it.sail = tier }
+        Upgrade("${tier.name.lowercase()} mast and sails", tier.sailingLevel, tier.constructionLevel, Materials.sailCost(Wood.entries[tier.ordinal], boat.type), tier.ordinal, tier.schematic) { it.sail = tier }
     }
 
     private fun keelUpgrade(boat: Boat): Upgrade? {
         if (!boat.type.hasKeel) return null
         val tier = KeelTier.entries.getOrNull((boat.keel?.ordinal ?: -1) + 1) ?: return null
-        return Upgrade("${tier.name.lowercase()} keel", tier.sailingLevel, tier.constructionLevel, Materials.keelCost(tier, boat.type), tier.ordinal) { it.upgradeKeel(tier) }
+        return Upgrade("${tier.name.lowercase()} keel", tier.sailingLevel, tier.constructionLevel, Materials.keelCost(tier, boat.type), tier.ordinal, tier.schematic) { it.upgradeKeel(tier) }
     }
 
     private fun offer(player: Player, site: PortSite, boat: Boat, upgrade: Upgrade?) {
@@ -125,6 +130,7 @@ object Shipwright {
     private fun build(player: Player, boat: Boat, upgrade: Upgrade, fee: Int, shipwrightBuilds: Boolean) {
         if (boat.state != BoatState.DOCKED) return player.sendMessage("The boat has to be moored.")
         if (player.skills.getLevelForXp(Constants.SAILING) < upgrade.sailingLevel) return player.sendMessage("You need Sailing level ${upgrade.sailingLevel}.")
+        if (upgrade.unlock != null && !SailorStore.of(player.username).unlocked(upgrade.unlock)) return player.sendMessage("You have not found the ${upgrade.unlock.name.lowercase()} schematic. Far-sea wrecks and hard bounties hold them.")
         if (!shipwrightBuilds) {
             if (player.skills.getLevelForXp(Constants.CONSTRUCTION) < upgrade.constructionLevel) return player.sendMessage("You need Construction level ${upgrade.constructionLevel}, or pay the Shipwright to build it.")
             if (!player.inventory.containsItem(Obj.hammer) || !player.inventory.containsItem(Obj.poh_saw)) return player.sendMessage("You need a hammer and a saw.")
@@ -145,17 +151,51 @@ object Shipwright {
             player.sendOptionsDialogue("Facilities for the ${boat.name} (${boat.hotspotsUsed}/${boat.type.hotspots} hotspots)") {
                 opExec("Salvaging hook") { offer(player, site, boat, hookUpgrade(boat)) }
                 opExec("Cannon") { offer(player, site, boat, cannonUpgrade(boat)) }
-                opExec("Anchor or inoculation station") { simpleFacilities(player, site, boat, Facility.ANCHOR, Facility.INOCULATION_STATION) }
-                opExec("Wind catcher or eternal brazier") { simpleFacilities(player, site, boat, Facility.WIND_CATCHER, Facility.BRAZIER) }
+                opExec("Trawling net") { netMenu(player, site, boat) }
+                opExec("Stations, catchers and more") { facilityPage(player, site, boat, 0) }
             }
         }
     }
 
-    private fun simpleFacilities(player: Player, site: PortSite, boat: Boat, first: Facility, second: Facility) {
+    private fun facilityPage(player: Player, site: PortSite, boat: Boat, page: Int) {
+        val chunks = Facility.entries.chunked(FACILITIES_PER_PAGE)
         player.sendOptionsDialogue("Which facility?") {
-            opExec(first.label.replaceFirstChar { it.uppercase() }) { offer(player, site, boat, facilityUpgrade(boat, first)) }
-            opExec(second.label.replaceFirstChar { it.uppercase() }) { offer(player, site, boat, facilityUpgrade(boat, second)) }
+            chunks[page].forEach { facility ->
+                opExec(facility.label.replaceFirstChar { it.uppercase() }) {
+                    val block = facilityBlock(boat, facility)
+                    if (block != null) player.sendMessage(block) else offer(player, site, boat, facilityUpgrade(boat, facility))
+                }
+            }
+            opExec(if (page + 1 < chunks.size) "More facilities" else "Back to the first page") { facilityPage(player, site, boat, (page + 1) % chunks.size) }
         }
+    }
+
+    private fun netMenu(player: Player, site: PortSite, boat: Boat) {
+        if (boat.maxNets == 0) return player.sendMessage("A raft cannot hold a trawling net.")
+        player.sendOptionsDialogue("Trawling net for the ${boat.name} (${boat.nets.size}/${boat.maxNets})") {
+            NetTier.entries.forEach { tier ->
+                opExec("${tier.label.replaceFirstChar { it.uppercase() }} net (Sailing ${tier.sailingLevel})") { offer(player, site, boat, netUpgrade(boat, tier)) }
+            }
+        }
+    }
+
+    private fun netUpgrade(boat: Boat, tier: NetTier): Upgrade? {
+        val replaced = if (boat.nets.size >= boat.maxNets) boat.nets.minByOrNull { it.ordinal }?.takeIf { it < tier } ?: return null else null
+        if (replaced == null && boat.hotspotsUsed >= boat.type.hotspots) return null
+        return Upgrade("${tier.label} trawling net", tier.sailingLevel, tier.constructionLevel, Materials.netCost(tier), tier.wood.ordinal) {
+            if (replaced != null) it.nets.remove(replaced)
+            it.nets.add(tier)
+        }
+    }
+
+    private fun facilityBlock(boat: Boat, facility: Facility): String? = when {
+        facility in boat.facilities -> "The ${boat.name} already has a ${facility.label}."
+        boat.type == BoatType.RAFT && !facility.raftAllowed -> "A raft has only one hotspot, for a hook, a cannon or a catcher."
+        facility == Facility.GALE_CATCHER && Facility.WIND_CATCHER in boat.facilities -> null
+        facility == Facility.GREATER_TELEPORT_FOCUS && Facility.TELEPORT_FOCUS in boat.facilities -> null
+        boat.facilities.any { facility.conflictsWith(it) } -> "The ${boat.name} already carries something that does the same job."
+        boat.hotspotsUsed >= boat.type.hotspots -> "The ${boat.name} has no free hotspot."
+        else -> null
     }
 
     private fun hookUpgrade(boat: Boat): Upgrade? {
@@ -171,8 +211,14 @@ object Shipwright {
     }
 
     private fun facilityUpgrade(boat: Boat, facility: Facility): Upgrade? {
-        if (facility in boat.facilities || boat.hotspotsUsed >= boat.type.hotspots) return null
+        val replaces = when (facility) {
+            Facility.GALE_CATCHER -> Facility.WIND_CATCHER.takeIf { it in boat.facilities }
+            Facility.GREATER_TELEPORT_FOCUS -> Facility.TELEPORT_FOCUS.takeIf { it in boat.facilities }
+            else -> null
+        }
+        if (replaces == null && boat.hotspotsUsed >= boat.type.hotspots) return null
         return Upgrade(facility.label, facility.sailingLevel, facility.constructionLevel, Materials.facilityCost(facility), facility.wood.ordinal) {
+            if (replaces != null) it.facilities.remove(replaces)
             it.facilities.add(facility)
             if (facility == Facility.BRAZIER) it.hasBrazier = true
             if (facility == Facility.INOCULATION_STATION) it.hasInoculationStation = true
@@ -182,8 +228,27 @@ object Shipwright {
     private fun repairMenu(player: Player, site: PortSite) {
         player.sendOptionsDialogue("Repair or recover") {
             opExec("Repair a boat (${REPAIR_FEE_PER_HP} gp per missing HP)") { repair(player, site) }
-            opExec("Recover a capsized boat") { recover(player, site) }
+            opExec("Recover a capsized or lost boat") { recover(player, site) }
             opExec("Move a boat here") { relocate(player, site) }
+            opExec("Rename a boat (Sailing cape)") { rename(player, site) }
+        }
+    }
+
+    private fun hasSailingCape(player: Player): Boolean {
+        val cape = Skillcapes.Thieving
+        return player.equipment.capeId in intArrayOf(cape.untrimmed, cape.trimmed, cape.master) || intArrayOf(cape.untrimmed, cape.trimmed, cape.master).any { player.inventory.containsItem(it) }
+    }
+
+    private fun rename(player: Player, site: PortSite) {
+        if (!hasSailingCape(player)) return player.sendMessage("Only a captain who has earned the Sailing skillcape may choose a boat's name.")
+        chooseBoat(player, "Rename which boat?", { it.state == BoatState.DOCKED && it.dockPort == site.name }) { boat ->
+            player.sendInputLongText("What will you call the ${boat.name}?") { name ->
+                val clean = name.trim()
+                if (clean.length !in NAME_MIN..NAME_MAX || !clean.all { it.isLetter() || it == ' ' }) return@sendInputLongText player.sendMessage("A boat's name is $NAME_MIN to $NAME_MAX letters.")
+                boat.name = clean
+                BoatStore.save(boat)
+                player.sendMessage("The ${boat.type.name.lowercase()} is now the $clean.")
+            }
         }
     }
 
@@ -199,7 +264,7 @@ object Shipwright {
     }
 
     private fun recover(player: Player, site: PortSite) {
-        chooseBoat(player, "Recover which boat?", { it.state == BoatState.CAPSIZED }) { boat ->
+        chooseBoat(player, "Recover which boat?", { it.state == BoatState.CAPSIZED || it.state == BoatState.BOTTLED }) { boat ->
             val fee = boat.type.recoveryFee
             if (!player.inventory.hasCoins(fee)) return@chooseBoat player.sendMessage("The recovery fee is ${"%,d".format(fee)} coins.")
             player.inventory.removeCoins(fee)
@@ -211,22 +276,26 @@ object Shipwright {
 
     private fun relocate(player: Player, site: PortSite) {
         val sailing = Voyages.of(player)
-        chooseBoat(player, "Move which boat?", { it.state != BoatState.CAPSIZED && it !== sailing?.boat && !(it.state == BoatState.DOCKED && it.dockPort == site.name) }) { boat ->
+        chooseBoat(player, "Move which boat?", { it.state == BoatState.DOCKED && it !== sailing?.boat && it.dockPort != site.name }) { boat ->
             val fee = boat.type.recoveryFee
             if (!player.inventory.hasCoins(fee)) return@chooseBoat player.sendMessage("The fee is ${"%,d".format(fee)} coins; cargo in the hold is lost.")
             player.inventory.removeCoins(fee)
-            val lost = SailorStore.of(player.username).tasks.removeIf { it.collected && boat.hold.crates.containsKey(it.id) }
-            boat.hold.clearLost()
-            val previous = boat.dockPort
-            boat.state = BoatState.DOCKED
-            moor(boat, site)
-            PortSites.byName(previous)?.let { Ports.refreshBoats(it) }
-            if (lost) SailorStore.save(SailorStore.of(player.username))
+            moveBoat(player, boat, site)
             player.sendMessage("The ${boat.name} is moved to port ${site.name}. Its cargo is lost.")
         }
     }
 
-    private fun moor(boat: Boat, site: PortSite) {
+    fun moveBoat(player: Player, boat: Boat, site: PortSite) {
+        val lost = SailorStore.of(player.username).tasks.removeIf { it.collected && boat.hold.crates.containsKey(it.id) }
+        boat.hold.clearLost()
+        val previous = boat.dockPort
+        boat.state = BoatState.DOCKED
+        moor(boat, site)
+        PortSites.byName(previous)?.let { Ports.refreshBoats(it) }
+        if (lost) SailorStore.save(SailorStore.of(player.username))
+    }
+
+    fun moor(boat: Boat, site: PortSite) {
         boat.dockPort = site.name
         boat.globalX = WorldWindow.toGlobal(site.shoreX, GeneratedWorld.windowX)
         boat.globalY = WorldWindow.toGlobal(site.shoreY, GeneratedWorld.windowY)
@@ -237,7 +306,8 @@ object Shipwright {
     private fun moreMenu(player: Player, site: PortSite) {
         player.sendOptionsDialogue("More") {
             opExec("Buy $CANNONBALL_PACK cannonballs (${CANNONBALL_PACK * CANNONBALL_PRICE} gp)") { buyBalls(player, site) }
-            opExec("Unload the hold") { unload(player, site) }
+            opExec("Barracuda Trials") { Barracuda.menu(player, site) }
+            opExec("Boat spells") { BoatSpells.menu(player) }
             opExec("Destroy a boat") { destroy(player, site) }
         }
     }
@@ -260,7 +330,7 @@ object Shipwright {
             boat.hold.goods.clear()
             boat.hold.sortingXp = 0.0
             BoatStore.save(boat)
-            if (sorted > 0.0) player.skills.addXp(Constants.SAILING, sorted)
+            if (sorted > 0.0) SailingXp.grant(player, boat, sorted)
             player.sendMessage("You sort and unload the salvage from the ${boat.name}. Merchants buy it at the cache price.")
         }
     }

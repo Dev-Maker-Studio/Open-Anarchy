@@ -14,7 +14,6 @@ private const val MERCHANT_RADIUS = 24
 private const val FEE_WAGES = 10
 private const val WAGE_PER_POINT = 30
 private const val MAX_STAT = 4
-private const val MAX_OPTIONS = 5
 private const val NAME_MIX = 31L
 private val FIRST_NAMES = listOf("Brine", "Salty", "Marlow", "Tamsin", "Jory", "Pell", "Wick", "Nessa", "Corin", "Dunn", "Ifor", "Merrin")
 private val LAST_NAMES = listOf("Tarwick", "Hallow", "Sprat", "Penrose", "Gannet", "Rook", "Skerry", "Tidewell")
@@ -25,16 +24,16 @@ object PortMaster {
         player.startConversation {
             npc(npc.id, HeadE.CALM_TALK, "Port master of ${site.name} at your service. Crews, cargo and contracts are my trade.")
             options("Port master") {
-                opExec("Courier tasks") { Courier.open(player, site) }
-                opExec("Hire a crewmate") { hireMenu(player, site) }
-                opExec("Hire a merchant as crew") { hireMerchant(player, site) }
-                opExec("Manage my crew") { manage(player, site) }
+                opExec("Courier and bounty tasks") { Courier.open(player, site) }
+                opExec("Claim a finished bounty") { BountyTasks.claim(player, site) }
+                opExec("Crew") { crewMenu(player, site) }
                 opExec("Unload the hold") { Shipwright.unload(player, site) }
+                opExec("Barracuda Trials") { Barracuda.menu(player, site) }
             }
         }
     }
 
-    private fun candidates(site: PortSite): List<Crewmate> {
+    fun candidates(site: PortSite): List<Crewmate> {
         val epoch = System.currentTimeMillis() / EPOCH_MILLIS
         val random = Random(site.name.hashCode() * NAME_MIX + epoch)
         return List(CANDIDATES) {
@@ -42,6 +41,14 @@ object PortMaster {
             val deck = 1 + random.nextInt(MAX_STAT)
             val priv = 1 + random.nextInt(MAX_STAT)
             Crewmate("${FIRST_NAMES[random.nextInt(FIRST_NAMES.size)]} ${LAST_NAMES[random.nextInt(LAST_NAMES.size)]}", helm, deck, priv, (helm + deck + priv) * WAGE_PER_POINT, CrewRules.firstLevelForStats(helm + deck + priv))
+        }
+    }
+
+    private fun crewMenu(player: Player, site: PortSite) {
+        player.sendOptionsDialogue("Crew") {
+            opExec("Hire a crewmate") { hireMenu(player, site) }
+            opExec("Hire a merchant as crew") { hireMerchant(player, site) }
+            opExec("Manage my crew") { manage(player, site) }
         }
     }
 
@@ -58,7 +65,7 @@ object PortMaster {
         }
     }
 
-    private fun hire(player: Player, boat: Boat, crewmate: Crewmate) {
+    fun hire(player: Player, boat: Boat, crewmate: Crewmate) {
         val fee = crewmate.wage * FEE_WAGES
         when {
             player.skills.getLevelForXp(Constants.SAILING) < crewmate.sailingLevel -> player.sendMessage("${crewmate.name} will only sign with a captain of Sailing level ${crewmate.sailingLevel}.")
@@ -91,31 +98,16 @@ object PortMaster {
     }
 
     private fun manage(player: Player, site: PortSite) {
-        Shipwright.chooseBoat(player, "Manage which crew?", { it.state == BoatState.DOCKED && it.dockPort == site.name && it.crew.isNotEmpty() }) { boat ->
-            player.sendOptionsDialogue("Crew of the ${boat.name}") {
-                boat.crew.take(MAX_OPTIONS).forEach { crewmate -> opExec("${crewmate.name} (${crewmate.job.name.lowercase()})") { orders(player, boat, crewmate) } }
-            }
+        Shipwright.chooseBoat(player, "Manage which crew?", { it.state == BoatState.DOCKED && it.dockPort == site.name }) { boat ->
+            SailingScreens.openCrew(player, boat, site)
         }
     }
 
-    private fun orders(player: Player, boat: Boat, crewmate: Crewmate) {
-        player.sendOptionsDialogue(crewmate.name) {
-            opExec("Work the helm and trim the sails") { assign(player, boat, crewmate, CrewJob.HELM) }
-            opExec("Work the salvaging hook") { assign(player, boat, crewmate, CrewJob.SALVAGE) }
-            opExec("Man the cannon") { assign(player, boat, crewmate, CrewJob.CANNON) }
-            opExec("Stand down") { assign(player, boat, crewmate, CrewJob.NONE) }
-            opExec("Dismiss") {
-                boat.crew.remove(crewmate)
-                BoatStore.save(boat)
-                player.sendMessage("${crewmate.name} leaves the ${boat.name}.")
-            }
-        }
-    }
-
-    private fun assign(player: Player, boat: Boat, crewmate: Crewmate, job: CrewJob) {
+    fun assign(player: Player, boat: Boat, crewmate: Crewmate, job: CrewJob) {
         when {
             job == CrewJob.CANNON && boat.cannon == null -> player.sendMessage("The ${boat.name} has no cannon.")
             job == CrewJob.SALVAGE && boat.hook == null -> player.sendMessage("The ${boat.name} has no salvaging hook.")
+            job == CrewJob.TRAWL && boat.nets.isEmpty() -> player.sendMessage("The ${boat.name} has no trawling net.")
             else -> {
                 crewmate.job = job
                 BoatStore.save(boat)

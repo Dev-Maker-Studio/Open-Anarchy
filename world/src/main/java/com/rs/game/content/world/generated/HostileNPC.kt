@@ -3,29 +3,48 @@ package com.rs.game.content.world.generated
 import com.rs.engine.pathfinder.DumbRouteFinder
 import com.rs.game.model.entity.npc.NPC
 import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions
+import com.rs.game.model.entity.player.Player
 import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.map.GeneratedWorld
 import org.darkan.core.model.Item
-import com.rs.game.model.entity.player.Player
 import world.gregs.voidps.type.Tile
 
 private const val WANDER_CHANCE = 0.4
 private const val WANDER_RADIUS = 10
 private const val WANDER_STEPS = 8
 private const val UNSCALED = 1.0
+private const val RESTORE_TICKS = 100
+private const val RESTORE_STEP = 1
 
 open class HostileNPC(id: Int, tile: Tile, val scale: Double, level: Int) : NPC(id, tile, null, true) {
 
+    private val scaledLevels: Map<NPCCombatDefinitions.Skill, Int> =
+        NPCCombatDefinitions.getDefs(id).levels.mapValues { (_, value) -> maxOf(1, (value * scale).toInt()) }
+
     init {
-        val base = NPCCombatDefinitions.getDefs(id)
-        setLevels(base.levels.mapValues { (_, value) -> maxOf(1, (value * scale).toInt()) }.toMutableMap())
+        setLevels(scaledLevels.toMutableMap())
         setCombatLevel(level)
+        setForceAgressive(true)
         hitpoints = maxHitpoints
     }
 
     override fun getMaxHitpoints(): Int = (super.getMaxHitpoints() * (if (scale > 0.0) scale else UNSCALED)).toInt()
 
     override fun getMaxHit(): Int = (super.getMaxHit() * (if (scale > 0.0) scale else UNSCALED)).toInt()
+
+    override fun processNPC() {
+        val restoring = tickCounter % RESTORE_TICKS == 0L
+        super.processNPC()
+        if (!restoring) return
+        scaledLevels.forEach { (skill, level) ->
+            val current = getStat(skill)
+            if (current < level) setStat(skill, minOf(level, current + RESTORE_STEP))
+        }
+    }
+
+    override fun canAggroPlayer(target: Player): Boolean =
+        !GeneratedWorld.onRoad(target.x, target.y) && !GeneratedWorld.onRoad(x, y)
 
     override fun randomWalk() {
         if (hasWalkSteps() || Math.random() >= WANDER_CHANCE) return

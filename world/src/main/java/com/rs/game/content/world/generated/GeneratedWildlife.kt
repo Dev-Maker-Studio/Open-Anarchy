@@ -8,6 +8,7 @@ import com.rs.game.tasks.WorldTasks
 import com.rs.plugin.annotations.ServerStartupEvent
 import org.darkan.core.EnvVars
 import org.darkan.core.Utils
+import org.darkan.core.cache.NPCDefinitions
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.map.GeneratedWorld
 import world.gregs.voidps.cache.source.codec.WorldGenerator
@@ -26,6 +27,7 @@ private const val ANIMAL_LIFETIME_TICKS = 3000
 private const val FISHING_SPOT_LIFETIME_TICKS = 500
 private const val FISHING_SPOT_CATCHES = 3
 private const val GROUND_LEVEL = 0
+private const val UNSCALED = 1.0
 
 private val generator = GeneratedWorld.generator
 
@@ -33,12 +35,12 @@ private val HOSTILE_BIOMES = setOf(Biome.WILDERNESS, Biome.WINTER, Biome.VOLCANO
 
 private val animals = mapOf(
     Biome.PLAINS to intArrayOf(Npc.chicken, Npc.cow, Npc.npc_5154, Npc.pig_1, Npc.dog, Npc.poh_growncat_bluegrey),
-    Biome.DESERT to intArrayOf(Npc.desert_goat_black2, Npc.rabbit_rabbit_grey, Npc.wolf, Npc.camel, Npc.snake, Npc.scorpion),
+    Biome.DESERT to intArrayOf(Npc.desert_goat_black2, Npc.rabbit_rabbit_grey, Npc.camel, Npc.snake, Npc.scorpion),
     Biome.WILDERNESS to intArrayOf(
         Npc.rand_skeleton_melee_lvl2_3, Npc.rand_skeleton_melee_lvl3_1, Npc.rand_skeleton_melee_lvl5_1,
         Npc.rand_skeleton_melee_lvl7_1, Npc.rand_skeleton_melee_lvl10_2, Npc.darkbear, Npc.brownbear, Npc.wolf
     ),
-    Biome.WINTER to intArrayOf(Npc.icegiant, Npc.icegiant2, Npc.icegiant3, Npc.wolf, Npc.wolfpack_leader_whiter, Npc.brownbear, Npc.darkbear),
+    Biome.WINTER to intArrayOf(Npc.icegiant, Npc.icegiant2, Npc.icegiant3, Npc.icewarrior, Npc.wolf, Npc.wolfpack_leader_whiter),
     Biome.MOUNTAIN to intArrayOf(Npc.wolf, Npc.bat, Npc.brownbear),
     Biome.VOLCANO to intArrayOf(Npc.imp, Npc.hellhound),
     Biome.OCEAN to intArrayOf(Npc.small_bat)
@@ -81,8 +83,8 @@ private fun popUpAnimal(player: Player) {
         return
     }
     val ids = animals[biome] ?: return
-    val animal = World.spawnNPC(ids[Utils.random(ids.size)], tile, true)
-    if (biome in HOSTILE_BIOMES) animal.setForceAgressive(true)
+    val id = ids[Utils.random(ids.size)]
+    val animal = if (biome in HOSTILE_BIOMES) HostileNPC(id, tile, UNSCALED, NPCDefinitions.getDefs(id).combatLevel) else World.spawnNPC(id, tile, true)
     animal.finishAfterTicks(ANIMAL_LIFETIME_TICKS)
 }
 
