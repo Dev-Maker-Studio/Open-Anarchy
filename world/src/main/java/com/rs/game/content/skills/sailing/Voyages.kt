@@ -1,12 +1,12 @@
 package com.rs.game.content.skills.sailing
 
 import com.rs.Settings
-import com.rs.engine.dialogue.sendOptionsDialogue
 import com.rs.game.World
 import com.rs.game.content.world.revealWorldMapFog
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.Constants
 import org.darkan.core.Utils
+import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.map.GeneratedWorld
 import org.darkan.core.map.WorldWindow
 import world.gregs.voidps.cache.source.codec.WorldGenerator
@@ -39,12 +39,66 @@ private const val SALVAGE_SUCCESSES = 5
 private const val EDGE_LOOKAHEAD = 3
 private const val BERTH_TRIES = 4
 private const val LAUNCH_SEARCH = 10
+private const val GUEST_ZONE_MARGIN = 20
+private const val ETERNAL_DROP_PERCENT = 3
+private const val ABYSSAL_DROP_PERCENT = 2
+private const val ABYSSAL_THREAT = 25
+private const val ETERNAL_THREAT = 15
+private const val BOUNTY_BIAS_PERCENT = 55
 
 object Voyages {
     private val active = ConcurrentHashMap<String, Voyage>()
     private val random = Random()
 
+    private val guests = ConcurrentHashMap<String, Voyage>()
+
     fun of(player: Player): Voyage? = active[player.username]
+
+    fun guestOf(player: Player): Voyage? = guests[player.username]
+
+    fun boardFriend(player: Player, site: PortSite, name: String) {
+        if (active.containsKey(player.username) || guests.containsKey(player.username)) return player.sendMessage("You are already aboard a boat.")
+        val captain = World.getPlayerByDisplay(name)?.takeIf { it !== player } ?: return player.sendMessage("$name is not online.")
+        val voyage = active[captain.username]?.takeIf { site.inZone(it.tileX, it.tileY, GUEST_ZONE_MARGIN) } ?: return player.sendMessage("${captain.displayName} has no boat at port ${site.name}.")
+        if (voyage.guests.size + 1 >= voyage.boat.type.players) return player.sendMessage("The ${voyage.boat.name} is full.")
+        player.stopAll()
+        voyage.guests.add(player.username)
+        guests[player.username] = voyage
+        player.tele(Tile.of(voyage.tileX, voyage.tileY, GROUND_LEVEL))
+        player.sendMessage("You board ${captain.displayName}'s ${voyage.boat.name}. Click the helm and choose Escape to disembark at port.")
+    }
+
+    fun leaveGuest(player: Player) {
+        val voyage = guests.remove(player.username) ?: return
+        voyage.guests.remove(player.username)
+        val site = PortSites.nearest(voyage.tileX, voyage.tileY, LEAVE_RANGE) ?: return player.sendMessage("You can only disembark at a port.")
+        player.tele(Ports.landingTile(site))
+        player.sendMessage("You step off the ${voyage.boat.name}.")
+    }
+
+    private fun followGuests(voyage: Voyage) {
+        voyage.guests.toList().forEach { name ->
+            val guest = World.getPlayerByUsername(name)?.takeIf { !it.hasFinished() }
+            if (guest == null) {
+                voyage.guests.remove(name)
+                guests.remove(name)
+            } else if (guest.x != voyage.tileX || guest.y != voyage.tileY) {
+                guest.tele(Tile.of(voyage.tileX, voyage.tileY, GROUND_LEVEL))
+            }
+        }
+    }
+
+    private fun releaseGuests(voyage: Voyage) {
+        val landing = PortSites.nearest(voyage.tileX, voyage.tileY, LEAVE_RANGE)?.let { Ports.landingTile(it) } ?: Settings.getConfig().playerRespawnTile
+        voyage.guests.toList().forEach { name ->
+            guests.remove(name)
+            World.getPlayerByUsername(name)?.let {
+                it.tele(landing)
+                it.sendMessage("The voyage ends and you are put ashore.")
+            }
+        }
+        voyage.guests.clear()
+    }
 
     fun all(): Collection<Voyage> = active.values
 
@@ -66,18 +120,14 @@ object Voyages {
         when {
             here.isEmpty() -> player.sendMessage("None of your boats is moored here. ${whereAre(owned)}")
             here.size == 1 -> start(player, here.first(), site)
-            else -> player.sendOptionsDialogue("Select a boat to board") {
-                here.take(MAX_MENU).forEach { boat -> opExec("${boat.name} (${boat.type.name.lowercase()})") { start(player, boat, site) } }
-            }
+            else -> SailingScreens.openGangplank(player, here, site)
         }
     }
-
-    private const val MAX_MENU = 5
 
     private fun whereAre(owned: List<Boat>): String =
         owned.joinToString(" ") { "${it.name}: ${if (it.dockPort.isEmpty()) "unmoored" else "port ${it.dockPort}"} (${it.state.name.lowercase()})." }
 
-    private fun start(player: Player, boat: Boat, site: PortSite) {
+    fun start(player: Player, boat: Boat, site: PortSite) {
         if (player.skills.getLevelForXp(Constants.SAILING) < boat.type.sailingLevel) {
             return player.sendMessage("You need Sailing level ${boat.type.sailingLevel} to sail a ${boat.type.name.lowercase()}.")
         }
@@ -87,7 +137,7 @@ object Voyages {
         Ports.active[site.name]?.boats?.remove(boat.id)?.finish()
         begin(player, boat, launch.first, launch.second, heading)
         SailorStore.of(player.username).lastDock = site.name
-        player.sendMessage("You board the ${boat.name}. Use ::boat helm to take the wheel, then steer out to sea.")
+        player.sendMessage("You board the ${boat.name}. Click the helm and choose Navigate to take the wheel, then steer out to sea.")
     }
 
     private fun launchPoint(site: PortSite, boat: Boat, x: Int, y: Int, heading: Int): Pair<Int, Int>? {
@@ -107,6 +157,9 @@ object Voyages {
         active[player.username] = voyage
         player.tele(Tile.of(x, y, GROUND_LEVEL))
         BoatStore.save(boat)
+        voyage.deck.build(boat)
+        voyage.deck.update(x, y, heading)
+        SailingPanel.open(player, voyage)
         return voyage
     }
 
@@ -129,6 +182,7 @@ object Voyages {
     }
 
     fun leave(player: Player) {
+        if (guests.containsKey(player.username)) return leaveGuest(player)
         val voyage = active[player.username] ?: return player.sendMessage("You are not aboard a boat.")
         val site = PortSites.nearest(voyage.tileX, voyage.tileY, LEAVE_RANGE) ?: return player.sendMessage("You can only leave your boat at a port.")
         val boat = voyage.boat
@@ -151,6 +205,11 @@ object Voyages {
 
     private fun end(voyage: Voyage) {
         active.remove(voyage.username, voyage)
+        voyage.trial?.let { Barracuda.cleanup(it) }
+        voyage.trial = null
+        releaseGuests(voyage)
+        voyage.deck.clear()
+        World.getPlayerByUsername(voyage.username)?.let { SailingPanel.close(it) }
         voyage.visual.finish()
         voyage.monsters.forEach { it.finish() }
         voyage.monsters.clear()
@@ -170,7 +229,11 @@ object Voyages {
             val player = World.getPlayerByUsername(voyage.username) ?: return@forEach
             runCatching { tick(voyage, player) }.onFailure { org.darkan.core.Logger.handle(Voyages::class.java, "tick", it) }
         }
-        if (World.getServerTicks() % CONTENT_TICKS == 0L) SeaContent.sync(active.values.map { it.tileX to it.tileY })
+        if (World.getServerTicks() % CONTENT_TICKS == 0L) {
+            val centres = active.values.map { it.tileX to it.tileY }
+            SeaContent.sync(centres)
+            Shoals.sync(centres)
+        }
     }
 
     private fun tick(voyage: Voyage, player: Player) {
@@ -178,7 +241,9 @@ object Voyages {
         val movement = voyage.movement
         voyage.ticks++
         voyage.trim.windCatcher = Facility.WIND_CATCHER in boat.facilities
+        voyage.trim.galeCatcher = Facility.GALE_CATCHER in boat.facilities
         voyage.trim.holdingCargo = boat.hold.crates.isNotEmpty()
+        movement.setWind(Wind.helps(movement.heading, Wind.directionAt(PortSites.sector, World.getServerTicks())))
         voyage.trim.tick()
         crewTrim(voyage, player)
         movement.slow = 1.0
@@ -189,6 +254,7 @@ object Voyages {
         movement.tick(::sailable)
         if (wasMoving && movement.speed == 0.0) blocked(voyage, player)
         BoatVisuals.move(voyage.visual, boat, voyage.tileX, voyage.tileY, movement.heading)
+        voyage.deck.update(voyage.tileX, voyage.tileY, movement.heading)
         if (player.x != voyage.tileX || player.y != voyage.tileY) player.tele(Tile.of(voyage.tileX, voyage.tileY, GROUND_LEVEL))
         boat.heading = movement.heading
         boat.globalX = WorldWindow.toGlobal(voyage.tileX, GeneratedWorld.windowX)
@@ -196,6 +262,11 @@ object Voyages {
         chart(voyage, player)
         salvage(voyage, player)
         BoatCombat.tick(voyage, player)
+        Trawling.tick(voyage, player)
+        Barracuda.tick(voyage, player)
+        Stations.tickCrewRepair(voyage, player)
+        followGuests(voyage)
+        SailingPanel.sync(player, voyage)
         if (voyage.ticks % MONSTER_TICKS == 0L) maybeSpawnMonster(voyage)
         if (voyage.ticks % WAGE_TICKS == 0L) wages(voyage, player)
         if (voyage.ticks - voyage.persistedTick >= PERSIST_TICKS) {
@@ -288,9 +359,9 @@ object Voyages {
             return
         }
         if (--voyage.crewTrimCountdown > 0) return
-        val helmsman = helmsmen.maxBy { it.helmsmanship }
+        val helmsman = helmsmen.maxBy { it.effectiveHelmsmanship(voyage.boat) }
         if (voyage.trim.trim(player.skills.getLevel(Constants.SAILING), true) > 0.0) {
-            player.skills.addXp(Constants.SAILING, voyage.trim.crewTrimXp(helmsman.helmsmanship))
+            SailingXp.grant(player, voyage.boat, voyage.trim.crewTrimXp(helmsman.effectiveHelmsmanship(voyage.boat)))
             player.sendMessage("${helmsman.name} trims the sails.")
         }
     }
@@ -315,7 +386,8 @@ object Voyages {
             val x = voyage.tileX + (Math.sin(angle) * distance).toInt()
             val y = voyage.tileY + (Math.cos(angle) * distance).toInt()
             if (!Seas.clearWater(x, y)) return@repeat
-            val monster = SeaMonsterTable.spawn(Tile.of(x, y, GROUND_LEVEL), PortSites.levelAt(x, y))
+            val hunted = BountyTasks.hunted(SailorStore.of(voyage.username))?.takeIf { Utils.random(PERCENT) < BOUNTY_BIAS_PERCENT }
+            val monster = SeaMonsterTable.spawn(Tile.of(x, y, GROUND_LEVEL), PortSites.levelAt(x, y), hunted?.npc)
             monster.voyage = voyage
             voyage.monsters.add(monster)
             return
@@ -336,13 +408,14 @@ object Voyages {
         }
         val xp = profile.log.record(point)
         if (xp <= 0) return
-        player.skills.addXp(Constants.SAILING, xp.toDouble())
+        SailingXp.grant(player, voyage.boat, xp.toDouble())
         player.sendMessage("You chart a ${point.kind.name.lowercase()} point in the ${Seas.nameAt(point.x, point.y)}.")
         revealWorldMapFog(player, point.x, point.y, CHART_FOG_RADIUS)
         val all = Seas.pointsIn(point.x, point.y)
         if (all.all { "${it.sea}:${it.x}:${it.y}" in profile.log.charted } && profile.chartedSeas.add(point.sea)) {
-            player.skills.addXp(Constants.SAILING, SEA_COMPLETE_XP.toDouble())
+            SailingXp.grant(player, voyage.boat, SEA_COMPLETE_XP.toDouble())
             player.sendMessage("You have charted every point of the ${Seas.nameAt(point.x, point.y)}!")
+            player.inventory.addItemDrop(KegKind.entries[random.nextInt(KegKind.entries.size)].drink, 1)
         }
         SailorStore.save(profile)
     }
@@ -373,7 +446,7 @@ object Voyages {
         var successes = 0
         if (voyage.ticks % SalvageRolls.PLAYER_ROLL_TICKS == 0L && Utils.random(PERCENT) < hook.successPercent) successes++
         if (voyage.ticks % SalvageRolls.CREW_ROLL_TICKS == 0L && voyage.sickTicks <= 0) {
-            voyage.crewWith(CrewJob.SALVAGE).forEach { if (random.nextDouble() < SalvageRolls.crewChance(it.deckhandiness)) successes++ }
+            voyage.crewWith(CrewJob.SALVAGE).forEach { if (random.nextDouble() < SalvageRolls.crewChance(it.effectiveDeckhandiness(boat))) successes++ }
         }
         repeat(successes) {
             if (job.remaining <= 0) return@repeat
@@ -384,21 +457,42 @@ object Voyages {
             }
             job.remaining--
             boat.hold.sortingXp += site.wreck.sortingXp / SALVAGE_SUCCESSES
-            player.skills.addXp(Constants.SAILING, site.wreck.salvageXp.toDouble() / SALVAGE_SUCCESSES)
+            SailingXp.grant(player, boat, site.wreck.salvageXp.toDouble() / SALVAGE_SUCCESSES)
         }
         if (job.remaining <= 0) {
             voyage.salvage = null
             SailorStore.of(player.username).wrecksSalvaged++
             SeaContent.wreckAt(site.x, site.y)?.let { SeaContent.consume(it) }
+            schematicDrop(player, boat, site)
             player.sendMessage("The wreck has been picked clean. Your hold holds the salvage; sort and sell it at port.")
         }
     }
 
     private const val PERCENT = 100
 
+    private fun schematicDrop(player: Player, boat: Boat, site: WreckSite) {
+        val threat = PortSites.levelAt(site.x, site.y)
+        val schematic = when {
+            site.wreck >= Wreck.MERCHANT && threat >= ABYSSAL_THREAT && Utils.random(PERCENT) < ABYSSAL_DROP_PERCENT -> Obj.sailing_abyssal_schematic
+            site.wreck >= Wreck.FREMENNIK && threat >= ETERNAL_THREAT && Utils.random(PERCENT) < ETERNAL_DROP_PERCENT -> Obj.sailing_eternal_schematic
+            else -> return
+        }
+        if (boat.hold.addGood(schematic, 1) > 0) player.sendMessage("Among the wreckage you find a rolled-up shipwright schematic.")
+    }
+
     fun startSalvageNearest(player: Player, voyage: Voyage) {
         val spot = SeaContent.nearestWreck(voyage.tileX, voyage.tileY, SalvageRolls.RANGE_TILES) ?: return player.sendMessage("There is no wreck within ${SalvageRolls.RANGE_TILES} tiles.")
         startSalvage(player, spot)
+    }
+
+    fun handleHelmClick(player: Player, tile: Tile): Boolean {
+        val voyage = active[player.username]?.takeIf { it.atHelm } ?: return false
+        val dx = tile.x - voyage.tileX
+        val dy = tile.y - voyage.tileY
+        if (dx == 0 && dy == 0) return true
+        val degrees = Math.floorMod(Math.round(Math.toDegrees(Math.atan2(dx.toDouble(), dy.toDouble()))).toInt(), FULL_TURN)
+        VoyageControls.setHeading(player, voyage, degrees)
+        return true
     }
 
     fun nearestTo(x: Int, y: Int, range: Int): Voyage? =

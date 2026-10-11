@@ -35,8 +35,8 @@ object SeaMonsterTable {
         return allowed.ifEmpty { listOf(byLevel.first()) }
     }
 
-    fun spawn(tile: Tile, threat: Int): SeaMonster {
-        val id = idsFor(threat).random()
+    fun spawn(tile: Tile, threat: Int, preferred: Int? = null): SeaMonster {
+        val id = preferred ?: idsFor(threat).random()
         val native = NPCDefinitions.getDefs(id).combatLevel.coerceAtLeast(1)
         val scale = maxOf(1.0, threat.toDouble() / native)
         return SeaMonster(id, tile, scale, (native * scale).toInt())
@@ -82,7 +82,10 @@ class SeaMonster(id: Int, tile: Tile, scale: Double, val monsterLevel: Int) : Ho
             ship.boat.hold.addGood(FISH_BY_TIER[tier], 1)
         }
         if (Utils.random(100) < CASKET_PERCENT) ship.boat.hold.addGood(Obj.casket, 1)
-        World.getPlayerByUsername(ship.username)?.sendMessage("You haul the $name's remains into your cargo hold.")
+        World.getPlayerByUsername(ship.username)?.let {
+            it.sendMessage("You haul the $name's remains into your cargo hold.")
+            BountyTasks.onKill(it, ship, id)
+        }
     }
 
     private fun boatHit(): Int = (BASE_BOAT_HIT + monsterLevel / LEVEL_PER_BOAT_HIT).coerceAtMost(MAX_BOAT_HIT)

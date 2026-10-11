@@ -75,6 +75,9 @@ object BoatStore {
         .append("cannon", boat.cannon?.name)
         .append("hook", boat.hook?.name)
         .append("facilities", boat.facilities.map { it.name })
+        .append("nets", boat.nets.map { it.name })
+        .append("keg", boat.keg?.name)
+        .append("kegDoses", boat.kegDoses)
         .append("cannonballs", boat.hold.cannonballs)
         .append("sortingXp", boat.hold.sortingXp)
         .append("goods", boat.hold.goods.map { Document("item", it.key).append("amount", it.value) })
@@ -102,7 +105,10 @@ object BoatStore {
             cannon = document.getString("cannon")?.let { CannonTier.valueOf(it) },
             hook = document.getString("hook")?.let { HookTier.valueOf(it) },
             facilities = document.getList("facilities", String::class.java, emptyList()).map { Facility.valueOf(it) }.toMutableSet(),
-            crew = document.getList(CREW, Document::class.java, emptyList()).map(::crewFrom).toMutableList()
+            crew = document.getList(CREW, Document::class.java, emptyList()).map(::crewFrom).toMutableList(),
+            nets = document.getList("nets", String::class.java, emptyList()).map { NetTier.valueOf(it) }.toMutableList(),
+            keg = document.getString("keg")?.let { KegKind.valueOf(it) },
+            kegDoses = document.getInteger("kegDoses", 0)
         )
         boat.hold.cannonballs = document.getInteger("cannonballs", 0)
         boat.hold.sortingXp = document.getDouble("sortingXp") ?: 0.0

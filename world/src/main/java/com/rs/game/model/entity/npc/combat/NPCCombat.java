@@ -16,6 +16,7 @@
 //
 package com.rs.game.model.entity.npc.combat;
 
+import org.darkan.core.map.GeneratedWorld;
 import org.darkan.core.map.pathfinder.PathFinder;
 import com.rs.game.content.Effect;
 import com.rs.game.content.combat.CombatStyle;
@@ -114,6 +115,8 @@ public final class NPCCombat {
 		if (target == null)
 			return false;
 		if (npc.isDead() || npc.hasFinished() || npc.isForceWalking() || target.isDead() || target.hasFinished() || npc.getPlane() != target.getPlane())
+			return false;
+		if (GeneratedWorld.INSTANCE.onRoad(npc.getX(), npc.getY()) || GeneratedWorld.INSTANCE.onRoad(target.getX(), target.getY()))
 			return false;
 		if (npc.hasEffect(Effect.FREEZE))
 			return true; // if freeze cant move ofc

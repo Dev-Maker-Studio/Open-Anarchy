@@ -104,7 +104,15 @@ object MapCodec : SourceCodec {
         outsideArea(square)?.let { return PackedArchive(it, ids) }
         val file = directory.resolve(path(square))
         if (!Files.isRegularFile(file)) {
-            val generated = generator?.let { generate(it, square) }
+            val worldGenerator = generator as? WorldGenerator
+            if (square.shape == MapSquare.Shape.UNDERWATER_TERRAIN && worldGenerator != null) {
+                val wet = worldGenerator.underwaterTerrain(square.regionX, square.regionY, surfaceOf(directory, square))
+                return PackedArchive(if (wet == null) sharedDryBed(square, worldGenerator) else compile(square, wet), ids)
+            }
+            if (square.shape == MapSquare.Shape.UNDERWATER_LOCATIONS && worldGenerator != null) {
+                return PackedArchive(sharedBedLocations(square, worldGenerator), ids)
+            }
+            val generated = generator?.let { generate(it, square, null) }
             if (generated != null) {
                 return PackedArchive(compile(square, generated), ids)
             }
@@ -162,13 +170,35 @@ object MapCodec : SourceCodec {
         return when (square.shape) {
             MapSquare.Shape.TERRAIN -> outside.computeIfAbsent(square.shape) { compile(square, generator.voidTerrain(square.regionX, square.regionY)) }
             MapSquare.Shape.LOCATIONS -> outside.computeIfAbsent(square.shape) { compile(square, generator.emptyLocations(square.regionX, square.regionY)) }
+            MapSquare.Shape.UNDERWATER_TERRAIN -> sharedDryBed(square, generator)
+            MapSquare.Shape.UNDERWATER_LOCATIONS -> sharedBedLocations(square, generator)
             else -> null
         }
     }
 
-    fun generate(generator: MapGenerator, square: MapSquare.Square): ByteArray? = when (square.shape) {
+    private fun sharedBedLocations(square: MapSquare.Square, generator: WorldGenerator): ByteArray =
+        outside.computeIfAbsent(square.shape) { compile(square, generator.underwaterLocations(square.regionX, square.regionY)) }
+
+    private fun sharedDryBed(square: MapSquare.Square, generator: WorldGenerator): ByteArray =
+        outside.computeIfAbsent(square.shape) { compile(square, generator.dryUnderwaterTerrain(square.regionX, square.regionY)) }
+
+    fun generate(generator: MapGenerator, square: MapSquare.Square): ByteArray? = generate(generator, square, null)
+
+    private fun surfaceOf(directory: Path, square: MapSquare.Square): ByteArray? {
+        if (square.shape != MapSquare.Shape.UNDERWATER_TERRAIN) {
+            return null
+        }
+        val file = directory.resolve(path(MapSquare.Square(MapSquare.Shape.TERRAIN, square.regionX, square.regionY)))
+        return if (Files.isRegularFile(file)) Files.readAllBytes(file) else null
+    }
+
+    private fun generate(generator: MapGenerator, square: MapSquare.Square, surface: ByteArray?): ByteArray? = when (square.shape) {
         MapSquare.Shape.TERRAIN -> generator.terrain(square.regionX, square.regionY)
         MapSquare.Shape.LOCATIONS -> generator.locations(square.regionX, square.regionY)
+        MapSquare.Shape.UNDERWATER_TERRAIN -> (generator as? WorldGenerator)?.let {
+            it.underwaterTerrain(square.regionX, square.regionY, surface) ?: it.dryUnderwaterTerrain(square.regionX, square.regionY)
+        }
+        MapSquare.Shape.UNDERWATER_LOCATIONS -> (generator as? WorldGenerator)?.underwaterLocations(square.regionX, square.regionY)
         else -> null
     }
 

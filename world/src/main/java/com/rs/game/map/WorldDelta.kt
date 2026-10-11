@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
 const val BUILT_FURNITURE_HP = "builtFurnitureHp"
 
 object WorldDelta {
-    private const val DIRECTORY = "./data/world-delta"
+    const val DIRECTORY = "./data/world-delta"
     private const val SAVE_DEBOUNCE_MS = 5000L
     private const val TICK_MS = 600L
     private const val PERSIST_MIN_TICKS = 100

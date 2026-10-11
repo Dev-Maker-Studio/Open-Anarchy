@@ -67,9 +67,9 @@ object SalvageLoot {
     private class Entry(val item: Int, val min: Int, val max: Int, val weight: Int)
 
     private val TABLES: Map<Wreck, List<Entry>> = mapOf(
-        Wreck.SMALL to listOf(Entry(Obj.woodplank, 1, 3, 40), Entry(Obj.nails_bronze, 5, 15, 30), Entry(Obj.bronze_bar, 1, 2, 20), Entry(Obj.logs, 2, 5, 10)),
-        Wreck.FISHERMANS to listOf(Entry(Obj.raw_tuna, 1, 3, 35), Entry(Obj.plank_oak, 1, 3, 30), Entry(Obj.nails_iron, 5, 15, 25), Entry(Obj.iron_bar, 1, 2, 10)),
-        Wreck.BARRACUDA to listOf(Entry(Obj.raw_swordfish, 1, 3, 30), Entry(Obj.plank_teak, 1, 3, 30), Entry(Obj.steel_bar, 1, 3, 25), Entry(Obj.casket, 1, 1, 15)),
+        Wreck.SMALL to listOf(Entry(Obj.woodplank, 1, 3, 40), Entry(Obj.nails_bronze, 5, 15, 30), Entry(Obj.bronze_bar, 1, 2, 20), Entry(Obj.logs, 2, 5, 10), Entry(Obj.sailing_boat_bottle, 1, 1, 5)),
+        Wreck.FISHERMANS to listOf(Entry(Obj.raw_tuna, 1, 3, 35), Entry(Obj.plank_oak, 1, 3, 30), Entry(Obj.nails_iron, 5, 15, 25), Entry(Obj.iron_bar, 1, 2, 10), Entry(Obj.sailing_boat_bottle, 1, 1, 5)),
+        Wreck.BARRACUDA to listOf(Entry(Obj.raw_swordfish, 1, 3, 30), Entry(Obj.plank_teak, 1, 3, 30), Entry(Obj.steel_bar, 1, 3, 25), Entry(Obj.casket, 1, 1, 15), Entry(Obj.sailing_boat_bottle, 1, 1, 5)),
         Wreck.LARGE to listOf(Entry(Obj.raw_shark, 1, 2, 25), Entry(Obj.plank_mahogany, 1, 3, 30), Entry(Obj.mithril_bar, 1, 3, 30), Entry(Obj.casket, 1, 1, 15)),
         Wreck.PIRATE to listOf(Entry(Obj.nails_mithril, 8, 20, 25), Entry(Obj.adamantite_bar, 1, 3, 30), Entry(Obj.gold_bar, 1, 2, 25), Entry(Obj.casket, 1, 1, 20)),
         Wreck.MERCENARY to listOf(Entry(Obj.adamantite_bar, 2, 4, 30), Entry(Obj.gold_bar, 2, 4, 30), Entry(Obj.raw_shark, 2, 4, 20), Entry(Obj.casket, 1, 2, 20)),
