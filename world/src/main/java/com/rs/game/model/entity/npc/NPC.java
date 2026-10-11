@@ -141,7 +141,7 @@ public class NPC extends Entity {
 		super(tile);
 		this.id = id;
 		respawnTile = Tile.of(tile);
-		if (tile.getX() < 32 && tile.getY() < 32)
+		if (tile.getX() == 0 && tile.getY() == 0 && tile.getPlane() != 0)
 			Logger.warn(NPC.class, "<init>", "NPC " + id + " spawned off the map at " + tile + " from " + Thread.currentThread().getStackTrace()[2]);
 		setSpawned(permaDeath);
 		combatLevel = -1;

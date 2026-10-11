@@ -714,7 +714,7 @@ public abstract class Entity {
 			}
 		}
 		nextWalkDirection = nextRunDirection = null;
-		if (nextTile != null && nextTile.getX() > 32 && nextTile.getY() > 32) {
+		if (nextTile != null) {
 			tile = nextTile;
 			tileBehind = getBackfacingTile();
 			nextTile = null;
@@ -809,7 +809,7 @@ public abstract class Entity {
 		int offsetX = tile.getChunkX() - baseChunk[0];
 		int offsetY = tile.getChunkY() - baseChunk[1];
 
-		return offsetX < 2 || offsetX >= limit || offsetY < 2 || offsetY >= limit;
+		return (offsetX < 2 && baseChunk[0] > 0) || offsetX >= limit || (offsetY < 2 && baseChunk[1] > 0) || offsetY >= limit;
 	}
 
 	public boolean addWalkSteps(int destX, int destY) {

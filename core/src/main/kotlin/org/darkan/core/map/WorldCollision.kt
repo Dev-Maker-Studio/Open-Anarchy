@@ -37,6 +37,7 @@ object WorldCollision {
     @JvmStatic
     fun addFlag(x: Int, y: Int, level: Int, flag: Int) {
         val zoneId = getZoneIndex(x, y, level)
+        if (zoneId < 0) return
         if (allFlags[zoneId] == null) allFlags[zoneId] = IntArray(64)
         val zone = allFlags[zoneId]!!
         val idx = getIndexInZone(x, y)
@@ -49,6 +50,7 @@ object WorldCollision {
     @JvmStatic
     fun removeFlag(x: Int, y: Int, level: Int, flag: Int) {
         val zoneId = getZoneIndex(x, y, level)
+        if (zoneId < 0) return
         val zone = allFlags[zoneId] ?: return
         val idx = getIndexInZone(x, y)
         zone[idx] = zone[idx] and flag.inv()
@@ -60,6 +62,7 @@ object WorldCollision {
     @JvmStatic
     fun setFlags(x: Int, y: Int, level: Int, flag: Int) {
         val zoneId = getZoneIndex(x, y, level)
+        if (zoneId < 0) return
         if (allFlags[zoneId] == null) allFlags[zoneId] = IntArray(64)
         allFlags[zoneId]!![getIndexInZone(x, y)] = flag
     }

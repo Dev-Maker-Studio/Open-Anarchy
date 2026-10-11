@@ -629,7 +629,10 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
     }
 
     fun sendMapRegion() {
-        val regionIds = BuildRegion.regionIds(player.chunkX, player.chunkY, player.mapSize)
+        val sceneRadius = player.mapSize.size shr SCENE_RADIUS_SHIFT
+        val sceneChunkX = maxOf(player.chunkX, sceneRadius)
+        val sceneChunkY = maxOf(player.chunkY, sceneRadius)
+        val regionIds = BuildRegion.regionIds(sceneChunkX, sceneChunkY, player.mapSize)
         if (EnvVars.gateMaps) {
             MapDiscovery.discover(regionIds)
             WorldServer.socialClient.reportMapDiscovered(regionIds)
@@ -641,8 +644,8 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
                 regionIds = regionIds,
                 mapSize = player.mapSize,
                 xteas = MapRegionKeys.forRegions(regionIds, MapXTEAs::getMapKeys),
-                chunkX = player.chunkX,
-                chunkY = player.chunkY,
+                chunkX = sceneChunkX,
+                chunkY = sceneChunkY,
                 forceMapRefresh = player.isForceNextMapLoadRefresh,
                 localPlayerPid = if (withLocalPlayer) player.index else null,
                 localPlayerBaseTileHash = if (withLocalPlayer) player.tile.id else null,
@@ -1002,6 +1005,7 @@ class WorldEncoder(private val player: Player, @JvmField val session: Session) {
 
     companion object {
         private const val PERCENT = 100
+        private const val SCENE_RADIUS_SHIFT = 4
         private val EMPTY_XTEAS = intArrayOf(0, 0, 0, 0)
         private const val PARTIAL_SLOT_BYTES = 4
         private const val FULL_SLOT_BYTES = 3

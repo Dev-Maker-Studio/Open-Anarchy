@@ -219,7 +219,7 @@ public class LineValidator(
     ): Int {
         val x = baseX + localX
         val y = baseY + localY
-        val zone = this[getZoneIndex(x, y, z)] ?: return -1
+        val zone = zoneAt(x, y, z) ?: return -1
         return zone[getIndexInZone(x, y)]
     }
 
