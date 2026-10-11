@@ -9,6 +9,12 @@ object EnvVars {
         ignoreIfMissing = true
     }
 
+    private fun tileEnv(key: String): IntArray? {
+        val parts = dotenv.get(key, null)?.split(',')?.map { it.trim().toIntOrNull() } ?: return null
+        if (parts.size != 3 || parts.any { it == null }) return null
+        return parts.map { it!! }.toIntArray()
+    }
+
     private const val CACHE_SOURCE_SUBMODULE = "./cache-source"
 
     //server settings
@@ -65,6 +71,8 @@ object EnvVars {
     // Both unset: the world is window 0,0, which is the plain generated world.
     val worldWindowX: Int? = dotenv.get("WORLD_WINDOW_X", null)?.toIntOrNull()
     val worldWindowY: Int? = dotenv.get("WORLD_WINDOW_Y", null)?.toIntOrNull()
+    val playerStartTile: IntArray? = tileEnv("PLAYER_START_TILE")
+    val playerRespawnTile: IntArray? = tileEnv("PLAYER_RESPAWN_TILE")
     val windowed: Boolean = worldWindowX != null && worldWindowY != null
     // Lobby: start neighbouring windows on demand by running WINDOW_SCRIPT, at most WINDOW_MAX_RUNNING at a time.
     // World ids and ports of window worlds: a community lobby only takes ids 100 to 999, so a world on one sets a base in that range.
