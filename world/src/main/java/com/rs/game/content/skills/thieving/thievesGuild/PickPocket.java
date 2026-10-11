@@ -1,5 +1,7 @@
 package com.rs.game.content.skills.thieving.thievesGuild;
 
+import com.rs.game.content.skills.thieving.Thieving;
+
 import com.rs.game.model.entity.ForceTalk;
 import com.rs.game.model.entity.Hit;
 import com.rs.game.model.entity.npc.NPC;
@@ -64,7 +66,7 @@ public class PickPocket extends PlayerAction {
 		} else {
 			double totalXp = calculateExperience(player);
 			player.incrementCount(npc.getDefinitions().getName() + " pickpocketed");
-			player.getSkills().addXp(Constants.THIEVING, totalXp);
+			Thieving.awardXp(player, totalXp);
 			if (player.getWeeklyI("HankyPoints") < HankyPoints.maxPoints(player)) {
 				player.simpleDialogue("You gain 1 Hanky Point.");
 				player.incWeeklyI("HankyPoints");

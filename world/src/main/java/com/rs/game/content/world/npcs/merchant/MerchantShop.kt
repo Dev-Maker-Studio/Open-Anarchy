@@ -10,11 +10,12 @@ import kotlin.math.ceil
 
 private const val SHOP_NAME = "Merchant"
 private const val SHOP_ATTRIBUTE = "Shop"
-private const val SELL_MARKUP = 1.25
+private const val SELL_MARKUP = 1.2
+private const val DEED_PRICE = 100
 private const val MIN_PRICE = 1
 private const val MERCHANT_SHOP_INTERFACE = 1326
 
-class MerchantShop(private val merchant: MerchantNPC) : Shop(SHOP_NAME, Obj.coins, emptyArray<ShopItem>(), true, false) {
+class MerchantShop(private val merchant: CoinTrader) : Shop(SHOP_NAME, Obj.coins, emptyArray<ShopItem>(), true, false) {
     private val viewers = HashSet<Player>()
 
     fun stock(): List<Item> = generalStock.orEmpty().filterNotNull().map { it.item }
@@ -50,7 +51,10 @@ class MerchantShop(private val merchant: MerchantNPC) : Shop(SHOP_NAME, Obj.coin
 
     override fun getSellPrice(item: Item): Int = storePrice(item)
 
-    override fun getBuyPrice(item: ShopItem): Int = ceil(storePrice(item.item) * SELL_MARKUP).toInt()
+    override fun getBuyPrice(item: ShopItem): Int =
+        if (item.item.id == Obj.estate_deed) DEED_PRICE else ceil(storePrice(item.item) * SELL_MARKUP).toInt()
+
+    fun deedCount(): Int = stock().filter { it.id == Obj.estate_deed }.sumOf { it.amount }
 
     override fun sell(player: Player, slotId: Int, quantity: Int) {
         if (!merchant.canTrade()) return

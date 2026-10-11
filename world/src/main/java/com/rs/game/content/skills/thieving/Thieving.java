@@ -31,8 +31,6 @@ import org.darkan.core.Constants;
 import org.darkan.core.model.Animation;
 import org.darkan.core.model.Item;
 import org.darkan.core.Utils;
-import com.rs.plugin.annotations.PluginEventHandler;
-import com.rs.plugin.handlers.ObjectClickHandler;
 import com.rs.utils.Ticks;
 import com.rs.utils.drop.DropSet;
 import com.rs.utils.drop.DropTable;
@@ -45,8 +43,15 @@ import java.util.Arrays;
  * @author Dragonkk
  *
  */
-@PluginEventHandler
 public class Thieving {
+
+	public static final boolean REMOVED = true;
+
+	public static void awardXp(Player player, double xp) {
+		if (REMOVED)
+			return;
+		player.getSkills().addXp(Constants.THIEVING, xp);
+	}
 
 	public enum Stalls {
 		VEGETABLE(4706, 2, new int[] { 1957, 1965, 1942, 1982, 1550 }, 1, 2, 10, 634),
@@ -152,6 +157,8 @@ public class Thieving {
 	}
 
 	public static void handleStalls(final Player player, final GameObject object) {
+		if (REMOVED)
+			return;
 		for (final Stalls stall : Stalls.values())
 			if (stall.getObjectId() == object.getId()) {
 				if (player.getAttackedBy() != null && player.inCombat()) {
@@ -204,11 +211,15 @@ public class Thieving {
 	}
 
 	public static void checkTrapsChest(Player player, GameObject object, int openedId, int level , int respawnTime, double xp, DropSet set) {
+		if (REMOVED)
+			return;
 		Item[] loot = DropTable.calculateDrops(player, set);
 		checkTrapsChest(player, object, openedId, level , respawnTime, xp, loot);
 	}
 
 	public static void checkTrapsChest(Player player, GameObject object, int openedId, int level, int respawnTime, double xp, Item... loot) {
+		if (REMOVED)
+			return;
 		player.faceObject(object);
 		if (!player.getInventory().hasFreeSlots()) {
 			player.sendMessage("You don't have any space in your inventory.");
@@ -229,6 +240,8 @@ public class Thieving {
 	}
 
 	public static boolean pickDoor(Player player, GameObject object) {
+		if (REMOVED)
+			return false;
 		if (player.getTempAttribs().getI("numbFingers") == -1)
 			player.getTempAttribs().setI("numbFingers", 0);
 		int thievingLevel = player.getSkills().getLevel(Constants.THIEVING);
@@ -254,43 +267,4 @@ public class Thieving {
 			chance += 15;
 		return chance;
 	}
-
-	public static ObjectClickHandler handleThievingStalls = new ObjectClickHandler(Stalls.getAllStallIds(), e -> {
-		Thieving.handleStalls(e.getPlayer(), e.getObj());
-	});
-
-	public static ObjectClickHandler handleChests = new ObjectClickHandler(new Object[] { 22697, 22681 }, e -> {
-		if (e.getOption().equals("Pick-lock")) {
-			switch(e.getObjectId()) {
-				case 22697 -> {
-					Thieving.checkTrapsChest(e.getPlayer(), e.getObj(), 22683, 52, 210, 200, new DropSet(
-						new DropTable(1, 5, 995, 1, 200),
-						new DropTable(1, 5, 4537, 1),
-						new DropTable(1, 5, 4546, 1),
-						new DropTable(1, 5, 5014, 1),
-						new DropTable(1, 5, 10981, 1)
-					));
-				}
-				case 22681 -> {
-					Thieving.checkTrapsChest(e.getPlayer(), e.getObj(), 22683, 78, 300, 650, new DropSet(
-						new DropTable(1, 15, 1623, 1),
-						new DropTable(1, 15, 1621, 1),
-						new DropTable(1, 15, 1619, 1),
-						new DropTable(1, 15, 1617, 1),
-						new DropTable(1, 15, 1625, 1),
-						new DropTable(1, 15, 1627, 1),
-						new DropTable(1, 15, 1629, 1),
-						new DropTable(1, 15, 4546, 1),
-						new DropTable(1, 15, 5014, 1),
-						new DropTable(1, 15, 10954, 1),
-						new DropTable(1, 15, 10956, 1),
-						new DropTable(1, 15, 2351, 1),
-						new DropTable(1, 15, 10981, 1),
-						new DropTable(1, 15, 10973, 1),
-						new DropTable(1, 15, 10980, 1)
-					));
-				}
-			}
-		}
-	});
 }

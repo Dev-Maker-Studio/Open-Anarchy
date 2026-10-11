@@ -1,5 +1,7 @@
 package com.rs.game.content.quests.dig_site.utils
 
+import com.rs.game.content.skills.thieving.Thieving
+
 import com.rs.engine.quest.Quest
 import com.rs.game.content.skills.thieving.PickPocketableNPC
 import com.rs.game.model.entity.Hit
@@ -79,7 +81,7 @@ class PickpocketWorkmanAction(private val npc: NPC) : PlayerAction() {
                     } else {
                         player.sendMessage("You steal something from the workman's pockets.")
                     }
-                    player.skills.addXp(Skills.THIEVING, 10.0)
+                    Thieving.awardXp(player, 10.0)
                     player.inventory.addItem(randomDrop.id, randomDrop.amount)
                 }
             }

@@ -35,6 +35,7 @@ import com.rs.game.content.ItemConstants
 import com.rs.game.content.world.areas.wilderness.WildernessController
 import com.rs.game.map.Chunk
 import com.rs.game.map.ChunkManager
+import com.rs.game.map.WorldDelta
 import com.rs.game.model.WorldProjectile
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.EntityList
@@ -320,6 +321,7 @@ object World {
     fun removeObjectTemporary(obj: GameObject?, ticks: Int): Boolean {
         if (obj == null) return false
         removeObject(obj)
+        WorldDelta.regrow(obj, ticks)
         WorldTasks.schedule(object : Task() {
             override fun run() {
                 try {

@@ -61,6 +61,7 @@ import com.rs.game.content.minigames.herblorehabitat.HabitatFeature;
 import com.rs.game.content.minigames.treasuretrails.TreasureTrailsManager;
 import com.rs.game.content.pets.Pet;
 import com.rs.game.content.pets.PetManager;
+import com.rs.game.content.skills.construction.StorageChest;
 import com.rs.game.content.skills.construction.playerOwnedHouse.House;
 import com.rs.game.content.skills.cooking.Brewery;
 import com.rs.game.content.skills.cooking.Foods;
@@ -363,6 +364,8 @@ public class Player extends Entity {
 
 	public ItemsContainer<Item> partyDeposit;
 	private Map<StorableItem, Item> leprechaunStorage;
+	private ItemsContainer<Item> storageChest;
+	private int claimTileAllowance = com.rs.game.content.claims.ClaimManager.STARTING_TILES;
 
 	private int graveStone;
 
@@ -1650,6 +1653,7 @@ public class Player extends Entity {
 	private transient long logoutDeadline;
 	private static final int MAX_LOGOUT_DELAY_TICKS = Ticks.fromSeconds(60);
 	private static final double WEIGHT_RELIEF_KG_PER_STRENGTH_LEVEL = 1.0;
+	private static final double WEIGHT_RELIEF_KG_PER_AGILITY_LEVEL = 1.0;
 
 	private Notes notes;
 
@@ -3640,7 +3644,8 @@ public class Player extends Entity {
 
 	public double getWeight() {
 		double carried = inventory.getInventoryWeight() + equipment.getEquipmentWeight();
-		double strengthRelief = skills.getLevelForXp(Constants.STRENGTH) * WEIGHT_RELIEF_KG_PER_STRENGTH_LEVEL;
+		double strengthRelief = skills.getLevelForXp(Constants.STRENGTH) * WEIGHT_RELIEF_KG_PER_STRENGTH_LEVEL
+				+ skills.getLevelForXp(Constants.AGILITY) * WEIGHT_RELIEF_KG_PER_AGILITY_LEVEL;
 		return carried - Math.min(strengthRelief, Math.max(carried, 0.0));
 	}
 
@@ -4125,6 +4130,20 @@ public class Player extends Entity {
 		if (leprechaunStorage == null)
 			leprechaunStorage = new HashMap<>();
 		return leprechaunStorage;
+	}
+
+	public int getClaimTileAllowance() {
+		return claimTileAllowance;
+	}
+
+	public void setClaimTileAllowance(int claimTileAllowance) {
+		this.claimTileAllowance = claimTileAllowance;
+	}
+
+	public ItemsContainer<Item> getStorageChest() {
+		if (storageChest == null)
+			storageChest = new ItemsContainer<>(StorageChest.SLOTS, false);
+		return storageChest;
 	}
 
 	public Recorder getRecorder() {

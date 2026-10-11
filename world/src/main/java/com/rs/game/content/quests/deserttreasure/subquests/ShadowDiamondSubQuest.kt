@@ -1,5 +1,7 @@
 package com.rs.game.content.quests.deserttreasure
 
+import com.rs.game.content.skills.thieving.Thieving
+
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
@@ -180,7 +182,7 @@ private fun attemptSecureChest(player: Player) {
     }
 
     player.sendMessage("...and manage to pick the final lock.")
-    player.skills.addXp(Constants.THIEVING, 150.0)
+    Thieving.awardXp(player, 150.0)
     player.inventory.addItemDrop(Obj.fd_sword_cross, 1)
     player.set(GILDED_CROSS_CLAIMED, true)
     player.simpleDialogue("Inside the chest, hidden under some rags, you find a Gilded Cross.")

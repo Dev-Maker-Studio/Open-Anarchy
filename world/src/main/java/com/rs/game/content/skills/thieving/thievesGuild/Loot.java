@@ -1,5 +1,7 @@
 package com.rs.game.content.skills.thieving.thievesGuild;
 
+import com.rs.game.content.skills.thieving.Thieving;
+
 import com.rs.game.model.entity.npc.NPC;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
@@ -46,7 +48,7 @@ public class Loot extends PlayerAction {
 		else {
 			double totalXp = calculateExperience(player);
 			player.incrementCount(npc.getDefinitions().getName() + " pickpocketed");
-			player.getSkills().addXp(Constants.THIEVING, totalXp);
+			Thieving.awardXp(player, totalXp);
 			if (player.getWeeklyI("HankyPoints") < HankyPoints.maxPoints(player) - 4) {
 				player.sendMessage("You empty the man's pocket and drape the red handkerchief over him.");
 				player.simpleDialogue("You gain 4 Hanky Points.");

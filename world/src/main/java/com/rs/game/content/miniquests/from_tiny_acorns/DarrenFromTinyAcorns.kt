@@ -1,5 +1,7 @@
 package com.rs.game.content.miniquests.from_tiny_acorns
 
+import com.rs.game.content.skills.thieving.Thieving
+
 import com.rs.engine.dialogue.HeadE.*
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.miniquest.Miniquest
@@ -72,7 +74,7 @@ class DarrenFromTinyAcorns(p: Player, npc: NPC) {
                             p.fadeScreen {
                                 p.inventory.deleteItem(18651, 1)
                                 p.inventory.deleteItem(18652, 1)
-                                p.skills.addXp(Skills.THIEVING, 1000.0)
+                                Thieving.awardXp(p, 1000.0)
                                 p.tele(Tile.of(3223, 3269, 0))
                                 p.miniquestManager.complete(Miniquest.FROM_TINY_ACORNS)
                             }

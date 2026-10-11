@@ -343,7 +343,7 @@ public class Shop {
 		}
 	}
 
-	private boolean addItem(int itemId, int quantity) {
+	public boolean addItem(int itemId, int quantity) {
 		for (ShopItem item : mainStock)
 			if (item.getItem().getId() == itemId) {
 				item.getItem().setAmount(item.getItem().getAmount() + quantity);
