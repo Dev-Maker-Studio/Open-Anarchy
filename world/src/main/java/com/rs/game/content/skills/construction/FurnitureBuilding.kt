@@ -5,7 +5,6 @@ import com.rs.game.content.claims.ClaimManager
 import com.rs.game.map.WorldDelta
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
-import com.rs.game.tasks.WorldTasks
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onItemClick
 import com.rs.plugin.kts.onItemOnItem
@@ -18,9 +17,6 @@ import org.darkan.core.model.Animation
 import world.gregs.voidps.type.Tile
 
 private const val PLANKS_REQUIRED = 3
-private const val XP_PER_MATERIAL = 5.0
-private const val MORE_ICON = 25525
-private const val PAGE_SIZE = 7
 private const val PLACEMENT_KEY = "furniturePlacement"
 private const val ROTATION_STEPS = 4
 private const val PLACE_OPTION = "Place"

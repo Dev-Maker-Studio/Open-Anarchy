@@ -418,17 +418,6 @@ public class Chunk {
         WorldDelta.restoreTimed(obj);
     }
 
-    /**
-     * Adds an object the world generates, like a tree: spawned on top of the map, clipped, and sent to players with the
-     * rest of the chunk. Unlike spawnObject it does not mark the chunk active, so a forest does not keep its region loaded.
-     */
-    public void addGeneratedObject(GameObject obj) {
-        if (getSpawnedObjectWithSlot(obj.getTile(), obj.getSlot()) != null)
-            return;
-        spawnedObjects.add(obj);
-        GameObjectCollision.clip(obj);
-    }
-
     public void spawnObject(GameObject newObj, boolean clip) {
         spawnObject(newObj, clip, true);
     }
