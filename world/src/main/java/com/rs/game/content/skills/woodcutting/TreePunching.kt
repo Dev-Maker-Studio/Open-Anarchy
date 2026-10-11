@@ -9,7 +9,6 @@ import com.rs.game.model.gameobject.GameObject
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import org.darkan.core.Constants
-import org.darkan.core.Utils
 import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.model.Animation
@@ -20,7 +19,6 @@ private const val PUNCHES_TO_FELL = 6
 private const val PUNCH_DELAY_TICKS = 3
 private const val PUNCH_OPTION = "Punch"
 private const val FREE_SLOTS_REQUIRED = 3
-private const val ROOT_DOUBLE_CHANCE = 10
 private const val SHADOW_NAME = "null"
 
 private val TREE_NAMES = arrayOf<Any>("Tree", "Swamp tree", "Dead tree", "Evergreen", "Dying tree", "Jungle Tree")
@@ -71,7 +69,7 @@ private class TreePunch(private val tree: GameObject) : Action() {
         if (++punches < PUNCHES_TO_FELL) return PUNCH_DELAY_TICKS
         val player = entity as Player
         player.inventory.addItem(Obj.logs)
-        player.inventory.addItem(TreeRoot.forTreeName(tree.definitions.name).root, if (Utils.random(ROOT_DOUBLE_CHANCE) == 0) 2 else 1)
+        player.inventory.addItem(TreeRoot.forTreeName(tree.definitions.name).root)
         player.skills.addXp(Constants.WOODCUTTING, TreeType.NORMAL.xp)
         destroyTree(tree)
         player.sendMessage("You punch the tree down completely and find tree roots.")

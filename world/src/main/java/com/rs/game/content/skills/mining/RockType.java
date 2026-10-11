@@ -16,6 +16,9 @@
 //
 package com.rs.game.content.skills.mining;
 
+import com.rs.utils.Ticks;
+import org.darkan.core.EnvVars;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -60,6 +63,8 @@ public enum RockType {
 
 	;
 
+	private static final int GENERATED_WORLD_REGROW_MINUTES = 5;
+
 	private final int respawnTime;
 	private final List<Ore> ores;
 
@@ -78,6 +83,8 @@ public enum RockType {
 	}
 
 	public int getRespawnTime() {
+		if (EnvVars.INSTANCE.getGenerateMaps() && (this == COPPER || this == TIN))
+			return Ticks.fromMinutes(GENERATED_WORLD_REGROW_MINUTES);
 		return respawnTime;
 	}
 
