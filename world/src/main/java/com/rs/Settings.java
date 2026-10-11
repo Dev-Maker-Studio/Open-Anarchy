@@ -22,6 +22,7 @@ import world.gregs.voidps.type.Tile;
 import com.rs.game.WorldInfo;
 import org.darkan.core.Logger;
 import org.darkan.core.EnvVars;
+import org.darkan.core.map.GeneratedWorld;
 
 import java.util.ArrayList;
 
@@ -53,9 +54,8 @@ public final class Settings {
 	private String loginMessage = "";
 	private boolean enableJFR = false;
 
-	// Tile env vars: read from PLAYER_START_TILE / PLAYER_RESPAWN_TILE or defaults
-	private final Tile playerStartTile = Tile.of(2889, 3528, 0);
-	private final Tile playerRespawnTile = Tile.of(2887, 3535, 0);
+	private final Tile playerStartTile = startTile(EnvVars.INSTANCE.getPlayerStartTile(), Tile.of(2889, 3528, 0));
+	private final Tile playerRespawnTile = startTile(EnvVars.INSTANCE.getPlayerRespawnTile(), Tile.of(2887, 3535, 0));
 
 	private final Item[] startItems = new Item[] {
 		new Item(1351, 1), new Item(590, 1), new Item(303, 1), new Item(315, 1),
@@ -66,6 +66,14 @@ public final class Settings {
 	};
 
 	private Settings() {}
+
+	private static Tile startTile(int[] override, Tile vanilla) {
+		if (override != null)
+			return Tile.of(override[0], override[1], override[2]);
+		if (EnvVars.INSTANCE.getGenerateMaps())
+			return Tile.of(GeneratedWorld.INSTANCE.getSpawnX(), GeneratedWorld.INSTANCE.getSpawnY(), 0);
+		return vanilla;
+	}
 
 	public static void loadConfig() {
 		Logger.info(Settings.class, "loadConfig", "Loading config from .env...");

@@ -8,7 +8,6 @@ import com.rs.game.tasks.WorldTasks
 import com.rs.plugin.annotations.ServerStartupEvent
 import org.darkan.core.EnvVars
 import org.darkan.core.Utils
-import org.darkan.core.cache.NPCDefinitions
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.map.GeneratedWorld
 import world.gregs.voidps.cache.source.codec.WorldGenerator
@@ -27,7 +26,6 @@ private const val ANIMAL_LIFETIME_TICKS = 3000
 private const val FISHING_SPOT_LIFETIME_TICKS = 500
 private const val FISHING_SPOT_CATCHES = 3
 private const val GROUND_LEVEL = 0
-private const val UNSCALED = 1.0
 
 private val generator = GeneratedWorld.generator
 
@@ -45,6 +43,8 @@ private val animals = mapOf(
     Biome.VOLCANO to intArrayOf(Npc.imp, Npc.hellhound),
     Biome.OCEAN to intArrayOf(Npc.small_bat)
 )
+
+private val HOSTILE_ANIMALS = setOf(Npc.snake, Npc.scorpion, Npc.wolf, Npc.bat, Npc.brownbear, Npc.small_bat)
 
 private val forestImplings = intArrayOf(Npc.ii_impling_type_1, Npc.ii_impling_type_2, Npc.ii_impling_type_3, Npc.ii_impling_type_4)
 
@@ -82,11 +82,15 @@ private fun popUpAnimal(player: Player) {
         Impling(forestImplings[Utils.random(forestImplings.size)], tile, true, true)
         return
     }
-    val ids = animals[biome] ?: return
+    val level = threatLevel(tile)
+    val ids = (animals[biome] ?: return).filter { !isHostile(biome, it) || withinLevel(it, level) }
+    if (ids.isEmpty()) return
     val id = ids[Utils.random(ids.size)]
-    val animal = if (biome in HOSTILE_BIOMES) HostileNPC(id, tile, UNSCALED, NPCDefinitions.getDefs(id).combatLevel) else World.spawnNPC(id, tile, true)
+    val animal = if (isHostile(biome, id)) scaledHostile(id, tile, biome, level) else World.spawnNPC(id, tile, true)
     animal.finishAfterTicks(ANIMAL_LIFETIME_TICKS)
 }
+
+private fun isHostile(biome: Biome, id: Int): Boolean = biome in HOSTILE_BIOMES || id in HOSTILE_ANIMALS
 
 private fun popUpFishingSpot(player: Player) {
     val tile = findTile(player) { x, y -> generator.liquidTileAt(x, y) == Liquid.WATER && hasShore(x, y) } ?: return

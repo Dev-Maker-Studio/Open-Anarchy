@@ -107,11 +107,17 @@ private fun spawnHostile(tile: Tile) {
     val biome = generator.biomeAt(tile.x, tile.y)
     val level = threatLevel(tile)
     val id = hostileIdsFor(biome, level).randomOrNull() ?: return
+    spawned.add(scaledHostile(id, tile, biome, level))
+}
+
+fun scaledHostile(id: Int, tile: Tile, biome: Biome, level: Int = threatLevel(tile)): HostileNPC {
     val native = NPCDefinitions.getDefs(id).combatLevel.coerceAtLeast(1)
     val wilderness = biome == Biome.WILDERNESS
     val scale = maxOf(1.0, level.toDouble() / native) * if (wilderness) WILDERNESS_LEVEL_MULTIPLIER else 1.0
-    spawned.add(HostileNPC(id, tile, scale, (native * scale).toInt()))
+    return HostileNPC(id, tile, scale, (native * scale).toInt())
 }
+
+fun withinLevel(id: Int, level: Int): Boolean = NPCDefinitions.getDefs(id).combatLevel <= level
 
 private fun despawnAbandoned() {
     spawned.removeIf { mob ->
