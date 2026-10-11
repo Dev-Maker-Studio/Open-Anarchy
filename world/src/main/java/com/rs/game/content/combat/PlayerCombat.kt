@@ -21,6 +21,7 @@ import org.darkan.core.cache.ItemDefinitions
 import org.darkan.core.map.pathfinder.Direction
 import org.darkan.core.gameval.gen.Npc
 import org.darkan.core.gameval.gen.Obj
+import org.darkan.core.map.GeneratedWorld
 import com.rs.game.World
 import com.rs.game.content.Effect
 import com.rs.game.content.combat.special_attacks.SpecialAttack
@@ -484,6 +485,10 @@ class PlayerCombat(@JvmField val target: Entity) : PlayerAction() {
 
     fun checkAll(player: Player): Boolean {
         if (target.isDead) return false
+        if (GeneratedWorld.onRoad(player.x, player.y) || GeneratedWorld.onRoad(target.x, target.y)) {
+            player.sendMessage(ROAD_MESSAGE)
+            return false
+        }
         if (!player.canAttackMulti(target) || !target.canAttackMulti(player)) return false
         if (target is Player) {
             if (!player.isCanPvp || !target.isCanPvp) return false
@@ -664,6 +669,8 @@ fun delayHit(target: Entity, delay: Int, weaponId: Int, attackStyle: AttackStyle
     else
         checkPoison(target, weaponId, hit)
 }
+
+private const val ROAD_MESSAGE = "Nothing can fight on the road."
 
 private val VINE_WHIPS = Obj.jaro_vine_whip_abyssal..Obj.jaro_vine_whip_abyssal_green
 

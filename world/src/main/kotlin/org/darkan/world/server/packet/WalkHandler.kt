@@ -4,6 +4,7 @@ import com.rs.game.content.Effect
 import com.rs.game.content.claims.ClaimManager
 import com.rs.game.content.items.handleModelPotatoClick
 import com.rs.game.content.skills.construction.handleFurniturePlacementClick
+import com.rs.game.content.skills.sailing.Voyages
 import com.rs.game.model.entity.player.Player
 import org.darkan.core.net.prot.packet.Walk
 import org.darkan.core.net.prot.handler.PacketHandler
@@ -27,6 +28,8 @@ class WalkHandler : PacketHandler<Player, Walk> {
         if (handleModelPotatoClick(player, Tile.of(packet.x, packet.y, player.plane)))
             return
         if (handleFurniturePlacementClick(player, Tile.of(packet.x, packet.y, player.plane)))
+            return
+        if (Voyages.handleHelmClick(player, Tile.of(packet.x, packet.y, player.plane)))
             return
         player.stopAll()
         player.walkRequest = packet

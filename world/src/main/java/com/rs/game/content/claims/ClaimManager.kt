@@ -3,11 +3,13 @@ package com.rs.game.content.claims
 import com.rs.engine.command.Commands
 import com.rs.game.World
 import com.rs.game.content.skills.sailing.PortSites
+import com.rs.game.map.WorldDelta
 import com.rs.game.model.entity.player.Player
 import com.rs.game.model.gameobject.GameObject
 import com.rs.game.tasks.WorldTasks
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onButtonClick
+import org.darkan.core.EnvVars
 import org.darkan.core.JsonFileManager
 import org.darkan.core.gameval.gen.Component
 import org.darkan.core.gameval.gen.Interface
@@ -18,6 +20,8 @@ import org.darkan.core.model.ObjectShape
 import org.darkan.core.model.Rights
 import world.gregs.voidps.type.Tile
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 object ClaimManager {
     const val STARTING_TILES = 100
@@ -34,7 +38,8 @@ object ClaimManager {
     private const val PVP = 16
     private const val LODESTONE_MESSAGE = "The land around a lodestone can't be claimed or built on."
     private const val PORT_MESSAGE = "The land around a port can't be claimed or built on."
-    private val FILE = File("./data/claims.json")
+    private const val ROAD_MESSAGE = "Nothing can be built on the road."
+    private val LEGACY_FILE = File("./data/claims.json")
     private val DESTROY_OPTIONS = setOf("chop down", "chop", "mine", "cut", "cut down", "pick", "pick-up", "pick up", "smash", "break", "burn", "destroy", "dismantle", "demolish", "remove", "dig", "rake", "harvest", "clear", "pull")
     private val BORDER_BY_MASK = intArrayOf(
         -1,
@@ -64,6 +69,11 @@ object ClaimManager {
 
     @JvmStatic
     fun canBuild(player: Player, tile: Tile, notify: Boolean = true): Boolean {
+        if (GeneratedWorld.onRoad(tile.x, tile.y)) {
+            if (notify)
+                player.sendMessage(ROAD_MESSAGE)
+            return false
+        }
         if (GeneratedWorld.inLodestoneZone(tile.x, tile.y)) {
             if (notify)
                 player.sendMessage(LODESTONE_MESSAGE)
@@ -85,6 +95,11 @@ object ClaimManager {
     /** Construction pieces are only made, placed and picked up on land claimed by the player, or by someone who allows building. */
     @JvmStatic
     fun canConstruct(player: Player, tile: Tile, notify: Boolean = true): Boolean {
+        if (GeneratedWorld.onRoad(tile.x, tile.y)) {
+            if (notify)
+                player.sendMessage(ROAD_MESSAGE)
+            return false
+        }
         if (GeneratedWorld.inLodestoneZone(tile.x, tile.y)) {
             if (notify)
                 player.sendMessage(LODESTONE_MESSAGE)
@@ -320,16 +335,23 @@ object ClaimManager {
         player.vars.setVar(Varp.claim_tiles, ownedTiles(player.username))
     }
 
+    private val file: File get() = File(WorldDelta.DIRECTORY, "sector-${EnvVars.worldId}-claims.json")
+
     private fun save() {
-        JsonFileManager.saveJsonFile(claims, FILE)
+        val target = file
+        val temporary = File(target.parentFile, "${target.name}.tmp")
+        JsonFileManager.saveJsonFile(claims, temporary)
+        Files.move(temporary.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
     }
 
     private fun load() {
-        if (!FILE.exists())
-            return
-        val stored = JsonFileManager.loadJsonFile(FILE, Array<Claim>::class.java) ?: return
+        val migrating = !file.exists() && LEGACY_FILE.exists() && GeneratedWorld.windowX == 0 && GeneratedWorld.windowY == 0
+        val source = if (migrating) LEGACY_FILE else file
+        val stored = JsonFileManager.loadJsonFile(source, Array<Claim>::class.java) ?: return
         claims.addAll(stored)
         nextId = (claims.maxOfOrNull { it.id } ?: 0) + 1
+        if (migrating)
+            save()
         WorldTasks.schedule(STARTUP_DELAY_TICKS, Runnable { claims.forEach { drawBorder(it) } })
     }
 

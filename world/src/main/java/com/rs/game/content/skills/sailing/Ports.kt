@@ -56,6 +56,10 @@ private const val MERCHANT_SIDE = 0
 private const val BOARD_FORWARD = -1
 private const val BOARD_SIDE = 3
 private const val MOORING_SIDE = 2
+private const val LEDGER_FORWARD = -1
+private const val LEDGER_SIDE = -3
+private const val STATION_FORWARD = -1
+private const val STATION_SIDE = 5
 private const val WARMUP_PRIORITY = Thread.MIN_PRIORITY
 private const val MERCHANT_NPC = Npc.wandering_merchant_01
 
@@ -83,13 +87,15 @@ object Ports {
         val port = ActivePort(site)
         if (active.putIfAbsent(site.name, port) != null) return
         val used = mutableSetOf<Pair<Int, Int>>()
-        place(port, used, Loc.sailing_shipyard_shipplank_on, ObjectShape.SCENERY_INTERACT, rotationToward(site.dirX, site.dirY), 0, 0)
-        place(port, used, Loc.acs_battleships_playerpost, ObjectShape.SCENERY_INTERACT, rotationToward(site.dirX, site.dirY), 0, MOORING_SIDE)
-        place(port, used, Loc.fai_falador_noticeboard2, ObjectShape.STRAIGHT_INSIDE_WALL_DEC, rotationToward(-site.dirX, -site.dirY), BOARD_FORWARD, BOARD_SIDE)
+        place(port, used, Loc.sailing_gangplank, ObjectShape.SCENERY_INTERACT, rotationToward(site.dirX, site.dirY), 0, 0)
+        place(port, used, Loc.sailing_mooring_post, ObjectShape.SCENERY_INTERACT, rotationToward(site.dirX, site.dirY), 0, MOORING_SIDE)
+        place(port, used, Loc.sailing_notice_board, ObjectShape.STRAIGHT_INSIDE_WALL_DEC, rotationToward(-site.dirX, -site.dirY), BOARD_FORWARD, BOARD_SIDE)
+        place(port, used, Loc.sailing_ledger_table, ObjectShape.SCENERY_INTERACT, rotationToward(-site.dirX, -site.dirY), LEDGER_FORWARD, LEDGER_SIDE)
+        place(port, used, Loc.sailing_salvaging_station, ObjectShape.SCENERY_INTERACT, rotationToward(-site.dirX, -site.dirY), STATION_FORWARD, STATION_SIDE)
         for (side in -PLAZA_HALF_WIDTH..PLAZA_HALF_WIDTH) decorate(port, Loc.pier2, site.x(0, side), site.y(0, side), site)
-        freeTile(site, SHIPWRIGHT_FORWARD, SHIPWRIGHT_SIDE, used)?.let { port.npcs.add(PortStaffNPC(Npc.shipyardworker1, it, PortRole.SHIPWRIGHT, site.name)) }
+        freeTile(site, SHIPWRIGHT_FORWARD, SHIPWRIGHT_SIDE, used)?.let { port.npcs.add(PortStaffNPC(Npc.sailing_shipwright, it, PortRole.SHIPWRIGHT, site.name)) }
         if (site.kind == PortKind.OCEAN) {
-            freeTile(site, PORT_MASTER_FORWARD, PORT_MASTER_SIDE, used)?.let { port.npcs.add(PortStaffNPC(Npc.captain_shanks, it, PortRole.PORT_MASTER, site.name)) }
+            freeTile(site, PORT_MASTER_FORWARD, PORT_MASTER_SIDE, used)?.let { port.npcs.add(PortStaffNPC(Npc.sailing_port_master, it, PortRole.PORT_MASTER, site.name)) }
             freeTile(site, MERCHANT_FORWARD, MERCHANT_SIDE, used)?.let { port.merchant = World.spawnNPC(MERCHANT_NPC, it, true) as? MerchantNPC }
         }
         refreshBoats(site)

@@ -1,7 +1,7 @@
 package com.rs.game.content.skills.sailing
 
 enum class Wood(val nails: String) {
-    WOODEN("bronze"), OAK("iron"), TEAK("steel"), MAHOGANY("mithril"), CAMPHOR("adamantite"), IRONWOOD("rune"), ROSEWOOD("dragon")
+    WOODEN("bronze"), OAK("iron"), TEAK("steel"), MAHOGANY("mithril"), CAMPHOR("adamantite"), IRONWOOD("rune"), ROSEWOOD("dragon"), ETERNAL("rune"), ABYSSAL("rune")
 }
 
 enum class HullTier(
@@ -25,7 +25,11 @@ enum class HullTier(
     MAHOGANY(Wood.MAHOGANY, 48, 41, 50, 75, 100, 2.0, 2.5, 3.0, 3.5, 15, 40, 45),
     CAMPHOR(Wood.CAMPHOR, 67, 59, 80, 120, 160, 2.5, 3.0, 3.0, 3.5, 20, 50, 55),
     IRONWOOD(Wood.IRONWOOD, 81, 75, 100, 150, 200, 2.5, 3.0, 3.0, 3.5, 25, 60, 65),
-    ROSEWOOD(Wood.ROSEWOOD, 93, 84, 120, 180, 240, 3.0, 3.5, 3.5, 3.5, 30, 70, 75);
+    ROSEWOOD(Wood.ROSEWOOD, 93, 84, 120, 180, 240, 3.0, 3.5, 3.5, 3.5, 30, 70, 75),
+    ETERNAL(Wood.ETERNAL, 105, 90, 144, 216, 288, 3.5, 4.0, 4.0, 4.0, 35, 80, 85),
+    ABYSSAL(Wood.ABYSSAL, 117, 96, 173, 259, 346, 4.0, 4.0, 4.0, 4.0, 40, 90, 95);
+
+    val schematic: Schematic? get() = Schematic.entries.firstOrNull { it.name == name }
 
     fun hitpoints(type: BoatType): Int = when (type) {
         BoatType.RAFT -> raftHp
@@ -56,6 +60,8 @@ enum class HelmTier(val sailingLevel: Int, val constructionLevel: Int, val rapid
     DRAGON(96, 86, RapidsClass.DEADLY)
 }
 
+enum class Schematic { ETERNAL, ABYSSAL }
+
 enum class RapidsClass { NONE, GENTLE, STRONG, POWERFUL, DEADLY }
 
 enum class StormResistance { NONE, PARTIAL, FULL }
@@ -74,7 +80,11 @@ enum class SailTier(
     MAHOGANY(52, 45, 26, 0, StormResistance.PARTIAL, 48.0),
     CAMPHOR(68, 60, 30, 64, StormResistance.FULL, 64.0),
     IRONWOOD(83, 77, 33, 64, StormResistance.FULL, 80.0),
-    ROSEWOOD(94, 85, 36, 64, StormResistance.FULL, 125.0);
+    ROSEWOOD(94, 85, 36, 64, StormResistance.FULL, 125.0),
+    ETERNAL(105, 91, 39, 64, StormResistance.FULL, 156.25),
+    ABYSSAL(117, 97, 42, 64, StormResistance.FULL, 195.3125);
+
+    val schematic: Schematic? get() = Schematic.entries.firstOrNull { it.name == name }
 
     val acceleration: Double get() = accelerationBonus / ACCELERATION_DIVISOR + BASE_ACCELERATION
 
@@ -97,7 +107,11 @@ enum class KeelTier(
     MITHRIL(54, 50, 60, 90, 400),
     ADAMANT(66, 62, 70, 100, 600),
     RUNE(85, 78, 80, 120, 800),
-    DRAGON(97, 87, 80, 120, 1000);
+    DRAGON(97, 87, 80, 120, 1000),
+    ETERNAL(105, 92, 96, 144, 1200),
+    ABYSSAL(117, 98, 115, 173, 1400);
+
+    val schematic: Schematic? get() = Schematic.entries.firstOrNull { it.name == name }
 
     val flatArmour: Int get() = armour / ARMOUR_PER_FLAT
 

@@ -32,14 +32,27 @@ private const val PERCENT = 100.0
 private val generator = GeneratedWorld.generator
 
 private val hostileIds = mapOf(
-    Biome.PLAINS to intArrayOf(Npc.rand_giant_rat_1, Npc.spider, Npc.wolf, Npc.brownbear, Npc.darkbear),
-    Biome.FOREST to intArrayOf(Npc.spider, Npc.giantspider1, Npc.wolf, Npc.mossgiant, Npc.brownbear, Npc.darkbear),
-    Biome.DESERT to intArrayOf(Npc.scorpion, Npc.snake, Npc.poison_scorpion, Npc.kingscorpion, Npc.hellhound),
-    Biome.WILDERNESS to intArrayOf(Npc.skeleton_armed, Npc.zombie_armed, Npc.ghost, Npc.mossgiant, Npc.hellhound, Npc.firegiant),
-    Biome.WINTER to intArrayOf(Npc.wolf, Npc.icewarrior, Npc.icegiant, Npc.darkbear, Npc.icegiant2),
-    Biome.MOUNTAIN to intArrayOf(Npc.bat, Npc.wolf, Npc.ogre, Npc.mossgiant, Npc.darkbear, Npc.babybluedragon),
-    Biome.VOLCANO to intArrayOf(Npc.imp, Npc.hellhound, Npc.babyreddragon, Npc.firegiant),
-    Biome.OCEAN to intArrayOf(Npc.small_bat, Npc.bat)
+    Biome.PLAINS to intArrayOf(Npc.spider, Npc.rand_giant_rat_1, Npc.rand_hill_giant_1, Npc.darkbear, Npc.brownbear, Npc.rand_hill_giant_2, Npc.wolf),
+    Biome.FOREST to intArrayOf(Npc.spider, Npc.giantspider1, Npc.darkbear, Npc.brownbear, Npc.giantspider2, Npc.mossgiant, Npc.wolf),
+    Biome.DESERT to intArrayOf(
+        Npc.spider, Npc.snake, Npc.scorpion, Npc.poison_scorpion, Npc.ics_little_jackal, Npc.kingscorpion, Npc.npc_2803, Npc.hellhound
+    ),
+    Biome.WILDERNESS to intArrayOf(
+        Npc.rand_zombie_ranged_1, Npc.rand_ghost_1, Npc.rand_skeleton_melee_lvl1_1, Npc.ghost, Npc.zombie_armed, Npc.skeleton_armed,
+        Npc.rand_fire_giant_1, Npc.mossgiant, Npc.rand_lesser_demon_1, Npc.firegiant, Npc.hellhound
+    ),
+    Biome.WINTER to intArrayOf(
+        Npc.rand_bat_1, Npc.darkbear, Npc.whitewolf, Npc.icegiant, Npc.icewarrior, Npc.rand_ice_troll_melee_1, Npc.ice_spider, Npc.wolf
+    ),
+    Biome.MOUNTAIN to intArrayOf(
+        Npc.rand_bat_1, Npc.rand_earth_warrior_1, Npc.rand_hill_giant_1, Npc.darkbear, Npc.bat, Npc.mossgiant, Npc.babybluedragon,
+        Npc.ogre2, Npc.wolf, Npc.troll
+    ),
+    Biome.VOLCANO to intArrayOf(
+        Npc.imp, Npc.elemental_fire, Npc.rand_fire_giant_1, Npc.babyreddragon, Npc.rand_lesser_demon_1, Npc.rand_hellhound_1,
+        Npc.rand_fire_giant_2, Npc.firegiant, Npc.hellhound
+    ),
+    Biome.OCEAN to intArrayOf(Npc.rand_bat_1, Npc.small_bat, Npc.bat)
 )
 
 private val byLevel: Map<Biome, List<Int>> by lazy {
@@ -58,11 +71,8 @@ fun startHostileMobs() {
     }
 }
 
-fun hostileIdsFor(biome: Biome, level: Int): List<Int> {
-    val ordered = byLevel[biome] ?: return emptyList()
-    val allowed = ordered.filter { NPCDefinitions.getDefs(it).combatLevel <= level }
-    return allowed.ifEmpty { listOf(ordered.first()) }
-}
+fun hostileIdsFor(biome: Biome, level: Int): List<Int> =
+    byLevel[biome].orEmpty().filter { NPCDefinitions.getDefs(it).combatLevel <= level }
 
 private fun rollSpawn(chunkId: Int): Boolean {
     val (chunkX, chunkY, _) = MapUtils.decode(Structure.CHUNK, chunkId)
@@ -95,16 +105,12 @@ private fun canSpawnAt(tile: Tile): Boolean =
 
 private fun spawnHostile(tile: Tile) {
     val biome = generator.biomeAt(tile.x, tile.y)
-    val wilderness = biome == Biome.WILDERNESS
-    val baseLevel = threatLevel(tile)
-    val level = if (wilderness) (baseLevel * WILDERNESS_LEVEL_MULTIPLIER).toInt().coerceAtLeast(baseLevel) else baseLevel
-    val ids = hostileIdsFor(biome, level)
-    if (ids.isEmpty()) return
-    val id = ids.random()
+    val level = threatLevel(tile)
+    val id = hostileIdsFor(biome, level).randomOrNull() ?: return
     val native = NPCDefinitions.getDefs(id).combatLevel.coerceAtLeast(1)
+    val wilderness = biome == Biome.WILDERNESS
     val scale = maxOf(1.0, level.toDouble() / native) * if (wilderness) WILDERNESS_LEVEL_MULTIPLIER else 1.0
-    val mob = HostileNPC(id, tile, scale, (native * scale).toInt())
-    spawned.add(mob)
+    spawned.add(HostileNPC(id, tile, scale, (native * scale).toInt()))
 }
 
 private fun despawnAbandoned() {
