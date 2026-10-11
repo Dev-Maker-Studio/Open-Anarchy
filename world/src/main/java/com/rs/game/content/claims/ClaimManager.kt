@@ -236,10 +236,6 @@ object ClaimManager {
             player.sendMessage("That claim would cover land around a port, which can't be claimed.")
             return
         }
-        if (GeneratedWorld.roadTouches(candidate.minX, candidate.minY, candidate.maxX, candidate.maxY)) {
-            player.sendMessage("Roads can't be claimed; that claim would cover one.")
-            return
-        }
         if (claims.any { it !== editing && it.overlaps(candidate) }) {
             player.sendMessage("That overlaps another claim.")
             return
