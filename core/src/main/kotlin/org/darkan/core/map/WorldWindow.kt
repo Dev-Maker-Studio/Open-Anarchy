@@ -5,6 +5,8 @@ import org.darkan.core.EnvVars
 object WorldWindow {
 
     const val WORLD_TILES = 1_000_000
+    const val WORLD_ORIGIN_X = 0
+    const val WORLD_ORIGIN_Y = 0
     const val WINDOW_TILES = 16384
     const val OVERLAP_TILES = 2048
     const val STRIDE_TILES = WINDOW_TILES - OVERLAP_TILES

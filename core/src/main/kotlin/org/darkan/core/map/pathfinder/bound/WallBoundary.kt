@@ -4,7 +4,7 @@ package org.darkan.core.map.pathfinder.bound
 
 import org.darkan.core.map.pathfinder.flag.CollisionFlag
 import org.darkan.core.map.pathfinder.getIndexInZone
-import org.darkan.core.map.pathfinder.getZoneIndex
+import org.darkan.core.map.pathfinder.zoneAt
 
 internal fun reachWall(
     flags: Array<IntArray?>,
@@ -344,6 +344,6 @@ private inline operator fun Array<IntArray?>.get(
     y: Int,
     z: Int
 ): Int {
-    val zone = this[getZoneIndex(x, y, z)] ?: return -1
+    val zone = zoneAt(x, y, z) ?: return -1
     return zone[getIndexInZone(x, y)]
 }
