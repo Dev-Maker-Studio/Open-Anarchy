@@ -1491,7 +1491,7 @@ public class PathFinder(
     private inline operator fun Array<IntArray?>.get(baseX: Int, baseY: Int, localX: Int, localY: Int, z: Int): Int {
         val x = baseX + localX
         val y = baseY + localY
-        val zone = this[getZoneIndex(x, y, z)] ?: return -1
+        val zone = zoneAt(x, y, z) ?: return -1
         return zone[getIndexInZone(x, y)]
     }
 

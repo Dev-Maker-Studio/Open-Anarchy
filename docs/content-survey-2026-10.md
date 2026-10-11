@@ -6,7 +6,7 @@ nothing here has been played through in game yet, only compiled and started.
 
 ## Generated world (world generation session)
 - `WorldGenerator`, `GeneratedWorld`, `MapGenerator`, `MapMaterializer`: biomes (plains, desert, forest, wilderness), water, lava,
-  scenery per biome, spawn at 3222,3218. Squares are generated when the cache has no saved file for them, and saved when explored.
+  scenery per biome, spawn at 3222,3218 at the time of writing (the world origin is now 0,0; see src/implementation/world-generation.md section 3b). Squares are generated when the cache has no saved file for them, and saved when explored.
 - `WorldMapImage`, `worldmapdata`: the world map image for the 64 x 64 square home area.
 - `CACHE_GENERATE_SIZE` (this session): a dev subsample, only N tiles around the spawn are built, the rest is void.
 - Sectors (called windows in the code until the rename): `WorldWindow`, `WindowTree`, `WindowOrchestrator`, `scripts/window*.sh`,
