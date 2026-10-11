@@ -1,5 +1,7 @@
 package com.rs.game.content.skills.thieving.thievesGuild;
 
+import com.rs.game.content.skills.thieving.Thieving;
+
 import com.rs.engine.dialogue.Dialogue;
 import com.rs.engine.dialogue.HeadE;
 import com.rs.engine.quest.Quest;
@@ -67,7 +69,7 @@ public class PickPocketDummy extends PlayerAction {
 				else {
 					player.npcDialogue(DarrenLightfinger, HeadE.HAPPY_TALKING, DarrenLightfingerCommentary[player.getQuestManager().getAttribs(Quest.BUYERS_AND_CELLARS).getI("DarrenLightfingerCommentary")]);
 					player.getQuestManager().getAttribs(Quest.BUYERS_AND_CELLARS).setI("DarrenLightfingerCommentary", commentaryStage + 1);
-					player.getSkills().addXp(Constants.THIEVING, 4);
+					Thieving.awardXp(player, 4);
 					return -1;
 				}
 			}
@@ -91,7 +93,7 @@ public class PickPocketDummy extends PlayerAction {
 				player.npcDialogue(DarrenLightfinger, HeadE.HAPPY_TALKING, "Excellent! Have a word with me again in a second, then, and we'll get you on your way.");
 			}
 			if(player.getSkills().getLevel(Skills.THIEVING) <= 15)
-				player.getSkills().addXp(Constants.THIEVING, 4);
+				Thieving.awardXp(player, 4);
 			if(player.getSkills().getLevel(Skills.THIEVING) >= 16)
 				player.sendMessage("There's not much more you can learn from a static dummy at this point.");
 		}

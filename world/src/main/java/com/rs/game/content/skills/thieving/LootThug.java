@@ -42,7 +42,7 @@ public class LootThug extends PlayerAction {
 		}
 		else {
 			player.incrementCount("Menaphite Thug pickpocketed");
-			player.getSkills().addXp(Constants.THIEVING, 137.5);
+			Thieving.awardXp(player, 137.5);
 			player.getInventory().addCoins(60);
 			stop(player);
 		}

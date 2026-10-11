@@ -1,9 +1,12 @@
 package com.rs.game.content.skills.construction
 
 import com.rs.game.World
+import com.rs.game.content.claims.ClaimManager
 import com.rs.game.content.combat.XPType
 import com.rs.game.content.combat.getMeleeCombatDelay
 import com.rs.game.content.combat.getWeaponAttackEmote
+import com.rs.game.map.BUILT_FURNITURE_HP
+import com.rs.game.map.WorldDelta
 import com.rs.game.model.entity.Entity
 import com.rs.game.model.entity.HitBar
 import com.rs.game.model.entity.actions.Action
@@ -15,14 +18,15 @@ import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onObjectClick
 import org.darkan.core.Constants
 import org.darkan.core.Utils
-import org.darkan.core.gameval.gen.Loc
+import org.darkan.core.gameval.gen.Obj
 import org.darkan.core.gameval.gen.Seq
 import org.darkan.core.model.Animation
 import org.darkan.core.model.Bonus
 import world.gregs.voidps.type.Tile
 
-private const val HP_ATTRIB = "builtFurnitureHp"
+private const val HP_ATTRIB = BUILT_FURNITURE_HP
 private const val MISSING_HP = -1
+const val PICK_UP_OPTION = "Pick Up"
 private const val DESTROY_OPTION = "Destroy"
 private const val REPAIR_OPTION = "Repair"
 internal const val OPEN_OPTION = "Open"
@@ -38,53 +42,80 @@ private const val BAR_HEIGHT_MODEL = 8719
 private const val FULL_BAR = 255
 private const val BAR_LINGER_TICKS = 4
 
-enum class Material(val xpPerDamage: Double) {
-    LIGHT_WOOD(0.5),
-    TIMBER(0.75),
-    HEAVY_TIMBER(1.0),
-}
+object BuiltFurniture {
+    fun handle(player: Player, obj: GameObject, option: String): Boolean {
+        val piece = ConstructionCatalogue.forLoc(obj.id) ?: return false
+        when (option) {
+            DESTROY_OPTION -> destroyPiece(player, obj, piece)
+            PICK_UP_OPTION -> pickUpPiece(player, obj, piece)
+            REPAIR_OPTION -> player.actionManager.setAction(RepairFurniture(obj, piece))
+            OPEN_OPTION, CLOSE_OPTION -> openPiece(player, obj, piece, option == OPEN_OPTION)
+            else -> return false
+        }
+        return true
+    }
 
-enum class BuiltFurniture(val loc: Int, val maxHp: Int, val material: Material, val openLoc: Int = -1) {
-    CHAIR(Loc.built_wooden_chair, 40, Material.LIGHT_WOOD),
-    WALL(Loc.built_wooden_wall, 150, Material.HEAVY_TIMBER),
-    DOOR(Loc.built_wooden_door, 100, Material.TIMBER, Loc.built_wooden_door_open),
-    ;
-
-    companion object {
-        private val byLoc = entries.flatMap { f -> listOf(f.loc, f.openLoc).filter { it != -1 }.map { it to f } }.toMap()
-
-        fun forLoc(loc: Int): BuiltFurniture? = byLoc[loc]
+    fun init(obj: GameObject) {
+        val piece = ConstructionCatalogue.forLoc(obj.id) ?: return
+        obj.attribs.setI(HP_ATTRIB, piece.hitPoints)
     }
 }
 
 @ServerStartupEvent
 fun mapBuiltFurniture() {
-    val locs = BuiltFurniture.entries.flatMap { listOf(it.loc, it.openLoc) }.filter { it != -1 }.toTypedArray()
-    onObjectClick(*locs) { (player, obj, option) ->
-        val furniture = BuiltFurniture.forLoc(obj.id) ?: return@onObjectClick
-        when (option) {
-            DESTROY_OPTION -> player.actionManager.setAction(DestroyFurniture(obj, furniture))
-            REPAIR_OPTION -> player.actionManager.setAction(RepairFurniture(obj, furniture))
-            OPEN_OPTION, CLOSE_OPTION -> toggleDoor(obj, option == OPEN_OPTION, furniture)
-        }
-    }
+    val locs = ConstructionCatalogue.pieces.filter { it.item != Obj.furnace_item }.flatMap { it.placedLocs.toList() }.toTypedArray()
+    onObjectClick(*locs) { (player, obj, option) -> BuiltFurniture.handle(player, obj, option) }
 }
 
-fun initBuiltFurniture(obj: GameObject) {
-    val furniture = BuiltFurniture.forLoc(obj.id) ?: return
-    obj.attribs.setI(HP_ATTRIB, furniture.maxHp)
-}
+fun initBuiltFurniture(obj: GameObject) = BuiltFurniture.init(obj)
 
-private fun hitPoints(obj: GameObject, furniture: BuiltFurniture): Int =
-    obj.attribs.getI(HP_ATTRIB, MISSING_HP).takeIf { it != MISSING_HP } ?: furniture.maxHp
+private fun hitPoints(obj: GameObject, piece: ConstructionPiece): Int =
+    obj.attribs.getI(HP_ATTRIB, MISSING_HP).takeIf { it != MISSING_HP } ?: piece.hitPoints
 
 private fun isStanding(obj: GameObject): Boolean = World.getObject(obj.tile, obj.type)?.id == obj.id
 
-private fun toggleDoor(door: GameObject, opening: Boolean, furniture: BuiltFurniture) {
-    val swung = swungDoor(door, opening, furniture.loc, furniture.openLoc)
-    swung.attribs.setI(HP_ATTRIB, hitPoints(door, furniture))
-    World.removeObject(door)
+private fun destroyPiece(player: Player, obj: GameObject, piece: ConstructionPiece) {
+    val claim = ClaimManager.claimAt(obj.tile)
+    when {
+        claim == null -> player.actionManager.setAction(DestroyFurniture(obj, piece))
+        claim.owner == player.username -> pickUpPiece(player, obj, piece)
+        else -> player.sendMessage("This ${piece.name.lowercase()} is protected by the land claim of ${claim.owner}.")
+    }
+}
+
+private fun pickUpPiece(player: Player, obj: GameObject, piece: ConstructionPiece) {
+    if (!isStanding(obj)) return
+    val claim = ClaimManager.claimAt(obj.tile)
+    if (claim == null) {
+        player.sendMessage("You can only pick that up on land you have claimed; destroy it instead.")
+        return
+    }
+    if (claim.owner != player.username) {
+        player.sendMessage("Only ${claim.owner} can pick that up.")
+        return
+    }
+    if (!player.inventory.hasFreeSlots()) {
+        player.sendMessage("You don't have enough inventory space to pick that up.")
+        return
+    }
+    World.removeObject(obj)
+    player.inventory.addItem(piece.item, 1)
+    player.sendMessage("You pick up the ${piece.name.lowercase()}.")
+}
+
+private fun openPiece(player: Player, obj: GameObject, piece: ConstructionPiece, opening: Boolean) {
+    val onOpen = piece.onOpen
+    if (onOpen != null) {
+        onOpen(player)
+        return
+    }
+    if (piece.openLoc == -1 || !isStanding(obj)) return
+    val swung = swungDoor(obj, opening, piece.loc, piece.openLoc)
+    swung.attribs.setI(HP_ATTRIB, hitPoints(obj, piece))
+    val owner = WorldDelta.ownerOf(obj)
+    World.removeObject(obj)
     World.spawnObject(swung)
+    WorldDelta.setOwner(swung, owner)
 }
 
 internal fun swungDoor(door: GameObject, opening: Boolean, closedLoc: Int, openLoc: Int): GameObject =
@@ -114,7 +145,7 @@ private class ObjectHitBar(private val from: Int, private val to: Int, private v
     override fun getToPercentage() = to * FULL_BAR / max
 }
 
-private class DestroyFurniture(private val obj: GameObject, private val furniture: BuiltFurniture) : Action() {
+private class DestroyFurniture(private val obj: GameObject, private val piece: ConstructionPiece) : Action() {
     private var barCarrier: NPC? = null
 
     private fun showBar(from: Int, to: Int) {
@@ -122,7 +153,7 @@ private class DestroyFurniture(private val obj: GameObject, private val furnitur
             it.bodyMeshModifier = NPCBodyMeshModifier(it.definitions).addModels(BAR_HEIGHT_MODEL)
             barCarrier = it
         }
-        carrier.nextHitBars.add(ObjectHitBar(from, to, furniture.maxHp))
+        carrier.nextHitBars.add(ObjectHitBar(from, to, piece.hitPoints))
     }
 
     override fun start(entity: Entity): Boolean = canAttack(entity as Player)
@@ -137,8 +168,8 @@ private class DestroyFurniture(private val obj: GameObject, private val furnitur
         val damage = Utils.random(BASE_DAMAGE, maxDamage + 1)
         player.faceObject(obj)
         player.anim(Animation(getWeaponAttackEmote(weapon, style)))
-        player.skills.addXp(trainedSkill(style.xpType), damage * furniture.material.xpPerDamage)
-        val before = hitPoints(obj, furniture)
+        player.skills.addXp(trainedSkill(style.xpType), damage * piece.material.xpPerDamage)
+        val before = hitPoints(obj, piece)
         val remaining = before - damage
         showBar(before, maxOf(remaining, 0))
         if (remaining <= 0) {
@@ -147,6 +178,7 @@ private class DestroyFurniture(private val obj: GameObject, private val furnitur
             return -1
         }
         obj.attribs.setI(HP_ATTRIB, remaining)
+        WorldDelta.touch(obj)
         player.sendMessage("You hit the ${obj.definitions.name.lowercase()} for $damage damage ($remaining hit points left).", true)
         return getMeleeCombatDelay(weapon)
     }
@@ -172,12 +204,12 @@ private fun trainedSkill(type: XPType): Int = when (type) {
     else -> NOT_MELEE
 }
 
-private class RepairFurniture(private val obj: GameObject, private val furniture: BuiltFurniture) : Action() {
+private class RepairFurniture(private val obj: GameObject, private val piece: ConstructionPiece) : Action() {
     private var ticks = 0
 
     override fun start(entity: Entity): Boolean {
         val player = entity as Player
-        if (hitPoints(obj, furniture) >= furniture.maxHp) {
+        if (hitPoints(obj, piece) >= piece.hitPoints) {
             player.sendMessage("The ${obj.definitions.name.lowercase()} doesn't need any repairs.")
             return false
         }
@@ -185,15 +217,16 @@ private class RepairFurniture(private val obj: GameObject, private val furniture
         return true
     }
 
-    override fun process(entity: Entity): Boolean = isStanding(obj) && hitPoints(obj, furniture) < furniture.maxHp
+    override fun process(entity: Entity): Boolean = isStanding(obj) && hitPoints(obj, piece) < piece.hitPoints
 
     override fun processWithDelay(entity: Entity): Int {
         val player = entity as Player
         if (ticks++ % REPAIR_ANIM_INTERVAL == 0) player.anim(Animation(Seq.human_poh_build_floor))
-        val repaired = minOf(furniture.maxHp, hitPoints(obj, furniture) + REPAIR_HP_PER_TICK)
+        val repaired = minOf(piece.hitPoints, hitPoints(obj, piece) + REPAIR_HP_PER_TICK)
         obj.attribs.setI(HP_ATTRIB, repaired)
+        WorldDelta.touch(obj)
         player.skills.addXp(Constants.CONSTRUCTION, REPAIR_XP_PER_TICK)
-        if (repaired >= furniture.maxHp) {
+        if (repaired >= piece.hitPoints) {
             player.anim(-1)
             player.sendMessage("You finish repairing the ${obj.definitions.name.lowercase()}.")
             return -1

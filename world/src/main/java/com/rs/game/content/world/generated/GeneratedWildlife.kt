@@ -29,7 +29,7 @@ private const val GROUND_LEVEL = 0
 
 private val generator = GeneratedWorld.generator
 
-private val HOSTILE_BIOMES = setOf(Biome.WILDERNESS, Biome.WINTER)
+private val HOSTILE_BIOMES = setOf(Biome.WILDERNESS, Biome.WINTER, Biome.VOLCANO)
 
 private val animals = mapOf(
     Biome.PLAINS to intArrayOf(Npc.chicken, Npc.cow, Npc.npc_5154, Npc.pig_1, Npc.dog, Npc.poh_growncat_bluegrey),
@@ -38,7 +38,10 @@ private val animals = mapOf(
         Npc.rand_skeleton_melee_lvl2_3, Npc.rand_skeleton_melee_lvl3_1, Npc.rand_skeleton_melee_lvl5_1,
         Npc.rand_skeleton_melee_lvl7_1, Npc.rand_skeleton_melee_lvl10_2, Npc.darkbear, Npc.brownbear, Npc.wolf
     ),
-    Biome.WINTER to intArrayOf(Npc.icegiant, Npc.icegiant2, Npc.icegiant3, Npc.wolf, Npc.wolfpack_leader_whiter, Npc.brownbear, Npc.darkbear)
+    Biome.WINTER to intArrayOf(Npc.icegiant, Npc.icegiant2, Npc.icegiant3, Npc.wolf, Npc.wolfpack_leader_whiter, Npc.brownbear, Npc.darkbear),
+    Biome.MOUNTAIN to intArrayOf(Npc.wolf, Npc.bat, Npc.brownbear),
+    Biome.VOLCANO to intArrayOf(Npc.imp, Npc.hellhound),
+    Biome.OCEAN to intArrayOf(Npc.small_bat)
 )
 
 private val forestImplings = intArrayOf(Npc.ii_impling_type_1, Npc.ii_impling_type_2, Npc.ii_impling_type_3, Npc.ii_impling_type_4)

@@ -315,6 +315,14 @@ corrected opcode is added to the `Cs2Op` enum by hand.
   `game_settings_toggle_hover` hook (box graphic, label 0xFAFAFA); the server enables those ops on
   the `rows` layer and flips the varbit (`GameSetting` with `isToggle = true`). The rows layer
   already redraws on varp 1438, so a setting's varbit belongs there (`option_buff_bar` is bit 20).
+- **Server-pushed list (interface 1328 `wilderness_lodestones`)**: when the rows are per-player secrets, the
+  server sends one `sendRunScript(Cs2.wilderness_lodestones_add, x, y)` per entry after `sendInterface` and
+  nothing for the rest, so the client never holds data it must not have; no varp or varbit carries it. The list
+  layer's `onLoadScript` clears it, each add script creates one text cc at `ifGetNextSubId(list)` (cc ids stay
+  contiguous), then `[proc,wilderness_lodestones_layout]` resizes the scroll and rebuilds the scrollbar with
+  `proc_scrollbar_vertical` (wom2 pattern). The op is always 1 and the row is the cc id, so the click arrives as
+  `e.slotId` and the 10-op limit of `setting` never caps the list; the server sends
+  `IFEvents(list, 0, n - 1).enableRightClickOption(0)` once.
 - **Buff bar (interface 1322 `buff_bar`)**: 28 slots in two rows of 14, hosted by 746:458 and
   548:425 (519x68, bottom-anchored above the chatbox; `chatbox_resize`/`chatbox_resize_window` move
   the resizable host with the chat). Each slot has an obj component (1-28), a 24x24 graphic
@@ -340,6 +348,13 @@ corrected opcode is added to the `Cs2Op` enum by hand.
   hover graphic (12417, the 12148 hover tile with the icon pixels both 2011 states share).
 
 
+- **World map overlays (interface 755)**: the map image (index 23, `main/4.dat`) is cache data and cannot change under a
+  running client (JS5 index CRCs are fixed at login), so anything live is a CS2 overlay fed by varps. Fog is
+  `worldmap_fog_0..7` (16x16 cells of 256 tiles, `[proc,worldmap_fog_explored]`); claims are `worldmap_claim_0..15`, two
+  varps per claim (minX | maxX << 12 | bit 24 present, then minY | maxY << 12), the 8 nearest claims pushed by
+  `WorldMapClaims.kt`, drawn as rect ccs at the end of `[proc,worldmap_fog_update]` through `[proc,worldmap_claim_value]`.
+  The overlay redraws when the map opens or pans/zooms, not on a varp change. The map menu lists `Enum.worldmap_maps`
+  (708), now only the main area; an area in the enum with no `details` file is a blank row.
 - **Gameframes**: the lobby screen 906, resizable frame 746 and fixed frame 548 each had a 50 px
   Home/Support/Forums/Clans bar as a root layer (906:1, 746:239, 548:2; buttons 509/517/525/533,
   244/252/260/268, 209/217/225/233) above a content root layer (906:0 and 335, 746:48, 548:204).
@@ -418,6 +433,16 @@ corrected opcode is added to the `Cs2Op` enum by hand.
 - **Pixel art**: derive new icons from existing graphics' own pixels (copy regions with plain
   `paste`, never a masked paste - it squares partial alpha), keep the palette, render at 6-10x next
   to neighbours to judge, then compare the decoded frame with the PNG on every visible pixel.
+
+- **Server-fed scrolling list with per-row text (construction menu, interface `construction_menu`)**: the server
+  sends one inv (`Inv.construction_menu`, 512 slots) of the rows to show and attaches the row text as the item's
+  `ItemTooltips.METADATA_KEY` metadata; `[proc,construction_menu_list_draw]` reads it back with `invGetTooltip(inv, row)`
+  (op 1006, sent with every UPDATE_INV_FULL) and draws three ccs per row (obj, text, separator at ids `3r`, `3r+1`,
+  `3r+2`, so the server's row is `slotId / 3`), then `ifSetScrollSize` + `proc_scrollbar_vertical` on a sibling layer.
+  The list layer's `onLoadScript` re-registers `ifSetOnInvTransmit` on itself so a category change is just a new
+  `sendItems`. The selected tab is a varbit (`construction_menu_category`) that only the tab layer's
+  `onVarpTransmit` reads, so the list redraws from the inv alone and the tabs from the var alone. The server enables
+  ops with `IFEvents(layer, 0, rows * 3 - 1).enableRightClickOptions(0, 1, 2)` after opening.
 
 ## 5. Keep this skill current
 

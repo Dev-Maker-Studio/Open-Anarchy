@@ -1,5 +1,7 @@
 package com.rs.game.content.world.areas.al_kharid.npcs
 
+import com.rs.game.content.skills.thieving.Thieving
+
 import com.rs.engine.dialogue.HeadE
 import com.rs.engine.dialogue.startConversation
 import com.rs.engine.quest.Quest
@@ -33,7 +35,7 @@ fun handleOsman() {
                             player.inventory.deleteItem(10849, Int.MAX_VALUE)
                             player.inventory.deleteItem(10850, Int.MAX_VALUE)
                             player.inventory.deleteItem(10851, Int.MAX_VALUE)
-                            player.skills.addXp(Constants.THIEVING, totalXp.toDouble())
+                            Thieving.awardXp(player, totalXp.toDouble())
                         }
                     }
                     else {

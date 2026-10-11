@@ -22,6 +22,7 @@ import com.rs.engine.thread.AsyncTaskExecutor;
 import com.rs.engine.thread.WorldThread;
 import com.rs.game.World;
 import com.rs.game.map.ChunkManager;
+import com.rs.game.map.WorldDelta;
 import com.rs.game.model.entity.player.Player;
 import org.darkan.core.JsonFileManager;
 import org.darkan.core.Logger;
@@ -125,6 +126,7 @@ public final class Launcher {
 		}
 		if (thisTick == 0)
 			WorldPersistentData.save();
+			WorldDelta.saveNow();
 	}
 
 	public static void cleanMemory(boolean force) {

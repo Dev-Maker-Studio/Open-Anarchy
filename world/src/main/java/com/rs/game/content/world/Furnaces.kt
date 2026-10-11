@@ -6,8 +6,7 @@ import com.rs.game.content.quests.familycrest.familyCrestItemOnFurnace
 import com.rs.game.content.skills.crafting.GOLD_BAR
 import com.rs.game.content.skills.crafting.Silver
 import com.rs.game.content.skills.crafting.Silver.SILVER_BAR
-import com.rs.game.content.skills.construction.PICK_UP_OPTION
-import com.rs.game.content.skills.construction.pickUpFurnace
+import com.rs.game.content.skills.construction.BuiltFurniture
 import com.rs.game.content.skills.crafting.openInterface
 import com.rs.game.content.skills.smithing.MoltenGlassMaking
 import com.rs.game.content.skills.smithing.SmeltingD
@@ -20,7 +19,7 @@ import com.rs.plugin.kts.onObjectClick
 
 @ServerStartupEvent
 fun mapFurnaces() {
-    onObjectClick("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666) { e -> if (e.option == PICK_UP_OPTION) pickUpFurnace(e.player, e.obj) else use(e.player, e.obj) }
+    onObjectClick("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666) { e -> if (!BuiltFurniture.handle(e.player, e.obj, e.option)) use(e.player, e.obj) }
     onItemOnObject(arrayOf("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666), arrayOf(GOLD_BAR, SILVER_BAR)) { e -> useItem(e.player, e.`object`, e.item) }
     onItemOnObject(arrayOf("Furnace", "Small furnace", "Clay forge", "Lava Furnace", 11666), arrayOf(PERFECT_ORE, PERFECT_BAR)) { e -> familyCrestItemOnFurnace(e.player, e.item) }
 }

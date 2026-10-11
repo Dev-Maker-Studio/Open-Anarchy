@@ -2,6 +2,8 @@ package com.rs.game.content.world.npcs.merchant
 
 import com.rs.engine.pathfinder.DumbRouteFinder
 import com.rs.game.World
+import com.rs.game.content.world.generated.threatLevel
+import com.rs.game.model.entity.npc.combat.NPCCombatDefinitions
 import com.rs.game.content.combat.RangedWeapon
 import com.rs.game.content.skills.cooking.Foods
 import com.rs.game.model.entity.Entity
@@ -17,7 +19,11 @@ import org.darkan.core.model.Bonus
 import org.darkan.core.model.Item
 import world.gregs.voidps.type.Tile
 
-private const val STARTING_COINS = 250
+private const val LEVEL_PER_THREAT = 5
+private const val COINS_PER_LEVEL = 3
+private const val HITPOINTS_PER_LEVEL = 10
+private const val DEED_STOCK = 3
+private const val DEED_REFRESH_TICKS = 2000
 private const val NO_MODEL = -1
 private const val SPARE_MODELS = 16
 private const val NO_RENDER_ANIM = -1
@@ -36,8 +42,10 @@ private val GEAR_SLOTS = setOf(
     Equipment.LEGS, Equipment.HANDS, Equipment.FEET, Equipment.RING, Equipment.AMMO
 )
 
-class MerchantNPC(id: Int, tile: Tile) : NPC(id, tile, null, true) {
-    var coins = STARTING_COINS
+class MerchantNPC(id: Int, tile: Tile) : NPC(id, tile, null, true), CoinTrader {
+    val level = threatLevel(tile) * LEVEL_PER_THREAT
+
+    override var coins = level * COINS_PER_LEVEL
         private set
     var weaponId = -1
         private set
@@ -52,15 +60,21 @@ class MerchantNPC(id: Int, tile: Tile) : NPC(id, tile, null, true) {
 
     init {
         isNoDistanceCheck = true
+        setLevels(NPCCombatDefinitions.Skill.entries.associateWith { level }.toMutableMap())
+        setCombatLevel(level)
+        hitpoints = maxHitpoints
+        shop.addItem(Obj.estate_deed, DEED_STOCK)
     }
 
-    fun canTrade() = !isDead && !hasFinished()
+    override fun getMaxHitpoints(): Int = (if (level > 0) level else 1) * HITPOINTS_PER_LEVEL
 
-    fun earn(amount: Int) {
+    override fun canTrade() = !isDead && !hasFinished()
+
+    override fun earn(amount: Int) {
         coins = (coins.toLong() + amount).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 
-    fun pay(amount: Int) {
+    override fun pay(amount: Int) {
         coins = (coins - amount).coerceAtLeast(0)
     }
 
@@ -73,7 +87,7 @@ class MerchantNPC(id: Int, tile: Tile) : NPC(id, tile, null, true) {
         pauseWanderUntil = tickCounter.toLong() + WANDER_PAUSE_TICKS
     }
 
-    fun stockChanged() {
+    override fun stockChanged() {
         val worn = bestGear(shop.stock())
         bonuses = IntArray(Bonus.entries.size) { index -> worn.sumOf { Equipment.getBonus(it, Bonus.entries[index]) } }
         weaponId = worn.firstOrNull { Equipment.getItemSlot(it.id) == Equipment.WEAPON }?.id ?: -1
@@ -91,6 +105,7 @@ class MerchantNPC(id: Int, tile: Tile) : NPC(id, tile, null, true) {
         super.processNPC()
         if (isDead || isLocked) return
         eatWhenHurt()
+        refreshDeeds()
     }
 
     override fun randomWalk() {
@@ -108,7 +123,12 @@ class MerchantNPC(id: Int, tile: Tile) : NPC(id, tile, null, true) {
     override fun drop() {
         val killer = mostDamageReceivedSourcePlayer
         val loot = shop.stock().map { Item(it.id, it.amount) } + Item(Obj.coins, coins)
-        loot.filter { it.amount > 0 }.forEach { World.addGroundItem(it, tile, killer, killer != null) }
+        loot.filter { it.amount > 0 }.forEach { World.addGroundItem(it, tile, killer, it.id != Obj.coins && killer != null) }
+    }
+
+    private fun refreshDeeds() {
+        if (tickCounter % DEED_REFRESH_TICKS != 0L || shop.deedCount() >= DEED_STOCK) return
+        shop.addItem(Obj.estate_deed, 1)
     }
 
     private fun eatWhenHurt() {

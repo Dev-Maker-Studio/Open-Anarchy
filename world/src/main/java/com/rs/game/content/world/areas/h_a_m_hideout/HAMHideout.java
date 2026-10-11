@@ -1,5 +1,7 @@
 package com.rs.game.content.world.areas.h_a_m_hideout;
 
+import com.rs.game.content.skills.thieving.Thieving;
+
 import com.rs.game.World;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.model.entity.player.Skills;
@@ -39,7 +41,7 @@ public class HAMHideout {
                     e.getPlayer().anim(832);
 
                     if (Utils.skillSuccess(e.getPlayer().getSkills().getLevel(Skills.THIEVING), hasLockpickRate, 190, 190)) {
-                        e.getPlayer().getSkills().addXp(Constants.THIEVING, 0.5);
+                        Thieving.awardXp(e.getPlayer(), 0.5);
                         World.removeObjectTemporary(e.getObj(), Ticks.fromSeconds(9));
                         World.spawnObjectTemporary(new GameObject(e.getObjectId() + 1, e.getObj().getType(), e.getObj().getRotation()+1, e.getObj().getTile().transform(-1, 0, 0)), Ticks.fromSeconds(10), true);
                         e.getPlayer().unlock();
@@ -70,7 +72,7 @@ public class HAMHideout {
         player.anim(832);
 
         if (Utils.skillSuccess(player.getSkills().getLevel(Skills.THIEVING), hasLockpickRate, 190, 190)) {
-            player.getSkills().addXp(Constants.THIEVING, 0.5);
+            Thieving.awardXp(player, 0.5);
             player.getVars().setVarBit(Varbit.ham_thief, 1);
             player.unlock();
         } else {

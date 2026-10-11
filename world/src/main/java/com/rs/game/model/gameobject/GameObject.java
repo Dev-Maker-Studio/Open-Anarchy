@@ -22,6 +22,7 @@ import world.gregs.voidps.cache.definition.data.ObjectDefinition;
 import com.rs.game.World;
 import com.rs.game.map.Chunk;
 import com.rs.game.map.ChunkManager;
+import com.rs.game.map.WorldDelta;
 import com.rs.game.model.entity.player.Player;
 import com.rs.game.tasks.TaskManager;
 import org.darkan.core.model.Animation;
@@ -159,6 +160,8 @@ public class GameObject extends WorldObject {
 		setId(newId);
 		if (lastId != newId)
 			World.refreshObject(this);
+		if (newId == originalId)
+			WorldDelta.timedCleared(this);
 		if (newId != originalId) {
 			ChunkManager.getChunk(getTile().getChunkId(), true).flagForProcess(this);
 			idChangeTicks = -2;
@@ -184,6 +187,7 @@ public class GameObject extends WorldObject {
 		chunk.flagForProcess(this);
 		changeId(newId);
 		idChangeTicks = ticks;
+		WorldDelta.timed(this, newId, ticks);
 	}
 
 	public GameObject setRouteType(RouteType routeType) {
