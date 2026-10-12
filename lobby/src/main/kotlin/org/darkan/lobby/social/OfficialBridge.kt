@@ -33,6 +33,8 @@ import org.darkan.core.social.SocialEvent
 import org.darkan.core.social.SocialJson
 import java.util.concurrent.atomic.AtomicReference
 
+private class Rejected : Exception()
+
 object OfficialBridge {
     const val RELAY_PREFIX = "[make]"
     private const val KEEP_ALIVE_MS = 5000L
@@ -66,6 +68,9 @@ object OfficialBridge {
                 val token = login()
                 attempt = 0
                 run(token)
+            } catch (e: Rejected) {
+                logWarn("OfficialBridge: the official lobby rejected the credentials, bridge stopped until the lobby restarts")
+                return
             } catch (e: Exception) {
                 logWarn("OfficialBridge: ${e.javaClass.simpleName} ${e.message}")
             }
@@ -84,6 +89,7 @@ object OfficialBridge {
             contentType(ContentType.Application.Json)
             setBody(body)
         }
+        if (response.status.value == 401) throw Rejected()
         val text = response.bodyAsText()
         val root = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrNull() ?: error("login failed: status ${response.status.value}")
         val data = (root["data"] as? JsonObject) ?: root
