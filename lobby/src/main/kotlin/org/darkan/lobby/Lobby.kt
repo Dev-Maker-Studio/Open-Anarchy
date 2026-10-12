@@ -58,6 +58,9 @@ object Lobby : CoroutineScope {
         scheduleUpdate(EnvVars.autoUpdateCountdownMinutes.minutes, "build $version")
     }
 
+    val ready: Boolean
+        get() = ::lobbyEngineLoop.isInitialized
+
     val updatingSoon: Boolean
         get() = updateAt != 0L && updateAt - System.currentTimeMillis() < UPDATE_LOGIN_CUTOFF_MILLIS
 
