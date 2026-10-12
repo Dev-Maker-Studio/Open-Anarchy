@@ -242,7 +242,9 @@ class Toolbelt {
                 return
             if (useTool(player, Tools.DUNG_NEEDLE, item, slotId) || useTool(player, Tools.DUNG_KNIFE, item, slotId))
                 return
-            useTool(player, Tools.DUNG_CHISEL, item, slotId)
+            if (useTool(player, Tools.DUNG_CHISEL, item, slotId))
+                return
+            useTool(player, Tools.SAW, item, slotId)
         }
 
         private fun handleFletch(player: Player, item: Item, slotId: Int) {

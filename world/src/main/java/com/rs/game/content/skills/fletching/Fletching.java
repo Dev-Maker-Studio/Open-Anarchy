@@ -28,7 +28,7 @@ public class Fletching extends PlayerAction {
 
 	public enum Fletch {
 
-		LOG(1511, KNIFE, new int[] { ARROW_SHAFT, 50, 48, 9440 }, new int[] { 1, 1, 10, 9 }, new double[] { 0.33, 5, 10, 6 }, new Animation(6702)),
+		LOG(1511, KNIFE, new int[] { ARROW_SHAFT, 50, 48, 9440, Obj.woodplank }, new int[] { 1, 1, 10, 9, 1 }, new double[] { 0.33, 5, 10, 6, 0 }, new Animation(6702)),
 
 		STRUNG_SHORT_BOW(50, BOW_STRING, new int[] { 841 }, new int[] { 1 }, new double[] { 5 }, new Animation(6678)),
 
@@ -43,7 +43,7 @@ public class Fletching extends PlayerAction {
 		OGRE_ARROWS(Obj.obj_2861, Obj.ogre_headless_arrow, new int[] { Obj.ogre_arrow }, new int[] { 5 }, new double[] { 1.0 }, new Animation(-1)),
 
 
-		OAK_LOG(1521, KNIFE, new int[] { ARROW_SHAFT, 54, 56, 9442 }, new int[] { 15, 20, 25, 24 }, new double[] { 0.375, 16.5, 25, 16 }, new Animation(6702)),
+		OAK_LOG(1521, KNIFE, new int[] { ARROW_SHAFT, 54, 56, 9442, Obj.plank_oak }, new int[] { 15, 20, 25, 24, 1 }, new double[] { 0.375, 16.5, 25, 16, 0 }, new Animation(6702)),
 
 		STRUNG_OAK_SHORT_BOW(54, BOW_STRING, new int[] { 843 }, new int[] { 20 }, new double[] { 16.5 }, new Animation(6679)),
 
@@ -55,9 +55,9 @@ public class Fletching extends PlayerAction {
 
 		STRUNG_WILLOW_LONG_BOW(58, BOW_STRING, new int[] { 847 }, new int[] { 40 }, new double[] { 41.5 }, new Animation(6686)),
 
-		TEAK_LOG(6333, KNIFE, new int[] { 9446 }, new int[] {46 }, new double[] { 27 }, new Animation(6702)),
+		TEAK_LOG(6333, KNIFE, new int[] { 9446, Obj.plank_teak }, new int[] { 46, 1 }, new double[] { 27, 0 }, new Animation(6702)),
 
-		MAHOGANY_LOG (6332, KNIFE, new int[] { 9450 }, new int[] { 61 }, new double[] { 41 }, new Animation(6702)),
+		MAHOGANY_LOG (6332, KNIFE, new int[] { 9450, Obj.plank_mahogany }, new int[] { 61, 1 }, new double[] { 41, 0 }, new Animation(6702)),
 
 		MAPLE_LOG(1517, KNIFE, new int[] { ARROW_SHAFT, 64, 62, 9448 }, new int[] { 45, 50, 55, 54 }, new double[] { 0.416, 50, 58.3, 32 }, new Animation(6702)),
 
@@ -292,14 +292,22 @@ public class Fletching extends PlayerAction {
 	public boolean process(Player player) {
 		if (ticks <= 0 || !player.getInventory().containsItem(fletch.getId(), 1))
 			return false;
-		if (!player.getInventory().containsItem(fletch.getSelected(), 1)
-				&& !com.rs.game.content.Toolbelt.containsTool(player, fletch.getSelected()))
+		int tool = isPlank(fletch, option) ? Obj.poh_saw : fletch.getSelected();
+		if (!player.getInventory().containsItem(tool, 1) && !com.rs.game.content.Toolbelt.containsTool(player, tool)) {
+			if (isPlank(fletch, option))
+				player.sendMessage("You need a saw to make planks.");
 			return false;
+		}
 		if (player.getSkills().getLevel(Constants.FLETCHING) < fletch.getLevel()[option]) {
 			player.simpleDialogue("You need a level of " + fletch.getLevel()[option] + " to fletch this.");
 			return false;
 		}
 		return true;
+	}
+
+	public static boolean isPlank(Fletch fletch, int option) {
+		int[] plank = com.rs.game.content.skills.construction.SawmillOperator.getPlankForLog(fletch.getId());
+		return plank != null && fletch.getProduct()[option] == plank[0];
 	}
 
 	public static boolean maxMakeQuantityTen(Fletch fletch) {
@@ -419,6 +427,9 @@ if (fletch == Fletch.FLIGHTED_OGRE_ARROWS) {
 			fletch = Fletch.forId(second.getId());
 			selected = first.getId();
 		}
-		return fletch != null && fletch.getSelected() == selected ? fletch : null;
+		if (fletch == null)
+			return null;
+		boolean saw = selected == Obj.poh_saw && com.rs.game.content.skills.construction.SawmillOperator.getPlankForLog(fletch.getId()) != null;
+		return fletch.getSelected() == selected || saw ? fletch : null;
 	}
 }
