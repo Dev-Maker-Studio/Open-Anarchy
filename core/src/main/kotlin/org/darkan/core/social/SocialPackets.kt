@@ -21,21 +21,22 @@ import org.darkan.core.net.prot.packet.UpdateIgnoreList
 
 object SocialPackets {
     private const val DISPLAY_WORLD_ID = 123
+    const val OFFICIAL_PREFIX = "official_"
 
 
-    fun render(viewer: String, event: SocialEvent): List<ServerProt> = when (event) {
+    fun render(viewer: String, event: SocialEvent, includeOfficial: Boolean = false): List<ServerProt> = when (event) {
         is SocialEvent.Snapshot -> listOf(
             FriendlistLoaded(),
             friendStatus(event.friends),
             ignoreList(event.ignores),
             ChatFilterSettingsPrivateChat(event.privateStatus),
-            friendsChatChannel(viewer, event.friendsChat),
+            friendsChatChannel(viewer, event.friendsChat, includeOfficial),
         )
         is SocialEvent.FriendUpdated -> listOf(friendStatus(listOf(event.friend)))
         is SocialEvent.FriendRemoved -> emptyList()
         is SocialEvent.IgnoresChanged -> listOf(ignoreList(event.ignores))
         is SocialEvent.PrivateStatusChanged -> listOf(ChatFilterSettingsPrivateChat(event.status))
-        is SocialEvent.FriendsChatChanged -> listOf(friendsChatChannel(viewer, event.channel))
+        is SocialEvent.FriendsChatChanged -> listOf(friendsChatChannel(viewer, event.channel, includeOfficial))
         is SocialEvent.FriendsChatLine -> listOf(friendsChatLine(event))
         is SocialEvent.PrivateMessageReceived -> listOf(privateMessage(event))
         is SocialEvent.PrivateMessageSent -> listOf(privateMessageEcho(event))
@@ -60,18 +61,18 @@ object SocialPackets {
     fun ignoreList(ignores: List<IgnoredPlayer>): UpdateIgnoreList =
         UpdateIgnoreList(ignores.map { IgnoreEntry(username = it.username, displayName = it.displayName) }.toTypedArray())
 
-    fun friendsChatChannel(viewer: String, state: FriendsChatState?): FriendsChatChannel {
+    fun friendsChatChannel(viewer: String, state: FriendsChatState?, includeOfficial: Boolean = false): FriendsChatChannel {
         if (state == null) return FriendsChatChannel(clear = true)
         return FriendsChatChannel(
             ownerDisplayName = state.ownerDisplayName,
             ownerUsername = state.ownerUsername,
             chatName = state.chatName.formatPlayerNameForProtocol(),
             minRankCanKick = if (viewer == state.ownerUsername) 0 else state.kickRank.id,
-            players = state.members.map {
+            players = state.members.filter { includeOfficial || !it.username.startsWith(OFFICIAL_PREFIX) }.map {
                 FriendsChatPlayer(
                     displayName = it.displayName,
                     username = it.username,
-                    worldId = if (it.worldId == 0 || it.username.startsWith("official_")) DISPLAY_WORLD_ID else it.worldId,
+                    worldId = if (it.worldId == 0 || it.username.startsWith(OFFICIAL_PREFIX)) DISPLAY_WORLD_ID else it.worldId,
                     rank = it.rank.id,
                     worldName = if (it.worldId == 0) "Web" else it.worldName,
                 )
