@@ -110,6 +110,7 @@ object OfficialBridge {
     }
 
     private suspend fun handle(text: String) {
+        if (text.length < 400) logInfo("OfficialBridge: received $text")
         val event = runCatching { SocialJson.json.decodeFromString(SocialEvent.serializer(), text) }.getOrNull() ?: return
         when (event) {
             is SocialEvent.FriendsChatLine -> {
