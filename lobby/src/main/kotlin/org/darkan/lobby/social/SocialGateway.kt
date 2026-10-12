@@ -338,7 +338,7 @@ object SocialGateway {
     private fun rankAllowed(rank: FriendsChatRank, required: FriendsChatRank): Boolean =
         required.id <= FriendsChatRank.UNRANKED.id || rank.id >= required.id
 
-    private fun officialMembersOf(): List<FriendsChatMember> = OfficialBridge.members().map {
+    private fun officialMembersOf(local: Collection<String>): List<FriendsChatMember> = OfficialBridge.members().filter { it.displayName.lowercase() !in local }.take(FRIENDS_CHAT_CAPACITY - local.size).map {
         FriendsChatMember(
             username = "official:" + it.username,
             displayName = it.displayName,
@@ -374,7 +374,7 @@ object SocialGateway {
             ownerDisplayName = owner.displayName,
             chatName = owner.social.friendsChat.name ?: owner.username,
             kickRank = owner.social.friendsChat.rankToKick,
-            members = members + officialMembersOf(),
+            members = members + officialMembersOf(members.map { it.displayName.lowercase() }),
         )
     }
 
