@@ -41,7 +41,6 @@ fun Player.princeAliDialogue(npc: NPC) {
                         Item(PrinceAliRescue.PINK_SKIRT, 1),
                         Item(PrinceAliRescue.BLONDE_WIG, 1)
                     )
-                    //TODO update this to new logic for NPC transformation
                 }
                 npc(PRINCE_ALI2, HeadE.HAPPY_TALKING, "Thank you my friend, I must leave you now. My father will pay you well for this.")
                 simple("The prince has escaped, well done! You are now a friend of Al-Kharid and may pass through the Al-Kharid toll gate for free.") {

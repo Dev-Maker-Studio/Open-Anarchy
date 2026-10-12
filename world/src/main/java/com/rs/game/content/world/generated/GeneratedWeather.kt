@@ -14,7 +14,6 @@ private const val SNOW_PER_PULSE = 4
 private const val SNOW_REACH = 7
 private const val GROUND_LEVEL = 0
 
-/** It snows all the time in the winter biome: snowfall graphics fall on random tiles around every player standing in it. */
 @ServerStartupEvent
 fun startGeneratedWeather() {
     if (!EnvVars.generateMaps) return

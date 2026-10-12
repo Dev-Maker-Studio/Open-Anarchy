@@ -5,13 +5,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.QuickChatOptionDefinition
 
-/**
- * A quick chat menu - archive 0 of indices 24 and 25 - byte for byte.
- *
- * Four opcodes, two of them a count and a list of `(id, hotkey)` pairs. One 727 file writes opcode 4
- * first, so the order is replayed from the file rather than derived; see
- * [world.gregs.voidps.cache.definition.OpcodeOrdered].
- */
 class QuickChatOptionEncoder : OpcodeEncoder<QuickChatOptionDefinition>() {
 
     override fun opcodes(definition: QuickChatOptionDefinition): IntArray = opcodesOf(definition)
@@ -31,7 +24,6 @@ class QuickChatOptionEncoder : OpcodeEncoder<QuickChatOptionDefinition>() {
         }
     }
 
-    /** A count byte and then a short id and a cp1252 hotkey byte per entry, 0 for no hotkey. */
     private fun Writer.pairs(ids: IntArray?, hotkeys: CharArray?) {
         val values = ids ?: IntArray(0)
         writeByte(values.size)
@@ -44,7 +36,6 @@ class QuickChatOptionEncoder : OpcodeEncoder<QuickChatOptionDefinition>() {
 
     companion object {
 
-        /** The opcodes a file with these values carries when it was packed canonically. */
         fun opcodesOf(definition: QuickChatOptionDefinition): IntArray {
             val opcodes = ArrayList<Int>(4)
             if (definition.optionText != null) {

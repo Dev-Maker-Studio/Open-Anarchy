@@ -38,7 +38,6 @@ private const val UNLOADED_TILE = -1
 private const val MAX_REGION_ID = 0xFFFF
 private const val COLLISION_HEAP = 1024L * 1024 * 1024
 private const val OBJECTS_HEAP = 3072L * 1024 * 1024
-// The citadel map decodes partially with its xteas but fails the gzip format checks.
 private const val UNDECODABLE_REGION = 18754
 
 @ServerStartupEvent(ServerStartupEvent.Priority.FILE_IO)

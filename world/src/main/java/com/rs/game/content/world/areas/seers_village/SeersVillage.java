@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.seers_village;
 
 import com.rs.engine.dialogue.Conversation;
@@ -125,7 +109,6 @@ public class SeersVillage {
 			});
 	});
 
-	//---Camelot Castle
 
 	public static NPCClickHandler handleSirKay = new NPCClickHandler(new Object[] { 241 }, e -> e.getPlayer().startConversation(new Conversation(e.getPlayer()) {
         {
@@ -202,7 +185,7 @@ public class SeersVillage {
 	});
 
 	public static NPCClickHandler handleKingArthur = new NPCClickHandler(new Object[] { 251 }, e -> {
-		if(e.getPlayer().isQuestComplete(Quest.MERLINS_CRYSTAL)) {//After merlins crystal is holy grail...
+		if(e.getPlayer().isQuestComplete(Quest.MERLINS_CRYSTAL)) {
 			e.getPlayer().startConversation(new KingArthurHolyGrailD(e.getPlayer()).getStart());
 			return;
 		}
@@ -218,7 +201,6 @@ public class SeersVillage {
 			e.getPlayer().startConversation(new Dialogue().addNPC(e.getNPCId(), HeadE.HAPPY_TALKING, "Thank you for saving me from that crystal!"));
 	});
 
-	//--End Camelot Castle
 
 	public static ObjectClickHandler handleRoofLadder = new ObjectClickHandler(new Object[] { 26118, 26119 }, e -> e.getPlayer().ladder(e.getPlayer().transform(0, 0, e.getObjectId() == 26118 ? 2 : -2)));
 

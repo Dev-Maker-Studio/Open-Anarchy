@@ -22,42 +22,22 @@ void main() {
         vec4 texColor = texture(textureSampler, vTexCoord);
         alpha = texColor.a;
         if (alpha < 0.01) discard;
-        // Multiplicative blend: texture color modulated by vertex color
-        // Matches RS client: color = texColor * vColor
         baseColor = texColor.rgb * vColor;
     } else {
         baseColor = vColor;
     }
 
-    // Flip normal for back faces (two-sided lighting).
-    //
-    // The vMirrored branch below is the opposite case to the one deleted from
-    // indirect_*.frag and ubo_*.frag, which is why it stays here. Those shaders draw
-    // mirrored instances from geometry whose winding was already reversed on the CPU
-    // (RegionManager.registerMirroredVariants -> StaticBatcher.reverseWinding), so
-    // gl_FrontFacing is correct as it stands and inverting it again negated the normal
-    // on every visible mirrored surface. Here vMirrored means something different: the
-    // vertex stage sets it from determinant(mat3(model)) < 0, a reflection baked into the
-    // model matrix, which really does invert raster winding - so compensating is correct.
-    //
-    // In practice the branch is unreachable. Only ModelViewer and InterfaceViewer's
-    // InterfaceModelRenderer load this program, and both build `model` from translate,
-    // rotate and positive scale only, so the determinant is never negative and vMirrored
-    // is always 0. Leave it in place for whoever draws a reflected model matrix next.
     vec3 norm = normalize(vNormal);
     bool isFrontFace = gl_FrontFacing;
     if (vMirrored == 1) {
-        // For mirrored objects, the notion of front/back is reversed
         isFrontFace = !isFrontFace;
     }
     if (!isFrontFace) {
         norm = -norm;
     }
 
-    // Ambient lighting
     vec3 ambient = ambientLight * baseColor;
 
-    // Diffuse lighting
     vec3 lightDir = normalize(-lightDirection);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor * baseColor;

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.engine.thread;
 
 import com.rs.Launcher;
@@ -72,7 +56,6 @@ public final class WorldThread extends Thread {
 		return Thread.currentThread() == ticking;
 	}
 
-	/** False when the tick did not finish in time; the caller drains anyway rather than hang a shutdown. */
 	public static boolean awaitStop(long timeoutMs) {
 		try {
 			return STOPPED.await(timeoutMs, TimeUnit.MILLISECONDS);

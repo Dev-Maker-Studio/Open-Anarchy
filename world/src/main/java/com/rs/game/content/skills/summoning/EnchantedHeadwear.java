@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.summoning;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -131,23 +115,6 @@ public class EnchantedHeadwear {
 			e.cancel();
 	});
 
-//	public static NPCClickHandler pikkupstixEnchanting = new NPCClickHandler(new Object[] { 6988 }, e -> {
-//		if (e.getOpNum() == 1)
-//			e.getPlayer().startConversation(new GenericSkillcapeOwnerD(e.getPlayer(), 6988, Skillcapes.Summoning));
-//		else if (e.getOpNum() == 3)
-//			ShopsHandler.openShop(e.getPlayer(), "taverly_summoning_shop");
-//		else if (e.getOpNum() == 4) {
-//			if (e.getPlayer().getInventory().getFreeSlots() < 28) {
-//				for (Item i : e.getPlayer().getInventory().getItems().array()) {
-//					if ((i != null) && (Headwear.forId(i.getId()) != null)) {
-//						e.getPlayer().startConversation(new Dialogue().addSimple("That is a fine piece of headwear you have there. If you give me a closer look, I may be able to enchant it."));
-//						return;
-//					}
-//				}
-//			}
-//			e.getPlayer().startConversation(new Dialogue().addSimple("If you bring me the right headwear, I may be able to assist in enchanting it."));
-//		}
-//	});
 	
 	public static ItemOnItemHandler chargeUncharged = new ItemOnItemHandler(Arrays.stream(Headwear.values()).mapToInt(h -> h.enchantedId).toArray(), Arrays.stream(Scroll.values()).mapToInt(Scroll::getId).toArray(), e -> {
 		Headwear wear = Headwear.forId(e.getItem1().getId());

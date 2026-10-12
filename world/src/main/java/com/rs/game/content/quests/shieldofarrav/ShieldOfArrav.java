@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.quests.shieldofarrav;
 
 import com.rs.engine.dialogue.Conversation;
@@ -49,29 +33,22 @@ import java.util.List;
 )
 @PluginEventHandler
 public class ShieldOfArrav extends QuestOutline {
-    //---Stages---
     final static int NOT_STARTED_STAGE = 0;
 
-    //Starting quest
     final static int FIND_BOOK_STAGE = 1;
     final static int BOOK_IS_READ_STAGE = 2;
     final static int TALK_TO_BARAEK_STAGE = 3;
     final static int AFTER_BRIBE_BARAEK_STAGE = 4;
 
-    //Inititiation Phoenix gang
     final static int PROVING_LOYALTY_PHOENIX_STAGE = 5;
 
-    //Initiation Black arm gang
     final static int AFTER_BRIBE_CHARLIE_STAGE = 20;
     final static int PROVING_LOYALTY_BLACK_ARM_STAGE = 21;
 
-    //Gang activity
     final public static int JOINED_PHOENIX_STAGE = 22;
 
-    //Gang activity
     final public static int JOINED_BLACK_ARM_STAGE = 23;
 
-    //King Roald
     final public static int HAS_SHIELD_STAGE = 24;
     final public static int SPOKE_TO_KING_STAGE = 25;
     final public static int HAS_CERTIFICATE_STAGE = 26;
@@ -107,7 +84,7 @@ public class ShieldOfArrav extends QuestOutline {
                 lines.add("Pheonix gang at central square in Varrock");
                 lines.add("");
                 break;
-            case AFTER_BRIBE_BARAEK_STAGE://good here
+            case AFTER_BRIBE_BARAEK_STAGE:
                 lines.add("I have bribed Baraek.");
                 lines.add("");
                 lines.add("If I wish to join the Phoenix Gang I must");
@@ -326,7 +303,7 @@ public class ShieldOfArrav extends QuestOutline {
         saveStageToPlayerSave(p, questStage);
     }
 
-    public static void setGang(Player p, String gang) {//"Phoenix", "Black", "None"
+    public static void setGang(Player p, String gang) {
 		p.set("ThievingGang", gang);
     }
 
@@ -525,19 +502,5 @@ create();
 			e.getPlayer().sendMessage("You need at least 1 of this item to give!");
     });
 
-    /**
-     * When the player logs in, the Shield Of Arrav display case is updated based on quest completion.
-	 * Also if the player does not have a gang upon completion they must be assigned one
-	 * --Do this with Minas--
-     */
-//    public static LoginHandler onLogin = new LoginHandler() {
-//        @Override
-//        public void handle(LoginEvent e) {
-//            if (e.getPlayer().isQuestComplete(Quest.SHIELD_OF_ARRAV))
-//				e.getPlayer().getVars().setVarBit(5394, 1);
-//            else
-//                e.getPlayer().getVars().setVarBit(5394, 0);
-//        }
-//    };
 
 }

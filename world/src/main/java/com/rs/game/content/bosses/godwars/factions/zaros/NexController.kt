@@ -51,6 +51,5 @@ class NexController(@Transient private var arena: NexArena? = null) : Controller
         player.interfaceManager.closeFadingInterface()
     }
 
-    /** The landslide is a wall from the inside: the prison has no way out but death or a teleport. */
     private fun seal(value: Int) = player.vars.setVarBit(Varbit.godwars2_climbdown_multi, value)
 }

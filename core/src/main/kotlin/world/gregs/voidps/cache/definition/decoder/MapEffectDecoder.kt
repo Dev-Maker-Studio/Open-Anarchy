@@ -11,21 +11,8 @@ import world.gregs.voidps.cache.definition.data.MapLightGridLevel
 import world.gregs.voidps.cache.definition.data.MapLightsEffect
 import world.gregs.voidps.cache.definition.data.MapSkyboxEffect
 
-/**
- * Decodes the environment block that follows the tiles of a `m<x>_<y>` map archive.
- *
- * The block is a list of records with no count and no terminator: it runs to the end of the file,
- * so decoding stops when the buffer does. Every field is kept as the file holds it - see
- * [MapEffect] - which is what makes [world.gregs.voidps.cache.definition.encoder.MapEffectEncoder]
- * the exact inverse.
- *
- * An opcode that is none of the five is a desynchronised read head rather than a feature nobody has
- * decoded yet - the client throws too - so it fails loudly with the region and the byte offset
- * instead of returning a half decoded block.
- */
 object MapEffectDecoder {
 
-    /** Every record from [offset] to the end of [data]. */
     fun decode(data: ByteArray, offset: Int, region: Int = -1): MutableList<MapEffect> {
         if (offset >= data.size) {
             return ArrayList(0)
@@ -35,7 +22,6 @@ object MapEffectDecoder {
         return decode(buffer, region)
     }
 
-    /** Every record from [buffer]'s position to the end of it. */
     fun decode(buffer: Reader, region: Int = -1): MutableList<MapEffect> {
         val effects = ArrayList<MapEffect>(2)
         while (buffer.remaining > 0) {
@@ -114,7 +100,6 @@ object MapEffectDecoder {
                     ranges = ranges,
                     colour = colour,
                     packedType = packedType,
-                    // The config id is on the wire only for the type that needs one.
                     lightType = if (packedType and 0x1f == MapLight.CONFIG_TYPE) buffer.readUnsignedShort() else -1
                 )
             )

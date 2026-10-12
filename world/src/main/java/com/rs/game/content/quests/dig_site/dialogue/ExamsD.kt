@@ -368,7 +368,7 @@ class ExamsD(val player: Player, val npc: NPC) {
                     if (player.inventory.freeSlots >= 1) {
                         val hasSpecimenJar = player.inventory.containsOneItem(SPECIMEN_JAR)
                         val hasSpecimenBrush = player.inventory.containsOneItem(SPECIMEN_BRUSH)
-                        var requiredSlots = 1 // For the level 3 cert
+                        var requiredSlots = 1
 
                         if (!hasSpecimenJar) requiredSlots++
                         if (!hasSpecimenBrush) requiredSlots++

@@ -13,8 +13,6 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
             return
         }
         writeByte(-1)
-        // The decoder only reads the name back when the high bit is set, so an empty (but present)
-        // name still has to set it or the field decodes as null instead of "".
         if (definition.unknown != null) {
             writeByte(definition.type or 0x80)
             writeString(definition.unknown)
@@ -89,9 +87,6 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
                 if (definition.ignoreZBuffer) {
                     flag = flag or 0x8
                 }
-                // Only one of the two viewport blocks is ever present. 0x2 (centreType) carries
-                // viewportZ, 0x1 does not, so a component that wants a Z has to use the centre block
-                // and viewportZ is dropped when centreType is false - the format has nowhere to put it.
                 val transform = !definition.centreType && (definition.viewportX != 0 || definition.viewportY != 0 || definition.graphicPitch != 0 || definition.graphicRoll != 0 || definition.graphicYaw != 0 || definition.graphicScale != 100)
                 if (transform) {
                     flag = flag or 0x1
@@ -136,8 +131,6 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
         if (options != null) {
             optionFlag = options.size
         }
-        // Only the entries actually written go in the high nibble, not the array length; the decoder
-        // takes the array length from the index byte of the first entry instead.
         val icons = definition.mouseIcon?.takeIf { it.isNotEmpty() }
         val extraIcon = if (icons == null) -1 else icons.indices.firstOrNull { it != icons.lastIndex && icons[it] != -1 } ?: -1
         if (icons != null) {
@@ -148,8 +141,6 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
             writeString(it)
         }
         if (icons != null) {
-            // The last entry has to come first so the decoder sizes the array correctly. The format
-            // only carries two entries in total, so anything else set past the second is lost.
             writeByte(icons.lastIndex)
             writeShort(icons[icons.lastIndex])
             if (extraIcon != -1) {
@@ -164,10 +155,6 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
         writeByte(definition.anInt4860)
         writeString(definition.useOption)
 
-        // The presence of these three shorts is decided by the setting bits, never by their own value:
-        // components routinely have the bits set and store 65535, which reads back as -1. Gating the
-        // write on "not -1" instead drops three shorts the decoder still expects and desyncs the rest
-        // of the component. writeShort truncates to 16 bits, so -1 goes out as the 65535 sentinel.
         if (InterfaceComponentSetting.useOptionFlags(definition.setting.setting) != 0) {
             writeShort(definition.setting.anInt7413)
             writeShort(definition.anInt4698)
@@ -184,7 +171,6 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
         encodeScript(definition.onStatTransmit)
         encodeScript(definition.onTimer)
         encodeScript(definition.params)
-        // onTargetLeave is skipped, the format written above is the original if3
         encodeScript(definition.popupScript)
         encodeScript(definition.onClick)
         encodeScript(definition.onClickRepeat)
@@ -202,14 +188,6 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
         encodeIntArray(definition.mouseWheelArray)
     }
 
-    /**
-     * Writes the key binding list; each entry is four bytes and the list is terminated by a zero byte
-     * where the next entry's header would start.
-     *
-     * Header byte packs the slot as `slot + 1` in the high nibble - which is what makes zero a valid
-     * terminator - and the top nibble of the 12 bit repeat delay in the low nibble. The remaining
-     * eight bits of the delay follow, then the key and the modifier mask.
-     */
     private fun Writer.encodeKeyBindings(definition: InterfaceComponentDefinition) {
         val keyRepeats = definition.keyRepeats
         val keyCodes = definition.keyCodes
@@ -232,8 +210,6 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
             written++
         }
         if (written == 0) {
-            // Arrays exist but every slot is empty; an entirely empty list would decode back as null,
-            // so keep the arrays alive with a single blank binding in slot 0.
             writeByte(1 shl 4)
             writeByte(0)
             writeByte(0)
@@ -269,7 +245,6 @@ class InterfaceEncoder : DefinitionEncoder<InterfaceComponentDefinition> {
     }
 
     private companion object {
-        /** Key binding slots the decoder allocates; slot 10 is the "use" binding. */
         private const val SLOTS = 11
     }
 }

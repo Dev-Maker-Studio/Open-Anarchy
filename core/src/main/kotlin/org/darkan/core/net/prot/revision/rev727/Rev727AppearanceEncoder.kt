@@ -6,20 +6,10 @@ import org.darkan.core.update.PlayerAppearanceData
 import world.gregs.voidps.buffer.write.BufferWriter
 import world.gregs.voidps.buffer.write.Writer
 
-/**
- * Revision 727 encoder for the player appearance block.
- *
- * Consumes the semantic [PlayerAppearanceData] entity schema and produces the byte block carried
- * by the appearance update mask. All framing decisions (empty slot as a zero byte, body styles
- * offset by [BODY_STYLE_OFFSET], worn items offset by [WORN_ITEM_OFFSET]) live here rather than in
- * the game modules that populate the schema.
- */
 object Rev727AppearanceEncoder {
 
-    /** Body style values are transmitted offset by this so they cannot collide with a zero byte. */
     private const val BODY_STYLE_OFFSET = 0x100
 
-    /** Worn item ids are transmitted offset by this to distinguish them from body styles. */
     private const val WORN_ITEM_OFFSET = 16384
 
     private const val FLAG_FEMALE = 0x1
@@ -33,7 +23,6 @@ object Rev727AppearanceEncoder {
     private const val MESH_COLOUR_FLAG = 0x4
     private const val MESH_TEXTURE_FLAG = 0x8
 
-    /** Written into a colour/texture slot nibble when the item defines no value for it. */
     private const val MESH_EMPTY_SLOT = 0xF
 
     private const val MESH_COLOUR_SLOTS = 4
@@ -41,7 +30,6 @@ object Rev727AppearanceEncoder {
 
     private const val INITIAL_BUFFER_SIZE = 512
 
-    /** Encodes [data] into the on-wire appearance block. */
     fun encode(data: PlayerAppearanceData): ByteArray {
         val out = BufferWriter(INITIAL_BUFFER_SIZE)
         out.writeByte(flags(data))
@@ -99,10 +87,6 @@ object Rev727AppearanceEncoder {
         }
     }
 
-    /**
-     * Writes the mesh-override section, back-patching the leading slot bitmask once the set of
-     * slots that actually contributed data is known.
-     */
     private fun writeMeshOverrides(out: BufferWriter, overrides: List<ItemMeshOverride>) {
         val start = out.position()
         out.writeShort(0)
@@ -163,12 +147,6 @@ object Rev727AppearanceEncoder {
         }
     }
 
-    /**
-     * Packs the per-slot nibble map that precedes a colour or texture list.
-     *
-     * Slot 0 is implicit, so nibbles are emitted for indices `1 until [slotCount]`: each carries
-     * its own index when the item supplies a value there, or [MESH_EMPTY_SLOT] when it does not.
-     */
     private fun slotNibbles(valueCount: Int, slotCount: Int): Int {
         var slots = 0
         for (i in 1 until slotCount) {

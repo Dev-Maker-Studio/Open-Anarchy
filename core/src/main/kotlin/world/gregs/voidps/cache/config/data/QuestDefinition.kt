@@ -11,7 +11,6 @@ data class QuestDefinition(
     var varps: Array<IntArray>? = null,
     var varbits: Array<IntArray>? = null,
     var subQuest: Int = -1,
-    /** Client `QuestType.type`, opcode 6. */
     var type: Int = 0,
     var difficulty: Int = -1,
     var members: Boolean = false,
@@ -26,14 +25,8 @@ data class QuestDefinition(
     override var extras: Map<String, Any>? = null,
 ) : Definition, Extra, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
 
     override fun equals(other: Any?): Boolean {

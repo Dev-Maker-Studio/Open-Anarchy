@@ -14,53 +14,8 @@ import world.gregs.voidps.cache.definition.encoder.ModelEncoder
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/**
- * One model as a glTF 2.0 binary file - a `.glb`, which Blender opens and saves natively.
- *
- * The geometry is real glTF: the vertices are a `POSITION` accessor and the faces an `indices`
- * accessor, so any glTF tool draws the model without knowing anything about RuneScape. Everything
- * else a 727 model file carries has no glTF equivalent - a colour per *face* rather than per
- * vertex, a render type, a priority, a bone label, a texture projection, the particle and
- * billboard attachments, the footer's own bytes - and that rides in `extras` on the node, as
- * compact JSON arrays named after what they are. **The extras are what the re-encoder reads**;
- * nothing in the glTF proper is a second copy of them.
- *
- * ```
- * glb
- *   header      "glTF", version 2, total length
- *   JSON chunk  the glTF asset, compact, fixed key order, padded with spaces
- *   BIN chunk   the vertex positions then the face indices, padded with zeroes
- * ```
- *
- * Rules:
- *
- * - **Positions are the RS integers, unscaled.** They are written as `FLOAT` because that is what
- *   the glTF core specification allows for `POSITION`, and a float32 holds every integer up to
- *   2^24 exactly, so the ints come back as themselves. Nothing is divided, transformed or
- *   re-oriented: what the cache holds is what the file holds.
- * - **Indices are `UNSIGNED_SHORT` while every index fits**, and `UNSIGNED_INT` otherwise, which is
- *   also how an index a malformed model puts out of range survives.
- * - **Deterministic to the byte**, the way [Gltf] describes: a fixed key order, no whitespace, every
- *   number an integer and a constant generator string, so re-unpacking an unchanged cache rewrites
- *   nothing.
- * - **A model with no geometry has no mesh.** Eight archives in 727 declare no vertices and no
- *   faces; glTF has no way to spell an empty primitive, so those files carry the node and its
- *   extras and nothing else.
- * - **Layout fidelity is absent when it is derivable.** `vertexFlags` and `faceIndexTypes` are the
- *   file's own per element arrays, and every model in the 727 cache has exactly the ones
- *   [ModelEncoder] derives, so no file carries either.
- *
- * Reading goes through [Gltf.accessor] - byte offsets, strides and component types - rather than
- * assuming this writer's layout, so a `.glb` that has been through another glTF tool still reads.
- * The one thing it insists on is a single primitive, because the extras are indexed by the model's
- * own face order and a split into several primitives loses it.
- *
- * The `.glb` container itself, the accessor reader and the JSON writers are [Gltf], which
- * [AnimationGltf] shares.
- */
 object ModelGltf {
 
-    /** [model] as the exact bytes of its `.glb`. */
     fun write(model: ModelDefinition): ByteArray {
         val vertices = model.vertexCount
         val faces = model.faceCount
@@ -77,8 +32,6 @@ object ModelGltf {
                 negative = true
             }
         }
-        // An index out of an unsigned short's range - or a negative one, which only a malformed
-        // model has - goes in the wider accessor so that it comes back as itself.
         val wide = negative || largest > Gltf.MAX_SHORT_INDEX
         val indexBytes = if (wide) 4 else 2
         val binary = ByteBuffer.allocate(vertices * 12 + faces * 3 * indexBytes).order(ByteOrder.LITTLE_ENDIAN)
@@ -105,13 +58,6 @@ object ModelGltf {
         }
     }
 
-    /**
-     * Read a `.glb` back into a definition of [id].
-     *
-     * The geometry comes from the accessors and everything else from `extras.rs`, which is where
-     * the encoder's answers live: a file whose extras say a section exists gets that section back
-     * whatever the geometry looks like.
-     */
     fun read(bytes: ByteArray, id: Int): ModelDefinition {
         val chunks = Gltf.chunks(bytes)
         val root = Gltf.root(chunks.first)
@@ -212,12 +158,9 @@ object ModelGltf {
         )
     }
 
-    /** The `.glb`'s JSON chunk, for a report or a test that wants to show what a file says. */
     fun json(bytes: ByteArray): String = Gltf.text(bytes)
 
-    // --- writing -----------------------------------------------------------------------------
 
-    /** The glTF asset, compact and in a fixed key order so the same model is the same bytes. */
     private fun asset(model: ModelDefinition, vertices: Int, faces: Int, wide: Boolean): String {
         val out = StringBuilder(1024 + model.faceCount * 8)
         val name = "model_" + model.id
@@ -265,7 +208,6 @@ object ModelGltf {
         return out.toString()
     }
 
-    /** The `POSITION` accessor's bounds, which glTF requires and every viewer uses to frame a model. */
     private fun bounds(out: StringBuilder, model: ModelDefinition, vertices: Int, least: Boolean) {
         var x = model.vertexX[0]
         var y = model.vertexY[0]
@@ -299,14 +241,6 @@ object ModelGltf {
         out.append('[').append(x).append(',').append(y).append(',').append(z).append(']')
     }
 
-    /**
-     * Everything a model file holds that glTF has no way to say, on the node as `extras.rs`.
-     *
-     * Signedness follows the field: colours, alphas, render types, priorities, mappings and skins
-     * are unsigned; materials and texture pointers are signed, because -1 is their "none"; texture
-     * rotations, directions, speeds and cube translations are signed bytes, which is what the
-     * client reads them as.
-     */
     private fun extras(out: StringBuilder, model: ModelDefinition) {
         out.append("{\"id\":").append(model.id)
         out.append(",\"format\":\"").append(if (model.newFormat) "new" else "old").append('"')
@@ -375,7 +309,6 @@ object ModelGltf {
                 }
             }
         }
-        // The two per element layout arrays, and only when the encoder would not derive them.
         model.vertexFlags?.let { flags ->
             if (!flags.contentEquals(ModelEncoder.deriveVertexFlags(model))) {
                 Gltf.scalars(out, "vertexFlags", flags.size) { flags[it].toInt() and 0xff }

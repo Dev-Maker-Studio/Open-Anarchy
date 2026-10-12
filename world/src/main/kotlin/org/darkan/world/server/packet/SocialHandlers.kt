@@ -59,10 +59,6 @@ class FcSetRankHandler : PacketHandler<Player, FcSetRank> {
     }
 }
 
-/**
- * Kicking somebody out of a clan channel. `packet.guest` is which of the two lists the player
- * clicked on; the lobby decides from its own membership whether the target really is a guest.
- */
 class ClanChannelKickHandler : PacketHandler<Player, ClanChannelKickUser> {
     override suspend fun handle(player: Player, packet: ClanChannelKickUser) {
         if (!player.hasStarted()) return

@@ -15,9 +15,6 @@ import world.gregs.voidps.cache.definition.decoder.ItemDecoder
 import world.gregs.voidps.cache.definition.decoder.NPCDecoder
 import world.gregs.voidps.cache.definition.decoder.ObjectDecoder
 
-/**
- * Asset browser panel for searching and selecting models, items, NPCs, and objects.
- */
 class AssetBrowser(private val cache: Cache) {
     var visible = true
 
@@ -79,7 +76,6 @@ class AssetBrowser(private val cache: Cache) {
         val flags = ImGuiWindowFlags.NoMove or ImGuiWindowFlags.NoResize
 
         if (ImGui.begin("Asset Browser", flags)) {
-            // Tab bar
             if (ImGui.beginTabBar("AssetTabs")) {
                 for ((index, tab) in tabs.withIndex()) {
                     if (ImGui.beginTabItem(tab)) {

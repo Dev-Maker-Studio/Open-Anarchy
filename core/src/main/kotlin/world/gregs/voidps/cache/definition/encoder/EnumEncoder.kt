@@ -7,13 +7,6 @@ import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.KeyedValue
 import world.gregs.voidps.cache.definition.data.EnumDefinition
 
-/**
- * Writes an index 17 enum file.
- *
- * The entries come in one of four shapes and the opcode says which: 5 and 6 are a flat list of int key to
- * string or int value, 7 and 8 the same but keyed by a short index into an array whose capacity
- * ([EnumDefinition.arraySize]) the file also carries.
- */
 class EnumEncoder : OpcodeEncoder<EnumDefinition>() {
 
     override fun opcodes(definition: EnumDefinition): IntArray {

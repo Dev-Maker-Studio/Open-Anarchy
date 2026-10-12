@@ -4,10 +4,6 @@ import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.sqrt
 
-/**
- * Type 35: Monochrome edge detection filter.
- * Detects edges by computing gradient magnitude.
- */
 class TextureOpMonochromeEdgeDetector : TextureOperation(1, true) {
     private var strength: Int = 4096
 

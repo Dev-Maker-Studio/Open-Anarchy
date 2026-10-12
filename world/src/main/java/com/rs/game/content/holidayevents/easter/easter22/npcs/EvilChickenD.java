@@ -140,8 +140,8 @@ public class EvilChickenD extends Conversation {
                                     	player.getAppearance().generateAppearanceData();
                                     })
                                     .addNPC(Easter2022.EVIL_CHICKEN, HeadE.NO_EXPRESSION, "Hunt down the five eggs scattered across Runescape. Blow them open with the Eggsterminator and splatter the chick that comes from within.")
-                                    .addSimple("These eggs can be found around Runescape. You can search for them yourself or with your friends.") //Information can also be found on the Runescape official forums.
-                                    .addSimple("Finding all 5 eggs in a single hunt will unlock additional rewards.")); //Some eggs only appear in members parts of the world, so only members gain these additional benefits.
+                                    .addSimple("These eggs can be found around Runescape. You can search for them yourself or with your friends.")
+                                    .addSimple("Finding all 5 eggs in a single hunt will unlock additional rewards."));
                 } else {
                     option("How do I hunt the eggs?", new Dialogue()
                             .addNPC(Easter2022.EVIL_CHICKEN, HeadE.NO_EXPRESSION, "The Easter Bunny has hidden magical eggs across Runescape. Unfortunate, the Easter Bunny is temporarily...indisposed...and so is unable to perform his duties as huntmaster. " +

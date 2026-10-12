@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.engine.quest.data;
 
 import world.gregs.voidps.cache.Cache;
@@ -31,11 +15,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.HashMap;
 
-/**
- * @author Trenton
- * Necking myself knowing that all of this was in the cache.
- * Regretting hours of finding varbits by looping for all the quests.
- */
 public class QuestDefinitions {
 
 	public enum Type {
@@ -72,7 +51,6 @@ public class QuestDefinitions {
     public int[] anIntArray2601;
 
     public static final HashMap<Integer, QuestDefinitions> QUESTS = new HashMap<>();
-	/** Handed back for a quest the cache has no file for, so content reads defaults instead of null. */
 	private static final QuestDefinitions BLANK = new QuestDefinitions();
 	static {
 		BLANK.name = "null";
@@ -81,13 +59,6 @@ public class QuestDefinitions {
 	private static final HashMap<String, QuestDefinitions> QUESTS_NAME = new HashMap<>();
 
 	public static void main(String[] args) throws IOException {
-		//		Cache.init();
-		//		for (int i = 0;i < Cache.Companion.get().fileCount(Index.CONFIGS, Config.QUESTS);i++) {
-		//			QuestDefinitions def = new QuestDefinitions(i);
-		//			//Logger.debug(def.name.toUpperCase().replace(" ", "_").replaceAll("[^A-Za-z0-9_]", "") + "(" + i + "),");
-		//			if (i == 0)
-		//				Logger.debug(def);
-		//		}
 	}
 
 	public QuestDefinitions() {
@@ -114,82 +85,61 @@ public class QuestDefinitions {
 		if (QUESTS.isEmpty())
 			return;
 
-		/*
-		 * Fix invalid values
-		 */
 		QuestDefinitions quest;
 
-		//buyers cellars
 		quest = QUESTS.get(174);
 		quest.varbitValues[0][0] = 7793;
 		quest.varbitValues[0][2] = 30;
 
-		//shield of arrav
 		quest = QUESTS.get(63);
 		quest.varValues[1][1] = 1;
 
-		//underground pass
 		quest = QUESTS.get(31);
 		quest.varValues[0][1] = 1;
 
-		//as a first resort
 		quest = QUESTS.get(41);
 		quest.varbitValues[0][1] = 10;
 
-		//workshop I
 		quest = QUESTS.get(8);
 		quest.varValues[0][1] = (1 << 1);
 		quest.varValues[0][2] = (1 << 20);
 
-		//fur n seek
 		quest = QUESTS.get(33);
 		quest.varbitValues[0][1] = 2;
 
-		//tai bwo wannai
 		quest = QUESTS.get(89);
 		quest.varValues[0][1] = 3;
 
-		//muspah
 		quest = QUESTS.get(18);
 		quest.varbitValues[0][1] = 10;
 
-		//deadliest catch
 		quest = QUESTS.get(191);
 		quest.varbitValues[0][2] = 50;
 
-		//workshop IV
 		quest = QUESTS.get(187);
 		quest.varbitValues[0][2] = 9;
 
-		//forgiveness of a chaos dwarf
 		quest = QUESTS.get(35);
 		quest.varbitValues[0][2] = 90;
 
-		//waterfall quest
 		quest = QUESTS.get(93);
 		quest.varValues[0][2] = 10;
 
-		//perils of ice mountain
 		quest = QUESTS.get(109);
 		quest.varbitValues[0][2] = 150;
 
-		//regicide
 		quest = QUESTS.get(100);
 		quest.varValues[0][2] = 15;
 
-		//rocking out
 		quest = QUESTS.get(4);
 		quest.varbitValues[0][2] = 100;
 
-		//spirit of summer
 		quest = QUESTS.get(14);
 		quest.varbitValues[0][2] = 100;
 
-		//Black knights fortress, wrong qp, for some reason it was 0
 		quest = QUESTS.get(53);
 		quest.questpointReward = 3;
 
-		//Gunnar's Ground - 0 in cache for some reason
 		quest = QUESTS.get(179);
 		quest.questpointReward = 5;
 
@@ -483,9 +433,6 @@ public class QuestDefinitions {
                 int[] varpRequirements = new int[i_13_];
                 int[] minVarpValue = new int[i_13_];
                 int[] maxVarpValue = new int[i_13_];
-                /*
-                 * LITERAL JUNK NULL FOR EVERY QUEST
-                 */
                 String[] varpRequirementNames = new String[i_13_];
 				for (int i_14_ = 0; i_14_ < i_13_; i_14_++) {
 					varpRequirements[i_14_] = buffer.readInt();
@@ -533,11 +480,8 @@ public class QuestDefinitions {
 		result.append(" {");
 		result.append(newLine);
 
-		// determine fields declared in this class only (no fields of
-		// superclass)
 		Field[] fields = this.getClass().getDeclaredFields();
 
-		// print field names paired with their values
 		for (Field field : fields) {
 			if (Modifier.isStatic(field.getModifiers()))
 				continue;

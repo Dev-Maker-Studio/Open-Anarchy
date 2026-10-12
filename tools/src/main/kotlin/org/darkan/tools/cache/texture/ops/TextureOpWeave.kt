@@ -4,9 +4,6 @@ import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.abs
 
-/**
- * Type 14: Generates a weave/fabric pattern.
- */
 class TextureOpWeave : TextureOperation(0, true) {
     private var threshold: Int = 585
 

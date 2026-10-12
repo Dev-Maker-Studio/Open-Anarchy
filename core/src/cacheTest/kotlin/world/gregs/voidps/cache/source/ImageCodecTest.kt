@@ -24,30 +24,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * Every archive of the six 2D art indices, through the codec that stores it.
- *
- * The bar is the one `docs/cache-source.md` sets for a typed codec: `pack(unpack(bytes)) == bytes`
- * for every archive of every index, with no pristine sidecar anywhere. Unlike
- * `DefinitionJsonCodecTest` this has to write the files out - a graphic is PNGs on disk and the
- * codec reads them back through `javax.imageio`, which is the half of the round trip that could
- * lose a pixel - so each archive is unpacked into a scratch directory and packed straight back.
- *
- * Four further things are proved, because the layout promises them:
- *
- * 1. **One file per image.** A graphic directory holds nothing but `<frame>.png` and a JPEG archive
- *    is one `<id>.jpg`; no sidecar, no metadata, no second half.
- * 2. **Every PNG is a standard picture.** `ImageIO` opens it as 8 bit RGBA at the group's canvas
- *    size, so it displays correctly in any viewer.
- * 3. **A stripped PNG still packs.** Rewriting every frame through `ImageIO.write` - which is what
- *    an image editor does, and which drops the private chunks - packs into a group whose frames are
- *    the *same picture*: the same composed canvas, pixel for pixel, and the same trimmed box. Byte
- *    parity is not expected there and is not asserted; the picture is.
- * 4. **An edit survives.** Recolour one pixel of a stripped PNG and the packed group decodes with
- *    that pixel recoloured and nothing else moved.
- *
- * Skipped when there is no cache to test against, like the other whole-cache tests.
- */
 class ImageCodecTest {
 
     @Test
@@ -86,10 +62,6 @@ class ImageCodecTest {
         assertEquals(0, pristine, "no 2D asset may need a pristine copy")
     }
 
-    /**
-     * The three graphic indices as files: one PNG per frame and nothing else, every one of them a
-     * standard RGBA picture at the group's canvas size, and the private chunks counted.
-     */
     @Test
     fun `a graphic index is one standard RGBA PNG per frame and nothing else`() {
         val cache = cache() ?: return
@@ -152,7 +124,6 @@ class ImageCodecTest {
                         if (GraphicCodec.INDEX_CHUNK in types) {
                             indexChunk++
                         }
-                        // A standard picture: RGBA, eight bits a channel, the group's canvas.
                         val image = ImageIO.read(ByteArrayInputStream(png))
                         assertNotNull(image, "$path is not an image ImageIO can read")
                         assertEquals(maxOf(definition.width, 1), image.width, "$path is the wrong width")
@@ -170,7 +141,6 @@ class ImageCodecTest {
                         index0++
                     }
                 }
-                // Nothing in the index directory but images.
                 Files.walk(directory).use { stream ->
                     for (path in stream) {
                         if (!Files.isRegularFile(path)) {
@@ -203,14 +173,6 @@ class ImageCodecTest {
         assertTrue(jpegs >= 21, "only $jpegs JPEG archives were written")
     }
 
-    /**
-     * Every private chunk stripped - which is what an image editor's save does - and the group packed
-     * from the pixels alone.
-     *
-     * The bytes are not expected back; the picture is. Both sides are decoded and composed onto the
-     * group's canvas by the client's own rule, and every pixel and every frame's trimmed box has to
-     * agree. Then one pixel is recoloured in a stripped PNG and has to come back recoloured.
-     */
     @Test
     fun `a PNG stripped of its chunks still packs into the same picture`() {
         val cache = cache() ?: return
@@ -252,15 +214,9 @@ class ImageCodecTest {
                     drifted += drift
                     groups++
                     if (drift > 0 || now.rawPalette.size >= PALETTE) {
-                        // The group's palette is full, so painting a new colour into it evicts one
-                        // and the edit cannot be isolated to the pixel it was made in. The strip
-                        // round trip above is what such a group is held to.
                         saturated++
                         continue
                     }
-                    // ... and now with one pixel repainted, in the first frame that has a pixel to
-                    // repaint. The colour is one nothing in the group uses, so it has to be added to
-                    // the palette and cannot be confused with an entry that was already there.
                     val frame = graphics.indexOfFirst { it.width > 0 && it.height > 0 && it.raster.any { p -> p.toInt() != 0 } }
                     if (frame < 0) {
                         continue
@@ -328,7 +284,6 @@ class ImageCodecTest {
         val millis: Long
     )
 
-    /** One index, archive by archive: unpack into a scratch directory, pack it back, compare. */
     private fun count(cache: Cache, index: Int, work: Path): Counts {
         val start = System.nanoTime()
         val codec = SourceCodecs.codec(index)
@@ -369,14 +324,9 @@ class ImageCodecTest {
         return Counts(archives, pristine, files, bytes, (System.nanoTime() - start) / 1_000_000)
     }
 
-    /**
-     * The materials index is one archive holding every material, so its files accumulate across
-     * the loop rather than being a directory per archive; everything else packs as it goes.
-     */
     private fun pack(codec: SourceCodec, directory: Path, archive: Int, metadata: ArchiveMetadata): ByteArray =
         codec.pack(directory, archive, metadata).group
 
-    /** [group] through the codec and onto disk; the paths it wrote, relative to the index. */
     private fun unpack(index: Int, archive: Int, group: ByteArray, directory: Path): List<String> {
         val metadata = ArchiveMetadata()
         metadata.fileIds(intArrayOf(0))
@@ -389,15 +339,6 @@ class ImageCodecTest {
         return unpacked.files.map { it.path }
     }
 
-    /**
-     * Two decodings of the same group, composed onto the canvas the way the client draws them.
-     *
-     * Every frame's opacity and trimmed box must match exactly. The colours must match exactly too,
-     * bar one level of one channel: a group whose palette is already full and which draws the
-     * transparent index *opaque* has no entry for the black the client renders there, so packing it
-     * from pixels alone quantises that pixel to the nearest colour the palette holds. Returns how
-     * many frames were not identical, which is how rare that is measured.
-     */
     private fun compare(index: Int, archive: Int, was: GraphicDefinition, now: GraphicDefinition): Int {
         assertEquals(was.width, now.width, "index $index group $archive changed canvas width")
         assertEquals(was.height, now.height, "index $index group $archive changed canvas height")
@@ -431,11 +372,6 @@ class ImageCodecTest {
         return drifted
     }
 
-    /**
-     * Whether two composed pixels are the same picture: the same opacity, and colours no more than
-     * one level of one channel apart - which is all a group with a full palette can lose when it is
-     * packed from pixels that hold a colour it has no entry for.
-     */
     private fun near(one: Int, two: Int): Boolean {
         if (one ushr 24 != two ushr 24) {
             return false
@@ -448,11 +384,6 @@ class ImageCodecTest {
         return true
     }
 
-    /**
-     * One frame drawn onto the group's canvas, as the client draws it: the palette colour, and the
-     * alpha plane where the frame has one or the transparent index where it does not. A fully
-     * transparent pixel is 0 whatever colour is under it, because nothing shows it.
-     */
     private fun canvas(definition: GraphicDefinition, frame: Int): IntArray {
         val width = maxOf(definition.width, 1)
         val out = IntArray(width * maxOf(definition.height, 1))
@@ -472,7 +403,6 @@ class ImageCodecTest {
         return out
     }
 
-    /** The frame's drawn pixels' bounding box in the canvas, which is what a stripped PNG recovers. */
     private fun trimmed(definition: GraphicDefinition, frame: Int): String {
         val width = maxOf(definition.width, 1)
         val pixels = canvas(definition, frame)
@@ -494,7 +424,6 @@ class ImageCodecTest {
         return if (maxX < 0) "empty" else "$minX,$minY ${maxX - minX + 1}x${maxY - minY + 1}"
     }
 
-    /** Whether the group's palette order is one the pixels alone would not rebuild. */
     private fun needsPalette(definition: GraphicDefinition): Boolean {
         val order = ArrayList<Int>()
         val seen = HashSet<Int>()
@@ -522,7 +451,6 @@ class ImageCodecTest {
         return false
     }
 
-    /** Whether the frame's box, storage order or dropped alpha plane is something the pixels lose. */
     private fun needsFrame(definition: GraphicDefinition, frame: Int): Boolean {
         val graphic = definition.graphics!![frame]
         if (graphic.width == 0 || graphic.height == 0) {
@@ -537,7 +465,6 @@ class ImageCodecTest {
         return trimmed(definition, frame) != "${graphic.offsetX},${graphic.offsetY} ${graphic.width}x${graphic.height}"
     }
 
-    /** [png] rewritten through `ImageIO`, which is what an editor's save does to a private chunk. */
     private fun strip(png: ByteArray): ByteArray {
         val image = ImageIO.read(ByteArrayInputStream(png))
         val out = ByteArrayOutputStream(png.size)
@@ -553,7 +480,6 @@ class ImageCodecTest {
         return out.toByteArray()
     }
 
-    /** Paint one drawn pixel of [path] a colour the group does not use; its offset in the canvas. */
     private fun repaint(path: Path): Int? {
         val image = ImageIO.read(ByteArrayInputStream(Files.readAllBytes(path)))
         for (y in 0 until image.height) {
@@ -579,7 +505,6 @@ class ImageCodecTest {
         return null
     }
 
-    /** Every chunk type in [png], in file order. */
     private fun chunks(png: ByteArray): List<String> {
         val out = ArrayList<String>(8)
         var position = 8
@@ -611,13 +536,10 @@ class ImageCodecTest {
     private companion object {
         private const val SCRATCH = "image-codec"
 
-        /** One group of index 8 in this many, for the checks that pack every frame twice over. */
         private const val SAMPLE = 8
 
-        /** Opaque magenta: a colour no graphic group in the cache holds, so an edit cannot hide. */
         private const val PAINT = 0xffff00ff.toInt()
 
-        /** A graphic group's palette: 255 colours and the transparent index. */
         private const val PALETTE = 256
 
         private const val PROOFS =

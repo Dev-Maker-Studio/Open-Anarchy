@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.quests.tribaltotem;
 
 import com.rs.engine.dialogue.Conversation;
@@ -58,7 +42,6 @@ public class TribalTotem extends QuestOutline {
 	public final static int GET_TOTEM = 3;
 	public final static int QUEST_COMPLETE = 4;
 
-	//Item
 	public static final int TOTEM = 1857;
 
 	@Override
@@ -117,7 +100,7 @@ public class TribalTotem extends QuestOutline {
 	@Override
 	public void complete(Player player) {
 		player.getSkills().addXpQuest(Constants.THIEVING, 1775);
-		player.getInventory().addItem(3144, 5, true);//Karambwan
+		player.getInventory().addItem(3144, 5, true);
 		sendQuestCompleteInterface(player, TOTEM);
 	}
 
@@ -135,7 +118,7 @@ public class TribalTotem extends QuestOutline {
 			return;
 		}
 		p.getQuestManager().getAttribs(Quest.TRIBAL_TOTEM).setO("LOCK_PASS", "AAAA");
-		p.getInterfaceManager().sendInterface(285);//Door lock tribal totem
+		p.getInterfaceManager().sendInterface(285);
 	});
 
 	public static ItemClickHandler handleClickOnGuideBook = new ItemClickHandler(new Object[] { 1856 }, new String[] { "Read" }, e -> e.getPlayer().openBook(new RealEstateGuideBook()));
@@ -178,7 +161,7 @@ public class TribalTotem extends QuestOutline {
 	public static ButtonClickHandler handleLockInterface = new ButtonClickHandler(285, e -> {
 		Player p = e.getPlayer();
 		switch(e.getComponentId()) {
-		case 18 -> {//Enter pass
+		case 18 -> {
 			if(((String)p.getQuestManager().getAttribs(Quest.TRIBAL_TOTEM).getO("LOCK_PASS")).equalsIgnoreCase("KURT")) {
 				p.sendMessage("Correct password.");
 				p.closeInterfaces();
@@ -186,7 +169,6 @@ public class TribalTotem extends QuestOutline {
 				p.sendMessage("Incorrect password.");
 		}
 
-		//LEFT
 		case 10 -> {
 			if(p.getTempAttribs().getI("ttLockCombo1") > 0)
 				p.getTempAttribs().decI("ttLockCombo1");
@@ -208,7 +190,6 @@ public class TribalTotem extends QuestOutline {
 			p.getPackets().setIFText(e.getInterfaceId(), FOURTH_LETTER_COMP, ""+LETTERS.charAt(p.getTempAttribs().getI("ttLockCombo4")));
 		}
 
-		//RIGHT
 		case 11 -> {
 			if(p.getTempAttribs().getI("ttLockCombo1") < LETTERS.length()-1)
 				p.getTempAttribs().incI("ttLockCombo1");

@@ -32,11 +32,8 @@ class AnotherCooksQuestCutscene (player: Player) {
         player.cutscene {
             when (player.getQuestStage(Quest.ANOTHER_COOKS_QUEST)) {
                 2 -> {
-                    //TODO CAMERA IMPLEMENTATION
-                    //TODO USE .forceTalk where appropriate
                     fadeInAndWait()
                     hideMinimap()
-                    //lowerAspectRatio()
                     player.interfaceManager.removeSubs(*InterfaceManager.Sub.ALL_GAME_TABS)
                     dynamicRegion(player.tile, 232, 667, 2, 3)
                     val lumbySage = npcCreate(CUTSCENE1_SAGE, 9, 13, 0)
@@ -62,8 +59,6 @@ class AnotherCooksQuestCutscene (player: Player) {
                     skrachUglogwee.faceDir(Direction.SOUTH)
                     dukeHoracio.faceDir(Direction.WEST)
                     entityTeleTo(player, 9, 5)
-                    //TODO SOUNDS AND MUSIC
-                    //player.musicsManager.playSongWithoutUnlocking(CUTSCENE_MUSIC_ID)
                     wait(2)
                     fadeOut()
                     dialogue {
@@ -112,12 +107,9 @@ class AnotherCooksQuestCutscene (player: Player) {
                             exec{dukeHoracio.faceEntity(awowogi)}
                         }
                         npc(CUTSCENE1_DUKE, CONFUSED, "Awowogei?") {
-                            //make awowogei get up and walk to the duke
                         }
                         npc(CUTSCENE1_DUKE, CONFUSED, "Please sit down!.")
                         npc(CUTSCENE1_DUKE, CONFUSED, "SIT DOWN!.") {
-                            //TODO make the duke kick awowogei
-                            //TODO awowogei runs clock wise around table
                         }
                         npc(CUTSCENE1_SAGE, LOSING_IT_LAUGHING, "I think he lost his Amulet of Manspeak!")
                         npc(CUTSCENE1_DUKE, CONFUSED, "Gypsy Aris seems to be late...")
@@ -138,7 +130,7 @@ class AnotherCooksQuestCutscene (player: Player) {
                         npc(CUTSCENE1_DUKE, CALM_TALK, "Excuse me while I deal with this...")
                     }
                     waitForDialogue()
-                    dukeHoracio.finish() //TODO need to change this to the duke walking out the double doors
+                    dukeHoracio.finish()
                     dialogue {
                         npc(CUTSCENE1_OSMON, CALM_TALK, "We should do something about that old man.")
                         npc(CUTSCENE1_DWARF, CALM_TALK, "Agreed.")
@@ -152,10 +144,8 @@ class AnotherCooksQuestCutscene (player: Player) {
                         npc(CUTSCENE1_OSMON, SCARED, "Nooooooooooooo!") {
                             evilBob.finish()
                             osmon.finish()
-                            //todo spawn chair id 36831 to location where osmon was.
                         }
                         npc(CUTSCENE1_DWARF, CONFUSED, "Wow - another one!")
-                        //player walks in from south door
                         player(HAPPY_TALKING, "Ooh - nice food!")
                         npc(CUTSCENE1_SKRACH, CALM_TALK, "You come here.")
                         player(CONFUSED, "Hello?")
@@ -168,8 +158,6 @@ class AnotherCooksQuestCutscene (player: Player) {
                         npc(CUTSCENE1_AMIK, CONFUSED, "Did we invite you?")
                         npc(CUTSCENE1_CULINAROMANCER, EVIL_LAUGH, "Hah! Your chef did! And now I'll kill you!")
                         npc(CUTSCENE1_CULINAROMANCER, EVIL_LAUGH, "MUAHAHAHA!") {
-                            //TODO instantiate an air wave cast south to north along both rows of chairs, east, and then west.
-                            //TODO Change anims of attendees to their frozen anims
                         }
                     }
                     waitForDialogue()
@@ -184,7 +172,6 @@ class AnotherCooksQuestCutscene (player: Player) {
                         npc(CUTSCENE1_GYPSY, ANGRY, "TEMPUS CESSIT!")
                     }
                     waitForDialogue()
-                    //TODO need to make the screen flash white as we move to the secondary instance location.
                     dynamicRegion(player.tile, 232, 664, 2, 3)
                     val gypsy2 = npcCreate(CUTSCENE1_GYPSY, 11, 11, 0)
                     gypsy2.faceEntity(player)
@@ -204,7 +191,6 @@ class AnotherCooksQuestCutscene (player: Player) {
                     fadeOut()
                     stop()
                     player.musicsManager.refreshListConfigs()
-                    //todo condition check for is RFD implemented
                     player.startConversation {
                         player(CONFUSED, "I should go back in there and talk to Gypsy Aris...")
                     }
@@ -363,20 +349,6 @@ class AnotherCooksQuestCutscene (player: Player) {
                             }
                         }
                     }
-                    //TODO GYPSY ARIS' NPC IN VARROCK SHOULD HAVE CHANGED DIALOG DURING THE QUEST Recipe for Disaster.
-                    //Player:
-                    //Fancy seeing you here again.
-                    //Aris:
-                    //Don't talk to me!
-                    //It might cause a time paradox!
-                    //Player:
-                    //Huh?
-                    //But how can it when you're...
-                    //Aris:
-                    //LA-LA-LA I'M NOT TALKING TO YOU LA-LA-LA TIME PARADOX LA-LA-LA.
-                    //Player:
-                    //Uh...
-                    //Okay then.
                     waitForDialogue()
                     player.setQuestStage(Quest.ANOTHER_COOKS_QUEST, 3)
                     fadeInAndWait()

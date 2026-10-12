@@ -1,6 +1,3 @@
-/**
- * Var packets: player vars, client vars, varbits and clan vars.
- */
 package org.darkan.core.net.prot.packet
 
 import kotlinx.serialization.Serializable

@@ -3,9 +3,6 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 9: Flips texture horizontally and/or vertically.
- */
 class TextureOpFlip : TextureOperation(1, false) {
     private var mirrorHorizontally: Boolean = true
     private var mirrorVertically: Boolean = true

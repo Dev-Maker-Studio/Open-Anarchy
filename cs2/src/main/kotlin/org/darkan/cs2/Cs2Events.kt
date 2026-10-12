@@ -1,18 +1,7 @@
 package org.darkan.cs2
 
-/**
- * The values the client substitutes into a hook's arguments when it fires it.
- *
- * A hook is bound long before it runs, so the values that only exist at the
- * moment of the event - where the mouse was, which component was clicked - are
- * written into the bound arguments as magic numbers and replaced on dispatch.
- * They are read straight from the client's own substitution table
- * (`CS2Executor.executeHook`), and are far enough outside any id range to be
- * recognised on sight.
- */
 object Cs2Events {
 
-    /** The value each event name stands for. */
     val VALUES: Map<String, Int> = linkedMapOf(
         "event_mousex" to -2147483647,
         "event_mousey" to -2147483646,
@@ -25,7 +14,6 @@ object Cs2Events {
         "event_keychar" to -2147483639,
     )
 
-    /** What each one is, for the declaration's doc comment. */
     val MEANINGS: Map<String, String> = linkedMapOf(
         "event_mousex" to "mouse x when the event fired",
         "event_mousey" to "mouse y when the event fired",
@@ -38,14 +26,11 @@ object Cs2Events {
         "event_keychar" to "the character it typed",
     )
 
-    /** The two that carry a component hash; the rest are plain numbers. */
     val COMPONENTS: Set<String> = setOf("event_com", "event_com2")
 
     val NAMES: Map<Int, String> = VALUES.entries.associate { (name, value) -> value to name }
 
-    /** The name for a value the client substitutes, or null when it is a number. */
     fun nameOf(value: Int): String? = NAMES[value]
 
-    /** The value an event name stands for, or null when the name is not one. */
     fun valueOf(name: String): Int? = VALUES[name]
 }

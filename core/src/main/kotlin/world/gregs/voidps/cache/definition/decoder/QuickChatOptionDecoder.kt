@@ -54,13 +54,11 @@ class QuickChatOptionDecoder : DefinitionDecoder<QuickChatOptionDefinition>(QUIC
                     if (b.toInt() != 0) byteToChar(b) else '\u0000'
                 }
             }
-            // Read as a bare flag by the client and acted on nowhere; kept so the record survives.
             4 -> unusedFlag4 = true
             else -> error("Unhandled quick chat option opcode $opcode for definition $id.")
         }
     }
 
-    /** The order [QuickChatOptionEncoder] writes on its own; see [OpcodeOrdered.opcodeOrder]. */
     override fun canonicalOpcodes(definition: QuickChatOptionDefinition): IntArray =
         QuickChatOptionEncoder.opcodesOf(definition)
 

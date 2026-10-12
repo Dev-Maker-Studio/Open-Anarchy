@@ -3,14 +3,6 @@ package org.darkan.core.gameval
 import org.darkan.core.EnvVars
 import java.io.File
 
-/**
- * Runtime id <-> Jagex dev-name lookup over the revision-727 `gamevals/<type>.json` catalogs, so
- * code can say `Gameval.requireId(Gameval.INV, "worn")` and logs/UIs can print names instead of
- * magic numbers. See `docs/gameval.md` for the catalogs, the placeholder rule and `GAMEVAL_PATH`.
- *
- * The catalogs live in the cache source tree (`<tree>/gamevals`, see `docs/cache-source.md`);
- * [EnvVars.gamevalPath] names that folder and there is no other copy.
- */
 object Gameval : GamevalCatalog(File(EnvVars.gamevalPath)) {
     const val OBJ = "obj"
     const val NPC = "npc"
@@ -40,7 +32,6 @@ object Gameval : GamevalCatalog(File(EnvVars.gamevalPath)) {
     const val QUEST = "quest"
     const val MODEL = "model"
 
-    /** Jagex `type graphic` = 2D images; not spotanim. */
     const val GRAPHIC = "graphic"
     const val SOUND = "sound"
     const val MIDI = "midi"
@@ -54,10 +45,8 @@ object Gameval : GamevalCatalog(File(EnvVars.gamevalPath)) {
     const val QUICKCHATOPTION = "quickchatoption"
     const val QUICKCHATPHRASE = "quickchatphrase"
 
-    /** World map areas: the `details` archive file ids the `WORLDMAP_*` clientscript opcodes take. */
     const val WORLDMAP = "worldmap"
 
-    /** Every catalog type name, in the order the contract lists them. */
     val TYPES: List<String> = listOf(
         OBJ, NPC, LOC, SEQ, SPOTANIM, ENUM, STRUCT, PARAM, INV, INTERFACE, COMPONENT, CLIENTSCRIPT,
         VARP, VARBIT, VARC, VARCSTR, VARCLAN, VARBITCLAN, VARCLANSETTING, VARBITCLANSETTING,
@@ -65,6 +54,5 @@ object Gameval : GamevalCatalog(File(EnvVars.gamevalPath)) {
         IDK, OVERLAY, UNDERLAY, MAPSCENE, SKYBOX, QUICKCHATOPTION, QUICKCHATPHRASE, WORLDMAP,
     )
 
-    /** The folder catalogs are read from before falling back to the bundled copy. */
     val folder: File = File(EnvVars.gamevalPath)
 }

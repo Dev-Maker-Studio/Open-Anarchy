@@ -2,7 +2,6 @@ package org.darkan.cs2
 
 import org.darkan.cs2.ir.Cs2Type
 
-/** Values an instruction takes off and puts back on the three operand stacks. */
 data class StackEffect(
     val popInt: Int = 0,
     val popStr: Int = 0,
@@ -12,29 +11,13 @@ data class StackEffect(
     val pushLong: Int = 0,
 )
 
-/** Everything the effective-signature calculation needs but cannot see locally. */
 interface Cs2Context {
-    /** Header + return signature of a called script, or null when it is missing. */
     fun script(id: Int): Cs2Script?
 
-    /** True when a `*_PARAM` opcode with this param id yields a string. */
     fun paramIsString(paramId: Int): Boolean
 
-    /** The cache's own type character for a param, or 0 when it has none. */
     fun paramType(paramId: Int): Char = 0.toChar()
 
-    /**
-     * What a script leaves on the stacks, in the order it pushes them.
-     *
-     * The compiler needs this to type the names in `let [a, b] = f();`, which carry no annotation
-     * of their own: the order is the callee's own push order where something has revealed it, and
-     * the grouped signature otherwise - exactly the order the decompiler binds the results in.
-     *
-     * Derived from [script] rather than answered separately, so a context that can produce a
-     * callee's header at all produces this too: the whole-cache analysis
-     * ([Cs2Analyzer]) recovers the order from what callers push, and a context built from a
-     * folder of sources ([Cs2SourceContext]) reads it off each script's own return annotation.
-     */
     fun returnTypes(scriptId: Int): List<Cs2Type> {
         val script = script(scriptId) ?: return emptyList()
         val signature = script.returnSignature ?: ReturnSignature.EMPTY
@@ -45,17 +28,6 @@ interface Cs2Context {
     }
 }
 
-/**
- * The stack effect of one instruction, given what is already on the stacks.
- *
- * Most opcodes have a fixed signature. The exceptions all depend on operands or
- * on constants sitting on the stack:
- *  - `JOIN_STRING` joins `operand` strings.
- *  - `GOSUB_WITH_PARAMS` takes the callee's arguments and leaves its returns.
- *  - hook setters pop a format string, then one value per character it lists,
- *    plus a trailing int array when the format ends in `Y`.
- *  - `*_PARAM` opcodes push an int or a string depending on the param's type.
- */
 fun effectiveSignature(
     instruction: Cs2Instruction,
     context: Cs2Context,
@@ -100,11 +72,6 @@ fun effectiveSignature(
     }
 }
 
-/**
- * `ENUM` pops `keyType, valueType, enumId, key`. It is self-describing: the
- * value type is a character code pushed as a constant, so no param table is
- * needed to know which stack the result lands on.
- */
 private fun enumYieldsString(stacks: SymbolicStacks): Boolean {
     val valueType = stacks.intBelowTop(2)
         ?: error("ENUM needs a constant value type to resolve its result type")
@@ -115,15 +82,13 @@ private fun hookSignature(op: Cs2Op, stacks: SymbolicStacks): StackEffect {
     val format = stacks.topString()
         ?: error("${op.name} needs a constant format string")
 
-    var popInt = op.popInt + 1 // component id (IF_ forms) plus the callback script id
-    var popStr = 1 // the format string itself
+    var popInt = op.popInt + 1
+    var popStr = 1
     var popLong = 0
 
     var spec = format
     if (op.hasTriggerArray && spec.endsWith("Y")) {
         spec = spec.dropLast(1)
-        // The trigger list is `count` ints preceded by the count itself. It sits
-        // under the component id for the IF_ forms, and on top for the CC_ ones.
         val count = stacks.intBelowTop(op.popInt)
             ?: error("${op.name} needs a constant trigger-list size")
         popInt += 1 + count
@@ -138,24 +103,13 @@ private fun hookSignature(op: Cs2Op, stacks: SymbolicStacks): StackEffect {
     return StackEffect(popInt, popStr, popLong)
 }
 
-/**
- * Operand stacks during simulation, tracking constant values where they are
- * known. Hook setters and `*_PARAM` opcodes need to read constants that were
- * pushed a few instructions earlier, so depth alone is not enough.
- */
 class SymbolicStacks {
     private val ints = ArrayList<Int?>()
     private val strings = ArrayList<String?>()
     private var longDepth = 0
 
-    /**
-     * Types of the live values in the order they were pushed. The three stacks
-     * are independent, so this is the only record of how they interleave - which
-     * is exactly what a script's return order is.
-     */
     private val live = ArrayList<Cs2Type>()
 
-    /** The live values' types, oldest first. */
     fun order(): List<Cs2Type> = live.toList()
 
     val intDepth: Int get() = ints.size
@@ -166,7 +120,6 @@ class SymbolicStacks {
 
     fun topInt(): Int? = ints.lastOrNull()
 
-    /** The int `depth` slots below the top, or null when unknown. */
     fun intBelowTop(depth: Int): Int? = ints.getOrNull(ints.size - 1 - depth)
 
     fun topString(): String? = strings.lastOrNull()
@@ -226,10 +179,6 @@ class SymbolicStacks {
     fun sameDepthAs(other: SymbolicStacks): Boolean =
         intDepth == other.intDepth && stringDepth == other.stringDepth && longs == other.longs
 
-    /**
-     * Merges another state in at a control-flow join. Depths must already agree;
-     * constants that differ become unknown.
-     */
     fun mergeConstantsFrom(other: SymbolicStacks) {
         for (i in ints.indices) if (ints[i] != other.ints[i]) ints[i] = null
         for (i in strings.indices) if (strings[i] != other.strings[i]) strings[i] = null

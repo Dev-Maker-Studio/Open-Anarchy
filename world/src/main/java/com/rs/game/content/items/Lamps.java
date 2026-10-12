@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.items;
 
 import org.darkan.core.cache.EnumDefinitions;
@@ -67,7 +51,6 @@ public class Lamps {
 			{ 23749, 23750, 23751, 23752 }
 	};
 
-	// 2528: RE Genie, 4447: Shield Of Arrav, 13227: Troll Stronghold, 19775: Gunnar's Ground, 23085: Death Plateau, 23086: Death Plateau Post-Quest
 	public static final int[] OTHER_SELECTABLE_LAMPS = { 2528, 4447, 13227, 19775, 23085, 23086, 24151 };
 
 	private static final int[] DIALOGUE_INTERFACE_CS2 = { Skills.ATTACK, Skills.MAGIC, Skills.MINING, Skills.WOODCUTTING, Skills.AGILITY, Skills.FLETCHING, Skills.THIEVING, Skills.STRENGTH, Skills.RANGE, Skills.SMITHING, Skills.FIREMAKING, Skills.HERBLORE, Skills.SLAYER, Skills.CONSTRUCTION, Skills.DEFENSE, Skills.PRAYER, Skills.FISHING, Skills.CRAFTING, Skills.FARMING, Skills.HUNTER, Skills.SUMMONING, Skills.HITPOINTS, Skills.DUNGEONEERING, Skills.COOKING, Skills.RUNECRAFTING };
@@ -106,11 +89,11 @@ public class Lamps {
 
 	private static int getLampsLevelReq(int id) {
 		return switch (id) {
-			case 4447 ->// Shield of Arrav
+			case 4447 ->
 					20;
-			case 13227 -> // Troll Stronghold
+			case 13227 ->
 					30;
-			case 19775 -> // Gunnar's Ground
+			case 19775 ->
 					5;
 			default -> 1;
 		};
@@ -126,7 +109,7 @@ public class Lamps {
 				return;
 			}
 			int lvl = player.getSkills().getLevelForXp(lamp.getSelectedSkill());
-			if (lvl < lamp.getReq())// makes unmet req skill xp unclickable
+			if (lvl < lamp.getReq())
 				return;
 
 			player.getInventory().deleteItem(slot, new Item(lamp.getId(), 1));
@@ -142,13 +125,13 @@ public class Lamps {
 				xpAmt = player.getSkills().getLevelForXp(lamp.getSelectedSkill()) * 10;
 			else if (lamp.getId() == 4447)
 				xpAmt = 1000;
-			else if (lamp.getId() == 19775) // Gunnar's Ground
+			else if (lamp.getId() == 19775)
 				xpAmt = 200;
-			else if (lamp.getId() == 23085) // Death Plateau
+			else if (lamp.getId() == 23085)
 				xpAmt = 100;
-			else if (lamp.getId() == 23086) // Death Plateau - Post-Quest Rewards
+			else if (lamp.getId() == 23086)
 				xpAmt = 180;
-			else if (lamp.getId() == 13227) // Troll Stronghold
+			else if (lamp.getId() == 13227)
 				xpAmt = 10000;
 			double exp = player.getSkills().addXpLamp(lamp.getSelectedSkill(), xpAmt);
 			player.sendMessage("You have been awarded " + Utils.getFormattedNumber(exp, ',') + " XP in " + Skills.SKILL_NAME[lamp.getSelectedSkill()] + "!");
@@ -159,7 +142,6 @@ public class Lamps {
 		player.setCloseInterfacesEvent(() -> player.getTempAttribs().removeO("lampInstance"));
 	}
 
-	// openPenguinHASExpReward relates to the Penguin Hide And Seek Distraction and Diversion XP reward.
 	public static void openPenguinHASExpReward(Player player, int penguinPoints) {
 		Lamp lamp = new Lamp(23713, -1, 1);
 		Dialogue lampD = new Dialogue().addNext(new LampXPSelectStatement(lamp));
@@ -168,7 +150,6 @@ public class Lamps {
 			int skillId = lamp.getSelectedSkill();
 			int lvl = player.getSkills().getLevelForXp(skillId);
 
-			// Calculate experience gained based on penguin points and player's level
 			double expGained = penguinPoints * (lvl * 25.0);
 			double exp = player.getSkills().addXpLamp(skillId, expGained);
 

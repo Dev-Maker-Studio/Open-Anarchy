@@ -26,8 +26,6 @@ class WorldMapInfoDecoder(
             5 -> anInt1054 = buffer.readUnsignedMedium()
             6 -> fontSize = buffer.readUnsignedByte()
             7 -> {
-                // Only bits 0 and 1 mean anything to the client; the whole byte is kept so the
-                // file can be written back unchanged.
                 displayFlags = buffer.readUnsignedByte()
                 if (displayFlags and 0x1 == 0) {
                     aBoolean1047 = false

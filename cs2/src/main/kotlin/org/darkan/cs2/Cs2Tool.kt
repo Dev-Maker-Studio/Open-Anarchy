@@ -3,12 +3,6 @@ package org.darkan.cs2
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
 
-/**
- * Loads clientscripts out of cache index 12.
- *
- * Each script is a single-file archive keyed by script id, matching the
- * client's `Resource.CS2.getFile(scriptId, 0)`.
- */
 class Cs2Cache(private val cache: Cache) {
 
     fun scriptIds(): IntArray = cache.archives(Index.CLIENT_SCRIPTS)
@@ -19,7 +13,6 @@ class Cs2Cache(private val cache: Cache) {
     fun load(scriptId: Int): Cs2Script? = raw(scriptId)?.let { Cs2Codec.decode(it) }
 }
 
-/** Result of decoding then re-encoding every script in the cache. */
 data class RoundTripReport(
     val total: Int,
     val identical: Int,
@@ -29,11 +22,6 @@ data class RoundTripReport(
     val ok: Boolean get() = mismatched.isEmpty() && failed.isEmpty()
 }
 
-/**
- * Decodes and re-encodes every clientscript, asserting the bytes come back
- * unchanged. This is the foundation the decompiler round-trip builds on: if the
- * codec is not exact, nothing above it can be.
- */
 fun verifyCodecRoundTrip(cache: Cache, log: (String) -> Unit = {}): RoundTripReport {
     val scripts = Cs2Cache(cache)
     val ids = scripts.scriptIds()

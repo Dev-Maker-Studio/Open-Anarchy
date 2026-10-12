@@ -4,11 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.config.data.IdentityKitDefinition
 
-/**
- * Writes an identity kit (`idk`, index 2 archive 3) file.
- *
- * Model ids are big smarts, not shorts; see [world.gregs.voidps.cache.config.decoder.IdentityKitDecoder].
- */
 class IdentityKitEncoder : OpcodeEncoder<IdentityKitDefinition>() {
 
     override fun opcodes(definition: IdentityKitDefinition): IntArray {

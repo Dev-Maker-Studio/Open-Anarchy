@@ -24,6 +24,5 @@ object ResponseOpcode {
     const val NO_REPLY_FROM_LOGIN_SERVER = 23
     const val DISPLAY_NAME_CHANGE_REQUIRED = 31
 
-    // The JS5 handshake has its own reply table: 0 is accepted, anything else is an error screen.
     const val JS5_REJECTED = 11
 }

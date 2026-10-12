@@ -12,7 +12,6 @@ class RsObjIconFont(
 
     override fun draw(canvas: Canvas2D, text: String, x: Int, y: Int, colour: Int, shadow: Int) {
         val font = fonts.font(fontId) ?: return
-        // The client's renderPlain measures y from the baseline, drawText from the box top.
         font.drawText(
             canvas, text, x, y - font.definition.topPadding,
             ObjIcons.WIDTH, 0, colour, shadow, 0, 0, 0, 0

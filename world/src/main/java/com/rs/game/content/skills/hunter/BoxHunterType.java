@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.hunter;
 
 import com.rs.engine.quest.Quest;
@@ -48,11 +32,6 @@ public enum BoxHunterType {
 
 	FERRET(5081, "hunter_ferret", 27, 115.2, BoxTrapType.BOX, 19188, 19189, 19192, new Animation(5191), new Animation(5192), 41, 255, List.of(Quest.EAGLES_PEAK), null),
 
-//	GECKO(6916, new Item[] { new Item(12184) }, 27, 100, BoxTrapType.BOX, 19188, 19189, 19192, new Animation(8362), new Animation(8361), 1, 255, null, Map.of(Skills.SUMMONING, 10)),
-//
-//	RACCOON(7272, new Item[] { new Item(12487) }, 27, 100, BoxTrapType.BOX, 19188, 19189, 19192, new Animation(7726), new Animation(7727), 1, 255, null, Map.of(Skills.SUMMONING, 80)),
-//
-//	BEIGE_MONKEY(7235, 1963, "hunter_monkey", 27, 100, BoxTrapType.BOX, 19188, 19189, 19192, new Animation(8349), new Animation(8350), 1, 255, null, Map.of(Skills.SUMMONING, 95)),
 
 	SWAMP_LIZARD(5117, "hunter_salam_swamp", 29, 152, BoxTrapType.TREE_NET, -1, -1, -1, new Animation(-1), new Animation(-1), -96, 433, null, null),
 

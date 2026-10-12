@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.minigames.fightpits;
 
 import com.rs.game.content.skills.magic.TeleType;
@@ -42,8 +26,6 @@ public class FightPitsController extends Controller {
 		return true;
 	}
 
-	// fuck it dont dare touching here again or dragonkk(me) kills u irl :D btw
-	// nice code it keeps nulling, fixed
 
 	@Override
 	public boolean logout() {
@@ -59,11 +41,11 @@ public class FightPitsController extends Controller {
 
 	@Override
 	public void onTeleported(TeleType type) {
-		FightPits.leaveArena(player, 3); // teled out somehow, impossible usualy
+		FightPits.leaveArena(player, 3);
 	}
 
 	@Override
-	public boolean login() { // shouldnt happen
+	public boolean login() {
 		removeController();
 		FightPits.leaveArena(player, 2);
 		return false;

@@ -3,10 +3,6 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 36: Samples from another texture/material.
- * Used for nested texture references within the texture operation DAG.
- */
 class TextureOpTexture : TextureOperation(0, false) {
     var texturePixels: IntArray? = null
     var textureHeight: Int = 0
@@ -22,7 +18,6 @@ class TextureOpTexture : TextureOperation(0, false) {
             val blue = output[2]
 
             if (pixels == null || textureWidth == 0 || textureHeight == 0) {
-                // Return gray if texture not loaded
                 for (x in 0 until currentWidth) {
                     red[x] = 2048
                     green[x] = 2048
@@ -60,8 +55,6 @@ class TextureOpTexture : TextureOperation(0, false) {
 
     override fun createImageCache(width: Int, height: Int) {
         super.createImageCache(width, height)
-        // Note: Actual texture loading happens externally via TextureLoader
-        // which sets texturePixels, textureWidth, and textureHeight
     }
 
     override fun clearImageCache() {

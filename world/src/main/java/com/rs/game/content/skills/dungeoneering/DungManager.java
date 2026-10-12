@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering;
 
 import org.darkan.core.cache.EnumDefinitions;
@@ -103,7 +87,6 @@ public class DungManager {
 			outsideId = insideId = -1;
 		}
 
-		// TODO: This may be a huge bug, in which the level, xp, and inside/outside tiles fields are mutated (this is an enum)
 		private int level;
 		private final int outsideId, insideId;
 		private double xp;
@@ -575,7 +558,7 @@ public class DungManager {
 	public void openPartyInterface() {
 		player.getInterfaceManager().sendSub(Sub.TAB_QUEST, 939);
 		player.getInterfaceManager().openTab(Sub.TAB_QUEST);
-		player.getPackets().sendVarc(234, 3);// Party Config Interface
+		player.getPackets().sendVarc(234, 3);
 		refresh();
 	}
 
@@ -595,37 +578,34 @@ public class DungManager {
 		player.getPackets().setIFHidden(939, 93, party == null || !party.getGuideMode());
 	}
 
-	/*
-	 * called aswell when player added/removed to party
-	 */
 	public void refreshPartyDetailsComponents() {
 		if (!player.getInterfaceManager().topOpen(939))
 			return;
 		if (party != null) {
-			if (party.isLeader(player)) { // party leader stuff here
+			if (party.isLeader(player)) {
 				player.getPackets().setIFHidden(939, 31, false);
 				player.getPackets().setIFHidden(939, 33, false);
-				player.getPackets().setIFHidden(939, 34, true); // Big Button leave Party
-				player.getPackets().setIFHidden(939, 37, true); // big button form party
-				player.getPackets().setIFHidden(939, 38, false); // right button, invite player
-				player.getPackets().setIFHidden(939, 105, true);// Complexity change
-				player.getPackets().setIFHidden(939, 111, true);// Floor change
-			} else { // non-party leader stuff here
+				player.getPackets().setIFHidden(939, 34, true);
+				player.getPackets().setIFHidden(939, 37, true);
+				player.getPackets().setIFHidden(939, 38, false);
+				player.getPackets().setIFHidden(939, 105, true);
+				player.getPackets().setIFHidden(939, 111, true);
+			} else {
 				player.getPackets().setIFHidden(939, 31, true);
-				player.getPackets().setIFHidden(939, 34, false); // Big Button leave Party
-				player.getPackets().setIFHidden(939, 37, true); // big button form party
-				player.getPackets().setIFHidden(939, 38, true); // right button, invite player
-				player.getPackets().setIFHidden(939, 105, true);// Complexity change
-				player.getPackets().setIFHidden(939, 111, true);// Floor change
+				player.getPackets().setIFHidden(939, 34, false);
+				player.getPackets().setIFHidden(939, 37, true);
+				player.getPackets().setIFHidden(939, 38, true);
+				player.getPackets().setIFHidden(939, 105, true);
+				player.getPackets().setIFHidden(939, 111, true);
 			}
 		} else {
 			player.getPackets().setIFHidden(939, 33, true);
-			player.getPackets().setIFHidden(939, 34, true); // Big Button leave Party
+			player.getPackets().setIFHidden(939, 34, true);
 			player.getPackets().setIFHidden(939, 36, false);
-			player.getPackets().setIFHidden(939, 37, false);// big button form party
-			player.getPackets().setIFHidden(939, 38, true);// right button invite player
-			player.getPackets().setIFHidden(939, 105, true);// Complexity change
-			player.getPackets().setIFHidden(939, 111, true);// Floor change
+			player.getPackets().setIFHidden(939, 37, false);
+			player.getPackets().setIFHidden(939, 38, true);
+			player.getPackets().setIFHidden(939, 105, true);
+			player.getPackets().setIFHidden(939, 111, true);
 		}
 	}
 
@@ -681,13 +661,13 @@ public class DungManager {
 	public static ButtonClickHandler handleInspectTab = new ButtonClickHandler(new Object[] { 936, 946 }, e -> {
 		int comp = e.getComponentId();
 		if (e.getInterfaceId() == 936) {
-			if (comp == 146)// exit button
+			if (comp == 146)
 				e.getPlayer().getDungManager().openPartyInterface();
-			if (comp == 134)// inventory
+			if (comp == 134)
 				e.getPlayer().sendMessage("Not implemented");
-			if (comp == 137)// equipment
+			if (comp == 137)
 				e.getPlayer().sendMessage("Not implemented");
-			if (comp == 140)// summoning
+			if (comp == 140)
 				e.getPlayer().sendMessage("Not implemented");
 		}
 	});
@@ -899,14 +879,6 @@ public class DungManager {
 	public static int PLAYER_5_FLOORS_COMPLETE = 183;
 
 	public void changeFloor() {
-		// if (party.getDungeon() != null) {
-		// player.sendMessage("You cannot change these settings while in a dungeon.");
-		// return;
-		// }
-		// if (!party.isLeader(this.player)) {
-		// this.player.sendMessage("Only your party's leader can change floor!");
-		// return;
-		// }
 		if (party == null) {
 			player.sendMessage("You must be in a party to view your floors.");
 			return;
@@ -965,9 +937,6 @@ public class DungManager {
 			player.sendMessage("Only your party's leader can change floor!");
 			return;
 		}
-		/*
-		 * cant happen, cuz u cant click anyway but oh well
-		 */
 		if (party.getMaxFloor() < party.getMaxFloor()) {
 			player.sendMessage("A member in your party can't do this floor.");
 			return;
@@ -1102,7 +1071,7 @@ public class DungManager {
 			player.startConversation(new DungeonPartyStart(player));
 			return;
 		}
-		if (party.getDungeon() != null) // cant happen
+		if (party.getDungeon() != null)
 			return;
 		if (!party.isLeader(player)) {
 			player.sendMessage("Only your party's leader can start a dungeon!");

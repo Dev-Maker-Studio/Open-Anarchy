@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
 import org.darkan.core.model.ObjectShape;
@@ -55,7 +39,6 @@ public class FlipTilesRoom extends PuzzleRoom {
 			}
 		for (int x = 0; x < 5; x++)
 			for (int y = 0; y < 5; y++) {
-				//Apparently not every configuration is solveable but eh, thats what the force option is for!
 				tiles[x][y] = new GameObject(Math.random() > 0.5 ? GREEN : YELLOW, ObjectShape.GROUND_DECORATION, 0, manager.getTile(reference, x + xOffset, y + yOffset));
 				World.spawnObject(tiles[x][y]);
 			}
@@ -96,7 +79,7 @@ public class FlipTilesRoom extends PuzzleRoom {
 
 	public void flipTile(final GameObject tile) {
 		final int id = tile.getId();
-		tile.setId(id == GREEN ? YELLOW : GREEN); //instantly update so 2 players pressing the same tiles at once will not bug it out, although visual may be weird, rs might lock the whole puzzle up for 1 sec, not sure tho
+		tile.setId(id == GREEN ? YELLOW : GREEN);
 		for (Player team : manager.getParty().getTeam())
 			team.getPackets().sendObjectAnimation(tile, new Animation(id == GREEN ? GREEN_TO_YELLOW : YELLOW_TO_GREEN));
 		WorldTasks.scheduleTimer(1, (ticks) -> {
@@ -112,7 +95,7 @@ public class FlipTilesRoom extends PuzzleRoom {
 
 	private void checkComplete() {
 		if (isComplete())
-			return; //You can still flip tiles after puzzle is complete, but don't do any checks
+			return;
 		int first = tiles[0][0].getId();
 		for (int x = 0; x < 5; x++)
 			for (int y = 0; y < 5; y++)

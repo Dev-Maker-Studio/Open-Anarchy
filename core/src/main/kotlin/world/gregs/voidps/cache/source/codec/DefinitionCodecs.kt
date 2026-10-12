@@ -75,37 +75,16 @@ import world.gregs.voidps.cache.definition.encoder.StructEncoder
 import world.gregs.voidps.cache.definition.encoder.VarBitEncoder
 import world.gregs.voidps.cache.source.IndexNames
 
-/**
- * Every definition type the source tree stores as editable JSON.
- *
- * Twenty-two types reach the bar a [DefinitionJsonCodec] needs - their encoder reproduces every one of the
- * 727 cache's files byte for byte, measured by the three parity tests `docs/cache-source.md` names - and
- * this is the one list of them. [register] hands the whole-index types to [SourceCodecs] and the index 2
- * types to [ConfigCodec]'s per-archive registry, which is what makes them the default for every user of a
- * tree; [types] is the same list for a report that wants to count files and pristine copies per type.
- *
- * Nothing here is per-tree or per-thread: a decoder and an encoder of an opcode keyed type hold no state
- * between files, so one of each is shared by every archive being unpacked or packed at once. Every decoder
- * that takes a parameter catalogue is left with its default
- * [world.gregs.voidps.cache.definition.Parameters.EMPTY], because a named parameter cannot be turned back
- * into the three byte key an encoder has to write.
- */
 object DefinitionCodecs {
 
-    /** One type, and where in the cache it lives. */
     class Type(
-        /** The index the type belongs to. */
         val index: Int,
-        /** The index 2 archive it is, or -1 for a type that is a whole index. */
         val archive: Int,
-        /** The gameval name of the type - `obj`, `struct`, `interface`. */
         val name: String,
-        /** The type's directory relative to the tree, `config_obj` or `config/struct`. */
         val directory: String,
         val codec: DefinitionJsonCodec<*>
     )
 
-    /** Every type, indices ascending and index 2's archives with them. */
     val types: List<Type> = buildList {
         add(index(Index.OBJECTS, "loc", 8, ObjectDecoder(), ObjectEncoder()) { ObjectDefinition(it) })
         add(index(Index.ENUMS, "enum", 8, EnumDecoder(), EnumEncoder()) { EnumDefinition(it) })
@@ -143,7 +122,6 @@ object DefinitionCodecs {
         add(config(Config.VAR_CLAN, "varclan", ClanVarDecoder(), ClanVarEncoder()) { ClanVarDefinition(it) })
     }
 
-    /** Claim every type's index, and every index 2 type's archive. Called by [SourceCodecs.reset]. */
     fun register() {
         for (type in types) {
             if (type.archive < 0) {
@@ -154,7 +132,6 @@ object DefinitionCodecs {
         }
     }
 
-    /** A whole index of one opcode keyed type, one flat file per definition id. */
     private fun <T> index(
         index: Int,
         name: String,
@@ -170,7 +147,6 @@ object DefinitionCodecs {
         codec = ordered("json-$name", DefinitionLayout.Packed(bits), decoder, encoder, create)
     )
 
-    /** One index 2 archive, a file per file inside the archive's own directory. */
     private fun <T> config(
         archive: Int,
         name: String,
@@ -185,10 +161,6 @@ object DefinitionCodecs {
         codec = ordered("json-$name", DefinitionLayout.Flat, decoder, encoder, create)
     )
 
-    /**
-     * Index 3, whose components are a fixed field layout rather than an opcode list, so it has neither
-     * [OpcodeOrdered] nor an [OpcodeEncoder] and its decode is the component's own `read`.
-     */
     private fun interfaces(): Type {
         val decoder = InterfaceDecoder()
         val encoder = InterfaceEncoder()
@@ -207,10 +179,6 @@ object DefinitionCodecs {
         )
     }
 
-    /**
-     * An opcode keyed type: decoded with `readLoop`, which is the only read path that records the file's
-     * opcode order and its overwritten payloads, and encoded by replaying them.
-     */
     private fun <T> ordered(
         id: String,
         layout: DefinitionLayout,
@@ -225,6 +193,5 @@ object DefinitionCodecs {
         encode = { definition, writer -> with(encoder) { writer.encode(definition) } }
     )
 
-    /** An interface component id is the low 16 bits of its definition id. */
     private const val COMPONENT_BITS = 16
 }

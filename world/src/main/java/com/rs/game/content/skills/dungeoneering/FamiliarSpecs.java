@@ -50,7 +50,6 @@ public class FamiliarSpecs {
 		return true;
 	}
 
-	// TODO: secondWind always returns false
 	public static boolean secondWind(Player player, Familiar familiar, int amount) {
 		if (player.getRunEnergy() >= 100) {
 			player.sendMessage("You are already full run energy.");

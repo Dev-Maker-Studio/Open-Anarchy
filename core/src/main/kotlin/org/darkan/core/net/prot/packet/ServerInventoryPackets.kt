@@ -1,6 +1,3 @@
-/**
- * Inventory and Grand Exchange packets.
- */
 package org.darkan.core.net.prot.packet
 
 import org.darkan.core.net.prot.ServerProt
@@ -70,5 +67,4 @@ data class UpdateInvFull(
 
 data class UpdateInvStopTransmit(val containerId: Int, val negativeKey: Boolean) : ServerProt
 
-/** A Grand Exchange slot's state, or a cleared slot when [offer] is null. */
 data class UpdateGESlot(val slot: Int, val offer: GrandExchangeOffer?) : ServerProt

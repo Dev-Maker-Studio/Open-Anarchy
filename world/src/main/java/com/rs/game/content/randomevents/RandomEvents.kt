@@ -9,19 +9,19 @@ import java.util.ArrayList
 
 object RandomEvents {
 	private val RANDOM_TILES = ArrayList<Tile>().apply {
-		add(Tile(2966, 3393, 0)) // North entrance of Falador
-		add(Tile(3007, 3322, 0)) // South entrance of Falador
-		add(Tile(3011, 3465, 0)) // Ice Mountain
-		add(Tile(3253, 3421, 1)) // Varrock East Bank
-		add(Tile(3295, 3279, 0)) // Near the Al Kharid Mine
-		add(Tile(3214, 3246, 0)) // Near the Lumbridge general store
-		add(Tile(3211, 9622, 0)) // Lumbridge castle basement
-		add(Tile(2636, 3373, 0)) // North of Ardougne
-		add(Tile(2995, 3341, 3)) // White Knights' Castle
-		add(Tile(2845, 3164, 0)) // Karamja Volcano
-		add(Tile(3110, 3161, 2)) // Wizard's Tower
-		add(Tile(3199, 3217, 2)) // Behind Lumbridge Castle
-		add(Tile(3256, 3485, 1)) // 1st floor of Varrock Church
+		add(Tile(2966, 3393, 0))
+		add(Tile(3007, 3322, 0))
+		add(Tile(3011, 3465, 0))
+		add(Tile(3253, 3421, 1))
+		add(Tile(3295, 3279, 0))
+		add(Tile(3214, 3246, 0))
+		add(Tile(3211, 9622, 0))
+		add(Tile(2636, 3373, 0))
+		add(Tile(2995, 3341, 3))
+		add(Tile(2845, 3164, 0))
+		add(Tile(3110, 3161, 2))
+		add(Tile(3199, 3217, 2))
+		add(Tile(3256, 3485, 1))
 	}
 
 	@JvmStatic

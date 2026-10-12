@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.model.entity.npc.combat;
 
 import org.darkan.core.map.GeneratedWorld;
@@ -44,9 +28,6 @@ public final class NPCCombat {
 		return combatDelay;
 	}
 
-	/*
-	 * returns if under combat
-	 */
 	public boolean process() {
 		if (combatDelay > 0)
 			combatDelay--;
@@ -62,11 +43,8 @@ public final class NPCCombat {
 		return false;
 	}
 
-	/*
-	 * return combatDelay
-	 */
 	private int combatAttack() {
-		Entity target = this.target; // prevents multithread issues
+		Entity target = this.target;
 		if (target == null)
 			return 0;
 		if (target instanceof Familiar familiar && familiar.getPouch().getScroll().getTarget() == ScrollTarget.COMBAT && Utils.random(3) == 0) {
@@ -80,8 +58,6 @@ public final class NPCCombat {
 		int maxDistance = npc.getAttackRange();
 		boolean los = npc.lineOfSightTo(target, maxDistance == 0) || target.lineOfSightTo(npc, maxDistance == 0);
 		boolean inRange = WorldUtil.isInRange(npc, target, maxDistance + (target.getRun() ? target.hasWalkSteps() ? 2 : 1 : target.hasWalkSteps() ? 1 : 0));
-		//boolean collidesCheck = !npc.isCantFollowUnderCombat() && WorldUtil.collides(npc, target);
-		//add collision check here to enable jagex's cancer NPC walking mechanic
 		if (!los || !inRange)
 			return 0;
 		addAttackedByDelay(target);
@@ -100,7 +76,7 @@ public final class NPCCombat {
 		target.setAttackedBy(npc);
 		if (target instanceof Player player)
 			player.getMusicsManager().onTargetedBy(npc);
-		target.setAttackedByDelay(System.currentTimeMillis() + npc.getAttackSpeed() * 600L + 600); // 8seconds
+		target.setAttackedByDelay(System.currentTimeMillis() + npc.getAttackSpeed() * 600L + 600);
 	}
 
 	public void setTarget(Entity target) {
@@ -111,7 +87,7 @@ public final class NPCCombat {
 	}
 
 	public boolean checkAll() {
-		Entity target = this.target; // prevents multithread issues
+		Entity target = this.target;
 		if (target == null)
 			return false;
 		if (npc.isDead() || npc.hasFinished() || npc.isForceWalking() || target.isDead() || target.hasFinished() || npc.getPlane() != target.getPlane())
@@ -119,7 +95,7 @@ public final class NPCCombat {
 		if (GeneratedWorld.INSTANCE.onRoad(npc.getX(), npc.getY()) || GeneratedWorld.INSTANCE.onRoad(target.getX(), target.getY()))
 			return false;
 		if (npc.hasEffect(Effect.FREEZE))
-			return true; // if freeze cant move ofc
+			return true;
 		int distanceX = npc.getX() - npc.getRespawnTile().getX();
 		int distanceY = npc.getY() - npc.getRespawnTile().getY();
 		int size = npc.getSize();
@@ -135,7 +111,7 @@ public final class NPCCombat {
 			distanceX = target.getX() - npc.getX();
 			distanceY = target.getY() - npc.getY();
 			if (distanceX > size + maxDistance || distanceX < -1 - maxDistance || distanceY > size + maxDistance || distanceY < -1 - maxDistance)
-				return false; // if target distance higher 16
+				return false;
 		}
 		if (!npc.canAttackMulti(target) || !target.canAttackMulti(npc))
 			return false;
@@ -144,13 +120,13 @@ public final class NPCCombat {
 		if (!npc.isCantFollowUnderCombat()) {
 			if (colliding) {
 				if (!npc.hasWalkSteps() && !target.hasWalkSteps()) {
-					if (!npc.addWalkSteps(target.getX() - size, npc.getY())) { //check west
+					if (!npc.addWalkSteps(target.getX() - size, npc.getY())) {
 						npc.resetWalkSteps();
-						if (!npc.addWalkSteps(target.getX() + targetSize, npc.getY())) { //check east
+						if (!npc.addWalkSteps(target.getX() + targetSize, npc.getY())) {
 							npc.resetWalkSteps();
-							if (!npc.addWalkSteps(npc.getX(), target.getY() - size)) { //check south
+							if (!npc.addWalkSteps(npc.getX(), target.getY() - size)) {
 								npc.resetWalkSteps();
-								if (!npc.addWalkSteps(npc.getX(), target.getY() + targetSize)) { //check north
+								if (!npc.addWalkSteps(npc.getX(), target.getY() + targetSize)) {
 									return true;
 								}
 							}

@@ -39,7 +39,6 @@ private const val PENDING = "instancePending"
 private const val PENDING_BOSS = "instancePendingBoss"
 private const val REVISION = "instanceRevision"
 
-/** Ops are addressed by cc slot, and every cc a row or button draws needs to be inside the range. */
 private const val SLOT_CEILING = 128
 private const val CCS_PER_ROW = 8
 private const val MINUS_SLOT = 2

@@ -4,123 +4,58 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.InterfaceComponentDefinition
 import world.gregs.voidps.cache.definition.data.InterfaceComponentHook
 
-/**
- * The size and position mode ids, spelled out so template code reads as intent
- * rather than as magic numbers. [InterfaceInstance] documents what each one does
- * to the box model; these are the same values.
- */
 object LayoutMode {
-    /** Use the base size verbatim. */
     const val SIZE_ABSOLUTE = 0
 
-    /** Parent extent minus the base size, i.e. an inset from both edges. */
     const val SIZE_INSET = 1
 
-    /** `base * parent / 16384`. */
     const val SIZE_PROPORTIONAL = 2
 
-    /** Keep whatever size the component already had. */
     const val SIZE_UNCHANGED = 3
 
-    /** Derive from the other axis through the aspect ratio. */
     const val SIZE_ASPECT = 4
 
-    /** Absolute offset from the parent's top left. */
     const val POSITION_ABSOLUTE = 0
 
-    /** Centred, offset by the base position. */
     const val POSITION_CENTRE = 1
 
-    /** Absolute offset from the parent's bottom right. */
     const val POSITION_END = 2
 
-    /** `base * parent / 16384` from the top left. */
     const val POSITION_PROPORTIONAL = 3
 
-    /** Centred plus a proportional offset. */
     const val POSITION_PROPORTIONAL_CENTRE = 4
 
-    /** Proportional offset from the bottom right. */
     const val POSITION_PROPORTIONAL_END = 5
 }
 
-/**
- * One component produced by a [ComponentTemplate].
- *
- * [parent] is an index *within the template's own list*, or
- * [ComponentTemplates.ATTACH] to hang off whatever the developer is inserting
- * into. [InterfaceDocument.addTemplate] resolves both into real indices.
- */
 class TemplateComponent(
     val definition: InterfaceComponentDefinition,
     val parent: Int = ComponentTemplates.ATTACH
 )
 
-/**
- * A named entry in the "add component" palette.
- *
- * [create] returns fresh definitions every call - templates are prototypes, not
- * shared instances, and handing the same object to two inserts would alias two
- * components onto one definition.
- */
 class ComponentTemplate(
-    /** Stable id for persistence and lookup, e.g. `graphic-button`. */
     val id: String,
     val name: String,
     val description: String,
-    /** Palette grouping, one of [ComponentTemplates.BASIC] / [ComponentTemplates.PRESET]. */
     val category: String,
     val create: () -> List<TemplateComponent>
 )
 
-/**
- * Starting definitions for new components.
- *
- * ### Why templates rather than the data class defaults
- *
- * `InterfaceComponentDefinition()` is not a usable starting point:
- *
- * - `id` defaults to -1, and
- *   [world.gregs.voidps.cache.definition.encoder.InterfaceEncoder] returns
- *   without writing a byte when the id is -1, so a component built with the bare
- *   constructor encodes to an empty file and disappears on the next decode.
- *   [InterfaceDocument] assigns the real id on insert, which is the only reason
- *   the templates here can leave it alone.
- * - `baseWidth` and `baseHeight` default to 0, so the component is invisible and,
- *   if it is a container, so is everything inside it.
- * - `defaultImage` and `fontId` default to -1, which draws nothing.
- * - `alpha` 0 means fully opaque and `graphicScale` 100, `lineWidth` 1 and
- *   `defaultMediaType` 1 are all sane - but only for the type that owns them, and
- *   the encoder writes a type's block whatever the other blocks contain.
- *
- * Graphic and font ids are cache specific, so [defaultGraphicId] and
- * [defaultFontId] are injectable; leave them at -1 and validation will flag the
- * new component rather than the template guessing an id that does not exist.
- */
 object ComponentTemplates {
 
-    /** [TemplateComponent.parent] value meaning "attach to the insertion parent". */
     const val ATTACH = ComponentDefinitions.ROOT
 
     const val BASIC = "Basic"
     const val PRESET = "Presets"
 
-    /** Graphic id new graphic components start with; set from the cache by the editor. */
     var defaultGraphicId: Int = -1
 
-    /** Font id new text components start with; set from the cache by the editor. */
     var defaultFontId: Int = -1
 
     private const val WHITE = 0xffffff
     private const val PANEL_GREY = 0x3d3529
     private const val BORDER_GREY = 0x766a55
 
-    /**
-     * A bare component of [type] with defaults that at least draw something.
-     *
-     * The returned definition has no id; [InterfaceDocument.addComponent] packs one
-     * in. Do not hand this straight to the encoder.
-     */
     @Suppress("LongMethod")
     fun defaults(type: Int): InterfaceComponentDefinition {
         val definition = InterfaceComponentDefinition(type = type)
@@ -143,7 +78,6 @@ object ComponentTemplates {
                 definition.fontId = defaultFontId
                 definition.text = "Text"
                 definition.colour = WHITE
-                // 0 means "use the font's own line height".
                 definition.lineHeight = 0
                 definition.horizontalTextAlign = 0
                 definition.verticalTextAlign = 0
@@ -155,8 +89,6 @@ object ComponentTemplates {
                 definition.baseHeight = GRAPHIC_SIZE
                 definition.defaultImage = defaultGraphicId
                 definition.alpha = 0
-                // colour 0 leaves the graphic untinted; rotation is the outline width
-                // the client bakes around it, not an angle.
                 definition.colour = 0
                 definition.rotation = 0
             }
@@ -164,9 +96,6 @@ object ComponentTemplates {
                 definition.defaultMediaType = MediaType.RAW_MODEL
                 definition.defaultMediaId = 0
                 definition.animation = -1
-                // Leaving the viewport at the origin with scale 100 is what makes the
-                // encoder skip the optional viewport block entirely, which is the only
-                // shape of a type 6 component that round-trips byte for byte.
                 definition.graphicScale = MODEL_SCALE
                 definition.centreType = false
             }
@@ -180,24 +109,13 @@ object ComponentTemplates {
         return definition
     }
 
-    /**
-     * A hook to hang on `onClick` and friends.
-     *
-     * Arguments are ints or strings; the client swaps every value below
-     * -2147483639 for event data before running the script, so
-     * [EVENT_SOURCE_COMPONENT] and [EVENT_CLICKED_OPTION] are passed through as
-     * plain arguments here and resolved at dispatch time.
-     */
     fun hook(script: Int, vararg args: Any): InterfaceComponentHook =
         InterfaceComponentHook(script, arrayOf(*args))
 
-    /** Placeholder the client replaces with the hash of the component clicked. */
     const val EVENT_SOURCE_COMPONENT = -2147483645
 
-    /** Placeholder the client replaces with the option index that was clicked. */
     const val EVENT_CLICKED_OPTION = -2147483643
 
-    /** Every template, in palette order. */
     val all: List<ComponentTemplate> = listOf(
         ComponentTemplate(
             "layer", "Layer", "Empty container. The only type that lays out children.", BASIC
@@ -259,7 +177,6 @@ object ComponentTemplates {
 
     val byCategory: Map<String, List<ComponentTemplate>> = all.groupBy { it.category }
 
-    /** The basic template for a component type, or null for the layout-only types. */
     fun forType(type: Int): ComponentTemplate? = when (type) {
         ComponentType.CONTAINER -> byId("layer")
         ComponentType.TYPE_2 -> byId("unclipped")
@@ -271,14 +188,6 @@ object ComponentTemplates {
         else -> null
     }
 
-    /**
-     * Turns an existing subtree into a reusable template, which is how a real RS
-     * window frame is obtained: point this at a cache interface that already has
-     * one rather than hard coding graphic ids that differ between caches.
-     *
-     * The extracted components are deep copies, so the template is independent of
-     * the document it came from. The subtree root is re-parented to [ATTACH].
-     */
     fun extract(
         document: InterfaceDocument,
         rootIndex: Int,
@@ -291,7 +200,6 @@ object ComponentTemplates {
         if (subtree.isEmpty()) {
             return null
         }
-        // Positions within the template list, so the copies point at each other.
         val positions = HashMap<Int, Int>(subtree.size)
         subtree.forEachIndexed { offset, node -> positions[node] = offset }
         val sources = subtree.map { document.components[it] }
@@ -305,7 +213,6 @@ object ComponentTemplates {
         }
     }
 
-    /** [extract] straight from the cache, without opening a document first. */
     fun extract(
         cache: Cache,
         interfaceId: Int,
@@ -317,7 +224,6 @@ object ComponentTemplates {
     ): ComponentTemplate? =
         extract(InterfaceDocument.decode(cache, interfaceId), rootIndex, id, name, description, category)
 
-    // --- Preset bodies -----------------------------------------------------
 
     private fun single(definition: InterfaceComponentDefinition) = listOf(TemplateComponent(definition))
 
@@ -332,7 +238,6 @@ object ComponentTemplates {
 
     private fun backdrop(): InterfaceComponentDefinition {
         val rectangle = defaults(ComponentType.FIGURE)
-        // Inset mode with a base size of 0 resolves to the parent's full extent.
         rectangle.baseWidth = 0
         rectangle.baseHeight = 0
         rectangle.horizontalSizeMode = LayoutMode.SIZE_INSET.toByte()
@@ -357,9 +262,6 @@ object ComponentTemplates {
         graphic.baseHeight = BUTTON_HEIGHT
         graphic.name = "Button"
         graphic.options = arrayOf("Ok")
-        // The client only delivers clicks for the setting bits an interface author
-        // sets; leave them at 0 here rather than guessing, and let the developer
-        // author them alongside the hook.
         graphic.setting.setting = 0
         val caption = defaults(ComponentType.TEXT)
         caption.baseWidth = 0
@@ -369,8 +271,6 @@ object ComponentTemplates {
         caption.horizontalTextAlign = 1
         caption.verticalTextAlign = 1
         caption.text = "Ok"
-        // A graphic is not a container, so a caption parented to it would never be
-        // laid out. The pair goes side by side under the insertion parent instead.
         return listOf(TemplateComponent(graphic), TemplateComponent(caption))
     }
 

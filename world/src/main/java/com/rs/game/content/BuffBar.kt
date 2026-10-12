@@ -31,8 +31,6 @@ object BuffBar {
         }
     }
 
-    // A bar opened afresh or shown again starts every countdown from what its varbits last held,
-    // so each slot is resent with the time actually left.
     @JvmStatic
     fun refresh(player: Player) {
         val published = player.tempAttribs.getO<PublishedSlots>(SLOTS_ATTRIBUTE) ?: return
@@ -41,8 +39,6 @@ object BuffBar {
     }
 }
 
-// Poison is the one bar entry that is not an Effect: it runs off its own counter rather than the
-// effect map, so it declares its icon here instead of on a constant.
 private val POISON_ENTRY = objIcon(Obj.poison, "You are taking poison damage.")
 
 private const val SLOT_COUNT = 28
@@ -141,8 +137,6 @@ private fun publishedSlots(player: Player): PublishedSlots {
     return slots
 }
 
-// An effect keeps the slot it already holds so nothing on screen jumps when another one is applied;
-// the survivors close up over the slots an expiry frees, and new effects take the tail.
 private fun layOutSlots(player: Player, published: PublishedSlots) {
     val antipoison = activeAntipoisonEntry(player)
     var next = 0
@@ -188,8 +182,6 @@ private fun isLaidOut(published: PublishedSlots, count: Int, entry: BuffBarEntry
     return false
 }
 
-// The client runs the countdown itself, so a slot only needs resending when the tick it expires on
-// moves. A countdown draining as expected leaves that tick where it was, and costs nothing.
 private fun publishSlot(player: Player, published: PublishedSlots, slot: Int, entry: BuffBarEntry?, expiryTick: Long, seconds: Int): Boolean {
     val icon = entry?.icon ?: EMPTY_ICON
     if (published.icons[slot] == icon && published.expiryTicks[slot] == expiryTick) return false
@@ -199,15 +191,10 @@ private fun publishSlot(player: Player, published: PublishedSlots, slot: Int, en
     player.vars.saveVarBit(SLOT_SPRITE_VARBITS[slot], if (entry?.isSprite == true) 1 else 0)
     player.vars.saveVarBit(SLOT_SECONDS_VARBITS[slot], seconds)
     player.packets.sendVarcString(SLOT_DESCRIPTION_VARCSTRS[slot], if (entry == null) "" else label(entry))
-    // Re-applying an effect republishes the same icon and duration, so the packed varp can be
-    // unchanged and setVarBit would drop it, leaving the client on its old deadline. Only this
-    // slot moved, so only this varp is forced - forcing all ten multiplies the cost of a slot
-    // that republishes often, such as poison while its counter is paused behind an interface.
     player.vars.setVar(SLOT_VARPS[slot], player.vars.getVar(SLOT_VARPS[slot]), forceSend = true)
     return true
 }
 
-// The tooltip is the effect's name over its description; the countdown is already on the icon.
 private fun label(entry: BuffBarEntry): String = "<col=ffffff>${entryName(entry)}</col><br>${entry.description}"
 
 private fun entryName(entry: BuffBarEntry): String {
@@ -217,8 +204,6 @@ private fun entryName(entry: BuffBarEntry): String {
     return name.replaceFirstChar { it.uppercase() }
 }
 
-// Both antifire effects can sit in the map at once; combat resolves super first and only falls
-// back to the plain one when it is absent (PlayerCombat.kt:883), so the bar hides the weaker.
 private fun remainingTicks(player: Player, entry: BuffBarEntry, antipoison: BuffBarEntry?): Long {
     if (entry === POISON_ENTRY) return player.poison.remainingTicks.toLong()
     if (entry === antipoison) return player.getEffectTicks(Effect.ANTIPOISON)

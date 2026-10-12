@@ -16,16 +16,14 @@ fun main() {
         results.add((System.nanoTime() - start) / 1000000.0)
     }
 
-    //println("Calculated " + RouteFinder.COUNT + " routes across Burthorpe.")
     println("Kotlin coroutines: "+results.average()+" ms")
 }
 
 fun runCoroutineTest() {
-    Cache.get() // Initialize cache
+    Cache.get()
     runBlocking {
         (0 until 1000).map { _ ->
             launch {
-                //RouteFinder.find(2888, 3452, 0, 1, FixedTileStrategy(2917, 3524), true)
             }
         }.forEach { it.join() }
     }

@@ -3,9 +3,6 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 21: Interpolates between two textures based on a third texture as blend factor.
- */
 class TextureOpInterpolate : TextureOperation(3, false) {
 
     override fun getMonochromeOutput(y: Int): IntArray {

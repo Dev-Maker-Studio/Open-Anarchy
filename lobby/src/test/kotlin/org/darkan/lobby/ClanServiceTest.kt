@@ -37,11 +37,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * The lobby's clan service, driven through [SocialGateway] with a fake world and the in-memory
- * stores (see [LobbyHarness]): every action's allow and deny path, owner succession, bans, chat
- * routing to worlds and lobby-screen recipients, temp bans, and the reconnect resync.
- */
 class ClanServiceTest {
 
     private val clanName = "Darkan"
@@ -49,7 +44,6 @@ class ClanServiceTest {
     @BeforeTest
     fun clearGateway() = LobbyHarness.reset()
 
-    /** The last result this world was sent for [account]. */
     private fun FakeWorld.lastResult(account: Account): ClanCommandResult =
         assertNotNull(messagesOf<ClanCommandResult>().lastOrNull { it.username == account.username }, "no result for ${account.username}")
 
@@ -75,21 +69,18 @@ class ClanServiceTest {
         return result
     }
 
-    /** An owner online on [world] with a freshly created clan. */
     private suspend fun FakeWorld.founded(owner: Account): Clan {
         playerOnline(owner)
         ok(owner, ClanAction.Create(clanName))
         return assertNotNull(LobbyHarness.clans.find(clanName))
     }
 
-    /** [member] joins [owner]'s clan from [world] on the owner's invitation. */
     private suspend fun FakeWorld.joined(owner: Account, member: Account, rank: ClanRank = ClanRank.RECRUIT) {
         playerOnline(member)
         ok(member, ClanAction.AcceptInvite(clanName, owner.username))
         if (rank != ClanRank.RECRUIT) ok(owner, ClanAction.UpdateMember(member.username, rank = rank))
     }
 
-    // ─── Create and names ────────────────────────────────────────────
 
     @Test
     fun `creating a clan makes the actor its owner and tells every world`() = runBlocking<Unit> {
@@ -130,7 +121,6 @@ class ClanServiceTest {
         assertNull(LobbyHarness.clans.find("Second"), "a check must not create anything")
     }
 
-    // ─── Invitations ─────────────────────────────────────────────────
 
     @Test
     fun `an invitation from a member with INVITE is accepted`() = runBlocking<Unit> {
@@ -160,7 +150,6 @@ class ClanServiceTest {
         world.playerOnline(banned)
         world.playerOnline(hopeful)
 
-        // A recruit holds no INVITE permission by default.
         world.denied(hopeful, ClanAction.AcceptInvite(clanName, recruit.username), "That player does not have permission to invite you to the clan.")
 
         world.ok(owner, ClanAction.Ban(banned.username))
@@ -176,7 +165,6 @@ class ClanServiceTest {
         world.denied(hopeful, ClanAction.AcceptInvite("Nowhere", owner.username), "That clan no longer exists.")
     }
 
-    // ─── Members ─────────────────────────────────────────────────────
 
     @Test
     fun `only an admin above the target can remove a member`() = runBlocking<Unit> {
@@ -237,7 +225,6 @@ class ClanServiceTest {
         assertEquals(ClanRank.ADMIN, handedOver.members[owner.username]?.rank)
     }
 
-    // ─── Leaving ─────────────────────────────────────────────────────
 
     @Test
     fun `an owner leaving hands the clan to the highest rank`() = runBlocking<Unit> {
@@ -280,7 +267,6 @@ class ClanServiceTest {
         assertEquals(ClanDeleted(clanName), other.messagesOf<ClanDeleted>().last(), "a fetch of a deleted clan answers deleted")
     }
 
-    // ─── Bans ────────────────────────────────────────────────────────
 
     @Test
     fun `a ban removes the member and keeps them out as a guest`() = runBlocking<Unit> {
@@ -306,7 +292,6 @@ class ClanServiceTest {
         assertEquals(ClanRank.NONE, world.lastChannel().state.chatter(recruit.username)?.rank)
     }
 
-    // ─── Settings ────────────────────────────────────────────────────
 
     @Test
     fun `settings need an admin and a wholly valid map`() = runBlocking<Unit> {
@@ -325,7 +310,6 @@ class ClanServiceTest {
 
         world.ok(owner, ClanAction.UpdateSettings(mapOf(ClanSetting.MOTTO.name to "Hello", ClanSetting.FORUM_QFC.name to 42)))
         assertEquals("Hello", world.lastSnapshot().getSetting(ClanSetting.MOTTO))
-        // The store keeps the setting's own type: the Int on the wire was widened to the Long setting.
         assertEquals(42L, assertNotNull(LobbyHarness.clans.find(clanName)).getSetting(ClanSetting.FORUM_QFC))
 
         world.ok(owner, ClanAction.SetChannelRanks(talkRank = ClanRank.CORPORAL, kickRank = ClanRank.GENERAL))
@@ -336,7 +320,6 @@ class ClanServiceTest {
         assertEquals(1, world.lastSnapshot().getVar(3))
     }
 
-    // ─── Channels ────────────────────────────────────────────────────
 
     @Test
     fun `leaving and joining the channel moves the chatter list and the membership flag`() = runBlocking<Unit> {
@@ -407,7 +390,6 @@ class ClanServiceTest {
         assertTrue(session.sent.filterIsInstance<ClanChannelFull>().any { it.clanName == clanName }, "the next login did not rejoin")
     }
 
-    // ─── Chat ────────────────────────────────────────────────────────
 
     @Test
     fun `chat reaches each world once and each lobby chatter with its own guest flag`() = runBlocking<Unit> {
@@ -445,7 +427,6 @@ class ClanServiceTest {
         val toGuest = assertNotNull(guestSession.sent.filterIsInstance<MessageClanChannel>().lastOrNull())
         assertTrue(toGuest.guest, "a guest hears the clan as listened")
 
-        // The guest speaks in the guest channel; guests may talk by default.
         assertTrue(ClanService.handle(guest.username, ClanAction.QuickChat(guest = true, message = QuickChatMessage("", 5))).ok)
         assertEquals(1, worldA.messagesOf<ClanQuickChatMessage>().size)
         assertTrue(memberSession.sent.filterIsInstance<MessageQuickChatClanChannel>().any { !it.guest })
@@ -473,7 +454,6 @@ class ClanServiceTest {
         assertTrue(world.messagesOf<ClanChatMessage>().isEmpty())
     }
 
-    // ─── Kicks and guests ────────────────────────────────────────────
 
     @Test
     fun `a kicked guest is out for an hour and a kicked member just leaves the channel`() = runBlocking<Unit> {
@@ -526,7 +506,6 @@ class ClanServiceTest {
         world.denied(guest, ClanAction.LeaveGuestChannel, "You are not currently connected to a clan chat.")
     }
 
-    // ─── Worlds coming and going ─────────────────────────────────────
 
     @Test
     fun `a world socket dropping takes its chatters out of every channel`() = runBlocking<Unit> {
@@ -557,7 +536,6 @@ class ClanServiceTest {
         world.playerOnline(guest)
         world.ok(guest, ClanAction.JoinGuestChannel(clanName))
 
-        // The world restarts without the lobby seeing the socket close.
         val reconnected = LobbyHarness.world(1).connect()
         reconnected.presenceSnapshot(PresenceSyncReason.CONNECT, owner, member, guest)
 

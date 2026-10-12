@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.magic;
 
 import com.rs.game.model.entity.player.Player;
@@ -25,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 
 public enum Rune {
-	//varbit 4540 = 2, 3 || varbit 5493 != 0 activates elemental/catalytic miniegame runes
 	AIR(556, 17780, 16091, 4697, 4695, 4696, 20941, 12850),
 	WATER(555, 17781, 16092, 4694, 4695, 4698, 20940, 12850),
 	EARTH(557, 17782, 16093, 4696, 4699, 4698, 20942, 12850),
@@ -34,7 +17,7 @@ public enum Rune {
 	MIND(558, 17784, 16095, 20943, 12851),
 	COSMIC(564, 17789, 16100, 12851),
 	CHAOS(562, 17785, 16096, 20947, 12851),
-	NATURE(561, 17791, 16102, 20946, 12851), //18341 and varc 1234 = nature rune count inside staff
+	NATURE(561, 17791, 16102, 20946, 12851),
 	DEATH(560, 17786, 16097, 20945, 12851),
 	BLOOD(565, 17787, 16098, 12851),
 	SOUL(566, 17793, 16104, 12851),

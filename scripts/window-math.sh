@@ -1,5 +1,3 @@
-# Sector arithmetic shared by window-world.sh and window.sh; mirrors org.darkan.core.map.WorldWindow.
-# 26 x 26 sectors of 15,000 tiles, no overlap, no handover. Sector MM is window 12,13 (row letter from the north, column letter from the west).
 WINDOW_TILES=15000
 REGION_TILES=64
 PER_AXIS=26

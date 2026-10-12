@@ -1,13 +1,5 @@
 package world.gregs.voidps.cache.definition.cs2
 
-/**
- * Represents a CS2 script type. Each type has a stack footprint (int/string/long),
- * a human-readable name, and a single-character Jagex descriptor used in cache
- * opcodes to identify the type.
- *
- * Ported from the legacy Java implementation; preserves the Java-facing API so
- * existing callers continue to work via [JvmField] and [JvmStatic].
- */
 class CS2Type {
 
     @JvmField var intStackSize: Int = 0
@@ -70,7 +62,6 @@ class CS2Type {
     companion object {
         @JvmField val attrTypes: MutableMap<Int, CS2Type> = HashMap()
 
-        // BASE TYPES
         @JvmField val VOID = CS2Type(0, 0, 0, "void", '\u0000')
         @JvmField val BOOLEAN = CS2Type(1, 0, 0, "boolean", '1')
         @JvmField val INT = CS2Type(1, 0, 0, "int", 'i')

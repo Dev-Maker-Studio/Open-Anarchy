@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -38,7 +22,6 @@ import org.darkan.core.model.SpotAnim;
 import org.darkan.core.model.Rights;
 import org.darkan.core.model.GroundItem;
 import org.darkan.core.model.WorldObject;
-// Hit class from com.rs.game.model.entity.Hit (not core module)
 import org.darkan.core.model.HintIcon;
 import org.darkan.core.model.Projectile;
 import org.darkan.core.Utils;
@@ -53,7 +36,7 @@ import java.util.List;
 @PluginEventHandler
 public final class Stomp extends DungeonBoss {
 
-	private static final int IVULNERABLE_TIMER = 37; // 16.5 sec
+	private static final int IVULNERABLE_TIMER = 37;
 	private int stage;
 	private int count;
 	private int lodeStoneType;
@@ -63,7 +46,7 @@ public final class Stomp extends DungeonBoss {
 
 	public Stomp(Tile tile, DungeonManager manager, RoomReference reference) {
 		super(DungeonUtils.getClosestToCombatLevel(Utils.range(9782, 9796), manager.getBossLevel()), tile, manager, reference);
-		setCantFollowUnderCombat(true); // force cant walk
+		setCantFollowUnderCombat(true);
 		freeze(5000000);
 		lodestones = new boolean[2];
 		shadows = new ArrayList<>();
@@ -211,9 +194,6 @@ public final class Stomp extends DungeonBoss {
 			}
 	}
 
-	/*
-	 * if wasnt destroyed yet
-	 */
 	public void destroyExistingDebris() {
 		for (int[] s : shadows)
 			getManager().removeObject(getReference(), 49269, ObjectShape.SCENERY_INTERACT, 0, s[0], s[1]);
@@ -260,18 +240,13 @@ public final class Stomp extends DungeonBoss {
 		getManager().openStairs(getReference());
 	}
 
-	/*
-	 * @Override public Item sendDrop(Player player, Drop drop) { Item item = new Item(drop.getItemId()); player.getInventory().addItemDrop(item.getId(), item.getAmount()); return item; }
-	 */
 
 	@Override
 	public void setNextFaceEntity(Entity entity) {
-		// this boss doesnt face
 	}
 
 	@Override
 	public boolean lineOfSightTo(Object tile, boolean checkClose) {
-		// because npc is under cliped data
 		return getManager().isAtBossRoom(WorldUtil.targetToTile(tile));
 	}
 

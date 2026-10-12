@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.cooking;
 
 import com.rs.plugin.annotations.PluginEventHandler;
@@ -54,39 +38,39 @@ public class TeaMaking  {
 
 	public static ItemOnItemHandler clayLeaves = new ItemOnItemHandler(7738, 7702, e -> {
 		e.getPlayer().getInventory().deleteItem(7738, 1);
-		e.getPlayer().getInventory().deleteItem(7702, 1); //Clay leaves into pot
+		e.getPlayer().getInventory().deleteItem(7702, 1);
 		e.getPlayer().getInventory().addItem(7700, 1);
 	});
 
 	public static ItemOnItemHandler porcelainLeaves = new ItemOnItemHandler(7738, 7714, e -> {
 		e.getPlayer().getInventory().deleteItem(7738, 1);
-		e.getPlayer().getInventory().deleteItem(7714, 1); //Porcelain leaves into pot
+		e.getPlayer().getInventory().deleteItem(7714, 1);
 		e.getPlayer().getInventory().addItem(7712, 1);
 	});
 
 	public static ItemOnItemHandler gildedLeaves = new ItemOnItemHandler(7738, 7726, e -> {
 		e.getPlayer().getInventory().deleteItem(7738, 1);
-		e.getPlayer().getInventory().deleteItem(7726, 1); //Gilded leaves into pot
+		e.getPlayer().getInventory().deleteItem(7726, 1);
 		e.getPlayer().getInventory().addItem(7724, 1);
 	});
 
 	public static ItemOnItemHandler clayWater = new ItemOnItemHandler(7691, 7700, e -> {
 		e.getPlayer().getInventory().deleteItem(7691, 1);
-		e.getPlayer().getInventory().deleteItem(7700, 1); //Clay water into pot
+		e.getPlayer().getInventory().deleteItem(7700, 1);
 		e.getPlayer().getInventory().addItem(7692, 1);
 		e.getPlayer().getInventory().addItem(7688, 1);
 	});
 
 	public static ItemOnItemHandler porcelainWater = new ItemOnItemHandler(7691, 7712, e -> {
 		e.getPlayer().getInventory().deleteItem(7691, 1);
-		e.getPlayer().getInventory().deleteItem(7712, 1); //Porcelain water into pot
+		e.getPlayer().getInventory().deleteItem(7712, 1);
 		e.getPlayer().getInventory().addItem(7704, 1);
 		e.getPlayer().getInventory().addItem(7688, 1);
 	});
 
 	public static ItemOnItemHandler gildedWater = new ItemOnItemHandler(7691, 7724, e -> {
 		e.getPlayer().getInventory().deleteItem(7691, 1);
-		e.getPlayer().getInventory().deleteItem(7724, 1); //Gilded water into pot
+		e.getPlayer().getInventory().deleteItem(7724, 1);
 		e.getPlayer().getInventory().addItem(7716, 1);
 		e.getPlayer().getInventory().addItem(7688, 1);
 	});

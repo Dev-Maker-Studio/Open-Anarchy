@@ -8,7 +8,7 @@ enum class HouseRooms(
     val chunkX: Int,
     val chunkY: Int,
     val isShowRoof: Boolean,
-    vararg val doorDirs: Int // `vararg` can be used for the doors
+    vararg val doorDirs: Int
 ) {
     PARLOUR(1000, 1, 232, 639, true, InstanceBuilder.EAST, InstanceBuilder.SOUTH, InstanceBuilder.WEST),
     GARDEN(

@@ -19,7 +19,6 @@ const val DARK_KEBBIT_FUR = 10115
 @ServerStartupEvent
 fun mapGlovesOfSilence() {
 
-    // Check charges
     onItemClick(GLOVES_OF_SILENCE, options = arrayOf("Check")) { e ->
         val charges = e.player.getI("glovesOfSilenceCharges").takeIf { it > 0 } ?: MAX_GLOVES_OF_SILENCE_CHARGES
         e.player.set("glovesOfSilenceCharges", charges)
@@ -35,7 +34,6 @@ fun mapGlovesOfSilence() {
         e.player.sendMessage(message)
     }
 
-    // Prevent equipping if less than lvl 54 Hunter
     onItemEquip(GLOVES_OF_SILENCE) { e ->
         if (e.equip())
             if (e.player.skills.getLevelForXp(Constants.HUNTER) < 54) {
@@ -44,7 +42,6 @@ fun mapGlovesOfSilence() {
             }
     }
 
-    // Repair gloves
     onItemOnItem(intArrayOf(GLOVES_OF_SILENCE), intArrayOf(DARK_KEBBIT_FUR)) { e ->
         val player = e.player
 
@@ -71,10 +68,6 @@ fun mapGlovesOfSilence() {
 
 }
 
-/*
- * Degrade gloves method.
- * If charges = 0, delete item and let player know.
- */
 fun degradeGlovesOfSilence(player: Player) {
     if (player.equipment.glovesId == GLOVES_OF_SILENCE) {
         var charges = player.getI("glovesOfSilenceCharges").takeIf { it > 0 } ?: MAX_GLOVES_OF_SILENCE_CHARGES

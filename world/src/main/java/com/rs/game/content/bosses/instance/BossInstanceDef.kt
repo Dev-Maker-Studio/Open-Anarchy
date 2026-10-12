@@ -4,12 +4,6 @@ import com.rs.game.model.entity.player.Controller
 import world.gregs.voidps.type.Region
 import world.gregs.voidps.type.Tile
 
-/**
- * Everything an instanced boss needs. The arena is described by the regions the encounter occupies
- * rather than by a list of what stands in them: the copy pulls the world's own spawns, and a boss
- * that is a [com.rs.game.content.bosses.MinionHost] brings its minions with it, so nothing here
- * has to name a minion, a position or a respawn.
- */
 data class BossInstanceDef(
     val key: String,
     val displayName: String,
@@ -24,17 +18,13 @@ data class BossInstanceDef(
     val spawnSpeeds: List<SpawnSpeed> = SpawnSpeed.entries,
     val cost: Int = 0,
     val portraitZoom: Int = 0,
-    /** The loc that leads out of the real arena, and the instance-only twin spawned over it. */
     val exitLoc: Int = -1,
     val exitTile: Tile? = null,
     val instanceExitLoc: Int = -1,
     val entranceRequirements: String = "None",
-    /** Flipped while a player stands inside, for an entrance loc that transforms on it. */
     val insideVarbit: Int = -1,
-    /** The controller that owns the ground the player is put back on, restored when they leave. */
     val returnController: (() -> Controller)? = null,
 ) {
-    /** The one the interface draws; a multi-boss arena shows its first. */
     val portraitNpc: Int get() = bossNpcs.first()
 
     private val origin: Region = Region(regions.minOf { Region(it).x }, regions.minOf { Region(it).y })
@@ -42,7 +32,6 @@ data class BossInstanceDef(
     val widthRegions: Int get() = regions.maxOf { Region(it).x } - origin.x + 1
     val heightRegions: Int get() = regions.maxOf { Region(it).y } - origin.y + 1
 
-    /** Where a real-world arena tile lands inside an instance whose base is the arena origin. */
     fun localOffset(tile: Tile): IntArray =
         intArrayOf(tile.x - origin.tile.x, tile.y - origin.tile.y, tile.plane)
 

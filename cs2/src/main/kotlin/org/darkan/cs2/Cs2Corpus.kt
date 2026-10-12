@@ -28,87 +28,40 @@ import org.darkan.cs2.ir.VarRef
 import org.darkan.cs2.ir.While
 import world.gregs.voidps.cache.Cache
 
-/**
- * The whole clientscript corpus decompiled once, and the folder it decompiles into.
- *
- * `cs2 decompile-all` and the cache source tree's index 12 codec
- * ([org.darkan.cs2.source.Cs2SourceCodec]) have to produce the *same* folder, byte for byte: the
- * tree stores index 12 as exactly what the CLI writes, so two implementations of that layout
- * would show up as a tree that churns depending on which tool touched it last. This is the one
- * implementation. Both callers want the same two things:
- *
- *  - **[decompile] / [decompileScript]** - a script as TypeScript, either one at a time from the
- *    bytes the caller holds, or the whole corpus in id order;
- *  - **[projectFiles]** - the files that are a property of the *corpus* rather than of any one
- *    script, so no per-archive codec could produce them: `cs2.d.ts` (opcode signatures, argument
- *    kinds included), `gamevals.d.ts` (the id constants), `vars.d.ts` (every variable any script
- *    touches, bound to its id), `tsconfig.json` and the `dead-code.md` report.
- *
- * Whole-corpus work - return signatures by fixpoint across calls, the type inference behind the
- * constant names - is done once by [Cs2Analyzer] and shared, so nothing here pays for it twice.
- *
- * Once [analyzer] and [types] are warm, [decompileScript] holds no state and may be called from
- * any number of threads at once, which is what lets a source tree unpack index 12 an archive per
- * core.
- */
 class Cs2Corpus(private val cache: Cache) {
 
-    /** The corpus analysis, done once on first use. */
     val analyzer: Cs2Analyzer by lazy {
         Cs2Analyzer(cache).also { it.analyse() }
     }
 
-    /** Index 12 itself, for checking that a caller's bytes are the ones we analysed. */
     private val scripts = Cs2Cache(cache)
 
-    /** What the corpus says every constant means; whole-cache work, cached by the analyzer. */
     fun types(log: (String) -> Unit = {}): Cs2Types = analyzer.types(log)
 
-    /** Every script the cache holds, ascending. */
     val ids: IntArray get() = analyzer.ids
 
-    /** One script's decompiled source, and what decompiling it turned up. */
     class Decompiled(
         val scriptId: Int,
         val source: String,
         val function: Cs2Function,
         val deadCode: List<Cs2DeadCode>
     ) {
-        /** Where this script's source belongs, relative to the folder. */
         val path: String get() = Cs2Layout.pathOf(scriptId)
     }
 
-    /**
-     * What one whole-corpus [decompile] pass learned.
-     *
-     * The sources themselves are handed to the pass's callback rather than kept: all 6,567 of
-     * them are 30 MB of text and every caller writes them straight out.
-     */
     class Corpus(
-        /** How many scripts were decompiled. */
         val decompiled: Int,
-        /** Scripts nothing could render, with why. Empty for the 727 cache. */
         val failures: List<Pair<Int, String>>,
-        /** Every variable any script reads or writes, in first-seen order. */
         val variables: Set<VarRef>,
-        /** How many scripts still need an unstructured `goto`. Zero for the 727 cache. */
         val gotos: Int,
         val scriptsWithDeadCode: Int,
         val deadCodeCounts: Map<Cs2DeadCodeKind, Int>,
-        /** `dead-code.md`, rendered as the pass went. */
         val deadCodeReport: String,
         val millis: Long
     ) {
         val deadCodeFindings: Int get() = deadCodeCounts.values.sum()
     }
 
-    /**
-     * Decompiles every script in the cache, handing each one to [onScript] as it is rendered.
-     *
-     * Sequential on purpose: the pass takes under two seconds for all 6,567 scripts once the
-     * analysis is warm, and holding no more than one script's IR at a time keeps a whole-cache
-     * decompile inside a default heap.
-     */
     fun decompile(log: (String) -> Unit = {}, onScript: (Decompiled) -> Unit = {}): Corpus {
         val start = System.nanoTime()
         val types = types(log)
@@ -149,22 +102,6 @@ class Cs2Corpus(private val cache: Cache) {
         )
     }
 
-    /**
-     * Decompiles one script, exactly as a whole-corpus [decompile] would.
-     *
-     * **It has to be the analyzed script, not a fresh decode of the same bytes.** A script's
-     * argument and return *order* is not in its bytecode - the stacks only say how many of each
-     * type there are - and is recovered by [Cs2Analyzer.analyse] from what its callers push.
-     * Decoding the bytes again loses that and 118 of the 6,567 scripts come out with their
-     * parameters in the grouped order instead, which still compiles but is a different file.
-     *
-     * [bytes] is therefore a check rather than an input: a codec is handed an archive's bytes and
-     * this is where it finds out whether they are the ones its cache was analysed from.
-     *
-     * Where the structurer cannot reproduce a script's branch layout the faithful rendering -
-     * block by block, with explicit jumps - can, so that is tried rather than giving up: source
-     * that will not compile back is worse than source that is ugly.
-     */
     fun decompileScript(scriptId: Int, bytes: ByteArray? = null, types: Cs2Types = types()): Decompiled? {
         val script = analyzer.script(scriptId) ?: return null
         if (bytes != null) {
@@ -189,19 +126,8 @@ class Cs2Corpus(private val cache: Cache) {
         return Decompiled(scriptId, Cs2Emitter(function).emit(), function, structurer.deadCode)
     }
 
-    // ------------------------------------------------------------------ project files
 
-    /**
-     * The files a decompiled folder needs that belong to the corpus rather than to one script,
-     * by their name in the folder root.
-     *
-     * A fixed order and derived from the corpus alone, because a source tree holding them must
-     * come out the same every time it is written.
-     */
     fun projectFiles(corpus: Corpus, types: Cs2Types = types()): Map<String, String> = linkedMapOf(
-        // The param types go into cs2.d.ts because they are the one thing a compile needs that no
-        // script's source states, and a folder has to be compilable from the folder alone - see
-        // Cs2SourceContext.
         Cs2Declarations.OPCODES_FILE to
             Cs2Declarations.generate(types.argumentKinds, analyzer.stringParams()),
         Cs2Declarations.GAMEVALS_FILE to Cs2Declarations.gamevals(),
@@ -212,10 +138,6 @@ class Cs2Corpus(private val cache: Cache) {
         DEAD_CODE_FILE to corpus.deadCodeReport
     )
 
-    /**
-     * Decompiles the corpus straight into [folder] - what `cs2 decompile-all` does, and what the
-     * cache source tree's index 12 directory holds.
-     */
     fun write(folder: File, log: (String) -> Unit = {}): Corpus {
         folder.mkdirs()
         val corpus = decompile(log) { script ->
@@ -251,7 +173,6 @@ class Cs2Corpus(private val cache: Cache) {
 
         const val DEAD_CODE_FILE = "dead-code.md"
 
-        /** What the emitter writes where control flow has no structured form. */
         private const val GOTO = "goto("
 
         private const val DEAD_CODE_HEADER =
@@ -261,11 +182,6 @@ class Cs2Corpus(private val cache: Cache) {
                 "Unreachable code that only jumps somewhere is the compiler's own layout and is not listed,\n" +
                 "and neither is the default `return` every script ends with.\n"
 
-        /**
-         * One finding rendered as the code it is about, each line prefixed with [prefix].
-         *
-         * Shared by the report and by `cs2 decompile`, which prints the same blocks as comments.
-         */
         fun notes(function: Cs2Function, findings: List<Cs2DeadCode>, prefix: String): String {
             val emitter = Cs2Emitter(function)
             val out = StringBuilder()
@@ -285,7 +201,6 @@ class Cs2Corpus(private val cache: Cache) {
             return out.toString()
         }
 
-        /** Every variable a statement tree reads or writes, added to [into]. */
         fun collectVariables(statements: List<Stmt>, into: MutableSet<VarRef>) {
             fun walkExpr(value: Expr) {
                 when (value) {

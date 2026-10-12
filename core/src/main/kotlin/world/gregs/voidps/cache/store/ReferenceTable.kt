@@ -2,20 +2,17 @@ package world.gregs.voidps.cache.store
 
 import world.gregs.voidps.cache.ReadOnlyCache
 
-/** One file of an archive, as the reference table describes it. */
 class FileEntry(
     val id: Int,
     var nameHash: Int = 0
 )
 
-/** One archive of an index, as the reference table describes it. */
 class ArchiveEntry(
     val id: Int,
     var nameHash: Int = 0,
     var crc: Int = 0,
     var whirlpool: ByteArray? = null,
     var version: Int = 0,
-    /** The archive's files, ascending by id. Never empty for an archive that exists. */
     val files: MutableList<FileEntry> = ArrayList()
 ) {
     val fileIds: IntArray
@@ -24,29 +21,6 @@ class ArchiveEntry(
     fun file(id: Int): FileEntry? = files.firstOrNull { it.id == id }
 }
 
-/**
- * An index's reference table - the decompressed contents of index 255's archive `<index>`.
- *
- * ```
- * u8  format                    5, 6 or 7; 6 and 7 both appear in the 727 cache
- * i32 revision                  format >= 6 only
- * u8  flags                     0x1 names, 0x2 whirlpool; 727 uses no others
- * ?   archiveCount              big-smart for format 7, u16 otherwise
- * ?   archive id deltas         one per archive, same encoding
- * i32 archive name hashes       if 0x1
- * i32 archive crcs
- * i32 archive unknown           if 0x8 - absent from 727
- * b64 archive whirlpools        if 0x2 - index 30 only
- * i64 archive sizes             if 0x4 - absent from 727
- * i32 archive versions          full ints; a container's trailer is the low 16 bits
- * ?   file counts               one per archive
- * ?   file id deltas            per archive, its own files
- * i32 file name hashes          if 0x1, per archive, its own files
- * ```
- *
- * Archives are held in encoded order, which is ascending by id because the ids are stored as
- * non-negative deltas. [encode] reproduces the shipped table byte for byte for all 37 indices.
- */
 class ReferenceTable(
     var format: Int = MAX_FORMAT,
     var revision: Int = 0,
@@ -56,7 +30,6 @@ class ReferenceTable(
 
     private val entries = ArrayList<ArchiveEntry>()
 
-    /** Every archive, ascending by id. */
     val archives: List<ArchiveEntry>
         get() = entries
 
@@ -73,7 +46,6 @@ class ReferenceTable(
 
     fun contains(id: Int): Boolean = indexOf(id) >= 0
 
-    /** The existing entry for [id], or a new empty one inserted in id order. */
     fun archiveOrCreate(id: Int): ArchiveEntry {
         require(id >= 0) { "Archive id $id is negative." }
         val index = indexOf(id)
@@ -96,7 +68,6 @@ class ReferenceTable(
         return if (index < 0) null else entries.removeAt(index)
     }
 
-    /** Binary search over the id-ordered entries; the insertion point encoded the same way as [List.binarySearch]. */
     private fun indexOf(id: Int): Int {
         var low = 0
         var high = entries.size - 1
@@ -116,8 +87,6 @@ class ReferenceTable(
         require(format in MIN_FORMAT..MAX_FORMAT) { "Unknown reference table format $format." }
         val smart = format >= 7
         val fileTotal = entries.sumOf { it.files.size }
-        // Per archive: id delta, name hash, crc, whirlpool, version and file count, each at
-        // most four bytes but for the whirlpool. Per file: an id delta and a name hash.
         val capacity = 1 + 4 + 1 + 4 +
             entries.size * (4 + 4 + 4 + 4 + 4 + ReadOnlyCache.WHIRLPOOL_SIZE) +
             fileTotal * (4 + 4)
@@ -261,19 +230,12 @@ class ReferenceTable(
                     }
                 }
             }
-            // Entries are already in encoded order, which is ascending: the ids come from
-            // non-negative deltas. Adding them one by one keeps the ordering invariant honest.
             for (entry in entries) {
                 table.add(entry)
             }
             return table
         }
 
-        /**
-         * Big-smart as the reference table uses it: two bytes for 0..0x7fff, four with the top
-         * bit set otherwise. Unlike the packet reader's big-smart there is no `-1` sentinel -
-         * a table only ever stores counts and non-negative deltas.
-         */
         private fun getSmart(data: ByteArray, offset: Int, smart: Boolean): Int {
             if (!smart) {
                 return ((data[offset].toInt() and 0xff) shl 8) or (data[offset + 1].toInt() and 0xff)

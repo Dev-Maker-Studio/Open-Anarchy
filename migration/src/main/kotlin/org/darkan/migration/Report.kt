@@ -2,11 +2,6 @@ package org.darkan.migration
 
 import java.util.TreeMap
 
-/**
- * Accumulates what a transform did to a collection so the run can be judged before anything is
- * trusted: how many documents went through, how many were changed by each rule, and every
- * document that could not be migrated, by key.
- */
 class Report(val collection: String) {
     var scanned = 0
     var written = 0

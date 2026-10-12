@@ -2,9 +2,6 @@ package world.gregs.voidps.buffer.write
 
 import world.gregs.voidps.buffer.Cp1252
 
-/**
- * All functions relative to writing directly to a packet are done by this class
- */
 interface Writer {
 
     fun setByte(index: Int, value: Int)
@@ -45,13 +42,6 @@ interface Writer {
 
     fun writeLong(value: Long)
 
-    /**
-     * Writes a 40-bit big-endian value, most significant byte first.
-     *
-     * Exact inverse of [world.gregs.voidps.buffer.read.Reader.read5].
-     *
-     * Only the low 40 bits of [value] are written.
-     */
     fun write5(value: Long) {
         writeByte((value shr 32).toInt())
         writeInt((value and 0xffffffffL).toInt())
@@ -65,14 +55,6 @@ interface Writer {
         }
     }
 
-    /**
-     * Writes a *signed* smart, the exact inverse of
-     * [world.gregs.voidps.buffer.read.Reader.readSignedSmart]: one byte biased by 64 for -64..63
-     * and two bytes biased by 49152 otherwise.
-     *
-     * [wide] forces the two byte form for a value the one byte form would fit, which is what a
-     * file that was packed that way needs to come back unchanged.
-     */
     fun writeSignedSmart(value: Int, wide: Boolean = false) {
         require(value in -16384..16383) { "A signed smart holds -16384..16383, not $value." }
         if (!wide && value in -64..63) {

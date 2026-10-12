@@ -39,10 +39,4 @@ public class TrollheimGuardTroll extends NPC {
 			DumbRouteFinder.addDumbPathfinderSteps(this, getRespawnTile(), 5, getCollisionStrategy());
 	}
 
-	//    public static NPCInstanceHandler toFunc = new NPCInstanceHandler(1130, 1131, 1132, 1133, 1134) {
-		//        @Override
-		//        public NPC getNPC(int npcId, Tile tile) {
-	//            return new TrollheimGuardTroll(npcId, tile);
-	//        }
-	//    };
 }

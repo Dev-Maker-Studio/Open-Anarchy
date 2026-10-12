@@ -5,14 +5,6 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.definition.data.FontDefinition
 import world.gregs.voidps.cache.definition.decoder.FontDecoder
 
-/**
- * Lazily builds [RsFont] atlases on demand.
- *
- * A font id addresses two indices at once: the metrics live in index 13
- * (`FONT_METRICS`) and the glyph bitmaps live in the graphic group of the same
- * id in index 8, which is why this shares the viewer's [GraphicCache] rather than
- * decoding graphics itself.
- */
 class FontCache(
     private val cache: Cache,
     private val graphics: GraphicCache
@@ -23,10 +15,8 @@ class FontCache(
 
     private val fonts = HashMap<Int, RsFont?>()
 
-    /** One past the highest font id in the cache, for id pickers to bound. */
     val count: Int get() = definitions.size
 
-    /** Returns the built font for [id], or null when it is missing from the cache. */
     fun font(id: Int): RsFont? {
         if (id < 0 || id >= definitions.size) {
             return null

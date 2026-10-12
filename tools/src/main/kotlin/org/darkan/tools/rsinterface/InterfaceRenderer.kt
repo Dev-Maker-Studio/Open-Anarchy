@@ -6,26 +6,6 @@ import org.darkan.tools.engine.render.ObjIconRequest
 import org.darkan.tools.engine.render.ObjIcons
 import kotlin.math.PI
 
-/**
- * Draws a whole interface tree into the engine's 2D pass.
- *
- * This is a transcription of the client's `InterfaceComponentRenderer.drawComponents`
- * with the interaction, hook and content-type machinery removed - the tool only
- * draws. The structural rules it keeps are the ones that decide what a component
- * looks like:
- *
- * - **child ordering**: components are visited in cache order within a parent,
- *   so later components draw on top;
- * - **clipping**: a container narrows the clip rectangle to its own bounds
- *   intersected with its ancestors', and its children are offset by its scroll
- *   position. A component's own artwork is clipped to its *parent's* rectangle,
- *   not its own - only containers clip;
- * - **type 2** never narrows the clip rectangle, so its children can escape it;
- * - **hidden** components, and their entire subtree, are skipped.
- *
- * All state is read from [ComponentState], never from the cache definition, so a
- * CS2 interpreter mutating component state is reflected on the next frame.
- */
 class InterfaceRenderer(
     private val canvas: Canvas2D,
     private val graphics: GraphicCache,
@@ -33,17 +13,10 @@ class InterfaceRenderer(
     private val models: InterfaceModelRenderer?,
     private val icons: ObjIcons? = null
 ) {
-    /** Font used when a text component's own font is missing from the cache. */
     var fallbackFontId: Int = -1
 
-    /** Set true to outline every component, which makes empty layers visible. */
     var debugOutlines: Boolean = false
 
-    /**
-     * Draws [instance] into the rectangle at ([x], [y]). The interface is laid
-     * out against [width] x [height] first, so this is the one call a host needs
-     * per frame.
-     */
     fun render(instance: InterfaceInstance, x: Int, y: Int, width: Int, height: Int) {
         instance.layout(width, height)
         drawChildren(instance, -1, x, y, x + width, y + height, x, y)
@@ -60,8 +33,6 @@ class InterfaceRenderer(
         offsetX: Int,
         offsetY: Int
     ) {
-        // Everything drawn at this level is clipped to the parent's region, which
-        // is what the client's setClipping call at the top of drawComponents does.
         val visible = canvas.pushClip(clipLeft, clipTop, clipRight, clipBottom)
         if (!visible) {
             canvas.popClip()
@@ -89,9 +60,6 @@ class InterfaceRenderer(
                 )
                 val sub = instance.subInterface(state.index)
                 if (sub != null) {
-                    // A mounted sub-interface is laid out against the container's
-                    // content box and drawn from the container's top-left corner,
-                    // without the container's scroll offset.
                     val innerWidth = if (state.scrollWidth != 0) state.scrollWidth else state.width
                     val innerHeight = if (state.scrollHeight != 0) state.scrollHeight else state.height
                     sub.layout(innerWidth, innerHeight)
@@ -119,11 +87,6 @@ class InterfaceRenderer(
         }
     }
 
-    /**
-     * Rectangles are filled or outlined in the component colour. A transparency
-     * of 0 writes opaquely, anything else blends with `255 - transparency` in the
-     * alpha channel. The outline is one pixel, inscribed in the component box.
-     */
     private fun drawRectangle(state: ComponentState, startX: Int, startY: Int) {
         val argb = tint(state.colour, state.transparency)
         if (state.filled) {
@@ -141,7 +104,6 @@ class InterfaceRenderer(
         }
         val alpha = 255 - (state.transparency and 0xff)
         val colour = (alpha shl 24) or (state.colour and 0xffffff)
-        // The client's shadow is pure black at the draw alpha, one pixel down-right.
         val shadow = if (state.shadow) (alpha shl 24) else -1
         font.drawText(
             canvas, content, startX, startY, state.width, state.height,
@@ -150,7 +112,6 @@ class InterfaceRenderer(
         )
     }
 
-    /** An item set on a text component replaces the text with the item's name. */
     private fun textContent(state: ComponentState): String {
         if (state.itemId == -1) {
             return state.text
@@ -165,12 +126,6 @@ class InterfaceRenderer(
         return name
     }
 
-    /**
-     * Graphics are drawn one of three ways, exactly as the client picks between
-     * them: tiled across the component box, rotated about the box centre at a
-     * uniform scale, or stretched to the box. The component colour multiplies the
-     * texels, and a colour of 0 with no transparency means "draw the art as-is".
-     */
     private fun drawGraphic(state: ComponentState, startX: Int, startY: Int) {
         val textureId: Int
         val graphicWidth: Int
@@ -197,8 +152,6 @@ class InterfaceRenderer(
             return
         }
         if (angle != 0) {
-            // Rotation is uniformly scaled by width / graphicWidth, the client's
-            // `component.width * 4096 / spriteWidth` zoom.
             val scale = state.width.toFloat() / graphicWidth
             canvas.drawTextureRotated(
                 textureId,
@@ -231,11 +184,6 @@ class InterfaceRenderer(
         return icon
     }
 
-    /**
-     * Tiling repeats the graphic from the component's top-left by the graphic's
-     * full (untrimmed) size. Un-rotated tiles fall out of a single GL_REPEAT quad;
-     * rotated ones have to be emitted per tile, as the client does.
-     */
     @Suppress("LongParameterList")
     private fun drawTiledGraphic(
         state: ComponentState,
@@ -278,11 +226,6 @@ class InterfaceRenderer(
         canvas.popClip()
     }
 
-    /**
-     * Models interrupt the 2D batch: they need the depth buffer, their own
-     * viewport and their own shaders, so the pending quads are flushed first and
-     * the canvas state restored afterwards.
-     */
     private fun drawModel(state: ComponentState, startX: Int, startY: Int) {
         val renderer = models ?: return
         canvas.flush()
@@ -291,11 +234,6 @@ class InterfaceRenderer(
         canvas.restoreState()
     }
 
-    /**
-     * Lines run corner to corner across the component box, top-left to
-     * bottom-right normally and bottom-left to top-right when mirrored. The
-     * client writes them opaquely regardless of the component transparency.
-     */
     private fun drawLine(state: ComponentState, startX: Int, startY: Int) {
         val argb = OPAQUE or (state.colour and 0xffffff)
         if (state.lineMirrored) {
@@ -313,11 +251,6 @@ class InterfaceRenderer(
         }
     }
 
-    /**
-     * The tint applied to a graphic. Untinted, fully opaque graphics pass their
-     * texels straight through (the client's REPLACE combine mode); anything else
-     * multiplies by the component colour, defaulting to white.
-     */
     private fun graphicTint(state: ComponentState): Int {
         if (state.colour == 0 && state.transparency == 0) {
             return WHITE
@@ -338,10 +271,6 @@ class InterfaceRenderer(
         private const val WHITE = -1
         private const val DEBUG_OUTLINE = 0x40ff00ff
 
-        /**
-         * The cache stores 2D graphic angles as 65536 units per turn, increasing
-         * counter-clockwise on screen; [Canvas2D] takes clockwise radians.
-         */
         private fun radians(angle: Int): Float = -(angle / 65536f) * 2f * PI.toFloat()
     }
 }

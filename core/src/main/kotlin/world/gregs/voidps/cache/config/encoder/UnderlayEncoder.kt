@@ -4,12 +4,6 @@ import world.gregs.voidps.buffer.write.Writer
 import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.config.data.UnderlayDefinition
 
-/**
- * Writes an underlay (`flu`, index 2 archive 1) file.
- *
- * The hsl components the decoder derives from the rgb are not written; the rgb is the source of
- * truth and the decoder recomputes them.
- */
 class UnderlayEncoder : OpcodeEncoder<UnderlayDefinition>() {
 
     override fun opcodes(definition: UnderlayDefinition): IntArray {

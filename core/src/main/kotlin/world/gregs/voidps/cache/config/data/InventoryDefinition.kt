@@ -13,14 +13,8 @@ data class InventoryDefinition(
     override var extras: Map<String, Any>? = null
 ) : Definition, Extra, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
 
     override fun equals(other: Any?): Boolean {

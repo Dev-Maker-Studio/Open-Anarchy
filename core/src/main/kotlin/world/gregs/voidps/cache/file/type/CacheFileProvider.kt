@@ -10,10 +10,6 @@ import world.gregs.voidps.cache.file.FileProvider.Companion.SEPARATOR
 import world.gregs.voidps.cache.file.FileProvider.Companion.SPLIT
 import world.gregs.voidps.cache.file.FileProvider.Companion.getInt
 
-/**
- * Reads sectors directly from the [cache]
- * Average read speeds, low memory usage
- */
 class CacheFileProvider(private val cache: Cache) : FileProvider {
 
     override fun data(index: Int, archive: Int): ByteArray? {

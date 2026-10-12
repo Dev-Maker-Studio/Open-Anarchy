@@ -21,23 +21,10 @@ import org.darkan.core.net.prot.packet.VarclanSetString
 import org.darkan.core.social.QuickChatMessage
 import world.gregs.voidps.cache.Cache
 
-/** The stack type of a clan var, which picks the `VarclanSet*` packet that carries it. */
 enum class ClanVarKind { INT, LONG, STRING }
 
-/**
- * The client packets both servers build from the shared clan state, so a member in a world and a
- * member on the lobby screen see exactly the same thing. Every builder is pure; the codec in
- * `Rev727ServerCodecsUpdate` writes the version byte, the filler rows and the setting type tags.
- */
 object ClanPackets {
 
-    /**
-     * `ClanSettingsFull` for [clan]. [main] is true for a member's own clan, false for a guest or
-     * an interface that only looks at the clan. [displayName] turns a username into what the
-     * client shows; the lobby resolves it from the accounts, a world from its players. Members are
-     * in join order (then username) so every send lists them the same way; the codec pads to the
-     * client's five-row minimum with filler rows.
-     */
     fun settingsFull(
         clan: Clan,
         main: Boolean,
@@ -63,10 +50,8 @@ object ClanPackets {
         )
     }
 
-    /** The one-byte `ClanSettingsFull` that tells the client it is no longer in a clan. */
     fun settingsLeft(main: Boolean): ClanSettingsFull = ClanSettingsFull(main = main)
 
-    /** `ClanChannelFull` for [state]; [main] as in [settingsFull]. */
     fun channelFull(state: ClanChannelState, main: Boolean): ClanChannelFull = ClanChannelFull(
         main = main,
         clanName = state.clanName,
@@ -78,14 +63,8 @@ object ClanPackets {
             .toTypedArray(),
     )
 
-    /** The one-byte `ClanChannelFull` that tells the client it left the channel. */
     fun channelLeft(main: Boolean): ClanChannelFull = ClanChannelFull(main = main)
 
-    /**
-     * `VarclanEnable` followed by one `VarclanSet*` per var of [clan], the packet chosen by the
-     * var's cache type ([varKind], the cache by default). A var the cache does not define, or
-     * whose stored value does not fit its type, is skipped rather than sent wrong.
-     */
     fun clanVarPackets(clan: Clan, varKind: (Int) -> ClanVarKind? = ::cacheVarKind): List<ServerProt> {
         val packets = ArrayList<ServerProt>(clan.vars.size + 1)
         packets += VarclanEnable()
@@ -96,7 +75,6 @@ object ClanPackets {
         return packets
     }
 
-    /** The single `VarclanSet*` for one var, or null if [value] does not fit [kind]. */
     fun clanVarPacket(id: Int, value: Any, kind: ClanVarKind): ServerProt? = when (kind) {
         ClanVarKind.STRING -> VarclanSetString(id, value.toString())
         ClanVarKind.LONG -> (value as? Number)?.let { VarclanSetLong(id, it.toLong()) }
@@ -105,14 +83,12 @@ object ClanPackets {
         }
     }
 
-    /** A line of clan chat as one recipient sees it; [guest] is true when they only listen in. */
     fun chatMessage(guest: Boolean, crown: Int, displayName: String, text: String): MessageClanChannel =
         MessageClanChannel(guest = guest, crown = crown, displayName = displayName, message = text)
 
     fun quickChatMessage(guest: Boolean, crown: Int, displayName: String, message: QuickChatMessage): MessageQuickChatClanChannel =
         MessageQuickChatClanChannel(guest = guest, crown = crown, displayName = displayName, message = message)
 
-    /** The kind of clan var [id] according to the loaded cache, null for an id it does not define. */
     fun cacheVarKind(id: Int): ClanVarKind? {
         val type = Cache.clanVars.getOrNull(id)?.type ?: return null
         return when {
@@ -122,10 +98,6 @@ object ClanPackets {
         }
     }
 
-    /**
-     * One stored setting as the client's var-setting: settings are keyed by enum name, the client
-     * wants its own ids, and anything with no client id or an unexpected value is not sent.
-     */
     private fun clientSetting(name: String, value: Any): ClanVarSetting? {
         val id = ClanSetting.forName(name)?.id ?: return null
         if (id == NO_CLIENT_ID) return null

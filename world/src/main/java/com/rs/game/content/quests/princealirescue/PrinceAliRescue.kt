@@ -89,34 +89,24 @@ class PrinceAliRescue : QuestOutline() {
         sendQuestCompleteInterface(player, 6964)
     }
 
-//    override fun updateStage(player: Player?, stage: Int) {
-//        super.updateStage(player, stage)
-//        if(player?.hasRights(Rights.DEVELOPER) == true)
-//        player.sendMessage("Prince Ali stage $stage")
-//    }
 
     companion object {
-        // Quest Stages
         const val NOT_STARTED = 0
         const val STARTED = 1
         const val GEAR_CHECK = 2
 
-        // Items
         const val BEER = 1917
         const val PINK_SKIRT = 1013
 
-        // Key stuff
         const val SOFT_CLAY = 1761
         const val BRONZE_KEY = 2418
         const val KEY_PRINT = 2423
         const val BRONZE_BAR = 2349
 
-        // Wig items
         const val BALL_WOOL = 1759
         const val WIG = 2421
         const val BLONDE_WIG = 2419
 
-        // Paste items
         const val ASHES = 592
         const val REDBERRY = 1951
         const val POT_OF_FLOUR = 1933
@@ -125,7 +115,6 @@ class PrinceAliRescue : QuestOutline() {
 
         const val ROPE = 954
 
-        // NPCs
         const val NED = 918
         const val AGGIE = 922
         const val HASSAN = 923
@@ -136,8 +125,7 @@ class PrinceAliRescue : QuestOutline() {
         const val PRINCE_ALI1 = 920
         const val PRINCE_ALI2 = 921
 
-        // Places
-        const val JAIL_REGION_ID = 12338 //Update to new logic
+        const val JAIL_REGION_ID = 12338
 
         @JvmStatic
         fun hasAllBreakOutItems(p: Player): Boolean =

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.plugin;
 
 import com.rs.game.model.entity.player.Player;
@@ -36,7 +20,6 @@ public class PluginManager {
 	private static final List<Method> STARTUP_HOOKS = new ArrayList<>();
 	private static final PluginMethodRepository REPOSITORY = new PluginMethodRepository();
 
-	/** Handler fields that could not be registered during {@link #loadPlugins()}. */
 	private static int FAILURES = 0;
 
 	public static int getRegistrationFailures() {
@@ -75,9 +58,6 @@ public class PluginManager {
 				handlers++;
 			}
 
-			// One broken handler field used to abort the whole registration loop and be swallowed by
-			// the catch below, leaving a silently half-registered server: every plugin after the bad
-			// one simply never existed. Failures are isolated per field and reported instead.
 			for (Class<?> clazz : classes) {
 				Field[] fields;
 				try {
@@ -145,9 +125,6 @@ public class PluginManager {
 			try {
 				m.invoke(null);
 			} catch (Throwable e) {
-				// Startup hooks are where every Commands.add lives. An Error out of one of them
-				// (a class initialiser failing, typically) must not take the remaining hooks - and
-				// with them the rest of the command registry - down with it.
 				FAILURES++;
 				Logger.handle(PluginManager.class, "executeStartupHooks", "Error executing startup hook: " + m.getDeclaringClass().getName() + "." + m.getName(), e);
 			}

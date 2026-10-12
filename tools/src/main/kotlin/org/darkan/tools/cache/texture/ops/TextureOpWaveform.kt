@@ -6,10 +6,6 @@ import world.gregs.voidps.buffer.read.BufferReader
 import kotlin.math.PI
 import kotlin.math.sqrt
 
-/**
- * Type 12: Waveform pattern generator.
- * Generates sine wave or triangular wave patterns.
- */
 class TextureOpWaveform : TextureOperation(0, true) {
     private var waveType: Int = 0
     private var waveShape: Int = 0

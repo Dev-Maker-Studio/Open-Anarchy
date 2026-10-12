@@ -80,10 +80,8 @@ class ContainerTest {
         val encrypted = container.encode(keys)
 
         assertEquals(plain.size, encrypted.size)
-        // The type byte and compressed size are outside the encrypted region.
         assertContentEquals(plain.copyOfRange(0, 5), encrypted.copyOfRange(0, 5))
         assertTrue(!plain.contentEquals(encrypted), "Keys should have changed the payload")
-        // The last two bytes are the version trailer, which is outside the encrypted region.
         assertContentEquals(plain.copyOfRange(plain.size - 2, plain.size), encrypted.copyOfRange(plain.size - 2, plain.size))
 
         val untouched = encrypted.copyOf()
@@ -124,7 +122,6 @@ class ContainerTest {
     }
 
     private fun payload(size: Int): ByteArray {
-        // Deterministic but compressible, like a real definition archive.
         val random = Random(size.toLong())
         return ByteArray(size) { (random.nextInt(16) + it % 7).toByte() }
     }

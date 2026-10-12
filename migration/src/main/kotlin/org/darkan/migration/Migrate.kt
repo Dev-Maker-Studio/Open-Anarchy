@@ -10,7 +10,6 @@ import org.bson.types.ObjectId
 import org.darkan.core.model.ClanSetting
 import java.util.Date
 
-/** The collections the legacy servers persist, with the transform that brings each to the modern shape. */
 val COLLECTIONS: Map<String, Transform> = linkedMapOf(
     "accounts" to AccountsTransform,
     "clans" to ClansTransform,
@@ -36,11 +35,6 @@ class MongoTarget(uri: String) : AutoCloseable {
     }
 }
 
-/**
- * Copies every collection from [source] into [target], applying the per-collection transform on
- * the way. The source is only ever read. [dryRun] performs the whole transform and prints the
- * report but writes nothing, which is how a run is judged before it is trusted.
- */
 fun migrate(source: MongoTarget, target: MongoTarget, only: Set<String>, dryRun: Boolean, replace: Boolean): Boolean {
     require(!(source.host == target.host && source.databaseName == target.databaseName)) {
         "Source and target are the same database (${source.describe()}); refusing."
@@ -93,10 +87,6 @@ fun migrate(source: MongoTarget, target: MongoTarget, only: Set<String>, dryRun:
     return clean
 }
 
-/**
- * Read-only survey of a legacy database: what is there, and which documents will need a decision
- * before the modern constraints (non-null fields, unique lowercase email) can hold.
- */
 fun inspect(source: MongoTarget) {
     println("Inspecting ${source.describe()}")
     val names = source.database.listCollectionNames().toList().sorted()

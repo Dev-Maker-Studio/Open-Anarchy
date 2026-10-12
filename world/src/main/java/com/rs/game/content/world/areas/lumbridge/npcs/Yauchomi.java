@@ -11,26 +11,20 @@ import com.rs.plugin.handlers.NPCClickHandler;
 @PluginEventHandler
 public class Yauchomi extends Conversation {
 
-	// Identify NPC by ID
 	private static final int npcId = 4903;
 	public static NPCClickHandler Yauchomi = new NPCClickHandler(new Object[] { npcId }, e -> {
 		switch (e.getOption()) {
-		// Start Conversation
 		case "Talk-to" -> e.getPlayer().startConversation(new Yauchomi(e.getPlayer()));
 		}
 	});
 
 	public Yauchomi(Player player) {
 		super(player);
-		// Identify NPC by ID
 		addOptions(new Options() {
 			@Override
 			public void create() {
-				// Player initiates
 				addPlayer(HeadE.CALM_TALK, "Good day, sister.");
-				// NPC responds
 				addNPC(npcId, HeadE.CALM_TALK, "Greetings, " + player.getDisplayName() + ", Can I help you with anything, today?");
-				// Player given choices
 				addOptions(new Options() {
 					@Override
 					public void create() {

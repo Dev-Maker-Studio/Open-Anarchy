@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.construction.playerOwnedHouse
 
 import org.darkan.core.cache.ItemDefinitions
@@ -428,7 +412,6 @@ class HouseController(@field:Transient val house: House?) : Controller() {
         house!!.leaveHouse(player, House.TELEPORTED)
     }
 
-    // shouldnt happen
     override fun forceClose() {
         player.tile = house!!.location.tile
         player.tele(house.location.tile)
@@ -459,13 +442,13 @@ class HouseController(@field:Transient val house: House?) : Controller() {
 
     fun telePlayer(objectId: Int) {
         when (objectId) {
-            13615, 13622, 13629 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(3212, 3424, 0), null, null) //Varrock
-            13616, 13623, 13630 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(3222, 3218, 0), null, null) //Lumby
-            13617, 13624, 13631 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(2964, 3379, 0), null, null) //Falador
-            13618, 13625, 13632 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(2757, 3478, 0), null, null) //Camelot
-            13619, 13626, 13633 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(2664, 3305, 0), null, null) //Ardougne
-            13620, 13627, 13634 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(2546, 3095, 0), null, null) //Yanille
-            13621, 13628, 13635 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(3492, 3471, 0), null, null) //Kharyrll
+            13615, 13622, 13629 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(3212, 3424, 0), null, null)
+            13616, 13623, 13630 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(3222, 3218, 0), null, null)
+            13617, 13624, 13631 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(2964, 3379, 0), null, null)
+            13618, 13625, 13632 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(2757, 3478, 0), null, null)
+            13619, 13626, 13633 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(2664, 3305, 0), null, null)
+            13620, 13627, 13634 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(2546, 3095, 0), null, null)
+            13621, 13628, 13635 -> Magic.sendNormalTeleportSpell(player, 1, 0.0, Tile.of(3492, 3471, 0), null, null)
             else -> player.sendMessage("Uh-oh... This shouldn't have happened (Object: $objectId). Please report to staff.")
         }
     }
@@ -686,11 +669,8 @@ class HouseController(@field:Transient val house: House?) : Controller() {
             }
             teleportDialogue.addOptions("Direct teleport to", object : Options() {
                 override fun create() {
-                    // Iterate through each teleport option based on frameType
                     teleportsByFrameType.forEach { teleportOption ->
-                        // Check if the current portal ID is not excluded and house does not contain conflicting objects
                         if (portalId != teleportOption.excludePortalId && !player.house.containsAnyObject(*teleportOption.houseObjectIds.toIntArray())) {
-                            // Add the teleport option to the dialogue
                             option(
                                 teleportOption.name,
                                 Dialogue().addOption(

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.bosses.asteafrostweb;
 
 import com.rs.game.content.Effect;
@@ -45,7 +29,7 @@ public class AsteaFrostwebCombat extends CombatScript {
 			AsteaFrostweb boss = (AsteaFrostweb) npc;
 			boss.spawnSpider();
 		}
-		if (Utils.getRandomInclusive(10) == 0) { // spikes
+		if (Utils.getRandomInclusive(10) == 0) {
 			List<Entity> possibleTargets = npc.getPossibleTargets();
 			npc.setNextAnimation(new Animation(defs.getAttackEmote()));
 			for (Entity t : possibleTargets)
@@ -54,14 +38,14 @@ public class AsteaFrostwebCombat extends CombatScript {
 		}
 		int attackStyle = Utils.random(2);
 		if (attackStyle == 1) {
-			if (Utils.getDistance(npc.getX(), npc.getY(), target.getX(), target.getY()) <= 1) { // melee
+			if (Utils.getDistance(npc.getX(), npc.getY(), target.getX(), target.getY()) <= 1) {
 				npc.setNextAnimation(new Animation(defs.getAttackEmote()));
 				delayHit(npc, 0, target, Hit.melee(npc, getMaxHitFromAttackStyleLevel(npc, CombatStyle.MELEE, target)));
 				return npc.getAttackSpeed();
 			}
 			attackStyle = 0;
 		}
-		if (attackStyle == 0) { // mage
+		if (attackStyle == 0) {
 			npc.setNextAnimation(new Animation(defs.getAttackEmote()));
 			List<Entity> possibleTargets = npc.getPossibleTargets();
 
@@ -92,9 +76,7 @@ public class AsteaFrostwebCombat extends CombatScript {
 
 					}
 			}
-			if (Utils.getDistance(npc.getX(), npc.getY(), target.getX(), target.getY()) <= 1) { // lure
-				// after
-				// freeze
+			if (Utils.getDistance(npc.getX(), npc.getY(), target.getX(), target.getY()) <= 1) {
 				npc.resetWalkSteps();
 				npc.addWalkSteps(target.getX() + Utils.random(3), target.getY() + Utils.random(3));
 			}

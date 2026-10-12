@@ -37,7 +37,6 @@ class WorldLoginTokenTest {
             secret = secret,
         )
 
-        // Flip a character in the payload portion to simulate tampering
         val dotIndex = token.indexOf('.')
         val payload = token.substring(0, dotIndex)
         val signature = token.substring(dotIndex)

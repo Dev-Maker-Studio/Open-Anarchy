@@ -6,17 +6,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Guards that the revision 727 codec covers the whole protocol.
- *
- * The expected tables below are transcribed from the authoritative 727 client's `ServerProt` and
- * `ClientProt` enums (`darkan-bot`). A packet the client knows about but we do not register is a
- * hole in the protocol; a size we declare that disagrees with the client's is a desync waiting to
- * happen, because the size drives the length prefix the client reads.
- */
 class Rev727ProtCoverageTest {
 
-    /** One row of the client's prot enum: its name, opcode, and declared size. */
     private data class ProtSpec(val name: String, val opcode: Int, val size: Int)
 
     private lateinit var codec: Codec
@@ -92,28 +83,8 @@ class Rev727ProtCoverageTest {
         specs.joinToString { "${it.name}(opcode=${it.opcode}, size=${it.size})" }
 
     private companion object {
-        /**
-         * Opcodes where the 727 client contradicts itself, so no single declared size can be
-         * "right".
-         *
-         * Both are zone packets. The client frames a standalone packet using its `ServerProt`
-         * size (`currentPacketSize = currentPacket.size`), but decodes the body with the shared
-         * `UpdateZonePacket` routine, whose declared size — and actual byte consumption —
-         * disagree:
-         *
-         * | opcode | `ServerProt` (framing) | `UpdateZonePacket` (body) | bytes the decoder reads |
-         * |--------|------------------------|---------------------------|-------------------------|
-         * | 95 `MAP_PROJANIM_HALFSQ` | 17 | 19 | 19 |
-         * | 128 `MIDI_SONG_LOCATION` | 6 | 8 | 8 |
-         *
-         * We declare the body size (19 / 8), because that is the length the decoder actually
-         * consumes and the only length that is correct inside `UpdateZonePartialEnclosed`, where
-         * the sub-packet stream is self-delimiting. Sending either opcode standalone is broken in
-         * the client regardless of what the server does, so send them enclosed.
-         */
         val CLIENT_SIZE_CONTRADICTIONS = setOf(95, 128)
 
-        /** Server -> client packets, transcribed from the 727 client's `ServerProt` enum. */
         val SERVER_PROTS = listOf(
             ProtSpec("IF_SETPLAYERHEAD", 0, 4),
             ProtSpec("CREATE_CHECK_EMAIL_REPLY", 1, 1),
@@ -278,7 +249,6 @@ class Rev727ProtCoverageTest {
             ProtSpec("GAME_MESSAGE", 160, -1),
         )
 
-        /** Client -> server packets, transcribed from the 727 client's `ClientProt` enum. */
         val CLIENT_PROTS = listOf(
             ProtSpec("PING", 0, 0),
             ProtSpec("PLAYER_OP6", 1, 3),

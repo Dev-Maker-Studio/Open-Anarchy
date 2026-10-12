@@ -53,26 +53,12 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * The clan system as a world player drives it (`docs/clans.md`).
- *
- * The invariant under test is that the world **never** decides anything about a clan: a button
- * becomes exactly one typed [ClanAction] on the gateway, a denial the world can already see
- * produces a message and no traffic at all, and every clan packet the player sees comes from a
- * lobby event rather than a local mutation. Nothing clan-shaped may leave as a
- * [SocialCommand] - the social path is not the clan path, and a regression to it would quietly
- * give the two servers two different rule sets.
- *
- * The seam is [ClanRegistry.transport]: a recorder in place of the social client, driven on an
- * immediate dispatcher so a send is visible by the time the button handler returns.
- */
 class ClanFlowTest {
 
     private companion object {
         const val CLAN = "Testers"
         const val OTHER_CLAN = "Others"
 
-        /** The interfaces the flows live on. */
         const val CLAN_CHAT = 1110
         const val SETTINGS = 1096
         const val INVITE = 1095
@@ -104,9 +90,7 @@ class ClanFlowTest {
         ClanRegistry.transport = { WorldServer.sendToGateway(it) }
     }
 
-    // ─── Buttons → actions ───────────────────────────────────────────
 
-    /** 1110:82 with a clan but no channel joins the player's own channel. */
     @Test
     fun clanChatButtonJoinsOwnChannel() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -117,7 +101,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.JoinChannel, action())
     }
 
-    /** ...and with the channel already joined, the same button leaves it. */
     @Test
     fun clanChatButtonLeavesOwnChannel() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -129,7 +112,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.LeaveChannel, action())
     }
 
-    /** 1110:91 asks for a clan name and listens in on it as a guest. */
     @Test
     fun guestChannelButtonAsksForANameThenJoins() {
         val player = login("guest")
@@ -141,7 +123,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.JoinGuestChannel(OTHER_CLAN), action())
     }
 
-    /** ...and leaves the guest channel when there is one. */
     @Test
     fun guestChannelButtonLeaves() {
         val player = login("guestleave")
@@ -152,7 +133,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.LeaveGuestChannel, action())
     }
 
-    /** The ban prompt sends the typed name protocol-formatted, which is how the lobby keys members. */
     @Test
     fun banPromptSendsBan() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -163,11 +143,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.Ban("some_guy"), action())
     }
 
-    /**
-     * The ban list rows are in the order `ClanSettingsFull` sent them - sorted - not the order the
-     * document happens to store them in, so a slot id has to be read against that same order or
-     * the wrong player is unbanned.
-     */
     @Test
     fun unbanBySlotFollowsTheOrderTheSettingsPacketSent() {
         val owner = login("banner")
@@ -183,7 +158,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.Unban("amy"), action())
     }
 
-    /** Leaving the clan takes both confirmations, and neither one alone sends anything. */
     @Test
     fun leavingTheClanNeedsBothConfirmations() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -200,7 +174,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.Leave, action())
     }
 
-    /** A setting toggle sends only the entry that changed, not the whole settings map. */
     @Test
     fun settingToggleSendsOnlyTheChangedEntry() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -211,10 +184,6 @@ class ClanFlowTest {
         assertEquals(mapOf(ClanSetting.GUESTS_CAN_ENTER_CC.name to 0), settings.settings)
     }
 
-    /**
-     * A rule the world can already see is applied before anything is sent: the player is told why,
-     * in the wording both servers share, and the lobby is not troubled at all.
-     */
     @Test
     fun aDeniedPrecheckMessagesThePlayerAndSendsNothing() {
         val recruit = member(CLAN, ClanRank.RECRUIT)
@@ -228,7 +197,6 @@ class ClanFlowTest {
         )
     }
 
-    /** The signpost slider is a clan var, not a setting. */
     @Test
     fun signpostSliderSendsSetVar() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -238,7 +206,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.SetVar(2811, 3), action())
     }
 
-    /** The talk-rank button carries only the talk rank; the kick rank is left alone, and vice versa. */
     @Test
     fun channelRankButtonsSendOneRankEach() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -252,7 +219,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.SetChannelRanks(talkRank = null, kickRank = ClanRank.CAPTAIN), action())
     }
 
-    /** The clanmate panel's save button is one UpdateMember for whatever was picked. */
     @Test
     fun clanmateSaveSendsUpdateMember() {
         val owner = member(CLAN, ClanRank.OWNER, "recruit" to ClanRank.RECRUIT)
@@ -264,7 +230,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.UpdateMember("recruit", rank = ClanRank.CAPTAIN), action())
     }
 
-    /** ...and the kick button is a RemoveMember, once confirmed. */
     @Test
     fun clanmateKickSendsRemoveMember() {
         val owner = member(CLAN, ClanRank.OWNER, "recruit" to ClanRank.RECRUIT)
@@ -277,11 +242,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.RemoveMember("recruit"), action())
     }
 
-    /**
-     * Inviting is two halves: the target is shown the inviter's clan read-only (`main = false`,
-     * built from the replica - the legacy path read a cached update block that was never filled in,
-     * so this interface never opened at all), and accepting sends the invite action.
-     */
     @Test
     fun acceptingAnInviteSendsAcceptInvite() {
         val inviter = member(CLAN, ClanRank.OWNER, name = "inviter")
@@ -300,12 +260,11 @@ class ClanFlowTest {
         assertEquals(ClanAction.AcceptInvite(CLAN, "inviter"), action())
     }
 
-    /** The motif editor holds its changes locally and saves them in one go. */
     @Test
     fun motifSaveSendsWhatChanged() {
         val owner = member(CLAN, ClanRank.OWNER)
 
-        click(owner, MOTIF, 66, slot = 5) // the top icon, stored one-based
+        click(owner, MOTIF, 66, slot = 5)
         assertTrue(wire.isEmpty(), "picking a motif icon wrote to the clan before the save")
         click(owner, MOTIF, 120)
 
@@ -313,7 +272,6 @@ class ClanFlowTest {
         assertEquals(mapOf(ClanSetting.MOTIF_TOP_ICON.name to 6), settings.settings)
     }
 
-    /** ...and a save with nothing picked sends nothing. */
     @Test
     fun motifSaveWithNoChangeSendsNothing() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -323,7 +281,6 @@ class ClanFlowTest {
         assertTrue(wire.isEmpty(), "an unchanged motif was still saved")
     }
 
-    /** The HSL picker leaves a pending motif colour, not a write. */
     @Test
     fun motifColourPickerSavesWithTheRest() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -341,7 +298,6 @@ class ClanFlowTest {
         assertEquals(mapOf(ClanSetting.MOTIF_PRIMARY_COLOR.name to 1234), settings.settings)
     }
 
-    /** The national flag picker saves the same way. */
     @Test
     fun flagSaveSendsTheNationalFlag() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -354,7 +310,6 @@ class ClanFlowTest {
         assertEquals(mapOf(ClanSetting.NATIONAL_FLAG.name to 7), settings.settings)
     }
 
-    /** The keyword editor saves all ten pairs it built up in the player's own varbits. */
     @Test
     fun keywordSaveSendsEveryKeywordSetting() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -369,7 +324,6 @@ class ClanFlowTest {
         assertEquals(2, settings.settings[ClanSetting.KEYWORD0_INDEX.name])
     }
 
-    /** The forum thread code is a base-36 long setting, and an unparsable one never leaves. */
     @Test
     fun forumQfcSendsUpdateSettings() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -388,7 +342,6 @@ class ClanFlowTest {
         assertEquals(mapOf(ClanSetting.FORUM_QFC.name to "zz1".toLong(36)), settings.settings)
     }
 
-    /** The motto is a string setting. */
     @Test
     fun mottoSendsUpdateSettings() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -403,7 +356,6 @@ class ClanFlowTest {
         assertEquals(mapOf(ClanSetting.MOTTO.name to "For the clan"), settings.settings)
     }
 
-    /** Creating a clan is a name check first, then the create the player confirmed. */
     @Test
     fun creatingAClanChecksTheNameFirst() {
         val player = login("founder")
@@ -422,7 +374,6 @@ class ClanFlowTest {
         assertEquals(ClanAction.Create("New Clan"), action())
     }
 
-    /** A name the world can already see is invalid never reaches the lobby. */
     @Test
     fun anInvalidClanNameIsRefusedLocally() {
         val player = login("founder2")
@@ -438,13 +389,7 @@ class ClanFlowTest {
         )
     }
 
-    // ─── Chat ────────────────────────────────────────────────────────
 
-    /**
-     * Clan chat is a typed action, not a forwarded `Chat` packet. The control is
-     * [friendsChatIsASocialAction]: chat type 1 goes out as a social action and, with no gateway
-     * attached in the harness, says so - clan chat must not produce that.
-     */
     @Test
     fun clanChatIsNotASocialAction() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -467,7 +412,6 @@ class ClanFlowTest {
         )
     }
 
-    /** The control: friends chat does still forward, so the assertion above can fail. */
     @Test
     fun friendsChatIsASocialAction() {
         val player = login("fcline")
@@ -484,7 +428,6 @@ class ClanFlowTest {
         )
     }
 
-    /** Guest chat is the same action with the guest flag set. */
     @Test
     fun guestChatIsSentAsAGuestAction() {
         snapshot(clanOf(CLAN, "owner", ClanRank.OWNER))
@@ -500,7 +443,6 @@ class ClanFlowTest {
         assertTrue(assertIs<ClanAction.Chat>(action()).guest, "a guest line was sent as a member's")
     }
 
-    /** Quick chat takes the same route, carrying the file id rather than any text. */
     @Test
     fun quickClanChatIsSentAsAnAction() {
         val owner = member(CLAN, ClanRank.OWNER)
@@ -515,12 +457,7 @@ class ClanFlowTest {
         assertFalse(quickChat.guest)
     }
 
-    // ─── Lobby events → client packets ───────────────────────────────
 
-    /**
-     * A snapshot is a full resend: members get their own clan, guests of the channel the read-only
-     * view. The client is never sent a delta.
-     */
     @Test
     fun aSnapshotPushesSettingsToMembersAndGuests() {
         val owner = login("snapowner")
@@ -541,7 +478,6 @@ class ClanFlowTest {
         assertFalse(toGuest.main, "a guest got the clan as their own")
     }
 
-    /** Joining a channel is the channel plus the clan's vars; leaving is the one-byte form. */
     @Test
     fun channelUpdatesJoinAndLeaveThePlayer() {
         val owner = member(CLAN, ClanRank.OWNER, name = "chanowner")
@@ -565,7 +501,6 @@ class ClanFlowTest {
         assertTrue(owner.sent.any { it is VarclanDisable }, "the clan vars were not disabled on leave")
     }
 
-    /** A player still in a changed channel gets the whole thing again. */
     @Test
     fun aChangedChannelIsResentWhole() {
         val owner = member(CLAN, ClanRank.OWNER, name = "resend")
@@ -585,7 +520,6 @@ class ClanFlowTest {
         assertEquals(2, resent.chatters?.size)
     }
 
-    /** The lobby's word on membership is written into the account, not merely displayed. */
     @Test
     fun aMembershipPushWritesTheSocialFields() {
         val player = login("joiner")
@@ -598,7 +532,6 @@ class ClanFlowTest {
         assertEquals(OTHER_CLAN, player.player.social.guestedClanChat)
     }
 
-    /** ...and being told of no clan is what sends the client the leave form. */
     @Test
     fun aMembershipPushWithNoClanSendsTheLeaveForm() {
         val player = login("leaver")
@@ -615,11 +548,6 @@ class ClanFlowTest {
         assertNull(player.player.social.clanName)
     }
 
-    /**
-     * One line in a channel reaches every local chatter, marked per recipient: affined for the
-     * clan's own members, listened for guests. Getting this backwards paints guest chat in the
-     * member colour and the other way round.
-     */
     @Test
     fun aChannelLineIsMarkedPerRecipient() {
         val owner = login("linemember")
@@ -651,7 +579,6 @@ class ClanFlowTest {
         assertTrue(toGuest.guest, "a guest's view of a clan line was marked as a member's")
     }
 
-    /** Quick chat lines are routed the same way. */
     @Test
     fun aQuickChatChannelLineReachesTheChatters() {
         val owner = login("qcmember")
@@ -670,7 +597,6 @@ class ClanFlowTest {
         assertEquals(7, line.message.fileId)
     }
 
-    /** A result carrying a message shows it verbatim. */
     @Test
     fun aCommandResultMessageIsShownToThePlayer() {
         val player = login("resulted")
@@ -687,9 +613,7 @@ class ClanFlowTest {
         )
     }
 
-    // ─── The replica itself ──────────────────────────────────────────
 
-    /** A clan the world has never seen is asked for once, however many callers want it. */
     @Test
     fun fetchAsksOnceAndAnswersEverybodyOnTheSnapshot() {
         val answers = CopyOnWriteArrayList<Clan?>()
@@ -706,7 +630,6 @@ class ClanFlowTest {
         assertEquals(CLAN, answers.first()?.name)
     }
 
-    /** A clan the lobby says is gone answers its waiters with null rather than leaving them hanging. */
     @Test
     fun aDeletedClanAnswersWaitingFetchesWithNull() {
         val answers = CopyOnWriteArrayList<Clan?>()
@@ -720,11 +643,6 @@ class ClanFlowTest {
         assertNull(ClanRegistry.clan(CLAN))
     }
 
-    /**
-     * The replica is only valid while the socket that filled it is up, so a reconnect starts from
-     * nothing and the lobby's connect-time resync refills it. `WorldServer.start` wires this to the
-     * social client's connection changes.
-     */
     @Test
     fun aReconnectDropsTheReplica() {
         snapshot(clanOf(CLAN, "owner", ClanRank.OWNER))
@@ -743,12 +661,10 @@ class ClanFlowTest {
         assertNull(answers.first())
     }
 
-    // ─── Harness plumbing ────────────────────────────────────────────
 
     private fun login(username: String): HarnessPlayer =
         WorldHarness.login(username = username, rights = Rights.PLAYER).also { loggedIn.add(it) }
 
-    /** A logged-in player who is [rank] of [clanName], with the clan already in the replica. */
     private fun member(
         clanName: String,
         rank: ClanRank,
@@ -811,7 +727,6 @@ class ClanFlowTest {
         ).run(name)
     }
 
-    /** The single [ClanAction] the recorder saw; fails if the world sent anything else. */
     private fun action(): ClanAction {
         val commands = wire.filterIsInstance<ClanCommand>()
         assertEquals(1, commands.size, "expected exactly one clan command, got ${wire.map { it::class.simpleName }}")

@@ -75,11 +75,6 @@ open class Polygon(
 
     companion object {
 
-        /**
-         * Checks if a point [x], [y] is inside (inclusive) or on the edge of the polygon [xPoints], [yPoints]
-         * See: https://wrfranklin.org/Research/Short_Notes/pnpoly.html
-         * See: https://stackoverflow.com/a/11908158/2871826
-         */
         fun pointInPolygon(x: Int, y: Int, xPoints: IntArray, yPoints: IntArray): Boolean {
             var j: Int
             var inside = false
@@ -88,11 +83,9 @@ open class Polygon(
             while (i < xPoints.size) {
                 val dxl = xPoints[j] - xPoints[i]
                 val dyl = yPoints[j] - yPoints[i]
-                // Check if inside polygon
                 if ((yPoints[i] > y) != (yPoints[j] > y) && (x < dxl * (y - yPoints[i]) / dyl + xPoints[i])) {
                     inside = !inside
                 }
-                // Check if crosses edge
                 val cross = (x - xPoints[i]) * dyl - (y - yPoints[i]) * dxl
                 if (cross == 0) {
                     if (abs(dxl) >= abs(dyl)) {

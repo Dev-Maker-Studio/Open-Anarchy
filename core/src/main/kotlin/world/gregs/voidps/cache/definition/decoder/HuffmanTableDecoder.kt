@@ -5,11 +5,6 @@ import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.HUFFMAN
 import world.gregs.voidps.cache.definition.data.HuffmanTableDefinition
 
-/**
- * Index 10's one archive: a code length per symbol, as many as the file is long.
- *
- * The length is not written down anywhere, so the read is the whole file; 727's is 256 bytes.
- */
 class HuffmanTableDecoder : DefinitionDecoder<HuffmanTableDefinition>(HUFFMAN) {
 
     override fun create(size: Int) = Array(size) { HuffmanTableDefinition(it) }

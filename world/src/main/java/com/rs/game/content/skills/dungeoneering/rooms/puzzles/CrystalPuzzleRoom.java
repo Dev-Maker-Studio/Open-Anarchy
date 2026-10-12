@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
 import org.darkan.core.model.ObjectShape;
@@ -30,34 +14,24 @@ public class CrystalPuzzleRoom extends PuzzleRoom {
 
 	private static final int ANIM_CHARGE_LODESTONE = 833;
 
-	// Lodestone base location
 	private static final int[] POS_BASE_LODESTONE = { 10, 1 };
 
-	// Large crystal in the center
 	private static final int[] POS_CENTER = { 7, 8 };
 
-	// Direction for each color
 	private static final int[][] POS_DELTA = { { 1, 0 }, { 0, -1 }, { -1, 0 }, { 0, 1 }, };
 
-	// Pressure plate location for each color
 	private static final int[][] POS_PLATE = { { 2, 8 }, { 7, 13 }, { 12, 8 }, { 7, 3 }, };
 
-	// Large center crystal lighting
 	private static final int[] LARGE_CRYSTAL_OFF = { 49507, 49508, 49509, 54275, 34866 };
 	private static final int[] LARGE_CRYSTAL_FLASH = { 49510, 49511, 49512, 54276, 35070 };
 	private static final int[] LARGE_CRYSTAL_ON = { 49513, 49514, 49515, 54277, 35231 };
 
-	// Tile lighting
 	private static final int[] TILE_INACTIVE = { 49465, 49466, 49467, 54261, 34317 };
 	private static final int[][] TILE_ACTIVE = { { 49468, 49469, 49470, 54262, 34319 }, { 49477, 49478, 49479, 54265, 34848 }, { 49486, 49487, 49488, 54268, 34856 }, { 49495, 49496, 49497, 54271, 34862 } };
 
-	// Pressure plates
-	// private static final int[] PLATE = { 52206, 52206, 52206, 54282, 35232 };
 
-	// Active lodestone id's
 	private static final int[][] LODESTONE_ACTIVE = { { 49474, 49475, 49476, 54264, 34847 }, { 49483, 49484, 49485, 54267, 34855 }, { 49492, 49493, 49494, 54270, 34861 }, { 49501, 49502, 49503, 54273, 34864 }, };
 
-	// Inactive lodestone id's
 	private static final int[][] LODESTONE_INACTIVE = { { 49471, 49472, 49473, 54263, 34320 }, { 49480, 49481, 49482, 54266, 34852 }, { 49489, 49490, 49491, 54269, 34860 }, { 49498, 49499, 49500, 54272, 34863 }, };
 
 	private boolean[] active;
@@ -121,10 +95,8 @@ public class CrystalPuzzleRoom extends PuzzleRoom {
 					return;
 				}
 				outer: for (int color = 0; color < 4; color++) {
-					// Make sure it's actually active
 					if (!active[color])
 						continue;
-					// ... and nobody is standing on it
 					for (Player player : manager.getParty().getTeam()) {
 						Tile last = player.getTile();
 						if (player.getLastTile() != null)
@@ -136,21 +108,17 @@ public class CrystalPuzzleRoom extends PuzzleRoom {
 							continue outer;
 					}
 
-					// Remove current tile
 					World.spawnObject(new GameObject(TILE_INACTIVE[type.ordinal()], ObjectShape.GROUND_DECORATION, 0, manager.getTile(reference, energyTile[color][0], energyTile[color][1])));
 
-					// Rewind position if it's in the center
 					if (energyTile[color][0] == POS_CENTER[0] && energyTile[color][1] == POS_CENTER[1])
 						resetPosition(color);
 					else {
-						// Actually move it
 						energyTile[color][0] += POS_DELTA[color][0];
 						energyTile[color][1] += POS_DELTA[color][1];
 						World.spawnObject(new GameObject(TILE_ACTIVE[color][type.ordinal()], ObjectShape.GROUND_DECORATION, 0, manager.getTile(reference, energyTile[color][0], energyTile[color][1])));
 					}
 				}
 
-				// Check if puzzle is complete
 				boolean complete = true;
 				boolean any = false;
 				for (int color = 0; color < 4; color++)

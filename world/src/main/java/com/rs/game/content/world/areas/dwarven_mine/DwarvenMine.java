@@ -81,8 +81,6 @@ public class DwarvenMine {
                     player.anim(12217);
                 }
                 case 3 -> {
-                    // TODO: Find emote
-                    // player.getPackets().sendObjectAnimation(new WorldObject(45078, 0, 3, 3651, 5123, 0), new Animation(12220));
                 }
                 case 5 -> {
                     player.unlock();

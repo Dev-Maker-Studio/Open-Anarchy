@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.combat;
 
 import com.rs.game.World;
@@ -39,7 +23,6 @@ import java.util.List;
 
 public class LakkTheRiftSplitterCombat extends CombatScript {
 
-	//	private static final int[] VOICES = { 3034, 2993, 3007 };
 	private static final String[] MESSAGES = { "A flame portal will flush you out!", "Taste miasma!", "This will cut you down to size!" };
 
 	@Override
@@ -78,7 +61,6 @@ public class LakkTheRiftSplitterCombat extends CombatScript {
 						regularMagicAttack(target, npc);
 						return 5;
 					}
-					// npc.playSoundEffect(VOICES[type]);
 					WorldTasks.scheduleTimer(1, (ticks) -> {
 						boss.setNextForceTalk(new ForceTalk(MESSAGES[type]));
 						boss.setNextAnimation(new Animation(14398));
@@ -89,7 +71,6 @@ public class LakkTheRiftSplitterCombat extends CombatScript {
 			}
 		}
 
-		// melee or magic
 		boolean onRange = WorldUtil.isInRange(npc.getX(), npc.getY(), npc.getSize(), target.getX(), target.getY(), target.getSize(), 0);
 		boolean melee = onRange && Utils.random(2) == 0;
 		if (melee) {

@@ -1,6 +1,3 @@
-/**
- * Interface and component packets.
- */
 package org.darkan.core.net.prot.packet
 
 import org.darkan.core.net.prot.ServerProt
@@ -104,15 +101,6 @@ data class IfSetNpcHead(val interfaceId: Int, val componentId: Int, val npcId: I
 
 data class IfSetItem(val interfaceId: Int, val componentId: Int, val itemId: Int, val amount: Int) : ServerProt
 
-/**
- * Sets the event mask for a range of slots on a component (opcode 121).
- *
- * Naming note: the 727 client's `ServerProt` enum calls this `IF_SETTARGETPARAM` and calls opcode
- * 148 `IF_RESETTARGETPARAM`, which is the reverse of how [IfSetTargetParam] is named here. The
- * names here follow the packets' shape and conventional usage; the wire encoding is what matters
- * and is verified against the client, so do not "correct" the names without re-checking the
- * opcodes.
- */
 data class IfSetEvents(
     val interfaceId: Int,
     val componentId: Int,
@@ -129,11 +117,6 @@ data class IfSetModel(val interfaceId: Int, val componentId: Int, val modelId: I
 
 data class IfSetReCol(val interfaceId: Int, val componentId: Int, val index: Int, val fromColor: Int, val toColor: Int) : ServerProt
 
-/**
- * Sets the target parameter for a range of slots on a component (opcode 148).
- *
- * See the naming note on [IfSetEvents]: the client enum labels this opcode `IF_RESETTARGETPARAM`.
- */
 data class IfSetTargetParam(
     val interfaceId: Int,
     val componentId: Int,
@@ -165,27 +148,12 @@ data class IfSetPlayerHeadOther(
     val value: Int,
 ) : ServerProt
 
-/**
- * Opcode 20, fixed size 6. Client enum `OUTDATED_SET_THEORA_STRING_SOMETHING`.
- *
- * Queues a high priority `T17` pulse event against the interface component
- * identified by [interfaceId]/[componentId], carrying a 16-bit [value].
- * The behaviour behind the `T17` pulse type is dead code in the 727 client.
- */
 data class OutdatedSetTheoraString(
     val interfaceId: Int,
     val componentId: Int,
     val value: Int,
 ) : ServerProt
 
-/**
- * Opcode 96, fixed size 8. Client enum `OUTDATED_INTERFACE_PULSE_EVENT`.
- *
- * Queues a high priority `T13` pulse event against the interface component
- * identified by [interfaceId]/[componentId], carrying a 32-bit [value] that the
- * client reassembles from a low short and a high short.
- * The behaviour behind the `T13` pulse type is dead code in the 727 client.
- */
 data class OutdatedInterfacePulseEvent(
     val interfaceId: Int,
     val componentId: Int,

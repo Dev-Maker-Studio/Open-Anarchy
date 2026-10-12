@@ -242,11 +242,11 @@ internal fun Codec.registerRev727UpdatePackets() {
         out.writeBoolean(main)
         if (clanName != null) {
             val chatterList = chatters ?: emptyArray()
-            out.writeByte(2) // nameTypeFlag: names as string
-            out.writeLong(4062231702422979939L) // fixed pointer UID
+            out.writeByte(2)
+            out.writeLong(4062231702422979939L)
             out.writeLong(updateNum)
             out.writeRSString(clanName)
-            out.writeByte(0) // unused
+            out.writeByte(0)
             out.writeByte(kickRank)
             out.writeByte(talkRank)
             out.writeShort(chatterList.size)
@@ -290,18 +290,18 @@ internal fun Codec.registerRev727UpdatePackets() {
             val fillerCount = (5 - memberList.size).coerceAtLeast(0)
             val totalSlots = memberList.size + fillerCount
 
-            out.writeByte(3) // version
-            out.writeByte(2) // attr: names as string
+            out.writeByte(3)
+            out.writeByte(2)
             out.writeInt(updateCount)
-            out.writeInt(0) // creationDay
+            out.writeInt(0)
             out.writeShort(totalSlots)
             out.writeByte(bannedList.size)
             out.writeRSString(clanName)
             out.writeByte(if (allowGuests) 1 else 0)
             out.writeByte(talkRank)
             out.writeByte(kickRank)
-            out.writeByte(0) // lootshareRank
-            out.writeByte(0) // coinShare
+            out.writeByte(0)
+            out.writeByte(0)
 
             for (member in memberList) {
                 out.writeRSString(member.displayName)
@@ -311,8 +311,8 @@ internal fun Codec.registerRev727UpdatePackets() {
 
             for (i in 0 until fillerCount) {
                 out.writeRSString("FILLER_CHARACTER$i")
-                out.writeByte(0) // rank
-                out.writeInt(0) // flags
+                out.writeByte(0)
+                out.writeInt(0)
             }
 
             for (banned in bannedList) {

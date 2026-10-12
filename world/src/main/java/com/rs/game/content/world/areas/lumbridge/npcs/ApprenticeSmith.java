@@ -12,7 +12,6 @@ import com.rs.plugin.handlers.NPCClickHandler;
 @PluginEventHandler
 public class ApprenticeSmith extends Conversation {
 
-    //Identify NPC by ID
     private static final int npcId = 4904;
 
     public static NPCClickHandler ApprenticeSmith = new NPCClickHandler(new Object[]{npcId}, e -> {

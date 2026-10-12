@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.commands.normal;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -106,14 +90,6 @@ public class Normal {
                     p.getPackets().sendDevConsoleMessage("Result found: " + i + " - " + NPCDefinitions.getDefs(i).getName() + " (" + NPCDefinitions.getDefs(i).getCombatLevel() + ")");
         });
 
-//        Commands.add(Rights.PLAYER, "yell,shout [text]", "Will broadcast your message to the whole server.", (p, args) -> {
-//            Commands.sendYell(p, Utils.fixChatMessage(Utils.concat(args)), false);
-//        });
-//
-//        Commands.add(Rights.PLAYER, "hideyell", "Hides yell from your chat box.", (p, args) -> {
-//            p.setYellOff(!p.isYellOff());
-//            p.sendMessage("You have turned " + (p.isYellOff() ? "off" : "on") + " yell.");
-//        });
 
         Commands.add(Rights.PLAYER, "ping", "Checks your ping if you have gotten it recently.", (p, args) -> p.sendMessage("Ping: " + p.getNSV().getI("ping", -1)));
 

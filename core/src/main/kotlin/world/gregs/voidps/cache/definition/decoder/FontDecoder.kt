@@ -33,8 +33,6 @@ class FontDecoder : DefinitionDecoder<FontDefinition>(FONT_METRICS) {
         if (variableWidth) {
             val widths = IntArray(GLYPHS) { buffer.readUnsignedByte() }
             val heights = IntArray(GLYPHS) { buffer.readUnsignedByte() }
-            // Both profiles are `widths[glyph]` bytes long, as in the client: the heights are
-            // what it kerns against, not what it reads.
             val left = profiles(buffer, widths)
             val right = profiles(buffer, widths)
             glyphCoverageWidths = widths
@@ -91,10 +89,6 @@ class FontDecoder : DefinitionDecoder<FontDefinition>(FONT_METRICS) {
             }
             return -minDelta
         }
-        /**
-         * One coverage profile per glyph, [lengths] bytes each, delta coded from 0 and wrapping
-         * in a byte exactly as the client's `(offset + readByte()).toByte()` does.
-         */
         private fun profiles(buffer: Reader, lengths: IntArray) = Array(GLYPHS) { index ->
             var total = 0
             IntArray(lengths[index]) {
@@ -103,10 +97,8 @@ class FontDecoder : DefinitionDecoder<FontDefinition>(FONT_METRICS) {
             }
         }
 
-        /** The cp1252 code points a font has a glyph for. */
         const val GLYPHS = 256
 
-        /** The space, whose profile the client reads the line spacing out of. */
         private const val SPACE = 32
     }
 }

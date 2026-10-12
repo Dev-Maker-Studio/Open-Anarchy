@@ -18,23 +18,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * The source tree against the real 727 cache: unpack it, pack the tree back, and demand that
- * every container and every reference table comes out byte for byte as it went in, bar a
- * clientscript the compiler only reproduces functionally - the one allowance `parity` makes, which
- * its index's reference table and the derived version table then follow. The `cs2` codec is not on
- * this suite's classpath, so index 12 is raw bytes here and nothing is recompiled;
- * `Cs2SourceTreeParityTest` is where that half is proved.
- *
- * This is the parity guarantee `docs/cache-source.md` makes, and the only place it can actually
- * be proved. It also checks the two properties everything downstream leans on: unpacking the same
- * cache twice writes nothing the second time, and building an unchanged tree is a no-op. With the
- * definition indices stored as JSON it also reports what each type cost - files written, files that
- * survived the JSON round trip, files that still need their shipped bytes beside them - and finishes by
- * editing one obj's name and rebuilding, which is the whole reason the typed codecs exist.
- *
- * Skipped when there is no cache to test against, like the other whole-cache tests.
- */
 class WholeCacheSourceTest {
 
     @Test
@@ -115,10 +98,6 @@ class WholeCacheSourceTest {
     }
 
 
-    /**
-     * Per type: how many JSON files it wrote and how many of them still need the shipped bytes beside
-     * them. Returns the pristine total, which is the number `docs/cache-source.md` promises is zero.
-     */
     private fun types(tree: SourceTree): Int {
         var files = 0
         var pristine = 0
@@ -140,7 +119,6 @@ class WholeCacheSourceTest {
         return pristine
     }
 
-    /** Every `<id>.json` under [directory] - the index's own `index.json` and the sidecars excluded. */
     private fun json(directory: Path): Int {
         if (!Files.isDirectory(directory)) {
             return 0
@@ -159,13 +137,6 @@ class WholeCacheSourceTest {
         return count
     }
 
-    /**
-     * Change one obj's name in the tree and rebuild: exactly one archive may be repacked, and the built
-     * cache must decode the new name.
-     *
-     * This is the whole point of the typed codecs - a definition is a file somebody edits - and the
-     * incremental build is what makes that cheap, so both are checked in one go.
-     */
     private fun edit(tree: SourceTree, output: File) {
         val file = tree.indexDirectory(Index.ITEMS).resolve("$EDITED${DefinitionLayout.EXTENSION}")
         val before = Files.readString(file)
@@ -217,7 +188,6 @@ class WholeCacheSourceTest {
         return stamps
     }
 
-    /** Several gigabytes of tree do not belong in a tmpfs; the build directory is on disk. */
     private fun scratch(): Path {
         val directory = File("core/build/tmp").absoluteFile
         directory.mkdirs()
@@ -234,18 +204,10 @@ class WholeCacheSourceTest {
     }
 
     private companion object {
-        /** The eight `l<x>_<y>` archives `data/map/xteaKeys.json` has no working key for. */
         private const val OPAQUE = 8
 
-        /**
-         * Unpacking the whole 876 MB cache. Every definition file is decoded, written as JSON, read back
-         * and re-encoded on the way out, which is most of it. Index 0's 490,049 animation frames are
-         * 4,085 files rather than 490,049 of them, because a frame set is one glTF animation - see
-         * *anims* - so the count is the definitions and the maps.
-         */
         private const val UNPACK_LIMIT = 900_000L
 
-        /** The obj whose name the edit test changes: a whip is a whip in every 727 cache. */
         private const val EDITED = 4151
         private const val ORIGINAL = "Abyssal whip"
         private const val RENAMED = "Abyssal thwip"

@@ -5,10 +5,6 @@ import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.file.FileProvider
 import world.gregs.voidps.cache.file.FileProvider.Companion.ARCHIVE_METADATA_HEADER_LEN
 
-/**
- * Reads all [Cache] sectors into memory
- * Fast read speed, high memory usage
- */
 class MemoryFileProvider(cache: Cache) : FileProvider {
 
     private val sectors: Array<Array<ByteArray?>?> = arrayOfNulls(256)

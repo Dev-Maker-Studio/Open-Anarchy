@@ -28,11 +28,9 @@ public class LegendsGuild {
 	}
 
 	public static int getChargedId(int itemId) {
-		//Combat Bracelet
 		if ((itemId == 11126) || (itemId == 11124) || (itemId == 11122) || (itemId == 11120))
 			return 11118;
 
-		//Skills Necklace
 		if ((itemId == 11113) || (itemId == 11111) || (itemId == 11109) || (itemId == 11107))
 			return 11105;
 

@@ -23,11 +23,6 @@ private data class Offender(
 @Serializable
 private data class RequireChangesRequest(val usernames: List<String>)
 
-/**
- * Sweeping the accounts that already hold a name the filter would refuse. The sweep only reports;
- * flagging is a second, explicit call with the usernames worth flagging, so nothing is forced onto
- * a player on the strength of an unreviewed match.
- */
 object DisplayNamesController {
     fun registerRoutes(routing: Routing) {
         routing.route("/admin/display-names") {

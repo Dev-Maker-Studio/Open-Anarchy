@@ -31,55 +31,8 @@ public class BarbarianVillageNPC {
         );
     });
 
-    /*public static NPCClickHandler talkToGunthor = new NPCClickHandler(new Object[]{ CHEIFTAIN_GUNTHOR }, new String[] { "Talk-to" }, e -> {
-        String[] responses = new String[]{
-                "Ah, you've come for fight!",
-                "You look funny!",
-                "Wanna fight?",
-                "Grrr!",
-                "What you want?",
-                "Go Away!"
-        };
-        e.getPlayer().startConversation(new Dialogue()
-                .addNPC(CHEIFTAIN_GUNTHOR, HeadE.VERY_FRUSTRATED, responses[(Utils.random(1,6))])
-                .addNext(() -> e.getNPC().setCombatTarget(e.getPlayer()))
-        );
-    });*/
 
 
-    /*public static NPCClickHandler HandleGudrun = new NPCClickHandler(new Object[]{ GUDRUN }, new String[] { "Talk-to" }, e -> {
-        if (Quest.GUNNARS_GROUND.isImplemented() && e.getPlayer().getQuestManager().isComplete(Quest.GUNNARS_GROUND)) {
-            e.getPlayer().startConversation(new Dialogue()
-                    .addNPC(GUDRUN, HeadE.HAPPY_TALKING, "Hello!")
-
-                    .addOptions(ops -> {
-                        ops.add("I want to ask you something.")
-                                .addNPC(GUDRUN, HeadE.SKEPTICAL, "Of course, what is it?")
-                                .addOptions(ops2 -> {
-                                    ops2.add("How are things with Dororan?")
-                                            .addNPC(GUDRUN, HeadE.CALM_TALK, "I really like him. He's funny, vulnerable and nothing like my people.")
-                                            .addPlayer(HeadE.CONFUSED, "You're going to stay together then?")
-                                            .addNPC(GUDRUN, HeadE.HAPPY_TALKING, "Of course!");
-
-                                    ops2.add("Where did this house come from?")
-                                            .addNPC(GUDRUN, HeadE.CALM_TALK, "I don't know. Papa said the previous owners left it to him. I don't know why they would do that.")
-                                            .addPlayer(HeadE.CONFUSED, "Do you have a theory?")
-                                            .addNPC(GUDRUN, HeadE.HAPPY_TALKING, "Gunnar always said 'A warrior does not barter; he simply takes!'. I think papa bought the house, but doesn't want anyone to know.");
-
-                                    ops2.add("Did you like your present?")
-                                            .addNPC(GUDRUN, HeadE.HAPPY_TALKING, "Look at this bracelet he got for me! 'With beauty blessed.' When I recited that line to papa, it took my breath away.");
-
-                                    ops2.add("Goodbye.")
-                                            .addNPC(GUDRUN, HeadE.CALM_TALK, "Goodbye.");
-                                });
-
-                        ops.add("Just passing through.")
-                                .addNPC(GUDRUN, HeadE.CALM_TALK, "Goodbye.");
-
-                    })
-            );
-        }
-    });*/
 
     public static NPCClickHandler talkToHaakon = new NPCClickHandler(new Object[]{ HAAKON }, new String[] { "Talk-to" }, e -> {
         if (!Quest.GUNNARS_GROUND.isImplemented() || !e.getPlayer().getQuestManager().isComplete(Quest.GUNNARS_GROUND))

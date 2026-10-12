@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.prayer;
 
 import com.rs.game.model.entity.Entity;
@@ -32,8 +16,8 @@ public class Sap {
 	private static final String SAP_PROC_PREFIX = "sap_proc_";
 	private static final String SAP_DECAY_PREFIX = "sap_decay_";
 
-	private static final int DECAY_INTERVAL = 10000; // 10s per stack
-	private static final int DECAY_LOCKOUT = 60000; // 60s lockout on fresh proc
+	private static final int DECAY_INTERVAL = 10000;
+	private static final int DECAY_LOCKOUT = 60000;
 	private static final int MAX_STACKS = 5;
 	private static final int SAP_DRAIN_PER_STACK = 2;
 	private static final int INITIAL_SAP_DRAIN_PERCENT = 10;
@@ -97,7 +81,6 @@ public class Sap {
 		}
 	}
 
-	//called when attacker hits a target and sap applies
 	public static void handleSapOnHit(Player attacker, Entity target, int statId) {
 		String drainKey = SAP_DRAIN_PREFIX + statId;
 		String timerKey = SAP_TIMER_PREFIX + statId;
@@ -139,19 +122,15 @@ public class Sap {
 
 		boolean drainCapped = maxDrain > 0 && currentStacks >= MAX_STACKS;
 
-		// Prevent drain if total drained from any source (Leech or Sap) is 20% or higher
 		if (drainCapped){
 			procMap.put(attackerIndex, System.currentTimeMillis());
 		} else {
-			// Add Stack
 			currentStacks++;
 
-			// Save updated values
 			 drainMap.put(attackerIndex, currentStacks);
 			 stackTimes.add(System.currentTimeMillis());
 			 procMap.put(attackerIndex, System.currentTimeMillis());
 
-			// Apply drain
 			if (currentStacks > 0)
 				applyStatDrain(target, statId, currentStacks);
 		}
@@ -176,7 +155,7 @@ public class Sap {
 		if (target instanceof Player player) {
 			int current = player.getSkills().getLevel(statId);
 			if (base - current >= maxDrain)
-				return; // Already drained max
+				return;
 
 			if (current > newLevel)
 				player.getSkills().set(statId, newLevel);

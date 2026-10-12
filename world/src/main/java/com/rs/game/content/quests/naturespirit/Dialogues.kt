@@ -151,7 +151,6 @@ fun drezelNatureSpiritOptions(player: Player, npc: NPC, options: Options) {
             player.startConversation {
                 npc(DREZEL, CONFUSED, "How's life been treating you since you got blessed?")
                 player(CHEERFUL, "No so bad!")
-                //Didn't read and take the teleport earlier? Get bent idiot.
             }
         }
 

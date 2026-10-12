@@ -75,27 +75,12 @@ data class NPCDefinition(
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null,
     var moveSpeed: Int = -1,
-    /**
-     * The option records as the file held them: indices 0 to 4 are opcodes 30 to 34, indices 5 to 9 are the
-     * members only opcodes 150 to 154. Null when the file had no option record. [options] is the merged view
-     * the client builds from them, which cannot say which opcode an option came from.
-     */
     var rawOptions: Array<String?>? = null,
-    /**
-     * The opcode 249 parameter records in file order, kept only when the file listed an id more than once -
-     * [params] keeps the last value of each. Null when [params] holds every record.
-     */
     var paramRecords: List<KeyedValue>? = null
 ) : Definition, Transforms, Recolourable, ColourPalette, Parameterized, Extra, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -282,34 +267,17 @@ data class NPCDefinition(
         return result
     }
 
-    // --- Java interop convenience methods ---
 
-    /** Legacy alias for [combat]. */
     val combatLevel: Int get() = combat
 
-    /**
-     * Whether this NPC can be attacked.
-     *
-     * Legacy `hasAttackOption()` accepts "attack" or "destroy", ignoring case, across both the ordinary
-     * and members option arrays - which [options] already holds merged.
-     */
     fun hasAttackOption(): Boolean = options.any {
         it != null && (it.equals("attack", ignoreCase = true) || it.equals("destroy", ignoreCase = true))
     }
 
-    /** Whether this NPC has the given option string. Legacy `hasOption()` ignores case. */
     fun hasOption(option: String): Boolean = options.any { it != null && it.equals(option, ignoreCase = true) }
 
-    /** A param read as an int, 0 when absent or a string. Legacy `NPCDefinitions.getBonus(int)`. */
     fun getParamVal(id: Int): Int = params?.get(id) as? Int ?: 0
 
-    /**
-     * A combat bonus.
-     *
-     * Legacy `NPCDefinitions.getBonus(Bonus)`: the attack and defence bonuses are params 0 to 9, so
-     * they happen to line up with the [Bonus] ordinals, but the strength bonuses are params 641, 643
-     * and 965 in tenths, and the summoning defence, absorb and prayer bonuses NPCs simply do not have.
-     */
     fun getBonus(bonus: Bonus): Int = when (bonus) {
         Bonus.STAB_ATT -> getParamVal(0)
         Bonus.SLASH_ATT -> getParamVal(1)
@@ -327,27 +295,15 @@ data class NPCDefinition(
         else -> 0
     }
 
-    /** The attack delay in ticks. Legacy `getAttackDelay()` - param 14, defaulting to 4. */
     fun getAttackDelay(): Int {
         val speed = getParamVal(14)
         return if (speed <= 0) 4 else speed
     }
 
-    /** [op] is the op number, 1-based - op1 is 1. */
     fun getOption(op: Int): String? = if (op < 1) null else options.getOrNull(op - 1)
 
-    /**
-     * The id this NPC presents as for a player with the given [vars].
-     *
-     * Legacy `NPCDefinitions.getIdForPlayer(VarManager)`.
-     */
     fun getIdForPlayer(vars: Vars?): Int = getIdForVars(id, vars)
 
-    /**
-     * The name of the definition this NPC transforms into for the given [vars].
-     *
-     * Legacy `NPCDefinitions.getName(VarManager)`.
-     */
     fun getName(vars: Vars?): String {
         val realId = getIdForPlayer(vars)
         if (realId == id) {

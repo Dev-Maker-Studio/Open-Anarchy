@@ -12,31 +12,11 @@ import org.darkan.cs2.vm.Cs2HookDispatcher
 import org.darkan.tools.rsinterface.InterfaceCs2Host
 import org.darkan.tools.rsinterface.InterfaceEvent
 
-/**
- * Every CS2 hook the open interface carries, in one table.
- *
- * A hook reaches a component from one of two places and the difference decides
- * what runs: the cache decoded one into a definition field, or a script bound one
- * at runtime with `IF_SETON*`. A runtime binding wins, silently, which is exactly
- * the situation where a developer stares at `onClick` in the cache and cannot
- * work out why their script is not running. Both are listed here against the
- * same event names, with the source spelled out.
- *
- * The event names are the recovered ones, not the decoder's field names: the two
- * disagree badly enough that reading the field name leads to the wrong
- * conclusion. `mouseLeaveScript` is an inventory transmit hook. `popupScript` is
- * the hover-repeat hook. `onKey` is a client-var transmit hook. Each row prints
- * the event and the field it came from, so the mapping is visible rather than
- * something to remember.
- */
 class Cs2HookPanel(
     private val context: InterfaceEditContext,
     private val host: InterfaceCs2Host,
-    /** Fires an event on a component through the interaction runtime. */
     private val onRunHook: (Int, InterfaceEvent) -> Unit,
-    /** Exports and opens a clientscript's source. */
     private val onOpenScript: (Int) -> Unit,
-    /** Re-runs every component's load script, i.e. re-opens the interface. */
     private val onRunLoadScripts: () -> Unit,
 ) {
     var visible: Boolean = true
@@ -44,7 +24,6 @@ class Cs2HookPanel(
     private val filter = ImString(48)
     private var selectionOnly = false
 
-    /** Script ids the open interface references, for the reload panel to export. */
     fun scripts(): List<Int> {
         val document = context.document ?: return emptyList()
         val ids = LinkedHashSet<Int>()
@@ -174,7 +153,6 @@ class Cs2HookPanel(
 
         ImGui.tableSetColumnIndex(1)
         if (overridden) {
-            // A script rebound this event, so the cache hook below is dead code.
             ImGui.pushStyleColor(ImGuiCol.Text, 0.55f, 0.55f, 0.58f, 1f)
             ImGui.text("${event?.name ?: field} (replaced)")
             ImGui.popStyleColor()
@@ -273,7 +251,6 @@ class Cs2HookPanel(
         private val EVENT_BY_FIELD: Map<String, InterfaceEvent> =
             InterfaceEvent.entries.mapNotNull { event -> event.field?.let { it to event } }.toMap()
 
-        /** The key a runtime binding is filed under in the host's map. */
         private val EVENT_BY_KEY: Map<String, InterfaceEvent> =
             InterfaceEvent.entries.associateBy { it.boundKey }
     }

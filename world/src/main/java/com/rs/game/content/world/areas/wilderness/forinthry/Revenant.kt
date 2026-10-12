@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.wilderness.forinthry
 
 import com.rs.game.content.Effect
@@ -120,12 +104,10 @@ private fun genDrop(killer: Player, name: String, combatLevel: Int): List<Item> 
 	val g = Utils.clampD(sqrt(combatLevel.toDouble()), 1.0, 12.0)
 	val r = 60000.0 / g
 
-	// Brawling gloves with weighted distribution
 	val brawlingGloves = buildList {
 		add(Drop(13845)); add(Drop(13846)); add(Drop(13847)); add(Drop(13848))
 		add(Drop(13849)); add(Drop(13850)); add(Drop(13851)); add(Drop(13852))
 		add(Drop(13854)); add(Drop(13856)); add(Drop(13857))
-		// Smithing and Hunter gloves (2/15 chance each)
 		add(Drop(13855)); add(Drop(13853))
 	}.toTypedArray()
 
@@ -149,29 +131,24 @@ private fun genDrop(killer: Player, name: String, combatLevel: Int): List<Item> 
 	)
 
 	drops.addAll(DropTable.calculateDrops(killer, DropSet(
-		// 1/R chance for rare items
 		DropTable(1.0, r, Drop(14876)), DropTable(1.0, r, Drop(14877)),
 		DropTable(1.0, r, Drop(14878)), DropTable(1.0, r, Drop(14879)),
 		DropTable(1.0, r, Drop(14880)), DropTable(1.0, r, Drop(14881)),
 		DropTable(1.0, r, *brawlingGloves),
 
-		// 2/R chance for medium rare items
 		DropTable(2.0, r, Drop(14882)), DropTable(2.0, r, Drop(14883)),
 		DropTable(2.0, r, Drop(14884)), DropTable(2.0, r, Drop(14885)),
 		DropTable(2.0, r, Drop(14886)), DropTable(2.0, r, Drop(14887)),
 		DropTable(2.0, r, *corruptDragonItems),
 
-		// 3/R chance for uncommon items
 		DropTable(3.0, r, Drop(14888)), DropTable(3.0, r, Drop(14889)),
 		DropTable(3.0, r, Drop(14890)), DropTable(3.0, r, Drop(14891)),
 		DropTable(3.0, r, Drop(14892)),
 
-		// 10/R chance for Ancient Warriors' equipment
 		DropTable(1.00, r, *ancientWarriorsEquipment),
 		DropTable(1.00, r, *corruptAncientWarriorsEquipment)
 	)))
 
-	// If no unique drops, give coins
 	if (drops.isEmpty()) {
 		drops.add(Item(995, (50.0 * g).toInt()))
 	}

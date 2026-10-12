@@ -9,7 +9,6 @@ import com.rs.utils.shop.ShopsHandler;
 @PluginEventHandler
 public class Hank extends Conversation {
 
-    //Identify NPC by ID
     private static final int npcId = 8864;
 
     public static NPCClickHandler Hank = new NPCClickHandler(new Object[]{npcId}, e -> {
@@ -24,6 +23,3 @@ public class Hank extends Conversation {
         super(player);
     };
 }
-/*
-This fixes Hank and restores default store conversation
- */

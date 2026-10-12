@@ -4,9 +4,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * There should be no duplicate region keys. But there can be parent genres.
- */
 public class Genre {
 	private String genre;
 	private String parent;

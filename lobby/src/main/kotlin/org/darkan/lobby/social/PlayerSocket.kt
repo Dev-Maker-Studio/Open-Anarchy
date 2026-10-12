@@ -13,12 +13,9 @@ import org.darkan.core.social.SocialAction
 import org.darkan.core.social.SocialEvent
 import org.darkan.core.social.SocialJson
 
-/**
- * A websocket on one player, for the website: the player's [SocialEvent]s go out as they happen,
- * starting with a snapshot, and every frame in is a [SocialAction] by that player.
- */
 object PlayerSocket {
     private const val CLOSE_REASON_LIMIT = 100
+    private const val KEEP_ALIVE = "0"
 
     suspend fun serve(account: Account, socket: DefaultWebSocketServerSession) {
         val sink = SocketSink(socket)
@@ -26,6 +23,7 @@ object PlayerSocket {
         try {
             for (frame in socket.incoming) {
                 val text = (frame as? Frame.Text)?.readText() ?: continue
+                if (text == KEEP_ALIVE) continue
                 val action = try {
                     SocialJson.json.decodeFromString(SocialAction.serializer(), text)
                 } catch (e: Exception) {

@@ -9,23 +9,10 @@ import java.nio.ByteBuffer
 
 object Xtea {
 
-    /**
-     * The golden ratio.
-     */
     private const val GOLDEN_RATIO = -0x61c88647
 
-    /**
-     * The number of rounds.
-     */
     private const val ROUNDS = 32
 
-    /**
-     * Deciphers the specified [ByteBuffer] with the given key.
-     * @param buffer The buffer.
-     * @param key The key.
-     * @throws IllegalArgumentException if the key is not exactly 4 elements
-     * long.
-     */
     fun decipher(buffer: ByteArray, key: IntArray, start: Int = 0, end: Int = buffer.size) {
         if (key.size != 4) {
             throw IllegalArgumentException()
@@ -46,13 +33,6 @@ object Xtea {
         }
     }
 
-    /**
-     * Enciphers the specified [ByteArray] with the given key.
-     * @param buffer The buffer.
-     * @param key The key.
-     * @throws IllegalArgumentException if the key is not exactly 4 elements
-     * long.
-     */
     fun encipher(buffer: ByteArray, start: Int, end: Int, key: IntArray) {
         if (key.size != 4)
             throw IllegalArgumentException()

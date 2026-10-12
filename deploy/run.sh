@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# The restart loop every Darkan server runs under: check out the channel's ref (a release tag, or the
-# branch head for a dev channel), download that build's jar, run it, repeat when it exits.
-# Configuration comes from .env.unit next to the checkout (kind, channel, project, token, JVM args),
-# or from the environment when there is none. Game configuration stays in .env. The server gets the
-# checkout's commit so its watcher can tell a release that changes nothing for it from one that does.
 set -u
 cd "$(dirname "$0")/.." || exit 1
 API="https://gitlab.com/api/v4"

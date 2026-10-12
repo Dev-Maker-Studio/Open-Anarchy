@@ -4,26 +4,13 @@ import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.OpcodeOrdered
 import world.gregs.voidps.cache.definition.encoder.BASEncoder
 
-/**
- * Base Animation Set (BAS / Render Animations) Definition
- *
- * Stores movement animation references for players and NPCs,
- * including stand, walk, run, and teleport animations with
- * directional variants and turn animations.
- *
- * The fields below the animations are the rest of the client's `BasType`: the model box, the
- * per-slot obj transforms, the camera easing values and the random stand table. They were read and
- * thrown away until the encoder needed them; the names follow the client's.
- */
 data class BASDefinition(
     override var id: Int = -1,
 
-    // Stand animations
     var standAnimation: Int = -1,
     var standTurn1: Int = -1,
     var standTurn2: Int = -1,
 
-    // Walk animations
     var walkAnimation: Int = -1,
     var walkDir1: Int = -1,
     var walkDir2: Int = -1,
@@ -31,7 +18,6 @@ data class BASDefinition(
     var walkTurn1: Int = -1,
     var walkTurn2: Int = -1,
 
-    // Run animations
     var runAnimation: Int = -1,
     var runDir1: Int = -1,
     var runDir2: Int = -1,
@@ -39,7 +25,6 @@ data class BASDefinition(
     var runTurn1: Int = -1,
     var runTurn2: Int = -1,
 
-    // Teleport animations
     var teleportAnimation: Int = -1,
     var teleDir1: Int = -1,
     var teleDir2: Int = -1,
@@ -47,12 +32,9 @@ data class BASDefinition(
     var teleTurn1: Int = -1,
     var teleTurn2: Int = -1,
 
-    /** Opcode 26, `(byte * 4)` widened back through a short. */
     var modelWidth: Int = 0,
     var modelLength: Int = 0,
-    /** Opcode 27, per equipment slot: translate x/y/z then rotate x/y/z. Absent in 727. */
     var objVerticeTransformations: Array<IntArray?>? = null,
-    /** Opcode 28, per equipment slot; 255 reads back as -1. Absent in 727. */
     var objVisibility: IntArray? = null,
     var yawAcceleration: Int = 0,
     var yawMaxVelocity: Int = 0,
@@ -62,41 +44,23 @@ data class BASDefinition(
     var pitchAcceleration: Int = 0,
     var pitchMaxVelocity: Int = 0,
     var pitchTargetAngle: Int = 0,
-    /** Opcode 37, read and unused by the client. */
     var unused: Int = -1,
-    /** Opcodes 43 and 44, read and unused by the client. */
     var unused43: Int = -1,
     var unused44: Int = -1,
     var iconHeightOverride: Int = -1,
-    /** Opcode 52: the stand animations picked at random, and their weights. */
     var randomStandSequences: IntArray? = null,
     var randomStandSequenceChances: IntArray? = null,
-    /** Opcode 53. */
     var rendersShadow: Boolean = true,
-    /** Opcode 54, both `byte shl 6`. */
     var hillRotateX: Int = 0,
     var hillRotateZ: Int = 0,
-    /** Opcode 55, per equipment slot. Absent in 727. */
     var turnAngleAdjustment: IntArray? = null,
-    /** Opcode 56, per equipment slot, three directions. Absent in 727. */
     var projectionOffset: Array<IntArray?>? = null,
 ) : Definition, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
 
-    /**
-     * Opcodes 27, 55 and 56 are one record per populated slot, not a field written twice.
-     *
-     * @see BASEncoder
-     */
     override fun repeats(opcode: Int): Boolean = opcode == 27 || opcode == 55 || opcode == 56
 
     override fun equals(other: Any?): Boolean {
@@ -206,10 +170,6 @@ data class BASDefinition(
     companion object {
         val EMPTY = BASDefinition()
 
-        /**
-         * Slots the per-slot opcodes (27, 55, 56) index into. The client sizes these by the
-         * equipment defaults file's customisable obj slot count; nothing in 727 carries them.
-         */
         const val SLOTS = 15
     }
 }

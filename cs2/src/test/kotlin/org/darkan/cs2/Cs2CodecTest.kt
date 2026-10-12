@@ -5,12 +5,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * The codec is the floor the whole toolchain stands on: if index 12 does not
- * decode and re-encode to the same bytes, nothing above it can be trusted. The
- * whole-cache proof is `cs2 verify` (6567/6567 byte-identical); this covers the
- * format's awkward corners without needing a cache to be present.
- */
 class Cs2CodecTest {
 
     private fun script(
@@ -31,8 +25,6 @@ class Cs2CodecTest {
 
     @Test
     fun `every operand width round-trips`() {
-        // One instruction of each operand encoding: a string, a long, a large
-        // (4-byte) operand and a plain 1-byte one.
         val original = script(
             name = "test_script",
             instructions = listOf(
@@ -75,8 +67,6 @@ class Cs2CodecTest {
 
     @Test
     fun `an absent name decodes as null`() {
-        // A bare 0 byte and an empty string are the same bytes on the wire, so an
-        // empty name has to come back as null or re-encoding would not be exact.
         val bytes = Cs2Codec.encode(script("", listOf(Cs2Instruction(Cs2Op.RETURN))))
         assertNull(Cs2Codec.decode(bytes).name)
     }

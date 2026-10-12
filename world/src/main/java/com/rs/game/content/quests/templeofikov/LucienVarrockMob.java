@@ -32,7 +32,7 @@ public class LucienVarrockMob extends NPC {
 
 	@Override
 	public boolean canBeAttackedBy(Player player) {
-		if(player.getEquipment().getAmuletId() == 87)//Armadyl pendant
+		if(player.getEquipment().getAmuletId() == 87)
 			return true;
 		this.faceEntityTile(player);
 		player.faceEntityTile(this);

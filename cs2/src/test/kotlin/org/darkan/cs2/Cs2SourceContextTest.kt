@@ -10,15 +10,6 @@ import kotlin.test.assertTrue
 import org.darkan.cs2.compile.Cs2Parser
 import org.darkan.cs2.ir.Cs2Type
 
-/**
- * The tree-derived compile context, without a cache anywhere.
- *
- * [Cs2SourceContext] is what lets a server build a cache from a source tree whose clientscripts
- * changed: the facts the corpus analysis recovers from bytecode are all written out in the
- * TypeScript, so a folder answers them for itself. These are the readings, one per fact.
- * [org.darkan.cs2.source.Cs2SourceCodecTest] is the proof that they add up to the cache's own
- * bytes.
- */
 class Cs2SourceContextTest {
 
     @Test
@@ -54,11 +45,6 @@ class Cs2SourceContextTest {
         assertNull(Cs2Parser.signature("declare const x: number;\n"))
     }
 
-    /**
-     * The header is read even when the catalogs no longer have the name it claims, because the
-     * signature is a different question from which archive the file belongs to - see
-     * [Cs2Parser.Companion.signature].
-     */
     @Test
     fun `a signature is read from a file whose header names no script`() {
         val signature = Cs2Parser.signature("// [proc,nothing_is_called_this]\n\nfunction f(): number {\n}")
@@ -122,7 +108,6 @@ class Cs2SourceContextTest {
         }
     }
 
-    /** A script at the path its gameval name puts it, with the header that binds it. */
     private fun write(folder: File, scriptId: Int, declaration: String) {
         val file = Cs2Layout.fileFor(folder, scriptId)
         file.parentFile?.mkdirs()

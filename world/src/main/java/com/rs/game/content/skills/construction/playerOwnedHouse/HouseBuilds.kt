@@ -7,7 +7,6 @@ enum class HouseBuilds(
     private val water: Boolean,
     vararg val pieces: HouseObjects
 ) {
-    //GARDEN
     CENTREPIECE(
         15361,
         false,
@@ -44,7 +43,6 @@ enum class HouseBuilds(
     BIG_PLANT_1(15364, true, HouseObjects.FERN_B, HouseObjects.BUSH, HouseObjects.TALL_PLANT),
     BIG_PLANT_2(15365, true, HouseObjects.SHORT_PLANT, HouseObjects.LARGE_LEAF_PLANT, HouseObjects.HUGE_PLANT),
 
-    // PARLOUR
     CHAIRS_1(
         15410,
         false,
@@ -119,7 +117,6 @@ enum class HouseBuilds(
     ),
     RUG(intArrayOf(15415, 15414, 15413), false, HouseObjects.BROWN_RUG, HouseObjects.RUG, HouseObjects.OPULENT_RUG),
 
-    // TODO dungeon stair id
     STAIRCASE_2(
         15390,
         false,
@@ -130,7 +127,6 @@ enum class HouseBuilds(
         HouseObjects.MARBLE_SPIRAL
     ),
 
-    // TROPHY ROOM
     HEAD_TROPHY(
         15382,
         false,
@@ -155,7 +151,6 @@ enum class HouseBuilds(
     BASIC_ARMOURS(34255, false, HouseObjects.MITHRIL_ARMOUR, HouseObjects.ADAMANT_ARMOUR, HouseObjects.RUNITE_ARMOUR),
     RUG_3(intArrayOf(15379, 15378, 15377), false, HouseObjects.RUG, HouseObjects.OPULENT_RUG),
 
-    // BEDROOM
     BED(
         15260,
         false,
@@ -194,7 +189,6 @@ enum class HouseBuilds(
     ),
     RUG_B(intArrayOf(15266, 15265, 15264), false, HouseObjects.BROWN_RUG, HouseObjects.RUG, HouseObjects.OPULENT_RUG),
 
-    //MENAGERIE
     OBELISK(44911, false, HouseObjects.SMALLOBELISK),
     FEEDER(44910, false, HouseObjects.OAKPETFEEDER, HouseObjects.TEAKPETFEEDER, HouseObjects.MAHOGANYPETFEEDER),
     PETHOUSE(
@@ -224,7 +218,6 @@ enum class HouseBuilds(
         HouseObjects.VOLCANIC_HABITAT
     ),
 
-    //THRONE ROOM
     THRONE(
         15426,
         false,
@@ -259,7 +252,6 @@ enum class HouseBuilds(
         HouseObjects.KITE_SHIELD
     ),
 
-    //FORMAL GARDEN
     FENCING(
         15369,
         false,
@@ -297,7 +289,6 @@ enum class HouseBuilds(
     BIG_PLANT1_FORM(15373, true, HouseObjects.SUNFLOWER, HouseObjects.MARIGOLDS, HouseObjects.ROSES),
     BIG_PLANT2_FORM(15374, true, HouseObjects.ROSEMARY, HouseObjects.DAFFODILS, HouseObjects.BLUEBELLS),
 
-    // KITCHEN
     LARDER(15403, false, HouseObjects.WOODEN_LARDER, HouseObjects.OAK_LARDER, HouseObjects.TEAK_LARDER),
     SINK(15404, false, HouseObjects.PUMP_AND_DRAIN, HouseObjects.PUMP_AND_TUB, HouseObjects.SINK),
     KITCHEN_TABLE(15405, false, HouseObjects.WOODEN_KITCHEN_TABLE, HouseObjects.OAK_KITCHEN_TABLE, HouseObjects.TEAK_KITCHEN_TABLE),
@@ -335,7 +326,6 @@ enum class HouseBuilds(
         HouseObjects.CHEFS_DELIGHT
     ),
 
-    // DINING ROOM
     FIREPLACE_DINING(15301, false, HouseObjects.CLAY_FIREPLACE, HouseObjects.STONE_FIREPLACE, HouseObjects.MARBLE_FIREPLACE),
     DINING_TABLE(
         15298,
@@ -363,7 +353,6 @@ enum class HouseBuilds(
     ROPE_BELL_PULL(15304, false, HouseObjects.ROPE_BELL_PULL, HouseObjects.BELL_PULL, HouseObjects.POSH_BELL_PULL),
     DECORATION(15303, false, HouseObjects.OAK_DECORATION, HouseObjects.TEAK_DECORATION, HouseObjects.GILDED_DECORATION),
 
-    // WORKSPACE
     REPAIR(15448, false, HouseObjects.REPAIR_BENCH, HouseObjects.WHETSTONE, HouseObjects.ARMOUR_STAND),
     WORKBENCH(
         15439,
@@ -429,7 +418,6 @@ enum class HouseBuilds(
     ),
     HERALDRY(15450, false, HouseObjects.PLUMING_STAND, HouseObjects.SHIELD_EASEL, HouseObjects.BANNER_EASEL),
 
-    // COSTUME ROOM
     DRESS_BOX(18814, false, HouseObjects.OAKCOSTUMEBOX, HouseObjects.TEAKCOSTUMEBOX, HouseObjects.MAHOGANYCOSTUMEBOX),
     TOY_BOX(18812, false, HouseObjects.OAKTOYBOX, HouseObjects.TEAKTOYBOX, HouseObjects.MAHOGANYTOYBOX),
     CAPE_RACK(
@@ -456,12 +444,9 @@ enum class HouseBuilds(
     TREASURE_CHEST(18813, false, HouseObjects.OAKTREASURECHEST, HouseObjects.TEAKTREASURECHEST, HouseObjects.MAHOGANYTREASURECHEST),
     ARMOR_CASE(18815, false, HouseObjects.OAKARMOURCASE, HouseObjects.TEAKARMOURCASE, HouseObjects.MAHOGANYARMOURCASE),
 
-    //DUNGEON
     LIGHTING_D(15355, false, HouseObjects.CANDLE, HouseObjects.TORCH, HouseObjects.SKULLTORCH),
     RUG_D(15379, false, HouseObjects.BROWN_RUG, HouseObjects.RUG, HouseObjects.OPULENT_RUG),
 
-    //		DOOR_D(36672, false, com.rs.game.content.skills.construction.playerOwnedHouse.HObject.OAKDOOR, com.rs.game.content.skills.construction.playerOwnedHouse.HObject.STEELPLATEDDOOR, com.rs.game.content.skills.construction.playerOwnedHouse.HObject.MARBLEDOOR),
-    //		DOOR_D2(36675, false, com.rs.game.content.skills.construction.playerOwnedHouse.HObject.OAKDOOR, com.rs.game.content.skills.construction.playerOwnedHouse.HObject.STEELPLATEDDOOR, com.rs.game.content.skills.construction.playerOwnedHouse.HObject.MARBLEDOOR),
     PITGUARD(
         36676,
         false,
@@ -561,7 +546,6 @@ enum class HouseBuilds(
     ),
     OUB_LADDER(15356, false, HouseObjects.OAK_LADDER, HouseObjects.TEAK_LADDER, HouseObjects.MAHOGANY_LADDER),
 
-    //TREASURE ROOM
     DECORATIVE2(15331, false, HouseObjects.DECORATIVEBLOOD, HouseObjects.DECORATIVEPIPE, HouseObjects.HANGINGSKELETON),
     LIGHTING(15330, false, HouseObjects.CANDLE, HouseObjects.TORCH, HouseObjects.SKULLTORCH),
     TREASURE(
@@ -584,7 +568,6 @@ enum class HouseBuilds(
     ),
     DOOR(intArrayOf(15326, 15327, 15328, 15329), false, HouseObjects.OAKDOOR, HouseObjects.STEELPLATEDDOOR, HouseObjects.MARBLEDOOR),
 
-    // GAMES ROOM
     ELEMENTAL_BALANCE(
         15345,
         false,
@@ -597,18 +580,16 @@ enum class HouseBuilds(
     GAME(15342, false, HouseObjects.JESTER, HouseObjects.TREASURE_HUNT, HouseObjects.HANGMAN),
     GAME_CHEST(15343, false, HouseObjects.OAK_PRIZE_CHEST, HouseObjects.TEAK_PRIZE_CHEST, HouseObjects.GILDED_PRIZE_CHEST),
 
-    // BOXING ROOM
     DECORATIONS(15297, false, HouseObjects.OAK_DECORATION, HouseObjects.TEAK_DECORATION, HouseObjects.GILDED_DECORATION),
     WEAPONS_RACK(15296, false, HouseObjects.GLOVE_RACK, HouseObjects.WEAPON_RACK, HouseObjects.EXTRA_WEAPON_RACK),
     COMBAT_RING(
         intArrayOf(
-            15277, 15278, 15279, 15280, 15281, 15282, 15286, 15287,  // ring
-            15289, 15290, 15294, 15295,  // 2 side
+            15277, 15278, 15279, 15280, 15281, 15282, 15286, 15287,
+            15289, 15290, 15294, 15295,
             15288, 15291, 15293, 15292
         ), false, HouseObjects.BOXING_RING, HouseObjects.FENCING_RING, HouseObjects.COMBAT_RING
-    ),  // 0side
+    ),
 
-    // QUEST ROOM
     QUEST_BOOKCASE(15397, false, HouseObjects.WOODEN_BOOKCASE, HouseObjects.OAK_BOOKCASE, HouseObjects.MAHOGANY_BOOKCASE),
     SWORD(15395, false, HouseObjects.SILVERLIGHT_SWORD, HouseObjects.EXCALIBER_SWORD, HouseObjects.DARKLIGHT_SWORD),
     MAP(15396, false, HouseObjects.MAP_SMALL, HouseObjects.MAP_MEDIUM, HouseObjects.MAP_LARGE),
@@ -616,7 +597,6 @@ enum class HouseBuilds(
     PORTRAIT(15392, false, HouseObjects.KING_ARTHUR, HouseObjects.ELENA, HouseObjects.GIANT_DWARF, HouseObjects.MISCELLENIA),
     GUILD_TROPHY(15394, false, HouseObjects.ANTIDRAGON_SHIELD, HouseObjects.GLORY, HouseObjects.CAPE_OF_LEGENDS),
 
-    // STUDY ROOM
     STUDY_BOOKCASE(15425, false, HouseObjects.WOODEN_BOOKCASE, HouseObjects.OAK_BOOKCASE, HouseObjects.MAHOGANY_BOOKCASE),
     CHARTS(15423, false, HouseObjects.ALCHEMICAL_CHART, HouseObjects.ASTRONOMICAL_CHART, HouseObjects.INFERNAL),
     LECTERN_STATUE(48662, false, HouseObjects.LECTURN_STATUE),
@@ -645,7 +625,6 @@ enum class HouseBuilds(
     TELESCOPE(15424, false, HouseObjects.WOODEN_TELESCOPE, HouseObjects.TEAK_TELESCOPE, HouseObjects.MAHOGANY_TELESCOPE),
     RUG_2(intArrayOf(15389, 15388, 15387), false, HouseObjects.RUG, HouseObjects.OPULENT_RUG),
 
-    // PORTAL ROOM
     PORTALS1(
         15406,
         false,
@@ -732,7 +711,6 @@ enum class HouseBuilds(
     ),
     FOCUS(15409, false, HouseObjects.TELEPORT_FOCUS, HouseObjects.GREATER_FOCUS, HouseObjects.SCRYING_POOL),
 
-    // CHAPEL
     ALTAR(
         15270,
         false,
@@ -770,7 +748,6 @@ enum class HouseBuilds(
     RUG_CHAPEL(intArrayOf(15274, 15273, 15274), false, HouseObjects.BROWN_RUG, HouseObjects.RUG, HouseObjects.OPULENT_RUG),
     STATUES(15275, false, HouseObjects.SMALL_STATUE, HouseObjects.MEDIUM_STATUE, HouseObjects.LARGE_STATUE),
 
-    // todo find -1(Zenevivia)
     WINDOW(
         intArrayOf(13730, 13728, 13732, 13729, 13733, 13731, 7101),
         false,
@@ -781,7 +758,6 @@ enum class HouseBuilds(
     ;
     constructor(id: Int, water: Boolean, vararg pieces: HouseObjects) : this(intArrayOf(id), water, *pieces)
 
-    // Methods
     fun containsId(id: Int): Boolean {
         return getIdSlot(id) != -1
     }

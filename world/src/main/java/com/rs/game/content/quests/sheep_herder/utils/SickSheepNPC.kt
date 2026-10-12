@@ -14,7 +14,6 @@ class SickSheepNPC(id: Int, tile: Tile, var officialRespawnTile: Tile, dir: Dire
     }
 
     override fun faceEntityTile(target: Entity?) {
-        // Stop sheep facing player
     }
 
     fun convertToOwnedNPC(player: Player): SickSheepOwnedNPC {

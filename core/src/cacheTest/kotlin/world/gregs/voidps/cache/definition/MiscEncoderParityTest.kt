@@ -51,22 +51,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * `encode(decode(bytes)) == bytes` for every file of the eight indices `MiscCodecs` claims.
- *
- * The companion of `DefinitionEncoderParityTest`, `ConfigEncoderParityTest` and
- * `InterfaceEncoderParityTest` for animation frames and skeletons, the huffman table, the world map,
- * both quick chat indices, the client defaults, the loading screens and the cutscenes. It compares against
- * the shipped bytes rather than against a re-decode, and it enumerates files through the reference table
- * rather than through a decoder's `size`, which rounds up to whole archives and invents ids.
- *
- * Where `MiscCodecTest` proves the whole trip a source tree makes, this proves the encoder alone, so a
- * failure names the definition and the byte instead of the index. `order` and `shadow` are how many files
- * have to carry [OpcodeOrdered]'s two layout fidelity fields, and are the numbers
- * `docs/cache-source.md`'s parity table quotes.
- *
- * Skipped when there is no cache to test against, like the other whole-cache tests.
- */
 class MiscEncoderParityTest {
 
     @Test
@@ -96,14 +80,11 @@ class MiscEncoderParityTest {
         }
     }
 
-    /** One type, where its files are, and how to decode and encode one. */
     private class Type(
         val name: String,
         val where: String,
         val index: Int,
-        /** The archives to read, or null for every archive of the index. */
         val archives: (Cache) -> IntArray,
-        /** The definition id of a file of an archive. */
         val id: (archive: Int, file: Int) -> Int,
         val roundTrip: (id: Int, data: ByteArray) -> Pair<ByteArray, Definition>
     )
@@ -170,7 +151,6 @@ class MiscEncoderParityTest {
         )
     )
 
-    /** Decode with the decoder's read path alone and encode; never `load`, which derives values. */
     private fun <T : Definition> trip(
         decoder: DefinitionDecoder<T>,
         encoder: DefinitionEncoder<T>,
@@ -185,7 +165,6 @@ class MiscEncoderParityTest {
 
     private fun count(cache: Cache, type: Type): Counts {
         val counts = Counts()
-        // Both quick chat indices hold the same two archives, and the types are told apart by archive.
         val places = if (type.index >= 0) {
             type.archives(cache).map { type.index to it }
         } else {
@@ -240,7 +219,6 @@ class MiscEncoderParityTest {
     }
 
     private companion object {
-        /** Headroom over the file's own size, for a writer that has to grow past it. */
         private const val CAPACITY = 64
     }
 }

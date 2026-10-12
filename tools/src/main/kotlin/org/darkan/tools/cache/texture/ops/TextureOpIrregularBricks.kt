@@ -5,10 +5,6 @@ import world.gregs.voidps.buffer.read.BufferReader
 import java.util.Random
 import kotlin.math.min
 
-/**
- * Type 28: Irregular brick pattern generator.
- * Creates a brick pattern with random positioning and size variations.
- */
 class TextureOpIrregularBricks : TextureOperation(0, true) {
     private var randomSeed: Int = 0
     private var minBrickWidth: Int = 1024
@@ -68,7 +64,6 @@ class TextureOpIrregularBricks : TextureOperation(0, true) {
                 brickEnd = currentWidth
             }
 
-            // Find vertical position based on previous row
             var verticalPos: Int
             if (isSecondRow) {
                 verticalPos = 0
@@ -123,7 +118,7 @@ class TextureOpIrregularBricks : TextureOperation(0, true) {
                     searchIndex++
                     if (searchIndex >= previousBrickCount) searchIndex = 0
                     overlapCount++
-                    if (overlapCount > previousBrickInfo.size) return // safety bound
+                    if (overlapCount > previousBrickInfo.size) return
                 }
             }
 
@@ -170,7 +165,7 @@ class TextureOpIrregularBricks : TextureOperation(0, true) {
                     previousBrickIndex++
                     if (previousBrickIndex >= previousBrickCount) previousBrickIndex = 0
                     searchIterations++
-                    if (searchIterations > previousBrickInfo.size) return // safety bound
+                    if (searchIterations > previousBrickInfo.size) return
                 }
 
                 currentRowStart = 0

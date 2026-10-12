@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.combat;
 
 import org.darkan.core.model.ObjectShape;
@@ -71,10 +55,10 @@ public class LexicusRunewrightCombat extends CombatScript {
 
 		int attack = Utils.random(WorldUtil.isInRange(target.getX(), target.getY(), target.getSize(), npc.getX(), npc.getY(), npc.getSize(), 0) ? 5 : 4);
 		switch (attack) {
-		case 0:// Range
+		case 0:
 		case 1:
 		case 2:
-		case 3:// Magic
+		case 3:
 			boolean range_style = attack == 0 || attack == 1;
 			boss.setNextAnimation(new Animation(13470));
 			boss.setNextSpotAnim(new SpotAnim(range_style ? 2408 : 2424));
@@ -85,7 +69,7 @@ public class LexicusRunewrightCombat extends CombatScript {
 				delayHit(npc, 1, target, Hit.magic(npc, getMaxHitFromAttackStyleLevel(npc, CombatStyle.MAGIC, target)));
 			target.setNextSpotAnim(new SpotAnim(range_style ? 2410 : 2426, 75, 0));
 			break;
-		case 4:// MELEE
+		case 4:
 			boss.setNextAnimation(new Animation(13469));
 			delayHit(npc, 0, target, Hit.melee(npc, getMaxHitFromAttackStyleLevel(npc, CombatStyle.MELEE, target)));
 			break;
@@ -153,6 +137,5 @@ public class LexicusRunewrightCombat extends CombatScript {
 
 			}
 		}, 0, 0);
-		// GFX 2421+
 	}
 }

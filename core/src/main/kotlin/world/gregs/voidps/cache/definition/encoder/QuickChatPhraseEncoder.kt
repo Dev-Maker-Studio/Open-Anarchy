@@ -5,14 +5,6 @@ import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.definition.data.QuickChatPhraseDefinition
 import world.gregs.voidps.cache.definition.data.QuickChatType
 
-/**
- * A quick chat phrase - archive 1 of indices 24 and 25 - byte for byte.
- *
- * Opcode 1's string is the phrase split on `<`, one fragment per dynamic value slot plus a trailing
- * one, so joining the fragments back with `<` is the file's string exactly. Opcode 3's entries are a
- * value type and then as many shorts as that type declares; a type the table does not know carries
- * none, which is what the client does too and what the decoder recorded.
- */
 class QuickChatPhraseEncoder : OpcodeEncoder<QuickChatPhraseDefinition>() {
 
     override fun opcodes(definition: QuickChatPhraseDefinition): IntArray = opcodesOf(definition)
@@ -51,7 +43,6 @@ class QuickChatPhraseEncoder : OpcodeEncoder<QuickChatPhraseDefinition>() {
 
     companion object {
 
-        /** The opcodes a file with these values carries when it was packed canonically. */
         fun opcodesOf(definition: QuickChatPhraseDefinition): IntArray {
             val opcodes = ArrayList<Int>(4)
             if (definition.stringParts != null) {

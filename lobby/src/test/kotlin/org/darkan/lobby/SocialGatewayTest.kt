@@ -21,31 +21,20 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * The lobby's social behaviour, driven end to end through [SocialGateway] with the in-memory
- * account store and a fake world (see [LobbyHarness]).
- *
- * The three regressions these were written for: a friend sitting in the lobby read as offline, a
- * lobby login did not put the player back in the friends chat they had joined, and server text
- * sent to a lobby player was never rendered.
- */
 class SocialGatewayTest {
 
     @BeforeTest
     fun clearGateway() = LobbyHarness.reset()
 
-    /** The single [FriendStatus] record the session most recently received about [displayName]. */
     private fun RecordingSession.lastStatusOf(displayName: String) =
         sent.filterIsInstance<FriendStatus>()
             .flatMap { it.updates.toList() }
             .lastOrNull { it.displayName == displayName }
 
-    /** The friends chat members the session was last told about. */
     private fun RecordingSession.lastChannel() = sent.filterIsInstance<FriendsChatChannel>().lastOrNull()
 
     private fun FriendsChatChannel.memberList() = players?.toList().orEmpty()
 
-    // ─── Friend presence ─────────────────────────────────────────────
 
     @Test
     fun `a friend sitting in the lobby is online, not offline`() = runBlocking {
@@ -82,8 +71,6 @@ class SocialGatewayTest {
     fun `logging in tells everyone who watches me, even one-sidedly`() = runBlocking {
         val watcher = LobbyHarness.account("watcher")
         val subject = LobbyHarness.account("subject")
-        // Only the watcher has the friendship; the subject has an empty list, which is the normal
-        // case and the one the old mutual-friends-only push silently skipped.
         LobbyHarness.befriend(watcher, subject)
 
         val watcherSession = LobbyHarness.lobbyLogin(watcher)
@@ -116,7 +103,6 @@ class SocialGatewayTest {
     @Test
     fun `a friend who appears offline to everybody is reported offline`() = runBlocking {
         val watcher = LobbyHarness.account("watcher")
-        // status 2 = "nobody"; status 1 would be "friends only".
         val friend = LobbyHarness.account("hidden", privateStatus = 2)
         LobbyHarness.befriend(watcher, friend)
         LobbyHarness.befriend(friend, watcher)
@@ -150,7 +136,6 @@ class SocialGatewayTest {
         )
     }
 
-    // ─── Friends chat ────────────────────────────────────────────────
 
     @Test
     fun `the friends chat joined last is re-joined on the next lobby login`() = runBlocking {
@@ -222,11 +207,9 @@ class SocialGatewayTest {
         val listed = assertNotNull(channel.memberList().firstOrNull { it.username == member.username })
         assertEquals(SocialGateway.LOBBY_WORLD_ID, listed.worldId)
         assertEquals("Lobby 15", listed.worldName)
-        // The owner's own copy of the block always lets them kick, as legacy patched it to do.
         assertEquals(0, channel.minRankCanKick)
     }
 
-    // ─── Server text in the lobby ────────────────────────────────────
 
     @Test
     fun `lobby chatbox text is sent as an FC notification, not a game message`() = runBlocking {
@@ -238,7 +221,6 @@ class SocialGatewayTest {
         assertEquals("hello lobby", message.message)
     }
 
-    // ─── Reconnect and resync ────────────────────────────────────────
 
     @Test
     fun `a world socket dropping takes its players offline`() = runBlocking {
@@ -276,8 +258,6 @@ class SocialGatewayTest {
         assertEquals(51, assertNotNull(watcherSession.lastStatusOf(goneAway.displayName)).world)
         watcherSession.clearSent()
 
-        // The world restarts without the lobby ever seeing the socket close: a new session for the
-        // same world announces a smaller population, and the difference has to be dropped.
         val reconnected = LobbyHarness.world(51).connect()
         reconnected.presenceSnapshot(PresenceSyncReason.CONNECT, stillOn)
 
@@ -333,7 +313,6 @@ class SocialGatewayTest {
         world.playerOnline(mover)
         val watcherSession = LobbyHarness.lobbyLogin(watcher)
 
-        // The lobby session lands first, then the world's late PlayerOffline arrives.
         LobbyHarness.lobbyLogin(mover)
         watcherSession.clearSent()
         world.playerOffline(mover)
@@ -345,7 +324,6 @@ class SocialGatewayTest {
         )
     }
 
-    // ─── Many connections on one player ──────────────────────────────
 
     @Test
     fun `a world player's first event is the whole snapshot`() = runBlocking {

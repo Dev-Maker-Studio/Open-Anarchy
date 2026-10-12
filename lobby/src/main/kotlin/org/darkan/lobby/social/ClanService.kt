@@ -37,27 +37,8 @@ import org.darkan.core.social.gateway.ClanSnapshot
 import org.darkan.core.social.gateway.SocialGatewayWireMessage
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * The lobby's half of `docs/clans.md`: the one writer of the `clans` collection and the owner of
- * every clan channel.
- *
- * Every intent - a `ClanCommand` from a world or a button on the lobby screen - comes through
- * [handle] as a [ClanAction], is judged by [ClanRules] (the caller's own check is never trusted)
- * and, if allowed, applied under one lock. Every mutation ends the same way: the clan is written
- * back, its [ClanSnapshot] goes to every connected world, [ClanMembership] goes to the world of
- * each player whose `Social` clan fields changed (and those fields are saved here, so the world's
- * own account saves can never clobber them), the channel's [ClanChannelUpdate] goes out if the
- * chatter list moved, and the players sitting on the lobby screen get their client packets from
- * [ClanPackets] exactly as a world builds them from the same state.
- *
- * State: the clan cache (a write-through copy of the store, filled lazily per clan), the
- * channels (chatters and an hourly temp ban per kicked guest), and nothing about sessions - the
- * lobby-screen sessions and the world sockets stay in [SocialGateway], which this object sends
- * through.
- */
 object ClanService {
 
-    /** How long a guest kicked from a channel stays out of it. */
     const val TEMP_BAN_MS = 60L * 60L * 1000L
 
     private const val NOT_IN_CHANNEL = "You are not currently connected to a clan chat."
@@ -70,16 +51,10 @@ object ClanService {
     private val channelsByClan = ConcurrentHashMap<String, Channel>()
     private val tempBansByClan = ConcurrentHashMap<String, MutableMap<String, Long>>()
 
-    /**
-     * The stack type of a clan var, which picks its `VarclanSet*` packet. The cache decides when
-     * it knows the var; a var the cache does not define is sent by the type of its stored value.
-     * A test with no cache loaded installs a value-only resolver here.
-     */
     internal var varKind: (id: Int, value: Any) -> ClanVarKind = { id, value ->
         ClanPackets.cacheVarKind(id) ?: kindOf(value)
     }
 
-    /** One clan channel: its chatters in join order and what the worlds were last told. */
     private class Channel(val clanName: String) {
         var updateNum = 0L
         val chatters = LinkedHashMap<String, ClanChatter>()
@@ -93,7 +68,6 @@ object ClanService {
             chatters = chatters.values.toList(),
         )
 
-        /** Re-reads each chatter's rank from [clan]; a member promoted or a guest who joined shows it. */
         fun refreshRanks(clan: Clan) {
             for ((username, chatter) in chatters) {
                 val rank = ClanRules.rankOf(clan, username)
@@ -102,12 +76,7 @@ object ClanService {
         }
     }
 
-    // ─── Public API ──────────────────────────────────────────────────
 
-    /**
-     * Judges and applies [action] for [username]. Never throws: a failure is a denied result so
-     * every command yields exactly one [ClanCommandResult], echoing [requestId].
-     */
     suspend fun handle(username: String, action: ClanAction, requestId: Int = 0): ClanCommandResult {
         val actor = username.formatPlayerNameForProtocol()
         val decision = try {
@@ -125,32 +94,21 @@ object ClanService {
         )
     }
 
-    /** The answer to a `ClanFetch`: the clan as a [ClanSnapshot], or [ClanDeleted]. */
     suspend fun fetch(clanName: String): SocialGatewayWireMessage = mutex.withLock {
         clan(clanName)?.let { ClanSnapshot(it) } ?: ClanDeleted(clanName)
     }
 
-    /** The clan [username] is a member of, or null. */
     suspend fun clanOf(username: String): Clan? = mutex.withLock {
         val account = Accounts.find(username.formatPlayerNameForProtocol()) ?: return@withLock null
         memberClan(account)
     }
 
-    /** The current chatter list of [clanName]'s channel, or null when nobody is in it. */
     suspend fun channelState(clanName: String): ClanChannelState? = mutex.withLock {
         val clan = clan(clanName) ?: return@withLock null
         channelsByClan[clanName]?.state(clan)
     }
 
-    // ─── Presence hooks (called by SocialGateway) ────────────────────
 
-    /**
-     * A player appeared, on a world or on the lobby screen: their world gets [ClanMembership]
-     * and the snapshots of the clans they are in, and they re-join the channel they were in
-     * (`connectedToClan`) and the guest channel they were listening to (`guestedClanChat`). A
-     * world reconnect runs this for every listed player, so the channel state is re-sent to that
-     * world even when the chatter list did not move.
-     */
     internal suspend fun onLogin(account: Account) = mutex.withLock {
         val username = account.username
         val worldId = SocialGateway.worldIdOf(username) ?: return@withLock
@@ -182,7 +140,6 @@ object ClanService {
         resyncChannel(guestClan, worldId, username)
     }
 
-    /** A player is gone from everywhere: out of the channels, flags kept so the next login rejoins. */
     internal suspend fun onLogout(username: String) = mutex.withLock {
         for (channel in channelsByClan.values.toList()) {
             if (channel.chatters.remove(username) == null) continue
@@ -191,7 +148,6 @@ object ClanService {
         }
     }
 
-    /** A world socket dropped: every chatter it held leaves every channel. */
     internal suspend fun onWorldDetached(worldId: Int) = mutex.withLock {
         for (channel in channelsByClan.values.toList()) {
             if (!channel.chatters.values.removeAll { it.worldId == worldId }) continue
@@ -200,7 +156,6 @@ object ClanService {
         }
     }
 
-    // ─── Dispatch ────────────────────────────────────────────────────
 
     private suspend fun apply(actor: String, action: ClanAction): ClanDecision {
         val account = Accounts.find(actor) ?: return ClanDecision.Denied("Unknown player.")
@@ -226,7 +181,6 @@ object ClanService {
         }
     }
 
-    // ─── Names and creation ──────────────────────────────────────────
 
     private suspend fun checkName(account: Account, name: String): ClanDecision {
         val decision = ClanRules.checkName(account.social.clanName, name)
@@ -239,8 +193,6 @@ object ClanService {
         val decision = checkName(account, name)
         if (!decision.allowed) return decision
         val clan = Clan(name = canonicalName(name), leaderUsername = account.username)
-        // A fresh clan starts from the client's defaults (motif, recruiting, home world, guest CC)
-        // rather than an empty settings block the interface would render as all zeroes.
         for (setting in ClanSetting.entries) {
             if (setting.id == NO_CLIENT_ID) continue
             val default = setting.defaultValue
@@ -256,7 +208,6 @@ object ClanService {
         return ClanDecision.Allowed
     }
 
-    // ─── Membership ──────────────────────────────────────────────────
 
     private suspend fun leave(account: Account): ClanDecision {
         val clan = memberClan(account) ?: return ClanDecision.Denied("You aren't in a clan.")
@@ -282,7 +233,6 @@ object ClanService {
         if (!decision.allowed) return decision
         val username = account.username
         if (account.social.guestedClanChat == clan.name) {
-            // A guest who joins stops being a guest; the chatter is re-added as a member below.
             channelsByClan[clan.name]?.chatters?.remove(username)
             account.social.guestedClanChat = null
         }
@@ -314,7 +264,6 @@ object ClanService {
         val rank = action.rank
         if (rank != null) {
             if (action.target == account.username && account.username == clan.leaderUsername) {
-                // The owner stepping down: the deputy owner the rule required takes over.
                 val successor = ClanRules.successor(clan) ?: return ClanDecision.Denied("There is nobody to hand the clan to.")
                 clan.leaderUsername = successor
                 clan.members[successor]?.rank = ClanRank.OWNER
@@ -354,7 +303,6 @@ object ClanService {
         return ClanDecision.Allowed
     }
 
-    // ─── Settings ────────────────────────────────────────────────────
 
     private suspend fun updateSettings(account: Account, settings: Map<String, Any>): ClanDecision {
         val clan = memberClan(account) ?: return ClanDecision.Denied(NOT_IN_CLAN)
@@ -392,7 +340,6 @@ object ClanService {
         return ClanDecision.Allowed
     }
 
-    // ─── Channels ────────────────────────────────────────────────────
 
     private suspend fun joinChannel(account: Account): ClanDecision {
         val clan = memberClan(account)
@@ -476,7 +423,6 @@ object ClanService {
         return ClanDecision.Allowed
     }
 
-    // ─── Chat ────────────────────────────────────────────────────────
 
     private suspend fun chat(account: Account, guest: Boolean, message: ChatMessage): ClanDecision {
         val clan = speakingClan(account, guest) ?: return ClanDecision.Denied(NOT_IN_CHANNEL)
@@ -502,14 +448,9 @@ object ClanService {
         return ClanDecision.Allowed
     }
 
-    /** The clan whose channel the actor speaks in: their own, or the one they listen to as a guest. */
     private suspend fun speakingClan(account: Account, guest: Boolean): Clan? =
         if (guest) account.social.guestedClanChat?.let { clan(it) } else memberClan(account)
 
-    /**
-     * One line to everyone in [state]: the wire message once per world holding a chatter, and
-     * the client packet straight to each lobby-screen chatter, `guest` as that recipient sees it.
-     */
     private suspend fun route(state: ClanChannelState, wire: SocialGatewayWireMessage, lobbyPacket: (ClanChatter) -> ServerProt) {
         val worlds = LinkedHashSet<Int>()
         for (chatter in state.chatters) {
@@ -522,13 +463,7 @@ object ClanService {
         for (worldId in worlds) SocialGateway.sendToWorld(worldId, wire)
     }
 
-    // ─── Clan cache and persistence ──────────────────────────────────
 
-    /** The cached clan, read from the store on first use. */
-    /**
-     * Clan names are stored in display form ("Darkan Devs"); whatever a player typed - a guest
-     * channel name, a name check - is resolved through the same canonical form.
-     */
     private fun canonicalName(name: String): String =
         name.trim().split(' ').filter { it.isNotEmpty() }.joinToString(" ").formatPlayerNameForDisplay()
 
@@ -537,10 +472,6 @@ object ClanService {
         return clansByName[key] ?: Clans.find(key)?.also { clansByName[it.name] = it }
     }
 
-    /**
-     * The clan [account] is a member of. An account naming a clan that no longer lists it (a
-     * deleted clan, a kick that never reached the account) is healed on the spot.
-     */
     private suspend fun memberClan(account: Account): Clan? {
         val name = account.social.clanName ?: return null
         val clan = clan(name)
@@ -551,10 +482,6 @@ object ClanService {
         return null
     }
 
-    /**
-     * The end of every clan mutation: write the clan back, tell every world, refresh the
-     * lobby-screen members' settings, and publish the channel if a rank or list changed with it.
-     */
     private suspend fun commit(clan: Clan) {
         clansByName[clan.name] = clan
         Clans.save(clan)
@@ -564,7 +491,6 @@ object ClanService {
         publishChannelIfChanged(clan)
     }
 
-    /** The last member left: everyone out of the channel, the document gone, every world told. */
     private suspend fun deleteClan(clan: Clan, last: Account) {
         val channel = channelsByClan[clan.name]
         if (channel != null) {
@@ -590,7 +516,6 @@ object ClanService {
         SocialGateway.broadcastToWorlds(ClanDeleted(clan.name))
     }
 
-    /** Takes [account] out of [clan]'s member list, its channel and their own clan fields. */
     private suspend fun dropMember(clan: Clan, account: Account) {
         clan.members.remove(account.username)
         leaveMemberChannel(clan, account.username)
@@ -602,7 +527,6 @@ object ClanService {
         saveMembership(account)
     }
 
-    /** Throws a guest out of [clan]'s channel and forgets it as their guest channel. */
     private suspend fun ejectGuest(clan: Clan, account: Account) {
         leaveGuestChannel(clan.name, account.username)
         if (account.social.guestedClanChat == clan.name) {
@@ -611,7 +535,6 @@ object ClanService {
         }
     }
 
-    // ─── Membership pushes ───────────────────────────────────────────
 
     private fun membershipOf(account: Account) = ClanMembership(
         username = account.username,
@@ -620,7 +543,6 @@ object ClanService {
         guestChannel = account.social.guestedClanChat,
     )
 
-    /** Saves [account]'s clan fields and pushes them to the world the player is on, if any. */
     private suspend fun saveMembership(account: Account) {
         Accounts.save(account)
         val worldId = SocialGateway.worldIdOf(account.username) ?: return
@@ -628,7 +550,6 @@ object ClanService {
         SocialGateway.sendToWorld(worldId, membershipOf(account))
     }
 
-    // ─── Channel mechanics ───────────────────────────────────────────
 
     private fun isTempBanned(clanName: String, username: String): Boolean {
         val bans = tempBansByClan[clanName] ?: return false
@@ -638,7 +559,6 @@ object ClanService {
         return false
     }
 
-    /** Puts [account] in [clan]'s channel as a member; a lobby-screen member also gets the clan vars. */
     private suspend fun joinMemberChannel(clan: Clan, account: Account, worldId: Int) {
         val username = account.username
         val channel = channelsByClan.getOrPut(clan.name) { Channel(clan.name) }
@@ -685,11 +605,6 @@ object ClanService {
         }
     }
 
-    /**
-     * Broadcasts [clan]'s channel if its chatters or ranks differ from what was last published,
-     * and hands every lobby-screen chatter their `ClanChannelFull`. Answers whether it did. An
-     * emptied channel is published once more, empty, and then dropped.
-     */
     private suspend fun publishChannelIfChanged(clan: Clan): Boolean {
         val channel = channelsByClan[clan.name] ?: return false
         channel.refreshRanks(clan)
@@ -712,10 +627,6 @@ object ClanService {
         return true
     }
 
-    /**
-     * After a join: publish the channel if it moved, else re-send it to where the joiner is - a
-     * reconnected world or a fresh lobby session has no copy yet even when the list is the same.
-     */
     private suspend fun resyncChannel(clan: Clan, worldId: Int, username: String) {
         if (publishChannelIfChanged(clan)) return
         val channel = channelsByClan[clan.name] ?: return
@@ -728,9 +639,7 @@ object ClanService {
         }
     }
 
-    // ─── Lobby-screen packets ────────────────────────────────────────
 
-    /** Every lobby-screen member gets the clan's settings; every lobby-screen guest the guest form. */
     private suspend fun refreshLobbyScreen(clan: Clan) {
         val members = ClanPackets.settingsFull(clan, main = true, updateCount = updateCount(clan), displayName = displayNames(clan))
         for (username in clan.members.keys) SocialGateway.sendToLobbyPlayer(username, members)
@@ -749,7 +658,6 @@ object ClanService {
 
     private fun updateCount(clan: Clan): Int = settingsUpdates[clan.name] ?: 0
 
-    /** `VarclanEnable` and one `VarclanSet*` per var, the kind resolved by [varKind]. */
     private fun varPackets(clan: Clan): List<ServerProt> {
         val packets = ArrayList<ServerProt>(clan.vars.size + 1)
         packets += VarclanEnable()
@@ -760,7 +668,6 @@ object ClanService {
         return packets
     }
 
-    /** Display names for everyone the settings packet lists: online players first, then the store. */
     private suspend fun displayNames(clan: Clan): (String) -> String {
         val usernames = clan.members.keys + clan.bannedUsers
         val names = HashMap<String, String>()

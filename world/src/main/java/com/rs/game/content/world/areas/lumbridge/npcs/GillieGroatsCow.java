@@ -10,9 +10,7 @@ import com.rs.plugin.handlers.ObjectClickHandler;
 
 @PluginEventHandler
 public class GillieGroatsCow extends Conversation {
-    //Identify Cow by ID
     private static final int objId = 47721;
-    //Identify Gillie by ID
     private static final int npcId = 3807;
 
     public static ObjectClickHandler handleOptions = new ObjectClickHandler(new Object[] {objId}, e -> {
@@ -23,7 +21,6 @@ public class GillieGroatsCow extends Conversation {
 
     public GillieGroatsCow(Player player) {
         super(player);
-        //Identify NPC by ID
         if(player.getQuestManager().getStage(Quest.COOKS_ASSISTANT) != 1) {
             addNPC(npcId, HeadE.ANGRY, "Hands off, That milk is for the Duke!");
             create();
@@ -32,6 +29,4 @@ public class GillieGroatsCow extends Conversation {
             player.getInventory().addItem(new Item(1927, 1));
     }
 }
-
-//TODO handle steal cowbell
 

@@ -20,7 +20,6 @@ fun mapBeaconConstruction() {
         if (e.player.getBool("AllFiredUp.GodWars")) e.player.vars.setVarBit(Varbit.firedup_access12, 1, true)
         if (e.player.getBool("AllFiredUp.WildernessTemple")) e.player.vars.setVarBit(Varbit.firedup_access13, 1, true)
     }
-    //Repair Burthorpe
     onObjectClick(34893, checkDistance = false) { e ->
         if (e.player.getBool("AllFiredUp.Burthorpe")) e.player.vars.saveVarBit(Varbit.firedup_access10, 1)
         if (e.option.equals("repair", ignoreCase = true)) {
@@ -66,7 +65,6 @@ fun mapBeaconConstruction() {
         }
     }
 
-    //Repair DeathPlateau
     onObjectClick(34992) { e ->
         if (e.option.equals("repair", ignoreCase = true)) {
             if (e.player.getBool("AllFiredUp.DeathPlateau")) e.player.vars.saveVarBit(Varbit.firedup_access10, 1)
@@ -139,7 +137,6 @@ fun mapBeaconConstruction() {
             )
         }
     }
-    //Repair GodWars
     onObjectClick(38495) { e ->
         val player = e.player
         if (e.option.equals("repair", ignoreCase = true)) {
@@ -164,7 +161,6 @@ fun mapBeaconConstruction() {
             )
         }
     }
-    //Repair Wilderness Temple
     onObjectClick(38499, 38497, checkDistance = false) { e ->
         val player = e.player
         if (e.option.equals("repair", ignoreCase = true)) {

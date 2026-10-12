@@ -6,17 +6,6 @@ import org.darkan.core.net.prot.dto.WorldListSnapshot
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 
-/**
- * [localWorldId], when above 0, pins a "localhost" entry under that number so developers can reach a
- * world on their own machine through this lobby. The pinned entry is permanent: a world registering
- * under the same number cannot replace it, and a disconnect cannot remove it.
- *
- * A world that disconnects stays listed as offline (the client shows -1 players) and is only
- * dropped by [expireOffline] once it has been gone for [offlineTtl].
- *
- * [maxWorlds] is the baseline upper world number advertised to the client. A snapshot raises that
- * bound when necessary so every registered world can be indexed by the client's descriptor table.
- */
 class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.localWorldId, private val offlineTtl: Duration = OFFLINE_TTL) {
     private val worlds = sortedMapOf<Int, World>()
     private var _revision = 10
@@ -76,14 +65,6 @@ class WorldList(val maxWorlds: Int, private val localWorldId: Int = EnvVars.loca
         }
     }
 
-    /**
-     * Takes an immutable, wire-shaped copy of the list for the world list packet.
-     *
-     * Snapshotting under the lock keeps the entries, [maxWorlds] and [revision] mutually
-     * consistent: the packet is encoded on the writer coroutine well after it was queued, and a
-     * world registering in between would otherwise leave the payload describing a list that never
-     * existed.
-     */
     fun snapshot(): WorldListSnapshot = synchronized(worlds) {
         val advertisedMaxWorld = if (worlds.isEmpty()) maxWorlds else maxOf(maxWorlds, worlds.lastKey())
         WorldListSnapshot(

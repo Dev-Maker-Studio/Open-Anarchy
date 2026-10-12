@@ -11,26 +11,21 @@ import com.rs.plugin.handlers.NPCClickHandler;
 @PluginEventHandler
 public class LumbridgeSage extends Conversation {
 
-	// Identify NPC by ID
 	private static final int npcId = 2244;
 	public static NPCClickHandler LumbridgeSage = new NPCClickHandler(new Object[] { 2244 }, e -> {
 		switch (e.getOption()) {
-		// Start Conversation
 		case "Talk-to" -> e.getPlayer().startConversation(new LumbridgeSage(e.getPlayer()));
 		}
 	});
 
 	public LumbridgeSage(Player player) {
 		super(player);
-		// Identify NPC by ID
 		addOptions(new Options() {
 			@Override
 			public void create() {
-				// Give player options
 				addOptions(new Options() {
 					@Override
 					public void create() {
-						// Simple Reply
 						addNPC(npcId, HeadE.CALM_TALK, "Greetings, adventurer. How may I help you?");
 						option("Who are you?", new Dialogue()
 								.addNPC(npcId, HeadE.CALM_TALK, "I am Phileas, the Lumbridge Sage. ")
@@ -38,7 +33,6 @@ public class LumbridgeSage extends Conversation {
 								.addNPC(npcId, HeadE.CALM_TALK, "My renown seems to have diminished somewhat in recent years, though.")
 								.addNPC(npcId, HeadE.CALM_TALK, "Can I help you with anything?"));
 
-						// Conversation
 						option("Tell me about the town of Lumbridge",
 								new Dialogue().addNPC(npcId, HeadE.CALM_TALK, "Lumbridge is one of the older towns in the human-controlled kingdoms. IT was founded over two hundred years ago towards the end of the Fourth Age. It's called Lumbridge because of this bridge built over the River Lum.")
 								.addNPC(npcId, HeadE.CALM_TALK, "The town is governed by Duke Horacio, who is a good friend of our monarch, King Roald of Misthalin.")

@@ -5,19 +5,8 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 
-/**
- * [RawArchiveCodec] with the extension the payload actually deserves: `<archive><extension>`.
- *
- * A `.dat` says nothing. An index whose archives hold one file of a format that is not going to be
- * decoded is still better off saying what that format is - `1234.jagvorbis` is a Jagex-framed
- * vorbis stream and `56.jagmidi` is Jagex's compact MIDI encoding - so that anyone opening the tree
- * knows what they are looking at and no tool mistakes it for something it can read.
- *
- * The bytes are the payload verbatim, so the codec is exact by construction.
- */
 class BinaryArchiveCodec(
     override val id: String,
-    /** The extension, dot included. */
     val extension: String
 ) : SourceCodec {
 

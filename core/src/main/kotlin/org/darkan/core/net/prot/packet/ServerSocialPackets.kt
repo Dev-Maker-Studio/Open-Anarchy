@@ -1,6 +1,3 @@
-/**
- * Friends list, ignore list, friends chat and clan channel packets.
- */
 package org.darkan.core.net.prot.packet
 
 import kotlinx.serialization.Serializable
@@ -149,7 +146,6 @@ data class ClanSettingsDelta(val main: Boolean, val data: ByteArray) : ServerPro
 
 data class AddIgnore(val username: String, val displayName: String, val temporary: Boolean = false, val editDisplayName: Boolean = false) : ServerProt
 
-// Friend and clan chat protocols
 @Serializable data class FriendsChatChannel(
     val clear: Boolean = false,
     val ownerDisplayName: String? = null,

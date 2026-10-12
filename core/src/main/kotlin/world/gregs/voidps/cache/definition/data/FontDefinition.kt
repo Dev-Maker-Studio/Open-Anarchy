@@ -3,17 +3,6 @@ package world.gregs.voidps.cache.definition.data
 import world.gregs.voidps.cache.Definition
 import world.gregs.voidps.cache.definition.Extra
 
-/**
- * One font's metrics from index 13: the advance of each of the 256 cp1252 glyphs, the line
- * spacing and padding, and - in the variable width form - the per glyph coverage profiles the
- * client turns into a kerning table.
- *
- * [version] onwards are what the file carries and the client throws away, so that
- * [world.gregs.voidps.cache.definition.encoder.FontEncoder] can write it back byte for byte; see
- * `docs/cache-source.md`, "fontmetrics". [kerningAdjustments] is the only field that is *derived*
- * rather than read - the client computes it from the coverage profiles - so it is the one field
- * the source tree does not write.
- */
 data class FontDefinition(
     override var id: Int = -1,
     var glyphWidths: ByteArray = byteArrayOf(),
@@ -21,26 +10,12 @@ data class FontDefinition(
     var verticalSpacing: Int = 0,
     var topPadding: Int = 0,
     var bottomPadding: Int = 0,
-    /** The format byte, which the client refuses to read anything but 0 of. */
     var version: Int = 0,
-    /**
-     * The variable width form: the file carries a coverage profile per glyph and the client
-     * derives [kerningAdjustments] and [verticalSpacing] from them. None of the 727 cache's 27
-     * fonts uses it - every one is the fixed width form, 263 bytes long.
-     */
     var variableWidth: Boolean = false,
-    /** How many coverage bytes each glyph has, and the width the client kerns against. */
     var glyphCoverageWidths: IntArray? = null,
-    /** Each glyph's coverage height. */
     var glyphCoverageHeights: IntArray? = null,
-    /** Per glyph, [glyphCoverageWidths] absolute offsets, delta coded in the file; the client's `horizontalOffsets`. */
     var horizontalOffsets: Array<IntArray>? = null,
-    /** Per glyph, the second offset table, the same shape as [horizontalOffsets]; the client's `verticalOffsets`. */
     var verticalOffsets: Array<IntArray>? = null,
-    /**
-     * The two bytes between the vertical spacing and the padding that the client reads and
-     * discards. Every one of the 727 fonts carries a nonzero pair, so they are not padding.
-     */
     var unusedByte1: Int = 0,
     var unusedByte2: Int = 0,
     override var stringId: String = "",

@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.world.areas.mortton;
 
 import com.rs.engine.dialogue.Conversation;
@@ -33,7 +17,6 @@ public class Mortton {
 			return;
 		}
 		switch(e.getItem().getId()) {
-			// Serum 207
 			case 3408:
 			case 3410:
 			case 3412:
@@ -57,7 +40,6 @@ public class Mortton {
 			e.getPlayer().sendMessage("The flask shatters as you use the last dose.");
 			break;
 
-			// Serum 208
 			case 3416:
 			case 3417:
 			case 3418:

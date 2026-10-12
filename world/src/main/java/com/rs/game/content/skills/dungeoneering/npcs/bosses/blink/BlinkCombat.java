@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.bosses.blink;
 
 import com.rs.game.World;
@@ -53,11 +37,9 @@ public class BlinkCombat extends CombatScript {
 		if (Utils.random(10) == 0 || boss.isSpecialRequired()) {
 			boss.setSpecialRequired(false);
 			boss.setNextForceTalk(new ForceTalk("H...Here it comes..."));
-			// boss.playSoundEffect(2989);
 			WorldTasks.delay(5, () -> {
 				boss.setNextAnimation(new Animation(14956));
 				boss.setNextForceTalk(new ForceTalk("Kapow!!"));
-				// boss.playSoundEffect(3002);
 				for (Entity t : boss.getPossibleTargets()) {
 					if (t instanceof Player player)
 						player.sendMessage("You are hit by a powerful magical blast.");
@@ -82,7 +64,7 @@ public class BlinkCombat extends CombatScript {
 				boss.setNextAnimation(new Animation(14949));
 				boss.resetCombat();
 				boss.setNextFaceEntity(null);
-				boss.setNextFaceTile(beginningTile);// Faces the direction it throws into
+				boss.setNextFaceTile(beginningTile);
 				World.sendProjectile(boss, beginningTile, 2853, new Pair<>(18, 18), 50, 5, 0);
 				WorldTasks.scheduleLooping(new Task() {
 
@@ -101,7 +83,6 @@ public class BlinkCombat extends CombatScript {
 							}
 						} else if (cycles == 2) {
 							for (Tile tile : knifeTargets) {
-								// outdated method projectile
 								int delay = 3;
 								for (Entity t : boss.getPossibleTargets()) {
 									if (!t.matches(tile))
@@ -122,7 +103,6 @@ public class BlinkCombat extends CombatScript {
 		} else {
 			if (Utils.random(7) == 0)
 				boss.setNextForceTalk(new ForceTalk("Magicinyaface!"));
-			// boss.playSoundEffect(3022); //MAGIC IN YA FACE
 			boss.setNextAnimation(new Animation(14956));
 			boss.setNextSpotAnim(new SpotAnim(2854));
 			target.setNextSpotAnim(new SpotAnim(2854, 5, 0));

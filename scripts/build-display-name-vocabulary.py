@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""Builds lobby/src/main/resources/display-name-vocabulary.txt.
-
-The base list is LDNOOBW (List of Dirty, Naughty, Obscene and Otherwise Bad Words), which is
-broad on obscenity but carries plenty of words that are merely crude, and nothing at all on hate
-speech - so DROP removes what does not belong in a name filter and SUPPLEMENT adds what it misses.
-
-Whether a term may be matched inside a word is decided against a dictionary rather than by eye: a
-term that occurs inside any innocent dictionary word ("ass" in "assassin", "coon" in "raccoon")
-can only ever be matched as a whole word.
-
-    ./scripts/build-display-name-vocabulary.py [--ldnoobw <file>] [--dict <file>]
-"""
 
 import argparse
 import re
@@ -64,7 +52,6 @@ SUPPLEMENT = {
     "yiff", "pedo", "paedo", "heil", "arse", "arsed",
 }
 
-# Terms whose innocent container the common-word list does not carry ("swanky" for "wank").
 FORCE_WHOLE_WORD = {"wank"}
 
 RESERVED = {
@@ -72,8 +59,6 @@ RESERVED = {
     "owner", "staff", "system", "support", "console",
 }
 
-# Words no dictionary knows that nonetheless contain an in-word term, and words that spell one
-# when run together with a neighbour ("Niger Red", "Goats Eating").
 EXTRA_ALLOW = {
     "niger", "goats", "since", "vince",
     "scunthorpe", "penistone", "shiitake", "shitake", "shiitakes",

@@ -19,7 +19,6 @@ import com.rs.utils.Ticks
 private const val REWARD_INTERFACE = 1083
 
 object LividFarmRewards {
-    //Cost is stored as /10
     enum class LividSpell(val spellComponent: Int, val learnComponent: Int, val requiredTier: Int, val cost: Int) {
         TELEPORT_SOUTH_FALADOR(387, 263, 0, 6984),
         REPAIR_RUNE_POUCH(74, 272, 1, 13976),
@@ -38,7 +37,6 @@ object LividFarmRewards {
         }
     }
 
-    //Cost is stored as /10
     enum class LividWish( val wishComponent: Int, val cost: Int) {
         VIAL_MY_HERBS( 353, 550),
         TURN_LUNAR_LUMBER_INTO_RUNES(362, 550),
@@ -278,9 +276,6 @@ fun vialMyHerbs(player: Player) {
 }
 
 fun iWantANewPatch(player: Player) {
-//    player.vars.setVarBit(2603, 1)
-//    player.vars.syncVarsToClient()
     player.sendMessage("Not yet implemented. Refunding points")
     player.producePoints += LividFarmRewards.LividWish.ID_LIKE_A_NEW_PATCH.cost
-    //TODO: Need to figure out farming implementation, not working with this patch correctly.
 }

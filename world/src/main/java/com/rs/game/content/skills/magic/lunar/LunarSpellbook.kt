@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.magic.lunar
 
 import org.darkan.core.cache.ItemDefinitions
@@ -61,11 +45,6 @@ import org.darkan.core.gameval.gen.Interface
 
 @ServerStartupEvent
 fun registerLunarInventorySpells() {
-//    onSpellCast() { e ->
-//        //if(!e.player.hasEffect(Effect.LUNARS_SPELLBOOK_SWAP))
-//            return@onSpellCast
-//        //Effect.LUNARS_SPELLBOOK_SWAP.expire(e.player)
-//    }
     onInterfaceOnPlayer(
         checkDistance = true,
         fromInterfaceIds = intArrayOf(430),
@@ -73,7 +52,7 @@ fun registerLunarInventorySpells() {
     ) { e ->
         when (e.componentId) {
             23 -> LunarSpellbook.handleCureOther(e.player, e.target)
-            27 -> e.player.sendMessage("Spell not yet implemented.") //LunarSpellbook.handleEnergyTransfer(e.player, e.target)
+            27 -> e.player.sendMessage("Spell not yet implemented.")
             28 -> e.player.sendMessage("This spell can only be cast on monsters.")
             31 -> LunarSpellbook.handleStatSpy(e.player, e.target)
             42 -> LunarSpellbook.handleVengeanceOther(e.player, e.target)
@@ -112,7 +91,7 @@ fun registerLunarInventorySpells() {
         val item = e.player.inventory.getItem(e.toSlotId) ?: return@onInterfaceOnInterface
         when (e.fromComponentId) {
             33 -> LunarSpellbook.handlePlankMake(e.player, item)
-            34 -> e.player.sendMessage("Spell not yet implemented.") //Borrowed Power
+            34 -> e.player.sendMessage("Spell not yet implemented.")
             35 -> LunarSpellbook.handleTuneBanite(e.player, item)
             50 -> LunarSpellbook.handleRestorePotionShare(e.player, item)
             72 -> {
@@ -143,12 +122,12 @@ fun registerLunarInventorySpells() {
     onButtonClick(interfaceIds = intArrayOf(430)) { e ->
         when (e.componentId) {
             22 -> sendLunarTeleportSpell(e.player, LunarSpell.BARBARIAN_TELEPORT.level, 76.0, Tile.of(2542, 3574, 0), LunarSpell.BARBARIAN_TELEPORT.runes);
-            26 -> e.player.sendMessage("Not yet implemented.");  //LunarSpellbook.handleNPCContact(player);
+            26 -> e.player.sendMessage("Not yet implemented.");
             29 -> LunarSpellbook.handleHumidify(e.player);
           25 -> LunarSpellbook.handleCureGroup(e.player);
             30 -> LunarSpellbook.handleHunterKit(e.player);
             32 -> LunarSpellbook.handleDream(e.player);
-            34 -> e.player.sendMessage("Spell not yet implemented.") //LunarSpellbook.handleSpellbookSwap(player);
+            34 -> e.player.sendMessage("Spell not yet implemented.")
             36 -> LunarSpellbook.handleMagicImbue(e.player);
           37 -> LunarSpellbook.handleVengeance(e.player);
             38 -> LunarSpellbook.handleBakePie(e.player)
@@ -213,14 +192,12 @@ fun registerLunarInventorySpells() {
                 }
                 sendLunarTeleportGroupSpell(e.player, LunarSpell.TELE_GROUP_TROLLHEIM.level, 102.0, Tile.of(2814, 3677, 0), LunarSpell.TELE_GROUP_TROLLHEIM.runes);
             }
-            // Filter and Sort Buttons
             2 -> e.player.combatDefinitions.switchDefensiveCasting()
             5 -> e.player.combatDefinitions.switchShowCombatSpells()
             7 -> e.player.combatDefinitions.switchShowTeleportSkillSpells()
             9 -> e.player.combatDefinitions.switchShowMiscSpells()
             11 -> e.player.combatDefinitions.switchShowSkillSpells()
             in 13..15 -> e.player.combatDefinitions.setSortSpellBook(e.componentId - 13)
-            //Home Teleport
             39 -> {
                 e.player.stopAll()
                 e.player.interfaceManager.sendInterface(1092)
@@ -308,7 +285,6 @@ object LunarSpellbook {
                     LunarSpell.TUNE_BANE_ORE.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
                     player.inventory.deleteItem(21778, 1)
                     player.inventory.addItem(targetOre, 1)
-                    //Magic.triggerSpellCastEvent(player, LunarSpell.TUNE_BANE_ORE.name)
                 }
             }
         }
@@ -339,7 +315,6 @@ object LunarSpellbook {
         LunarSpell.PLANK_MAKE.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
         player.addSpellDelay(2)
         player.soundEffect(3617, true)
-//        Magic.triggerSpellCastEvent(player, LunarSpell.PLANK_MAKE.name)
     }
 
     @JvmStatic
@@ -357,7 +332,6 @@ object LunarSpellbook {
         player.soundEffect(2907, true)
         LunarSpell.VENGEANCE.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
         player.tempAttribs.setL("LAST_VENGEANCE_CAST", System.currentTimeMillis())
-//        Magic.triggerSpellCastEvent(player, LunarSpell.VENGEANCE.name)
     }
 
     @JvmStatic
@@ -375,7 +349,6 @@ object LunarSpellbook {
         player.soundEffect(2907, true)
         LunarSpell.VENGEANCE.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
         player.tempAttribs.setL("LAST_VENGEANCE_CAST", System.currentTimeMillis())
-//        Magic.triggerSpellCastEvent(player, LunarSpell.VENGEANCE.name)
     }
 
     @JvmStatic
@@ -429,7 +402,6 @@ object LunarSpellbook {
                         player.inventory.deleteItem(item.id, 1)
                         player.inventory.addItem(strung[strungId], 1)
                         player.soundEffect(2903, true)
-//                        Magic.triggerSpellCastEvent(player, LunarSpell.STRING_JEWELLERY.name)
                     }
                 }
             }
@@ -466,7 +438,6 @@ object LunarSpellbook {
         World.sendSpotAnim(obj.tile, 724)
         spot.compostLevel = 2
         player.putPatch(spot)
-//        Magic.triggerSpellCastEvent(player, LunarSpell.FERTILE_SOIL.name)
     }
 
     @JvmStatic
@@ -496,7 +467,6 @@ object LunarSpellbook {
         spot.diseased = false
         spot.updateVars(player)
         player.lock(3)
-//        Magic.triggerSpellCastEvent(player, LunarSpell.CURE_PLANT.name)
     }
 
     @JvmStatic
@@ -520,7 +490,6 @@ object LunarSpellbook {
         val toMake = minOf(available, 5)
         fun convert(outputId: Int) {
             if (!Magic.checkMagicAndRunes(player, LunarSpell.MAKE_LEATHER.level, true, LunarSpell.MAKE_LEATHER.runes)) return
-//            Magic.triggerSpellCastEvent(player, LunarSpell.MAKE_LEATHER.name)
             player.anim(4413)
             player.spotAnim(SpotAnim(745, 0, 0))
             LunarSpell.MAKE_LEATHER.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
@@ -610,14 +579,12 @@ object LunarSpellbook {
             return
         }
         val targets = getNearPlayers(player, 3, Int.MAX_VALUE)
-//            .filter { it.assistStatus == 1 || it.isIronMan } //TODO Unable to toggle aid on in interface
             .filter { it.isIronMan }
             .take(doses)
         if (targets.isEmpty()) {
             player.sendMessage("No one here can accept aid.")
             return
         }
-//        Magic.triggerSpellCastEvent(player, spell.name)
         player.anim(4411)
         player.spotAnim(SpotAnim(728, 0, 100))
         if(isRestorePotion(potion))
@@ -681,7 +648,6 @@ object LunarSpellbook {
             repeat(count) {
                 if (!player.canCastSpell()) return
                 if (!Magic.checkMagicAndRunes(player, LunarSpell.BAKE_PIE.level, true, LunarSpell.BAKE_PIE.runes)) return
-//                Magic.triggerSpellCastEvent(player, LunarSpell.BAKE_PIE.name)
                 player.inventory.deleteItem(cook.rawItem.id, 1)
                 val bakedId = cook.productItem.first()
                 player.inventory.addItem(bakedId, 1)
@@ -698,7 +664,6 @@ object LunarSpellbook {
         if (!player.canCastSpell()) return
         if (player.poison.isPoisoned) {
             if (Magic.checkMagicAndRunes(player, LunarSpell.CURE_ME.level, true, LunarSpell.CURE_ME.runes)) {
-//                Magic.triggerSpellCastEvent(player, LunarSpell.CURE_ME.name)
                 player.spotAnim(SpotAnim(729, 0, 100))
                 player.anim(4409)
                 LunarSpell.CURE_ME.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
@@ -713,14 +678,14 @@ object LunarSpellbook {
         if (!player.canCastSpell()) return
         if (!Magic.checkMagicAndRunes(player, LunarSpell.HUNTER_KIT.level, true, LunarSpell.HUNTER_KIT.runes)) return
         val kitItems = listOf(
-            10150, // Noose wand
-            10010, // Butterfly net
-            10006, // Bird snare
-            10031, // Rabbit snare
-            10029, // Teasing stick
-            594,   // Unlit torch (item id 594)
-            10008, // Box trap
-            11260  // Impling jar
+            10150,
+            10010,
+            10006,
+            10031,
+            10029,
+            594,
+            10008,
+            11260
         )
         if (kitItems.all { player.inventory.containsItem(it, 1) }) {
             player.sendMessage("Why do you want to create a kit? You already have all the Hunter equipment it contains.")
@@ -729,7 +694,6 @@ object LunarSpellbook {
         player.spotAnim(SpotAnim(1074, 0, 100))
         player.anim(6303)
         LunarSpell.HUNTER_KIT.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
-//        Magic.triggerSpellCastEvent(player, LunarSpell.HUNTER_KIT.name)
         for (id in kitItems) {
             if (!player.inventory.containsItem(id, 1) && player.inventory.hasFreeSlots()) {
                 player.inventory.addItem(id, 1)
@@ -744,7 +708,6 @@ object LunarSpellbook {
     fun handleCureGroup(player: Player) {
         if (!player.canCastSpell()) return
         if (Magic.checkMagicAndRunes(player, LunarSpell.CURE_GROUP.level, true, LunarSpell.CURE_GROUP.runes)) {
-//            Magic.triggerSpellCastEvent(player, LunarSpell.CURE_GROUP.name)
             player.actionManager.addActionDelay(4)
             player.spotAnim(SpotAnim(729, 0, 100))
             player.anim(4409)
@@ -763,7 +726,6 @@ object LunarSpellbook {
     fun handleCureOther(player: Player, target: Player) {
         if (!player.canCastSpell()) return
         if (Magic.checkMagicAndRunes(player, LunarSpell.CURE_OTHER.level, true, LunarSpell.CURE_OTHER.runes)) {
-//            Magic.triggerSpellCastEvent(player, LunarSpell.CURE_OTHER.name)
             player.actionManager.addActionDelay(4)
             player.spotAnim(SpotAnim(729, 0, 100))
             player.anim(4409)
@@ -781,7 +743,7 @@ object LunarSpellbook {
 
     @JvmStatic
     fun handleSuperGlassMake(player: Player) {
-        val secondary = (if (player.inventory.containsItem(10978)) 10978 else if (player.inventory.containsItem(1781)) 1781 else 401) //Swamp weed
+        val secondary = (if (player.inventory.containsItem(10978)) 10978 else if (player.inventory.containsItem(1781)) 1781 else 401)
         var number = min(player.inventory.getNumberOf(1783).toDouble(), player.inventory.getNumberOf(secondary).toDouble()).toInt()
         if (number <= 0) {
             player.sendMessage("You need seaweed and buckets of sand to make molten glass.")
@@ -791,7 +753,6 @@ object LunarSpellbook {
             player.spotAnim(SpotAnim(729, 0, 100))
             player.anim(4412)
             player.skills.addXp(Constants.MAGIC, 78.0)
-//            Magic.triggerSpellCastEvent(player, LunarSpell.SUPERGLASS_MAKE.name)
             if (number > 0) {
                 val chance = (number * 1.30) - floor(number * 1.3)
                 number = (number * 1.30).toInt()
@@ -812,7 +773,6 @@ object LunarSpellbook {
     fun handleRemoteFarm(player: Player) {
         if (!player.canCastSpell()) return
         if (!Magic.checkMagicAndRunes(player, LunarSpell.REMOTE_FARM.level, true, LunarSpell.REMOTE_FARM.runes)) return
-//        Magic.triggerSpellCastEvent(player, LunarSpell.REMOTE_FARM.name)
         openRemoteFarm(player)
     }
 
@@ -820,7 +780,6 @@ object LunarSpellbook {
     fun handleDream(player: Player) {
         if (!player.canCastSpell()) return
         if (!Magic.checkMagicAndRunes(player, LunarSpell.DREAM.level, true, LunarSpell.DREAM.runes)) return
-//        Magic.triggerSpellCastEvent(player, LunarSpell.DREAM.name)
         player.anim(6295)
         LunarSpell.DREAM.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
         player.addEffect(Effect.LUNARS_DREAM, Ticks.fromMinutes(60).toLong())
@@ -842,7 +801,6 @@ object LunarSpellbook {
             player.soundEffect(2888, true)
             LunarSpell.MAGIC_IMBUE.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
             player.tempAttribs.setL("LAST_IMBUE", System.currentTimeMillis())
-//            Magic.triggerSpellCastEvent(player, LunarSpell.MAGIC_IMBUE.name)
         }
     }
 
@@ -855,7 +813,6 @@ object LunarSpellbook {
             return
         }
         if (!Magic.checkMagicAndRunes(player, LunarSpell.DISRUPTION_SHIELD.level, true, LunarSpell.DISRUPTION_SHIELD.runes)) return
-//        Magic.triggerSpellCastEvent(player, LunarSpell.DISRUPTION_SHIELD.name)
         player.spotAnim(SpotAnim(1320, 0, 100))
         player.anim(722)
         LunarSpell.DISRUPTION_SHIELD.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
@@ -878,7 +835,6 @@ object LunarSpellbook {
             player.soundEffect(2908, true)
             LunarSpell.VENGEANCE_GROUP.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
             player.tempAttribs.setL("LAST_VENGEANCE_CAST", System.currentTimeMillis())
-//            Magic.triggerSpellCastEvent(player, LunarSpell.VENGEANCE_GROUP.name)
             for (other in getNearPlayers(player, 3, 10)) {
                 val otherVeng = other.tempAttribs.getL("LAST_VENGEANCE_CAST")
                 if (otherVeng != -1L && otherVeng + 30000 > System.currentTimeMillis()) continue
@@ -923,7 +879,6 @@ object LunarSpellbook {
         player.spotAnim(SpotAnim(729, 0, 100))
         player.anim(4411)
         LunarSpell.HEAL_GROUP.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
-//        Magic.triggerSpellCastEvent(player, LunarSpell.HEAL_GROUP.name)
         player.sendMessage("You heal ${targets.size} player${if (targets.size > 1) "s" else ""} for $healPer hitpoints each.")
     }
 
@@ -948,7 +903,6 @@ object LunarSpellbook {
         player.spotAnim(SpotAnim(729, 0, 100))
         player.anim(4411)
         LunarSpell.HEAL_OTHER.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
-//        Magic.triggerSpellCastEvent(player, LunarSpell.HEAL_OTHER.name)
         player.sendMessage("You transfer $healAmount hitpoints to ${target.displayName}.")
         target.sendMessage("${player.displayName} heals you for $healAmount hitpoints.")
     }
@@ -957,7 +911,6 @@ object LunarSpellbook {
     fun handleSpellbookSwap(player: Player) {
         if (!player.canCastSpell()) return
         if (!Magic.checkMagicAndRunes(player, LunarSpell.SPELLBOOK_SWAP.level, true, LunarSpell.SPELLBOOK_SWAP.runes)) return
-//        Magic.triggerSpellCastEvent(player, LunarSpell.SPELLBOOK_SWAP.name)
         player.anim(6298)
         player.spotAnim(SpotAnim(1063))
         LunarSpell.SPELLBOOK_SWAP.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
@@ -992,14 +945,12 @@ object LunarSpellbook {
     fun handleStatSpy(player: Player, target: Player) {
         if (!player.canCastSpell()) return
         if (!Magic.checkMagicAndRunes(player, LunarSpell.STAT_SPY.level, true, LunarSpell.STAT_SPY.runes)) return
-//        Magic.triggerSpellCastEvent(player, LunarSpell.STAT_SPY.name)
         player.anim(4409)
         player.spotAnim(SpotAnim(1059))
         LunarSpell.STAT_SPY.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
         val interfaceId = 523
         player.interfaceManager.sendInventoryInterface(interfaceId)
         player.packets.setIFText(interfaceId, 103, "Player:<br>" + target.displayName.toString())
-        //player.packets.setIFText(interfaceId, 104, target.displayName.toString())
         val skillsOrder = listOf(
             Skills.ATTACK,
             Skills.HITPOINTS,
@@ -1039,7 +990,6 @@ object LunarSpellbook {
     fun handleMonsterExamine(player: Player, npc: NPC) {
         if (!player.canCastSpell()) return
         if (!Magic.checkMagicAndRunes(player, LunarSpell.MONSTER_EXAMINE.level, true, LunarSpell.MONSTER_EXAMINE.runes)) return
-//        Magic.triggerSpellCastEvent(player, LunarSpell.MONSTER_EXAMINE.name)
         player.anim(4409)
         player.spotAnim(SpotAnim(1060))
         LunarSpell.MONSTER_EXAMINE.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
@@ -1050,7 +1000,7 @@ object LunarSpellbook {
         player.packets.setIFText(interfaceId, 1, "Combat Level: " + npc.combatLevel)
         player.packets.setIFText(interfaceId, 2, "Lifepoints: " + npc.hitpoints)
         player.packets.setIFText(interfaceId, 3, "Max Hit: " + npc.maxHit)
-        player.packets.setIFText(interfaceId, 4, "Slayer Targets not yet implemented") //TODO isASlayerTarget
+        player.packets.setIFText(interfaceId, 4, "Slayer Targets not yet implemented")
     }
 
     @JvmStatic
@@ -1076,7 +1026,6 @@ object LunarSpellbook {
         player.spotAnim(SpotAnim(1302, 0, 100))
         player.anim(4409)
         LunarSpell.ENERGY_TRANSFER.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
-//        Magic.triggerSpellCastEvent(player, LunarSpell.ENERGY_TRANSFER.name)
         player.sendMessage("You transfer your energy to ${target.displayName}.")
         target.sendMessage("${player.displayName} casts Energy Transfer on you; your run energy and special attack are fully restored.")
     }
@@ -1116,7 +1065,6 @@ object LunarSpellbook {
         fam.spotAnim(SpotAnim(1315))
         player.anim(6294)
         LunarSpell.SPIRITUALISE_FOOD.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
-//        Magic.triggerSpellCastEvent(player, LunarSpell.SPIRITUALISE_FOOD.name)
         player.tempAttribs.setL("SPIRIT_FOOD_COOLDOWN", now)
         player.sendMessage("You spiritualise the ${ItemDefinitions.getDefs(item.id).name.lowercase()} for your familiar.")
     }

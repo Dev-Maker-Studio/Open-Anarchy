@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content
 
 import org.darkan.core.cache.ItemDefinitions
@@ -280,10 +264,9 @@ enum class Potion(val emptyId: Int, val ids: IntArray, val effect: (Player) -> U
     ANTIPOISONPP(VIAL, intArrayOf(5952, 5954, 5956, 5958), { it.applyAntipoison(AntipoisonTier.ANTIDOTE_PLUS_PLUS) }),
     ANTIPOISONPP_FLASK(-1, intArrayOf(23591, 23593, 23595, 23597, 23599, 23601), { it.applyAntipoison(AntipoisonTier.ANTIDOTE_PLUS_PLUS) }),
 
-    RELICYMS_BALM(VIAL, intArrayOf(4842, 4844, 4846, 4848), { /* TODO */ }),
-    RELICYMS_BALM_FLASK(-1, intArrayOf(23537, 23539, 23541, 23543, 23545, 23547), { /* TODO */ }),
+    RELICYMS_BALM(VIAL, intArrayOf(4842, 4844, 4846, 4848), { }),
+    RELICYMS_BALM_FLASK(-1, intArrayOf(23537, 23539, 23541, 23543, 23545, 23547), { }),
     RELICYMS_MIX(VIAL, intArrayOf(11437, 11439), { p ->
-        //TODO
         p.heal(30)
     }),
 
@@ -505,8 +488,8 @@ enum class Potion(val emptyId: Int, val ids: IntArray, val effect: (Player) -> U
     JUJU_MINING_POTION(JUJU_VIAL, intArrayOf(20003, 20004, 20005, 20006), { it.addEffect(Effect.JUJU_MINING, 500) }),
     JUJU_MINING_FLASK(-1, intArrayOf(23131, 23132, 23133, 23134, 23135, 23136), { it.addEffect(Effect.JUJU_MINING, 500) }),
 
-    JUJU_COOKING_POTION(JUJU_VIAL, intArrayOf(20007, 20008, 20009, 20010), { /*TODO*/ }),
-    JUJU_COOKING_FLASK(-1, intArrayOf(23137, 23138, 23139, 23140, 23141, 23142), { /*TODO*/ }),
+    JUJU_COOKING_POTION(JUJU_VIAL, intArrayOf(20007, 20008, 20009, 20010), { }),
+    JUJU_COOKING_FLASK(-1, intArrayOf(23137, 23138, 23139, 23140, 23141, 23142), { }),
 
     JUJU_FARMING_POTION(JUJU_VIAL, intArrayOf(20011, 20012, 20013, 20014), { it.addEffect(Effect.JUJU_FARMING, 500) }),
     JUJU_FARMING_FLASK(-1, intArrayOf(23143, 23144, 23145, 23146, 23147, 23148), { it.addEffect(Effect.JUJU_FARMING, 500) }),
@@ -593,7 +576,7 @@ enum class Potion(val emptyId: Int, val ids: IntArray, val effect: (Player) -> U
         p.prayer.restorePrayer((floor(p.skills.getLevelForXp(PRAYER) * 2.2) + 100).toInt().toDouble())
     }),
 
-    POISON_CHALICE(2026, 197, { /* TODO */ }),
+    POISON_CHALICE(2026, 197, { }),
 
     STRANGE_FRUIT(-1, 464, { it.restoreRunEnergy(30.0) }),
     GORAJIAN_MUSHROOM(-1, 22446, { p ->

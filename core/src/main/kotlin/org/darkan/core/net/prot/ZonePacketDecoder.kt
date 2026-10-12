@@ -12,7 +12,6 @@ import kotlin.reflect.KClass
 
 data class LocCustomisationSizes(val models: Int, val recolors: Int, val retextures: Int)
 
-// CustomizeObject omits its array lengths (the client reads them from its cache), so a decoding client supplies them.
 class LocCustomisationSizing(val sizes: (objectId: Int, shape: Int) -> LocCustomisationSizes) : AbstractCoroutineContextElement(Key) {
     companion object Key : CoroutineContext.Key<LocCustomisationSizing> {
         suspend fun sizes(objectId: Int, shape: Int): LocCustomisationSizes? = coroutineContext[Key]?.sizes(objectId, shape)

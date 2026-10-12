@@ -5,12 +5,6 @@ import world.gregs.voidps.cache.OpcodeEncoder
 import world.gregs.voidps.cache.config.data.QuestDefinition
 import world.gregs.voidps.cache.definition.encoder.writeExtras
 
-/**
- * Writes a quest (`quest`, index 2 archive 35) file.
- *
- * Names are `gjstr2` - a 0 version byte then the cp1252 bytes - and the sort name (opcode 2) is
- * only present when it differs from the name, because the decoder falls back to the name.
- */
 class QuestEncoder : OpcodeEncoder<QuestDefinition>() {
 
     override fun opcodes(definition: QuestDefinition): IntArray {
@@ -107,9 +101,6 @@ class QuestEncoder : OpcodeEncoder<QuestDefinition>() {
         }
     }
 
-    /**
-     * One `var id / start value / complete value` record per variable.
-     */
     private fun Writer.writeVariables(variables: Array<IntArray>?) {
         val values = variables ?: emptyArray()
         writeByte(values.size)

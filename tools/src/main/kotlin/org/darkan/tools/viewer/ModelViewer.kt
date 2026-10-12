@@ -24,12 +24,6 @@ import world.gregs.voidps.cache.Cache
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * Interactive model viewer application.
- *
- * @param cache The game cache to load models from
- * @param initialModelId Optional model ID to load on startup. If null, tries default models.
- */
 class ModelViewer(
     private val cache: Cache,
     private val initialModelId: Int? = null
@@ -48,21 +42,17 @@ class ModelViewer(
     private var autoRotate = false
     private var rotationSpeed = 30f
 
-    // Face picker state
     private var selectedFaceIndex: Int = -1
     private var selectedFaceInfo: FaceInfo? = null
     private var showFacePicker = true
 
-    /**
-     * Detailed information about a selected face
-     */
     data class FaceInfo(
         val faceIndex: Int,
         val vertexA: Int, val vertexB: Int, val vertexC: Int,
         val posA: Vector3f, val posB: Vector3f, val posC: Vector3f,
         val hslColor: Int,
         val rgbColor: Vector3f,
-        val textureId: Int,    // -1 if no texture
+        val textureId: Int,
         val alpha: Int,
         val renderType: Int,
         val priority: Int,
@@ -72,7 +62,6 @@ class ModelViewer(
     )
 
     override fun onInit() {
-        // Initialize texture loader
         TextureLoader.init(cache)
 
         imGui = ImGuiLayer(window)
@@ -82,7 +71,6 @@ class ModelViewer(
         assetBrowser = AssetBrowser(cache)
         assetBrowser.init()
 
-        // Setup callbacks
         assetBrowser.setOnModelSelected { modelId ->
             loadModel(modelId)
         }
@@ -101,19 +89,15 @@ class ModelViewer(
             def.modelIds?.firstOrNull()?.firstOrNull()?.let { loadModel(it) }
         }
 
-        // Setup camera
         scene.camera.setPosition(0f, 2f, 5f)
         scene.camera.moveSpeed = 3f
 
-        // Add grid
         gridNode = SceneNode(mesh = Mesh.createGrid(20f, 20))
         scene.addNode("grid", gridNode!!)
 
-        // Load initial model - either from command line arg or try defaults
         if (initialModelId != null) {
             loadModel(initialModelId)
         } else {
-            // Load default model - try several until we find a valid one
             for (id in listOf(54, 27, 0, 1, 10, 100, 1000, 2000, 5000)) {
                 if (loadModel(id)) {
                     break
@@ -123,7 +107,6 @@ class ModelViewer(
     }
 
     fun loadModel(modelId: Int): Boolean {
-        // Remove existing model nodes
         modelNode?.let {
             scene.removeNode("model")
             it.cleanup()
@@ -139,7 +122,6 @@ class ModelViewer(
         if (texturedModel != null) {
             var totalVertices = 0
 
-            // Add color batch (untextured faces)
             texturedModel.colorBatch?.let { mesh ->
                 if (mesh.vertexCount > 0) {
                     totalVertices += mesh.vertexCount
@@ -148,7 +130,6 @@ class ModelViewer(
                 }
             }
 
-            // Add textured batches
             texturedModel.textureBatches.forEachIndexed { index, batch ->
                 if (batch.mesh.vertexCount > 0) {
                     totalVertices += batch.mesh.vertexCount
@@ -171,14 +152,12 @@ class ModelViewer(
     }
 
     override fun onInput() {
-        // Don't process game input if ImGui wants it
         if (imGui.wantCaptureKeyboard() || imGui.wantCaptureMouse()) {
             return
         }
 
         val camera = scene.camera
 
-        // Camera movement
         if (input.keyboard.isKeyDown(GLFW_KEY_W)) camera.moveForward(deltaTime)
         if (input.keyboard.isKeyDown(GLFW_KEY_S)) camera.moveBackward(deltaTime)
         if (input.keyboard.isKeyDown(GLFW_KEY_A)) camera.moveLeft(deltaTime)
@@ -186,17 +165,14 @@ class ModelViewer(
         if (input.keyboard.isKeyDown(GLFW_KEY_SPACE)) camera.moveUp(deltaTime)
         if (input.keyboard.isKeyDown(GLFW_KEY_LEFT_SHIFT)) camera.moveDown(deltaTime)
 
-        // Camera rotation (when mouse captured)
         if (input.mouseCaptured) {
             camera.rotate(input.mouse.deltaX.toFloat(), input.mouse.deltaY.toFloat())
         }
 
-        // Scroll zoom
         if (input.mouse.scrollY != 0.0) {
             camera.zoom(input.mouse.scrollY.toFloat())
         }
 
-        // Keyboard shortcuts
         if (input.keyboard.isKeyPressed(GLFW_KEY_R)) {
             autoRotate = !autoRotate
         }
@@ -210,7 +186,6 @@ class ModelViewer(
             renderSystem.toggleWireframe()
         }
 
-        // Model navigation
         if (input.keyboard.isKeyPressed(GLFW_KEY_LEFT) || input.keyboard.isKeyPressed(GLFW_KEY_COMMA)) {
             if (currentModelId > 0) {
                 loadModel(currentModelId - 1)
@@ -221,46 +196,36 @@ class ModelViewer(
             loadModel(nextId)
         }
 
-        // Toggle face picker
         if (input.keyboard.isKeyPressed(GLFW_KEY_F4)) {
             showFacePicker = !showFacePicker
         }
 
-        // Face picking with left click (when not captured)
         if (!input.mouseCaptured && input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
             pickFace(input.mouse.x.toFloat(), input.mouse.y.toFloat())
         }
 
-        // Clear selection with middle click
         if (input.mouse.isButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE)) {
             selectedFaceIndex = -1
             selectedFaceInfo = null
         }
     }
 
-    /**
-     * Pick a face at the given screen coordinates using ray-triangle intersection.
-     */
     private fun pickFace(screenX: Float, screenY: Float) {
         val def = ModelLoader.getCachedDefinition(currentModelId) ?: return
         if (def.faceCount == 0) return
 
-        // Get matrices
         val aspectRatio = getAspectRatio()
         val viewMatrix = scene.camera.getViewMatrix()
         val projectionMatrix = scene.camera.getProjectionMatrix(aspectRatio)
 
-        // Get the model transform (from the first node, assume all share same transform)
         val modelMatrix = modelNode?.getModelMatrix()
             ?: texturedModelNodes.firstOrNull()?.getModelMatrix()
             ?: Matrix4f()
 
-        // Calculate the ray from camera through mouse position
         val ray = screenToWorldRay(screenX, screenY, viewMatrix, projectionMatrix)
         val rayOrigin = ray.first
         val rayDir = ray.second
 
-        // Find closest intersecting face
         var closestT = Float.MAX_VALUE
         var closestFace = -1
 
@@ -273,7 +238,6 @@ class ModelViewer(
                 bIdx < 0 || bIdx >= def.vertexCount ||
                 cIdx < 0 || cIdx >= def.vertexCount) continue
 
-            // Get vertices in OpenGL world space (apply model transform)
             val posA = transformVertex(def.vertexX[aIdx], def.vertexY[aIdx], def.vertexZ[aIdx], modelMatrix)
             val posB = transformVertex(def.vertexX[bIdx], def.vertexY[bIdx], def.vertexZ[bIdx], modelMatrix)
             val posC = transformVertex(def.vertexX[cIdx], def.vertexY[cIdx], def.vertexZ[cIdx], modelMatrix)
@@ -291,9 +255,6 @@ class ModelViewer(
         }
     }
 
-    /**
-     * Convert RS coordinates to OpenGL and apply model transformation.
-     */
     private fun transformVertex(rsX: Int, rsY: Int, rsZ: Int, modelMatrix: Matrix4f): Vector3f {
         val glPos = CoordinateUtil.rsToOpenGL(rsX, rsY, rsZ)
         val transformed = Vector4f(glPos.x, glPos.y, glPos.z, 1f)
@@ -301,28 +262,21 @@ class ModelViewer(
         return Vector3f(transformed.x, transformed.y, transformed.z)
     }
 
-    /**
-     * Convert screen coordinates to a world-space ray.
-     */
     private fun screenToWorldRay(
         screenX: Float, screenY: Float,
         viewMatrix: Matrix4f, projectionMatrix: Matrix4f
     ): Pair<Vector3f, Vector3f> {
-        // Convert to normalized device coordinates (-1 to 1)
         val ndcX = (2f * screenX / window.width) - 1f
-        val ndcY = 1f - (2f * screenY / window.height) // Flip Y
+        val ndcY = 1f - (2f * screenY / window.height)
 
-        // Create inverse matrices
         val invProj = Matrix4f(projectionMatrix).invert()
         val invView = Matrix4f(viewMatrix).invert()
 
-        // Near point in NDC (z = -1)
         val nearNdc = Vector4f(ndcX, ndcY, -1f, 1f)
         invProj.transform(nearNdc)
         nearNdc.div(nearNdc.w)
         invView.transform(nearNdc)
 
-        // Far point in NDC (z = 1)
         val farNdc = Vector4f(ndcX, ndcY, 1f, 1f)
         invProj.transform(farNdc)
         farNdc.div(farNdc.w)
@@ -334,10 +288,6 @@ class ModelViewer(
         return Pair(origin, direction)
     }
 
-    /**
-     * Moller-Trumbore ray-triangle intersection algorithm.
-     * Returns the distance t along the ray if hit, null otherwise.
-     */
     private fun rayTriangleIntersect(
         rayOrigin: Vector3f, rayDir: Vector3f,
         v0: Vector3f, v1: Vector3f, v2: Vector3f
@@ -350,7 +300,7 @@ class ModelViewer(
         val h = Vector3f(rayDir).cross(edge2)
         val a = edge1.dot(h)
 
-        if (a > -epsilon && a < epsilon) return null // Ray parallel to triangle
+        if (a > -epsilon && a < epsilon) return null
 
         val f = 1f / a
         val s = Vector3f(rayOrigin).sub(v0)
@@ -367,9 +317,6 @@ class ModelViewer(
         return if (t > epsilon) t else null
     }
 
-    /**
-     * Build detailed face information for display.
-     */
     private fun buildFaceInfo(def: ModelDefinition, faceIndex: Int): FaceInfo {
         val aIdx = def.faceA[faceIndex]
         val bIdx = def.faceB[faceIndex]
@@ -411,7 +358,6 @@ class ModelViewer(
     }
 
     override fun onUpdate(deltaTime: Float) {
-        // Auto-rotate model
         if (autoRotate) {
             val angle = rotationSpeed * deltaTime
             val radians = Math.toRadians(angle.toDouble()).toFloat()
@@ -426,7 +372,6 @@ class ModelViewer(
         val viewMatrix = scene.camera.getViewMatrix()
         val projectionMatrix = scene.camera.getProjectionMatrix(aspectRatio)
 
-        // Render untextured elements (grid and color batch) with color shader
         colorShader.bind()
         colorShader.setUniform("view", viewMatrix)
         colorShader.setUniform("projection", projectionMatrix)
@@ -434,14 +379,11 @@ class ModelViewer(
         colorShader.setUniform("lightDirection", scene.lightDirection)
         colorShader.setUniform("lightColor", scene.lightColor)
 
-        // Render grid
         gridNode?.let { node ->
             colorShader.setUniform("model", node.getModelMatrix())
             node.mesh?.render()
         }
 
-        // Render untextured faces. RS model geometry is single-sided (see
-        // RenderSystem.enableModelCullFace); the grid above is not, so cull only here.
         modelNode?.let { node ->
             renderSystem.enableModelCullFace()
             colorShader.setUniform("model", node.getModelMatrix())
@@ -452,11 +394,7 @@ class ModelViewer(
 
         colorShader.unbind()
 
-        // Render textured batches using two-pass approach matching the RS client:
-        // Pass 1: Opaque materials (no blending, depth write ON)
-        // Pass 2: Transparent materials (alpha blending, depth write OFF but depth test ON)
         if (texturedModelNodes.isNotEmpty() && currentTexturedModel != null) {
-            // RS models are single-sided; the client back-face culls them.
             renderSystem.enableModelCullFace()
 
             texturedShader.bind()
@@ -467,8 +405,6 @@ class ModelViewer(
             texturedShader.setUniform("lightColor", scene.lightColor)
             texturedShader.setUniform("textureSampler", 0)
 
-            // --- Pass 1: Opaque batches ---
-            // No blending, depth write enabled (default state)
             renderSystem.disableBlending()
             renderSystem.enableDepthWrite()
 
@@ -483,8 +419,6 @@ class ModelViewer(
                 node.mesh?.render()
             }
 
-            // --- Pass 2: Transparent batches ---
-            // Enable alpha blending, disable depth write (but depth test remains on)
             renderSystem.enableBlending()
             renderSystem.disableDepthWrite()
 
@@ -499,7 +433,6 @@ class ModelViewer(
                 node.mesh?.render()
             }
 
-            // Restore default state
             renderSystem.enableDepthWrite()
             renderSystem.disableBlending()
             TextureLoader.unbindTexture()
@@ -508,7 +441,6 @@ class ModelViewer(
             renderSystem.enableCullFace()
         }
 
-        // Render ImGui
         imGui.beginFrame()
 
         debugPanel.fps = fps
@@ -521,10 +453,8 @@ class ModelViewer(
 
         assetBrowser.render()
 
-        // Model info panel
         renderModelInfo()
 
-        // Face picker panel
         if (showFacePicker) {
             renderFacePickerPanel()
         }
@@ -532,27 +462,19 @@ class ModelViewer(
         imGui.endFrame()
     }
 
-    // Track first frame for initial positioning
     private var facePickerFirstFrame = true
 
-    /**
-     * Render the face picker information panel.
-     */
     private fun renderFacePickerPanel() {
-        // Set size constraints: min width 340, max height 80% of screen
         val maxHeight = window.height * 0.8f
         ImGui.setNextWindowSizeConstraints(340f, 150f, 450f, maxHeight)
 
-        // Only set initial position on first frame
         if (facePickerFirstFrame) {
             ImGui.setNextWindowPos(ImGui.getIO().displaySizeX - 350f, 10f)
             facePickerFirstFrame = false
         }
 
-        // Allow moving and resizing, scrollbar appears automatically when needed
         val flags = ImGuiWindowFlags.None
         if (ImGui.begin("Face Picker (F4)", flags)) {
-            // Clamp window position to stay on screen
             clampWindowToScreen()
             ImGui.text("Left-click to select face")
             ImGui.text("Middle-click to clear selection")
@@ -563,7 +485,6 @@ class ModelViewer(
                 ImGuiText.coloured(0f, 1f, 0f, 1f, "Face #${info.faceIndex}")
                 ImGui.separator()
 
-                // Vertex indices
                 ImGui.text("Vertex Indices:")
                 ImGuiText.bullet("A: ${info.vertexA}")
                 ImGuiText.bullet("B: ${info.vertexB}")
@@ -571,7 +492,6 @@ class ModelViewer(
 
                 ImGui.separator()
 
-                // Positions (OpenGL space)
                 ImGui.text("Positions (GL):")
                 ImGuiText.bullet("A: (%.2f, %.2f, %.2f)".format(info.posA.x, info.posA.y, info.posA.z))
                 ImGuiText.bullet("B: (%.2f, %.2f, %.2f)".format(info.posB.x, info.posB.y, info.posB.z))
@@ -579,11 +499,9 @@ class ModelViewer(
 
                 ImGui.separator()
 
-                // Color info
                 ImGui.text("Color:")
                 ImGuiText.bullet("HSL Raw: ${info.hslColor} (0x${info.hslColor.toString(16).uppercase()})")
 
-                // Decode HSL components
                 val hue = (info.hslColor shr 10) and 0x3f
                 val sat = (info.hslColor shr 7) and 0x7
                 val light = info.hslColor and 0x7f
@@ -591,7 +509,6 @@ class ModelViewer(
 
                 ImGuiText.bullet("RGB: (%.2f, %.2f, %.2f)".format(info.rgbColor.x, info.rgbColor.y, info.rgbColor.z))
 
-                // Show color swatch
                 val rgb255 = intArrayOf(
                     (info.rgbColor.x * 255).toInt(),
                     (info.rgbColor.y * 255).toInt(),
@@ -601,7 +518,6 @@ class ModelViewer(
 
                 ImGui.separator()
 
-                // Texture info
                 ImGui.text("Texture:")
                 if (info.textureId >= 0) {
                     ImGuiText.coloured(1f, 1f, 0f, 1f, "Texture ID: ${info.textureId}")
@@ -611,13 +527,11 @@ class ModelViewer(
 
                 ImGui.separator()
 
-                // Other face properties
                 ImGui.text("Properties:")
                 ImGuiText.bullet("Alpha: ${info.alpha}")
                 ImGuiText.bullet("Render Type: ${info.renderType}")
                 ImGuiText.bullet("Priority: ${info.priority}")
 
-                // UV coordinates
                 if (info.uvA != null || info.uvB != null || info.uvC != null) {
                     ImGui.separator()
                     ImGui.text("UV Coordinates:")
@@ -628,9 +542,7 @@ class ModelViewer(
 
                 ImGui.separator()
 
-                // Copy button for easy sharing
                 if (ImGui.button("Copy Face Info")) {
-                    // Face info is displayed in the panel - clipboard copy would require GLFW integration
                 }
             } else {
                 ImGuiText.coloured(0.5f, 0.5f, 0.5f, 1f, "No face selected")
@@ -655,7 +567,6 @@ class ModelViewer(
                 ImGui.text("Faces: ${def.faceCount}")
             }
 
-            // Texture info
             currentTexturedModel?.let { model ->
                 ImGui.separator()
                 ImGui.text("Textures: ${if (model.hasTextures) "Yes" else "No"}")
@@ -667,7 +578,6 @@ class ModelViewer(
                 }
             }
 
-            // Raw face texture data from model definition
             if (def != null && def.faceTextures != null) {
                 ImGui.separator()
                 ImGui.text("Raw faceTextures (first 20):")
@@ -693,10 +603,6 @@ class ModelViewer(
         ImGui.end()
     }
 
-    /**
-     * Clamp the current ImGui window position to stay within screen bounds.
-     * Call this inside ImGui.begin() block.
-     */
     private fun clampWindowToScreen() {
         val pos = ImGui.getWindowPos()
         val size = ImGui.getWindowSize()
@@ -706,11 +612,9 @@ class ModelViewer(
         var newX = pos.x
         var newY = pos.y
 
-        // Clamp X: keep at least 50px visible on screen
         if (newX + size.x < 50f) newX = 50f - size.x
         if (newX > screenWidth - 50f) newX = screenWidth - 50f
 
-        // Clamp Y: keep title bar on screen (at least 20px from top)
         if (newY < 0f) newY = 0f
         if (newY > screenHeight - 50f) newY = screenHeight - 50f
 

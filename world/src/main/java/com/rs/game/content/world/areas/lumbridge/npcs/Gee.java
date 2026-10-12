@@ -11,7 +11,6 @@ import com.rs.plugin.handlers.NPCClickHandler;
 @PluginEventHandler
 public class Gee extends Conversation {
 
-    //Identify NPC by ID
     private static final int npcId = 2237;
     public static NPCClickHandler Gee = new NPCClickHandler(new Object[]{2237, 7932, 7923}, e -> {
     	switch (e.getOption()) {
@@ -23,22 +22,17 @@ public class Gee extends Conversation {
 
     public Gee(Player player) {
         super(player);
-        //Identify NPC by ID
-        //Gee has the same script as Donie..
 
         addOptions(new Options() {
             @Override
             public void create() {
-                //Give player options
                 addNPC(npcId, HeadE.CALM_TALK, "Hello there, Can I help you?");
                 addOptions(new Options() {
                     @Override
                     public void create() {
-                        //Simple Reply
                         option("Where am I?", new Dialogue()
                                 .addNPC(npcId, HeadE.CALM_TALK, "This is the town of Lumbridge my friend."));
 
-                        //Conversation
                         option("How are you today?", new Dialogue()
                                 .addNPC(npcId, HeadE.CALM_TALK, "Aye, not too bad thank you. Lovely weather in RuneScape this fine day.")
                                 .addPlayer(HeadE.CALM_TALK, "Weather?")
@@ -48,11 +42,8 @@ public class Gee extends Conversation {
                                 .addNPC(npcId, HeadE.LAUGH, "Not just a pretty face eh? Ha ha ha.")
                         );
 
-                        //Nested player options with responses
                         option("Are there any quests I can do here?", new Dialogue()
-                                //NPC to respond first
                                 .addNPC(npcId, HeadE.CALM_TALK, "What kind of quest are you looking for?")
-                                //Show next set of options
                                 .addOptions(new Options() {
                                     @Override
                                     public void create() {
@@ -168,6 +159,5 @@ public class Gee extends Conversation {
             }
         });
 
-        //TODO add mission checks and alternative responses. Maybe rewrite this as Gee and Donie have the same script which is a bore.
     }
 }

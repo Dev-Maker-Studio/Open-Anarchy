@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.combat
 
 import org.darkan.core.gameval.gen.Npc
@@ -636,7 +620,6 @@ enum class CombatSpell(
 
     companion object {
         private val SPELL_MAP: Map<Int, Map<Int, CombatSpell>> = mapOf(
-            //Modern spellbook
             192 to mapOf(
                 98 to WIND_RUSH,
                 25 to WIND_STRIKE,
@@ -678,7 +661,6 @@ enum class CombatSpell(
                 91 to FIRE_SURGE,
             ),
 
-            //Ancient spellbook
             193 to mapOf(
                 28 to SMOKE_RUSH,
                 32 to SHADOW_RUSH,
@@ -702,10 +684,8 @@ enum class CombatSpell(
                 39 to MIASMIC_BARRAGE,
             ),
 
-            //Lunar spellbook
             430 to mapOf(),
 
-            //Dungeoneering spellbook
             950 to mapOf(
                 25 to WIND_STRIKE,
                 26 to CONFUSE,

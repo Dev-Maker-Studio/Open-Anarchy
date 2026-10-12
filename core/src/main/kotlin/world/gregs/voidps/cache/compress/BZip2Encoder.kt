@@ -3,20 +3,13 @@ package world.gregs.voidps.cache.compress
 import kotlin.math.max
 import kotlin.math.min
 
-/** Faithful port of libbzip2 1.0.8's compressor. Output is byte-identical to `bzip2 -<blockSize>`. */
 object BZip2Encoder {
 
-    /**
-     * Compresses [data] with libbzip2's algorithm at [blockSize] (100 kB units, 1..9; the 727 cache uses 1)
-     * and returns the stream WITHOUT the 4-byte "BZh<n>" magic, which is how JS5 containers store it.
-     * Thread-safe: all working state is allocated per call.
-     */
     fun compress(data: ByteArray, blockSize: Int = 1): ByteArray {
         val stream = compressWithMagic(data, blockSize)
         return stream.copyOfRange(MAGIC_LENGTH, stream.size)
     }
 
-    /** Same, but with the "BZh<n>" magic, i.e. a stream `bzip2 -d` accepts. */
     fun compressWithMagic(data: ByteArray, blockSize: Int = 1): ByteArray {
         require(blockSize in 1..9) { "Block size must be 1..9 (100kB units) but was $blockSize." }
         return BZip2Stream(blockSize, data.size).compress(data)
@@ -25,46 +18,22 @@ object BZip2Encoder {
     private const val MAGIC_LENGTH = 4
 }
 
-/**
- * One compression run. Mirrors libbzip2's `EState` plus the parts of `bzlib.c` that drive it
- * ([compress] is `handle_compress` specialised to "the whole input is already in memory and is
- * handed over with BZ_FINISH", which is what `BZ2_bzBuffToBuffCompress` does).
- *
- * Line-for-line sources: `bzlib.c` (RLE prefix, block boundaries), `blocksort.c` (the BWT),
- * `compress.c` (MTF, the Huffman back end, the bit writer), `huffman.c` (code lengths and codes).
- * Only libbzip2's `verbosity` reporting and its array aliasing (`ptr`/`mtfv`, `block`/`eclass`,
- * `quadrant`, `zbits`, all overlaid on two allocations) are left out; the aliased regions are never
- * live at the same time, so separate arrays hold the same values.
- */
 private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
 
-    /** `s->nblockMAX`. The input cut-off for a block; the RLE tail may push `nblock` past it. */
     private val blockMax = 100000 * blockSize100k - 19
 
-    /**
-     * Upper bound on `nblock`, used only to size the working arrays. libbzip2 always allocates
-     * 100000 * blockSize100k of everything; the RLE prefix expands its input by at most 5/4 (a run
-     * of exactly four becomes five bytes), so an input too small to fill a block gets arrays sized
-     * to it instead. No value derived from this reaches the output.
-     */
     private val capacity = min(100000 * blockSize100k, dataSize + dataSize / 4 + 16)
 
-    /** `s->block`, with libbzip2's overshoot area: `mainGtU` reads up to 33 bytes past `nblock`. */
     private val block = ByteArray(capacity + BZ_N_OVERSHOOT)
 
-    /** `quadrant`, 16 bit values in libbzip2. Held as Int; every entry stays within 0..65535. */
     private val quadrant = IntArray(capacity + BZ_N_OVERSHOOT)
 
-    /** `s->ptr` / `fmap`: the sorted rotation order. */
     private val ptr = IntArray(max(capacity, 1))
 
-    /** `s->ftab`, 65537 entries, doubling as `bhtab` for the fallback sort exactly as libbzip2 does. */
     private val ftab = IntArray(65537)
 
-    /** `eclass` for the fallback sort. Allocated on first use; repetitive blocks are rare. */
     private var eclass: IntArray? = null
 
-    /** `s->mtfv`, 16 bit values in libbzip2, all within 0..257. */
     private val mtfv = IntArray(max(capacity, 1) + 1)
 
     private val mtfFreq = IntArray(BZ_MAX_ALPHA_SIZE)
@@ -83,7 +52,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
     private var origPtr = 0
     private var blockNo = 0
 
-    /** `s->state_in_ch`, 256 while no run is open. */
     private var stateInCh = 256
     private var stateInLen = 0
 
@@ -91,18 +59,11 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
     private var combinedCRC = 0
     private var budget = 0
 
-    /** `s->zbits` / `s->numZ`, as one growing stream: libbzip2 empties `zbits` between blocks. */
     private var out = ByteArray(max(64, dataSize + dataSize / 50 + 1024))
     private var numZ = 0
     private var bsBuff = 0
     private var bsLive = 0
 
-    /**
-     * `handle_compress` for a single BZ_FINISH covering the whole input: fill a block, compress it,
-     * repeat, and finish on the block that runs out of input. Note the order of the two stop tests -
-     * libbzip2 checks "input exhausted" before "block full", so an input that ends exactly on a
-     * block boundary finishes that block rather than opening an empty one.
-     */
     fun compress(data: ByteArray): ByteArray {
         initRL()
         prepareNewBlock()
@@ -125,7 +86,7 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
 
     private fun prepareNewBlock() {
         nblock = 0
-        blockCRC = -1 // BZ_INITIALISE_CRC: 0xffffffff
+        blockCRC = -1
         for (i in 0 until 256) {
             inUse[i] = false
         }
@@ -144,10 +105,8 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         initRL()
     }
 
-    /** `ADD_CHAR_TO_BLOCK`. */
     private fun addCharToBlock(ch: Int) {
         if (ch != stateInCh && stateInLen == 1) {
-            // Fast track: a single occurrence of the previous byte goes straight into the block.
             val previous = stateInCh
             blockCRC = (blockCRC shl 8) xor CRC_TABLE[(blockCRC ushr 24) xor previous]
             inUse[previous] = true
@@ -164,7 +123,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         }
     }
 
-    /** `add_pair_to_block`: runs of four or more become four bytes plus a length byte. */
     private fun addPairToBlock() {
         val ch = stateInCh and 0xff
         for (i in 0 until stateInLen) {
@@ -196,11 +154,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         }
     }
 
-    /*
-     * ---------------------------------------------------------------------------------------------
-     * Bit stream I/O (compress.c)
-     * ---------------------------------------------------------------------------------------------
-     */
 
     private fun grow(bytes: Int) {
         if (numZ + bytes > out.size) {
@@ -208,7 +161,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         }
     }
 
-    /** `bsW`. `n` is at most 24 here, so the shift is always 1..31. */
     private fun bsW(n: Int, v: Int) {
         grow(4)
         while (bsLive >= 8) {
@@ -243,27 +195,20 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         }
     }
 
-    /*
-     * ---------------------------------------------------------------------------------------------
-     * BZ2_compressBlock (compress.c)
-     * ---------------------------------------------------------------------------------------------
-     */
 
     private fun compressBlock(isLastBlock: Boolean) {
         if (nblock > 0) {
-            blockCRC = blockCRC.inv() // BZ_FINALISE_CRC
+            blockCRC = blockCRC.inv()
             combinedCRC = (combinedCRC shl 1) or (combinedCRC ushr 31)
             combinedCRC = combinedCRC xor blockCRC
-            // libbzip2 resets numZ here for every block after the first, because it reuses one
-            // zbits buffer and copies it out between blocks. This stream is written end to end.
             blockSort()
         }
 
         if (blockNo == 1) {
             bsInitWrite()
-            bsPutUChar(0x42) // 'B'
-            bsPutUChar(0x5a) // 'Z'
-            bsPutUChar(0x68) // 'h'
+            bsPutUChar(0x42)
+            bsPutUChar(0x5a)
+            bsPutUChar(0x68)
             bsPutUChar(0x30 + blockSize100k)
         }
 
@@ -275,7 +220,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             bsPutUChar(0x53)
             bsPutUChar(0x59)
             bsPutUInt32(blockCRC)
-            // Randomisation has been unnecessary since 0.9.5; the bit is always zero.
             bsW(1, 0)
             bsW(24, origPtr)
             generateMTFValues()
@@ -294,11 +238,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         }
     }
 
-    /*
-     * ---------------------------------------------------------------------------------------------
-     * generateMTFValues / sendMTFValues (compress.c)
-     * ---------------------------------------------------------------------------------------------
-     */
 
     private fun makeMaps() {
         nInUse = 0
@@ -405,7 +344,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             }
         }
 
-        // Decide how many coding tables to use.
         check(nMTF > 0) { "No MTF values to code." }
         val nGroups = when {
             nMTF < 200 -> 2
@@ -415,7 +353,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             else -> 6
         }
 
-        // Generate an initial set of coding tables: an even split of the total frequency.
         var gs: Int
         var ge: Int
         run {
@@ -454,8 +391,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
                 }
             }
 
-            // Auxiliary length table to fast-track the common case (nGroups == 6). The three packed
-            // words each hold two 16 bit lengths; a group of 50 symbols can never carry between them.
             if (nGroups == 6) {
                 for (v in 0 until alphaSize) {
                     lenPack[v][0] = (len[1][v] shl 16) or len[0][v]
@@ -503,7 +438,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
                     }
                 }
 
-                // Cheapest table wins; ties go to the lowest table, as in libbzip2.
                 var bc = 999999999
                 var bt = -1
                 for (t in 0 until nGroups) {
@@ -524,8 +458,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
                 gs = ge + 1
             }
 
-            // Recompute the tables from the accumulated frequencies. maxLen was changed from 20 to
-            // 17 in bzip2-1.0.3.
             for (t in 0 until nGroups) {
                 makeCodeLengths(len[t], rfreq[t], alphaSize, BZ_MAX_COMPRESS_CODE_LEN)
             }
@@ -534,7 +466,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         check(nGroups < 8) { "Too many coding tables: $nGroups." }
         check(nSelectors < 32768 && nSelectors <= selector.size) { "Too many selectors: $nSelectors." }
 
-        // Compute MTF values for the selectors.
         run {
             val pos = IntArray(BZ_N_GROUPS)
             for (i in 0 until nGroups) {
@@ -555,7 +486,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             }
         }
 
-        // Assign actual codes for the tables.
         for (t in 0 until nGroups) {
             var minLen = 32
             var maxLen = 0
@@ -572,7 +502,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             assignCodes(code[t], len[t], minLen, maxLen, alphaSize)
         }
 
-        // Transmit the mapping table.
         run {
             val inUse16 = BooleanArray(16)
             for (i in 0 until 16) {
@@ -595,7 +524,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             }
         }
 
-        // Now the selectors.
         bsW(3, nGroups)
         bsW(15, nSelectors)
         for (i in 0 until nSelectors) {
@@ -605,24 +533,22 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             bsW(1, 0)
         }
 
-        // Now the coding tables, as deltas from the previous length.
         for (t in 0 until nGroups) {
             var curr = len[t][0]
             bsW(5, curr)
             for (i in 0 until alphaSize) {
                 while (curr < len[t][i]) {
-                    bsW(2, 2) // 10
+                    bsW(2, 2)
                     curr++
                 }
                 while (curr > len[t][i]) {
-                    bsW(2, 3) // 11
+                    bsW(2, 3)
                     curr--
                 }
                 bsW(1, 0)
             }
         }
 
-        // And finally, the block data proper.
         var selCtr = 0
         gs = 0
         while (true) {
@@ -646,17 +572,11 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         check(selCtr == nSelectors) { "Wrote $selCtr groups for $nSelectors selectors." }
     }
 
-    /*
-     * ---------------------------------------------------------------------------------------------
-     * BZ2_hbMakeCodeLengths / BZ2_hbAssignCodes (huffman.c)
-     * ---------------------------------------------------------------------------------------------
-     */
 
     private val heap = IntArray(BZ_MAX_ALPHA_SIZE + 2)
     private val weight = IntArray(BZ_MAX_ALPHA_SIZE * 2)
     private val parent = IntArray(BZ_MAX_ALPHA_SIZE * 2)
 
-    /** `UPHEAP`. Terminates on the `weight[0] == 0` sentinel at `heap[0]`. */
     private fun upHeap(z: Int) {
         var zz = z
         val tmp = heap[zz]
@@ -687,10 +607,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         heap[zz] = tmp
     }
 
-    /**
-     * `BZ2_hbMakeCodeLengths`. The weights pack a frequency in the top 24 bits and a tree depth in
-     * the low 8, so equal-frequency merges break ties towards the shallower subtree.
-     */
     private fun makeCodeLengths(lengths: IntArray, freq: IntArray, alphaSize: Int, maxLen: Int) {
         for (i in 0 until alphaSize) {
             weight[i + 1] = (if (freq[i] == 0) 1 else freq[i]) shl 8
@@ -748,7 +664,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
                 break
             }
 
-            // Halve the frequencies and try again. With maxLen 17 this is used from time to time.
             for (i in 1..alphaSize) {
                 var j = weight[i] shr 8
                 j = 1 + (j / 2)
@@ -776,17 +691,11 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         }
     }
 
-    /*
-     * ---------------------------------------------------------------------------------------------
-     * BZ2_blockSort (blocksort.c)
-     * ---------------------------------------------------------------------------------------------
-     */
 
     private fun blockSort() {
         if (nblock < 10000) {
             fallbackSort(nblock)
         } else {
-            // (wfact-1)/3 keeps the default-factor-30 transition point where 0.9.0 had it.
             var wfact = WORK_FACTOR
             if (wfact < 1) {
                 wfact = 1
@@ -797,8 +706,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             budget = nblock * ((wfact - 1) / 3)
             mainSort(nblock)
             if (budget < 0) {
-                // Too repetitive; fall back on the exponential radix sort. Either sort produces the
-                // same permutation, so the compressed stream does not depend on which one ran.
                 fallbackSort(nblock)
             }
         }
@@ -813,15 +720,7 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         check(origPtr != -1) { "Block sort lost the original pointer." }
     }
 
-    /*
-     * --- The main, O(N^2 log(N)) sort. Faster for "normal" non-repetitive blocks. ---
-     */
 
-    /**
-     * `mainGtU`: is the rotation at [start1] greater than the one at [start2]? The first twelve
-     * bytes are compared directly; past that the cached `quadrant` ordering is consulted too, and
-     * every eight bytes cost one unit of the work budget.
-     */
     private fun mainGtU(start1: Int, start2: Int, nblock: Int): Boolean {
         var i1 = start1
         var i2 = start2
@@ -868,7 +767,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         return false
     }
 
-    /** One shell-sort insertion step of `mainSimpleSort`. */
     private fun mainInsert(i: Int, h: Int, d: Int, nblock: Int, lo: Int) {
         val v = ptr[i]
         var j = i
@@ -882,7 +780,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         ptr[j] = v
     }
 
-    /** `mainSimpleSort`: Knuth's increments, since the ranges are usually tiny. */
     private fun mainSimpleSort(nblock: Int, lo: Int, hi: Int, d: Int) {
         val bigN = hi - lo + 1
         if (bigN < 2) {
@@ -960,7 +857,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         }
     }
 
-    /** `mainQSort3`: Sedgewick and Bentley's three-way quicksort for strings. */
     private fun mainQSort3(nblock: Int, loSt: Int, hiSt: Int, dSt: Int) {
         val stackLo = IntArray(MAIN_QSORT_STACK_SIZE)
         val stackHi = IntArray(MAIN_QSORT_STACK_SIZE)
@@ -1069,7 +965,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             nextHi[2] = mm - 1
             nextD[2] = d + 1
 
-            // Largest interval first, so the stack stays shallow.
             if (nextHi[0] - nextLo[0] < nextHi[1] - nextLo[1]) {
                 nextSwap(nextLo, nextHi, nextD, 0, 1)
             }
@@ -1101,9 +996,7 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         nextD[b] = tz
     }
 
-    /** `mainSort`: a two byte radix sort, then quicksort the small buckets that survive it. */
     private fun mainSort(nblock: Int) {
-        // Set up the 2-byte frequency table.
         for (i in 65536 downTo 0) {
             ftab[i] = 0
         }
@@ -1117,13 +1010,11 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             i--
         }
 
-        // Emphasises the close relationship of block and quadrant.
         for (k in 0 until BZ_N_OVERSHOOT) {
             block[nblock + k] = block[k]
             quadrant[nblock + k] = 0
         }
 
-        // Complete the initial radix sort.
         for (k in 1..65536) {
             ftab[k] += ftab[k - 1]
         }
@@ -1138,8 +1029,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             i--
         }
 
-        // Now ftab contains the first location of every small bucket. Calculate the running order,
-        // from smallest to largest big bucket.
         val runningOrder = IntArray(256)
         val bigDone = BooleanArray(256)
         val copyStart = IntArray(256)
@@ -1171,13 +1060,9 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             } while (h != 1)
         }
 
-        // The main sorting loop.
         for (index in 0..255) {
-            // Process big buckets, starting with the least full.
             val ss = runningOrder[index]
 
-            // Step 1: complete the big bucket [ss] by quicksorting any unsorted small buckets
-            // [ss, j] for j != ss. Earlier pointer-scanning phases have often finished them already.
             for (jj in 0..255) {
                 if (jj != ss) {
                     val sb = (ss shl 8) + jj
@@ -1197,8 +1082,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
 
             check(!bigDone[ss]) { "Big bucket $ss sorted twice." }
 
-            // Step 2: scan this big bucket so as to synthesise the sorted order for the small
-            // buckets [t, ss] for all t, including, magically, [ss, ss].
             run {
                 for (jj in 0..255) {
                     copyStart[jj] = ftab[(jj shl 8) + ss] and CLEARMASK
@@ -1232,7 +1115,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
 
             check(
                 copyStart[ss] - 1 == copyEnd[ss] ||
-                    // Extremely rare case, missing in 1.0.0 and 1.0.1.
                     (copyStart[ss] == 0 && copyEnd[ss] == nblock - 1),
             ) { "Bucket $ss copy bounds disagree." }
 
@@ -1240,8 +1122,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
                 ftab[(jj shl 8) + ss] = ftab[(jj shl 8) + ss] or SETMASK
             }
 
-            // Step 3: the [ss] big bucket is done. Record that and update the quadrant descriptors,
-            // which cache the orderings found so far so that later mainGtU calls finish sooner.
             bigDone[ss] = true
 
             if (index < 255) {
@@ -1268,9 +1148,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
 
     private fun bigFreq(b: Int) = ftab[(b + 1) shl 8] - ftab[b shl 8]
 
-    /*
-     * --- Fallback O(N log(N)^2) sort, for repetitive blocks. ---
-     */
 
     private fun fallbackSimpleSort(fmap: IntArray, eclass: IntArray, lo: Int, hi: Int) {
         if (lo == hi) {
@@ -1306,10 +1183,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         }
     }
 
-    /**
-     * `fallbackQSort3`. Every `eclass` value is a bucket index in 0..nblock-1, so libbzip2's
-     * unsigned comparisons and this port's signed ones agree.
-     */
     private fun fallbackQSort3(fmap: IntArray, eclass: IntArray, loSt: Int, hiSt: Int) {
         val stackLo = IntArray(FALLBACK_QSORT_STACK_SIZE)
         val stackHi = IntArray(FALLBACK_QSORT_STACK_SIZE)
@@ -1331,7 +1204,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
                 continue
             }
 
-            // Random partitioning; the constants come from Sedgewick, chapter 35.
             r = ((r * 7621) + 1) % 32768
             val med = when (r % 3) {
                 0 -> eclass[fmap[lo]]
@@ -1435,12 +1307,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         }
     }
 
-    /**
-     * `fallbackSort`: an "exponential radix sort" in the spirit of Manber-Myers. libbzip2 overlays
-     * `eclass` on the block bytes and rebuilds the block afterwards; the block bytes here are only
-     * read before the first `eclass` write and rewritten with the same values at the end, so a
-     * separate `eclass` array behaves identically. `bhtab` shares `ftab` exactly as libbzip2 does.
-     */
     private fun fallbackSort(nblock: Int) {
         val fmap = ptr
         val eclass = this.eclass ?: IntArray(max(capacity, 1)).also { this.eclass = it }
@@ -1448,7 +1314,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
         val localFtab = IntArray(257)
         val ftabCopy = IntArray(256)
 
-        // Initial one-char radix sort, to generate the initial fmap and BH bits.
         for (i in 0 until 257) {
             localFtab[i] = 0
         }
@@ -1477,13 +1342,11 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             setBh(bhtab, localFtab[i])
         }
 
-        // Sentinel bits for block-end detection.
         for (i in 0 until 32) {
             setBh(bhtab, nblock + 2 * i)
             clearBh(bhtab, nblock + 2 * i + 1)
         }
 
-        // The log(N) loop.
         var h = 1
         while (true) {
             var j = 0
@@ -1501,13 +1364,12 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             var nNotDone = 0
             var r = -1
             while (true) {
-                // Find the next non-singleton bucket.
                 var k = r + 1
                 while (isSetBh(bhtab, k) && (k and 0x1f) != 0) {
                     k++
                 }
                 if (isSetBh(bhtab, k)) {
-                    while (bhtab[k shr 5] == -1) { // 0xffffffff
+                    while (bhtab[k shr 5] == -1) {
                         k += 32
                     }
                     while (isSetBh(bhtab, k)) {
@@ -1534,12 +1396,10 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
                     break
                 }
 
-                // Now [l, r] brackets the current bucket.
                 if (r > l) {
                     nNotDone += (r - l + 1)
                     fallbackQSort3(fmap, eclass, l, r)
 
-                    // Scan the bucket and generate header bits.
                     var cc = -1
                     for (i in l..r) {
                         val cc1 = eclass[fmap[i]]
@@ -1557,8 +1417,6 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
             }
         }
 
-        // Reconstruct the original block, which the previous phase destroyed in libbzip2. Here it
-        // rewrites the bytes that are already there.
         var j = 0
         for (i in 0 until nblock) {
             while (ftabCopy[j] == 0) {
@@ -1581,16 +1439,12 @@ private class BZip2Stream(private val blockSize100k: Int, dataSize: Int) {
     private fun isSetBh(bhtab: IntArray, zz: Int) = bhtab[zz shr 5] and (1 shl (zz and 31)) != 0
 }
 
-/** `BZ_N_RADIX`, the depth the two byte radix sort has already resolved. */
 private const val BZ_N_RADIX = 2
 
-/** `BZ_N_QSORT`, the depth beyond which mainQSort3 hands over to the shell sort. */
 private const val BZ_N_QSORT = 12
 
-/** `BZ_N_SHELL`. */
 private const val BZ_N_SHELL = 18
 
-/** `BZ_N_OVERSHOOT`: how far past the block mainGtU may read. */
 private const val BZ_N_OVERSHOOT = BZ_N_RADIX + BZ_N_QSORT + BZ_N_SHELL + 2
 
 private const val BZ_MAX_ALPHA_SIZE = 258
@@ -1602,10 +1456,8 @@ private const val BZ_RUNB = 1
 private const val BZ_LESSER_ICOST = 0
 private const val BZ_GREATER_ICOST = 15
 
-/** Changed from 20 to 17 in bzip2-1.0.3; the decoder still has to accept 20. */
 private const val BZ_MAX_COMPRESS_CODE_LEN = 17
 
-/** libbzip2's default work factor, and the one `bzip2` itself passes. */
 private const val WORK_FACTOR = 30
 
 private const val MAIN_QSORT_SMALL_THRESH = 20
@@ -1617,17 +1469,12 @@ private const val FALLBACK_QSORT_STACK_SIZE = 100
 private const val SETMASK = 1 shl 21
 private const val CLEARMASK = SETMASK.inv()
 
-/** Knuth's increments, used by mainSimpleSort. */
 private val INCS = intArrayOf(
     1, 4, 13, 40, 121, 364, 1093, 3280,
     9841, 29524, 88573, 265720,
     797161, 2391484,
 )
 
-/**
- * `BZ2_crc32Table`: the AUTODIN-II / Ethernet / FDDI 32-bit CRC, most significant bit first over
- * polynomial 0x04c11db7. Generated rather than transcribed; the values are identical to crctable.c.
- */
 private val CRC_TABLE = IntArray(256) { index ->
     var crc = index shl 24
     repeat(8) {

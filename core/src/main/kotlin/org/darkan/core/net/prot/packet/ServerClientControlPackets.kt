@@ -1,6 +1,3 @@
-/**
- * Packets that drive client-side machinery: scripts, cutscenes, cursors and debug hooks.
- */
 package org.darkan.core.net.prot.packet
 
 import org.darkan.core.clientwatch.ReflectionCheck

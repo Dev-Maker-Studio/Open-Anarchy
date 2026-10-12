@@ -41,7 +41,6 @@ class AnimationDecoder : DefinitionDecoder<AnimationDefinition>(ANIMATIONS) {
                 for (index in records) {
                     interleaveOrder!![index] = true
                 }
-                // The flags alone cannot say how many records there were, nor in what order.
                 if (!records.contentEquals(records.distinct().sorted().toIntArray())) {
                     interleaveRecords = records
                 }

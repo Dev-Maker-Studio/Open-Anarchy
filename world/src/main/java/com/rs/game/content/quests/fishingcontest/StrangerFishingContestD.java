@@ -89,7 +89,7 @@ public class StrangerFishingContestD extends Conversation {
 				if(e.getPlayer().getQuestManager().getAttribs(Quest.FISHING_CONTEST).getB(PIPE_HAS_GARLIC))
 					e.getPlayer().startConversation(new Conversation(e.getPlayer()) {
 						{
-							addNPC(225, HeadE.CALM_TALK, "Hey, you need to pay to enter the competition first! Only 5 coins for the entrance fee!");//Bonzo
+							addNPC(225, HeadE.CALM_TALK, "Hey, you need to pay to enter the competition first! Only 5 coins for the entrance fee!");
 							create();
 						}
 					});

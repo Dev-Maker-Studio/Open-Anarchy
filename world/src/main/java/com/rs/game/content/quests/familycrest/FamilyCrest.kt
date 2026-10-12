@@ -23,7 +23,6 @@ const val TALK_TO_JOHNATHAN = 6
 const val KILL_CHRONOZON = 7
 const val QUEST_COMPLETE = 8
 
-// Items
 const val PERFECT_RUBY_RING = 773
 const val PERFECT_RUBY_NECKLACE = 774
 const val CALEB_CREST = 779

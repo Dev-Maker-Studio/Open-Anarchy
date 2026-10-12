@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.summoning;
 
 import org.darkan.core.cache.ItemDefinitions;
@@ -599,19 +583,13 @@ public final class Familiar extends NPC {
 		owner.getVars().setVarBit(Varbit.lore_timer_2, (ticks % 100) == 0 ? 0 : 1);
 	}
 
-	/**
-	 * Var 448 sets to itemId of pouch then gets npc chathead from enum 1279 and stores it in var 1174
-	 * Var 1174 set to 0 will refresh the head as 448 will recalculate from the enum
-	 * 
-	 * 
-	 */
 	public void sendMainConfigs() {
-		owner.getVars().setVar(Varp.follower_obj, pouch.getId());// configures familiar type
-		owner.getVars().setVar(1174, 0, true); //refresh familiar head
-		owner.getVars().setVarBit(Varbit.lore_interface_boolean, pouch.getHeadAnimIndex()); //refresh familiar emote
+		owner.getVars().setVar(Varp.follower_obj, pouch.getId());
+		owner.getVars().setVar(1174, 0, true);
+		owner.getVars().setVarBit(Varbit.lore_interface_boolean, pouch.getHeadAnimIndex());
 		refreshSpecialEnergy();
 		sendTimeRemaining();
-		owner.getVars().setVarBit(4288, pouch.getScroll().getPointCost());// check
+		owner.getVars().setVarBit(4288, pouch.getScroll().getPointCost());
 		owner.getPackets().sendVarcString(204, pouch.getScroll().getName());
 		owner.getPackets().sendVarcString(205, pouch.getScroll().getDescription());
 		owner.getPackets().sendVarc(1436, pouch.getScroll().getTarget() == ScrollTarget.CLICK || pouch.getScroll().getTarget() == ScrollTarget.COMBAT ? 1 : 0);

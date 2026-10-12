@@ -8,14 +8,6 @@ import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.TEXTURE_DEFINITIONS
 import world.gregs.voidps.cache.definition.data.MaterialDefinition
 
-/**
- * Index 26, which is one archive holding every material at once.
- *
- * The blob is a count, then a presence byte per material, then one column per field holding that
- * field for every *defined* material in id order - so a field cannot be read without having read
- * every field before it. [world.gregs.voidps.cache.definition.encoder.MaterialEncoder] writes the
- * same columns back; the field names are the client's `MaterialTypeList`.
- */
 class MaterialDecoder : DefinitionDecoder<MaterialDefinition>(TEXTURE_DEFINITIONS) {
 
     override fun create(size: Int) = Array(size) { MaterialDefinition(it) }
@@ -35,7 +27,6 @@ class MaterialDecoder : DefinitionDecoder<MaterialDefinition>(TEXTURE_DEFINITION
         return definitions
     }
 
-    /** [definitions] is the whole blob's worth; [reader] is positioned just past the count. */
     override fun load(definitions: Array<MaterialDefinition>, reader: Reader) {
         val data = mutableListOf<MaterialDefinition>()
         for (index in definitions.indices) {

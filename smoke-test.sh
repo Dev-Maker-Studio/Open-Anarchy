@@ -1,12 +1,4 @@
 #!/bin/bash
-# Boots the lobby and the world from a fresh installDist against the database in .env, waits for
-# the world to register with the lobby's social gateway, then shuts both down. Exit 0 = healthy.
-# Logs land in ${SMOKE_LOG_DIR:-/tmp/darkan-smoke}.
-#
-# Ports come from .env / the environment. On a host that also runs the legacy servers, move off
-# the defaults, e.g.:
-#   LOBBY_PORT=53594 WORLD_PORT=53595 LOBBY_API_PORT=54040 \
-#   SOCIAL_GATEWAY_URL=ws://localhost:54040/social/ws ./smoke-test.sh
 set -u
 cd "$(dirname "$0")"
 
@@ -24,7 +16,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-wait_for() { # file pattern label
+wait_for() {
   local waited=0
   until grep -q "$2" "$1"; do
     if grep -qiE "Exception|FATAL|SEVERE" "$1"; then
@@ -54,7 +46,6 @@ echo "Checking /health..."
 curl -sf "http://127.0.0.1:${LOBBY_API_PORT:-4040}/health" >/dev/null && echo "ok: lobby /health" || { echo "FAIL: /health"; exit 1; }
 curl -s "http://127.0.0.1:${LOBBY_API_PORT:-4040}/worldlist" | head -c 300; echo
 
-# Let a few ticks run so a tick-loop crash shows up.
 sleep 6
 if grep -qiE "Exception|SEVERE" "$WORLD_LOG" "$LOBBY_LOG"; then
   echo "FAIL: errors after startup:"; grep -iE -m5 -A3 "Exception|SEVERE" "$WORLD_LOG" "$LOBBY_LOG"; exit 1

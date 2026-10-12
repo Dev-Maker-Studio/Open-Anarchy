@@ -57,10 +57,6 @@ object PacketHandlers {
     @Suppress("UNCHECKED_CAST")
     fun <T> getHandler(packet: Class<*>) = PACKET_HANDLERS[packet] as? PacketHandler<T, Any>
 
-    /**
-     * Blocking dispatch for Java callers (e.g. Player.processPackets on the world thread).
-     * Handlers that call only non-suspend legacy Java code complete synchronously.
-     */
     @Suppress("UNCHECKED_CAST")
     fun <T> handleBlocking(player: T, packet: Any) {
         val handler = PACKET_HANDLERS[packet::class.java] as? PacketHandler<T, Any>

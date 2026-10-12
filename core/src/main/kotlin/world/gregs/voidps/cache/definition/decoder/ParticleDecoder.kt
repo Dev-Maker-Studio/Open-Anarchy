@@ -7,18 +7,6 @@ import world.gregs.voidps.cache.Index
 import world.gregs.voidps.cache.definition.data.ParticleDefinition
 import world.gregs.voidps.cache.definition.encoder.ParticleEncoder
 
-/**
- * Index 27 archive 1: particles, the client's `ParticleType`.
- *
- * Eighteen files in the 727 cache. As with the producers, the client's `setDefaults` - a cosine, a
- * 3D magnitude, a squared reach - is derivation and stays out of the read path.
- *
- * **Opcode 4 is a byte and an int, not a bare int.** The reference client reads only the int, which
- * leaves its `type` field - the one `setDefaults` switches on - permanently 0 and desynchronises
- * the rest of the record list; ten of the eighteen 727 files carry the record, and every one of
- * them parses to its last byte with the leading byte read and to nothing sensible without it. That
- * byte is the type: 1 and 2 are the values the cache uses.
- */
 class ParticleDecoder : DefinitionDecoder<ParticleDefinition>(Index.PARTICLES) {
 
     private val encoder = ParticleEncoder()
@@ -55,7 +43,6 @@ class ParticleDecoder : DefinitionDecoder<ParticleDefinition>(Index.PARTICLES) {
     }
 
     companion object {
-        /** Index 27's particle archive. */
         const val ARCHIVE = 1
     }
 }

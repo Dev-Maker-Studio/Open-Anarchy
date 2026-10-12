@@ -58,7 +58,6 @@ fun openRemoteFarm(player: Player) {
     player.spotAnim(SpotAnim(748, 0, 100))
     player.addSpellDelay(10)
     LunarSpell.REMOTE_FARM.xp?.let { player.skills.addXp(Constants.MAGIC, it) }
-//    Magic.triggerSpellCastEvent(player, LunarSpell.REMOTE_FARM.name)
     player.tempAttribs.setB("RemoteFarm", true)
     player.interfaceManager.sendInterface(REMOTE_FARM_INTERFACE)
     refreshRemoteFarm(player)

@@ -8,9 +8,6 @@ import com.rs.plugin.handlers.ObjectClickHandler;
 
 import static com.rs.game.content.world.doors.Doors.handleDoor;
 
-/**
- * Puzzle remake from this picture: https://gyazo.com/305b717ded771ca352b7cb50d51a91b8
- */
 @PluginEventHandler
 public class WitchHavenPuzzleFamilyCrest {
 	private static boolean northNorthLeverUp = false;

@@ -16,7 +16,6 @@ import world.gregs.voidps.type.Tile
 private const val MAX_DAMAGE = 650
 private const val CAMERA_PULLBACK = 7
 
-/** Where Nex lines up before the charge, and where the camera sits to watch it, relative to the arena centre. */
 private class Charge(val offsetX: Int, val offsetY: Int, val camOffsetX: Int, val camOffsetY: Int) {
     val northSouth: Boolean get() = offsetX == 0
 }

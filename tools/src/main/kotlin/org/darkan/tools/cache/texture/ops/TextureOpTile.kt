@@ -3,9 +3,6 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 20: Tiles the input texture multiple times.
- */
 class TextureOpTile : TextureOperation(1, false) {
     private var tilesX: Int = 4
     private var tilesY: Int = 4

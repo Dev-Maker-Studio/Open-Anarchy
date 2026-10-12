@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.death;
 
 import org.darkan.core.cache.EnumDefinitions;
@@ -36,7 +20,7 @@ import org.darkan.core.gameval.gen.Varbit;
 
 import static com.rs.utils.KtExtensionsKt.copyItem;
 
-public class GraveStone extends NPC {// 652 - gravestone selection interface
+public class GraveStone extends NPC {
 
 	private static final int GRAVE_STONE_INTERFACE = 266;
 
@@ -149,7 +133,7 @@ public class GraveStone extends NPC {// 652 - gravestone selection interface
 	public void sendGraveInscription(Player reader) {
 		reader.getInterfaceManager().sendInterface(GRAVE_STONE_INTERFACE);
 		reader.getVars().setVarBit(Varbit.gravestone_transmit, graveStone == 0 ? 0 : 1);
-		if (ticks <= 50) // if the grave is almost broken
+		if (ticks <= 50)
 			reader.getPackets().setIFText(GRAVE_STONE_INTERFACE, 22, "The inscription is too unclear to read.");
 		else if (reader == getPlayer())
 			reader.getPackets().setIFText(GRAVE_STONE_INTERFACE, 22, "It looks like it'll survive another " + (ticks / 100) + " minutes. Isn't there something a bit odd about reading your own gravestone?");
@@ -174,7 +158,7 @@ public class GraveStone extends NPC {// 652 - gravestone selection interface
 			blesser.sendMessage("This gravestone doesn't seem to need repair.");
 			return;
 		}
-		ticks += bless ? 6000 : 500; // 5minutes, 1hour
+		ticks += bless ? 6000 : 500;
 		blessed = true;
 		decrementGrave(0, blesser.getDisplayName() + "has " + (bless ? "blessed" : "repaired") + " your gravestone. It should survive another " + (ticks / 100) + " minutes.");
 		blesser.sendMessage("You " + (bless ? "bless" : "repair") + " the grave.");
@@ -232,14 +216,10 @@ public class GraveStone extends NPC {// 652 - gravestone selection interface
         };
     }
 
-	/*
-	 * the final items after swaping slots return keptItems, dropedItems as we
-	 * reset inv and equipment all others will just disapear
-	 */
 	public static Item[][] getItemsKeptOnDeath(Player player, Integer[][] slots) {
 		ArrayList<Item> droppedItems = new ArrayList<>();
 		ArrayList<Item> keptItems = new ArrayList<>();
-		for (int i : slots[0]) { // items kept on death
+		for (int i : slots[0]) {
 			Item item = i >= 16 ? copyItem(player.getInventory().getItem(i - 16)) : copyItem(player.getEquipment().getItem(i - 1));
 			if (item.getAmount() > 1) {
 				droppedItems.add(new Item(item.getId(), item.getAmount() - 1));
@@ -247,30 +227,22 @@ public class GraveStone extends NPC {// 652 - gravestone selection interface
 			}
 			keptItems.add(item);
 		}
-		for (int i : slots[1]) { // items droped on death
+		for (int i : slots[1]) {
 			Item item = i >= 16 ? player.getInventory().getItem(i - 16) : player.getEquipment().getItem(i - 1);
-			if (item == null) // shouldnt
+			if (item == null)
 				continue;
 			droppedItems.add(item);
 		}
-		for (int i : slots[2]) { // items protected by default
+		for (int i : slots[2]) {
 			Item item = i >= 16 ? player.getInventory().getItem(i - 16) : player.getEquipment().getItem(i - 1);
-			if (item == null) // shouldnt
+			if (item == null)
 				continue;
 			keptItems.add(item);
 		}
 		return new Item[][] { keptItems.toArray(new Item[0]), droppedItems.toArray(new Item[0]) };
 	}
 
-	/*
-	 * if (item.getAmount() > 1) { item.setAmount(item.getAmount() - 1);
-	 * count++; } else containedItems.remove(count);
-	 */
 
-	/*
-	 * return arrays: items kept on death by default, items dropped on death by
-	 * default, items protected by default, items lost by default
-	 */
 	public static Integer[][] getItemSlotsKeptOnDeath(final Player player, boolean atWilderness, boolean skulled, boolean protectPrayer) {
 		ArrayList<Integer> droppedItems = new ArrayList<>();
 		ArrayList<Integer> protectedItems = atWilderness ? null : new ArrayList<>();

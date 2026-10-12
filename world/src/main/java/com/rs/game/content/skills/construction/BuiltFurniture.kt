@@ -37,7 +37,6 @@ private const val REPAIR_ANIM_INTERVAL = 3
 private const val STRENGTH_DAMAGE_DIVISOR = 8
 private const val BASE_DAMAGE = 1
 private const val INVISIBLE_NPC = 9167
-/** A speck of a model about 2.9 tiles up; the client places the bar just above the NPC's model, so this sets the bar's height. */
 private const val BAR_HEIGHT_MODEL = 8719
 private const val FULL_BAR = 255
 private const val BAR_LINGER_TICKS = 4
@@ -136,7 +135,6 @@ private fun destroy(obj: GameObject) {
     World.removeObject(obj)
 }
 
-/** An object cannot carry a hit bar, so the bar is shown on an invisible, unclickable NPC standing on the object's tile. */
 private class ObjectHitBar(private val from: Int, private val to: Int, private val max: Int) : HitBar() {
     override fun getType() = 0
 

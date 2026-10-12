@@ -4,7 +4,6 @@ import org.darkan.core.model.Clan
 import org.darkan.core.mongo.collections.ClanStore
 import java.util.concurrent.ConcurrentHashMap
 
-/** A [ClanStore] held in a map, for tests that put it behind `Clans.store` instead of Mongo. */
 class InMemoryClanStore : ClanStore {
     val clans = ConcurrentHashMap<String, Clan>()
 

@@ -27,36 +27,16 @@ data class AnimationDefinition(
     var secondarySpeeds: IntArray? = null,
     override var stringId: String = "",
     override var extras: Map<String, Any>? = null,
-    /**
-     * The opcode 19 records in file order, as (frame, volume) pairs. [volumes] holds the same values indexed
-     * by frame, but not which frames the file wrote a record for - a frame may be given its default 255.
-     */
     var soundVolumeRecords: IntArray? = null,
-    /**
-     * The opcode 20 records in file order, as (frame, primary, secondary) triples. [primarySpeeds] and
-     * [secondarySpeeds] hold the same values indexed by frame; see [soundVolumeRecords].
-     */
     var soundSpeedRecords: IntArray? = null,
-    /**
-     * The opcode 3 interleave indices in file order, kept only when they are not the ascending distinct set
-     * [interleaveOrder] holds - ten seqs list an index twice.
-     */
     var interleaveRecords: IntArray? = null,
-    /** Opcode 16, a flag with no payload that the client of this revision reads and discards. */
     var unusedFlag16: Boolean = false
 ) : Definition, Extra, OpcodeOrdered {
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var opcodeOrder: IntArray? = null
 
-    /**
-     * @see OpcodeOrdered
-     */
     override var shadowedPayloads: Array<ByteArray?>? = null
 
-    /** Opcodes 19 and 20 are one record per sound frame, not a field written twice. */
     override fun repeats(opcode: Int): Boolean = opcode == 19 || opcode == 20
 
     override fun equals(other: Any?): Boolean {
@@ -158,7 +138,6 @@ data class AnimationDefinition(
         return result
     }
 
-    /** Returns total duration of all frames in client cycles (20ms). */
     fun getEmoteTime(): Int = durations?.sum() ?: 0
 
     companion object {

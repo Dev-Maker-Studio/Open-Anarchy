@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs;
 
 import com.rs.game.content.skills.dungeoneering.DungeonManager;
@@ -35,12 +19,11 @@ public final class ShadowForgerIhlakhizan extends DungeonBoss {
 
 	public ShadowForgerIhlakhizan(Tile tile, DungeonManager manager, RoomReference reference) {
 		super(DungeonUtils.getClosestToCombatLevel(Utils.range(10143, 10156), manager.getBossLevel()), tile, manager, reference);
-		setCantFollowUnderCombat(true); //force cant walk
+		setCantFollowUnderCombat(true);
 	}
 
 	@Override
 	public void setNextFaceEntity(Entity entity) {
-		//this boss doesnt face
 	}
 
 	@Override

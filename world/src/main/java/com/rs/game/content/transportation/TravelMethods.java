@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.transportation;
 
 import org.darkan.core.model.Bonus;
@@ -43,7 +27,6 @@ public class TravelMethods {
 	private static final int TRAVEL_INTERFACE = 299, CHARTER_INTERFACE = 95;
 	private static final int[] REGIONS = { 8496, 14646, 11061, 11823, 11825, 11058, 10545, 12081, 14637, -1, 10284 };
 
-	// List of allowed items (Ice Gloves, for Heroes' Quest, etc)
 	public static final Set<Integer> allowedEntranaItems = Set.of(1580);
 
 	public enum Carrier {
@@ -56,14 +39,14 @@ public class TravelMethods {
 		PORT_KHAZARD(new int[] { 3200, 4100, 1600, 1600, 1600, 1600, -1, 1280, 1025, -1, 5000 }, Tile.of(0,41,49,50,8)),
 		PORT_SARIM(new int[] { 3200, 1300, 1000, 400, -1, 1600, 1280, -1, 325, -1, 1400 }, Tile.of(3038, 3192, 0)),
 		MOS_LE_HARMLESS(new int[] { 1600, -1, 625, 275, 1025, 725, 1025, 325, -1, -1, 500 }, Tile.of(0,57,45,23,51)),
-		CRANDOR(new int[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, Tile.of(0,40,44,63,41)), //disabled
+		CRANDOR(new int[] { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, Tile.of(0,40,44,63,41)),
 		OO_GLOG(new int[] { 3200, 2800, 3400, 900, 2000, 3800, 5000, 1400, 550, -1, -1 }, Tile.of(0,40,44,63,41)),
 		ENTRANA_FARE(null, "Port Sarim", Tile.of(2834, 3335, 0), Tile.of(3048, 3234, 0)),
 		CRANDOR_FARE(null, "Port Sarim", Tile.of(2853, 3238, 0), Tile.of(3047, 3204, 0)),
 		KARAMJA_FARE(new int[] { 30 }, "Port Sarim", Tile.of(2956, 3146, 0), Tile.of(3029, 3217, 0)),
 		BRIMHAVEN_FARE(new int[] { 30 }, "Ardougne", Tile.of(2772, 3234, 0), Tile.of(2683, 3271, 0)),
 		UNUSED(null, null, null, null),
-		PORT_KHAZARD_FARE(null, "Ship yard", Tile.of(2981, 3052, 0), Tile.of(2676, 3170, 0)), // 15
+		PORT_KHAZARD_FARE(null, "Ship yard", Tile.of(2981, 3052, 0), Tile.of(2676, 3170, 0)),
 		CARIN_ISLAND_FARE(null, "Ship yard", Tile.of(2995, 3052, 0), Tile.of(2763, 2956, 1)),
 		VOID_OUTPOST_FARE(null, "Port Sarim", Tile.of(2659, 2676, 0), Tile.of(3041, 3202, 0)),
 		JATIZO(null, "Relleka", Tile.of(2422, 3781, 0), Tile.of(2643, 3710, 0)),
@@ -120,21 +103,21 @@ public class TravelMethods {
 		int iComp = -1;
 		switch(ship) {
 			case ENTRANA_FARE:
-				if(ship.getFixedName(returning).equalsIgnoreCase("entrana fare"))//sarim->entrana
+				if(ship.getFixedName(returning).equalsIgnoreCase("entrana fare"))
 					iComp = 54;
-				else if(ship.getFixedName(returning).equalsIgnoreCase("port sarim"))//entrana-> sarim
+				else if(ship.getFixedName(returning).equalsIgnoreCase("port sarim"))
 					iComp = 46;
 				break;
-			case KARAMJA_FARE://fare, meaning not charter
-				if(ship.getFixedName(returning).equalsIgnoreCase("port sarim"))//brimhaven->port sarim
+			case KARAMJA_FARE:
+				if(ship.getFixedName(returning).equalsIgnoreCase("port sarim"))
 					iComp = 42;
-				else if(ship.getFixedName(returning).equalsIgnoreCase("karamja fare"))//sarim->karamja
+				else if(ship.getFixedName(returning).equalsIgnoreCase("karamja fare"))
 					iComp = 43;
 				break;
 			case BRIMHAVEN_FARE:
-				if(ship.getFixedName(returning).equalsIgnoreCase("ardougne"))//karamja/brim->ardougn
+				if(ship.getFixedName(returning).equalsIgnoreCase("ardougne"))
 					iComp = 40;
-				else if(ship.getFixedName(returning).equalsIgnoreCase("brimhaven fare"))//ardy->brim fare
+				else if(ship.getFixedName(returning).equalsIgnoreCase("brimhaven fare"))
 					iComp = 41;
 				break;
 			default:
@@ -142,20 +125,6 @@ public class TravelMethods {
 		}
 		return iComp;
 	}
-	/**Add map then sound, MAP -> 299, music-effect -> 171(short)/172(long)
-	 * p.getInterfaceManager().sendInterface(TRAVEL_INTERFACE);
-	 * p.getPackets().setIFHidden(299, icomp, false);
-	 * 40: brim->ardy(short)
-	 * 41: ardy->brim(short)
-	 * 42: Karamja->Sarim(short)
-	 * 43: sarim -> karamja/(short)
-	 * 46: entrana -> sarim(short)
-	 * 54: sarim -> entrana(short)
-	 *
-	 * //save for dragon slayer
-	 * * 45: crandor -> sarim(short)
-	 * * 44: sarim -> crandor(short)
-	 */
 
 	public static NPCClickHandler handleCharterShips = new NPCClickHandler(new Object[] { "Trader Crewmember", "Trader crewmember" }, e -> {
 		if (e.getOpNum() == 3)
@@ -252,7 +221,7 @@ public class TravelMethods {
 		player.getTempAttribs().setB("using_carrier", true);
 
 		if(getComponentForMap(ship, returning) == -1)
-			FadingScreen.fade(player, () -> {// 9
+			FadingScreen.fade(player, () -> {
 				player.tele(tile);
 				player.lock(1);
 				player.closeInterfaces();
@@ -267,7 +236,7 @@ public class TravelMethods {
 					int tick;
 					@Override
 					public void run() {
-						if (tick == 0)  //setup p1
+						if (tick == 0)
 							player.getInterfaceManager().setFadingInterface(115);
 						else if (tick == 3) {
 							player.getInterfaceManager().setFadingInterface(516);
@@ -293,7 +262,7 @@ public class TravelMethods {
 					int tick;
 					@Override
 					public void run() {
-						if (tick == 0)  //setup p1
+						if (tick == 0)
 							player.getInterfaceManager().setFadingInterface(115);
 						else if (tick == 3) {
 							player.getPackets().setBlockMinimapState(2);

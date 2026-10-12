@@ -1,21 +1,9 @@
 package world.gregs.voidps.cache.definition.data
 
-/**
- * One shape a rasterizer operation (type 29) draws: a line, a cubic bezier, a rectangle or an
- * ellipse, in the fixed point 0..4096 coordinate space textures are generated in.
- *
- * [shape] decides the record's whole shape - four coordinates or eight, one colour or two - so it
- * is what both the decoder and the encoder read the rest from; see
- * [world.gregs.voidps.cache.definition.TextureOpFormat].
- */
 data class TextureShape(
-    /** `0` line, `1` bezier, `2` rectangle, `3` ellipse. */
     var shape: Int = 0,
-    /** Four coordinates (`x1, y1, x2, y2`), or eight for a bezier's two control points. */
     var coordinates: IntArray = IntArray(0),
-    /** The fill colour, only for a rectangle or an ellipse. */
     var fill: Int? = null,
-    /** The stroke colour. */
     var stroke: Int = 0,
     var strokeWidth: Int = 0
 ) {

@@ -28,8 +28,6 @@ class EnumDecoder : DefinitionDecoder<EnumDefinition>(ENUMS) {
             4 -> defaultInt = buffer.readInt()
             5, 6 -> {
                 length = buffer.readUnsignedShort()
-                // Linked so the keys come back out in the order the file listed them, which is what the
-                // encoder writes back.
                 val hashtable = Int2ObjectLinkedOpenHashMap<Any>(length)
                 val records = ArrayList<KeyedValue>(length)
                 for (count in 0 until length) {
@@ -44,7 +42,6 @@ class EnumDecoder : DefinitionDecoder<EnumDefinition>(ENUMS) {
                 }
             }
             7, 8 -> {
-                // Indexed array variant: arraySize is the array capacity, length is the entry count
                 arraySize = buffer.readUnsignedShort()
                 length = buffer.readUnsignedShort()
                 val hashtable = Int2ObjectLinkedOpenHashMap<Any>(length)

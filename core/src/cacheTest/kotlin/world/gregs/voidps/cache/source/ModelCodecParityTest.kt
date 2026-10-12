@@ -19,21 +19,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * Every archive of indices 7, 27 and 29 through the codec that stores it: models as glTF binaries,
- * particles and billboards as JSON.
- *
- * [world.gregs.voidps.cache.definition.ModelEncoderParityTest] proves `encode(decode(bytes)) ==
- * bytes`; this proves the whole trip the source tree actually makes -
- * `encode(read(write(decode(bytes)))) == bytes` - so a field the JSON cannot spell, an array it
- * reorders or a number it narrows shows up here rather than as a pristine sidecar in a 2 GB tree.
- *
- * The codec is asked for exactly what an unpack asks it for, so a file it could not reproduce
- * comes back with its `.pristine` sidecar and is counted; the bar is zero. It also reports what
- * the JSON costs, which is the size `docs/cache-source.md` quotes.
- *
- * Skipped when there is no cache to test against, like the other whole-cache tests.
- */
 class ModelCodecParityTest {
 
     @Test
@@ -67,13 +52,6 @@ class ModelCodecParityTest {
         assertTrue(models.tree > models.raw, "the editable form is expected to be larger than the bytes it replaces")
     }
 
-    /**
-     * One model's `.glb`, reported: its size, its two chunks and the start of its glTF JSON.
-     *
-     * A worked example belongs in a test rather than only in a document, because a test is what
-     * prints it again when the spelling changes: `docs/cache-source.md`'s *models* excerpt is the
-     * head of this output.
-     */
     @Test
     fun `a model reads as a whole file`() {
         val directory = File(EnvVars.cachePath)
@@ -123,7 +101,6 @@ class ModelCodecParityTest {
         assertEquals(ModelCodecs.particles, ParticleCodec.codec(1))
     }
 
-    /** One codec's files, how many needed the shipped bytes beside them, and what they cost. */
     private class Result(
         val name: String,
         val vanilla: Int,
@@ -133,12 +110,6 @@ class ModelCodecParityTest {
         val tree: Long
     )
 
-    /**
-     * Run [codec] over every archive of [index] exactly as an unpack does, and count.
-     *
-     * [archives] narrows it to one archive of an index whose archives are different types, which
-     * is how index 27's two are reported separately.
-     */
     private fun count(
         cache: Cache,
         index: Int,
@@ -183,16 +154,13 @@ class ModelCodecParityTest {
     }
 
     private companion object {
-        /** What vanilla 727 shipped; the tree only ever grows, so these are floors. */
         private const val VANILLA_MODELS = 73_417
         private const val VANILLA_PRODUCERS = 741
         private const val VANILLA_PARTICLES = 18
         private const val VANILLA_BILLBOARDS = 360
 
-        /** The model `docs/cache-source.md`'s *models* excerpt quotes. */
         private const val EXAMPLE = 9808
 
-        /** How much of its glTF JSON to print: enough to show the asset and the start of the extras. */
         private const val HEAD = 640
     }
 }

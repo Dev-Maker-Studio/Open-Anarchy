@@ -5,13 +5,8 @@ import world.gregs.voidps.cache.Index
 
 fun prefetchKeys(cache: Cache): IntArray {
     return generatePrefetchKeys(cache)
-    //return EnvVars.js5Keys?.split(",")?.map { it.toInt() }?.toIntArray() ?: generatePrefetchKeys(cache)
 }
 
-/**
- * Generates cache prefetch keys used to determine total cache download percentage
- * Note: Can vary between revisions, compare with your client.
- */
 fun generatePrefetchKeys(cache: Cache) = intArrayOf(
     archive(cache, Index.DEFAULTS),
     native(cache, "jaclib"),
@@ -42,9 +37,6 @@ fun generatePrefetchKeys(cache: Cache) = intArrayOf(
     file(cache, Index.WORLD_MAP, "details"),
 )
 
-/**
- *  Length of archive with [name] in [index]
- */
 fun file(cache: Cache, index: Int, name: String): Int {
     val archive = cache.archiveId(index, name)
     if (archive == -1) {
@@ -53,9 +45,6 @@ fun file(cache: Cache, index: Int, name: String): Int {
     return (cache.sector(index, archive)?.size ?: 2) - 2
 }
 
-/**
- * Length of all archives in [index]
- */
 fun archive(cache: Cache, index: Int): Int {
     var total = 0
     for(archive in cache.archives(index)) {

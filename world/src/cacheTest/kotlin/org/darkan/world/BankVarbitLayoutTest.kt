@@ -9,7 +9,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** The bank's toggles share a varp with the rest of the bank's state, so their bits must not collide. */
 class BankVarbitLayoutTest {
 
     @Test

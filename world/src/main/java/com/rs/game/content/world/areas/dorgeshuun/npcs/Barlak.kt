@@ -17,12 +17,8 @@ data class BarlakItem(
 )
 
 val barlakItems = listOf(
-    BarlakItem(10976, 1000, 1500.0, Constants.CONSTRUCTION),  // Long bone
-    BarlakItem(10977, 2000, 2250.0, Constants.CONSTRUCTION),  // Curved bone
-    /*BarlakItem(10978, 600, null, null),                     // Snail shell
-    BarlakItem(10979, 600, 500, Constants.CRAFTING),          // Perfect snail shell
-    BarlakItem(10980, 600, null, null),                       // Tortoise shell
-    BarlakItem(10981, 600, 500, Constants.CRAFTING)*/         // Perfect shell
+    BarlakItem(10976, 1000, 1500.0, Constants.CONSTRUCTION),
+    BarlakItem(10977, 2000, 2250.0, Constants.CONSTRUCTION),
 )
 
 class Barlak(val player: Player, val npc: NPC) {

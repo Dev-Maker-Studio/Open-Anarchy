@@ -3,9 +3,6 @@ package org.darkan.tools.cache.texture.ops
 import org.darkan.tools.cache.texture.TextureOperation
 import world.gregs.voidps.buffer.read.BufferReader
 
-/**
- * Type 22: Inverts color/grayscale values.
- */
 class TextureOpInvert : TextureOperation(1, false) {
 
     override fun getColorOutput(y: Int): Array<IntArray> {

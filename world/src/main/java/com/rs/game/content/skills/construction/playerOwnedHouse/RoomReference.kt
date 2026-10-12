@@ -45,9 +45,6 @@ class RoomReference(val room: HouseRooms, x: Int, y: Int, plane: Int, rotation: 
             return false
         }
 
-    /*
-     * x,y inside the room chunk
-     */
     fun addObject(build: HouseBuilds, slot: Int): ObjectReference {
         val ref = ObjectReference(build, slot)
         objects.add(ref)

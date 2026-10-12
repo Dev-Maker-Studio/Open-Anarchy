@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.agility;
 
 import com.rs.engine.dialogue.Conversation;
@@ -170,7 +154,6 @@ public class Agility {
 	public static boolean rollSuccess(final Player player, final int rate1, final int rate99, final String stageName, int stageIdx) {
 		boolean stageCompleted = Agility.getStageProgress(player, stageName, stageIdx);
 
-		// only apply aura effect if obstacle hasn't been completed already
         return (!stageCompleted && player.getAuraManager().isSurefootedAura())
 				|| Utils.skillSuccess(player.getSkills().getLevel(Constants.AGILITY), rate1, rate99);
 	}
@@ -178,7 +161,6 @@ public class Agility {
 	public static boolean rollSuccess(final Player player, final double successProbability, final String stageName, int stageIdx) {
 		boolean stageCompleted = Agility.getStageProgress(player, stageName, stageIdx);
 
-		// only apply aura effect if obstacle hasn't been completed already
 		return (!stageCompleted && player.getAuraManager().isSurefootedAura())
 				|| Math.random() <= successProbability;
 	}

@@ -23,14 +23,6 @@ private const val DIRTY_BLAST_ID = 7497
 private const val GREENMANS_ALE_ID = 1909
 private const val ROTTEN_TOMATO_ID = 2518
 
-//@QuestHandler(
-//    quest = Quest.ANOTHER_COOKS_QUEST,
-//    startText = "The cook in Lumbridge has a surprisingly small number of ingredients to hand in his kitchen, possibly as a result of an endless stream of newcomers with light fingers taking anything that isn't nailed down from his kitchen.<br>Luckily, in the past a kind Cook's Assistant was willing to help him in his culinary duties, but now a problem has appeared that could spell... a Recipe For Disaster!<br>Almost all members may attempt to solve his tricky predicament, and be rewarded accordingly, but only the very elite of Questers will be able to put an end to his problem permanently!",
-//    itemsText = "Eye of newt. Greenman's ale. Rotten tomato. Fruit blast. Ashes.",
-//    combatText = "None.",
-//    rewardsText = "1 Quest Point<br>An invitation to the most amazing feast you will ever see!<br>Access to the Culinaromancer's Chest",
-//    completedStage = 3
-//)
 class AnotherCooksQuest : QuestOutline() {
     companion object {
         const val NOT_STARTED = 0

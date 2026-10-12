@@ -227,9 +227,6 @@ fun mapPlagueCityInteractions() {
     }
 }
 
-/*
- * Sets various VarBits relating to Plague City quest.
- */
 fun setPlagueCityVarBits(player: Player) {
     val plagueCityStage = player.questManager.getStage(Quest.PLAGUE_CITY)
     val biohazardStarted = player.isQuestStarted(Quest.BIOHAZARD)

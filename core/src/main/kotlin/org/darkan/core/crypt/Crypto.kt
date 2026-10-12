@@ -40,17 +40,8 @@ object Crypto {
         }
     }
 
-    /**
-     * True if [hash] is an Argon2 hash produced by [hashPasswordArgon2]. Callers use this to decide
-     * whether to take the Argon2 path or fall through to a legacy credential, rather than testing
-     * for a non-empty string - anything else in the field must not short-circuit the fallbacks.
-     */
     fun isArgon2Hash(hash: String) = hash.startsWith(ARGON2_PREFIX)
 
-    /**
-     * Verifies [password] against an Argon2 [hash]. Returns false rather than throwing for empty or
-     * non-Argon2 input so a malformed stored hash fails the login instead of the request.
-     */
     fun verifyPasswordArgon2(password: String, hash: String): Boolean {
         if (password.isEmpty() || !isArgon2Hash(hash)) return false
 
@@ -68,13 +59,6 @@ object Crypto {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes)
     }
 
-    /**
-     * Legacy encryption function using AES/CBC/PKCS5Padding.
-     * Retained for backward compatibility.
-     *
-     * @param strToEncrypt The string to encrypt
-     * @return The encrypted bytes or null if encryption fails
-     */
     @Deprecated("Legacy method, use modern crypto approaches instead")
     fun legacyEncrypt(strToEncrypt: String): ByteArray? {
         try {
@@ -96,14 +80,6 @@ object Crypto {
         }
     }
 
-    /**
-     * Legacy function to compare encrypted data with unencrypted string.
-     * Retained for backward compatibility.
-     *
-     * @param encrypted The encrypted bytes
-     * @param unencrypted The unencrypted string to compare against
-     * @return True if they match, false otherwise
-     */
     @Deprecated("Legacy method, use modern crypto approaches instead")
     fun legacyCompare(unencrypted: String, encrypted: ByteArray) = encrypted.contentEquals(legacyEncrypt(unencrypted))
 

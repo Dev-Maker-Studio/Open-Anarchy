@@ -3,9 +3,6 @@ package world.gregs.voidps.type
 import world.gregs.voidps.type.area.Cuboid
 import world.gregs.voidps.type.area.Rectangle
 
-/**
- * Represents a 8x8 tiled area
- */
 @JvmInline
 value class Zone(val id: Int) : Coordinate3D<Zone> {
 
@@ -47,9 +44,6 @@ value class Zone(val id: Int) : Coordinate3D<Zone> {
         fun level(id: Int) = id shr 22 and 0x3
         val EMPTY = Zone(0, 0, 0)
 
-        /**
-         * Index of a local tile within a zone
-         */
         fun tileIndex(tileX: Int, tileY: Int, level: Int): Int = id(tileX shr 3, tileY shr 3, level)
     }
 }

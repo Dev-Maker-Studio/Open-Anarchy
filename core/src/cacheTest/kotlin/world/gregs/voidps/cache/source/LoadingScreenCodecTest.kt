@@ -23,33 +23,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * Index 32's loading screens: the four component JPEGs, the one ordinary JPEG each is stored as, and
- * the client's rules for reading them.
- *
- * Five things are proved here, in the order they matter.
- *
- * 1. **Parity.** Every JPEG archive becomes one `<id>.jpg` - a three component baseline JPEG with the
- *    fourth component's codestream inside it as `APP11` segments - and comes back to the archive's
- *    bytes *byte for byte*, which is what lets the tree store a loading screen as one editable image
- *    with no `.pristine` copy and no second file.
- * 2. **It is an ordinary JPEG.** `javax.imageio` reads it as a three band sRGB image at the right
- *    size; the only application segment in it is the alpha, which every standard decoder skips.
- * 3. **The decode rules are the client's.** Index 34 holds the same 34 pictures as palette graphics -
- *    it is the branch the client takes when AWT will not decode these files - so it is an
- *    independent copy of the same art to measure against, and [JagexJpeg.decode] lands within a few
- *    levels of it. Nothing in this test asserts "the colours look plausible": it asserts they are
- *    the colours Jagex shipped in the other format.
- * 4. **An edit survives, with the alpha or without it.** Re-saving through `ImageIO` - new
- *    quantisation tables, a JFIF segment, its own Huffman tables - still joins into a four component
- *    file whose pixels come back where they were put; and a re-save that *strips* the `APP11`
- *    segments, which is what most editors do, joins with an entirely opaque fourth component rather
- *    than failing.
- * 5. **A PNG may stand in for it.** An RGBA PNG dropped in place of the JPEG encodes into a four
- *    component archive the client reads, which is how transparency is painted in an ordinary editor.
- *
- * Skipped when there is no cache to test against, like the other whole-cache tests.
- */
 class LoadingScreenCodecTest {
 
     @Test
@@ -84,8 +57,6 @@ class LoadingScreenCodecTest {
                     "archive $archive's component $index changed its vertical sampling"
                 )
             }
-            // Jagex's layout: two quantisation tables, four Huffman tables, no APP or COM segment,
-            // and 2x2, 1x1, 1x1, 2x2 over table selectors 0, 1, 1, 0.
             assertEquals(
                 listOf(DQT, DQT, SOF0, DHT, DHT, DHT, DHT, SOS), markers(group),
                 "archive $archive is not Jagex's marker layout"
@@ -99,7 +70,6 @@ class LoadingScreenCodecTest {
                 listOf(0, 1, 1, 0), original.components.map { it.quantisation },
                 "archive $archive's fourth component is not quantised like its luminance"
             )
-            // The only application segment in the stored file is the alpha, and it comes first.
             val stored = markers(file)
             assertEquals(APP11, stored[0], "archive $archive's file does not open on its alpha segment")
             assertTrue(
@@ -110,8 +80,6 @@ class LoadingScreenCodecTest {
             assertNotNull(alpha, "archive $archive's file carries no alpha")
             assertEquals(1, BaselineJpeg.read(alpha).components.size, "archive $archive's alpha is not one component")
 
-            // Through a standard reader, which is the whole point: the four component original makes
-            // ImageIO.read throw and this does not.
             val readable = ImageIO.read(ByteArrayInputStream(file))
             assertNotNull(readable, "archive $archive's file is not readable by ImageIO")
             assertEquals(3, readable.raster.numBands, "archive $archive's file is not three bands")
@@ -137,7 +105,6 @@ class LoadingScreenCodecTest {
                 "$fileBytes on disk (${"%.1f".format(100.0 * (fileBytes - originalBytes) / originalBytes)}%)"
         )
         assertTrue(jpegs >= 21, "only $jpegs JPEG archives were found in index 32")
-        // The rest of the index is the pre-cache fonts, which are palette graphic groups.
         assertTrue(graphics > 0, "index 32 has no palette graphic groups")
     }
 
@@ -175,9 +142,6 @@ class LoadingScreenCodecTest {
                 for (x in 0 until frame.width) {
                     val offset = x + y * frame.width
                     val index = frame.raster[offset].toInt() and 0xff
-                    // Index 34 carries transparency two ways: an 8 bit plane where the frame has
-                    // one, and palette index 0 - the client's transparent colour - where it does
-                    // not. 3764 and 3765 use the second, so both have to be read here.
                     val plane = frame.alpha
                     val opacity = when {
                         plane != null -> plane[offset].toInt() and 0xff
@@ -212,18 +176,10 @@ class LoadingScreenCodecTest {
                 )
             )
             assertTrue(opaque > 0, "archive $archive has no pixel opaque in both formats to compare")
-            // Two independent encodings of one picture: a q75 JPEG and a 256 colour palette, so a
-            // few levels apart is the whole disagreement. A CMYK or YCCK reading of the same file
-            // is off by ninety and more, which is the failure this number is here to catch.
             assertTrue(
                 colour < COLOUR_TOLERANCE,
                 "archive $archive decodes $colour levels away from index 34's copy of the same picture"
             )
-            // Straight alpha, not inverted. The two formats draw an *edge* differently - the JPEG
-            // has eight bits of it and index 34 a hard palette index - so comparing them pixel for
-            // pixel would only measure the edge's width. What is compared instead is the direction:
-            // where index 34 says a pixel is solid the fourth component is near 255, and where it
-            // says the pixel is not there at all it is near 0. Under `255 - v` the two swap.
             assertTrue(
                 inside > SOLID,
                 "archive $archive's alpha averages $inside where index 34 says the picture is solid"
@@ -250,8 +206,6 @@ class LoadingScreenCodecTest {
         val file = JagexJpeg.editable(group)
         val original = JagexJpeg.decode(group)
 
-        // What an image editor does to the file: its own quantisation and Huffman tables, a JFIF
-        // segment, and no idea any of this was ever one image with a fourth component.
         val edited = ImageIO.read(ByteArrayInputStream(file))
         for (y in 0 until HOLE) {
             for (x in 0 until HOLE) {
@@ -262,7 +216,6 @@ class LoadingScreenCodecTest {
         assertTrue(markers(resaved).contains(APP0), "the re-saved file should carry the JFIF segment ImageIO writes")
         assertTrue(markers(resaved).none { it == APP11 }, "ImageIO was expected to strip the alpha segment")
 
-        // The alpha is put back the way a pack does when the editor kept it.
         val joined = JagexJpeg.archive(JagexJpeg.embed(resaved, JagexJpeg.alphaOf(file)!!))
         val rebuilt = BaselineJpeg.read(joined)
         assertEquals(4, rebuilt.components.size, "archive $archive did not rejoin into four components")
@@ -283,11 +236,6 @@ class LoadingScreenCodecTest {
         assertTrue(drift(original, decoded) < COLOUR_TOLERANCE, "a re-saved file drifted more than a re-encode costs")
     }
 
-    /**
-     * The case the layout has to survive: an editor that keeps the picture and throws the alpha
-     * segment away. The packer synthesises an entirely opaque fourth component rather than failing,
-     * so the loading screen still builds - it is simply no longer transparent anywhere.
-     */
     @Test
     fun `a loading screen whose alpha segment was stripped packs as an opaque image`() {
         val cache = cache() ?: return
@@ -311,7 +259,6 @@ class LoadingScreenCodecTest {
         assertTrue(drift(JagexJpeg.decode(group), decoded) < COLOUR_TOLERANCE, "the picture drifted more than a re-encode costs")
     }
 
-    /** The other way to paint transparency: an RGBA PNG in place of the JPEG. */
     @Test
     fun `an RGBA PNG stands in for a loading screen`() {
         val cache = cache() ?: return
@@ -341,14 +288,6 @@ class LoadingScreenCodecTest {
         println("archive $archive through an RGBA PNG: ${encoded.size} bytes")
     }
 
-    /**
-     * Every loading screen written out where somebody can look at it: the one file exactly as
-     * `GraphicCodec` puts it in the source tree, plus a PNG of what any viewer shows and a PNG of
-     * what the client's rules read, alpha included.
-     *
-     * Not a parity check - that is the first test - but it is how anybody sees whether the colours
-     * came out right, and it is where the proof render for 3770 comes from.
-     */
     @Test
     fun `every loading screen is written out where somebody can look at it`() {
         val cache = cache() ?: return
@@ -363,7 +302,6 @@ class LoadingScreenCodecTest {
             val file = JagexJpeg.editable(group)
             File(directory, "$archive${GraphicCodec.JPEG_EXTENSION}").writeBytes(file)
             val preview = File(directory, "loading-$archive.png")
-            // Exactly what a standard reader makes of the stored file, APP11 segments and all.
             ImageIO.write(ImageIO.read(ByteArrayInputStream(file)), "png", preview)
             ImageIO.write(JagexJpeg.decode(group), "png", File(directory, "loading-$archive-rgba.png"))
             assertTrue(preview.length() > 0, "nothing was written to ${preview.absolutePath}")
@@ -385,7 +323,6 @@ class LoadingScreenCodecTest {
         assertEquals(null, GraphicCodec.archiveOf("3770.dat"))
     }
 
-    /** Mean absolute channel difference between two decodings of the same picture. */
     private fun drift(was: BufferedImage, now: BufferedImage): Double {
         var error = 0L
         var pixels = 0L
@@ -405,7 +342,6 @@ class LoadingScreenCodecTest {
         return error / (pixels * 3.0)
     }
 
-    /** The biggest JPEG archive of index 32, which is the one worth looking at. */
     private fun largest(cache: Cache): Pair<Int, ByteArray>? {
         var best: Pair<Int, ByteArray>? = null
         var area = 0
@@ -423,7 +359,6 @@ class LoadingScreenCodecTest {
         return best
     }
 
-    /** [image] through the standard writer at [quality], which is what "the user re-saved it" means. */
     private fun resave(image: BufferedImage, quality: Float): ByteArray {
         val writer = ImageIO.getImageWritersByFormatName("JPEG").next()
         try {
@@ -441,7 +376,6 @@ class LoadingScreenCodecTest {
         }
     }
 
-    /** Every marker of [data] up to and including its scan header, in order. */
     private fun markers(data: ByteArray): List<Int> {
         val out = ArrayList<Int>(8)
         var position = 2
@@ -478,19 +412,12 @@ class LoadingScreenCodecTest {
         private const val COM = 0xfe
         private val APPLICATION = 0xe0..0xef
 
-        /**
-         * Mean absolute channel difference allowed between a q75 JPEG and index 34's 256 colour
-         * palette of the same art. The worst of the 29 measures about ten; a CMYK reading measures
-         * ninety and more.
-         */
         private const val COLOUR_TOLERANCE = 16.0
 
-        /** What the fourth component must average where index 34 says the picture is solid, and where it is not. */
         private const val SOLID = 200.0
 
         private const val CLEAR = 64.0
 
-        /** How far one pixel may move through a JPEG re-encode before it is a different pixel. */
         private const val EDIT_TOLERANCE = 24
 
         private const val HOLE = 32
@@ -499,7 +426,6 @@ class LoadingScreenCodecTest {
 
         private const val OUTPUT = "build/loading-screens"
 
-        /** The loading screen the proof render is taken from. */
         private const val PROOF = 3770
 
         private const val PROOFS =

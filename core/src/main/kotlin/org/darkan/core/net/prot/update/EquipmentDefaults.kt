@@ -4,11 +4,6 @@ import world.gregs.voidps.buffer.read.BufferReader
 import world.gregs.voidps.cache.Cache
 import world.gregs.voidps.cache.Index
 
-/**
- * Equipment defaults loaded from cache (index 28, file 6).
- * The client reads customizableObjSlots from this same cache entry
- * to decode appearance blocks. The server must use an identical array.
- */
 object EquipmentDefaults {
     lateinit var customizableObjSlots: IntArray
         private set

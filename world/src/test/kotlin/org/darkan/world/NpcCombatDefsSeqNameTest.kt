@@ -8,12 +8,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-/**
- * The combat defs animation fields load from either form the tree keeps: a seq id, or the
- * sequence's gameval name (`SeqGamevalAdapter`, which `NPCCombatDefinitions` wires onto its four
- * anim fields). Runs against the real catalogs and skips itself when seq.json is not there, the
- * same guard GamevalTest uses; the third test also skips until the tree has a name in it.
- */
 class NpcCombatDefsSeqNameTest {
 
     @Test
@@ -44,7 +38,6 @@ class NpcCombatDefsSeqNameTest {
         if (!Gameval.has(Gameval.SEQ)) return
         val root = File("data/npcs/combatdefs")
         if (!root.isDirectory) return
-        // A name, not a quoted id and not a placeholder string - both of those resolve to nothing.
         val field = Regex("\"(attackAnim|defenceAnim|deathAnim|respawnAnim)\"\\s*:\\s*\"(?!seq_\\d+\")([a-z0-9_]+)\"")
         val (file, fieldName, seqName) = root.walkTopDown().asSequence()
             .filter { it.isFile && it.extension == "json" }

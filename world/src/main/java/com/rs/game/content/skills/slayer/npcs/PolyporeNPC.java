@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.slayer.npcs;
 
 import com.rs.game.model.entity.Entity;
@@ -94,11 +78,11 @@ public class PolyporeNPC extends NPC {
 
 	public int getFungalDamage() {
 		return switch (realId) {
-			case 14690, 14692 -> Utils.randomInclusive(2, 3); //fungal mage
-			case 14700 -> Utils.randomInclusive(7, 13); //grifolaroo
-			case 14688 -> Utils.randomInclusive(10, 19); //grifolapine
-			case 14698 -> Utils.randomInclusive(11, 21); //gano runt
-			case 14696 -> Utils.randomInclusive(15, 28); //gano beast
+			case 14690, 14692 -> Utils.randomInclusive(2, 3);
+			case 14700 -> Utils.randomInclusive(7, 13);
+			case 14688 -> Utils.randomInclusive(10, 19);
+			case 14698 -> Utils.randomInclusive(11, 21);
+			case 14696 -> Utils.randomInclusive(15, 28);
 			default -> Utils.randomInclusive(5, 10);
 		};
 	}

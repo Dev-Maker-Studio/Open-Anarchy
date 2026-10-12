@@ -11,28 +11,10 @@ import org.darkan.tools.rsinterface.FontCache
 import org.darkan.tools.rsinterface.GraphicCache
 import world.gregs.voidps.cache.definition.data.ItemDefinition
 
-/**
- * Visual pickers for the cache ids an interface component points at.
- *
- * Typing a graphic id into a number box means holding the whole graphic index in
- * your head, so this offers the alternative the job actually needs: a scrollable
- * grid of thumbnails to click. The grid is built lazily and only for the rows
- * currently on screen - the cache holds tens of thousands of graphic groups, and
- * uploading every one to find the button art would cost hundreds of megabytes of
- * texture memory and a long stall.
- *
- * Each picker is a self-contained popup driven by an `id` field the caller owns.
- * The `field` helpers below draw the number box, a thumbnail of the current
- * value and the button that opens the popup, and return true on the frame the
- * value changed - the same contract as ImGui's own widgets, so they drop into a
- * property sheet without any extra state handling at the call site.
- */
 class AssetPicker(
     private val graphics: GraphicCache,
     private val fonts: FontCache,
-    /** Resolves an item definition for the item picker; supplied by the viewer. */
     private val items: (Int) -> ItemDefinition?,
-    /** One past the highest item id, for the item picker to bound its scan. */
     private val itemCount: Int,
     private val icons: ObjIcons? = null,
 ) {
@@ -40,18 +22,11 @@ class AssetPicker(
     private val itemFilter = ImString(64)
     private val graphicJump = ImInt(0)
 
-    /** Which popup is open, so only one grid is scanned per frame. */
     private var open: String? = null
 
-    /** Id the open popup is editing, written back through [pending] on a pick. */
     private var pending: ((Int) -> Unit)? = null
 
-    // ------------------------------------------------------------------ fields
 
-    /**
-     * A graphic id field: number box, live thumbnail, and a "..." button opening
-     * the grid. Returns true when [value] changed this frame.
-     */
     fun graphicField(label: String, value: ImInt): Boolean {
         var changed = false
         ImGui.pushID(label)
@@ -76,10 +51,6 @@ class AssetPicker(
         return changed
     }
 
-    /**
-     * A font id field. Fonts are few enough to list in a combo, and the label
-     * carries the font's own name so the choice is legible without a preview.
-     */
     fun fontField(label: String, value: ImInt): Boolean {
         var changed = false
         ImGui.pushID(label)
@@ -109,7 +80,6 @@ class AssetPicker(
         return changed
     }
 
-    /** An item id field, with the item's name resolved from the cache. */
     fun itemField(label: String, value: ImInt, amount: Int = 1): Boolean {
         var changed = false
         ImGui.pushID(label)
@@ -141,10 +111,6 @@ class AssetPicker(
         return changed
     }
 
-    /**
-     * Draws a graphic at up to [size] pixels, letterboxed to its aspect ratio, or
-     * a placeholder when the id resolves to nothing.
-     */
     fun thumbnail(id: Int, size: Float) {
         val graphic = if (id < 0) null else graphics.graphic(id)
         if (graphic == null || graphic.width <= 0 || graphic.height <= 0) {
@@ -168,7 +134,6 @@ class AssetPicker(
         ImGui.image(icon.textureId.toLong(), ObjIcons.WIDTH.toFloat(), ObjIcons.HEIGHT.toFloat())
     }
 
-    // ------------------------------------------------------------------ popups
 
     private fun drawGraphicPopup(): Boolean {
         if (open != GRAPHIC_POPUP) {
@@ -200,15 +165,6 @@ class AssetPicker(
         return picked
     }
 
-    /**
-     * The thumbnail grid.
-     *
-     * Only the rows inside the scroll region are decoded and uploaded: the grid is
-     * laid out from a fixed cell size so the visible row span can be computed from
-     * the scroll offset without touching the cache, and the rows above and below
-     * are replaced with a single spacer of the right height. Without that, opening
-     * the picker would decode every graphic in the cache.
-     */
     private fun drawGraphicGrid(range: IntRange): Boolean {
         val available = ImGui.getContentRegionAvailX()
         val columns = ((available + CELL_SPACING) / (CELL + CELL_SPACING)).toInt().coerceAtLeast(1)
@@ -295,8 +251,6 @@ class AssetPicker(
                 open = null
             }
             for (id in 0 until fonts.count) {
-                // Only fonts that actually built are offered; the metrics index has
-                // ids with no glyph graphics behind them.
                 if (fonts.font(id) == null) {
                     continue
                 }
@@ -328,10 +282,6 @@ class AssetPicker(
             if (filter.isEmpty()) {
                 ImGuiText.disabled("Type to search ${itemCount} items.")
             } else if (ImGui.beginChild("items", 0f, 0f)) {
-                // Item names are only known once decoded, so a name search has to
-                // walk the index. It is capped rather than paged: a developer types
-                // enough of a name to narrow it, and an uncapped scan of every item
-                // decodes the whole index on the first keystroke.
                 var shown = 0
                 val byId = filter.toIntOrNull()
                 if (byId != null) {
@@ -372,10 +322,6 @@ class AssetPicker(
         return false
     }
 
-    /**
-     * Reads the graphic filter as either a single id, an inclusive `from-to` range,
-     * or nothing at all, which means the whole index.
-     */
     private fun parseRange(text: String, limit: Int): IntRange {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) {
@@ -391,8 +337,6 @@ class AssetPicker(
         }
         val single = trimmed.toIntOrNull()
         if (single != null) {
-            // A bare id shows a window around it rather than one lonely cell, so the
-            // neighbouring art in the same group is visible - graphic ids cluster.
             val from = (single - 8).coerceAtLeast(0)
             val to = (single + 120).coerceAtMost(limit - 1)
             return from..to

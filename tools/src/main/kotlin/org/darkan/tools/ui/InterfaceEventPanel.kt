@@ -16,29 +16,6 @@ import org.darkan.tools.rsinterface.InterfaceEvent
 import org.darkan.tools.rsinterface.InterfaceInteraction
 import org.darkan.tools.rsinterface.InterfaceKeys
 
-/**
- * The "why didn't my hook run" panel.
- *
- * Everything an interface does at runtime goes through
- * [InterfaceInteraction], and when a button does nothing the answer is always one
- * of a short list: the pointer never reached the component, the component has no
- * hook for the event that fired, a script rebound the hook to something else, the
- * script errored, or the editor is in Design mode and nothing is being dispatched
- * at all. This panel shows each of those directly rather than leaving them to be
- * inferred:
- *
- * - the **hover chain** is what the pointer actually reached, back to front,
- *   including the components that a `noClickThrough` above them swallowed;
- * - the **trace** is every dispatch that happened, with the script it ran and
- *   whatever the virtual machine complained about;
- * - the **manual triggers** fire an event without needing to reproduce the
- *   gesture, which is the only practical way to test a transmit hook - a varp
- *   write has no pointer gesture behind it.
- *
- * Firing by hand temporarily lifts [InterfaceInteraction.liveMode], because a
- * "fire this hook" button that silently does nothing in Design mode is worse
- * than no button.
- */
 class InterfaceEventPanel(
     private val context: InterfaceEditContext,
     private val interaction: InterfaceInteraction,
@@ -46,7 +23,6 @@ class InterfaceEventPanel(
 ) {
     var visible: Boolean = true
 
-    /** Live when the viewer is in Play mode; shown so the panel can explain itself. */
     var playMode: Boolean = false
 
     private val eventChoice = ImInt(InterfaceEvent.MOUSE_PRESS.ordinal)
@@ -88,7 +64,6 @@ class InterfaceEventPanel(
         ImGui.end()
     }
 
-    // -------------------------------------------------------------- controls
 
     private fun runtimeControls() {
         if (playMode) {
@@ -129,7 +104,6 @@ class InterfaceEventPanel(
         }
     }
 
-    // ------------------------------------------------------------ live state
 
     private fun liveState() {
         val pointer = interaction.pointer
@@ -146,8 +120,6 @@ class InterfaceEventPanel(
         if (chain.isEmpty()) {
             ImGuiText.disabled("  nothing under the pointer")
         }
-        // Front to back reads the way a developer thinks about it: the thing they
-        // believe they clicked first, then what is behind it.
         for (state in chain.asReversed()) {
             componentLink("  ", state)
         }
@@ -191,7 +163,6 @@ class InterfaceEventPanel(
         ImGui.popID()
     }
 
-    // --------------------------------------------------------------- trigger
 
     private fun triggers() {
         val target = context.primaryState()
@@ -208,8 +179,6 @@ class InterfaceEventPanel(
         }
 
         ImGui.separator()
-        // The host already routes every var write back into the interaction's
-        // transmit entry points, so writing the value is the whole trigger.
         transmitRow("varp", varpId, varpValue) { id, value -> live { host.setVarp(id, value) } }
         transmitRow("varc", varcId, varcValue) { id, value -> live { host.setVarc(id, value) } }
         idRow("stat", statId) { id -> live { interaction.statChanged(id) } }
@@ -275,11 +244,6 @@ class InterfaceEventPanel(
         }
     }
 
-    /**
-     * Runs a dispatch with the runtime live, whatever mode the editor is in.
-     * Everything in this panel is an explicit request to run something, so
-     * honouring Design mode here would only make the buttons look broken.
-     */
     private fun live(block: () -> Unit) {
         val previous = interaction.liveMode
         interaction.liveMode = true
@@ -290,7 +254,6 @@ class InterfaceEventPanel(
         }
     }
 
-    // ----------------------------------------------------------- bound hooks
 
     private fun boundHooks() {
         if (host.boundHooks.isEmpty()) {
@@ -313,7 +276,6 @@ class InterfaceEventPanel(
         }
     }
 
-    // ----------------------------------------------------------------- trace
 
     private fun trace() {
         ImGui.setNextItemWidth(160f)
@@ -389,7 +351,6 @@ class InterfaceEventPanel(
     companion object {
         private const val TRACE_HEIGHT = 190f
 
-        /** Keeps the ImGui ids of two lists of the same components apart. */
         private const val PREFIX_SALT = 31
 
         private val EVENT_NAMES = InterfaceEvent.entries.map { it.name }.toTypedArray()

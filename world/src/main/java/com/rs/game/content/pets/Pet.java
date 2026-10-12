@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.pets;
 
 import com.rs.game.content.skills.summoning.Familiar;
@@ -116,13 +100,10 @@ public final class Pet extends NPC {
 			tele(teleTile);
 	}
 
-	/**
-	 * Baby troll = var 2480 itemId it's eaten
-	 */
 	public void sendMainConfigurations() {
-		owner.getVars().setVar(Varp.follower_obj, itemId);// configures pet type
-		owner.getVars().setVar(1174, 0); //refresh pet head
-		owner.getVars().setVarBit(Varbit.lore_interface_boolean, 0); //refresh pet emote
+		owner.getVars().setVar(Varp.follower_obj, itemId);
+		owner.getVars().setVar(1174, 0);
+		owner.getVars().setVarBit(Varbit.lore_interface_boolean, 0);
 		owner.getPackets().sendVarc(1436, 0);
 		owner.getPackets().setIFHidden(747, 9, false);
 	}

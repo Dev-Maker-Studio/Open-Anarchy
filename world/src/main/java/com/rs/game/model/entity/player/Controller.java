@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.model.entity.player;
 
 import org.darkan.core.map.pathfinder.Direction;
@@ -66,36 +50,18 @@ public abstract class Controller {
 
 	}
 
-	/**
-	 * Should there be ambient music at all?
-	 * @return
-	 */
     public boolean playAmbientMusic() {
         return true;
     }
 
-	/**
-	 * No unlocks and no music outside of genre.
-	 * @return
-	 */
 	public boolean playAmbientStrictlyBackgroundMusic() {
 		return false;
 	}
 
-	/**
-	 * Genre of controller
-	 * @return
-	 */
     public Genre getGenre() {
         return Music.getGenre(player);
     }
 
-	/**
-	 * After starting the controller if you enter a new region should you play the controller genre, true or false?
-	 * Also, if you enter a region then start the controller you wont get the genre change.
-	 * After first time music doesn't play on region enter.
-	 * @return
-	 */
     public boolean playAmbientOnControllerRegionEnter() {
         return true;
     }
@@ -112,9 +78,6 @@ public abstract class Controller {
 		return true;
 	}
 
-	/**
-	 * after the normal checks, extra checks, only called when you attacking
-	 */
 	public boolean keepCombating(Entity target) {
 		return true;
 	}
@@ -123,10 +86,6 @@ public abstract class Controller {
 		return true;
 	}
 
-	/**
-	 * after the normal checks, extra checks, only called when you start trying
-	 * to attack
-	 */
 	public boolean canAttack(Entity target) {
 		return true;
 	}
@@ -175,16 +134,10 @@ public abstract class Controller {
 
 	}
 
-	/**
-	 * hits as ice barrage and that on multi areas
-	 */
 	public boolean canHit(Entity entity) {
 		return true;
 	}
 
-	/**
-	 * processes every game ticket, usualy not used
-	 */
 	public void process() {
 
 	}
@@ -193,9 +146,6 @@ public abstract class Controller {
 
 	}
 
-	/**
-	 * called once teleport is performed
-	 */
 	public void onTeleported(TeleType type) {
 
 	}
@@ -204,58 +154,34 @@ public abstract class Controller {
 
 	}
 
-	/**
-	 * return can use script
-	 */
 	public boolean useDialogueScript(Object key) {
 		return true;
 	}
 
-	/**
-	 * return can teleport
-	 */
 	public boolean processTeleport(Teleport tele) {
 		return true;
 	}
 
-	/**
-	 * return process normaly
-	 */
 	public boolean processObjectClick1(GameObject object) {
 		return true;
 	}
 
-	/**
-	 * return process normaly
-	 */
 	public boolean processNPCClick1(NPC npc) {
 		return true;
 	}
 
-	/**
-	 * return process normaly
-	 */
 	public boolean processNPCClick2(NPC npc) {
 		return true;
 	}
 
-	/**
-	 * return process normaly
-	 */
 	public boolean processNPCClick3(NPC npc) {
 		return true;
 	}
 
-	/**
-	 * return process normaly
-	 */
 	public boolean processObjectClick2(GameObject object) {
 		return true;
 	}
 
-	/**
-	 * return process normaly
-	 */
 	public boolean processObjectClick3(GameObject object) {
 		return true;
 	}
@@ -264,37 +190,22 @@ public abstract class Controller {
 		return true;
 	}
 
-	/**
-	 * return let default death
-	 */
 	public boolean sendDeath() {
 		return true;
 	}
 
-	/**
-	 * return can move that step
-	 */
 	public boolean canMove(Direction dir) {
 		return true;
 	}
 
-	/**
-	 * return can set that step
-	 */
 	public boolean checkWalkStep(int lastX, int lastY, int nextX, int nextY) {
 		return true;
 	}
 
-	/**
-	 * return remove controller
-	 */
 	public boolean login() {
 		return true;
 	}
 
-	/**
-	 * return remove controller
-	 */
 	public boolean logout() {
 		return true;
 	}
@@ -309,7 +220,7 @@ public abstract class Controller {
 	public boolean processItemOnObject(GameObject object, Item item) {
 		return true;
 	}
-	public boolean processObjectClick4(GameObject object) {// TODO implement
+	public boolean processObjectClick4(GameObject object) {
 		return true;
 	}
 

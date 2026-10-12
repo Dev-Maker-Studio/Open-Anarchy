@@ -20,7 +20,6 @@ private val ENCHANTED_WATER_TIARA = Item(11969)
 @ServerStartupEvent
 fun mapEnchantedWaterTiara() {
 
-    // Check Enchanted Water Tiara charges
     onItemClick(ENCHANTED_WATER_TIARA.id, options = arrayOf("Charges", "Check-charges")) { e ->
         val tiara = e.item
         val charges = tiara.getMetaDataI("enchantedWaterTiaraCharges", 0)
@@ -30,7 +29,6 @@ fun mapEnchantedWaterTiara() {
         e.player.sendMessage("Your enchanted water tiara has $formattedCharges $chargeText remaining.")
     }
 
-    // Create Enchanted Water Tiara with the option to add more charges
     onItemOnItem(intArrayOf(REGULAR_WATER_TIARA.id), intArrayOf(WATER_RUNE.id)) { e ->
         val player = e.player
 
@@ -53,7 +51,6 @@ fun mapEnchantedWaterTiara() {
             return@onItemOnItem
         }
 
-        // Prompt the user to ask how many runes they want to use
         val maxChargesToAdd = Utils.clampI(waterRunesAvailable / 3, 0, 500000)
         val formattedMaxChargesToAdd = String.format("%,d", maxChargesToAdd)
         val chargeTextQuestion = if (maxChargesToAdd == 1) "charge" else "charges"
@@ -94,12 +91,10 @@ fun mapEnchantedWaterTiara() {
         }
     }
 
-    // Recharge Enchanted Water Tiara
     onItemOnItem(intArrayOf(ENCHANTED_WATER_TIARA.id), intArrayOf(WATER_RUNE.id)) { e ->
         EnchantedWaterTiara(e.player).rechargeEnchantedWaterTiara()
     }
 
-    // Handle destroying the Enchanted Water Tiara
     onDestroyItem(ENCHANTED_WATER_TIARA.id) { e ->
         if (e.player.inventory.hasFreeSlots()) {
             val tiara = e.item

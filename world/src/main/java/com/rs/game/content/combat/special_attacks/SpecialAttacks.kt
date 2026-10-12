@@ -40,10 +40,6 @@ fun mapSpecials() {
         return isDead || hasFinished() || !isValidCombatTarget(player) || !player.inMeleeRange(this)
     }
 
-    /**
-     * Instant Specials
-     */
-    //Granite maul/Granite mace
     addSpec(intArrayOf(4153, 13445, 14681, 14679), SpecialAttack(50) { player ->
         val target: Entity = player.interactionManager.interaction.let { interaction ->
             if (interaction is PlayerCombatInteraction) interaction.action.target else player.tempAttribs.getO<Entity>("last_target")
@@ -66,7 +62,6 @@ fun mapSpecials() {
         return@SpecialAttack
     })
 
-    //Dragon battleaxe
     addSpec(intArrayOf(1377, 13472), SpecialAttack(100) { player ->
         player.sync(1056, 246)
         player.forceTalk("Raarrrrrgggggghhhhhhh!")
@@ -79,7 +74,6 @@ fun mapSpecials() {
     })
 
 
-    //Excalibur
     addSpec(intArrayOf(35, 8280, 14632), SpecialAttack(100) { player ->
         player.sync(1168, 247)
         player.forceTalk("For Camelot!")
@@ -94,7 +88,6 @@ fun mapSpecials() {
     })
 
 
-    //Staff of light
     addSpec(intArrayOf(15486, 15502, 22207, 22208, 22209, 22210, 22211, 22212, 22213, 22214), SpecialAttack(100) { player ->
         player.sync(12804, 2319)
         player.spotAnim(2321)
@@ -105,10 +98,6 @@ fun mapSpecials() {
     })
 
 
-    /**
-     * MAGIC WEAPONS
-     */
-    //Mindspike
     addSpec(intArrayOf(23044, 23045, 23046, 23047), SpecialAttack(SpecialAttack.Type.MAGIC, 75) { player, target ->
         delayMagicHit(target, CombatSpell.WIND_RUSH.cast(player, target), Hit.magic(player, 50).setMaxHit(50), {
             target.spotAnim(CombatSpell.WIND_RUSH.hitSpotAnim)
@@ -117,7 +106,6 @@ fun mapSpecials() {
     })
 
 
-    //Obliteration
     addSpec(intArrayOf(24457), SpecialAttack(SpecialAttack.Type.MAGIC, 20) { player, target ->
         player.sync(16960, 3189)
         val p = World.sendProjectile(player, target, 3188, 15 to 15, 15, 5, 0)
@@ -128,9 +116,6 @@ fun mapSpecials() {
         return@SpecialAttack 7
     })
 
-    /**
-     * RANGED WEAPONS
-     */
     addSpec(RangedWeapon.QUICK_BOW.ids, SpecialAttack(SpecialAttack.Type.RANGE, 75) { player, target ->
         player.anim(1074)
         player.spotAnim(250, 10, 100)
@@ -165,7 +150,7 @@ fun mapSpecials() {
         return@SpecialAttack getRangeCombatDelay(player)
     })
 
-    addSpec(RangedWeapon.RUNE_THROWNAXE.ids, SpecialAttack(SpecialAttack.Type.RANGE, 20) { player, target -> //TODO test this heavily
+    addSpec(RangedWeapon.RUNE_THROWNAXE.ids, SpecialAttack(SpecialAttack.Type.RANGE, 20) { player, target ->
         val maxHit = getMaxHit(player, target, CombatStyle.RANGE, 1.0)
         player.anim(9055)
         val projectile = World.sendProjectile(player, target, 258, delay = 50, speed = 5, angle = 20)
@@ -303,10 +288,6 @@ fun mapSpecials() {
         return@SpecialAttack 6
     })
 
-    /**
-     * MELEE WEAPONS
-     */
-    //Vine whip
     addSpec(intArrayOf(21371, 21372, 21373, 21374, 21375), SpecialAttack(SpecialAttack.Type.MELEE, 60) { player, target ->
         val attackStyle = player.combatDefinitions.getAttackStyle()
         val tile = target.tile
@@ -326,7 +307,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Abyssal whip
     addSpec(intArrayOf(4151, 13444, 15441, 15442, 15443, 15444, 23691), SpecialAttack(SpecialAttack.Type.MELEE, 50) { player, target ->
         player.anim(11971)
         target.spotAnim(2108, 0, 100)
@@ -337,7 +317,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Saradomin sword
     addSpec(intArrayOf(11730, 13461, 23690), SpecialAttack(SpecialAttack.Type.MELEE, 100) { player, target ->
         player.sync(11993, 1194)
         delayNormalHit(target, Hit(player, 50 + Utils.getRandomInclusive(100), HitLook.MELEE_DAMAGE).setMaxHit(150))
@@ -346,7 +325,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dragon spear/Zamorakian spear
     addSpec(intArrayOf(1249, 1263, 3176, 5716, 5730, 11716, 13454, 13770, 13772, 13774, 13776, 23683), SpecialAttack(SpecialAttack.Type.MELEE, 25) { player, target ->
         player.anim(12017)
         player.stopAll()
@@ -376,7 +354,6 @@ fun mapSpecials() {
     })
 
 
-    //Keenblade
     addSpec(intArrayOf(23042), SpecialAttack(SpecialAttack.Type.MELEE, 75) { player, target ->
         player.sync(16067, 2109)
         delayNormalHit(target, Hit(player, 50, HitLook.MELEE_DAMAGE).setMaxHit(50))
@@ -384,7 +361,6 @@ fun mapSpecials() {
     })
 
 
-    //Saradomin godsword
     addSpec(intArrayOf(11698, 13452, 23681), SpecialAttack(SpecialAttack.Type.MELEE, 50) { player, target ->
         player.sync(12019, 2109)
         val hit = calculateHit(player, target, CombatStyle.MELEE, true, 2.0, 1.1)
@@ -395,7 +371,6 @@ fun mapSpecials() {
     })
 
 
-    //Bandos godsword
     addSpec(intArrayOf(11696, 13451, 23680), SpecialAttack(SpecialAttack.Type.MELEE, 50) { player, target ->
         player.sync(11991, 2114)
         val hit = calculateHit(player, target, CombatStyle.MELEE, true, 2.0, 1.1)
@@ -411,7 +386,6 @@ fun mapSpecials() {
     })
 
 
-    //Ancient mace
     addSpec(intArrayOf(11061, 22406), SpecialAttack(SpecialAttack.Type.MELEE, 100) { player, target ->
         player.sync(6147, 1052)
         val hit = calculateHit(player, target, CombatStyle.MELEE, true, 1.0, 1.0)
@@ -422,21 +396,12 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Armadyl godsword
     addSpec(intArrayOf(11694, 13450, 23679), SpecialAttack(SpecialAttack.Type.MELEE, 50) { player, target ->
         player.sync(11989, 2113)
         delayNormalHit(target, calculateHit(player, target, CombatStyle.MELEE, true, 2.0, 1.25))
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Vesta's longsword
-    /**
-     * Its special attack, Feint, inflicts 20% more damage and is harder to defend against while only draining 25% of the special bar,
-     * making it deadly as it can be used four times in a row. When activated, the player thrusts the sword out with an exaggerated motion.
-     * The power and accuracy of this attack made the Longsword the only piece of Ancient Warrior's equipment to retain a high price during
-     * the excessive supply before the Anti-76k measures were put in place, due to its fatal capabilities. Only the non-corrupted version
-     * features this attack. After the sword has been used in combat it will become untradeable.
-     */
     addSpec(intArrayOf(13899, 13901), SpecialAttack(SpecialAttack.Type.MELEE, 25) { player, target ->
         player.anim(10502)
         delayNormalHit(target, calculateHit(player, target, CombatStyle.MELEE, true, 2.0, 1.20))
@@ -444,7 +409,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Statius' warhammer
     addSpec(intArrayOf(13902, 13904), SpecialAttack(SpecialAttack.Type.MELEE, 35) { player, target ->
         val hit = calculateHit(player, target, CombatStyle.MELEE, true, 1.0, 1.25)
         player.sync(10505, 1840)
@@ -455,7 +419,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Vesta's spear
     addSpec(intArrayOf(13905, 13907), SpecialAttack(SpecialAttack.Type.MELEE, 50) { player, target ->
         val attackStyle = player.combatDefinitions.getAttackStyle()
         player.sync(10499, 1835)
@@ -468,7 +431,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dragon 2h sword
     addSpec(intArrayOf(7158, 13430, 23696), SpecialAttack(SpecialAttack.Type.MELEE, 60) { player, target ->
         val attackStyle = player.combatDefinitions.getAttackStyle()
         player.sync(7078, 1225)
@@ -480,7 +442,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Korasi's sword
     addSpec(intArrayOf(18786, 19780, 19784, 22401), SpecialAttack(SpecialAttack.Type.MELEE, 60) { player, target ->
         player.sync(14788, 1729)
         var damage = getMaxHit(player, target, CombatStyle.MELEE, 1.0).toDouble()
@@ -492,7 +453,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Zamorak godsword
     addSpec(intArrayOf(11700, 13453, 23682), SpecialAttack(SpecialAttack.Type.MELEE, 100) { player, target ->
         val hit = calculateHit(player, target, CombatStyle.MELEE, true, 2.0, 1.1)
         player.sync(7070, 1221)
@@ -535,21 +495,18 @@ fun mapSpecials() {
         }
     }
 
-    //Rune claws
     addSpec(intArrayOf(3101, 13764), SpecialAttack(SpecialAttack.Type.MELEE, 50) { player, target ->
         player.anim(10961)
         clawSpec(player, target, doubleArrayOf(0.75, 0.75, 0.75, 1.25))
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dragon claws
     addSpec(intArrayOf(14484, 14486, 23695), SpecialAttack(SpecialAttack.Type.MELEE, 50) { player, target ->
         player.sync(10961, 1950)
         clawSpec(player, target, doubleArrayOf(1.0, 1.0, 1.0, 1.5))
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Barrelchest anchor
     addSpec(intArrayOf(10887), SpecialAttack(SpecialAttack.Type.MELEE, 50) { player, target ->
         player.sync(5870, 1027)
         val hit = calculateHit(player, target, CombatStyle.MELEE, true, 2.0, 1.1)
@@ -559,7 +516,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dragon longsword
     addSpec(intArrayOf(1305, 13475), SpecialAttack(SpecialAttack.Type.MELEE, 25) { player, target ->
         player.sync(12033, 2117)
         delayNormalHit(target, calculateHit(player, target, CombatStyle.MELEE, true, 1.0, 1.25))
@@ -567,7 +523,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dragon halberd
     addSpec(intArrayOf(3204, 13478), SpecialAttack(SpecialAttack.Type.MELEE, 30) { player, target ->
         player.sync(1665, 282)
         if (target.size > 3) {
@@ -580,7 +535,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dragon scimitar
     addSpec(intArrayOf(4587, 13477), SpecialAttack(SpecialAttack.Type.MELEE, 55) { player, target ->
         player.sync(12031, 2118)
         val hit = calculateHit(player, target, CombatStyle.MELEE, true, 1.25, 1.0)
@@ -591,7 +545,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dragon daggers
     addSpec(intArrayOf(1215, 1231, 5680, 5698, 13465, 13466, 13467, 13468), SpecialAttack(SpecialAttack.Type.MELEE, 25) { player, target ->
         player.anim(1062)
         player.spotAnim(252, 0, 100)
@@ -601,7 +554,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dragon mace
     addSpec(intArrayOf(1434, 13479), SpecialAttack(SpecialAttack.Type.MELEE, 25) { player, target ->
         player.sync(1060, 251)
         delayNormalHit(target, calculateHit(player, target, CombatStyle.MELEE, true, 1.25, 1.5))
@@ -609,32 +561,26 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Rod of Ivandis, Ivandis flail
     addSpec(Stream.of(Utils.range(7639, 7648), Utils.range(13117, 13146)).flatMapToInt { array: IntArray? -> Arrays.stream(array) }.toArray(), SpecialAttack(SpecialAttack.Type.MELEE, 1) { player, target ->
-        //TODO lmao
         player.sync(1060, 251)
         delayNormalHit(target, calculateHit(player, target, CombatStyle.MELEE, true, 1.0, 1.0))
         player.soundEffect(target, 2541, true)
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Penance trident
     addSpec(intArrayOf(15438, 15485), SpecialAttack(SpecialAttack.Type.MELEE, 50) { player, _ ->
         player.anim(12804)
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dwarven army axe
     addSpec(intArrayOf(21340), SpecialAttack(SpecialAttack.Type.MELEE, 100) { player, target ->
         player.anim(16308)
-        //TODO proper anim
         delayHit(target, 0, Hit.melee(player, if (target is NPC) 20 else 10))
         delayHit(target, 0, Hit.melee(player, if (target is NPC) 40 else 25))
         delayHit(target, 0, Hit.melee(player, if (target is NPC) 30 else 20))
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Darklight
     addSpec(intArrayOf(6746), SpecialAttack(SpecialAttack.Type.MELEE, 50) { player, target ->
         val accuracyRoll = calculateHit(player, target, Bonus.STAB_ATT, CombatStyle.MELEE, true, 1.0, 1.0)
         player.sync(2890, 483)
@@ -648,7 +594,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dragon hatchet
     addSpec(intArrayOf(6739, 13470), SpecialAttack(SpecialAttack.Type.MELEE, 100) { player, target ->
         player.sync(2876, 479)
         val hit = calculateHit(player, target, CombatStyle.MELEE, true, 1.0, 1.0)
@@ -661,7 +606,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Dragon pickaxe
     addSpec(intArrayOf(15259, 15261, 20786), SpecialAttack(SpecialAttack.Type.MELEE, 100) { player, target ->
         player.sync(2661, 2144)
         val hit = calculateHit(player, target, CombatStyle.MELEE, true, 1.0, 1.0)
@@ -674,7 +618,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Bone dagger
     addSpec(intArrayOf(8872, 8874, 8876, 8878), SpecialAttack(SpecialAttack.Type.MELEE, 75) { player, target ->
         player.sync(4198, 704)
         val hit = calculateHit(player, target, CombatStyle.MELEE, target.tempAttribs.getO<Any>("last_target") === player, 1.0, 1.0)
@@ -685,7 +628,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Brine sabre, Brackish blade
     addSpec(intArrayOf(11037, 20671, 20673), SpecialAttack(SpecialAttack.Type.MELEE, 75) { player, target ->
         player.anim(6118)
         player.spotAnim(1048, 0, 96)
@@ -699,8 +641,6 @@ fun mapSpecials() {
         return@SpecialAttack getMeleeCombatDelay(player.equipment.weaponId)
     })
 
-    //Annihilation (16964 3193) obtaining
-    //Absorbing essence into it? (16962 43)
     addSpec(intArrayOf(24455), SpecialAttack(SpecialAttack.Type.MELEE, 20) { player, target ->
         player.sync(16961, 44)
         delayNormalHit(target, calculateHit(player, target, CombatStyle.MELEE, true, 1.5, 1.5))

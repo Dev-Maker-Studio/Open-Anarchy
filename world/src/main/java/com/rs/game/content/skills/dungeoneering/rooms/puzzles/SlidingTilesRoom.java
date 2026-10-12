@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.rooms.puzzles;
 
 import com.rs.game.content.skills.dungeoneering.*;
@@ -72,11 +56,11 @@ public class SlidingTilesRoom extends PuzzleRoom {
 			GuardianMonster m = GuardianMonster.forId(i);
 			int x = Utils.random(2) + 1;
 			int y = Utils.random(2) + 1;
-			if (Utils.random(2) == 0) { //vertical spawn
-				x += Utils.random(2) == 0 ? 0 : 11; //left or right side
+			if (Utils.random(2) == 0) {
+				x += Utils.random(2) == 0 ? 0 : 11;
 				y = Utils.random(14) + 1;
-			} else { //horizontal spawn
-				y += Utils.random(2) == 0 ? 0 : 11; //bottom or top
+			} else {
+				y += Utils.random(2) == 0 ? 0 : 11;
 				x = Utils.random(14) + 1;
 			}
 
@@ -149,7 +133,6 @@ public class SlidingTilesRoom extends PuzzleRoom {
 				puzzle.solveIndex--;
 				if (puzzle.solveIndex == 0) {
 					puzzle.setComplete();
-					//players can keep clicking after it's done but will take damage
 					puzzle.solveIndex = 1;
 					puzzle.solveOrder[0] = -1;
 				}
@@ -168,7 +151,7 @@ public class SlidingTilesRoom extends PuzzleRoom {
 
 	@Override
 	public String getCompleteMessage() {
-		return "You hear a click as a nearby door unlocks.";//This is correct
+		return "You hear a click as a nearby door unlocks.";
 	}
 
 }

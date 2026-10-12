@@ -1,19 +1,3 @@
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//  Copyright (C) 2021 Trenton Kress
-//  This file is part of project: Darkan
-//
 package com.rs.game.content.skills.dungeoneering.npcs.combat;
 
 import com.rs.game.World;
@@ -61,13 +45,13 @@ public class KalGerWarmongerCombat extends CombatScript {
 				for (Player player : manager.getParty().getTeam()) {
 					if (!manager.isAtBossRoom(player.getTile()))
 						continue;
-					player.getPackets().sendCameraShake(3, 25, 50, 25, 50);// everyone's camera shakes
-					if (Utils.inCircle(player.getTile(), boss.getTile(), 5))// 5 square radius (imperfect circle)
+					player.getPackets().sendCameraShake(3, 25, 50, 25, 50);
+					if (Utils.inCircle(player.getTile(), boss.getTile(), 5))
 						player.applyHit(new Hit(boss, Utils.random(300, boss.getMaxHit()), HitLook.TRUE_DAMAGE));
 				}
 				WorldTasks.scheduleTimer((ticks) -> {
 					boss.setPullTicks(0);
-					for (Player player : manager.getParty().getTeam())// we obv need to reset the camera ^.^
+					for (Player player : manager.getParty().getTeam())
 						player.getPackets().sendStopCameraShake();
 					return false;
 				});
@@ -76,18 +60,16 @@ public class KalGerWarmongerCombat extends CombatScript {
 		}
 		boss.setPullTicks(0);
 		if (boss.getAnnoyanceMeter() == 8)
-			// boss.playSoundEffect(2986);
 			boss.setNextForceTalk(new ForceTalk("GRRRR!"));
 		else if (boss.getAnnoyanceMeter() == 10)
-			// boss.playSoundEffect(3012);
 			boss.setNextForceTalk(new ForceTalk("ENOUGH!"));
-		if (boss.getType() == 1) {// NO WEAPONS HUR
+		if (boss.getType() == 1) {
 			npc.setNextAnimation(new Animation(14392));
 			delayHit(npc, 0, target, Hit.melee(npc, getMaxHit(npc, boss.getMaxHit(), CombatStyle.MELEE, target)));
-		} else if (boss.getType() == 2) {// LONG
+		} else if (boss.getType() == 2) {
 			npc.setNextAnimation(new Animation(14416));
 			delayHit(npc, 0, target, Hit.melee(npc, getMaxHit(npc, boss.getMaxHit(), CombatStyle.MELEE, target)));
-		} else if (boss.getType() == 3) {// STAFF
+		} else if (boss.getType() == 3) {
 			npc.setNextAnimation(new Animation(14996));
 			npc.setNextSpotAnim(new SpotAnim(2874));
 			for (Entity t : boss.getPossibleTargets()) {
@@ -95,20 +77,20 @@ public class KalGerWarmongerCombat extends CombatScript {
 				t.setNextSpotAnim(new SpotAnim(2873));
 				delayHit(npc, 0, t, Hit.magic(npc, getMaxHit(npc, boss.getMaxHit(), CombatStyle.MAGIC, t)));
 			}
-		} else if (boss.getType() == 4) {// 2H
+		} else if (boss.getType() == 4) {
 			npc.setNextAnimation(new Animation(14450));
 			delayHit(npc, 0, target, Hit.melee(npc, getMaxHit(npc, boss.getMaxHit(), CombatStyle.MELEE, target)));
-		} else if (boss.getType() == 5) {// BOW
+		} else if (boss.getType() == 5) {
 			npc.setNextAnimation(new Animation(14537));
 			npc.setNextSpotAnim(new SpotAnim(2885));
 			for (Entity t : boss.getPossibleTargets()) {
 				World.sendProjectile(boss, t, 2886, new Pair<>(75, 30), 50, 5, 2);
 				delayHit(npc, 2, t, Hit.range(npc, getMaxHit(npc, boss.getMaxHit(), CombatStyle.RANGE, t)));
 			}
-		} else if (boss.getType() == 6) {// MAUL
+		} else if (boss.getType() == 6) {
 			npc.setNextAnimation(new Animation(14963));
 			delayHit(npc, 0, target, Hit.melee(npc, getMaxHit(npc, boss.getMaxHit(), CombatStyle.MELEE, target)));
-			return 3;// SUPER OP MODE!
+			return 3;
 		}
 		return 4;
 	}

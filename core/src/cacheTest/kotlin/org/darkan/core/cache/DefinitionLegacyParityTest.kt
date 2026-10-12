@@ -14,13 +14,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * Guards the definition accessors the game content reads against the legacy Java they were ported from
- * (`com.rs.cache.loaders.ItemDefinitions`, `ObjectDefinitions`, `com.rs.lib.game.Item`).
- *
- * The cache-backed checks skip themselves when there is no cache to read, the same way
- * `DefinitionEncoderParityTest` does.
- */
 class DefinitionLegacyParityTest {
 
     @Test
@@ -37,8 +30,6 @@ class DefinitionLegacyParityTest {
             )
             checked++
         }
-        // The crash this guards: Equipment.getBonus indexes getBonuses() by Bonus ordinal, and
-        // MAGIC_STR is 17, so anything shorter than 18 threw on the first equipped item.
         for (bonus in Bonus.entries) {
             items[ABYSSAL_WHIP].getBonuses()[bonus.ordinal]
         }
@@ -74,7 +65,6 @@ class DefinitionLegacyParityTest {
         val bonuses = scimitar.getBonuses()
         assertEquals(scimitar.getParamVal(1), bonuses[Bonus.SLASH_ATT.ordinal])
         assertTrue(bonuses[Bonus.SLASH_ATT.ordinal] > 0, "expected a slash attack bonus")
-        // Legacy divides params 641 and 643 by ten.
         assertEquals(scimitar.getParamVal(641) / 10, bonuses[Bonus.MELEE_STR.ordinal])
         assertTrue(bonuses[Bonus.MELEE_STR.ordinal] > 0, "expected a melee strength bonus")
     }
@@ -93,8 +83,6 @@ class DefinitionLegacyParityTest {
     @Test
     fun `rings and ammo are wearable`() {
         cache() ?: return
-        // Legacy only requires a worn model below slot 12, so rings, ammo and auras - which have
-        // none in the cache - stay wearable.
         for (id in intArrayOf(GOLD_RING, BRONZE_ARROW)) {
             val definition = Cache.items[id]
             assertTrue(definition.wearPos >= 12, "item $id is not in a slot the exemption covers")
@@ -116,8 +104,6 @@ class DefinitionLegacyParityTest {
     fun `two handed weapons report the shield equip type`() {
         cache() ?: return
         val sword = Cache.items[TWO_HANDED_SWORD]
-        // Legacy isEquipType reads wearPos2/wearPos3, the slots a worn item also occupies; 5 is the
-        // shield slot, which is what makes a weapon two-handed.
         assertTrue(sword.isEquipType(5), "${sword.name} is not detected as two-handed")
         assertFalse(Cache.items[ABYSSAL_WHIP].isEquipType(5), "the whip is not two-handed")
     }
@@ -126,15 +112,12 @@ class DefinitionLegacyParityTest {
     fun `merging a stack with no metadata does not throw`() {
         val coins = Item(COINS, 100)
         val more = Item(COINS, 50)
-        // ItemsContainer.add passes the incoming item's metadata straight into the merged item, and
-        // it is null for every ordinary stack.
         assertNull(more.getMetaData())
         val merged = Item(coins.id, coins.amount + more.amount, more.metadata)
         assertEquals(COINS, merged.id)
         assertEquals(150, merged.amount)
         assertNull(merged.getMetaData())
         assertFalse(merged.containsMetaData())
-        // Metadata is still allocated on demand afterwards.
         merged.addMetaData("charges", 3)
         assertEquals(3, merged.getMetaDataI("charges", 0))
         assertTrue(merged.containsMetaData())
@@ -160,7 +143,6 @@ class DefinitionLegacyParityTest {
             val bits = varbits[varbit]
             val capacity = 1 shl (bits.endBit - bits.startBit + 1)
             val fallback = transforms[transforms.size - 1]
-            // Index 1 upwards, so the value differs from the 0 an unset var reads as.
             val index = (1 until transforms.size - 1).firstOrNull {
                 it < capacity && transforms[it] >= 0 && transforms[it] < objects.size &&
                     transforms[it] != transforms[0] && transforms[it] != fallback
@@ -186,10 +168,7 @@ class DefinitionLegacyParityTest {
                 base.id != resolved.id,
                 "object ${definition.id} resolved to the same definition for both var values"
             )
-            // Without vars, legacy falls back to the last transform entry.
             assertEquals(fallback, definition.getIdForPlayer(null))
-            // A fallback of -1 means "not shown"; getDefs keeps the base definition rather than
-            // dereferencing it, since every caller uses the result unconditionally.
             val expected = if (fallback in objects.indices) fallback else definition.id
             assertEquals(expected, ObjectDefinitions.getDefs(definition.id, null).id)
             tested++
@@ -210,12 +189,9 @@ class DefinitionLegacyParityTest {
                     "npc ${definition.id} attack/defence bonus $index"
                 )
             }
-            // The strength bonuses are their own params in tenths, not the ordinal-numbered ones -
-            // MELEE_STR's ordinal 14 is the attack delay param, which is what the port used to read.
             assertEquals(definition.getParamVal(641) / 10, definition.getBonus(Bonus.MELEE_STR))
             assertEquals(definition.getParamVal(643) / 10, definition.getBonus(Bonus.RANGE_STR))
             assertEquals(definition.getParamVal(965) / 10, definition.getBonus(Bonus.MAGIC_STR))
-            // NPCs have no summoning defence, absorb or prayer bonuses at all.
             for (bonus in listOf(Bonus.SUMM_DEF, Bonus.ABSORB_MELEE, Bonus.ABSORB_MAGIC, Bonus.ABSORB_RANGE, Bonus.PRAYER)) {
                 assertEquals(0, definition.getBonus(bonus), "npc ${definition.id} $bonus")
             }
@@ -234,7 +210,6 @@ class DefinitionLegacyParityTest {
         assertTrue(delays > 0, "expected some npc to declare an attack delay")
     }
 
-    /** The legacy `ItemDefinitions.parseBonuses()` mapping, written out independently. */
     private fun legacyBonuses(definition: ItemDefinition): IntArray {
         val bonuses = IntArray(18)
         bonuses[Bonus.STAB_ATT.ordinal] = definition.getParamVal(0)

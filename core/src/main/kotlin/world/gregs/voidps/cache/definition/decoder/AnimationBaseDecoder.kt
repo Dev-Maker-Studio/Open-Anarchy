@@ -5,13 +5,6 @@ import world.gregs.voidps.cache.DefinitionDecoder
 import world.gregs.voidps.cache.Index.ANIMATION_SKELETONS
 import world.gregs.voidps.cache.definition.data.AnimationBaseDefinition
 
-/**
- * Index 1: one animation skeleton per archive, one file per archive.
- *
- * Five columns of one row per transform and nothing else - no opcodes, no terminator - so the whole read
- * is [readLoop]. The label table's own lengths are the last column, so the file's length is a function of
- * its contents and anything past the table is stored verbatim ([AnimationBaseDefinition.trailing]).
- */
 class AnimationBaseDecoder : DefinitionDecoder<AnimationBaseDefinition>(ANIMATION_SKELETONS) {
 
     override fun create(size: Int) = Array(size) { AnimationBaseDefinition(it) }
@@ -26,7 +19,6 @@ class AnimationBaseDecoder : DefinitionDecoder<AnimationBaseDefinition>(ANIMATIO
 
     override fun AnimationBaseDefinition.read(opcode: Int, buffer: Reader) {
         val declared = buffer.readUnsignedByte()
-        // A declared 0 with a payload behind it is 256 written into a byte; see WRAPPED_COUNT.
         val count = if (declared == 0 && buffer.readableBytes() > 0) {
             AnimationBaseDefinition.WRAPPED_COUNT
         } else {
