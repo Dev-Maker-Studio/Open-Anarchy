@@ -211,11 +211,10 @@ server/
 ├── core/           # Shared library (networking, models, MongoDB, crypto)
 ├── lobby/          # Lobby server (auth, API, social gateway host)
 ├── world/          # World server (gameplay, social gateway client)
-├── cs2/            # Headless CS2 clientscript toolchain: decompiler, TS compiler, VM (see docs/cs2-editor.md)
+├── cs2/            # Headless CS2 clientscript toolchain: decompiler, TS compiler, VM (see src/engine/cs2-editor.md)
 ├── tools/          # Cache/map/interface/CS2 editor suite (LWJGL)
-├── migration/      # Legacy → modern database migration (see docs/migration.md)
-├── cache-source/   # git submodule: the unpacked 727 cache + gamevals/<type>.json catalogs (see docs/cache-source.md)
-├── docs/           # Architecture documentation
+├── migration/      # Legacy → modern database migration (see src/engine/migration.md)
+├── cache-source/   # git submodule: the unpacked 727 cache + gamevals/<type>.json catalogs (see src/engine/cache-source.md)
 └── build.gradle.kts
 ```
 
@@ -297,7 +296,7 @@ Shared code used by both lobby and world servers.
 # Dump every 727 cache definition to JSONL, one file per type (tools module)
 ./gradlew :tools:run --args="gameval dump cache-source/gamevals/work/727"
 
-# The cache source tree (docs/cache-source.md): unpack, pack, build, verify, status.
+# The cache source tree (src/engine/cache-source.md): unpack, pack, build, verify, status.
 # 'verify' exits 1 unless packing the tree reproduces the packed cache byte for byte, bar the
 # clientscripts it compiles back to equivalent bytecode and the two tables derived from them.
 ./gradlew :tools:run --args="cache unpack cache-source"
@@ -384,7 +383,7 @@ GAMEVAL_PATH=             # folder of <type>.json name catalogs; default <CACHE_
 ### Social Gateway (World Server)
 ```env
 SOCIAL_GATEWAY_URL=ws://dev.darkan.org:4040/social/ws   # default: the dev lobby
-SOCIAL_GATEWAY_TOKEN=<shared-secret>   # default: COMMUNITY_WORLD_TOKEN, i.e. a community world (docs/community-worlds.md)
+SOCIAL_GATEWAY_TOKEN=<shared-secret>   # default: COMMUNITY_WORLD_TOKEN, i.e. a community world (src/engine/community-worlds.md)
 COMMUNITY_WORLD_TOKEN=darkan-community-world   # public; the lobby accepts it only with DEBUG=true
 OFFICIAL_WORLD_MAX=99         # worlds 1..99 are official; the lobby refuses them to community worlds
 WORLD_ID=100
@@ -526,7 +525,7 @@ data class AnnouncementBroadcast(val channel: AnnouncementChannel, val message: 
 Nothing revision-specific crosses the socket: `SocialAction` and `SocialEvent`
 (`core/.../social/SocialProtocol.kt`) are the whole vocabulary, and each side renders its own
 client packets from the events with `SocialPackets`. The same vocabulary is served per player to
-the website over `WS /social/players/{username}` (see `docs/social-gateway.md`).
+the website over `WS /social/players/{username}` (see `src/engine/social-gateway.md`).
 
 ---
 
@@ -568,7 +567,7 @@ class Session {
 
 `Session` is the server end of `ProtSession<I, O>`; `net.client.ClientSession` is the headless
 client end. Every prot carries both directions (`.decoder {}` on server prots, `.encoder {}` on
-client prots) - see `docs/headless-client.md`.
+client prots) - see `src/engine/headless-client.md`.
 
 ### Engine Loop
 
@@ -694,7 +693,7 @@ object MyCollection {
 
 ### Editing the Gameval Catalogs
 
-The 40 catalogs in `cache-source/gamevals/<type>.json` (the cache source tree submodule, `docs/cache-source.md`) are **canonical and hand-edited**. 727 is permanently
+The 40 catalogs in `cache-source/gamevals/<type>.json` (the cache source tree submodule, `src/engine/cache-source.md`) are **canonical and hand-edited**. 727 is permanently
 version-locked, the one-time recovery tooling that first produced them is gone, and there is
 nothing to regenerate them from - they are improved in place. `gamevals/CONTRACT.md` records the
 evidence rules the recovered names were held to (a name only on proof, placeholder `<type>_<id>`
@@ -714,19 +713,19 @@ Every id has a constant, placeholders included (`Loc.loc_54321`), so renaming an
 catalog renames the constant and every stale call site fails to compile. A catalog whose names
 conflict (duplicates, collisions after identifier escaping, a name that is another id's
 placeholder, a coverage block that disagrees with the entries) **fails the build** with a message
-naming the ids; see `docs/gameval.md`.
+naming the ids; see `src/engine/gameval.md`.
 
 At runtime the catalogs are read from `GAMEVAL_PATH` (default `<CACHE_SOURCE_PATH>/gamevals`, else
 `./cache-source/gamevals`); that folder is the only copy - nothing is bundled into a jar - so an
 edited catalog needs only a restart. Use
 `Gameval.requireId(Gameval.INV, "worn")` or `Obj.coins` in new code rather than magic numbers; see
-`docs/gameval.md`. Cache **archive** names (map squares, native libraries, shaders) are not
-gamevals and are built from formulas - see `docs/cache-archive-names.md`.
+`src/engine/gameval.md`. Cache **archive** names (map squares, native libraries, shaders) are not
+gamevals and are built from formulas - see `src/engine/cache-archive-names.md`.
 
 The legacy flat var constant package `com.rs.engine.variables` (world module) has been
 **removed**: all callers use `org.darkan.core.gameval.gen` (`Varbit`, `Varp`, `Varc`, `Varcstr`,
 `Varclan`, ...) directly, migrated id-for-id with a per-reference proof. If a legacy re-sync
-batch (`docs/legacy-baseline.md`) reintroduces the package or imports of it, migrate the new
+batch (`src/engine/legacy-baseline.md`) reintroduces the package or imports of it, migrate the new
 callers to `org.darkan.core.gameval.gen` and delete the package again.
 
 ### Adding a New API Endpoint
@@ -763,7 +762,7 @@ fun Application.configureRoutes() {
 | `core/src/main/kotlin/org/darkan/core/gameval/Gameval.kt` | Runtime name lookup for 727 asset ids (catalogs in `cache-source/gamevals/`) |
 | `buildSrc/src/main/kotlin/org/darkan/build/gameval/` | Generator for the typed gameval constants (`Obj`, `Npc`, `Loc`, `Component`, `Cs2`, ...), run by `:core:generateGamevalConstants` |
 | `cache-source/gamevals/CONTRACT.md` | Rule book for the gameval catalogs |
-| `docs/cache-source.md` | The cache source tree: unpack/pack parity, `index.json`, codecs, the incremental build |
+| `src/engine/cache-source.md` | The cache source tree: unpack/pack parity, `index.json`, codecs, the incremental build |
 
 ---
 
@@ -805,18 +804,18 @@ Configure `STAFF_WEBHOOK_URL` for tick performance warnings and error notificati
 
 ## Documentation
 
-- `docs/social-gateway.md` - Comprehensive social gateway architecture
-- `docs/headless-client.md` - The client side of core: bidirectional codec, `ClientSession`, login encoding, JS5 cache sync, entity update decoding
-- `docs/community-worlds.md` - Running your own world against the dev lobby: the public community token, what the lobby enforces, the token-replay limit
-- `docs/clans.md` - The clan system: lobby-authoritative `ClanService`, typed `ClanAction` commands over the gateway, world `ClanRegistry`, shared `ClanRules`/`ClanPackets`
+- `src/engine/social-gateway.md` - Comprehensive social gateway architecture
+- `src/engine/headless-client.md` - The client side of core: bidirectional codec, `ClientSession`, login encoding, JS5 cache sync, entity update decoding
+- `src/engine/community-worlds.md` - Running your own world against the dev lobby: the public community token, what the lobby enforces, the token-replay limit
+- `src/engine/clans.md` - The clan system: lobby-authoritative `ClanService`, typed `ClanAction` commands over the gateway, world `ClanRegistry`, shared `ClanRules`/`ClanPackets`
 - `README.md` - Quick start guide
-- `docs/migration.md` - Legacy database migration tooling and runbook
-- `docs/deploy.md` - VM layout, systemd units, CI-driven deploys and the legacy cut-over runbook
-- `docs/legacy-baseline.md` - Which legacy commits the modern tree is synced to
-- `docs/gameval.md` - Gameval name catalogs: runtime API, typed constants, regeneration
-- `docs/cs2-editor.md` - The CS2 clientscript toolchain (`cs2/`), its CLI, and compiling from server code
-- `docs/rs3-port.md` - Porting RS3 assets into the 727 cache: `tools rs3port`, the material crosswalk, the calibration gate
-- `docs/cache-source.md` - The unpacked cache: layout, parity guarantees, codecs, build and `CACHE_SOURCE_PATH`
+- `src/engine/migration.md` - Legacy database migration tooling and runbook
+- `src/engine/deploy.md` - VM layout, systemd units, CI-driven deploys and the legacy cut-over runbook
+- `src/engine/legacy-baseline.md` - Which legacy commits the modern tree is synced to
+- `src/engine/gameval.md` - Gameval name catalogs: runtime API, typed constants, regeneration
+- `src/engine/cs2-editor.md` - The CS2 clientscript toolchain (`cs2/`), its CLI, and compiling from server code
+- `src/engine/rs3-port.md` - Porting RS3 assets into the 727 cache: `tools rs3port`, the material crosswalk, the calibration gate
+- `src/engine/cache-source.md` - The unpacked cache: layout, parity guarantees, codecs, build and `CACHE_SOURCE_PATH`
 - `cache-source/gamevals/CONTRACT.md` - The evidence rules under which every gameval name was proven
 
 ---
