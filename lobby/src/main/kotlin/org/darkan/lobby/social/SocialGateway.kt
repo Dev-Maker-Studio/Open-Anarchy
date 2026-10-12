@@ -338,25 +338,6 @@ object SocialGateway {
     private fun rankAllowed(rank: FriendsChatRank, required: FriendsChatRank): Boolean =
         required.id <= FriendsChatRank.UNRANKED.id || rank.id >= required.id
 
-    private fun officialMembersOf(local: Collection<String>): List<FriendsChatMember> =
-        OfficialBridge.members()
-            .filter { it.displayName.lowercase() !in local }
-            .take(FRIENDS_CHAT_CAPACITY - local.size)
-            .map {
-                FriendsChatMember(
-                    username = "official_" + it.username,
-                    displayName = it.displayName,
-                    worldId = it.worldId,
-                    worldName = "Darkan " + it.worldName,
-                    rank = FriendsChatRank.UNRANKED,
-                )
-            }
-
-    suspend fun officialMembersChanged() {
-        val room = fcRoomsByOwner[HELP_OWNER] ?: return
-        broadcastRoom(helpOwner(), room)
-    }
-
     suspend fun officialLine(displayName: String, text: String) {
         val room = fcRoomsByOwner[HELP_OWNER] ?: return
         emit(room.members.toList(), SocialEvent.FriendsChatLine(HELP_NAME, Speaker(HELP_OWNER, HELP_NAME, 0), PublicChatMessage("[make]$displayName: $text")))
@@ -378,7 +359,7 @@ object SocialGateway {
             ownerDisplayName = owner.displayName,
             chatName = owner.social.friendsChat.name ?: owner.username,
             kickRank = owner.social.friendsChat.rankToKick,
-            members = members + officialMembersOf(members.map { it.displayName.lowercase() }),
+            members = members,
         )
     }
 
