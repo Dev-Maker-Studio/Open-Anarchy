@@ -1,6 +1,7 @@
 package org.darkan.core.cache
 
 import org.darkan.core.Logger.logInfo
+import org.darkan.core.map.WorldWindow
 import world.gregs.voidps.cache.MapSquare
 import world.gregs.voidps.cache.definition.data.MapDefinition
 import world.gregs.voidps.cache.source.codec.MapCodec
@@ -15,8 +16,9 @@ object WorldMapImage {
 
     private const val IMAGE = "worldmapdata/main/4.dat"
     private const val MAPS = "maps"
-    private const val AREA_SQUARES = 64
     private const val SQUARE_TILES = MapDefinition.SIZE
+    private const val AREA_SQUARES = WorldWindow.MAP_TILES / SQUARE_TILES
+    private const val FIRST_SQUARE = WorldWindow.MAP_ORIGIN / SQUARE_TILES
     private const val GROUND_LEVEL = 0
     private const val EMPTY_TABLE_COUNT = 0
     private const val SQUARE_BY_TILES = 0
@@ -46,8 +48,8 @@ object WorldMapImage {
         val out = ByteArrayOutputStream()
         out.write(EMPTY_TABLE_COUNT)
         out.write(EMPTY_TABLE_COUNT)
-        for (regionX in 0 until AREA_SQUARES) {
-            for (regionY in 0 until AREA_SQUARES) {
+        for (regionX in FIRST_SQUARE until FIRST_SQUARE + AREA_SQUARES) {
+            for (regionY in FIRST_SQUARE until FIRST_SQUARE + AREA_SQUARES) {
                 val square = MapSquare.Square(MapSquare.Shape.TERRAIN, regionX, regionY)
                 val saved = File(tree, "$MAPS/${MapCodec.path(square)}")
                 val terrain = if (saved.isFile) saved.readBytes() else generator.terrain(regionX, regionY)

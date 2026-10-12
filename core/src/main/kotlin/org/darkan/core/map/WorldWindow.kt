@@ -16,8 +16,11 @@ object WorldWindow {
     const val FIRST_LETTER = 'A'
     const val CENTER_SECTOR_X = 12
     const val CENTER_SECTOR_Y = 13
-    const val WORLD_ORIGIN_X = CENTER_SECTOR_X * STRIDE_TILES / REGION_TILES * REGION_TILES
-    const val WORLD_ORIGIN_Y = CENTER_SECTOR_Y * STRIDE_TILES / REGION_TILES * REGION_TILES
+    const val ORIGIN_LOCAL = WINDOW_TILES / 2
+    const val WORLD_ORIGIN_X = CENTER_SECTOR_X * STRIDE_TILES / REGION_TILES * REGION_TILES + ORIGIN_LOCAL
+    const val WORLD_ORIGIN_Y = CENTER_SECTOR_Y * STRIDE_TILES / REGION_TILES * REGION_TILES + ORIGIN_LOCAL
+    const val MAP_TILES = 4096
+    const val MAP_ORIGIN = (ORIGIN_LOCAL - MAP_TILES / 2) / REGION_TILES * REGION_TILES
 
     val generated: Set<Pair<Int, Int>> by lazy {
         EnvVars.generatedSectors.split(',').map { it.trim().uppercase() }.filter { it.isNotEmpty() }.map {

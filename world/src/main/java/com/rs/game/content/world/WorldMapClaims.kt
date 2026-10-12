@@ -8,8 +8,10 @@ import com.rs.game.tasks.WorldTasks
 import com.rs.plugin.annotations.ServerStartupEvent
 import com.rs.plugin.kts.onLogin
 import org.darkan.core.gameval.gen.Varp
+import org.darkan.core.map.WorldWindow
 
-private const val MAP_AREA_TILES = 4096
+private const val MAP_AREA_TILES = WorldWindow.MAP_TILES
+private const val MAP_ORIGIN = WorldWindow.MAP_ORIGIN
 private const val COORDINATE_BITS = 12
 private const val COORDINATE_MASK = (1 shl COORDINATE_BITS) - 1
 private const val PRESENT = 1 shl 24
@@ -37,13 +39,13 @@ fun mapWorldMapClaims() {
 
 private fun pushClaims(player: Player) {
     val nearest = ClaimManager.all()
-        .filter { it.plane == GROUND_PLANE && it.minX < MAP_AREA_TILES && it.minY < MAP_AREA_TILES }
+        .filter { it.plane == GROUND_PLANE && it.maxX >= MAP_ORIGIN && it.minX < MAP_ORIGIN + MAP_AREA_TILES && it.maxY >= MAP_ORIGIN && it.minY < MAP_ORIGIN + MAP_AREA_TILES }
         .sortedBy { distance(it, player) }
         .take(SHOWN_CLAIMS)
     for (slot in 0 until SHOWN_CLAIMS) {
         val claim = nearest.getOrNull(slot)
-        setIfChanged(player, CLAIM_VARPS[slot * 2], claim?.let { PRESENT or pack(it.minX, it.maxX) } ?: 0)
-        setIfChanged(player, CLAIM_VARPS[slot * 2 + 1], claim?.let { pack(it.minY, it.maxY) } ?: 0)
+        setIfChanged(player, CLAIM_VARPS[slot * 2], claim?.let { PRESENT or pack(it.minX - MAP_ORIGIN, it.maxX - MAP_ORIGIN) } ?: 0)
+        setIfChanged(player, CLAIM_VARPS[slot * 2 + 1], claim?.let { pack(it.minY - MAP_ORIGIN, it.maxY - MAP_ORIGIN) } ?: 0)
     }
 }
 

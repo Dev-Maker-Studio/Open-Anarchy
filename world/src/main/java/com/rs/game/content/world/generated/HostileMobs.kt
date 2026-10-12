@@ -52,7 +52,8 @@ private val hostileIds = mapOf(
         Npc.imp, Npc.elemental_fire, Npc.rand_fire_giant_1, Npc.babyreddragon, Npc.rand_lesser_demon_1, Npc.rand_hellhound_1,
         Npc.rand_fire_giant_2, Npc.firegiant, Npc.hellhound
     ),
-    Biome.OCEAN to intArrayOf(Npc.rand_bat_1, Npc.small_bat, Npc.bat)
+    Biome.OCEAN to intArrayOf(Npc.rand_bat_1, Npc.small_bat, Npc.bat),
+    Biome.RUNE_ESSENCE to intArrayOf(Npc.whitewolf_sentry, Npc.pack_wolf_whiter, Npc.whitewolf, Npc.wolfpack_leader_whiter)
 )
 
 private val byLevel: Map<Biome, List<Int>> by lazy {
