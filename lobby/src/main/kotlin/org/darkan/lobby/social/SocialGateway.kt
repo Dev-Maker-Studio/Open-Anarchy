@@ -338,6 +338,26 @@ object SocialGateway {
     private fun rankAllowed(rank: FriendsChatRank, required: FriendsChatRank): Boolean =
         required.id <= FriendsChatRank.UNRANKED.id || rank.id >= required.id
 
+    private fun officialMembersOf(): List<FriendsChatMember> = OfficialBridge.members().map {
+        FriendsChatMember(
+            username = "official:" + it.username,
+            displayName = it.displayName,
+            worldId = it.worldId,
+            worldName = "Darkan " + it.worldName,
+            rank = FriendsChatRank.UNRANKED,
+        )
+    }
+
+    suspend fun officialMembersChanged() {
+        val room = fcRoomsByOwner[HELP_OWNER] ?: return
+        broadcastRoom(helpOwner(), room)
+    }
+
+    suspend fun officialLine(username: String, displayName: String, text: String) {
+        val room = fcRoomsByOwner[HELP_OWNER] ?: return
+        emit(room.members.toList(), SocialEvent.FriendsChatLine(HELP_NAME, Speaker("official:$username", displayName, 0), PublicChatMessage(text)))
+    }
+
     private suspend fun stateOf(owner: Account, room: FcRoom): FriendsChatState {
         val members = Accounts.findByUsernames(room.members).map { member ->
             val location = locationOf(member.username)
@@ -354,7 +374,7 @@ object SocialGateway {
             ownerDisplayName = owner.displayName,
             chatName = owner.social.friendsChat.name ?: owner.username,
             kickRank = owner.social.friendsChat.rankToKick,
-            members = members,
+            members = members + officialMembersOf(),
         )
     }
 
@@ -505,6 +525,7 @@ object SocialGateway {
             return notice(fromUsername, NoticeKind.FRIENDS_CHAT, "You are not allowed to speak in that friends chat.")
         val chatName = owner.social.friendsChat.name ?: owner.username
         emit(room.members.toList(), SocialEvent.FriendsChatLine(chatName, speakerOf(from), message))
+        if (message !is QuickChatMessage) OfficialBridge.say(OfficialBridge.RELAY_PREFIX + from.displayName + ": " + message.message)
         if (message !is QuickChatMessage)
             SocialSubscribers.publish(FriendsChatMessageEvent(owner.displayName, from.displayName, from.rights, message.message))
     }
