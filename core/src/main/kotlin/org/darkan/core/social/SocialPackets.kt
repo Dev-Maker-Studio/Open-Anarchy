@@ -20,7 +20,7 @@ import org.darkan.core.net.prot.packet.MessageQuickChatPrivateEcho
 import org.darkan.core.net.prot.packet.UpdateIgnoreList
 
 object SocialPackets {
-    private const val WEB_WORLD_ID = 1115
+    private const val DISPLAY_WORLD_ID = 123
 
 
     fun render(viewer: String, event: SocialEvent): List<ServerProt> = when (event) {
@@ -71,7 +71,7 @@ object SocialPackets {
                 FriendsChatPlayer(
                     displayName = it.displayName,
                     username = it.username,
-                    worldId = if (it.worldId == 0) WEB_WORLD_ID else it.worldId,
+                    worldId = if (it.worldId == 0 || it.username.startsWith("official:")) DISPLAY_WORLD_ID else it.worldId,
                     rank = it.rank.id,
                     worldName = if (it.worldId == 0) "Web" else it.worldName,
                 )
