@@ -146,7 +146,7 @@ object SocialGateway {
         if (first) registerFriendWatcher(username, account.social.friends)
         attachment.sink.deliver(listOf(username), snapshotOf(account))
         if (attachment.worldId != null) ClanService.onLogin(account)
-        if (first) rejoinFriendsChat(account)
+        if (attachment.worldId != LOBBY_WORLD_ID && fcOwnerByMember[username] == null) rejoinFriendsChat(account)
         if (locationOf(username) != before) locationChanged(username, account)
     }
 
