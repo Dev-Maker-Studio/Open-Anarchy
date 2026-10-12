@@ -56,6 +56,7 @@ open class HostileNPC(id: Int, tile: Tile, val scale: Double, level: Int) : NPC(
 
     override fun sendDrop(player: Player, item: Item) {
         if (item.id == Obj.coins) return
+        if (id in HILL_GIANT_IDS && item.id !in HILL_GIANT_DROPS) return
         super.sendDrop(player, item)
     }
 }

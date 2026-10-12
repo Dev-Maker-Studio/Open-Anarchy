@@ -2,6 +2,8 @@ package org.darkan.core.cache
 
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logInfo
+import org.darkan.core.map.GeneratedWorld
+import org.darkan.core.map.WorldWindow
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -12,7 +14,7 @@ object WindowTree {
     private const val GIT = ".git"
 
     fun prepare(base: File): File {
-        if (EnvVars.worldWindowX == 0 && EnvVars.worldWindowY == 0) return base
+        if (GeneratedWorld.windowX == WorldWindow.CENTER_SECTOR_X && GeneratedWorld.windowY == WorldWindow.CENTER_SECTOR_Y) return base
         val target = File(EnvVars.cacheBuildPath + SUFFIX)
         val source = base.toPath()
         val destination = target.toPath()

@@ -4,26 +4,56 @@ import org.darkan.core.EnvVars
 
 object WorldWindow {
 
-    const val WORLD_TILES = 1_000_000
-    const val WORLD_ORIGIN_X = 0
-    const val WORLD_ORIGIN_Y = 0
-    const val WINDOW_TILES = 16384
-    const val OVERLAP_TILES = 2048
+    const val REGION_TILES = 64
+    const val WINDOW_TILES = 15_000
+    const val OVERLAP_TILES = 0
     const val STRIDE_TILES = WINDOW_TILES - OVERLAP_TILES
-    const val HANDOVER_MARGIN = OVERLAP_TILES / 2
+    const val HANDOVER_MARGIN = 0
     const val GRID_WINDOWS = 26
-    const val GRID_TILES = (GRID_WINDOWS - 1) * STRIDE_TILES + WINDOW_TILES
-    const val WINDOWS_PER_AXIS = (WORLD_TILES - WINDOW_TILES + STRIDE_TILES - 1) / STRIDE_TILES + 1
+    const val WINDOWS_PER_AXIS = GRID_WINDOWS
+    const val GRID_TILES = GRID_WINDOWS * WINDOW_TILES
+    const val WORLD_TILES = GRID_TILES
+    const val FIRST_LETTER = 'A'
+    const val CENTER_SECTOR_X = 12
+    const val CENTER_SECTOR_Y = 13
+    const val WORLD_ORIGIN_X = CENTER_SECTOR_X * STRIDE_TILES / REGION_TILES * REGION_TILES
+    const val WORLD_ORIGIN_Y = CENTER_SECTOR_Y * STRIDE_TILES / REGION_TILES * REGION_TILES
 
-    fun origin(window: Int): Int = minOf(window * STRIDE_TILES, WORLD_TILES - WINDOW_TILES)
+    val generated: Set<Pair<Int, Int>> by lazy {
+        EnvVars.generatedSectors.split(',').map { it.trim().uppercase() }.filter { it.isNotEmpty() }.map {
+            sectorOf(it) ?: error("GENERATED_SECTORS names '$it', which is outside AA..ZZ")
+        }.toSet()
+    }
+
+    fun inGrid(sectorX: Int, sectorY: Int): Boolean = sectorX in 0 until GRID_WINDOWS && sectorY in 0 until GRID_WINDOWS
+
+    fun isGenerated(sectorX: Int, sectorY: Int): Boolean = inGrid(sectorX, sectorY) && (sectorX to sectorY) in generated
+
+    fun sectorName(sectorX: Int, sectorY: Int): String {
+        val column = FIRST_LETTER + sectorX.coerceIn(0, GRID_WINDOWS - 1)
+        val row = FIRST_LETTER + (GRID_WINDOWS - 1 - sectorY).coerceIn(0, GRID_WINDOWS - 1)
+        return "$row$column"
+    }
+
+    fun sectorOf(name: String): Pair<Int, Int>? {
+        if (name.length != 2) return null
+        val row = name[0] - FIRST_LETTER
+        val column = name[1] - FIRST_LETTER
+        if (row !in 0 until GRID_WINDOWS || column !in 0 until GRID_WINDOWS) return null
+        return column to (GRID_WINDOWS - 1 - row)
+    }
+
+    fun origin(window: Int): Int = window.coerceIn(0, GRID_WINDOWS - 1) * STRIDE_TILES / REGION_TILES * REGION_TILES
 
     fun owner(global: Int): Int {
-        if (global < STRIDE_TILES + HANDOVER_MARGIN) return 0
-        return ((global - HANDOVER_MARGIN) / STRIDE_TILES).coerceAtMost(WINDOWS_PER_AXIS - 1)
+        var window = (global / STRIDE_TILES).coerceIn(0, GRID_WINDOWS - 1)
+        while (window < GRID_WINDOWS - 1 && origin(window + 1) <= global) window++
+        while (window > 0 && origin(window) > global) window--
+        return window
     }
 
     fun worldId(windowX: Int, windowY: Int): Int =
-        if (windowX == 0 && windowY == 0 && EnvVars.windowHomeWorldId > 0) EnvVars.windowHomeWorldId
+        if (windowX == CENTER_SECTOR_X && windowY == CENTER_SECTOR_Y && EnvVars.windowHomeWorldId > 0) EnvVars.windowHomeWorldId
         else EnvVars.windowWorldIdBase + windowY * WINDOWS_PER_AXIS + windowX
 
     fun port(windowX: Int, windowY: Int): Int = EnvVars.windowPortBase + windowY * WINDOWS_PER_AXIS + windowX

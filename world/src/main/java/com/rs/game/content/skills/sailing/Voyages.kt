@@ -291,6 +291,7 @@ object Voyages {
         val sectorX = WorldWindow.owner(globalX)
         val sectorY = WorldWindow.owner(globalY)
         if (sectorX == GeneratedWorld.windowX && sectorY == GeneratedWorld.windowY) return
+        if (!WorldWindow.isGenerated(sectorX, sectorY)) return
         end(voyage)
         voyage.boat.state = BoatState.SAILING
         BoatStore.save(voyage.boat)

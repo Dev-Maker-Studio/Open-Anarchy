@@ -67,10 +67,14 @@ object EnvVars {
     val cachePackLock: String = dotenv.get("CACHE_PACK_LOCK", System.getProperty("java.io.tmpdir") + "/darkan-cache-pack.lock")
     // Lobby: only hand a map square to a client once a world has reported it explored (org.darkan.core.map.MapDiscovery).
     // World: report the squares sent to players to the lobby. Both need to be set for the fog to work.
-    // Run this world as one 16384 x 16384 window of the 1,000,000 x 1,000,000 generated world (org.darkan.core.map.WorldWindow).
-    // Both unset: the world is window 0,0, which is the plain generated world.
+    // Run this world as one 15,000 x 15,000 sector of the 26 x 26 sector world (org.darkan.core.map.WorldWindow).
+    // Both unset: the world is sector MM unless WORLD_SECTOR names another generated sector.
     val worldWindowX: Int? = dotenv.get("WORLD_WINDOW_X", null)?.toIntOrNull()
     val worldWindowY: Int? = dotenv.get("WORLD_WINDOW_Y", null)?.toIntOrNull()
+    // The sector this world is, by name (row letter then column letter, MM is the centre). Unset: MM. Only sectors in GENERATED_SECTORS may run.
+    val worldSector: String? = dotenv.get("WORLD_SECTOR", null)?.trim()?.uppercase()?.takeIf { it.isNotEmpty() }
+    // Comma separated sector names that exist for now. Everything else is refused: no world, demand or handover for it.
+    val generatedSectors: String = dotenv.get("GENERATED_SECTORS", "MM")
     val playerStartTile: IntArray? = tileEnv("PLAYER_START_TILE")
     val playerRespawnTile: IntArray? = tileEnv("PLAYER_RESPAWN_TILE")
     val windowed: Boolean = worldWindowX != null && worldWindowY != null
