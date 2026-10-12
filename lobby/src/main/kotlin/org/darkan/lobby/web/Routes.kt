@@ -57,6 +57,7 @@ fun Application.configureRouting() {
         DisplayNamesController.registerRoutes(this)
         WorldListController.registerRoutes(this)
         SocialController.registerRoutes(this)
+        WebApiController.registerRoutes(this)
     }
 }
 

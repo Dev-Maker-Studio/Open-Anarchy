@@ -15,7 +15,6 @@ import org.darkan.core.Logger.logError
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logTrace
 import org.darkan.core.net.Session
-import org.darkan.core.crypt.Crypto
 import org.darkan.core.generateRandom24ByteArray
 import org.darkan.core.model.MachineInformation
 import org.darkan.core.model.Account
@@ -201,37 +200,8 @@ class LobbyServer(val js5: JS5Server) {
             output.finish(ResponseOpcode.INVALID_CREDENTIALS)
             return null
         }
-        if (Crypto.isArgon2Hash(account.passwordHash)) {
-            if (!Crypto.verifyPasswordArgon2(password, account.passwordHash)) {
-                logInfo("Invalid argon password hash for found: $username")
-                output.finish(ResponseOpcode.INVALID_CREDENTIALS)
-                return null
-            }
-            if (account.password != null || account.legacyPass != null) {
-                account.password = null
-                account.legacyPass = null
-                Accounts.save(account)
-            }
-        } else if (account.password != null) {
-            if (!Crypto.legacyCompare(password, account.password!!.map { it.toByte() }.toByteArray())) {
-                logInfo("Invalid legacy password hash for found: $username")
-                output.finish(ResponseOpcode.INVALID_CREDENTIALS)
-                return null
-            }
-            account.passwordHash = Crypto.hashPasswordArgon2(password)
-            account.password = null
-            Accounts.save(account)
-        } else if (account.legacyPass != null) {
-            if (!Crypto.gigaLegacyCompare(password, account.legacyPass!!)) {
-                logInfo("Invalid giga legacy password hash for found: $username")
-                output.finish(ResponseOpcode.INVALID_CREDENTIALS)
-                return null
-            }
-            account.passwordHash = Crypto.hashPasswordArgon2(password)
-            account.legacyPass = null
-            Accounts.save(account)
-        } else {
-            logInfo("Account has no usable credential: $username")
+        if (!account.passwordMatches(password)) {
+            logInfo("Invalid password for $username")
             output.finish(ResponseOpcode.INVALID_CREDENTIALS)
             return null
         }
