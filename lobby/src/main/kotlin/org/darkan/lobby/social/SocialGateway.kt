@@ -359,7 +359,7 @@ object SocialGateway {
 
     suspend fun officialLine(displayName: String, text: String) {
         val room = fcRoomsByOwner[HELP_OWNER] ?: return
-        emit(room.members.toList(), SocialEvent.FriendsChatLine(HELP_NAME, Speaker(HELP_OWNER, HELP_NAME, 0), PublicChatMessage("<$displayName> $text")))
+        emit(room.members.toList(), SocialEvent.FriendsChatLine(HELP_NAME, Speaker(HELP_OWNER, HELP_NAME, 0), PublicChatMessage("[make]$displayName: $text")))
     }
 
     private suspend fun stateOf(owner: Account, room: FcRoom): FriendsChatState {
@@ -529,7 +529,7 @@ object SocialGateway {
             return notice(fromUsername, NoticeKind.FRIENDS_CHAT, "You are not allowed to speak in that friends chat.")
         val chatName = owner.social.friendsChat.name ?: owner.username
         emit(room.members.toList(), SocialEvent.FriendsChatLine(chatName, speakerOf(from), message))
-        if (message !is QuickChatMessage) OfficialBridge.say(OfficialBridge.RELAY_PREFIX + from.displayName + ": " + message.message)
+        if (message !is QuickChatMessage) OfficialBridge.say("<" + from.displayName + "> " + message.message)
         if (message !is QuickChatMessage)
             SocialSubscribers.publish(FriendsChatMessageEvent(owner.displayName, from.displayName, from.rights, message.message))
     }
