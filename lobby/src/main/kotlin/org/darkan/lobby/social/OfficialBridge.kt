@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicReference
 private class Rejected : Exception()
 
 object OfficialBridge {
-    const val RELAY_PREFIX = "[make]"
     private const val KEEP_ALIVE_MS = 5000L
     private const val RECONNECT_MAX_MS = 300_000L
 
@@ -125,7 +124,7 @@ object OfficialBridge {
             is SocialEvent.FriendsChatChanged -> updateMembers(event.channel?.members)
             is SocialEvent.FriendsChatLine -> {
                 val line = event.message.message
-                if (line.startsWith(RELAY_PREFIX)) return
+                if (event.speaker.username == EnvVars.officialUsername.lowercase()) return
                 SocialGateway.officialLine(event.speaker.displayName, line)
             }
             else -> Unit
