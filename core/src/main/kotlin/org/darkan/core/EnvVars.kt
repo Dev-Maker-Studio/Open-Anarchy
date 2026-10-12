@@ -42,7 +42,6 @@ object EnvVars {
     val localWorldId: Int = dotenv.get("LOCAL_WORLD_ID", "0").toInt()
     val apiKey: String = dotenv.get("API_KEY", "TEST_API_KEY")
     val officialApi: String = dotenv.get("OFFICIAL_API", "https://api.darkan.org")
-    val officialChat: String = dotenv.get("OFFICIAL_CHAT", "Darkan")
     val officialUsername: String = dotenv.get("OFFICIAL_USERNAME", "")
     val officialPassword: String = dotenv.get("OFFICIAL_PASSWORD", "")
     val lobbyOwner: String = dotenv.get("LOBBY_OWNER", "trent").lowercase().replace(" ", "_")
