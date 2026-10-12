@@ -10,12 +10,16 @@ import java.util.concurrent.ConcurrentHashMap
 
 object WindowOrchestrator {
 
-    enum class Status { DISABLED, ONLINE, STARTING, STARTED, AT_CAPACITY, FAILED }
+    enum class Status { DISABLED, ONLINE, STARTING, STARTED, AT_CAPACITY, FAILED, REFUSED }
 
     private val running = ConcurrentHashMap<Int, Process>()
 
     fun ensure(windowX: Int, windowY: Int): Status {
         if (!EnvVars.windowOrchestrator) return Status.DISABLED
+        if (!WorldWindow.isGenerated(windowX, windowY)) {
+            logWarn("WindowOrchestrator: refusing sector ${WorldWindow.sectorName(windowX, windowY)}, it is not generated")
+            return Status.REFUSED
+        }
         val worldId = WorldWindow.worldId(windowX, windowY)
         val online = Lobby.worldList.get(worldId)
         if (online != null && !online.offline) return Status.ONLINE

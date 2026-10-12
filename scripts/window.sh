@@ -1,5 +1,5 @@
 #!/bin/bash
-# Creates a 16384 x 16384 window of the 1,000,000 x 1,000,000 generated world when a player needs it, and hands the
+# Creates a 15,000 x 15,000 sector of the 26 x 26 sector world (only generated sectors, default MM) when a player needs it, and hands the
 # player over to it. A world runs this itself (WINDOW_LAUNCH_SCRIPT) when a player nears the edge of its window.
 #
 #   window.sh ensure <wx> <wy> [gateway url]      start the window's world if it is not running, wait until it listens
@@ -18,6 +18,7 @@ listening() { ss -ltn 2>/dev/null | grep -q ":$1 "; }
 ensure() {
   local wx=$1 wy=$2 gateway=${3:-ws://localhost:4041/social/ws}
   local id port
+  if ! window_generated "$wx" "$wy"; then echo "sector $wx,$wy is not generated (GENERATED_SECTORS=$GENERATED_SECTORS)" >&2; return 1; fi
   id=$(window_world_id "$wx" "$wy")
   port=$(window_port "$wx" "$wy")
   if listening "$port"; then echo "window $wx,$wy is running as world $id"; return; fi
