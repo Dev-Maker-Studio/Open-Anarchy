@@ -26,12 +26,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.darkan.core.EnvVars
 import org.darkan.core.Logger.logInfo
 import org.darkan.core.Logger.logWarn
-import org.darkan.core.social.FriendsChatMember
 import org.darkan.core.social.PublicChatMessage
 import org.darkan.core.social.SocialAction
 import org.darkan.core.social.SocialEvent
 import org.darkan.core.social.SocialJson
-import java.util.concurrent.atomic.AtomicReference
 
 private class Rejected : Exception()
 
@@ -42,11 +40,8 @@ object OfficialBridge {
 
     private val client = HttpClient(CIO) { install(WebSockets) }
     private val outbound = Channel<String>(Channel.UNLIMITED)
-    private val members = AtomicReference<List<FriendsChatMember>>(emptyList())
 
     val enabled: Boolean get() = EnvVars.officialUsername.isNotBlank() && EnvVars.officialPassword.isNotBlank()
-
-    fun members(): List<FriendsChatMember> = members.get()
 
     fun start(scope: CoroutineScope) {
         if (!enabled) {
@@ -74,8 +69,6 @@ object OfficialBridge {
             } catch (e: Exception) {
                 logWarn("OfficialBridge: ${e.javaClass.simpleName} ${e.message}")
             }
-            members.set(emptyList())
-            SocialGateway.officialMembersChanged()
             delay(minOf(5000L * (1L shl minOf(attempt++, 6)), RECONNECT_MAX_MS))
         }
     }
@@ -120,19 +113,12 @@ object OfficialBridge {
     private suspend fun handle(text: String) {
         val event = runCatching { SocialJson.json.decodeFromString(SocialEvent.serializer(), text) }.getOrNull() ?: return
         when (event) {
-            is SocialEvent.Snapshot -> updateMembers(event.friendsChat?.members)
-            is SocialEvent.FriendsChatChanged -> updateMembers(event.channel?.members)
             is SocialEvent.FriendsChatLine -> {
                 val line = event.message.message
                 if (line.startsWith(RELAY_PREFIX)) return
-                SocialGateway.officialLine(event.speaker.username, event.speaker.displayName, line)
+                SocialGateway.officialLine(event.speaker.displayName, line)
             }
             else -> Unit
         }
-    }
-
-    private suspend fun updateMembers(list: List<FriendsChatMember>?) {
-        members.set(list.orEmpty().filter { it.username != EnvVars.officialUsername.lowercase() })
-        SocialGateway.officialMembersChanged()
     }
 }
