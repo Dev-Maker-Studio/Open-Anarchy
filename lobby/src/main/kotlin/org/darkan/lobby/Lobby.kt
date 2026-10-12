@@ -4,6 +4,7 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.*
+import org.darkan.lobby.social.OfficialBridge
 import org.darkan.core.EnvVars
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration
@@ -84,6 +85,7 @@ object Lobby : CoroutineScope {
         js5Server = JS5Server(cacheProvider, prefetchKeys(cache))
         PacketHandlers.loadHandlersFromPackage("org.darkan.lobby.server.packet")
         startLobbyAPI()
+        OfficialBridge.start(CoroutineScope(Dispatchers.IO))
         runBlocking {
             startLobbyServer()
         }
