@@ -24,7 +24,7 @@ private const val GROUND_LEVEL = 0
 
 private val generator = GeneratedWorld.generator
 
-private val HOSTILE_BIOMES = setOf(Biome.WILDERNESS, Biome.WINTER, Biome.VOLCANO)
+private val HOSTILE_BIOMES = setOf(Biome.WILDERNESS, Biome.WINTER, Biome.VOLCANO, Biome.RUNE_ESSENCE)
 
 private val animals = mapOf(
     Biome.PLAINS to intArrayOf(Npc.chicken, Npc.cow, Npc.npc_5154, Npc.pig_1, Npc.dog, Npc.poh_growncat_bluegrey),
@@ -35,8 +35,9 @@ private val animals = mapOf(
     ),
     Biome.WINTER to intArrayOf(Npc.icegiant, Npc.icegiant2, Npc.icegiant3, Npc.icewarrior, Npc.wolf, Npc.wolfpack_leader_whiter),
     Biome.MOUNTAIN to intArrayOf(Npc.wolf, Npc.bat, Npc.brownbear, *HILL_GIANT_IDS, *MOUNTAIN_GOAT_IDS),
-    Biome.VOLCANO to intArrayOf(Npc.imp, Npc.hellhound),
-    Biome.OCEAN to intArrayOf(Npc.small_bat)
+    Biome.VOLCANO to intArrayOf(Npc.imp, Npc.rand_fire_giant_1, Npc.rand_fire_giant_2, Npc.firegiant, Npc.hellhound),
+    Biome.OCEAN to intArrayOf(Npc.small_bat),
+    Biome.RUNE_ESSENCE to intArrayOf(Npc.whitewolf_sentry, Npc.pack_wolf_whiter, Npc.whitewolf, Npc.wolfpack_leader_whiter)
 )
 
 private val HOSTILE_ANIMALS = setOf(Npc.snake, Npc.scorpion, Npc.wolf, Npc.bat, Npc.brownbear, Npc.small_bat, *HILL_GIANT_IDS.toTypedArray())
