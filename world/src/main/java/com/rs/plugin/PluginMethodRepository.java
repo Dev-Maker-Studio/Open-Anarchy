@@ -34,6 +34,7 @@ public class PluginMethodRepository {
 		List<PluginHandler<? extends PluginEvent>> methods = event.getMethods();
 		if (methods == null || methods.isEmpty())
 			return false;
+		boolean succeeded = true;
 		for (PluginHandler<? extends PluginEvent> m : methods)
 			try {
 				PluginHandler<PluginEvent> pHandle = (PluginHandler<PluginEvent>) m;
@@ -41,9 +42,9 @@ public class PluginMethodRepository {
 				pHandle.getHandler().accept(event);
 			} catch (Exception e) {
 				Logger.handle(PluginMethodRepository.class, "handle:" + event.getClass().getSimpleName(), e);
-				return false;
+				succeeded = false;
 			}
-		return true;
+		return succeeded;
 	}
 
 	@SuppressWarnings("unchecked")
