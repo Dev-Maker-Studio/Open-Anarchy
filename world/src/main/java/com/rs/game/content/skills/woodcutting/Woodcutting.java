@@ -216,7 +216,7 @@ public class Woodcutting extends Action {
 					return 3;
 				}
 				if (entity instanceof Player player && EnvVars.INSTANCE.getGenerateMaps() && (type == TreeType.NORMAL || type == TreeType.OAK || type == TreeType.WILLOW)) {
-					player.getInventory().addItem(TreeRoot.Companion.forTreeName(treeObj.getDefinitions().getName()).getRoot(), Utils.random(10) == 0 ? 2 : 1);
+					player.getInventory().addItem(TreeRoot.Companion.forTreeName(treeObj.getDefinitions().getName()).getRoot(), TreeRoot.ROOTS_PER_TREE);
 					player.sendMessage("You find some tree roots in the stump.", true);
 				}
 				fellTree();
