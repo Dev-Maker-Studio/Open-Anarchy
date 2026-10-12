@@ -60,6 +60,9 @@ object BiomeMusic {
         Biome.VOLCANIC to listOf(
             Midi.eruption, Midi.tzhaar, Midi.kethsi, Midi.deadlands, Midi.shadowland, Midi.lair,
             Midi.tzhaar2wandering1, Midi.tzhaar2wandering2, Midi.tzhaar2wandering3, Midi.tzhaar2wandering4, Midi.tzhaar2wandering5
+        ),
+        Biome.RUNE_ESSENCE to listOf(
+            Midi.rune_mechanics, Midi.stillness, Midi.dreamstate, Midi.inspiration, Midi.mellow, Midi.arrival, Midi.venture, Midi.venture2
         )
     )
 
