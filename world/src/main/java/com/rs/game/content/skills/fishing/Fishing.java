@@ -117,8 +117,7 @@ public class Fishing extends PlayerAction {
         for (Fish f : spot.getFish()) {
             if (f.checkRequirements(player) && f.rollSuccess(player, level)) {
                 f.giveFish(player, spot);
-                FishingSpotDepletionKt.depleteFishingSpot(player, npc);
-                return -1;
+                return FishingSpotDepletionKt.depleteFishingSpot(player, npc) ? -1 : 4;
             }
             if (f == Fish.KARAMBWAN) {
                 f.deleteBait(player, spot);

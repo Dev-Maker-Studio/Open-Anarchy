@@ -1,11 +1,13 @@
 #!/bin/bash
-# Runs one 16384 x 16384 window of the 1,000,000 x 1,000,000 generated world as its own world with its own cache.
+# Runs one 15,000 x 15,000 sector of the 26 x 26 sector world as its own world with its own cache. Only generated sectors (GENERATED_SECTORS, default MM) start.
 # usage: scripts/window-world.sh <windowX> <windowY> [lobby gateway url] [foreground]  (docs/infinite-world.md)
 # With "foreground" the world replaces this shell (the lobby's orchestrator tracks the process); otherwise it runs detached.
 set -eu
 cd "$(dirname "$0")/.."
 WX=${1:?window x}
 WY=${2:?window y}
+. "$(dirname "$0")/window-math.sh"
+if ! window_generated "$WX" "$WY"; then echo "sector $WX,$WY is not generated (GENERATED_SECTORS=$GENERATED_SECTORS), refusing to start it" >&2; exit 1; fi
 GATEWAY=${3:-ws://localhost:4041/social/ws}
 MODE=${4:-detached}
 export JAVA_HOME=$HOME/.jdks/jdk-26.0.2.1+1

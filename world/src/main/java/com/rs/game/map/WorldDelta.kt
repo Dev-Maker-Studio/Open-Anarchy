@@ -47,15 +47,19 @@ object WorldDelta {
         var originalId: Int = 0, var currentId: Int = 0, var regrowAt: Long = 0
     )
 
+    class Spot(var x: Int = 0, var y: Int = 0, var plane: Int = 0, var regrowAt: Long = 0)
+
     private class Snapshot(
         val version: Int = VERSION, val sector: Int = 0,
-        val added: List<Added> = emptyList(), val removed: List<Removed> = emptyList(), val timed: List<Timed> = emptyList()
+        val added: List<Added> = emptyList(), val removed: List<Removed> = emptyList(), val timed: List<Timed> = emptyList(),
+        val spots: List<Spot> = emptyList()
     )
 
     private val tracked = HashSet<Int>()
     private val added = HashMap<Long, Added>()
     private val removed = HashMap<Long, Removed>()
     private val timed = HashMap<Long, Timed>()
+    private val spots = HashMap<Long, Spot>()
     private val byChunk = HashMap<Int, MutableSet<Long>>()
     private val restoring = ThreadLocal.withInitial { false }
     private val writer = Executors.newSingleThreadScheduledExecutor { Thread(it, "world-delta").also { thread -> thread.isDaemon = true } }
@@ -97,7 +101,8 @@ object WorldDelta {
             }
             for (entry in stored.removed) removed[key(entry.x, entry.y, entry.plane, ObjectShape.forId(entry.shape)?.slot ?: continue)] = entry
             for (entry in stored.timed) timed[key(entry.x, entry.y, entry.plane, ObjectShape.forId(entry.shape)?.slot ?: continue)] = entry
-            Logger.info(WorldDelta::class.java, "load", "Sector ${EnvVars.worldId}: ${added.size} added, ${removed.size} removed, ${timed.size} timed objects")
+            for (entry in stored.spots.orEmpty()) spots[key(entry.x, entry.y, entry.plane, 0)] = entry
+            Logger.info(WorldDelta::class.java, "load", "Sector ${EnvVars.worldId}: ${added.size} added, ${removed.size} removed, ${timed.size} timed objects, ${spots.size} depleted spots")
         }
     }
 
@@ -208,6 +213,35 @@ object WorldDelta {
     }
 
     @JvmStatic
+    fun spotDepleted(x: Int, y: Int, plane: Int, ticks: Int) {
+        if (!EnvVars.generateMaps) return
+        ensureLoaded()
+        synchronized(this) {
+            spots[key(x, y, plane, 0)] = Spot(x, y, plane, now() + ticks * TICK_MS)
+            scheduleSave()
+        }
+    }
+
+    @JvmStatic
+    fun spotRegrowTicks(x: Int, y: Int, plane: Int): Int {
+        if (!EnvVars.generateMaps) return 0
+        ensureLoaded()
+        val k = key(x, y, plane, 0)
+        val entry = synchronized(this) { spots[k] } ?: return 0
+        if (entry.regrowAt > now()) return ticksUntil(entry.regrowAt)
+        spotRestored(x, y, plane)
+        return 0
+    }
+
+    @JvmStatic
+    fun spotRestored(x: Int, y: Int, plane: Int) {
+        if (!loaded) return
+        synchronized(this) {
+            if (spots.remove(key(x, y, plane, 0)) != null) scheduleSave()
+        }
+    }
+
+    @JvmStatic
     fun touch(obj: GameObject) {
         if (!EnvVars.generateMaps) return
         ensureLoaded()
@@ -283,7 +317,8 @@ object WorldDelta {
             val cutoff = now()
             removed.values.removeIf { it.regrowAt in 1..cutoff }
             timed.values.removeIf { it.regrowAt <= cutoff }
-            json = JsonFileManager.toJson(Snapshot(VERSION, EnvVars.worldId, added.values.toList(), removed.values.toList(), timed.values.toList()))
+            spots.values.removeIf { it.regrowAt <= cutoff }
+            json = JsonFileManager.toJson(Snapshot(VERSION, EnvVars.worldId, added.values.toList(), removed.values.toList(), timed.values.toList(), spots.values.toList()))
         }
         runCatching {
             val target = file

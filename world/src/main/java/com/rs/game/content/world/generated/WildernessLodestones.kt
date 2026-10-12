@@ -16,6 +16,7 @@ import org.darkan.core.gameval.gen.Spotanim
 import org.darkan.core.map.GeneratedWorld
 import org.darkan.core.map.WorldWindow
 import org.darkan.core.model.IFEvents
+import world.gregs.voidps.cache.source.codec.WorldGenerator
 import org.darkan.core.model.Rights
 import world.gregs.voidps.type.Tile
 
@@ -26,8 +27,8 @@ object WildernessLodestones {
     private const val ACTIVATE_OP = 1
     private const val LIST_OP = 2
 
-    private val originX get() = WorldWindow.origin(GeneratedWorld.windowX)
-    private val originY get() = WorldWindow.origin(GeneratedWorld.windowY)
+    private val originX get() = WorldWindow.origin(GeneratedWorld.windowX) - WorldGenerator.ORIGIN_X
+    private val originY get() = WorldWindow.origin(GeneratedWorld.windowY) - WorldGenerator.ORIGIN_Y
 
     fun unlocked(player: Player): List<Pair<Int, Int>> =
         player.getO<String>(SAVE_KEY).orEmpty().split(ENTRY_SEPARATOR).mapNotNull { entry ->
